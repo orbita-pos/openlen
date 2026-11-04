@@ -24,7 +24,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
   const tools = await Promise.all(
     rows.map(async (row) => toInstalledToolView(row, { locale, requestHost, plan, releaseExists: await releaseExists(row.releaseSha) })),
   );
-  return json({ tools, person: { name } });
+  return json({ tools, person: { name }, paid: plan !== "free" });
 });
 
 export const OPTIONS = respuestaPrevia;

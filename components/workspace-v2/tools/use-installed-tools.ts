@@ -14,21 +14,23 @@ export function announceToolsChanged(): void {
   window.dispatchEvent(new Event(TOOLS_CHANGED_EVENT));
 }
 
-export function useInstalledTools(locale: string): { tools: InstalledToolView[]; person: { name: string }; available: boolean; reload: () => void } {
+export function useInstalledTools(locale: string): { tools: InstalledToolView[]; person: { name: string }; available: boolean; paid: boolean; reload: () => void } {
   const [tools, setTools] = useState<InstalledToolView[]>([]);
   const [person, setPerson] = useState<{ name: string }>({ name: "" });
   // False when the server said tools are off (404) or the person isn't signed in: nothing of tools is drawn.
   const [available, setAvailable] = useState(false);
+  const [paid, setPaid] = useState(false);
   const reload = useCallback(() => {
     void fetch(`/api/tools?locale=${encodeURIComponent(locale)}`, { cache: "no-store" })
       .then(async (res) => {
         setAvailable(res.ok);
-        return res.ok ? ((await res.json()) as { tools?: InstalledToolView[]; person?: { name: string } }) : {};
+        return res.ok ? ((await res.json()) as { tools?: InstalledToolView[]; person?: { name: string }; paid?: boolean }) : {};
       })
-      .catch(() => ({}) as { tools?: InstalledToolView[]; person?: { name: string } })
+      .catch(() => ({}) as { tools?: InstalledToolView[]; person?: { name: string }; paid?: boolean })
       .then((body) => {
         setTools(body.tools ?? []);
         if (body.person) setPerson(body.person);
+        setPaid(body.paid === true);
       });
   }, [locale]);
   useEffect(() => {
@@ -40,5 +42,5 @@ export function useInstalledTools(locale: string): { tools: InstalledToolView[];
       window.removeEventListener(TOOLS_CHANGED_EVENT, reload);
     };
   }, [reload]);
-  return { tools, person, available, reload };
+  return { tools, person, available, paid, reload };
 }

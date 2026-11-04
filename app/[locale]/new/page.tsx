@@ -57,6 +57,7 @@ import { AnalyticsSection } from "../analytics/analytics-section";
 import { DatabaseView } from "@/components/workspace-v2/database-view";
 import { projectToolItems, railToolItems, toolPromptDraft } from "@/components/workspace-v2/tools/tool-items";
 import { ToolView } from "@/components/workspace-v2/tools/tool-view";
+import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
 import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -1113,7 +1114,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComo === "app" ? { naceComo: "app" as const, idioma: locale } : {}),
+        ...(naceComo === "app" || naceComo === "tool" ? { naceComo, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1566,7 +1567,7 @@ function NewV2Inner() {
   // AN APP BEING BORN: the first turn of a project that is (or was just asked to
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
-  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app");
+  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app" || naceComo === "tool");
   // LO QUE ENSEÑA EL CENTRO, como Claude con un artefacto (21/10): la conversación ocupa el medio mientras no hay
   // nada que ver; una pieza (presentación, dashboard, imagen, video, voz) se abre ahí si el proyecto no tiene
   // página; con página o app, el lienzo de siempre. La lista de piezas se lee UNA vez y la comparten la campana,
@@ -1583,7 +1584,7 @@ function NewV2Inner() {
   // `loading` vuelve a false y cuenta como ninguna).
   const centro = centerContent({
     hasPage: loadedProject ? activeDoc.trim() !== "" || Object.keys(loadedProject.pages ?? {}).length > 0 : null,
-    isApp: esApp || naceComo === "app",
+    isApp: esApp || naceComo === "app" || naceComo === "tool",
     deliverables:
       artifactsOn && artifacts.enabled === null && artifacts.loading ? null : artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
   });
@@ -3876,7 +3877,9 @@ function NewV2Inner() {
                 debajo de la barra. Subieron A la barra el 2026-08-31: son la
                 navegación global, y ahí competían por el centro con el propio
                 contenido de la pantalla (el brief, la rejilla de páginas). */}
-            {startSurface === "herramienta" ? (
+            {startSurface === "herramientas" ? (
+              <ToolsView tools={installedTools.tools} paid={installedTools.paid} onChanged={installedTools.reload} />
+            ) : startSurface === "herramienta" ? (
               <ToolView tool={openToolData} person={installedTools.person} locale={locale} />
             ) : startSurface === "mispaginas" ? (
               <ProjectsSection
@@ -3957,6 +3960,8 @@ function NewV2Inner() {
                 }}
                 onPaste={() => router.push("/new?mode=paste")}
                 naceComo={naceComo}
+                conHerramienta={installedTools.available}
+                herramientaBloqueada={installedTools.paid ? undefined : tws("tools.planRequired")}
                 onNaceComoChange={setNaceComo}
               />
             </div>

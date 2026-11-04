@@ -320,7 +320,12 @@
       "appHint": "Etwas zum Benutzen: Kasse, Terminbuchung, Dashboard mit Login",
       "appPlaceholder": "Beschreibe deine App: was sie tut, wer sie nutzt…",
       "headline": "Deine nächste App beginnt hier",
-      "subtitle": "Sag Len, was sie können soll, und er baut sie: ihre Screens, ihre Daten und ihren Login."
+      "subtitle": "Sag Len, was sie können soll, und er baut sie: ihre Screens, ihre Daten und ihren Login.",
+      "tool": "Tool",
+      "toolHint": "Ein eigener Bildschirm in OpenLen, gebaut von Len.",
+      "toolHeadline": "Welches Tool brauchst du?",
+      "toolSubtitle": "Len baut es, und es bleibt in deinem OpenLen: in der Seitenleiste oder in deinen Projekten.",
+      "toolPlaceholder": "Etwas, um die heutigen Reservierungen zu sehen und zu bestätigen…"
     }
   },
   "empty": {
@@ -747,6 +752,21 @@
       "apply": "Anwenden",
       "cancel": "Abbrechen"
     },
-    "unavailable": "Dieses Tool lässt sich gerade nicht öffnen."
+    "unavailable": "Dieses Tool lässt sich gerade nicht öffnen.",
+    "page": {
+      "title": "Tools",
+      "subtitle": "Bildschirme, die Len für dich gebaut hat. Sie leben in deinem OpenLen, nicht auf deiner Website.",
+      "ask": "Len um ein Tool bitten",
+      "empty": "Noch keine Tools. Bitte Len um eins.",
+      "inRail": "Seitenleiste",
+      "inProject": "In Projekten",
+      "version": "Version {version} · {date}",
+      "switch": "{tool} anzeigen",
+      "openProject": "Projekt öffnen",
+      "remove": "Entfernen",
+      "restore": "Wiederherstellen",
+      "releaseGone": "Diese Version gibt es nicht mehr. Bitte Len, sie neu zu installieren.",
+      "failed": "Das hat nicht geklappt. Versuch es noch einmal."
+    }
   }
 }

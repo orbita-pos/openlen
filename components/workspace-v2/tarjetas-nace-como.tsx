@@ -16,22 +16,32 @@ import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 /** Con qué nace el proyecto en blanco. `"pagina"` es lo de siempre. */
-export type NaceComo = "pagina" | "app";
+/** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): `"tool"` is the third card. */
+export type NaceComo = "pagina" | "app" | "tool";
 
 export function TarjetasNaceComo({
   value,
   onChange,
   disabled = false,
+  conHerramienta = false,
+  herramientaBloqueada,
 }: {
   value: NaceComo;
   onChange: (v: NaceComo) => void;
   disabled?: boolean;
+  /** Tools are on: the «Herramienta» card is offered. */
+  conHerramienta?: boolean;
+  /** Why it can't be chosen (the Free plan); absent = it can. */
+  herramientaBloqueada?: string;
 }) {
   const t = useTranslations("wsChrome");
-  const refs = useRef<Record<NaceComo, HTMLButtonElement | null>>({ pagina: null, app: null });
+  const refs = useRef<Record<NaceComo, HTMLButtonElement | null>>({ pagina: null, app: null, tool: null });
   const opciones: ReadonlyArray<{ id: NaceComo; titulo: string; linea: string; dibujo: ReactNode }> = [
     { id: "pagina", titulo: t("start.kind.page"), linea: t("start.kind.pageHint"), dibujo: <DibujoPagina /> },
     { id: "app", titulo: t("start.kind.app"), linea: t("start.kind.appHint"), dibujo: <DibujoApp /> },
+    ...(conHerramienta
+      ? [{ id: "tool" as const, titulo: t("start.kind.tool"), linea: herramientaBloqueada ?? t("start.kind.toolHint"), dibujo: <DibujoHerramienta /> }]
+      : []),
   ];
 
   // Flechas: con dos opciones, cualquier flecha va a la otra (y la elige, como
@@ -39,13 +49,16 @@ export function TarjetasNaceComo({
   const alPulsar = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
     e.preventDefault();
-    const otra: NaceComo = value === "pagina" ? "app" : "pagina";
+    // Round the cards that can be chosen, forwards with →/↓ and back with ←/↑, as a native radio group does.
+    const ids = opciones.map((o) => o.id).filter((id) => !(id === "tool" && herramientaBloqueada));
+    const step = e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1;
+    const otra = ids[(ids.indexOf(value) + step + ids.length) % ids.length]!;
     onChange(otra);
     refs.current[otra]?.focus();
   };
 
   return (
-    <div role="radiogroup" aria-label={t("start.kind.label")} className="grid grid-cols-2 gap-3">
+    <div role="radiogroup" aria-label={t("start.kind.label")} className={`grid ${opciones.length === 3 ? "grid-cols-3" : "grid-cols-2"} gap-3`}>
       {opciones.map((o) => {
         const elegida = value === o.id;
         return (
@@ -58,7 +71,7 @@ export function TarjetasNaceComo({
             role="radio"
             aria-checked={elegida}
             tabIndex={elegida ? 0 : -1}
-            disabled={disabled}
+            disabled={disabled || (o.id === "tool" && !!herramientaBloqueada)}
             onClick={() => onChange(o.id)}
             onKeyDown={alPulsar}
             className={`group text-left rounded-[14px] border p-2.5 transition disabled:opacity-60 ${
@@ -135,6 +148,24 @@ export function DibujoApp() {
       <rect x="42" y="53" width="110" height="5" rx="1.5" fill="currentColor" opacity="0.1" />
       <rect x="42" y="62" width="110" height="5" rx="1.5" fill="currentColor" opacity="0.1" />
       <rect x="128" y="71" width="24" height="7" rx="3.5" fill="currentColor" opacity="0.9" />
+    </svg>
+  );
+}
+
+/** A tool: a small panel docked in the app, with a list and a switch — something you keep using. */
+export function DibujoHerramienta() {
+  return (
+    <svg viewBox="0 0 160 84" className="block w-full h-auto" aria-hidden>
+      <rect x="0" y="0" width="22" height="84" fill="currentColor" opacity="0.1" />
+      <rect x="6" y="8" width="10" height="10" rx="2.5" fill="currentColor" opacity="0.85" />
+      <rect x="6" y="24" width="10" height="10" rx="2.5" fill="currentColor" opacity="0.3" />
+      <rect x="6" y="40" width="10" height="10" rx="2.5" fill="currentColor" opacity="0.3" />
+      <rect x="34" y="12" width="60" height="6" rx="2" fill="currentColor" opacity="0.75" />
+      <rect x="34" y="28" width="112" height="12" rx="3" fill="currentColor" opacity="0.14" />
+      <rect x="34" y="46" width="112" height="12" rx="3" fill="currentColor" opacity="0.14" />
+      <rect x="34" y="64" width="112" height="12" rx="3" fill="currentColor" opacity="0.14" />
+      <rect x="128" y="31" width="14" height="6" rx="3" fill="currentColor" opacity="0.9" />
+      <rect x="128" y="49" width="14" height="6" rx="3" fill="currentColor" opacity="0.35" />
     </svg>
   );
 }
