@@ -16,3 +16,21 @@ export interface ToolReleaseFile {
   readonly content: string;
   readonly contentType: string;
 }
+
+export type InstalledToolStatus = "ok" | "removed" | "plan_required" | "broken";
+
+/** What the workspace sees of an installed tool (§4.11): built by `toInstalledToolView` (lib/tools/view.ts). */
+export interface InstalledToolView {
+  readonly id: string;
+  readonly projectId: string;
+  readonly title: string;
+  readonly description: string;
+  readonly placement: ToolPlacement;
+  readonly iconUrl: string;
+  readonly frameUrl: string | null;
+  readonly frameOrigin: string | null;
+  readonly releaseSha: string;
+  readonly enabled: boolean;
+  readonly installedAt: string;
+  readonly status: InstalledToolStatus;
+}

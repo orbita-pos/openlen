@@ -145,9 +145,11 @@ interface TopBarProps {
    *  normalmente: sin esto el usuario se queda sin idioma, sin tema y sin
    *  cerrar sesión en cuanto sale de un proyecto. */
   inicio?: {
-    activa: "crear" | "mispaginas" | "comunidad";
-    onIr: (s: "crear" | "mispaginas" | "comunidad") => void;
-    etiqueta: (s: "crear" | "mispaginas" | "comunidad") => string;
+    activa: StartTab;
+    onIr: (s: StartTab) => void;
+    etiqueta: (s: StartTab) => string;
+    /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.11): the Herramientas tab, when tools are on. */
+    conHerramientas?: boolean;
     dark: boolean;
     onToggleDark: () => void;
     soundVolume?: number;
@@ -155,6 +157,9 @@ interface TopBarProps {
     onToggleSoundMute?: () => void;
   };
 }
+
+/** The start page's global tabs. */
+export type StartTab = "crear" | "mispaginas" | "comunidad" | "herramientas";
 
 export function TopBar({
   esApp = false,
@@ -547,7 +552,7 @@ export function TopBar({
           <>
             <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
             <nav className="flex items-center gap-0.5 min-w-0">
-              {(["crear", "mispaginas", "comunidad"] as const).map((s) => (
+              {(inicio.conHerramientas ? (["crear", "mispaginas", "comunidad", "herramientas"] as const) : (["crear", "mispaginas", "comunidad"] as const)).map((s) => (
                 <button
                   key={s}
                   type="button"

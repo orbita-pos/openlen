@@ -435,12 +435,14 @@
     "messages": "Posta in arrivo",
     "business": "La mia attività",
     "versions": "Versioni",
-    "database": "Database"
+    "database": "Database",
+    "tools": "Strumenti"
   },
   "startTabs": {
     "crear": "Crea",
     "mispaginas": "Le mie pagine",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Strumenti"
   },
   "resultadosTabs": {
     "page": "Pagina",
@@ -744,6 +746,7 @@
       "subtitle": "Questo modifica i dati reali. Non cambia nulla finché non applichi.",
       "apply": "Applica",
       "cancel": "Annulla"
-    }
+    },
+    "unavailable": "Questo strumento non si può aprire adesso."
   }
 }

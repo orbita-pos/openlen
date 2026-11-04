@@ -18,7 +18,11 @@ import {
   Smartphone,
   Tablet,
   X,
+  ToolsIcon,
 } from "./icons";
+import type { InstalledToolView } from "@/lib/tools/types";
+import { ToolFrame } from "./tools/tool-frame";
+import { toolIdOfLens, toolLens } from "./tools/tool-items";
 import { CodeView } from "./code-view";
 import { TestDataBadge } from "./test-data-badge";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
@@ -63,6 +67,14 @@ interface PreviewAreaProps {
    *  conmutador vive en la barra de estado, no aquí. */
   lente: Lente;
   onLente: (l: Lente) => void;
+  /** The person's installed `project` tools that can open (spec local 2026-11-04-herramientas-hechas-por-len, §4.3). */
+  projectTools?: readonly InstalledToolView[];
+  /** Who uses them, for their `context()`. */
+  toolPerson?: { readonly name: string; readonly locale: string };
+  /** The open project's title, for a project tool's `context()`. */
+  toolProjectTitle?: string;
+  /** A tool's `sendPrompt`: the text goes to Len's composer, never sent. Absent = no chat to write in. */
+  onToolPrompt?: (text: string, toolTitle: string) => void;
   /** When set, the iframe loads this URL directly (a curated template from
    *  /public/templates/curated/) instead of using the composed-from-primitives
    *  HTML in `doc`. Cleared via `onClearTemplate`. */
@@ -267,13 +279,19 @@ const FRASES_DEL_EDITOR = [
 ] as const;
 
 // ⚰️ «datos»: la lente de los almacenes `data-ol-stores`, retirada el 2026-10-04.
-export type Lente = "pagina" | "codigo" | "terminal" | "cambios";
+// TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): a `project` tool is one more lens.
+export type Lente = "pagina" | "codigo" | "terminal" | "cambios" | `tool:${string}`;
 
 const SIN_TURNOS: readonly CambiosDeUnTurno[] = [];
+const NO_TOOLS: readonly InstalledToolView[] = [];
 
 export function PreviewArea({
   lente,
   onLente,
+  projectTools = NO_TOOLS,
+  toolPerson,
+  toolProjectTitle,
+  onToolPrompt,
   doc,
   previewUrl,
   templateName,
@@ -378,7 +396,9 @@ export function PreviewArea({
     if (lente === "codigo" && !hayCodigo) setLente("pagina");
     if (lente === "terminal" && !hayTerminal && !terminal.cargando) setLente("pagina");
     if (lente === "cambios" && !hayCambios) setLente("pagina");
-  }, [lente, hayCodigo, hayTerminal, terminal.cargando, hayCambios]);
+    const openTool = toolIdOfLens(lente);
+    if (openTool && !projectTools.some((tool) => tool.id === openTool)) setLente("pagina");
+  }, [lente, hayCodigo, hayTerminal, terminal.cargando, hayCambios, projectTools]);
   // Una fila de la tarjeta del turno pide la lente «Cambios»: se abre. La
   // propia lente sigue la petición hasta su fichero.
   // Sólo una petición NUEVA: al volver a montarse, la de antes ya se atendió.
@@ -946,6 +966,7 @@ export function PreviewArea({
                 ...(hayCambios
                   ? [{ value: "cambios" as const, label: t("preview.lente.cambios"), icon: FileDiff }]
                   : []),
+                ...(hayProyecto ? projectTools.map((tool) => ({ value: toolLens(tool.id), label: tool.title, icon: ToolsIcon })) : []),
               ]}
             />
           )}
@@ -1226,6 +1247,28 @@ export function PreviewArea({
             />
           </div>
         )}
+        {(() => {
+          const tool = projectTools.find((x) => toolLens(x.id) === lente);
+          if (!tool?.frameUrl || !tool.frameOrigin || !projectId) return null;
+          return (
+            <div className="absolute inset-0 z-10 bg-app" data-tool-lens={tool.id}>
+              <ToolFrame
+                key={tool.frameUrl}
+                src={tool.frameUrl}
+                frameOrigin={tool.frameOrigin}
+                caller={{ installationId: tool.id }}
+                context={{
+                  person: toolPerson ?? { name: "", locale: "en" },
+                  project: { id: projectId, title: toolProjectTitle ?? "" },
+                  tool: { id: tool.id, version: tool.releaseSha },
+                  environment: "installed",
+                }}
+                onPrompt={onToolPrompt ? (text) => onToolPrompt(text, tool.title) : null}
+                title={tool.title}
+              />
+            </div>
+          );
+        })()}
         {lente === "terminal" && hayTerminal && (
           <TerminalView
             terminal={terminal}

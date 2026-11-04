@@ -7,24 +7,9 @@ import type { Plan } from "@/lib/plan";
 
 import { toolFrameUrl } from "./host";
 import type { ToolInstallationRow } from "./store";
-import type { ToolPlacement } from "./types";
+import type { InstalledToolStatus, InstalledToolView } from "./types";
 
-export type InstalledToolStatus = "ok" | "removed" | "plan_required" | "broken";
-
-export interface InstalledToolView {
-  readonly id: string;
-  readonly projectId: string;
-  readonly title: string;
-  readonly description: string;
-  readonly placement: ToolPlacement;
-  readonly iconUrl: string;
-  readonly frameUrl: string | null;
-  readonly frameOrigin: string | null;
-  readonly releaseSha: string;
-  readonly enabled: boolean;
-  readonly installedAt: string;
-  readonly status: InstalledToolStatus;
-}
+export type { InstalledToolStatus, InstalledToolView };
 
 function inLocale(texts: Readonly<Record<string, string>>, locale: string): string {
   return texts[locale] ?? texts.en ?? Object.values(texts)[0] ?? "";

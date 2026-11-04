@@ -435,12 +435,14 @@
     "messages": "Posteingang",
     "business": "Mein Unternehmen",
     "versions": "Versionen",
-    "database": "Datenbank"
+    "database": "Datenbank",
+    "tools": "Tools"
   },
   "startTabs": {
     "crear": "Erstellen",
     "mispaginas": "Meine Seiten",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Tools"
   },
   "resultadosTabs": {
     "page": "Seite",
@@ -744,6 +746,7 @@
       "subtitle": "Das ändert die echten Daten. Nichts ändert sich, bevor du es anwendest.",
       "apply": "Anwenden",
       "cancel": "Abbrechen"
-    }
+    },
+    "unavailable": "Dieses Tool lässt sich gerade nicht öffnen."
   }
 }
