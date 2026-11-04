@@ -27,6 +27,8 @@ export interface InstalledToolView {
   readonly description: string;
   readonly placement: ToolPlacement;
   readonly iconUrl: string;
+  /** An SVG icon: painted as a mask in the colour around it (`ToolIcon`), so it reads in light and dark. */
+  readonly iconTinted: boolean;
   readonly frameUrl: string | null;
   readonly frameOrigin: string | null;
   readonly releaseSha: string;

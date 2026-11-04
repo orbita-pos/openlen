@@ -44,6 +44,7 @@ import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 // locally here; SidebarMode is otherwise identical member-for-member to what
 // this file declared before.
 export type { SectionView, SidebarMode } from "./rail-model";
+import { ToolIcon } from "./tools/tool-icon";
 import {
   RAIL_CREAR,
   railActiveKey,
@@ -189,7 +190,7 @@ function RailTools({
       <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
       {button("tools", t("rail.tools"), onPage, <ToolsIcon size={ICONO_RAIL} />)}
       {tools.map((tool) =>
-        button(`tool:${tool.id}`, tool.name, () => onTool(tool.id), <img src={tool.iconUrl} alt="" width={ICONO_RAIL + 2} height={ICONO_RAIL + 2} className="rounded-[3px]" />),
+        button(`tool:${tool.id}`, tool.name, () => onTool(tool.id), <ToolIcon url={tool.iconUrl} tinted={tool.iconTinted} size={ICONO_RAIL + 2} className="rounded-[3px]" />),
       )}
     </>
   );

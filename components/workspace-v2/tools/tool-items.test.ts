@@ -12,6 +12,7 @@ const tool = (over: Partial<InstalledToolView> = {}): InstalledToolView => ({
   description: "",
   placement: "rail",
   iconUrl: "/api/tools/a/icon?v=1",
+  iconTinted: true,
   frameUrl: "http://x/?v=1",
   frameOrigin: "http://x",
   releaseSha: "1",
@@ -24,7 +25,7 @@ const tool = (over: Partial<InstalledToolView> = {}): InstalledToolView => ({
 describe("where installed tools show up", () => {
   it("the rail: switched-on rail tools that can open", () => {
     const tools = [tool(), tool({ id: "b", placement: "project" }), tool({ id: "c", enabled: false }), tool({ id: "d", status: "plan_required" })];
-    expect(railToolItems(tools)).toEqual([{ kind: "tool", id: "a", name: "Reservas", iconUrl: "/api/tools/a/icon?v=1" }]);
+    expect(railToolItems(tools)).toEqual([{ kind: "tool", id: "a", name: "Reservas", iconUrl: "/api/tools/a/icon?v=1", iconTinted: true }]);
   });
 
   it("the project's lenses: switched-on project tools that can open", () => {
