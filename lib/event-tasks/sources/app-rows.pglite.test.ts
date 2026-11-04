@@ -29,10 +29,10 @@ const pg = () => base.pg as PGlite;
 beforeEach(async () => {
   const db = new PGlite();
   await db.exec(`
-    CREATE TABLE reservas (id uuid PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now(), dia date NOT NULL DEFAULT current_date, nombre text);
-    INSERT INTO reservas (id, created_at, nombre) VALUES
-      ('00000000-0000-0000-0000-000000000001', '2026-11-03 10:00:00+00', 'Ana'),
-      ('00000000-0000-0000-0000-000000000002', '2026-11-03 11:00:00+00', 'Luis');
+    CREATE TABLE reservas (id uuid PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now(), dia date NOT NULL DEFAULT current_date, hora time, mesa int, nombre text);
+    INSERT INTO reservas (id, created_at, dia, hora, mesa, nombre) VALUES
+      ('00000000-0000-0000-0000-000000000001', '2026-11-03 10:00:00+00', '2026-11-14', '21:00', 4, 'Ana'),
+      ('00000000-0000-0000-0000-000000000002', '2026-11-03 11:00:00+00', '2026-11-15', '20:00', 2, 'Luis');
     CREATE ROLE ro NOLOGIN NOINHERIT;
     GRANT USAGE ON SCHEMA public TO ro;
     GRANT SELECT ON ALL TABLES IN SCHEMA public TO ro;
@@ -61,5 +61,24 @@ describe("app_rows as the production read-only role", () => {
     const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "dia" });
     expect(v.ok).toBe(false);
     if (!v.ok) expect(v.reason).toMatch(/timestamp/);
+  });
+
+  it("reads older rows by their fields, each value compared in its column's type (Task 13)", async () => {
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    if (!v.ok) throw new Error(v.reason);
+    const out = (await appRowsSource.read("p1", { table: "reservas", created_column: "created_at" }, {
+      keys: [],
+      state: v.initialState,
+      match: [{ field: "dia", value: "2026-11-14" }, { field: "hora", value: "21:00" }, { field: "mesa", value: "4" }],
+    })) as { matching: { nombre: string }[] };
+    expect(out.matching.map((r) => r.nombre)).toEqual(["Ana"]);
+  });
+
+  it("a field that isn't a column of the table is said, with the columns there are", async () => {
+    const v = await appRowsSource.validate("p1", { table: "reservas", created_column: "created_at" });
+    if (!v.ok) throw new Error(v.reason);
+    await expect(
+      appRowsSource.read("p1", { table: "reservas", created_column: "created_at" }, { keys: [], state: v.initialState, match: [{ field: "mesa\" OR 1=1 --", value: "4" }] }),
+    ).rejects.toThrow(/no column .*Columns: .*mesa/);
   });
 });

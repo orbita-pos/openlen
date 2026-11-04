@@ -14,7 +14,7 @@ import type { QueryOutcome } from "@/lib/backend/cli-core";
 import { queryLive } from "@/lib/backend/live-read";
 
 import { appRowsParamsSchema } from "./declarations";
-import { SourceError, type EventSource, type SourceChange } from "./types";
+import { MATCHING_MAX, SourceError, type EventSource, type SourceChange, type SourceMatch } from "./types";
 
 export interface AppRowsParams {
   readonly table: string;
@@ -69,6 +69,18 @@ function summaryOf(row: Record<string, unknown>, keyColumn: string): string {
     .slice(0, 3)
     .map(([c, v]) => `${c}: ${v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v)}`)
     .join(" · ");
+}
+
+/** The rows whose fields equal the values. A field is a column of the table (checked against the live schema, then
+ *  quoted); a value is a literal Postgres casts to that column's type, so «21:00» equals a `time` and «4» an `int`. */
+async function matchingRows(projectId: string, params: AppRowsParams, match: readonly SourceMatch[]): Promise<Record<string, unknown>[]> {
+  const columns = objects(
+    await rowsOf(projectId, `SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ${quoteLiteral(params.table)} ORDER BY ordinal_position`),
+  ).map((r) => String(r.column_name));
+  const unknown = match.find((m) => !columns.includes(m.field));
+  if (unknown) throw new SourceError("column_missing", `Table "${params.table}" has no column "${unknown.field}". Columns: ${columns.join(", ")}.`);
+  const where = match.map((m) => `${quoteIdent(m.field)} = ${quoteLiteral(m.value)}`).join(" AND ");
+  return objects(await rowsOf(projectId, `SELECT * FROM ${quoteIdent(params.table)} WHERE ${where} ORDER BY ${quoteIdent(params.created_column)} DESC LIMIT ${MATCHING_MAX}`));
 }
 
 export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
@@ -129,12 +141,13 @@ export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
     return { state: { ...state, cursor: { at: String(last[AT]), key: String(last[KEY]) } }, changes };
   },
 
-  async read(projectId, params, { keys, state }) {
+  async read(projectId, params, { keys, state, match }) {
     const t = quoteIdent(params.table);
     const k = quoteIdent(state.key_column);
     const c = quoteIdent(params.created_column);
     const items = keys.length === 0 ? [] : objects(await rowsOf(projectId, `SELECT * FROM ${t} WHERE ${k}::text IN (${keys.map(quoteLiteral).join(", ")})`));
     const previous = objects(await rowsOf(projectId, `SELECT * FROM ${t} ORDER BY ${c} DESC LIMIT ${BEFORE}`));
-    return { items, previous };
+    if (!match?.length) return { items, previous };
+    return { items, previous, matching: await matchingRows(projectId, params, match) };
   },
 };

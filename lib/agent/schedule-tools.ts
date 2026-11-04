@@ -152,7 +152,7 @@ const SELECTOR_PARAMETERS = {
 
 /** Ours: what `on` adds to `schedule_create`'s description. */
 const ON_SENTENCE =
-  "Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash.";
+  "Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.";
 
 export const SCHEDULE_DECLARATIONS: Record<string, unknown>[] = [
   {

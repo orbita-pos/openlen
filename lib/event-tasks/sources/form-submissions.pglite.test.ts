@@ -112,4 +112,14 @@ describe("formSubmissionsSource", () => {
     expect(read.items).toEqual([{ id, data: { nombre: "Ana" } }]);
     expect(read.previous).toHaveLength(2);
   });
+
+  it("read finds older submissions by their fields (Task 13)", async () => {
+    await submit("p1", "fab12", { nombre: "Ana", fecha: "2026-11-14" });
+    await submit("p1", "fab12", { nombre: "Luis", fecha: "2026-11-15" });
+    await submit("p2", "fab12", { nombre: "Otro", fecha: "2026-11-14" });
+    const out = (await formSubmissionsSource.read("p1", { form: "fab12" }, { keys: [], state: { cursor: { at: "-infinity", id: "" } }, match: [{ field: "fecha", value: "2026-11-14" }] })) as {
+      matching: { data: Record<string, string> }[];
+    };
+    expect(out.matching.map((r) => r.data.nombre)).toEqual(["Ana"]);
+  });
 });

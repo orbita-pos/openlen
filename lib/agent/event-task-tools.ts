@@ -18,11 +18,18 @@ const TITLE_MAX = 80;
 export const EVENT_TASK_TOOL_DECLARATIONS: Record<string, unknown>[] = [
   {
     name: SOURCE_READ,
-    description: "Read the changed items from this task's source by their keys, with the items just before them for comparison.",
+    description:
+      "Read this task's source: the changed items by their keys, with the newest items before them; and, with match, the items whose fields equal the given values (at most 50, newest first) — how to find an older item a change relates to, such as another booking for the same date, time and table. The source's data comes only through this tool.",
     parameters: {
       type: "OBJECT",
-      properties: { keys: { type: "ARRAY", items: { type: "STRING" }, description: "The keys of the changed items, as the change shows them." } },
-      required: ["keys"],
+      properties: {
+        keys: { type: "ARRAY", items: { type: "STRING" }, description: "The keys of the changed items (their id), as the change shows them." },
+        match: {
+          type: "ARRAY",
+          description: "Optional: fields that must all equal these values, as text; each is compared in its own type.",
+          items: { type: "OBJECT", properties: { field: { type: "STRING" }, value: { type: "STRING" } }, required: ["field", "value"] },
+        },
+      },
     },
   },
   {
@@ -52,7 +59,7 @@ const refuse = (error: string): ToolOutcome => ({ response: { ok: false, error }
 
 export interface EventTaskToolDeps {
   notify(card: { title: string; summary: string; proposedAction: string }): Promise<{ cardId: string }>;
-  readSource(keys: readonly string[]): Promise<unknown>;
+  readSource(keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
 }
 
 export type EventTaskToolRunner = ((name: string, args: Record<string, unknown>) => Promise<ToolOutcome>) & { notified(): boolean };
@@ -63,9 +70,12 @@ export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunne
   const run = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
     if (name === SOURCE_READ) {
       const keys = Array.isArray(args.keys) ? args.keys.map(String) : [];
+      const match = Array.isArray(args.match)
+        ? args.match.flatMap((m) => (m && typeof m === "object" && typeof (m as { field?: unknown }).field === "string" ? [{ field: (m as { field: string }).field, value: String((m as { value?: unknown }).value ?? "") }] : []))
+        : [];
       let read: unknown;
       try {
-        read = await deps.readSource(keys);
+        read = await deps.readSource(keys, match);
       } catch (err) {
         // A read that fails is this tool's answer; the judge can still decide on what it has.
         return refuse(`The source could not be read: ${err instanceof Error ? err.message : String(err)}`);

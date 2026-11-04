@@ -11,7 +11,7 @@ import { db, schema } from "@/lib/db";
 import { readFormIds } from "@/lib/publish/form-identity";
 
 import { formSubmissionsParamsSchema } from "./declarations";
-import type { EventSource, SourceChange } from "./types";
+import { MATCHING_MAX, type EventSource, type SourceChange } from "./types";
 
 export interface FormSubmissionsParams {
   readonly form?: string;
@@ -87,9 +87,18 @@ export const formSubmissionsSource: EventSource<FormSubmissionsParams, FormSubmi
     return { state: { cursor: { at: last.at, id: last.id } }, changes };
   },
 
-  async read(projectId, params, { keys }) {
+  async read(projectId, params, { keys, match }) {
     const items = keys.length === 0 ? [] : await db.select({ id: f.id, data: f.data }).from(f).where(and(eq(f.projectId, projectId), inArray(f.id, [...keys])));
     const previous = await db.select({ id: f.id, data: f.data }).from(f).where(ofForm(projectId, params.form)).orderBy(desc(f.createdAt)).limit(BEFORE);
-    return { items, previous };
+    if (!match?.length) return { items, previous };
+    // A field of what the visitor sent, as text: a form's values are strings.
+    const fields = match.map((m) => sql`${f.data}->>${m.field} = ${m.value}`);
+    const matching = await db
+      .select({ id: f.id, data: f.data })
+      .from(f)
+      .where(and(ofForm(projectId, params.form), ...fields))
+      .orderBy(desc(f.createdAt))
+      .limit(MATCHING_MAX);
+    return { items, previous, matching };
   },
 };
