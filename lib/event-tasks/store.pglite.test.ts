@@ -62,6 +62,16 @@ describe("event tasks", () => {
     expect((await store.claimDueChecks(new Date(NOW.getTime() + 60_000), 20)).map((t) => t.id)).toEqual([task.id]);
   });
 
+  it("a source's own check interval sets the next check", async () => {
+    const rows = await store.createEventTask(eventInput());
+    const forms = await store.createEventTask(eventInput({ source: "form_submissions", params: {} }));
+    const every = (s: string) => (s === "form_submissions" ? 300_000 : 60_000);
+    const claimed = await store.claimDueChecks(NOW, 20, every);
+    const next = new Map(claimed.map((t) => [t.id, t.nextCheckAt.getTime()]));
+    expect(next.get(forms.id)).toBe(NOW.getTime() + 300_000);
+    expect(next.get(rows.id)).toBe(NOW.getTime() + 60_000);
+  });
+
   it("a paused task is not claimed", async () => {
     const task = await store.createEventTask(eventInput());
     await store.pauseEventTask("p1", task.id, NOW);

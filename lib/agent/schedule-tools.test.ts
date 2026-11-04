@@ -211,6 +211,12 @@ describe("event tasks through the schedule tools", () => {
     expect(events.create).not.toHaveBeenCalled();
   });
 
+  it("validate receives the turn's time zone and the owner", async () => {
+    const { deps, events } = withEvents();
+    await toolScheduleCreate(owner, deps, ROWS_ON);
+    expect(events.validate).toHaveBeenCalledWith("app_rows", "p1", { table: "reservas", created_column: "created_at" }, { timeZone: "America/Mexico_City", ownerId: "owner" });
+  });
+
   it("saves the task with its source, params and first state, as the owner who asked", async () => {
     const { deps, events } = withEvents();
     const out = result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { ...ROWS_ON.on, conditions: [{ field: "estado", op: "eq", value: "confirmada" }] } }));

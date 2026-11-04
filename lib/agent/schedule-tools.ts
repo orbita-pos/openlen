@@ -68,7 +68,7 @@ export interface ScheduledTasksDeps {
 
 export interface EventTasksToolDeps {
   /** The source's own check (lib/event-tasks/sources): whether it can be watched, and its first state. */
-  validate(source: EventSourceKind, projectId: string, params: Record<string, unknown>): Promise<{ ok: true; initialState: unknown } | { ok: false; reason: string }>;
+  validate(source: EventSourceKind, projectId: string, params: Record<string, unknown>, ctx: { readonly timeZone: string; readonly ownerId: string }): Promise<{ ok: true; initialState: unknown } | { ok: false; reason: string }>;
   create: typeof createEventTask;
   list: typeof listEventTasks;
   get: typeof getEventTask;
@@ -327,7 +327,8 @@ async function createEventTaskFrom(session: AgentSession, sd: ScheduledTasksDeps
   if (!isOwner(session)) return { code: "owner_only", message: OWNER_ONLY };
   const on = parseOn(args.on);
   if (!on.ok) return { code: "invalid_source", message: on.message };
-  const checked = await events.validate(on.source, session.projectId, on.params);
+  // The source is told the creator's zone (a day is local) and the owner, whose accounts it may use.
+  const checked = await events.validate(on.source, session.projectId, on.params, { timeZone: session.zonaHoraria ?? FALLBACK_ZONE, ownerId: session.userId });
   if (!checked.ok) return { code: "invalid_source", message: checked.reason };
   const row = await events.create({
     projectId: session.projectId,

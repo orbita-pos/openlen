@@ -94,6 +94,33 @@ function setup(
 beforeEach(() => forgetJudging());
 
 describe("tick", () => {
+  it("observe receives the task's time zone, the moment and the owner", async () => {
+    const s = setup();
+    let seen: unknown;
+    s.deps.sourceOf = () =>
+      ({
+        observe: async (_p: string, _params: unknown, _state: unknown, ctx: unknown) => {
+          seen = ctx;
+          return { state: {}, changes: [] };
+        },
+      }) as unknown as EventSource<unknown, unknown>;
+    await tick(s.deps);
+    expect(seen).toEqual({ timeZone: s.tasks[0]!.timeZone, now: NOW, ownerId: "owner" });
+  });
+
+  it("the claim asks each task's source for its interval", async () => {
+    const s = setup();
+    let every: ((source: EventTaskRow["source"]) => number) | undefined;
+    s.deps.store.claimDueChecks = async (_now, _limit, everyOf) => {
+      every = everyOf;
+      return [];
+    };
+    s.deps.sourceOf = (kind) => ({ checkEveryMs: kind === "app_rows" ? 300_000 : undefined }) as unknown as EventSource<unknown, unknown>;
+    await tick(s.deps);
+    expect(every?.("app_rows")).toBe(300_000);
+    expect(every?.("form_submissions")).toBe(60_000);
+  });
+
   it("an observation without changes writes no record and starts no judge", async () => {
     const s = setup();
     await tick(s.deps);

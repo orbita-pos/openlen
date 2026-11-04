@@ -48,17 +48,30 @@ export class SourceError extends Error {
   }
 }
 
+/** Where a card's reply can go (spec local 2026-11-04-hazlo, §7.1, §7.4): DeepSeek's channels — the source's write side. */
+export type ReplyChannel = "email" | "chat" | "github";
+
+/** What a source is told about the task it serves: the creator's zone (a day is local), the moment, and the owner
+ *  whose accounts it may use (the GitHub App's installation). */
+export interface SourceContext {
+  readonly timeZone: string;
+  readonly now: Date;
+  readonly ownerId: string;
+}
+
 export interface EventSource<P, S> {
   readonly kind: EventSourceKind;
   /** Its parameters' schema (./declarations.ts, shared with `schedule_create`'s `on`). */
   readonly paramsSchema: z.ZodType<P>;
   /** What can be done with what it sees, beyond work in the project (spec local 2026-11-04-hazlo, §7.1): DeepSeek's
    *  channels. A reply by email also needs the project's email ready (lib/event-tasks/actions/available.ts). */
-  readonly offers: { readonly dataChange: boolean; readonly replyByEmail: boolean };
+  readonly offers: { readonly dataChange: boolean; readonly replies: readonly ReplyChannel[] };
+  /** How often it is looked at; CHECK_EVERY_MS (store.ts) when absent. */
+  readonly checkEveryMs?: number;
   /** Whether a task can watch this, and its first state: what exists now never fires. */
-  validate(projectId: string, params: P): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
-  observe(projectId: string, params: P, state: S): Promise<Observation<S>>;
+  validate(projectId: string, params: P, ctx: SourceContext): Promise<{ ok: true; initialState: S } | { ok: false; reason: string }>;
+  observe(projectId: string, params: P, state: S, ctx: SourceContext): Promise<Observation<S>>;
   /** The judge's read: the candidate's items, the newest before them, and — with `match` — the items whose fields
    *  equal those values, however old (Task 13: a clash with a booking from before the task). */
-  read(projectId: string, params: P, args: { readonly keys: readonly string[]; readonly state: S; readonly match?: readonly SourceMatch[] }): Promise<unknown>;
+  read(projectId: string, params: P, args: { readonly keys: readonly string[]; readonly state: S; readonly match?: readonly SourceMatch[]; readonly ctx: SourceContext }): Promise<unknown>;
 }

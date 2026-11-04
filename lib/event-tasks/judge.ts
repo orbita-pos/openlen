@@ -53,9 +53,9 @@ export interface JudgeDeps {
     providersUsed(): readonly ProviderUse[];
   };
   runReadTool(session: AgentSession, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
-  readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
+  readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[], ownerId: string): Promise<unknown>;
   /** What this task's card may propose (lib/event-tasks/actions/available.ts). */
-  available(task: EventTaskRow): Promise<AvailableActions>;
+  available(task: EventTaskRow, ownerId: string): Promise<AvailableActions>;
   /** The watched table's columns, read-only; null without one. */
   tableInfo(task: EventTaskRow): Promise<{ readonly columns: readonly TableColumn[] } | null>;
   readRow(task: EventTaskRow, key: string): Promise<Record<string, unknown> | null>;
@@ -109,21 +109,22 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
       leidos: new Map(),
     };
     // What its card may propose (spec local 2026-11-04-hazlo, §7.1): the source's actions, the watched table's columns.
-    const available = await d.available(task);
+    const available = await d.available(task, ownerId);
+    const replyByEmail = available.replyChannels.includes("email");
     const params = task.params as { table?: string; created_column?: string };
     const keyColumn = (task.state as { key_column?: string } | null)?.key_column ?? null;
     const info = available.dataChange && params.table ? await d.tableInfo(task) : null;
     const editable = info ? info.columns.map((c) => c.name).filter((n) => n !== keyColumn && n !== params.created_column) : [];
-    const eventTools = eventTaskToolDeclarations({ dataChange: info !== null, reply: available.reply, ...(info && params.table ? { table: params.table, columns: editable } : {}) });
+    const eventTools = eventTaskToolDeclarations({ dataChange: info !== null, reply: replyByEmail, ...(info && params.table ? { table: params.table, columns: editable } : {}) });
     const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...eventTools];
     const runEventTool = eventTaskToolRunner({
       notify: async (c) => ({ cardId: (await d.createCard({ task, recordId: record.id, title: c.title, summary: c.summary, actions: c.actions, subjectKey: c.subjectKey })).id }),
-      readSource: (keys, match) => d.readSource(task, keys, match),
+      readSource: (keys, match) => d.readSource(task, keys, match, ownerId),
       keyColumn,
       seen: seenOfCandidate(record.candidate, keyColumn),
       validate: (input, seen) =>
         validateActions(input, {
-          available: { ...available, dataChange: info !== null },
+          available: { project: true, dataChange: info !== null, reply: replyByEmail },
           ...(params.table ? { table: params.table } : {}),
           ...(keyColumn ? { keyColumn } : {}),
           ...(params.created_column ? { createdColumn: params.created_column } : {}),
@@ -219,8 +220,9 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
       };
     },
     runReadTool: (session, name, args) => tools.runAgentTool(session, deps, name, args),
-    readSource: (task, keys, match) => sourceOf(task.source).read(task.projectId, task.params, { keys, state: task.state, match }),
-    available: (task) => available.availableActions(task, available.defaultAvailableDeps()),
+    readSource: (task, keys, match, ownerId) =>
+      sourceOf(task.source).read(task.projectId, task.params, { keys, state: task.state, match, ctx: { timeZone: task.timeZone, now: new Date(), ownerId } }),
+    available: (task, ownerId) => available.availableActions(task, ownerId, available.defaultAvailableDeps()),
     tableInfo: (task) => production.tableColumns(task.projectId, (task.params as { table: string }).table),
     readRow: (task, key) => production.readRow(task.projectId, (task.params as { table: string }).table, (task.state as { key_column: string }).key_column, key),
     castCheck: (task, column, value) => production.castCheck(task.projectId, (task.params as { table: string }).table, column, value),

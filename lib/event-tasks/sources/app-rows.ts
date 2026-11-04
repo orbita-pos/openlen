@@ -87,7 +87,7 @@ export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
   kind: "app_rows",
   paramsSchema,
   // A row of the watched table can be changed by the owner's «Aplicar»; a row with an address can be answered.
-  offers: { dataChange: true, replyByEmail: true },
+  offers: { dataChange: true, replies: ["email"] },
 
   async validate(projectId, params) {
     const columns = await queryLive(

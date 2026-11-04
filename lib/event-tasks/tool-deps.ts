@@ -10,9 +10,9 @@ import { SourceError } from "./sources/types";
 import { createEventTask, deleteEventTask, getEventTask, listEventTasks, updateEventTask } from "./store";
 
 export const eventTasksToolDeps: EventTasksToolDeps = {
-  async validate(source, projectId, params) {
+  async validate(source, projectId, params, ctx) {
     try {
-      return await sourceOf(source).validate(projectId, params);
+      return await sourceOf(source).validate(projectId, params, { ...ctx, now: new Date() });
     } catch (error) {
       // A source that fails in a way the owner can understand says so; anything else is the tool's internal error.
       if (error instanceof SourceError) return { ok: false, reason: error.message };
