@@ -35,15 +35,18 @@ export function decideEnvironment(i: {
   referer: string | null;
   lienzoLabel: string | null;
   hasLive: boolean;
+  /** The source is an installed, switched-on TOOL of this project (spec local 2026-11-04-herramientas-hechas-por-len,
+   *  §4.5; `isInstalledToolOrigin`): its own production. */
+  toolOfProject?: boolean;
 }): EnvironmentDecision {
   const fallback: Environment = i.hasLive ? "live" : "draft";
   const source = parse(i.origin) ?? parse(i.referer);
   if (!source) return { kind: "env", environment: fallback, attributed: false };
   const label = etiquetaDelHost(source.host);
   if (label) {
-    return label === i.lienzoLabel
-      ? { kind: "env", environment: "draft", attributed: true }
-      : { kind: "forbidden", message: "This canvas does not belong to this project." };
+    if (label === i.lienzoLabel) return { kind: "env", environment: "draft", attributed: true };
+    if (i.toolOfProject) return { kind: "env", environment: fallback, attributed: true };
+    return { kind: "forbidden", message: "This canvas does not belong to this project." };
   }
   if (LOOPBACK_ORIGIN.test(source.origin)) return { kind: "env", environment: "draft", attributed: true };
   return { kind: "env", environment: fallback, attributed: true };
