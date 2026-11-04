@@ -66,6 +66,13 @@ describe("automationNotifyDeclaration by channel", () => {
     expect(d.parameters.properties.actions.description).toContain("conversation_id");
   });
 
+  it("a chat or GitHub reply says it goes out as written when the owner accepts (the real run's judge told the owner to send it himself)", () => {
+    for (const channel of ["chat", "github"] as const) {
+      const d = automationNotifyDeclaration({ dataChange: false, replyChannels: [channel] }) as Decl;
+      expect(d.parameters.properties.actions.description).toMatch(/exactly as written when the owner accepts/);
+    }
+  });
+
   it("github says the comment is the OpenLen app's", () => {
     const d = automationNotifyDeclaration({ dataChange: false, replyChannels: ["github"] }) as Decl;
     expect(d.parameters.properties.actions.description).toContain("OpenLen GitHub app");

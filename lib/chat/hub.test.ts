@@ -59,3 +59,17 @@ describe("chat hub", () => {
     expect(h.isUserOnline("unknown-project", "unknown-user")).toBe(false);
   });
 });
+
+describe("one hub per process (plan B real run, 2026-11-04)", () => {
+  it("a second copy of the module is the same hub: the watcher's replies and every route reach the same live streams", async () => {
+    const first = await import("@/lib/chat/hub");
+    vi.resetModules();
+    const second = await import("@/lib/chat/hub");
+    expect(second.hub).toBe(first.hub);
+    const got = vi.fn();
+    const off = first.hub.subscribe("c-shared", { id: "s-shared", userId: "u1", send: got });
+    second.hub.publish("c-shared", { type: "message", message: { id: "m-shared" } as never });
+    expect(got).toHaveBeenCalledTimes(1);
+    off();
+  });
+});

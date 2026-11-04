@@ -60,8 +60,10 @@ export function automationNotifyDeclaration(a: { readonly dataChange: boolean; r
       : []),
     ...(onlyEmail ? ["reply: an email to a person whose address you read in this turn, sent exactly as written when the owner accepts."] : []),
     ...(email && !onlyEmail ? ["reply by email: channel email, to = an address you read in this turn, with a subject and a body, sent exactly as written when the owner accepts."] : []),
-    ...(channels.includes("chat") ? ["reply in the chat: channel chat, to = the conversation_id you read; body is posted in that conversation as the business."] : []),
-    ...(channels.includes("github") ? ["reply on GitHub: channel github, to = the number of the issue or pull request you read; body is posted as a comment by the OpenLen GitHub app."] : []),
+    ...(channels.includes("chat") ? ["reply in the chat: channel chat, to = the conversation_id you read; body is posted in that conversation as the business, exactly as written when the owner accepts."] : []),
+    ...(channels.includes("github")
+      ? ["reply on GitHub: channel github, to = the number of the issue or pull request you read; body is posted as a comment by the OpenLen GitHub app, exactly as written when the owner accepts."]
+      : []),
   ];
   const properties: Record<string, unknown> = {
     kind: { type: "STRING", enum: kinds },
