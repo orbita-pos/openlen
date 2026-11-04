@@ -15,7 +15,14 @@ export interface ToolDataChange {
   readonly key: Readonly<Record<string, unknown>>;
   readonly set: Readonly<Record<string, unknown>>;
   readonly before: Readonly<Record<string, unknown>>;
+  readonly projectTitle?: string;
 }
+
+/** The row, by its key: `id = 12`. */
+const keyText = (key: Readonly<Record<string, unknown>>) =>
+  Object.entries(key)
+    .map(([col, value]) => `${col} = ${String(value)}`)
+    .join(", ");
 
 export function DataChangeDialog({
   open,
@@ -44,6 +51,9 @@ export function DataChangeDialog({
       closeLabel={t("tools.change.cancel")}
     >
       <div className="rounded-lg border bd px-3 py-2">
+        <p data-tool-change-key className="font-mono text-[11.5px] fg-muted">
+          {keyText(change.key)}
+        </p>
         <DataChangeRows change={change} />
       </div>
       <div className="mt-4 flex justify-end gap-2">

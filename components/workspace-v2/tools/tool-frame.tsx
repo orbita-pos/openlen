@@ -49,7 +49,7 @@ export function ToolFrame({
 
   useToolBridgeHost({ iframe, frameOrigin, caller, context, onPrompt, onConfirmChange });
 
-  const nameOf = (id: string) => projectTitle?.(id) ?? (context.project?.id === id ? context.project.title : id);
+  const nameOf = (change: ToolDataChange) => change.projectTitle ?? projectTitle?.(change.projectId) ?? change.projectId;
   return (
     <>
       <iframe ref={iframe} src={src} title={title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} className="h-full w-full border-0 bg-[var(--bg)]" data-tool-frame={caller && "installationId" in caller ? caller.installationId : "draft"} />
@@ -57,7 +57,7 @@ export function ToolFrame({
         <DataChangeDialog
           open
           toolTitle={title}
-          projectTitle={nameOf(asking.change.projectId)}
+          projectTitle={nameOf(asking.change)}
           change={asking.change}
           onAccept={() => settle(true)}
           onCancel={() => settle(false)}

@@ -79,7 +79,7 @@ describe("createToolBridgeHost", () => {
     const s = setup();
     const change = { projectId: "p1", table: "reservas", key: { id: 12 }, set: { estado: "ok" }, before: { estado: "no" } };
     await s.send(rpc(5, "update", change));
-    expect(s.opts.onConfirmChange).toHaveBeenCalledWith(change);
+    expect(s.opts.onConfirmChange).toHaveBeenCalledWith({ ...change, projectTitle: "Café" });
     expect(s.fetchImpl).not.toHaveBeenCalled();
     expect(s.answered()[0]).toMatchObject({ id: 5, result: { status: "declined" } });
   });
@@ -91,6 +91,22 @@ describe("createToolBridgeHost", () => {
     await s.send(rpc(6, "update", change));
     expect(fetchImpl).toHaveBeenCalledWith("/api/tools/data-change", expect.objectContaining({ method: "POST" }));
     expect(s.answered()[0]).toMatchObject({ id: 6, result: { status: "applied", row: { id: 12 } } });
+  });
+
+  it("update: the dialog gets the title of a project the tool listed, not just its id", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [{ id: "p2", title: "Panadería", role: "dueno" }], channel: "openlen-tool" })));
+    const s = setup({ fetchImpl: fetchImpl as unknown as typeof fetch });
+    await s.send(rpc(1, "projects"));
+    const change = { projectId: "p2", table: "reservas", key: { id: 3 }, set: { estado: "ok" }, before: { estado: "no" } };
+    await s.send(rpc(2, "update", change));
+    expect(s.opts.onConfirmChange).toHaveBeenCalledWith({ ...change, projectTitle: "Panadería" });
+  });
+
+  it("update: the project the tool was opened in is named by the context", async () => {
+    const s = setup();
+    const change = { projectId: "p1", table: "reservas", key: { id: 3 }, set: { estado: "ok" }, before: { estado: "no" } };
+    await s.send(rpc(3, "update", change));
+    expect(s.opts.onConfirmChange).toHaveBeenCalledWith({ ...change, projectTitle: "Café" });
   });
 
   it("update in the draft canvas: refused, without OpenLen's dialog and without the server", async () => {

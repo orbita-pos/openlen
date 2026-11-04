@@ -18,7 +18,8 @@ import {
 } from "@/lib/tools/bridge/protocol";
 
 export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string };
-export type ToolChange = DataChange & { readonly projectId: string };
+/** What OpenLen's dialog shows: the change, and the project's title when the bridge has seen it. */
+export type ToolChange = DataChange & { readonly projectId: string; readonly projectTitle?: string };
 
 export interface BridgeHostOptions {
   frame(): Window | null;
@@ -56,6 +57,8 @@ function record(v: unknown): Record<string, unknown> {
 }
 
 export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: MessageEvent): Promise<void>; notifyContext(): void } {
+  // Titles of the projects the tool has seen (its `projects()`), so the dialog names a project, not an id.
+  const titles = new Map<string, string>();
   const doFetch = o.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const post = (message: unknown) => {
     const frame = o.frame();
@@ -93,13 +96,21 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
         // The draft never writes production: refused here, before OpenLen's dialog (the server refuses it too).
         if ("draftProjectId" in o.caller) return { result: { status: "refused", reason: "draft_no_production" } };
         const change = { projectId: String(p.projectId ?? ""), table: String(p.table ?? ""), key: record(p.key), set: record(p.set), before: record(p.before) };
-        if (!(await o.onConfirmChange(change))) return { result: { status: "declined" } };
+        const here = o.context().project;
+        const projectTitle = titles.get(change.projectId) ?? (here?.id === change.projectId ? here.title : undefined);
+        if (!(await o.onConfirmChange(projectTitle ? { ...change, projectTitle } : change))) return { result: { status: "declined" } };
         return relay("/api/tools/data-change", { change });
       }
       default: {
         const r = await relay("/api/tools/bridge", { request: req });
         if ("error" in r) return r;
         const rpc = record(r.result);
+        if (req.method === "projects" && Array.isArray(rpc.result)) {
+          for (const item of rpc.result) {
+            const it = record(item);
+            if (typeof it.id === "string" && typeof it.title === "string") titles.set(it.id, it.title);
+          }
+        }
         return rpc.error ? { error: rpc.error as BridgeError } : { result: rpc.result };
       }
     }
