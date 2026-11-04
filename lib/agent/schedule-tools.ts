@@ -43,6 +43,7 @@ import type { createTask, deleteTask, listTasks, updateTask } from "@/lib/schedu
 import { invalidInterval, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
 import { ON_DECLARATION, parseOn } from "@/lib/event-tasks/sources/declarations";
+import { eventTaskPatch } from "@/lib/event-tasks/update";
 import type { createEventTask, deleteEventTask, EventSourceKind, EventTaskRow, getEventTask, listEventTasks, updateEventTask } from "@/lib/event-tasks/store";
 
 export const SCHEDULE_CREATE = "schedule_create";
@@ -338,7 +339,6 @@ async function createEventTaskFrom(session: AgentSession, sd: ScheduledTasksDeps
 
 /** Ours: a form task doesn't replace the email of each submission (spec §7.6). */
 const FORM_EMAIL_NOTE = "The owner still gets an email for each submission of this form.";
-const EVENT_UPDATE_KEYS = new Set(["id", "title", "prompt"]);
 
 export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   return guarded(async () => {
@@ -359,11 +359,9 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
     if (!sd) return internalError();
     const event = sd.events && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
     if (event && sd.events) {
-      if (Object.keys(args).some((k) => !EVENT_UPDATE_KEYS.has(k))) {
-        return { code: "invalid_selector", message: "An event task changes only its title and prompt; to watch something else, create a new task." };
-      }
-      const patch = { ...(typeof args.title === "string" ? { title: scheduleTitle(args.title) } : {}), ...(typeof args.prompt === "string" ? { prompt: args.prompt } : {}) };
-      const row = await sd.events.update(session.projectId, event.id, patch, new Date(sd.now()));
+      const change = eventTaskPatch(args);
+      if (!change.ok) return change.error;
+      const row = await sd.events.update(session.projectId, event.id, change.patch, new Date(sd.now()));
       return row ? eventView(row, await sd.events.latestCards(row.id, 3)) : { id: args.id, code: "schedule_not_found", message: "No such schedule." };
     }
     return updateScheduledTask(session.projectId, args, sd);

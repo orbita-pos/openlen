@@ -6,6 +6,7 @@
 import "server-only";
 
 import type { launchEventTaskTurn } from "@/lib/agent/turnos-desde-el-servidor";
+import type { EventTaskOrigin } from "@/lib/projects/types";
 
 import type { Decision } from "./cards";
 import type { EventTaskCardRow, EventTaskRow } from "./store";
@@ -32,7 +33,11 @@ export interface AcceptDeps {
   newRowId(): string;
 }
 
-export type AcceptResult = { ok: true; status: "accepted" | "dismissed" } | { ok: false; reason: "not_pending" | "not_found" };
+/** An accepted card carries what the chat needs to paint its turn running and follow it (a code thread's way). */
+export type AcceptResult =
+  | { ok: true; status: "dismissed" }
+  | { ok: true; status: "accepted"; rowId: string; text: string; origin: EventTaskOrigin }
+  | { ok: false; reason: "not_pending" | "not_found" };
 
 export async function decideAndLaunch(o: { readonly projectId: string; readonly cardId: string; readonly action: "accept" | "dismiss"; readonly actorId: string }, deps: AcceptDeps): Promise<AcceptResult> {
   const now = deps.now();
@@ -45,12 +50,14 @@ export async function decideAndLaunch(o: { readonly projectId: string; readonly 
   const task = await deps.getTask(card.taskId);
   if (!task) return { ok: false, reason: "not_found" };
   const rowId = deps.newRowId();
+  const text = acceptedTurnPrompt(task.locale, task.title);
+  const origin: EventTaskOrigin = { kind: "event_task", taskId: task.id, cardId: card.id, title: task.title };
   deps.launch({
     userId: o.actorId,
     projectId: o.projectId,
-    texto: acceptedTurnPrompt(task.locale, task.title),
+    texto: text,
     framing: acceptedFraming({ card, task, actorName: await deps.nameOf(o.actorId), at: now.toISOString() }),
-    origin: { kind: "event_task", taskId: task.id, cardId: card.id, title: task.title },
+    origin,
     timeZone: task.timeZone,
     locale: task.locale,
     filaId: rowId,
@@ -60,7 +67,7 @@ export async function decideAndLaunch(o: { readonly projectId: string; readonly 
       console.warn(`[event-tasks] the accepted turn of card ${card.id} did not run`, fallo?.code ?? "");
     },
   });
-  return { ok: true, status: "accepted" };
+  return { ok: true, status: "accepted", rowId, text, origin };
 }
 
 export async function defaultAcceptDeps(): Promise<AcceptDeps> {
