@@ -3840,6 +3840,16 @@ describe("POST /api/agent — Len's subagents", () => {
     mocks.hayTurnoVivoEnElProyecto.mockReturnValue(false);
   });
 
+  it("in a tool project, a child's session knows it is one (spec local 2026-11-04-herramientas-hechas-por-len, §4.8)", async () => {
+    mocks.loadProject.mockResolvedValue({
+      title: "Reservas", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" }, tool: { bornAt: "2026-11-04T00:00:00Z" } },
+    });
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => null;" });
+    await pedir();
+    expect((launcherArgs()[0] as unknown as { sessionBase: { tool?: boolean } }).sessionBase.tool).toBe(true);
+  });
+
   it("the turn's tools get the launcher, and a child's event reaches the chat as `subagent`", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       await args.runTool("subagent", { description: "Find the menu", prompt: "Where is it?", subagent_type: "Explore" });
