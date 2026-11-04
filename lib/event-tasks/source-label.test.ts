@@ -15,6 +15,11 @@ describe("sourceLabel", () => {
     expect(sourceLabel({ source: "app_rows", params: { table: "reservas", after_hours: 24 } })).toEqual({ key: "sourceRowsAfter", values: { table: "reservas", hours: "24" } });
   });
 
+  it("traffic names its page or the site", () => {
+    expect(sourceLabel({ source: "traffic", params: { page: "menu" } })).toEqual({ key: "sourceTraffic", values: { page: "menu" } });
+    expect(sourceLabel({ source: "traffic", params: {} })).toEqual({ key: "sourceTrafficSite" });
+  });
+
   it("app_users says sign-ups", () => {
     expect(sourceLabel({ source: "app_users", params: {} })).toEqual({ key: "sourceAppUsers" });
   });

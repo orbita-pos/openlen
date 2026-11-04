@@ -261,6 +261,12 @@ describe("event tasks through the schedule tools", () => {
     expect(result(await toolScheduleCreate(owner, deps, on(24)))).toMatchObject({ kind: "event", params: expect.objectContaining({ after_hours: 24 }) });
   });
 
+  it("schedule_create takes on.source traffic, and refuses a threshold under 5 %", async () => {
+    const { deps } = withEvents();
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "traffic", change_percent: 40, direction: "down" } }))).toMatchObject({ kind: "event", source: "traffic" });
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "traffic", change_percent: 1 } })).code).toBe("invalid_source");
+  });
+
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");

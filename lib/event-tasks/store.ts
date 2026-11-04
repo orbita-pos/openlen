@@ -11,7 +11,7 @@ import { and, asc, count, desc, eq, getTableColumns, inArray, isNull, lt, lte, s
 import { db, schema } from "@/lib/db";
 import { MAX_ACTIVE_TASKS_PER_PROJECT, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
 
-export type EventSourceKind = "app_rows" | "form_submissions" | "visitor_chat" | "app_users";
+export type EventSourceKind = "app_rows" | "form_submissions" | "visitor_chat" | "app_users" | "traffic";
 export type EventTaskRow = typeof schema.eventTasks.$inferSelect;
 export type EventTaskRecordRow = typeof schema.eventTaskRecords.$inferSelect;
 export type EventTaskCardRow = typeof schema.eventTaskCards.$inferSelect;

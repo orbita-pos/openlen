@@ -602,6 +602,8 @@
     "sourceChatMessages": "Nachrichten im Chat deiner Seite",
     "sourceChatSignups": "Anmeldungen im Chat deiner Seite",
     "sourceAppUsers": "Anmeldungen in deiner App",
+    "sourceTraffic": "Besuche von {page}",
+    "sourceTrafficSite": "Besuche der Website",
     "conditions": "Bedingungen",
     "recDelivered": "Len hat nachgesehen",
     "recNotified": "Len hat Bescheid gegeben",

@@ -59,6 +59,7 @@ export interface ClockEventTask {
     readonly form?: string;
     readonly watch?: string;
     readonly after_hours?: number;
+    readonly page?: string;
     readonly conditions?: readonly { readonly field: string; readonly op: string; readonly value?: string | number }[];
   };
   readonly lastCheckedAt: string | null;
