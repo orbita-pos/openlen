@@ -9,12 +9,16 @@ import "server-only";
 
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { ProviderUse } from "@/lib/agent/brain";
-import { AUTOMATION_NOTIFY, EVENT_TASK_TOOL_DECLARATIONS, SOURCE_READ, eventTaskToolRunner } from "@/lib/agent/event-task-tools";
+import { AUTOMATION_NOTIFY, SOURCE_READ, eventTaskToolDeclarations, eventTaskToolRunner } from "@/lib/agent/event-task-tools";
 import { runAgentLoop, type AgentLoopResult } from "@/lib/agent/loop";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { candidateMessage, JUDGE_SYSTEM } from "./framing";
+import type { AvailableActions } from "./actions/available";
+import type { TableColumn } from "./actions/production";
+import { seenOfCandidate } from "./actions/seen";
 import type { CardAction } from "./actions/types";
+import { validateActions } from "./actions/validate";
 import type { EventTaskCardRow, EventTaskRecordRow, EventTaskRow } from "./store";
 import type { Candidate } from "./trigger";
 
@@ -41,6 +45,12 @@ export interface JudgeDeps {
   };
   runReadTool(session: AgentSession, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
+  /** What this task's card may propose (lib/event-tasks/actions/available.ts). */
+  available(task: EventTaskRow): Promise<AvailableActions>;
+  /** The watched table's columns, read-only; null without one. */
+  tableInfo(task: EventTaskRow): Promise<{ readonly columns: readonly TableColumn[] } | null>;
+  readRow(task: EventTaskRow, key: string): Promise<Record<string, unknown> | null>;
+  castCheck(task: EventTaskRow, column: string, value: string): Promise<string | null>;
   createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; actions: readonly CardAction[]; subjectKey: string }): Promise<EventTaskCardRow>;
   decisionsSince(taskId: string, since: Date): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
@@ -85,13 +95,32 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
       busquedasVaciasSeguidas: 0,
       leidos: new Map(),
     };
-    const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...EVENT_TASK_TOOL_DECLARATIONS];
+    // What its card may propose (spec local 2026-11-04-hazlo, §7.1): the source's actions, the watched table's columns.
+    const available = await d.available(task);
+    const params = task.params as { table?: string; created_column?: string };
+    const keyColumn = (task.state as { key_column?: string } | null)?.key_column ?? null;
+    const info = available.dataChange && params.table ? await d.tableInfo(task) : null;
+    const editable = info ? info.columns.map((c) => c.name).filter((n) => n !== keyColumn && n !== params.created_column) : [];
+    const eventTools = eventTaskToolDeclarations({ dataChange: info !== null, reply: available.reply, ...(info && params.table ? { table: params.table, columns: editable } : {}) });
+    const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...eventTools];
     const runEventTool = eventTaskToolRunner({
-      notify: async (c) =>
-        ({
-          cardId: (await d.createCard({ task, recordId: record.id, title: c.title, summary: c.summary, actions: [{ kind: "project", text: c.proposedAction }], subjectKey: record.id })).id,
-        }),
+      notify: async (c) => ({ cardId: (await d.createCard({ task, recordId: record.id, title: c.title, summary: c.summary, actions: c.actions, subjectKey: c.subjectKey })).id }),
       readSource: (keys, match) => d.readSource(task, keys, match),
+      keyColumn,
+      seen: seenOfCandidate(record.candidate, keyColumn),
+      validate: (input, seen) =>
+        validateActions(input, {
+          available: { ...available, dataChange: info !== null },
+          ...(params.table ? { table: params.table } : {}),
+          ...(keyColumn ? { keyColumn } : {}),
+          ...(params.created_column ? { createdColumn: params.created_column } : {}),
+          ...(info ? { columns: info.columns } : {}),
+          seenKeys: seen.keys,
+          seenAddresses: seen.addresses,
+          recordId: record.id,
+          readRow: (key) => d.readRow(task, key),
+          castCheck: (column, value) => d.castCheck(task, column, value),
+        }),
     });
     const decisions = await d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt);
     const prior = kept((task.transcript ?? []) as Message[]);
@@ -100,7 +129,7 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     const brain = brains[0]!;
     // Past the reading budget, ONE more call that can only notify: the verdict is a tool call, so a call without
     // tools (closeOut) could never notify (final review I1). After it, closeOut ends the turn.
-    const notifyOnly = EVENT_TASK_TOOL_DECLARATIONS.filter((t) => t.name === AUTOMATION_NOTIFY);
+    const notifyOnly = eventTools.filter((t) => t.name === AUTOMATION_NOTIFY);
     let steps = 0;
     const result = await (d.runLoop ?? runAgentLoop)({
       messages: [{ role: "system", content: JUDGE_SYSTEM }, ...prior, ask],
@@ -155,6 +184,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
       import("@/lib/db"),
       import("drizzle-orm"),
     ]);
+  const [available, production] = await Promise.all([import("./actions/available"), import("./actions/production")]);
   const deps = tools.realDeps();
   return {
     now: () => new Date(),
@@ -174,6 +204,10 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
     },
     runReadTool: (session, name, args) => tools.runAgentTool(session, deps, name, args),
     readSource: (task, keys, match) => sourceOf(task.source).read(task.projectId, task.params, { keys, state: task.state, match }),
+    available: (task) => available.availableActions(task, available.defaultAvailableDeps()),
+    tableInfo: (task) => production.tableColumns(task.projectId, (task.params as { table: string }).table),
+    readRow: (task, key) => production.readRow(task.projectId, (task.params as { table: string }).table, (task.state as { key_column: string }).key_column, key),
+    castCheck: (task, column, value) => production.castCheck(task.projectId, (task.params as { table: string }).table, column, value),
     createCard: (o) => cards.createCard(o),
     decisionsSince: cards.decisionsSince,
     saveTranscript: store.saveTranscript,

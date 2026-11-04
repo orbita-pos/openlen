@@ -56,6 +56,18 @@ function setup(script: StreamEvent[][], o: { decisions?: Partial<EventTaskCardRo
     },
     runReadTool: async (session, name) => (reads.push({ session, name }), { response: { ok: true, tool_result: "contenido" } }),
     readSource: async () => ({ items: [], previous: [] }),
+    available: async () => ({ project: true, dataChange: true, reply: false }),
+    tableInfo: async () => ({
+      columns: [
+        { name: "id", type: "uuid" },
+        { name: "created_at", type: "timestamp with time zone" },
+        { name: "nombre", type: "text" },
+        { name: "mesa", type: "integer" },
+        { name: "nota", type: "text" },
+      ],
+    }),
+    readRow: async (_task, key) => (key === "r10" ? { id: "r10", nombre: "Ana", mesa: 4 } : null),
+    castCheck: async () => null,
     createCard: async (c) => (cards.push(c), { id: "c1" } as EventTaskCardRow),
     decisionsSince: async () => (o.decisions ?? []) as EventTaskCardRow[],
     saveTranscript: async (_id, transcript) => void saved.push(transcript),
@@ -103,7 +115,7 @@ describe("judgeCandidate", () => {
 
   it("after its reading budget the judge still decides: one last call offers only automation_notify (review I1)", async () => {
     const reading = Array.from({ length: 6 }, () => call("Read", { file_path: "/LEN.md" }));
-    const s = setup([...reading, call("automation_notify", { title: "Choque en la mesa 4", summary: "Ana y Luis, viernes 21:00.", proposed_action: "Escribirle a Luis." })]);
+    const s = setup([...reading, call("automation_notify", { title: "Choque en la mesa 4", summary: "Ana y Luis, viernes 21:00.", actions: [{ kind: "project", text: "Escribirle a Luis." }] })]);
     const r = await judgeCandidate(record(), task(), s.deps);
     expect(s.offered[1]).toEqual(["automation_notify"]);
     expect(s.cards).toHaveLength(1);
@@ -145,8 +157,27 @@ describe("judgeCandidate", () => {
     expect(s.judged).toEqual([{ id: "r1", notified: false }]);
   });
 
+  it("a judge that proposes moving a booking makes a card with a data_change and its before values", async () => {
+    const s = setup([
+      call("automation_notify", {
+        title: "Choque en la mesa 4",
+        summary: "Ana y Luis, viernes 21:00.",
+        actions: [{ kind: "data_change", table: "reservas", key: "r10", set: [{ column: "mesa", value: "6" }] }],
+      }),
+      say("Avisé."),
+    ]);
+    await judgeCandidate(record(), task(), s.deps);
+    expect(s.cards).toEqual([
+      expect.objectContaining({
+        actions: [{ kind: "data_change", table: "reservas", key: { id: "r10" }, set: { mesa: "6" }, before: { mesa: "4" } }],
+        subjectKey: "r10",
+      }),
+    ]);
+    expect(JSON.stringify(s.offered[0])).not.toContain("reply");
+  });
+
   it("an automation_notify call makes the card, for this record", async () => {
-    const args = { title: "Choca la mesa 4", summary: "Ana y Luis a las 21:00.", proposed_action: "Escribirle a Luis." };
+    const args = { title: "Choca la mesa 4", summary: "Ana y Luis a las 21:00.", actions: [{ kind: "project", text: "Escribirle a Luis." }] };
     const s = setup([call("automation_notify", args), say("Avisé.")]);
     expect(await judgeCandidate(record(), task(), s.deps)).toEqual({ notified: true });
     expect(s.cards).toEqual([expect.objectContaining({ recordId: "r1", title: "Choca la mesa 4", actions: [{ kind: "project", text: "Escribirle a Luis." }], subjectKey: "r1" })]);
