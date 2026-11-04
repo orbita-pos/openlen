@@ -4,11 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/tools/bridge/caller", () => ({ resolveBridgeCaller: vi.fn() }));
 vi.mock("@/lib/tools/bridge/handlers", () => ({ handleBridgeCall: vi.fn(), SERVER_METHODS: ["backend", "projects", "forms", "visits", "query"] }));
 vi.mock("@/lib/tools/data-change", () => ({ applyToolDataChange: vi.fn() }));
 
 const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
+const { auth } = await import("@/auth");
 const { resolveBridgeCaller } = await import("@/lib/tools/bridge/caller");
 const { handleBridgeCall } = await import("@/lib/tools/bridge/handlers");
 const { applyToolDataChange } = await import("@/lib/tools/data-change");
@@ -22,6 +24,7 @@ const rpc = (method: string, params?: unknown) => ({ jsonrpc: "2.0", id: 7, meth
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u1");
+  vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
   vi.mocked(resolveBridgeCaller).mockResolvedValue({ caller: CALLER } as never);
   vi.mocked(handleBridgeCall).mockResolvedValue({ result: [{ id: "p1" }] });
   vi.mocked(applyToolDataChange).mockResolvedValue({ status: "applied", row: { id: 1 } });
@@ -59,8 +62,19 @@ describe("POST /api/tools/bridge", () => {
 
   it("not a request, or nobody signed in", async () => {
     expect((await BRIDGE(req({ installationId: "i1", request: { method: "projects" } }))).status).toBe(400);
-    vi.mocked(usuarioDeLaPeticion).mockResolvedValue(null);
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
     expect((await BRIDGE(req({ installationId: "i1", request: rpc("projects") }))).status).toBe(401);
+  });
+
+  it("only the browser session of the workspace: a phone key alone is refused, on both routes (phase 1)", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u1");
+    const bearer = (body: unknown) => new Request("http://x", { method: "POST", headers: { authorization: "Bearer phone-key" }, body: JSON.stringify(body) });
+    expect((await BRIDGE(bearer({ installationId: "i1", request: rpc("projects") }))).status).toBe(401);
+    const change = { projectId: "p1", table: "reservas", key: { id: 1 }, set: { estado: "ok" }, before: { estado: "no" } };
+    expect((await CHANGE(bearer({ installationId: "i1", change }))).status).toBe(401);
+    expect(handleBridgeCall).not.toHaveBeenCalled();
+    expect(applyToolDataChange).not.toHaveBeenCalled();
   });
 });
 
