@@ -93,6 +93,14 @@ describe("createToolBridgeHost", () => {
     expect(s.answered()[0]).toMatchObject({ id: 6, result: { status: "applied", row: { id: 12 } } });
   });
 
+  it("update in the draft canvas: refused, without OpenLen's dialog and without the server", async () => {
+    const s = setup({ caller: { draftProjectId: "p1" } });
+    await s.send(rpc(7, "update", { projectId: "p2", table: "reservas", key: { id: 1 }, set: { estado: "ok" }, before: { estado: "no" } }));
+    expect(s.opts.onConfirmChange).not.toHaveBeenCalled();
+    expect(s.fetchImpl).not.toHaveBeenCalled();
+    expect(s.answered()[0]).toMatchObject({ id: 7, result: { status: "refused", reason: "draft_no_production" } });
+  });
+
   it("sendPrompt: unavailable without a chat; with one, the text goes to the composer", async () => {
     const off = setup();
     await off.send(rpc(7, "sendPrompt", { text: "hola" }));

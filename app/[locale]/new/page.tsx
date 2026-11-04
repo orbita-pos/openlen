@@ -223,6 +223,8 @@ interface LoadedProject {
    *  (una app que nace, una página que se convierte) y con su Deshacer: lo trae
    *  el refetch de `onChatChange`. */
   app: AppDeProyecto | null;
+  /** A TOOL being built (`data.tool`, spec local 2026-11-04-herramientas-hechas-por-len): installed, not published. */
+  tool: boolean;
   /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
    *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
    *  esto sólo esconde lo que no podría hacer. */
@@ -1395,6 +1397,7 @@ function NewV2Inner() {
                 degradations?: Degradation[];
                 degradationsDismissed?: boolean;
                 app?: AppDeProyecto;
+                tool?: { bornAt: string };
               };
               rol?: "dueno" | "editor" | "lector";
               artifacts?: boolean;
@@ -1438,6 +1441,7 @@ function NewV2Inner() {
         degradations: p.data?.degradations,
         degradationsDismissed: p.data?.degradationsDismissed,
         app: p.data?.app ?? null,
+        tool: !!p.data?.tool,
         rol: p.rol ?? "dueno",
         artifacts: p.artifacts === true,
       });
@@ -3850,6 +3854,7 @@ function NewV2Inner() {
                 projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
                 toolPerson={{ name: installedTools.person.name, locale }}
                 toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
                 onToolPrompt={toolPrompt}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
@@ -3929,6 +3934,7 @@ function NewV2Inner() {
                 projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
                 toolPerson={{ name: installedTools.person.name, locale }}
                 toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
                 onToolPrompt={toolPrompt}
                 previewUrl={previewingTemplate.previewUrl}
                 templateName={previewingTemplate.name}
@@ -3988,6 +3994,7 @@ function NewV2Inner() {
                 projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
                 toolPerson={{ name: installedTools.person.name, locale }}
                 toolProjectTitle={loadedProject?.title ?? ""}
+                isTool={loadedProject?.tool === true}
                 onToolPrompt={toolPrompt}
                 projectId={loadedProject.id}
                 pagina={activeSitePage ?? null}

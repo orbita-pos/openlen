@@ -90,6 +90,8 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
         return { result: { status: "placed" } };
       }
       case "update": {
+        // The draft never writes production: refused here, before OpenLen's dialog (the server refuses it too).
+        if ("draftProjectId" in o.caller) return { result: { status: "refused", reason: "draft_no_production" } };
         const change = { projectId: String(p.projectId ?? ""), table: String(p.table ?? ""), key: record(p.key), set: record(p.set), before: record(p.before) };
         if (!(await o.onConfirmChange(change))) return { result: { status: "declined" } };
         return relay("/api/tools/data-change", { change });

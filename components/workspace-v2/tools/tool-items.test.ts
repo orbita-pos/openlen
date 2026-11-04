@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { InstalledToolView } from "@/lib/tools/types";
 
 import { railActiveKey } from "../rail-model";
-import { projectToolItems, railToolItems, toolIdOfLens, toolLens, toolPromptDraft } from "./tool-items";
+import { draftCanvasBridge, projectToolItems, railToolItems, toolIdOfLens, toolLens, toolPromptDraft } from "./tool-items";
 
 const tool = (over: Partial<InstalledToolView> = {}): InstalledToolView => ({
   id: "a",
@@ -47,5 +47,21 @@ describe("where installed tools show up", () => {
 describe("toolPromptDraft", () => {
   it("quotes the tool's text and signs it, for the person to send", () => {
     expect(toolPromptDraft("línea 1\nlínea 2", "Lector")).toBe("> línea 1\n> línea 2\n\n— Lector\n");
+  });
+});
+
+describe("draftCanvasBridge", () => {
+  it("a tool project running in its real canvas: the canvas's origin answers as the draft", () => {
+    expect(draftCanvasBridge({ isTool: true, remoteUrl: "https://lienzo-abc.openlen.app/?v=3", projectId: "p1" })).toEqual({
+      frameOrigin: "https://lienzo-abc.openlen.app",
+      caller: { draftProjectId: "p1" },
+    });
+  });
+
+  it("nothing to answer for a page or an app, without the real canvas, or without a project", () => {
+    expect(draftCanvasBridge({ isTool: false, remoteUrl: "https://lienzo-abc.openlen.app/", projectId: "p1" })).toBeNull();
+    expect(draftCanvasBridge({ isTool: true, remoteUrl: null, projectId: "p1" })).toBeNull();
+    expect(draftCanvasBridge({ isTool: true, remoteUrl: "not a url", projectId: "p1" })).toBeNull();
+    expect(draftCanvasBridge({ isTool: true, remoteUrl: "https://lienzo-abc.openlen.app/", projectId: null })).toBeNull();
   });
 });
