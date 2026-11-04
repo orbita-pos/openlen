@@ -123,6 +123,8 @@ export default defineConfig({
       // «Len que avisa»: «Hazlo» / «Ahora no» on a card. LISTA BLANCA.
       "app/api/projects/[id]/event-cards/[cardId]/route.test.ts",
       "app/api/projects/[id]/event-cards/route.test.ts",
+      // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "app/api/projects/[id]/install/route.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",
