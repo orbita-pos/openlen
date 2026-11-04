@@ -23,12 +23,12 @@ export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
 export const KIND_PARAM = "kind";
 
 /** Lo que dice la URL: sólo `app` es app. */
-export function kindFromParam(v: string | null): "pagina" | "app" {
-  return v === "app" ? "app" : "pagina";
+export function kindFromParam(v: string | null): "pagina" | "app" | "tool" {
+  return v === "app" || v === "tool" ? v : "pagina";
 }
 
 /** El enlace de la portada a /new: el brief escrito y, si es una app, `kind=app`. */
-export function newProjectHref(brief: string, kind: "pagina" | "app"): string {
+export function newProjectHref(brief: string, kind: "pagina" | "app" | "tool"): string {
   const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
-  return kind === "app" ? `${base}&${KIND_PARAM}=app` : base;
+  return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }

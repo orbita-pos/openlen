@@ -49,6 +49,7 @@ describe("GET /api/tools", () => {
     expect(body.tools[0]).toMatchObject({ id: "i1", title: "Reservas", status: "ok", frameUrl: "http://lienzo-0123456789abcdef0123456789abcdef.localhost:3000/?v=sha1" });
     expect(store.listInstallations).toHaveBeenCalledWith("u1");
     expect((body as unknown as { person: unknown }).person).toEqual({ name: "Ana" });
+    expect((body as unknown as { paid: unknown }).paid).toBe(true);
   });
 
   it("on Free every tool says plan_required (Review Focus 5)", async () => {

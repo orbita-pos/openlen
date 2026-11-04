@@ -31,3 +31,10 @@ describe("los campos de nacer en el cuerpo del primer mensaje", () => {
     expect(camposDeNacer(null)).toEqual({});
   });
 });
+
+describe("a tool in the URL (spec local 2026-11-04-herramientas-hechas-por-len)", () => {
+  it("kind=tool is a tool; its link carries it", () => {
+    expect(kindFromParam("tool")).toBe("tool");
+    expect(newProjectHref("reservas", "tool")).toBe("/new?brief=reservas&kind=tool");
+  });
+});

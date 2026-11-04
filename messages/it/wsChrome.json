@@ -320,7 +320,12 @@
       "appHint": "Qualcosa da usare: cassa, agenda, pannello con login",
       "appPlaceholder": "Descrivi la tua app: cosa fa, chi la usa…",
       "headline": "La tua prossima app inizia qui",
-      "subtitle": "Di’ a Len cosa deve fare e lui la costruisce: schermate, dati e login."
+      "subtitle": "Di’ a Len cosa deve fare e lui la costruisce: schermate, dati e login.",
+      "tool": "Strumento",
+      "toolHint": "Una schermata tua dentro OpenLen, fatta da Len.",
+      "toolHeadline": "Di che strumento hai bisogno?",
+      "toolSubtitle": "Len lo costruisce e resta nel tuo OpenLen: nella barra laterale o dentro i tuoi progetti.",
+      "toolPlaceholder": "Qualcosa per vedere le prenotazioni di oggi e confermarle…"
     }
   },
   "empty": {
@@ -747,6 +752,21 @@
       "apply": "Applica",
       "cancel": "Annulla"
     },
-    "unavailable": "Questo strumento non si può aprire adesso."
+    "unavailable": "Questo strumento non si può aprire adesso.",
+    "page": {
+      "title": "Strumenti",
+      "subtitle": "Schermate che Len ha costruito per te. Vivono nel tuo OpenLen, non sul tuo sito.",
+      "ask": "Chiedi uno strumento a Len",
+      "empty": "Ancora nessuno strumento. Chiedine uno a Len.",
+      "inRail": "Barra laterale",
+      "inProject": "Nei progetti",
+      "version": "Versione {version} · {date}",
+      "switch": "Mostra {tool}",
+      "openProject": "Apri progetto",
+      "remove": "Rimuovi",
+      "restore": "Ripristina",
+      "releaseGone": "Quella versione non c'è più. Chiedi a Len di reinstallarla.",
+      "failed": "Non è andata. Riprova."
+    }
   }
 }
