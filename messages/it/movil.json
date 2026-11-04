@@ -161,6 +161,8 @@
     "sourceRows": "Nuove righe di {table}",
     "sourceForm": "Invii del modulo {form}",
     "sourceAllForms": "Invii dei moduli",
+    "sourceChatMessages": "Messaggi nella chat della tua pagina",
+    "sourceChatSignups": "Iscrizioni alla chat della tua pagina",
     "conditions": "Condizioni",
     "recDelivered": "Len ha guardato",
     "recNotified": "Len ha avvisato",

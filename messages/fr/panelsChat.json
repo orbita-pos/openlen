@@ -598,6 +598,8 @@
     "sourceRows": "Nouvelles lignes de {table}",
     "sourceForm": "Envois du formulaire {form}",
     "sourceAllForms": "Envois des formulaires",
+    "sourceChatMessages": "Messages dans le chat de votre page",
+    "sourceChatSignups": "Inscriptions au chat de votre page",
     "conditions": "Conditions",
     "recDelivered": "Len a regardé",
     "recNotified": "Len a prévenu",

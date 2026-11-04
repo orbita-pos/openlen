@@ -330,6 +330,29 @@ export async function insertMessage(conversationId: string, authorId: string, bo
   return rows[0];
 }
 
+/** `insertMessage` with a given id, once: null when a message with that id is already there (a retry of the same
+ *  send — the owner's reply from an event card, lib/event-tasks/actions/channels/chat.ts). */
+export async function insertMessageOnce(conversationId: string, authorId: string, body: string, id: string): Promise<MessageRow | null> {
+  const createdAt = new Date();
+  const rows = await db
+    .insert(schema.chatMessages)
+    .values({ id, conversationId, authorId, body, createdAt })
+    .onConflictDoNothing({ target: schema.chatMessages.id })
+    .returning({
+      id: schema.chatMessages.id,
+      conversationId: schema.chatMessages.conversationId,
+      authorId: schema.chatMessages.authorId,
+      body: schema.chatMessages.body,
+      createdAt: schema.chatMessages.createdAt,
+    });
+  if (rows.length === 0) return null;
+  await db
+    .update(schema.chatConversations)
+    .set({ lastMessageAt: rows[0].createdAt })
+    .where(eq(schema.chatConversations.id, conversationId));
+  return rows[0];
+}
+
 export async function listMessagesSince(
   conversationId: string, cursor: string | null, limit = MESSAGE_PAGE,
 ): Promise<MessageRow[]> {

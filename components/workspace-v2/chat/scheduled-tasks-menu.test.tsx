@@ -142,6 +142,12 @@ describe("ScheduledTasksMenu", () => {
     };
     const open = (host: HTMLElement) => act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
 
+    it("a visitor_chat task says what it watches", () => {
+      const { host } = paint([], undefined, undefined, undefined, [{ ...EVENT, source: "visitor_chat", params: {} }]);
+      open(host);
+      expect(host.querySelector('[data-event-task="e1"]')!.textContent).toContain("eventTasks.sourceChatMessages");
+    });
+
     it("the menu shows an event task's source read-only and its records", () => {
       const { host } = paint([], undefined, undefined, undefined, [EVENT]);
       open(host);

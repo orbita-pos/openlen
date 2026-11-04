@@ -239,6 +239,14 @@ describe("event tasks through the schedule tools", () => {
     expect(out.note).toBe("The owner still gets an email for each submission of this form.");
   });
 
+  it("schedule_create takes on.source visitor_chat", async () => {
+    const { deps, events } = withEvents();
+    const out = result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "visitor_chat", watch: "messages" } }));
+    expect(out).toMatchObject({ kind: "event", source: "visitor_chat" });
+    expect(events.validate).toHaveBeenCalledWith("visitor_chat", "p1", { watch: "messages" }, expect.anything());
+    expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "visitor_chat", watch: "everything" } })).code).toBe("invalid_source");
+  });
+
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");

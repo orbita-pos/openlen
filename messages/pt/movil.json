@@ -161,6 +161,8 @@
     "sourceRows": "Linhas novas de {table}",
     "sourceForm": "Envios do formulário {form}",
     "sourceAllForms": "Envios dos formulários",
+    "sourceChatMessages": "Mensagens no chat da sua página",
+    "sourceChatSignups": "Cadastros no chat da sua página",
     "conditions": "Condições",
     "recDelivered": "Len olhou",
     "recNotified": "Len avisou",
