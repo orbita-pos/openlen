@@ -42,7 +42,9 @@ interface OpenLenBridge {
   /** This tool's own backend, signed in as the person. */
   backend(): Promise<{ url: string; key: string; session: { access_token: string; refresh_token: string } & Record<string, unknown> }>;
   projects(): Promise<Array<{ id: string; title: string }>>;
-  forms(projectId: string, options?: { limit?: number; since?: string }): Promise<unknown>;
+  /** Form submissions; dates as YYYY-MM-DD in the person's time zone. */
+  forms(projectId: string, options?: { since?: string; until?: string }): Promise<unknown>;
+  /** Visits; dates as YYYY-MM-DD. */
   visits(projectId: string, options?: { from?: string; to?: string }): Promise<unknown>;
   /** SELECT only, on the project's production data. */
   query(projectId: string, sql: string): Promise<unknown>;
