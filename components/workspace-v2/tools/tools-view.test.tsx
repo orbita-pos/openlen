@@ -21,6 +21,7 @@ const tool = (over: Partial<InstalledToolView> = {}): InstalledToolView => ({
   description: "Ver y confirmar",
   placement: "rail",
   iconUrl: "/api/tools/i1/icon?v=1",
+  iconTinted: true,
   frameUrl: "http://x/?v=1",
   frameOrigin: "http://x",
   releaseSha: "1",

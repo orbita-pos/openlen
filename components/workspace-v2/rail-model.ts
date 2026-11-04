@@ -29,6 +29,7 @@ export interface RailToolItem {
   readonly id: string;
   readonly name: string;
   readonly iconUrl: string;
+  readonly iconTinted: boolean;
 }
 
 export type SidebarMode =

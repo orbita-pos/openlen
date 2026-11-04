@@ -34,6 +34,7 @@ describe("toInstalledToolView", () => {
       description: "Las reservas de hoy",
       placement: "rail",
       iconUrl: "/api/tools/i1/icon?v=sha1",
+      iconTinted: true,
       frameUrl: "http://lienzo-0123456789abcdef0123456789abcdef.localhost:3000/?v=sha1",
       frameOrigin: "http://lienzo-0123456789abcdef0123456789abcdef.localhost:3000",
       releaseSha: "sha1",
@@ -41,6 +42,12 @@ describe("toInstalledToolView", () => {
       installedAt: "2026-11-04T10:00:00.000Z",
       status: "ok",
     });
+  });
+
+  it("an SVG icon is tinted with the workspace's colour; a raster one is shown as it is", () => {
+    expect(view(row({ iconPath: "/icon.svg" })).iconTinted).toBe(true);
+    expect(view(row({ iconPath: "/branding/mark.SVG" })).iconTinted).toBe(true);
+    expect(view(row({ iconPath: "/icon.png" })).iconTinted).toBe(false);
   });
 
   it("falls back to English for a language it doesn't have", () => {

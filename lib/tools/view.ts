@@ -40,6 +40,7 @@ export function toInstalledToolView(
     description: inLocale(row.descriptions, o.locale),
     placement: row.placement,
     iconUrl: `/api/tools/${encodeURIComponent(row.id)}/icon?v=${encodeURIComponent(row.releaseSha)}`,
+    iconTinted: /.svg$/i.test(row.iconPath),
     frameUrl,
     frameOrigin: frameUrl ? new URL(frameUrl).origin : null,
     releaseSha: row.releaseSha,

@@ -12,6 +12,7 @@ import { useState } from "react";
 import type { InstalledToolView } from "@/lib/tools/types";
 
 import { KIND_PARAM } from "../chat/nace-como";
+import { ToolIcon } from "./tool-icon";
 
 export const NEW_TOOL_HREF = `/new?${KIND_PARAM}=tool`;
 
@@ -65,7 +66,7 @@ export function ToolsView({ tools, paid, onChanged }: { tools: readonly Installe
                 tool.status === "plan_required" ? t("tools.planRequired") : tool.status === "broken" ? t("tools.unavailable") : null;
               return (
                 <li key={tool.id} data-tool-row={tool.id} className="flex items-center gap-3 rounded-lg border bd bg-elev px-3 py-2.5">
-                  <img src={tool.iconUrl} alt="" width={28} height={28} className="h-7 w-7 shrink-0 rounded-md" />
+                  <ToolIcon url={tool.iconUrl} tinted={tool.iconTinted} size={28} className="h-7 w-7 shrink-0 rounded-md fg" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate text-[13.5px] font-semibold fg">{tool.title}</span>

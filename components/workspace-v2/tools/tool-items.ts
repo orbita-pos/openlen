@@ -10,7 +10,7 @@ import type { BridgeHostCaller } from "./use-tool-bridge-host";
 const canOpen = (t: InstalledToolView) => t.enabled && t.status === "ok" && !!t.frameUrl;
 
 export function railToolItems(tools: readonly InstalledToolView[]): RailToolItem[] {
-  return tools.filter((t) => t.placement === "rail" && canOpen(t)).map((t) => ({ kind: "tool", id: t.id, name: t.title, iconUrl: t.iconUrl }));
+  return tools.filter((t) => t.placement === "rail" && canOpen(t)).map((t) => ({ kind: "tool", id: t.id, name: t.title, iconUrl: t.iconUrl, iconTinted: t.iconTinted }));
 }
 
 export function projectToolItems(tools: readonly InstalledToolView[]): InstalledToolView[] {
