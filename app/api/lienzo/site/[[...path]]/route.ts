@@ -7,6 +7,7 @@ import { leerDocumento, proyectoDeEtiqueta } from "@/lib/lienzo/almacen";
 import { LIENZO_PARAM, etiquetaDeLienzo, etiquetaDelHost, frameAncestors } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { isBlobPointer } from "@/lib/files/blob-pointer";
+import { TOOL_BRIDGE_PATH, toolBridgeScriptResponse } from "@/lib/tools/serve";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/lienzo/site/<ruta> — EL SITIO ENTERO DEL LIENZO (pieza 9 de Len 2.5).
@@ -61,6 +62,27 @@ export async function GET(
   if (deLaCaja && etiquetaDeLienzo(deLaCaja) === etiqueta) {
     const { servirVistaDeLaCaja } = await import("@/lib/lienzo/vista-de-la-caja");
     return (await servirVistaDeLaCaja(deLaCaja, ruta)) ?? noEncontrado();
+  }
+
+  // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its private host has this label's
+  // shape but lives in `toolInstallations`, not in the live documents; its release is served as installed, with
+  // the bridge. A label with a live canvas document is a canvas, and never reaches the table.
+  const canvas = proyectoDeEtiqueta(etiqueta);
+  if (!canvas) {
+    const { toolsEnabled } = await import("@/lib/tools/enabled");
+    if (toolsEnabled()) {
+      const { installationByLabel } = await import("@/lib/tools/store");
+      const tool = await installationByLabel(etiqueta).catch(() => null);
+      if (tool) {
+        const { serveToolRelease } = await import("@/lib/tools/serve");
+        return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language") });
+      }
+    }
+  }
+  // A TOOL PROJECT'S CANVAS gets `window.openlen` too, in draft mode: the workspace answers it.
+  if (ruta === TOOL_BRIDGE_PATH) {
+    if (!canvas?.tool) return noEncontrado();
+    return toolBridgeScriptResponse(req.headers.get("host"));
   }
 
   // LOS FUENTES (.jsx .tsx .ts, y en una app también .js), antes que la

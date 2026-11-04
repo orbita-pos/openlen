@@ -594,6 +594,17 @@ describe("view_page", () => {
     assert.match(String(out.response.edge_function_calls), /WORKER_ERROR/);
   });
 
+  it("a tool: measure runs the draft — with installed: true it says to look with a screenshot, and measures nothing", async () => {
+    const { deps } = makeDeps();
+    let medidas = 0;
+    const conOjos = { ...deps, observarPagina: async () => (medidas++, { respuesta: "x" }) };
+    const out = await runAgentTool({ ...makeSession(), tool: true }, conOjos, "view_page", { mode: "measure", question: "¿carga?", installed: true });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /installed/);
+    assert.match(String(out.response.error), /screenshot/);
+    assert.equal(medidas, 0);
+  });
+
   it("tipo=medir devuelve la respuesta y NO toca la página", async () => {
     const { deps } = makeDeps();
     const vistas: unknown[] = [];

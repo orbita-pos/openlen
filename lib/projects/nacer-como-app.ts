@@ -32,12 +32,25 @@ export async function nacerComoApp(p: {
   readonly idioma?: string;
 }): Promise<boolean> {
   const e = esqueletoDeApp({ titulo: p.titulo, ...(p.idioma ? { idioma: p.idioma } : {}) });
-  const ficheros = Object.entries(e.ficheros).map(([path, content]) => ({ path, content }));
+  return bornWithSkeleton({ projectId: p.projectId, userId: p.userId, patch: { html: e.html, app: e.app }, files: e.ficheros });
+}
+
+/**
+ * The one statement behind every birth (an app here; a tool in `born-as-tool.ts`): merges `patch` into
+ * `data` and writes the skeleton's files, only on a blank project the user owns that isn't an app yet.
+ */
+export async function bornWithSkeleton(p: {
+  readonly projectId: string;
+  readonly userId: string;
+  readonly patch: Record<string, unknown>;
+  readonly files: Readonly<Record<string, string>>;
+}): Promise<boolean> {
+  const ficheros = Object.entries(p.files).map(([path, content]) => ({ path, content }));
   const res = await db.execute(sql`
     WITH actualizado AS (
       UPDATE "projects"
-      SET "data" = coalesce("data", '{}'::jsonb) || ${JSON.stringify({ html: e.html, app: e.app })}::jsonb,
-          "filesHash" = ${folderFingerprint(e.ficheros)},
+      SET "data" = coalesce("data", '{}'::jsonb) || ${JSON.stringify(p.patch)}::jsonb,
+          "filesHash" = ${folderFingerprint(p.files)},
           "updatedAt" = now()
       WHERE "id" = ${p.projectId} AND "userId" = ${p.userId}
         AND coalesce(btrim("data"->>'html'), '') = ''

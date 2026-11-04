@@ -49,6 +49,13 @@ describe("bundled skills", () => {
     ]);
   });
 
+  // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): DeepSeek's plugin skill, our words.
+  it("tool-development is offered only in a project born as a tool", () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    expect(bundledSkills({ app, env: {}, tool: true }).map((b) => b.skill.name)).toContain("tool-development");
+    expect(bundledSkills({ app, env: {} }).map((b) => b.skill.name)).not.toContain("tool-development");
+  });
+
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.1): `/schedule`, from Claude Code's.
   describe("schedule", () => {
     it("is offered unless OPENLEN_SCHEDULE=0, and its name stays reserved", () => {

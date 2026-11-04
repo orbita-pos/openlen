@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const served: string[] = [];
-const state = { hasLive: true, draftProvisioned: true, liveStatus: 404 };
+const state = { hasLive: true, draftProvisioned: true, liveStatus: 404, installedTool: false };
 
 vi.mock("./pg", () => ({ backendConfigured: () => true }));
 vi.mock("@/lib/lienzo/host", () => ({ etiquetaDeLienzo: () => "lienzo-0123456789abcdef0123456789abcdef" }));
+vi.mock("@/lib/tools/environment", () => ({ isInstalledToolOrigin: async () => state.installedTool }));
 vi.mock("./environments", () => ({
   getEnvironment: async (_id: string, env: string) => (env === "draft" && state.draftProvisioned ? { environment: "draft", provisionedAt: new Date() } : null),
 }));
@@ -31,7 +32,7 @@ const req = (path: string, headers: Record<string, string> = {}) =>
 
 beforeEach(() => {
   served.length = 0;
-  Object.assign(state, { hasLive: true, draftProvisioned: true, liveStatus: 404 });
+  Object.assign(state, { hasLive: true, draftProvisioned: true, liveStatus: 404, installedTool: false });
 });
 
 describe("cada petición a su entorno", () => {
@@ -44,6 +45,13 @@ describe("cada petición a su entorno", () => {
     const res = await serveBackend(req("/rest/v1/productos", { origin: "https://lienzo-ffffffffffffffffffffffffffffffff.openlen.app" }));
     expect(res.status).toBe(403);
     expect(served).toEqual([]);
+  });
+
+  it("desde una herramienta instalada de este proyecto, a producción", async () => {
+    state.installedTool = true;
+    const res = await serveBackend(req("/rest/v1/productos", { origin: "https://lienzo-ffffffffffffffffffffffffffffffff.openlen.app" }));
+    expect(res.status).toBe(404);
+    expect(served).toEqual(["live"]);
   });
 
   it("desde la publicada, a producción", async () => {

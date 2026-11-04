@@ -139,7 +139,8 @@
       "artifact-image": "Een promotieafbeelding maken",
       "artifact-motion": "Een geanimeerde video maken",
       "artifact-audio": "Een audio of voice-over maken",
-      "schedule": "Een taak plannen die Len op een vast tijdstip doet"
+      "schedule": "Een taak plannen die Len op een vast tijdstip doet",
+      "tool-development": "Deze tool bouwen, wijzigen, installeren of controleren"
     },
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",
@@ -644,5 +645,17 @@
     "doneSent": "Verstuurd naar {to}",
     "actionFailed": "Lukte niet: {error}",
     "yourNote": "Jouw notitie: {note}"
+  },
+  "installCard": {
+    "title": "«{title}» installeren",
+    "inRail": "Hij verschijnt in je zijbalk.",
+    "inProject": "Hij verschijnt in je projecten, naast de pagina.",
+    "install": "Installeren",
+    "installAnyway": "Toch installeren",
+    "cancel": "Annuleren",
+    "findings": "De beveiligingscontrole vond:",
+    "destructive": "Installeren verwijdert gegevens uit zijn database. Toch installeren?",
+    "failed": "Installeren lukte niet ({reason}).",
+    "installed": "Geïnstalleerd."
   }
 }

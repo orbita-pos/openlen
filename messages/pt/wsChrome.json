@@ -328,7 +328,12 @@
       "appHint": "Algo que se usa: ponto de venda, agenda, painel com login",
       "appPlaceholder": "Descreva seu app: o que faz, quem usa…",
       "headline": "Seu próximo app começa aqui",
-      "subtitle": "Conte ao Len o que ele precisa fazer e ele o constrói: telas, dados e login."
+      "subtitle": "Conte ao Len o que ele precisa fazer e ele o constrói: telas, dados e login.",
+      "tool": "Ferramenta",
+      "toolHint": "Uma tela sua dentro do OpenLen, feita pelo Len.",
+      "toolHeadline": "De que ferramenta você precisa?",
+      "toolSubtitle": "O Len a constrói e ela fica no seu OpenLen: na barra lateral ou dentro dos seus projetos.",
+      "toolPlaceholder": "Algo para ver as reservas de hoje e confirmá-las…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "Caixa de entrada",
     "business": "Meu negócio",
     "versions": "Versões",
-    "database": "Banco de dados"
+    "database": "Banco de dados",
+    "tools": "Ferramentas"
   },
   "startTabs": {
     "crear": "Criar",
     "mispaginas": "Minhas páginas",
-    "comunidad": "Comunidade"
+    "comunidad": "Comunidade",
+    "herramientas": "Ferramentas"
   },
   "resultadosTabs": {
     "page": "Página",
@@ -735,6 +742,31 @@
       "step": "Passo {current} de {total}",
       "noSteps": "—",
       "finished": "Pronto"
+    }
+  },
+  "tools": {
+    "planRequired": "Você precisa de um plano pago para abrir esta ferramenta.",
+    "change": {
+      "title": "{tool} quer alterar {table} em {project}",
+      "subtitle": "Isto altera os dados reais. Nada muda até você aplicar.",
+      "apply": "Aplicar",
+      "cancel": "Cancelar"
+    },
+    "unavailable": "Esta ferramenta não pode ser aberta agora.",
+    "page": {
+      "title": "Ferramentas",
+      "subtitle": "Telas que o Len construiu para você. Elas ficam no seu OpenLen, não no seu site.",
+      "ask": "Pedir uma ferramenta ao Len",
+      "empty": "Ainda não há ferramentas. Peça uma ao Len.",
+      "inRail": "Barra lateral",
+      "inProject": "Nos projetos",
+      "version": "Versão {version} · {date}",
+      "switch": "Mostrar {tool}",
+      "openProject": "Abrir projeto",
+      "remove": "Remover",
+      "restore": "Restaurar",
+      "releaseGone": "Essa versão não existe mais. Peça ao Len para instalá-la de novo.",
+      "failed": "Não deu certo. Tente de novo."
     }
   }
 }

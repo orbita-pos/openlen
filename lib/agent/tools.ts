@@ -470,6 +470,8 @@ export interface AgentDeps {
     /** El contexto con el que se hornea lo que se MIDE, para que sea el mismo
      *  documento que el lienzo le enseña al usuario. Ver `MiradaParams.vista`. */
     vista?: ContextoDeVista | null;
+    /** A tool: measured with its bridge in draft (`MiradaParams.toolBridge`). */
+    toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
   }): Promise<{ respuesta: string } | null>;
   /** USAR LA PÁGINA — `use_page` (H9). Una visita en Chromium con los pasos
    *  que da Len; devuelve HECHOS de cada paso, no un veredicto. Opcional por lo
@@ -486,6 +488,10 @@ export interface AgentDeps {
     newVisit?: boolean;
     /** El tamaño de la pestaña en esta visita (`view_page viewport`); sin él, escritorio. */
     viewport?: "mobile" | "desktop";
+    /** A tool's bridge in the eyes (spec local 2026-11-04-herramientas-hechas-por-len, §4.4). */
+    toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
+    /** `installed: true`: the installed tool's private host. */
+    installedUrl?: string;
   }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
@@ -1140,6 +1146,9 @@ export interface AgentSession {
    *  devuelve Read, las guardas de la escritura y las herramientas que en una
    *  app hacen otra cosa (deshacer, publicar). */
   app?: AppDeProyecto | null;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): `publish` installs, and the eyes can open
+   *  the installed version. Absent = not a tool. */
+  tool?: boolean;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -1460,6 +1469,7 @@ export interface ToolOutcome {
         /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what publishing will copy to live mode. */
         stripe?: StripeForCard;
       }
+    | import("./tool-install").ToolInstallConfirm
     // El borrador de respuesta (plans/len-resultados/): la tarjeta sólo manda
     // si el usuario toca.
     | RespuestaPreparada;
@@ -1976,10 +1986,12 @@ async function toolMirarPagina(
     // en blanco.
     const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
     const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+    const ojosDeHerramienta = await toolEyesOf(session, args);
+    if ("error" in ojosDeHerramienta) return { response: { ok: false, error: ojosDeHerramienta.error } };
     // EN LA PESTAÑA DEL TURNO: la captura es de lo que hay en ella, como la de Claude Code.
     const tab = (session.browserTab ??= newBrowserTabHolder());
     const visto = await visitar(() =>
-      deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab, ...(enTelefono ? { viewport: "mobile" as const } : {}) }),
+      deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab, ...(enTelefono ? { viewport: "mobile" as const } : {}), ...ojosDeHerramienta }),
     ).catch(() => null);
     if (!visto) {
       return {
@@ -1996,8 +2008,15 @@ async function toolMirarPagina(
     };
   }
 
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): measured in draft, with its bridge; the
+  // installed version is looked at with a screenshot, where it really runs.
+  if (session.tool && args.installed === true) {
+    return { response: { ok: false, error: `with "installed", mode has to be "screenshot": "measure" runs this project's draft.` } };
+  }
+  const ojosParaMedir = session.tool ? await toolEyesOf(session, { ...args, installed: false }) : {};
+  if ("error" in ojosParaMedir) return { response: { ok: false, error: ojosParaMedir.error } };
   const visto = await deps
-    .observarPagina!({ html, tipo, pregunta, ...(zona ? { zona } : {}), vista })
+    .observarPagina!({ html, tipo, pregunta, ...(zona ? { zona } : {}), vista, ...(ojosParaMedir.toolBridge ? { toolBridge: ojosParaMedir.toolBridge } : {}) })
     .catch(() => null);
   if (!visto) {
     // Fail-open y DICIÉNDOLO: «no se pudo mirar» no puede leerse como «está
@@ -2151,7 +2170,9 @@ async function toolUsarPagina(
   const desde = new Date();
   const tab = (session.browserTab ??= newBrowserTabHolder());
   const newVisit = args.new_visit === true;
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}) }))
+  const ojos = await toolEyesOf(session, args);
+  if ("error" in ojos) return { response: { ok: false, error: ojos.error } };
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}), ...ojos }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -2420,11 +2441,54 @@ const MAX_PUBLISH_LOCALES = 9;
 // resolves which subdomain + languages a publish WOULD use and hands that back
 // as a `confirm` payload. The panel turns that into a card whose button hits
 // the real endpoint — the user's tap is the only thing that publishes.
+/** A TOOL's eyes (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.8): the bridge of this turn, in draft
+ *  mode — or, with `installed: true`, the installed version on its own host. Nothing outside a tool project. */
+async function toolEyesOf(
+  session: AgentSession,
+  args: Record<string, unknown>,
+): Promise<{ toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller; installedUrl?: string } | { error: string }> {
+  if (!session.tool) return {};
+  const store = await import("@/lib/tools/store");
+  const personId = session.personId ?? session.userId;
+  const base = {
+    personId,
+    personEmail: await store.personEmail(personId).catch(() => ""),
+    locale: session.uiLocale ?? "en",
+    timeZone: session.zonaHoraria ?? "UTC",
+    theme: args.dark === true ? ("dark" as const) : ("light" as const),
+  };
+  if (args.installed !== true) return { toolBridge: { ...base, mode: "draft", toolProjectId: session.projectId } };
+  const row = await store.installationOf(personId, session.projectId).catch(() => null);
+  if (!row || row.removedAt || !row.enabled) return { error: "This tool isn't installed for this person yet: call publish to install it first." };
+  const { toolFrameUrl } = await import("@/lib/tools/host");
+  const url = toolFrameUrl({ hostLabel: row.hostLabel, releaseSha: row.releaseSha, requestHost: null });
+  if (!url) return { error: "The installed tool has no address here." };
+  return { toolBridge: { ...base, mode: "installed", installation: row }, installedUrl: url };
+}
+
 async function toolPublicar(
   session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // A TOOL INSTALLS (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card, another action.
+  if (session.tool) {
+    const { toolInstalar } = await import("./tool-install");
+    return toolInstalar(session, {
+      loadProject: async (p, u) => deps.loadProject(p, u),
+      projectFiles: async (p) => (deps.projectFiles ? ((await deps.projectFiles(p).catch(() => null)) ?? {}) : {}),
+      compileErrors: (data, files) =>
+        data.app
+          ? [
+              ...erroresDeLaApp(data.app, files).map(textoDeDiagnostico),
+              ...problemasDelCascaron(data.app, sinOpIds(data.html ?? ""), files).map((d) => `${d.ruta} — ${d.mensaje}`),
+            ]
+          : [],
+      securityReview: async (p, l) => (deps.securityReview ? deps.securityReview(p, l) : null),
+      previewDataChanges: async (p) => (deps.previewDataChanges ? deps.previewDataChanges(p) : null),
+    }) as Promise<ToolOutcome>;
+  }
+
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
 

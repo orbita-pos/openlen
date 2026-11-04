@@ -119,7 +119,9 @@
       "limit": "你已达到套餐的已发布项目上限。",
       "invalid": "发布失败。请检查子域名后重试。",
       "checking": "检查中…",
-      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。"
+      "langsFailed": "未能翻译 {langs}——重新发布可再试一次。",
+      "install": "安装",
+      "installed": "已把「{title}」安装到你的 OpenLen。"
     },
     "errors": {
       "turn_limit": "智能体已达到每轮步骤上限。",

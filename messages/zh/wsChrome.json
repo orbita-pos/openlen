@@ -320,7 +320,12 @@
       "appHint": "拿来用的东西：收银、预约、带登录的后台",
       "appPlaceholder": "描述你的应用：它做什么、谁在用……",
       "headline": "你的下一个应用从这里开始",
-      "subtitle": "告诉 Len 它要做什么，Len 就把它做出来：页面、数据和登录。"
+      "subtitle": "告诉 Len 它要做什么，Len 就把它做出来：页面、数据和登录。",
+      "tool": "工具",
+      "toolHint": "由 Len 制作、在 OpenLen 里属于你的一个界面。",
+      "toolHeadline": "你需要什么工具？",
+      "toolSubtitle": "Len 来做，它会留在你的 OpenLen 里：在侧边栏，或在你的项目里。",
+      "toolPlaceholder": "能查看并确认今天预订的东西…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "收件箱",
     "business": "我的业务",
     "versions": "版本",
-    "database": "数据库"
+    "database": "数据库",
+    "tools": "工具"
   },
   "startTabs": {
     "crear": "创建",
     "mispaginas": "我的页面",
-    "comunidad": "社区"
+    "comunidad": "社区",
+    "herramientas": "工具"
   },
   "resultadosTabs": {
     "page": "页面",
@@ -735,6 +742,31 @@
       "step": "第 {current} 步，共 {total} 步",
       "noSteps": "—",
       "finished": "完成"
+    }
+  },
+  "tools": {
+    "planRequired": "需要付费套餐才能打开这个工具。",
+    "change": {
+      "title": "{tool} 想要修改 {project} 中的 {table}",
+      "subtitle": "这会修改真实数据。在你应用之前，什么都不会改变。",
+      "apply": "应用",
+      "cancel": "取消"
+    },
+    "unavailable": "这个工具现在无法打开。",
+    "page": {
+      "title": "工具",
+      "subtitle": "Len 为你做的界面。它们在你的 OpenLen 里，而不在你的网站上。",
+      "ask": "请 Len 做一个工具",
+      "empty": "还没有工具。请 Len 做一个吧。",
+      "inRail": "侧边栏",
+      "inProject": "在项目里",
+      "version": "版本 {version} · {date}",
+      "switch": "显示 {tool}",
+      "openProject": "打开项目",
+      "remove": "移除",
+      "restore": "恢复",
+      "releaseGone": "那个版本已经不在了。请 Len 重新安装。",
+      "failed": "没有成功。请再试一次。"
     }
   }
 }

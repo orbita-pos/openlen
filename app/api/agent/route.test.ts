@@ -126,6 +126,7 @@ const mocks = vi.hoisted(() => {
   cobroDeLasHerramientas: undefined as undefined | ((userId: string, centicreditos: number, use: LedgerUse) => Promise<unknown>),
   // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
   nacerComoApp: vi.fn(async (_p: unknown) => true),
+  bornAsTool: vi.fn(async (_p: unknown): Promise<"born" | "not_blank" | "plan_required"> => "born"),
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): the launcher is checked by what the route hands it.
   createSubagentLauncher: vi.fn((_ctx: unknown, _io: unknown) => ({ launch: vi.fn(async () => ({ ok: true as const, id: "r1" })) })),
   launchSubagentNoticeTurn: vi.fn((_p: unknown) => {}),
@@ -152,6 +153,8 @@ vi.mock("@/lib/agent/subagents/store", () => ({
   reopenRun: vi.fn(async () => false),
   runsOfCurrentConversation: vi.fn(async () => []),
   runOfCurrentConversation: vi.fn(async () => null),
+  setWorktree: vi.fn(async () => {}),
+  setWorktreeOutcome: vi.fn(async () => {}),
 }));
 vi.mock("@/lib/projects/hilos", async (original) => ({
   // Pura: la de verdad (quién del texto es del proyecto, sin uno mismo).
@@ -225,6 +228,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 // F2 de las apps web: lo que cambió el turno, guardado para deshacerlo entero.
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno, addChangesToTurn: mocks.addChangesToTurn }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
+vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 vi.mock("@/lib/projects/chat", () => ({
@@ -463,6 +467,41 @@ describe("POST /api/agent credit gate", () => {
       }));
     }
     expect(mocks.nacerComoApp).not.toHaveBeenCalled();
+  });
+
+  // A TOOL IS BORN the same way (spec local 2026-11-04-herramientas-hechas-por-len, §4.9, §4.13): paid plans only.
+  it("naceComo: \"tool\" makes the blank project a tool before reading it", async () => {
+    const orden: string[] = [];
+    mocks.bornAsTool.mockImplementationOnce(async () => (orden.push("nace"), "born"));
+    mocks.loadProject.mockImplementationOnce(async () => (orden.push("lee"), null));
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "algo para ver mis reservas de hoy", naceComo: "tool", idioma: "es" }),
+    }));
+    expect(mocks.bornAsTool).toHaveBeenCalledWith({ projectId: "p1", userId: "u1", title: "Herramienta", locale: "es" });
+    expect(orden).toEqual(["nace", "lee"]);
+    expect(mocks.nacerComoApp).not.toHaveBeenCalled();
+  });
+
+  it("naceComo: \"tool\" on the free plan answers 402 plan_required and starts no turn", async () => {
+    mocks.bornAsTool.mockImplementationOnce(async () => "plan_required");
+    const res = await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "algo para ver mis reservas", naceComo: "tool" }),
+    }));
+    expect(res.status).toBe(402);
+    expect(await res.json()).toEqual({ error: "plan_required" });
+    expect(mocks.loadProject).not.toHaveBeenCalled();
+  });
+
+  it("with OPENLEN_TOOLS=0, naceComo: \"tool\" is ignored", async () => {
+    vi.stubEnv("OPENLEN_TOOLS", "0");
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "algo", naceComo: "tool" }),
+    }));
+    vi.unstubAllEnvs();
+    expect(mocks.bornAsTool).not.toHaveBeenCalled();
   });
 
   it("si la app no puede nacer, el turno sigue con el proyecto como está", async () => {
@@ -3799,6 +3838,16 @@ describe("POST /api/agent — Len's subagents", () => {
     vi.unstubAllEnvs();
     mocks.techoDelTurno.mockReturnValue(1_000_000);
     mocks.hayTurnoVivoEnElProyecto.mockReturnValue(false);
+  });
+
+  it("in a tool project, a child's session knows it is one (spec local 2026-11-04-herramientas-hechas-por-len, §4.8)", async () => {
+    mocks.loadProject.mockResolvedValue({
+      title: "Reservas", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" }, tool: { bornAt: "2026-11-04T00:00:00Z" } },
+    });
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => null;" });
+    await pedir();
+    expect((launcherArgs()[0] as unknown as { sessionBase: { tool?: boolean } }).sessionBase.tool).toBe(true);
   });
 
   it("the turn's tools get the launcher, and a child's event reaches the chat as `subagent`", async () => {

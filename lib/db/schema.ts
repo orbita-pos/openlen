@@ -2487,6 +2487,41 @@ export const eventTaskCards = pgTable(
   (t) => [index("eventTaskCards_projectId_status_idx").on(t.projectId, t.status)],
 );
 
+/** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): an installed release, immutable and
+ *  content-addressed. Its files never reach the public disk; the tool's private host serves them. */
+export const toolReleases = pgTable("toolReleases", {
+  sha: text("sha").primaryKey(),
+  projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  files: jsonb("files").$type<Record<string, { content: string; contentType: string }>>().notNull(),
+  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A tool installed for a person (§4.12): one row per person and tool project. Removing keeps the row
+ *  (Restaurar); the host label is fixed for the row's life. */
+export const toolInstallations = pgTable(
+  "toolInstallations",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    releaseSha: text("releaseSha").notNull(),
+    placement: text("placement").$type<"rail" | "project">().notNull(),
+    titles: jsonb("titles").$type<Record<string, string>>().notNull().default({}),
+    descriptions: jsonb("descriptions").$type<Record<string, string>>().notNull().default({}),
+    iconPath: text("iconPath").notNull(),
+    hostLabel: text("hostLabel").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    installedAt: timestamp("installedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    removedAt: timestamp("removedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("toolInstallations_person_project_idx").on(t.personId, t.projectId),
+    uniqueIndex("toolInstallations_hostLabel_idx").on(t.hostLabel),
+    index("toolInstallations_personId_idx").on(t.personId),
+  ],
+);
+
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a
 // published site that stopped loading. `npm run len-watch:migrate`.
 export const lenWatchSettings = pgTable("lenWatchSettings", {

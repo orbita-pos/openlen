@@ -1234,3 +1234,49 @@ describe("un recurso que no carga no es una rotura de JavaScript", () => {
     );
   });
 });
+
+// A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its page calls window.openlen as it boots, so
+// whatever answers it has to be on the page BEFORE the document loads — or the measure reports a JS error the
+// person never sees.
+describe("preparePage", () => {
+  it("runs on the measuring page before it navigates", async () => {
+    const order: string[] = [];
+    const page = {
+      setViewport: vi.fn(async () => undefined),
+      setContent: vi.fn(async () => void order.push("navigate")),
+      evaluate: vi.fn(async () => undefined),
+      screenshot: vi.fn(async () => Buffer.from("jpeg")),
+    };
+    await renderVisualQualityViewports(
+      HTML,
+      { launchBrowser: async () => ({ newPage: async () => page, close: async () => undefined }), installGuard: async () => undefined, settle: async () => undefined },
+      { preparePage: async (p) => void order.push(p === page ? "prepare" : "prepare-other") },
+    ).catch(() => null);
+    expect(order[0]).toBe("prepare");
+    expect(order).toContain("navigate");
+  });
+});
+
+describe("the pool and preparePage", () => {
+  it("a render that prepares its page gets a fresh browser of its own, closed after (a reused page can't expose twice)", async () => {
+    const pages: object[] = [];
+    let closed = 0;
+    const launchBrowser = vi.fn(async () => {
+      const page = {
+        setViewport: vi.fn(async () => undefined),
+        setContent: vi.fn(async () => undefined),
+        evaluate: vi.fn(async () => undefined),
+        screenshot: vi.fn(async () => Buffer.from("jpeg")),
+      };
+      pages.push(page);
+      return { newPage: async () => page, close: async () => void (closed += 1) };
+    });
+    const pool = await createVisualQualityRendererPool(1, { launchBrowser, installGuard: async () => undefined, settle: async () => undefined });
+    const prepared: unknown[] = [];
+    await pool.render(HTML, { preparePage: async (p) => void prepared.push(p) }).catch(() => null);
+    expect(launchBrowser).toHaveBeenCalledTimes(2);
+    expect(prepared).toEqual([pages[1]]);
+    expect(closed).toBe(1);
+    await pool.close();
+  });
+});

@@ -119,7 +119,9 @@
       "limit": "Vous avez atteint la limite de projets publiés de votre offre.",
       "invalid": "Impossible de publier. Vérifiez le sous-domaine et réessayez.",
       "checking": "Vérification…",
-      "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer."
+      "langsFailed": "{langs} n'a pas pu être traduite — republiez pour réessayer.",
+      "install": "Installer",
+      "installed": "« {title} » est installé dans votre OpenLen."
     },
     "errors": {
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",

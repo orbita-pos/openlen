@@ -153,6 +153,9 @@ import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
+import { bornAsTool } from "@/lib/projects/born-as-tool";
+import { toolsEnabled } from "@/lib/tools/enabled";
+import { declarationsOfTool } from "@/lib/agent/tool-mode";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
 import { captureDesignElements, storeDesignCaptures } from "@/lib/agent/design-screenshots";
@@ -647,6 +650,22 @@ async function correrTurno(
       console.warn("[agent] la app no pudo nacer; el turno sigue con el proyecto como está", err);
     });
   }
+  // A TOOL IS BORN the same way (spec local 2026-11-04-herramientas-hechas-por-len, §4.9): the «Herramienta» card's
+  // first message makes the blank project a tool before Len reads it. Tools are for paid plans only (§4.13): on
+  // Free nothing is written and no turn starts.
+  if (body?.naceComo === "tool" && !opts.round && toolsEnabled()) {
+    const born = await bornAsTool({
+      projectId,
+      userId,
+      title: "Herramienta",
+      locale: typeof body.idioma === "string" ? body.idioma : "en",
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] the tool couldn't be born; the turn goes on with the project as it is", err);
+      return "not_blank" as const;
+    });
+    if (born === "plan_required") return errorJson(402, "plan_required");
+  }
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =
@@ -659,6 +678,8 @@ async function correrTurno(
   // sus herramientas son los suyos (`lib/agent/modo-app.ts`). Se decide UNA vez
   // por turno, con la fila del principio, como todo lo demás que lee el prompt.
   const appDelTurno = project.data?.app ?? null;
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): an app with the tool posture on top.
+  const toolDelTurno = appDelTurno && project.data?.tool && toolsEnabled() ? true : false;
   // EL MODO DISEÑO (spec local 2026-10-11): sólo en una app. Las líneas se
   // leen de la carpeta, y un elemento inválido se descarta sin tumbar el turno.
   const ficherosDelDiseno =
@@ -682,7 +703,8 @@ async function correrTurno(
     return resolveAgentTypes({ project: projectTypes, personal: personalTypes });
   };
   let agentTypes = await loadAgentTypes();
-  const tools = buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno);
+  const conPostura = (d: Record<string, unknown>[]) => (toolDelTurno ? declarationsOfTool(d) : d);
+  const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
   const refreshAgentTypes = (): Promise<void> => {
     if (!subagentsOn) return Promise.resolve();
@@ -691,7 +713,7 @@ async function correrTurno(
       const next = await loadAgentTypes();
       const changed = JSON.stringify(next.custom) !== JSON.stringify(agentTypes.custom);
       agentTypes = next;
-      if (changed) tools.splice(0, tools.length, ...buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
+      if (changed) tools.splice(0, tools.length, ...conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno)));
     });
     return typesRefresh;
   };
@@ -898,7 +920,7 @@ async function correrTurno(
     mentionRefs.length > 0
       ? await resolveMentions(mentionRefs, {
           pageHtml: (p) => (p ? (project.data.pages?.[p]?.html ?? null) : (project.data.html ?? null)),
-          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno }, deps),
+          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno }, deps),
         })
       : null;
   const seleccion = mentioned ? null : seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
@@ -1075,7 +1097,7 @@ async function correrTurno(
               projectId,
               ownerId: userId,
               personId: quien,
-              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno }, deps),
+              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno }, deps),
             }),
           GIT_STATUS_TIMEOUT_MS,
           null,
@@ -1107,7 +1129,7 @@ async function correrTurno(
         conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
       ])
     : [[], []];
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(
@@ -1153,6 +1175,7 @@ async function correrTurno(
   const argsDelTurno = {
     mode,
     app: appDelTurno,
+    tool: toolDelTurno,
     realTerminal,
     zona: zonaDelTurno,
     timeContext: timeContextDelTurno,
@@ -1310,6 +1333,7 @@ async function correrTurno(
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
+    tool: toolDelTurno,
     // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
     // Los PDF de la conversación (26/10), por la ruta con la que Read los abre:
@@ -1999,6 +2023,8 @@ async function correrTurno(
                   ...(agentSession.uiLocale ? { uiLocale: agentSession.uiLocale } : {}),
                   zonaHoraria: agentSession.zonaHoraria,
                   ownerEmail,
+                  // A child in a tool project installs and opens the installed tool, as Len does.
+                  ...(toolDelTurno ? { tool: true } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.

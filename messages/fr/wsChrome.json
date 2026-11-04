@@ -320,7 +320,12 @@
       "appHint": "Un outil qu’on utilise : caisse, agenda, tableau de bord avec connexion",
       "appPlaceholder": "Décrivez votre app : ce qu’elle fait, qui l’utilise…",
       "headline": "Votre prochaine app commence ici",
-      "subtitle": "Dites à Len ce qu’elle doit faire et il la construit : ses écrans, ses données et sa connexion."
+      "subtitle": "Dites à Len ce qu’elle doit faire et il la construit : ses écrans, ses données et sa connexion.",
+      "tool": "Outil",
+      "toolHint": "Un écran à vous dans OpenLen, fait par Len.",
+      "toolHeadline": "De quel outil avez-vous besoin ?",
+      "toolSubtitle": "Len le construit et il reste dans votre OpenLen : dans la barre latérale ou dans vos projets.",
+      "toolPlaceholder": "Quelque chose pour voir les réservations du jour et les confirmer…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "Boîte de réception",
     "business": "Mon entreprise",
     "versions": "Versions",
-    "database": "Base de données"
+    "database": "Base de données",
+    "tools": "Outils"
   },
   "startTabs": {
     "crear": "Créer",
     "mispaginas": "Mes pages",
-    "comunidad": "Communauté"
+    "comunidad": "Communauté",
+    "herramientas": "Outils"
   },
   "resultadosTabs": {
     "page": "Page",
@@ -735,6 +742,31 @@
       "step": "Étape {current} sur {total}",
       "noSteps": "—",
       "finished": "Terminé"
+    }
+  },
+  "tools": {
+    "planRequired": "Il vous faut une offre payante pour ouvrir cet outil.",
+    "change": {
+      "title": "{tool} veut modifier {table} dans {project}",
+      "subtitle": "Cela modifie les données réelles. Rien ne change tant que vous n'appliquez pas.",
+      "apply": "Appliquer",
+      "cancel": "Annuler"
+    },
+    "unavailable": "Cet outil ne peut pas s'ouvrir pour le moment.",
+    "page": {
+      "title": "Outils",
+      "subtitle": "Des écrans que Len a construits pour vous. Ils vivent dans votre OpenLen, pas sur votre site.",
+      "ask": "Demander un outil à Len",
+      "empty": "Pas encore d'outils. Demandez-en un à Len.",
+      "inRail": "Barre latérale",
+      "inProject": "Dans les projets",
+      "version": "Version {version} · {date}",
+      "switch": "Afficher {tool}",
+      "openProject": "Ouvrir le projet",
+      "remove": "Retirer",
+      "restore": "Restaurer",
+      "releaseGone": "Cette version n'existe plus. Demandez à Len de la réinstaller.",
+      "failed": "Ça n'a pas marché. Réessayez."
     }
   }
 }

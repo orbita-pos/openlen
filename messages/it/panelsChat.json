@@ -139,7 +139,8 @@
       "artifact-image": "Creare un'immagine promozionale",
       "artifact-motion": "Creare un video animato",
       "artifact-audio": "Creare un audio o una narrazione",
-      "schedule": "Programmare un'attività che Len farà a un'ora precisa"
+      "schedule": "Programmare un'attività che Len farà a un'ora precisa",
+      "tool-development": "Costruire, cambiare, installare o verificare questo strumento"
     },
     "fileLimit": "Massimo 4 file per messaggio.",
     "fileTooBig": "Quel file supera i 20 MB.",
@@ -644,5 +645,17 @@
     "doneSent": "Inviato a {to}",
     "actionFailed": "Impossibile: {error}",
     "yourNote": "La tua nota: {note}"
+  },
+  "installCard": {
+    "title": "Installa «{title}»",
+    "inRail": "Comparirà nella tua barra laterale.",
+    "inProject": "Comparirà dentro i tuoi progetti, accanto alla pagina.",
+    "install": "Installa",
+    "installAnyway": "Installa comunque",
+    "cancel": "Annulla",
+    "findings": "La revisione di sicurezza ha trovato:",
+    "destructive": "L'installazione cancella dati dal suo database. Installare comunque?",
+    "failed": "Non è stato possibile installarlo ({reason}).",
+    "installed": "Installato."
   }
 }

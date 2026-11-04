@@ -176,6 +176,7 @@ export type VisualEngineProjectMetadata =
 
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
+import type { ToolOfProject } from "@/lib/tools/types";
 
 /**
  * UNA APP WEB (spec local docs/superpowers/specs/2026-10-07-apps-design.md):
@@ -196,6 +197,9 @@ export interface ProjectData {
   /** Presente = el proyecto es una APP WEB, no una página. Ausente en todo lo
    *  anterior al 2026-10-07. */
   app?: AppDeProyecto;
+  /** Present = the project was born as a TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.1): an app
+   *  that installs into its owner's OpenLen instead of being published. */
+  tool?: ToolOfProject;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic

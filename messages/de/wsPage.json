@@ -119,7 +119,9 @@
       "limit": "Du hast das Limit veröffentlichter Projekte deines Tarifs erreicht.",
       "invalid": "Veröffentlichen fehlgeschlagen. Prüfe die Subdomain und versuch es erneut.",
       "checking": "Prüfe…",
-      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen."
+      "langsFailed": "{langs} konnte nicht übersetzt werden — erneut veröffentlichen, um es nochmal zu versuchen.",
+      "install": "Installieren",
+      "installed": "„{title}“ ist in deinem OpenLen installiert."
     },
     "errors": {
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",

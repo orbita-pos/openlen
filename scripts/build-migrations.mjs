@@ -169,6 +169,9 @@ const targets = [
   // Len's subagents: subagentRuns and agentRequestSteps.subagentId (spec local 2026-11-01-subagentes-de-len).
   // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, cada `subagent` falla al guardar su fila.
   "subagents-migrate",
+  // Tools made by Len: toolReleases and toolInstallations (spec local 2026-11-04-herramientas-hechas-por-len).
+  // Aditiva e idempotente. 🔴 OBLIGATORIA antes que el código: sin ella, «Instalar» falla al guardar.
+  "tools-migrate",
   // Los datos en borrador y producción: la tabla projectBackendEnvironments y,
   // para cada base de antes, su entorno de siempre. Aditiva e idempotente; va
   // después de `pages-backend-migrate` porque lee projectBackends. 🔴

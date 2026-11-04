@@ -320,7 +320,12 @@
       "appHint": "使うもの：POSレジ、予約、ログイン付きダッシュボード",
       "appPlaceholder": "アプリについて説明してください：何をするか、誰が使うか…",
       "headline": "次のアプリはここから",
-      "subtitle": "何をするアプリかを Len に伝えれば、画面・データ・ログインまで作ります。"
+      "subtitle": "何をするアプリかを Len に伝えれば、画面・データ・ログインまで作ります。",
+      "tool": "ツール",
+      "toolHint": "Len が作る、OpenLen の中のあなた専用の画面。",
+      "toolHeadline": "どんなツールが必要ですか？",
+      "toolSubtitle": "Len が作り、あなたの OpenLen に残ります。サイドバーか、プロジェクトの中に。",
+      "toolPlaceholder": "今日の予約を見て確定できるもの…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "受信箱",
     "business": "マイビジネス",
     "versions": "バージョン",
-    "database": "データベース"
+    "database": "データベース",
+    "tools": "ツール"
   },
   "startTabs": {
     "crear": "作成",
     "mispaginas": "マイページ",
-    "comunidad": "コミュニティ"
+    "comunidad": "コミュニティ",
+    "herramientas": "ツール"
   },
   "resultadosTabs": {
     "page": "ページ",
@@ -735,6 +742,31 @@
       "step": "ステップ {current} / {total}",
       "noSteps": "—",
       "finished": "完了"
+    }
+  },
+  "tools": {
+    "planRequired": "このツールを開くには有料プランが必要です。",
+    "change": {
+      "title": "{tool} が {project} の {table} を変更しようとしています",
+      "subtitle": "本番のデータが変わります。適用するまで何も変わりません。",
+      "apply": "適用",
+      "cancel": "キャンセル"
+    },
+    "unavailable": "このツールは今は開けません。",
+    "page": {
+      "title": "ツール",
+      "subtitle": "Len があなたのために作った画面です。サイトではなく、あなたの OpenLen の中にあります。",
+      "ask": "Len にツールを頼む",
+      "empty": "まだツールはありません。Len に頼んでみましょう。",
+      "inRail": "サイドバー",
+      "inProject": "プロジェクト内",
+      "version": "バージョン {version} · {date}",
+      "switch": "{tool} を表示",
+      "openProject": "プロジェクトを開く",
+      "remove": "外す",
+      "restore": "元に戻す",
+      "releaseGone": "そのバージョンはもうありません。Len にもう一度インストールしてもらいましょう。",
+      "failed": "うまくいきませんでした。もう一度お試しください。"
     }
   }
 }

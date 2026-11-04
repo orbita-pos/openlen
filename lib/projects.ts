@@ -855,6 +855,12 @@ export async function publishProject(
     .limit(1);
   const project = projects[0];
   if (!project) throw new ProjectNotFoundError();
+  // A TOOL IS INSTALLED, NOT PUBLISHED (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): refused here, at
+  // the bottom door, before an address is claimed — whoever calls (the route, MCP, Len Watch).
+  if ((project.data as { tool?: unknown } | null)?.tool) {
+    const { ProjectIsToolError } = await import("@/lib/tools/errors");
+    throw new ProjectIsToolError();
+  }
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
   // is never written (see `persistLanguages` below).

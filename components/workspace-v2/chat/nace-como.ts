@@ -2,16 +2,17 @@
 // App del estado vacío (`tarjetas-nace-como.tsx`). Un sitio para la forma del
 // campo, que la usan dos: el borrador que se manda solo y el cuerpo del turno.
 
-/** Lo que pide nacer como app: la tarjeta, y el idioma de la interfaz. */
+/** Lo que pide nacer como app —o como herramienta (spec local 2026-11-04-herramientas-hechas-por-len)—: la
+ *  tarjeta, y el idioma de la interfaz. */
 export interface PideNacer {
-  readonly naceComo?: "app";
+  readonly naceComo?: "app" | "tool";
   readonly idioma?: string;
 }
 
-/** Los campos del cuerpo: `{ naceComo: "app", idioma }`, o nada si es una página. */
+/** Los campos del cuerpo: `{ naceComo, idioma }` para una app o una herramienta, o nada si es una página. */
 export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
-  if (o?.naceComo !== "app") return {};
-  return { naceComo: "app", ...(o.idioma ? { idioma: o.idioma } : {}) };
+  if (o?.naceComo !== "app" && o?.naceComo !== "tool") return {};
+  return { naceComo: o.naceComo, ...(o.idioma ? { idioma: o.idioma } : {}) };
 }
 
 // LA PORTADA TAMBIÉN ELIGE (la píldora del input, `hero-kind-picker.tsx`): su
@@ -22,12 +23,12 @@ export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
 export const KIND_PARAM = "kind";
 
 /** Lo que dice la URL: sólo `app` es app. */
-export function kindFromParam(v: string | null): "pagina" | "app" {
-  return v === "app" ? "app" : "pagina";
+export function kindFromParam(v: string | null): "pagina" | "app" | "tool" {
+  return v === "app" || v === "tool" ? v : "pagina";
 }
 
 /** El enlace de la portada a /new: el brief escrito y, si es una app, `kind=app`. */
-export function newProjectHref(brief: string, kind: "pagina" | "app"): string {
+export function newProjectHref(brief: string, kind: "pagina" | "app" | "tool"): string {
   const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
-  return kind === "app" ? `${base}&${KIND_PARAM}=app` : base;
+  return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }

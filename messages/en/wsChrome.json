@@ -320,7 +320,12 @@
       "appHint": "Something people use: point of sale, booking, dashboard with login",
       "appPlaceholder": "Describe your app: what it does, who uses it…",
       "headline": "Your next app starts here",
-      "subtitle": "Tell Len what it has to do and it builds it: its screens, its data and its login."
+      "subtitle": "Tell Len what it has to do and it builds it: its screens, its data and its login.",
+      "tool": "Tool",
+      "toolHint": "A screen of your own in OpenLen, made by Len.",
+      "toolHeadline": "What tool do you need?",
+      "toolSubtitle": "Len builds it and it stays in your OpenLen: in the side bar or inside your projects.",
+      "toolPlaceholder": "Something to see today's bookings and confirm them…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "Inbox",
     "business": "My business",
     "versions": "Versions",
-    "database": "Database"
+    "database": "Database",
+    "tools": "Tools"
   },
   "startTabs": {
     "crear": "Create",
     "mispaginas": "My pages",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Tools"
   },
   "resultadosTabs": {
     "page": "Page",
@@ -735,6 +742,31 @@
       "step": "Step {current} of {total}",
       "noSteps": "—",
       "finished": "Done"
+    }
+  },
+  "tools": {
+    "planRequired": "You need a paid plan to open this tool.",
+    "change": {
+      "title": "{tool} wants to change {table} in {project}",
+      "subtitle": "This changes the live data. Nothing is changed until you apply it.",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    },
+    "unavailable": "This tool can't open right now.",
+    "page": {
+      "title": "Tools",
+      "subtitle": "Screens Len built for you. They live in your OpenLen, not on your site.",
+      "ask": "Ask Len for a tool",
+      "empty": "No tools yet. Ask Len for one.",
+      "inRail": "Side bar",
+      "inProject": "In projects",
+      "version": "Version {version} · {date}",
+      "switch": "Show {tool}",
+      "openProject": "Open project",
+      "remove": "Remove",
+      "restore": "Restore",
+      "releaseGone": "That version isn't there any more. Ask Len to install it again.",
+      "failed": "That didn't work. Try again."
     }
   }
 }

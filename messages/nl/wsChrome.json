@@ -328,7 +328,12 @@
       "appHint": "Iets wat je gebruikt: kassa, agenda, dashboard met login",
       "appPlaceholder": "Beschrijf je app: wat hij doet, wie hem gebruikt…",
       "headline": "Je volgende app begint hier",
-      "subtitle": "Vertel Len wat hij moet doen en hij bouwt hem: de schermen, de gegevens en de login."
+      "subtitle": "Vertel Len wat hij moet doen en hij bouwt hem: de schermen, de gegevens en de login.",
+      "tool": "Tool",
+      "toolHint": "Een eigen scherm in OpenLen, gemaakt door Len.",
+      "toolHeadline": "Welke tool heb je nodig?",
+      "toolSubtitle": "Len bouwt hem en hij blijft in je OpenLen: in de zijbalk of in je projecten.",
+      "toolPlaceholder": "Iets om de reserveringen van vandaag te zien en te bevestigen…"
     }
   },
   "empty": {
@@ -435,12 +440,14 @@
     "messages": "Inbox",
     "business": "Mijn bedrijf",
     "versions": "Versies",
-    "database": "Database"
+    "database": "Database",
+    "tools": "Tools"
   },
   "startTabs": {
     "crear": "Maken",
     "mispaginas": "Mijn pagina’s",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Tools"
   },
   "resultadosTabs": {
     "page": "Pagina",
@@ -735,6 +742,31 @@
       "step": "Stap {current} van {total}",
       "noSteps": "—",
       "finished": "Klaar"
+    }
+  },
+  "tools": {
+    "planRequired": "Je hebt een betaald abonnement nodig om deze tool te openen.",
+    "change": {
+      "title": "{tool} wil {table} in {project} wijzigen",
+      "subtitle": "Dit wijzigt de echte gegevens. Er verandert niets tot je het toepast.",
+      "apply": "Toepassen",
+      "cancel": "Annuleren"
+    },
+    "unavailable": "Deze tool kan nu niet worden geopend.",
+    "page": {
+      "title": "Tools",
+      "subtitle": "Schermen die Len voor je heeft gebouwd. Ze staan in je OpenLen, niet op je site.",
+      "ask": "Len om een tool vragen",
+      "empty": "Nog geen tools. Vraag Len om er een.",
+      "inRail": "Zijbalk",
+      "inProject": "In projecten",
+      "version": "Versie {version} · {date}",
+      "switch": "{tool} tonen",
+      "openProject": "Project openen",
+      "remove": "Verwijderen",
+      "restore": "Herstellen",
+      "releaseGone": "Die versie is er niet meer. Vraag Len om hem opnieuw te installeren.",
+      "failed": "Dat lukte niet. Probeer het opnieuw."
     }
   }
 }

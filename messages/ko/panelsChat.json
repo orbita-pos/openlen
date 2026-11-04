@@ -139,7 +139,8 @@
       "artifact-image": "홍보 이미지 만들기",
       "artifact-motion": "모션 영상 만들기",
       "artifact-audio": "오디오나 내레이션 만들기",
-      "schedule": "Len이 정해진 시간에 할 작업 예약하기"
+      "schedule": "Len이 정해진 시간에 할 작업 예약하기",
+      "tool-development": "이 도구를 만들고, 바꾸고, 설치하고, 확인하기"
     },
     "fileLimit": "메시지당 파일은 4개까지예요.",
     "fileTooBig": "그 파일은 20MB를 넘어요.",
@@ -644,5 +645,17 @@
     "doneSent": "{to}에게 보냈어요",
     "actionFailed": "하지 못했어요: {error}",
     "yourNote": "내 메모: {note}"
+  },
+  "installCard": {
+    "title": "「{title}」 설치",
+    "inRail": "사이드바에 나타나요.",
+    "inProject": "프로젝트 안, 페이지 옆에 나타나요.",
+    "install": "설치",
+    "installAnyway": "그래도 설치",
+    "cancel": "취소",
+    "findings": "보안 검토에서 찾은 것:",
+    "destructive": "설치하면 데이터베이스의 데이터가 삭제돼요. 그래도 설치할까요?",
+    "failed": "설치하지 못했어요({reason}).",
+    "installed": "설치했어요."
   }
 }

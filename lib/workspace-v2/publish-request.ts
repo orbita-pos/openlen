@@ -28,8 +28,10 @@ export type PublishOutcome =
   | { readonly kind: "len_watch_fix_pending"; readonly incidentId: string; readonly branch: string }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
-export async function postPublish(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
-  const res = await fetch(`/api/projects/${projectId}/publish`, {
+/** A gated POST — publish, or install a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): both answer
+ *  the same 428s and errors. `published` means it went through. */
+async function postGated(url: string, body: Record<string, unknown>): Promise<PublishOutcome> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -72,12 +74,40 @@ export async function postPublishAfterSecurity(
   onView: (v: ReviewView) => void,
   wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null> = waitForSecurityReview,
 ): Promise<PublishOutcome> {
-  let outcome = await postPublish(projectId, body);
+  return throughSecurity((b) => postPublish(projectId, b), projectId, body, onView, wait);
+}
+
+export function postPublish(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
+  return postGated(`/api/projects/${projectId}/publish`, body);
+}
+
+/** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same gates as publishing. */
+export function postInstall(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
+  return postGated(`/api/projects/${projectId}/install`, body);
+}
+
+export async function postInstallAfterSecurity(
+  projectId: string,
+  body: Record<string, unknown>,
+  onView: (v: ReviewView) => void,
+  wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null> = waitForSecurityReview,
+): Promise<PublishOutcome> {
+  return throughSecurity((b) => postInstall(projectId, b), projectId, body, onView, wait);
+}
+
+async function throughSecurity(
+  post: (body: Record<string, unknown>) => Promise<PublishOutcome>,
+  projectId: string,
+  body: Record<string, unknown>,
+  onView: (v: ReviewView) => void,
+  wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null>,
+): Promise<PublishOutcome> {
+  let outcome = await post(body);
   for (let k = 0; k < 3 && outcome.kind === "security_review_pending"; k++) {
     onView({ fingerprint: outcome.fingerprint, status: "running", blocking: [], medium: [], accepted: [] });
     const done = await wait(projectId, outcome.fingerprint);
     if (done) onView(done);
-    outcome = await postPublish(projectId, body);
+    outcome = await post(body);
   }
   return outcome;
 }
