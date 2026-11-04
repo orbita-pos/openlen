@@ -155,7 +155,7 @@ async function check(task: EventTaskRow, deps: WatcherDeps): Promise<void> {
 export async function tick(deps: WatcherDeps): Promise<void> {
   let checked = 0;
   while (checked < CHECKS_PER_PASS) {
-    const due = await deps.store.claimDueChecks(deps.now(), DUE_PER_TICK, (s) => deps.sourceOf(s).checkEveryMs ?? CHECK_EVERY_MS);
+    const due = await deps.store.claimDueChecks(deps.now(), DUE_PER_TICK, (s) => deps.sourceOf(s)?.checkEveryMs ?? CHECK_EVERY_MS);
     for (let i = 0; i < due.length; i += CHECKS_AT_ONCE) {
       await Promise.all(
         due.slice(i, i + CHECKS_AT_ONCE).map(async (task) => {

@@ -36,7 +36,14 @@ afterEach(() => vi.unstubAllGlobals());
 const NOW = new Date("2026-11-04T10:05:00Z");
 const card = { id: "c1", projectId: "p1", decidedAt: new Date("2026-11-04T10:00:00Z") } as EventTaskCardRow;
 const reply = { kind: "reply" as const, channel: "github" as const, to: "12", toLabel: "#12 Login roto", body: "Lo miramos hoy." };
-const send = () => githubSender({ repoOf: async () => ({ ok: true, owner: "ana", repo: "web", token: "ghs_x" }), ownerOf: async () => "owner", api: githubApi });
+let repoOf: ReturnType<typeof vi.fn>;
+let pinnedOf: ReturnType<typeof vi.fn>;
+beforeEach(() => {
+  repoOf = vi.fn(async () => ({ ok: true, owner: "ana", repo: "web", token: "ghs_x" }));
+  pinnedOf = vi.fn(async () => ({ owner: "ana", repo: "web" }));
+  routes["GET /repos/ana/web/issues/12/comments"] = () => json(200, []);
+});
+const send = () => githubSender({ repoOf: repoOf as never, pinnedOf: pinnedOf as never, ownerOf: async () => "owner", api: githubApi });
 const posts = () => calls.filter((c) => c.method === "POST");
 
 describe("githubSender", () => {
@@ -67,5 +74,37 @@ describe("githubSender", () => {
     expect(await send()(card, reply, 1, NOW)).toEqual({ kind: "failed", message: "Not Found", passing: false });
     routes["POST /repos/ana/web/issues/12/comments"] = () => json(502, { message: "Bad Gateway" });
     expect(await send()(card, reply, 1, NOW)).toEqual({ kind: "failed", message: "Bad Gateway", passing: true });
+  });
+});
+
+describe("githubSender after the final review", () => {
+  it("even the first attempt looks for the marker, and finding it posts nothing (a press racing the watcher's resume)", async () => {
+    routes["GET /repos/ana/web/issues/12/comments"] = () => json(200, [{ id: 1, body: `Lo miramos hoy.\n\n${markerOf("c1")}` }]);
+    routes["POST /repos/ana/web/issues/12/comments"] = () => json(201, { id: 2 });
+    expect(await send()(card, reply, 1, NOW)).toEqual({ kind: "sent", result: "#12" });
+    expect(posts()).toEqual([]);
+  });
+
+  it("a marker check that fails is tried again later, never posted blind", async () => {
+    routes["GET /repos/ana/web/issues/12/comments"] = () => json(502, { message: "Bad Gateway" });
+    routes["POST /repos/ana/web/issues/12/comments"] = () => json(201, { id: 2 });
+    expect(await send()(card, reply, 2, NOW)).toEqual({ kind: "failed", message: "Bad Gateway", passing: true });
+    expect(posts()).toEqual([]);
+  });
+
+  it("the comment goes to the task's repository, and a card whose task is gone is refused", async () => {
+    routes["POST /repos/ana/web/issues/12/comments"] = () => json(201, { id: 2 });
+    await send()(card, reply, 1, NOW);
+    expect(repoOf).toHaveBeenCalledWith("p1", "owner", undefined, { owner: "ana", repo: "web" });
+    pinnedOf.mockResolvedValue(null);
+    expect(await send()(card, reply, 1, NOW)).toEqual({ kind: "failed", message: "This card's task no longer exists.", passing: false });
+  });
+
+  it("a token that can't be had now, and a secondary rate limit, are tried again", async () => {
+    repoOf.mockResolvedValue({ ok: false, reason: "no_token" });
+    expect(await send()(card, reply, 1, NOW)).toMatchObject({ kind: "failed", passing: true });
+    repoOf.mockResolvedValue({ ok: true, owner: "ana", repo: "web", token: "ghs_x" });
+    routes["POST /repos/ana/web/issues/12/comments"] = () => json(403, { message: "You have exceeded a secondary rate limit." }, { "retry-after": "60", "x-ratelimit-remaining": "4000" });
+    expect(await send()(card, reply, 1, NOW)).toEqual({ kind: "failed", message: "You have exceeded a secondary rate limit.", passing: true });
   });
 });

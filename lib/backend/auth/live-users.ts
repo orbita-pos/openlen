@@ -13,6 +13,10 @@ export async function readLiveAuthUsers<T>(projectId: string, work: (q: TxQuery)
   if (!project) return null;
   return project.db.transaction(async (q) => {
     await q("set transaction read only");
+    // As `queryLive`'s read: a slow or locked read gives up instead of holding a connection the live app shares, or the
+    // watcher's whole pass (final review I3).
+    await q("set local statement_timeout = '10s'");
+    await q("set local lock_timeout = '5s'");
     await q(`select set_config('role', 'supabase_auth_admin', true)`);
     return work(q);
   });

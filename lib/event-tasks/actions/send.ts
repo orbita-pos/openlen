@@ -32,6 +32,9 @@ export interface SendReplyDeps {
 }
 
 const FIRST_WAIT_S = 5;
+/** How long an attempt holds its send: a watcher's pass that runs while it is in flight doesn't try it again (final
+ *  review I1). Past it, a try a restart cut off is due. */
+const SEND_LEASE_MS = 120_000;
 const LONGEST_WAIT_S = 300;
 
 const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -80,7 +83,7 @@ export async function sendReply(card: EventTaskCardRow, index: number, deps: Sen
   const sender = a.channel === "email" ? emailSender(deps) : deps.senders?.[a.channel];
   if (!sender) return fail("This channel can't send.");
   // Recorded first: a restart finds it «sending» and tries again, harmlessly on the channel's side.
-  await deps.record(card.id, index, { state: "sending", attempts, nextAttemptAt: null });
+  await deps.record(card.id, index, { state: "sending", attempts, nextAttemptAt: new Date(now.getTime() + SEND_LEASE_MS).toISOString() });
   const r = await sender(card, a, attempts, now);
   if (r.kind === "sent") {
     await deps.record(card.id, index, { state: "done", nextAttemptAt: null, error: null, result: r.result });

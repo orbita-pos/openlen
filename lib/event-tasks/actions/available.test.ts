@@ -33,6 +33,15 @@ describe("availableActions", () => {
     expect(await availableActions(task("form_submissions"), "owner", ready(true))).toEqual({ project: true, dataChange: false, replyChannels: ["email"] });
   });
 
+  it("a GitHub check that fails offers no GitHub reply instead of failing the judge", async () => {
+    fakeSources.set("app_rows", { kind: "app_rows", offers: { dataChange: false, replies: ["github"] } });
+    const githubReady = vi.fn(async () => {
+      throw new Error("connect ETIMEDOUT");
+    });
+    expect(await availableActions(task("app_rows"), "owner", { ...ready(true), githubReady })).toEqual({ project: true, dataChange: false, replyChannels: [] });
+    fakeSources.clear();
+  });
+
   it("GitHub replies are offered only while a token can be had", async () => {
     fakeSources.set("app_rows", { kind: "app_rows", offers: { dataChange: false, replies: ["github"] } });
     expect(await availableActions(task("app_rows"), "owner", { ...ready(true), githubReady: vi.fn(async () => false) })).toEqual({ project: true, dataChange: false, replyChannels: [] });

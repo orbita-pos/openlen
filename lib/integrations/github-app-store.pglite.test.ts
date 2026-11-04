@@ -40,3 +40,13 @@ describe("githubRepoOfProject", () => {
     expect(await githubRepoOfProject("p1", "owner", async () => null)).toEqual({ ok: false, reason: "no_token" });
   });
 });
+
+describe("githubRepoOfProject with the task's repository", () => {
+  it("a pinned repository is asked for even when another remote ranks first now", async () => {
+    await pg.query(`INSERT INTO "projectGitRepos" VALUES ('p1', $1)`, [JSON.stringify({ origin: { url: "https://github.com/ana/web.git", refs: {} }, upstream: { url: "https://github.com/acme/web.git", refs: {} } })]);
+    await pg.query(`INSERT INTO "githubAppInstallations" ("userId", "installationId", "accountLogin", "accountType") VALUES ('owner', 77, 'ana', 'User'), ('owner', 88, 'acme', 'Organization')`);
+    const token = vi.fn(async () => "ghs_tok");
+    expect(await githubRepoOfProject("p1", "owner", token, { owner: "ana", repo: "web" })).toEqual({ ok: true, owner: "ana", repo: "web", token: "ghs_tok" });
+    expect(token).toHaveBeenCalledWith(expect.any(Array), "https://github.com/ana/web");
+  });
+});

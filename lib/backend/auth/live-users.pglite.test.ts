@@ -32,3 +32,13 @@ describe("readLiveAuthUsers", () => {
     expect(await readLiveAuthUsers("p1", async () => 1)).toBeNull();
   });
 });
+
+describe("readLiveAuthUsers's limits (final review I3)", () => {
+  it("a slow or locked read gives up instead of holding the live app's connection", async () => {
+    const out = await readLiveAuthUsers("p1", async (q) => ({
+      statement: String((await q("show statement_timeout")).rows[0]!.statement_timeout),
+      lock: String((await q("show lock_timeout")).rows[0]!.lock_timeout),
+    }));
+    expect(out).toEqual({ statement: "10s", lock: "5s" });
+  });
+});

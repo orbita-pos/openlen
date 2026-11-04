@@ -9,6 +9,7 @@ import "server-only";
 import type { z } from "zod";
 
 import { githubApi, githubMessage, type GitHubAnswer } from "@/lib/gh/rest";
+import { githubAppLogin } from "@/lib/integrations/github-app";
 
 import { githubParamsSchema } from "./declarations";
 import { MATCHING_MAX, SourceError, type EventSource, type SourceChange } from "./types";
@@ -29,7 +30,7 @@ export interface GithubState {
   readonly ciSeen: readonly string[];
 }
 
-type RepoOf = (projectId: string, ownerId: string) => Promise<{ ok: true; owner: string; repo: string; token: string } | { ok: false; reason: "no_remote" | "not_connected" | "no_token" }>;
+type RepoOf = (projectId: string, ownerId: string, token?: undefined, pinned?: { readonly owner: string; readonly repo: string }) => Promise<{ ok: true; owner: string; repo: string; token: string } | { ok: false; reason: "no_remote" | "not_connected" | "no_token" }>;
 
 export interface GithubSourceDeps {
   repoOf: RepoOf;
@@ -66,15 +67,19 @@ const commentOf = (c: Item) => ({ author: c.user?.login ?? "", body: c.body ?? "
 const itemRow = (i: Item) => ({ number: i.number, kind: kindOf(i), title: i.title ?? "", state: i.state ?? "", author: i.user?.login ?? "", labels: labelsOf(i), url: i.html_url ?? "", updated_at: i.updated_at ?? "" });
 
 export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubParams, GithubState> {
-  async function connect(projectId: string, ownerId: string) {
-    const r = await deps.repoOf(projectId, ownerId);
+  /** The token for the repository the task was made for, whatever the remotes say now (final review I4). */
+  async function connect(projectId: string, ownerId: string, state: GithubState) {
+    const r = await deps.repoOf(projectId, ownerId, undefined, { owner: state.owner, repo: state.repo });
     if (!r.ok) throw new SourceError("github_unavailable", WHY[r.reason]);
     return r;
   }
 
   /** One request; a refusal the owner can understand is the source's failure (the watcher records it). */
   async function call(token: string, path: string): Promise<GitHubAnswer> {
-    const a = await deps.api("GET", path, token);
+    return checked(await deps.api("GET", path, token));
+  }
+
+  function checked(a: GitHubAnswer): GitHubAnswer {
     if (a.status >= 200 && a.status < 300) return a;
     if (a.status === 429 || (a.status === 403 && a.rateRemaining === 0)) throw new SourceError("rate_limited", `GitHub's rate limit is spent: ${githubMessage(a)}`);
     if (a.status === 401 || a.status === 403 || a.status === 404) throw new SourceError("github_unavailable", `GitHub answered ${a.status}: ${githubMessage(a)}`);
@@ -97,7 +102,9 @@ export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubPara
       const action = ms(i.created_at) > since ? "opened" : i.closed_at && ms(i.closed_at) > since ? "closed" : "updated";
       let comments: Item[] = [];
       if (action === "updated") {
-        comments = (await call(token, `${base}/issues/${i.number}/comments?since=${encodeURIComponent(state.cursor)}&per_page=${PAGE}`)).body as Item[];
+        comments = ((await call(token, `${base}/issues/${i.number}/comments?since=${encodeURIComponent(state.cursor)}&per_page=${PAGE}`)).body as Item[])
+          // GitHub's `since` is inclusive: a comment at the cursor's own time was already told (final review I2).
+          .filter((c) => ms(c.updated_at ?? c.created_at) > since);
         const ours = (c: Item) => app !== null && c.user?.type === "Bot" && c.user?.login === app;
         // The owner's own reply, posted by the App: not news.
         if (comments.length > 0 && comments.every(ours)) continue;
@@ -128,11 +135,18 @@ export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubPara
     return { changes, cursor: batch.at(-1)?.updated_at ?? state.cursor };
   }
 
-  async function failedChecks(token: string, base: string, state: GithubState): Promise<{ changes: SourceChange[]; seen: string[] }> {
-    const branch = (await call(token, `${base}/branches/${encodeURIComponent(state.defaultBranch)}`)).body;
+  async function failedChecks(token: string, base: string, state: GithubState): Promise<{ changes: SourceChange[]; seen: string[]; defaultBranch: string }> {
+    let defaultBranch = state.defaultBranch;
+    let answer = await deps.api("GET", `${base}/branches/${encodeURIComponent(defaultBranch)}`, token);
+    if (answer.status === 404) {
+      // Renamed (master → main): the repository says what it is now (final review I4).
+      defaultBranch = (await call(token, base)).body?.default_branch ?? defaultBranch;
+      answer = await deps.api("GET", `${base}/branches/${encodeURIComponent(defaultBranch)}`, token);
+    }
+    const branch = checked(answer).body;
     const pulls = (await call(token, `${base}/pulls?state=open&sort=updated&direction=desc&per_page=${OPEN_PRS}`)).body as Item[];
     const heads = [
-      { sha: branch?.commit?.sha as string | undefined, branch: state.defaultBranch, number: null as number | null, title: state.defaultBranch },
+      { sha: branch?.commit?.sha as string | undefined, branch: defaultBranch, number: null as number | null, title: defaultBranch },
       ...pulls.map((p) => ({ sha: p.head?.sha as string | undefined, branch: (p.head?.ref as string) ?? "", number: p.number as number, title: (p.title as string) ?? "" })),
     ].filter((h) => h.sha);
     const seen = new Set(state.ciSeen);
@@ -153,7 +167,7 @@ export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubPara
         });
       }
     }
-    return { changes, seen: [...seen].slice(-CI_SEEN) };
+    return { changes, seen: [...seen].slice(-CI_SEEN), defaultBranch };
   }
 
   return {
@@ -174,18 +188,18 @@ export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubPara
     },
 
     async observe(projectId, _params, state, ctx) {
-      const r = await connect(projectId, ctx.ownerId);
+      const r = await connect(projectId, ctx.ownerId, state);
       const base = `/repos/${state.owner}/${state.repo}`;
       const found = await issues(r.token, base, state, deps.appLogin());
       const ci = await failedChecks(r.token, base, state);
-      return { state: { ...state, cursor: found.cursor, ciSeen: ci.seen }, changes: [...found.changes, ...ci.changes] };
+      return { state: { ...state, cursor: found.cursor, ciSeen: ci.seen, defaultBranch: ci.defaultBranch }, changes: [...found.changes, ...ci.changes] };
     },
 
     async read(projectId, _params, { keys, state, match, ctx }) {
       const field = match?.[0]?.field;
       const query = field === "label" ? "labels" : field === "author" ? "creator" : field === "state" ? "state" : null;
       if (match && (match.length > 1 || (match.length === 1 && !query))) throw new SourceError("column_missing", "github matches label, author or state, one at a time.");
-      const r = await connect(projectId, ctx.ownerId);
+      const r = await connect(projectId, ctx.ownerId, state);
       const base = `/repos/${state.owner}/${state.repo}`;
       const items = [];
       for (const key of keys) {
@@ -207,7 +221,8 @@ export function githubSourceWith(deps: GithubSourceDeps): EventSource<GithubPara
 }
 
 export const githubSource = githubSourceWith({
-  repoOf: async (projectId, ownerId) => (await import("@/lib/integrations/github-app-store")).githubRepoOfProject(projectId, ownerId),
+  repoOf: async (projectId, ownerId, _token, pinned) => (await import("@/lib/integrations/github-app-store")).githubRepoOfProject(projectId, ownerId, undefined, pinned),
   api: githubApi,
-  appLogin: () => (process.env.GITHUB_APP_SLUG ? `${process.env.GITHUB_APP_SLUG}[bot]` : null),
+  // Trimmed like the App's other settings: a slug with a stray newline would turn the loop guard off.
+  appLogin: () => githubAppLogin(),
 });
