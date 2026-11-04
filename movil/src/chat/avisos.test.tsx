@@ -156,6 +156,18 @@ describe("AvisosDeLen", () => {
     expect(card.textContent).toContain("eventTasks.notDone");
   });
 
+  it("an action a cut-off press left behind says so, and a reply held back by its change says why (final review I1, I2)", async () => {
+    const host = await pintar(cliente([
+      tarjeta({ status: "accepted", actions: [reg(cambio, { state: "failed", error: "interrupted", result: "mesa 4" }), reg(mensaje, { state: "failed", error: "change_not_done" })] }),
+      tarjeta({ id: "c2", status: "accepted", actions: [reg(mensaje, { state: "failed", error: "expired" })] }),
+    ]));
+    const card = host.querySelector('[data-aviso="c1"]')!;
+    expect(card.textContent).toContain("eventTasks.interrupted");
+    expect(card.textContent).toContain('eventTasks.rowNow {"now":"mesa 4"}');
+    expect(card.textContent).toContain("eventTasks.notSentChange");
+    expect(host.querySelector('[data-aviso="c2"]')!.textContent).toContain("eventTasks.sendExpired");
+  });
+
   it("a sending reply shows its state and Retirar", async () => {
     const enviando = tarjeta({ status: "accepted", actions: [reg(cambio, { state: "done", result: "mesa 4 → 6" }), reg(mensaje, { state: "sending", attempts: 2 })] });
     const c = cliente([enviando], { respuesta: { status: "withdrawn" } });

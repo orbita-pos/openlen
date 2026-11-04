@@ -116,6 +116,15 @@ describe("event tasks", () => {
     expect((await pg().query<{ note: string | null }>(`SELECT "note" FROM "eventTaskRecords"`)).rows).toEqual([{ note: null }]);
   });
 
+  it("requeueRecord with the slot already taken takes no other (final review I4)", async () => {
+    const task = await store.createEventTask(eventInput());
+    const record = await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "delivered", candidate: { subject: "reservas", changes: [], summary: "1" }, at: NOW });
+    await store.markJudged(record.id, true);
+    expect(await store.requeueRecord(record.id, "nota", "2026-11-03", NOW, { slotTaken: true })).toEqual({ ok: true });
+    expect((await store.pendingJudges()).map((r) => r.id)).toEqual([record.id]);
+    expect((await pg().query<{ judgesThatDay: number }>(`SELECT "judgesThatDay" FROM "eventTasks"`)).rows).toEqual([{ judgesThatDay: 0 }]);
+  });
+
   it("only a delivered record can be judged again", async () => {
     const task = await store.createEventTask(eventInput());
     const failed = await store.writeRecord({ taskId: task.id, projectId: "p1", kind: "failed", reason: "read_failed", at: NOW });

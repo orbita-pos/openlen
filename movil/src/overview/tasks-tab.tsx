@@ -164,7 +164,11 @@ export function TasksTab({
           : te("eventTasks.recDelivered")
         : r.kind === "filtered"
           ? te("eventTasks.recFiltered", { reason: r.reason ?? "" })
-          : te("eventTasks.recFailed", { reason: r.reason ?? "" });
+          : r.kind === "applied"
+            ? te("eventTasks.recApplied", { reason: r.reason ?? "" })
+            : r.kind === "sent"
+              ? te("eventTasks.recSent", { reason: r.reason ?? "" })
+              : te("eventTasks.recFailed", { reason: r.reason ?? "" });
     return r.count > 1 ? `${what} ${te("eventTasks.recCount", { count: r.count })}` : what;
   };
   const event = (e: EventItem) => (

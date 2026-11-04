@@ -44,6 +44,14 @@ export interface CardActionRecord {
 
 /** The error of a send the owner withdrew («Retirar»): the card says «Retirado». */
 export const WITHDRAWN = "retirado por el dueño";
+/** A press cut off before this action finished (./resume.ts): the card says so. */
+export const INTERRUPTED = "interrupted";
+/** A reply held back because its card's change didn't go through. */
+export const NOT_SENT_CHANGE = "change_not_done";
+/** A send still not out a day after the press: no more tries (Resend keeps an idempotency key for a day). */
+export const EXPIRED = "expired";
+/** How long a card stays in the chat, and in what the judge hears of the waiting ones. */
+export const CARD_WINDOW_MS = 7 * 86_400_000;
 
 /** At most this many actions on one card: the real case needs two, move and tell. */
 export const MAX_ACTIONS = 2;

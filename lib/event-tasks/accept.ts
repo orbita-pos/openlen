@@ -12,7 +12,7 @@ import type { launchEventTaskTurn } from "@/lib/agent/turnos-desde-el-servidor";
 import type { EventTaskOrigin } from "@/lib/projects/types";
 
 import type { Applied } from "./actions/apply";
-import type { ActionState, CardAction, CardActionRecord } from "./actions/types";
+import { NOT_SENT_CHANGE, type ActionState, type CardAction, type CardActionRecord } from "./actions/types";
 import type { Decision } from "./cards";
 import type { EventTaskCardRow, EventTaskRow } from "./store";
 import { acceptedTurnPrompt } from "./texts";
@@ -43,7 +43,9 @@ export interface AcceptDeps {
   /** The owner's reply, stored and sent once (./actions/send.ts). */
   send(card: EventTaskCardRow, index: number): Promise<{ state: ActionState; error: string | null }>;
   record(cardId: string, index: number, patch: Partial<Omit<CardActionRecord, "action">>): Promise<void>;
-  requeue(recordId: string, note: string | null, day: string, now: Date): Promise<{ ok: true } | { ok: false; reason: "daily_limit" | "not_found" }>;
+  requeue(recordId: string, note: string | null, day: string, now: Date, o?: { readonly slotTaken?: boolean }): Promise<{ ok: true } | { ok: false; reason: "daily_limit" | "not_found" }>;
+  /** One of the task's judges of the day (store.takeJudgeSlot). */
+  takeSlot(taskId: string, day: string): Promise<boolean>;
   withdraw(cardId: string, index: number): Promise<void>;
 }
 
@@ -78,18 +80,27 @@ export async function decideAndLaunch(o: Press, deps: AcceptDeps): Promise<Accep
   const now = deps.now();
   if (o.action === "look_again" || o.action === "withdraw_send") return onDecided(o, deps, now);
   const note = o.action === "dismiss" ? (o.note ?? null) : null;
+  // «Ahora no» with a note: the day's judge first, so past the 24 the card stays waiting and says so (review I4).
+  let slot: { day: string } | null = null;
+  if (note) {
+    const before = await deps.getCard(o.cardId);
+    if (!before || before.projectId !== o.projectId) return { ok: false, reason: "not_found" };
+    const task = await deps.getTask(before.taskId);
+    if (task) {
+      const day = dayOf(now, task.timeZone);
+      if (!(await deps.takeSlot(task.id, day))) return { ok: false, reason: "daily_limit" };
+      slot = { day };
+    }
+  }
   const decided = await deps.decide(o.projectId, o.cardId, o.action, o.actorId, now, note);
   if (!decided.ok) return decided;
   const card = decided.card;
   // A card of another project was never this route's: it decides nothing visible and launches nothing.
   if (card.projectId !== o.projectId) return { ok: false, reason: "not_found" };
   if (o.action === "dismiss") {
-    if (!note) return { ok: true, status: "dismissed" };
-    const task = await deps.getTask(card.taskId);
-    if (!task) return { ok: true, status: "dismissed" };
-    const again = await deps.requeue(card.recordId, note, dayOf(now, task.timeZone), now);
-    if (again.ok) return { ok: true, status: "dismissed", lookingAgain: true };
-    return again.reason === "daily_limit" ? { ok: false, reason: "daily_limit" } : { ok: true, status: "dismissed" };
+    if (!note || !slot) return { ok: true, status: "dismissed" };
+    const again = await deps.requeue(card.recordId, note, slot.day, now, { slotTaken: true });
+    return again.ok ? { ok: true, status: "dismissed", lookingAgain: true } : { ok: true, status: "dismissed" };
   }
   const task = await deps.getTask(card.taskId);
   if (!task) return { ok: false, reason: "not_found" };
@@ -132,7 +143,15 @@ async function act(card: EventTaskCardRow, task: EventTaskRow, actorId: string, 
     changeDone &&= results[i]!.state === "done";
   }
   for (const [i, rec] of records.entries()) {
-    if (rec.action.kind !== "reply" || !changeDone) continue;
+    if (rec.action.kind !== "reply") continue;
+    if (!changeDone) {
+      // Held back by its change: said on the card, so it doesn't wait for ever (final review I1).
+      if (rec.state === "pending") {
+        await deps.record(card.id, i, { state: "failed", error: NOT_SENT_CHANGE });
+        results[i] = { kind: "reply", state: "failed", error: NOT_SENT_CHANGE };
+      }
+      continue;
+    }
     try {
       results[i] = { kind: "reply", ...(await deps.send(card, i)) };
     } catch (err) {
@@ -198,6 +217,7 @@ export async function defaultAcceptDeps(): Promise<AcceptDeps> {
     send: async (card, index) => send.sendReply(card, index, await send.defaultSendReplyDeps(), new Date()),
     record: cards.updateCardAction,
     requeue: store.requeueRecord,
+    takeSlot: store.takeJudgeSlot,
     withdraw: (cardId, index) => send.withdrawSend(cardId, index, { record: cards.updateCardAction }),
   };
 }

@@ -21,6 +21,7 @@ function deps(o: { update?: ApplyDeps["update"]; now?: Record<string, unknown> |
     update: o.update ?? vi.fn(async () => ({ row: { id: "r2", mesa: 6 } })),
     readRow: vi.fn(async () => (o.now === undefined ? { id: "r2", mesa: 5 } : o.now)),
     record: vi.fn(async (_cardId, _index, rec) => void recorded.push(rec)),
+    log: vi.fn(async () => {}),
   };
   return { d, recorded };
 }
@@ -39,6 +40,16 @@ describe("applyDataChange", () => {
     const r = await applyDataChange(card([freshRecord(change)]), 0, s.d);
     expect(r).toEqual({ state: "blocked", result: "mesa 5", error: "The row changed since the card was made." });
     expect(s.recorded).toEqual([r]);
+  });
+
+  it("an applied change is written to the task's Registros with what changed; a blocked one isn't (spec §7.3)", async () => {
+    const s = deps();
+    const c = card([freshRecord(change)]);
+    await applyDataChange(c, 0, s.d);
+    expect(s.d.log).toHaveBeenCalledWith(c, "applied", "mesa 4 → 6");
+    const b = deps({ update: vi.fn(async () => ({ changed: true as const })) });
+    await applyDataChange(card([freshRecord(change)]), 0, b.d);
+    expect(b.d.log).not.toHaveBeenCalled();
   });
 
   it("an action already done is not applied again", async () => {

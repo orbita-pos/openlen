@@ -19,7 +19,7 @@ import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { Bell } from "lucide-react";
 
-import { WITHDRAWN, type CardActionRecord } from "@/lib/event-tasks/actions/types";
+import { EXPIRED, INTERRUPTED, NOT_SENT_CHANGE, WITHDRAWN, type CardActionRecord } from "@/lib/event-tasks/actions/types";
 import type { EventTaskOrigin } from "@/lib/projects/types";
 
 /** One card as GET /api/projects/[id]/event-cards gives it. */
@@ -122,15 +122,19 @@ function stateLine(rec: CardActionRecord, t: T): { text: string; tone: "ok" | "w
   if (a.kind === "data_change") {
     if (rec.state === "done") return { text: t("eventTasks.doneApplied", { result: rec.result ?? "" }), tone: "ok" };
     if (rec.state === "blocked") return { text: t("eventTasks.rowChanged"), tone: "warn" };
+    if (rec.error === INTERRUPTED) return { text: t("eventTasks.interrupted"), tone: "warn" };
     return { text: t("eventTasks.actionFailed", { error: rec.error ?? "" }), tone: "bad" };
   }
   if (a.kind === "reply") {
     if (rec.state === "done") return { text: t("eventTasks.doneSent", { to: rec.result ?? a.to }), tone: "ok" };
     if (rec.state === "sending") return { text: t("eventTasks.sending", { attempts: rec.attempts }), tone: "warn" };
     if (rec.error === WITHDRAWN) return { text: t("eventTasks.withdrawn"), tone: "bad" };
+    if (rec.error === NOT_SENT_CHANGE) return { text: t("eventTasks.notSentChange"), tone: "warn" };
+    if (rec.error === EXPIRED) return { text: t("eventTasks.sendExpired"), tone: "bad" };
     return { text: t("eventTasks.sendFailed", { error: rec.error ?? "" }), tone: "bad" };
   }
   if (rec.state === "done") return { text: t("eventTasks.done"), tone: "ok" };
+  if (rec.error === INTERRUPTED) return { text: t("eventTasks.interrupted"), tone: "warn" };
   return { text: t("eventTasks.actionFailed", { error: rec.error ?? "" }), tone: "bad" };
 }
 
@@ -142,7 +146,9 @@ function StateLine({ rec, t }: { rec: CardActionRecord; t: T }) {
   return (
     <p data-event-state={rec.state} className={`mt-1 text-[11.5px] font-medium ${TONE[line.tone]}`}>
       {line.text}
-      {rec.state === "blocked" && rec.result ? <span className="block font-normal fg-muted">{t("eventTasks.rowNow", { now: rec.result })}</span> : null}
+      {(rec.state === "blocked" || (rec.state === "failed" && rec.action.kind === "data_change")) && rec.result ? (
+        <span className="block font-normal fg-muted">{t("eventTasks.rowNow", { now: rec.result })}</span>
+      ) : null}
     </p>
   );
 }

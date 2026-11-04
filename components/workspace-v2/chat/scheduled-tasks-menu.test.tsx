@@ -136,6 +136,8 @@ describe("ScheduledTasksMenu", () => {
         { id: "r1", kind: "delivered", reason: null, count: 1, notified: true, at: "2026-11-03T09:00:00.000Z" },
         { id: "r2", kind: "filtered", reason: "estado ≠ confirmada", count: 3, notified: null, at: "2026-11-03T08:00:00.000Z" },
         { id: "r3", kind: "failed", reason: "table_missing", count: 2, notified: null, at: "2026-11-03T07:00:00.000Z" },
+        { id: "r4", kind: "applied", reason: "mesa 4 → 1 · Marta", count: 1, notified: null, at: "2026-11-03T06:00:00.000Z" },
+        { id: "r5", kind: "sent", reason: "luis@ejemplo.com · Marta", count: 1, notified: null, at: "2026-11-03T05:00:00.000Z" },
       ],
     };
     const open = (host: HTMLElement) => act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
@@ -151,8 +153,11 @@ describe("ScheduledTasksMenu", () => {
       expect(row.querySelector("input, select, textarea")).toBeNull();
       act(() => row.querySelector<HTMLButtonElement>("[data-event-records]")!.click());
       const lines = [...row.querySelectorAll("[data-event-record]")].map((li) => li.textContent);
-      expect(lines).toHaveLength(3);
+      expect(lines).toHaveLength(5);
       expect(lines[0]).toContain("eventTasks.recNotified");
+      // What the owner's «Hazlo» did, in Registros too (spec §7.3).
+      expect(lines[3]).toContain('eventTasks.recApplied {"reason":"mesa 4 → 1 · Marta"}');
+      expect(lines[4]).toContain('eventTasks.recSent {"reason":"luis@ejemplo.com · Marta"}');
       expect(lines[1]).toContain('eventTasks.recFiltered {"reason":"estado ≠ confirmada"}');
       expect(lines[1]).toContain('eventTasks.recCount {"count":3}');
       expect(lines[2]).toContain('eventTasks.recFailed {"reason":"table_missing"}');

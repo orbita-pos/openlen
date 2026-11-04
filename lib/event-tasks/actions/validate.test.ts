@@ -56,6 +56,10 @@ describe("validateActions", () => {
     expect(await error([{ ...reply, body: " " }])).toMatch(/body/);
   });
 
+  it("a project action longer than 1000 characters is refused (final review I3)", async () => {
+    expect(await error([{ kind: "project", text: "x".repeat(1001) }])).toMatch(/1000/);
+  });
+
   it("more than 2 actions, none, or two of a kind is refused", async () => {
     expect(await error([move, reply, { kind: "project", text: "x" }])).toMatch(/2/);
     expect(await error([])).toMatch(/at least one/);

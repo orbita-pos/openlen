@@ -201,6 +201,32 @@ describe("decideCard", () => {
     expect(await after(waiting.id)).toBeNull();
   });
 
+  it("the judge's list of waiting cards is the chat's: this week's, the newest ten (final review I3)", async () => {
+    const task = await newTask();
+    const n = notifier();
+    const old = await card(task, "vieja", n, "old");
+    await pg.query(`UPDATE "eventTaskCards" SET "createdAt" = now() - interval '8 days' WHERE id = $1`, [old.id]);
+    for (let i = 0; i < 12; i++) await card(task, `c${i}`, n, `s${i}`);
+    const list = await cards.pendingCardsOfTask(task.id, new Date(Date.now() - 7 * 86_400_000));
+    expect(list).toHaveLength(10);
+    expect(list.map((c) => c.id)).not.toContain(old.id);
+  });
+
+  it("interruptedCards: accepted before a time with an action still pending, and nothing else (final review I1)", async () => {
+    const task = await newTask();
+    const n = notifier();
+    const BEFORE = new Date(NOW.getTime() - 10 * 60_000);
+    const cut = await card(task, "cortada", n, "a");
+    await cards.decideCard("p1", cut.id, "accept", "u1", BEFORE);
+    const pressing = await card(task, "en curso", n, "b");
+    await cards.decideCard("p1", pressing.id, "accept", "u1", NOW);
+    const finished = await card(task, "terminada", n, "c");
+    await cards.decideCard("p1", finished.id, "accept", "u1", BEFORE);
+    await cards.updateCardAction(finished.id, 0, { state: "done" });
+    await card(task, "esperando", n, "d");
+    expect((await cards.interruptedCards(new Date(NOW.getTime() - 120_000))).map((c) => c.id)).toEqual([cut.id]);
+  });
+
   it("an unknown card is not_found", async () => {
     expect(await cards.decideCard("p1", "nope", "accept", "u1", NOW)).toEqual({ ok: false, reason: "not_found" });
   });

@@ -3,7 +3,7 @@
 // proposal is marked as the automation's, not the owner's words (DeepSeek). No raw event text rides along.
 import { describe, expect, it, vi } from "vitest";
 
-import { freshRecord, type CardAction, type CardActionRecord } from "./actions/types";
+import { NOT_SENT_CHANGE, freshRecord, type CardAction, type CardActionRecord } from "./actions/types";
 import type { EventTaskCardRow, EventTaskRow } from "./store";
 import { acceptedFraming, decideAndLaunch, type AcceptDeps } from "./accept";
 
@@ -48,6 +48,7 @@ function setup(decision: Awaited<ReturnType<AcceptDeps["decide"]>>, o: { found?:
     }),
     record: vi.fn(async () => {}),
     requeue: vi.fn(async () => ({ ok: true as const })),
+    takeSlot: vi.fn(async () => true),
     withdraw: vi.fn(async () => {}),
   };
   return { deps, launched, rows, order };
@@ -137,10 +138,12 @@ describe("«Hazlo» does what the card shows (spec local 2026-11-04-hazlo, §7.3
     expect(await decideAndLaunch(accept, s.deps)).toMatchObject({
       results: [
         { kind: "data_change", state: "blocked", error: "The row changed since the card was made." },
-        { kind: "reply", state: "pending", error: null },
+        { kind: "reply", state: "failed", error: NOT_SENT_CHANGE },
       ],
     });
     expect(s.deps.send).not.toHaveBeenCalled();
+    // Said on the card, so it doesn't wait for ever (final review I1).
+    expect(s.deps.record).toHaveBeenCalledWith("c1", 1, { state: "failed", error: NOT_SENT_CHANGE });
   });
 
   it("a reply alone goes out without any row to compare", async () => {
@@ -162,8 +165,17 @@ describe("«Hazlo» does what the card shows (spec local 2026-11-04-hazlo, §7.3
     const s = setup({ ok: true, card: card({ status: "dismissed" }) });
     expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "dismiss", actorId: "u2", note: "Ofrécele la 8, la 6 es de fumadores." }, s.deps)).toEqual({ ok: true, status: "dismissed", lookingAgain: true });
     expect(s.deps.decide).toHaveBeenCalledWith("p1", "c1", "dismiss", "u2", NOW, "Ofrécele la 8, la 6 es de fumadores.");
-    // The task's day, in its zone: 14:00 in Mexico City.
-    expect(s.deps.requeue).toHaveBeenCalledWith("r1", "Ofrécele la 8, la 6 es de fumadores.", "2026-11-03", NOW);
+    // The slot first, in the task's day and zone (14:00 in Mexico City); then the record goes back without taking another.
+    expect(s.deps.takeSlot).toHaveBeenCalledWith("t1", "2026-11-03");
+    expect(s.deps.requeue).toHaveBeenCalledWith("r1", "Ofrécele la 8, la 6 es de fumadores.", "2026-11-03", NOW, { slotTaken: true });
+  });
+
+  it("«Ahora no» with a note past the day's 24 leaves the card waiting and says so (final review I4)", async () => {
+    const s = setup({ ok: true, card: card({ status: "dismissed" }) });
+    vi.mocked(s.deps.takeSlot).mockResolvedValueOnce(false);
+    expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "dismiss", actorId: "u2", note: "Ofrécele la 8." }, s.deps)).toEqual({ ok: false, reason: "daily_limit" });
+    expect(s.deps.decide).not.toHaveBeenCalled();
+    expect(s.deps.requeue).not.toHaveBeenCalled();
   });
 
   it("look_again requeues a blocked card's record", async () => {

@@ -2441,7 +2441,8 @@ export const eventTaskRecords = pgTable(
     id: text("id").primaryKey(),
     taskId: text("taskId").notNull().references(() => eventTasks.id, { onDelete: "cascade" }),
     projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
-    kind: text("kind").$type<"delivered" | "filtered" | "failed">().notNull(),
+    /** `applied` / `sent`: what the owner's «Hazlo» did (spec local 2026-11-04-hazlo, §7.3). */
+    kind: text("kind").$type<"delivered" | "filtered" | "failed" | "applied" | "sent">().notNull(),
     reason: text("reason"),
     /** Consecutive failures with the same cause are one record. */
     count: integer("count").notNull().default(1),

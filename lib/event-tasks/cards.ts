@@ -6,7 +6,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, desc, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { LenAvisoEvent } from "@/lib/notifications/types";
@@ -157,13 +157,29 @@ export async function cardsOfProject(projectId: string, o: { readonly since: Dat
   return db.select().from(c).where(and(eq(c.projectId, projectId), gte(c.createdAt, o.since))).orderBy(desc(c.createdAt)).limit(50);
 }
 
-/** A task's cards still waiting for the owner: the judge is told, so it doesn't repeat one. */
-export async function pendingCardsOfTask(taskId: string): Promise<EventTaskCardRow[]> {
+/** The judge hears at most this many of a task's waiting cards. */
+const PENDING_FOR_THE_JUDGE = 10;
+
+/** A task's cards still waiting for the owner: the judge is told, so it doesn't repeat one. Only those made since
+ *  `since` — the chat's window — and the newest ten: one the owner can no longer see must not silence a new notice,
+ *  and a neglected task must not make every judge longer (final review I3). */
+export async function pendingCardsOfTask(taskId: string, since?: Date): Promise<EventTaskCardRow[]> {
   return db
     .select()
     .from(c)
-    .where(and(eq(c.taskId, taskId), eq(c.status, "pending")))
-    .orderBy(desc(c.createdAt));
+    .where(and(eq(c.taskId, taskId), eq(c.status, "pending"), since ? gte(c.createdAt, since) : undefined))
+    .orderBy(desc(c.createdAt))
+    .limit(PENDING_FOR_THE_JUDGE);
+}
+
+/** Cards accepted before `before` with an action still pending: a press cut off half way (./actions/resume.ts). */
+export async function interruptedCards(before: Date): Promise<EventTaskCardRow[]> {
+  return db
+    .select()
+    .from(c)
+    .where(and(eq(c.status, "accepted"), lt(c.decidedAt, before), sql`${c.actions} @> '[{"state":"pending"}]'::jsonb`))
+    .orderBy(asc(c.decidedAt))
+    .limit(50);
 }
 
 /** The cards waiting for «Hazlo» or «Ahora no» in several projects: the phone's «Te necesita». */

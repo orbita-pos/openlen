@@ -231,7 +231,9 @@ async function defaultDeps(judgeCandidate: JudgeRunner): Promise<WatcherDeps> {
       await judgeCandidate(record, task);
     },
     retrySends: async (now) => {
-      const { defaultSendReplyDeps, retryPendingSends } = await import("./actions/send");
+      const [{ defaultSendReplyDeps, retryPendingSends }, { defaultResumeDeps, resumeInterrupted }] = await Promise.all([import("./actions/send"), import("./actions/resume")]);
+      // A press cut off half way first (final review I1), then the replies due another try.
+      await resumeInterrupted(now, await defaultResumeDeps());
       await retryPendingSends(now, await defaultSendReplyDeps());
     },
     notifyStopped: (task, why) => notifyEventTaskStopped(task, why),

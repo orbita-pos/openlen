@@ -190,6 +190,14 @@ describe("judgeCandidate", () => {
     expect(status).not.toContain("pedro@ejemplo.test");
   });
 
+  it("the judge's system text names the card's actions, not the retired proposed_action (final review I6)", async () => {
+    const s = setup([say("Nada.")]);
+    await judgeCandidate(record(), task(), s.deps);
+    const system = String(s.sent[0]![0]!.content);
+    expect(system).not.toContain("proposed_action");
+    expect(system).toContain("actions");
+  });
+
   it("the judge is told that changing real data and messaging people are the owner's to approve", async () => {
     const s = setup([say("Nada.")]);
     await judgeCandidate(record(), task(), s.deps);

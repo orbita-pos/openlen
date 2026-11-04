@@ -7,7 +7,7 @@ import type { SendInput, SendOutcome } from "@/lib/project-email/send";
 
 import type { EventTaskCardRow } from "../store";
 import { retryPendingSends, sendReply, withdrawSend, type SendReplyDeps } from "./send";
-import { freshRecord, type CardActionRecord } from "./types";
+import { EXPIRED, freshRecord, type CardActionRecord } from "./types";
 
 vi.mock("server-only", () => ({}));
 
@@ -20,6 +20,7 @@ function world(o: { answer?: (i: SendInput) => SendOutcome } = {}) {
   const records: Record<string, unknown>[] = [];
   const delivered = new Map<string, string>();
   const d: SendReplyDeps = {
+    log: vi.fn(async () => {}),
     fromOf: vi.fn(async () => "noreply@notify.lamesa.mx"),
     record: vi.fn(async (_cardId: string, _index: number, patch: Record<string, unknown>) => {
       order.push(`record:${String(patch.state)}`);
@@ -64,6 +65,32 @@ describe("sendReply", () => {
       waits.push((Date.parse(String(w.records.at(-1)!.nextAttemptAt)) - NOW.getTime()) / 1000);
     }
     expect(waits).toEqual([5, 10, 20, 300]);
+  });
+
+  it("a refusal for the month's quota is final, so the owner isn't told again every few minutes (final review I2)", async () => {
+    const w = world({ answer: () => ({ kind: "rejected", error: { statusCode: 429, name: "monthly_quota_exceeded", message: "No credits left for more." } }) });
+    expect(await sendReply(card(freshRecord(reply)), 0, w.d, NOW)).toEqual({ state: "failed", error: "No credits left for more." });
+    expect(w.records.at(-1)).toMatchObject({ state: "failed", nextAttemptAt: null });
+  });
+
+  it("the hourly cap is still a passing refusal", async () => {
+    const w = world({ answer: () => ({ kind: "rejected", error: { statusCode: 429, name: "rate_limit_exceeded", message: "At most 50 an hour." } }) });
+    expect(await sendReply(card(freshRecord(reply)), 0, w.d, NOW)).toEqual({ state: "sending", error: "At most 50 an hour." });
+  });
+
+  it("a send still retrying a day after the press stops without another attempt: Resend keeps a key for a day (final review I2)", async () => {
+    const w = world();
+    const late = { ...card({ ...freshRecord(reply), state: "sending", attempts: 9 }), decidedAt: new Date(NOW.getTime() - 25 * 3_600_000) } as EventTaskCardRow;
+    expect(await sendReply(late, 0, w.d, NOW)).toEqual({ state: "failed", error: EXPIRED });
+    expect(w.d.send).not.toHaveBeenCalled();
+    expect(w.records.at(-1)).toMatchObject({ state: "failed", error: EXPIRED, nextAttemptAt: null });
+  });
+
+  it("a reply that went out is written to the task's Registros (spec §7.3)", async () => {
+    const w = world();
+    const c = card(freshRecord(reply));
+    await sendReply(c, 0, w.d, NOW);
+    expect(w.d.log).toHaveBeenCalledWith(c, "sent", "luis@ejemplo.com");
   });
 
   it("a final refusal is failed with Resend's message", async () => {

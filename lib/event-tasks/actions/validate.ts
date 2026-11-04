@@ -84,6 +84,16 @@ function reply(a: Record<string, unknown>, ctx: ValidationContext): CardAction |
   return { kind: "reply", channel: "email", to, subject, body };
 }
 
+/** What Len will do in the project: a sentence or a short paragraph, since every judge after this one reads it too. */
+const PROJECT_TEXT_MAX = 1000;
+
+function project(a: Record<string, unknown>): CardAction | string {
+  const t = text(a.text);
+  if (!t) return "A project action needs text: what will be done.";
+  if (t.length > PROJECT_TEXT_MAX) return `A project action is at most ${PROJECT_TEXT_MAX} characters: say what will be done, not how.`;
+  return { kind: "project", text: t };
+}
+
 export async function validateActions(input: unknown, ctx: ValidationContext): Promise<Validated> {
   if (!Array.isArray(input) || input.length === 0) return no("Give at least one action.");
   if (input.length > MAX_ACTIONS) return no(`At most ${MAX_ACTIONS} actions per card.`);
@@ -96,8 +106,7 @@ export async function validateActions(input: unknown, ctx: ValidationContext): P
     if (!offered.includes(kind)) return no(`This task's source can't do "${kind}". It offers: ${offered.join(", ")}.`);
     if (seenKinds.has(kind)) return no(`At most one ${kind} per card.`);
     seenKinds.add(kind);
-    const made =
-      kind === "project" ? (text(a.text) ? ({ kind: "project", text: text(a.text) } as CardAction) : "A project action needs text: what will be done.") : kind === "data_change" ? await dataChange(a, ctx) : reply(a, ctx);
+    const made = kind === "project" ? project(a) : kind === "data_change" ? await dataChange(a, ctx) : reply(a, ctx);
     if (typeof made === "string") return no(made);
     actions.push(made);
   }
