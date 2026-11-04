@@ -1764,3 +1764,43 @@ test("BRAZO DE CONTROL: sin carpeta en la vista, nada viaja", async () => {
   );
   assert.equal(enLaFoto, undefined);
 });
+
+// A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.8): `view_page mode="measure"` runs it with its
+// bridge in draft, as the screenshot does — without it every tool «throws» reading window.openlen.
+test("a tool: view_page measures it with window.openlen, in draft", async () => {
+  let medido = "";
+  let opciones: { carpeta?: { platformFiles?: Record<string, unknown> }; preparePage?: (page: unknown) => Promise<void> } = {};
+  const caller = { personId: "u1", personEmail: "a@example.com", locale: "es", timeZone: "UTC", mode: "draft" as const, toolProjectId: "t1" };
+  await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿carga?", toolBridge: caller },
+    {
+      medir: async (html: string, _i?: unknown, o?: unknown) => {
+        medido = html;
+        opciones = (o ?? {}) as typeof opciones;
+        return { unreadableText: [], mobileOverflow: false } as never;
+      },
+    },
+  );
+  assert.ok(medido.includes("/openlen/tool-bridge.js"), "the bridge script is in the measured document");
+  assert.ok(opciones.carpeta?.platformFiles?.["/openlen/tool-bridge.js"], "the platform serves the bridge script");
+  const exposed: string[] = [];
+  await opciones.preparePage!({ exposeFunction: async (name: string) => void exposed.push(name) });
+  assert.deepEqual(exposed, ["__openlenBridge"]);
+});
+
+test("CONTRA-PRUEBA: not a tool, view_page measures without a bridge", async () => {
+  let medido = "";
+  let opciones: { preparePage?: unknown } | undefined;
+  await observarPagina(
+    { html: PARAMS.html, tipo: "medir", pregunta: "¿carga?" },
+    {
+      medir: async (html: string, _i?: unknown, o?: unknown) => {
+        medido = html;
+        opciones = o as typeof opciones;
+        return { unreadableText: [], mobileOverflow: false } as never;
+      },
+    },
+  );
+  assert.ok(!medido.includes("/openlen/tool-bridge.js"));
+  assert.equal(opciones?.preparePage, undefined);
+});

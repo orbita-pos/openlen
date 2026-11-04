@@ -14,6 +14,15 @@ describe("una medida por documento", () => {
     expect(m.reusos()).toBe(1);
   });
 
+  it("passes every render option through, not only the folder — a tool's preparePage (its bridge) too", async () => {
+    const vistos: unknown[] = [];
+    const m = medirUnaVezPorDocumento(async (_html, _i, opts) => (vistos.push(opts), { ok: true }));
+    const preparePage = async () => undefined;
+    const carpeta = { files: {}, pagina: null };
+    await m.medir("<html>t</html>", {}, { carpeta, preparePage } as never);
+    expect(vistos).toEqual([{ carpeta, preparePage }]);
+  });
+
   it("CONTRA-PRUEBA: un byte de diferencia son dos documentos y dos medidas", async () => {
     let veces = 0;
     const m = medirUnaVezPorDocumento(async () => {

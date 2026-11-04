@@ -38,7 +38,8 @@ import type { OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 type Medidor<T> = (
   html: string,
   internals?: Record<string, never>,
-  opts?: { carpeta?: OpcionesDelDocumento },
+  /** All of the render options travel: the folder, and a tool's `preparePage` (its bridge). */
+  opts?: { carpeta?: OpcionesDelDocumento; preparePage?: (page: unknown) => Promise<void> },
 ) => Promise<T | null>;
 
 function claveDe(html: string, carpeta: OpcionesDelDocumento | undefined): string {
@@ -75,7 +76,7 @@ export function medirUnaVezPorDocumento<T>(
         reusos += 1;
         return ya;
       }
-      const medida = carpeta ? medir(html, internals ?? {}, { carpeta }) : medir(html);
+      const medida = opts && (carpeta || opts.preparePage) ? medir(html, internals ?? {}, opts) : medir(html);
       enCurso.set(clave, medida);
       void medida.then(
         (v) => {
