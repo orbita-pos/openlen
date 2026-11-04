@@ -33,6 +33,7 @@ import { composeAnswerMessage, emailDomainAnswerMessage, fallbackDelivery, liveQ
 import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSelection } from "./plan-mode-state";
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
+import type { ToolInstallConfirm } from "@/lib/agent/tool-install";
 import { tarjetaDeConfirmacion } from "@/components/llamada/puente-a-len";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import type { DesignRequest } from "@/lib/apps/design/types";
@@ -221,6 +222,8 @@ export interface DesignTurn {
    *  `done` (it finalizes to applied but the card stays tappable). Local-only,
    *  never persisted (F2-T11 decision) — see the `persistTurn` comment for why. */
   confirm?: AgentConfirm;
+  /** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): Len's `publish` in a tool project. */
+  install?: ToolInstallConfirm;
   /** El borrador de `draft_reply` (plans/len-resultados/): una tarjeta
    *  que sólo manda si el usuario toca. Local, como `confirm`: no se guarda. */
   respuesta?: RespuestaPreparada;
@@ -1942,6 +1945,13 @@ export function useAgentChat({
                 if (tarjeta?.tipo === "publicar" && tarjeta.confirm.subdominio) {
                   updateTurn(turnId, { confirm: tarjeta.confirm });
                 }
+                // «Instalar» a tool: sanitized field by field, it comes from the stream.
+                if (c.action === "install") {
+                  const i = payload as Partial<ToolInstallConfirm>;
+                  if (typeof i.title === "string" && (i.placement === "rail" || i.placement === "project")) {
+                    updateTurn(turnId, { install: { action: "install", placement: i.placement, title: i.title } });
+                  }
+                }
                 // El borrador de respuesta (plans/len-resultados/). Se sanea
                 // campo a campo: viene del stream, y un botón desconocido no
                 // se pinta.
@@ -2442,6 +2452,18 @@ export function useAgentChat({
   // endpoint published. Append a local assistant turn ("✓ Publicada …") AND
   // persist it so the confirmation survives a reload (the card itself is
   // ephemeral, rebuilt from the SSE `confirm` event and gone on reload).
+  /** A tool was installed from its card: a note in the chat, as a publish leaves one. */
+  const handleInstalled = useCallback(
+    (title: string) => {
+      const noteId = publishNoteId();
+      const userText = tAgent("confirm.install");
+      const assistantReasoning = tAgent("confirm.installed", { title });
+      setTurns((prev) => [...prev, { id: noteId, userText, assistantReasoning, status: "applied", preEditHtml: "", page: null, noDocChange: true, appliedAt: Date.now() }]);
+      void persistTurn({ id: noteId, userText, assistantReasoning, status: "applied", page: null, noDocChange: true });
+    },
+    [persistTurn, tAgent],
+  );
+
   const handlePublished = useCallback(
     (url: string) => {
       const noteId = publishNoteId();
@@ -2709,6 +2731,7 @@ export function useAgentChat({
     handleCancel,
     handleUndo,
     handlePublished,
+    handleInstalled,
     answerQuestion,
     dismissQuestion,
     conversationChanged,

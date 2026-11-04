@@ -465,6 +465,8 @@ export interface BuildAgentMessagesArgs {
   /** UNA APP WEB (`project.data.app`): el prompt y el manual son los suyos
    *  (`lib/agent/modo-app.ts`). Ausente = una página. */
   app?: AppDeProyecto | null;
+  /** A tool project (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): the tool posture on top of the app's. */
+  tool?: boolean;
   /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
    *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
   zona?: string;
@@ -569,7 +571,7 @@ export type BuildAgentMessagesResult =
  *  (ensayo de caja de crear-es-len, 06/10). El último mensaje es el del dueño:
  *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null);
+  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true);
   const contextBlock = buildAgentContext({
     equipo: args.equipo,
     zona: args.zona,
@@ -602,7 +604,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   // justo después del prompt de sistema, como Claude Code sus ficheros de
   // instrucciones. No cambia entre peticiones, así que va en el prefijo fijo y
   // se lee de caché; el contexto, que sí cambia, sigue en el último mensaje.
-  const manual = adjuntoDelManual(buildManualDeLaPlataforma(process.env, args.mode, args.app ?? null, args.realTerminal));
+  const manual = adjuntoDelManual(buildManualDeLaPlataforma(process.env, args.mode, args.app ?? null, args.realTerminal, args.tool === true));
   // Los avisos cuentan para el techo: son parte del turno, no un extra que
   // aparece después de haber decidido que cabía. El manual también.
   // Y las fotos (A): viajan pegadas a su mensaje en todas las vueltas, así que

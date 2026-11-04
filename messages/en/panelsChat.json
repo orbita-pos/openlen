@@ -635,5 +635,17 @@
     "doneSent": "Sent to {to}",
     "actionFailed": "Couldn't do it: {error}",
     "yourNote": "Your note: {note}"
+  },
+  "installCard": {
+    "title": "Install «{title}»",
+    "inRail": "It will show up in your side bar.",
+    "inProject": "It will show up inside your projects, beside the page.",
+    "install": "Install",
+    "installAnyway": "Install anyway",
+    "cancel": "Cancel",
+    "findings": "The security review found:",
+    "destructive": "Installing deletes data in its database. Install anyway?",
+    "failed": "It couldn't be installed ({reason}).",
+    "installed": "Installed."
   }
 }

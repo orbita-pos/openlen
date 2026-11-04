@@ -212,6 +212,8 @@ export type AgentStreamEvent =
   | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
+  // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card mechanism.
+  | ({ type: "confirm" } & import("./tool-install").ToolInstallConfirm)
   | { type: "done"; turns: number; toolCalls: number }
   | { type: "error"; message: string; code?: AgentErrorCode };
 
@@ -2111,7 +2113,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
               // En inglés desde el 2026-10-06, como las herramientas que lo producen.
               outcome.confirm.action === "publish"
                 ? { ok: true, state: "waiting_for_user_confirmation", subdomain: outcome.confirm.subdominio }
-                : {
+                : outcome.confirm.action === "install"
+                  ? { ok: true, state: "waiting_for_user_confirmation", tool: outcome.confirm.title }
+                  : {
                     ok: true,
                     state: "draft_in_a_card_nothing_sent",
                     note: "The draft is in a card with its button. NOTHING has been sent: tell the user to review it and send it themselves. Never say it was already sent.",

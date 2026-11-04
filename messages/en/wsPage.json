@@ -119,7 +119,9 @@
       "limit": "You've hit your plan's published-projects limit.",
       "invalid": "Couldn't publish. Check the subdomain and try again.",
       "checking": "Checking…",
-      "langsFailed": "{langs} could not be translated — publish again to retry."
+      "langsFailed": "{langs} could not be translated — publish again to retry.",
+      "install": "Install",
+      "installed": "Installed «{title}» in your OpenLen."
     },
     "errors": {
       "turn_limit": "The agent hit its per-turn step limit.",

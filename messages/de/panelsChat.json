@@ -635,5 +635,17 @@
     "doneSent": "Gesendet an {to}",
     "actionFailed": "Nicht möglich: {error}",
     "yourNote": "Deine Notiz: {note}"
+  },
+  "installCard": {
+    "title": "„{title}“ installieren",
+    "inRail": "Es erscheint in deiner Seitenleiste.",
+    "inProject": "Es erscheint in deinen Projekten, neben der Seite.",
+    "install": "Installieren",
+    "installAnyway": "Trotzdem installieren",
+    "cancel": "Abbrechen",
+    "findings": "Die Sicherheitsprüfung hat gefunden:",
+    "destructive": "Die Installation löscht Daten in seiner Datenbank. Trotzdem installieren?",
+    "failed": "Es konnte nicht installiert werden ({reason}).",
+    "installed": "Installiert."
   }
 }

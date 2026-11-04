@@ -635,5 +635,17 @@
     "doneSent": "{to} に送信しました",
     "actionFailed": "できませんでした: {error}",
     "yourNote": "あなたのメモ: {note}"
+  },
+  "installCard": {
+    "title": "「{title}」をインストール",
+    "inRail": "サイドバーに表示されます。",
+    "inProject": "プロジェクトの中、ページの横に表示されます。",
+    "install": "インストール",
+    "installAnyway": "それでもインストール",
+    "cancel": "キャンセル",
+    "findings": "セキュリティレビューで見つかったこと：",
+    "destructive": "インストールするとデータベースのデータが削除されます。それでもインストールしますか？",
+    "failed": "インストールできませんでした（{reason}）。",
+    "installed": "インストールしました。"
   }
 }
