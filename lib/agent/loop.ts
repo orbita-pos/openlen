@@ -393,6 +393,9 @@ export interface AgentLoopArgs {
   /** La lista con pasos sin hacer que el turno hereda (`todosForTurn`): con
    *  ella, el aviso es el de «hay lista». */
   initialTodos?: readonly TodoItem[] | null;
+  /** A turn no person follows (an event task's judge, lib/event-tasks/judge.ts): it never gets the reminder to
+   *  keep the user updated — there is nobody to update, and its only way to reach the owner is its notify tool. */
+  unattended?: true;
 }
 export interface AgentLoopResult {
   finalText: string;
@@ -2326,7 +2329,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // Y el tiempo que lleva el turno, como Claude Code (A3).
         elapsedTimeReminder(ahora() - relojDesde),
         // Y si lleva 5 pasos sin decirle nada a la persona, el aviso de turno callado.
-        silencio.observe(turnText.trim() !== "" || calls.some((c) => asksTheOwner(c.name))),
+        args.unattended ? "" : silencio.observe(turnText.trim() !== "" || calls.some((c) => asksTheOwner(c.name))),
         cutNotice,
       ].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,

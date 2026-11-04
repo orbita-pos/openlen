@@ -8,6 +8,7 @@
 import "server-only";
 
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
+import type { ProviderUse } from "@/lib/agent/brain";
 import { AUTOMATION_NOTIFY, EVENT_TASK_TOOL_DECLARATIONS, SOURCE_READ, eventTaskToolRunner } from "@/lib/agent/event-task-tools";
 import { runAgentLoop, type AgentLoopResult } from "@/lib/agent/loop";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
@@ -31,15 +32,30 @@ export interface JudgeDeps {
   ownerOf(projectId: string): Promise<string>;
   /** Read, Glob and Grep, as Len's catalog declares them. */
   readDeclarations(): Record<string, unknown>[];
-  brain(tools: Record<string, unknown>[]): { openStream(m: Message[]): AsyncIterable<StreamEvent>; closeOut(m: Message[]): AsyncIterable<StreamEvent> };
+  brain(tools: Record<string, unknown>[]): {
+    openStream(m: Message[]): AsyncIterable<StreamEvent>;
+    closeOut(m: Message[]): AsyncIterable<StreamEvent>;
+    /** What each provider it called spent: the ledger's real cost. */
+    providersUsed(): readonly ProviderUse[];
+  };
   runReadTool(session: AgentSession, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
   createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; proposedAction: string }): Promise<EventTaskCardRow>;
   decisionsSince(taskId: string, since: Date): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
   markJudged(recordId: string, notified: boolean): Promise<void>;
-  charge(c: { ownerId: string; projectId: string; actorId: string; refId: string; usage: AgentLoopResult["usage"] }): Promise<void>;
+  charge(c: { ownerId: string; projectId: string; actorId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly JudgeUse[] }): Promise<void>;
   runLoop?: typeof runAgentLoop;
+}
+
+/** One provider's spend in a judging turn, as the ledger takes it. */
+export interface JudgeUse {
+  readonly provider: ProviderUse["provider"];
+  readonly model: string;
+  readonly inputTokens: number;
+  readonly cachedTokens: number;
+  readonly outputTokens: number;
+  readonly reasoningTokens: number;
 }
 
 /** The kept conversation: its last messages, starting at a candidate so no tool result is left without its call. */
@@ -76,7 +92,8 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     const decisions = await d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt);
     const prior = kept((task.transcript ?? []) as Message[]);
     const ask: Message = { role: "user", content: candidateMessage({ task, candidate: record.candidate as unknown as Candidate, decisions }) };
-    const brain = d.brain(tools);
+    const brains = [d.brain(tools)];
+    const brain = brains[0]!;
     // Past the reading budget, ONE more call that can only notify: the verdict is a tool call, so a call without
     // tools (closeOut) could never notify (final review I1). After it, closeOut ends the turn.
     const notifyOnly = EVENT_TASK_TOOL_DECLARATIONS.filter((t) => t.name === AUTOMATION_NOTIFY);
@@ -87,7 +104,11 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
       openStream: (messages) => {
         steps++;
         if (steps <= MAX_STEPS) return brain.openStream(messages);
-        if (steps === MAX_STEPS + 1) return d.brain(notifyOnly).openStream([...messages, { role: "user", content: ANSWER_NOW }]);
+        if (steps === MAX_STEPS + 1) {
+          const last = d.brain(notifyOnly);
+          brains.push(last);
+          return last.openStream([...messages, { role: "user", content: ANSWER_NOW }]);
+        }
         return brain.closeOut(messages);
       },
       closeOut: brain.closeOut,
@@ -98,10 +119,15 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
         return runEventTool(name, args);
       },
       emit: () => {},
+      unattended: true,
     });
     notified = runEventTool.notified();
     await d.saveTranscript(task.id, [...prior, ask, ...(result.transcripcion ?? [])], d.now());
-    await d.charge({ ownerId, projectId: task.projectId, actorId: task.createdBy, refId: record.id, usage: result.usage });
+    // Each provider's tokens: the ledger prices them, so a judging turn has its real cost like a chat turn.
+    const uses = brains.flatMap((b) =>
+      b.providersUsed().map((u) => ({ provider: u.provider, model: u.model, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, reasoningTokens: u.thinkingTokens })),
+    );
+    await d.charge({ ownerId, projectId: task.projectId, actorId: task.createdBy, refId: record.id, usage: result.usage, uses });
     return { notified };
   } finally {
     await d.markJudged(record.id, notified);
@@ -139,6 +165,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
       return {
         openStream: (m) => streamWithRetry(() => brain.openStream(m), {}),
         closeOut: (m) => streamWithRetry(() => brain.closeOut(m), {}),
+        providersUsed: () => brain.providersUsed(),
       };
     },
     runReadTool: (session, name, args) => tools.runAgentTool(session, deps, name, args),
@@ -150,7 +177,16 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
     charge: async (c) => {
       const rate = policy.creditRateForRole(policy.roleForOperation("event_task_judge"));
       const centicredits = creditsForUsage(c.usage.inputTokens, c.usage.outputTokens, rate, c.usage.cachedTokens);
-      await chargeCredits(c.ownerId, centicredits, { surface: "event_task", outcome: "ok", projectId: c.projectId, actorId: c.actorId, refId: c.refId, listCenticredits: centicredits });
+      const at = new Date();
+      await chargeCredits(c.ownerId, centicredits, {
+        surface: "event_task",
+        outcome: "ok",
+        projectId: c.projectId,
+        actorId: c.actorId,
+        refId: c.refId,
+        listCenticredits: centicredits,
+        uses: c.uses.map((u) => ({ ...u, at })),
+      });
     },
   };
 }
