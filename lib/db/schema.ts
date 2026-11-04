@@ -2449,6 +2449,8 @@ export const eventTaskRecords = pgTable(
     /** A delivered record: `pending` until its judge ran, then `done`. */
     judge: text("judge").$type<"pending" | "done">(),
     notified: boolean("notified"),
+    /** The owner's note for judging this record again (spec local 2026-11-04-hazlo, §7.6.7). */
+    note: text("note"),
     firstAt: timestamp("firstAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },
@@ -2471,6 +2473,12 @@ export const eventTaskCards = pgTable(
     decidedAt: timestamp("decidedAt", { mode: "date", withTimezone: true }),
     /** The chat row of the turn «Hazlo» launched. */
     acceptedRowId: text("acceptedRowId"),
+    /** What the card does, each with its own state (spec local 2026-11-04-hazlo, §7.1); null on older cards. */
+    actions: jsonb("actions").$type<import("@/lib/event-tasks/actions/types").CardActionRecord[]>(),
+    /** The row or person it is about: a new card replaces only a pending one with the same key. */
+    subjectKey: text("subjectKey"),
+    /** «¿Qué cambiarías?» from «Ahora no». */
+    dismissNote: text("dismissNote"),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("eventTaskCards_projectId_status_idx").on(t.projectId, t.status)],

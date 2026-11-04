@@ -19,7 +19,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CREATE_SCHEDULED_TASKS, CREATE_EVENT_TASKS } = await import("@/scripts/scheduled-tasks-migrate-sql");
+const { CREATE_SCHEDULED_TASKS, CREATE_EVENT_TASKS, ALTER_EVENT_TASK_CARDS } = await import("@/scripts/scheduled-tasks-migrate-sql");
 const { ScheduleId, createWeeklyScheduleRecord } = await import("@/lib/scheduled-tasks/deepseek/domain");
 const scheduled = await import("@/lib/scheduled-tasks/store");
 const store = await import("./store");
@@ -47,7 +47,7 @@ beforeEach(async () => {
   await db.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY);`);
   await db.query(`INSERT INTO "users" VALUES ('u1'), ('u2');`);
   await db.query(`INSERT INTO "projects" VALUES ('p1'), ('p2');`);
-  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS]) await db.query(statement);
+  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS, ...ALTER_EVENT_TASK_CARDS]) await db.query(statement);
   base.pg = db;
   base.db = drizzle(db, { schema });
 });

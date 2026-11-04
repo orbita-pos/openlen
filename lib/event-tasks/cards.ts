@@ -11,6 +11,7 @@ import { and, desc, eq, gt, gte, inArray, ne } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import type { LenAvisoEvent } from "@/lib/notifications/types";
 
+import { actionsLine, freshRecord, type CardAction } from "./actions/types";
 import type { EventTaskCardRow, EventTaskRow } from "./store";
 import { cardEmail } from "./texts";
 
@@ -34,17 +35,41 @@ async function defaultCardDeps(): Promise<CardDeps> {
 }
 
 export async function createCard(
-  o: { readonly task: EventTaskRow; readonly recordId: string; readonly title: string; readonly summary: string; readonly proposedAction: string },
+  o: {
+    readonly task: EventTaskRow;
+    readonly recordId: string;
+    readonly title: string;
+    readonly summary: string;
+    readonly actions: readonly CardAction[];
+    /** The row or person it is about (spec local 2026-11-04-hazlo, §7.6.2). */
+    readonly subjectKey: string;
+  },
   deps?: CardDeps,
 ): Promise<EventTaskCardRow> {
   const d = deps ?? (await defaultCardDeps());
-  await db.update(c).set({ status: "replaced" }).where(and(eq(c.taskId, o.task.id), eq(c.status, "pending")));
+  // A task can have several cards waiting, one per row or person — DeepSeek's several Tickets on a Thread. Only the
+  // pending card about the same one is replaced.
+  await db
+    .update(c)
+    .set({ status: "replaced" })
+    .where(and(eq(c.taskId, o.task.id), eq(c.status, "pending"), eq(c.subjectKey, o.subjectKey)));
+  const proposedAction = actionsLine(o.actions);
   const [card] = await db
     .insert(c)
-    .values({ id: randomUUID(), taskId: o.task.id, projectId: o.task.projectId, recordId: o.recordId, title: o.title, summary: o.summary, proposedAction: o.proposedAction })
+    .values({
+      id: randomUUID(),
+      taskId: o.task.id,
+      projectId: o.task.projectId,
+      recordId: o.recordId,
+      title: o.title,
+      summary: o.summary,
+      proposedAction,
+      actions: o.actions.map(freshRecord),
+      subjectKey: o.subjectKey,
+    })
     .returning();
   const url = `${d.siteUrl}/new?project=${encodeURIComponent(o.task.projectId)}&chat=1&card=${encodeURIComponent(card!.id)}`;
-  const email = cardEmail(o.task.locale, { task: o.task.title, title: o.title, summary: o.summary, action: o.proposedAction, url });
+  const email = cardEmail(o.task.locale, { task: o.task.title, title: o.title, summary: o.summary, action: proposedAction, url });
   await d.notify(
     {
       type: "len_aviso",
@@ -96,6 +121,15 @@ export async function setAcceptedRow(cardId: string, rowId: string): Promise<voi
 /** The project's cards for the chat: pending ones and those decided since `since`, newest first. */
 export async function cardsOfProject(projectId: string, o: { readonly since: Date }): Promise<EventTaskCardRow[]> {
   return db.select().from(c).where(and(eq(c.projectId, projectId), gte(c.createdAt, o.since))).orderBy(desc(c.createdAt)).limit(50);
+}
+
+/** A task's cards still waiting for the owner: the judge is told, so it doesn't repeat one. */
+export async function pendingCardsOfTask(taskId: string): Promise<EventTaskCardRow[]> {
+  return db
+    .select()
+    .from(c)
+    .where(and(eq(c.taskId, taskId), eq(c.status, "pending")))
+    .orderBy(desc(c.createdAt));
 }
 
 /** The cards waiting for «Hazlo» or «Ahora no» in several projects: the phone's «Te necesita». */
