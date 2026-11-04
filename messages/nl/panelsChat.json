@@ -598,6 +598,8 @@
     "sourceRows": "Nieuwe rijen van {table}",
     "sourceForm": "Inzendingen van formulier {form}",
     "sourceAllForms": "Formulierinzendingen",
+    "sourceChatMessages": "Berichten in de chat van je pagina",
+    "sourceChatSignups": "Aanmeldingen bij de chat van je pagina",
     "conditions": "Voorwaarden",
     "recDelivered": "Len keek",
     "recNotified": "Len meldde",

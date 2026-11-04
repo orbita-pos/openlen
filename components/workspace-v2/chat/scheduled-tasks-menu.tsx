@@ -7,6 +7,9 @@
 // something else, Len creates a new task), name and prompt editable, and their «Registros».
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+
+import { sourceLabel } from "@/lib/event-tasks/source-label";
+import type { EventSourceKind } from "@/lib/event-tasks/store";
 import { AlarmClock, Bell, Pause, Pencil, Play, Trash2 } from "lucide-react";
 
 import { useMandoDesplegable } from "../use-mando-desplegable";
@@ -49,11 +52,12 @@ export interface ClockEventTask {
   readonly kind: "event";
   readonly title: string;
   readonly prompt: string;
-  readonly source: "app_rows" | "form_submissions";
+  readonly source: EventSourceKind;
   readonly params: {
     readonly table?: string;
     readonly created_column?: string;
     readonly form?: string;
+    readonly watch?: string;
     readonly conditions?: readonly { readonly field: string; readonly op: string; readonly value?: string | number }[];
   };
   readonly lastCheckedAt: string | null;
@@ -229,12 +233,8 @@ function EventEditor({ task, onDone, update }: { task: ClockEventTask; onDone: (
 /** What the task watches and its conditions, as text: read-only. */
 function SourceLine({ task }: { task: ClockEventTask }) {
   const t = useTranslations("panelsChat");
-  const what =
-    task.source === "app_rows"
-      ? t("eventTasks.sourceRows", { table: task.params.table ?? "" })
-      : task.params.form
-        ? t("eventTasks.sourceForm", { form: task.params.form })
-        : t("eventTasks.sourceAllForms");
+  const label = sourceLabel(task);
+  const what = t(`eventTasks.${label.key}`, label.values);
   const conditions = (task.params.conditions ?? []).map((c) => [c.field, c.op, c.value].filter((x) => x !== undefined).join(" ")).join(" · ");
   return (
     <small className="block text-[11.5px] leading-snug fg-muted">

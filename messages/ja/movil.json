@@ -161,6 +161,8 @@
     "sourceRows": "{table} の新しい行",
     "sourceForm": "フォーム {form} の送信",
     "sourceAllForms": "フォームの送信",
+    "sourceChatMessages": "ページのチャットのメッセージ",
+    "sourceChatSignups": "ページのチャットへの登録",
     "conditions": "条件",
     "recDelivered": "Len が確認",
     "recNotified": "Len が通知",

@@ -161,6 +161,8 @@
     "sourceRows": "Neue Zeilen in {table}",
     "sourceForm": "Einsendungen des Formulars {form}",
     "sourceAllForms": "Formular-Einsendungen",
+    "sourceChatMessages": "Nachrichten im Chat deiner Seite",
+    "sourceChatSignups": "Anmeldungen im Chat deiner Seite",
     "conditions": "Bedingungen",
     "recDelivered": "Len hat nachgesehen",
     "recNotified": "Len hat Bescheid gegeben",

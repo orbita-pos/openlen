@@ -598,6 +598,8 @@
     "sourceRows": "New rows of {table}",
     "sourceForm": "Submissions of form {form}",
     "sourceAllForms": "Form submissions",
+    "sourceChatMessages": "Messages in your page's chat",
+    "sourceChatSignups": "Sign-ups to your page's chat",
     "conditions": "Conditions",
     "recDelivered": "Len looked",
     "recNotified": "Len notified",

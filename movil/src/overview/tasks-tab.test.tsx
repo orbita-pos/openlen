@@ -127,6 +127,12 @@ describe("TasksTab", () => {
     expect(host.textContent).toContain("vacioTareas");
   });
 
+  it("a visitor_chat task says what it watches", async () => {
+    const event = { id: "e2", projectId: "p1", projectTitle: "Mi tienda", title: "Piden persona", prompt: "Avísame.", source: "visitor_chat", params: { watch: "signups" }, paused: false, lastCheckedAt: null, records: [] };
+    const { host } = await paint({ ...OVERVIEW, events: [event] } as unknown as TasksOverview);
+    expect(host.querySelector('[data-event-task="e2"]')!.textContent).toContain("eventTasks.sourceChatSignups");
+  });
+
   it("tasks tab lists an event task with its records", async () => {
     const event = {
       id: "e1",

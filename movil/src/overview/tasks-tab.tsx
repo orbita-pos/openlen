@@ -10,6 +10,7 @@ import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { ViewerFile } from "@/components/viewer/viewer";
+import { sourceLabel } from "@/lib/event-tasks/source-label";
 import type { EventItem, OverviewItem, ScheduledItem, TasksOverview } from "@/lib/movil/tasks-overview";
 
 import { useAtras } from "../atras";
@@ -153,8 +154,8 @@ export function TasksTab({
     );
 
   const source = (e: EventItem) => {
-    const p = e.params as { table?: string; form?: string };
-    return e.source === "app_rows" ? te("eventTasks.sourceRows", { table: p.table ?? "" }) : p.form ? te("eventTasks.sourceForm", { form: p.form }) : te("eventTasks.sourceAllForms");
+    const label = sourceLabel({ source: e.source, params: e.params as Record<string, unknown> });
+    return te(`eventTasks.${label.key}`, label.values);
   };
   const recordLine = (r: Registro) => {
     const what =

@@ -115,14 +115,16 @@ export async function withdrawSend(cardId: string, index: number, deps: Pick<Sen
 
 /** The real parts: the project email's sending core, its address, the card's record. */
 export async function defaultSendReplyDeps(): Promise<SendReplyDeps & { sending(): Promise<EventTaskCardRow[]> }> {
-  const [{ sendProjectEmail }, { realSendDeps }, { emailStateFor }, cards, { defaultActionLog }] = await Promise.all([
+  const [{ sendProjectEmail }, { realSendDeps }, { emailStateFor }, cards, { defaultActionLog }, chat] = await Promise.all([
     import("@/lib/project-email/send"),
     import("@/lib/project-email/real"),
     import("@/lib/project-email/state"),
     import("../cards"),
     import("./log"),
+    import("./channels/chat"),
   ]);
   return {
+    senders: { chat: await chat.defaultChatSender() },
     log: await defaultActionLog(),
     send: (i) => sendProjectEmail(i, realSendDeps()),
     fromOf: async (projectId) => (await emailStateFor(projectId))?.from ?? null,
