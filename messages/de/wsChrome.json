@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "Du brauchst einen kostenpflichtigen Tarif, um dieses Tool zu öffnen."
+    "planRequired": "Du brauchst einen kostenpflichtigen Tarif, um dieses Tool zu öffnen.",
+    "change": {
+      "title": "{tool} möchte {table} in {project} ändern",
+      "subtitle": "Das ändert die echten Daten. Nichts ändert sich, bevor du es anwendest.",
+      "apply": "Anwenden",
+      "cancel": "Abbrechen"
+    }
   }
 }

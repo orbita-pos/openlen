@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "Ti serve un piano a pagamento per aprire questo strumento."
+    "planRequired": "Ti serve un piano a pagamento per aprire questo strumento.",
+    "change": {
+      "title": "{tool} vuole modificare {table} in {project}",
+      "subtitle": "Questo modifica i dati reali. Non cambia nulla finché non applichi.",
+      "apply": "Applica",
+      "cancel": "Annulla"
+    }
   }
 }

@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "Necesitas un plan de pago para abrir esta herramienta."
+    "planRequired": "Necesitas un plan de pago para abrir esta herramienta.",
+    "change": {
+      "title": "{tool} quiere cambiar {table} en {project}",
+      "subtitle": "Esto cambia los datos reales. No se cambia nada hasta que lo apliques.",
+      "apply": "Aplicar",
+      "cancel": "Cancelar"
+    }
   }
 }

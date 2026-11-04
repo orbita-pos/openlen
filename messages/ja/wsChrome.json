@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "このツールを開くには有料プランが必要です。"
+    "planRequired": "このツールを開くには有料プランが必要です。",
+    "change": {
+      "title": "{tool} が {project} の {table} を変更しようとしています",
+      "subtitle": "本番のデータが変わります。適用するまで何も変わりません。",
+      "apply": "適用",
+      "cancel": "キャンセル"
+    }
   }
 }

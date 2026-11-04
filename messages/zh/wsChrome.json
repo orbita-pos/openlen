@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "需要付费套餐才能打开这个工具。"
+    "planRequired": "需要付费套餐才能打开这个工具。",
+    "change": {
+      "title": "{tool} 想要修改 {project} 中的 {table}",
+      "subtitle": "这会修改真实数据。在你应用之前，什么都不会改变。",
+      "apply": "应用",
+      "cancel": "取消"
+    }
   }
 }

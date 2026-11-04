@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "Je hebt een betaald abonnement nodig om deze tool te openen."
+    "planRequired": "Je hebt een betaald abonnement nodig om deze tool te openen.",
+    "change": {
+      "title": "{tool} wil {table} in {project} wijzigen",
+      "subtitle": "Dit wijzigt de echte gegevens. Er verandert niets tot je het toepast.",
+      "apply": "Toepassen",
+      "cancel": "Annuleren"
+    }
   }
 }

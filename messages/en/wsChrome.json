@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "You need a paid plan to open this tool."
+    "planRequired": "You need a paid plan to open this tool.",
+    "change": {
+      "title": "{tool} wants to change {table} in {project}",
+      "subtitle": "This changes the live data. Nothing is changed until you apply it.",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    }
   }
 }

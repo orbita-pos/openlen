@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "Il vous faut une offre payante pour ouvrir cet outil."
+    "planRequired": "Il vous faut une offre payante pour ouvrir cet outil.",
+    "change": {
+      "title": "{tool} veut modifier {table} dans {project}",
+      "subtitle": "Cela modifie les données réelles. Rien ne change tant que vous n'appliquez pas.",
+      "apply": "Appliquer",
+      "cancel": "Annuler"
+    }
   }
 }

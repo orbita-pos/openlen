@@ -153,6 +153,27 @@ function StateLine({ rec, t }: { rec: CardActionRecord; t: T }) {
   );
 }
 
+/** A production row's change, column by column: before (struck through) → after. «Hazlo»'s card and a tool's
+ *  confirmation (spec local 2026-11-04-herramientas-hechas-por-len, §4.4) show it the same way. */
+export function DataChangeRows({ change }: { change: { readonly set: Readonly<Record<string, unknown>>; readonly before: Readonly<Record<string, unknown>> } }) {
+  return (
+    <table className="mt-1 w-full text-[12px]">
+      <tbody>
+        {Object.entries(change.set).map(([col, value]) => (
+          <tr key={col} data-event-column={col}>
+            <td className="py-0.5 pr-2 font-mono text-[11.5px] fg-muted">{col}</td>
+            <td className="py-0.5 fg">
+              <span className="fg-faint line-through">{String(change.before[col] ?? "∅")}</span>
+              <span className="px-1.5 fg-faint">→</span>
+              <span className="font-medium">{String(value)}</span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 /** One block per action, with its state once «Hazlo» ran it. */
 function ActionBlocks({ card, repliesTo, t }: { card: EventCard; repliesTo: string | null; t: T }) {
   return (
@@ -163,20 +184,7 @@ function ActionBlocks({ card, repliesTo, t }: { card: EventCard; repliesTo: stri
           return (
             <div key={i} data-event-action="data_change" className="rounded-lg border bd px-2.5 py-1.5">
               <span className="block text-[10.5px] font-semibold uppercase tracking-[0.06em] fg-faint">{t("eventTasks.actionData", { table: a.table })}</span>
-              <table className="mt-1 w-full text-[12px]">
-                <tbody>
-                  {Object.entries(a.set).map(([col, value]) => (
-                    <tr key={col} data-event-column={col}>
-                      <td className="py-0.5 pr-2 font-mono text-[11.5px] fg-muted">{col}</td>
-                      <td className="py-0.5 fg">
-                        <span className="fg-faint line-through">{a.before[col] ?? "∅"}</span>
-                        <span className="px-1.5 fg-faint">→</span>
-                        <span className="font-medium">{value}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <DataChangeRows change={a} />
               <StateLine rec={rec} t={t} />
             </div>
           );

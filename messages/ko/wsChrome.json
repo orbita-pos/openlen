@@ -738,6 +738,12 @@
     }
   },
   "tools": {
-    "planRequired": "이 도구를 열려면 유료 요금제가 필요해요."
+    "planRequired": "이 도구를 열려면 유료 요금제가 필요해요.",
+    "change": {
+      "title": "{tool}이(가) {project}의 {table}을(를) 바꾸려고 해요",
+      "subtitle": "실제 데이터가 바뀌어요. 적용하기 전에는 아무것도 바뀌지 않아요.",
+      "apply": "적용",
+      "cancel": "취소"
+    }
   }
 }
