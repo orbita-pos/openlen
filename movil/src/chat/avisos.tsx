@@ -124,10 +124,16 @@ function Acciones({ tarjeta, repliesTo, t }: { tarjeta: TarjetaDeAviso; repliesT
         if (a.kind === "reply") {
           return (
             <div key={i} className="ch-aviso-accion" data-aviso-accion="reply">
-              <small className="ch-aviso-de">{t("eventTasks.actionReply", { to: a.to })}</small>
-              <strong className="ch-aviso-asunto">{a.subject}</strong>
+              <small className="ch-aviso-de">
+                {a.channel === "chat"
+                  ? t("eventTasks.actionReplyChat", { to: a.toLabel ?? a.to })
+                  : a.channel === "github"
+                    ? t("eventTasks.actionReplyGithub", { to: a.toLabel ?? a.to })
+                    : t("eventTasks.actionReply", { to: a.to })}
+              </small>
+              {a.subject ? <strong className="ch-aviso-asunto">{a.subject}</strong> : null}
               <p className="ch-aviso-cuerpo">{a.body}</p>
-              {repliesTo ? <small className="ch-aviso-de">{t("eventTasks.repliesGoTo", { email: repliesTo })}</small> : null}
+              {repliesTo && a.channel === "email" ? <small className="ch-aviso-de">{t("eventTasks.repliesGoTo", { email: repliesTo })}</small> : null}
               <Linea r={r} t={t} />
             </div>
           );

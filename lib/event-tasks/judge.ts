@@ -110,27 +110,30 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     };
     // What its card may propose (spec local 2026-11-04-hazlo, §7.1): the source's actions, the watched table's columns.
     const available = await d.available(task, ownerId);
-    const replyByEmail = available.replyChannels.includes("email");
+    const channels = available.replyChannels;
     const params = task.params as { table?: string; created_column?: string };
     const keyColumn = (task.state as { key_column?: string } | null)?.key_column ?? null;
     const info = available.dataChange && params.table ? await d.tableInfo(task) : null;
     const editable = info ? info.columns.map((c) => c.name).filter((n) => n !== keyColumn && n !== params.created_column) : [];
-    const eventTools = eventTaskToolDeclarations({ dataChange: info !== null, reply: replyByEmail, ...(info && params.table ? { table: params.table, columns: editable } : {}) });
+    const eventTools = eventTaskToolDeclarations({ dataChange: info !== null, replyChannels: channels, ...(info && params.table ? { table: params.table, columns: editable } : {}) });
     const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...eventTools];
     const runEventTool = eventTaskToolRunner({
       notify: async (c) => ({ cardId: (await d.createCard({ task, recordId: record.id, title: c.title, summary: c.summary, actions: c.actions, subjectKey: c.subjectKey })).id }),
       readSource: (keys, match) => d.readSource(task, keys, match, ownerId),
       keyColumn,
-      seen: seenOfCandidate(record.candidate, keyColumn),
+      replyChannels: channels,
+      seen: seenOfCandidate(record.candidate, keyColumn, channels),
       validate: (input, seen) =>
         validateActions(input, {
-          available: { project: true, dataChange: info !== null, reply: replyByEmail },
+          available: { project: true, dataChange: info !== null, replyChannels: channels },
           ...(params.table ? { table: params.table } : {}),
           ...(keyColumn ? { keyColumn } : {}),
           ...(params.created_column ? { createdColumn: params.created_column } : {}),
           ...(info ? { columns: info.columns } : {}),
           seenKeys: seen.keys,
           seenAddresses: seen.addresses,
+          seenConversations: seen.conversations,
+          seenThreads: seen.threads,
           recordId: record.id,
           readRow: (key) => d.readRow(task, key),
           castCheck: (column, value) => d.castCheck(task, column, value),

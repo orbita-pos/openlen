@@ -138,4 +138,37 @@ describe("retrying and withdrawing", () => {
     await withdrawSend("c1", 0, { record });
     expect(record).toHaveBeenCalledWith("c1", 0, { state: "failed", nextAttemptAt: null, error: "retirado por el dueño" });
   });
+
+  // Every channel through the same stored work (plan B, Task 2).
+  const chat = { kind: "reply" as const, channel: "chat" as const, to: "conv1", toLabel: "Ana", body: "Hola Ana" };
+
+  it("a reply goes by its channel's sender", async () => {
+    const w = world();
+    const sender = vi.fn(async () => ({ kind: "sent" as const, result: "Ana" }));
+    const d = { ...w.d, senders: { chat: sender } };
+    expect(await sendReply(card(freshRecord(chat)), 0, d, NOW)).toEqual({ state: "done", error: null });
+    expect(sender).toHaveBeenCalledWith(expect.objectContaining({ id: "c1" }), chat, 1, NOW);
+    expect(w.d.send).not.toHaveBeenCalled();
+    expect(w.records.at(-1)).toMatchObject({ state: "done", result: "Ana" });
+  });
+
+  it("a channel with no sender fails without trying", async () => {
+    const w = world();
+    const gh = { kind: "reply" as const, channel: "github" as const, to: "12", toLabel: "#12 Login", body: "Hola" };
+    expect(await sendReply(card(freshRecord(gh)), 0, w.d, NOW)).toEqual({ state: "failed", error: "This channel can't send." });
+    expect(w.order).toEqual(["record:failed"]);
+  });
+
+  it("a passing failure of any channel backs off 5 s doubling to 300 s, a final one fails", async () => {
+    const w = world();
+    const d = { ...w.d, senders: { chat: vi.fn(async () => ({ kind: "failed" as const, message: "busy", passing: true })) } };
+    const waits: number[] = [];
+    for (const attempts of [0, 1, 2, 6]) {
+      expect(await sendReply(card({ ...freshRecord(chat), state: attempts === 0 ? "pending" : "sending", attempts }), 0, d, NOW)).toEqual({ state: "sending", error: "busy" });
+      waits.push((Date.parse(String(w.records.at(-1)!.nextAttemptAt)) - NOW.getTime()) / 1000);
+    }
+    expect(waits).toEqual([5, 10, 20, 300]);
+    const final = { ...w.d, senders: { chat: vi.fn(async () => ({ kind: "failed" as const, message: "gone", passing: false })) } };
+    expect(await sendReply(card(freshRecord(chat)), 0, final, NOW)).toEqual({ state: "failed", error: "gone" });
+  });
 });

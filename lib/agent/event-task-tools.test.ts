@@ -3,7 +3,10 @@
 // enforced by the tool, not by the prompt).
 import { describe, expect, it, vi } from "vitest";
 
+import { emptySeen, type Seen } from "@/lib/event-tasks/actions/seen";
+
 import { AUTOMATION_NOTIFY, SOURCE_READ, automationNotifyDeclaration, eventTaskToolDeclarations, eventTaskToolRunner, wordCount } from "./event-task-tools";
+import frozen from "./event-task-tools.frozen.json";
 
 const ok = {
   title: "Reserva de las 21:00 choca con la mesa 4",
@@ -12,16 +15,16 @@ const ok = {
 };
 const PROJECT = [{ kind: "project" as const, text: "Escribirle a Luis para ofrecerle la mesa 6." }];
 
-function runner(o: { seen?: { keys: Set<string>; addresses: Set<string> } } = {}) {
+function runner(o: { seen?: Seen } = {}) {
   const notify = vi.fn(async () => ({ cardId: "c1" }));
   const readSource = vi.fn(async (keys: readonly string[], _match?: readonly { field: string; value: string }[]) => ({ items: keys }) as unknown);
-  const validate = vi.fn(async (_input: unknown, _seen: { keys: Set<string>; addresses: Set<string> }) => ({ ok: true as const, actions: PROJECT, subjectKey: "rec1" }) as { ok: true; actions: typeof PROJECT; subjectKey: string } | { ok: false; error: string });
-  return { notify, readSource, validate, run: eventTaskToolRunner({ notify, readSource, validate, keyColumn: "id", ...(o.seen ? { seen: o.seen } : {}) }) };
+  const validate = vi.fn(async (_input: unknown, _seen: Seen) => ({ ok: true as const, actions: PROJECT, subjectKey: "rec1" }) as { ok: true; actions: typeof PROJECT; subjectKey: string } | { ok: false; error: string });
+  return { notify, readSource, validate, run: eventTaskToolRunner({ notify, readSource, validate, keyColumn: "id", replyChannels: ["email"], ...(o.seen ? { seen: o.seen } : {}) }) };
 }
 
 describe("declarations", () => {
   it("are source_read and automation_notify, with the 100-word limit on the summary", () => {
-    const decls = eventTaskToolDeclarations({ dataChange: false, reply: false });
+    const decls = eventTaskToolDeclarations({ dataChange: false, replyChannels: [] });
     expect(decls.map((d) => d.name)).toEqual([SOURCE_READ, AUTOMATION_NOTIFY]);
     const notify = decls[1] as { parameters: { properties: Record<string, { description: string }>; required: string[] } };
     expect(notify.parameters.required).toEqual(["title", "summary", "actions"]);
@@ -32,14 +35,40 @@ describe("declarations", () => {
 describe("automationNotifyDeclaration", () => {
   type Decl = { description: string; parameters: { properties: { actions: { description: string; items: { properties: { kind: { enum: string[] } } } } } } };
   it("the declaration lists only the available actions and the table's columns", () => {
-    const rows = automationNotifyDeclaration({ dataChange: true, reply: false, table: "reservas", columns: ["mesa", "hora"] }) as Decl;
+    const rows = automationNotifyDeclaration({ dataChange: true, replyChannels: [], table: "reservas", columns: ["mesa", "hora"] }) as Decl;
     expect(rows.parameters.properties.actions.items.properties.kind.enum).toEqual(["project", "data_change"]);
     expect(rows.parameters.properties.actions.description).toContain("reservas");
     expect(rows.parameters.properties.actions.description).toContain("mesa, hora");
     expect(JSON.stringify(rows)).not.toContain('"reply"');
-    const forms = automationNotifyDeclaration({ dataChange: false, reply: true }) as Decl;
+    const forms = automationNotifyDeclaration({ dataChange: false, replyChannels: ["email"] }) as Decl;
     expect(forms.parameters.properties.actions.items.properties.kind.enum).toEqual(["project", "reply"]);
     expect(JSON.stringify(forms)).not.toContain("data_change");
+  });
+});
+
+describe("automationNotifyDeclaration by channel", () => {
+  type Props = Record<string, { enum?: string[] } | undefined>;
+  type Decl = { parameters: { properties: { actions: { description: string; items: { properties: Props } } } } };
+
+  it("with only email, automation_notify is declared exactly as before (a task's cached prefix stays)", () => {
+    expect(JSON.stringify(automationNotifyDeclaration({ dataChange: false, replyChannels: ["email"] }))).toBe(JSON.stringify(frozen.forms));
+    expect(JSON.stringify(automationNotifyDeclaration({ dataChange: true, replyChannels: ["email"], table: "reservas", columns: ["mesa", "hora"] }))).toBe(JSON.stringify(frozen.rows));
+  });
+
+  it("a chat channel adds channel, to and body, and no subject", () => {
+    const d = automationNotifyDeclaration({ dataChange: false, replyChannels: ["chat"] }) as Decl;
+    const props = d.parameters.properties.actions.items.properties;
+    expect(props.kind!.enum).toEqual(["project", "reply"]);
+    expect(props.channel!.enum).toEqual(["chat"]);
+    expect(props.to).toBeDefined();
+    expect(props.body).toBeDefined();
+    expect(props.subject).toBeUndefined();
+    expect(d.parameters.properties.actions.description).toContain("conversation_id");
+  });
+
+  it("github says the comment is the OpenLen app's", () => {
+    const d = automationNotifyDeclaration({ dataChange: false, replyChannels: ["github"] }) as Decl;
+    expect(d.parameters.properties.actions.description).toContain("OpenLen GitHub app");
   });
 });
 
@@ -119,13 +148,13 @@ describe("source_read", () => {
     const r = runner();
     await r.run(SOURCE_READ, { match: [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: 4 }] });
     expect(r.readSource).toHaveBeenCalledWith([], [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: "4" }]);
-    const decl = eventTaskToolDeclarations({ dataChange: false, reply: false })[0] as { parameters: { properties: Record<string, unknown>; required?: string[] } };
+    const decl = eventTaskToolDeclarations({ dataChange: false, replyChannels: [] })[0] as { parameters: { properties: Record<string, unknown>; required?: string[] } };
     expect(Object.keys(decl.parameters.properties)).toEqual(["keys", "match"]);
     expect(decl.parameters.required ?? []).toEqual([]);
   });
 
   it("source_read results add their keys and addresses to what the turn read", async () => {
-    const r = runner({ seen: { keys: new Set(["r1"]), addresses: new Set() } });
+    const r = runner({ seen: { ...emptySeen(), keys: new Set(["r1"]) } });
     r.readSource.mockResolvedValueOnce({
       items: [{ id: "r9", email: "Ana@Ejemplo.com" }],
       previous: [{ id: "s8", data: { correo: "b@y.com", nombre: "B" } }],

@@ -280,4 +280,14 @@ describe("EventCards", () => {
     const { host } = await paint([]);
     expect(host.innerHTML).toBe("");
   });
+
+  it("a chat reply shows who and where, with no subject", async () => {
+    const chat = { kind: "reply" as const, channel: "chat" as const, to: "conv1", toLabel: "Ana", body: "Hola Ana, ¿para cuántos sería?" };
+    const { host } = await paint([card({ actions: [rec(chat)] })]);
+    const block = host.querySelector('[data-event-card="c1"] [data-event-action="reply"]')!;
+    expect(block.textContent).toContain('eventTasks.actionReplyChat {"to":"Ana"}');
+    expect(block.querySelector("b")).toBeNull();
+    expect(block.textContent).toContain("Hola Ana, ¿para cuántos sería?");
+    expect(block.textContent).not.toContain("eventTasks.repliesGoTo");
+  });
 });

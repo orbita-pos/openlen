@@ -615,6 +615,8 @@
     "recSent": "已发送：{reason}",
     "actionData": "{table} 中的更改",
     "actionReply": "收件人：{to} · 方式：邮件",
+    "actionReplyChat": "收件人：{to} · 方式：页面聊天",
+    "actionReplyGithub": "位置：{to} · 方式：以 OpenLen 应用身份在 GitHub 评论",
     "apply": "应用",
     "applyAndSend": "应用并发送",
     "rowChanged": "自提醒以来该行已更改：未应用任何内容。",

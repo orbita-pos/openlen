@@ -184,10 +184,16 @@ function ActionBlocks({ card, repliesTo, t }: { card: EventCard; repliesTo: stri
         if (a.kind === "reply") {
           return (
             <div key={i} data-event-action="reply" className="rounded-lg border bd px-2.5 py-1.5">
-              <span className="block text-[11px] fg-faint">{t("eventTasks.actionReply", { to: a.to })}</span>
-              <b className="mt-0.5 block font-semibold fg">{a.subject}</b>
+              <span className="block text-[11px] fg-faint">
+                {a.channel === "chat"
+                  ? t("eventTasks.actionReplyChat", { to: a.toLabel ?? a.to })
+                  : a.channel === "github"
+                    ? t("eventTasks.actionReplyGithub", { to: a.toLabel ?? a.to })
+                    : t("eventTasks.actionReply", { to: a.to })}
+              </span>
+              {a.subject ? <b className="mt-0.5 block font-semibold fg">{a.subject}</b> : null}
               <p className="mt-1 whitespace-pre-line rounded-md bg-side px-2 py-1.5 leading-snug fg">{a.body}</p>
-              {repliesTo ? <span className="mt-1 block text-[11px] fg-faint">{t("eventTasks.repliesGoTo", { email: repliesTo })}</span> : null}
+              {repliesTo && a.channel === "email" ? <span className="mt-1 block text-[11px] fg-faint">{t("eventTasks.repliesGoTo", { email: repliesTo })}</span> : null}
               <StateLine rec={rec} t={t} />
             </div>
           );

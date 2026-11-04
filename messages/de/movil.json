@@ -178,6 +178,8 @@
     "recSent": "Gesendet: {reason}",
     "actionData": "Änderung in {table}",
     "actionReply": "An: {to} · Per: E-Mail",
+    "actionReplyChat": "An: {to} · Per: Chat deiner Seite",
+    "actionReplyGithub": "Auf: {to} · Per: GitHub-Kommentar, als OpenLen-App",
     "apply": "Anwenden",
     "applyAndSend": "Anwenden und senden",
     "rowChanged": "Die Zeile hat sich seit dem Hinweis geändert: Nichts wurde angewendet.",

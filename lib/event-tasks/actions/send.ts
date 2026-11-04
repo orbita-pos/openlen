@@ -3,19 +3,29 @@
 // key (Resend keeps one email per key, so a retry after a restart can't send a second), and a passing failure (429, 5xx)
 // is tried again by the watcher's pass with a backoff of 5 s doubling to 300 s, until it goes out or the owner withdraws
 // it. A final refusal is failed with Resend's own message. It is its own kind of email, `reply`: the project's domain,
-// the owner's Reply-To, the plan's hourly cap and monthly allowance, not the form reply's brakes.
+// the owner's Reply-To, the plan's hourly cap and monthly allowance, not the form reply's brakes. The other channels
+// (the page's chat, a GitHub comment) go through the same stored work, each by its own sender, which is what makes a
+// retry harmless on its side: a message id from the card, a marker looked for before posting again.
 import "server-only";
 
 import type { SendInput, SendOutcome } from "@/lib/project-email/send";
 
+import type { ReplyChannel } from "../sources/types";
 import type { EventTaskCardRow } from "../store";
 import type { ActionLog } from "./log";
-import { EXPIRED, WITHDRAWN, type ActionState, type CardActionRecord } from "./types";
+import { EXPIRED, WITHDRAWN, type ActionState, type CardActionRecord, type ReplyAction } from "./types";
+
+/** What one try of a channel came to: out, or a failure that waiting may fix (`passing`) or not. */
+export type ChannelOutcome = { kind: "sent"; result: string } | { kind: "failed"; message: string; passing: boolean };
+/** One channel's write side. `attempt` counts from 1; past the first, it checks whether the last try went out. */
+export type ChannelSender = (card: EventTaskCardRow, a: ReplyAction, attempt: number, now: Date) => Promise<ChannelOutcome>;
 
 export interface SendReplyDeps {
+  /** Email: the project email's sending core and the project's address (null while its email isn't ready). */
   send(i: SendInput): Promise<SendOutcome>;
-  /** The project's sending address, null while its email isn't ready. */
   fromOf(projectId: string): Promise<string | null>;
+  /** The other channels' senders. */
+  senders?: Partial<Record<Exclude<ReplyChannel, "email">, ChannelSender>>;
   record(cardId: string, index: number, patch: Partial<Omit<CardActionRecord, "action">>): Promise<void>;
   /** Who was written to, in the task's Registros too (spec §7.3). */
   log: ActionLog;
@@ -38,6 +48,24 @@ const QUOTA = new Set(["monthly_quota_exceeded", "daily_quota_exceeded"]);
 /** Worth another try: the hourly cap or Resend itself; anything else is final. */
 const passing = (e: { statusCode: number; name: string }) => (e.statusCode === 429 && !QUOTA.has(e.name)) || e.statusCode >= 500;
 
+/** Email as a channel: the card's idempotency key, so a retry after a restart is the same email. */
+export function emailSender(deps: Pick<SendReplyDeps, "send" | "fromOf">): ChannelSender {
+  return async (card, a) => {
+    const from = await deps.fromOf(card.projectId);
+    if (!from) return { kind: "failed", message: "The project's email isn't ready.", passing: false };
+    const r = await deps.send({
+      projectId: card.projectId,
+      environment: "live",
+      kind: "reply",
+      idempotencyKey: `event-card:${card.id}:reply`,
+      email: { from, to: [a.to], subject: a.subject ?? "", text: a.body, html: html(a.body) },
+    });
+    if (r.kind === "sent") return { kind: "sent", result: a.to };
+    if (r.kind !== "rejected") return { kind: "failed", message: "The email wasn't sent.", passing: false };
+    return { kind: "failed", message: r.error.message, passing: passing(r.error) };
+  };
+}
+
 export async function sendReply(card: EventTaskCardRow, index: number, deps: SendReplyDeps, now: Date): Promise<{ state: ActionState; error: string | null }> {
   const rec = card.actions?.[index];
   if (!rec || rec.action.kind !== "reply") return { state: "failed", error: "This card has no reply there." };
@@ -49,27 +77,20 @@ export async function sendReply(card: EventTaskCardRow, index: number, deps: Sen
     return { state: "failed" as const, error };
   };
   if (card.decidedAt && now.getTime() - card.decidedAt.getTime() > SEND_DEADLINE_MS) return fail(EXPIRED);
-  // Recorded first: a restart finds it «sending» and tries again with the same key.
+  const sender = a.channel === "email" ? emailSender(deps) : deps.senders?.[a.channel];
+  if (!sender) return fail("This channel can't send.");
+  // Recorded first: a restart finds it «sending» and tries again, harmlessly on the channel's side.
   await deps.record(card.id, index, { state: "sending", attempts, nextAttemptAt: null });
-  const from = await deps.fromOf(card.projectId);
-  if (!from) return fail("The project's email isn't ready.");
-  const r = await deps.send({
-    projectId: card.projectId,
-    environment: "live",
-    kind: "reply",
-    idempotencyKey: `event-card:${card.id}:reply`,
-    email: { from, to: [a.to], subject: a.subject, text: a.body, html: html(a.body) },
-  });
+  const r = await sender(card, a, attempts, now);
   if (r.kind === "sent") {
-    await deps.record(card.id, index, { state: "done", nextAttemptAt: null, error: null, result: a.to });
-    await deps.log(card, "sent", a.to);
+    await deps.record(card.id, index, { state: "done", nextAttemptAt: null, error: null, result: r.result });
+    await deps.log(card, "sent", a.toLabel ?? a.to);
     return { state: "done", error: null };
   }
-  if (r.kind !== "rejected") return fail("The email wasn't sent.");
-  if (!passing(r.error)) return fail(r.error.message);
+  if (!r.passing) return fail(r.message);
   const wait = Math.min(LONGEST_WAIT_S, FIRST_WAIT_S * 2 ** (attempts - 1));
-  await deps.record(card.id, index, { state: "sending", nextAttemptAt: new Date(now.getTime() + wait * 1000).toISOString(), error: r.error.message });
-  return { state: "sending", error: r.error.message };
+  await deps.record(card.id, index, { state: "sending", nextAttemptAt: new Date(now.getTime() + wait * 1000).toISOString(), error: r.message });
+  return { state: "sending", error: r.message };
 }
 
 /** The watcher's pass: every reply still sending whose wait is over. */

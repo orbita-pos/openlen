@@ -1,6 +1,7 @@
 // WHAT A CARD CAN DO (spec local 2026-11-04-hazlo-que-se-puede-y-mas-fuentes, §7.1): the judge picks one or two of the
 // actions its source offers, never one it made up — DeepSeek's rules and channels. A card keeps each with its own state,
 // so «Hazlo» can report what it did, what is still being sent and what the row's change met.
+import type { ReplyChannel } from "../sources/types";
 
 /** Work in the project (the page, the app, a screen): Len's framed turn, as before. */
 export interface ProjectAction {
@@ -18,12 +19,16 @@ export interface DataChangeAction {
   readonly before: Readonly<Record<string, string | null>>;
 }
 
-/** A message to the person, through the source's channel, sent exactly as the card shows it. */
+/** A message to the person, through the source's channel, sent exactly as the card shows it. `to` is what the channel
+ *  needs — an address, a conversation's id, an issue or pull request's number — and `toLabel` what the card shows: the
+ *  address, the visitor's name, «#12 title». A card from before the channels has neither `toLabel` nor another channel. */
 export interface ReplyAction {
   readonly kind: "reply";
-  readonly channel: "email";
+  readonly channel: ReplyChannel;
   readonly to: string;
-  readonly subject: string;
+  readonly toLabel?: string;
+  /** Email only. */
+  readonly subject?: string;
   readonly body: string;
 }
 
@@ -68,7 +73,7 @@ export function actionsLine(actions: readonly CardAction[]): string {
           ? `${a.table}: ${Object.entries(a.set)
               .map(([col, v]) => `${col} ${a.before[col] ?? "∅"} → ${v}`)
               .join(", ")}`
-          : `→ ${a.to}: ${a.subject}`,
+          : `→ ${a.toLabel ?? a.to}${a.subject ? `: ${a.subject}` : ""}`,
     )
     .join(" · ");
 }

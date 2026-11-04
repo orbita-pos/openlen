@@ -202,4 +202,13 @@ describe("AvisosDeLen", () => {
     const host = await pintar(cliente([]));
     expect(host.innerHTML).toBe("");
   });
+
+  it("a chat reply shows who and where, with no subject", async () => {
+    const chat = { kind: "reply" as const, channel: "chat" as const, to: "conv1", toLabel: "Ana", body: "Hola Ana, ¿para cuántos sería?" };
+    const host = await pintar(cliente([tarjeta({ actions: [reg(chat)] })]));
+    const bloque = host.querySelector('[data-aviso="c1"] [data-aviso-accion="reply"]')!;
+    expect(bloque.textContent).toContain('eventTasks.actionReplyChat {"to":"Ana"}');
+    expect(bloque.querySelector(".ch-aviso-asunto")).toBeNull();
+    expect(bloque.textContent).not.toContain("eventTasks.repliesGoTo");
+  });
 });
