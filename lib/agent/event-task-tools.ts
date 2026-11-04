@@ -4,8 +4,16 @@
 // refusal; the summary at most 100 words, the Super-agent's hard cap, enforced here and not by the prompt. The
 // descriptions are ours.
 //
-// Cache effect: these two declarations exist only in a judging turn's request, fixed, after Read/Glob/Grep; the
-// project chat's requests never carry them.
+// `automation_notify` takes ACTIONS (spec local 2026-11-04-hazlo-que-se-puede-y-mas-fuentes, §7.1): only the ones this
+// task's source offers, declared per task, and checked before the card exists (lib/event-tasks/actions/validate.ts)
+// against what the turn read (`Seen`).
+//
+// Cache effect: these two declarations exist only in a judging turn's request, after Read/Glob/Grep; they are fixed
+// per task (its source, its table's columns, whether the project's email is ready), so one task's judging turns keep
+// their prefix. The project chat's requests never carry them.
+import type { CardAction } from "@/lib/event-tasks/actions/types";
+import { collectSeen, emptySeen, type Seen } from "@/lib/event-tasks/actions/seen";
+import type { Validated } from "@/lib/event-tasks/actions/validate";
 import { visitorEnvelope } from "@/lib/event-tasks/framing";
 
 import type { ToolOutcome } from "./tools";
@@ -15,8 +23,7 @@ export const AUTOMATION_NOTIFY = "automation_notify";
 export const SUMMARY_MAX_WORDS = 100;
 const TITLE_MAX = 80;
 
-export const EVENT_TASK_TOOL_DECLARATIONS: Record<string, unknown>[] = [
-  {
+export const SOURCE_READ_DECLARATION: Record<string, unknown> = {
     name: SOURCE_READ,
     description:
       "Read this task's source: the changed items by their keys, with the newest items before them; and, with match, the items whose fields equal the given values (at most 50, newest first) — how to find an older item a change relates to, such as another booking for the same date, time and table. The source's data comes only through this tool.",
@@ -31,8 +38,44 @@ export const EVENT_TASK_TOOL_DECLARATIONS: Record<string, unknown>[] = [
         },
       },
     },
-  },
-  {
+};
+
+/** What `automation_notify`'s actions may be, for one task: work in the project always; a change of one row of the
+ *  watched table, and an email reply, only where the task's source offers them. Ours. */
+export function automationNotifyDeclaration(a: { readonly dataChange: boolean; readonly reply: boolean; readonly table?: string; readonly columns?: readonly string[] }): Record<string, unknown> {
+  const kinds = ["project", ...(a.dataChange ? ["data_change"] : []), ...(a.reply ? ["reply"] : [])];
+  const parts = [
+    "project: work on the site or the app (change a page, build a screen); text says what will be done, and Len does it when the owner accepts.",
+    ...(a.dataChange
+      ? [
+          `data_change: change ONE row of the table ${a.table ?? ""} that you read in this turn — key is the value of its key, set the columns and their new values (columns you may change: ${(a.columns ?? []).join(", ")}). The owner applies it; you never write the data.`,
+        ]
+      : []),
+    ...(a.reply ? ["reply: an email to a person whose address you read in this turn, sent exactly as written when the owner accepts."] : []),
+  ];
+  const properties: Record<string, unknown> = {
+    kind: { type: "STRING", enum: kinds },
+    text: { type: "STRING", description: "project: what will be done." },
+    ...(a.dataChange
+      ? {
+          table: { type: "STRING", description: "data_change: the watched table." },
+          key: { type: "STRING", description: "data_change: the value of the row's key." },
+          set: {
+            type: "ARRAY",
+            description: "data_change: each column to change and its new value.",
+            items: { type: "OBJECT", properties: { column: { type: "STRING" }, value: { type: "STRING" } }, required: ["column", "value"] },
+          },
+        }
+      : {}),
+    ...(a.reply
+      ? {
+          to: { type: "STRING", description: "reply: the person's email address." },
+          subject: { type: "STRING", description: "reply: the subject." },
+          body: { type: "STRING", description: "reply: the whole message, as it will be sent." },
+        }
+      : {}),
+  };
+  return {
     name: AUTOMATION_NOTIFY,
     description:
       "Notify the owner: a card they can accept or dismiss, a push and an email. Call it only when the owner needs to act on this change; otherwise end without it and nothing reaches them. At most once per turn.",
@@ -41,12 +84,21 @@ export const EVENT_TASK_TOOL_DECLARATIONS: Record<string, unknown>[] = [
       properties: {
         title: { type: "STRING", description: `One line, at most ${TITLE_MAX} characters, leading with what the owner would act on.` },
         summary: { type: "STRING", description: `What happened and why it matters, at most ${SUMMARY_MAX_WORDS} words.` },
-        proposed_action: { type: "STRING", description: "What you would do if the owner accepts: one concrete sentence that can be carried out as written." },
+        actions: {
+          type: "ARRAY",
+          description: `What accepting the card will do: one or two of these, never anything else. ${parts.join(" ")}`,
+          items: { type: "OBJECT", properties, required: ["kind"] },
+        },
       },
-      required: ["title", "summary", "proposed_action"],
+      required: ["title", "summary", "actions"],
     },
-  },
-];
+  };
+}
+
+/** The judge's two tools for one task. */
+export function eventTaskToolDeclarations(a: Parameters<typeof automationNotifyDeclaration>[0]): Record<string, unknown>[] {
+  return [SOURCE_READ_DECLARATION, automationNotifyDeclaration(a)];
+}
 
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u;
 
@@ -58,8 +110,14 @@ export function wordCount(text: string): number {
 const refuse = (error: string): ToolOutcome => ({ response: { ok: false, error } });
 
 export interface EventTaskToolDeps {
-  notify(card: { title: string; summary: string; proposedAction: string }): Promise<{ cardId: string }>;
+  notify(card: { title: string; summary: string; actions: readonly CardAction[]; subjectKey: string }): Promise<{ cardId: string }>;
   readSource(keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
+  /** Checks the proposed actions against what the turn read (lib/event-tasks/actions/validate.ts). */
+  validate(input: unknown, seen: Seen): Promise<Validated>;
+  /** The source's key column, to read row keys out of `source_read` (null: a submission's own id). */
+  keyColumn: string | null;
+  /** What the candidate itself brought. */
+  seen?: Seen;
 }
 
 export type EventTaskToolRunner = ((name: string, args: Record<string, unknown>) => Promise<ToolOutcome>) & { notified(): boolean };
@@ -67,6 +125,7 @@ export type EventTaskToolRunner = ((name: string, args: Record<string, unknown>)
 /** The runner of one judging turn: it remembers whether that turn already made its card. */
 export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunner {
   let made = false;
+  const seen = deps.seen ?? emptySeen();
   const run = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
     if (name === SOURCE_READ) {
       const keys = Array.isArray(args.keys) ? args.keys.map(String) : [];
@@ -80,6 +139,7 @@ export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunne
         // A read that fails is this tool's answer; the judge can still decide on what it has.
         return refuse(`The source could not be read: ${err instanceof Error ? err.message : String(err)}`);
       }
+      collectSeen(read, deps.keyColumn, seen);
       // The same visitor text as the candidate: inside the same envelope (final review I2).
       return { response: { ok: true, tool_result: visitorEnvelope([read]).join("\n") } };
     }
@@ -88,12 +148,13 @@ export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunne
     if (made) return refuse("One card per turn; the earlier card stands.");
     const title = typeof args.title === "string" ? args.title.trim() : "";
     const summary = typeof args.summary === "string" ? args.summary.trim() : "";
-    const proposedAction = typeof args.proposed_action === "string" ? args.proposed_action.trim() : "";
-    if (!title || !summary || !proposedAction) return refuse("title, summary and proposed_action are all required.");
+    if (!title || !summary || !Array.isArray(args.actions)) return refuse("title, summary and actions are all required.");
     if (title.length > TITLE_MAX) return refuse(`The title has ${title.length} characters; the limit is ${TITLE_MAX}. Shorten it and call ${AUTOMATION_NOTIFY} again.`);
     const words = wordCount(summary);
     if (words > SUMMARY_MAX_WORDS) return refuse(`The summary has ${words} words; the limit is ${SUMMARY_MAX_WORDS}. Shorten it and call ${AUTOMATION_NOTIFY} again.`);
-    await deps.notify({ title, summary, proposedAction });
+    const checked = await deps.validate(args.actions, seen);
+    if (!checked.ok) return refuse(checked.error);
+    await deps.notify({ title, summary, actions: checked.actions, subjectKey: checked.subjectKey });
     made = true;
     return { response: { ok: true, tool_result: "The card reached the owner." } };
   };

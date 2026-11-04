@@ -3,22 +3,43 @@
 // enforced by the tool, not by the prompt).
 import { describe, expect, it, vi } from "vitest";
 
-import { AUTOMATION_NOTIFY, EVENT_TASK_TOOL_DECLARATIONS, SOURCE_READ, eventTaskToolRunner, wordCount } from "./event-task-tools";
+import { AUTOMATION_NOTIFY, SOURCE_READ, automationNotifyDeclaration, eventTaskToolDeclarations, eventTaskToolRunner, wordCount } from "./event-task-tools";
 
-const ok = { title: "Reserva de las 21:00 choca con la mesa 4", summary: "Ana y Luis reservaron la mesa 4 a las 21:00 del sábado.", proposed_action: "Escribirle a Luis para ofrecerle la mesa 6." };
+const ok = {
+  title: "Reserva de las 21:00 choca con la mesa 4",
+  summary: "Ana y Luis reservaron la mesa 4 a las 21:00 del sábado.",
+  actions: [{ kind: "project", text: "Escribirle a Luis para ofrecerle la mesa 6." }],
+};
+const PROJECT = [{ kind: "project" as const, text: "Escribirle a Luis para ofrecerle la mesa 6." }];
 
-function runner() {
+function runner(o: { seen?: { keys: Set<string>; addresses: Set<string> } } = {}) {
   const notify = vi.fn(async () => ({ cardId: "c1" }));
-  const readSource = vi.fn(async (keys: readonly string[], _match?: readonly { field: string; value: string }[]) => ({ items: keys }));
-  return { notify, readSource, run: eventTaskToolRunner({ notify, readSource }) };
+  const readSource = vi.fn(async (keys: readonly string[], _match?: readonly { field: string; value: string }[]) => ({ items: keys }) as unknown);
+  const validate = vi.fn(async (_input: unknown, _seen: { keys: Set<string>; addresses: Set<string> }) => ({ ok: true as const, actions: PROJECT, subjectKey: "rec1" }) as { ok: true; actions: typeof PROJECT; subjectKey: string } | { ok: false; error: string });
+  return { notify, readSource, validate, run: eventTaskToolRunner({ notify, readSource, validate, keyColumn: "id", ...(o.seen ? { seen: o.seen } : {}) }) };
 }
 
 describe("declarations", () => {
   it("are source_read and automation_notify, with the 100-word limit on the summary", () => {
-    expect(EVENT_TASK_TOOL_DECLARATIONS.map((d) => d.name)).toEqual([SOURCE_READ, AUTOMATION_NOTIFY]);
-    const notify = EVENT_TASK_TOOL_DECLARATIONS[1] as { parameters: { properties: Record<string, { description: string }>; required: string[] } };
-    expect(notify.parameters.required).toEqual(["title", "summary", "proposed_action"]);
+    const decls = eventTaskToolDeclarations({ dataChange: false, reply: false });
+    expect(decls.map((d) => d.name)).toEqual([SOURCE_READ, AUTOMATION_NOTIFY]);
+    const notify = decls[1] as { parameters: { properties: Record<string, { description: string }>; required: string[] } };
+    expect(notify.parameters.required).toEqual(["title", "summary", "actions"]);
     expect(notify.parameters.properties.summary!.description).toContain("100 words");
+  });
+});
+
+describe("automationNotifyDeclaration", () => {
+  type Decl = { description: string; parameters: { properties: { actions: { description: string; items: { properties: { kind: { enum: string[] } } } } } } };
+  it("the declaration lists only the available actions and the table's columns", () => {
+    const rows = automationNotifyDeclaration({ dataChange: true, reply: false, table: "reservas", columns: ["mesa", "hora"] }) as Decl;
+    expect(rows.parameters.properties.actions.items.properties.kind.enum).toEqual(["project", "data_change"]);
+    expect(rows.parameters.properties.actions.description).toContain("reservas");
+    expect(rows.parameters.properties.actions.description).toContain("mesa, hora");
+    expect(JSON.stringify(rows)).not.toContain('"reply"');
+    const forms = automationNotifyDeclaration({ dataChange: false, reply: true }) as Decl;
+    expect(forms.parameters.properties.actions.items.properties.kind.enum).toEqual(["project", "reply"]);
+    expect(JSON.stringify(forms)).not.toContain("data_change");
   });
 });
 
@@ -36,7 +57,7 @@ describe("automation_notify", () => {
     const r = runner();
     const out = await r.run(AUTOMATION_NOTIFY, ok);
     expect(out.response.ok).toBe(true);
-    expect(r.notify).toHaveBeenCalledWith({ title: ok.title, summary: ok.summary, proposedAction: ok.proposed_action });
+    expect(r.notify).toHaveBeenCalledWith({ title: ok.title, summary: ok.summary, actions: PROJECT, subjectKey: "rec1" });
   });
 
   it("a summary over 100 words is refused with its count, and the turn can retry", async () => {
@@ -52,6 +73,14 @@ describe("automation_notify", () => {
     await r.run(AUTOMATION_NOTIFY, ok);
     expect((await r.run(AUTOMATION_NOTIFY, ok)).response).toEqual({ ok: false, error: "One card per turn; the earlier card stands." });
     expect(r.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it("an action that can't be done is the tool's refusal, and no card is made", async () => {
+    const r = runner();
+    r.validate.mockResolvedValueOnce({ ok: false, error: "Only reservas can be changed." });
+    expect((await r.run(AUTOMATION_NOTIFY, ok)).response).toEqual({ ok: false, error: "Only reservas can be changed." });
+    expect(r.notify).not.toHaveBeenCalled();
+    expect(r.run.notified()).toBe(false);
   });
 
   it("a missing field is refused", async () => {
@@ -90,9 +119,23 @@ describe("source_read", () => {
     const r = runner();
     await r.run(SOURCE_READ, { match: [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: 4 }] });
     expect(r.readSource).toHaveBeenCalledWith([], [{ field: "fecha", value: "2026-11-14" }, { field: "mesa", value: "4" }]);
-    const decl = EVENT_TASK_TOOL_DECLARATIONS[0] as { parameters: { properties: Record<string, unknown>; required?: string[] } };
+    const decl = eventTaskToolDeclarations({ dataChange: false, reply: false })[0] as { parameters: { properties: Record<string, unknown>; required?: string[] } };
     expect(Object.keys(decl.parameters.properties)).toEqual(["keys", "match"]);
     expect(decl.parameters.required ?? []).toEqual([]);
+  });
+
+  it("source_read results add their keys and addresses to what the turn read", async () => {
+    const r = runner({ seen: { keys: new Set(["r1"]), addresses: new Set() } });
+    r.readSource.mockResolvedValueOnce({
+      items: [{ id: "r9", email: "Ana@Ejemplo.com" }],
+      previous: [{ id: "s8", data: { correo: "b@y.com", nombre: "B" } }],
+      matching: [{ id: "r7", nota: "no es un correo" }],
+    });
+    await r.run(SOURCE_READ, { keys: ["r9"] });
+    await r.run(AUTOMATION_NOTIFY, ok);
+    const seen = r.validate.mock.calls[0]![1];
+    expect([...seen.keys].sort()).toEqual(["r1", "r7", "r9", "s8"]);
+    expect([...seen.addresses].sort()).toEqual(["ana@ejemplo.com", "b@y.com"]);
   });
 
   it("a source that can't be read is the tool's error, not the end of the turn", async () => {
