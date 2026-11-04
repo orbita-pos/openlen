@@ -116,3 +116,11 @@ export const CREATE_EVENT_TASKS: readonly string[] = [
 
 /** The form a submission came from (an event task watches one form). */
 export const ALTER_FORM_SUBMISSIONS: readonly string[] = [`ALTER TABLE "formSubmissions" ADD COLUMN IF NOT EXISTS "formId" text;`];
+
+/** Cards that carry actions (spec local 2026-11-04-hazlo-que-se-puede-y-mas-fuentes): after CREATE_EVENT_TASKS. */
+export const ALTER_EVENT_TASK_CARDS: readonly string[] = [
+  `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "actions" jsonb;`,
+  `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "subjectKey" text;`,
+  `ALTER TABLE "eventTaskCards" ADD COLUMN IF NOT EXISTS "dismissNote" text;`,
+  `ALTER TABLE "eventTaskRecords" ADD COLUMN IF NOT EXISTS "note" text;`,
+];

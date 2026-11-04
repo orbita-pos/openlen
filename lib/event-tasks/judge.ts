@@ -14,6 +14,7 @@ import { runAgentLoop, type AgentLoopResult } from "@/lib/agent/loop";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { candidateMessage, JUDGE_SYSTEM } from "./framing";
+import type { CardAction } from "./actions/types";
 import type { EventTaskCardRow, EventTaskRecordRow, EventTaskRow } from "./store";
 import type { Candidate } from "./trigger";
 
@@ -40,7 +41,7 @@ export interface JudgeDeps {
   };
   runReadTool(session: AgentSession, name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   readSource(task: EventTaskRow, keys: readonly string[], match: readonly { field: string; value: string }[]): Promise<unknown>;
-  createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; proposedAction: string }): Promise<EventTaskCardRow>;
+  createCard(o: { task: EventTaskRow; recordId: string; title: string; summary: string; actions: readonly CardAction[]; subjectKey: string }): Promise<EventTaskCardRow>;
   decisionsSince(taskId: string, since: Date): Promise<EventTaskCardRow[]>;
   saveTranscript(taskId: string, transcript: unknown[], at: Date): Promise<void>;
   markJudged(recordId: string, notified: boolean): Promise<void>;
@@ -86,7 +87,10 @@ export async function judgeCandidate(record: EventTaskRecordRow, task: EventTask
     };
     const tools = [...d.readDeclarations().filter((t) => READ_TOOLS.has(String(t.name))), ...EVENT_TASK_TOOL_DECLARATIONS];
     const runEventTool = eventTaskToolRunner({
-      notify: async (c) => ({ cardId: (await d.createCard({ task, recordId: record.id, ...c })).id }),
+      notify: async (c) =>
+        ({
+          cardId: (await d.createCard({ task, recordId: record.id, title: c.title, summary: c.summary, actions: [{ kind: "project", text: c.proposedAction }], subjectKey: record.id })).id,
+        }),
       readSource: (keys, match) => d.readSource(task, keys, match),
     });
     const decisions = await d.decisionsSince(task.id, task.lastJudgedAt ?? task.createdAt);

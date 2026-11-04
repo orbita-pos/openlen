@@ -9,11 +9,11 @@
 import { sql } from "drizzle-orm";
 
 import { db } from "../lib/db";
-import { ALTER_FORM_SUBMISSIONS, CREATE_EVENT_TASKS, CREATE_SCHEDULED_TASKS } from "./scheduled-tasks-migrate-sql";
+import { ALTER_EVENT_TASK_CARDS, ALTER_FORM_SUBMISSIONS, CREATE_EVENT_TASKS, CREATE_SCHEDULED_TASKS } from "./scheduled-tasks-migrate-sql";
 
 async function main() {
   // Event tasks (spec local 2026-11-03-len-que-avisa) go after the scheduled ones: they share the cap.
-  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS, ...ALTER_FORM_SUBMISSIONS]) await db.execute(sql.raw(statement));
+  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS, ...ALTER_FORM_SUBMISSIONS, ...ALTER_EVENT_TASK_CARDS]) await db.execute(sql.raw(statement));
   console.log("[scheduled-tasks:migrate] listo");
   process.exit(0);
 }

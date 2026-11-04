@@ -17,7 +17,7 @@ vi.mock("@/lib/db", async () => ({
   },
 }));
 
-const { CREATE_SCHEDULED_TASKS, CREATE_EVENT_TASKS } = await import("@/scripts/scheduled-tasks-migrate-sql");
+const { CREATE_SCHEDULED_TASKS, CREATE_EVENT_TASKS, ALTER_EVENT_TASK_CARDS } = await import("@/scripts/scheduled-tasks-migrate-sql");
 const store = await import("./store");
 const cards = await import("./cards");
 const { breaksQuietHours } = await import("@/lib/notifications/urgency");
@@ -31,7 +31,7 @@ beforeEach(async () => {
   pg = new PGlite();
   await pg.exec(`CREATE TABLE "users" ("id" text PRIMARY KEY); CREATE TABLE "projects" ("id" text PRIMARY KEY);
     INSERT INTO "users" VALUES ('u1'); INSERT INTO "projects" VALUES ('p1');`);
-  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS]) await pg.query(statement);
+  for (const statement of [...CREATE_SCHEDULED_TASKS, ...CREATE_EVENT_TASKS, ...ALTER_EVENT_TASK_CARDS]) await pg.query(statement);
   base.db = drizzle(pg, { schema });
 });
 
@@ -43,8 +43,11 @@ function notifier() {
   return { sent, notify: async (event: LenAvisoEvent, dedupeKey: string) => void sent.push({ event, dedupeKey }) };
 }
 
-const card = (task: Awaited<ReturnType<typeof newTask>>, title: string, n: ReturnType<typeof notifier>) =>
-  cards.createCard({ task, recordId: "r1", title, summary: "La reserva de Ana choca con la de Luis.", proposedAction: "Escribirle a Ana para ofrecerle las 21:30." }, { notify: n.notify, siteUrl: "https://openlen.com" });
+const card = (task: Awaited<ReturnType<typeof newTask>>, title: string, n: ReturnType<typeof notifier>, subjectKey = title) =>
+  cards.createCard(
+    { task, recordId: "r1", title, summary: "La reserva de Ana choca con la de Luis.", actions: [{ kind: "project", text: "Escribirle a Ana para ofrecerle las 21:30." }], subjectKey },
+    { notify: n.notify, siteUrl: "https://openlen.com" },
+  );
 
 describe("createCard", () => {
   it("schedules one len_aviso to the task's creator, in their language, keyed by the task", async () => {
@@ -73,15 +76,51 @@ describe("createCard", () => {
     expect((await pg.query(`SELECT 1 FROM "projectChatMessages"`)).rows).toEqual([]);
   });
 
-  it("a new card replaces the pending one of the same task, not of another task", async () => {
+  it("a card stores its actions with state pending and zero attempts", async () => {
+    const task = await newTask();
+    const made = await cards.createCard(
+      {
+        task,
+        recordId: "r1",
+        title: "Choque",
+        summary: "Ana y Luis.",
+        actions: [
+          { kind: "data_change", table: "reservas", key: { id: "r2" }, set: { mesa: "6" }, before: { mesa: "4" } },
+          { kind: "reply", channel: "email", to: "luis@ejemplo.com", subject: "Tu reserva", body: "Hola Luis" },
+        ],
+        subjectKey: "r2",
+      },
+      { notify: notifier().notify, siteUrl: "https://openlen.com" },
+    );
+    expect(made.subjectKey).toBe("r2");
+    expect(made.actions).toEqual([
+      { action: { kind: "data_change", table: "reservas", key: { id: "r2" }, set: { mesa: "6" }, before: { mesa: "4" } }, state: "pending", attempts: 0, nextAttemptAt: null, error: null, result: null },
+      { action: { kind: "reply", channel: "email", to: "luis@ejemplo.com", subject: "Tu reserva", body: "Hola Luis" }, state: "pending", attempts: 0, nextAttemptAt: null, error: null, result: null },
+    ]);
+    expect(made.proposedAction).toContain("reservas");
+  });
+
+  it("two pending cards of one task about different rows both stay pending, and a third about the first row replaces only it (review focus 5)", async () => {
     const [a, b] = [await newTask(), await newTask()];
     const n = notifier();
-    const first = await card(a, "uno", n);
-    const other = await card(b, "otra tarea", n);
-    await card(a, "dos", n);
+    const r1 = await card(a, "uno", n, "r1");
+    const r2 = await card(a, "dos", n, "r2");
+    const other = await card(b, "otra tarea", n, "r1");
+    const again = await card(a, "uno otra vez", n, "r1");
     const status = Object.fromEntries((await pg.query<{ id: string; status: string }>(`SELECT "id", "status" FROM "eventTaskCards"`)).rows.map((r) => [r.id, r.status]));
-    expect(status[first.id]).toBe("replaced");
+    expect(status[r1.id]).toBe("replaced");
+    expect(status[r2.id]).toBe("pending");
     expect(status[other.id]).toBe("pending");
+    expect(status[again.id]).toBe("pending");
+    expect((await cards.pendingCardsOfTask(a.id)).map((c) => c.id).sort()).toEqual([r2.id, again.id].sort());
+  });
+
+  it("the migration adds the new columns to existing tables, and running it twice is harmless", async () => {
+    for (const statement of [...ALTER_EVENT_TASK_CARDS, ...ALTER_EVENT_TASK_CARDS]) await pg.query(statement);
+    const cols = (await pg.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name, column_name FROM information_schema.columns WHERE column_name IN ('actions', 'subjectKey', 'dismissNote', 'note') ORDER BY table_name, column_name`,
+    )).rows.map((r) => `${r.table_name}.${r.column_name}`);
+    expect(cols).toEqual(["eventTaskCards.actions", "eventTaskCards.dismissNote", "eventTaskCards.subjectKey", "eventTaskRecords.note"]);
   });
 });
 

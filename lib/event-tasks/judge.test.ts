@@ -25,7 +25,7 @@ const task = (over: Partial<EventTaskRow> = {}): EventTaskRow => ({
 });
 
 const record = (note = "ventana, por favor"): EventTaskRecordRow => ({
-  id: "r1", taskId: "t1", projectId: "p1", kind: "delivered", reason: null, count: 1, judge: "pending", notified: null, firstAt: NOW, lastAt: NOW,
+  id: "r1", taskId: "t1", projectId: "p1", kind: "delivered", reason: null, count: 1, judge: "pending", notified: null, note: null, firstAt: NOW, lastAt: NOW,
   candidate: { subject: "reservas", summary: "reservas: 1", changes: [{ subject: "reservas", summary: "Ana", detail: { id: "r10", nombre: "Ana", mesa: 4, nota: note }, at: "x" }] },
 });
 
@@ -149,7 +149,7 @@ describe("judgeCandidate", () => {
     const args = { title: "Choca la mesa 4", summary: "Ana y Luis a las 21:00.", proposed_action: "Escribirle a Luis." };
     const s = setup([call("automation_notify", args), say("Avisé.")]);
     expect(await judgeCandidate(record(), task(), s.deps)).toEqual({ notified: true });
-    expect(s.cards).toEqual([expect.objectContaining({ recordId: "r1", title: "Choca la mesa 4", proposedAction: "Escribirle a Luis." })]);
+    expect(s.cards).toEqual([expect.objectContaining({ recordId: "r1", title: "Choca la mesa 4", actions: [{ kind: "project", text: "Escribirle a Luis." }], subjectKey: "r1" })]);
     expect(s.judged).toEqual([{ id: "r1", notified: true }]);
   });
 
