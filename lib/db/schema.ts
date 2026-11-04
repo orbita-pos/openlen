@@ -2479,6 +2479,8 @@ export const eventTaskCards = pgTable(
     subjectKey: text("subjectKey"),
     /** «¿Qué cambiarías?» from «Ahora no». */
     dismissNote: text("dismissNote"),
+    /** Len's answer when the owner had it look again and it made no new card (spec local 2026-11-04-hazlo, §7.6.3). */
+    lookedAgain: text("lookedAgain"),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("eventTaskCards_projectId_status_idx").on(t.projectId, t.status)],

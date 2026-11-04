@@ -38,6 +38,8 @@ export interface EventCard {
   readonly dismissNote: string | null;
   /** The row or person it is about. */
   readonly subjectKey: string | null;
+  /** What Len found when it looked again and made no new card. */
+  readonly lookedAgain: string | null;
 }
 
 /** The turn «Hazlo» started on the server, for the chat to paint and follow. */
@@ -217,7 +219,8 @@ export function EventCards({
   const [lookingAgain, setLookingAgain] = useState<ReadonlySet<string>>(new Set());
   // A blocked card is over once a newer card about the same row has come.
   const superseded = (c: EventCard) => c.subjectKey !== null && cards.some((o) => o.id !== c.id && o.taskId === c.taskId && o.subjectKey === c.subjectKey && o.createdAt > c.createdAt);
-  const needsYou = (c: EventCard) => c.status === "pending" || (c.status === "accepted" && (has(c, "sending") || (has(c, "blocked") && !superseded(c))));
+  const needsYou = (c: EventCard) =>
+    c.status === "pending" || (c.status === "accepted" && (has(c, "sending") || (has(c, "blocked") && !superseded(c) && !c.lookedAgain)));
   const live = cards.filter(needsYou);
   const decided = cards.filter((c) => !needsYou(c));
   if (cards.length === 0) return null;
@@ -239,7 +242,10 @@ export function EventCards({
   // The accepted turn's row, when the chat has it painted (an older one appears as the conversation scrolls up).
   const openRow = (rowId: string) =>
     [...document.querySelectorAll("[data-chat-row]")].find((el) => el.getAttribute("data-chat-row") === rowId)?.scrollIntoView({ block: "start", behavior: "smooth" });
-  const stateOf = (c: EventCard) => (c.status === "accepted" ? t("eventTasks.done") : c.status === "dismissed" ? t("eventTasks.dismissed") : t("eventTasks.replaced"));
+  // Accepted with actions and none of them done (a row that changed, a send withdrawn): not «Hecho».
+  const nothingDone = (c: EventCard) => (c.actions ?? []).length > 0 && !has(c, "done");
+  const stateOf = (c: EventCard) =>
+    c.status === "accepted" ? t(nothingDone(c) ? "eventTasks.notDone" : "eventTasks.done") : c.status === "dismissed" ? t("eventTasks.dismissed") : t("eventTasks.replaced");
   const acceptLabel = (c: EventCard) => {
     const kinds = new Set((c.actions ?? []).map((r) => r.action.kind));
     return kinds.has("data_change") ? (kinds.has("reply") ? t("eventTasks.applyAndSend") : t("eventTasks.apply")) : t("eventTasks.accept");
@@ -269,7 +275,7 @@ export function EventCards({
               {failed.error === "daily_limit" ? t("eventTasks.dailyLimit") : t("eventTasks.failed")}
             </p>
           )}
-          {card.status === "accepted" && lookingAgain.has(card.id) && <p className="mt-1.5 text-[11.5px] fg-muted">{t("eventTasks.lookingAgain")}</p>}
+          {card.status === "accepted" && lookingAgain.has(card.id) && !card.lookedAgain && <p className="mt-1.5 text-[11.5px] fg-muted">{t("eventTasks.lookingAgain")}</p>}
           {!soloLectura && card.status === "pending" && (
             <>
               <div className="mt-2 flex items-center gap-1.5">
@@ -360,6 +366,7 @@ export function EventCards({
                 {/* What each did; a project action's «Hecho» is the card's own state already. */}
                 {card.status === "accepted" && (card.actions ?? []).map((rec, i) => (rec.action.kind === "project" ? null : <StateLine key={i} rec={rec} t={t} />))}
                 {card.dismissNote ? <p className="mt-1 text-[11.5px] fg-muted">{t("eventTasks.yourNote", { note: card.dismissNote })}</p> : null}
+                {card.lookedAgain ? <p data-event-looked-again="" className="mt-1 text-[11.5px] fg">{t("eventTasks.lookedAgain", { answer: card.lookedAgain })}</p> : null}
               </Card>
             ))}
           </div>

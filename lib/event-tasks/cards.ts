@@ -124,6 +124,20 @@ export async function updateCardAction(cardId: string, index: number, patch: Par
     .where(eq(c.id, cardId));
 }
 
+/** The owner had Len look again — «Volver a mirar» on a blocked change, or «Ahora no» with a note — and its judge made
+ *  no new card: what it found goes on the card that asked, so the owner hears it (real turn, 2026-11-04). */
+export async function answerLookAgain(recordId: string, answer: string): Promise<void> {
+  await db
+    .update(c)
+    .set({ lookedAgain: answer })
+    .where(
+      and(
+        eq(c.recordId, recordId),
+        sql`((${c.status} = 'accepted' AND ${c.actions} @> '[{"state":"blocked"}]'::jsonb) OR (${c.status} = 'dismissed' AND ${c.dismissNote} IS NOT NULL))`,
+      ),
+    );
+}
+
 /** The cards with a reply still being sent: what the watcher's pass retries. */
 export async function cardsWithSendingActions(): Promise<EventTaskCardRow[]> {
   return db.select().from(c).where(sql`${c.actions} @> '[{"state":"sending"}]'::jsonb`).limit(100);

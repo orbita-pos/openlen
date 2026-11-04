@@ -34,6 +34,8 @@ export interface TarjetaDeAviso {
   readonly actions: readonly CardActionRecord[] | null;
   readonly dismissNote: string | null;
   readonly subjectKey: string | null;
+  /** What Len found when it looked again and made no new card. */
+  readonly lookedAgain: string | null;
 }
 
 type Pulsacion = { action: "accept" } | { action: "dismiss"; note?: string } | { action: "look_again" } | { action: "withdraw_send"; index: number };
@@ -181,12 +183,16 @@ export function AvisosDeLen({ cliente, projectId, abierto, resaltar }: { cliente
 
   // A card is over for the owner once a newer one about the same row has come.
   const sustituida = (c: TarjetaDeAviso) => c.subjectKey !== null && tarjetas.some((o) => o.id !== c.id && o.taskId === c.taskId && o.subjectKey === c.subjectKey && o.createdAt > c.createdAt);
-  const teNecesita = (c: TarjetaDeAviso) => c.status === "pending" || (c.status === "accepted" && (tiene(c, "sending") || (tiene(c, "blocked") && !sustituida(c))));
+  const teNecesita = (c: TarjetaDeAviso) =>
+    c.status === "pending" || (c.status === "accepted" && (tiene(c, "sending") || (tiene(c, "blocked") && !sustituida(c) && !c.lookedAgain)));
   // The ones that need the owner, and a day of the decided: the web keeps the week under «Avisos anteriores».
   const ahora = Date.now();
   const visibles = tarjetas.filter((c) => teNecesita(c) || ahora - Date.parse(c.createdAt) < DIA_MS || c.id === resaltar);
   if (visibles.length === 0) return null;
-  const estado = (c: TarjetaDeAviso) => (c.status === "accepted" ? t("eventTasks.done") : c.status === "dismissed" ? t("eventTasks.dismissed") : t("eventTasks.replaced"));
+  // Accepted with actions and none of them done (a row that changed, a send withdrawn): not «Hecho».
+  const nadaHecho = (c: TarjetaDeAviso) => (c.actions ?? []).length > 0 && !tiene(c, "done");
+  const estado = (c: TarjetaDeAviso) =>
+    c.status === "accepted" ? t(nadaHecho(c) ? "eventTasks.notDone" : "eventTasks.done") : c.status === "dismissed" ? t("eventTasks.dismissed") : t("eventTasks.replaced");
   const hazlo = (c: TarjetaDeAviso) => {
     const tipos = new Set((c.actions ?? []).map((r) => r.action.kind));
     return tipos.has("data_change") ? (tipos.has("reply") ? t("eventTasks.applyAndSend") : t("eventTasks.apply")) : t("eventTasks.accept");
@@ -271,6 +277,7 @@ export function AvisosDeLen({ cliente, projectId, abierto, resaltar }: { cliente
             <small className="ch-aviso-estado">{estado(c)}</small>
             {c.status === "accepted" && (c.actions ?? []).map((r, i) => (r.action.kind === "project" ? null : <Linea key={i} r={r} t={t} />))}
             {c.dismissNote ? <small className="ch-aviso-estado">{t("eventTasks.yourNote", { note: c.dismissNote })}</small> : null}
+            {c.lookedAgain ? <small className="ch-aviso-estado">{t("eventTasks.lookedAgain", { answer: c.lookedAgain })}</small> : null}
           </Tarjeta>
         ),
       )}

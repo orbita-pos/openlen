@@ -24,7 +24,7 @@ const get = () => GET(new Request("http://localhost/api/projects/p1/event-cards"
 beforeEach(() => {
   vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "u1" } as never);
   vi.mocked(cardsOfProject).mockResolvedValue([
-    { id: "c1", taskId: "t1", title: "Choca la mesa 4", summary: "s", proposedAction: "→ luis@ejemplo.com: Tu reserva", status: "dismissed", acceptedRowId: null, createdAt: NOW, dismissNote: "Ofrécele la 8.", subjectKey: "luis@ejemplo.com", actions: [{ action: reply, state: "pending", attempts: 0, nextAttemptAt: null, error: null, result: null }] },
+    { id: "c1", taskId: "t1", title: "Choca la mesa 4", summary: "s", proposedAction: "→ luis@ejemplo.com: Tu reserva", status: "dismissed", acceptedRowId: null, createdAt: NOW, dismissNote: "Ofrécele la 8.", subjectKey: "luis@ejemplo.com", lookedAgain: "Ya no choca.", actions: [{ action: reply, state: "pending", attempts: 0, nextAttemptAt: null, error: null, result: null }] },
     { id: "c0", taskId: "t1", title: "Antes", summary: "s", proposedAction: "Escribirle a Ana.", status: "accepted", acceptedRowId: "row-1", createdAt: NOW, dismissNote: null, actions: null },
   ] as never);
 });
@@ -33,7 +33,7 @@ describe("GET event-cards", () => {
   it("each card brings its actions with their states and its note, and the answer where replies come back to", async () => {
     const body = await (await get()).json();
     expect(body.repliesTo).toBe("dueno@lamesa.mx");
-    expect(body.cards[0]).toMatchObject({ id: "c1", taskTitle: "Reservas que chocan", dismissNote: "Ofrécele la 8.", subjectKey: "luis@ejemplo.com", actions: [{ action: reply, state: "pending" }] });
+    expect(body.cards[0]).toMatchObject({ id: "c1", taskTitle: "Reservas que chocan", dismissNote: "Ofrécele la 8.", subjectKey: "luis@ejemplo.com", lookedAgain: "Ya no choca.", actions: [{ action: reply, state: "pending" }] });
     // A card from before the actions has none.
     expect(body.cards[1]).toMatchObject({ id: "c0", actions: null, dismissNote: null });
   });

@@ -29,6 +29,7 @@ const tarjeta = (o: Partial<TarjetaDeAviso> = {}): TarjetaDeAviso => ({
   actions: null,
   dismissNote: null,
   subjectKey: null,
+  lookedAgain: null,
   ...o,
 });
 
@@ -144,6 +145,15 @@ describe("AvisosDeLen", () => {
     expect(enviados(c).at(-1)).toEqual({ action: "look_again" });
     expect(host.querySelector('[data-aviso="c1"]')!.textContent).toContain("eventTasks.lookingAgain");
     expect(host.querySelector("[data-aviso-mirar]")).toBeNull();
+  });
+
+  it("a blocked card Len looked at again says what it found, and keeps no buttons (real turn, 04/11)", async () => {
+    const host = await pintar(cliente([tarjeta({ status: "accepted", actions: [reg(cambio, { state: "blocked", result: "mesa 3" })], lookedAgain: "Ya no choca: nada que hacer." })]));
+    const card = host.querySelector('[data-aviso="c1"]')!;
+    expect(card.textContent).toContain('eventTasks.lookedAgain {"answer":"Ya no choca: nada que hacer."}');
+    expect(card.querySelector("[data-aviso-mirar]")).toBeNull();
+    expect(card.textContent).not.toContain("eventTasks.done");
+    expect(card.textContent).toContain("eventTasks.notDone");
   });
 
   it("a sending reply shows its state and Retirar", async () => {

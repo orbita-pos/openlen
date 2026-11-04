@@ -80,7 +80,14 @@ export function candidateMessage(o: {
   const hidden = o.candidate.changes.length - shown.length;
   if (hidden > 0) lines.push(`… ${hidden} more ${hidden === 1 ? "change" : "changes"} not shown; read them with source_read.`);
   if (o.decisions.length > 0) {
-    lines.push("", STATUS_PREAMBLE, inert(o.decisions.map((d) => ({ title: d.title, status: d.status }))));
+    // Each action's kind and state too: «accepted» with a blocked change was not resolved (real turn, 2026-11-04). Only
+    // those — the row's values and the addresses stay out of the status facts.
+    const status = (d: EventTaskCardRow) => ({
+      title: d.title,
+      status: d.status,
+      ...(d.actions?.length ? { actions: d.actions.map((r) => ({ kind: r.action.kind, state: r.state })) } : {}),
+    });
+    lines.push("", STATUS_PREAMBLE, inert(o.decisions.map(status)));
   }
   if (o.pending && o.pending.length > 0) {
     lines.push("", PENDING_PREAMBLE, inert(o.pending.map((c) => ({ title: c.title, about: c.subjectKey, proposes: c.proposedAction }))));

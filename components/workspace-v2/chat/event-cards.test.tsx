@@ -43,6 +43,7 @@ const card = (over: Partial<EventCard> = {}): EventCard => ({
   actions: null,
   dismissNote: null,
   subjectKey: null,
+  lookedAgain: null,
   ...over,
 });
 
@@ -176,6 +177,17 @@ describe("EventCards", () => {
     const newer = card({ id: "c2", subjectKey: "r7", actions: [rec(change)], createdAt: "2026-11-03T10:05:00.000Z" });
     const { host } = await paint([newer, blocked]);
     expect(host.querySelector('[data-event-card="c1"]')!.closest("details")).not.toBeNull();
+  });
+
+  it("a blocked card Len looked at again says what it found, and folds (real turn, 04/11)", async () => {
+    const { host } = await paint([card({ status: "accepted", actions: [rec(change, { state: "blocked", result: "mesa 3" })], lookedAgain: "Ya no choca con ninguna: no hay nada que hacer." })]);
+    const box = host.querySelector('[data-event-card="c1"]')!;
+    expect(box.closest("details")).not.toBeNull();
+    expect(box.textContent).toContain('eventTasks.lookedAgain {"answer":"Ya no choca con ninguna: no hay nada que hacer."}');
+    expect(host.querySelector("[data-event-look-again]")).toBeNull();
+    // Nothing was applied: the card doesn't say «Hecho» (real turn, 04/11).
+    expect(box.textContent).not.toContain("eventTasks.done");
+    expect(box.textContent).toContain("eventTasks.notDone");
   });
 
   it("a sending reply shows its state and Retirar", async () => {
