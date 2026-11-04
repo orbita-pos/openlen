@@ -349,7 +349,8 @@ export function LenTurn({
   if (streaming && !hasSteps && text.length === 0 && !liveQuestions && !(todos && todos.length > 0) && !turn.liveWidget) return null;
 
   return (
-    <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast}>
+    // `data-chat-row`: an event-task card's «Hecho» goes to the turn it started.
+    <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast} data-chat-row={turn.id}>
       <div className="flex items-center gap-1.5 text-[12.5px]">
         <LenFace size={18} className="shrink-0" />
         <b className="font-semibold">Len</b>

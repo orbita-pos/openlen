@@ -3,16 +3,21 @@
 // chat opens and again each time a turn ends (Len may have just created, changed or removed one).
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { ClockTask, ScheduledTasks } from "./scheduled-tasks-menu";
+import type { ClockEventTask, ClockTask, ScheduledTasks } from "./scheduled-tasks-menu";
 
 export function useScheduledTasks(projectId: string | null, busy: boolean): ScheduledTasks {
   const [tasks, setTasks] = useState<readonly ClockTask[]>([]);
+  const [events, setEvents] = useState<readonly ClockEventTask[]>([]);
   const base = projectId ? `/api/projects/${encodeURIComponent(projectId)}/scheduled-tasks` : null;
   const load = useCallback(async () => {
     if (!base) return;
     try {
       const res = await fetch(base);
-      if (res.ok) setTasks(((await res.json()) as { tasks: ClockTask[] }).tasks);
+      if (res.ok) {
+        const body = (await res.json()) as { tasks: ClockTask[]; events?: ClockEventTask[] };
+        setTasks(body.tasks);
+        setEvents(body.events ?? []);
+      }
     } catch {
       // No clock this time; the next turn's end reads again.
     }
@@ -27,6 +32,7 @@ export function useScheduledTasks(projectId: string | null, busy: boolean): Sche
   }, [busy, load]);
   return {
     tasks,
+    events,
     update: async (id, body) => {
       if (!base) return { ok: false };
       const res = await fetch(`${base}/${encodeURIComponent(id)}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);

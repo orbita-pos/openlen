@@ -1,7 +1,9 @@
 // POST /api/projects/[id]/scheduled-tasks/[taskId]/pause — the clock's «Pausar» / «Reanudar», on the web
 // and on the phone (spec local 2026-10-31-len-movil, §5.5). Body { paused: boolean } → { id, paused }.
 // Owner and editors, like the rest of the clock; only recurring tasks (409 `schedule_one_shot`). Resuming
-// goes to the next run after now: what was missed while paused is not run.
+// goes to the next run after now: what was missed while paused is not run. An event task (spec local
+// 2026-11-03-len-que-avisa) pauses the same way: no look at its source until it resumes.
+import { pauseEventTask, resumeEventTask } from "@/lib/event-tasks/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -24,7 +26,10 @@ export const POST = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response> 
   if (typeof body?.paused !== "boolean") return Response.json({ code: "invalid_body" }, { status: 400 });
   const now = new Date();
   const result = body.paused ? await pauseTask(id, taskId, now) : await resumeTask(id, taskId, now);
-  if (result === "not_found") return Response.json({ code: "schedule_not_found" }, { status: 404 });
+  if (result === "not_found") {
+    const event = body.paused ? await pauseEventTask(id, taskId, now) : await resumeEventTask(id, taskId, now);
+    return event ? Response.json({ id: taskId, paused: body.paused }) : Response.json({ code: "schedule_not_found" }, { status: 404 });
+  }
   if (result === "one_shot") return Response.json({ code: "schedule_one_shot" }, { status: 409 });
   return Response.json({ id: taskId, paused: body.paused });
 });

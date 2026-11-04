@@ -7,12 +7,15 @@ vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/scheduled-tasks/enabled", () => ({ scheduleEnabled: vi.fn(() => true) }));
 vi.mock("@/lib/scheduled-tasks/store", () => ({ pauseTask: vi.fn(), resumeTask: vi.fn() }));
+vi.mock("@/lib/event-tasks/store", () => ({ pauseEventTask: vi.fn(), resumeEventTask: vi.fn() }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { pauseTask, resumeTask } from "@/lib/scheduled-tasks/store";
 import type { TaskRow } from "@/lib/scheduled-tasks/store";
+import { pauseEventTask, resumeEventTask } from "@/lib/event-tasks/store";
+import type { EventTaskRow } from "@/lib/event-tasks/store";
 import { OPTIONS, POST } from "./route";
 
 const ctx = { params: Promise.resolve({ id: "p1", taskId: "t1" }) };
@@ -26,6 +29,8 @@ beforeEach(() => {
   vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" });
   vi.mocked(pauseTask).mockResolvedValue({ id: "t1", pausedAt: new Date() } as TaskRow);
   vi.mocked(resumeTask).mockResolvedValue({ id: "t1", pausedAt: null } as TaskRow);
+  vi.mocked(pauseEventTask).mockResolvedValue(null);
+  vi.mocked(resumeEventTask).mockResolvedValue(null);
 });
 
 describe("POST /api/projects/[id]/scheduled-tasks/[taskId]/pause", () => {
@@ -42,6 +47,17 @@ describe("POST /api/projects/[id]/scheduled-tasks/[taskId]/pause", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ id: "t1", paused: false });
     expect(resumeTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
+  });
+
+  it("pauses and resumes an event task (spec local 2026-11-03-len-que-avisa)", async () => {
+    vi.mocked(pauseTask).mockResolvedValue("not_found");
+    vi.mocked(resumeTask).mockResolvedValue("not_found");
+    vi.mocked(pauseEventTask).mockResolvedValue({ id: "t1" } as EventTaskRow);
+    vi.mocked(resumeEventTask).mockResolvedValue({ id: "t1" } as EventTaskRow);
+    expect(await (await post({ paused: true })).json()).toEqual({ id: "t1", paused: true });
+    expect(pauseEventTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
+    expect(await (await post({ paused: false })).json()).toEqual({ id: "t1", paused: false });
+    expect(resumeEventTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
   });
 
   it("a viewer is refused", async () => {

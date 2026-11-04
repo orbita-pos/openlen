@@ -8,7 +8,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, v?: Record<string, unknown>) => (v ? `${key} ${JSON.stringify(v)}` : key),
 }));
 
-import { ScheduledTasksMenu, type ClockTask } from "./scheduled-tasks-menu";
+import { ScheduledTasksMenu, type ClockEventTask, type ClockTask } from "./scheduled-tasks-menu";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const roots: Root[] = [];
@@ -32,12 +32,12 @@ const TASK: ClockTask = {
   lastRun: { at: "2026-11-02T15:03:00.000Z", outcome: "no_credits", reason: "Sin créditos." },
 };
 
-function paint(tasks: ClockTask[], update = vi.fn(async () => ({ ok: true })), remove = vi.fn(async () => true), setPaused = vi.fn(async () => true)) {
+function paint(tasks: ClockTask[], update = vi.fn(async () => ({ ok: true })), remove = vi.fn(async () => true), setPaused = vi.fn(async () => true), events?: ClockEventTask[]) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  act(() => root.render(<ScheduledTasksMenu scheduled={{ tasks, update, remove, setPaused }} />));
+  act(() => root.render(<ScheduledTasksMenu scheduled={{ tasks, update, remove, setPaused, ...(events ? { events } : {}) }} />));
   return { host, update, remove, setPaused };
 }
 
@@ -120,5 +120,85 @@ describe("ScheduledTasksMenu", () => {
     expect(remove).not.toHaveBeenCalled();
     await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-confirm-delete]")!.click());
     expect(remove).toHaveBeenCalledWith("schedule-1");
+  });
+
+  describe("event tasks (spec local 2026-11-03-len-que-avisa)", () => {
+    const EVENT: ClockEventTask = {
+      id: "e1",
+      kind: "event",
+      title: "Reservas que chocan",
+      prompt: "Avísame si dos reservas caen en la misma mesa y hora.",
+      source: "app_rows",
+      params: { table: "reservas", created_column: "created_at", conditions: [{ field: "estado", op: "eq", value: "confirmada" }] },
+      lastCheckedAt: "2026-11-03T10:00:00.000Z",
+      createdBy: "ana",
+      records: [
+        { id: "r1", kind: "delivered", reason: null, count: 1, notified: true, at: "2026-11-03T09:00:00.000Z" },
+        { id: "r2", kind: "filtered", reason: "estado ≠ confirmada", count: 3, notified: null, at: "2026-11-03T08:00:00.000Z" },
+        { id: "r3", kind: "failed", reason: "table_missing", count: 2, notified: null, at: "2026-11-03T07:00:00.000Z" },
+      ],
+    };
+    const open = (host: HTMLElement) => act(() => host.querySelector<HTMLButtonElement>("[data-scheduled-clock]")!.click());
+
+    it("the menu shows an event task's source read-only and its records", () => {
+      const { host } = paint([], undefined, undefined, undefined, [EVENT]);
+      open(host);
+      const row = host.querySelector('[data-event-task="e1"]')!;
+      expect(row.textContent).toContain("Reservas que chocan");
+      expect(row.textContent).toContain('eventTasks.sourceRows {"table":"reservas"}');
+      expect(row.textContent).toContain("estado eq confirmada");
+      // Read-only: the source is text, not a field.
+      expect(row.querySelector("input, select, textarea")).toBeNull();
+      act(() => row.querySelector<HTMLButtonElement>("[data-event-records]")!.click());
+      const lines = [...row.querySelectorAll("[data-event-record]")].map((li) => li.textContent);
+      expect(lines).toHaveLength(3);
+      expect(lines[0]).toContain("eventTasks.recNotified");
+      expect(lines[1]).toContain('eventTasks.recFiltered {"reason":"estado ≠ confirmada"}');
+      expect(lines[1]).toContain('eventTasks.recCount {"count":3}');
+      expect(lines[2]).toContain('eventTasks.recFailed {"reason":"table_missing"}');
+    });
+
+    it("a form task without a form names all the forms", () => {
+      const { host } = paint([], undefined, undefined, undefined, [{ ...EVENT, source: "form_submissions", params: {}, records: [] }]);
+      open(host);
+      const row = host.querySelector('[data-event-task="e1"]')!;
+      expect(row.textContent).toContain("eventTasks.sourceAllForms");
+      act(() => row.querySelector<HTMLButtonElement>("[data-event-records]")!.click());
+      expect(row.textContent).toContain("eventTasks.noRecords");
+    });
+
+    it("the filter shows one kind at a time", () => {
+      const { host } = paint([TASK], undefined, undefined, undefined, [EVENT]);
+      open(host);
+      expect(host.querySelector('[data-event-task="e1"]')).not.toBeNull();
+      expect(host.textContent).toContain("PDF de resultados");
+      act(() => host.querySelector<HTMLButtonElement>('[data-scheduled-filter="events"]')!.click());
+      expect(host.textContent).not.toContain("PDF de resultados");
+      expect(host.querySelector('[data-event-task="e1"]')).not.toBeNull();
+      act(() => host.querySelector<HTMLButtonElement>('[data-scheduled-filter="time"]')!.click());
+      expect(host.querySelector('[data-event-task="e1"]')).toBeNull();
+      expect(host.textContent).toContain("PDF de resultados");
+    });
+
+    it("an event task's editor changes only the name and the prompt", async () => {
+      const { host, update } = paint([], undefined, undefined, undefined, [EVENT]);
+      open(host);
+      act(() => host.querySelector<HTMLButtonElement>('[data-event-task="e1"] [data-scheduled-edit]')!.click());
+      expect(host.querySelector("[data-field=time]")).toBeNull();
+      expect(host.querySelector("select")).toBeNull();
+      type(host.querySelector<HTMLInputElement>("[data-field=title]")!, "Choques de reservas");
+      await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-save]")!.click());
+      expect(update).toHaveBeenCalledWith("e1", { title: "Choques de reservas", prompt: "Avísame si dos reservas caen en la misma mesa y hora." });
+    });
+
+    it("an event task pauses and is deleted like a recurring one", async () => {
+      const { host, setPaused, remove } = paint([], undefined, undefined, undefined, [EVENT]);
+      open(host);
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-event-task="e1"] [data-scheduled-pause]')!.click());
+      expect(setPaused).toHaveBeenCalledWith("e1", true);
+      act(() => host.querySelector<HTMLButtonElement>('[data-event-task="e1"] [data-scheduled-delete]')!.click());
+      await act(async () => host.querySelector<HTMLButtonElement>("[data-scheduled-confirm-delete]")!.click());
+      expect(remove).toHaveBeenCalledWith("e1");
+    });
   });
 });

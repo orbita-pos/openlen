@@ -49,7 +49,14 @@ describe("acceptedFraming", () => {
 describe("decideAndLaunch", () => {
   it("accept launches one turn in the project chat as the person who pressed, with the proposed action verbatim", async () => {
     const s = setup({ ok: true, card: card() });
-    expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "accept", actorId: "u2" }, s.deps)).toEqual({ ok: true, status: "accepted" });
+    expect(await decideAndLaunch({ projectId: "p1", cardId: "c1", action: "accept", actorId: "u2" }, s.deps)).toEqual({
+      ok: true,
+      status: "accepted",
+      // What the chat needs to paint the turn running and follow it, like a turn started from a code thread.
+      rowId: "row-1",
+      text: "🔔 Reservas que chocan: Hazlo",
+      origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "Reservas que chocan" },
+    });
     expect(s.launched).toHaveLength(1);
     const p = s.launched[0]!;
     expect(p).toMatchObject({ userId: "u2", projectId: "p1", filaId: "row-1", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "Reservas que chocan" } });

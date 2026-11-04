@@ -25,7 +25,10 @@ export const POST = paraLaApp(
       if (acceso instanceof Response) return acceso;
       const r = await decideAndLaunch({ projectId: id, cardId, action, actorId: userId }, await defaultAcceptDeps());
       if (!r.ok) return Response.json({ error: r.reason }, { status: r.reason === "not_found" ? 404 : 409 });
-      return Response.json({ status: r.status }, { status: r.status === "accepted" ? 202 : 200 });
+      // Accepted: the row and its text let the chat paint the turn running and follow it.
+      return r.status === "accepted"
+        ? Response.json({ status: r.status, rowId: r.rowId, text: r.text, origin: r.origin }, { status: 202 })
+        : Response.json({ status: r.status });
     },
   ),
 );

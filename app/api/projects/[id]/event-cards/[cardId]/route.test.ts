@@ -20,13 +20,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u2");
   vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
-  vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted" });
+  vi.mocked(decideAndLaunch).mockResolvedValue({ ok: true, status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
 });
 
 describe("POST event-cards/[cardId]", () => {
   it("an editor accepts: 202", async () => {
     const res = await post("accept");
     expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ status: "accepted", rowId: "row-1", text: "🔔 T: Hazlo", origin: { kind: "event_task", taskId: "t1", cardId: "c1", title: "T" } });
     expect(vi.mocked(exigirAcceso)).toHaveBeenCalledWith("p1", "u2", "editar");
     expect(vi.mocked(decideAndLaunch)).toHaveBeenCalledWith({ projectId: "p1", cardId: "c1", action: "accept", actorId: "u2" }, expect.anything());
   });
