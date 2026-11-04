@@ -486,6 +486,10 @@ export interface AgentDeps {
     newVisit?: boolean;
     /** El tamaño de la pestaña en esta visita (`view_page viewport`); sin él, escritorio. */
     viewport?: "mobile" | "desktop";
+    /** A tool's bridge in the eyes (spec local 2026-11-04-herramientas-hechas-por-len, §4.4). */
+    toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
+    /** `installed: true`: the installed tool's private host. */
+    installedUrl?: string;
   }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
@@ -1980,10 +1984,12 @@ async function toolMirarPagina(
     // en blanco.
     const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
     const ruta = row.data.app ? `/${pantalla ?? "#/"}` : pedida.ruta;
+    const ojosDeHerramienta = await toolEyesOf(session, args);
+    if ("error" in ojosDeHerramienta) return { response: { ok: false, error: ojosDeHerramienta.error } };
     // EN LA PESTAÑA DEL TURNO: la captura es de lo que hay en ella, como la de Claude Code.
     const tab = (session.browserTab ??= newBrowserTabHolder());
     const visto = await visitar(() =>
-      deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab, ...(enTelefono ? { viewport: "mobile" as const } : {}) }),
+      deps.usarPagina!({ html, pasos: [{ screenshot: zona ?? "screen" }], ruta, vista, tab, ...(enTelefono ? { viewport: "mobile" as const } : {}), ...ojosDeHerramienta }),
     ).catch(() => null);
     if (!visto) {
       return {
@@ -2155,7 +2161,9 @@ async function toolUsarPagina(
   const desde = new Date();
   const tab = (session.browserTab ??= newBrowserTabHolder());
   const newVisit = args.new_visit === true;
-  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}) }))
+  const ojos = await toolEyesOf(session, args);
+  if ("error" in ojos) return { response: { ok: false, error: ojos.error } };
+  const visto = await visitar(() => usarPagina({ html, pasos: v.pasos, ruta, vista, signedInAs, tab, ...(newVisit ? { newVisit } : {}), ...ojos }))
     .catch(() => null)
     .finally(() => end?.().catch(() => undefined));
   if (!visto) {
@@ -2424,6 +2432,25 @@ const MAX_PUBLISH_LOCALES = 9;
 // resolves which subdomain + languages a publish WOULD use and hands that back
 // as a `confirm` payload. The panel turns that into a card whose button hits
 // the real endpoint — the user's tap is the only thing that publishes.
+/** A TOOL's eyes (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.8): the bridge of this turn, in draft
+ *  mode — or, with `installed: true`, the installed version on its own host. Nothing outside a tool project. */
+async function toolEyesOf(
+  session: AgentSession,
+  args: Record<string, unknown>,
+): Promise<{ toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller; installedUrl?: string } | { error: string }> {
+  if (!session.tool) return {};
+  const store = await import("@/lib/tools/store");
+  const personId = session.personId ?? session.userId;
+  const base = { personId, personEmail: await store.personEmail(personId).catch(() => ""), locale: session.uiLocale ?? "en", timeZone: session.zonaHoraria ?? "UTC" };
+  if (args.installed !== true) return { toolBridge: { ...base, mode: "draft", toolProjectId: session.projectId } };
+  const row = await store.installationOf(personId, session.projectId).catch(() => null);
+  if (!row || row.removedAt || !row.enabled) return { error: "This tool isn't installed for this person yet: call publish to install it first." };
+  const { toolFrameUrl } = await import("@/lib/tools/host");
+  const url = toolFrameUrl({ hostLabel: row.hostLabel, releaseSha: row.releaseSha, requestHost: null });
+  if (!url) return { error: "The installed tool has no address here." };
+  return { toolBridge: { ...base, mode: "installed", installation: row }, installedUrl: url };
+}
+
 async function toolPublicar(
   session: AgentSession,
   deps: AgentDeps,

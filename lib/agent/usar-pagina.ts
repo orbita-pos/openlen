@@ -30,6 +30,10 @@
 // llega al correo del dueño y un enlace a otro sitio no se abre — se dice a
 // dónde iba.
 
+import { toolBridgeClientSource } from "@/lib/tools/bridge/client-source";
+import { installEyesBridge } from "@/lib/tools/bridge/eyes";
+import type { BridgeCaller } from "@/lib/tools/bridge/handlers";
+import { injectToolBridge, TOOL_BRIDGE_PATH } from "@/lib/tools/bridge/inject";
 import { createHash } from "node:crypto";
 import { Script } from "node:vm";
 import type { Browser, CDPSession, ElementHandle, Page } from "puppeteer";
@@ -708,6 +712,10 @@ export interface VisitaParams {
   /** El tamaño de la pestaña en esta visita: un teléfono (390×844, el mismo del
    *  pase de móvil de `measure`) o, si no se dice, escritorio. */
   readonly viewport?: "mobile" | "desktop";
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its `window.openlen`, answered in Node. */
+  readonly toolBridge?: BridgeCaller;
+  /** The installed tool's private host, opened top-level instead of the draft (`installed: true`). */
+  readonly installedUrl?: string;
 }
 
 /** Escritorio, el de siempre de la pestaña. */
@@ -1121,6 +1129,15 @@ async function loadVersion(tab: OpenTab, html: string, opciones: OpenTab["opcion
  * cierra su sesión del backend), cada visita abre y cierra la suya.
  */
 export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string; images?: InlineImage[] }> {
+  // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8 step 6): its own host, as the person
+  // sees it, with the bridge in installed mode — its writes are refused all the same.
+  if (p.installedUrl && p.toolBridge) {
+    const bridge = p.toolBridge;
+    return visitAnotherSite(
+      { url: p.installedUrl, pasos: p.pasos, viewport: p.viewport ?? "desktop" },
+      { ...internals, allowOrigins: [new URL(p.installedUrl).origin], beforeGoto: (page) => installEyesBridge(page, bridge) },
+    );
+  }
   if (!p.tab || p.signedInAs) {
     const tab = await openTab(internals, p.signedInAs);
     try {
@@ -1202,7 +1219,11 @@ export interface AnotherSiteVisit {
  */
 export async function visitAnotherSite(
   p: AnotherSiteVisit,
-  internals: VisitaInternals & { readonly allowOrigins?: readonly string[] } = {},
+  internals: VisitaInternals & {
+    readonly allowOrigins?: readonly string[];
+    /** Before the first navigation (an installed tool's bridge). */
+    readonly beforeGoto?: (page: { exposeFunction(name: string, fn: (json: string) => Promise<string>): Promise<void> }) => Promise<void>;
+  } = {},
 ): Promise<{ informe: string; images?: InlineImage[] }> {
   const browser = await (internals.lanzar ?? lanzarChromium)();
   try {
@@ -1213,6 +1234,7 @@ export async function visitAnotherSite(
     // A private address is cut on every request, and below that by the proxy.
     await installSubresourceSsrfGuard(page, { allowOrigins: [...(internals.allowOrigins ?? [])] });
     await page.evaluateOnNewDocument(PRELUDIO_DE_USO);
+    if (internals.beforeGoto) await internals.beforeGoto(page as never);
     const dialogs: string[] = [];
     page.on("dialog", (d) => {
       const kind = d.type() === "confirm" ? "a question (confirm)" : d.type() === "prompt" ? "a prompt" : "an alert";
@@ -1313,16 +1335,29 @@ export async function closeBrowserTab(holder: BrowserTabHolder | undefined): Pro
   if (tab) await closeOpenTab(tab);
 }
 
+/** The tabs whose page already exposes a tool's bridge (Puppeteer refuses to expose a name twice). */
+const bridgedTabs = new WeakSet<object>();
+
 async function visitTab(
   tab: OpenTab,
   p: VisitaParams,
   internals: VisitaInternals,
   o: { readonly persistent: boolean; readonly recovered: boolean; readonly closedIdle?: boolean },
 ): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean }> {
-  const html = documentoMedible(p.html, p.vista ?? null);
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): `window.openlen` first in its <head>, served by
+  // the platform under /openlen/, and answered in Node in draft mode — never writing production.
+  const medible = documentoMedible(p.html, p.vista ?? null);
+  const html = p.toolBridge ? injectToolBridge(medible) : medible;
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
-  const opciones = await carpetaDeLaVista(p.vista);
+  const carpeta = await carpetaDeLaVista(p.vista);
+  const opciones = p.toolBridge
+    ? { ...(carpeta ?? { files: {}, pagina: null }), platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([]) } }
+    : carpeta;
+  if (p.toolBridge && !bridgedTabs.has(tab.page)) {
+    await installEyesBridge(tab.page as never, p.toolBridge);
+    bridgedTabs.add(tab.page);
+  }
   const version = versionOf(html, opciones);
   const enUnaApp = Boolean(p.vista?.app);
   const inicio = (doc: DocumentoServido) => doc.url + (opciones?.hash ?? "");
