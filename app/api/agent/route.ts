@@ -153,6 +153,8 @@ import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
+import { bornAsTool } from "@/lib/projects/born-as-tool";
+import { toolsEnabled } from "@/lib/tools/enabled";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
 import { captureDesignElements, storeDesignCaptures } from "@/lib/agent/design-screenshots";
@@ -646,6 +648,22 @@ async function correrTurno(
       // eslint-disable-next-line no-console
       console.warn("[agent] la app no pudo nacer; el turno sigue con el proyecto como está", err);
     });
+  }
+  // A TOOL IS BORN the same way (spec local 2026-11-04-herramientas-hechas-por-len, §4.9): the «Herramienta» card's
+  // first message makes the blank project a tool before Len reads it. Tools are for paid plans only (§4.13): on
+  // Free nothing is written and no turn starts.
+  if (body?.naceComo === "tool" && !opts.round && toolsEnabled()) {
+    const born = await bornAsTool({
+      projectId,
+      userId,
+      title: "Herramienta",
+      locale: typeof body.idioma === "string" ? body.idioma : "en",
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] the tool couldn't be born; the turn goes on with the project as it is", err);
+      return "not_blank" as const;
+    });
+    if (born === "plan_required") return errorJson(402, "plan_required");
   }
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");

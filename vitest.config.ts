@@ -320,6 +320,8 @@ export default defineConfig({
       "lib/projects/autor-del-cambio.test.ts",
       "lib/projects/correos-del-proyecto.test.ts",
       "lib/projects/nacer-como-app.pg.test.ts",
+      // A blank project born as a tool (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
+      "lib/projects/born-as-tool.pglite.test.ts",
       "lib/publish/model-runtime-locales.test.ts",
       // Un idioma pedido que no sale tiene que OÍRSE: el fallo era mudo y por
       // eso la traducción vivió cinco meses sin producir una sola página.
