@@ -43,5 +43,8 @@ export interface ToolCardView {
   readonly review: ToolCardReview | null;
 }
 
+/** Len's card tool, DeepSeek's name (packages/experimental/action-cards). */
+export const PROPOSE_ACTION = "propose_action";
+
 /** A human-written place for the tool: DeepSeek's `customLocationSchema` (1 to 1,000 characters, trimmed). */
 export const CUSTOM_LOCATION_MAX = 1000;

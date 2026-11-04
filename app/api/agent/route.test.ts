@@ -2072,6 +2072,19 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(argsQueRecibio().skillCatalogMessage ?? "").not.toMatch(/tool-suggestions/);
     });
 
+    it("offered: Len is declared propose_action, its session knows this turn's row and starts with no skill loaded this turn", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      suggestionsTo.mockResolvedValueOnce(true);
+      await readEvents(await pedir());
+      const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { tools: { name: string }[] };
+      expect(args.tools.map((t) => t.name)).toContain("propose_action");
+      suggestionsTo.mockResolvedValueOnce(false);
+      await readEvents(await pedir());
+      const off = mocks.runAgentLoop.mock.calls.at(-1)![0] as { tools: { name: string }[] };
+      expect(off.tools.map((t) => t.name)).not.toContain("propose_action");
+    });
+
     it("the first turn carries the catalog; the second, with nothing changed, none", async () => {
       turno();
       mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);

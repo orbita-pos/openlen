@@ -37,6 +37,13 @@ describe("loading it", () => {
     expect(text).toContain("[\"Reservas\"]");
   });
 
+  it("a call in this turn counts even when the skill was already loaded (DeepSeek's turnLoads)", async () => {
+    const set = resolveSkills({ bundled: bundledSkills({ app: null, env: {}, toolSuggestions: true }), project: [], personal: [] });
+    const session = { skills: set, projectId: "p", userId: "u", loadedSkills: new Set(["tool-suggestions"]), turnSkillLoads: new Set<string>() } as unknown as AgentSession;
+    await toolSkill(session, { name: "tool-suggestions" });
+    expect(session.turnSkillLoads?.has("tool-suggestions")).toBe(true);
+  });
+
   it("another skill gets no catalog", async () => {
     const set = resolveSkills({ bundled: bundledSkills({ app, env: {}, tool: true }), project: [], personal: [] });
     const session = { skills: set, projectId: "p", userId: "u" } as unknown as AgentSession;

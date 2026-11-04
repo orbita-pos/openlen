@@ -209,6 +209,8 @@ export type AgentStreamEvent =
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
+  /** A «Crear» card `propose_action` accepted (spec local 2026-11-04-herramientas-hechas-por-len, §4.10). */
+  | { type: "tool_card"; card: import("@/lib/tools/cards/types").ToolCardView }
   | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
@@ -2098,6 +2100,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           mutoDurable = true;
           args.onMutacion?.();
         }
+
+        // A «Crear» card: the chat draws it under this answer; the model reads the tool's own result.
+        if (outcome.toolCard) args.emit({ type: "tool_card", card: outcome.toolCard });
 
         // A confirm outcome (publish) NEVER carries out its action. Surface the
         // confirm card to the user and hand the model a fixed "waiting" state so

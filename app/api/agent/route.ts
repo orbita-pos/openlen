@@ -116,7 +116,7 @@ import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
 import { createArtifactAgent } from "@/lib/artifacts/tools";
 
-import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente, queuedDirections } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
 import {
@@ -156,6 +156,7 @@ import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
 import { toolsEnabled } from "@/lib/tools/enabled";
 import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
+import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
 import { declarationsOfTool } from "@/lib/agent/tool-mode";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
@@ -704,7 +705,13 @@ async function correrTurno(
     return resolveAgentTypes({ project: projectTypes, personal: personalTypes });
   };
   let agentTypes = await loadAgentTypes();
-  const conPostura = (d: Record<string, unknown>[]) => (toolDelTurno ? declarationsOfTool(d) : d);
+  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): `tool-suggestions` and Len's
+  // `propose_action` for whoever speaks, with «Sugerencias de herramientas» on, a paid plan, outside a tool project.
+  const ofrecerSugerencias = await suggestionsOfferedTo(quien, toolDelTurno).catch(() => false);
+  const conPostura = (d: Record<string, unknown>[]) => {
+    const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
+    return ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
+  };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
   const refreshAgentTypes = (): Promise<void> => {
@@ -1130,10 +1137,14 @@ async function correrTurno(
         conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
       ])
     : [[], []];
-  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): `tool-suggestions` (and Len's
-  // `propose_action`) for whoever speaks, with «Sugerencias de herramientas» on, a paid plan, outside a tool project.
-  const ofrecerSugerencias = await suggestionsOfferedTo(quien, toolDelTurno).catch(() => false);
   if (ofrecerSugerencias) {
+    deps.toolCards = {
+      insertCard: async (input) => {
+        const { insertCard, toCardView } = await import("@/lib/tools/cards/store");
+        return toCardView(await insertCard(input));
+      },
+      queued: (turnId) => queuedDirections(turnId),
+    };
     const idiomaDelCatalogo = typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en";
     deps.suggestionCatalog = async () => {
       const [{ listInstallations }, { toInstalledToolView }, { suggestionCatalog }] = await Promise.all([
@@ -1342,6 +1353,8 @@ async function correrTurno(
     // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
     // put in this message: `skill` answers «already loaded» for them.
     loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
+    // What a `skill` call answered in THIS turn (DeepSeek's `turnLoads`): `propose_action` needs its skill here.
+    turnSkillLoads: new Set<string>(),
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
@@ -1541,6 +1554,8 @@ async function correrTurno(
       // cuando el cliente se entera de que acabó.
       const filaId = turnIdDelCliente ?? turnoId;
       ledgerRefId = filaId;
+      // The answer a «Crear» card follows (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+      agentSession.chatRowId = filaId;
       /** Lo que el usuario escribió a media faena, con la misma forma que el
        *  panel (`↳`): si no está el panel, la fila la escribe el servidor. */
       const correcciones: string[] = [];

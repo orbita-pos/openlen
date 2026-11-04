@@ -102,6 +102,8 @@ export async function toolSkill(session: AgentSession, args: Record<string, unkn
     if (!result.ok) return { response: { ok: false, error: result.code, message: result.message } };
     return { response: { ok: true, tool_result: forkedSkillLine(name, result.id) }, action: { tool: SKILL_TOOL, ok: true, summary: name }, subagent: { id: result.id, preset } };
   }
+  // This turn's loads, «already loaded» included (DeepSeek's `turnLoads`): `propose_action` needs its skill here.
+  (session.turnSkillLoads ??= new Set()).add(name);
   const loaded = (session.loadedSkills ??= new Set());
   if (loaded.has(name)) return { response: { ok: true, tool_result: alreadyLoaded(name) } };
   loaded.add(name);
