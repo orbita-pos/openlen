@@ -19,6 +19,8 @@ import { MATCHING_MAX, SourceError, type EventSource, type SourceChange, type So
 export interface AppRowsParams {
   readonly table: string;
   readonly created_column: string;
+  /** Wake N hours after a row was created, as it is then, instead of when it is created. */
+  readonly after_hours?: number;
   readonly conditions?: readonly { readonly field: string; readonly op: "eq" | "neq" | "contains" | "gt" | "lt" | "exists"; readonly value?: string | number }[];
 }
 
@@ -41,6 +43,13 @@ export const quoteIdent = (name: string): string => `"${name.replace(/\0/g, "").
 export const quoteLiteral = (value: string): string => `'${value.replace(/\0/g, "").replace(/'/g, "''")}'`;
 
 const paramsSchema = appRowsParamsSchema as unknown as z.ZodType<AppRowsParams>;
+
+/** With `after_hours`, only the rows at least that old — by Postgres's clock, the one that wrote them. An integer the
+ *  schema checked (1–720), so it goes in the SQL as a number. */
+function comeOfAge(params: AppRowsParams, c: string): string {
+  const hours = params.after_hours;
+  return typeof hours === "number" && Number.isInteger(hours) && hours > 0 ? ` AND ${c} <= now() - make_interval(hours => ${hours})` : "";
+}
 
 /** The rows of a result as objects, without the cursor's own columns. */
 function objects(o: Extract<QueryOutcome, { kind: "rows" }>): Record<string, unknown>[] {
@@ -117,7 +126,8 @@ export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
     const t = quoteIdent(params.table);
     const c = quoteIdent(params.created_column);
     const k = quoteIdent(keyColumn);
-    const newest = await queryLive(projectId, `SELECT ${c}::text AS ${AT}, ${k}::text AS ${KEY} FROM ${t} ORDER BY ${c} DESC, ${k}::text DESC LIMIT 1`);
+    // With after_hours, the newest row already past the mark: what is past it now never fires, what is younger will.
+    const newest = await queryLive(projectId, `SELECT ${c}::text AS ${AT}, ${k}::text AS ${KEY} FROM ${t} WHERE true${comeOfAge(params, c)} ORDER BY ${c} DESC, ${k}::text DESC LIMIT 1`);
     if (newest?.kind !== "rows") return { ok: false, reason: newest?.kind === "error" ? newest.message : "The production base could not be read." };
     const last = newest.rows[0];
     return { ok: true, initialState: { cursor: last ? { at: String(last[0]), key: String(last[1]) } : { at: "-infinity", key: "" }, key_column: keyColumn } };
@@ -131,7 +141,7 @@ export const appRowsSource: EventSource<AppRowsParams, AppRowsState> = {
     const key = quoteLiteral(state.cursor.key);
     const o = await rowsOf(
       projectId,
-      `SELECT *, ${c}::text AS ${AT}, ${k}::text AS ${KEY} FROM ${t} WHERE ${c} > ${at} OR (${c} = ${at} AND ${k}::text > ${key}) ORDER BY ${c}, ${k}::text LIMIT ${PAGE}`,
+      `SELECT *, ${c}::text AS ${AT}, ${k}::text AS ${KEY} FROM ${t} WHERE (${c} > ${at} OR (${c} = ${at} AND ${k}::text > ${key}))${comeOfAge(params, c)} ORDER BY ${c}, ${k}::text LIMIT ${PAGE}`,
     );
     const found = objects(o);
     if (found.length === 0) return { state, changes: [] };

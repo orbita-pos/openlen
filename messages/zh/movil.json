@@ -159,6 +159,7 @@
     "records": "记录",
     "noRecords": "暂无",
     "sourceRows": "{table} 的新行",
+    "sourceRowsAfter": "{hours} 小时后仍符合条件的 {table} 行",
     "sourceForm": "表单 {form} 的提交",
     "sourceAllForms": "表单提交",
     "sourceChatMessages": "你页面聊天中的消息",

@@ -23,6 +23,7 @@ vi.mock("@/lib/backend/live-read", () => ({
 }));
 
 const { appRowsSource } = await import("./app-rows");
+const { evaluate } = await import("../trigger");
 const CTX = { timeZone: "UTC", now: new Date("2026-11-04T12:00:00Z"), ownerId: "owner" };
 
 const pg = () => base.pg as PGlite;
@@ -82,3 +83,70 @@ describe("app_rows as the production read-only role", () => {
     ).rejects.toThrow(/no column .*Columns: .*mesa/);
   });
 });
+
+// «Esperar es una fuente» (spec local 2026-11-04-hazlo, §7.4.3): with after_hours a row wakes the task N hours after it
+// was created, as it is then; the judge never schedules a wait. Postgres's own clock decides the age.
+describe("app_rows with after_hours", () => {
+  const PARAMS = { table: "esperan", created_column: "created_at", after_hours: 24 };
+  const R1 = "00000000-0000-0000-0000-0000000000e1";
+  async function table(type: "timestamptz" | "timestamp", rows: { id: string; hoursAgo: number; confirmada: boolean }[]) {
+    const now = type === "timestamptz" ? "now()" : "localtimestamp";
+    await pg().exec(`RESET ROLE;
+      CREATE TABLE esperan (id uuid PRIMARY KEY, created_at ${type} NOT NULL, confirmada boolean NOT NULL DEFAULT false);
+      GRANT SELECT ON esperan TO ro;
+      ${rows.map((r) => `INSERT INTO esperan VALUES ('${r.id}', ${now} - interval '${r.hoursAgo} hours', ${r.confirmada});`).join("\n")}
+      SET ROLE ro;`);
+  }
+  const age = (id: string, hoursAgo: number, type: "timestamptz" | "timestamp" = "timestamptz") =>
+    pg().exec(`RESET ROLE; UPDATE esperan SET created_at = ${type === "timestamptz" ? "now()" : "localtimestamp"} - interval '${hoursAgo} hours' WHERE id = '${id}'; SET ROLE ro;`);
+  const started = async (params = PARAMS) => {
+    const v = await appRowsSource.validate("p1", params, CTX);
+    if (!v.ok) throw new Error(v.reason);
+    return v.initialState;
+  };
+
+  it("with after_hours a row wakes the task only once it is that old", async () => {
+    await table("timestamptz", [{ id: R1, hoursAgo: 23, confirmada: false }]);
+    const state = await started();
+    const young = await appRowsSource.observe("p1", PARAMS, state, CTX);
+    expect(young.changes).toEqual([]);
+    await age(R1, 25);
+    const old = await appRowsSource.observe("p1", PARAMS, young.state, CTX);
+    expect(old.changes.map((c) => c.detail.id)).toEqual([R1]);
+    expect((await appRowsSource.observe("p1", PARAMS, old.state, CTX)).changes).toEqual([]);
+  });
+
+  it("a row that stopped matching before the hours passed never wakes it", async () => {
+    await table("timestamptz", [{ id: R1, hoursAgo: 10, confirmada: false }]);
+    const state = await started();
+    await pg().exec(`RESET ROLE; UPDATE esperan SET confirmada = true WHERE id = '${R1}'; SET ROLE ro;`);
+    await age(R1, 25);
+    const o = await appRowsSource.observe("p1", PARAMS, state, CTX);
+    // It comes of age, and the trigger reads it as it is then.
+    expect(o.changes.map((c) => c.detail.id)).toEqual([R1]);
+    expect(evaluate({ changes: o.changes, conditions: [{ field: "confirmada", op: "eq", value: "false" }] }).candidate).toBeNull();
+  });
+
+  it("rows already past the mark when the task is made never fire", async () => {
+    await table("timestamptz", [{ id: R1, hoursAgo: 30, confirmada: false }]);
+    const state = await started();
+    expect((await appRowsSource.observe("p1", PARAMS, state, CTX)).changes).toEqual([]);
+  });
+
+  it("with a timestamp without time zone column too", async () => {
+    await table("timestamp", [{ id: R1, hoursAgo: 23, confirmada: false }]);
+    const state = await started();
+    expect((await appRowsSource.observe("p1", PARAMS, state, CTX)).changes).toEqual([]);
+    await age(R1, 25, "timestamp");
+    expect((await appRowsSource.observe("p1", PARAMS, state, CTX)).changes.map((c) => c.detail.id)).toEqual([R1]);
+  });
+
+  it("without after_hours a new row still fires when it is created", async () => {
+    await table("timestamptz", []);
+    const params = { table: "esperan", created_column: "created_at" };
+    const state = await started(params);
+    await pg().exec(`RESET ROLE; INSERT INTO esperan VALUES ('${R1}', now(), false); SET ROLE ro;`);
+    expect((await appRowsSource.observe("p1", params, state, CTX)).changes.map((c) => c.detail.id)).toEqual([R1]);
+  });
+});
+

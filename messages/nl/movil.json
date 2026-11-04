@@ -159,6 +159,7 @@
     "records": "Logboek",
     "noRecords": "Nog niets",
     "sourceRows": "Nieuwe rijen van {table}",
+    "sourceRowsAfter": "Rijen van {table} die na {hours} u nog kloppen",
     "sourceForm": "Inzendingen van formulier {form}",
     "sourceAllForms": "Formulierinzendingen",
     "sourceChatMessages": "Berichten in de chat van je pagina",

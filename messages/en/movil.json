@@ -159,6 +159,7 @@
     "records": "Records",
     "noRecords": "Nothing yet",
     "sourceRows": "New rows of {table}",
+    "sourceRowsAfter": "Rows of {table} still matching after {hours} h",
     "sourceForm": "Submissions of form {form}",
     "sourceAllForms": "Form submissions",
     "sourceChatMessages": "Messages in your page's chat",

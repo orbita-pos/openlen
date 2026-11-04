@@ -596,6 +596,7 @@
     "records": "Registros",
     "noRecords": "Aún nada",
     "sourceRows": "Filas nuevas de {table}",
+    "sourceRowsAfter": "Filas de {table} que siguen igual tras {hours} h",
     "sourceForm": "Envíos del formulario {form}",
     "sourceAllForms": "Envíos de los formularios",
     "sourceChatMessages": "Mensajes en el chat de tu página",

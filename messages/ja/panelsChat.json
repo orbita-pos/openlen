@@ -596,6 +596,7 @@
     "records": "記録",
     "noRecords": "まだありません",
     "sourceRows": "{table} の新しい行",
+    "sourceRowsAfter": "{hours} 時間後も条件を満たす {table} の行",
     "sourceForm": "フォーム {form} の送信",
     "sourceAllForms": "フォームの送信",
     "sourceChatMessages": "ページのチャットのメッセージ",

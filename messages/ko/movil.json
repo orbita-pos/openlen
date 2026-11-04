@@ -159,6 +159,7 @@
     "records": "기록",
     "noRecords": "아직 없음",
     "sourceRows": "{table}의 새 행",
+    "sourceRowsAfter": "{hours}시간 후에도 조건에 맞는 {table}의 행",
     "sourceForm": "{form} 양식 제출",
     "sourceAllForms": "양식 제출",
     "sourceChatMessages": "페이지 채팅의 메시지",

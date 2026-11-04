@@ -159,6 +159,7 @@
     "records": "Protokoll",
     "noRecords": "Noch nichts",
     "sourceRows": "Neue Zeilen in {table}",
+    "sourceRowsAfter": "Zeilen in {table}, die nach {hours} h noch zutreffen",
     "sourceForm": "Einsendungen des Formulars {form}",
     "sourceAllForms": "Formular-Einsendungen",
     "sourceChatMessages": "Nachrichten im Chat deiner Seite",

@@ -253,6 +253,14 @@ describe("event tasks through the schedule tools", () => {
     expect(events.validate).toHaveBeenCalledWith("app_users", "p1", {}, expect.anything());
   });
 
+  it("after_hours outside 1–720 is refused by schedule_create", async () => {
+    const { deps } = withEvents();
+    const on = (after_hours: number) => ({ ...ROWS_ON, on: { ...ROWS_ON.on, after_hours } });
+    expect(result(await toolScheduleCreate(owner, deps, on(0))).code).toBe("invalid_source");
+    expect(result(await toolScheduleCreate(owner, deps, on(721))).code).toBe("invalid_source");
+    expect(result(await toolScheduleCreate(owner, deps, on(24)))).toMatchObject({ kind: "event", params: expect.objectContaining({ after_hours: 24 }) });
+  });
+
   it("an unknown source or bad params are refused", async () => {
     const { deps } = withEvents();
     expect(result(await toolScheduleCreate(owner, deps, { ...ROWS_ON, on: { source: "stripe" } })).code).toBe("invalid_source");

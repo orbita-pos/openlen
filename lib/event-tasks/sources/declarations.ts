@@ -13,7 +13,13 @@ const conditionSchema = z.object({
   value: z.union([z.string(), z.number()]).optional(),
 });
 
-export const appRowsParamsSchema = z.object({ table: z.string().min(1), created_column: z.string().min(1), conditions: z.array(conditionSchema).optional() });
+export const appRowsParamsSchema = z.object({
+  table: z.string().min(1),
+  created_column: z.string().min(1),
+  // «Esperar es una fuente» (spec local 2026-11-04-hazlo, §7.4.3): 30 days at most, past which a card is out of context.
+  after_hours: z.number().int().min(1).max(720).optional(),
+  conditions: z.array(conditionSchema).optional(),
+});
 export const formSubmissionsParamsSchema = z.object({ form: z.string().min(1).optional(), conditions: z.array(conditionSchema).optional() });
 export const visitorChatParamsSchema = z.object({ watch: z.enum(["messages", "signups"]).optional(), conditions: z.array(conditionSchema).optional() });
 export const appUsersParamsSchema = z.object({ conditions: z.array(conditionSchema).optional() });
@@ -38,6 +44,10 @@ export const ON_DECLARATION: Record<string, unknown> = {
     },
     table: { type: "STRING", description: "app_rows: the table to watch for new rows." },
     created_column: { type: "STRING", description: "app_rows: the table's creation timestamp column, such as created_at." },
+    after_hours: {
+      type: "NUMBER",
+      description: "app_rows: instead of when a row is created, wake N hours after it, if it still matches the conditions then — «a booking still unconfirmed after 24 h». 1 to 720.",
+    },
     form: {
       type: "STRING",
       description:
