@@ -10,7 +10,12 @@ export interface GitHubAnswer {
   readonly url: string;
   /** `x-ratelimit-remaining`, null when GitHub didn't say. */
   readonly rateRemaining: number | null;
+  /** `retry-after` in seconds (a secondary rate limit), null when absent. */
+  readonly retryAfter: number | null;
 }
+
+/** A GitHub request that takes longer gives up: a hung one held the event tasks' whole pass (final review). */
+export const GITHUB_TIMEOUT_MS = 30_000;
 
 export async function githubApi(method: string, path: string, token: string, body?: unknown, accept = "application/vnd.github+json"): Promise<GitHubAnswer> {
   const url = `${GITHUB_API}${path}`;
@@ -18,6 +23,7 @@ export async function githubApi(method: string, path: string, token: string, bod
     method,
     headers: { Authorization: `Bearer ${token}`, Accept: accept, "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "OpenLen", ...(body ? { "Content-Type": "application/json" } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS),
   });
   const text = await res.text();
   let parsed: unknown = text;
@@ -26,8 +32,8 @@ export async function githubApi(method: string, path: string, token: string, bod
   } catch {
     // A raw body (a README).
   }
-  const remaining = res.headers.get("x-ratelimit-remaining");
-  return { status: res.status, body: parsed, url, rateRemaining: remaining === null || remaining === "" ? null : Number(remaining) };
+  const num = (h: string | null) => (h === null || h.trim() === "" || !Number.isFinite(Number(h)) ? null : Number(h));
+  return { status: res.status, body: parsed, url, rateRemaining: num(res.headers.get("x-ratelimit-remaining")), retryAfter: num(res.headers.get("retry-after")) };
 }
 
 /** GitHub's own message of an answer, else its status. */

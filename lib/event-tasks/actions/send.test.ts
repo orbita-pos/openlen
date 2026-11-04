@@ -172,3 +172,11 @@ describe("retrying and withdrawing", () => {
     expect(await sendReply(card(freshRecord(chat)), 0, final, NOW)).toEqual({ state: "failed", error: "gone" });
   });
 });
+
+describe("the lease of an attempt (final review I1)", () => {
+  it("the attempt is recorded with a lease, so a pass during it doesn't send it again", async () => {
+    const w = world();
+    await sendReply(card(freshRecord(reply)), 0, w.d, NOW);
+    expect(w.records[0]).toMatchObject({ state: "sending", attempts: 1, nextAttemptAt: new Date(NOW.getTime() + 120_000).toISOString() });
+  });
+});

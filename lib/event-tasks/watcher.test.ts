@@ -121,6 +121,18 @@ describe("tick", () => {
     expect(every?.("form_submissions")).toBe(60_000);
   });
 
+  it("a task of a source this build doesn't know doesn't stop the claim (final review I5)", async () => {
+    const s = setup();
+    let every: ((source: EventTaskRow["source"]) => number) | undefined;
+    s.deps.store.claimDueChecks = async (_now, _limit, everyOf) => {
+      every = everyOf;
+      return [];
+    };
+    s.deps.sourceOf = () => undefined as unknown as EventSource<unknown, unknown>;
+    await tick(s.deps);
+    expect(every?.("app_rows")).toBe(60_000);
+  });
+
   it("an observation without changes writes no record and starts no judge", async () => {
     const s = setup();
     await tick(s.deps);

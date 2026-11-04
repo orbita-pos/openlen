@@ -26,7 +26,17 @@ export async function availableActions(task: EventTaskRow, ownerId: string, deps
   const replyChannels: ReplyChannel[] = [];
   for (const channel of offers.replies) {
     if (channel === "email" && !(await deps.emailReady(task.projectId))) continue;
-    if (channel === "github" && !(await deps.githubReady?.(task.projectId, ownerId))) continue;
+    if (channel === "github") {
+      // A check that fails (GitHub's token endpoint down) offers no GitHub reply: it must never fail the judge, which
+      // would mark its change judged without a look (final review).
+      const ready = deps.githubReady
+        ? await deps.githubReady(task.projectId, ownerId).catch((err: unknown) => {
+            console.warn(`[event-tasks] could not check GitHub for task ${task.id}`, err);
+            return false;
+          })
+        : false;
+      if (!ready) continue;
+    }
     replyChannels.push(channel);
   }
   return { project: true, dataChange: offers.dataChange, replyChannels };

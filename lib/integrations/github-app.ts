@@ -101,6 +101,12 @@ export function githubRepoOf(url: string): { owner: string; repo: string } | nul
   return repo ? { owner: parts[0]!, repo } : null;
 }
 
+/** The App's own login on GitHub, `<slug>[bot]`: what its comments are signed with. Null without a slug. */
+export function githubAppLogin(env: GitHubAppEnv = process.env): string | null {
+  const slug = value(env.GITHUB_APP_SLUG);
+  return slug ? `${slug}[bot]` : null;
+}
+
 /** gh's base repository among a project's remotes (remote_resolver.go): upstream first, then github, then origin, then
  *  the rest in their order; the first that is a github.com repository. */
 export function rankedGithubRemote(remotes: Readonly<Record<string, { readonly url: string }>>): { owner: string; repo: string; url: string } | null {

@@ -11,6 +11,7 @@ import {
   githubAppConfigured,
   githubRepoOf,
   rankedGithubRemote,
+  githubAppLogin,
   installationToken,
   signInstallState,
   tokenForRepoUrl,
@@ -161,5 +162,13 @@ describe("rankedGithubRemote", () => {
     expect(rankedGithubRemote({ gitlab: { url: "https://gitlab.com/a/b.git" }, origin: { url: "https://github.com/ana/web" } })).toMatchObject({ owner: "ana", repo: "web" });
     expect(rankedGithubRemote({ gitlab: { url: "https://gitlab.com/a/b.git" } })).toBeNull();
     expect(rankedGithubRemote({})).toBeNull();
+  });
+});
+
+describe("githubAppLogin", () => {
+  it("is the App's slug with [bot], trimmed as the rest of its settings", () => {
+    expect(githubAppLogin({ GITHUB_APP_SLUG: "openlen\r\n" })).toBe("openlen[bot]");
+    expect(githubAppLogin({ GITHUB_APP_SLUG: "  " })).toBeNull();
+    expect(githubAppLogin({})).toBeNull();
   });
 });

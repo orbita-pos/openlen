@@ -165,3 +165,38 @@ describe("github", () => {
     await expect(source().read("p1", {}, { keys: [], state, match: [{ field: "title", value: "x" }], ctx: CTX })).rejects.toMatchObject({ reason: "column_missing" });
   });
 });
+
+describe("github after the final review", () => {
+  it("the owner's reply after a visitor's comment at the cursor's time doesn't wake the task (GitHub's since is inclusive)", async () => {
+    const state = await started();
+    const comments = [
+      { user: { login: "eva", type: "User" }, body: "A mí también", created_at: "2026-11-04T10:06:00Z", updated_at: "2026-11-04T10:06:00Z" },
+      { user: { login: "openlen[bot]", type: "Bot" }, body: "Lo miramos.\n\n<!-- openlen-card:c1 -->", created_at: "2026-11-04T10:07:00Z", updated_at: "2026-11-04T10:07:00Z" },
+    ];
+    // As GitHub does: comments updated at or after `since`.
+    routes["GET /repos/ana/web/issues/1/comments"] = (_b, url) => json(200, comments.filter((c) => Date.parse(c.updated_at) >= Date.parse(url.searchParams.get("since")!)));
+    routes["GET /repos/ana/web/issues"] = () => json(200, [issue(1, { created: OLD, updated: "2026-11-04T10:06:00Z" })]);
+    const first = await source().observe("p1", {}, state, CTX);
+    expect(first.changes.map((c) => c.detail.new_comments)).toEqual([[{ author: "eva", body: "A mí también", at: "2026-11-04T10:06:00Z" }]]);
+    routes["GET /repos/ana/web/issues"] = () => json(200, [issue(1, { created: OLD, updated: "2026-11-04T10:07:00Z" })]);
+    expect((await source().observe("p1", {}, first.state, CTX)).changes).toEqual([]);
+  });
+
+  it("the repository the task was made for is the one read, whatever the remotes say now", async () => {
+    const state = await started();
+    await source().observe("p1", {}, state, CTX);
+    expect(repoOf).toHaveBeenLastCalledWith("p1", "owner", undefined, { owner: "ana", repo: "web" });
+  });
+
+  it("a renamed default branch is found again, and issues keep coming", async () => {
+    const state = await started();
+    routes["GET /repos/ana/web/branches/main"] = () => json(404, { message: "Branch not found" });
+    routes["GET /repos/ana/web"] = () => json(200, { default_branch: "trunk" });
+    routes["GET /repos/ana/web/branches/trunk"] = () => json(200, { commit: { sha: "sha-trunk" } });
+    routes["GET /repos/ana/web/commits/sha-trunk/check-runs"] = () => json(200, { check_runs: [{ id: 701, name: "build", conclusion: "failure", completed_at: "2026-11-04T10:09:00Z", html_url: "w" }] });
+    routes["GET /repos/ana/web/issues"] = () => json(200, [issue(3, { created: "2026-11-04T10:05:00Z", updated: "2026-11-04T10:05:00Z" })]);
+    const o = await source().observe("p1", {}, state, CTX);
+    expect(o.changes.map((c) => c.link)).toEqual(["3", "701"]);
+    expect(o.state.defaultBranch).toBe("trunk");
+  });
+});
