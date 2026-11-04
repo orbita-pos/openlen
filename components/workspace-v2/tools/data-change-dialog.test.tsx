@@ -39,6 +39,11 @@ describe("DataChangeDialog", () => {
     expect(row.textContent).toContain("confirmada");
   });
 
+  it("names the row it changes by its key", () => {
+    render();
+    expect(document.querySelector("[data-tool-change-key]")?.textContent).toBe("id = 12");
+  });
+
   it("«Aplicar» accepts; «Cancelar» doesn't", () => {
     const r = render();
     act(() => button("tools.change.apply").click());
