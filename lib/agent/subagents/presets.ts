@@ -21,6 +21,7 @@ import { SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
+import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";
@@ -61,6 +62,8 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   SUBAGENT_FORK_TOOL,
   INTERRUPT_AGENT_TOOL,
   LIST_AGENTS_TOOL,
+  // A «Crear» card is the main conversation's (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+  PROPOSE_ACTION,
 ]);
 
 /** The artifact tools that only read. */

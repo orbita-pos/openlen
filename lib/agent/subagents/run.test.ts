@@ -322,6 +322,8 @@ describe("the launcher of Len's subagents", () => {
     expect(child.readOnly).toBe(true);
     expect(child.turnId).toBe("turn-1");
     expect(child.terminalHolderId).toBe("r1");
+    // A child never proposes a «Crear» card (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+    expect(child.isSubagent).toBe(true);
   });
 
   it("the child is offered only its tools: no publish, no subagent; Explore no Write", async () => {

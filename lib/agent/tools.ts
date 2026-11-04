@@ -382,6 +382,8 @@ export interface AgentDeps {
   /** «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what already exists in OpenLen and the
    *  person's installed tools, carried by the `tool-suggestions` skill. */
   suggestionCatalog?: () => Promise<string>;
+  /** What `propose_action` writes and reads (lib/tools/cards/propose.ts); present only when the card is offered. */
+  toolCards?: import("@/lib/tools/cards/propose").ProposeDeps;
   skillStore?: {
     list(scope: SkillScope, ownerId: string): Promise<readonly StoredSkill[]>;
     upsert(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null): Promise<{ before: string | null }>;
@@ -1122,6 +1124,15 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
 export interface AgentSession {
   /** The forked skill this child is already executing; it cannot launch itself. */
   runningSkill?: string;
+  /** «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the skills a `skill` call answered in
+   *  THIS turn (DeepSeek's `turnLoads`, «already loaded» included) — `propose_action` needs its skill loaded here. */
+  turnSkillLoads?: Set<string>;
+  /** A subagent's session: it never proposes a card (DeepSeek: «Cards are offered in the main conversation only»). */
+  isSubagent?: true;
+  /** This turn's chat row: the answer a card follows. */
+  chatRowId?: string;
+  /** A card was accepted this turn (DeepSeek: one card per turn, the first wins). */
+  cardProposedThisTurn?: boolean;
   projectId: string;
   userId: string;
   /**
@@ -1319,6 +1330,9 @@ export interface AgentSession {
 export interface ToolOutcome {
   /** functionResponse.response que vuelve al modelo. Siempre presente. */
   response: Record<string, unknown>;
+  /** A «Crear» card `propose_action` accepted: the chat draws it under this answer (spec local
+   *  2026-11-04-herramientas-hechas-por-len, §4.10). */
+  toolCard?: import("@/lib/tools/cards/types").ToolCardView;
   /** Los ojos como Claude Code (14/10): capturas que vuelven al modelo como
    *  IMÁGENES —él las mira, sin nadie que se las describa—. El bucle las pone
    *  en el mensaje que sigue a los resultados de la tanda. */
@@ -3056,6 +3070,11 @@ async function ejecutarHerramienta(
   }
   {
     switch (name) {
+      case "propose_action": {
+        if (!deps.toolCards) return { response: { ok: false, error: "propose_action is not available here." } };
+        const { proposeToolCard } = await import("@/lib/tools/cards/propose");
+        return await proposeToolCard(session, args, deps.toolCards);
+      }
       case "toggle_module":
         return await toolActivarModulo(session, deps, args);
       case "find_photo":

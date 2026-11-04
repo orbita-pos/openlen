@@ -293,6 +293,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       ...(ctx.personId !== ctx.userId ? { personId: ctx.personId } : {}),
       turnId: ctx.turnId,
       terminalHolderId: id,
+      isSubagent: true,
       mode: ctx.mode,
       app: ctx.app,
       page: null,
@@ -731,7 +732,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   }
 
   async function discardUnused(id: string, w: AgentWorktree, description: string) {
-    const session = { ...ctx.sessionBase, projectId: ctx.projectId, userId: ctx.userId, turnId: ctx.turnId, terminalHolderId: id, page: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
+    const session = { ...ctx.sessionBase, projectId: ctx.projectId, userId: ctx.userId, turnId: ctx.turnId, terminalHolderId: id, isSubagent: true, page: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
     try {
       const result = await io.finishWorktree!({ w, description, session });
       await io.store.setWorktreeOutcome?.(id, result.outcome);
