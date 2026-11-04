@@ -17,7 +17,7 @@ create policy "own notes" on notes for all using (owner = auth.uid()) with check
 ```
 
 - In this project's canvas and your eyes, it uses the test database; once installed, its production one. Installing applies the migrations, with the same checks as publishing (the person confirms anything that deletes data).
-- A `project` tool keeps its rows apart per project: store `context().project.id` and filter by it.
+- A `project` tool keeps its rows apart per project: save `context().project.id` with each row and filter by it.
 
 ## The person's projects
 
