@@ -6,6 +6,7 @@
 // `invokeFunctionInternally` es el `curl` de la terminal de Len: SIEMPRE el
 // borrador (Len no toca producción).
 
+import { isInstalledToolOrigin } from "@/lib/tools/environment";
 import "server-only";
 
 import { decideEnvironment } from "@/lib/backend/environment-routing";
@@ -49,11 +50,13 @@ function realGatewayDeps(): GatewayDeps {
       if (o.forceDraft) environment = "draft";
       else if (hb.environment) environment = hb.environment;
       else {
+        const lienzoLabel = etiquetaDeLienzo(hb.record.projectId);
         const d = decideEnvironment({
           origin: req.headers.get("origin"),
           referer: req.headers.get("referer"),
-          lienzoLabel: etiquetaDeLienzo(hb.record.projectId),
+          lienzoLabel,
           hasLive: await hasLiveEnvironment(hb.record),
+          toolOfProject: await isInstalledToolOrigin({ origin: req.headers.get("origin"), referer: req.headers.get("referer"), lienzoLabel, projectId: hb.record.projectId }),
         });
         if (d.kind === "forbidden") return { forbidden: d.message };
         environment = d.environment;
