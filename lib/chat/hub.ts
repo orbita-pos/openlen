@@ -124,6 +124,13 @@ export function createHub() {
   return { subscribe, publish, markOnline, markOffline, isUserOnline, isProjectStaffOnline };
 }
 
-// Module-level singleton: Next.js runs as a single long-lived process on
-// Hetzner, so module state survives across requests without Redis.
-export const hub = createHub();
+// One hub per process: Next.js runs as a single long-lived process on Hetzner,
+// so its state survives across requests without Redis. Kept on globalThis, as
+// the event-task watcher keeps its own state: a module can be evaluated more
+// than once in one process (instrumentation, where the watcher retries an event
+// card's chat reply, is its own entry; `next dev` re-evaluates on recompiles),
+// and a second hub would never reach the streams subscribed to the first (plan
+// B real run, 2026-11-04).
+const HUB = Symbol.for("openlen.chat.hub");
+type WithHub = typeof globalThis & { [HUB]?: ReturnType<typeof createHub> };
+export const hub = ((globalThis as WithHub)[HUB] ??= createHub());
