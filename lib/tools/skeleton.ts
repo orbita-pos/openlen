@@ -25,6 +25,7 @@ interface OpenLenToolContext {
   theme: { mode: "light" | "dark"; tokens: Record<string, string> };
   /** The open project, for a tool shown inside a project; null in the rail. */
   project: { id: string; title: string } | null;
+  /** This tool: its own project's id (the same in the canvas, Len's eyes and installed) and the version it runs. */
   tool: { id: string; version: string };
   /** "draft" in this project's canvas and Len's eyes: writes to production are always refused there. */
   environment: "draft" | "installed";

@@ -46,7 +46,7 @@ function contextOf(caller: BridgeCaller): ToolContext {
     person: { name: "", locale: caller.locale },
     theme: caller.theme === "dark" ? { mode: "dark", tokens: DARK_TOKENS } : { mode: "light", tokens: LIGHT_TOKENS },
     project: null,
-    tool: caller.mode === "installed" ? { id: caller.installation.id, version: caller.installation.releaseSha } : { id: toolProjectOf(caller), version: "draft" },
+    tool: caller.mode === "installed" ? { id: caller.installation.projectId, version: caller.installation.releaseSha } : { id: toolProjectOf(caller), version: "draft" },
     environment: caller.mode,
   };
 }
