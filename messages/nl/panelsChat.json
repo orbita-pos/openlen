@@ -615,6 +615,8 @@
     "recSent": "Verstuurd: {reason}",
     "actionData": "Wijziging in {table}",
     "actionReply": "Aan: {to} · Via: e-mail",
+    "actionReplyChat": "Aan: {to} · Via: de chat van je pagina",
+    "actionReplyGithub": "Op: {to} · Via: een GitHub-reactie, als de OpenLen-app",
     "apply": "Toepassen",
     "applyAndSend": "Toepassen en versturen",
     "rowChanged": "De rij is sinds de melding veranderd: er is niets toegepast.",

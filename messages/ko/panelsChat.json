@@ -615,6 +615,8 @@
     "recSent": "보냄: {reason}",
     "actionData": "{table} 변경",
     "actionReply": "받는 사람: {to} · 방법: 이메일",
+    "actionReplyChat": "받는 사람: {to} · 방법: 페이지 채팅",
+    "actionReplyGithub": "대상: {to} · 방법: OpenLen 앱으로 GitHub 댓글",
     "apply": "적용",
     "applyAndSend": "적용하고 보내기",
     "rowChanged": "알림 이후 행이 바뀌었어요. 아무것도 적용하지 않았어요.",

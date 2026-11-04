@@ -178,6 +178,8 @@
     "recSent": "Sent: {reason}",
     "actionData": "Change in {table}",
     "actionReply": "To: {to} · By: email",
+    "actionReplyChat": "To: {to} · By: your page's chat",
+    "actionReplyGithub": "On: {to} · By: a GitHub comment, as the OpenLen app",
     "apply": "Apply",
     "applyAndSend": "Apply and send",
     "rowChanged": "The row changed since the notice: nothing was applied.",

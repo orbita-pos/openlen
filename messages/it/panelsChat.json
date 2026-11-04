@@ -615,6 +615,8 @@
     "recSent": "Inviato: {reason}",
     "actionData": "Modifica in {table}",
     "actionReply": "A: {to} · Via: e-mail",
+    "actionReplyChat": "A: {to} · Via: chat della tua pagina",
+    "actionReplyGithub": "Su: {to} · Via: commento su GitHub, come app OpenLen",
     "apply": "Applica",
     "applyAndSend": "Applica e invia",
     "rowChanged": "La riga è cambiata dall’avviso: non è stato applicato nulla.",

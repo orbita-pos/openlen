@@ -615,6 +615,8 @@
     "recSent": "Enviado: {reason}",
     "actionData": "Cambio en {table}",
     "actionReply": "Para: {to} · Por: correo",
+    "actionReplyChat": "Para: {to} · Por: el chat de tu página",
+    "actionReplyGithub": "En: {to} · Por: un comentario en GitHub, como la app OpenLen",
     "apply": "Aplicar",
     "applyAndSend": "Aplicar y enviar",
     "rowChanged": "La fila cambió desde el aviso: no se aplicó nada.",

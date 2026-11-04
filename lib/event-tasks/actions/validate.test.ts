@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { validateActions, type ValidationContext } from "./validate";
 
 const ctx = (o: Partial<ValidationContext> = {}): ValidationContext => ({
-  available: { project: true, dataChange: true, reply: true },
+  available: { project: true, dataChange: true, replyChannels: ["email"] },
   table: "reservas",
   keyColumn: "id",
   createdColumn: "created_at",
@@ -18,6 +18,8 @@ const ctx = (o: Partial<ValidationContext> = {}): ValidationContext => ({
   ],
   seenKeys: new Set(["r2"]),
   seenAddresses: new Set(["luis@ejemplo.com"]),
+  seenConversations: new Map([["conv1", "Ana"]]),
+  seenThreads: new Map([["12", "Login roto"]]),
   recordId: "rec1",
   readRow: vi.fn(async (key: string) => (key === "r2" ? { id: "r2", mesa: 4, email: "luis@ejemplo.com" } : null)),
   castCheck: vi.fn(async (column: string, value: string) => (column === "mesa" && !/^\d+$/.test(value) ? `invalid input syntax for type integer: "${value}"` : null)),
@@ -32,7 +34,7 @@ const error = async (input: unknown, c = ctx()) => {
 
 describe("validateActions", () => {
   it("an action the source doesn't offer is refused naming the ones it does", async () => {
-    const e = await error([move], ctx({ available: { project: true, dataChange: false, reply: true } }));
+    const e = await error([move], ctx({ available: { project: true, dataChange: false, replyChannels: ["email"] } }));
     expect(e).toContain("data_change");
     expect(e).toContain("project, reply");
   });
@@ -73,7 +75,7 @@ describe("validateActions", () => {
       subjectKey: "r2",
       actions: [
         { kind: "data_change", table: "reservas", key: { id: "r2" }, set: { mesa: "6" }, before: { mesa: "4" } },
-        { kind: "reply", channel: "email", to: "luis@ejemplo.com", subject: "Tu reserva", body: "Hola Luis, te movimos a la mesa 6." },
+        { kind: "reply", channel: "email", to: "luis@ejemplo.com", toLabel: "luis@ejemplo.com", subject: "Tu reserva", body: "Hola Luis, te movimos a la mesa 6." },
       ],
     });
   });
@@ -85,5 +87,41 @@ describe("validateActions", () => {
   it("a reply alone is about its address; project work alone about the record", async () => {
     expect(await validateActions([reply], ctx())).toMatchObject({ ok: true, subjectKey: "luis@ejemplo.com" });
     expect(await validateActions([{ kind: "project", text: "Montar una pantalla de reservas" }], ctx())).toMatchObject({ ok: true, subjectKey: "rec1" });
+  });
+
+  // Replies by the source's channels (plan B, Task 2).
+  const chat = { kind: "reply", channel: "chat", to: "conv1", body: "Hola Ana, ¿para cuántos sería?" };
+  const gh = { kind: "reply", channel: "github", to: "#12", body: "Lo miramos hoy." };
+  const all = () => ctx({ available: { project: true, dataChange: false, replyChannels: ["chat", "github", "email"] } });
+
+  it("a chat reply goes only to a conversation the judge read", async () => {
+    expect(await validateActions([chat], all())).toMatchObject({ ok: true, actions: [{ kind: "reply", channel: "chat", to: "conv1", toLabel: "Ana", body: chat.body }] });
+    expect(await error([{ ...chat, to: "conv9" }], all())).toMatch(/conv9/);
+  });
+
+  it("a GitHub reply goes only to an issue or pull request the judge read", async () => {
+    expect(await validateActions([gh], all())).toMatchObject({ ok: true, actions: [{ channel: "github", to: "12", toLabel: "#12 Login roto" }], subjectKey: "#12" });
+    expect(await validateActions([{ ...gh, to: "12" }], all())).toMatchObject({ ok: true });
+    expect(await error([{ ...gh, to: "13" }], all())).toMatch(/13/);
+  });
+
+  it("a channel the source doesn't offer is refused, naming the ones it does", async () => {
+    expect(await error([chat])).toMatch(/replies by: email/);
+  });
+
+  it("an email reply still needs a subject; a chat reply has none", async () => {
+    expect(await error([{ ...reply, subject: "" }])).toMatch(/subject/);
+    const r = await validateActions([{ ...chat, subject: "ignored" }], all());
+    expect(r.ok && "subject" in r.actions[0]!).toBe(false);
+  });
+
+  it("a chat reply's subjectKey is its conversation, and its body is at most 4000 characters", async () => {
+    expect(await validateActions([chat], all())).toMatchObject({ ok: true, subjectKey: "conv1" });
+    expect(await error([{ ...chat, body: "x".repeat(4001) }], all())).toMatch(/4000/);
+  });
+
+  it("with one channel offered, a reply without channel takes it", async () => {
+    const onlyChat = ctx({ available: { project: true, dataChange: false, replyChannels: ["chat"] } });
+    expect(await validateActions([{ kind: "reply", to: "conv1", body: "Hola" }], onlyChat)).toMatchObject({ ok: true, actions: [{ channel: "chat" }] });
   });
 });

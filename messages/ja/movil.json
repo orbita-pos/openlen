@@ -178,6 +178,8 @@
     "recSent": "送信: {reason}",
     "actionData": "{table} の変更",
     "actionReply": "宛先: {to} · 方法: メール",
+    "actionReplyChat": "宛先: {to} · 方法: ページのチャット",
+    "actionReplyGithub": "対象: {to} · 方法: OpenLen アプリとして GitHub にコメント",
     "apply": "適用",
     "applyAndSend": "適用して送信",
     "rowChanged": "お知らせの後で行が変わりました。何も適用していません。",

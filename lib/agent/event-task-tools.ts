@@ -9,10 +9,12 @@
 // against what the turn read (`Seen`).
 //
 // Cache effect: these two declarations exist only in a judging turn's request, after Read/Glob/Grep; they are fixed
-// per task (its source, its table's columns, whether the project's email is ready), so one task's judging turns keep
-// their prefix. The project chat's requests never carry them.
+// per task (its source, its table's columns, its reply channels), so one task's judging turns keep their prefix — save
+// when a channel comes or goes between two turns (the project's email, the GitHub App's token). With email as the only
+// channel the declaration is byte for byte what it was before the channels. The project chat's requests never carry them.
 import type { CardAction } from "@/lib/event-tasks/actions/types";
 import { collectSeen, emptySeen, type Seen } from "@/lib/event-tasks/actions/seen";
+import type { ReplyChannel } from "@/lib/event-tasks/sources/types";
 import type { Validated } from "@/lib/event-tasks/actions/validate";
 import { visitorEnvelope } from "@/lib/event-tasks/framing";
 
@@ -41,9 +43,14 @@ export const SOURCE_READ_DECLARATION: Record<string, unknown> = {
 };
 
 /** What `automation_notify`'s actions may be, for one task: work in the project always; a change of one row of the
- *  watched table, and an email reply, only where the task's source offers them. Ours. */
-export function automationNotifyDeclaration(a: { readonly dataChange: boolean; readonly reply: boolean; readonly table?: string; readonly columns?: readonly string[] }): Record<string, unknown> {
-  const kinds = ["project", ...(a.dataChange ? ["data_change"] : []), ...(a.reply ? ["reply"] : [])];
+ *  watched table, and a reply by each channel, only where the task's source offers them. Ours. */
+export function automationNotifyDeclaration(a: { readonly dataChange: boolean; readonly replyChannels: readonly ReplyChannel[]; readonly table?: string; readonly columns?: readonly string[] }): Record<string, unknown> {
+  const channels = a.replyChannels;
+  const reply = channels.length > 0;
+  const email = channels.includes("email");
+  // Email alone is how a reply was declared before the channels: kept byte for byte (the task's cached prefix).
+  const onlyEmail = email && channels.length === 1;
+  const kinds = ["project", ...(a.dataChange ? ["data_change"] : []), ...(reply ? ["reply"] : [])];
   const parts = [
     "project: work on the site or the app (change a page, build a screen); text says what will be done, and Len does it when the owner accepts.",
     ...(a.dataChange
@@ -51,7 +58,10 @@ export function automationNotifyDeclaration(a: { readonly dataChange: boolean; r
           `data_change: change ONE row of the table ${a.table ?? ""} that you read in this turn — key is the value of its key, set the columns and their new values (columns you may change: ${(a.columns ?? []).join(", ")}). The owner applies it; you never write the data.`,
         ]
       : []),
-    ...(a.reply ? ["reply: an email to a person whose address you read in this turn, sent exactly as written when the owner accepts."] : []),
+    ...(onlyEmail ? ["reply: an email to a person whose address you read in this turn, sent exactly as written when the owner accepts."] : []),
+    ...(email && !onlyEmail ? ["reply by email: channel email, to = an address you read in this turn, with a subject and a body, sent exactly as written when the owner accepts."] : []),
+    ...(channels.includes("chat") ? ["reply in the chat: channel chat, to = the conversation_id you read; body is posted in that conversation as the business."] : []),
+    ...(channels.includes("github") ? ["reply on GitHub: channel github, to = the number of the issue or pull request you read; body is posted as a comment by the OpenLen GitHub app."] : []),
   ];
   const properties: Record<string, unknown> = {
     kind: { type: "STRING", enum: kinds },
@@ -67,10 +77,11 @@ export function automationNotifyDeclaration(a: { readonly dataChange: boolean; r
           },
         }
       : {}),
-    ...(a.reply
+    ...(reply
       ? {
-          to: { type: "STRING", description: "reply: the person's email address." },
-          subject: { type: "STRING", description: "reply: the subject." },
+          ...(onlyEmail ? {} : { channel: { type: "STRING", enum: [...channels], description: "reply: the channel it goes by." } }),
+          to: { type: "STRING", description: onlyEmail ? "reply: the person's email address." : "reply: who it goes to, by channel — an email address, a conversation_id, or an issue or pull request number." },
+          ...(email ? { subject: { type: "STRING", description: onlyEmail ? "reply: the subject." : "reply by email: the subject." } } : {}),
           body: { type: "STRING", description: "reply: the whole message, as it will be sent." },
         }
       : {}),
@@ -118,6 +129,8 @@ export interface EventTaskToolDeps {
   keyColumn: string | null;
   /** What the candidate itself brought. */
   seen?: Seen;
+  /** The task's reply channels: which conversations and issues `source_read` makes answerable. */
+  replyChannels: readonly ReplyChannel[];
 }
 
 export type EventTaskToolRunner = ((name: string, args: Record<string, unknown>) => Promise<ToolOutcome>) & { notified(): boolean };
@@ -139,7 +152,7 @@ export function eventTaskToolRunner(deps: EventTaskToolDeps): EventTaskToolRunne
         // A read that fails is this tool's answer; the judge can still decide on what it has.
         return refuse(`The source could not be read: ${err instanceof Error ? err.message : String(err)}`);
       }
-      collectSeen(read, deps.keyColumn, seen);
+      collectSeen(read, deps.keyColumn, seen, deps.replyChannels);
       // The same visitor text as the candidate: inside the same envelope (final review I2).
       return { response: { ok: true, tool_result: visitorEnvelope([read]).join("\n") } };
     }
