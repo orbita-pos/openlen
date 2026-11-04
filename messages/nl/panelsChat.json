@@ -606,6 +606,27 @@
     "filterAll": "Alle",
     "filterTime": "Op tijd",
     "filterEvents": "Bij gebeurtenis",
-    "lastCheck": "Laatste controle: {when}"
+    "lastCheck": "Laatste controle: {when}",
+    "actionData": "Wijziging in {table}",
+    "actionReply": "Aan: {to} · Via: e-mail",
+    "apply": "Toepassen",
+    "applyAndSend": "Toepassen en versturen",
+    "rowChanged": "De rij is sinds de melding veranderd: er is niets toegepast.",
+    "rowNow": "Nu: {now}",
+    "lookAgain": "Opnieuw bekijken",
+    "lookingAgain": "Len kijkt opnieuw; er komt een nieuwe melding.",
+    "dailyLimit": "Vandaag zijn er geen controles meer over voor deze taak. Probeer het morgen.",
+    "sending": "Bezig met versturen… (poging {attempts})",
+    "sendFailed": "Niet verstuurd: {error}",
+    "withdraw": "Intrekken",
+    "withdrawn": "Ingetrokken",
+    "whatWouldYouChange": "Wat zou je veranderen? (optioneel)",
+    "askAgain": "Vraag een ander voorstel",
+    "dismissConfirm": "Negeren",
+    "repliesGoTo": "Antwoorden komen naar {email}",
+    "doneApplied": "Toegepast: {result}",
+    "doneSent": "Verstuurd naar {to}",
+    "actionFailed": "Lukte niet: {error}",
+    "yourNote": "Jouw notitie: {note}"
   }
 }

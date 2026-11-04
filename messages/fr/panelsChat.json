@@ -606,6 +606,27 @@
     "filterAll": "Toutes",
     "filterTime": "Programmées",
     "filterEvents": "Sur événement",
-    "lastCheck": "Dernière vérification : {when}"
+    "lastCheck": "Dernière vérification : {when}",
+    "actionData": "Modification dans {table}",
+    "actionReply": "À : {to} · Par : e-mail",
+    "apply": "Appliquer",
+    "applyAndSend": "Appliquer et envoyer",
+    "rowChanged": "La ligne a changé depuis l’avis : rien n’a été appliqué.",
+    "rowNow": "Maintenant : {now}",
+    "lookAgain": "Regarder à nouveau",
+    "lookingAgain": "Len regarde à nouveau ; un autre avis arrivera.",
+    "dailyLimit": "Plus d’examens aujourd’hui pour cette tâche. Réessayez demain.",
+    "sending": "Envoi… (tentative {attempts})",
+    "sendFailed": "Non envoyé : {error}",
+    "withdraw": "Retirer",
+    "withdrawn": "Retiré",
+    "whatWouldYouChange": "Que changeriez-vous ? (facultatif)",
+    "askAgain": "En demander une autre",
+    "dismissConfirm": "Écarter",
+    "repliesGoTo": "Les réponses arriveront à {email}",
+    "doneApplied": "Appliqué : {result}",
+    "doneSent": "Envoyé à {to}",
+    "actionFailed": "Impossible : {error}",
+    "yourNote": "Votre note : {note}"
   }
 }
