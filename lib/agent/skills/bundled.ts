@@ -83,9 +83,14 @@ function offHere(ctx: BundledContext): ReadonlySet<string> {
   return new Set(scheduleEnabled(ctx.env) ? [] : ["schedule"]);
 }
 
+/** And the ones it doesn't OFFER here: `tool-development` outside a tool project (its files stay readable). */
+function notOffered(ctx: BundledContext): ReadonlySet<string> {
+  return new Set([...offHere(ctx), ...(ctx.tool ? [] : ["tool-development"])]);
+}
+
 /** OpenLen's skills in this context: the ones on disk and the generated ones it offers, by name. */
 export function bundledSkills(ctx: BundledContext = DEFAULT_CONTEXT()): readonly BundledSkill[] {
-  const off = offHere(ctx);
+  const off = notOffered(ctx);
   return [...load().skills.filter((b) => !off.has(b.skill.name)), ...generated(ctx).skills].sort((a, b) => a.skill.name.localeCompare(b.skill.name));
 }
 

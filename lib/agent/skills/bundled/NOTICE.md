@@ -76,3 +76,10 @@ guide, which comes first and wins where they differ; the critique uses Len's `vi
 `skill-creator` is ours, after DeepSeek's idea of shipping "creator skills" for what the agent authors
 (`.agents/notes/archived/architecture/2026-09-21-creator-skills-progressive-disclosure.md`): added on
 2026-10-26 when a real turn showed Len did not know where a user's skill goes.
+
+`tool-development` is ours, after DeepSeek Harness's Creator mode plugin skill
+(`packages/preset/agent-preset/skills/cordis-plugin-development/SKILL.md` and its `references/`, at
+`fcc0ad4621`, MIT): the same structure (a short SKILL.md that delivers a working version first, the rest in
+`references/`) and the same workflow (resolve the destination, read only what is needed, display record,
+install as the first preview, verify in place, fix, report), written in our own words for OpenLen's tools
+(spec local 2026-11-04-herramientas-hechas-por-len, §4.8).

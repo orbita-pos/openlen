@@ -139,7 +139,8 @@
       "artifact-image": "Créer une image promotionnelle",
       "artifact-motion": "Créer une vidéo animée",
       "artifact-audio": "Créer un audio ou une narration",
-      "schedule": "Planifier une tâche que Len fera à une heure donnée"
+      "schedule": "Planifier une tâche que Len fera à une heure donnée",
+      "tool-development": "Construire, modifier, installer ou vérifier cet outil"
     },
     "fileLimit": "4 fichiers maximum par message.",
     "fileTooBig": "Ce fichier dépasse 20 Mo.",

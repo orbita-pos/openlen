@@ -139,7 +139,8 @@
       "artifact-image": "Een promotieafbeelding maken",
       "artifact-motion": "Een geanimeerde video maken",
       "artifact-audio": "Een audio of voice-over maken",
-      "schedule": "Een taak plannen die Len op een vast tijdstip doet"
+      "schedule": "Een taak plannen die Len op een vast tijdstip doet",
+      "tool-development": "Deze tool bouwen, wijzigen, installeren of controleren"
     },
     "fileLimit": "Maximaal 4 bestanden per bericht.",
     "fileTooBig": "Dat bestand is groter dan 20 MB.",

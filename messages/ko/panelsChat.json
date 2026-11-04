@@ -139,7 +139,8 @@
       "artifact-image": "홍보 이미지 만들기",
       "artifact-motion": "모션 영상 만들기",
       "artifact-audio": "오디오나 내레이션 만들기",
-      "schedule": "Len이 정해진 시간에 할 작업 예약하기"
+      "schedule": "Len이 정해진 시간에 할 작업 예약하기",
+      "tool-development": "이 도구를 만들고, 바꾸고, 설치하고, 확인하기"
     },
     "fileLimit": "메시지당 파일은 4개까지예요.",
     "fileTooBig": "그 파일은 20MB를 넘어요.",
