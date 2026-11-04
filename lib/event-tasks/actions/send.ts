@@ -9,13 +9,16 @@ import "server-only";
 import type { SendInput, SendOutcome } from "@/lib/project-email/send";
 
 import type { EventTaskCardRow } from "../store";
-import { WITHDRAWN, type ActionState, type CardActionRecord } from "./types";
+import type { ActionLog } from "./log";
+import { EXPIRED, WITHDRAWN, type ActionState, type CardActionRecord } from "./types";
 
 export interface SendReplyDeps {
   send(i: SendInput): Promise<SendOutcome>;
   /** The project's sending address, null while its email isn't ready. */
   fromOf(projectId: string): Promise<string | null>;
   record(cardId: string, index: number, patch: Partial<Omit<CardActionRecord, "action">>): Promise<void>;
+  /** Who was written to, in the task's Registros too (spec §7.3). */
+  log: ActionLog;
 }
 
 const FIRST_WAIT_S = 5;
@@ -27,8 +30,13 @@ const html = (body: string) =>
     .split(/\r?\n\s*\r?\n/)
     .map((p) => `<p>${escapeHtml(p).replace(/\r?\n/g, "<br>")}</p>`)
     .join("");
-/** Worth another try: a cap or Resend itself; anything else is final. */
-const passing = (statusCode: number) => statusCode === 429 || statusCode >= 500;
+/** Resend keeps an idempotency key for a day: past it, another try could send a second email, and a day late is out
+ *  of context anyway (final review I2). */
+const SEND_DEADLINE_MS = 86_400_000;
+/** Refusals that waiting minutes won't change: the plan's month or day is spent (lib/project-email/send.ts). */
+const QUOTA = new Set(["monthly_quota_exceeded", "daily_quota_exceeded"]);
+/** Worth another try: the hourly cap or Resend itself; anything else is final. */
+const passing = (e: { statusCode: number; name: string }) => (e.statusCode === 429 && !QUOTA.has(e.name)) || e.statusCode >= 500;
 
 export async function sendReply(card: EventTaskCardRow, index: number, deps: SendReplyDeps, now: Date): Promise<{ state: ActionState; error: string | null }> {
   const rec = card.actions?.[index];
@@ -36,12 +44,13 @@ export async function sendReply(card: EventTaskCardRow, index: number, deps: Sen
   if (rec.state === "done" || rec.state === "failed" || rec.state === "blocked") return { state: rec.state, error: rec.error };
   const a = rec.action;
   const attempts = rec.attempts + 1;
-  // Recorded first: a restart finds it «sending» and tries again with the same key.
-  await deps.record(card.id, index, { state: "sending", attempts, nextAttemptAt: null });
   const fail = async (error: string) => {
     await deps.record(card.id, index, { state: "failed", nextAttemptAt: null, error });
     return { state: "failed" as const, error };
   };
+  if (card.decidedAt && now.getTime() - card.decidedAt.getTime() > SEND_DEADLINE_MS) return fail(EXPIRED);
+  // Recorded first: a restart finds it «sending» and tries again with the same key.
+  await deps.record(card.id, index, { state: "sending", attempts, nextAttemptAt: null });
   const from = await deps.fromOf(card.projectId);
   if (!from) return fail("The project's email isn't ready.");
   const r = await deps.send({
@@ -53,10 +62,11 @@ export async function sendReply(card: EventTaskCardRow, index: number, deps: Sen
   });
   if (r.kind === "sent") {
     await deps.record(card.id, index, { state: "done", nextAttemptAt: null, error: null, result: a.to });
+    await deps.log(card, "sent", a.to);
     return { state: "done", error: null };
   }
   if (r.kind !== "rejected") return fail("The email wasn't sent.");
-  if (!passing(r.error.statusCode)) return fail(r.error.message);
+  if (!passing(r.error)) return fail(r.error.message);
   const wait = Math.min(LONGEST_WAIT_S, FIRST_WAIT_S * 2 ** (attempts - 1));
   await deps.record(card.id, index, { state: "sending", nextAttemptAt: new Date(now.getTime() + wait * 1000).toISOString(), error: r.error.message });
   return { state: "sending", error: r.error.message };
@@ -84,13 +94,15 @@ export async function withdrawSend(cardId: string, index: number, deps: Pick<Sen
 
 /** The real parts: the project email's sending core, its address, the card's record. */
 export async function defaultSendReplyDeps(): Promise<SendReplyDeps & { sending(): Promise<EventTaskCardRow[]> }> {
-  const [{ sendProjectEmail }, { realSendDeps }, { emailStateFor }, cards] = await Promise.all([
+  const [{ sendProjectEmail }, { realSendDeps }, { emailStateFor }, cards, { defaultActionLog }] = await Promise.all([
     import("@/lib/project-email/send"),
     import("@/lib/project-email/real"),
     import("@/lib/project-email/state"),
     import("../cards"),
+    import("./log"),
   ]);
   return {
+    log: await defaultActionLog(),
     send: (i) => sendProjectEmail(i, realSendDeps()),
     fromOf: async (projectId) => (await emailStateFor(projectId))?.from ?? null,
     record: cards.updateCardAction,

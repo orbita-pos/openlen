@@ -6,6 +6,7 @@
 import { eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { CARD_WINDOW_MS } from "@/lib/event-tasks/actions/types";
 import { cardsOfProject } from "@/lib/event-tasks/cards";
 import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
 import { listEventTasks } from "@/lib/event-tasks/store";
@@ -16,8 +17,6 @@ import { exigirAcceso } from "@/lib/projects/acceso";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const WEEK_MS = 7 * 86_400_000;
-
 export const GET = paraLaApp(async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
   if (!eventTasksEnabled()) return Response.json({ cards: [] });
   const { id } = await params;
@@ -27,7 +26,7 @@ export const GET = paraLaApp(async (req: Request, { params }: { params: Promise<
   if (acceso instanceof Response) return acceso;
   if (acceso.rol !== "dueno") return Response.json({ cards: [] });
   const [cards, tasks, [owner]] = await Promise.all([
-    cardsOfProject(id, { since: new Date(Date.now() - WEEK_MS) }),
+    cardsOfProject(id, { since: new Date(Date.now() - CARD_WINDOW_MS) }),
     listEventTasks(id, { includeInactive: true }),
     db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, userId)).limit(1),
   ]);

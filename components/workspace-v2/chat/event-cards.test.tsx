@@ -190,6 +190,18 @@ describe("EventCards", () => {
     expect(box.textContent).toContain("eventTasks.notDone");
   });
 
+  it("an action a cut-off press left behind says so, and a reply held back by its change says why (final review I1, I2)", async () => {
+    const { host } = await paint([
+      card({ status: "accepted", actions: [rec(change, { state: "failed", error: "interrupted", result: "mesa 4" }), rec(reply, { state: "failed", error: "change_not_done" })] }),
+      card({ id: "c2", status: "accepted", actions: [rec(reply, { state: "failed", error: "expired" })] }),
+    ]);
+    const box = host.querySelector('[data-event-card="c1"]')!;
+    expect(box.textContent).toContain("eventTasks.interrupted");
+    expect(box.textContent).toContain('eventTasks.rowNow {"now":"mesa 4"}');
+    expect(box.textContent).toContain("eventTasks.notSentChange");
+    expect(host.querySelector('[data-event-card="c2"]')!.textContent).toContain("eventTasks.sendExpired");
+  });
+
   it("a sending reply shows its state and Retirar", async () => {
     const sending = card({ status: "accepted", actions: [rec(change, { state: "done", result: "mesa 4 → 6" }), rec(reply, { state: "sending", attempts: 2, error: "Resend is down" })] });
     serve([sending], { answer: { status: "withdrawn" } });

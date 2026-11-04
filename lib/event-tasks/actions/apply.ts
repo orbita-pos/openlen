@@ -8,6 +8,7 @@ import type { updateRowIf } from "@/lib/backend/dashboard";
 import type { BackendProject } from "@/lib/backend/router";
 
 import type { EventTaskCardRow } from "../store";
+import type { ActionLog } from "./log";
 import type { DataChangeAction } from "./types";
 
 export interface ApplyDeps {
@@ -15,6 +16,8 @@ export interface ApplyDeps {
   update: typeof updateRowIf;
   readRow(projectId: string, table: string, keyColumn: string, key: string): Promise<Record<string, unknown> | null>;
   record(cardId: string, index: number, rec: Applied): Promise<void>;
+  /** What was applied, in the task's Registros too (spec §7.3). */
+  log: ActionLog;
 }
 
 export interface Applied {
@@ -23,8 +26,8 @@ export interface Applied {
   readonly error: string | null;
 }
 
-const asText = (v: unknown): string => (v === null || v === undefined ? "∅" : typeof v === "object" ? JSON.stringify(v) : String(v));
-const changes = (a: DataChangeAction) =>
+export const asText = (v: unknown): string => (v === null || v === undefined ? "∅" : typeof v === "object" ? JSON.stringify(v) : String(v));
+export const changeLine = (a: DataChangeAction) =>
   Object.entries(a.set)
     .map(([col, v]) => `${col} ${a.before[col] ?? "∅"} → ${v}`)
     .join(", ");
@@ -41,7 +44,11 @@ export async function applyDataChange(card: EventTaskCardRow, index: number, dep
   const project = await deps.project(card.projectId);
   if (!project) return finish({ state: "failed", result: null, error: "The app has no production base." });
   const r = await deps.update(project, a.table, a.key, a.before, a.set);
-  if ("row" in r) return finish({ state: "done", result: changes(a), error: null });
+  if ("row" in r) {
+    const done = await finish({ state: "done", result: changeLine(a), error: null });
+    await deps.log(card, "applied", changeLine(a));
+    return done;
+  }
   if ("changed" in r) {
     const [keyColumn, key] = Object.entries(a.key)[0]!;
     const now = await deps.readRow(card.projectId, a.table, keyColumn, key).catch(() => null);
@@ -56,11 +63,12 @@ export async function applyDataChange(card: EventTaskCardRow, index: number, dep
 
 /** The real parts: production's backend, the Database view's compared update, the card's record. */
 export async function defaultApplyDeps(): Promise<ApplyDeps> {
-  const [{ liveBackendProject }, { updateRowIf: update }, { readRow }, { updateCardAction }] = await Promise.all([
+  const [{ liveBackendProject }, { updateRowIf: update }, { readRow }, { updateCardAction }, { defaultActionLog }] = await Promise.all([
     import("@/lib/backend/owner-access"),
     import("@/lib/backend/dashboard"),
     import("./production"),
     import("../cards"),
+    import("./log"),
   ]);
-  return { project: liveBackendProject, update, readRow, record: (cardId, index, rec) => updateCardAction(cardId, index, rec) };
+  return { project: liveBackendProject, update, readRow, record: (cardId, index, rec) => updateCardAction(cardId, index, rec), log: await defaultActionLog() };
 }

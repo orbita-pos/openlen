@@ -141,6 +141,7 @@ describe("TasksTab", () => {
       records: [
         { id: "r1", kind: "delivered", reason: null, count: 1, notified: true, at: "2026-11-10T17:00:00.000Z" },
         { id: "r2", kind: "failed", reason: "table_missing", count: 2, notified: null, at: "2026-11-10T16:00:00.000Z" },
+        { id: "r3", kind: "applied", reason: "mesa 4 → 1 · Marta", count: 1, notified: null, at: "2026-11-10T15:00:00.000Z" },
       ],
     };
     const { host } = await paint({ ...OVERVIEW, events: [event] } as unknown as TasksOverview);
@@ -151,8 +152,9 @@ describe("TasksTab", () => {
     expect(row.textContent).toContain('eventTasks.sourceRows {"table":"reservas"}');
     act(() => row.querySelector<HTMLButtonElement>("[data-event-records]")!.click());
     const lines = [...row.querySelectorAll("[data-event-record]")].map((li) => li.textContent);
-    expect(lines).toHaveLength(2);
+    expect(lines).toHaveLength(3);
     expect(lines[0]).toContain("eventTasks.recNotified");
+    expect(lines[2]).toContain('eventTasks.recApplied {"reason":"mesa 4 → 1 · Marta"}');
     expect(lines[1]).toContain('eventTasks.recFailed {"reason":"table_missing"}');
     expect(lines[1]).toContain('eventTasks.recCount {"count":2}');
   });

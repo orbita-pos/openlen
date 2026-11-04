@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
-import { WITHDRAWN, type CardActionRecord } from "@/lib/event-tasks/actions/types";
+import { EXPIRED, INTERRUPTED, NOT_SENT_CHANGE, WITHDRAWN, type CardActionRecord } from "@/lib/event-tasks/actions/types";
 
 import "./avisos.css";
 
@@ -69,7 +69,13 @@ function Linea({ r, t }: { r: CardActionRecord; t: T }) {
   let tono: "ok" | "aviso" | "mal";
   if (a.kind === "data_change") {
     [texto, tono] =
-      r.state === "done" ? [t("eventTasks.doneApplied", { result: r.result ?? "" }), "ok"] : r.state === "blocked" ? [t("eventTasks.rowChanged"), "aviso"] : [t("eventTasks.actionFailed", { error: r.error ?? "" }), "mal"];
+      r.state === "done"
+        ? [t("eventTasks.doneApplied", { result: r.result ?? "" }), "ok"]
+        : r.state === "blocked"
+          ? [t("eventTasks.rowChanged"), "aviso"]
+          : r.error === INTERRUPTED
+            ? [t("eventTasks.interrupted"), "aviso"]
+            : [t("eventTasks.actionFailed", { error: r.error ?? "" }), "mal"];
   } else if (a.kind === "reply") {
     [texto, tono] =
       r.state === "done"
@@ -78,14 +84,18 @@ function Linea({ r, t }: { r: CardActionRecord; t: T }) {
           ? [t("eventTasks.sending", { attempts: r.attempts }), "aviso"]
           : r.error === WITHDRAWN
             ? [t("eventTasks.withdrawn"), "mal"]
-            : [t("eventTasks.sendFailed", { error: r.error ?? "" }), "mal"];
+            : r.error === NOT_SENT_CHANGE
+              ? [t("eventTasks.notSentChange"), "aviso"]
+              : r.error === EXPIRED
+                ? [t("eventTasks.sendExpired"), "mal"]
+                : [t("eventTasks.sendFailed", { error: r.error ?? "" }), "mal"];
   } else {
-    [texto, tono] = r.state === "done" ? [t("eventTasks.done"), "ok"] : [t("eventTasks.actionFailed", { error: r.error ?? "" }), "mal"];
+    [texto, tono] = r.state === "done" ? [t("eventTasks.done"), "ok"] : r.error === INTERRUPTED ? [t("eventTasks.interrupted"), "aviso"] : [t("eventTasks.actionFailed", { error: r.error ?? "" }), "mal"];
   }
   return (
     <small data-aviso-estado={r.state} className={`ch-aviso-linea is-${tono}`}>
       {texto}
-      {r.state === "blocked" && r.result ? <span>{t("eventTasks.rowNow", { now: r.result })}</span> : null}
+      {(r.state === "blocked" || (r.state === "failed" && a.kind === "data_change")) && r.result ? <span>{t("eventTasks.rowNow", { now: r.result })}</span> : null}
     </small>
   );
 }

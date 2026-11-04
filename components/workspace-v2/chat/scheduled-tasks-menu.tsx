@@ -36,7 +36,7 @@ export interface ClockTask {
 /** One record of an event task: a look at its source and what came of it. */
 export interface ClockEventRecord {
   readonly id: string;
-  readonly kind: "delivered" | "filtered" | "failed";
+  readonly kind: "delivered" | "filtered" | "failed" | "applied" | "sent";
   readonly reason: string | null;
   readonly count: number;
   readonly notified: boolean | null;
@@ -252,7 +252,11 @@ function recordLine(r: ClockEventRecord, t: ReturnType<typeof useTranslations>):
         : t("eventTasks.recDelivered")
       : r.kind === "filtered"
         ? t("eventTasks.recFiltered", { reason: r.reason ?? "" })
-        : t("eventTasks.recFailed", { reason: r.reason ?? "" });
+        : r.kind === "applied"
+          ? t("eventTasks.recApplied", { reason: r.reason ?? "" })
+          : r.kind === "sent"
+            ? t("eventTasks.recSent", { reason: r.reason ?? "" })
+            : t("eventTasks.recFailed", { reason: r.reason ?? "" });
   return r.count > 1 ? `${what} ${t("eventTasks.recCount", { count: r.count })}` : what;
 }
 

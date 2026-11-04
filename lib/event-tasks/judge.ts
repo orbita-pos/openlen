@@ -17,7 +17,7 @@ import { candidateMessage, JUDGE_SYSTEM } from "./framing";
 import type { AvailableActions } from "./actions/available";
 import type { TableColumn } from "./actions/production";
 import { seenOfCandidate } from "./actions/seen";
-import type { CardAction } from "./actions/types";
+import { CARD_WINDOW_MS, type CardAction } from "./actions/types";
 import { validateActions } from "./actions/validate";
 import type { EventTaskCardRow, EventTaskRecordRow, EventTaskRow } from "./store";
 import type { Candidate } from "./trigger";
@@ -226,7 +226,7 @@ async function defaultJudgeDeps(): Promise<JudgeDeps> {
     castCheck: (task, column, value) => production.castCheck(task.projectId, (task.params as { table: string }).table, column, value),
     createCard: (o) => cards.createCard(o),
     decisionsSince: cards.decisionsSince,
-    pendingCards: cards.pendingCardsOfTask,
+    pendingCards: (taskId) => cards.pendingCardsOfTask(taskId, new Date(Date.now() - CARD_WINDOW_MS)),
     saveTranscript: store.saveTranscript,
     markJudged: store.markJudged,
     answerLookAgain: cards.answerLookAgain,
