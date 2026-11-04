@@ -21,7 +21,11 @@ import {
   ToolsIcon,
 } from "./icons";
 import type { InstalledToolView } from "@/lib/tools/types";
+import { draftCanvasBridge } from "./tools/tool-items";
 import { ToolFrame } from "./tools/tool-frame";
+import { useToolBridgeHost } from "./tools/use-tool-bridge-host";
+
+const NEVER_CONFIRM = async (): Promise<boolean> => false;
 import { toolIdOfLens, toolLens } from "./tools/tool-items";
 import { CodeView } from "./code-view";
 import { TestDataBadge } from "./test-data-badge";
@@ -75,6 +79,8 @@ interface PreviewAreaProps {
   toolProjectTitle?: string;
   /** A tool's `sendPrompt`: the text goes to Len's composer, never sent. Absent = no chat to write in. */
   onToolPrompt?: (text: string, toolTitle: string) => void;
+  /** The project is a TOOL being built (`data.tool`): its canvas calls `window.openlen`, answered here as the draft. */
+  isTool?: boolean;
   /** When set, the iframe loads this URL directly (a curated template from
    *  /public/templates/curated/) instead of using the composed-from-primitives
    *  HTML in `doc`. Cleared via `onClearTemplate`. */
@@ -292,6 +298,7 @@ export function PreviewArea({
   toolPerson,
   toolProjectTitle,
   onToolPrompt,
+  isTool = false,
   doc,
   previewUrl,
   templateName,
@@ -723,6 +730,23 @@ export function PreviewArea({
   const sinLienzoDeApp = esApp && !modoRemoto && !esperandoRemoto;
   const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };
   const iframeSandbox = modoRemoto ? SANDBOX_REMOTO : SANDBOX_LOCAL;
+
+  // A TOOL BEING BUILT (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its canvas has `window.openlen`
+  // and asks this window; answered as the draft — the test database, never production.
+  const canvasBridge = draftCanvasBridge({ isTool, remoteUrl: modoRemoto ? urlRemota : null, projectId });
+  useToolBridgeHost({
+    iframe: iframeLocalRef,
+    frameOrigin: canvasBridge?.frameOrigin ?? null,
+    caller: canvasBridge?.caller ?? { draftProjectId: projectId ?? "" },
+    context: {
+      person: toolPerson ?? { name: "", locale: "en" },
+      project: projectId ? { id: projectId, title: toolProjectTitle ?? "" } : null,
+      tool: { id: projectId ?? "", version: "draft" },
+      environment: "draft",
+    },
+    onPrompt: onToolPrompt ? (text) => onToolPrompt(text, toolProjectTitle ?? "") : null,
+    onConfirmChange: NEVER_CONFIRM,
+  });
 
   // Section-insert plumbing. The fragment must land only AFTER the iframe
   // runtime is listening — on a fresh PreviewArea mount (e.g. returning from the
