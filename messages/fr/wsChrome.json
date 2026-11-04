@@ -435,12 +435,14 @@
     "messages": "Boîte de réception",
     "business": "Mon entreprise",
     "versions": "Versions",
-    "database": "Base de données"
+    "database": "Base de données",
+    "tools": "Outils"
   },
   "startTabs": {
     "crear": "Créer",
     "mispaginas": "Mes pages",
-    "comunidad": "Communauté"
+    "comunidad": "Communauté",
+    "herramientas": "Outils"
   },
   "resultadosTabs": {
     "page": "Page",
@@ -744,6 +746,7 @@
       "subtitle": "Cela modifie les données réelles. Rien ne change tant que vous n'appliquez pas.",
       "apply": "Appliquer",
       "cancel": "Annuler"
-    }
+    },
+    "unavailable": "Cet outil ne peut pas s'ouvrir pour le moment."
   }
 }

@@ -435,12 +435,14 @@
     "messages": "Caixa de entrada",
     "business": "Meu negócio",
     "versions": "Versões",
-    "database": "Banco de dados"
+    "database": "Banco de dados",
+    "tools": "Ferramentas"
   },
   "startTabs": {
     "crear": "Criar",
     "mispaginas": "Minhas páginas",
-    "comunidad": "Comunidade"
+    "comunidad": "Comunidade",
+    "herramientas": "Ferramentas"
   },
   "resultadosTabs": {
     "page": "Página",
@@ -744,6 +746,7 @@
       "subtitle": "Isto altera os dados reais. Nada muda até você aplicar.",
       "apply": "Aplicar",
       "cancel": "Cancelar"
-    }
+    },
+    "unavailable": "Esta ferramenta não pode ser aberta agora."
   }
 }

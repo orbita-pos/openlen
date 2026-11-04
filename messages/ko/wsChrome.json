@@ -435,12 +435,14 @@
     "messages": "받은편지함",
     "business": "내 비즈니스",
     "versions": "버전",
-    "database": "데이터베이스"
+    "database": "데이터베이스",
+    "tools": "도구"
   },
   "startTabs": {
     "crear": "만들기",
     "mispaginas": "내 페이지",
-    "comunidad": "커뮤니티"
+    "comunidad": "커뮤니티",
+    "herramientas": "도구"
   },
   "resultadosTabs": {
     "page": "페이지",
@@ -744,6 +746,7 @@
       "subtitle": "실제 데이터가 바뀌어요. 적용하기 전에는 아무것도 바뀌지 않아요.",
       "apply": "적용",
       "cancel": "취소"
-    }
+    },
+    "unavailable": "지금은 이 도구를 열 수 없어요."
   }
 }

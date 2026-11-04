@@ -15,7 +15,7 @@
 
 import { useTranslations } from "next-intl";
 import { AccountMenu } from "./account-menu";
-import { ICONO_BARRA, ICONO_RAIL, Layers, X } from "./icons";
+import { ICONO_BARRA, ICONO_RAIL, Layers, ToolsIcon, X } from "./icons";
 import type { Section } from "./mock-data";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import {
@@ -50,6 +50,7 @@ import {
   railItemKey,
   visibleOperar,
   type RailItemDef,
+  type RailToolItem,
   type SectionView,
   type SidebarMode,
 } from "./rail-model";
@@ -68,6 +69,8 @@ function UnifiedRail({
   chatSinVer = 0,
   hasDatabase,
   centerView,
+  tools,
+  onTool,
 }: {
   activeKey: string;
   onPanel: (id: SidebarMode) => void;
@@ -79,6 +82,9 @@ function UnifiedRail({
   chatSinVer?: number;
   hasDatabase: boolean;
   centerView: SectionView;
+  /** The person's installed `rail` tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.3). */
+  tools?: readonly RailToolItem[];
+  onTool?: (id: string) => void;
 }) {
   const t = useTranslations("wsChrome");
   const tInbox = useTranslations("inbox");
@@ -142,6 +148,49 @@ function UnifiedRail({
       {RAIL_CREAR.map(render)}
       <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
       {visibleOperar({ hasDatabase, centerView }).map(render)}
+      {tools && onTool ? <RailTools tools={tools} activeKey={activeKey} onTool={onTool} onPage={() => onView("tools")} /> : null}
+    </>
+  );
+}
+
+/** The rail's own group of tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): each installed `rail` tool
+ *  with its own icon and name, and the Herramientas page at its head. */
+function RailTools({
+  tools,
+  activeKey,
+  onTool,
+  onPage,
+}: {
+  tools: readonly RailToolItem[];
+  activeKey: string;
+  onTool: (id: string) => void;
+  onPage: () => void;
+}) {
+  const t = useTranslations("wsChrome");
+  const button = (key: string, label: string, onClick: () => void, icon: React.ReactNode) => {
+    const active = key === activeKey;
+    return (
+      <Tooltip key={key} label={label} side="right">
+        <button
+          type="button"
+          aria-label={label}
+          aria-current={active ? "page" : undefined}
+          data-rail-tool={key}
+          onClick={onClick}
+          className={`h-8 w-8 relative inline-flex items-center justify-center rounded-md transition ${active ? "bg-elev fg shadow-card border bd" : "fg-muted hover:fg hover:bg-hover"}`}
+        >
+          {icon}
+        </button>
+      </Tooltip>
+    );
+  };
+  return (
+    <>
+      <div className="my-1 h-px w-6 bg-black/10 dark:bg-white/10" />
+      {button("tools", t("rail.tools"), onPage, <ToolsIcon size={ICONO_RAIL} />)}
+      {tools.map((tool) =>
+        button(`tool:${tool.id}`, tool.name, () => onTool(tool.id), <img src={tool.iconUrl} alt="" width={ICONO_RAIL + 2} height={ICONO_RAIL + 2} className="rounded-[3px]" />),
+      )}
     </>
   );
 }
@@ -277,6 +326,11 @@ interface LeftSidebarProps {
   onSelectSection?: (v: SectionView) => void;
   /** La página tiene base de datos: el rail enseña su icono (`visibleOperar`). */
   hasDatabase?: boolean;
+  /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): the person's `rail` tools, the one
+   *  open in the center, and how to open one. Absent = tools off: the group isn't drawn. */
+  railTools?: readonly RailToolItem[];
+  activeToolId?: string | null;
+  onOpenTool?: (id: string) => void;
   /** Multi-page site tree (Site tab) — owned by the parent. */
   sitePages?: SitePageSummary[];
   activeSitePage?: string | null;
@@ -310,6 +364,9 @@ export function LeftSidebar({
   activeSection = "page",
   onSelectSection,
   hasDatabase = false,
+  railTools,
+  activeToolId = null,
+  onOpenTool,
   flatProjectHtml,
   flatProjectId,
   soloLectura = false,
@@ -417,7 +474,7 @@ export function LeftSidebar({
     return (
       <aside className="h-full w-12 shrink-0 bg-side border-r bd flex flex-col items-center pt-2 gap-1">
         <UnifiedRail
-          activeKey={railActiveKey(activeSection, mode, collapsed)}
+          activeKey={railActiveKey(activeSection, mode, collapsed, activeToolId)}
           onPanel={abrirOPlegar}
           onView={(v) => onSelectSection?.(v)}
           lockedTabs={lockedTabs}
@@ -429,6 +486,8 @@ export function LeftSidebar({
           chatSinVer={chatSinVer}
           hasDatabase={hasDatabase}
           centerView={activeSection}
+          tools={railTools}
+          onTool={onOpenTool}
         />
         {/* ⚰️ Aquí vivía el botón de desplegar. Lo hace ahora el propio icono
             del panel — ver `abrirOPlegar`.
@@ -455,7 +514,7 @@ export function LeftSidebar({
           panel just opens to its right (it never reflows into a top row). */}
       <div className="h-full w-12 shrink-0 flex flex-col items-center pt-2 gap-1 border-r bd">
         <UnifiedRail
-          activeKey={railActiveKey(activeSection, mode, collapsed)}
+          activeKey={railActiveKey(activeSection, mode, collapsed, activeToolId)}
           onPanel={abrirOPlegar}
           onView={(v) => onSelectSection?.(v)}
           lockedTabs={lockedTabs}
@@ -467,6 +526,8 @@ export function LeftSidebar({
           chatSinVer={chatSinVer}
           hasDatabase={hasDatabase}
           centerView={activeSection}
+          tools={railTools}
+          onTool={onOpenTool}
         />
         {/* ⚰️ Y aquí el de plegar. Mismo motivo: un segundo clic en el icono
             del panel abierto lo cierra. La «✕» de la cabecera SÍ se queda — en

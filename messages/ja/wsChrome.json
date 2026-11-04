@@ -435,12 +435,14 @@
     "messages": "受信箱",
     "business": "マイビジネス",
     "versions": "バージョン",
-    "database": "データベース"
+    "database": "データベース",
+    "tools": "ツール"
   },
   "startTabs": {
     "crear": "作成",
     "mispaginas": "マイページ",
-    "comunidad": "コミュニティ"
+    "comunidad": "コミュニティ",
+    "herramientas": "ツール"
   },
   "resultadosTabs": {
     "page": "ページ",
@@ -744,6 +746,7 @@
       "subtitle": "本番のデータが変わります。適用するまで何も変わりません。",
       "apply": "適用",
       "cancel": "キャンセル"
-    }
+    },
+    "unavailable": "このツールは今は開けません。"
   }
 }

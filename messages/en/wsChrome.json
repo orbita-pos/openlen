@@ -435,12 +435,14 @@
     "messages": "Inbox",
     "business": "My business",
     "versions": "Versions",
-    "database": "Database"
+    "database": "Database",
+    "tools": "Tools"
   },
   "startTabs": {
     "crear": "Create",
     "mispaginas": "My pages",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Tools"
   },
   "resultadosTabs": {
     "page": "Page",
@@ -744,6 +746,7 @@
       "subtitle": "This changes the live data. Nothing is changed until you apply it.",
       "apply": "Apply",
       "cancel": "Cancel"
-    }
+    },
+    "unavailable": "This tool can't open right now."
   }
 }

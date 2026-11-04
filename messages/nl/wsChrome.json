@@ -435,12 +435,14 @@
     "messages": "Inbox",
     "business": "Mijn bedrijf",
     "versions": "Versies",
-    "database": "Database"
+    "database": "Database",
+    "tools": "Tools"
   },
   "startTabs": {
     "crear": "Maken",
     "mispaginas": "Mijn pagina’s",
-    "comunidad": "Community"
+    "comunidad": "Community",
+    "herramientas": "Tools"
   },
   "resultadosTabs": {
     "page": "Pagina",
@@ -744,6 +746,7 @@
       "subtitle": "Dit wijzigt de echte gegevens. Er verandert niets tot je het toepast.",
       "apply": "Toepassen",
       "cancel": "Annuleren"
-    }
+    },
+    "unavailable": "Deze tool kan nu niet worden geopend."
   }
 }

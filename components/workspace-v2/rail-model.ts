@@ -17,7 +17,19 @@ export type SectionView =
   // hecha y se rehará de nuevo, mejor (Jesús).
   | "explore" | "resultados"
   // La base de datos de la página (fase 6 de plans/pages-backend/design.md).
-  | "database";
+  | "database"
+  // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3, §4.11): the Herramientas page, and
+  // one installed `rail` tool (`?view=tool&tool=<id>`).
+  | "tools"
+  | "tool";
+
+/** An installed `rail` tool in the rail's own group: its name and icon are its own, not a translated key. */
+export interface RailToolItem {
+  readonly kind: "tool";
+  readonly id: string;
+  readonly name: string;
+  readonly iconUrl: string;
+}
 
 export type SidebarMode =
   | "site" | "chat" | "templates" | "pages"
@@ -115,8 +127,11 @@ export function railActiveKey(
   centerView: SectionView,
   mode: SidebarMode,
   collapsed = false,
+  /** The open tool (`?tool=`), when the center shows one. */
+  toolId: string | null = null,
 ): string {
   if (centerView === "page") return collapsed ? "" : mode;
   if (centerView === "analytics") return "resultados";
+  if (centerView === "tool") return `tool:${toolId ?? ""}`;
   return centerView;
 }

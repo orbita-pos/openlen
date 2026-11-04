@@ -29,6 +29,8 @@ const SIN_PUERTA_EN_EL_RAIL: Record<string, string> = {
   templates: "desde la pestaña Plantillas de la barra lateral",
   explore: "desde el landing de inicio",
   analytics: "alias de URL de `resultados`, que sí está en el rail",
+  tools: "desde el grupo de herramientas del rail (su primer botón) y la pestaña Herramientas del inicio",
+  tool: "desde cada herramienta instalada del grupo del rail y la página Herramientas",
 };
 
 /** Las vistas que `page.tsx` acepta, leídas de su fuente. */

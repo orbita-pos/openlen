@@ -435,12 +435,14 @@
     "messages": "收件箱",
     "business": "我的业务",
     "versions": "版本",
-    "database": "数据库"
+    "database": "数据库",
+    "tools": "工具"
   },
   "startTabs": {
     "crear": "创建",
     "mispaginas": "我的页面",
-    "comunidad": "社区"
+    "comunidad": "社区",
+    "herramientas": "工具"
   },
   "resultadosTabs": {
     "page": "页面",
@@ -744,6 +746,7 @@
       "subtitle": "这会修改真实数据。在你应用之前，什么都不会改变。",
       "apply": "应用",
       "cancel": "取消"
-    }
+    },
+    "unavailable": "这个工具现在无法打开。"
   }
 }

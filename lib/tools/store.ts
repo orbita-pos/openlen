@@ -25,6 +25,18 @@ export async function readRelease(sha: string): Promise<Record<string, ToolRelea
   return row?.files ?? null;
 }
 
+/** The person's name, for a tool's `context()` (the workspace has no session object of its own). */
+export async function personName(personId: string): Promise<string> {
+  const [row] = await db.select({ name: schema.users.name }).from(schema.users).where(eq(schema.users.id, personId)).limit(1);
+  return row?.name ?? "";
+}
+
+/** Whether a release is still there, without reading its files (the tools list asks it for every tool). */
+export async function releaseExists(sha: string): Promise<boolean> {
+  const [row] = await db.select({ sha: r.sha }).from(r).where(eq(r.sha, sha)).limit(1);
+  return !!row;
+}
+
 export async function upsertInstallation(input: {
   readonly personId: string;
   readonly projectId: string;
