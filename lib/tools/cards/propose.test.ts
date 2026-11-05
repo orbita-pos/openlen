@@ -79,6 +79,9 @@ describe("propose_action", () => {
     const s = session();
     const out = await proposeToolCard(s, { ...good, details: { placement: "project", initialContent: "Mesa 4, 20:00" } }, d);
     expect(out.response).toEqual({ ok: true, tool_result: `Card shown below your answer. Do not restate it. ${INVITATION}` });
+    // The build is OpenLen's creator's, launched by the card — Len doesn't say he will build it himself.
+    expect(INVITATION).not.toMatch(/first person|you will build/i);
+    expect(INVITATION).toMatch(/not you/);
     expect(d.insertCard).toHaveBeenCalledWith({
       projectId: "p1",
       chatRowId: "row-1",

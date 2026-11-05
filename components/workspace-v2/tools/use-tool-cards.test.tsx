@@ -137,6 +137,21 @@ describe("🔴 I3: a card that installs or uninstalls in the background tells th
   });
 });
 
+describe("the balance hears what the creator spent in the background", () => {
+  it("a card leaving creating (the creator settled and was charged) asks the balance to refresh, once", () => {
+    const heard = vi.fn();
+    window.addEventListener("openlen:credits-changed", heard);
+    toolCardsLive.event("p1", card({ phase: "proposed" }));
+    toolCardsLive.fromServer("p1", [card({ phase: "creating" })]);
+    expect(heard).not.toHaveBeenCalled();
+    toolCardsLive.fromServer("p1", [card({ phase: "installing" })]);
+    expect(heard).toHaveBeenCalledTimes(1);
+    toolCardsLive.fromServer("p1", [card({ phase: "installed", installationId: "inst-1" })]);
+    expect(heard).toHaveBeenCalledTimes(1);
+    window.removeEventListener("openlen:credits-changed", heard);
+  });
+});
+
 describe("toolCardsLive.event", () => {
   it("a stream card is sanitized: one without an id or a known phase is dropped", () => {
     toolCardsLive.event("p1", { ...card(), phase: "exploded" });

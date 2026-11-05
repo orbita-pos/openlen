@@ -2111,14 +2111,22 @@ async function correrTurno(
         }
         const hostToolCreation = async (o: ToolCreationOrigin): Promise<AgentLoopResult> => {
           const creation = await import("@/lib/tools/cards/creation");
-          const text = await creation.hostTheCreator(
+          const { text, runId } = await creation.hostTheCreator(
             { cardId: o.cardId, framing: programadaDelTurno?.framing ?? "", locale: agentSession.uiLocale ?? "en", launcher: subagents, hostRowId: filaId },
             await creation.realCreationDeps(),
           );
-          const ev = { type: "text" as const, text };
-          registro.observar(ev);
-          avance.tocar();
-          emit(ev.type, ev);
+          // The creator's step, as a `subagent` call leaves it: its card shows under this row, live and on reload.
+          const pasos = runId
+            ? [
+                { type: "action" as const, tool: "subagent", status: "running" as const, summary: o.title },
+                { type: "action" as const, tool: "subagent", status: "done" as const, summary: o.title, subagent: { id: runId, preset: "creator" } },
+              ]
+            : [];
+          for (const ev of [...pasos, { type: "text" as const, text }]) {
+            registro.observar(ev);
+            avance.tocar();
+            emit(ev.type, ev);
+          }
           return {
             finalText: text,
             transcripcion: [{ role: "assistant", content: text }],

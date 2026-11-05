@@ -30,10 +30,11 @@ export const DECLARACION_PROPOSE_ACTION = {
   },
 } as const;
 
-/** DeepSeek's invitation for a page card, for an OpenLen tool. */
+/** DeepSeek's invitation for a page card, for an OpenLen tool — without its first person: here the build is the card's
+ *  creator's, which Len never sees, so «I'll build it» told the person something untrue. */
 export const INVITATION =
-  "End with at most one short invitation in the user's language, in the first person: after they press Crear below, " +
-  "you will build it in the background as a tool that stays in their OpenLen, without blocking the chat; " +
+  "End with at most one short invitation in the user's language: after they press Crear below, OpenLen builds it in " +
+  "the background — a builder of its own, not you — as a tool that stays in their OpenLen, without blocking the chat; " +
   "the build takes minutes and uses their credits.";
 
 /** DeepSeek's `queuedMessageLimit` default. */
