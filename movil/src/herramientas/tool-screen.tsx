@@ -23,8 +23,19 @@ import { abrirHerramienta } from "../api/herramientas";
 import { useAtras } from "../atras";
 import { BASE } from "../config";
 import { PhoneViewer } from "../viewer/phone-viewer";
-import { HojaDeCambio, HojaDeFicheros, HojaDeTrabajo, LineaDeTrabajos } from "./confirmaciones";
+import { HojaDeCambio, HojaDeFicheros, HojaDeTrabajo, LineaDeEntregados, LineaDeTrabajos } from "./confirmaciones";
 import "./herramientas.css";
+
+/** What the tool is waiting on — one at a time, whatever its kind: a new question answers the open one «no», so the
+ *  sheet on screen is always the one Android's back closes. */
+type Pregunta = (
+  | { tipo: "cambio"; change: ToolChange; resolve: (ok: boolean) => void }
+  | { tipo: "trabajo"; job: ToolJobAsk; resolve: (ok: boolean) => void }
+  | { tipo: "ficheros"; accept?: string; multiple: boolean; resolve: (files: File[] | null) => void }) & {
+  /** Which question: a new pick starts its sheet afresh. */
+  n?: number;
+};
+const responderNo = (p: Pregunta) => (p.tipo === "ficheros" ? p.resolve(null) : p.resolve(false));
 
 /** The workspace's colours, light or dark as the phone's own theme (`data-theme` on <html>, tema.ts). */
 function temaDeLaHerramienta(): ToolContext["theme"] {
@@ -56,10 +67,10 @@ export function PantallaHerramienta({
   const [marco, setMarco] = useState<{ url: string; origin: string } | { error: string } | null>(null);
   const [intento, setIntento] = useState(0);
   const iframe = useRef<HTMLIFrameElement>(null);
-  const [cambio, setCambio] = useState<{ change: ToolChange; resolve: (ok: boolean) => void } | null>(null);
-  const [trabajo, setTrabajo] = useState<{ job: ToolJobAsk; resolve: (ok: boolean) => void } | null>(null);
-  const [ficheros, setFicheros] = useState<{ accept?: string; multiple: boolean; resolve: (files: File[] | null) => void } | null>(null);
+  const [pregunta, setPregunta] = useState<Pregunta | null>(null);
   const [iniciados, setIniciados] = useState<ToolJobView[]>([]);
+  // What the tool delivered: it waits in the bottom line for the person's tap — the tool never opens the viewer itself.
+  const [entregados, setEntregados] = useState<ViewerFile[]>([]);
   const [visor, setVisor] = useState<ViewerFile | null>(null);
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const latest = useRef({ onCerrar, onPrompt, proyecto, persona, idioma });
@@ -79,6 +90,12 @@ export function PantallaHerramienta({
     };
   }, [cliente, tool.id, intento]);
 
+  const serie = useRef(0);
+  const preguntar = (p: Pregunta) =>
+    setPregunta((prev) => {
+      if (prev) responderNo(prev);
+      return { ...p, n: ++serie.current };
+    });
   const origin = marco && "url" in marco ? marco.origin : null;
   const conChat = onPrompt !== null;
   const host = useMemo(() => {
@@ -105,30 +122,12 @@ export function PantallaHerramienta({
             latest.current.onCerrar();
           }
         : null,
-      // A newer question answers the one before it «no»: the frame only ever waits on the latest.
-      onConfirmChange: (change) =>
-        new Promise<boolean>((resolve) =>
-          setCambio((prev) => {
-            prev?.resolve(false);
-            return { change, resolve };
-          }),
-        ),
-      onConfirmJob: (job) =>
-        new Promise<boolean>((resolve) =>
-          setTrabajo((prev) => {
-            prev?.resolve(false);
-            return { job, resolve };
-          }),
-        ),
-      onPickFiles: (pick) =>
-        new Promise<File[] | null>((resolve) =>
-          setFicheros((prev) => {
-            prev?.resolve(null);
-            return { ...pick, resolve };
-          }),
-        ),
+      // A newer question answers the one before it «no», whatever its kind: the frame only ever waits on the latest.
+      onConfirmChange: (change) => new Promise<boolean>((resolve) => preguntar({ tipo: "cambio", change, resolve })),
+      onConfirmJob: (job) => new Promise<boolean>((resolve) => preguntar({ tipo: "trabajo", job, resolve })),
+      onPickFiles: (pick) => new Promise<File[] | null>((resolve) => preguntar({ tipo: "ficheros", ...pick, resolve })),
       onJobStarted: (job) => setIniciados((js) => [...js, job]),
-      onDelivered: (f) => setVisor({ name: f.name, url: f.url, size: f.size }),
+      onDelivered: (f) => setEntregados((fs) => [...fs, { name: f.name, url: f.url, size: f.size }]),
       fetchImpl: pedir as typeof fetch,
       linkOrigin: BASE,
       timeZone,
@@ -150,28 +149,19 @@ export function PantallaHerramienta({
   }, [host]);
 
   // Closed with a question open: the tool hears «no», never waits on a screen that is gone.
-  const abiertas = useRef({ cambio, trabajo, ficheros });
-  abiertas.current = { cambio, trabajo, ficheros };
+  const abierta = useRef(pregunta);
+  abierta.current = pregunta;
   useEffect(
     () => () => {
-      abiertas.current.cambio?.resolve(false);
-      abiertas.current.trabajo?.resolve(false);
-      abiertas.current.ficheros?.resolve(null);
+      if (abierta.current) responderNo(abierta.current);
     },
     [],
   );
 
-  const responderCambio = (ok: boolean) => {
-    cambio?.resolve(ok);
-    setCambio(null);
-  };
-  const responderTrabajo = (ok: boolean) => {
-    trabajo?.resolve(ok);
-    setTrabajo(null);
-  };
-  const responderFicheros = (files: File[] | null) => {
-    ficheros?.resolve(files);
-    setFicheros(null);
+  const responder = (si: boolean, files: File[] | null = null) => {
+    if (pregunta?.tipo === "ficheros") pregunta.resolve(si ? files : null);
+    else pregunta?.resolve(si);
+    setPregunta(null);
   };
 
   return createPortal(
@@ -207,19 +197,27 @@ export function PantallaHerramienta({
           <iframe ref={iframe} data-herr-marco="" src={marco.url} title={tool.title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} />
         )}
         {origin && <LineaDeTrabajos cliente={cliente} installationId={tool.id} idioma={idioma} timeZone={timeZone} iniciados={iniciados} onVer={setVisor} />}
+        {entregados.length > 0 && <LineaDeEntregados ficheros={entregados} onVer={setVisor} onCerrar={() => setEntregados([])} />}
       </div>
-      {cambio && (
+      {pregunta?.tipo === "cambio" && (
         <HojaDeCambio
           herramienta={tool.title}
-          proyecto={cambio.change.projectTitle ?? (proyecto?.id === cambio.change.projectId ? proyecto.title : cambio.change.projectId)}
-          cambio={cambio.change}
-          onAplicar={() => responderCambio(true)}
-          onCancelar={() => responderCambio(false)}
+          proyecto={pregunta.change.projectTitle ?? (proyecto?.id === pregunta.change.projectId ? proyecto.title : pregunta.change.projectId)}
+          cambio={pregunta.change}
+          onAplicar={() => responder(true)}
+          onCancelar={() => responder(false)}
         />
       )}
-      {trabajo && <HojaDeTrabajo herramienta={tool.title} trabajo={trabajo.job} idioma={idioma} onEjecutar={() => responderTrabajo(true)} onCancelar={() => responderTrabajo(false)} />}
-      {ficheros && (
-        <HojaDeFicheros herramienta={tool.title} accept={ficheros.accept} multiple={ficheros.multiple} onElegidos={(files) => responderFicheros(files)} onCancelar={() => responderFicheros(null)} />
+      {pregunta?.tipo === "trabajo" && <HojaDeTrabajo herramienta={tool.title} trabajo={pregunta.job} idioma={idioma} onEjecutar={() => responder(true)} onCancelar={() => responder(false)} />}
+      {pregunta?.tipo === "ficheros" && (
+        <HojaDeFicheros
+          key={pregunta.n}
+          herramienta={tool.title}
+          accept={pregunta.accept}
+          multiple={pregunta.multiple}
+          onElegidos={(files) => responder(true, files)}
+          onCancelar={() => responder(false)}
+        />
       )}
       {visor && <PhoneViewer cliente={cliente} file={visor} onClose={() => setVisor(null)} />}
     </section>,

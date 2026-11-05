@@ -6,7 +6,7 @@ import type { Idioma } from "./config";
 
 const es = {
   titulo: "Herramientas",
-  vacio: "Aquí salen las herramientas que Len te construye. Se crean desde la web.",
+  vacio: "Aquí salen las herramientas que Len te construye. Pídele una a Len cuando la necesites.",
   cargando: "Cargando…",
   error: "No se pudo cargar.",
   reintentar: "Reintentar",
@@ -25,7 +25,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   es,
   en: {
     titulo: "Tools",
-    vacio: "The tools Len builds for you show up here. You create them on the web.",
+    vacio: "The tools Len builds for you show up here. Ask Len for one whenever you need it.",
     cargando: "Loading…",
     error: "Couldn't load.",
     reintentar: "Try again",
@@ -40,7 +40,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   pt: {
     titulo: "Ferramentas",
-    vacio: "Aqui aparecem as ferramentas que o Len cria para você. Elas são criadas na web.",
+    vacio: "Aqui aparecem as ferramentas que o Len cria para você. Peça uma ao Len quando precisar.",
     cargando: "Carregando…",
     error: "Não foi possível carregar.",
     reintentar: "Tentar de novo",
@@ -55,7 +55,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   fr: {
     titulo: "Outils",
-    vacio: "Les outils que Len construit pour vous apparaissent ici. Ils se créent sur le web.",
+    vacio: "Les outils que Len construit pour vous apparaissent ici. Demandez-en un à Len quand vous en avez besoin.",
     cargando: "Chargement…",
     error: "Impossible de charger.",
     reintentar: "Réessayer",
@@ -70,7 +70,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   de: {
     titulo: "Werkzeuge",
-    vacio: "Hier erscheinen die Werkzeuge, die Len für dich baut. Erstellt werden sie im Web.",
+    vacio: "Hier erscheinen die Werkzeuge, die Len für dich baut. Bitte Len um eines, wenn du es brauchst.",
     cargando: "Wird geladen…",
     error: "Konnte nicht geladen werden.",
     reintentar: "Erneut versuchen",
@@ -85,7 +85,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   it: {
     titulo: "Strumenti",
-    vacio: "Qui compaiono gli strumenti che Len costruisce per te. Si creano dal web.",
+    vacio: "Qui compaiono gli strumenti che Len costruisce per te. Chiedine uno a Len quando ti serve.",
     cargando: "Caricamento…",
     error: "Impossibile caricare.",
     reintentar: "Riprova",
@@ -100,7 +100,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   ja: {
     titulo: "ツール",
-    vacio: "Len があなたのために作ったツールがここに表示されます。作成はウェブで行います。",
+    vacio: "Len があなたのために作ったツールがここに表示されます。必要なときは Len に頼んでください。",
     cargando: "読み込み中…",
     error: "読み込めませんでした。",
     reintentar: "もう一度",
@@ -115,7 +115,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   ko: {
     titulo: "도구",
-    vacio: "Len이 만들어 준 도구가 여기에 표시됩니다. 도구는 웹에서 만듭니다.",
+    vacio: "Len이 만들어 준 도구가 여기에 표시됩니다. 필요할 때 Len에게 부탁하세요.",
     cargando: "불러오는 중…",
     error: "불러오지 못했습니다.",
     reintentar: "다시 시도",
@@ -130,7 +130,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   zh: {
     titulo: "工具",
-    vacio: "Len 为你构建的工具会显示在这里。工具在网页上创建。",
+    vacio: "Len 为你构建的工具会显示在这里。需要时请让 Len 帮你做一个。",
     cargando: "加载中…",
     error: "无法加载。",
     reintentar: "重试",
@@ -145,7 +145,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
   },
   nl: {
     titulo: "Tools",
-    vacio: "Hier verschijnen de tools die Len voor je bouwt. Je maakt ze op het web.",
+    vacio: "Hier verschijnen de tools die Len voor je bouwt. Vraag Len om er een als je die nodig hebt.",
     cargando: "Laden…",
     error: "Kon niet laden.",
     reintentar: "Opnieuw proberen",
