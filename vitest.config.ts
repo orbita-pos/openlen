@@ -629,6 +629,9 @@ export default defineConfig({
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
       "app/api/tools/**/*.test.ts",
+      // The game mode (spec local 2026-11-05-modo-juego-design). LISTA BLANCA.
+      "lib/games/**/*.test.ts",
+      "app/api/games/**/*.test.ts",
       "app/api/tool-cards/**/*.test.ts",
       // The atomic work of an isolated child's copy (`inTransaction`). LISTA BLANCA.
       "lib/db/transaction-scope.test.ts",
