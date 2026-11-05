@@ -57,7 +57,7 @@ describe("toolSkeleton", () => {
     const app = JSON.parse(esqueletoDeApp({ titulo: "Reservas", idioma: "es" }).ficheros["/package.json"]!) as { dependencies: unknown };
     const pkg = JSON.parse(s.files["/package.json"]!) as Record<string, unknown>;
     expect(pkg.dependencies).toEqual(app.dependencies);
-    expect(pkg.openlen).toEqual({ tool: { placement: "rail" } });
+    expect(pkg.openlen).toEqual({ tool: { placement: "rail", jobs: {} } });
     expect(pkg.version).toBe("1.0.0");
   });
 
