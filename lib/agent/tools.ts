@@ -1169,6 +1169,9 @@ export interface AgentSession {
   /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): `publish` installs, and the eyes can open
    *  the installed version. Absent = not a tool. */
   tool?: boolean;
+  /** A GAME (spec local 2026-11-05-modo-juego-design, §8.4): the game posture and the `game-development` skill.
+   *  Absent = not a game. */
+  game?: boolean;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la

@@ -169,7 +169,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
         if (texto === null) throw new Error("its types couldn't be read now");
         return texto;
       }
-      const doc = textoDeLaPlataforma(ruta, session.mode, session.app ?? null, realTerminalFor(session.userId));
+      const doc = textoDeLaPlataforma(ruta, session.mode, session.app ?? null, realTerminalFor(session.userId), session.tool === true, session.game === true);
       if (doc !== null) return doc;
       throw new Error(`${ruta}: no such read-only file`);
     },
