@@ -710,9 +710,32 @@ async function correrTurno(
   // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): `tool-suggestions` and Len's
   // `propose_action` for whoever speaks, with «Sugerencias de herramientas» on, a paid plan, outside a tool project.
   const ofrecerSugerencias = await suggestionsOfferedTo(quien, toolDelTurno).catch(() => false);
+  // AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): the speaker's, as
+  // `mcp__<server>__<operation>`, LAST and sorted — the same installations give the same bytes, so only installing moves
+  // the cache prefix. None with the functions off, on a free plan, or when the lookup fails (the turn goes on).
+  const operaciones = functionsEnabled()
+    ? await (async () => {
+        const { operationsFor, realOperationsDeps } = await import("@/lib/tools/mcp/operations");
+        return operationsFor(quien, await realOperationsDeps());
+      })().catch((err: unknown) => {
+        console.warn("[tools] the speaker's operations couldn't be read:", err);
+        return null;
+      })
+    : null;
+  if (operaciones && operaciones.routes.size > 0) {
+    deps.toolOperations = {
+      async call(name, args) {
+        const route = operaciones.routes.get(name);
+        if (!route) return { response: { isError: true, content: [{ type: "text", text: `${name} isn't an operation of a tool installed for you.` }] } };
+        const [{ callOperation, realOperationsDeps }, { personEmail }] = await Promise.all([import("@/lib/tools/mcp/operations"), import("@/lib/tools/store")]);
+        return callOperation(quien, await personEmail(quien), route, args, await realOperationsDeps());
+      },
+    };
+  }
   const conPostura = (d: Record<string, unknown>[]) => {
     const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
-    return ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
+    const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
+    return operaciones && operaciones.declarations.length > 0 ? [...conLaTarjeta, ...operaciones.declarations] : conLaTarjeta;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
