@@ -928,6 +928,8 @@ describe("la vista «Datos» se retiró y el prompt no la nombra", () => {
       cambios: "Cambios",
       // Apps (F4): en una app el lienzo la enseña corriendo.
       app: "App",
+      // The game mode (spec local 2026-11-05-modo-juego-design, §8.6): in a game, that lens is called «Juego».
+      game: "Juego",
     });
   });
 });

@@ -38,7 +38,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
-- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: load the convert-to-app skill, build the app in /src and then call convert_to_app. Never convert without their yes.
+- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: load the convert-to-app skill, build the app in /src and then call convert_to_app. Never convert without their yes. A game that will grow —levels, 3D, several files— fits better as a GAME project: offer it the same way, build it in /src reading /.openlen/skills/game-development/SKILL.md, and convert it with convert_to_app and game: true. A small one-file game the user only wants on this page can stay in the page.
 - You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
@@ -109,7 +109,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
-- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: load the convert-to-app skill, build the app in /src and then call convert_to_app. Never convert without their yes.
+- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: load the convert-to-app skill, build the app in /src and then call convert_to_app. Never convert without their yes. A game that will grow —levels, 3D, several files— fits better as a GAME project: offer it the same way, build it in /src reading /.openlen/skills/game-development/SKILL.md, and convert it with convert_to_app and game: true. A small one-file game the user only wants on this page can stay in the page.
 - You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
@@ -1491,7 +1491,12 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     "description": "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: /src/main.tsx mounting /src/App.tsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.tsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\\"#/menu\\").",
     "parameters": {
       "type": "OBJECT",
-      "properties": {}
+      "properties": {
+        "game": {
+          "type": "BOOLEAN",
+          "description": "Convert it into a GAME project instead (only after the user accepted a game): the shell fills the window, Len's game posture applies from then on, and /src needs no <HashRouter> —a game has no routes—, only the entry mounting it into #root."
+        }
+      }
     }
   },
   {
@@ -4407,7 +4412,12 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     "description": "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: /src/main.tsx mounting /src/App.tsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.tsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\\"#/menu\\").",
     "parameters": {
       "type": "OBJECT",
-      "properties": {}
+      "properties": {
+        "game": {
+          "type": "BOOLEAN",
+          "description": "Convert it into a GAME project instead (only after the user accepted a game): the shell fills the window, Len's game posture applies from then on, and /src needs no <HashRouter> —a game has no routes—, only the entry mounting it into #root."
+        }
+      }
     }
   },
   {
@@ -5633,6 +5643,418 @@ Rules:
 - Copy the EXACT tag, just as it is written above. DON'T add integrity or crossorigin to it: this origin sends no CORS headers, and either of the two attributes makes the browser BLOCK the library and your code die with "is not defined".
 - They go in the <head>, before your own <script>: that way the library is already loaded when your code runs.
 - Don't put them in "just in case": a chart with made-up data is worse than no chart. Use them when the page really calls for them."
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: game-development
+description: Use before building or changing a game in this project — how to build it (a blockout first, then a scene that already plays), which engine (three for 3D, Phaser for 2D), what this platform can't serve, where models and sounds come from, and how to check it by playing.
+---
+
+# Building a game
+
+This project is a game: an app (React in /src) whose game runs in a canvas. It is born without an engine: you pick one from what the person asks for, and importing it installs it, as \`npm install\` would.
+
+## The method
+
+Moonshot teaches this way of building a 3D scene or a game with an agent in Kimi Academy's 3D tutorial (kimi.ai/academy/3d-tutorial). It works for 2D too.
+
+1. **A blockout first.** Build the level with plain boxes, cylinders and flat colors before any model, texture or effect.
+2. **Look at it from more than one camera** before adding detail: the player's, from the front and from above.
+3. **One representative scene that already plays** — the player moves, the main rule works — before more levels, enemies or content.
+4. **Finish one piece before the next.** Check that the interaction feels right and that it loads quickly, then add more.
+5. **Assets: first list what can be used as it is, then make what is missing.** Every asset brought from outside goes in /ASSETS.md (references/assets.md).
+
+## Pick the engine
+
+- **3D: three**, with \`WebGLRenderer\`. Read references/three.md before writing it.
+- **2D: Phaser 4.** Mount it in React the way Phaser's own template does (references/phaser/template-react-ts.md). Before using a part of Phaser (scenes, keyboard and touch input, arcade physics, scaling, audio, loading, sprites, tilemaps, tweens, cameras…), find its own skill in references/phaser-index.md and read it. You probably know Phaser 3 better than 4: references/phaser/v3-to-v4-migration/SKILL.md says what changed. Phaser's files are served in a game project; in a page being converted into a game, they arrive with the next turn.
+- **A tiny game** (a few shapes, one screen): a plain 2D canvas is enough, as the skeleton's /src/game/Game.tsx does.
+
+Keep what changes every frame in the engine or in plain variables, never in React state: a setState per frame renders React sixty times a second. React is for the menus and the HUD around the canvas.
+
+## What this platform can't serve
+
+- **WebGPU.** Len's eyes are a headless Chromium with software WebGL, and they can't capture a WebGPU canvas; three's WebGPURenderer falls back without saying so. Use WebGLRenderer: three's own llms.txt calls it the default, with the widest compatibility.
+- **A package that loads a separate .wasm file.** Packages are bundled into the app, and a .wasm fetched by URL at runtime has no path here. Use the \`-compat\` builds that carry it inside (for physics, \`@dimforge/rapier3d-compat\`).
+- **Draco or KTX2 compressed models**, whose decoders are fetched by URL. Compress GLB with meshopt instead: its decoder is a plain module (\`three/addons/libs/meshopt_decoder.module.js\`).
+
+## Phones
+
+- Touch controls as well as keys: buttons or a virtual joystick over the canvas.
+- Start with a screen the player taps («Tap to play»). Sound, pointer lock and fullscreen only start after a user gesture, by the browsers' autoplay rule. Phaser unlocks its audio on that first touch by itself; with three, resume the AudioContext there.
+- iPhone has no fullscreen for an element: design for the window.
+- The game's canvas has \`touch-action: none\`, so dragging on it doesn't scroll the page.
+
+## Files
+
+- /src/game/ — the game. /src/App.tsx — the screens and HUD.
+- /models, /textures, /sounds — GLB models, textures and sounds; images in /img. Load them by their path ("/models/ship.glb") or import them with ?url.
+- The project's files are served at their own path: there is no public/ folder mapped to the root. Where Phaser's template writes \`this.load.setPath('assets')\`, write the real folder (\`this.load.setPath('/img')\`).
+- /ASSETS.md — every asset brought from outside, with its source, license and attribution.
+
+## Check it by playing
+
+Load the verify skill and follow it. In a game:
+
+- use_page presses keys (key) and clicks or drags on the canvas. Look with a screenshot, or a zoom on the canvas: the page's text doesn't show what a canvas draws.
+- What only moves while a key is HELD (most games) is checked in the box with Playwright: the verify skill's "When it moves" (a paused clock, keyboard.down, a strip of frames). Without the box, say that you couldn't verify it.
+- You don't have to win the game: a few seconds of input and the proof that it moved are enough. If two looks didn't settle it, say what you saw instead of playing on.
+- Never say it plays if you didn't see it move.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: game-development
+description: Use before building or changing a game in this project — how to build it (a blockout first, then a scene that already plays), which engine (three for 3D, Phaser for 2D), what this platform can't serve, where models and sounds come from, and how to check it by playing.
+---
+
+# Building a game
+
+This project is a game: an app (React in /src) whose game runs in a canvas. It is born without an engine: you pick one from what the person asks for, and importing it installs it, as \`npm install\` would.
+
+## The method
+
+Moonshot teaches this way of building a 3D scene or a game with an agent in Kimi Academy's 3D tutorial (kimi.ai/academy/3d-tutorial). It works for 2D too.
+
+1. **A blockout first.** Build the level with plain boxes, cylinders and flat colors before any model, texture or effect.
+2. **Look at it from more than one camera** before adding detail: the player's, from the front and from above.
+3. **One representative scene that already plays** — the player moves, the main rule works — before more levels, enemies or content.
+4. **Finish one piece before the next.** Check that the interaction feels right and that it loads quickly, then add more.
+5. **Assets: first list what can be used as it is, then make what is missing.** Every asset brought from outside goes in /ASSETS.md (references/assets.md).
+
+## Pick the engine
+
+- **3D: three**, with \`WebGLRenderer\`. Read references/three.md before writing it.
+- **2D: Phaser 4.** Mount it in React the way Phaser's own template does (references/phaser/template-react-ts.md). Before using a part of Phaser (scenes, keyboard and touch input, arcade physics, scaling, audio, loading, sprites, tilemaps, tweens, cameras…), find its own skill in references/phaser-index.md and read it. You probably know Phaser 3 better than 4: references/phaser/v3-to-v4-migration/SKILL.md says what changed. Phaser's files are served in a game project; in a page being converted into a game, they arrive with the next turn.
+- **A tiny game** (a few shapes, one screen): a plain 2D canvas is enough, as the skeleton's /src/game/Game.tsx does.
+
+Keep what changes every frame in the engine or in plain variables, never in React state: a setState per frame renders React sixty times a second. React is for the menus and the HUD around the canvas.
+
+## What this platform can't serve
+
+- **WebGPU.** Len's eyes are a headless Chromium with software WebGL, and they can't capture a WebGPU canvas; three's WebGPURenderer falls back without saying so. Use WebGLRenderer: three's own llms.txt calls it the default, with the widest compatibility.
+- **A package that loads a separate .wasm file.** Packages are bundled into the app, and a .wasm fetched by URL at runtime has no path here. Use the \`-compat\` builds that carry it inside (for physics, \`@dimforge/rapier3d-compat\`).
+- **Draco or KTX2 compressed models**, whose decoders are fetched by URL. Compress GLB with meshopt instead: its decoder is a plain module (\`three/addons/libs/meshopt_decoder.module.js\`).
+
+## Phones
+
+- Touch controls as well as keys: buttons or a virtual joystick over the canvas.
+- Start with a screen the player taps («Tap to play»). Sound, pointer lock and fullscreen only start after a user gesture, by the browsers' autoplay rule. Phaser unlocks its audio on that first touch by itself; with three, resume the AudioContext there.
+- iPhone has no fullscreen for an element: design for the window.
+- The game's canvas has \`touch-action: none\`, so dragging on it doesn't scroll the page.
+
+## Files
+
+- /src/game/ — the game. /src/App.tsx — the screens and HUD.
+- /models, /textures, /sounds — GLB models, textures and sounds; images in /img. Load them by their path ("/models/ship.glb") or import them with ?url.
+- The project's files are served at their own path: there is no public/ folder mapped to the root. Where Phaser's template writes \`this.load.setPath('assets')\`, write the real folder (\`this.load.setPath('/img')\`).
+- /ASSETS.md — every asset brought from outside, with its source, license and attribution.
+
+## Check it by playing
+
+Load the verify skill and follow it. In a game:
+
+- use_page presses keys (key) and clicks or drags on the canvas. Look with a screenshot, or a zoom on the canvas: the page's text doesn't show what a canvas draws.
+- What only moves while a key is HELD (most games) is checked in the box with Playwright: the verify skill's "When it moves" (a paused clock, keyboard.down, a strip of frames). Without the box, say that you couldn't verify it.
+- You don't have to win the game: a few seconds of input and the proof that it moved are enough. If two looks didn't settle it, say what you saw instead of playing on.
+- Never say it plays if you didn't see it move.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/references/assets.md) — la salida entera, sin cambios accidentales 1`] = `
+"# Assets
+
+Kimi Academy's 3D tutorial (kimi.ai/academy/3d-tutorial), said for this platform.
+
+## First, what can be used as it is
+
+List the assets that can be used as they are, then make what is missing. Pick packs of one consistent style: a game mixing three styles looks broken.
+
+## Where they come from
+
+All three sources are CC0: free to use, with nothing required. Each asset still goes in /ASSETS.md.
+
+- **Kenney** (kenney.nl): game packs with 2D sprites, 3D models, interface pieces and sounds.
+- **Poly Haven** (polyhaven.com): 3D models, textures and HDRIs.
+- **ambientCG** (ambientcg.com): textures and materials.
+
+Careful with **Quaternius**. Its license forbids redistributing the assets on their own, also inside templates, and anyone can remix a public project here from Explore. Don't use it in a public game.
+
+## With the box
+
+The box can download from those three sites.
+
+- Download into /tmp, unzip, and copy only the files the game uses into /models, /textures, /sounds or /img.
+- Never link to a file on its own site (Poly Haven forbids scraping). A file on someone else's server breaks the published game the day it moves.
+- Each file can be up to 50 MB. Compress GLB models with meshopt (references/three.md).
+
+## Without the box
+
+There is no way to bring a file from outside into the project. Build with what code makes:
+- **Shapes and materials:** three's geometries, or Phaser's Graphics and the textures it generates. This is how Kimi's method starts anyway: the blockout.
+- **Sounds synthesized with Web Audio:** an OscillatorNode with a GainNode envelope makes a jump, a coin or a hit.
+
+Don't say you brought assets you couldn't bring.
+
+## /ASSETS.md
+
+One row per asset brought from outside, even CC0:
+
+| File | Source | License | Attribution |
+|---|---|---|---|
+| /models/ship.glb | https://polyhaven.com/a/… | CC0 | — |
+
+The list tells the person what they can reuse, and from where.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/references/assets.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"# Assets
+
+Kimi Academy's 3D tutorial (kimi.ai/academy/3d-tutorial), said for this platform.
+
+## First, what can be used as it is
+
+List the assets that can be used as they are, then make what is missing. Pick packs of one consistent style: a game mixing three styles looks broken.
+
+## Where they come from
+
+All three sources are CC0: free to use, with nothing required. Each asset still goes in /ASSETS.md.
+
+- **Kenney** (kenney.nl): game packs with 2D sprites, 3D models, interface pieces and sounds.
+- **Poly Haven** (polyhaven.com): 3D models, textures and HDRIs.
+- **ambientCG** (ambientcg.com): textures and materials.
+
+Careful with **Quaternius**. Its license forbids redistributing the assets on their own, also inside templates, and anyone can remix a public project here from Explore. Don't use it in a public game.
+
+## With the box
+
+The box can download from those three sites.
+
+- Download into /tmp, unzip, and copy only the files the game uses into /models, /textures, /sounds or /img.
+- Never link to a file on its own site (Poly Haven forbids scraping). A file on someone else's server breaks the published game the day it moves.
+- Each file can be up to 50 MB. Compress GLB models with meshopt (references/three.md).
+
+## Without the box
+
+There is no way to bring a file from outside into the project. Build with what code makes:
+- **Shapes and materials:** three's geometries, or Phaser's Graphics and the textures it generates. This is how Kimi's method starts anyway: the blockout.
+- **Sounds synthesized with Web Audio:** an OscillatorNode with a GainNode envelope makes a jump, a coin or a hit.
+
+Don't say you brought assets you couldn't bring.
+
+## /ASSETS.md
+
+One row per asset brought from outside, even CC0:
+
+| File | Source | License | Attribution |
+|---|---|---|---|
+| /models/ship.glb | https://polyhaven.com/a/… | CC0 | — |
+
+The list tells the person what they can reuse, and from where.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/references/three.md) — la salida entera, sin cambios accidentales 1`] = `
+"# three.js here
+
+Written from three.js's own sources (MIT): its guide for language models (threejs.org/docs/llms.txt) and its manual, for three 0.187.0. three changes its API often: the types and the lint that check the files you change catch what no longer exists.
+
+## Import
+
+- \`import * as THREE from "three"\`: importing it installs it.
+- Addons come from \`three/addons/…\`: \`import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"\`, \`import { OrbitControls } from "three/addons/controls/OrbitControls.js"\`.
+- Not the old global \`<script src="…/three.min.js">\`: three's llms.txt calls it an outdated pattern.
+
+## The renderer
+
+- \`new THREE.WebGLRenderer({ antialias: true })\` is the default ("Maximum browser compatibility", says llms.txt). \`WebGPURenderer\` is for TSL or compute shaders, and here not at all: Len's eyes can't capture WebGPU.
+- \`renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))\`: a phone at 3× would draw nine times the pixels.
+- Colors: the output is sRGB by default; a texture with color gets \`texture.colorSpace = THREE.SRGBColorSpace\`. (\`outputEncoding\` is gone.)
+
+## A scene inside a React component
+
+The manual's first scene ("Creating a scene"), sized to its box as in its "Responsive Design", and released when the component goes away:
+
+\`\`\`tsx
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+
+export default function Game() {
+  const mount = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const host = mount.current!;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    camera.position.z = 3;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    host.appendChild(renderer.domElement);
+
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x44aa88 }));
+    scene.add(cube, new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+
+    const resize = () => {
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(host);
+    resize();
+
+    let last = 0;
+    renderer.setAnimationLoop((time) => {
+      // Seconds since the last frame, capped: after a pause nothing jumps across the level.
+      const dt = Math.min((time - last) / 1000, 0.25);
+      last = time;
+      cube.rotation.y += dt;
+      renderer.render(scene, camera);
+    });
+
+    return () => {
+      renderer.setAnimationLoop(null);
+      observer.disconnect();
+      scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose();
+          for (const m of [o.material].flat()) m.dispose();
+        }
+      });
+      renderer.dispose();
+      host.removeChild(renderer.domElement);
+    };
+  }, []);
+
+  return <div ref={mount} className="h-full w-full" style={{ touchAction: "none" }} />;
+}
+\`\`\`
+
+Skipping the cleanup leaks a WebGL context every time the component mounts again, and browsers only keep a few.
+
+## A model (GLB, compressed with meshopt)
+
+\`\`\`ts
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+const gltf = await loader.loadAsync("/models/ship.glb");
+scene.add(gltf.scene);
+\`\`\`
+
+Not Draco or KTX2: their decoders are fetched by URL, which has no path here.
+
+## Collisions and physics
+
+None by default. Boxes that touch are a bounding-box check (\`new THREE.Box3().setFromObject(a).intersectsBox(…)\`), and the ground under the player is a \`THREE.Raycaster\`. When the game needs real physics, use \`@dimforge/rapier3d-compat\` (the build with its .wasm inside), and call \`await RAPIER.init()\` before creating the world.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/game-development/references/three.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"# three.js here
+
+Written from three.js's own sources (MIT): its guide for language models (threejs.org/docs/llms.txt) and its manual, for three 0.187.0. three changes its API often: the types and the lint that check the files you change catch what no longer exists.
+
+## Import
+
+- \`import * as THREE from "three"\`: importing it installs it.
+- Addons come from \`three/addons/…\`: \`import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"\`, \`import { OrbitControls } from "three/addons/controls/OrbitControls.js"\`.
+- Not the old global \`<script src="…/three.min.js">\`: three's llms.txt calls it an outdated pattern.
+
+## The renderer
+
+- \`new THREE.WebGLRenderer({ antialias: true })\` is the default ("Maximum browser compatibility", says llms.txt). \`WebGPURenderer\` is for TSL or compute shaders, and here not at all: Len's eyes can't capture WebGPU.
+- \`renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))\`: a phone at 3× would draw nine times the pixels.
+- Colors: the output is sRGB by default; a texture with color gets \`texture.colorSpace = THREE.SRGBColorSpace\`. (\`outputEncoding\` is gone.)
+
+## A scene inside a React component
+
+The manual's first scene ("Creating a scene"), sized to its box as in its "Responsive Design", and released when the component goes away:
+
+\`\`\`tsx
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+
+export default function Game() {
+  const mount = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const host = mount.current!;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    camera.position.z = 3;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    host.appendChild(renderer.domElement);
+
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x44aa88 }));
+    scene.add(cube, new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+
+    const resize = () => {
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(host);
+    resize();
+
+    let last = 0;
+    renderer.setAnimationLoop((time) => {
+      // Seconds since the last frame, capped: after a pause nothing jumps across the level.
+      const dt = Math.min((time - last) / 1000, 0.25);
+      last = time;
+      cube.rotation.y += dt;
+      renderer.render(scene, camera);
+    });
+
+    return () => {
+      renderer.setAnimationLoop(null);
+      observer.disconnect();
+      scene.traverse((o) => {
+        if (o instanceof THREE.Mesh) {
+          o.geometry.dispose();
+          for (const m of [o.material].flat()) m.dispose();
+        }
+      });
+      renderer.dispose();
+      host.removeChild(renderer.domElement);
+    };
+  }, []);
+
+  return <div ref={mount} className="h-full w-full" style={{ touchAction: "none" }} />;
+}
+\`\`\`
+
+Skipping the cleanup leaks a WebGL context every time the component mounts again, and browsers only keep a few.
+
+## A model (GLB, compressed with meshopt)
+
+\`\`\`ts
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+
+const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+const gltf = await loader.loadAsync("/models/ship.glb");
+scene.add(gltf.scene);
+\`\`\`
+
+Not Draco or KTX2: their decoders are fetched by URL, which has no path here.
+
+## Collisions and physics
+
+None by default. Boxes that touch are a bounding-box check (\`new THREE.Box3().setFromObject(a).intersectsBox(…)\`), and the ground under the player is a \`THREE.Raycaster\`. When the game needs real physics, use \`@dimforge/rapier3d-compat\` (the build with its .wasm inside), and call \`await RAPIER.init()\` before creating the world.
+"
 `;
 
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/office/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `

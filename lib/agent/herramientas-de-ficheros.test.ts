@@ -2734,6 +2734,49 @@ describe("convertir una página en app", () => {
     assert.ok((rota.diagnosticos ?? []).some((d) => d.ruta === "/src/screens/Nueva.jsx"), "lo que no compila ya vuelve en el acto");
   });
 
+  // A PAGE THAT ASKS TO BE A GAME (spec local 2026-11-05-modo-juego-design, §8.2): the same conversion, plus data.game.
+  const GAME_MAIN = 'import { createRoot } from "react-dom/client";\nimport App from "./App";\n\ncreateRoot(document.getElementById("root")!).render(<App />);\n';
+  const GAME_APP = "export default function App() {\n  return <canvas className=\"block h-full w-full\" />;\n}\n";
+
+  it("🔴 with game: true it becomes a game — data.app and data.game, the full-screen shell, the pages in Versions, and the rest of the turn is a game's", async () => {
+    const { deps, store, archivos } = conPaginas();
+    archivos["/src/main.tsx"] = GAME_MAIN;
+    archivos["/src/App.tsx"] = GAME_APP;
+    const s = makeSession();
+    const r = await runAgentTool(s, deps, "convert_to_app", { game: true });
+    assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    assert.deepEqual(store.data.app, { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.tsx" });
+    assert.equal(typeof store.data.game?.bornAt, "string");
+    assert.equal(store.data.pages, undefined);
+    assert.match(store.data.html, /html, body, #root \{ height: 100%; margin: 0; overflow: hidden; \}/);
+    assert.match(store.data.html, /<title>Brote · Inicio<\/title>/);
+    assert.deepEqual(store.versions.map((v) => v.page), [null, "contacto", "menu"]);
+    assert.equal(s.game, true);
+    assert.deepEqual(s.app, store.data.app);
+  });
+
+  it("without game, converting leaves no data.game and the app's shell", async () => {
+    const { deps, store, archivos } = conPaginas();
+    archivos["/src/main.tsx"] = GAME_MAIN;
+    archivos["/src/App.tsx"] = GAME_APP;
+    for (const args of [{}, { game: false }, { game: "yes" }]) {
+      const r = await runAgentTool(makeSession(), deps, "convert_to_app", args);
+      if (r.response.ok) break;
+    }
+    assert.equal(store.data.game, undefined);
+    assert.doesNotMatch(store.data.html, /overflow: hidden/);
+  });
+
+  it("the page's prompt offers a game like an app — with the skills on, reading game-development; off, not at all", async () => {
+    const { buildAgentSystemPrompt, buildFunctionDeclarations } = await import("./catalog");
+    const on = buildAgentSystemPrompt({}, "len", null);
+    assert.match(on, /\/\.openlen\/skills\/game-development\/SKILL\.md/);
+    assert.match(on, /game: true/);
+    assert.doesNotMatch(buildAgentSystemPrompt({ OPENLEN_SKILLS: "0" }, "len", null), /game-development/);
+    const decl = buildFunctionDeclarations({}, {}, "len", null).find((d) => d.name === "convert_to_app") as { parameters: { properties: Record<string, { type: string }> } };
+    assert.equal(decl.parameters.properties.game?.type, "BOOLEAN");
+  });
+
   it("🔴 en una app, Read abre /node_modules por su ruta, como Claude Code (el turno real de Len lo buscó); en una página no existe", async () => {
     const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
     const { deps } = conCarpeta({ html: "<!doctype html>", app: APP });
