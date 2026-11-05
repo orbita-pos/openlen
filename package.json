@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "seo:indexnow": "tsx --tsconfig tsconfig.eval.json scripts/indexnow-ping.ts",
     "artifacts:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/artifacts-migrate.ts",
     "password-changed:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/password-changed-migrate.ts",
     "artifacts:bundle": "node scripts/build-artifacts.mjs",
