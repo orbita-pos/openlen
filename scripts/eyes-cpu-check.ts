@@ -2,14 +2,13 @@
 // What the new eyes cost the machine they run on (spec local 2026-11-05-ojos-que-ven-el-movimiento, §7,
 // §8.5, §10): use_page on a WebGL scene that never stops drawing, with Len's own launcher (WebGL by
 // software, nice 10 on Linux), measuring
-//   (a) ms per `key` step with and without the canvas measure (internals.canvasDiff);
-//   (b) the machine's busy cores during a visit of 8 × `wait: 10`, against the same time idle;
+//   (b) the machine's busy cores during a visit of 8 × `wait: 10` (the page runs during the waits),
+//       against the same time idle;
 //   (c) with --probe-url <url>, that URL's latency every 500 ms during the waits, against idle.
-// Criteria: (a) ≤ 250 ms more per step — measured 05/11: three captures of ~45 ms each, whatever their
-// size (the compositor's readback), so the plan's first 50 ms couldn't be met by a smaller scale; a step
-// already takes 2–3.5 s; (c) p95 during the visit ≤ 2 × idle — if not, a cap on the
-// total wait of a visit. Run it locally first; on the production box only in the box rehearsal, with
-// Jesús's OK.
+// Criterion: (c) p95 during the visit ≤ 2 × idle — if not, a cap on the total wait of a visit. (There
+// was an (a) for the per-step pixel measure; it went on 05/11 with the measure itself: Claude, DeepSeek
+// and Kimi's agent look at the page instead of measuring it.) Run it locally first; on the production
+// box only in the box rehearsal, with Jesús's OK.
 //
 // Run: npm run eyes:cpu-check [-- --probe-url https://…]
 
@@ -34,7 +33,6 @@ addEventListener("keydown", function () { x += 0.5; });
 (function f(ms) { gl.uniform1f(tl, ms / 1000 + x); gl.clearColor(0.07, 0.07, 0.07, 1); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES, 0, 3); requestAnimationFrame(f); })(0);
 </script></body></html>`;
 
-const KEYS: PasoDeUso[] = Array.from({ length: 6 }, () => ({ key: "ArrowRight" }));
 const WAITS: PasoDeUso[] = Array.from({ length: 8 }, () => ({ wait: 10 }));
 
 /** Busy cores of the whole machine between two readings of os.cpus(). */
@@ -83,35 +81,17 @@ const f1 = (x: number) => x.toFixed(1);
 async function main() {
   const at = process.argv.indexOf("--probe-url");
   const probeUrl = at >= 0 ? process.argv[at + 1] : undefined;
-  const visit = (pasos: PasoDeUso[], canvasDiff: boolean) =>
-    usarPagina({ html: SCENE, pasos, ruta: "/index.html" }, { canvasDiff, plazoMs: 120_000 });
+  const visit = (pasos: PasoDeUso[]) => usarPagina({ html: SCENE, pasos, ruta: "/index.html" }, { plazoMs: 120_000 });
 
-  // (a) the canvas measure, per step.
-  await visit([{ key: "a" }], false); // warm-up: the first Chromium start is slower
-  const t0 = performance.now();
-  await visit(KEYS, false);
-  const off = performance.now() - t0;
-  const t1 = performance.now();
-  const on = await visit(KEYS, true);
-  const onMs = performance.now() - t1;
-  const perStep = (onMs - off) / KEYS.length;
-  console.log(`(a) 6 key steps: ${f1(off)} ms without the canvas measure, ${f1(onMs)} ms with → ${f1(perStep)} ms more per step`);
-  console.log(`    the report says: ${on.informe.split("\n").find((l) => l.includes("the canvas")) ?? "(no canvas line)"}`);
-
-  // (b) + (c): idle, then a visit full of waits.
+  await visit([{ key: "a" }]); // warm-up: the first Chromium start is slower
   const idle = await sample(new Promise((r) => setTimeout(r, 6_000)), probeUrl);
-  const busy = await sample(visit(WAITS, true), probeUrl);
+  const busy = await sample(visit(WAITS), probeUrl);
   console.log(`(b) busy cores of ${cpus().length}: idle avg ${f1(avg(idle.cores))}, during 8 × wait:10 avg ${f1(avg(busy.cores))} max ${f1(Math.max(...busy.cores))}`);
   if (probeUrl) {
-    console.log(`(c) ${probeUrl}: p95 idle ${f1(p95(idle.latencies))} ms, during the visit ${f1(p95(busy.latencies))} ms`);
-  }
-
-  const verdicts = [`canvas measure ${perStep <= 250 ? "OK" : "OVER"} (${f1(perStep)} ms/step, limit 250)`];
-  if (probeUrl) {
     const ratio = p95(busy.latencies) / Math.max(1, p95(idle.latencies));
-    verdicts.push(`latency ${ratio <= 2 ? "OK" : "OVER"} (p95 × ${f1(ratio)}, limit 2)`);
+    console.log(`(c) ${probeUrl}: p95 idle ${f1(p95(idle.latencies))} ms, during the visit ${f1(p95(busy.latencies))} ms`);
+    console.log(`\nlatency ${ratio <= 2 ? "OK" : "OVER"} (p95 × ${f1(ratio)}, limit 2)`);
   }
-  console.log(`\n${verdicts.join("; ")}`);
 }
 
 main().then(
