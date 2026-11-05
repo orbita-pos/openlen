@@ -406,7 +406,9 @@ describe("use_page — captura, eval y lo que hace el navegador", () => {
     expect(r.images ?? []).toHaveLength(0);
   }, 90_000);
 
-  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y «nothing changed»", async () => {
+  // With the canvas in view, the control arm no longer reads «nothing changed» (the report only reads text,
+  // spec local 2026-11-05-ojos-que-ven-el-movimiento): it says to look at the canvas.
+  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y se dice que se mire el canvas", async () => {
     const juego = (pide: boolean) =>
       marco(`<canvas id="c" width="400" height="300"></canvas><div id="ov">Click to play</div>
       <script>
@@ -417,7 +419,7 @@ describe("use_page — captura, eval y lo que hace el navegador", () => {
     expect(pide).toContain("the page took the pointer (pointer lock is on)");
     expect(pide).not.toMatch(/nothing (else )?changed/);
     expect(noPide).not.toContain("pointer lock");
-    expect(noPide).toMatch(/nothing changed/);
+    expect(noPide).toMatch(/a canvas is in view, and this report only reads the page's text/);
   }, 90_000);
 });
 
@@ -612,9 +614,295 @@ describe("use_page — another site", () => {
     });
   }, 120_000);
 
+  // Claude Code's and DeepSeek's browser tools act the same on any site: the canvas notice too.
+  it("🔴 on another site, with a canvas in view and no text changed, it says to look at the canvas", async () => {
+    const { createServer } = await import("node:http");
+    const { allowEgressOrigin } = await import("@/lib/security/egress-proxy");
+    const juego = (vivo: boolean) =>
+      marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas><script>
+        var g = document.getElementById("c").getContext("2d"), x = 20;
+        function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
+        pinta();
+        ${vivo ? 'window.addEventListener("keydown", function () { x += 120; });' : ""}
+      </script>`);
+    for (const vivo of [true, false]) {
+      const server = createServer((_req, res) => {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(juego(vivo));
+      });
+      await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+      const host = `127.0.0.1:${(server.address() as { port: number }).port}`;
+      const cerrar = allowEgressOrigin(host);
+      try {
+        const { informe } = await visitAnotherSite({ url: `http://${host}/`, pasos: [{ key: "ArrowRight" }], viewport: "desktop" }, { allowOrigins: [host] });
+        expect(informe).toMatch(/a canvas is in view, and this report only reads the page's text/);
+        expect(informe).not.toMatch(/the canvas (changed|didn't change)/);
+      } finally {
+        cerrar();
+        await new Promise((r) => server.close(r));
+      }
+    }
+  }, 120_000);
+
   it("🔴 control arm: without its origin allowed, a local address isn't reached", async () => {
     await conSitio(async (base) => {
       await expect(visitAnotherSite({ url: base, pasos: [{ read: "Inicio" }], viewport: "desktop" })).rejects.toThrow();
     });
   }, 120_000);
+});
+
+// LO QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): `innerText` cuenta el texto a
+// opacidad 0 o empujado fuera de la pantalla, así que un modal o una hoja que ENTRA animando salía como
+// «nothing changed». Cuenta sólo el texto que un visitante puede ver.
+describe("use_page — sólo cuenta el texto que se ve", () => {
+  const modal = (abre: boolean) =>
+    marco(`
+    <button id="b">Reservar</button>
+    <div id="m" style="opacity:0;transition:opacity .2s">Reserva confirmada</div>
+    <script>
+      document.getElementById("b").addEventListener("click", function () { ${abre ? 'document.getElementById("m").style.opacity = "1";' : 'console.log("x");'} });
+    </script>`);
+
+  it("🔴 un modal que entra por opacidad cuenta como cambio; BRAZO DE CONTROL: si no se abre, nothing changed", async () => {
+    const abre = await visitar(modal(true), [{ click: "Reservar" }]);
+    const noAbre = await visitar(modal(false), [{ click: "Reservar" }]);
+    expect(abre).toContain("appeared: «Reserva confirmada»");
+    expect(abre).not.toMatch(/nothing (else )?changed/);
+    expect(noAbre).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  const hoja = (entra: boolean) =>
+    marco(`
+    <button id="b">Ver carrito</button>
+    <div id="h" style="position:fixed;left:0;right:0;bottom:0;height:200px;background:#eee;transform:translateY(110%);transition:transform .2s">Tu carrito: 2 velas</div>
+    <script>
+      document.getElementById("b").addEventListener("click", function () { ${entra ? 'document.getElementById("h").style.transform = "translateY(0)";' : 'console.log("x");'} });
+    </script>`);
+
+  it("🔴 una hoja que entra desde fuera de la pantalla cuenta como cambio; BRAZO DE CONTROL: si no entra, nothing changed", async () => {
+    const entra = await visitar(hoja(true), [{ click: "Ver carrito" }]);
+    const noEntra = await visitar(hoja(false), [{ click: "Ver carrito" }]);
+    expect(entra).toContain("appeared: «Tu carrito: 2 velas»");
+    expect(noEntra).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  it("el texto del final de una página larga (fuera de la vista, sin animar) sigue contando", async () => {
+    const larga = marco(`<div style="height:3000px">Arriba</div><p id="pie">Pie: Velas Aurora 2026</p><button id="b">Cambiar</button>
+      <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("pie").textContent = "Pie: Velas Aurora 2027"; });</script>`);
+    const informe = await visitar(larga, [{ click: "Cambiar" }]);
+    expect(informe).toContain("«Pie: Velas Aurora 2026» → «Pie: Velas Aurora 2027»");
+  }, 90_000);
+});
+
+// LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5), hechos en la
+// página: teclas, clic y hover por coordenadas, arrastrar, esperar y acercarse. Cada uno con su brazo
+// de control: la misma página sin el efecto dice otra cosa.
+describe("use_page — los pasos de Claude Code", () => {
+  const conTeclado = (escucha: boolean) =>
+    marco(`<p id="pos">x=0</p>
+    <script>
+      var x = 0;
+      ${escucha ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") { x += 10; document.getElementById("pos").textContent = "x=" + x; } });' : ""}
+    </script>`);
+
+  it("🔴 key pulsa la tecla las veces que se pide; BRAZO DE CONTROL: sin nadie que escuche, nothing changed y lo dice", async () => {
+    const viva = await visitar(conTeclado(true), [{ key: "ArrowRight", repeat: 3 }]);
+    const muerta = await visitar(conTeclado(false), [{ key: "ArrowRight", repeat: 3 }]);
+    expect(viva).toContain("I pressed the key «ArrowRight» (3 times)");
+    expect(viva).toContain("«x=0» → «x=30»");
+    expect(muerta).toMatch(/nothing (else )?changed/);
+    expect(muerta).toContain("nothing on the page listens to the keyboard");
+  }, 90_000);
+
+  // Un canvas de 400×300 en (24, 24) —el margen del cuerpo—: su centro está en (224, 174).
+  const lienzo = (escucha: boolean) =>
+    marco(`<canvas id="c" width="400" height="300" style="display:block;background:#ddd"></canvas><p id="donde">Sin clic</p>
+    <script>
+      ${escucha ? 'document.getElementById("c").addEventListener("click", function (e) { document.getElementById("donde").textContent = "Clic en " + Math.round(e.offsetX) + "," + Math.round(e.offsetY); });' : ""}
+    </script>`);
+
+  it("🔴 left_click hace clic en el punto, aunque allí no haya texto; BRAZO DE CONTROL: sin oyente, se dice que nadie escucha y que se mire el canvas", async () => {
+    const viva = await visitar(lienzo(true), [{ left_click: [224, 174] }]);
+    const muerta = await visitar(lienzo(false), [{ left_click: [224, 174] }]);
+    expect(viva).toContain("I clicked at (224, 174)");
+    expect(viva).toContain("«Sin clic» → «Clic en 200,150»");
+    expect(muerta).toMatch(/a canvas is in view, and this report only reads the page's text/);
+    expect(muerta).toContain("nor the page listens to the click");
+  }, 90_000);
+
+  // Claude Code's key takes several space-separated keys; a character outside a US keyboard («é») is
+  // typed as a character, Puppeteer's own way (keyboard.sendCharacter), not refused as an unknown key.
+  it("🔴 key: varias teclas separadas por espacios y una «é»; BRAZO DE CONTROL: sin pulsar, el campo no cambia", async () => {
+    const campo = marco(`<label>Nombre <input id="n" value="abc" autofocus></label>`);
+    const borra = await visitar(campo, [{ key: "End" }, { key: "Backspace Backspace" }]);
+    expect(borra).toContain("[field «Nombre»: «abc»]» → «[field «Nombre»: «a»]");
+    const acento = await visitar(campo, [{ key: "End" }, { key: "é" }]);
+    expect(acento).toContain("[field «Nombre»: «abc»]» → «[field «Nombre»: «abcé»]");
+    expect(acento).not.toContain("couldn't");
+    const nada = await visitar(campo, [{ read: "Nombre" }]);
+    expect(nada).toContain("«abc»");
+  }, 90_000);
+
+  // Kimi's region note («add the region offset»): a screenshot of a BLOCK says where it is in the tab, so a
+  // point in it can become left_click, hover or zoom coordinates.
+  it("una captura de un bloque dice dónde está en la pestaña y que se sume", async () => {
+    const pagina = marco(`<div style="height:300px">Arriba</div><section style="width:400px;height:120px;background:#eee"><h2>Precios</h2></section>`);
+    const { informe } = await usarPagina({ html: pagina, pasos: [{ screenshot: "Precios" }], ruta: "/index.html" });
+    expect(informe).toMatch(/The block is at \(\d+, \d+\) → \(\d+, \d+\) of the tab: add \(\d+, \d+\) to a point of this image/);
+  }, 90_000);
+
+  it("left_click fuera de la pestaña no se hace, lo dice con su tamaño, y la visita para ahí", async () => {
+    const informe = await visitar(lienzo(true), [{ left_click: [5000, 10] }, { read: "Sin clic" }]);
+    expect(informe).toContain("couldn't: (5000, 10) is outside the 1280×900 tab");
+    expect(informe).toContain("Step 2 wasn't done");
+  }, 90_000);
+
+  const menu = (abre: boolean) =>
+    marco(`<div id="m" style="width:300px;height:100px;background:#cde">Menú</div><p id="sub" style="display:none">Contacto</p>
+    <script>
+      ${abre ? 'document.getElementById("m").addEventListener("mouseenter", function () { document.getElementById("sub").style.display = "block"; });' : ""}
+    </script>`);
+
+  it("🔴 hover lleva el ratón al punto y se ve lo que abre; BRAZO DE CONTROL: sin efecto, nothing changed", async () => {
+    const abre = await visitar(menu(true), [{ hover: [100, 60] }]);
+    const noAbre = await visitar(menu(false), [{ hover: [100, 60] }]);
+    expect(abre).toContain("I moved the mouse to (100, 60)");
+    expect(abre).toContain("appeared: «Contacto»");
+    expect(noAbre).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  // Un tablero: «Tarea 1» en (24, 24)–(124, 64); soltarla a la derecha de x=300 la pasa a «Hecho».
+  const tablero = (forma: "puntero" | "html5" | "nada") =>
+    marco(`<div id="t" ${forma === "html5" ? 'draggable="true"' : ""} style="position:absolute;left:24px;top:24px;width:100px;height:40px;background:#fd8">Tarea 1</div>
+    <div id="hecho" style="position:absolute;left:400px;top:0;width:300px;height:300px;background:#efe">Hecho</div>
+    <p id="estado" style="position:absolute;top:400px">Tarea 1 en Por hacer</p>
+    <script>
+      var estado = document.getElementById("estado");
+      ${
+        forma === "puntero"
+          ? `var arrastrando = false;
+      document.getElementById("t").addEventListener("mousedown", function () { arrastrando = true; });
+      document.addEventListener("mouseup", function (e) { if (arrastrando && e.clientX > 300) estado.textContent = "Tarea 1 en Hecho"; arrastrando = false; });`
+          : forma === "html5"
+            ? `var h = document.getElementById("hecho");
+      h.addEventListener("dragover", function (e) { e.preventDefault(); });
+      h.addEventListener("drop", function (e) { e.preventDefault(); estado.textContent = "Tarea 1 en Hecho"; });`
+            : ""
+      }
+    </script>`);
+
+  it("🔴 left_click_drag arrastra con el ratón y con HTML5; BRAZO DE CONTROL: una tarjeta que no se arrastra, nothing changed", async () => {
+    const pasos: PasoDeUso[] = [{ left_click_drag: [74, 44], coordinate: [500, 100] }];
+    const puntero = await visitar(tablero("puntero"), pasos);
+    const html5 = await visitar(tablero("html5"), pasos);
+    const nada = await visitar(tablero("nada"), pasos);
+    expect(puntero).toContain("I dragged from (74, 44) to (500, 100)");
+    expect(puntero).toContain("«Tarea 1 en Por hacer» → «Tarea 1 en Hecho»");
+    expect(html5).toContain("«Tarea 1 en Por hacer» → «Tarea 1 en Hecho»");
+    expect(nada).toMatch(/nothing (else )?changed/);
+  }, 120_000);
+
+  const aviso = (sale: boolean) =>
+    marco(`<p>Editor</p><script>${sale ? 'setTimeout(function () { var p = document.createElement("p"); p.textContent = "Guardado"; document.body.appendChild(p); }, 1000);' : ""}</script>`);
+
+  it("🔴 wait espera en tiempo real y dice lo que cambió solo; BRAZO DE CONTROL: si nada cambia, lo dice", async () => {
+    const sale = await visitar(aviso(true), [{ wait: 2 }]);
+    const noSale = await visitar(aviso(false), [{ wait: 2 }]);
+    expect(sale).toContain("I waited 2 s");
+    expect(sale).toContain("appeared: «Guardado»");
+    expect(noSale).toContain("nothing on the page changed while waiting.");
+    expect(noSale).not.toMatch(/nothing (else )?changed:/);
+  }, 90_000);
+
+  it("muchos wait se cortan con el plazo de la visita, con el mensaje de siempre", async () => {
+    const { informe } = await usarPagina({ html: aviso(false), pasos: [{ wait: 2 }, { wait: 2 }, { wait: 2 }], ruta: "/index.html" }, { plazoMs: 3_000 });
+    expect(informe).toMatch(/the visit went over 3 s and was cut here/);
+  }, 90_000);
+
+  // Review (05/11): what follows a click is the click's, even after a wait saw it appear once.
+  it("🔴 lo que apareció durante un wait sigue siendo efecto del clic la vez siguiente", async () => {
+    const guardar = marco(`<button id="b">Guardar</button>
+      <script>var n = 0; document.getElementById("b").addEventListener("click", function () { n++; var k = n; setTimeout(function () { var p = document.createElement("p"); p.textContent = "Guardado (" + k + ")"; document.body.appendChild(p); }, k === 1 ? 2500 : 500); });</script>`);
+    // The first save is slow: it appears DURING the wait. The second is fast: within the click's own window.
+    const informe = await visitar(guardar, [{ click: "Guardar" }, { wait: 3 }, { click: "Guardar" }]);
+    expect(informe.slice(informe.indexOf("2. wait"), informe.indexOf("3. click"))).toContain("appeared: «Guardado (1)»");
+    const tercero = informe.slice(informe.indexOf("3. click"));
+    expect(tercero).toContain("appeared: «Guardado (2)»");
+    expect(tercero).not.toContain("this also changes by itself");
+    expect(tercero).not.toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  // Review (05/11): zoom's region is the tab's, also on a scrolled page — a box fixed at the tab's top
+  // left is red wherever the page is scrolled to.
+  it("🔴 zoom recorta la región de la PESTAÑA también con la página desplazada", async () => {
+    const fija = marco(`<div style="position:fixed;left:0;top:0;width:200px;height:200px;background:#f00"></div>
+      <div style="height:3000px;background:#00f"></div><button id="b">Abajo</button>`);
+    const { informe, images } = await usarPagina({ html: fija, pasos: [{ click: "Abajo" }, { zoom: [0, 0, 100, 100] }], ruta: "/index.html" });
+    expect(informe).toContain("the region 0,0 → 100,100 of the tab");
+    // The JPEG's center, read by a browser (the eyes' own Chromium): red is the fixed box, blue the page.
+    const browser = await lanzarChromium();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(`<img id="i" src="data:image/jpeg;base64,${images![0]!.dataBase64}">`);
+      const [r, g, b] = (await page.evaluate(
+        "new Promise((ok) => { const i = document.getElementById('i'); const go = () => { const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0); ok(Array.from(x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data)); }; i.complete ? go() : i.onload = go; })",
+      )) as number[];
+      expect(r! > 200 && g! < 60 && b! < 60, `center rgb(${r},${g},${b})`).toBe(true);
+    } finally {
+      await browser.close();
+    }
+  }, 90_000);
+
+  it("zoom devuelve una imagen de la región de la pestaña", async () => {
+    const { informe, images } = await usarPagina({ html: lienzo(false), pasos: [{ zoom: [0, 0, 320, 240] }], ruta: "/index.html" });
+    expect(images?.length).toBe(1);
+    expect(informe).toContain("the region 0,0 → 320,240 of the tab");
+  }, 90_000);
+});
+
+// EL CANVAS, COMO LO MIRAN CLAUDE, DEEPSEEK Y KIMI (spec local 2026-11-05-ojos-que-ven-el-movimiento,
+// revisado el 05/11): ninguno mide píxeles solo; el modelo mira. Un canvas no tiene texto, así que con
+// uno a la vista `use_page` no afirma «nothing changed»: dice que el informe sólo lee texto y que se mire.
+describe("use_page — un canvas a la vista", () => {
+  const juego = (vivo: boolean) =>
+    marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas>
+    <script>
+      var g = document.getElementById("c").getContext("2d"), x = 20;
+      function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
+      pinta();
+      ${vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
+    </script>`);
+  const AVISO = /a canvas is in view, and this report only reads the page's text/;
+
+  it("🔴 con un canvas a la vista no dice «nothing changed»: dice que se mire; BRAZO DE CONTROL: sin oyente, además lo dice", async () => {
+    const vivo = await visitar(juego(true), [{ key: "ArrowRight" }]);
+    const muerto = await visitar(juego(false), [{ key: "ArrowRight" }]);
+    for (const informe of [vivo, muerto]) {
+      expect(informe).toMatch(AVISO);
+      expect(informe).not.toMatch(/nothing (else )?changed/);
+      expect(informe).not.toMatch(/the canvas (changed|didn't change|keeps changing)/);
+    }
+    expect(vivo).not.toContain("nothing on the page listens to the keyboard");
+    expect(muerto).toContain("nothing on the page listens to the keyboard");
+  }, 90_000);
+
+  it("un canvas más abajo, tras un clic que lo trae a la vista: el aviso sale en el paso siguiente", async () => {
+    const abajo = marco(`<div style="height:2000px">Arriba</div><button id="b">Empezar</button><canvas width="600" height="300" style="display:block"></canvas>
+      <script>document.getElementById("b").addEventListener("click", function () {});</script>`);
+    const informe = await visitar(abajo, [{ click: "Empezar" }, { key: "ArrowRight" }]);
+    expect(informe.slice(informe.indexOf("2. key"))).toMatch(AVISO);
+  }, 90_000);
+
+  it("un canvas oculto o de 0×0 no cuenta: «nothing changed» como siempre", async () => {
+    const oculto = marco(`<canvas width="300" height="200" style="display:none"></canvas><canvas width="0" height="0"></canvas><button id="b">Ok</button>
+      <script>document.getElementById("b").addEventListener("click", function () {});</script>`);
+    const informe = await visitar(oculto, [{ click: "Ok" }]);
+    expect(informe).not.toMatch(AVISO);
+    expect(informe).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  it("una página sin canvas no gana el aviso", async () => {
+    const informe = await visitar(calculadora(false), [{ type: "3", into: "Metros" }]);
+    expect(informe).not.toMatch(AVISO);
+  }, 90_000);
 });

@@ -56,6 +56,18 @@ pub struct ProcessRequestJs {
     /// ~1 ms on a small thumb; opt-in so legacy callers stay zero-cost.
     /// Default: `false`.
     pub placeholder: Option<bool>,
+    /// Keep only this rectangle of the oriented image, before resizing
+    /// (Kimi Code's `ReadMediaFile` `region`). Omit to keep it whole.
+    pub crop: Option<CropRegionJs>,
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct CropRegionJs {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[napi(object)]
@@ -96,6 +108,9 @@ pub struct ProcessResultJs {
     /// BlurHash + dominant color for the source image — suitable for
     /// `style.backgroundColor` + LQIP rendering on the client.
     pub placeholder: Option<PlaceholderJs>,
+    /// The oriented image's size, before any crop or resize.
+    pub source_width: u32,
+    pub source_height: u32,
 }
 
 fn envelope(kind: &str, retryable: bool, message: impl Into<String>) -> String {
@@ -161,6 +176,12 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
         auto_orient: req.auto_orient.unwrap_or(true),
         without_enlargement: req.without_enlargement.unwrap_or(true),
         placeholder: req.placeholder.unwrap_or(false),
+        crop: req.crop.map(|c| pipeline::CropRegion {
+            x: c.x,
+            y: c.y,
+            width: c.width,
+            height: c.height,
+        }),
     };
 
     let result = tokio::task::spawn_blocking(move || pipeline::process_image(native_req))
@@ -194,6 +215,8 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
     Ok(ProcessResultJs {
         variants: variants_js,
         placeholder: placeholder_js,
+        source_width: result.source_width,
+        source_height: result.source_height,
     })
 }
 

@@ -425,6 +425,8 @@ export default defineConfig({
       "app/api/commons-credit/route.test.ts",
       "lib/workspace-v2/upload-attachment.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
+      // La rejilla de imagen de DeepSeek V4.1, copiada de su arnés (MIT). LISTA BLANCA.
+      "lib/agent/deepseek-image-grid.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
       "lib/agent/screenshots-in-context.test.ts",
       "lib/business-profiles/**/*.test.ts",

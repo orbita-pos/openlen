@@ -44,6 +44,7 @@ import {
 } from "@/lib/agent/ficheros/sitio";
 import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from "@/lib/agent/ficheros/resultado";
 import { IMAGE_FILE, MAX_IMAGE_READ_BYTES, imageEmpty, imageTooLarge, imageTypeOf, notAnImage } from "@/lib/agent/image-bytes";
+import { READ_BACK_NOTE, VIDEO_FILE, parseImageRegion, readImageNote, regionOnlyForImages, videoReadError, type ImageRegion } from "@/lib/agent/image-region";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
 import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
@@ -280,6 +281,27 @@ function booleano(v: unknown): boolean | undefined {
 
 const bytesDelBlob = async (puntero: string) => (await import("@/lib/files/blob")).getBlob(puntero);
 
+/** An image shown to Len, as Claude Code's Read shows one, with Kimi Code's `region` and its notes (spec local
+ *  2026-11-05-ojos-que-ven-el-movimiento, §8.1). A region that falls outside the image is the model's to fix. */
+async function mostrarImagen(
+  deps: AgentDeps,
+  ruta: string,
+  bytes: Uint8Array,
+  region: ImageRegion | undefined,
+  deLaCaja: boolean,
+): Promise<ToolOutcome> {
+  let vista: Awaited<ReturnType<NonNullable<AgentDeps["imageForModel"]>>>;
+  try {
+    vista = await deps.imageForModel!(bytes, region ? { region } : undefined);
+  } catch (e) {
+    if (!region) throw e;
+    return { response: respuesta(fallo(e instanceof Error ? e.message : String(e))) };
+  }
+  const notas = [readImageNote({ ...vista, region }), deLaCaja ? READ_BACK_NOTE : ""].filter(Boolean);
+  const linea = `Image read: ${ruta} (${formatoDeBytes(bytes.byteLength)}, ${vista.width}×${vista.height})`;
+  return { response: respuesta(exito([linea, ...notas].join("\n\n"))), images: [vista.image] };
+}
+
 /** Read de un BINARIO DE LA CARPETA (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §5), como el Read de
  *  Claude Code: una imagen se le enseña a Len, un PDF por sus páginas, un texto que no es UTF-8 con U+FFFD y su
  *  nota, y cualquier otro binario dice que no. Sus bytes salen del almacén, sin caja. */
@@ -290,6 +312,7 @@ async function leerBinarioDeLaCarpeta(
   puntero: string,
   args: Record<string, unknown>,
   sitio: SitioBuscable | null,
+  region?: ImageRegion,
 ): Promise<ToolOutcome> {
   const size = parsePointer(puntero)?.size ?? 0;
   if (IMAGE_FILE.test(ruta) && deps.imageForModel) {
@@ -297,8 +320,7 @@ async function leerBinarioDeLaCarpeta(
     if (size === 0) return { response: respuesta(fallo(imageEmpty(ruta))) };
     const bytes = await bytesDelBlob(puntero);
     if (!imageTypeOf(bytes)) return { response: respuesta(fallo(notAnImage(ruta, bytes))) };
-    const { image, width, height } = await deps.imageForModel(bytes);
-    return { response: respuesta(exito(`Image read: ${ruta} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
+    return mostrarImagen(deps, ruta, bytes, region, false);
   }
   if (/\.pdf$/i.test(ruta) && deps.pdfPages) {
     const pdfPages = deps.pdfPages;
@@ -345,10 +367,18 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   // read by its pages like an attached one. The site's folder never holds a PDF (text only).
   const enLaCaja = resolverRuta(asked);
   const deLaCaja = !enLaCaja.startsWith(`${ATTACHMENTS_DIR}/`);
+  // A VIDEO, AND KIMI CODE'S REGION (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.1 and §8.4): Kimi
+  // reads video; this model doesn't, and is told how to look at motion instead. Both answered before
+  // anything is read.
+  if (VIDEO_FILE.test(enLaCaja)) return { response: respuesta(fallo(videoReadError(enLaCaja))) };
+  const pedido = parseImageRegion(args.region);
+  if (!pedido.ok) return { response: respuesta(fallo(pedido.error)) };
+  const region = pedido.region;
+  if (region && !IMAGE_FILE.test(enLaCaja)) return { response: respuesta(fallo(regionOnlyForImages(enLaCaja))) };
   // UNA IMAGEN O UN PDF DE LA CARPETA (spec local 2026-10-28): de sus bytes, antes de mirar la caja.
   if (deLaCaja && (IMAGE_FILE.test(enLaCaja) || /\.pdf$/i.test(enLaCaja)) && deps.projectFiles) {
     const enCarpeta = (await deps.projectFiles(session.projectId).catch(() => null))?.[enLaCaja];
-    if (enCarpeta !== undefined && parsePointer(enCarpeta)) return await leerBinarioDeLaCarpeta(session, deps, enLaCaja, enCarpeta, args, null);
+    if (enCarpeta !== undefined && parsePointer(enCarpeta)) return await leerBinarioDeLaCarpeta(session, deps, enLaCaja, enCarpeta, args, null, region);
   }
   const pdfDeLaCaja = deLaCaja && /\.pdf$/i.test(enLaCaja) && Boolean(deps.pdfPages);
   const imagenDeLaCaja = deLaCaja && IMAGE_FILE.test(enLaCaja) && Boolean(deps.imageForModel);
@@ -383,8 +413,7 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
         if (bytes.byteLength === 0) return { response: respuesta(fallo(imageEmpty(enLaCaja))) };
         if (bytes.byteLength > MAX_IMAGE_READ_BYTES) return { response: respuesta(fallo(imageTooLarge(enLaCaja, formatoDeBytes(MAX_IMAGE_READ_BYTES)))) };
         if (!imageTypeOf(bytes)) return { response: respuesta(fallo(notAnImage(enLaCaja, bytes))) };
-        const { image, width, height } = await deps.imageForModel(bytes);
-        return { response: respuesta(exito(`Image read: ${enLaCaja} (${formatoDeBytes(bytes.byteLength)}, ${width}×${height})`)), images: [image] };
+        return mostrarImagen(deps, enLaCaja, bytes, region, true);
       }
     }
   }
@@ -407,7 +436,7 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   if (isLegacyMemoryPath(resolverRuta(file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   const sitio = sitioDe(row.data, session, v);
   const binario = punteroEn(v.folder, resolverRuta(file_path));
-  if (binario) return await leerBinarioDeLaCarpeta(session, deps, resolverRuta(file_path), binario, args, sitio);
+  if (binario) return await leerBinarioDeLaCarpeta(session, deps, resolverRuta(file_path), binario, args, sitio, region);
   // NPM ABIERTO: en una app, /node_modules se abre por su ruta, como en Claude
   // Code (lo mismo que `cat` en la terminal, `lib/apps/npm/node-modules.ts`).
   const enNodeModules = session.app && deps.projectFiles && resolverRuta(file_path).startsWith(`${NODE_MODULES}/`) ? resolverRuta(file_path) : null;

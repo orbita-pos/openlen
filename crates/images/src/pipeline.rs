@@ -90,6 +90,19 @@ pub struct ProcessRequest {
     /// and not every consumer needs it (server-side optimize jobs that just
     /// rewrite an asset don't care about LQIP).
     pub placeholder: bool,
+    /// Keep only this rectangle of the oriented image, before any resize
+    /// (and before the placeholder). Coordinates are the oriented image's
+    /// pixels — Kimi Code's `ReadMediaFile` `region`. `None` keeps it whole.
+    pub crop: Option<CropRegion>,
+}
+
+/// A rectangle of the oriented image, in its pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CropRegion {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -107,6 +120,10 @@ pub struct ProcessResult {
     /// the BlurHash + dominant color computed from the oriented source,
     /// suitable for `style.backgroundColor` + `<img>` LQIP rendering.
     pub placeholder: Option<Placeholder>,
+    /// The oriented image's size, before any crop or resize — what Kimi
+    /// Code's `ReadMediaFile` calls the original dimensions.
+    pub source_width: u32,
+    pub source_height: u32,
 }
 
 /// Effective output dimensions given the variant's bounds and the input
@@ -168,14 +185,37 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
         decoded
     };
 
-    let base: RgbaImage = oriented.to_rgba8();
-    let (orig_w, orig_h) = (base.width(), base.height());
-    if orig_w == 0 || orig_h == 0 {
+    let whole: RgbaImage = oriented.to_rgba8();
+    if whole.width() == 0 || whole.height() == 0 {
         return Err(ImageError::Decode(format!(
             "decoded image has zero dimensions ({}×{})",
-            orig_w, orig_h
+            whole.width(),
+            whole.height()
         )));
     }
+
+    let (source_width, source_height) = (whole.width(), whole.height());
+
+    // 2b. Crop if asked: what follows (placeholder, resize, encode) sees only
+    //     the rectangle, as if it were the whole image.
+    let base: RgbaImage = match req.crop {
+        None => whole,
+        Some(c) => {
+            let (w, h) = (whole.width(), whole.height());
+            let inside = c.width > 0
+                && c.height > 0
+                && c.x.checked_add(c.width).is_some_and(|r| r <= w)
+                && c.y.checked_add(c.height).is_some_and(|b| b <= h);
+            if !inside {
+                return Err(ImageError::InvalidInput(format!(
+                    "crop (x={}, y={}, width={}, height={}) falls outside the {}×{} image",
+                    c.x, c.y, c.width, c.height, w, h
+                )));
+            }
+            image::imageops::crop_imm(&whole, c.x, c.y, c.width, c.height).to_image()
+        }
+    };
+    let (orig_w, orig_h) = (base.width(), base.height());
 
     // Placeholder is opt-in. Computed from the oriented base so the
     // BlurHash + dominant color match what the variants will render.
@@ -239,6 +279,8 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
     Ok(ProcessResult {
         variants: outputs,
         placeholder,
+        source_width,
+        source_height,
     })
 }
 
@@ -270,6 +312,7 @@ mod tests {
             auto_orient: true,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         });
         assert!(matches!(r, Err(ImageError::InvalidInput(_))));
     }
@@ -282,6 +325,7 @@ mod tests {
             auto_orient: true,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         });
         assert!(matches!(r, Err(ImageError::InvalidInput(_))));
     }
@@ -300,6 +344,7 @@ mod tests {
             auto_orient: true,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         });
         assert!(matches!(r, Err(ImageError::Decode(_))));
     }
@@ -319,6 +364,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants.len(), 1);
@@ -363,6 +409,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants.len(), 3);
@@ -391,6 +438,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         // Asked for 800w but input is 100w → withoutEnlargement keeps 100w.
@@ -413,6 +461,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: false,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 80);
@@ -450,6 +499,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(
@@ -459,6 +509,98 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![(200, 100), (100, 50), (50, 25)]
         );
+    }
+
+    /// Left half red, right half blue.
+    fn halves_png(w: u32, h: u32) -> Vec<u8> {
+        use image::{ImageEncoder, Rgba, RgbaImage};
+        let img = RgbaImage::from_fn(w, h, |x, _| {
+            if x < w / 2 {
+                Rgba([255, 0, 0, 255])
+            } else {
+                Rgba([0, 0, 255, 255])
+            }
+        });
+        let mut bytes = Vec::new();
+        image::codecs::png::PngEncoder::new(&mut bytes)
+            .write_image(img.as_raw(), w, h, image::ExtendedColorType::Rgba8)
+            .unwrap();
+        bytes
+    }
+
+    fn png_variant() -> Variant {
+        Variant {
+            width: 0,
+            max_height: None,
+            format: Format::Png,
+            quality: 0,
+            alpha_quality: None,
+        }
+    }
+
+    #[test]
+    fn crop_takes_the_region_before_resizing() {
+        let r = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![png_variant()],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: Some(CropRegion { x: 50, y: 0, width: 50, height: 50 }),
+        })
+        .unwrap();
+        assert_eq!((r.variants[0].width, r.variants[0].height), (50, 50));
+        let out = image::load_from_memory(&r.variants[0].bytes).unwrap().to_rgba8();
+        assert!(out.pixels().all(|p| p.0 == [0, 0, 255, 255]), "every pixel of the crop is blue");
+    }
+
+    #[test]
+    fn crop_outside_the_image_is_an_error() {
+        let r = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![png_variant()],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: Some(CropRegion { x: 60, y: 0, width: 50, height: 50 }),
+        });
+        match r {
+            Err(ImageError::InvalidInput(m)) => assert!(m.contains("falls outside the 100×50 image"), "{m}"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+        let empty = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![png_variant()],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: Some(CropRegion { x: 0, y: 0, width: 0, height: 10 }),
+        });
+        assert!(matches!(empty, Err(ImageError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn result_reports_the_oriented_source_size() {
+        let whole = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![Variant { width: 40, ..png_variant() }],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: None,
+        })
+        .unwrap();
+        assert_eq!((whole.source_width, whole.source_height), (100, 50));
+        let cropped = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![png_variant()],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: Some(CropRegion { x: 0, y: 0, width: 10, height: 10 }),
+        })
+        .unwrap();
+        assert_eq!((cropped.source_width, cropped.source_height), (100, 50), "the size before the crop");
     }
 
     #[test]
@@ -488,6 +630,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 50);
@@ -512,6 +655,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 200);
@@ -535,6 +679,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert_eq!(r.variants[0].width, 200);
@@ -556,6 +701,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: false,
+            crop: None,
         })
         .unwrap();
         assert!(
@@ -580,6 +726,7 @@ mod tests {
             auto_orient: false,
             without_enlargement: true,
             placeholder: true,
+            crop: None,
         })
         .unwrap();
         let p = r.placeholder.expect("placeholder requested but None");
@@ -615,6 +762,7 @@ mod tests {
             auto_orient: true,
             without_enlargement: true,
             placeholder: true,
+            crop: None,
         })
         .unwrap();
         let p = r.placeholder.expect("placeholder requested but None");

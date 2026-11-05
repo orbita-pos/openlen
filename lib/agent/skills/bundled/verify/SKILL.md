@@ -20,6 +20,18 @@ Run the shortest path that makes the change run: the form changed, send it; the 
 
 `view_page mode="measure"` reports the JavaScript errors, what overflows on a phone and the contrast: an error in the console counts as a failure even when the screen looks right.
 
+## When it moves
+
+A game, an animation, a carousel, a drag, a notice that appears and goes: one screenshot is one moment, and motion needs several.
+
+- **Without a real terminal**, with `use_page` steps: `key` presses a key (`"ArrowRight"`, `"Enter"`, `"ctrl+k"`; `repeat` for several presses), `left_click` and `hover` act at an `[x, y]` of the tab (what has no text: a canvas, a map), `left_click_drag` drags from one point to another (`coordinate` is where it ends), and `wait` lets time pass. Put a `screenshot` between them to see the moments (three per visit) and `zoom` for a region in detail. `use_page` reads the page's text, and a canvas or a video has none: with one in view it says so instead of "nothing changed", and what it shows is yours to look at.
+- **With a real terminal** (bash runs commands and Playwright is installed in it): write a short Playwright script that moves time itself with `page.clock`, holds keys with `keyboard.down` and `keyboard.up`, drags with the mouse and saves screenshots in `/tmp/motion/`; then join them into one image with `python3 <base directory>/scripts/contact_sheet.py` and look at it with `Read`. How, in references/playwright.md ("Looking at motion").
+- **To look closer** at any image, `Read` it again with `region`: that rectangle comes back at full detail.
+- **Does the input do anything?** Make the same short series twice from the same start, once with the key and once without. The same frames mean the key does nothing, even when the screen moves.
+- A key that has to be **held** to move something (a game's arrows) is checked only with the script: `key` presses and releases. Without a real terminal, the held movement is what you couldn't verify, and you say so.
+
+Keep it short: a few series of a second or two that show the behavior, never playing the game to the end. If two or three tries don't make it clear, answer **couldn't verify** and say what you saw.
+
 ## What is never done for real
 
 - To check something, never publish: the canvas is enough.
