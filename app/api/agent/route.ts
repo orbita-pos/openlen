@@ -155,6 +155,7 @@ import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-t
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
+import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
 import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
 import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
@@ -997,6 +998,14 @@ async function correrTurno(
   // sepa que «hay lista», y una línea con ella SÓLO si ya no está en el historial.
   // Fail-soft: sin la base, el turno sigue sin lista.
   const listaDelTurno = todosForTurn(await latestTodoListForChat(projectId).catch(() => null), history);
+  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what the person or the background work
+  // changed on this person's cards since Len last heard, read with this request (DeepSeek's action-card status; it
+  // never wakes Len). Marked delivered as of this read once the turn starts. Fail-soft: without the table, nothing.
+  const tarjetasLeidasEn = new Date();
+  const tarjetasCambiadas = toolsEnabled()
+    ? await conPlazo(async () => (await import("@/lib/tools/cards/store")).undeliveredCards(projectId, quien), MEMORIA_TIMEOUT_MS, []).catch(() => [])
+    : [];
+  const estadoDeTarjetas = toolCardStatusNotice(tarjetasCambiadas);
 
   const state = summarizeProjectState(
     {
@@ -1253,6 +1262,7 @@ async function correrTurno(
     equipo: compartido,
     history,
     todoRestore: listaDelTurno.restoreLine,
+    toolCardStatus: estadoDeTarjetas,
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
     seleccion,
@@ -2088,6 +2098,12 @@ async function correrTurno(
         // whose settlement the card's code installs — and closes, charging nothing (`sinCobro: "host"`); the child
         // spends within this turn's cap and outlives it.
         const creacionDelTurno = programadaDelTurno && isToolCreationOrigin(programadaDelTurno.origin) ? programadaDelTurno.origin : null;
+        // The turn starts: the cards' status read above is now Len's.
+        if (tarjetasCambiadas.length > 0) {
+          void import("@/lib/tools/cards/store")
+            .then((s) => s.markDelivered(tarjetasCambiadas.map((c) => c.id), tarjetasLeidasEn))
+            .catch((err: unknown) => console.warn("[agent] couldn't mark the cards' status delivered", err));
+        }
         const hostToolCreation = async (o: ToolCreationOrigin): Promise<AgentLoopResult> => {
           const creation = await import("@/lib/tools/cards/creation");
           const text = await creation.hostTheCreator(

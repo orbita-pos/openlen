@@ -232,6 +232,9 @@ vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }))
 // «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
 const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
 vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
+// «Crear» cards changed since Len last heard (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+const cardsStore = vi.hoisted(() => ({ undeliveredCards: vi.fn(async (_p: string, _person: string): Promise<unknown[]> => []), markDelivered: vi.fn(async (_ids: readonly string[], _at: Date) => {}) }));
+vi.mock("@/lib/tools/cards/store", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/cards/store")>()), ...cardsStore }));
 // «Crear» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn's card lives in a fake store.
 const creationCard = vi.hoisted(() => ({ row: { id: "card-1", title: "Reservas de hoy", phase: "creating", personId: "u1", toolProjectId: "p1", creatorRunId: null as string | null } }));
 vi.mock("@/lib/tools/cards/creation", async (orig) => ({
@@ -2079,6 +2082,27 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       suggestionsTo.mockResolvedValueOnce(false);
       await readEvents(await pedir());
       expect(argsQueRecibio().skillCatalogMessage ?? "").not.toMatch(/tool-suggestions/);
+    });
+
+    it("the cards changed since Len last heard reach this request, and are marked delivered as of the read", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      const changed = { id: "card-1", title: "Reservas de hoy", phase: "installed", placement: "rail", customLocation: null, error: null };
+      cardsStore.undeliveredCards.mockResolvedValueOnce([changed]);
+      const before = Date.now();
+      await readEvents(await pedir());
+      expect(cardsStore.undeliveredCards).toHaveBeenLastCalledWith("p1", "u1");
+      const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ toolCardStatus?: string | null }])[0];
+      expect(args.toolCardStatus).toMatch(/^Latest status of action cards/);
+      expect(args.toolCardStatus).toContain('"id":"card-1"');
+      const [ids, at] = cardsStore.markDelivered.mock.calls.at(-1)!;
+      expect(ids).toEqual(["card-1"]);
+      expect(at.getTime()).toBeGreaterThanOrEqual(before);
+      // Nothing changed: no notice, nothing marked.
+      cardsStore.markDelivered.mockClear();
+      await readEvents(await pedir());
+      expect((mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ toolCardStatus?: string | null }])[0].toolCardStatus ?? null).toBeNull();
+      expect(cardsStore.markDelivered).not.toHaveBeenCalled();
     });
 
     it("offered: Len is declared propose_action, its session knows this turn's row and starts with no skill loaded this turn", async () => {
