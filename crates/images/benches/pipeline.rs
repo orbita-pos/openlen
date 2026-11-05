@@ -158,6 +158,7 @@ fn build_request(input: Vec<u8>, placeholder: bool) -> ProcessRequest {
         auto_orient: true,
         without_enlargement: true,
         placeholder,
+        crop: None,
     }
 }
 

@@ -29,5 +29,5 @@ pub mod resize;
 pub mod napi_binding;
 
 pub use error::ImageError;
-pub use pipeline::{process_image, Format, ProcessRequest, ProcessResult, Variant, VariantOutput};
+pub use pipeline::{process_image, CropRegion, Format, ProcessRequest, ProcessResult, Variant, VariantOutput};
 pub use placeholder::{compute_placeholder, Placeholder};

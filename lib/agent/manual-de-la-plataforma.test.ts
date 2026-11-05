@@ -437,6 +437,13 @@ describe("/tests de una página con la caja", () => {
     expect(buildManualDeLaPlataforma({})).toContain("there is no Playwright in the terminal");
   });
 
+  // El movimiento (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.7): con la caja, Playwright
+  // también sirve para mirar cómo se mueve la página; sin ella, el manual no lo menciona.
+  it("con la caja dice que Playwright también muestra el movimiento; sin ella, no", () => {
+    expect(buildManualDeLaPlataforma(CAJA)).toContain("can also show motion");
+    expect(buildManualDeLaPlataforma({})).not.toContain("can also show motion");
+  });
+
   it("🔴 en un despliegue por fases, como hoy para quien no está en la lista; con la caja para quien sí", () => {
     const FASES = { ...CAJA, OPENLEN_SANDBOX_ONLY_USERS: "u1" };
     expect(buildManualDeLaPlataforma(FASES, "len", null, false)).toBe(buildManualDeLaPlataforma({}));

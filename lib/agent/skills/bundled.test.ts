@@ -244,6 +244,26 @@ describe("bundled skills", () => {
     it("verify takes its screenshot after acting, the frame it presents", () => {
       expect(text()).toContain("after acting");
     });
+
+    // Motion (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.3): Kimi reads video; this model joins
+    // the frames into one image, with a script the skill brings, as the pdf skill brings its own.
+    // Kimi's way of looking (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.7): a script that drives
+    // the page with time under control, frames into one image, and Read with region to look closer.
+    it("verify teaches how to look at motion", () => {
+      for (const must of ["## When it moves", "scripts/contact_sheet.py", "page.clock", "region", "key", "left_click_drag", "couldn't verify"]) {
+        expect(text(), must).toContain(must);
+      }
+      const ref = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/verify/references/playwright.md`]!;
+      for (const must of ["## Looking at motion", "clock.install", "pauseAt", "/tmp/motion/", "keyboard.down", "contact_sheet.py"]) {
+        expect(ref, must).toContain(must);
+      }
+    });
+
+    it("verify serves contact_sheet.py, which joins frames into one image", () => {
+      const script = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/verify/scripts/contact_sheet.py`];
+      expect(script).toBeDefined();
+      for (const must of ["--out", "--label", "PIL"]) expect(script, must).toContain(must);
+    });
   });
 
   // SETUP-BRAND (§4.5): Claude's setup-writing-style turned into the business's brand, saved as the

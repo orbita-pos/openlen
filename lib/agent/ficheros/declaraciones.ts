@@ -43,6 +43,19 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
         offset: { type: "NUMBER", description: "First line to return, counting from 1. To read only part of a long file." },
         limit: { type: "NUMBER", description: "How many lines to return. To read only part of a long file." },
         pages: { type: "STRING", description: 'Page range for PDF files (e.g., "1-5", "3", "10-20"). Only applicable to PDF files. Maximum 20 pages per request.' },
+        // Kimi Code's ReadMediaFile `region`, its words (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.1).
+        region: {
+          type: "OBJECT",
+          description:
+            "Images only: view just this rectangle of the image (original-image pixel coordinates). Use after a downsampled full view to inspect fine detail — a region within the size limits is delivered at full fidelity.",
+          properties: {
+            x: { type: "NUMBER", description: "Left edge of the crop, in original-image pixels." },
+            y: { type: "NUMBER", description: "Top edge of the crop, in original-image pixels." },
+            width: { type: "NUMBER", description: "Crop width, in original-image pixels." },
+            height: { type: "NUMBER", description: "Crop height, in original-image pixels." },
+          },
+          required: ["x", "y", "width", "height"],
+        },
       },
       required: ["file_path"],
     },

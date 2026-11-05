@@ -36,7 +36,7 @@ import type { BridgeCaller } from "@/lib/tools/bridge/handlers";
 import { injectToolBridge, TOOL_BRIDGE_PATH } from "@/lib/tools/bridge/inject";
 import { createHash } from "node:crypto";
 import { Script } from "node:vm";
-import type { Browser, CDPSession, ElementHandle, Page } from "puppeteer";
+import type { Browser, CDPSession, ElementHandle, KeyInput, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -45,7 +45,7 @@ import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-
 import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
-import type { BrowserTabHolder, PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import { parseKey, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -72,12 +72,16 @@ export const PRELUDIO_DE_USO = `
   var TIPOS = { click: 1, mousedown: 1, mouseup: 1, pointerdown: 1, pointerup: 1, touchstart: 1, touchend: 1 };
   // Los de un CAMPO: teclear, mover una barra, elegir en un desplegable.
   var TIPOS_CAMPO = { input: 1, change: 1, keyup: 1, keydown: 1, keypress: 1 };
+  // Los del TECLADO, para el paso \`key\` (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5).
+  var TIPOS_TECLA = { keydown: 1, keyup: 1, keypress: 1 };
   var oyen = new Set();
   var oyenCampo = new Set();
+  var oyenTeclas = new Set();
   var orig = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (tipo, fn, op) {
     if (TIPOS[tipo]) oyen.add(this);
     if (TIPOS_CAMPO[tipo]) oyenCampo.add(this);
+    if (TIPOS_TECLA[tipo]) oyenTeclas.add(this);
     return orig.call(this, tipo, fn, op);
   };
   var R = { salidas: [], envios: [], elegido: null, hechos: [], webgl: "" };
@@ -164,10 +168,61 @@ export const PRELUDIO_DE_USO = `
     return norm(partes.filter(Boolean).join(" "));
   }
 
-  function foto() {
-    var lineas = (document.body ? document.body.innerText : "").split("\\n")
+  function lineasDe(t) {
+    return String(t || "").split("\\n")
       .map(function (l) { return l.replace(/\\s+/g, " ").trim(); })
       .filter(Boolean);
+  }
+  // LO QUE NO SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): innerText cuenta el texto
+  // a opacidad 0 o empujado fuera por un transform, que es como ENTRA un modal o una hoja. Se apuntan
+  // los elementos MÁS EXTERIORES que no se ven —sin bajar dentro de ellos— y sus líneas; nada se toca
+  // en el DOM (un MutationObserver de la página no se entera).
+  function siguienteSinBajar(w) {
+    var n = w.nextSibling();
+    while (!n) {
+      if (!w.parentNode()) return null;
+      n = w.nextSibling();
+    }
+    return n;
+  }
+  function textoNoVisto() {
+    var fuera = [];
+    if (!document.body) return fuera;
+    var de = document.documentElement;
+    var vw = innerWidth, vh = innerHeight;
+    var docX0 = -scrollX, docY0 = -scrollY;
+    var docX1 = Math.max(de.scrollWidth, vw) - scrollX, docY1 = Math.max(de.scrollHeight, vh) - scrollY;
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+    var el = w.nextNode();
+    while (el) {
+      var cs = getComputedStyle(el);
+      var noSeVe = false;
+      if (cs.display !== "none") {
+        if (parseFloat(cs.opacity) < 0.01) noSeVe = true;
+        else {
+          var r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            var fijo = cs.position === "fixed";
+            var x0 = fijo ? 0 : docX0, y0 = fijo ? 0 : docY0, x1 = fijo ? vw : docX1, y1 = fijo ? vh : docY1;
+            noSeVe = r.right <= x0 || r.left >= x1 || r.bottom <= y0 || r.top >= y1;
+          }
+        }
+      }
+      if (noSeVe) {
+        fuera.push.apply(fuera, lineasDe(el.innerText));
+        el = siguienteSinBajar(w);
+      } else el = w.nextNode();
+    }
+    return fuera;
+  }
+
+  function foto() {
+    var cuenta = {};
+    textoNoVisto().forEach(function (l) { cuenta[l] = (cuenta[l] || 0) + 1; });
+    var lineas = lineasDe(document.body ? document.body.innerText : "").filter(function (l) {
+      if (cuenta[l] > 0) { cuenta[l]--; return false; }
+      return true;
+    });
     document.querySelectorAll("input, select, textarea").forEach(function (e) {
       var t = (e.type || "").toLowerCase();
       if (["hidden", "password", "submit", "button", "reset", "image", "file"].indexOf(t) >= 0) return;
@@ -409,6 +464,20 @@ export const PRELUDIO_DE_USO = `
     var campo = /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && !/^(button|submit|reset|image)$/i.test(el.type || "");
     return campo ? { escucha: escuchaCampo(el), propia: false, campo: true } : { escucha: escucha(el), propia: accionPropia(el) };
   }
+  // LOS PASOS DE CLAUDE CODE: el elemento en un punto de la pestaña, su texto y si alguien escucha el
+  // clic; y si alguien escucha el teclado (window, document, el elemento con foco y sus contenedores).
+  function enPunto(x, y) {
+    var el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    return { texto: (textoDe(el) || el.tagName.toLowerCase()).slice(0, 60), escucha: escucha(el), propia: accionPropia(el) };
+  }
+  function escuchaTeclas() {
+    for (var n = document.activeElement || document.body; n; n = n.parentNode) {
+      if (oyenTeclas.has(n)) return true;
+      if (n.nodeType === 1 && (n.onkeydown || n.onkeyup || n.onkeypress)) return true;
+    }
+    return oyenTeclas.has(window) || oyenTeclas.has(document) || typeof window.onkeydown === "function" || typeof window.onkeyup === "function" || typeof document.onkeydown === "function";
+  }
   function ancla(href) {
     if (!href || href.charAt(0) !== "#" || href.length < 2) return null;
     var id = decodeURIComponent(href.slice(1));
@@ -425,7 +494,24 @@ export const PRELUDIO_DE_USO = `
     foto: foto, control: control, campo: campo, opcion: opcion, leer: leer,
     escuchaElegido: function () { var e = R.elegido; return e ? { escucha: escuchaCampo(e) || escucha(e), propia: false, campo: true } : null; },
     antesDeActuar: antesDeActuar, tapadoAhora: function () { return R.elegido ? tapado(R.elegido) : ""; },
-    ancla: ancla, sacar: sacar,
+    ancla: ancla, sacar: sacar, enPunto: enPunto, escuchaTeclas: escuchaTeclas,
+    // EL CANVAS QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento): los <canvas> y <video>
+    // visibles que tocan la pestaña, el mayor primero, con su tipo — para el aviso de que el informe sólo
+    // lee texto (en coordenadas del documento).
+    lienzosVisibles: function () {
+      var out = [];
+      var vv = window.visualViewport;
+      var dx = vv ? vv.pageLeft : scrollX, dy = vv ? vv.pageTop : scrollY;
+      document.querySelectorAll("canvas, video").forEach(function (el) {
+        if (!visible(el)) return;
+        var r = el.getBoundingClientRect();
+        var x0 = Math.max(0, r.left), y0 = Math.max(0, r.top), x1 = Math.min(innerWidth, r.right), y1 = Math.min(innerHeight, r.bottom);
+        if (x1 - x0 < 2 || y1 - y0 < 2) return;
+        out.push({ x: x0 + dx, y: y0 + dy, width: x1 - x0, height: y1 - y0, kind: el.tagName === "VIDEO" ? "video" : "canvas" });
+      });
+      out.sort(function (a, b) { return b.width * b.height - a.width * a.height; });
+      return out.slice(0, 4);
+    },
     hechos: function () { var h = R.hechos.slice(); R.hechos.length = 0; return h; },
     webgl: function () { return R.webgl; },
     // El bloque que se captura (Puppeteer lo lleva a la vista y lo recorta).
@@ -468,6 +554,28 @@ const q = (s: string, max = 140) => {
  *  1.350 es la MISMA línea moviéndose. */
 function forma(linea: string): string {
   return linea.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\d+([.,]\d+)*/g, "#").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * UN CANVAS A LA VISTA (spec local 2026-11-05-ojos-que-ven-el-movimiento, revisado el 05/11): Claude, DeepSeek
+ * (Playwright MCP) y el agente de Kimi no miden píxeles solos: el modelo mira capturas, un GIF o un vídeo
+ * cuando quiere. Este informe lee el TEXTO de la página, y un <canvas> o un <video> no tiene: con uno a la
+ * vista, el paso no puede afirmar «nothing changed», y lo dice para que se mire.
+ */
+type LienzoALaVista = { readonly kind: "canvas" | "video" };
+
+function avisoDeLienzos(lienzos: readonly LienzoALaVista[]): string {
+  const canvas = lienzos.filter((l) => l.kind === "canvas").length;
+  const videos = lienzos.length - canvas;
+  const que = [canvas === 1 ? "a canvas" : canvas > 1 ? `${canvas} canvases` : "", videos === 1 ? "a video" : videos > 1 ? `${videos} videos` : ""]
+    .filter(Boolean)
+    .join(" and ");
+  const uno = lienzos.length === 1;
+  return `${que} ${uno ? "is" : "are"} in view, and this report only reads the page's text: what ${uno ? "it draws" : "they draw"} isn't in it. Look with a screenshot, or a zoom of ${uno ? "it" : "them"}.`;
+}
+
+async function lienzosALaVista(page: Page): Promise<LienzoALaVista[]> {
+  return (await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as LienzoALaVista[];
 }
 
 /** Espera a que la página se quede quieta y apunta lo que cambió SIN que nadie
@@ -602,7 +710,45 @@ function describirPaso(p: PasoDeUso): string {
   if ("reload" in p) return "reload";
   if ("screenshot" in p) return isScreen(p.screenshot) ? "screenshot of the screen" : `screenshot of ${q(p.screenshot)}`;
   if ("eval" in p) return "eval";
+  if ("key" in p) return `key ${q(p.key)}${p.repeat && p.repeat > 1 ? ` ×${p.repeat}` : ""}`;
+  if ("wait" in p) return `wait ${p.wait} s`;
+  if ("left_click" in p) return `left_click (${p.left_click[0]}, ${p.left_click[1]})`;
+  if ("hover" in p) return `hover (${p.hover[0]}, ${p.hover[1]})`;
+  if ("left_click_drag" in p) return `left_click_drag (${p.left_click_drag[0]}, ${p.left_click_drag[1]}) → (${p.coordinate[0]}, ${p.coordinate[1]})`;
+  if ("zoom" in p) return `zoom ${p.zoom[0]},${p.zoom[1]} → ${p.zoom[2]},${p.zoom[3]}`;
   return `read ${q(p.read)}`;
+}
+
+/** El tamaño de la pestaña, el de sus coordenadas (las de una captura de la pantalla). */
+const tamanoDe = (page: Page) => page.viewport() ?? { width: 1280, height: 900 };
+
+/** `zoom` (el de Claude Code): una región de la pestaña, a su resolución, recortada a la pestaña. */
+async function takeZoom(page: Page, z: readonly [number, number, number, number], images: InlineImage[]): Promise<string> {
+  const { width, height } = tamanoDe(page);
+  const x0 = Math.min(z[0], width), y0 = Math.min(z[1], height), x1 = Math.min(z[2], width), y1 = Math.min(z[3], height);
+  if (x1 <= x0 || y1 <= y0) return `the region ${z[0]},${z[1]} → ${z[2]},${z[3]} is outside the ${width}×${height} tab.`;
+  await twoFrames(page);
+  // The clip is in DOCUMENT coordinates; the region is the tab's: add where the tab is scrolled to.
+  const [dx, dy] = (await page
+    .evaluate("[window.visualViewport ? visualViewport.pageLeft : scrollX, window.visualViewport ? visualViewport.pageTop : scrollY]")
+    .catch(() => [0, 0])) as [number, number];
+  const dataBase64 = (await page.screenshot({ type: "jpeg", quality: 80, encoding: "base64", clip: { x: x0 + dx, y: y0 + dy, width: x1 - x0, height: y1 - y0 } })) as string;
+  images.push({ mimeType: "image/jpeg", dataBase64 });
+  return `attached below as image ${images.length} (the region ${x0},${y0} → ${x1},${y1} of the tab).`;
+}
+
+/**
+ * `wait` (el de Claude Code): el tiempo pasa de verdad y la página corre, y se dice lo que cambió
+ * mientras tanto. NO se apunta como «cambia solo»: se espera justo para ver el efecto tardío del paso
+ * anterior, y apuntarlo hacía que el mismo efecto, la vez siguiente, no contara (revisión del 05/11).
+ * Nunca más allá del plazo.
+ */
+async function esperarPaso(page: Page, segundos: number, plazo: number): Promise<string[]> {
+  const antes = await foto(page);
+  await dormir(Math.max(0, Math.min(segundos * 1000, plazo - Date.now())));
+  const despues = await foto(page);
+  const cambios = contarCambios(antes, despues, new Set());
+  return cambios.length === 0 ? ["nothing on the page changed while waiting."] : cambios.map((c) => c.texto);
 }
 
 const isScreen = (target: string) => target.trim().toLowerCase() === "screen";
@@ -641,6 +787,13 @@ async function takeScreenshot(page: Page, target: string, images: InlineImage[])
     await handle.scrollIntoView().catch(() => undefined);
     await twoFrames(page);
     dataBase64 = (await handle.screenshot({ type: "jpeg", quality: 80, encoding: "base64" })) as string;
+    // Where the block is in the tab, as Kimi Code's region note says the offset to add: a point of this image
+    // becomes coordinates for left_click, hover or zoom (spec local 2026-11-05-ojos-que-ven-el-movimiento).
+    const box = await handle.boundingBox().catch(() => null);
+    images.push({ mimeType: "image/jpeg", dataBase64 });
+    if (!box) return `attached below as image ${images.length}.`;
+    const [x0, y0, x1, y1] = [box.x, box.y, box.x + box.width, box.y + box.height].map((n) => Math.max(0, Math.round(n)));
+    return `attached below as image ${images.length}. The block is at (${x0}, ${y0}) → (${x1}, ${y1}) of the tab: add (${x0}, ${y0}) to a point of this image to use it with left_click, hover or zoom.`;
   }
   images.push({ mimeType: "image/jpeg", dataBase64 });
   return `attached below as image ${images.length}${isScreen(target) ? " (what a visitor sees on a 1280×900 desktop screen)" : ""}.`;
@@ -749,6 +902,8 @@ interface Previo {
   readonly propia: boolean;
   /** Es un campo (se teclea o se elige), no algo que se pulsa. */
   readonly campo?: boolean;
+  /** Es una tecla (`key`): «escucha» es si alguien escucha el teclado. */
+  readonly teclado?: boolean;
 }
 
 /** Las líneas de la foto que son el efecto DIRECTO de la acción. */
@@ -801,9 +956,84 @@ const SIN_TECLEAR = new Set(["range", "date", "time", "month", "week", "datetime
 
 async function actuar(
   page: Page,
-  paso: Exclude<PasoDeUso, { readonly read: string } | { readonly screenshot: string } | { readonly eval: string }>,
+  paso: Exclude<
+    PasoDeUso,
+    { readonly read: string } | { readonly screenshot: string } | { readonly eval: string } | { readonly wait: number } | { readonly zoom: readonly [number, number, number, number] }
+  >,
   cambiantes: Set<string>,
 ): Promise<Actuacion> {
+  // LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): con el teclado y
+  // con el ratón donde se diga, como una persona; lo demás del paso (qué cambió) es lo de siempre.
+  if ("key" in paso) {
+    const k = parseKey(paso.key);
+    if (!k.ok) return { ok: false, hecho: `couldn't: ${k.error}` };
+    const antes = await quieta(page, cambiantes);
+    const escuchan = (await page.evaluate(US("escuchaTeclas()")).catch(() => true)) as boolean;
+    const veces = paso.repeat ?? 1;
+    const comoCaracter: string[] = [];
+    for (let i = 0; i < veces; i++) {
+      for (const combo of k.combos) {
+        const mods = combo.slice(0, -1) as KeyInput[];
+        const tecla = combo[combo.length - 1]!;
+        for (const m of mods) await page.keyboard.down(m);
+        try {
+          await page.keyboard.press(tecla as KeyInput);
+        } catch (e) {
+          // A character outside Puppeteer's US keyboard («é», «ñ»): typed as a character, Puppeteer's own
+          // way (sendCharacter: input without keydown). With modifiers there is no such way: said so.
+          if (mods.length > 0 || [...tecla].length !== 1 || !/Unknown key/i.test(String(e))) {
+            for (const m of [...mods].reverse()) await page.keyboard.up(m);
+            return { ok: false, hecho: `couldn't: ${q(combo.join("+"))} isn't a key this browser's keyboard has.` };
+          }
+          await page.keyboard.sendCharacter(tecla);
+          if (!comoCaracter.includes(tecla)) comoCaracter.push(tecla);
+        }
+        for (const m of [...mods].reverse()) await page.keyboard.up(m);
+      }
+    }
+    return {
+      ok: true,
+      hecho: `I pressed the key ${q(paso.key)}${veces > 1 ? ` (${veces} times)` : ""}.`,
+      antes,
+      detalle: comoCaracter.map((c) => `(note: ${q(c)} isn't on this browser's US keyboard, so it was typed as a character: the page got its input, not a keydown.)`),
+      previo: { escucha: escuchan, propia: false, teclado: true },
+    };
+  }
+  if ("left_click" in paso || "hover" in paso || "left_click_drag" in paso) {
+    const { width, height } = tamanoDe(page);
+    const puntos = "left_click" in paso ? [paso.left_click] : "hover" in paso ? [paso.hover] : [paso.left_click_drag, paso.coordinate];
+    const fuera = puntos.find(([x, y]) => x >= width || y >= height);
+    if (fuera) return { ok: false, hecho: `couldn't: (${fuera[0]}, ${fuera[1]}) is outside the ${width}×${height} tab.` };
+    const antes = await quieta(page, cambiantes);
+    const [x0, y0] = puntos[0]!;
+    const sitio = (await page.evaluate(US(`enPunto(${x0}, ${y0})`)).catch(() => null)) as { texto: string; escucha: boolean; propia: boolean } | null;
+    if ("left_click" in paso) {
+      await page.mouse.click(x0, y0, { delay: 20 });
+      return {
+        ok: true,
+        hecho: `I clicked at (${x0}, ${y0})${sitio ? `, on ${q(sitio.texto, 60)}` : ""}.`,
+        antes,
+        detalle: [],
+        previo: sitio ? { escucha: sitio.escucha, propia: sitio.propia } : null,
+      };
+    }
+    if ("hover" in paso) {
+      await page.mouse.move(x0, y0);
+      return { ok: true, hecho: `I moved the mouse to (${x0}, ${y0})${sitio ? `, over ${q(sitio.texto, 60)}` : ""}.`, antes, detalle: [], previo: null };
+    }
+    const [x1, y1] = paso.coordinate;
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    await page.mouse.move(x1, y1, { steps: 12 });
+    await page.mouse.up();
+    return {
+      ok: true,
+      hecho: `I dragged from (${x0}, ${y0}) to (${x1}, ${y1})${sitio ? `, starting on ${q(sitio.texto, 60)}` : ""}.`,
+      antes,
+      detalle: [],
+      previo: null,
+    };
+  }
   if ("reload" in paso) {
     const antes = await foto(page);
     await page.reload({ waitUntil: "load", timeout: 20_000 });
@@ -1283,6 +1513,15 @@ export async function visitAnotherSite(
         if (r.stuck) break;
         continue;
       }
+      if ("zoom" in paso) {
+        lineas.push(`${encabezado} → ${await takeZoom(page, paso.zoom, images).catch(() => "the screenshot couldn't be taken this time.")}`);
+        continue;
+      }
+      if ("wait" in paso) {
+        lineas.push(`${encabezado} → I waited ${paso.wait} s.`);
+        for (const c of await esperarPaso(page, paso.wait, plazo)) lineas.push(`   · ${c}`);
+        continue;
+      }
       const before = page.url();
       const accion = await actuar(page, paso, cambiantes);
       if (!accion.ok) {
@@ -1317,6 +1556,11 @@ export async function visitAnotherSite(
         detalle.push(`now on ${page.url()}.`);
       } else {
         cambios = contarCambios(accion.antes, await foto(page), cambiantes, accion.propio).map((c) => c.texto);
+        // The same canvas notice as on the project's page: Claude's and DeepSeek's browser tools act the same on any site.
+        if (cambios.length === 0) {
+          const lienzos = await lienzosALaVista(page);
+          if (lienzos.length > 0) detalle.push(avisoDeLienzos(lienzos));
+        }
       }
       detalle.push(...(accion.alFinal ?? []));
       lineas.push(`${encabezado} → ${accion.hecho}`);
@@ -1472,6 +1716,15 @@ async function visitTab(
       }
       continue;
     }
+    if ("zoom" in paso) {
+      lineas.push(`${encabezado} → ${await takeZoom(page, paso.zoom, images).catch(() => "the screenshot couldn't be taken this time.")}`);
+      continue;
+    }
+    if ("wait" in paso) {
+      lineas.push(`${encabezado} → I waited ${paso.wait} s.`);
+      for (const c of await esperarPaso(page, paso.wait, plazo)) lineas.push(`   · ${c}`);
+      continue;
+    }
     const accion = await actuar(page, paso, cambiantes);
     if (!accion.ok) {
       lineas.push(`${encabezado} → ${accion.hecho}`);
@@ -1533,21 +1786,31 @@ async function visitTab(
 
     // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
     // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
-    if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0) {
+    const nadaPropio = propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0;
+    // With a canvas or a video in view, the text can't say «nothing changed»: it says to look instead, as
+    // Claude's, DeepSeek's and Kimi's agents look. What nobody listens to is still a fact, and is said.
+    const lienzos = nadaPropio ? await lienzosALaVista(page) : [];
+    if (nadaPropio) {
       const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
-      if ("reload" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
-      else {
+      if (lienzos.length > 0) detalle.push(avisoDeLienzos(lienzos));
+      if ("reload" in paso) {
+        if (lienzos.length === 0) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
+      } else {
         const campo = accion.previo?.campo === true;
-        detalle.push(
-          campo
-            ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
-            : `nothing changed: not what is shown, not the fields, not what is saved in the browser${salvo}.`,
-        );
-        if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
+        if (lienzos.length === 0) {
           detalle.push(
             campo
-              ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
-              : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
+              ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
+              : `nothing changed: not what is shown, not the fields, not what is saved in the browser${salvo}.`,
+          );
+        }
+        if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
+          detalle.push(
+            accion.previo.teclado
+              ? "(note: nothing on the page listens to the keyboard —not the window, the document, nor what has the focus—: there is nothing behind the key.)"
+              : campo
+                ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
+                : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
           );
         }
       }

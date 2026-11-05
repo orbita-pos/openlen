@@ -1922,6 +1922,27 @@ describe("la carpeta con binarios", () => {
     assert.deepEqual(vistas, [PNG.byteLength]);
   });
 
+  // El region de Kimi Code (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.1).
+  it("Read de una imagen de la carpeta con region le pasa el recorte a imageForModel", async () => {
+    const { deps } = await conBlobs({ "/img/a.png": PNG });
+    const pedidos: unknown[] = [];
+    const d = {
+      ...deps,
+      imageForModel: async (_b: Uint8Array, o?: unknown) => (pedidos.push(o), { image: { mimeType: "image/jpeg", dataBase64: "x" }, width: 2, height: 2, originalWidth: 4, originalHeight: 3, reduced: false }),
+    } as unknown as AgentDeps;
+    const r = await runAgentTool(makeSession(), d, "Read", { file_path: "/img/a.png", region: { x: 1, y: 1, width: 2, height: 2 } });
+    assert.match(texto(r), /^Image read: \/img\/a\.png/);
+    assert.match(texto(r), /Showing region \(x=1, y=1, width=2, height=2\) of the original 4×3 image/);
+    assert.deepEqual(pedidos, [{ region: { x: 1, y: 1, width: 2, height: 2 } }]);
+  });
+
+  it("region en un fichero que no es imagen: dice que sólo vale para imágenes", async () => {
+    const { deps } = await conBlobs({});
+    const r = await runAgentTool(makeSession(), deps, "Read", { file_path: "/index.html", region: { x: 0, y: 0, width: 2, height: 2 } });
+    assert.equal(r.response.ok, false);
+    assert.match(String(r.response.error), /region only applies to images/);
+  });
+
   it("Read de otro binario: el error de Claude Code; de un Latin-1: su texto con U+FFFD y la nota", async () => {
     const { deps } = await conBlobs({ "/data/x.bin": Uint8Array.from([0, 1, 2]), "/viejo.txt": Uint8Array.from([0x63, 0x61, 0x66, 0xe9, 0x0a]) });
     const bin = await runAgentTool(makeSession(), deps, "Read", { file_path: "/data/x.bin" });
