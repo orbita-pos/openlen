@@ -33,6 +33,7 @@ import {
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 import { newProjectHref } from "@/components/workspace-v2/chat/nace-como";
 import { HeroKindPicker } from "./hero-kind-picker";
+import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // LO QUE LE PEDIRÍAS A UN DESARROLLADOR (04/10). La portada enseñaba las ideas
@@ -61,6 +62,8 @@ export function HeroPromptInput() {
   const [loginOpen, setLoginOpen] = useState(false);
   // PÁGINA O APP (la píldora del input). Página por defecto, como en /new.
   const [kind, setKind] = useState<NaceComo>("pagina");
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Juego in the pill, unless games are off here.
+  const juegos = useGamesAvailable();
   const tw = useTranslations("wsChrome");
   // LAS FOTOS ADJUNTAS. Hasta `MAX_REFERENCIAS`.
   //
@@ -424,7 +427,7 @@ export function HeroPromptInput() {
                 )}
               </button>
             )}
-            <HeroKindPicker value={kind} onChange={setKind} />
+            <HeroKindPicker value={kind} onChange={setKind} conJuego={juegos} />
             {/* EL BOTÓN DEL CHAT: cuadrado redondeado, siempre del mismo tamaño;
                 sólo cambia de color al haber algo que mandar. */}
             <button

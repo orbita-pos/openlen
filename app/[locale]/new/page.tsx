@@ -59,6 +59,7 @@ import { projectToolItems, railToolItems, toolPromptDraft } from "@/components/w
 import { ToolView } from "@/components/workspace-v2/tools/tool-view";
 import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
 import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
+import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
   LeftSidebar,
@@ -70,7 +71,7 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { KIND_PARAM, kindFromParam } from "@/components/workspace-v2/chat/nace-como";
+import { KIND_PARAM, kindFromParam, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
@@ -225,6 +226,8 @@ interface LoadedProject {
   app: AppDeProyecto | null;
   /** A TOOL being built (`data.tool`, spec local 2026-11-04-herramientas-hechas-por-len): installed, not published. */
   tool: boolean;
+  /** A GAME (`data.game`, spec local 2026-11-05-modo-juego-design): an app whose preview lens is called «Juego». */
+  game: boolean;
   /** COMPARTIR EL PROYECTO (lib/projects/acceso.ts): tú eres el dueño, un
    *  editor o un lector. Un lector no edita nada; el servidor lo hace cumplir,
    *  esto sólo esconde lo que no podría hacer. */
@@ -353,6 +356,8 @@ function NewV2Inner() {
   const locale = useLocale();
   // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): the person's installed tools.
   const installedTools = useInstalledTools(locale);
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): the «Juego» card, unless games are off here.
+  const juegosDisponibles = useGamesAvailable();
   const [dark, toggleDark] = useDarkMode();
   const toast = useToast();
   // Editor sound (creamy click on rail switching) + the mute/volume control,
@@ -1075,6 +1080,10 @@ function NewV2Inner() {
     setNaceComo(kindFromUrl.current);
     if (projectParam) kindFromUrl.current = "pagina";
   }, [projectParam]);
+  // A «Juego» asked for while games are off here (a stale kind=game link) is a page, as the server makes it.
+  useEffect(() => {
+    setNaceComo((v) => naceComoDisponible(v, juegosDisponibles));
+  }, [juegosDisponibles]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
   // compositor, y enviar es el primer mensaje.
@@ -1116,7 +1125,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComo === "app" || naceComo === "tool" ? { naceComo, idioma: locale } : {}),
+        ...(naceComo !== "pagina" ? { naceComo, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1398,6 +1407,7 @@ function NewV2Inner() {
                 degradationsDismissed?: boolean;
                 app?: AppDeProyecto;
                 tool?: { bornAt: string };
+                game?: { bornAt: string };
               };
               rol?: "dueno" | "editor" | "lector";
               artifacts?: boolean;
@@ -1442,6 +1452,7 @@ function NewV2Inner() {
         degradationsDismissed: p.data?.degradationsDismissed,
         app: p.data?.app ?? null,
         tool: !!p.data?.tool,
+        game: !!p.data?.game,
         rol: p.rol ?? "dueno",
         artifacts: p.artifacts === true,
       });
@@ -1571,7 +1582,7 @@ function NewV2Inner() {
   // AN APP BEING BORN: the first turn of a project that is (or was just asked to
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
-  const appBirth = useAppBirth(latestTurn, esApp || naceComo === "app" || naceComo === "tool");
+  const appBirth = useAppBirth(latestTurn, esApp || naceComo !== "pagina");
   // LO QUE ENSEÑA EL CENTRO, como Claude con un artefacto (21/10): la conversación ocupa el medio mientras no hay
   // nada que ver; una pieza (presentación, dashboard, imagen, video, voz) se abre ahí si el proyecto no tiene
   // página; con página o app, el lienzo de siempre. La lista de piezas se lee UNA vez y la comparten la campana,
@@ -1588,7 +1599,7 @@ function NewV2Inner() {
   // `loading` vuelve a false y cuenta como ninguna).
   const centro = centerContent({
     hasPage: loadedProject ? activeDoc.trim() !== "" || Object.keys(loadedProject.pages ?? {}).length > 0 : null,
-    isApp: esApp || naceComo === "app" || naceComo === "tool",
+    isApp: esApp || naceComo !== "pagina",
     deliverables:
       artifactsOn && artifacts.enabled === null && artifacts.loading ? null : artifactsOn && artifacts.enabled ? artifacts.items.length : 0,
   });
@@ -3967,6 +3978,7 @@ function NewV2Inner() {
                 }}
                 onPaste={() => router.push("/new?mode=paste")}
                 naceComo={naceComo}
+                conJuego={juegosDisponibles}
                 conHerramienta={installedTools.available}
                 herramientaBloqueada={installedTools.paid ? undefined : tws("tools.planRequired")}
                 onNaceComoChange={setNaceComo}
@@ -4049,6 +4061,7 @@ function NewV2Inner() {
                 // la app, y lo que quedaba debajo —un botón, un menú— no se podía elegir.
                 reservaDerecha={designMode ? DESIGN_PANEL_WIDTH : 0}
                 esApp={esApp}
+                esJuego={juegosDisponibles && !!loadedProject?.game}
                 usesTestData={hasDatabase}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}

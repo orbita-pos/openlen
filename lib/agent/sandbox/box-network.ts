@@ -18,6 +18,18 @@ export const PAGE_CDNS: readonly string[] = [
   "cdn.shopify.com",
 ];
 
+/** Where a game's CC0 models and textures are downloaded from (spec local 2026-11-05-modo-juego-design, §8.5–8.6),
+ *  each where its source actually serves them, measured on 05/11: Poly Haven's API and files, ambientCG and the host
+ *  its downloads redirect to. Not Kenney: its site answers 403 to anything that isn't a browser, so its packs come in
+ *  by the person's own upload. Poly Haven's API terms ask for a User-Agent of our own and for telling the person the
+ *  asset came from Poly Haven (the game-development skill says both). */
+export const CC0_ASSET_HOSTS: readonly string[] = [
+  "api.polyhaven.com",
+  "dl.polyhaven.org",
+  "ambientcg.com",
+  "acg-download.struffelproductions.com",
+];
+
 export interface BoxNetwork {
   /** OpenLen's hosts of the project: allowed, each with a header rule (E2B: up to 10). */
   readonly hosts: readonly string[];

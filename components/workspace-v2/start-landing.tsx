@@ -66,7 +66,17 @@ export interface StartLandingProps {
   conHerramienta?: boolean;
   /** Why the tool card can't be chosen (the Free plan). */
   herramientaBloqueada?: string;
+  /** THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): the «Juego» card, when games are on. */
+  conJuego?: boolean;
 }
+
+/** What the empty state says for each kind: its headline, its subtitle and the composer's placeholder. */
+const TEXTS: Record<NaceComo, { headline: string; subtitle: string; placeholder?: string }> = {
+  pagina: { headline: "start.headline", subtitle: "start.subtitle" },
+  app: { headline: "start.kind.headline", subtitle: "start.kind.subtitle", placeholder: "start.kind.appPlaceholder" },
+  game: { headline: "start.kind.gameHeadline", subtitle: "start.kind.gameSubtitle", placeholder: "start.kind.gamePlaceholder" },
+  tool: { headline: "start.kind.toolHeadline", subtitle: "start.kind.toolSubtitle", placeholder: "start.kind.toolPlaceholder" },
+};
 
 export function StartLanding({
   aiState,
@@ -78,6 +88,7 @@ export function StartLanding({
   onPaste,
   naceComo,
   onNaceComoChange,
+  conJuego = false,
   conHerramienta = false,
   herramientaBloqueada,
 }: StartLandingProps) {
@@ -150,17 +161,17 @@ export function StartLanding({
           {/* Hero copy */}
           <div className="text-center mb-6">
             <h2 className="text-[26px] sm:text-[31px] font-semibold fg tracking-tight leading-tight">
-              {naceComo === "app" ? tw("start.kind.headline") : naceComo === "tool" ? tw("start.kind.toolHeadline") : tw("start.headline")}
+              {tw(TEXTS[naceComo].headline)}
             </h2>
             <p className="mt-2.5 text-[13px] fg-muted leading-relaxed max-w-md mx-auto">
-              {naceComo === "app" ? tw("start.kind.subtitle") : naceComo === "tool" ? tw("start.kind.toolSubtitle") : tw("start.subtitle")}
+              {tw(TEXTS[naceComo].subtitle)}
             </p>
           </div>
 
           {/* PÁGINA O APP, y debajo el compositor de siempre. */}
           <div className="max-w-2xl mx-auto">
             <div className="mb-4">
-              <TarjetasNaceComo value={naceComo} onChange={onNaceComoChange} disabled={generating} conHerramienta={conHerramienta} {...(herramientaBloqueada ? { herramientaBloqueada } : {})} />
+              <TarjetasNaceComo value={naceComo} onChange={onNaceComoChange} disabled={generating} conJuego={conJuego} conHerramienta={conHerramienta} {...(herramientaBloqueada ? { herramientaBloqueada } : {})} />
             </div>
             <HeroComposer
               state={aiState}
@@ -169,7 +180,7 @@ export function StartLanding({
               effort={effort}
               onEffortChange={onEffortChange}
               addFilesRef={addFilesRef}
-              {...(naceComo === "app" ? { placeholder: tw("start.kind.appPlaceholder") } : naceComo === "tool" ? { placeholder: tw("start.kind.toolPlaceholder") } : {})}
+              {...(TEXTS[naceComo].placeholder ? { placeholder: tw(TEXTS[naceComo].placeholder) } : {})}
             />
             {/* Pegar HTML y la galería son de PÁGINAS: con App elegida no hay
                 plantilla que clonar ni HTML que pegar, y enseñarlas sería

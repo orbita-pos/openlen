@@ -2,17 +2,33 @@
 // App del estado vacío (`tarjetas-nace-como.tsx`). Un sitio para la forma del
 // campo, que la usan dos: el borrador que se manda solo y el cuerpo del turno.
 
-/** Lo que pide nacer como app —o como herramienta (spec local 2026-11-04-herramientas-hechas-por-len)—: la
- *  tarjeta, y el idioma de la interfaz. */
+/** What is born as an app: an app, a tool (spec local 2026-11-04-herramientas-hechas-por-len) or a game (spec local
+ *  2026-11-05-modo-juego-design). A page is born as always, with nothing. */
+export type NaceComoApp = "app" | "tool" | "game";
+
+const COMO_APP: readonly string[] = ["app", "tool", "game"] satisfies readonly NaceComoApp[];
+
+/** Lo que pide nacer como app —o como herramienta, o como juego—: la tarjeta, y el idioma de la interfaz. */
 export interface PideNacer {
-  readonly naceComo?: "app" | "tool";
+  readonly naceComo?: NaceComoApp;
   readonly idioma?: string;
 }
 
-/** Los campos del cuerpo: `{ naceComo, idioma }` para una app o una herramienta, o nada si es una página. */
+/** Los campos del cuerpo: `{ naceComo, idioma }` para una app, una herramienta o un juego, o nada si es una página. */
 export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
-  if (o?.naceComo !== "app" && o?.naceComo !== "tool") return {};
+  if (!o?.naceComo || !COMO_APP.includes(o.naceComo)) return {};
   return { naceComo: o.naceComo, ...(o.idioma ? { idioma: o.idioma } : {}) };
+}
+
+/** Whether this first message makes the blank project an app (a tool and a game are apps too). */
+export function naceComoApp(v: string | null | undefined): v is NaceComoApp {
+  return typeof v === "string" && COMO_APP.includes(v);
+}
+
+/** What the start page can really be born as: a game asked for (a stale `kind=game` link) while the server says
+ *  games are off (OPENLEN_GAMES=0) is a page, which is what the server makes of it. */
+export function naceComoDisponible<T extends "pagina" | NaceComoApp>(v: T, juegos: boolean): T | "pagina" {
+  return v === "game" && !juegos ? "pagina" : v;
 }
 
 // LA PORTADA TAMBIÉN ELIGE (la píldora del input, `hero-kind-picker.tsx`): su
@@ -22,13 +38,13 @@ export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
 /** El parámetro de /new con el que la portada pide nacer como app. */
 export const KIND_PARAM = "kind";
 
-/** Lo que dice la URL: sólo `app` es app. */
-export function kindFromParam(v: string | null): "pagina" | "app" | "tool" {
-  return v === "app" || v === "tool" ? v : "pagina";
+/** Lo que dice la URL: `app`, `tool` o `game`; lo demás, o nada, es una página. */
+export function kindFromParam(v: string | null): "pagina" | NaceComoApp {
+  return naceComoApp(v) ? v : "pagina";
 }
 
-/** El enlace de la portada a /new: el brief escrito y, si es una app, `kind=app`. */
-export function newProjectHref(brief: string, kind: "pagina" | "app" | "tool"): string {
+/** El enlace de la portada a /new: el brief escrito y, si no es una página, su `kind`. */
+export function newProjectHref(brief: string, kind: "pagina" | NaceComoApp): string {
   const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
   return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }

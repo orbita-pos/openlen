@@ -82,7 +82,8 @@
       "codigo": "Codice",
       "terminal": "Terminale",
       "cambios": "Modifiche",
-      "app": "App"
+      "app": "App",
+      "game": "Gioco"
     },
     "toolbar": {
       "editPage": "Modifica pagina (⌘E)",
@@ -321,6 +322,11 @@
       "appPlaceholder": "Descrivi la tua app: cosa fa, chi la usa…",
       "headline": "La tua prossima app inizia qui",
       "subtitle": "Di’ a Len cosa deve fare e lui la costruisce: schermate, dati e login.",
+      "game": "Gioco",
+      "gameHint": "Un gioco nel browser, 2D o 3D, da giocare e condividere",
+      "gameHeadline": "A cosa vuoi giocare?",
+      "gameSubtitle": "Racconta a Len com’è il gioco e lui lo costruisce: il suo mondo, i comandi e come si vince.",
+      "gamePlaceholder": "Un’astronave che schiva gli asteroidi…",
       "tool": "Strumento",
       "toolHint": "Una schermata tua dentro OpenLen, fatta da Len.",
       "toolHeadline": "Di che strumento hai bisogno?",

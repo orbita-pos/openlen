@@ -21,6 +21,13 @@ const TYPES: Readonly<Record<string, string>> = {
   ".m4a": "audio/mp4",
   ".ogg": "audio/ogg",
   ".wav": "audio/wav",
+  ".opus": "audio/ogg",
+  ".flac": "audio/flac",
+  // A game's models (spec local 2026-11-05-modo-juego-design, §8.6), as Caddy sends them on the published site.
+  ".glb": "model/gltf-binary",
+  ".gltf": "model/gltf+json",
+  ".bin": "application/octet-stream",
+  ".hdr": "image/vnd.radiance",
   ".mp4": "video/mp4",
   ".webm": "video/webm",
   ".mov": "video/quicktime",

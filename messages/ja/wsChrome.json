@@ -82,7 +82,8 @@
       "codigo": "コード",
       "terminal": "ターミナル",
       "cambios": "変更",
-      "app": "アプリ"
+      "app": "アプリ",
+      "game": "ゲーム"
     },
     "toolbar": {
       "editPage": "ページを編集（⌘E）",
@@ -321,6 +322,11 @@
       "appPlaceholder": "アプリについて説明してください：何をするか、誰が使うか…",
       "headline": "次のアプリはここから",
       "subtitle": "何をするアプリかを Len に伝えれば、画面・データ・ログインまで作ります。",
+      "game": "ゲーム",
+      "gameHint": "ブラウザで遊べる2D・3Dゲーム。遊んで、シェアできます",
+      "gameHeadline": "どんなゲームで遊びたい？",
+      "gameSubtitle": "どんなゲームかを Len に伝えれば、世界・操作・勝ち方まで作ります。",
+      "gamePlaceholder": "小惑星をよける宇宙船のゲーム…",
       "tool": "ツール",
       "toolHint": "Len が作る、OpenLen の中のあなた専用の画面。",
       "toolHeadline": "どんなツールが必要ですか？",

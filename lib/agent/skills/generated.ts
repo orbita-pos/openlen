@@ -31,6 +31,9 @@ export interface BundledContext {
   /** «Sugerencias de herramientas» on for whoever speaks, outside a tool project (lib/tools/suggestions.ts):
    *  `tool-suggestions` is offered. */
   readonly toolSuggestions?: boolean;
+  /** A game project (spec local 2026-11-05-modo-juego-design, §8.5): `game-development` is offered and its Phaser
+   *  references are served; `frontend-design` is Claude's method without the app guide. */
+  readonly game?: boolean;
 }
 
 export interface GeneratedSkill {
@@ -70,6 +73,8 @@ const frontendDesign: GeneratedSkill = {
     "OpenLen's design guide for color, type, dark mode and finish, with Claude's frontend-design method. Load it before writing a page or an app from scratch, or a redesign. What you add to something that already exists is written the way it already is.",
   when: () => true,
   files: (ctx): Record<string, string> => {
+    // A game's menus and HUD: Claude's method, without the app guide (a point of sale is not a game).
+    if (ctx.app && ctx.game) return { "SKILL.md": FROM_CLAUDE_FRONTEND_DESIGN };
     if (ctx.app) return { "SKILL.md": `${GUIA_DE_LA_APP}\n\n${FROM_CLAUDE_FRONTEND_DESIGN}` };
     const docs = partirElManual().docs;
     return {

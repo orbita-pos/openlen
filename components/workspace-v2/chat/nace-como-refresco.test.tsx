@@ -89,6 +89,16 @@ describe("la app que nace con el primer mensaje", () => {
     expect(onChatChange).toHaveBeenCalledTimes(1);
   });
 
+  // A tool and a game are born the same way (they are apps): the view must see them as such from the start.
+  for (const naceComo of ["tool", "game"] as const) {
+    it(`🔴 a ${naceComo} that is born also reloads the project as soon as the turn starts`, async () => {
+      stubAgentStream();
+      const onChatChange = vi.fn();
+      await render({ images: [], naceComo, idioma: "es" }, onChatChange);
+      expect(onChatChange).toHaveBeenCalledTimes(1);
+    });
+  }
+
   it("CONTRA-PRUEBA: un primer mensaje de página no recarga a mitad del turno", async () => {
     stubAgentStream();
     const onChatChange = vi.fn();

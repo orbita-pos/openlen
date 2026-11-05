@@ -16,7 +16,7 @@ export interface SandboxConfig {
   readonly apiKey: string;
   readonly template: string;
   readonly dailyUsd: number;
-  /** Only these accounts get the box (`OPENLEN_SANDBOX_ONLY_USERS`); `null` = everyone. */
+  /** Accounts that get the box whatever their plan (`OPENLEN_SANDBOX_ONLY_USERS`, test ones); `null` = none. */
   readonly onlyUsers: readonly string[] | null;
 }
 
@@ -30,11 +30,22 @@ export function sandboxConfig(env: Readonly<Record<string, string | undefined>> 
   return { apiKey, template: SANDBOX_TEMPLATE, dailyUsd, onlyUsers: users.length > 0 ? users : null };
 }
 
-/** Whether the turns of the project's owner `userId` get the box: on, and during a rollout, on its list
- *  (as terminalForTurn decides, ./choose.ts). What Len is told about its terminal —bash's description,
- *  the manual— follows this. Without a person (scripts, Len-Bench, the MCP docs), only with no rollout. */
-export function realTerminalFor(userId: string | null | undefined, env: Readonly<Record<string, string | undefined>> = process.env): boolean {
+/** Whether an owner gets the box: on a paid plan (Jesús, 05/11, spec local 2026-11-05-modo-juego-design, §11:
+ *  the owner pays it per second; Free credits would be OpenLen's), or on `OPENLEN_SANDBOX_ONLY_USERS`. */
+export function ownerGetsTheBox(config: SandboxConfig, userId: string, ownerPaid: boolean): boolean {
+  return ownerPaid || config.onlyUsers?.includes(userId) === true;
+}
+
+/** Whether the turns of the project's owner `userId` get the box (as terminalForTurn decides, ./choose.ts):
+ *  the box on, and `ownerGetsTheBox`. What Len is told about its terminal —bash's description, the manual—
+ *  follows this. Without a person (scripts, Len-Bench, the MCP docs), nobody. */
+export function realTerminalFor(
+  userId: string | null | undefined,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+  /** The project OWNER's plan is paid (the route reads it once per turn). */
+  ownerPaid = false,
+): boolean {
   const config = sandboxConfig(env);
-  if (!config) return false;
-  return config.onlyUsers === null || (typeof userId === "string" && config.onlyUsers.includes(userId));
+  if (!config || typeof userId !== "string") return false;
+  return ownerGetsTheBox(config, userId, ownerPaid);
 }

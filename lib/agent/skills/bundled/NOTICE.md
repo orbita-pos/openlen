@@ -89,3 +89,14 @@ install as the first preview, verify in place, fix, report), written in our own 
 `src/skill.ts`, at `fcc0ad4621`, MIT): the same sections, rules, fields and order, with OpenLen's tools in place of
 DSH pages, `create_tool` in place of `create_personalized_page`, and our own examples
 (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+
+`game-development` (spec local 2026-11-05-modo-juego-design, §8.5):
+- `SKILL.md`, `references/three.md`, `references/assets.md` and `references/phaser-index.md` are ours. The method
+  follows Kimi Academy's 3D tutorial (kimi.ai/academy/3d-tutorial, read on 2026-11-05), said in our own words and
+  cited; `three.md` is written from three.js's own `llms.txt` and manual (MIT).
+- `references/phaser/<area>/` are Phaser's own agent skills, copied as they are from `phaserjs/phaser`, `skills/`, at
+  `02d8931b626d9764c133cbb3fbf99966c03c757c`, MIT License, Copyright (c) 2026 Richard Davey, Phaser Studio Inc. The
+  full license is in `LICENSES/phaser.MIT.txt`.
+- `references/phaser/template-react-ts.md` holds five files of `phaserjs/template-react-ts` at
+  `c7265972c856906cacf1f2892d8565d64a358d34` (MIT License, Copyright (c) 2025 Phaser Studio Inc), as they are,
+  inside Markdown so the repo's type check doesn't read them as source.

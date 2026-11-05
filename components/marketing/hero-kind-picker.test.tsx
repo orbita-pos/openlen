@@ -16,11 +16,12 @@ vi.mock("next-intl", () => ({
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
-function Arnes() {
+function Arnes({ conJuego = false }: { conJuego?: boolean }) {
   const [v, setV] = useState<NaceComo>("pagina");
   return (
     <HeroKindPicker
       value={v}
+      conJuego={conJuego}
       onChange={(x) => {
         vistos.push(x);
         setV(x);
@@ -28,12 +29,12 @@ function Arnes() {
     />
   );
 }
-function render() {
+function render(o: { conJuego?: boolean } = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   act(() => {
     const root = createRoot(container);
-    root.render(<Arnes />);
+    root.render(<Arnes {...o} />);
     roots.push(root);
   });
   return container;
@@ -72,5 +73,16 @@ describe("la píldora Página/App de la portada", () => {
     expect(vistos).toEqual(["app"]);
     expect(opciones(c)).toHaveLength(0);
     expect(disparador(c).textContent).toContain("start.kind.app");
+  });
+
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Kimi has 3D Make on its home page.
+  it("with games on, it offers Juego third, and choosing it makes the pill say Juego", () => {
+    const c = render({ conJuego: true });
+    act(() => disparador(c).click());
+    expect(opciones(c)).toHaveLength(3);
+    expect(opciones(c)[2].textContent).toContain("start.kind.gameHint");
+    act(() => opciones(c)[2].click());
+    expect(vistos).toEqual(["game"]);
+    expect(disparador(c).textContent).toContain("start.kind.game");
   });
 });

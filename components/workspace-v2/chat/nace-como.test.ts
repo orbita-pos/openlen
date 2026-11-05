@@ -1,6 +1,6 @@
 // La portada pide nacer como app por la URL: `/new?brief=…&kind=app`.
 import { describe, expect, it } from "vitest";
-import { camposDeNacer, kindFromParam, newProjectHref } from "./nace-como";
+import { camposDeNacer, kindFromParam, naceComoDisponible, newProjectHref } from "./nace-como";
 
 describe("el tipo que trae la URL de /new", () => {
   it("sólo `app` es app; lo demás, o nada, es página", () => {
@@ -29,6 +29,25 @@ describe("los campos de nacer en el cuerpo del primer mensaje", () => {
     expect(camposDeNacer({ naceComo: "tool", idioma: "es" })).toEqual({ naceComo: "tool", idioma: "es" });
     expect(camposDeNacer({ naceComo: "app" })).toEqual({ naceComo: "app" });
     expect(camposDeNacer(null)).toEqual({});
+  });
+});
+
+describe("a game in the URL and in the first message (spec local 2026-11-05-modo-juego-design, §8.2)", () => {
+  it("kind=game is a game; its link carries it", () => {
+    expect(kindFromParam("game")).toBe("game");
+    expect(newProjectHref("naves", "game")).toBe("/new?brief=naves&kind=game");
+  });
+  it("a game travels like an app: `naceComo` and the language", () => {
+    expect(camposDeNacer({ naceComo: "game", idioma: "es" })).toEqual({ naceComo: "game", idioma: "es" });
+  });
+});
+
+describe("a game asked for while games are off (final review, 05/11)", () => {
+  it("a stale kind=game is a page when the server says games are off, and stays as it is otherwise", () => {
+    expect(naceComoDisponible("game", false)).toBe("pagina");
+    expect(naceComoDisponible("game", true)).toBe("game");
+    expect(naceComoDisponible("app", false)).toBe("app");
+    expect(naceComoDisponible("tool", false)).toBe("tool");
   });
 });
 

@@ -18,7 +18,7 @@ import { chargeSandbox } from "./billing";
 import type { BoxNetwork } from "./box-network";
 import type { BridgeHandlers } from "./bridge";
 import { sandboxBudgetOk, spentTodayMicroUsd } from "./budget";
-import { sandboxConfig } from "./config";
+import { ownerGetsTheBox, sandboxConfig } from "./config";
 import type { SandboxDriver, SandboxHandle } from "./driver";
 import { e2bDriver } from "./e2b-driver";
 import type { Manifest } from "./manifest";
@@ -239,7 +239,8 @@ export async function terminalForTurn(session: AgentSession, o: TurnTerminalOpti
     if (notice) session.sandboxNotice = LIMITED_TERMINAL_NOTICE;
     return o.local();
   };
-  if (config.onlyUsers && !config.onlyUsers.includes(session.userId)) return fallback("only_users", false);
+  // The box is for the owner's paid plan, or the list (spec local 2026-11-05-modo-juego-design, §11).
+  if (!ownerGetsTheBox(config, session.userId, session.ownerPaid === true)) return fallback("plan", false);
 
   const projectFiles = await o.projectFiles();
   if (conflictingTopLevel(Object.keys(projectFiles)).length > 0) return fallback("conflict");

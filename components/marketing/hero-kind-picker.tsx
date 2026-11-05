@@ -11,12 +11,13 @@
 // portada, la barra del input—, no a la píldora: anclado a ella se salía por la
 // derecha en un móvil.
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronDown, LayoutDashboard, PanelsTopLeft } from "lucide-react";
+import { Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft } from "lucide-react";
 import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
 import {
   DibujoApp,
+  DibujoJuego,
   DibujoPagina,
   type NaceComo,
 } from "@/components/workspace-v2/tarjetas-nace-como";
@@ -25,18 +26,24 @@ import { cn } from "@/lib/cn";
 export function HeroKindPicker({
   value,
   onChange,
+  conJuego = false,
 }: {
   value: NaceComo;
   onChange: (v: NaceComo) => void;
+  /** Games are on (spec local 2026-11-05-modo-juego-design, §8.2): Juego is offered too, as Kimi offers 3D Make
+   *  from its home page. */
+  conJuego?: boolean;
 }) {
   const t = useTranslations("wsChrome");
   const [open, setOpen] = useState(false);
   const mando = useMandoDesplegable({ abierto: open, cerrar: () => setOpen(false) });
-  const opciones = [
+  const opciones: ReadonlyArray<{ id: NaceComo; titulo: string; linea: string; dibujo: ReactNode }> = [
     { id: "pagina", titulo: t("start.kind.page"), linea: t("start.kind.pageHint"), dibujo: <DibujoPagina /> },
     { id: "app", titulo: t("start.kind.app"), linea: t("start.kind.appHint"), dibujo: <DibujoApp /> },
-  ] as const;
-  const Icono = value === "app" ? LayoutDashboard : PanelsTopLeft;
+    ...(conJuego ? [{ id: "game" as const, titulo: t("start.kind.game"), linea: t("start.kind.gameHint"), dibujo: <DibujoJuego /> }] : []),
+  ];
+  const Icono = value === "app" ? LayoutDashboard : value === "game" ? Gamepad2 : PanelsTopLeft;
+  const nombre = value === "app" ? t("start.kind.app") : value === "game" ? t("start.kind.game") : t("start.kind.page");
 
   const elegir = (id: NaceComo) => {
     setOpen(false);
@@ -51,19 +58,19 @@ export function HeroKindPicker({
         ref={mando.refDisparador}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`${t("start.kind.label")} ${value === "app" ? t("start.kind.app") : t("start.kind.page")}`}
+        aria-label={`${t("start.kind.label")} ${nombre}`}
         title={t("start.kind.label")}
         onClick={() => setOpen((x) => !x)}
         className={cn(
           "inline-flex h-[30px] items-center gap-1.5 rounded-[9px] pl-2 pr-1.5 text-[12.5px] font-medium transition hover:bg-zinc-100 dark:hover:bg-zinc-900",
-          value === "app"
+          value === "app" || value === "game"
             ? "text-coral-600 dark:text-coral-400"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100",
           open && "bg-zinc-100 dark:bg-zinc-900",
         )}
       >
         <Icono size={14} aria-hidden />
-        <span>{value === "app" ? t("start.kind.app") : t("start.kind.page")}</span>
+        <span>{nombre}</span>
         <ChevronDown
           size={13}
           aria-hidden

@@ -928,6 +928,8 @@ describe("la vista «Datos» se retiró y el prompt no la nombra", () => {
       cambios: "Cambios",
       // Apps (F4): en una app el lienzo la enseña corriendo.
       app: "App",
+      // The game mode (spec local 2026-11-05-modo-juego-design, §8.6): in a game, that lens is called «Juego».
+      game: "Juego",
     });
   });
 });
@@ -955,6 +957,20 @@ describe("los almacenes data-ol-stores no vuelven", () => {
     expect(bash, "sin `bash` la guarda de abajo no comprueba nada").toBeDefined();
     expect(bash!.description).not.toMatch(/\/datos\b/);
     expect(bash!.description).toContain("/supabase/migrations/");
+  });
+
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.5): a game's skills too. What is copied from Phaser
+  // uses "store" as the English verb, nothing to do with the retired data stores: only that word is let through
+  // there (its skills, and our index that quotes their descriptions), as Shopify's line above.
+  it("a game's skills don't either; what is copied from Phaser is only let off the word store", async () => {
+    const { bundledSkillFiles } = await import("@/lib/agent/skills/bundled");
+    const files = Object.entries(bundledSkillFiles({ app: { catalogo: "2026-11", entrada: "/src/main.tsx" }, env: {}, game: true }));
+    expect(files.some(([p]) => p.includes("/game-development/references/phaser/")), "the guard must see Phaser's files").toBe(true);
+    for (const [path, text] of files) {
+      expect(text, path).not.toContain("data-ol-stores");
+      expect(text, path).not.toMatch(/\/datos\b/);
+      if (!path.includes("/game-development/references/phaser")) expect(text, path).not.toMatch(/\bstores?\b/);
+    }
   });
 });
 

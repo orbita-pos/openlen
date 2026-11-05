@@ -154,9 +154,11 @@ import { cambiosEntreFotos } from "@/lib/agent/cambios-del-turno";
 import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-turno-plan";
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
+import { bornAsGame } from "@/lib/projects/born-as-game";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
 import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
+import { gamesEnabled } from "@/lib/games/enabled";
 import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
 import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
 import { declarationsOfTool } from "@/lib/agent/tool-mode";
@@ -670,6 +672,19 @@ async function correrTurno(
     });
     if (born === "plan_required") return errorJson(402, "plan_required");
   }
+  // A GAME IS BORN the same way (spec local 2026-11-05-modo-juego-design, §8.1): the «Juego» card's first message
+  // makes the blank project a game before Len reads it. Open to every plan, like apps (§11).
+  if (body?.naceComo === "game" && !opts.round && gamesEnabled()) {
+    await bornAsGame({
+      projectId,
+      userId,
+      title: "Juego",
+      locale: typeof body.idioma === "string" ? body.idioma : "en",
+    }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn("[agent] the game couldn't be born; the turn goes on with the project as it is", err);
+    });
+  }
   const project = await deps.loadProject(projectId, userId);
   if (!project) return errorJson(404, "project not found");
   const pageSlug =
@@ -684,6 +699,8 @@ async function correrTurno(
   const appDelTurno = project.data?.app ?? null;
   // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): an app with the tool posture on top.
   const toolDelTurno = appDelTurno && project.data?.tool && toolsEnabled() ? true : false;
+  // A GAME (spec local 2026-11-05-modo-juego-design, §8.4): an app with the game posture. Off, it is the app it is.
+  const gameDelTurno = appDelTurno && project.data?.game && gamesEnabled() && !toolDelTurno ? true : false;
   // EL MODO DISEÑO (spec local 2026-10-11): sólo en una app. Las líneas se
   // leen de la carpeta, y un elemento inválido se descarta sin tumbar el turno.
   const ficherosDelDiseno =
@@ -694,7 +711,10 @@ async function correrTurno(
   // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
   // LA TERMINAL REAL: lo que bash y el manual dicen de la terminal sigue a la caja del dueño (en un
   // despliegue por fases, quien no está en la lista tiene la de siempre: terminalForTurn).
-  const realTerminal = realTerminalFor(userId);
+  // THE BOX IS FOR THE OWNER'S PAID PLAN (Jesús, 05/11; spec local 2026-11-05-modo-juego-design, §11): read once,
+  // here, for what Len is told and for the box the turn opens. A failed read is Free: only the list then decides.
+  const ownerPaid = await getUserPlan(userId).then((p) => p !== "free").catch(() => false);
+  const realTerminal = realTerminalFor(userId, process.env, ownerPaid);
   // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
   // and pull request protocol; without one it stays byte for byte as before.
   const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
@@ -953,7 +973,7 @@ async function correrTurno(
     mentionRefs.length > 0
       ? await resolveMentions(mentionRefs, {
           pageHtml: (p) => (p ? (project.data.pages?.[p]?.html ?? null) : (project.data.html ?? null)),
-          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno }, deps),
+          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno, ownerPaid }, deps),
         })
       : null;
   const seleccion = mentioned ? null : seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
@@ -1142,7 +1162,7 @@ async function correrTurno(
               projectId,
               ownerId: userId,
               personId: quien,
-              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno }, deps),
+              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno, ownerPaid }, deps),
             }),
           GIT_STATUS_TIMEOUT_MS,
           null,
@@ -1193,7 +1213,7 @@ async function correrTurno(
       return suggestionCatalog({ installed: rows.map((r) => toInstalledToolView(r, { locale: idiomaDelCatalogo, requestHost: null, plan: "pro", releaseExists: true })) });
     };
   }
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, game: gameDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(
@@ -1241,6 +1261,7 @@ async function correrTurno(
     mode,
     app: appDelTurno,
     tool: toolDelTurno,
+    game: gameDelTurno,
     realTerminal,
     zona: zonaDelTurno,
     timeContext: timeContextDelTurno,
@@ -1398,10 +1419,13 @@ async function correrTurno(
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
     turnId: turnoId,
+    // The box is for the owner's paid plan (spec local 2026-11-05-modo-juego-design, §11).
+    ownerPaid,
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
     tool: toolDelTurno,
+    game: gameDelTurno,
     // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
     // Los PDF de la conversación (26/10), por la ruta con la que Read los abre:
@@ -2095,8 +2119,11 @@ async function correrTurno(
                   ...(agentSession.uiLocale ? { uiLocale: agentSession.uiLocale } : {}),
                   zonaHoraria: agentSession.zonaHoraria,
                   ownerEmail,
+                  // A child shares the turn's box, which follows the owner's plan.
+                  ownerPaid,
                   // A child in a tool project installs and opens the installed tool, as Len does.
                   ...(toolDelTurno ? { tool: true } : {}),
+                  ...(gameDelTurno ? { game: true } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.

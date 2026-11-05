@@ -112,6 +112,8 @@ const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</ti
   t('camara', function(){ return policyAllows('camera'); });
   t('microfono', function(){ return policyAllows('microphone'); });
   t('ubicacion', function(){ return policyAllows('geolocation'); });
+  // A GAME (spec local 2026-11-05-modo-juego-design, §8.6, §10): a gamepad, read by the policy and by its API.
+  t('mando', function(){ var p = policyAllows('gamepad'); try { navigator.getGamepads(); return p + ':lee'; } catch (e) { return p + ':' + e.name; } });
   // El puntero, y se suelta en el acto: con él bloqueado los clics siguientes
   // de la sonda (el ancla) no llegarían a su sitio.
   document.getElementById('lock').addEventListener('click', function(){
@@ -124,6 +126,8 @@ const SONDA = `<!doctype html><html><head><meta charset="utf-8"><title>sonda</ti
     t('prompt', function(){ return JSON.stringify(prompt('nombre?')); });
     t('confirm', function(){ return confirm('seguro?'); });
     t('window_open', function(){ var w = window.open('about:blank', '_blank'); var r = w ? 'ventana' : 'null'; try { w && w.close(); } catch (e) {} return r; });
+    // A game's sound starts on the player's first touch («Tap to play»): the AudioContext runs after a gesture.
+    t('audio_tras_gesto', function(){ var c = new AudioContext(); return c.resume().then(function(){ return c.state; }); });
   });
 })();
 </script></body></html>`;
@@ -252,6 +256,8 @@ const IGUALES = [
   "origen_real", "localStorage", "sessionStorage", "indexedDB", "serviceWorker",
   "prompt", "confirm", "window_open", "ancla_desplaza", "formulario_envia",
   "pointer_lock", "camara", "microfono", "ubicacion",
+  // A game's (spec local 2026-11-05-modo-juego-design, §8.6).
+  "mando", "audio_tras_gesto",
 ] as const;
 
 describe("el lienzo remoto da lo mismo que la publicada", () => {
@@ -304,6 +310,15 @@ describe("el lienzo remoto da lo mismo que la publicada", () => {
     expect(publicada.ubicacion).toBe("ok:true");
     // La reserva local también bloquea el puntero; la cámara no (sin `allow`).
     expect(local.pointer_lock).toBe("ok");
+  });
+
+  // A GAME (spec local 2026-11-05-modo-juego-design, §8.6, §10): without these, «remoto = publicada» would pass with
+  // both blocked. Measured 05/11: the canvas needs neither `gamepad` nor `autoplay` in ALLOW_REMOTO.
+  it("🔴 a game can read a gamepad, and its sound runs after the player's first touch", () => {
+    expect(publicada.mando).toBe("ok:true:lee");
+    expect(publicada.audio_tras_gesto).toBe("ok:running");
+    expect(remoto.mando).toBe("ok:true:lee");
+    expect(remoto.audio_tras_gesto).toBe("ok:running");
   });
 
   it("BRAZO DE CONTROL: la reserva local SIGUE distinta en almacenamiento y formularios", () => {
