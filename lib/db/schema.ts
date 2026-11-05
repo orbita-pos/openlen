@@ -2496,6 +2496,9 @@ export const toolReleases = pgTable("toolReleases", {
   sha: text("sha").primaryKey(),
   projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
   files: jsonb("files").$type<Record<string, { content: string; contentType: string }>>().notNull(),
+  /** Phase 3 (§4.6): the version's job files (`/jobs/**`, `/package.json`, its lockfile, `/requirements.txt`) — what a
+   *  job runs, never served by the tool's host. */
+  jobFiles: jsonb("jobFiles").$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 

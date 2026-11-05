@@ -103,6 +103,15 @@ describe("tool installations", () => {
 });
 
 describe("tool releases", () => {
+  it("a release keeps its job files apart from what it serves (phase 3)", async () => {
+    await store.saveRelease("sha-j", "p1", { "/index.html": { content: "<html></html>", contentType: "text/html" } }, { "/jobs/pdf.py": "print(1)" });
+    expect(await store.readReleaseJobs("sha-j")).toEqual({ "/jobs/pdf.py": "print(1)" });
+    expect(Object.keys((await store.readRelease("sha-j")) ?? {})).toEqual(["/index.html"]);
+    await store.saveRelease("sha-k", "p1", { "/index.html": { content: "<html></html>", contentType: "text/html" } });
+    expect(await store.readReleaseJobs("sha-k")).toEqual({});
+    expect(await store.readReleaseJobs("missing")).toBeNull();
+  });
+
   it("saving is idempotent on the sha", async () => {
     const files = { "/index.html": { content: "<html></html>", contentType: "text/html" } };
     await store.saveRelease("sha-1", "p1", files);
