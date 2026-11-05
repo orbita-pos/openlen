@@ -92,16 +92,20 @@ describe("installing a tool with operations (phase 4)", () => {
     expect(r.body.operationsLeftOut).toEqual(["add numbers: its name must be letters"]);
   });
 
-  it("a server that doesn't answer MCP: 422 mcp_failed with the reason, nothing saved or installed", async () => {
+  // 🔴 Production was migrated and the functions deployed before the server is asked: a refusal now would leave the old
+  // version installed over the new functions (final review, Important 4). The install completes WITHOUT operations and
+  // says why, so what is installed, what is deployed and what Len is declared agree.
+  it("a server that doesn't answer MCP after deploying: installed without operations, and the answer says why", async () => {
     const d = deps({
       files: vi.fn(async () => MCP_FILES),
       prepareFunctions: vi.fn(async () => ({ deploy: async () => undefined })),
       discover: vi.fn(async () => ({ ok: false as const, error: "HTTP 500 from the server" })),
     });
     const r = await install(d);
-    expect(r).toEqual({ status: 422, body: { error: "mcp_failed", detail: "HTTP 500 from the server" } });
-    expect(d.saveRelease).not.toHaveBeenCalled();
-    expect(d.upsertInstallation).not.toHaveBeenCalled();
+    expect(r.status).toBe(200);
+    expect(r.body.operationsLeftOut).toEqual(["mcp_failed: HTTP 500 from the server — the tool is installed without operations; fix its MCP server and install again"]);
+    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), expect.any(Object), null);
+    expect(d.upsertInstallation).toHaveBeenCalled();
   });
 
   it("the functions off: installed without operations, nothing asked", async () => {

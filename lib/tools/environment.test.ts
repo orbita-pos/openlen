@@ -43,3 +43,11 @@ describe("toolLiveIsPublished", () => {
     expect(await toolLiveIsPublished("p1", async () => Promise.reject(new Error("db down")))).toBe(false);
   });
 });
+
+describe("toolLiveIsPublished with tools off", () => {
+  it("OPENLEN_TOOLS=0: no installed tool's production functions answer", async () => {
+    const { toolLiveIsPublished } = await import("./environment");
+    expect(await toolLiveIsPublished("p1", async () => true, { OPENLEN_TOOLS: "0" })).toBe(false);
+    expect(await toolLiveIsPublished("p1", async () => true, {})).toBe(true);
+  });
+});

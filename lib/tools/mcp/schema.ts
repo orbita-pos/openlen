@@ -30,6 +30,28 @@ function hasRef(v: unknown): boolean {
   return Object.entries(v as Record<string, unknown>).some(([k, x]) => k === "$ref" || hasRef(x));
 }
 
+/** The first structural problem of a JSON Schema node the provider would choke on, or null: `type` a name or a list of
+ *  names, `properties` an object of schemas, `required` a list of names, `items` a schema — all the way down. */
+function structureProblem(node: unknown, depth = 0): string | null {
+  if (depth > 32) return "is nested too deep";
+  if (!node || typeof node !== "object" || Array.isArray(node)) return "has a part that isn't a schema object";
+  const n = node as Record<string, unknown>;
+  if (n.type !== undefined && typeof n.type !== "string" && !(Array.isArray(n.type) && n.type.every((t) => typeof t === "string"))) return "has a type that isn't a name";
+  if (n.properties !== undefined) {
+    if (!n.properties || typeof n.properties !== "object" || Array.isArray(n.properties)) return "has properties that aren't an object";
+    for (const child of Object.values(n.properties as Record<string, unknown>)) {
+      const p = structureProblem(child, depth + 1);
+      if (p) return p;
+    }
+  }
+  if (n.required !== undefined && !(Array.isArray(n.required) && n.required.every((r) => typeof r === "string"))) return "has required that isn't a list of names";
+  if (n.items !== undefined) {
+    const p = structureProblem(n.items, depth + 1);
+    if (p) return p;
+  }
+  return null;
+}
+
 export function checkTools(serverName: string, tools: readonly McpTool[]): { tools: StoredOperation[]; problems: string[] } {
   const ok: StoredOperation[] = [];
   const problems: string[] = [];
@@ -51,6 +73,11 @@ export function checkTools(serverName: string, tools: readonly McpTool[]): { too
     const { $schema: _dropped, ...schema } = tool.inputSchema;
     if (schema.type !== "object") {
       problems.push(`${tool.name}: its inputSchema must be an object (type: "object")`);
+      continue;
+    }
+    const broken = structureProblem(schema);
+    if (broken) {
+      problems.push(`${tool.name}: its inputSchema ${broken}`);
       continue;
     }
     if (hasRef(schema)) {

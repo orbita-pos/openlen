@@ -343,7 +343,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     } as AgentSession;
     const tools = spec.tools;
     // Depth 1: the child has no launcher of its own; its stop is its own.
-    const deps: AgentDeps = { ...ctx.deps, subagents: undefined, turnSignal: abort.signal };
+    // An installed tool's operations are the main turn's only (spec local 2026-11-04-herramientas-hechas-por-len, §4.7).
+    const deps: AgentDeps = { ...ctx.deps, subagents: undefined, toolOperations: undefined, turnSignal: abort.signal };
     const actions: ChildStep[] = [];
     let toolUses = 0;
     /** The files its tools wrote: its undo is only these (others may change the project meanwhile). */

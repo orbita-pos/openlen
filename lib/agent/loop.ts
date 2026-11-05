@@ -2027,7 +2027,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         const { call, readOnly, summary, sig, outcome } = paso;
         if (!readOnly) ejecutadasDeTrabajo += 1;
         if (outcome.guardarSinSalida) guardarSinSalida = true;
-        const ok = outcome.response.ok !== false;
+        // MCP's error result (an installed tool's operation, phase 4) is a failure too, though it carries no `ok`.
+        const ok = outcome.response.ok !== false && outcome.response.isError !== true;
         // 🔴 H01 · LO QUE LA HERRAMIENTA DICE DE SU PROPIO EFECTO. Las puertas de
         // edición lo declaran (`declararCambio`: `cambio` / `sin_cambio` /
         // `no_se`); el resto no lo dice y se juzga por si escribió.

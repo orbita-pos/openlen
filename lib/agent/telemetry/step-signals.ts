@@ -25,6 +25,8 @@ export interface RepeatSignals {
 }
 
 export function toolErrorCode(response: Record<string, unknown>): string | undefined {
+  // An installed tool's operation answers MCP's own result: `isError` is its failure (phase 4).
+  if (response.isError === true) return "mcp_error";
   if (response.ok !== false) return undefined;
   if (typeof response.code === "string") return response.code;
   const text = String(response[CLAVE_TOOL_RESULT] ?? response.error ?? "");
@@ -56,7 +58,7 @@ export function summarizeBatch(
     return {
       name: call.name,
       argsHash: argsHash(call.args),
-      ok: response.ok !== false,
+      ok: response.ok !== false && response.isError !== true,
       ...(errorCode ? { errorCode } : {}),
       ...(typeof path === "string" ? { pathHash: createHash("sha1").update(path).digest("hex").slice(0, 16) } : {}),
     };

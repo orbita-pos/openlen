@@ -713,7 +713,7 @@ async function correrTurno(
   // AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): the speaker's, as
   // `mcp__<server>__<operation>`, LAST and sorted — the same installations give the same bytes, so only installing moves
   // the cache prefix. None with the functions off, on a free plan, or when the lookup fails (the turn goes on).
-  const operaciones = functionsEnabled()
+  const operaciones = functionsEnabled() && toolsEnabled()
     ? await (async () => {
         const { operationsFor, realOperationsDeps } = await import("@/lib/tools/mcp/operations");
         return operationsFor(quien, await realOperationsDeps());

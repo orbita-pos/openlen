@@ -21,6 +21,14 @@ describe("toolErrorCode", () => {
   });
 });
 
+describe("an installed tool's operation (phase 4)", () => {
+  it("MCP's error result (isError) is a failure: not ok, code mcp_error", () => {
+    const r = { isError: true, content: [{ type: "text", text: "tool_removed" }] };
+    expect(toolErrorCode(r)).toBe("mcp_error");
+    expect(summarizeBatch([{ name: "mcp__a__b", args: {} }], [{ name: "mcp__a__b", response: r }])[0]).toMatchObject({ ok: false, errorCode: "mcp_error" });
+  });
+});
+
 describe("summarizeBatch", () => {
   it("argument key order does not change argsHash", () => {
     const [a] = summarizeBatch([{ name: "Read", args: { file_path: "/a", limit: 5 } }], [{ name: "Read", response: { ok: true } }]);

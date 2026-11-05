@@ -1016,6 +1016,23 @@ describe("runAgentLoop", () => {
     expect(JSON.stringify(callsSeen[1])).toContain("Card shown below your answer.");
   });
 
+  // An installed tool's operation (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): MCP's error result is a
+  // failed step — red in the chat, and counted by the repeat guard — though it carries no `ok: false`.
+  it("an MCP error result (isError) is a failed step", async () => {
+    const events: AgentStreamEvent[] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "mcp__empleados__add_employee", args: { name: "Ana" } }, done],
+      [{ type: "text_delta", text: "No pude." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "agrega a Ana" }], tools: [],
+      openStream: (messages) => stream(messages),
+      runTool: async () => ({ response: { isError: true, content: [{ type: "text", text: "tool_removed: this tool is no longer installed" }] } }),
+      emit: (e) => events.push(e),
+    });
+    expect(events.filter((e) => e.type === "action" && e.tool === "mcp__empleados__add_employee").at(-1)).toMatchObject({ status: "error" });
+  });
+
   // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card mechanism, its own waiting state.
   it("an install confirm emits its card and feeds the model a fixed waiting state with the tool", async () => {
     const events: AgentStreamEvent[] = [];

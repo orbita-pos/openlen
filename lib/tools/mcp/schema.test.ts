@@ -61,3 +61,18 @@ describe("checkTools", () => {
     expect(r.problems).toHaveLength(1);
   });
 });
+
+// Final review, Important 6 (Review Focus 1): a schema whose structure the provider can't read is left out too.
+describe("checkTools — the schema's structure", () => {
+  it("properties that aren't an object of schemas, or required that isn't a list of names: left out", () => {
+    const r = checkTools("calc", [
+      { name: "a", inputSchema: { type: "object", properties: [] } },
+      { name: "b", inputSchema: { type: "object", properties: { x: "string" } } },
+      { name: "c", inputSchema: { type: "object", properties: { x: { type: "string" } }, required: "x" } },
+      { name: "d", inputSchema: { type: "object", properties: { x: { type: 3 } } } },
+      { name: "e", inputSchema: { type: "object", properties: { x: { type: ["string", "null"] } }, required: ["x"] } },
+    ]);
+    expect(r.tools.map((t) => t.name)).toEqual(["e"]);
+    expect(r.problems).toHaveLength(4);
+  });
+});

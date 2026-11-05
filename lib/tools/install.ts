@@ -156,9 +156,13 @@ export async function installTool(
     let operationsLeftOut: string[] = [];
     if (functions && manifest.manifest.mcp && d.discover) {
       const found = await d.discover({ projectId: i.projectId, actorId: i.actorId, mcp: manifest.manifest.mcp });
-      if (!found.ok) return { status: 422, body: { error: "mcp_failed", detail: found.error } };
-      mcp = found.mcp;
-      operationsLeftOut = found.problems;
+      // Production is migrated and the functions deployed by now: refusing would leave the old version installed over
+      // the new functions. The install completes WITHOUT operations and says why — installed, deployed and declared agree.
+      if (!found.ok) operationsLeftOut = [`mcp_failed: ${found.error} — the tool is installed without operations; fix its MCP server and install again`];
+      else {
+        mcp = found.mcp;
+        operationsLeftOut = found.problems;
+      }
     }
     await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {}, mcp);
     const row = await d.upsertInstallation({
