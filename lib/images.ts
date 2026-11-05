@@ -50,6 +50,10 @@ export interface ProcessImageOptions {
    *  from the oriented source and attach it to `result.placeholder`.
    *  Opt-in — adds ~1 ms even on a small input. Default: false. */
   placeholder?: boolean;
+  /** Keep only this rectangle of the oriented image, before resizing — Kimi
+   *  Code's `ReadMediaFile` `region` (image pixels). A rectangle that falls
+   *  outside the image, or is 0 wide or tall, rejects. Omit to keep it whole. */
+  crop?: { x: number; y: number; width: number; height: number };
 }
 
 export interface VariantOutput {
@@ -159,6 +163,7 @@ export async function processImage(
       autoOrient: opts.autoOrient,
       withoutEnlargement: opts.withoutEnlargement,
       placeholder: opts.placeholder,
+      ...(opts.crop ? { crop: opts.crop } : {}),
     };
     raw = await nativeProcessImage(req);
   } catch (err) {

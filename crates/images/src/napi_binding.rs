@@ -56,6 +56,18 @@ pub struct ProcessRequestJs {
     /// ~1 ms on a small thumb; opt-in so legacy callers stay zero-cost.
     /// Default: `false`.
     pub placeholder: Option<bool>,
+    /// Keep only this rectangle of the oriented image, before resizing
+    /// (Kimi Code's `ReadMediaFile` `region`). Omit to keep it whole.
+    pub crop: Option<CropRegionJs>,
+}
+
+#[napi(object)]
+#[derive(Clone)]
+pub struct CropRegionJs {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }
 
 #[napi(object)]
@@ -161,6 +173,12 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
         auto_orient: req.auto_orient.unwrap_or(true),
         without_enlargement: req.without_enlargement.unwrap_or(true),
         placeholder: req.placeholder.unwrap_or(false),
+        crop: req.crop.map(|c| pipeline::CropRegion {
+            x: c.x,
+            y: c.y,
+            width: c.width,
+            height: c.height,
+        }),
     };
 
     let result = tokio::task::spawn_blocking(move || pipeline::process_image(native_req))
