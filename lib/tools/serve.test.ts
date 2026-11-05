@@ -18,6 +18,7 @@ const ROW: ToolInstallationRow = {
   installedAt: new Date(),
   updatedAt: new Date(),
   removedAt: null,
+  phoneHostLabel: null,
 };
 
 const RELEASE = {
@@ -97,5 +98,36 @@ describe("serveToolRelease", () => {
     expect(await res.text()).toContain("Necesitas un plan de pago");
     const en = await serve("/", deps({ plan: vi.fn(async () => "free" as const) }), ROW, null);
     expect(await en.text()).toContain("You need a paid plan");
+  });
+});
+
+// Phase 5 (§4.14): served on its phone label, the tool is framed only by the phone app's origins and its bridge takes
+// answers only from them; on the workspace's label nothing changes.
+describe("serveToolRelease — on the phone's label", () => {
+  const onPhone = (path: string, d = deps()) =>
+    serveToolRelease(ROW, path, { requestHost: "openlen.com", acceptLanguage: "es", servedTo: "phone", env: { NEXT_PUBLIC_SITE_URL: "https://openlen.com", NODE_ENV: "production" } }, d);
+
+  it("the page is framed only by the app's origins", async () => {
+    const res = await onPhone("/");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors http://localhost:5173 https://localhost capacitor://localhost");
+  });
+
+  it("the Free plan's notice too", async () => {
+    const res = await onPhone("/", deps({ plan: vi.fn(async () => "free" as const) }));
+    expect(res.status).toBe(402);
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors http://localhost:5173 https://localhost capacitor://localhost");
+  });
+
+  it("its bridge answers only the app's origins", async () => {
+    const js = await (await onPhone(TOOL_BRIDGE_PATH)).text();
+    expect(js).toContain(`"https://localhost"`);
+    expect(js).toContain(`"capacitor://localhost"`);
+    expect(js).not.toContain(`"https://openlen.com"`);
+  });
+
+  it("on the workspace's label, the workspace frames it as before", async () => {
+    const res = await serveToolRelease(ROW, "/", { requestHost: "openlen.com", acceptLanguage: "es", servedTo: "workspace", env: { NEXT_PUBLIC_SITE_URL: "https://openlen.com", NODE_ENV: "production" } }, deps());
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
   });
 });

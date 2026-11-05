@@ -68,6 +68,18 @@ describe("tool installations", () => {
     expect(await store.installationByLabel("lienzo-ffffffffffffffffffffffffffffffff")).toBeNull();
   });
 
+  it("finds an installation by either label, and says which (phase 5)", async () => {
+    const row = await install();
+    expect((await store.installationByLabel(row.hostLabel))?.servedTo).toBe("workspace");
+    await store.setPhoneHostLabel(row.id, "lienzo-feedfacefeedfacefeedfacefeedface");
+    const found = await store.installationByLabel("lienzo-feedfacefeedfacefeedfacefeedface");
+    expect(found?.id).toBe(row.id);
+    expect(found?.servedTo).toBe("phone");
+    // A reinstall keeps the phone's label too.
+    const again = await install({ releaseSha: "sha-2" });
+    expect(again.phoneHostLabel).toBe("lienzo-feedfacefeedfacefeedfacefeedface");
+  });
+
   it("removing keeps the row; restoring brings it back", async () => {
     const row = await install();
     expect(await store.markRemoved(row.id, "u1")).toBe(true);
