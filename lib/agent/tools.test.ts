@@ -2969,7 +2969,8 @@ describe("Read of an image made in the box", () => {
     assert.equal(r.image.mimeType, "image/jpeg");
   });
 
-  it("imageForModel shrinks a large image to at most 1000 px wide", async () => {
+  // DeepSeek V4.1's grid (deepseek-image-grid.ts, as DeepSeek's harness sends images): a square keeps 1302×1302.
+  it("imageForModel sends a large image at the size DeepSeek V4.1's grid keeps", async () => {
     const { processImage } = await import("@/lib/images");
     const { imageForModel } = await import("./image-for-model");
     const { readFileSync } = await import("node:fs");
@@ -2977,8 +2978,7 @@ describe("Read of an image made in the box", () => {
     const big = (await processImage({ input: icon, variants: [{ width: 5000, format: "png", quality: 100 }], withoutEnlargement: false })).variants[0]!;
     assert.equal(big.width, 5000);
     const r = await imageForModel(new Uint8Array(big.bytes));
-    assert.ok(r.width <= 1000, `width ${r.width}`);
-    assert.ok(r.height <= 3000, `height ${r.height}`);
+    assert.deepEqual([r.width, r.height], [1302, 1302]);
     assert.equal(r.image.mimeType, "image/jpeg");
   });
 
@@ -2991,7 +2991,7 @@ describe("Read of an image made in the box", () => {
     const icon = readFileSync("public/icon-192.png");
     const big = (await processImage({ input: icon, variants: [{ width: 2400, format: "png", quality: 100 }], withoutEnlargement: false })).variants[0]!;
     const whole = await imageForModel(new Uint8Array(big.bytes));
-    assert.deepEqual([whole.originalWidth, whole.originalHeight, whole.width, whole.reduced], [2400, 2400, 1000, true]);
+    assert.deepEqual([whole.originalWidth, whole.originalHeight, whole.width, whole.reduced], [2400, 2400, 1302, true]);
     const crop = await imageForModel(new Uint8Array(big.bytes), { region: { x: 0, y: 0, width: 500, height: 400 } });
     assert.deepEqual([crop.originalWidth, crop.width, crop.height, crop.reduced], [2400, 500, 400, false]);
   });
@@ -3069,6 +3069,8 @@ describe("Read of an image made in the box", () => {
     const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/run.webm" });
     assert.equal(out.response.ok, false);
     assert.equal(String(out.response.error), videoReadError("/tmp/motion/run.webm"));
+    // Also for a video of the site (one the user uploaded): a frame of it, through a <video> in Playwright.
+    assert.match(String(out.response.error), /<video>/);
     assert.deepEqual(downloaded, []);
   });
 });

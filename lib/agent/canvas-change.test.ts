@@ -73,4 +73,10 @@ describe("canvasLine", () => {
     );
     expect(canvasLine("unchanged", { selfChange: 0, stepChange: 0 })).toBe("the canvas didn't change.");
   });
+
+  // Kimi Code names what it read by its kind (<image>, <video>): a <video> measured is «the video».
+  it("un <video> se nombra como vídeo", () => {
+    expect(canvasLine("changed", { selfChange: 0, stepChange: 0.5 }, "video")).toBe("the video changed: 50 % of its pixels.");
+    expect(canvasLine("unchanged", { selfChange: 0, stepChange: 0 }, "video")).toBe("the video didn't change.");
+  });
 });

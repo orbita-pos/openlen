@@ -612,6 +612,36 @@ describe("use_page — another site", () => {
     });
   }, 120_000);
 
+  // Claude Code's and DeepSeek's browser tools act the same on any site: the canvas measure too.
+  it("🔴 on another site a key that moves a canvas says the canvas changed; CONTROL: a dead key says it didn't", async () => {
+    const { createServer } = await import("node:http");
+    const { allowEgressOrigin } = await import("@/lib/security/egress-proxy");
+    const juego = (vivo: boolean) =>
+      marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas><script>
+        var g = document.getElementById("c").getContext("2d"), x = 20;
+        function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
+        pinta();
+        ${vivo ? 'window.addEventListener("keydown", function () { x += 120; });' : ""}
+      </script>`);
+    for (const vivo of [true, false]) {
+      const server = createServer((_req, res) => {
+        res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+        res.end(juego(vivo));
+      });
+      await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+      const host = `127.0.0.1:${(server.address() as { port: number }).port}`;
+      const cerrar = allowEgressOrigin(host);
+      try {
+        const { informe } = await visitAnotherSite({ url: `http://${host}/`, pasos: [{ key: "ArrowRight" }], viewport: "desktop" }, { allowOrigins: [host] });
+        if (vivo) expect(informe).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+        else expect(informe).toContain("the canvas didn't change.");
+      } finally {
+        cerrar();
+        await new Promise((r) => server.close(r));
+      }
+    }
+  }, 120_000);
+
   it("🔴 control arm: without its origin allowed, a local address isn't reached", async () => {
     await conSitio(async (base) => {
       await expect(visitAnotherSite({ url: base, pasos: [{ read: "Inicio" }], viewport: "desktop" })).rejects.toThrow();
@@ -695,6 +725,27 @@ describe("use_page — los pasos de Claude Code", () => {
     expect(viva).toContain("I clicked at (224, 174)");
     expect(viva).toContain("«Sin clic» → «Clic en 200,150»");
     expect(muerta).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  // Claude Code's key takes several space-separated keys; a character outside a US keyboard («é») is
+  // typed as a character, Puppeteer's own way (keyboard.sendCharacter), not refused as an unknown key.
+  it("🔴 key: varias teclas separadas por espacios y una «é»; BRAZO DE CONTROL: sin pulsar, el campo no cambia", async () => {
+    const campo = marco(`<label>Nombre <input id="n" value="abc" autofocus></label>`);
+    const borra = await visitar(campo, [{ key: "End" }, { key: "Backspace Backspace" }]);
+    expect(borra).toContain("[field «Nombre»: «abc»]» → «[field «Nombre»: «a»]");
+    const acento = await visitar(campo, [{ key: "End" }, { key: "é" }]);
+    expect(acento).toContain("[field «Nombre»: «abc»]» → «[field «Nombre»: «abcé»]");
+    expect(acento).not.toContain("couldn't");
+    const nada = await visitar(campo, [{ read: "Nombre" }]);
+    expect(nada).toContain("«abc»");
+  }, 90_000);
+
+  // Kimi's region note («add the region offset»): a screenshot of a BLOCK says where it is in the tab, so a
+  // point in it can become left_click, hover or zoom coordinates.
+  it("una captura de un bloque dice dónde está en la pestaña y que se sume", async () => {
+    const pagina = marco(`<div style="height:300px">Arriba</div><section style="width:400px;height:120px;background:#eee"><h2>Precios</h2></section>`);
+    const { informe } = await usarPagina({ html: pagina, pasos: [{ screenshot: "Precios" }], ruta: "/index.html" });
+    expect(informe).toMatch(/The block is at \(\d+, \d+\) → \(\d+, \d+\) of the tab: add \(\d+, \d+\) to a point of this image/);
   }, 90_000);
 
   it("left_click fuera de la pestaña no se hace, lo dice con su tamaño, y la visita para ahí", async () => {

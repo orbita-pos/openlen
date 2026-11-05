@@ -102,12 +102,19 @@ describe("validarPasos — los pasos de Claude Code", () => {
   });
 
   it("parseKey traduce nombres y combinaciones a teclas de Puppeteer", () => {
-    expect(parseKey("ctrl+k")).toEqual({ ok: true, keys: ["Control", "k"] });
-    expect(parseKey("Return")).toEqual({ ok: true, keys: ["Enter"] });
-    expect(parseKey("up")).toEqual({ ok: true, keys: ["ArrowUp"] });
-    expect(parseKey("cmd+shift+Z")).toEqual({ ok: true, keys: ["Meta", "Shift", "Z"] });
-    expect(parseKey("space")).toEqual({ ok: true, keys: ["Space"] });
-    expect(parseKey("F5")).toEqual({ ok: true, keys: ["F5"] });
+    expect(parseKey("ctrl+k")).toEqual({ ok: true, combos: [["Control", "k"]] });
+    expect(parseKey("Return")).toEqual({ ok: true, combos: [["Enter"]] });
+    expect(parseKey("up")).toEqual({ ok: true, combos: [["ArrowUp"]] });
+    expect(parseKey("cmd+shift+Z")).toEqual({ ok: true, combos: [["Meta", "Shift", "Z"]] });
+    expect(parseKey("space")).toEqual({ ok: true, combos: [["Space"]] });
+    expect(parseKey("F5")).toEqual({ ok: true, combos: [["F5"]] });
+  });
+
+  // Claude Code's key: «space-separated keys (e.g. "Backspace Backspace Delete")».
+  it("parseKey acepta varias teclas separadas por espacios, como el key de Claude Code", () => {
+    expect(parseKey("Backspace Backspace Delete")).toEqual({ ok: true, combos: [["Backspace"], ["Backspace"], ["Delete"]] });
+    expect(parseKey("ctrl+a Delete")).toEqual({ ok: true, combos: [["Control", "a"], ["Delete"]] });
+    expect(parseKey("é")).toEqual({ ok: true, combos: [["é"]] });
   });
 
   it("una tecla que no existe se rechaza antes de abrir nada, con ejemplos", () => {
