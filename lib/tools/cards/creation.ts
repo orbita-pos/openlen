@@ -189,7 +189,8 @@ export interface CreatorLauncher {
 
 /**
  * The host turn: no model call. It launches the `creator` child with DeepSeek's activation options — `delivery:
- * "caller"`, the `{ ready }` schema — whose settlement goes to the card, and answers what the row says.
+ * "caller"`, the `{ ready }` schema — whose settlement goes to the card. It answers what the row says and the run it
+ * launched, whose step the row carries (as a `subagent` call's) so whoever opens the tool project sees it working.
  */
 export async function hostTheCreator(
   o: {
@@ -201,14 +202,15 @@ export async function hostTheCreator(
     readonly hostRowId?: string;
   },
   deps: CreationDeps,
-): Promise<string> {
+): Promise<{ text: string; runId: string | null }> {
   const card = await deps.cardById(o.cardId);
   const text = (HOST_TEXT[o.locale] ?? HOST_TEXT.en!)(card?.title ?? "");
-  if (!card || card.phase !== "creating") return text;
-  if (o.hostRowId && card.hostRowId && card.hostRowId !== o.hostRowId) return text;
+  const none = { text, runId: null };
+  if (!card || card.phase !== "creating") return none;
+  if (o.hostRowId && card.hostRowId && card.hostRowId !== o.hostRowId) return none;
   if (!o.launcher) {
     await deps.casPhase(card.id, ["creating"], "failed", { error: "subagents_off" });
-    return text;
+    return none;
   }
   const launched = await o.launcher.launch({
     preset: "creator",
@@ -220,12 +222,12 @@ export async function hostTheCreator(
   });
   if (!launched.ok) {
     await deps.casPhase(card.id, ["creating"], "failed", { error: launched.code });
-    return text;
+    return none;
   }
   const stored = await deps.casPhase(card.id, ["creating"], "creating", { creatorRunId: launched.id });
   // «Cancelar» pressed while it was being launched: the press found no run to stop, so it is stopped here.
   if (!stored || stored.cancelRequested) deps.stopRun(launched.id);
-  return text;
+  return { text, runId: launched.id };
 }
 
 /** How the Creator's run ended (Task 6's `onSettled`). */

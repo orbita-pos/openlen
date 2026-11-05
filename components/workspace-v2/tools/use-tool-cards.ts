@@ -5,6 +5,7 @@
 // is creating or installing, and when a turn ends.
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
+import { notifyCreditBalanceChanged } from "@/lib/credits-client";
 import type { ToolCardPhase, ToolCardReview, ToolCardView } from "@/lib/tools/cards/types";
 
 import { announceToolsChanged } from "./use-installed-tools";
@@ -61,15 +62,19 @@ function put(projectId: string, next: readonly ToolCardView[]): void {
   if (next.length === 0) return;
   const m = new Map(cards);
   let toolsChanged = false;
+  let creatorSettled = false;
   for (const c of next) {
     const prev = cards.get(c.id);
     // A card seen moving into installed or removed (not one first seen that way, as on a reload).
     if (prev && prev.phase !== c.phase && TOOLS_CHANGE.includes(c.phase)) toolsChanged = true;
+    // A card leaving creating: its creator settled, and was charged, in the background — the balance must hear it.
+    if (prev?.phase === "creating" && c.phase !== "creating") creatorSettled = true;
     m.set(c.id, { ...c, projectId });
   }
   cards = m;
   for (const l of listeners) l();
   if (toolsChanged) announceToolsChanged();
+  if (creatorSettled) notifyCreditBalanceChanged();
 }
 
 export const toolCardsLive = {

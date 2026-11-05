@@ -232,7 +232,8 @@ describe("hostTheCreator (the host turn, no model call)", () => {
   it("launches the creator with DeepSeek's activation options and keeps its run id on the card", async () => {
     const d = deps();
     const l = launcher();
-    const text = await hostTheCreator({ cardId: "card-1", framing: '{"task":"x"}', locale: "es", launcher: l }, d);
+    const { text, runId } = await hostTheCreator({ cardId: "card-1", framing: '{"task":"x"}', locale: "es", launcher: l }, d);
+    expect(runId).toBe("run-9");
     const o = l.launch.mock.calls[0]![0];
     expect(o).toMatchObject({ preset: "creator", description: "Reservas de hoy", prompt: '{"task":"x"}', delivery: "caller", outputSchema: READY_SCHEMA });
     expect(typeof o.onSettled).toBe("function");

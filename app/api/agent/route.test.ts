@@ -4200,6 +4200,18 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(eventos.filter((e) => e.event === "text").map((e) => (e.data as { text: string }).text).join("")).toContain("Creando «Reservas de hoy»");
   });
 
+  it("the host turn's row carries the creator's step, so whoever opens the tool project sees it working", async () => {
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null, hostRowId: null } as typeof creationCard.row;
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    const eventos = await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "{}", origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    const acciones = eventos.filter((e) => e.event === "action").map((e) => e.data);
+    expect(acciones.at(-1)).toMatchObject({ tool: "subagent", status: "done", summary: "Reservas de hoy", subagent: { id: "r1", preset: "creator" } });
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { actions?: { tool: string; subagent?: { id: string } }[] }])[1];
+    expect(fila.actions?.find((x) => x.tool === "subagent")?.subagent?.id).toBe("r1");
+  });
+
   it("🔴 the host turn's row keeps the plain account, never the Creator's task; a host whose card has a newer row launches nothing", async () => {
     const sentText = "«Crear» on a tool card started this project: a background creator subagent builds the tool «Reservas de hoy» here.";
     creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null, hostRowId: "99999999-9999-4999-8999-999999999999" } as typeof creationCard.row;
