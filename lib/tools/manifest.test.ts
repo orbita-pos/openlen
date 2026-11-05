@@ -54,6 +54,7 @@ describe("readToolManifest", () => {
         descriptions: { en: "See and confirm today's bookings.", es: "Ver y confirmar las reservas de hoy." },
         iconPath: "/icon.svg",
         jobs: {},
+        mcp: null,
       },
     });
   });
@@ -179,5 +180,34 @@ describe("readToolJobs", () => {
     const { readToolJobs } = await import("./manifest");
     expect(readToolJobs({})).toEqual({});
     expect(readToolJobs(files(undefined))).toEqual({});
+  });
+});
+
+// PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): the tool names its MCP server — DeepSeek's
+// `serverName`, and the Edge Function that serves it where DeepSeek has a `url`.
+describe("the MCP server a tool names", () => {
+  const withMcp = (mcp: unknown, extra: Record<string, string> = { "/supabase/functions/mcp/index.ts": "Deno.serve(() => new Response())" }) =>
+    valid({ "/package.json": pkg({ openlen: { tool: { placement: "rail", mcp } } }), ...extra });
+
+  it("serverName and function, when the function's entry exists", () => {
+    const r = read(withMcp({ serverName: "empleados", function: "mcp" }));
+    expect(r.ok && r.manifest.mcp).toEqual({ serverName: "empleados", function: "mcp" });
+  });
+
+  it("none declared: null", () => {
+    const r = read(valid());
+    expect(r.ok && r.manifest.mcp).toBeNull();
+  });
+
+  it("a serverName Len's tool names can't carry: mcp_bad_name", () => {
+    expect(codes(withMcp({ serverName: "Empleados", function: "mcp" }))).toContain("mcp_bad_name");
+    expect(codes(withMcp({ serverName: "x".repeat(25), function: "mcp" }))).toContain("mcp_bad_name");
+    expect(codes(withMcp({ serverName: "emple ados", function: "mcp" }))).toContain("mcp_bad_name");
+  });
+
+  it("a function with no index.ts, index.tsx or index.js: mcp_function_missing", () => {
+    expect(codes(withMcp({ serverName: "empleados", function: "mcp" }, {}))).toContain("mcp_function_missing");
+    expect(codes(withMcp({ serverName: "empleados", function: "mcp" }, { "/supabase/functions/mcp/index.js": "x" }))).toEqual([]);
+    expect(codes(withMcp({ serverName: "empleados" }))).toContain("mcp_function_missing");
   });
 });
