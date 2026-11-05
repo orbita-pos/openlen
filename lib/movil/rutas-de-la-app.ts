@@ -31,4 +31,20 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/pause/route.ts", metodos: ["POST"] },
   { fichero: "app/api/movil/delivered/route.ts", metodos: ["GET"] },
   { fichero: "app/api/movil/tasks/route.ts", metodos: ["GET"] },
+  // Las herramientas en el teléfono (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): las usa, no las
+  // gestiona — apagar, quitar, restaurar y las sugerencias siguen sólo en la web.
+  { fichero: "app/api/tools/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/tools/[id]/icon/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/movil/tools/[id]/open/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/bridge/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/data-change/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/uploads/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/deliver/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/jobs/route.ts", metodos: ["GET", "POST"] },
+  { fichero: "app/api/tools/jobs/[id]/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/tools/jobs/[id]/cancel/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/tools/jobs/declared/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/tool-cards/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/tool-cards/[id]/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/projects/[id]/install/route.ts", metodos: ["POST"] },
 ];

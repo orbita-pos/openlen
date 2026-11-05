@@ -1,11 +1,12 @@
 // @vitest-environment node
 //
 // THE «CREAR» CARD'S ROUTES (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the person's cards in a
-// project, and a press on one. Only the workspace's browser session: a phone key alone is refused (phase 5).
+// project, and a press on one. The workspace's session or, since phase 5 (§4.14), the phone app's key.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: vi.fn(async (k: string) => (k === "phone-key-0123456789abcdef" ? "u1" : null)) }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/tools/cards/store", () => ({ cardsOfProject: vi.fn(), toCardView: (r: { id: string; phase: string }) => ({ id: r.id, phase: r.phase }) }));
 vi.mock("@/lib/tools/cards/actions", () => ({ actOnCard: vi.fn(), realActionDeps: vi.fn(async () => ({})), reconcileOnRead: vi.fn(async (rows: unknown[]) => rows) }));
@@ -63,9 +64,16 @@ describe("GET /api/tool-cards?projectId=", () => {
     expect((await GET(new Request("http://x/api/tool-cards?projectId=p9"))).status).toBe(404);
   });
 
-  it("a phone key alone is refused", async () => {
-    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValueOnce(null);
-    const res = await GET(new Request("http://x/api/tool-cards?projectId=p1", { headers: { authorization: "Bearer phone-key" } }));
+  it("with the phone's key, that person's cards, with the app's CORS (phase 5)", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    const res = await GET(new Request("http://x/api/tool-cards?projectId=p1", { headers: { authorization: "Bearer phone-key-0123456789abcdef", origin: "https://localhost" } }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://localhost");
+    expect(cardsOfProject).toHaveBeenCalledWith("p1", "u1");
+  });
+
+  it("a key that doesn't resolve: 401, whatever session is around", async () => {
+    const res = await GET(new Request("http://x/api/tool-cards?projectId=p1", { headers: { authorization: "Bearer not-a-key-0123456789abcdef" } }));
     expect(res.status).toBe(401);
   });
 });
@@ -101,9 +109,12 @@ describe("POST /api/tool-cards/[id]", () => {
     expect(actOnCard).not.toHaveBeenCalled();
   });
 
-  it("no session: 401, even with a phone key", async () => {
-    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValueOnce(null);
-    expect((await press({ verb: "create" }, "card-1", { authorization: "Bearer phone-key" })).status).toBe(401);
+  it("with the phone's key, the press acts as that person (phase 5); a key that doesn't resolve is 401", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    expect((await press({ verb: "create" }, "card-1", { authorization: "Bearer phone-key-0123456789abcdef" })).status).toBe(202);
+    expect(actOnCard).toHaveBeenCalledWith("card-1", "u1", "create", expect.anything(), expect.anything());
+    vi.mocked(actOnCard).mockClear();
+    expect((await press({ verb: "create" }, "card-1", { authorization: "Bearer not-a-key-0123456789abcdef" })).status).toBe(401);
     expect(actOnCard).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,8 @@ const Body = z.object({
   confirmFingerprint: z.string().max(200).optional(),
   copyDraftData: z.boolean().optional(),
   skipMissingSecrets: z.boolean().optional(),
+  // The phone's card (phase 5, §4.14): wait for a security review still running, as the «Crear» card's install does.
+  waitWhenPending: z.boolean().optional(),
 });
 
 export const POST = paraLaApp(async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
