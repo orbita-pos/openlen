@@ -1169,6 +1169,12 @@ export interface AgentSession {
   /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): `publish` installs, and the eyes can open
    *  the installed version. Absent = not a tool. */
   tool?: boolean;
+  /** A GAME (spec local 2026-11-05-modo-juego-design, §8.4): the game posture and the `game-development` skill.
+   *  Absent = not a game. */
+  game?: boolean;
+  /** The project OWNER is on a paid plan (spec local 2026-11-05-modo-juego-design, §11): their turns get the box.
+   *  Read once per turn by the route; absent = only `OPENLEN_SANDBOX_ONLY_USERS` decides. */
+  ownerPaid?: boolean;
   // ⚰️ Aquí vivían `taggedHtml` (el documento activo con ids, contra el que se
   // aplicaban las ops) y `baseHtml` (contra qué comparar si otro escribió). Len
   // 2.0 edita ficheros (plans/len-2/ficheros-plan.md): cada herramienta lee la
@@ -3103,7 +3109,7 @@ async function ejecutarHerramienta(
       case "publish":
         return await toolPublicar(session, deps, args);
       case CONVERTIR_EN_APP:
-        return await toolConvertirEnApp(session, deps);
+        return await toolConvertirEnApp(session, deps, args);
       // La lista de progreso del usuario: el `todo_write` de DeepSeek.
       case TODO_WRITE:
         return toolTodoWrite(args);

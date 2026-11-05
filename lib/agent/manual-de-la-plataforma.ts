@@ -29,6 +29,7 @@ import { paraSoloLaTerminal, terminalOnly } from "@/lib/agent/terminal/declaraci
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import { GUIA_DE_LA_APP, manualDeLaApp } from "@/lib/agent/modo-app";
+import { manualOfGame } from "./game-mode";
 import { manualOfTool } from "./tool-mode";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import {
@@ -375,10 +376,13 @@ export function buildManualDeLaPlataforma(
   realTerminal: boolean = realTerminalFor(null, env),
   /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): the tool section after the app's manual. */
   tool = false,
+  /** A GAME (spec local 2026-11-05-modo-juego-design, §8.4): the app's manual said for a game. Never with a tool. */
+  game = false,
 ): string {
   const conSkills = skillsEnabled(env);
   const page = partirElManual(manualSinPartir(), conSkills).agents;
-  const base = app ? manualDeLaApp(manualSinPartir(), app, conSkills) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
+  const forTheApp = app ? manualDeLaApp(manualSinPartir(), app, conSkills) : null;
+  const base = forTheApp ? (game && !tool ? manualOfGame(forTheApp) : forTheApp) : realTerminal ? page.replace(TESTS_NOT_RUN, TESTS_RUN) : page;
   const withFunctions = functionsEnabledIn(env) ? conEdgeFunctions(base, env) : base;
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
@@ -394,6 +398,8 @@ export function buildManualDeLaPlataforma(
 export function documentosDeLaPlataforma(
   app: AppDeProyecto | null = null,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  /** A game (spec local 2026-11-05-modo-juego-design, §8.5): its skills, Phaser's included, and its design guide. */
+  game = false,
 ): Readonly<Record<string, string>> {
   // Con las skills encendidas, los manuales de los entregables SON skills (spec local
   // 2026-10-27-len-five-skills, §4.2): no se sirven en /.openlen/docs. Apagadas, como siempre.
@@ -401,7 +407,7 @@ export function documentosDeLaPlataforma(
   const artifacts = env.OPENLEN_ARTIFACTS === "1" && !skillsOn ? artifactManuals : {};
   // Las skills de Len (spec local 2026-10-26-len-skills): /.openlen/skills, como un documento más.
   // Los tipos de subagente de OpenLen (spec local 2026-11-02-subagentes-de-len-fase-4, §3), con sus skills.
-  const skills = { ...(skillsOn ? bundledSkillFiles({ app, env }) : {}), ...(subagentsEnabled(env) ? bundledAgentFiles() : {}) };
+  const skills = { ...(skillsOn ? bundledSkillFiles({ app, env, game }) : {}), ...(subagentsEnabled(env) ? bundledAgentFiles() : {}) };
   // Con las skills encendidas, las guías también son skills (`frontend-design`, `convert-to-app`):
   // /.openlen/docs se queda sin nada que servir.
   if (skillsOn) return skills;
@@ -423,9 +429,12 @@ export function textoDeLaPlataforma(
   mode: AgentMode = "len",
   app: AppDeProyecto | null = null,
   realTerminal: boolean = realTerminalFor(null),
+  /** The project's posture, as in the manual the turn carries: Read of /AGENTS.md gives the same text. */
+  tool = false,
+  game = false,
 ): string | null {
-  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app, realTerminal);
-  const docs = documentosDeLaPlataforma(app);
+  if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app, realTerminal, tool, game);
+  const docs = documentosDeLaPlataforma(app, process.env, game);
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }
 

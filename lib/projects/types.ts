@@ -176,6 +176,7 @@ export type VisualEngineProjectMetadata =
 
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
+import type { GameOfProject } from "@/lib/games/types";
 import type { ToolOfProject } from "@/lib/tools/types";
 
 /**
@@ -200,6 +201,9 @@ export interface ProjectData {
   /** Present = the project was born as a TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.1): an app
    *  that installs into its owner's OpenLen instead of being published. */
   tool?: ToolOfProject;
+  /** Present = the project is a GAME (spec local 2026-11-05-modo-juego-design, §8.1): an app whose turns carry
+   *  Len's game posture. */
+  game?: GameOfProject;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic

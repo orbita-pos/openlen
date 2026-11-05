@@ -25,6 +25,7 @@ import { esDeLaPlataforma } from "@/lib/agent/ficheros/manual";
 import { classifyFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, paginaDeRuta, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { esDelProyecto } from "@/lib/agent/terminal/ficheros";
+import type { GameOfProject } from "@/lib/games/types";
 import type { AppDeProyecto, ProjectData, SitePage } from "@/lib/projects/types";
 
 /**
@@ -39,18 +40,21 @@ export const RUTA_FORMA = "/ajustes/forma.json";
 
 interface Forma {
   readonly app: AppDeProyecto | null;
+  /** A game's (spec local 2026-11-05-modo-juego-design, §8.2): only present in a game, so a page's and an app's shape
+   *  text stays what it always was. */
+  readonly game?: GameOfProject;
   readonly paginas: Readonly<Record<string, Omit<SitePage, "html">>>;
 }
 
 /** El texto de la forma: estable (las páginas en orden) para que dos fotos
  *  iguales den el mismo texto. */
-export function formaDelProyecto(data: Pick<ProjectData, "app" | "pages">): string {
+export function formaDelProyecto(data: Pick<ProjectData, "app" | "pages" | "game">): string {
   const paginas: Record<string, Omit<SitePage, "html">> = {};
   for (const slug of Object.keys(data.pages ?? {}).sort()) {
     const p = data.pages![slug]!;
     paginas[slug] = { ...(p.title !== undefined ? { title: p.title } : {}), ...(p.membersOnly ? { membersOnly: true } : {}) };
   }
-  const forma: Forma = { app: data.app ?? null, paginas };
+  const forma: Forma = { app: data.app ?? null, ...(data.game ? { game: data.game } : {}), paginas };
   return JSON.stringify(forma, clavesOrdenadas);
 }
 
@@ -63,7 +67,7 @@ function clavesOrdenadas(_clave: string, valor: unknown): unknown {
 }
 
 /** La foto con la forma: lo que guarda el turno para deshacerlo. */
-export function conForma(foto: Readonly<Record<string, string>>, data: Pick<ProjectData, "app" | "pages">): Record<string, string> {
+export function conForma(foto: Readonly<Record<string, string>>, data: Pick<ProjectData, "app" | "pages" | "game">): Record<string, string> {
   return { ...foto, [RUTA_FORMA]: formaDelProyecto(data) };
 }
 
@@ -71,14 +75,15 @@ export function conForma(foto: Readonly<Record<string, string>>, data: Pick<Proj
  *  que hay (las que el deshacer ya devolvió o dejó). */
 function aplicarForma(data: ProjectData, texto: string | null): ProjectData {
   const forma = (texto ? JSON.parse(texto) : { app: null, paginas: {} }) as Forma;
-  const { app: _app, pages, ...resto } = data;
+  const { app: _app, game: _game, pages, ...resto } = data;
   void _app;
+  void _game;
   const paginas = pages
     ? Object.fromEntries(Object.entries(pages).map(([slug, p]) => [slug, { html: p.html, ...(forma.paginas[slug] ?? {}) }]))
     : undefined;
   // Sin páginas, sin la clave: como un proyecto que nunca las tuvo (una app).
   const conPaginas = paginas && Object.keys(paginas).length > 0;
-  return { ...resto, ...(forma.app ? { app: forma.app } : {}), ...(conPaginas ? { pages: paginas } : {}) };
+  return { ...resto, ...(forma.app ? { app: forma.app } : {}), ...(forma.game ? { game: forma.game } : {}), ...(conPaginas ? { pages: paginas } : {}) };
 }
 
 /** Lo que el turno cambió en una ruta. */

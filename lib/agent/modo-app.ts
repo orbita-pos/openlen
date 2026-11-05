@@ -86,7 +86,8 @@ const COMO_LA_APP =
 
 const PROBAR_LA_PAGINA =
   'If you change the page, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with use_page: the path the user asked for and some odd case (an empty or wrong value, reloading the page). What it SHOWS —a section, a new page—, look at it with view_page mode="measure", which is free and tells whether something overflows on mobile. And check that the rest of the page is still as it was.';
-const PROBAR_LA_APP =
+/** Exported for the game posture (`lib/agent/game-mode.ts`), which swaps it for testing by playing. */
+export const PROBAR_LA_APP =
   'If you change the app, test it before you call it done. What it DOES —a button, a form, a calculation, something that is saved or changes when clicked—, use it with use_page: the path the user asked for and some odd case (an empty or wrong value, reloading the app). What it SHOWS —a screen, a list, a total—, look at it with view_page mode="measure", which is free and tells whether something overflows on mobile. And check that the screens you didn\'t touch still work.';
 
 // Leer un fichero, cuando el mensaje lo necesita: el porqué y la medición, en
@@ -119,7 +120,9 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY — ", SUS_DATOS_EN_LA_APP);
   // Convertir en app es de una página: en una app, la viñeta sobra.
   // Con skills o sin ellas, su frase nombra la guía de apps de un modo u otro: se quita la que esté.
-  p = cambiar(p, `\n${p.includes(laPaginaQueCrece(true)) ? laPaginaQueCrece(true) : LA_PAGINA_QUE_CRECE}`, "");
+  // (With the skills on, the bullet also carries the game sentence unless games are off: the longest first.)
+  const vineta = [laPaginaQueCrece(true, true), laPaginaQueCrece(true, false)].find((v) => p.includes(v)) ?? LA_PAGINA_QUE_CRECE;
+  p = cambiar(p, `\n${vineta}`, "");
   return p;
 }
 

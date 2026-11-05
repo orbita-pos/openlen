@@ -75,7 +75,7 @@ import { cambiosEnVivo, esFicheroCambiado } from "@/lib/workspace-v2/cambios-en-
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { httpErrorText } from "./http-error";
-import { camposDeNacer, type PideNacer } from "./nace-como";
+import { camposDeNacer, naceComoApp, type PideNacer } from "./nace-como";
 import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 
 /** El evento `html` del bucle, tal cual sale por el cable. Se usa como TIPO al
@@ -1592,7 +1592,8 @@ export function useAgentChat({
                 // este evento (app/api/agent/route.ts). Se recarga el proyecto
                 // ya, para que el turno entero se vea como app (sus pasos, el
                 // lienzo, el pie) y no sólo al acabar, o nunca si falla.
-                if (opciones?.naceComo === "app") onChatChangeRef.current?.();
+                // A tool and a game are apps too: the same reload (spec local 2026-11-05-modo-juego-design, §8.6).
+                if (naceComoApp(opciones?.naceComo)) onChatChangeRef.current?.();
               } else if (evName === "direccion") {
                 // LO QUE ESCRIBISTE A MEDIA FAENA, de vuelta por el stream. Se
                 // pega al texto del turno para que quede EN LA CONVERSACION: si

@@ -425,8 +425,10 @@ describe("EDGE FUNCTIONS (spec local 2026-10-11, Parte 1)", () => {
 describe("/tests de una página con la caja", () => {
   const CAJA = { E2B_API_KEY: "k" };
 
+  // Since 05/11 (spec local 2026-11-05-modo-juego-design, §11) the box follows the owner's plan: without a person
+  // nobody has it, so these say whose turn has it (`realTerminal`), as the route does.
   it("con la caja: npx playwright test contra el borrador en $BASE_URL, sin capturas de referencia", () => {
-    const m = buildManualDeLaPlataforma(CAJA);
+    const m = buildManualDeLaPlataforma(CAJA, "len", null, true);
     expect(m).not.toContain("there is no Playwright in the terminal");
     expect(m).toContain("npx playwright test");
     expect(m).toContain("process.env.BASE_URL");
@@ -440,15 +442,16 @@ describe("/tests de una página con la caja", () => {
   // El movimiento (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.7): con la caja, Playwright
   // también sirve para mirar cómo se mueve la página; sin ella, el manual no lo menciona.
   it("con la caja dice que Playwright también muestra el movimiento; sin ella, no", () => {
-    expect(buildManualDeLaPlataforma(CAJA)).toContain("can also show motion");
+    expect(buildManualDeLaPlataforma(CAJA, "len", null, true)).toContain("can also show motion");
     expect(buildManualDeLaPlataforma({})).not.toContain("can also show motion");
   });
 
-  it("🔴 en un despliegue por fases, como hoy para quien no está en la lista; con la caja para quien sí", () => {
+  it("🔴 sin la caja del turno, como hoy; con ella, la caja — y sin persona, nadie la tiene", () => {
     const FASES = { ...CAJA, OPENLEN_SANDBOX_ONLY_USERS: "u1" };
     expect(buildManualDeLaPlataforma(FASES, "len", null, false)).toBe(buildManualDeLaPlataforma({}));
-    expect(buildManualDeLaPlataforma(FASES, "len", null, true)).toBe(buildManualDeLaPlataforma(CAJA));
+    expect(buildManualDeLaPlataforma(FASES, "len", null, true)).toBe(buildManualDeLaPlataforma(CAJA, "len", null, true));
     expect(buildManualDeLaPlataforma(FASES)).toBe(buildManualDeLaPlataforma({}));
+    expect(buildManualDeLaPlataforma(CAJA)).toBe(buildManualDeLaPlataforma({}));
     expect(textoDeLaPlataforma(RUTA_MANUAL, "len", null, false)).toBe(buildManualDeLaPlataforma(process.env, "len", null, false));
   });
 

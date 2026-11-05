@@ -27,21 +27,29 @@ describe("sandboxConfig", () => {
   });
 });
 
-// What Len is told about its terminal follows the same decision as terminalForTurn: during a rollout, a
-// person off the list keeps today's terminal, and must be told today's terminal.
+// What Len is told about its terminal follows the same decision as terminalForTurn. Jesús, 05/11 (spec local
+// 2026-11-05-modo-juego-design, §11): the box is for the OWNER's paid plan — the owner pays it — and the list
+// still adds accounts (test ones, even on Free). Free and off the list: today's terminal, told as such.
 describe("🔴 realTerminalFor: whose turns get the box", () => {
-  const ROLLOUT = { E2B_API_KEY: "k", OPENLEN_SANDBOX_ONLY_USERS: "u1, u2" };
+  const BOX = { E2B_API_KEY: "k" };
+  const LIST = { ...BOX, OPENLEN_SANDBOX_ONLY_USERS: "u1, u2" };
 
-  it("during a rollout, only the people on its list; without a person, nobody", () => {
-    expect(realTerminalFor("u1", ROLLOUT)).toBe(true);
-    expect(realTerminalFor("u3", ROLLOUT)).toBe(false);
-    expect(realTerminalFor(null, ROLLOUT)).toBe(false);
+  it("a paid owner gets it, on the list or not", () => {
+    expect(realTerminalFor("u3", BOX, true)).toBe(true);
+    expect(realTerminalFor("u3", LIST, true)).toBe(true);
   });
 
-  it("without a rollout, everyone, with or without a person; with the box off, nobody", () => {
-    expect(realTerminalFor("u3", { E2B_API_KEY: "k" })).toBe(true);
-    expect(realTerminalFor(null, { E2B_API_KEY: "k" })).toBe(true);
-    expect(realTerminalFor("u1", { ...ROLLOUT, OPENLEN_SANDBOX: "0" })).toBe(false);
-    expect(realTerminalFor("u1", {})).toBe(false);
+  it("a Free owner only on the list — and with no list, not at all", () => {
+    expect(realTerminalFor("u1", LIST, false)).toBe(true);
+    expect(realTerminalFor("u3", LIST, false)).toBe(false);
+    expect(realTerminalFor("u3", BOX, false)).toBe(false);
+    expect(realTerminalFor("u3", BOX)).toBe(false);
+  });
+
+  it("without a person, nobody; with the box off, nobody", () => {
+    expect(realTerminalFor(null, BOX, true)).toBe(false);
+    expect(realTerminalFor(null, LIST)).toBe(false);
+    expect(realTerminalFor("u1", { ...LIST, OPENLEN_SANDBOX: "0" }, true)).toBe(false);
+    expect(realTerminalFor("u1", {}, true)).toBe(false);
   });
 });

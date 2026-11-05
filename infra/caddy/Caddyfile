@@ -205,8 +205,10 @@ openlen.com, www.openlen.com {
 	# Los ficheros de la carpeta, como `public/` en Vercel: se revalidan siempre
 	# (ETag → 304), o un js/app.js nuevo no llegaría — y un sw.js viejo seguiría
 	# sirviendo la versión de antes.
+	# Y los de un juego (spec local 2026-11-05-modo-juego-design, §8.6): sus modelos y sonidos, que Len puede
+	# cambiar con el mismo nombre (/models/nave.glb).
 	@carpeta {
-		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md
+		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
 		not path /assets/* /uploads/*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*
@@ -235,9 +237,47 @@ openlen.com, www.openlen.com {
 		not path /storage/v1/*
 	}
 	header @markdown Content-Type "text/markdown; charset=utf-8"
+	# LOS DE UN JUEGO (spec local 2026-11-05-modo-juego-design, §8.6): el tipo de cada uno, a mano, porque la tabla
+	# del sistema de la máquina puede no traerlos y un GLTFLoader o un <audio> esperan el suyo.
+	@glb {
+		path *.glb
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @glb Content-Type "model/gltf-binary"
+	@gltf {
+		path *.gltf
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @gltf Content-Type "model/gltf+json"
+	@bin {
+		path *.bin
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @bin Content-Type "application/octet-stream"
+	@hdr {
+		path *.hdr
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @hdr Content-Type "image/vnd.radiance"
+	@opus {
+		path *.opus
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @opus Content-Type "audio/ogg"
+	@flac {
+		path *.flac
+		not header_regexp Host ^lienzo-
+		not path /storage/v1/*
+	}
+	header @flac Content-Type "audio/flac"
 
 	@doc {
-		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.jsx *.tsx *.ts *.json *.webmanifest *.txt *.md
+		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.jsx *.tsx *.ts *.json *.webmanifest *.txt *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
 		not header_regexp Host ^lienzo-
 	}
