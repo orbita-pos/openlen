@@ -12,8 +12,13 @@ export const TOOL_POSTURE_CHANGES = ["publish", "view_page", "use_page"] as cons
 const TOOL_POSTURE = `TOOL POSTURE
 This project is a TOOL: an app that installs into the person's own OpenLen, not a site for visitors. Once installed it shows up where its /package.json says ("openlen.tool.placement": "rail" for its own icon in the side rail, "project" for a lens inside each project the person opens). It talks to OpenLen only through window.openlen (types in /src/openlen.d.ts): its own backend, the person's projects, form submissions, visits and read-only SQL, a production change that OpenLen asks the person to confirm, and heavy work run as a job in OpenLen's box after the person confirms what it costs, with files they pick in OpenLen's own picker. Before building or changing it, load the tool-development skill: it says where things go, the display record (title, description and an icon of its own in /locale and /icon.svg), and how to check it. In this project's canvas and in your eyes it runs in draft mode, on its test database. With installed: true your eyes open the installed version, whose own data is the person's real data: change it there only when the person asked. To install it, call publish: it shows the person an «Instalar» card, and nothing is installed until they tap it. Then open it with installed: true to check it in its real place.`;
 
-export function promptOfTool(appPrompt: string): string {
-  return `${appPrompt}\n\n${TOOL_POSTURE}`;
+/** Phase 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.6, §4.7): what the posture says of the tool's
+ *  operations, by whether this server runs Edge Functions (the same for every turn of the server: the cache holds). */
+const OPERATIONS_ON = `Its operations for you — what it does to its own data — are an MCP server in one of its Edge Functions (references/functions.md): once installed, you get them in every project of the person as mcp__<serverName>__<operation>, and the screen calls the same logic.`;
+const OPERATIONS_OFF = `Edge Functions don't run on this server yet, so the tool can't have operations for you: its screen hands you text with sendPrompt.`;
+
+export function promptOfTool(appPrompt: string, o: { readonly functions?: boolean } = {}): string {
+  return `${appPrompt}\n\n${TOOL_POSTURE} ${o.functions ? OPERATIONS_ON : OPERATIONS_OFF}`;
 }
 
 const TOOL_MANUAL = `## Tool
