@@ -2777,6 +2777,30 @@ describe("convertir una página en app", () => {
     assert.equal(decl.parameters.properties.game?.type, "BOOLEAN");
   });
 
+  // THE KILL SWITCH (final review, 05/11): with OPENLEN_GAMES=0 nothing offers or makes a game.
+  it("🔴 with OPENLEN_GAMES=0 the page offers no game, convert_to_app has no game parameter, and game: true makes a plain app", async () => {
+    const { buildAgentSystemPrompt, buildFunctionDeclarations } = await import("./catalog");
+    const off = { OPENLEN_GAMES: "0" };
+    assert.doesNotMatch(buildAgentSystemPrompt(off, "len", null), /game-development|game: true/);
+    assert.match(buildAgentSystemPrompt(off, "len", null), /convert_to_app/);
+    const decl = buildFunctionDeclarations(off, {}, "len", null).find((d) => d.name === "convert_to_app") as { parameters: { properties: Record<string, unknown> } };
+    assert.equal(decl.parameters.properties.game, undefined);
+    const { deps, store, archivos } = conPaginas();
+    archivos["/src/main.tsx"] = GAME_MAIN;
+    archivos["/src/App.tsx"] = GAME_APP;
+    const prev = process.env.OPENLEN_GAMES;
+    process.env.OPENLEN_GAMES = "0";
+    try {
+      const r = await runAgentTool(makeSession(), deps, "convert_to_app", { game: true });
+      assert.equal(r.response.ok, true, JSON.stringify(r.response));
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_GAMES;
+      else process.env.OPENLEN_GAMES = prev;
+    }
+    assert.equal(store.data.game, undefined);
+    assert.doesNotMatch(store.data.html, /overflow: hidden/);
+  });
+
   it("🔴 en una app, Read abre /node_modules por su ruta, como Claude Code (el turno real de Len lo buscó); en una página no existe", async () => {
     const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
     const { deps } = conCarpeta({ html: "<!doctype html>", app: APP });

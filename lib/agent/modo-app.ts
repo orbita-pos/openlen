@@ -120,7 +120,9 @@ export function promptDeLaApp(promptDePagina: string, app: AppDeProyecto): strin
   p = cambiarBloque(p, "THEIR DATA AND THEIR LINKS:\n", "\n\nMEMORY — ", SUS_DATOS_EN_LA_APP);
   // Convertir en app es de una página: en una app, la viñeta sobra.
   // Con skills o sin ellas, su frase nombra la guía de apps de un modo u otro: se quita la que esté.
-  p = cambiar(p, `\n${p.includes(laPaginaQueCrece(true)) ? laPaginaQueCrece(true) : LA_PAGINA_QUE_CRECE}`, "");
+  // (With the skills on, the bullet also carries the game sentence unless games are off: the longest first.)
+  const vineta = [laPaginaQueCrece(true, true), laPaginaQueCrece(true, false)].find((v) => p.includes(v)) ?? LA_PAGINA_QUE_CRECE;
+  p = cambiar(p, `\n${vineta}`, "");
   return p;
 }
 

@@ -37,6 +37,7 @@ import { titleFromHtml } from "@/lib/projects/titulo-del-html";
 import { RUTA_APPS } from "@/lib/agent/ficheros/manual";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import type { GameOfProject } from "@/lib/games/types";
+import { gamesEnabled } from "@/lib/games/enabled";
 import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
 export const CONVERTIR_EN_APP = "convert_to_app";
@@ -76,9 +77,16 @@ export const LA_PAGINA_QUE_CRECE = `- Some requests don't fit in a page but in a
 const UN_JUEGO_QUE_CRECE = ` A game that will grow —levels, 3D, several files— fits better as a GAME project: offer it the same way, build it in /src reading ${CARPETA_SKILLS}/game-development/SKILL.md, and convert it with ${CONVERTIR_EN_APP} and game: true. A small one-file game the user only wants on this page can stay in the page.`;
 
 /** La misma viñeta con las skills encendidas: la guía de apps es la skill `convert-to-app` (spec local
- *  2026-10-27-len-five-skills), y un juego, la suya. Apagadas, la de siempre. */
-export function laPaginaQueCrece(conSkills: boolean): string {
-  return conSkills ? LA_PAGINA_QUE_CRECE.replace(`read ${RUTA_APPS}`, "load the convert-to-app skill") + UN_JUEGO_QUE_CRECE : LA_PAGINA_QUE_CRECE;
+ *  2026-10-27-len-five-skills), y un juego, la suya —sólo con los juegos encendidos (OPENLEN_GAMES)—. Apagadas, la
+ *  de siempre. */
+export function laPaginaQueCrece(conSkills: boolean, conJuegos = true): string {
+  return conSkills ? LA_PAGINA_QUE_CRECE.replace(`read ${RUTA_APPS}`, "load the convert-to-app skill") + (conJuegos ? UN_JUEGO_QUE_CRECE : "") : LA_PAGINA_QUE_CRECE;
+}
+
+/** The declaration as this server offers it: without games (OPENLEN_GAMES=0), no `game` parameter. */
+export function declaracionConvertirEnApp(conJuegos: boolean): Record<string, unknown> {
+  if (conJuegos) return { ...DECLARACION_CONVERTIR_EN_APP };
+  return { ...DECLARACION_CONVERTIR_EN_APP, parameters: { type: "OBJECT", properties: {} } };
 }
 
 export const DECLARACION_CONVERTIR_EN_APP = {
@@ -103,7 +111,8 @@ export const DECLARACION_CONVERTIR_EN_APP = {
 const ENTRADA_DE_EJEMPLO = esqueletoDeApp({ titulo: "App" }).ficheros[ENTRADA]!;
 
 export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps, args: { readonly game?: unknown } = {}): Promise<ToolOutcome> {
-  const comoJuego = args.game === true;
+  // With games off (OPENLEN_GAMES=0) the parameter isn't offered, and a stray `game: true` makes a plain app.
+  const comoJuego = args.game === true && gamesEnabled();
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
   if (row.data.app) return { response: { ok: false, error: "This project is already an app: there is nothing to convert." } };

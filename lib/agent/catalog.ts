@@ -56,7 +56,8 @@ import { CONNECT_SHOPIFY_STORE, CONNECT_SHOPIFY_STORE_DECLARATION } from "@/lib/
 import { shopifyEnabledIn } from "@/lib/shopify/enabled";
 import { SESSION_QUERY_DECLARATIONS, SESSION_QUERY_PROMPT } from "@/lib/agent/session-query-tools";
 import { PLAN_MODE_DECLARATIONS } from "@/lib/agent/plan-mode-tools";
-import { DECLARACION_CONVERTIR_EN_APP, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
+import { CONVERTIR_EN_APP, declaracionConvertirEnApp, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
+import { gamesEnabled } from "@/lib/games/enabled";
 import { GOAL_DECLARATIONS, GOAL_PROMPT } from "@/lib/agent/goal-tools";
 import { scheduleDeclarations, SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
@@ -241,7 +242,9 @@ function declaracionesDelModo(
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
       )
     : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env));
-  return fuera.size === 0 ? declaraciones : declaraciones.filter((d) => !fuera.has(String(d.name)));
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): with games off, convert_to_app offers no `game`.
+  const conJuegos = gamesEnabled(_env) ? declaraciones : declaraciones.map((d) => (d.name === CONVERTIR_EN_APP ? declaracionConvertirEnApp(false) : d));
+  return fuera.size === 0 ? conJuegos : conJuegos.filter((d) => !fuera.has(String(d.name)));
 }
 
 /** El párrafo de `file_path` de las herramientas que actúan sobre UNA página
@@ -584,7 +587,7 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     // UNA PÁGINA QUE CRECE SE CONVIERTE EN APP (F4 de la spec local
     // 2026-10-07-apps, `lib/agent/convertir-en-app.ts`). Sólo en una página:
     // `declaracionesDeLaApp` la quita.
-    { ...DECLARACION_CONVERTIR_EN_APP },
+    declaracionConvertirEnApp(true),
     // PIEZA 5 DE LEN 2.5: buscar en las charlas pasadas del proyecto, con las
     // tres de session-query de DeepSeek (`lib/agent/session-query-tools.ts`).
     ...SESSION_QUERY_DECLARATIONS,
@@ -748,7 +751,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
-${laPaginaQueCrece(skillsEnabled(env))}
+${laPaginaQueCrece(skillsEnabled(env), gamesEnabled(env))}
 - You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
 
 MODULES YOU CAN OPERATE (toggle_module):
