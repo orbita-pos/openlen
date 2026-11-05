@@ -571,7 +571,9 @@ const LADO_DE_LA_HUELLA = 128;
 async function huellaDelLienzo(page: Page, rect: MedidaDelLienzo["rect"]): Promise<PngCrudo | null> {
   try {
     const scale = Math.min(1, LADO_DE_LA_HUELLA / Math.max(rect.width, rect.height));
-    const png = (await page.screenshot({ type: "png", clip: { ...rect, scale } })) as Uint8Array;
+    // ~45 ms each, whatever its size (measured 05/11: the cost is the compositor's readback, not the
+    // pixels; optimizeForSpeed takes it from ~53 to ~45).
+    const png = (await page.screenshot({ type: "png", clip: { ...rect, scale }, optimizeForSpeed: true })) as Uint8Array;
     return decodificarPng(png);
   } catch {
     return null;
