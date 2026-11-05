@@ -10,6 +10,7 @@ import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 import { publishedHost } from "@/lib/publish/base-host";
+import { postInstallAfterSecurity, type PublishOutcome } from "@/lib/workspace-v2/publish-request";
 import { Icono } from "../iconos";
 import { barrasDeVisitas } from "./barras";
 
@@ -166,11 +167,79 @@ function Publicar({ cliente, projectId, confirm }: { cliente: ClienteDeOpenLen; 
   );
 }
 
+type ConfirmarInstalar = Extract<TarjetaDeLlamada, { tipo: "instalar" }>["confirm"];
+type EstadoDeInstalar =
+  | { fase: "listo" }
+  | { fase: "instalando" }
+  | { fase: "hallazgos"; huella: string; titulos: string[] }
+  | { fase: "borraDatos"; huella: string }
+  | { fase: "revisionSigue" }
+  | { fase: "instalada" }
+  | { fase: "error"; motivo: string };
+
+/** «Instalar» (herramientas, fase 5, spec local 2026-11-04-herramientas-hechas-por-len, §4.2, §4.14): lo que deja el
+ *  `publish` de Len en una herramienta, con las mismas puertas que la tarjeta de la web y su texto. El servidor espera
+ *  una revisión de seguridad que sigue en marcha (`waitWhenPending`); lo que encuentre, y lo que borre datos reales,
+ *  sólo lo acepta este toque — nunca Len. */
+function Instalar({ cliente, projectId, idioma, confirm }: { cliente: ClienteDeOpenLen; projectId: string; idioma: string; confirm: ConfirmarInstalar }) {
+  const t = useTranslations("movil.herramientas");
+  const [estado, setEstado] = useState<EstadoDeInstalar>({ fase: "listo" });
+  const [aceptado, setAceptado] = useState<{ acceptSecurityFingerprint?: string; confirmFingerprint?: string }>({});
+  const instalar = async (extra: { acceptSecurityFingerprint?: string; confirmFingerprint?: string } = {}) => {
+    const todo = { ...aceptado, ...extra };
+    setAceptado(todo);
+    setEstado({ fase: "instalando" });
+    const r: PublishOutcome = await postInstallAfterSecurity(projectId, { locale: idioma, waitWhenPending: true, ...todo }, () => {}, async () => null, (u, i) => cliente.pedir(u, i)).catch(
+      () => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome,
+    );
+    if (r.kind === "published") setEstado({ fase: "instalada" });
+    else if (r.kind === "security_findings") setEstado({ fase: "hallazgos", huella: r.view.fingerprint, titulos: r.view.blocking.map((f) => f.description || f.category) });
+    else if (r.kind === "needs_confirmation") setEstado({ fase: "borraDatos", huella: r.fingerprint });
+    else if (r.kind === "security_review_pending") setEstado({ fase: "revisionSigue" });
+    else setEstado({ fase: "error", motivo: r.kind === "error" ? r.error : r.kind });
+  };
+  return (
+    <div className="nx" data-tarjeta-instalar="">
+      <div className="nx-cap">{t("installCard.title", { title: confirm.title })}</div>
+      {estado.fase === "instalada" ? (
+        <div className="nx-what">{confirm.placement === "rail" ? t("instaladaRail") : t("instaladaProyecto")}</div>
+      ) : (
+        <>
+          <div className="nx-what">{confirm.placement === "rail" ? t("installCard.inRail") : t("installCard.inProject")}</div>
+          {estado.fase === "hallazgos" && (
+            <div className="nx-vs" role="alert">
+              {t("installCard.findings")}
+              <ul>
+                {estado.titulos.map((x, i) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {estado.fase === "borraDatos" && <div className="nx-vs" role="alert">{t("installCard.destructive")}</div>}
+          {estado.fase === "revisionSigue" && <div className="nx-vs" role="status">{t("revisionSigue")}</div>}
+          {estado.fase === "error" && <div className="nx-vs" role="alert">{t("installCard.failed", { reason: estado.motivo })}</div>}
+          <div className="nx-acts">
+            {estado.fase === "hallazgos" ? (
+              <button type="button" className="nx-act" onClick={() => void instalar({ acceptSecurityFingerprint: estado.huella })}>{t("installCard.installAnyway")}</button>
+            ) : estado.fase === "borraDatos" ? (
+              <button type="button" className="nx-act" onClick={() => void instalar({ confirmFingerprint: estado.huella })}>{t("installCard.installAnyway")}</button>
+            ) : estado.fase === "revisionSigue" ? (
+              <button type="button" className="nx-act" onClick={() => void instalar()}>{t("volverAIntentar")}</button>
+            ) : (
+              <button type="button" className="nx-act" disabled={estado.fase === "instalando"} onClick={() => void instalar()}>{t("installCard.install")}</button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function TarjetaDeLaApp({ x, cliente, projectId, idioma }: { x: TarjetaDeLlamada; cliente: ClienteDeOpenLen; projectId: string; idioma: string }) {
   if (x.tipo === "visitas") return <Visitas cliente={cliente} projectId={projectId} idioma={idioma} />;
   if (x.tipo === "respuesta") return <Borrador cliente={cliente} r={x.respuesta} />;
   if (x.tipo === "publicar") return <Publicar cliente={cliente} projectId={projectId} confirm={x.confirm} />;
-  // Herramientas, fase 5: «Instalar» se pinta en la tarea 7; hasta entonces no sale nada.
-  if (x.tipo === "instalar") return null;
+  if (x.tipo === "instalar") return <Instalar cliente={cliente} projectId={projectId} idioma={idioma} confirm={x.confirm} />;
   return <div className="nx"><div className="nx-what" style={{ whiteSpace: "pre-wrap" }}>{x.texto}</div></div>;
 }
