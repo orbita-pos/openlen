@@ -766,7 +766,9 @@
       "remove": "Retirer",
       "restore": "Restaurer",
       "releaseGone": "Cette version n'existe plus. Demandez à Len de la réinstaller.",
-      "failed": "Ça n'a pas marché. Réessayez."
+      "failed": "Ça n'a pas marché. Réessayez.",
+      "suggestions": "Suggestions d'outils",
+      "suggestionsHint": "Len vous propose un outil quand il voit qu'il vous aiderait ; rien n'est créé avant que vous appuyiez sur «Créer»."
     }
   }
 }
