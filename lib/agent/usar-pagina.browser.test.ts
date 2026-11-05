@@ -765,6 +765,40 @@ describe("use_page — los pasos de Claude Code", () => {
     expect(informe).toMatch(/the visit went over 3 s and was cut here/);
   }, 90_000);
 
+  // Review (05/11): what follows a click is the click's, even after a wait saw it appear once.
+  it("🔴 lo que apareció durante un wait sigue siendo efecto del clic la vez siguiente", async () => {
+    const guardar = marco(`<button id="b">Guardar</button>
+      <script>var n = 0; document.getElementById("b").addEventListener("click", function () { n++; var k = n; setTimeout(function () { var p = document.createElement("p"); p.textContent = "Guardado (" + k + ")"; document.body.appendChild(p); }, k === 1 ? 2500 : 500); });</script>`);
+    // The first save is slow: it appears DURING the wait. The second is fast: within the click's own window.
+    const informe = await visitar(guardar, [{ click: "Guardar" }, { wait: 3 }, { click: "Guardar" }]);
+    expect(informe.slice(informe.indexOf("2. wait"), informe.indexOf("3. click"))).toContain("appeared: «Guardado (1)»");
+    const tercero = informe.slice(informe.indexOf("3. click"));
+    expect(tercero).toContain("appeared: «Guardado (2)»");
+    expect(tercero).not.toContain("this also changes by itself");
+    expect(tercero).not.toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  // Review (05/11): zoom's region is the tab's, also on a scrolled page — a box fixed at the tab's top
+  // left is red wherever the page is scrolled to.
+  it("🔴 zoom recorta la región de la PESTAÑA también con la página desplazada", async () => {
+    const fija = marco(`<div style="position:fixed;left:0;top:0;width:200px;height:200px;background:#f00"></div>
+      <div style="height:3000px;background:#00f"></div><button id="b">Abajo</button>`);
+    const { informe, images } = await usarPagina({ html: fija, pasos: [{ click: "Abajo" }, { zoom: [0, 0, 100, 100] }], ruta: "/index.html" });
+    expect(informe).toContain("the region 0,0 → 100,100 of the tab");
+    // The JPEG's center, read by a browser (the eyes' own Chromium): red is the fixed box, blue the page.
+    const browser = await lanzarChromium();
+    try {
+      const page = await browser.newPage();
+      await page.setContent(`<img id="i" src="data:image/jpeg;base64,${images![0]!.dataBase64}">`);
+      const [r, g, b] = (await page.evaluate(
+        "new Promise((ok) => { const i = document.getElementById('i'); const go = () => { const c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; const x = c.getContext('2d'); x.drawImage(i, 0, 0); ok(Array.from(x.getImageData(c.width >> 1, c.height >> 1, 1, 1).data)); }; i.complete ? go() : i.onload = go; })",
+      )) as number[];
+      expect(r! > 200 && g! < 60 && b! < 60, `center rgb(${r},${g},${b})`).toBe(true);
+    } finally {
+      await browser.close();
+    }
+  }, 90_000);
+
   it("zoom devuelve una imagen de la región de la pestaña", async () => {
     const { informe, images } = await usarPagina({ html: lienzo(false), pasos: [{ zoom: [0, 0, 320, 240] }], ruta: "/index.html" });
     expect(images?.length).toBe(1);
@@ -807,7 +841,45 @@ describe("use_page — el canvas, por píxeles", () => {
     expect(muerto).toContain("can't be told apart");
     expect(muerto).not.toMatch(/the canvas changed:/);
     expect(muerto).not.toMatch(/nothing (else )?changed/);
+    // Review (05/11): «can't be told apart» used to drop the one hard fact there was.
+    expect(muerto).toContain("nothing on the page listens to the keyboard");
     expect(vivo).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+    expect(vivo).not.toContain("nothing on the page listens to the keyboard");
+  }, 90_000);
+
+  // Review (05/11): the baseline was ~0.5 s and the step ≥ 1.5 s, so an animation whose change grows
+  // with time (a bar that fills) read as «changed» with a dead key.
+  it("🔴 una animación lenta que crece con el tiempo y una tecla muerta: no se distingue; BRAZO DE CONTROL: la tecla viva sí cambia el canvas", async () => {
+    const barra = (vivo: boolean) =>
+      marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas>
+      <script>
+        var g = document.getElementById("c").getContext("2d"), w = 0, y = 20;
+        function pinta() { w = (w + 1) % 600; g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#39c"; g.fillRect(0, 200, w, 100); g.fillStyle = "#c33"; g.fillRect(250, y, 100, 100); requestAnimationFrame(pinta); }
+        pinta();
+        ${vivo ? 'window.addEventListener("keydown", function () { y = y === 20 ? 90 : 20; });' : ""}
+      </script>`);
+    const muerta = await visitar(barra(false), [{ key: "ArrowRight" }]);
+    expect(muerta).toContain("can't be told apart");
+    expect(muerta).not.toMatch(/the canvas changed:/);
+  }, 90_000);
+
+  // Review (05/11): Puppeteer's clip is in DOCUMENT coordinates; the tab's were passed, so on a scrolled
+  // page the canvas measure looked at the wrong place.
+  it("🔴 un canvas más abajo, tras un clic que desplaza la página: la tecla viva lo cambia; BRAZO DE CONTROL: la muerta no", async () => {
+    const abajo = (vivo: boolean) =>
+      marco(`<div style="height:2000px">Arriba</div><button id="b">Empezar</button>
+      <canvas id="c" width="600" height="300" style="display:block"></canvas>
+      <script>
+        var g = document.getElementById("c").getContext("2d"), x = 20;
+        function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
+        pinta();
+        document.getElementById("b").addEventListener("click", function () {});
+        ${vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
+      </script>`);
+    const viva = await visitar(abajo(true), [{ click: "Empezar" }, { key: "ArrowRight" }]);
+    const muerta = await visitar(abajo(false), [{ click: "Empezar" }, { key: "ArrowRight" }]);
+    expect(viva.slice(viva.indexOf("2. key"))).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+    expect(muerta.slice(muerta.indexOf("2. key"))).toContain("the canvas didn't change.");
   }, 90_000);
 
   it("un canvas oculto o de 0×0 no se mide y la visita acaba normal", async () => {

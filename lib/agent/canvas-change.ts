@@ -47,6 +47,6 @@ const pct = (x: number) => String(Math.round(x * 1000) / 10);
 export function canvasLine(v: CanvasVerdict, c: { readonly selfChange: number; readonly stepChange: number }): string {
   if (v === "unchanged") return "the canvas didn't change.";
   if (v === "only_by_itself") return `the canvas keeps changing by itself (about ${pct(c.selfChange)} %) and this step's effect can't be told apart from that.`;
-  const solo = c.selfChange >= UNCHANGED_BELOW ? ` (by itself it changes about ${pct(c.selfChange)} % in the same time)` : "";
+  const solo = c.selfChange >= UNCHANGED_BELOW ? ` (by itself it changes about ${pct(c.selfChange)} % in about the same time)` : "";
   return `the canvas changed: ${pct(c.stepChange)} % of its pixels${solo}.`;
 }
