@@ -23,7 +23,10 @@ import { Selector } from "./selector";
 import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
-import { listarHerramientas, type HerramientasDeLaPersona } from "../api/herramientas";
+import { listarHerramientas, sePuedeAbrir, type HerramientasDeLaPersona } from "../api/herramientas";
+import { IconoDeHerramienta } from "../herramientas/tools-tab";
+import { PantallaHerramienta } from "../herramientas/tool-screen";
+import type { InstalledToolView } from "@/lib/tools/types";
 import { fetchDelivered } from "../api/overview";
 import { PhoneViewer } from "../viewer/phone-viewer";
 import type { ViewerFile } from "@/components/viewer/viewer";
@@ -85,6 +88,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // The person's tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): read when the app opens and on every
   // reload; `"off"` hides «Herramientas» (tools switched off on the server); a failure keeps it (the tab offers «Reintentar»).
   const [herramientas, setHerramientas] = useState<HerramientasDeLaPersona | "off" | null>(null);
+  // The tool open full screen: a `rail` one from the tab (no project), a `project` one beside this project's chat.
+  const [herramientaAbierta, setHerramientaAbierta] = useState<{ tool: InstalledToolView; proyecto: { id: string; title: string } | null } | null>(null);
+  // What a project tool's `sendPrompt` leaves in the chat's composer.
+  const [borrador, setBorrador] = useState<{ texto: string; n: number } | null>(null);
   useEffect(() => {
     let alive = true;
     listarHerramientas(cliente, idioma).then((x) => alive && setHerramientas(x), () => {});
@@ -345,6 +352,11 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
                 <button type="button" onClick={() => setPanel("gestion")}>{te("gestionar")}</button>
                 <button type="button" onClick={() => setPanel("comparar")}>{te("comparar")}</button>
                 <button type="button" onClick={() => setPanel("equipo")}>{tq("titulo")}</button>
+                {id && herramientas && herramientas !== "off" && herramientas.paid && herramientas.tools.filter((x) => x.placement === "project" && sePuedeAbrir(x)).map((x) => (
+                  <button key={x.id} type="button" className="herr-atajo" data-tool-shortcut={x.id} onClick={() => setHerramientaAbierta({ tool: x, proyecto: { id, title: p?.title ?? lista?.find((y) => y.id === id)?.title ?? "" } })}>
+                    <IconoDeHerramienta cliente={cliente} tool={x} />{x.title}
+                  </button>
+                ))}
               </div>
               {avisos.recibido && <ControlAvisos avisos={avisos} />}
             </div>
@@ -366,7 +378,20 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         enfocar={enfocarEnChat}
         onEnfocado={alEnfocarEnChat}
         resaltarAviso={avisoDelChat?.id === id ? avisoDelChat.tarjeta : null}
+        borrador={borrador}
       />
+      {herramientaAbierta && (
+        <PantallaHerramienta
+          key={herramientaAbierta.tool.id}
+          cliente={cliente}
+          tool={herramientaAbierta.tool}
+          persona={herramientas && herramientas !== "off" ? herramientas.person : { name: "" }}
+          proyecto={herramientaAbierta.proyecto}
+          idioma={idioma}
+          onCerrar={() => setHerramientaAbierta(null)}
+          onPrompt={herramientaAbierta.proyecto ? (texto) => { setBorrador({ texto, n: Date.now() }); setChatAbierto(true); } : null}
+        />
+      )}
 
       <PanelAnimado contexto={id}
         paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel ?? ""}
@@ -378,7 +403,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
-          : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={() => {}} /> : null}
+          : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}

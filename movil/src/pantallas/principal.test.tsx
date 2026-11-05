@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -13,7 +13,14 @@ const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: numb
 vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: (o: { alMedir?: (v: number) => void }) => { hoja.alMedir = o.alMedir ?? null; return null; } }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../llamada/llamada", () => ({ Llamada: ({ projectId }: { projectId: string }) => <div data-llamada={projectId} /> }));
-vi.mock("../chat/chat", () => ({ PantallaChat: () => null }));
+const chatProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
+vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => { chatProps.ultimo = p; return null; } }));
+// The tool's screen is its own test's (tool-screen.test.tsx): here, which tool opened, where, and its `sendPrompt`.
+vi.mock("../herramientas/tool-screen", () => ({
+  PantallaHerramienta: ({ tool, proyecto, onPrompt }: { tool: { id: string }; proyecto: { id: string } | null; onPrompt: ((d: string) => void) | null }) => (
+    <div data-herr-abierta={tool.id} data-proyecto={proyecto?.id ?? ""}>{onPrompt && <button data-herr-prompt="" onClick={() => onPrompt("> hola\n\n— Reservas\n")} />}</div>
+  ),
+}));
 vi.mock("../chat/use-chat", () => ({ useChat: () => ({ trabajando: false }) }));
 
 let root: Root;
@@ -187,6 +194,62 @@ describe("Herramientas in the selector", () => {
     const { botones } = await paint(Response.json({ error: "tools_off" }, { status: 404 }));
     expect(botones().some((x) => x.textContent === "titulo")).toBe(false);
     expect(botones().some((x) => x.textContent === "entregado")).toBe(true);
+  });
+});
+
+// A project's tools beside its chat (§4.14): one button each in the sheet's row; a rail tool is the tab's, not here.
+describe("a project's tools beside the chat", () => {
+  // Closing a panel animates its exit, which asks matchMedia (jsdom has none).
+  beforeEach(() => vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })));
+  afterEach(() => vi.unstubAllGlobals());
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-05", chatHistory: [] };
+  const tool = (id: string, placement: "rail" | "project") => ({ id, projectId: `t-${id}`, title: `Tool ${id}`, description: "", placement, iconUrl: `/api/tools/${id}/icon`, iconTinted: true, frameUrl: "x", frameOrigin: "x", releaseSha: "sha", enabled: true, installedAt: "2026-11-05T10:00:00Z", status: "ok" });
+  async function paint() {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta.startsWith("/api/tools?")
+            ? Response.json({ tools: [tool("r", "rail"), tool("q", "project")], paid: true, person: { name: "Ana" } })
+            : ruta.startsWith("/api/tools/")
+              ? new Response("x", { status: 404 })
+              : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+  }
+
+  it("a project tool is a button in the sheet's row and opens in this project; a rail tool isn't there", async () => {
+    await paint();
+    const row = [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")];
+    expect(row.map((b) => b.textContent)).toContain("Tool q");
+    expect(row.map((b) => b.textContent)).not.toContain("Tool r");
+    await act(async () => row.find((b) => b.textContent === "Tool q")!.click());
+    const open = document.querySelector("[data-herr-abierta]");
+    expect(open?.getAttribute("data-herr-abierta")).toBe("q");
+    expect(open?.getAttribute("data-proyecto")).toBe("p1");
+  });
+
+  it("its sendPrompt fills the chat's composer and opens the chat", async () => {
+    await paint();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].find((b) => b.textContent === "Tool q")!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-herr-prompt]")!.click());
+    expect(chatProps.ultimo?.abierto).toBe(true);
+    expect((chatProps.ultimo?.borrador as { texto: string } | null)?.texto).toBe("> hola\n\n— Reservas\n");
+  });
+
+  it("the tab's tool opens with no project", async () => {
+    await paint();
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find((x) => x.textContent === "titulo")!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-tool-row]")!.click());
+    const open = document.querySelector("[data-herr-abierta]");
+    expect(open?.getAttribute("data-herr-abierta")).toBe("r");
+    expect(open?.getAttribute("data-proyecto")).toBe("");
+    expect(document.querySelector("[data-herr-prompt]")).toBeNull();
   });
 });
 
