@@ -69,6 +69,9 @@ export const CREATE_TOOLS: readonly string[] = [
   `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "jobFiles" jsonb NOT NULL DEFAULT '{}'::jsonb;`,
   // Phase 4 (§4.7): the operations an installed version's MCP server listed at install.
   `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "mcp" jsonb;`,
+  // Phase 5 (§4.14): the phone's own private label of an installation, framed only by the phone app.
+  `ALTER TABLE "toolInstallations" ADD COLUMN IF NOT EXISTS "phoneHostLabel" text;`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "toolInstallations_phoneHostLabel_idx" ON "toolInstallations" ("phoneHostLabel");`,
   // Phase 3: a tool's jobs (DeepSeek's job registry, the person as the owner).
   `CREATE TABLE IF NOT EXISTS "toolJobs" (
     "id" text PRIMARY KEY,

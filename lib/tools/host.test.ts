@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 
-import { toolFrameUrl, toolHostLabel } from "./host";
+import { toolFrameUrl, toolHostLabel, toolPhoneHostLabel } from "./host";
 
 const ID = "4f0c2a8e-1b3d-4c5e-9f7a-0b1c2d3e4f5a";
 const ENV = { AUTH_SECRET: "s3cret" };
@@ -35,5 +35,17 @@ describe("toolFrameUrl", () => {
   });
   it("with the canvas origin switched off, there is nowhere isolated to serve it", () => {
     expect(toolFrameUrl({ hostLabel: label, releaseSha: "abc", requestHost: "localhost:3000" }, { OPENLEN_LIENZO_ORIGEN: "0" })).toBeNull();
+  });
+});
+
+// Phase 5 (§4.14): the phone frames a tool on a label of its own, so the web's host stays framed only by openlen.com.
+describe("toolPhoneHostLabel", () => {
+  it("is a lienzo label, stable, and not the workspace's label of the same installation", () => {
+    expect(toolPhoneHostLabel(ID, ENV)).toMatch(/^lienzo-[0-9a-f]{32}$/);
+    expect(toolPhoneHostLabel(ID, ENV)).toBe(toolPhoneHostLabel(ID, ENV));
+    expect(toolPhoneHostLabel(ID, ENV)).not.toBe(toolHostLabel(ID, ENV));
+  });
+  it("without a secret there is no label", () => {
+    expect(toolPhoneHostLabel(ID, {})).toBeNull();
   });
 });
