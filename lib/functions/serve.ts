@@ -6,7 +6,7 @@
 // `invokeFunctionInternally` es el `curl` de la terminal de Len: SIEMPRE el
 // borrador (Len no toca producción).
 
-import { isInstalledToolOrigin } from "@/lib/tools/environment";
+import { isInstalledToolOrigin, toolLiveIsPublished } from "@/lib/tools/environment";
 import "server-only";
 
 import { decideEnvironment } from "@/lib/backend/environment-routing";
@@ -67,7 +67,9 @@ function realGatewayDeps(): GatewayDeps {
         ref: rec.ref,
         host,
         environment,
-        published: hb.pageSub !== null,
+        // An installed tool is never published, yet its production functions are what its screen and Len's
+        // operations call (spec local 2026-11-04-herramientas-hechas-por-len, §4.7).
+        published: hb.pageSub !== null || (await toolLiveIsPublished(rec.projectId)),
         publishableKey: rec.publishableKey,
         secretKeyHash: rec.secretKeyHash,
         // Lo que se tapa en lo que Len lee: la clave del servicio y los secretos

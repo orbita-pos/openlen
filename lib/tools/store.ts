@@ -5,7 +5,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -113,6 +113,16 @@ export async function listInstallations(personId: string): Promise<ToolInstallat
 export async function installationByLabel(label: string): Promise<ToolInstallationRow | null> {
   const [row] = await db.select().from(i).where(eq(i.hostLabel, label)).limit(1);
   return row ?? null;
+}
+
+/** Whether the tool project has an installation switched on and not removed: its production functions answer (phase 4). */
+export async function hasActiveInstallation(projectId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: i.id })
+    .from(i)
+    .where(and(eq(i.projectId, projectId), eq(i.enabled, true), isNull(i.removedAt)))
+    .limit(1);
+  return !!row;
 }
 
 export async function installationById(id: string): Promise<ToolInstallationRow | null> {
