@@ -13,6 +13,7 @@
 // Len's prefix is untouched, and the notice is appended to Len's conversation later.
 
 import type { Message } from "@/lib/ai-gateway";
+import type { LaunchOptions } from "./tool";
 import { buildAgentMessages, type BuildAgentMessagesArgs } from "@/lib/agent/context";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AgentLoopArgs, AgentLoopResult, AgentStreamEvent } from "@/lib/agent/loop";
@@ -251,6 +252,38 @@ interface ChildSpec {
   readonly prior: { readonly toolUses: number; readonly durationMs: number; readonly charged: number; readonly usage: Usage; readonly actions: readonly ChildStep[] };
   /** Phase 4: it works in this copy, which comes back into the draft when it ends. */
   readonly worktree?: AgentWorktree;
+  /** DeepSeek's activation output: declared `structured_output`, whose call ends the run. */
+  readonly outputSchema?: LaunchOptions["outputSchema"];
+  /** DeepSeek's `delivery: "caller"`: the result goes to `onSettled`, never to Len as a notice. */
+  readonly delivery?: "caller";
+  readonly onSettled?: LaunchOptions["onSettled"];
+}
+
+/** DeepSeek's structured output tool, declared to a child launched with an output schema. */
+export const STRUCTURED_OUTPUT_TOOL = "structured_output";
+
+function structuredOutputDeclaration(schema: NonNullable<LaunchOptions["outputSchema"]>): Record<string, unknown> {
+  return {
+    name: STRUCTURED_OUTPUT_TOOL,
+    description: "Return the final result for this task. Call it once, as your last step.",
+    parameters: {
+      type: "OBJECT",
+      properties: Object.fromEntries(Object.entries(schema.properties).map(([k, v]) => [k, { type: v.type.toUpperCase() }])),
+      required: [...schema.required],
+    },
+  };
+}
+
+/** Whether a structured_output call fits its schema: every required field, each of its declared JSON type. */
+function fitsSchema(args: Record<string, unknown>, schema: NonNullable<LaunchOptions["outputSchema"]>): string | null {
+  for (const key of schema.required) if (!(key in args)) return `missing "${key}"`;
+  for (const [key, def] of Object.entries(schema.properties)) {
+    if (!(key in args)) continue;
+    const v = args[key];
+    const actual = Array.isArray(v) ? "array" : v === null ? "null" : typeof v;
+    if (actual !== def.type) return `"${key}" must be ${def.type}`;
+  }
+  return null;
 }
 
 /** Server-owned state on a preload message, kept in its transcript but not sent as provider content. */
@@ -284,6 +317,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const { id, preset, description } = spec;
     const running = spec.messages.findLast((m: PreloadedMessage) => !!m.runningSkill) as PreloadedMessage | undefined;
     const startedAt = io.now();
+    /** What its `structured_output` handed back (DeepSeek's activation output). */
+    let structured: Record<string, unknown> | null = null;
     const session: AgentSession = {
       ...ctx.sessionBase,
       // An isolated child works in its copy; its LEN.md, memory, skills and agents stay its parent's (phase 4).
@@ -385,6 +420,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         signal: abort.signal,
         runTool: async (name, args) => {
           if (name === SEND_MESSAGE_TOOL) return sendToLen(args);
+          if (name === STRUCTURED_OUTPUT_TOOL && spec.outputSchema) {
+            const wrong = fitsSchema(args, spec.outputSchema);
+            if (wrong) return { response: { ok: false, error: `structured_output doesn't fit its schema: ${wrong}` } };
+            structured = { ...args };
+            return { response: { ok: true }, final: true };
+          }
           // A tool call after its message: the closing message may report what the message didn't.
           omitClosingText = false;
           const out = await io.runTool(session, deps, name, args);
@@ -542,7 +583,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       if (revision === receivedWhileFinishing) break;
     }
     // The notice first, then the slot: a turn waiting for «a notice or no child left» must see the notice.
-    if (toLen) {
+    if (toLen && spec.delivery !== "caller") {
       queueNotice(ctx.projectId, {
         id,
         text: settlementNotice({ id, stopReason: status, closingText: finalText, ...(diagnostic ? { diagnostic } : {}), omitClosingText, ...(worktree ? { worktree } : {}) })
@@ -552,7 +593,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     }
     release(ctx.projectId, id);
     ctx.emit?.({ type: "subagent", id, preset, description, status, ...(worktree ? { worktree } : {}) });
-    if (toLen) wakeLen();
+    if (toLen && spec.delivery !== "caller") wakeLen();
+    if (spec.delivery === "caller") {
+      void spec.onSettled?.({ id, status, structured, finalText }).catch((e: unknown) => log(`[subagents] run=${id} onSettled failed: ${String(e)}`));
+    }
 
     async function finishCopy(w: AgentWorktree): Promise<WorktreeOutcome> {
       const { parentProjectId: _parent, ...rest } = session;
@@ -777,9 +821,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) =>
           i === all.length - 1 ? withLine(o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m, w ?? null) : m,
         ),
-        tools,
+        tools: o.outputSchema ? [...tools, structuredOutputDeclaration(o.outputSchema)] : tools,
         prior: NOTHING_YET,
         ...(w ? { worktree: w } : {}),
+        ...(o.outputSchema ? { outputSchema: o.outputSchema } : {}),
+        ...(o.delivery ? { delivery: o.delivery } : {}),
+        ...(o.onSettled ? { onSettled: o.onSettled } : {}),
       };
       void run(spec, abort).catch((e: unknown) => log(`[subagents] run=${id} crashed: ${String(e)}`));
       return { ok: true, id };

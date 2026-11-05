@@ -1871,6 +1871,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
      *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
     let ownerTookOver = false;
+    /** A tool handed the run's result back (a child's `structured_output`): the run ends after this step. */
+    let handedBack = false;
     /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
      *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
     const avisos: string[] = [];
@@ -2136,6 +2138,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           preguntaSinTexto = (outcome.preguntas ?? []).length > 0 && outcome.preguntas!.every((q) => q.intent);
         }
         if (outcome.dismissed) ownerTookOver = true;
+        if (outcome.final) handedBack = true;
         if (outcome.notice) avisos.push(outcome.notice);
         // La lista vigente es la última que escribió (también vacía).
         if (outcome.todos) currentTodos = outcome.todos;
@@ -2271,6 +2274,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });
       endedOnQuestion = true;
+      return buildResult(false);
+    }
+
+    // DeepSeek's structured output: the call is the hand-back; nothing else is asked of the model.
+    if (handedBack) {
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      finalText = turnText.trim();
       return buildResult(false);
     }
 

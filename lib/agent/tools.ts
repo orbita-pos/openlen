@@ -1333,6 +1333,9 @@ export interface ToolOutcome {
   /** A «Crear» card `propose_action` accepted: the chat draws it under this answer (spec local
    *  2026-11-04-herramientas-hechas-por-len, §4.10). */
   toolCard?: import("@/lib/tools/cards/types").ToolCardView;
+  /** Ends the run after this step, with no further model call (a child's `structured_output`, DeepSeek's
+   *  activation output). */
+  final?: true;
   /** Los ojos como Claude Code (14/10): capturas que vuelven al modelo como
    *  IMÁGENES —él las mira, sin nadie que se las describa—. El bucle las pone
    *  en el mensaje que sigue a los resultados de la tanda. */
