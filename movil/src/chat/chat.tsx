@@ -45,9 +45,12 @@ interface Props {
   onEnfocado?: () => void;
   /** An event task's push: the card to bring into view over the conversation. */
   resaltarAviso?: string | null;
+  /** A project tool's `sendPrompt` (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.14): each new `n`
+   *  REPLACES the composer's text, as the web's `pendingDraft` does; the person sends it, never the app. */
+  borrador?: { texto: string; n: number } | null;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -68,6 +71,14 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const [archivos,setArchivos] = useState<File[]>([]);
   const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
   useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
+  const borradorN = borrador?.n;
+  useEffect(() => {
+    if (borradorN === undefined || !borrador) return;
+    setTexto(borrador.texto);
+    campo.current?.focus({ preventScroll: true });
+    // Only a new draft (its `n`) replaces what is written.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borradorN]);
   const vistos = useRef(chat.elementos.length);
   const deslizar = useDeslizar({ hacia: "derecha", rapido: true, activo: abierto, clave: projectId, alSoltar: onCerrar });
   useAtras(abierto, onCerrar);

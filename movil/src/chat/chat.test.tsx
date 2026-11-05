@@ -36,6 +36,20 @@ function pintar(elementos: ElementoDelHilo[], trabajando = false, turnoId: strin
  act(() => root.render(<PantallaChat abierto={abierto} chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} enfocar={enfocar?.clave} onEnfocado={enfocar?.alEnfocar} />));
  return host.querySelector<HTMLDivElement>(".ch-log")!;
 }
+// Herramientas, fase 5 (§4.4, §4.14): lo que manda una herramienta con `sendPrompt` llena el cuadro, como el
+// `pendingDraft` de la web; lo envía la persona, nunca la app.
+it("el borrador de una herramienta sustituye el texto del cuadro y no se envía nada", () => {
+ const chat = { elementos: [], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ const dibujar = (borrador: { texto: string; n: number } | null) => act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} borrador={borrador} />));
+ dibujar(null);
+ const campo = host.querySelector<HTMLTextAreaElement>("textarea")!;
+ act(() => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(campo, "lo que había"); campo.dispatchEvent(new Event("input", { bubbles: true })); });
+ dibujar({ texto: "> Confirma a Ana\n\n— Reservas\n", n: 1 });
+ expect(campo.value).toBe("> Confirma a Ana\n\n— Reservas\n");
+ expect((chat as unknown as { mandar: ReturnType<typeof vi.fn> }).mandar).not.toHaveBeenCalled();
+ expect(cliente.pedir).not.toHaveBeenCalled();
+});
+
 it("no muestra leído para un mensaje pendiente ni una subida fallida", () => {
  pintar([mensaje("enviando")], true);
  expect(host.textContent).not.toContain("leido"); expect(host.textContent).toContain("enviando");
