@@ -40,6 +40,23 @@ describe("buildToolRelease", () => {
     expect(r.files["/img/logo.png"]?.content).toBe(FILES["/img/logo.png"]);
   });
 
+  // PHASE 3 (§4.6): the installed version keeps a copy of its job files — never served — so a job runs what was
+  // installed, not the draft.
+  it("keeps a snapshot of the job files, never served, and part of the sha", async () => {
+    const withJobs = { ...FILES, "/jobs/pdf.py": "print('pdf')", "/jobs/lib/util.py": "x = 1", "/requirements.txt": "fpdf2==2.7.9" };
+    const r = await build(deps(), withJobs);
+    expect(r.jobFiles).toEqual({
+      "/jobs/pdf.py": "print('pdf')",
+      "/jobs/lib/util.py": "x = 1",
+      "/requirements.txt": "fpdf2==2.7.9",
+      "/package.json": "{}",
+    });
+    expect(Object.keys(r.files).some((p) => p.startsWith("/jobs/") || p === "/requirements.txt")).toBe(false);
+    const changed = await build(deps(), { ...withJobs, "/jobs/pdf.py": "print('pdf 2')" });
+    expect(changed.sha).not.toBe(r.sha);
+    expect((await build(deps())).jobFiles).toEqual({ "/package.json": "{}" });
+  });
+
   it("the icon is in the release even if it weren't publishable", async () => {
     const r = await buildToolRelease(
       { projectId: "t1", html: SHELL, files: { ...FILES, "/branding/mark.svg": "<svg/>" }, app: APP, entorno: {}, iconPath: "/branding/mark.svg" },

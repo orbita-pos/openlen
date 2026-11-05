@@ -65,4 +65,6 @@ export const CREATE_TOOLS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS "toolCards_project_person_phase_idx" ON "toolCards" ("projectId", "personId", "phase");`,
   `CREATE INDEX IF NOT EXISTS "toolCards_chatRowId_idx" ON "toolCards" ("chatRowId");`,
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "toolSuggestions" boolean NOT NULL DEFAULT false;`,
+  // Phase 3 (§4.6): the installed version's job files, kept apart from what its host serves.
+  `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "jobFiles" jsonb NOT NULL DEFAULT '{}'::jsonb;`,
 ];

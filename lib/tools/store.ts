@@ -16,8 +16,19 @@ export type ToolInstallationRow = typeof schema.toolInstallations.$inferSelect;
 const i = schema.toolInstallations;
 const r = schema.toolReleases;
 
-export async function saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>): Promise<void> {
-  await db.insert(r).values({ sha, projectId, files }).onConflictDoNothing({ target: r.sha });
+export async function saveRelease(
+  sha: string,
+  projectId: string,
+  files: Record<string, ToolReleaseFile>,
+  jobFiles: Record<string, string> = {},
+): Promise<void> {
+  await db.insert(r).values({ sha, projectId, files, jobFiles }).onConflictDoNothing({ target: r.sha });
+}
+
+/** A version's job files (phase 3, §4.6): what its jobs run; `{}` for a version without jobs, null for none. */
+export async function readReleaseJobs(sha: string): Promise<Record<string, string> | null> {
+  const [row] = await db.select({ jobFiles: r.jobFiles }).from(r).where(eq(r.sha, sha)).limit(1);
+  return row ? (row.jobFiles ?? {}) : null;
 }
 
 export async function readRelease(sha: string): Promise<Record<string, ToolReleaseFile> | null> {
