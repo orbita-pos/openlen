@@ -493,7 +493,7 @@ export interface AgentLoopResult {
    * Cerrarlos con los hechos delante es mejor para el dueño, pero no puede
    * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
    */
-  sinCobro?: "rechazos" | "conflicto";
+  sinCobro?: "rechazos" | "conflicto" | "host";
   /**
    * LO QUE EL BUCLE ESTIMÓ DE LOS INTENTOS FALLIDOS SIN USO del proveedor que
    * el cerebro dejó (spec local 2026-10-16-second-provider §3.4b). Va DENTRO de

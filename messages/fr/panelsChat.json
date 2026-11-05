@@ -24,7 +24,8 @@
     "desdeElHilo": "depuis le fil · {donde}",
     "scheduled": "Tâche planifiée «{title}» · {when}",
     "lenWatch": "Len Watch · votre site publié ne se chargeait pas",
-    "fromSubagents": "Résultats des sous-agents"
+    "fromSubagents": "Résultats des sous-agents",
+    "toolCreation": "Créer un outil"
   },
   "proceso": {
     "completadoEn": "Terminé en <d>{duracion}</d>",

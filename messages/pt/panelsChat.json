@@ -24,7 +24,8 @@
     "desdeElHilo": "da conversa · {donde}",
     "scheduled": "Tarefa agendada «{title}» · {when}",
     "lenWatch": "Len Watch · seu site publicado não carregava",
-    "fromSubagents": "Resultados dos subagentes"
+    "fromSubagents": "Resultados dos subagentes",
+    "toolCreation": "Criar ferramenta"
   },
   "proceso": {
     "completadoEn": "Concluído em <d>{duracion}</d>",

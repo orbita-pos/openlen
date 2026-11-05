@@ -111,6 +111,7 @@ import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, TOOL_OUTCOME_UNKNOWN, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
+import { isToolCreationOrigin, type ToolCreationOrigin } from "@/lib/projects/types";
 import { randomUUID } from "node:crypto";
 import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
@@ -1806,6 +1807,8 @@ async function correrTurno(
           const margen = await margenDeMiembros(projectId);
           if (margen != null) techo = Math.min(techo, margen);
         }
+        // «Crear» on a tool card: what one creation may spend (`OPENLEN_TOOL_CREATION_CAP`), never above the plan's.
+        if (programadaDelTurno?.ceilingCentis !== undefined) techo = Math.min(techo, programadaDelTurno.ceilingCentis);
         // LEN'S SUBAGENTS: what they spend counts against this same cap, also after this turn closes.
         let lenSpent = 0;
         const spend = createTurnSpend(techo, () => lenSpent);
@@ -2080,7 +2083,39 @@ async function correrTurno(
               },
             }
           : { ...deps, planMode, goal, scheduledTasks, stillWorking, turnSignal, ...(subagents ? { subagents } : {}) };
-        const result = await runAgentLoop({
+        // «CREAR» ON A TOOL CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn calls no
+        // model. It launches the `creator` child for the card — DeepSeek's `delivery: "caller"` and `{ ready }` schema,
+        // whose settlement the card's code installs — and closes, charging nothing (`sinCobro: "host"`); the child
+        // spends within this turn's cap and outlives it.
+        const creacionDelTurno = programadaDelTurno && isToolCreationOrigin(programadaDelTurno.origin) ? programadaDelTurno.origin : null;
+        const hostToolCreation = async (o: ToolCreationOrigin): Promise<AgentLoopResult> => {
+          const creation = await import("@/lib/tools/cards/creation");
+          const text = await creation.hostTheCreator(
+            { cardId: o.cardId, framing: programadaDelTurno?.framing ?? "", locale: agentSession.uiLocale ?? "en", launcher: subagents },
+            await creation.realCreationDeps(),
+          );
+          const ev = { type: "text" as const, text };
+          registro.observar(ev);
+          avance.tocar();
+          emit(ev.type, ev);
+          return {
+            finalText: text,
+            transcripcion: [{ role: "assistant", content: text }],
+            usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 },
+            turns: 0,
+            toolCalls: 0,
+            terminalError: false,
+            topeAlcanzado: null,
+            errorCode: null,
+            mutoDurable: false,
+            aplicado: [],
+            rechazos: [],
+            sinCobro: "host",
+          };
+        };
+        const result = creacionDelTurno
+          ? await hostToolCreation(creacionDelTurno)
+          : await runAgentLoop({
           messages,
           tools,
           ...(stepRecorder ? { onStepTools: stepRecorder.onStepTools } : {}),
@@ -2385,7 +2420,7 @@ async function correrTurno(
         });
         // Para el enfriamiento: 3 turnos seguidos con respaldo saltan al
         // principal 5 min (`lib/agent/provider-health.ts`).
-        noteTurn({ primary: brain.firstProvider(), fellBack: brain.fellBack(), now: Date.now() });
+        if (!creacionDelTurno) noteTurn({ primary: brain.firstProvider(), fellBack: brain.fellBack(), now: Date.now() });
         const gastoTokens = inputTokens + outputTokens > 0;
         if (!result.terminalError && !result.sinCobro) {
           // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:

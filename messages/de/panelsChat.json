@@ -24,7 +24,8 @@
     "desdeElHilo": "aus der Unterhaltung · {donde}",
     "scheduled": "Geplante Aufgabe «{title}» · {when}",
     "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht",
-    "fromSubagents": "Ergebnisse der Subagenten"
+    "fromSubagents": "Ergebnisse der Subagenten",
+    "toolCreation": "Tool erstellen"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",

@@ -24,7 +24,8 @@
     "desdeElHilo": "スレッドから · {donde}",
     "scheduled": "予定タスク「{title}」 · {when}",
     "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした",
-    "fromSubagents": "サブエージェントの結果"
+    "fromSubagents": "サブエージェントの結果",
+    "toolCreation": "ツールを作成"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",
