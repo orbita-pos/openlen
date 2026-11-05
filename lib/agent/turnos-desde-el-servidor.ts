@@ -71,6 +71,8 @@ export interface ScheduledRequest {
   readonly chatProjectId?: string;
   /** A lower ceiling than the plan's, in centicredits (a tool's creation: `OPENLEN_TOOL_CREATION_CAP`). */
   readonly ceilingCentis?: number;
+  /** What the history keeps as this turn's message instead of `framing` (a tool's creation: a plain account). */
+  readonly sentText?: string;
 }
 
 type Corredor = (
@@ -302,6 +304,7 @@ export function launchToolCreationHost(p: {
   readonly projectId: string;
   readonly texto: string;
   readonly framing: string;
+  readonly sentText: string;
   readonly origin: ToolCreationOrigin;
   readonly timeZone: string;
   readonly locale: string;
@@ -320,6 +323,7 @@ export function launchToolCreationHost(p: {
       locale: p.locale,
       filaId: p.filaId,
       ceilingCentis: p.ceilingCentis,
+      sentText: p.sentText,
       reply: async () => {},
       fail: (fallo) => p.fail(fallo?.code ?? fallo?.motivo ?? null),
       onStart: async () => {},
@@ -397,6 +401,8 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   readonly extraBody?: Readonly<Record<string, unknown>>;
   /** `ScheduledRequest.ceilingCentis`. */
   readonly ceilingCentis?: number;
+  /** `ScheduledRequest.sentText`. */
+  readonly sentText?: string;
 }
 
 function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin>(
@@ -426,6 +432,7 @@ function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentO
         },
         ...(p.chatProjectId ? { chatProjectId: p.chatProjectId } : {}),
         ...(p.ceilingCentis !== undefined ? { ceilingCentis: p.ceilingCentis } : {}),
+        ...(p.sentText !== undefined ? { sentText: p.sentText } : {}),
       };
       const errores = await runTurn(
         correr,

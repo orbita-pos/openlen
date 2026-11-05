@@ -42,6 +42,7 @@ import {
   type SubagentStopReason,
   type WorktreeOutcome,
 } from "./notice";
+import { HIDDEN_AGENT_TYPES } from "./agent-paths";
 import type { AgentWorktree, FinishedWorktree } from "./worktree";
 import { childSystemPromptFor, childToolDeclarations, childToolsFor, childTypeOf, DELEGATION_SCOPE_STATEMENT, isReadOnlyFor, omitsLenMdFor, type ChildType, type SubagentPreset } from "./presets";
 import { finalizingInput, isLive, noticeTurnPending, queueNotice, release, reserve, sendToRun, setFinalizingInput, setNoticeTurnPending, stop, takeRunInbox } from "./registry";
@@ -665,6 +666,11 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
   async function resume(id: string, texts: readonly string[]): Promise<SendResult> {
     const first = await io.store.runOfCurrentConversation(ctx.projectId, id);
     if (!first) return { ok: false, code: "unavailable", message: unavailableError(id) };
+    // A hidden type (the «Crear» card's creator) reports to whoever launched it, never to Len: woken by a message it
+    // would run without its output schema and its hand-back, and the card would never hear.
+    if (HIDDEN_AGENT_TYPES.has(first.preset)) {
+      return { ok: false, code: "unavailable", message: `Subagent ${id} hands its result to OpenLen, not to you; it can't be sent messages.` };
+    }
     const preset = first.preset;
     const toInbox = (): SendResult => {
       for (const t of texts) sendToRun(id, t);

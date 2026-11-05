@@ -514,6 +514,16 @@ describe("waking an idle child (phase 2)", () => {
     ]);
   });
 
+  it("🔴 a «Crear» card's creator can't be messaged or woken by Len: its result is the card's", async () => {
+    const s = setup({ scripts: [dice("Built")] });
+    const ready = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+    const r = await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "creator", outputSchema: ready, delivery: "caller", onSettled: async () => {} });
+    expect(r).toMatchObject({ ok: true });
+    await s.settled("r1");
+    expect(await s.launcher.send({ id: "r1", message: "Now publish it." })).toMatchObject({ ok: false, code: "unavailable" });
+    expect(s.g.seen).toHaveLength(1);
+  });
+
   it("a running child gets Len's message in its inbox instead", async () => {
     const s = setup({ scripts: [llama("Read", { file_path: "/a" }), dice("Done")] });
     s.g.hold();

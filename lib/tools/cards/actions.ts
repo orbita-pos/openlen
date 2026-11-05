@@ -43,8 +43,11 @@ export interface ActionDeps {
   sleep?(ms: number): Promise<void>;
 }
 
-/** When this server process started (one Next process, like the subagent registry). */
-const PROCESS_STARTED_AT = new Date();
+/** When this server process started — the process's own clock, not when this module first loaded. */
+const PROCESS_STARTED_AT = new Date(Date.now() - process.uptime() * 1000);
+
+/** The errors of an install that broke on the way (not the Creator's work): «Reintentar» installs again, without it. */
+const INSTALL_STAGE_ERRORS: readonly string[] = ["security_review_pending", "install_failed"];
 
 export async function realActionDeps(): Promise<ActionDeps> {
   const [store, creation, tools, limits, registry, restore] = await Promise.all([
@@ -105,14 +108,30 @@ async function act(cardId: string, personId: string, verb: ToolCardVerb, payload
       if (!location) return { status: "refused", reason: "invalid_location" };
       if ((await d.plan(personId)) === "free") return { status: "refused", reason: "plan_required" };
       const previousError = verb === "retry" ? card.error : null;
-      const creating = await d.casPhase(card.id, [card.phase], "creating", { ...location, error: null, review: null, cancelRequested: false });
+      // The Creator already handed it back ready and only the install broke: install again (DeepSeek's retry of an
+      // install that failed doesn't regenerate the page).
+      if (verb === "retry" && card.toolProjectId && previousError && INSTALL_STAGE_ERRORS.includes(previousError)) {
+        const installing = await d.casPhase(card.id, [card.phase], "installing", { error: null, review: null, cancelRequested: false });
+        if (!installing) return settled();
+        void d.installAndCheck(installing, { locale: payload.locale }).catch(() => undefined);
+        return { status: "accepted" };
+      }
+      // Going back to creating forgets the previous creator's run.
+      const creating = await d.casPhase(card.id, [card.phase], "creating", { ...location, creatorRunId: null, error: null, review: null, cancelRequested: false });
       if (!creating) return settled();
-      const started = await d.startCreation(creating, {
-        personId,
-        locale: payload.locale,
-        timeZone: payload.timeZone,
-        ...(previousError ? { previousError } : {}),
-      });
+      let started: Awaited<ReturnType<ActionDeps["startCreation"]>>;
+      try {
+        started = await d.startCreation(creating, {
+          personId,
+          locale: payload.locale,
+          timeZone: payload.timeZone,
+          ...(previousError ? { previousError } : {}),
+        });
+      } catch (err) {
+        console.warn(`[tools] card ${card.id}: the creation couldn't start`, err);
+        await d.casPhase(card.id, ["creating"], "failed", { error: "unavailable" });
+        return { status: "refused", reason: "unavailable" };
+      }
       if (!started.ok) {
         await d.casPhase(card.id, ["creating"], card.phase, { error: card.error });
         return { status: "refused", reason: started.reason };
@@ -150,11 +169,14 @@ async function act(cardId: string, personId: string, verb: ToolCardVerb, payload
       const review = card.review;
       const installing = await d.casPhase(card.id, ["needs_review"], "installing");
       if (!installing) return settled();
-      await d.installAndCheck(installing, {
-        locale: payload.locale,
-        ...(review.kind === "security_findings" ? { acceptSecurityFingerprint: review.fingerprint } : { confirmFingerprint: review.fingerprint }),
-      });
-      return settled();
+      // In the background, as «Crear»: the build and the load test outlast a proxy's patience; the card follows it.
+      void d
+        .installAndCheck(installing, {
+          locale: payload.locale,
+          ...(review.kind === "security_findings" ? { acceptSecurityFingerprint: review.fingerprint } : { confirmFingerprint: review.fingerprint }),
+        })
+        .catch(() => undefined);
+      return { status: "accepted" };
     }
   }
 }
@@ -165,7 +187,7 @@ async function act(cardId: string, personId: string, verb: ToolCardVerb, payload
  * installed card whose tool was removed from the Tools page (or restored there) follows it. A card still being
  * worked on in this process is left alone: its creator's settlement, or its install, decides it.
  */
-async function reconcile(card: ToolCardRow, d: ActionDeps): Promise<ToolCardRow> {
+async function reconcile(card: ToolCardRow, d: Pick<ActionDeps, "casPhase" | "installationOf" | "processStartedAt">): Promise<ToolCardRow> {
   const working = card.phase === "creating" || card.phase === "installing";
   if (working && card.updatedAt >= d.processStartedAt) return card;
   if (card.phase === "dismissed" || card.phase === "replaced" || card.phase === "proposed") return card;
@@ -177,6 +199,26 @@ async function reconcile(card: ToolCardRow, d: ActionDeps): Promise<ToolCardRow>
   if (!live && card.phase === "installed") return (await d.casPhase(card.id, ["installed"], "removed")) ?? card;
   if (working) return (await d.casPhase(card.id, [card.phase], "interrupted")) ?? card;
   return card;
+}
+
+/**
+ * The same reconciliation when the cards are READ (the chat's list, Len's notice): a card left creating or installing
+ * by an earlier process says «interrumpida» — or «instalada» — without anyone having to press it first. Only those
+ * rows ask about installations; the rest come back as they are.
+ */
+export async function reconcileOnRead(
+  rows: readonly ToolCardRow[],
+  deps?: Pick<ActionDeps, "casPhase" | "installationOf" | "processStartedAt">,
+): Promise<ToolCardRow[]> {
+  const stale = (r: ToolCardRow) => (r.phase === "creating" || r.phase === "installing") && r.updatedAt < (deps?.processStartedAt ?? PROCESS_STARTED_AT);
+  if (!rows.some(stale)) return [...rows];
+  const d = deps ?? (await realReconcileDeps());
+  return Promise.all(rows.map((r) => (stale(r) ? reconcile(r, d) : r)));
+}
+
+async function realReconcileDeps(): Promise<Pick<ActionDeps, "casPhase" | "installationOf" | "processStartedAt">> {
+  const [store, tools] = await Promise.all([import("./store"), import("../store")]);
+  return { casPhase: (id, from, to, set) => store.casPhase(id, from, to, set), installationOf: tools.installationOf, processStartedAt: PROCESS_STARTED_AT };
 }
 
 async function waitWhileCreating(cardId: string, d: ActionDeps): Promise<void> {

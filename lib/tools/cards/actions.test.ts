@@ -9,7 +9,7 @@ import type { ToolCardRow } from "./store";
 
 vi.mock("server-only", () => ({}));
 
-const { actOnCard } = await import("./actions");
+const { actOnCard, reconcileOnRead } = await import("./actions");
 
 const START = new Date("2026-11-04T12:00:00Z");
 const BEFORE = new Date("2026-11-04T11:00:00Z");
@@ -247,12 +247,80 @@ describe("retry (🔴 the creator wasn't ready / the tool didn't load)", () => {
   });
 });
 
+describe("🔴 C1: reconciled when read, not only when pressed (a restart in the middle of «creando»)", () => {
+  it("creating or installing from before this process, no installation: interrupted", async () => {
+    const d = deps();
+    const rows = await reconcileOnRead(
+      [
+        { ...base, id: "a", phase: "creating", toolProjectId: "tool-1", creatorRunId: "run-1", updatedAt: BEFORE },
+        { ...base, id: "b", phase: "installing", toolProjectId: "tool-1", updatedAt: BEFORE },
+      ],
+      { ...d, casPhase: async (id: string, from: readonly string[], to: string, set: Partial<ToolCardRow> = {}) => ({ ...base, id, ...set, phase: to as ToolCardRow["phase"] }) },
+    );
+    expect(rows.map((r) => r.phase)).toEqual(["interrupted", "interrupted"]);
+  });
+
+  it("from before this process but its tool did get installed: installed", async () => {
+    installation = { id: "inst-7", removedAt: null };
+    const d = deps();
+    card = { ...base, phase: "installing", toolProjectId: "tool-1", updatedAt: BEFORE };
+    const [row] = await reconcileOnRead([card], d);
+    expect(row).toMatchObject({ phase: "installed", installationId: "inst-7" });
+  });
+
+  it("anything else is left as it is, without asking for installations", async () => {
+    const d = deps();
+    const rows = [{ ...base, phase: "creating" as const, toolProjectId: "tool-1", updatedAt: AFTER }, { ...base, id: "x", phase: "proposed" as const }, { ...base, id: "y", phase: "installed" as const, toolProjectId: "tool-1" }];
+    expect(await reconcileOnRead(rows, d)).toEqual(rows);
+    expect(d.installationOf).not.toHaveBeenCalled();
+  });
+});
+
+describe("🔴 I4: a creation that throws doesn't leave the card «creando»", () => {
+  it("startCreation throws: failed", async () => {
+    const d = deps();
+    d.startCreation.mockRejectedValueOnce(new Error("db down"));
+    expect(await act("create", { placement: "rail" }, d)).toEqual({ status: "refused", reason: "unavailable" });
+    expect(card).toMatchObject({ phase: "failed", error: "unavailable" });
+  });
+});
+
+describe("🔴 I5: «Reintentar» after an install-stage failure installs again, without the Creator", () => {
+  it("a security review that was still running: installing again, the Creator not relaunched", async () => {
+    card = { ...base, phase: "failed", toolProjectId: "tool-1", error: "security_review_pending" };
+    const d = deps();
+    expect(await act("retry", {}, d)).toEqual({ status: "accepted" });
+    expect(d.startCreation).not.toHaveBeenCalled();
+    expect(d.installAndCheck).toHaveBeenCalledWith(expect.objectContaining({ phase: "installing" }), { locale: "es" });
+  });
+
+  it("an install that broke (install_failed) too; a tool that didn't load relaunches the Creator with its error", async () => {
+    card = { ...base, phase: "failed", toolProjectId: "tool-1", error: "install_failed" };
+    const d = deps();
+    await act("retry", {}, d);
+    expect(d.startCreation).not.toHaveBeenCalled();
+    card = { ...base, phase: "failed", toolProjectId: "tool-1", error: "TypeError: x is undefined" };
+    const d2 = deps();
+    await act("retry", {}, d2);
+    expect(d2.startCreation).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("🔴 two creators at once", () => {
+  it("going back to creating forgets the previous creator's run", async () => {
+    card = { ...base, phase: "cancelled", toolProjectId: "tool-1", creatorRunId: "run-old" };
+    await act("retry");
+    expect(card.creatorRunId).toBeNull();
+  });
+});
+
 describe("install_anyway (🔴 install answered 428)", () => {
   it("security findings: installed with the person's acceptance of that fingerprint", async () => {
     card = { ...base, phase: "needs_review", toolProjectId: "tool-1", review: { kind: "security_findings", fingerprint: "f1", findings: ["RLS off"] } };
     const d = deps();
-    expect(await act("install_anyway", {}, d)).toMatchObject({ status: "settled", card: { phase: "installed" } });
+    expect(await act("install_anyway", {}, d)).toEqual({ status: "accepted" });
     expect(d.installAndCheck).toHaveBeenCalledWith(expect.objectContaining({ phase: "installing" }), { locale: "es", acceptSecurityFingerprint: "f1" });
+    await vi.waitFor(() => expect(card.phase).toBe("installed"));
   });
 
   it("a destructive migration: installed with its confirmation", async () => {

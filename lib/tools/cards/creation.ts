@@ -29,6 +29,8 @@ export interface ToolCreationHost {
   readonly projectId: string;
   readonly texto: string;
   readonly framing: string;
+  /** What the tool project's history keeps as this turn's message: a plain account, never the Creator's task. */
+  readonly sentText: string;
   readonly origin: { readonly kind: "tool_creation"; readonly cardId: string; readonly title: string };
   readonly timeZone: string;
   readonly locale: string;
@@ -114,12 +116,14 @@ export async function startCreation(
     if (born === "plan_required") return { ok: false, reason: "plan_required" };
   }
   const hostRowId = deps.newId();
-  await deps.casPhase(card.id, ["creating"], "creating", { toolProjectId, hostRowId, error: null, review: null, cancelRequested: false });
+  // A retry forgets the previous creator's run: a Cancel now must stop the new one, not wait on a dead one.
+  await deps.casPhase(card.id, ["creating"], "creating", { toolProjectId, hostRowId, creatorRunId: null, error: null, review: null, cancelRequested: false });
   deps.launchHost({
     userId: o.personId,
     projectId: toolProjectId,
-    texto: `Crear «${card.title}»`,
+    texto: (CREATE_TEXT[o.locale] ?? CREATE_TEXT.en!)(card.title),
     framing: creatorFraming(card, o.previousError ? { previousError: o.previousError } : {}),
+    sentText: hostHistoryText(card),
     origin: { kind: "tool_creation", cardId: card.id, title: card.title },
     timeZone: o.timeZone,
     locale: o.locale,
@@ -130,6 +134,31 @@ export async function startCreation(
     },
   });
   return { ok: true };
+}
+
+/** The host row's message, as the person pressed it: «Crear «title»» in their language. */
+const CREATE_TEXT: Readonly<Record<string, (title: string) => string>> = {
+  en: (t) => `Create «${t}»`,
+  es: (t) => `Crear «${t}»`,
+  pt: (t) => `Criar «${t}»`,
+  fr: (t) => `Créer «${t}»`,
+  de: (t) => `«${t}» erstellen`,
+  it: (t) => `Crea «${t}»`,
+  ja: (t) => `«${t}»を作成`,
+  ko: (t) => `«${t}» 만들기`,
+  zh: (t) => `创建«${t}»`,
+  nl: (t) => `«${t}» maken`,
+};
+
+/**
+ * What Len reads of this turn in the tool project's later conversations: what happened, as a fact, with the card's
+ * brief — the Creator's task (its «do not publish or install», its `structured_output`) is the Creator's, not Len's.
+ */
+export function hostHistoryText(card: Pick<ToolCardRow, "title" | "brief">): string {
+  return (
+    `«Crear» on a tool card started this project: a background creator subagent builds the tool «${card.title}» here, ` +
+    `and OpenLen installs it when the creator hands it back. The card's brief: ${card.brief}`
+  );
 }
 
 /** What the host row says while the Creator works (the person may open the tool project and see it). */
@@ -163,12 +192,20 @@ export interface CreatorLauncher {
  * "caller"`, the `{ ready }` schema — whose settlement goes to the card, and answers what the row says.
  */
 export async function hostTheCreator(
-  o: { readonly cardId: string; readonly framing: string; readonly locale: string; readonly launcher: CreatorLauncher | undefined },
+  o: {
+    readonly cardId: string;
+    readonly framing: string;
+    readonly locale: string;
+    readonly launcher: CreatorLauncher | undefined;
+    /** This host turn's row: a card retried meanwhile has a newer host, and this one launches nothing. */
+    readonly hostRowId?: string;
+  },
   deps: CreationDeps,
 ): Promise<string> {
   const card = await deps.cardById(o.cardId);
   const text = (HOST_TEXT[o.locale] ?? HOST_TEXT.en!)(card?.title ?? "");
   if (!card || card.phase !== "creating") return text;
+  if (o.hostRowId && card.hostRowId && card.hostRowId !== o.hostRowId) return text;
   if (!o.launcher) {
     await deps.casPhase(card.id, ["creating"], "failed", { error: "subagents_off" });
     return text;
@@ -199,8 +236,23 @@ export interface CreatorSettled {
   readonly finalText: string;
 }
 
-/** The Creator settled: the card's code decides, never the model's prose (DeepSeek's `generate`). */
+/**
+ * The Creator settled: the card's code decides, never the model's prose (DeepSeek's `generate`). Whatever throws on
+ * the way leaves the card «fallida» with `install_failed`, never «creando» or «instalando» with nobody finishing it.
+ */
 export async function onCreatorSettled(cardId: string, r: CreatorSettled, o: { readonly locale: string }, deps: CreationDeps): Promise<void> {
+  try {
+    await settle(cardId, r, o, deps);
+  } catch (err) {
+    console.warn(`[tools] card ${cardId}: settling its creator failed`, err);
+    await deps.casPhase(cardId, ["creating", "installing"], "failed", { error: INSTALL_FAILED }).catch(() => null);
+  }
+}
+
+/** An install that broke on our side (an exception, not a gate's answer): «Reintentar» installs again. */
+export const INSTALL_FAILED = "install_failed";
+
+async function settle(cardId: string, r: CreatorSettled, o: { readonly locale: string }, deps: CreationDeps): Promise<void> {
   const card = await deps.cardById(cardId);
   if (!card || card.phase !== "creating") return;
   if (r.status !== "completed") {
@@ -226,6 +278,22 @@ export async function installAndCheck(
   o: { readonly locale: string; readonly acceptSecurityFingerprint?: string; readonly confirmFingerprint?: string },
   deps: CreationDeps,
 ): Promise<void> {
+  let installedId: string | null = null;
+  try {
+    await install(card, o, deps, (id) => (installedId = id));
+  } catch (err) {
+    console.warn(`[tools] card ${card.id}: installing failed`, err);
+    if (installedId) await deps.markRemoved(installedId, card.personId).catch(() => false);
+    await deps.casPhase(card.id, ["installing"], "failed", { error: INSTALL_FAILED }).catch(() => null);
+  }
+}
+
+async function install(
+  card: ToolCardRow,
+  o: { readonly locale: string; readonly acceptSecurityFingerprint?: string; readonly confirmFingerprint?: string },
+  deps: CreationDeps,
+  installed: (id: string) => void,
+): Promise<void> {
   if (!card.toolProjectId) {
     await deps.casPhase(card.id, ["installing"], "failed", { error: "not_a_tool" });
     return;
@@ -241,6 +309,7 @@ export async function installAndCheck(
   });
   if (answer.status === 200) {
     const installation = answer.body.installation as { id: string };
+    installed(installation.id);
     const loaded = await deps.loadTest(installation, card.personId, o.locale);
     if (loaded.ok) {
       await deps.casPhase(card.id, ["installing"], "installed", { installationId: installation.id, error: null, review: null });

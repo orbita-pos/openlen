@@ -235,8 +235,10 @@ vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof impo
 // «Crear» cards changed since Len last heard (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
 const cardsStore = vi.hoisted(() => ({ undeliveredCards: vi.fn(async (_p: string, _person: string): Promise<unknown[]> => []), markDelivered: vi.fn(async (_ids: readonly string[], _at: Date) => {}) }));
 vi.mock("@/lib/tools/cards/store", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/cards/store")>()), ...cardsStore }));
+const reconciled = vi.hoisted(() => ({ reconcileOnRead: vi.fn(async (rows: unknown[]) => rows) }));
+vi.mock("@/lib/tools/cards/actions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/cards/actions")>()), ...reconciled }));
 // «Crear» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn's card lives in a fake store.
-const creationCard = vi.hoisted(() => ({ row: { id: "card-1", title: "Reservas de hoy", phase: "creating", personId: "u1", toolProjectId: "p1", creatorRunId: null as string | null } }));
+const creationCard = vi.hoisted(() => ({ row: { id: "card-1", title: "Reservas de hoy", phase: "creating", personId: "u1", toolProjectId: "p1", creatorRunId: null as string | null, hostRowId: null as string | null } }));
 vi.mock("@/lib/tools/cards/creation", async (orig) => ({
   ...(await orig<typeof import("@/lib/tools/cards/creation")>()),
   realCreationDeps: async () => ({
@@ -2092,6 +2094,8 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       const before = Date.now();
       await readEvents(await pedir());
       expect(cardsStore.undeliveredCards).toHaveBeenLastCalledWith("p1", "u1");
+      // Reconciled before Len hears it: a card a restart left «creando» reaches him as interrupted.
+      expect(reconciled.reconcileOnRead).toHaveBeenCalledWith([changed]);
       const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ toolCardStatus?: string | null }])[0];
       expect(args.toolCardStatus).toMatch(/^Latest status of action cards/);
       expect(args.toolCardStatus).toContain('"id":"card-1"');
@@ -4194,6 +4198,20 @@ describe("POST /api/agent — Len's subagents", () => {
     expect((launcherArgs()[0] as unknown as { spend: { cap: number } }).spend.cap).toBe(2500);
     expect(mocks.chargeCredits).not.toHaveBeenCalled();
     expect(eventos.filter((e) => e.event === "text").map((e) => (e.data as { text: string }).text).join("")).toContain("Creando «Reservas de hoy»");
+  });
+
+  it("🔴 the host turn's row keeps the plain account, never the Creator's task; a host whose card has a newer row launches nothing", async () => {
+    const sentText = "«Crear» on a tool card started this project: a background creator subagent builds the tool «Reservas de hoy» here.";
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null, hostRowId: "99999999-9999-4999-8999-999999999999" } as typeof creationCard.row;
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: '{"task":"x","completion":"structured_output"}', sentText, origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    const transcript = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1].transcript;
+    expect(transcript?.sentText).toBe(sentText);
+    const launcher = mocks.createSubagentLauncher.mock.results.at(-1)!.value as { launch: ReturnType<typeof vi.fn> };
+    expect(launcher.launch).not.toHaveBeenCalled();
+    creationCard.row = { ...creationCard.row, hostRowId: null } as typeof creationCard.row;
   });
 
   it("a lower ceiling never raises the plan's", async () => {

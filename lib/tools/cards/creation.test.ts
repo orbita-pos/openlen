@@ -72,6 +72,16 @@ describe("startCreation", () => {
     const host = d.launchHost.mock.calls[0]![0] as Record<string, unknown>;
     expect(host).toMatchObject({ userId: "u1", projectId: "tool-1", filaId: "host-row-1", ceilingCentis: 2500, origin: { kind: "tool_creation", cardId: "card-1", title: "Reservas de hoy" } });
     expect(String(host.framing)).toContain("Ver las reservas del día.");
+    // 🔴 I1: the tool project's history keeps a plain account, never the Creator's task as the person's words.
+    expect(String(host.sentText)).not.toContain("structured_output");
+    expect(String(host.sentText)).toContain("Ver las reservas del día.");
+    expect(host.texto).toBe("Crear «Reservas de hoy»");
+  });
+
+  it("the host row's message is in the person's language", async () => {
+    const d = deps();
+    await startCreation(card, { personId: "u1", locale: "en", timeZone: "UTC" }, d);
+    expect((d.launchHost.mock.calls[0]![0] as { texto: string }).texto).toBe("Create «Reservas de hoy»");
   });
 
   it("a retry reuses the tool project and passes the last error", async () => {
@@ -174,6 +184,34 @@ describe("onCreatorSettled", () => {
   });
 });
 
+describe("🔴 I4: what throws during the settlement or the install lands on «fallida»", () => {
+  beforeEach(() => {
+    card = { ...card, toolProjectId: "tool-1" };
+  });
+
+  it("installTool throws: failed install_failed", async () => {
+    const d = deps();
+    d.installTool.mockRejectedValueOnce(new Error("pool exhausted"));
+    await onCreatorSettled("card-1", { id: "run-1", status: "completed", structured: { ready: true }, finalText: "" }, { locale: "es" }, d);
+    expect(card).toMatchObject({ phase: "failed", error: "install_failed" });
+  });
+
+  it("the load test throws after installing: removed again, failed install_failed", async () => {
+    const d = deps();
+    d.loadTest.mockRejectedValueOnce(new Error("chromium gone"));
+    await onCreatorSettled("card-1", { id: "run-1", status: "completed", structured: { ready: true }, finalText: "" }, { locale: "es" }, d);
+    expect(d.markRemoved).toHaveBeenCalledWith("inst-1", "u1");
+    expect(card).toMatchObject({ phase: "failed", error: "install_failed" });
+  });
+
+  it("reading the card throws: still failed, from creating", async () => {
+    const d = deps();
+    d.cardById.mockRejectedValueOnce(new Error("db down"));
+    await onCreatorSettled("card-1", { id: "run-1", status: "completed", structured: { ready: true }, finalText: "" }, { locale: "es" }, d);
+    expect(card).toMatchObject({ phase: "failed", error: "install_failed" });
+  });
+});
+
 describe("installAndCheck with the person's acceptance («Instalar igual»)", () => {
   it("passes the fingerprints through", async () => {
     card = { ...card, phase: "installing", toolProjectId: "tool-1" };
@@ -244,6 +282,14 @@ describe("hostTheCreator (the host turn, no model call)", () => {
     });
     await hostTheCreator({ cardId: "card-1", framing: "{}", locale: "es", launcher: l }, d);
     expect(d.stopRun).toHaveBeenCalledWith("run-9");
+  });
+
+  it("🔴 a host whose card was retried meanwhile (another host row) launches nothing", async () => {
+    card = { ...card, hostRowId: "host-row-2" };
+    const d = deps();
+    const l = launcher();
+    await hostTheCreator({ cardId: "card-1", framing: "{}", locale: "es", launcher: l, hostRowId: "host-row-1" }, d);
+    expect(l.launch).not.toHaveBeenCalled();
   });
 
   it("a card cancelled before the host started: nothing launched", async () => {

@@ -111,6 +111,19 @@ describe("at boot, what the previous process left", () => {
     expect(s.turns[0]!.notices[0]!.text).toBe("Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nIn /menu/index.html:12.");
   });
 
+  it("🔴 a «Crear» card's creator never wakes Len: its result is the card's (DeepSeek's delivery to the caller)", async () => {
+    const s = setup([
+      row({ id: "c1", preset: "creator", status: "completed", finalText: "", settledAt: new Date(NOW - 15_000) }),
+      row({ id: "c2", preset: "creator" }),
+    ]);
+    expect(await closeSubagentsOfThePreviousProcess(s.io)).toBe(0);
+    expect(s.turns).toHaveLength(0);
+    // Closed and marked, so no later boot looks at them again.
+    expect(s.db.get("c2")).toMatchObject({ status: "aborted" });
+    expect(s.db.get("c1")!.noticeDeliveredAt).not.toBeNull();
+    expect(s.db.get("c2")!.noticeDeliveredAt).not.toBeNull();
+  });
+
   it("one from more than a day ago is closed without waking Len", async () => {
     const s = setup([row({ id: "r1", status: "completed", finalText: "old", settledAt: new Date(NOW - 2 * 86_400_000) })]);
     expect(await closeSubagentsOfThePreviousProcess(s.io)).toBe(0);
