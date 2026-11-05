@@ -19,6 +19,7 @@ import { npmTypesFor } from "@/lib/apps/npm/types-for-check";
 import { directorioVendor } from "@/lib/apps/servir";
 import { testKitFor } from "@/lib/apps/tests/test-kit";
 import { WorkerQueue } from "@/lib/apps/worker-queue";
+import { isJobFile } from "@/lib/apps/job-files";
 import type { CheckResult } from "./checker-core.mjs";
 
 const RUTA_DEL_HILO = path.join(process.cwd(), "lib", "apps", "checker", "checker-worker.mjs");
@@ -44,7 +45,8 @@ export async function checkAppInWorker(
 ): Promise<CheckResult | null> {
   // OPEN NPM (spec 2026-10-13): the types of the app's esm.sh packages; the lock itself isn't a source.
   const extraTypes = await npmTypesFor(input.files, input.catalogo).catch(() => ({}));
-  const files = Object.fromEntries(Object.entries(input.files).filter(([p]) => p !== ESM_LOCK_PATH));
+  // Nor a tool's jobs (/jobs): Node or Python in OpenLen's box, never the app's browser code.
+  const files = Object.fromEntries(Object.entries(input.files).filter(([p]) => p !== ESM_LOCK_PATH && !isJobFile(p)));
   return cola.run(
     {
       files,

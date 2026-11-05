@@ -45,7 +45,7 @@ const deps = (over: Partial<InstallDeps> = {}): InstallDeps => ({
   files: vi.fn(async () => FILES),
   securityGate: vi.fn(async () => ({ fingerprint: "fp1" })),
   entorno: vi.fn(async () => ({})),
-  build: vi.fn(async () => ({ sha: "sha1", files: { "/index.html": { content: "x", contentType: "text/html" } } })),
+  build: vi.fn(async () => ({ sha: "sha1", files: { "/index.html": { content: "x", contentType: "text/html" } }, jobFiles: { "/jobs/pdf.py": "print(1)" } })),
   prepareFunctions: vi.fn(async () => null),
   dataChanges: vi.fn(async () => {}),
   saveRelease: vi.fn(async () => {}),
@@ -63,7 +63,7 @@ describe("installTool", () => {
     const r = await install(d);
     expect(r.status).toBe(200);
     expect((r.body.installation as { placement: string; id: string }).placement).toBe("rail");
-    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object));
+    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), { "/jobs/pdf.py": "print(1)" });
     expect(d.upsertInstallation).toHaveBeenCalledWith(expect.objectContaining({ personId: "u1", projectId: "p1", releaseSha: "sha1", placement: "rail", iconPath: "/icon.svg" }));
     expect(d.markPublished).toHaveBeenCalledWith("p1", "fp1");
   });

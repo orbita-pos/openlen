@@ -74,6 +74,64 @@ interface OpenLenVisitsSummary {
   recortadoDesde: string | null;
 }
 
+type OpenLenJobStatus = "running" | "stopping" | "completed" | "killed" | "failed";
+
+/** A job: a script of this tool's jobs/ folder, run in OpenLen's box after the person confirms (jobs.run). */
+interface OpenLenJob {
+  id: string;
+  name: string;
+  /** The job's title in the person's language, from locale/<lang>.json "jobs". */
+  title: string;
+  status: OpenLenJobStatus;
+  /** The last line the job wrote to $OPENLEN_JOB_PROGRESS. */
+  progress: string | null;
+  /** Why it failed or stopped. */
+  detail: string | null;
+  /** What the job wrote to $OPENLEN_JOB_DIR/result.json (JSON, at most 64 KB). */
+  result: unknown;
+  /** The files it left in $OPENLEN_JOB_OUT, delivered to the person. */
+  delivered: Array<{ name: string; url: string; size: number }>;
+  startedAt: string;
+  finishedAt: string | null;
+  seconds: number;
+  /** What it cost the person, in hundredths of a credit. */
+  chargedCentis: number;
+}
+
+type OpenLenJobRunResult =
+  | { status: "started"; job: OpenLenJob }
+  | { status: "declined" }
+  | {
+      status: "refused";
+      reason: "unknown_job" | "bad_input" | "bad_upload" | "plan_required" | "no_credits" | "sandbox_off" | "budget" | "busy" | "eyes_never_run";
+    };
+
+/** A file the person picked in OpenLen's picker: hand it (or its id) to jobs.run. */
+interface OpenLenPickedFile {
+  id: string;
+  name: string;
+  size: number;
+  contentType: string;
+}
+
+interface OpenLenJobs {
+  /** Asks the person first, in a dialog OpenLen draws with what the job may cost. "started" does not wait for the end. */
+  run(name: string, options?: { input?: unknown; files?: Array<OpenLenPickedFile | string> }): Promise<OpenLenJobRunResult>;
+  get(id: string): Promise<OpenLenJob>;
+  cancel(id: string): Promise<OpenLenJob>;
+  /** The person's jobs of this tool, newest first. */
+  list(): Promise<OpenLenJob[]>;
+  /** Asks every 2 s, tells each change, and resolves when the job settles. */
+  follow(id: string, onUpdate?: (job: OpenLenJob) => void): Promise<OpenLenJob>;
+}
+
+interface OpenLenFiles {
+  /** OpenLen's own file picker (the tool never reads the person's disk): null when they close it. */
+  pick(options?: { accept?: string; multiple?: boolean }): Promise<OpenLenPickedFile[] | null>;
+  /** Hands the person a file the tool made (a PDF, a CSV): a download link only they can open. */
+  deliver(file: { name: string; contentType: string; bytes: Blob | ArrayBuffer | Uint8Array }): Promise<{ url: string }>;
+}
+
 interface OpenLenBridge {
   context(): Promise<OpenLenToolContext>;
   onContext(callback: (context: OpenLenToolContext) => void): () => void;
@@ -94,6 +152,9 @@ interface OpenLenBridge {
   ): Promise<OpenLenUpdateResult>;
   /** Puts the text in the person's chat with Len; they send it. Only inside a project. */
   sendPrompt(text: string): Promise<{ status: "placed" | "unavailable" }>;
+  /** Heavy work in OpenLen's box (a video, a PDF, Python): scripts in jobs/, declared in package.json. */
+  jobs: OpenLenJobs;
+  files: OpenLenFiles;
 }
 
 interface Window {
@@ -139,7 +200,7 @@ export function toolSkeleton(o: { readonly title: string; readonly locale: strin
     ...appPackage,
     name: slug(o.title),
     version: "1.0.0",
-    openlen: { tool: { placement: "rail" } },
+    openlen: { tool: { placement: "rail", jobs: {} } },
     exports: { "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },
   };
   const meta = `${JSON.stringify({ meta: { title: o.title.trim() || "Tool", description: o.title.trim() || "A tool made by Len." } }, null, 2)}\n`;

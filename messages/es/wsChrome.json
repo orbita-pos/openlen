@@ -752,6 +752,34 @@
       "apply": "Aplicar",
       "cancel": "Cancelar"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} quiere ejecutar «{job}»",
+        "subtitle": "Corre en la caja de OpenLen y se cobra de tus créditos por segundo. No corre nada hasta que pulses Ejecutar.",
+        "minutes": "Hasta {minutes} min",
+        "credits": "Hasta {credits} créditos",
+        "files": "Archivos que recibe:",
+        "run": "Ejecutar",
+        "cancel": "Cancelar"
+      },
+      "running": {
+        "stop": "Detener",
+        "stopping": "Deteniendo…",
+        "completed": "Terminado",
+        "failed": "Falló",
+        "killed": "Detenido",
+        "dismiss": "Cerrar"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} te pide archivos",
+        "subtitle": "Sólo recibe los que elijas aquí.",
+        "choose": "Elegir archivos",
+        "use": "Dárselos a la herramienta",
+        "cancel": "Cancelar"
+      }
+    },
     "unavailable": "Esta herramienta no se puede abrir ahora.",
     "page": {
       "title": "Herramientas",

@@ -3,6 +3,10 @@
 // for `./locale/*.json` and `./icon`; `meta.title` / `meta.description` in each locale file; an original icon,
 // SVG, PNG, JPEG or WebP, at most 256 KiB, inside the package — «never silently accept default artwork».
 // Pure: install and Len's `publish` read the project's files through it.
+//
+// Phase 3 (§4.6): `openlen.tool.jobs` declares the tool's jobs — a script `jobs/<file>.mjs|.py` each, with a ceiling
+// of minutes — and each job's title lives beside the display record, in `locale/<lang>.json` → `jobs.<name>`. A job
+// that isn't declared never runs.
 import { createHash } from "node:crypto";
 
 import { isBlobPointer, sizeOf } from "@/lib/files/blob-pointer";
@@ -14,6 +18,19 @@ const TITLE_MAX = 60;
 const DESCRIPTION_MAX = 200;
 const ICON_TYPES = [".svg", ".png", ".jpg", ".jpeg", ".webp"] as const;
 
+export const JOB_NAME = /^[a-z][a-z0-9-]{0,39}$/;
+export const JOB_SCRIPT = /^\/jobs\/[A-Za-z0-9_.-]+\.(mjs|py)$/;
+export const JOB_MAX_MINUTES = 30;
+export const JOB_DEFAULT_MINUTES = 10;
+export const MAX_JOBS = 8;
+
+/** One declared job: its script in the package, its ceiling of minutes, and its title in each locale. */
+export interface ToolJobDeclaration {
+  readonly script: string;
+  readonly maxMinutes: number;
+  readonly titles: Record<string, string>;
+}
+
 export interface ToolManifest {
   readonly name: string;
   readonly version: string;
@@ -21,6 +38,7 @@ export interface ToolManifest {
   readonly titles: Record<string, string>;
   readonly descriptions: Record<string, string>;
   readonly iconPath: string;
+  readonly jobs: Record<string, ToolJobDeclaration>;
 }
 
 export type ManifestProblemCode =
@@ -36,7 +54,13 @@ export type ManifestProblemCode =
   | "icon_too_big"
   | "icon_bad_type"
   | "icon_not_an_image"
-  | "icon_is_placeholder";
+  | "icon_is_placeholder"
+  | "job_bad_name"
+  | "job_script_missing"
+  | "job_script_kind"
+  | "job_minutes"
+  | "job_title_missing"
+  | "job_too_many";
 
 export interface ManifestProblem {
   readonly code: ManifestProblemCode;
@@ -70,8 +94,59 @@ function packagePath(spec: string): string | null {
   return `/${parts.join("/")}`;
 }
 
+/** The jobs `openlen.tool.jobs` declares, checked against the files and the locale files' `jobs` titles. */
+function readJobs(
+  declared: unknown,
+  files: Readonly<Record<string, string>>,
+  problems: ManifestProblem[],
+): Record<string, ToolJobDeclaration> {
+  const jobs: Record<string, ToolJobDeclaration> = {};
+  const entries = Object.entries(record(declared) ?? {});
+  if (entries.length > MAX_JOBS) problems.push({ code: "job_too_many", file: PACKAGE, detail: `> ${MAX_JOBS}` });
+  const titlesOf = (name: string): Record<string, string> => {
+    const titles: Record<string, string> = {};
+    for (const [path, text] of Object.entries(files)) {
+      const m = /^\/locale\/([A-Za-z-]+)\.json$/.exec(path);
+      const title = m ? record(record(parse(text))?.jobs)?.[name] : undefined;
+      if (m && typeof title === "string" && title.trim()) titles[m[1]!] = title.trim().slice(0, TITLE_MAX);
+    }
+    return titles;
+  };
+  for (const [name, value] of entries.slice(0, MAX_JOBS)) {
+    if (!JOB_NAME.test(name)) {
+      problems.push({ code: "job_bad_name", file: PACKAGE, detail: name });
+      continue;
+    }
+    const decl = record(value) ?? {};
+    const spec = typeof decl.script === "string" ? decl.script : "";
+    const script = packagePath(spec.startsWith("./") ? spec : `./${spec}`);
+    if (!script || !JOB_SCRIPT.test(script)) {
+      problems.push({ code: "job_script_kind", file: PACKAGE, detail: `${name}: ${spec}` });
+      continue;
+    }
+    if (files[script] === undefined) problems.push({ code: "job_script_missing", file: script, detail: name });
+    const minutes = decl.maxMinutes === undefined ? JOB_DEFAULT_MINUTES : decl.maxMinutes;
+    if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 1 || minutes > JOB_MAX_MINUTES) {
+      problems.push({ code: "job_minutes", file: PACKAGE, detail: `${name}: ${String(minutes)}` });
+      continue;
+    }
+    const titles = titlesOf(name);
+    if (Object.keys(titles).length === 0) problems.push({ code: "job_title_missing", file: "/locale/en.json", detail: name });
+    jobs[name] = { script, maxMinutes: minutes, titles };
+  }
+  return jobs;
+}
+
 function metaOf(text: string | undefined): { title?: unknown; description?: unknown } | null {
   return record(record(parse(text))?.meta) as { title?: unknown; description?: unknown } | null;
+}
+
+/** The jobs a version can run (a job's start, §4.6): the ones `openlen.tool.jobs` declares well, with their script
+ *  among `files`. Installing already refused a version with problems; a draft is read as it is. */
+export function readToolJobs(files: Readonly<Record<string, string>>): Record<string, ToolJobDeclaration> {
+  const declared = record(record(record(parse(files[PACKAGE]))?.openlen)?.tool)?.jobs;
+  const jobs = readJobs(declared, files, []);
+  return Object.fromEntries(Object.entries(jobs).filter(([, job]) => files[job.script] !== undefined));
 }
 
 export function readToolManifest(
@@ -85,7 +160,8 @@ export function readToolManifest(
 
   const problems: ManifestProblem[] = [];
 
-  const placement = record(record(pkg.openlen)?.tool)?.placement;
+  const toolField = record(record(pkg.openlen)?.tool);
+  const placement = toolField?.placement;
   if (placement === undefined) problems.push({ code: "no_placement", file: PACKAGE });
   else if (!TOOL_PLACEMENTS.includes(placement as ToolPlacement))
     problems.push({ code: "bad_placement", file: PACKAGE, detail: String(placement) });
@@ -136,6 +212,8 @@ export function readToolManifest(
     }
   }
 
+  const jobs = readJobs(toolField?.jobs, files, problems);
+
   if (problems.length) return { ok: false, problems };
   return {
     ok: true,
@@ -146,6 +224,7 @@ export function readToolManifest(
       titles,
       descriptions,
       iconPath,
+      jobs,
     },
   };
 }

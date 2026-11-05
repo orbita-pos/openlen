@@ -30,10 +30,12 @@ export interface InstallDeps {
   build(p: { projectId: string; html: string; files: Record<string, string>; app: NonNullable<ProjectData["app"]>; entorno: Record<string, string>; iconPath: string }): Promise<{
     sha: string;
     files: Record<string, ToolReleaseFile>;
+    /** Phase 3: what the version's jobs run, never served. */
+    jobFiles?: Record<string, string>;
   }>;
   prepareFunctions(projectId: string, o: { skipMissingSecrets: boolean }): Promise<{ deploy(): Promise<void> } | null>;
   dataChanges(o: { projectId: string; confirmFingerprint?: string; copyDraftData?: boolean }): Promise<void>;
-  saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>): Promise<void>;
+  saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>, jobFiles?: Record<string, string>): Promise<void>;
   upsertInstallation(i: {
     personId: string;
     projectId: string;
@@ -141,7 +143,7 @@ export async function installTool(
       ...(i.copyDraftData !== undefined ? { copyDraftData: i.copyDraftData } : {}),
     });
     await functions?.deploy();
-    await d.saveRelease(release.sha, i.projectId, release.files);
+    await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {});
     const row = await d.upsertInstallation({
       personId: i.actorId,
       projectId: i.projectId,

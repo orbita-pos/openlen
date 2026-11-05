@@ -24,6 +24,7 @@ import type { InstalledToolView } from "@/lib/tools/types";
 import { draftCanvasBridge, installedToolIdentity } from "./tools/tool-items";
 import { ToolFrame } from "./tools/tool-frame";
 import { useToolBridgeHost } from "./tools/use-tool-bridge-host";
+import { useToolDialogs } from "./tools/use-tool-dialogs";
 
 const NEVER_CONFIRM = async (): Promise<boolean> => false;
 import { toolIdOfLens, toolLens } from "./tools/tool-items";
@@ -734,6 +735,12 @@ export function PreviewArea({
   // A TOOL BEING BUILT (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its canvas has `window.openlen`
   // and asks this window; answered as the draft — the test database, never production.
   const canvasBridge = draftCanvasBridge({ isTool, remoteUrl: modoRemoto ? urlRemota : null, projectId });
+  // Its jobs run here too, as the draft (§4.6): the same confirmation, picker and running line as installed.
+  const draftToolDialogs = useToolDialogs({
+    toolTitle: toolProjectTitle ?? "",
+    locale: toolPerson?.locale ?? "en",
+    caller: canvasBridge?.caller ?? { draftProjectId: projectId ?? "" },
+  });
   useToolBridgeHost({
     iframe: iframeLocalRef,
     frameOrigin: canvasBridge?.frameOrigin ?? null,
@@ -746,6 +753,9 @@ export function PreviewArea({
     },
     onPrompt: onToolPrompt ? (text) => onToolPrompt(text, toolProjectTitle ?? "") : null,
     onConfirmChange: NEVER_CONFIRM,
+    onConfirmJob: draftToolDialogs.onConfirmJob,
+    onPickFiles: draftToolDialogs.onPickFiles,
+    onJobStarted: draftToolDialogs.onJobStarted,
   });
 
   // Section-insert plumbing. The fragment must land only AFTER the iframe
@@ -1511,6 +1521,7 @@ export function PreviewArea({
               }}
             />
             <ScanOverlay onBusyChange={setScanBusy} />
+            {canvasBridge ? draftToolDialogs.dialogs : null}
           </div>
         </div>
       </div>

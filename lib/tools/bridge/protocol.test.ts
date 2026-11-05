@@ -28,7 +28,22 @@ describe("bridge messages", () => {
     expect(isBridgeNotification({ jsonrpc: "2.0", id: 2, method: "context", params: {}, channel: "openlen-tool" })).toBe(false);
   });
   it("names the methods the client offers and the workspace tokens it passes", () => {
-    expect([...BRIDGE_METHODS]).toEqual(["context", "backend", "projects", "forms", "visits", "query", "update", "sendPrompt"]);
+    expect([...BRIDGE_METHODS]).toEqual([
+      "context",
+      "backend",
+      "projects",
+      "forms",
+      "visits",
+      "query",
+      "update",
+      "sendPrompt",
+      "jobs.run",
+      "jobs.get",
+      "jobs.cancel",
+      "jobs.list",
+      "files.pick",
+      "files.deliver",
+    ]);
     expect(TOOL_THEME_TOKENS).toContain("--accent");
     expect(TOOL_THEME_TOKENS).toContain("--bg");
   });

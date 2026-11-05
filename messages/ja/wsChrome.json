@@ -752,6 +752,34 @@
       "apply": "適用",
       "cancel": "キャンセル"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} が「{job}」を実行しようとしています",
+        "subtitle": "OpenLen のボックスで動き、秒単位でクレジットが使われます。「実行」を押すまで何も動きません。",
+        "minutes": "最大 {minutes} 分",
+        "credits": "最大 {credits} クレジット",
+        "files": "渡すファイル:",
+        "run": "実行",
+        "cancel": "キャンセル"
+      },
+      "running": {
+        "stop": "停止",
+        "stopping": "停止中…",
+        "completed": "完了",
+        "failed": "失敗",
+        "killed": "停止",
+        "dismiss": "閉じる"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} がファイルを求めています",
+        "subtitle": "ここで選んだファイルだけが渡されます。",
+        "choose": "ファイルを選ぶ",
+        "use": "ツールに渡す",
+        "cancel": "キャンセル"
+      }
+    },
     "unavailable": "このツールは今は開けません。",
     "page": {
       "title": "ツール",
