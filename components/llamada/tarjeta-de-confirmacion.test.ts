@@ -8,6 +8,20 @@ import { tarjetaDeConfirmacion } from "./puente-a-len";
 
 const BASE = { action: "publish", subdominio: "tiendita", idiomas: [], republicar: true };
 
+// Herramientas, fase 5 (§4.14): el `publish` de Len en un proyecto que es una herramienta deja «Instalar», y el
+// teléfono la pulsa desde su chat.
+describe("tarjetaDeConfirmacion e «Instalar»", () => {
+  it("una confirmación de instalar es la tarjeta «instalar», con su título y su sitio", () => {
+    expect(tarjetaDeConfirmacion({ action: "install", title: "Reservas de hoy", placement: "project", seguridad: { fingerprint: "f", blocking: [], medium: [] } })).toEqual({
+      tipo: "instalar",
+      confirm: { title: "Reservas de hoy", placement: "project" },
+    });
+  });
+  it("sin título no hay tarjeta", () => {
+    expect(tarjetaDeConfirmacion({ action: "install", placement: "rail" })).toBeNull();
+  });
+});
+
 describe("tarjetaDeConfirmacion y los datos", () => {
   it("🔴 lo destructivo llega a la tarjeta", () => {
     const cambiosDeDatos = {

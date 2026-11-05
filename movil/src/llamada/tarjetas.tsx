@@ -170,5 +170,7 @@ export function TarjetaDeLaApp({ x, cliente, projectId, idioma }: { x: TarjetaDe
   if (x.tipo === "visitas") return <Visitas cliente={cliente} projectId={projectId} idioma={idioma} />;
   if (x.tipo === "respuesta") return <Borrador cliente={cliente} r={x.respuesta} />;
   if (x.tipo === "publicar") return <Publicar cliente={cliente} projectId={projectId} confirm={x.confirm} />;
+  // Herramientas, fase 5: «Instalar» se pinta en la tarea 7; hasta entonces no sale nada.
+  if (x.tipo === "instalar") return null;
   return <div className="nx"><div className="nx-what" style={{ whiteSpace: "pre-wrap" }}>{x.texto}</div></div>;
 }
