@@ -164,10 +164,61 @@ export const PRELUDIO_DE_USO = `
     return norm(partes.filter(Boolean).join(" "));
   }
 
-  function foto() {
-    var lineas = (document.body ? document.body.innerText : "").split("\\n")
+  function lineasDe(t) {
+    return String(t || "").split("\\n")
       .map(function (l) { return l.replace(/\\s+/g, " ").trim(); })
       .filter(Boolean);
+  }
+  // LO QUE NO SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): innerText cuenta el texto
+  // a opacidad 0 o empujado fuera por un transform, que es como ENTRA un modal o una hoja. Se apuntan
+  // los elementos MÁS EXTERIORES que no se ven —sin bajar dentro de ellos— y sus líneas; nada se toca
+  // en el DOM (un MutationObserver de la página no se entera).
+  function siguienteSinBajar(w) {
+    var n = w.nextSibling();
+    while (!n) {
+      if (!w.parentNode()) return null;
+      n = w.nextSibling();
+    }
+    return n;
+  }
+  function textoNoVisto() {
+    var fuera = [];
+    if (!document.body) return fuera;
+    var de = document.documentElement;
+    var vw = innerWidth, vh = innerHeight;
+    var docX0 = -scrollX, docY0 = -scrollY;
+    var docX1 = Math.max(de.scrollWidth, vw) - scrollX, docY1 = Math.max(de.scrollHeight, vh) - scrollY;
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+    var el = w.nextNode();
+    while (el) {
+      var cs = getComputedStyle(el);
+      var noSeVe = false;
+      if (cs.display !== "none") {
+        if (parseFloat(cs.opacity) < 0.01) noSeVe = true;
+        else {
+          var r = el.getBoundingClientRect();
+          if (r.width > 0 && r.height > 0) {
+            var fijo = cs.position === "fixed";
+            var x0 = fijo ? 0 : docX0, y0 = fijo ? 0 : docY0, x1 = fijo ? vw : docX1, y1 = fijo ? vh : docY1;
+            noSeVe = r.right <= x0 || r.left >= x1 || r.bottom <= y0 || r.top >= y1;
+          }
+        }
+      }
+      if (noSeVe) {
+        fuera.push.apply(fuera, lineasDe(el.innerText));
+        el = siguienteSinBajar(w);
+      } else el = w.nextNode();
+    }
+    return fuera;
+  }
+
+  function foto() {
+    var cuenta = {};
+    textoNoVisto().forEach(function (l) { cuenta[l] = (cuenta[l] || 0) + 1; });
+    var lineas = lineasDe(document.body ? document.body.innerText : "").filter(function (l) {
+      if (cuenta[l] > 0) { cuenta[l]--; return false; }
+      return true;
+    });
     document.querySelectorAll("input, select, textarea").forEach(function (e) {
       var t = (e.type || "").toLowerCase();
       if (["hidden", "password", "submit", "button", "reset", "image", "file"].indexOf(t) >= 0) return;

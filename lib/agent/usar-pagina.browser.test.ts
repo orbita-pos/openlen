@@ -618,3 +618,46 @@ describe("use_page — another site", () => {
     });
   }, 120_000);
 });
+
+// LO QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): `innerText` cuenta el texto a
+// opacidad 0 o empujado fuera de la pantalla, así que un modal o una hoja que ENTRA animando salía como
+// «nothing changed». Cuenta sólo el texto que un visitante puede ver.
+describe("use_page — sólo cuenta el texto que se ve", () => {
+  const modal = (abre: boolean) =>
+    marco(`
+    <button id="b">Reservar</button>
+    <div id="m" style="opacity:0;transition:opacity .2s">Reserva confirmada</div>
+    <script>
+      document.getElementById("b").addEventListener("click", function () { ${abre ? 'document.getElementById("m").style.opacity = "1";' : 'console.log("x");'} });
+    </script>`);
+
+  it("🔴 un modal que entra por opacidad cuenta como cambio; BRAZO DE CONTROL: si no se abre, nothing changed", async () => {
+    const abre = await visitar(modal(true), [{ click: "Reservar" }]);
+    const noAbre = await visitar(modal(false), [{ click: "Reservar" }]);
+    expect(abre).toContain("appeared: «Reserva confirmada»");
+    expect(abre).not.toMatch(/nothing (else )?changed/);
+    expect(noAbre).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  const hoja = (entra: boolean) =>
+    marco(`
+    <button id="b">Ver carrito</button>
+    <div id="h" style="position:fixed;left:0;right:0;bottom:0;height:200px;background:#eee;transform:translateY(110%);transition:transform .2s">Tu carrito: 2 velas</div>
+    <script>
+      document.getElementById("b").addEventListener("click", function () { ${entra ? 'document.getElementById("h").style.transform = "translateY(0)";' : 'console.log("x");'} });
+    </script>`);
+
+  it("🔴 una hoja que entra desde fuera de la pantalla cuenta como cambio; BRAZO DE CONTROL: si no entra, nothing changed", async () => {
+    const entra = await visitar(hoja(true), [{ click: "Ver carrito" }]);
+    const noEntra = await visitar(hoja(false), [{ click: "Ver carrito" }]);
+    expect(entra).toContain("appeared: «Tu carrito: 2 velas»");
+    expect(noEntra).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  it("el texto del final de una página larga (fuera de la vista, sin animar) sigue contando", async () => {
+    const larga = marco(`<div style="height:3000px">Arriba</div><p id="pie">Pie: Velas Aurora 2026</p><button id="b">Cambiar</button>
+      <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("pie").textContent = "Pie: Velas Aurora 2027"; });</script>`);
+    const informe = await visitar(larga, [{ click: "Cambiar" }]);
+    expect(informe).toContain("«Pie: Velas Aurora 2026» → «Pie: Velas Aurora 2027»");
+  }, 90_000);
+});
