@@ -56,6 +56,30 @@ describe("bundled skills", () => {
     expect(bundledSkills({ app, env: {} }).map((b) => b.skill.name)).not.toContain("tool-development");
   });
 
+  // A TOOL'S JOBS (spec local 2026-11-04-herramientas-hechas-por-len, §4.6): how to write one, the variables the box
+  // gives it, and the rule that keeps visitors' data out of the box.
+  it("tool-development teaches jobs: declared, the box's variables, out/ and result.json, and no visitor data", () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const files = bundledSkillFiles({ app, env: {}, tool: true });
+    const jobs = files[`${BUNDLED_SKILLS_DIR}/tool-development/references/jobs.md`]!;
+    for (const must of [
+      "openlen.tool.jobs",
+      "OPENLEN_JOB_DIR",
+      "OPENLEN_JOB_INPUT",
+      "OPENLEN_JOB_OUT",
+      "OPENLEN_JOB_PROGRESS",
+      "OPENLEN_JOB_FILES",
+      "result.json",
+      "jobs.run",
+      "files.pick",
+      "files.deliver",
+      "maxMinutes",
+    ]) expect(jobs, must).toContain(must);
+    expect(jobs).toMatch(/never .*visitor/i);
+    const skill = files[`${BUNDLED_SKILLS_DIR}/tool-development/SKILL.md`]!;
+    expect(skill).toContain("references/jobs.md");
+  });
+
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.1): `/schedule`, from Claude Code's.
   describe("schedule", () => {
     it("is offered unless OPENLEN_SCHEDULE=0, and its name stays reserved", () => {

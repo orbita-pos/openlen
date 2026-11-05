@@ -50,6 +50,12 @@ describe("the tool posture's words", () => {
     expect(p).toContain("publish");
   });
 
+  it("the prompt says a tool can run heavy work as a job, after the person confirms its cost", () => {
+    const p = promptOfTool("APP PROMPT");
+    expect(p).toContain("job in OpenLen's box after the person confirms what it costs");
+    expect(p).toContain("OpenLen's own picker");
+  });
+
   it("the manual names the tool's files", () => {
     const m = manualOfTool("APP MANUAL");
     for (const path of ["/package.json", "/locale/", "/icon.svg", "/src/openlen.d.ts"]) expect(m).toContain(path);
