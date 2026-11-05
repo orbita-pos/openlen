@@ -382,6 +382,9 @@ export interface AgentDeps {
   /** «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what already exists in OpenLen and the
    *  person's installed tools, carried by the `tool-suggestions` skill. */
   suggestionCatalog?: () => Promise<string>;
+  /** The speaker's installed tools' operations (`mcp__<server>__<operation>`, lib/tools/mcp/operations.ts, spec local
+   *  2026-11-04-herramientas-hechas-por-len §4.7); present only on a turn that declared some. */
+  toolOperations?: { call(name: string, args: Record<string, unknown>): Promise<ToolOutcome> };
   /** What `propose_action` writes and reads (lib/tools/cards/propose.ts); present only when the card is offered. */
   toolCards?: import("@/lib/tools/cards/propose").ProposeDeps;
   skillStore?: {
@@ -3061,6 +3064,12 @@ async function ejecutarHerramienta(
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
+  // An installed tool's operation (phase 4): MCP's result, or an error result saying why it isn't available.
+  if (name.startsWith("mcp__")) {
+    return deps.toolOperations
+      ? await deps.toolOperations.call(name, args)
+      : { response: { isError: true, content: [{ type: "text", text: "This operation isn't available in this turn." }] } };
+  }
   if (esHerramientaDeFicheros(name)) {
     const out = await {
       Read: toolRead,
