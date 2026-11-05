@@ -62,6 +62,7 @@ import { scanController, scanFxUnavailable } from "@/lib/workspace-v2/scan-contr
 import { terminalEnVivo } from "@/lib/workspace-v2/terminal-en-vivo";
 import { subagentRefFrom } from "@/lib/agent/subagents/card";
 import { subagentsLive } from "./subagents-live";
+import { toolCardsLive } from "../tools/use-tool-cards";
 import { leerCambiosDelComando } from "@/lib/agent/terminal/cambios-del-comando";
 import {
   MAX_PROMPT,
@@ -1826,6 +1827,10 @@ export function useAgentChat({
               } else if (evName === "subagent") {
                 // LEN'S SUBAGENTS: a child started, took a step or ended; its card reads it.
                 subagentsLive.event(projectId, payload);
+              } else if (evName === "tool_card") {
+                // «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): Len's `propose_action`; the
+                // card shows under this answer at once, sanitized by the store.
+                toolCardsLive.event(projectId, (payload as { card?: unknown } | null)?.card);
               } else if (evName === "terminal") {
                 // F6a · un comando de la terminal de Len, para la lente
                 // «Terminal» del lienzo. No toca el turno ni su tarjeta: la

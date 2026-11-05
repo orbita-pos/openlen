@@ -33,7 +33,7 @@ describe("GET /api/tool-cards?projectId=", () => {
   it("the session person's cards in that project", async () => {
     const res = await GET(new Request("http://x/api/tool-cards?projectId=p1"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ cards: [{ id: "card-1", phase: "proposed" }] });
+    expect(await res.json()).toEqual({ cards: [{ id: "card-1", phase: "proposed" }], capCredits: 25 });
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "u1", "ver");
     expect(cardsOfProject).toHaveBeenCalledWith("p1", "u1");
   });

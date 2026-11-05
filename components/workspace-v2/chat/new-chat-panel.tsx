@@ -63,6 +63,7 @@ import { colorDePersona } from "@/lib/workspace-v2/menciones";
 import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 import { LenWatchBanner } from "../len-watch/len-watch-banner";
 import { EventCards } from "./event-cards";
+import { useToolCards } from "../tools/use-tool-cards";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -246,6 +247,9 @@ function AgentChatView({
     if (wasBusy.current && !chat.busy) refreshMentions();
     wasBusy.current = chat.busy;
   }, [chat.busy, refreshMentions]);
+  // «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the cards under Len's answers stay current
+  // while the chat is open — the creation runs in the background.
+  useToolCards(projectId, chat.busy);
   useEffect(() => {
     const box = chat.taRef.current;
     if (!box) return;
