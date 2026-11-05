@@ -351,6 +351,34 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
                   type: "STRING",
                   description: "JavaScript run in the page at that moment —an expression, or statements with return— and its value comes back as JSON: to inspect what can't be read, like a canvas, a variable or the state of a game, without adding debug code to the page.",
                 },
+                // Claude Code's browser `computer` actions, their names (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5).
+                key: {
+                  type: "STRING",
+                  description:
+                    'A key or a combination, pressed once (not held): "Enter", "Escape", "Tab", "ArrowLeft", "Space", "a", "ctrl+k". To check something that moves while a key is HELD, use Playwright in the terminal when there is one.',
+                },
+                repeat: { type: "NUMBER", description: "With key: how many times to press it, 1 to 100." },
+                wait: {
+                  type: "NUMBER",
+                  description: "Seconds to wait, up to 10, in real time: the page only runs during this call. It tells you what changed meanwhile, by itself.",
+                },
+                left_click: {
+                  type: "ARRAY",
+                  items: { type: "NUMBER" },
+                  description: "[x, y]: a click at that point, for what has no text (a canvas, a map, an icon). Pixels of the tab, as in a screenshot of the screen (1280×900 on a desktop).",
+                },
+                hover: { type: "ARRAY", items: { type: "NUMBER" }, description: "[x, y]: moves the mouse there, as a visitor pointing at something. Pixels of the tab." },
+                left_click_drag: {
+                  type: "ARRAY",
+                  items: { type: "NUMBER" },
+                  description: "[x, y] where a drag starts, with coordinate where it ends: press, move and release, as a visitor drags a card or a slider. Pixels of the tab.",
+                },
+                coordinate: { type: "ARRAY", items: { type: "NUMBER" }, description: "With left_click_drag: the [x, y] where the drag ends." },
+                zoom: {
+                  type: "ARRAY",
+                  items: { type: "NUMBER" },
+                  description: "[x0, y0, x1, y1]: a screenshot of just that region of the tab, at full detail, comes back as an image. Counts as one of the 3 screenshots.",
+                },
               },
             },
           },

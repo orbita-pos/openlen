@@ -16,7 +16,16 @@ export type PasoDeUso =
   // y `eval` corre JavaScript en la página, como el `javascript_tool` de su
   // navegador o el `eval` de `chromium-cli`.
   | { readonly screenshot: string }
-  | { readonly eval: string };
+  | { readonly eval: string }
+  // Los pasos de Claude Code (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): las acciones de
+  // la herramienta `computer` de su navegador, con sus nombres. Coordenadas = píxeles CSS de la
+  // pestaña, los de una captura de la pantalla. `key` PULSA (como el suyo), no mantiene.
+  | { readonly key: string; readonly repeat?: number }
+  | { readonly wait: number }
+  | { readonly left_click: readonly [number, number] }
+  | { readonly hover: readonly [number, number] }
+  | { readonly left_click_drag: readonly [number, number]; readonly coordinate: readonly [number, number] }
+  | { readonly zoom: readonly [number, number, number, number] };
 
 /** Pasos por visita. Una visita de Claude Test tiene ~30 acciones de techo; aquí
  *  cada paso espera a que la página se quede quieta, y el turno tiene su reloj. */
@@ -29,8 +38,73 @@ export const MAX_EVAL_CHARS = 4_000;
 // En inglés desde el 2026-10-06, como las herramientas de DeepSeek: eran
 // `pulsa`, `escribe` + `en`, `elige`, `recarga`, `lee` y `dentro_de`
 // (lo guardado se traduce al leer, `tool-renames.ts`).
-const VERBOS = ["click", "type", "choose", "reload", "read", "screenshot", "eval"] as const;
-const CLAVES = new Set<string>([...VERBOS, "into", "within"]);
+const VERBOS = ["click", "type", "choose", "reload", "read", "screenshot", "eval", "key", "wait", "left_click", "hover", "left_click_drag", "zoom"] as const;
+const CLAVES = new Set<string>([...VERBOS, "into", "within", "repeat", "coordinate"]);
+/** El `wait` de Claude Code: «Maximum 10 seconds». */
+export const MAX_WAIT_S = 10;
+/** El `repeat` de Claude Code: de 1 a 100. */
+const MAX_REPEAT = 100;
+const LISTA_DE_PASOS =
+  '{"click": "…"}, {"type": "…", "into": "…"}, {"choose": "…"}, {"reload": true}, {"read": "…"}, {"screenshot": "screen"}, {"eval": "…"}, {"key": "Enter"}, {"wait": 2}, {"left_click": [x, y]}, {"hover": [x, y]}, {"left_click_drag": [x, y], "coordinate": [x, y]} or {"zoom": [x0, y0, x1, y1]}';
+
+const MODIFICADORES: Record<string, string> = { ctrl: "Control", control: "Control", shift: "Shift", alt: "Alt", option: "Alt", cmd: "Meta", command: "Meta", meta: "Meta", win: "Meta", super: "Meta" };
+const TECLAS: Record<string, string> = {
+  enter: "Enter",
+  return: "Enter",
+  escape: "Escape",
+  esc: "Escape",
+  tab: "Tab",
+  backspace: "Backspace",
+  delete: "Delete",
+  del: "Delete",
+  space: "Space",
+  spacebar: "Space",
+  home: "Home",
+  end: "End",
+  pageup: "PageUp",
+  pagedown: "PageDown",
+  arrowup: "ArrowUp",
+  up: "ArrowUp",
+  arrowdown: "ArrowDown",
+  down: "ArrowDown",
+  arrowleft: "ArrowLeft",
+  left: "ArrowLeft",
+  arrowright: "ArrowRight",
+  right: "ArrowRight",
+};
+
+/**
+ * Una tecla o combinación como las del `key` de Claude Code («Enter», «ctrl+a») a nombres de
+ * Puppeteer (`KeyInput`): los modificadores delante, la tecla al final.
+ */
+export function parseKey(text: string): { readonly ok: true; readonly keys: string[] } | { readonly ok: false; readonly error: string } {
+  const malo = {
+    ok: false as const,
+    error: `"${text}" isn't a key name. Use names like "Enter", "Escape", "Tab", "Backspace", "Space", "ArrowLeft", "PageDown", "F5" or one character like "a", and combinations like "ctrl+k" or "shift+Tab".`,
+  };
+  const t = text.trim();
+  if (t === "") return malo;
+  const partes = t === "+" ? ["+"] : t.split("+").map((p) => p.trim());
+  const keys: string[] = [];
+  for (const [i, p] of partes.entries()) {
+    const bajo = p.toLowerCase();
+    const ultima = i === partes.length - 1;
+    const mod = MODIFICADORES[bajo];
+    if (mod && (!ultima || partes.length === 1)) {
+      keys.push(mod);
+      continue;
+    }
+    if (!ultima) return malo;
+    const tecla = TECLAS[bajo] ?? (/^f([1-9]|1[0-2])$/.test(bajo) ? bajo.toUpperCase() : [...p].length === 1 ? p : null);
+    if (!tecla) return malo;
+    keys.push(tecla);
+  }
+  return { ok: true, keys };
+}
+
+/** Dos (o cuatro) números finitos de 0 o más. */
+const coordenadas = (v: unknown, n: 2 | 4): number[] | null =>
+  Array.isArray(v) && v.length === n && v.every((x) => typeof x === "number" && Number.isFinite(x) && x >= 0) ? (v as number[]) : null;
 
 /**
  * La entrada, comprobada ANTES de abrir nada — el orden del ejecutor de Claude
@@ -46,7 +120,9 @@ export function validarPasos(
   if (bruto.length > MAX_PASOS) {
     return { ok: false, error: `A visit carries at most ${MAX_PASOS} steps and this one brings ${bruto.length}. Split it into two visits.` };
   }
-  const screenshots = bruto.filter((p) => p && typeof p === "object" && (p as Record<string, unknown>).screenshot !== undefined).length;
+  const screenshots = bruto.filter(
+    (p) => p && typeof p === "object" && ((p as Record<string, unknown>).screenshot !== undefined || (p as Record<string, unknown>).zoom !== undefined),
+  ).length;
   if (screenshots > MAX_SCREENSHOTS_PER_VISIT) {
     return { ok: false, error: `A visit takes at most ${MAX_SCREENSHOTS_PER_VISIT} screenshots and this one asks for ${screenshots}. Keep the ones that show what you need to see.` };
   }
@@ -56,23 +132,72 @@ export function validarPasos(
     if (!p || typeof p !== "object" || Array.isArray(p)) {
       return {
         ok: false,
-        error: `Step ${n} isn't an object: each step is {"click": "…"}, {"type": "…", "into": "…"}, {"choose": "…"}, {"reload": true}, {"read": "…"}, {"screenshot": "screen"} or {"eval": "…"}.`,
+        error: `Step ${n} isn't an object: each step is ${LISTA_DE_PASOS}.`,
       };
     }
     const o = p as Record<string, unknown>;
     const extra = Object.keys(o).find((k) => !CLAVES.has(k));
-    if (extra) return { ok: false, error: `Step ${n} brings an unexpected parameter \`${extra}\`. The ones there are: click, type + into, choose, reload, read, screenshot, eval, and within with click or choose.` };
+    if (extra) {
+      return {
+        ok: false,
+        error: `Step ${n} brings an unexpected parameter \`${extra}\`. The ones there are: click, type + into, choose, reload, read, screenshot, eval, key (+ repeat), wait, left_click, hover, left_click_drag + coordinate, zoom, and within with click or choose.`,
+      };
+    }
     const verbos = VERBOS.filter((v) => o[v] !== undefined);
     if (verbos.length !== 1) {
       return {
         ok: false,
         error:
           verbos.length === 0
-            ? `Step ${n} doesn't say what to do: it carries one of click, type, choose, reload, read, screenshot or eval.`
+            ? `Step ${n} doesn't say what to do: it carries one of click, type, choose, reload, read, screenshot, eval, key, wait, left_click, hover, left_click_drag or zoom.`
             : `Step ${n} carries ${verbos.map((v) => `\`${v}\``).join(" and ")}: each step does ONE thing. Split it into several steps.`,
       };
     }
     const verbo = verbos[0]!;
+    if (o.coordinate !== undefined && verbo !== "left_click_drag") {
+      return { ok: false, error: `Step ${n}: \`coordinate\` only goes with \`left_click_drag\` (where the drag ends).` };
+    }
+    if (o.repeat !== undefined && verbo !== "key") return { ok: false, error: `Step ${n}: \`repeat\` only goes with \`key\` (how many times to press it).` };
+    const enPixeles = "pixels of the tab, as in a screenshot of the screen (1280×900 on a desktop)";
+    if (verbo === "key") {
+      const k = typeof o.key === "string" ? parseKey(o.key) : null;
+      if (!k || !k.ok) return { ok: false, error: `Step ${n}: \`key\`: ${k && !k.ok ? k.error : "it has to be a key name, like \"Enter\" or \"ctrl+k\"."}` };
+      if (o.repeat !== undefined && (typeof o.repeat !== "number" || !Number.isInteger(o.repeat) || o.repeat < 1 || o.repeat > MAX_REPEAT)) {
+        return { ok: false, error: `Step ${n}: \`repeat\` is how many times to press the key, from 1 to ${MAX_REPEAT}.` };
+      }
+      pasos.push(o.repeat !== undefined ? { key: (o.key as string).trim(), repeat: o.repeat as number } : { key: (o.key as string).trim() });
+      continue;
+    }
+    if (verbo === "wait") {
+      if (typeof o.wait !== "number" || !Number.isFinite(o.wait) || o.wait <= 0 || o.wait > MAX_WAIT_S) {
+        return { ok: false, error: `Step ${n}: \`wait\` is seconds, more than 0 and up to ${MAX_WAIT_S}.` };
+      }
+      pasos.push({ wait: o.wait });
+      continue;
+    }
+    if (verbo === "left_click" || verbo === "hover") {
+      const c = coordenadas(o[verbo], 2);
+      if (!c) return { ok: false, error: `Step ${n}: \`${verbo}\` has to be [x, y]: two numbers of 0 or more, ${enPixeles}.` };
+      pasos.push(verbo === "left_click" ? { left_click: [c[0]!, c[1]!] } : { hover: [c[0]!, c[1]!] });
+      continue;
+    }
+    if (verbo === "left_click_drag") {
+      const desde = coordenadas(o.left_click_drag, 2);
+      if (!desde) return { ok: false, error: `Step ${n}: \`left_click_drag\` has to be [x, y], where the drag starts: two numbers of 0 or more, ${enPixeles}.` };
+      if (o.coordinate === undefined) return { ok: false, error: `Step ${n}: \`left_click_drag\` needs \`coordinate\`, the [x, y] where the drag ends.` };
+      const hasta = coordenadas(o.coordinate, 2);
+      if (!hasta) return { ok: false, error: `Step ${n}: \`coordinate\` has to be [x, y], where the drag ends: two numbers of 0 or more, ${enPixeles}.` };
+      pasos.push({ left_click_drag: [desde[0]!, desde[1]!], coordinate: [hasta[0]!, hasta[1]!] });
+      continue;
+    }
+    if (verbo === "zoom") {
+      const z = coordenadas(o.zoom, 4);
+      if (!z || z[2]! <= z[0]! || z[3]! <= z[1]!) {
+        return { ok: false, error: `Step ${n}: \`zoom\` has to be [x0, y0, x1, y1]: the top-left and bottom-right corners of a region, ${enPixeles}.` };
+      }
+      pasos.push({ zoom: [z[0]!, z[1]!, z[2]!, z[3]!] });
+      continue;
+    }
     const texto = (k: string): string | null => {
       const v = o[k];
       return typeof v === "string" && v.trim() !== "" && v.length <= MAX_TEXTO ? v.trim() : null;

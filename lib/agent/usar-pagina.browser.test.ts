@@ -661,3 +661,113 @@ describe("use_page — sólo cuenta el texto que se ve", () => {
     expect(informe).toContain("«Pie: Velas Aurora 2026» → «Pie: Velas Aurora 2027»");
   }, 90_000);
 });
+
+// LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5), hechos en la
+// página: teclas, clic y hover por coordenadas, arrastrar, esperar y acercarse. Cada uno con su brazo
+// de control: la misma página sin el efecto dice otra cosa.
+describe("use_page — los pasos de Claude Code", () => {
+  const conTeclado = (escucha: boolean) =>
+    marco(`<p id="pos">x=0</p>
+    <script>
+      var x = 0;
+      ${escucha ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") { x += 10; document.getElementById("pos").textContent = "x=" + x; } });' : ""}
+    </script>`);
+
+  it("🔴 key pulsa la tecla las veces que se pide; BRAZO DE CONTROL: sin nadie que escuche, nothing changed y lo dice", async () => {
+    const viva = await visitar(conTeclado(true), [{ key: "ArrowRight", repeat: 3 }]);
+    const muerta = await visitar(conTeclado(false), [{ key: "ArrowRight", repeat: 3 }]);
+    expect(viva).toContain("I pressed the key «ArrowRight» (3 times)");
+    expect(viva).toContain("«x=0» → «x=30»");
+    expect(muerta).toMatch(/nothing (else )?changed/);
+    expect(muerta).toContain("nothing on the page listens to the keyboard");
+  }, 90_000);
+
+  // Un canvas de 400×300 en (24, 24) —el margen del cuerpo—: su centro está en (224, 174).
+  const lienzo = (escucha: boolean) =>
+    marco(`<canvas id="c" width="400" height="300" style="display:block;background:#ddd"></canvas><p id="donde">Sin clic</p>
+    <script>
+      ${escucha ? 'document.getElementById("c").addEventListener("click", function (e) { document.getElementById("donde").textContent = "Clic en " + Math.round(e.offsetX) + "," + Math.round(e.offsetY); });' : ""}
+    </script>`);
+
+  it("🔴 left_click hace clic en el punto, aunque allí no haya texto; BRAZO DE CONTROL: sin oyente, nothing changed", async () => {
+    const viva = await visitar(lienzo(true), [{ left_click: [224, 174] }]);
+    const muerta = await visitar(lienzo(false), [{ left_click: [224, 174] }]);
+    expect(viva).toContain("I clicked at (224, 174)");
+    expect(viva).toContain("«Sin clic» → «Clic en 200,150»");
+    expect(muerta).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  it("left_click fuera de la pestaña no se hace, lo dice con su tamaño, y la visita para ahí", async () => {
+    const informe = await visitar(lienzo(true), [{ left_click: [5000, 10] }, { read: "Sin clic" }]);
+    expect(informe).toContain("couldn't: (5000, 10) is outside the 1280×900 tab");
+    expect(informe).toContain("Step 2 wasn't done");
+  }, 90_000);
+
+  const menu = (abre: boolean) =>
+    marco(`<div id="m" style="width:300px;height:100px;background:#cde">Menú</div><p id="sub" style="display:none">Contacto</p>
+    <script>
+      ${abre ? 'document.getElementById("m").addEventListener("mouseenter", function () { document.getElementById("sub").style.display = "block"; });' : ""}
+    </script>`);
+
+  it("🔴 hover lleva el ratón al punto y se ve lo que abre; BRAZO DE CONTROL: sin efecto, nothing changed", async () => {
+    const abre = await visitar(menu(true), [{ hover: [100, 60] }]);
+    const noAbre = await visitar(menu(false), [{ hover: [100, 60] }]);
+    expect(abre).toContain("I moved the mouse to (100, 60)");
+    expect(abre).toContain("appeared: «Contacto»");
+    expect(noAbre).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  // Un tablero: «Tarea 1» en (24, 24)–(124, 64); soltarla a la derecha de x=300 la pasa a «Hecho».
+  const tablero = (forma: "puntero" | "html5" | "nada") =>
+    marco(`<div id="t" ${forma === "html5" ? 'draggable="true"' : ""} style="position:absolute;left:24px;top:24px;width:100px;height:40px;background:#fd8">Tarea 1</div>
+    <div id="hecho" style="position:absolute;left:400px;top:0;width:300px;height:300px;background:#efe">Hecho</div>
+    <p id="estado" style="position:absolute;top:400px">Tarea 1 en Por hacer</p>
+    <script>
+      var estado = document.getElementById("estado");
+      ${
+        forma === "puntero"
+          ? `var arrastrando = false;
+      document.getElementById("t").addEventListener("mousedown", function () { arrastrando = true; });
+      document.addEventListener("mouseup", function (e) { if (arrastrando && e.clientX > 300) estado.textContent = "Tarea 1 en Hecho"; arrastrando = false; });`
+          : forma === "html5"
+            ? `var h = document.getElementById("hecho");
+      h.addEventListener("dragover", function (e) { e.preventDefault(); });
+      h.addEventListener("drop", function (e) { e.preventDefault(); estado.textContent = "Tarea 1 en Hecho"; });`
+            : ""
+      }
+    </script>`);
+
+  it("🔴 left_click_drag arrastra con el ratón y con HTML5; BRAZO DE CONTROL: una tarjeta que no se arrastra, nothing changed", async () => {
+    const pasos: PasoDeUso[] = [{ left_click_drag: [74, 44], coordinate: [500, 100] }];
+    const puntero = await visitar(tablero("puntero"), pasos);
+    const html5 = await visitar(tablero("html5"), pasos);
+    const nada = await visitar(tablero("nada"), pasos);
+    expect(puntero).toContain("I dragged from (74, 44) to (500, 100)");
+    expect(puntero).toContain("«Tarea 1 en Por hacer» → «Tarea 1 en Hecho»");
+    expect(html5).toContain("«Tarea 1 en Por hacer» → «Tarea 1 en Hecho»");
+    expect(nada).toMatch(/nothing (else )?changed/);
+  }, 120_000);
+
+  const aviso = (sale: boolean) =>
+    marco(`<p>Editor</p><script>${sale ? 'setTimeout(function () { var p = document.createElement("p"); p.textContent = "Guardado"; document.body.appendChild(p); }, 1000);' : ""}</script>`);
+
+  it("🔴 wait espera en tiempo real y dice lo que cambió solo; BRAZO DE CONTROL: si nada cambia, lo dice", async () => {
+    const sale = await visitar(aviso(true), [{ wait: 2 }]);
+    const noSale = await visitar(aviso(false), [{ wait: 2 }]);
+    expect(sale).toContain("I waited 2 s");
+    expect(sale).toContain("appeared: «Guardado»");
+    expect(noSale).toContain("nothing on the page changed while waiting.");
+    expect(noSale).not.toMatch(/nothing (else )?changed:/);
+  }, 90_000);
+
+  it("muchos wait se cortan con el plazo de la visita, con el mensaje de siempre", async () => {
+    const { informe } = await usarPagina({ html: aviso(false), pasos: [{ wait: 2 }, { wait: 2 }, { wait: 2 }], ruta: "/index.html" }, { plazoMs: 3_000 });
+    expect(informe).toMatch(/the visit went over 3 s and was cut here/);
+  }, 90_000);
+
+  it("zoom devuelve una imagen de la región de la pestaña", async () => {
+    const { informe, images } = await usarPagina({ html: lienzo(false), pasos: [{ zoom: [0, 0, 320, 240] }], ruta: "/index.html" });
+    expect(images?.length).toBe(1);
+    expect(informe).toContain("the region 0,0 → 320,240 of the tab");
+  }, 90_000);
+});
