@@ -111,3 +111,18 @@ export async function settleJob(
 export function runningJobs(): Promise<ToolJobRow[]> {
   return db.select().from(j).where(inArray(j.status, [...LIVE]));
 }
+
+/** At boot: the live jobs started before this process booted — their runner died with it (ONE Next process, like the
+ *  turn rows). The cut is on the database's clock: now minus how long this process has lived. */
+export function liveJobsFromBeforeBoot(secondsSinceBoot: number): Promise<ToolJobRow[]> {
+  return db
+    .select()
+    .from(j)
+    .where(and(inArray(j.status, [...LIVE]), sql`${j.startedAt} < now() - (${secondsSinceBoot}::double precision * interval '1 second')`));
+}
+
+/** Who a job is for — who pays its box. */
+export async function jobPersonOf(id: string): Promise<string | null> {
+  const [row] = await db.select({ personId: j.personId }).from(j).where(eq(j.id, id)).limit(1);
+  return row?.personId ?? null;
+}

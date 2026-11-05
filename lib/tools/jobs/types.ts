@@ -51,6 +51,9 @@ export const JOB_REFUSALS = [
 ] as const;
 export type JobRefusal = (typeof JOB_REFUSALS)[number];
 
+/** The detail of a job a restart cut: a deploy's exit (the runner's exit flush) or a crash (the next boot). */
+export const STOPPED_BY_RESTART = "stopped_by_restart";
+
 /** The files the person picks in OpenLen's picker at once (and hands one job). */
 export const UPLOADS_PER_PICK = 8;
 
