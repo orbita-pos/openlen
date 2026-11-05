@@ -53,6 +53,7 @@ describe("readToolManifest", () => {
         titles: { en: "Today's bookings", es: "Reservas de hoy" },
         descriptions: { en: "See and confirm today's bookings.", es: "Ver y confirmar las reservas de hoy." },
         iconPath: "/icon.svg",
+        jobs: {},
       },
     });
   });
@@ -110,6 +111,48 @@ describe("readToolManifest", () => {
     const png = (p: string) => valid({ "/package.json": pkg({ exports: { "./locale/*.json": "./locale/*.json", "./icon": "./icon.png" } }), "/icon.svg": undefined, "/icon.png": p });
     expect(codes(png(pointer(1000)))).toEqual([]);
     expect(codes(png(pointer(ICON_MAX_BYTES + 1)))).toContain("icon_too_big");
+  });
+
+  // PHASE 3 (spec local 2026-11-04-herramientas-hechas-por-len, §4.6): a tool declares its jobs, each a script of
+  // its own, with a ceiling of minutes; its title lives in the display record.
+  describe("jobs", () => {
+    const withJobs = (jobs: unknown, over: Record<string, string | undefined> = {}) =>
+      valid({
+        "/package.json": pkg({ openlen: { tool: { placement: "rail", jobs } } }),
+        "/jobs/pdf.py": "print('ok')",
+        "/locale/en.json": JSON.stringify({ meta: { title: "Today's bookings", description: "See and confirm today's bookings." }, jobs: { pdf: "Make the PDF" } }),
+        "/locale/es.json": JSON.stringify({ meta: { title: "Reservas de hoy", description: "Ver y confirmar las reservas de hoy." }, jobs: { pdf: "Hacer el PDF" } }),
+        ...over,
+      });
+
+    it("a declared job is read with its script, its titles, and 10 minutes by default", () => {
+      const r = read(withJobs({ pdf: { script: "jobs/pdf.py" } }));
+      expect(r.ok && r.manifest.jobs).toEqual({ pdf: { script: "/jobs/pdf.py", maxMinutes: 10, titles: { en: "Make the PDF", es: "Hacer el PDF" } } });
+      const r2 = read(withJobs({ pdf: { script: "jobs/pdf.py", maxMinutes: 30 } }));
+      expect(r2.ok && r2.manifest.jobs.pdf?.maxMinutes).toBe(30);
+    });
+
+    it("no jobs field reads as none", () => {
+      const r = read(valid());
+      expect(r.ok && r.manifest.jobs).toEqual({});
+    });
+
+    it("each problem a job can have", () => {
+      expect(codes(withJobs({ Pdf: { script: "jobs/pdf.py" } }))).toContain("job_bad_name");
+      expect(codes(withJobs({ pdf: { script: "jobs/other.py" } }))).toContain("job_script_missing");
+      expect(codes(withJobs({ pdf: { script: "jobs/run.sh" } }, { "/jobs/run.sh": "echo" }))).toContain("job_script_kind");
+      expect(codes(withJobs({ pdf: { script: "../pdf.py" } }))).toContain("job_script_kind");
+      expect(codes(withJobs({ pdf: { script: "jobs/pdf.py", maxMinutes: 0 } }))).toContain("job_minutes");
+      expect(codes(withJobs({ pdf: { script: "jobs/pdf.py", maxMinutes: 31 } }))).toContain("job_minutes");
+      expect(codes(withJobs({ pdf: { script: "jobs/pdf.py", maxMinutes: 2.5 } }))).toContain("job_minutes");
+      const noTitle = withJobs({ pdf: { script: "jobs/pdf.py" } }, { "/locale/en.json": meta("Today's bookings", "See and confirm today's bookings."), "/locale/es.json": meta("Reservas de hoy", "Ver y confirmar las reservas de hoy.") });
+      expect(codes(noTitle)).toContain("job_title_missing");
+    });
+
+    it("at most eight jobs", () => {
+      const nine = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`j${i}`, { script: "jobs/pdf.py" }]));
+      expect(codes(withJobs(nine))).toContain("job_too_many");
+    });
   });
 
   it("collects every problem before answering", () => {

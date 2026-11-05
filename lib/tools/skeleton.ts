@@ -139,7 +139,7 @@ export function toolSkeleton(o: { readonly title: string; readonly locale: strin
     ...appPackage,
     name: slug(o.title),
     version: "1.0.0",
-    openlen: { tool: { placement: "rail" } },
+    openlen: { tool: { placement: "rail", jobs: {} } },
     exports: { "./locale/*.json": "./locale/*.json", "./icon": "./icon.svg" },
   };
   const meta = `${JSON.stringify({ meta: { title: o.title.trim() || "Tool", description: o.title.trim() || "A tool made by Len." } }, null, 2)}\n`;
