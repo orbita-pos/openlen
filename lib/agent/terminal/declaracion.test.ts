@@ -220,8 +220,10 @@ describe("Claude Code's git protocol when the project has a remote (spec local 2
 // que corre de verdad, dónde llega su red, que lo de los visitantes se lee con sus herramientas y
 // que hay segundo plano. Apagada, la descripción es la de hoy, byte a byte.
 describe("bash con la terminal real", () => {
-  const bashDe = (env: Record<string, string>, app: { catalogo: string; entrada: string } | null = null) =>
-    buildFunctionDeclarations(env, {}, "len", app as never).find((d) => d.name === NOMBRE_BASH)!;
+  // `realTerminal`: whose turn has the box (since 05/11 the owner's plan decides, spec local 2026-11-05-modo-juego-
+  // design, §11; without a person nobody has it). The «on» cases say so, as the route does.
+  const bashDe = (env: Record<string, string>, app: { catalogo: string; entrada: string } | null = null, realTerminal?: boolean) =>
+    buildFunctionDeclarations(env, realTerminal === undefined ? {} : { realTerminal }, "len", app as never).find((d) => d.name === NOMBRE_BASH)!;
   const SIN_CAJA = { OPENLEN_GIT: "0" };
   const CON_CAJA = { OPENLEN_GIT: "0", E2B_API_KEY: "k" };
   const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
@@ -243,7 +245,7 @@ describe("bash con la terminal real", () => {
   });
 
   it("encendida, dice que corre de verdad y hasta dónde llega su red", () => {
-    const d = String(bashDe(CON_CAJA).description);
+    const d = String(bashDe(CON_CAJA, null, true).description);
     expect(d).not.toContain("interprets commands without running real programs");
     expect(d).toContain("isolated Linux computer");
     expect(d).toContain("python3 with pip");
@@ -255,7 +257,7 @@ describe("bash con la terminal real", () => {
   });
 
   it("lo de los visitantes se lee con sus herramientas, no en la terminal", () => {
-    const d = String(bashDe(CON_CAJA).description);
+    const d = String(bashDe(CON_CAJA, null, true).description);
     expect(d).not.toContain("/.openlen/bandeja/formularios.jsonl");
     expect(d).not.toContain("/.openlen/resultados/visitas.json");
     expect(d).toContain("list_form_submissions");
@@ -263,20 +265,20 @@ describe("bash con la terminal real", () => {
   });
 
   it("dice lo del segundo plano y trae run_in_background", () => {
-    const d = bashDe(CON_CAJA);
+    const d = bashDe(CON_CAJA, null, true);
     expect(String(d.description)).toContain("keeps running in the background");
     expect(JSON.stringify(d.parameters)).toContain("run_in_background");
   });
 
   it("con git, en una app, también", () => {
-    const d = String(bashDe({ E2B_API_KEY: "k" }, APP).description);
+    const d = String(bashDe({ E2B_API_KEY: "k" }, APP, true).description);
     expect(d).toContain("isolated Linux computer");
     expect(d).toContain("this project's repository (branches and remotes; fetch, pull and push go through OpenLen)");
     expect(d).toContain("npm test, npm run build");
   });
 
   it("no promete que una búsqueda de / se salte nada: en la caja recorre el ordenador entero", () => {
-    for (const d of [bashDe(CON_CAJA), bashDe({ E2B_API_KEY: "k" }, APP)].map((x) => String(x.description))) {
+    for (const d of [bashDe(CON_CAJA, null, true), bashDe({ E2B_API_KEY: "k" }, APP, true)].map((x) => String(x.description))) {
       expect(d).not.toMatch(/grep -r \/,? does not enter it/);
       expect(d).not.toContain("does not enter it unless you name it");
       expect(d).toContain("not with grep -r /");
@@ -284,7 +286,7 @@ describe("bash con la terminal real", () => {
   });
 
   it("en una página, /tests se corre: npx playwright test contra $BASE_URL", () => {
-    const d = String(bashDe(CON_CAJA).description);
+    const d = String(bashDe(CON_CAJA, null, true).description);
     expect(d).not.toContain("there is no Playwright in this terminal");
     expect(d).toContain("npx playwright test");
     expect(d).toContain("$BASE_URL");
