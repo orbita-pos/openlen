@@ -2496,6 +2496,9 @@ export const toolReleases = pgTable("toolReleases", {
   sha: text("sha").primaryKey(),
   projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
   files: jsonb("files").$type<Record<string, { content: string; contentType: string }>>().notNull(),
+  /** Phase 3 (§4.6): the version's job files (`/jobs/**`, `/package.json`, its lockfile, `/requirements.txt`) — what a
+   *  job runs, never served by the tool's host. */
+  jobFiles: jsonb("jobFiles").$type<Record<string, string>>().notNull().default({}),
   createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -2555,6 +2558,53 @@ export const toolCards = pgTable(
     statusDeliveredAt: timestamp("statusDeliveredAt", { mode: "date", withTimezone: true }),
   },
   (t) => [index("toolCards_project_person_phase_idx").on(t.projectId, t.personId, t.phase), index("toolCards_chatRowId_idx").on(t.chatRowId)],
+);
+
+/** A tool's jobs (phase 3, spec local 2026-11-04-herramientas-hechas-por-len, §4.6): DeepSeek's job registry —
+ *  `job-<16 hex>`, one owner (the person), a status decided once. Created by `npm run tools:migrate`. */
+export const toolJobs = pgTable(
+  "toolJobs",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toolProjectId: text("toolProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** Null: the owner ran the draft in the tool project's canvas. */
+    installationId: text("installationId"),
+    releaseSha: text("releaseSha"),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    status: text("status").$type<import("@/lib/tools/jobs/types").ToolJobStatus>().notNull().default("running"),
+    progress: text("progress"),
+    detail: text("detail"),
+    input: jsonb("input").$type<unknown>(),
+    uploads: jsonb("uploads").$type<import("@/lib/tools/jobs/types").JobUpload[]>().notNull().default([]),
+    result: jsonb("result").$type<unknown>(),
+    delivered: jsonb("delivered").$type<import("@/lib/tools/jobs/types").DeliveredFile[]>().notNull().default([]),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finishedAt", { mode: "date", withTimezone: true }),
+    seconds: integer("seconds").notNull().default(0),
+    chargedCentis: integer("chargedCentis").notNull().default(0),
+    /** The most it may run and be charged: its minutes and the install allowance (what the confirmation showed). */
+    maxSeconds: integer("maxSeconds").notNull().default(0),
+  },
+  (t) => [index("toolJobs_person_tool_started_idx").on(t.personId, t.toolProjectId, t.startedAt), index("toolJobs_status_idx").on(t.status)],
+);
+
+/** What a person picked in OpenLen's own picker for a tool (phase 3, §4.6): the only files a job gets. The bytes are a
+ *  blob (`pointer`, lib/files/blob.ts). Created by `npm run tools:migrate`. */
+export const toolUploads = pgTable(
+  "toolUploads",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toolProjectId: text("toolProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    size: integer("size").notNull(),
+    contentType: text("contentType").notNull(),
+    pointer: text("pointer").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("toolUploads_person_idx").on(t.personId)],
 );
 
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a

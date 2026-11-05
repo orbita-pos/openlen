@@ -169,7 +169,8 @@ export function fakeDriver(o: { readonly onRun?: FakeRun } = {}): SandboxDriver 
       const b = boxes.get(sandboxId);
       if (!b) throw new Error(`sandbox ${sandboxId} not found`);
       b.paused = false;
-      if (network !== undefined) networks.set(sandboxId, network);
+      // Like the E2B driver: without a network the box keeps the one it had.
+      if (network) networks.set(sandboxId, network);
       return handle(sandboxId);
     },
     async kill(sandboxId) {
