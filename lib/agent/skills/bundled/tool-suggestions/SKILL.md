@@ -53,13 +53,13 @@ Supplying data in this conversation does not tie a record to this project.
 To propose, call `propose_action` once, in the same turn as loading this skill, with `action: "create_tool"`, `title`, `brief` and `details` holding `placement` and, when there is supplied content, `initialContent`. The call is the submission: the card appears below your answer; a refused call creates no card, and its error says why. Then write your final answer. One proposal per turn, and one unstarted card per conversation: if a card is still waiting, do not propose another; a new proposal replaces it only when the person changed the plan. Plan-only and read-only requests still get a card; do not ask for approval instead of proposing it. Only pressing Crear starts the background build; do not wait, poll, claim installation or ask for a report-back. Answer any direct question; the call's result says how to end the answer. Do not repeat the plan, list extra features, narrate the call or mention schema names.
 
 ```json
-{"action":"create_tool","title":"Revisión antes de publicar","brief":"Una lista de revisión de este proyecto que se puede marcar y desmarcar, guardada con el proyecto.","details":{"placement":"project","initialContent":"1. Formulario de contacto\n2. Fotos del menú"}}
+{"action":"create_tool","title":"Revisión antes de lanzar","brief":"Una lista de revisión de este proyecto que se puede marcar y desmarcar, guardada con el proyecto.","details":{"placement":"project","initialContent":"1. Formulario de contacto\n2. Fotos del menú"}}
 ```
 
 ## Examples
 
 - «Quiero un sitio para guardar mis proveedores y añadir nombre y teléfono cuando quiera; empiezo de cero.» → `brief`: «Una lista de proveedores para abrir siempre, con nombre y teléfono que se añaden a mano y se guardan.» No `initialContent`. `rail`.
-- «En este proyecto, una lista para revisar antes de publicar que pueda marcar: formulario de contacto; fotos del menú.» → `brief`: «Una lista de revisión de este proyecto que se puede marcar y desmarcar, guardada con el proyecto.» `initialContent`: «1. Formulario de contacto\n2. Fotos del menú». `project`.
+- «En este proyecto, una lista para revisar antes de lanzar la web que pueda marcar: formulario de contacto; fotos del menú.» → `brief`: «Una lista de revisión de este proyecto que se puede marcar y desmarcar, guardada con el proyecto.» `initialContent`: «1. Formulario de contacto\n2. Fotos del menú». `project`.
 - «Estas tres semanas tuve 12, 9 y 15 reservas, ¿qué tendencia ves? Cada semana te paso el número y quiero verlo crecer.» → answer the trend first, then `brief`: «Registrar a mano las reservas de cada semana y ver cómo cambian, guardado.» `initialContent`: «Semana 1: 12, semana 2: 9, semana 3: 15». `rail`.
 - «¿Puedo ver las visitas de mi página?» → Resultados already shows them; say where; no card.
 - «Cambia mi herramienta de reservas para que muestre la hora.» → explain the change in its own project; no card and no copy.
