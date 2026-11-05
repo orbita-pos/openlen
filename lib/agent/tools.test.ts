@@ -2981,6 +2981,96 @@ describe("Read of an image made in the box", () => {
     assert.ok(r.height <= 3000, `height ${r.height}`);
     assert.equal(r.image.mimeType, "image/jpeg");
   });
+
+  // Kimi Code's ReadMediaFile (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.1): a region of
+  // the original image, and what was done to it said to the model.
+  it("imageForModel says the original size and whether it shrank; a region is cut first", async () => {
+    const { processImage } = await import("@/lib/images");
+    const { imageForModel } = await import("./image-for-model");
+    const { readFileSync } = await import("node:fs");
+    const icon = readFileSync("public/icon-192.png");
+    const big = (await processImage({ input: icon, variants: [{ width: 2400, format: "png", quality: 100 }], withoutEnlargement: false })).variants[0]!;
+    const whole = await imageForModel(new Uint8Array(big.bytes));
+    assert.deepEqual([whole.originalWidth, whole.originalHeight, whole.width, whole.reduced], [2400, 2400, 1000, true]);
+    const crop = await imageForModel(new Uint8Array(big.bytes), { region: { x: 0, y: 0, width: 500, height: 400 } });
+    assert.deepEqual([crop.originalWidth, crop.width, crop.height, crop.reduced], [2400, 500, 400, false]);
+  });
+
+  const withRegion = (result: Record<string, unknown> | Error) => {
+    const { deps } = makeDeps();
+    const session = makeSession();
+    const downloaded: string[] = [];
+    session.terminal = {
+      arrancada: true,
+      readFileBytes: async (p: string) => (downloaded.push(p), PNG),
+      fileSize: async () => PNG.byteLength,
+    } as unknown as AgentSession["terminal"];
+    const opts: unknown[] = [];
+    const d = {
+      ...deps,
+      imageForModel: async (_b: Uint8Array, o?: unknown) => {
+        opts.push(o);
+        if (result instanceof Error) throw result;
+        return { image: IMG, ...result };
+      },
+    } as unknown as AgentDeps;
+    return { d, session, opts, downloaded };
+  };
+
+  it("Read with region of a box image cuts it and says the offset to add", async () => {
+    const { d, session, opts } = withRegion({ width: 30, height: 40, originalWidth: 300, originalHeight: 200, reduced: false });
+    const region = { x: 10, y: 20, width: 30, height: 40 };
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/sheet.png", region });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.deepEqual(opts, [{ region }]);
+    const text = String(out.response.tool_result);
+    assert.match(text, /Showing region \(x=10, y=20, width=30, height=40\) of the original 300×200 image, at native resolution\./);
+    assert.match(text, /add the region offset \(x=10, y=20\)/);
+  });
+
+  it("a box image that shrank says from what size, and how to ask for a region", async () => {
+    const { d, session } = withRegion({ width: 1000, height: 667, originalWidth: 2400, originalHeight: 1600, reduced: true });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/frame.png" });
+    const text = String(out.response.tool_result);
+    assert.match(text, /^Image read: \/tmp\/motion\/frame\.png/);
+    assert.match(text, /downsampled from 2400×1600 to 1000×667 pixels/);
+    assert.match(text, /call Read again with region/);
+    assert.match(text, /read the result back before continuing/);
+  });
+
+  it("a region outside the image is refused with the size of the image", async () => {
+    const { d, session, opts } = withRegion(new Error("crop (x=60, y=0, width=50, height=50) falls outside the 100×50 image"));
+    const region = { x: 60, y: 0, width: 50, height: 50 };
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/a.png", region });
+    assert.deepEqual(opts, [{ region }]);
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /falls outside the 100×50 image/);
+  });
+
+  it("a region with numbers that aren't pixels is refused before reading, naming the field", async () => {
+    const { d, session, opts, downloaded } = withRegion({ width: 1, height: 1, originalWidth: 1, originalHeight: 1, reduced: false });
+    for (const [region, field] of [
+      [{ x: -1, y: 0, width: 5, height: 5 }, "x"],
+      [{ x: 0, y: 0, width: 0, height: 5 }, "width"],
+      [{ x: 1.5, y: 0, width: 5, height: 5 }, "x"],
+      [{ x: 0, y: 0, width: 5 }, "height"],
+    ] as const) {
+      const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/a.png", region });
+      assert.equal(out.response.ok, false, JSON.stringify(region));
+      assert.match(String(out.response.error), new RegExp(`region\\.${field}`), JSON.stringify(region));
+    }
+    assert.deepEqual(opts, []);
+    assert.deepEqual(downloaded, []);
+  });
+
+  it("Read of a video says this model can't read video and how to look at motion, without opening the box", async () => {
+    const { videoReadError } = await import("./image-region");
+    const { d, session, downloaded } = withRegion({ width: 1, height: 1, originalWidth: 1, originalHeight: 1, reduced: false });
+    const out = await runAgentTool(session, d, "Read", { file_path: "/tmp/motion/run.webm" });
+    assert.equal(out.response.ok, false);
+    assert.equal(String(out.response.error), videoReadError("/tmp/motion/run.webm"));
+    assert.deepEqual(downloaded, []);
+  });
 });
 
 // Review of the branch (26/10): the box's read-only files are refreshed after every command that
