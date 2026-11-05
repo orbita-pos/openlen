@@ -161,3 +161,23 @@ describe("readToolManifest", () => {
     );
   });
 });
+
+describe("readToolJobs", () => {
+  const files = (jobs: unknown, extra: Record<string, string> = {}) => ({
+    "/package.json": JSON.stringify({ openlen: { tool: { placement: "rail", jobs } } }),
+    "/locale/en.json": JSON.stringify({ jobs: { a: "Export", b: "Other" } }),
+    ...extra,
+  });
+
+  it("the jobs a version can run: declared well and with their script present", async () => {
+    const { readToolJobs } = await import("./manifest");
+    const jobs = readToolJobs(files({ a: { script: "./jobs/a.mjs", maxMinutes: 5 }, b: { script: "./jobs/b.py" }, "Bad Name": { script: "./jobs/c.mjs" } }, { "/jobs/a.mjs": "1" }));
+    expect(jobs).toEqual({ a: { script: "/jobs/a.mjs", maxMinutes: 5, titles: { en: "Export" } } });
+  });
+
+  it("no package.json, or none declared: none", async () => {
+    const { readToolJobs } = await import("./manifest");
+    expect(readToolJobs({})).toEqual({});
+    expect(readToolJobs(files(undefined))).toEqual({});
+  });
+});

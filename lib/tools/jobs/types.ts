@@ -37,6 +37,9 @@ export interface ToolJobView {
   readonly chargedCentis: number;
 }
 
+/** The files the person picks in OpenLen's picker at once (and hands one job). */
+export const UPLOADS_PER_PICK = 8;
+
 /** DeepSeek's id: the kind, then 16 lowercase hex characters of a UUID. */
 export function newJobId(): string {
   return `job-${globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;

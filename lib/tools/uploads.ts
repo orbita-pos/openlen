@@ -14,7 +14,7 @@ import { MAX_FILE_BYTES } from "@/lib/files/limits";
 import type { JobUpload } from "./jobs/types";
 
 export const UPLOAD_MAX_BYTES = MAX_FILE_BYTES;
-export const UPLOADS_PER_PICK = 8;
+export { UPLOADS_PER_PICK } from "./jobs/types";
 
 const u = schema.toolUploads;
 const hex16 = () => globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 16);
@@ -69,16 +69,18 @@ export async function readToolUpload(id: string): Promise<{ name: string; bytes:
   return { name: row.name, bytes: await getBlob(row.pointer) };
 }
 
-/** A file a tool delivers: the private store, under the tool project, served to whoever can open that project. */
+/** A file a tool delivers (from its frame, or from a job's `out/` under the job's id): the private store, under the
+ *  tool project, served to whoever can open that project. */
 export async function deliverFromTool(
   toolProjectId: string,
   file: { readonly name: string; readonly contentType: string; readonly bytes: Uint8Array },
+  turn = `deliver-${hex16()}`,
 ): Promise<{ url: string }> {
   if (file.bytes.byteLength > MAX_DELIVERABLE_BYTES) throw new Error("too_large");
   const [{ deliveryStore }, { deliverableLocation }] = await Promise.all([import("@/lib/agent/skills/deliveries"), import("@/lib/agent/skills/present")]);
   const store = deliveryStore();
   if (!store) throw new Error("no_store");
-  const where = deliverableLocation(toolProjectId, `deliver-${hex16()}`, ownName(file.name), hex16().slice(0, 8));
+  const where = deliverableLocation(toolProjectId, turn, ownName(file.name), hex16().slice(0, 8));
   await store.put(where.key, file.bytes, file.contentType.slice(0, 100) || "application/octet-stream");
   return { url: where.url };
 }
