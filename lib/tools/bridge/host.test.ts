@@ -39,6 +39,15 @@ describe("createToolBridgeHost, outside the workspace", () => {
     expect(s.answered()[0]).toMatchObject({ result: { url: "https://openlen.com/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf" } });
   });
 
+  // Phase 5 (§4.14): on the phone a link inside the frame carries no key, so the app opens what was delivered itself.
+  it("onDelivered hears the delivered file as the server gave it", async () => {
+    const onDelivered = vi.fn();
+    const fetchImpl = vi.fn(async () => Response.json({ url: "/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf" }));
+    const s = setup(fetchImpl as unknown as typeof fetch, { onDelivered });
+    await s.send(rpc(1, "files.deliver", { name: "r.pdf", contentType: "application/pdf", bytes: new Uint8Array([1, 2]) }));
+    expect(onDelivered).toHaveBeenCalledWith({ name: "r.pdf", url: "/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf", size: 2 });
+  });
+
   it("a job's files too", async () => {
     const done = { id: "job-1", status: "completed", delivered: [{ name: "r.pdf", url: "/api/projects/tool-1/deliveries/job-1/ab-r.pdf", size: 1 }] };
     const s = setup(vi.fn(async () => Response.json({ job: done })) as unknown as typeof fetch);

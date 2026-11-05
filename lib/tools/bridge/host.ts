@@ -37,6 +37,9 @@ export interface BridgeHostOptions {
   onPickFiles(o: { accept?: string; multiple: boolean }): Promise<File[] | null>;
   /** A job this frame started: the frame's bar shows it with «Detener». */
   onJobStarted?(job: ToolJobView): void;
+  /** A file the tool delivered, as the server gave it (phase 5, §4.14): the phone app opens it in its own viewer, because
+   *  a link inside the frame carries no key. */
+  onDelivered?(file: { name: string; url: string; size: number }): void;
   fetchImpl?: typeof fetch;
   /** The origin a link the frame gets must name — where the person's session or key opens it. The workspace's own by
    *  default; the phone app gives openlen.com's (phase 5, §4.14). */
@@ -158,7 +161,9 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
     const name = typeof p.name === "string" && p.name ? p.name : "file";
     const file = new File([bytes as BlobPart], name, { type: typeof p.contentType === "string" ? p.contentType : "" });
     const delivered = await postFiles("/api/tools/deliver", [file]);
-    return "error" in delivered ? delivered : { result: { ...delivered.result, url: absolute(delivered.result.url) } };
+    if ("error" in delivered) return delivered;
+    if (typeof delivered.result.url === "string") o.onDelivered?.({ name, url: delivered.result.url, size: file.size });
+    return { result: { ...delivered.result, url: absolute(delivered.result.url) } };
   }
 
   async function handle(req: BridgeRequest): Promise<{ result: unknown } | { error: BridgeError }> {
