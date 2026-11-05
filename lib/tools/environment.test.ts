@@ -27,3 +27,27 @@ describe("isInstalledToolOrigin", () => {
     expect(l).not.toHaveBeenCalled();
   });
 });
+
+// PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): an installed tool has no published page, yet its
+// production functions are what its screen and Len's operations call — the gateway's «production only when published»
+// counts an installed tool's project as published.
+describe("toolLiveIsPublished", () => {
+  it("a project with an installed, switched-on tool: yes; switched off, removed or never installed: no", async () => {
+    const { toolLiveIsPublished } = await import("./environment");
+    expect(await toolLiveIsPublished("p1", async () => true)).toBe(true);
+    expect(await toolLiveIsPublished("p1", async () => false)).toBe(false);
+  });
+
+  it("a lookup that fails is a no, never a throw", async () => {
+    const { toolLiveIsPublished } = await import("./environment");
+    expect(await toolLiveIsPublished("p1", async () => Promise.reject(new Error("db down")))).toBe(false);
+  });
+});
+
+describe("toolLiveIsPublished with tools off", () => {
+  it("OPENLEN_TOOLS=0: no installed tool's production functions answer", async () => {
+    const { toolLiveIsPublished } = await import("./environment");
+    expect(await toolLiveIsPublished("p1", async () => true, { OPENLEN_TOOLS: "0" })).toBe(false);
+    expect(await toolLiveIsPublished("p1", async () => true, {})).toBe(true);
+  });
+});

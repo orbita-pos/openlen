@@ -35,8 +35,20 @@ describe(`el catálogo ${FUNCTIONS_CATALOG_CURRENT} de las Edge Functions`, () =
     }
   });
 
-  it("2026-12 is 2026-11 plus React Email, the old entries untouched, and it is the current one", () => {
-    expect(FUNCTIONS_CATALOG_CURRENT).toBe("2026-12");
+  it("2027-01 is 2026-12 with zod 4 and Supabase's MCP server, and it is the current one", () => {
+    expect(FUNCTIONS_CATALOG_CURRENT).toBe("2027-01");
+    const antes = functionsCatalog("2026-12")!.dependencies.filter((d) => d.name !== "zod").map((d) => [d.name, d.version]);
+    const ahora = functionsCatalog("2027-01")!.dependencies;
+    expect(ahora.map((d) => [d.name, d.version])).toEqual(expect.arrayContaining(antes));
+    expect(ahora.find((d) => d.name === "zod")?.version).toBe("4.6.7");
+    expect(ahora.find((d) => d.name === "@modelcontextprotocol/server")?.version).toBe("2.4.0");
+  });
+
+  it("the MCP server, loaded by Node: McpServer and createMcpHandler", { timeout: 60_000 }, () => {
+    expect(exportsOf("modelcontextprotocol-server.mjs")).toEqual(expect.arrayContaining(["McpServer", "createMcpHandler"]));
+  });
+
+  it("2026-12 is 2026-11 plus React Email, the old entries untouched", () => {
     const viejo = functionsCatalog("2026-11")!.dependencies;
     const nuevo = functionsCatalog("2026-12")!.dependencies;
     for (const d of viejo) expect(nuevo).toContainEqual(d);

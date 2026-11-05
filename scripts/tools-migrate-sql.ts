@@ -67,6 +67,8 @@ export const CREATE_TOOLS: readonly string[] = [
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "toolSuggestions" boolean NOT NULL DEFAULT false;`,
   // Phase 3 (§4.6): the installed version's job files, kept apart from what its host serves.
   `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "jobFiles" jsonb NOT NULL DEFAULT '{}'::jsonb;`,
+  // Phase 4 (§4.7): the operations an installed version's MCP server listed at install.
+  `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "mcp" jsonb;`,
   // Phase 3: a tool's jobs (DeepSeek's job registry, the person as the owner).
   `CREATE TABLE IF NOT EXISTS "toolJobs" (
     "id" text PRIMARY KEY,

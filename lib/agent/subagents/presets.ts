@@ -90,6 +90,12 @@ export function omitsLenMd(preset: SubagentPreset): boolean {
   return preset !== "general-purpose";
 }
 
+/** An installed tool's operation (`mcp__<server>__<operation>`, spec local 2026-11-04-herramientas-hechas-por-len, §4.7):
+ *  it writes the person's production, so only the main turn has it — never a child, read-only or not. */
+function isToolOperation(name: string): boolean {
+  return name.startsWith("mcp__");
+}
+
 export function childToolDeclarations(
   all: readonly Record<string, unknown>[],
   preset: SubagentPreset,
@@ -98,7 +104,7 @@ export function childToolDeclarations(
   const readOnly = isReadOnly(preset, planMode);
   return all.filter((d) => {
     const name = String(d.name);
-    return !OUT_FOR_EVERY_CHILD.has(name) && !(readOnly && OUT_FOR_READ_ONLY.has(name));
+    return !OUT_FOR_EVERY_CHILD.has(name) && !isToolOperation(name) && !(readOnly && OUT_FOR_READ_ONLY.has(name));
   });
 }
 
@@ -145,7 +151,7 @@ export function childToolsFor(all: readonly Record<string, unknown>[], type: Chi
   const a = type.type.agent;
   return all.filter((d) => {
     const name = String(d.name);
-    return !OUT_FOR_EVERY_CHILD.has(name) && !(planMode && OUT_FOR_READ_ONLY.has(name)) &&
+    return !OUT_FOR_EVERY_CHILD.has(name) && !isToolOperation(name) && !(planMode && OUT_FOR_READ_ONLY.has(name)) &&
       (a.tools === null || a.tools.includes(name)) && !a.disallowedTools.includes(name);
   });
 }

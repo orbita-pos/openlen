@@ -28,3 +28,17 @@ export async function isInstalledToolOrigin(
   const row = await find(label).catch(() => null);
   return !!row && row.projectId === i.projectId && row.enabled && !row.removedAt;
 }
+
+/** AN INSTALLED TOOL'S PRODUCTION FUNCTIONS ANSWER (phase 4, §4.7): the gateway calls production only for a published
+ *  project, and a tool is installed, never published. Its screen and Len's operations call the same production function,
+ *  so a tool project with an installation switched on counts as published. A failed lookup is a no. */
+export async function toolLiveIsPublished(
+  projectId: string,
+  lookup?: (projectId: string) => Promise<boolean>,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): Promise<boolean> {
+  // OPENLEN_TOOLS=0 turns tools off entirely (§4.15): no installed tool's production answers.
+  if (env.OPENLEN_TOOLS === "0") return false;
+  const find = lookup ?? (async (p: string) => (await import("./store")).hasActiveInstallation(p));
+  return find(projectId).catch(() => false);
+}

@@ -80,6 +80,27 @@ describe("bundled skills", () => {
     expect(skill).toContain("references/jobs.md");
   });
 
+  // A TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): Supabase's MCP server in an Edge
+  // Function, named in the manifest, as the person, and how to check it.
+  it("tool-development teaches operations: Supabase's MCP server, the manifest, the person's client, secrets, checking", () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const files = bundledSkillFiles({ app, env: {}, tool: true });
+    const fns = files[`${BUNDLED_SKILLS_DIR}/tool-development/references/functions.md`]!;
+    for (const must of [
+      "createMcpHandler",
+      "registerTool",
+      "Deno.serve((req) => handler.fetch(req))",
+      "openlen.tool.mcp",
+      "serverName",
+      "Authorization",
+      "request_secrets",
+      "curl",
+      "mcp__",
+      "one operation, two callers",
+    ]) expect(fns, must).toContain(must);
+    expect(files[`${BUNDLED_SKILLS_DIR}/tool-development/SKILL.md`]!).toContain("references/functions.md");
+  });
+
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.1): `/schedule`, from Claude Code's.
   describe("schedule", () => {
     it("is offered unless OPENLEN_SCHEDULE=0, and its name stays reserved", () => {

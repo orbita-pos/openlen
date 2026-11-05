@@ -39,6 +39,31 @@ export interface ToolManifest {
   readonly descriptions: Record<string, string>;
   readonly iconPath: string;
   readonly jobs: Record<string, ToolJobDeclaration>;
+  /** Its operations for Len: an MCP server in one of its Edge Functions (phase 4, §4.7). */
+  readonly mcp: ToolMcpDeclaration | null;
+}
+
+/** DeepSeek's `serverName` (Len sees `mcp__<serverName>__<operation>`), and the Edge Function serving it where DeepSeek has a `url`. */
+export interface ToolMcpDeclaration {
+  readonly serverName: string;
+  readonly function: string;
+}
+
+/** Short enough that `mcp__<serverName>__<operation>` stays within the 64 characters a tool name may have. */
+export const MCP_SERVER_NAME = /^[a-z][a-z0-9_-]{0,23}$/;
+const FUNCTION_NAME = /^[A-Za-z][A-Za-z0-9_-]*$/;
+const FUNCTION_ENTRIES = ["index.ts", "index.tsx", "index.js"];
+
+function readMcp(declared: unknown, files: Readonly<Record<string, string>>, problems: ManifestProblem[]): ToolMcpDeclaration | null {
+  const decl = record(declared);
+  if (!decl) return null;
+  const serverName = typeof decl.serverName === "string" ? decl.serverName : "";
+  const fn = typeof decl.function === "string" ? decl.function : "";
+  if (!MCP_SERVER_NAME.test(serverName)) problems.push({ code: "mcp_bad_name", file: PACKAGE, detail: serverName });
+  if (!FUNCTION_NAME.test(fn) || !FUNCTION_ENTRIES.some((e) => files[`/supabase/functions/${fn}/${e}`] !== undefined)) {
+    problems.push({ code: "mcp_function_missing", file: PACKAGE, detail: fn });
+  }
+  return { serverName, function: fn };
 }
 
 export type ManifestProblemCode =
@@ -60,7 +85,9 @@ export type ManifestProblemCode =
   | "job_script_kind"
   | "job_minutes"
   | "job_title_missing"
-  | "job_too_many";
+  | "job_too_many"
+  | "mcp_bad_name"
+  | "mcp_function_missing";
 
 export interface ManifestProblem {
   readonly code: ManifestProblemCode;
@@ -213,6 +240,7 @@ export function readToolManifest(
   }
 
   const jobs = readJobs(toolField?.jobs, files, problems);
+  const mcp = readMcp(toolField?.mcp, files, problems);
 
   if (problems.length) return { ok: false, problems };
   return {
@@ -225,6 +253,7 @@ export function readToolManifest(
       descriptions,
       iconPath,
       jobs,
+      mcp,
     },
   };
 }

@@ -56,6 +56,20 @@ describe("the tool posture's words", () => {
     expect(p).toContain("OpenLen's own picker");
   });
 
+  // PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.6, §4.7): what the posture says of operations.
+  it("with the functions on, the posture points to operations as an MCP server and their names", () => {
+    const p = promptOfTool("APP PROMPT", { functions: true });
+    expect(p).toContain("references/functions.md");
+    expect(p).toContain("mcp__<serverName>__<operation>");
+  });
+
+  it("with the functions off, it says plainly they don't run yet and the screen hands text with sendPrompt", () => {
+    const p = promptOfTool("APP PROMPT", { functions: false });
+    expect(p).toContain("Edge Functions don't run on this server yet");
+    expect(p).toContain("sendPrompt");
+    expect(p).not.toContain("references/functions.md");
+  });
+
   it("the manual names the tool's files", () => {
     const m = manualOfTool("APP MANUAL");
     for (const path of ["/package.json", "/locale/", "/icon.svg", "/src/openlen.d.ts"]) expect(m).toContain(path);

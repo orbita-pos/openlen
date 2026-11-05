@@ -415,6 +415,25 @@ describe("summarizeProjectState", () => {
   });
 });
 
+// AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): any mcp__ name goes to the
+// turn's toolOperations, as the call it is; without them (another kind of turn) it is an error result, never a throw.
+describe("mcp__ operations", () => {
+  it("an mcp__ call goes to the turn's toolOperations with its arguments", async () => {
+    const { deps } = makeDeps();
+    const calls: Array<[string, Record<string, unknown>]> = [];
+    deps.toolOperations = { call: async (name, args) => (calls.push([name, args]), { response: { content: [{ type: "text", text: "done" }] } }) };
+    const out = await runAgentTool(makeSession(), deps, "mcp__empleados__add_employee", { name: "Ana" });
+    assert.deepEqual(calls, [["mcp__empleados__add_employee", { name: "Ana" }]]);
+    assert.deepEqual(out.response.content, [{ type: "text", text: "done" }]);
+  });
+
+  it("without them: an error result, no throw", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "mcp__empleados__add_employee", {});
+    assert.equal(out.response.isError, true);
+  });
+});
+
 describe("toggle_module", () => {
   it("provisions owner chat on chat enable, threading the session email", async () => {
     const { deps, store } = makeDeps();
