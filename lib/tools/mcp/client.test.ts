@@ -51,11 +51,11 @@ describe("mcpSession against the real MCP server", () => {
 
   it("an unknown tool is an error result or a JSON-RPC error, never a crash", async () => {
     const s = mcpSession(await realServer());
-    const out = await s.callTool("nope", {}).then(
+    const out: { isError?: boolean; code?: string } = await s.callTool("nope", {}).then(
       (r) => ({ isError: r.isError }),
       (e: unknown) => ({ code: (e as McpError).code }),
     );
-    expect(out.isError === true || (out as { code?: string }).code === "rpc").toBe(true);
+    expect(out.isError === true || out.code === "rpc").toBe(true);
   });
 });
 

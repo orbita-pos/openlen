@@ -2499,6 +2499,9 @@ export const toolReleases = pgTable("toolReleases", {
   /** Phase 3 (§4.6): the version's job files (`/jobs/**`, `/package.json`, its lockfile, `/requirements.txt`) — what a
    *  job runs, never served by the tool's host. */
   jobFiles: jsonb("jobFiles").$type<Record<string, string>>().notNull().default({}),
+  /** Phase 4 (§4.7): its MCP server and the operations its `tools/list` gave at install, checked — what Len is
+   *  declared. Null without one, or when the functions were off. */
+  mcp: jsonb("mcp").$type<{ serverName: string; function: string; tools: { name: string; description: string; inputSchema: Record<string, unknown> }[] } | null>(),
   createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
 });
 

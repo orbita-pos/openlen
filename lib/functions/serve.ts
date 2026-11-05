@@ -131,3 +131,20 @@ export function serveFunctions(req: Request): Promise<Response> {
 export function invokeFunctionInternally(req: Request): Promise<Response> {
   return handleFunctionsRequest(req, realGatewayDeps(), { forceDraft: true });
 }
+
+/** AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): OpenLen calling a tool's
+ *  PRODUCTION function in-process — to list its MCP tools right after installing deploys them (before the installation
+ *  row exists, so before `toolLiveIsPublished` would say yes) and for Len's calls. Production only: a request the routing
+ *  sends to the draft is refused. Never reached from outside: it is not a route. */
+export function invokeToolFunctionLive(req: Request): Promise<Response> {
+  const deps = realGatewayDeps();
+  return handleFunctionsRequest(req, {
+    ...deps,
+    async resolve(r, o) {
+      const target = await deps.resolve(r, o);
+      if (!target || "forbidden" in target) return target;
+      if (target.environment !== "live") return { forbidden: "an installed tool's operations run in production only" };
+      return { ...target, published: true };
+    },
+  });
+}
