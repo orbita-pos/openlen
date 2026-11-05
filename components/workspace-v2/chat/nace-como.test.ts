@@ -32,6 +32,16 @@ describe("los campos de nacer en el cuerpo del primer mensaje", () => {
   });
 });
 
+describe("a game in the URL and in the first message (spec local 2026-11-05-modo-juego-design, §8.2)", () => {
+  it("kind=game is a game; its link carries it", () => {
+    expect(kindFromParam("game")).toBe("game");
+    expect(newProjectHref("naves", "game")).toBe("/new?brief=naves&kind=game");
+  });
+  it("a game travels like an app: `naceComo` and the language", () => {
+    expect(camposDeNacer({ naceComo: "game", idioma: "es" })).toEqual({ naceComo: "game", idioma: "es" });
+  });
+});
+
 describe("a tool in the URL (spec local 2026-11-04-herramientas-hechas-por-len)", () => {
   it("kind=tool is a tool; its link carries it", () => {
     expect(kindFromParam("tool")).toBe("tool");

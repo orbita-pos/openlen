@@ -82,7 +82,8 @@
       "codigo": "代码",
       "terminal": "终端",
       "cambios": "更改",
-      "app": "应用"
+      "app": "应用",
+      "game": "游戏"
     },
     "toolbar": {
       "editPage": "编辑页面（⌘E）",
@@ -321,6 +322,11 @@
       "appPlaceholder": "描述你的应用：它做什么、谁在用……",
       "headline": "你的下一个应用从这里开始",
       "subtitle": "告诉 Len 它要做什么，Len 就把它做出来：页面、数据和登录。",
+      "game": "游戏",
+      "gameHint": "在浏览器里玩的 2D 或 3D 游戏，可以分享",
+      "gameHeadline": "你想玩什么游戏？",
+      "gameSubtitle": "告诉 Len 这个游戏是什么样的，Len 就把它做出来：世界、操作和怎么赢。",
+      "gamePlaceholder": "一艘躲避小行星的飞船……",
       "tool": "工具",
       "toolHint": "由 Len 制作、在 OpenLen 里属于你的一个界面。",
       "toolHeadline": "你需要什么工具？",
