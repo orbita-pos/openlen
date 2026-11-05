@@ -35,3 +35,12 @@
 .ent-shortcuts .herr-atajo { display: inline-flex; align-items: center; gap: 6px; }
 .herr-atajo .herr-icono { width: 20px; height: 20px; border-radius: 6px; }
 .herr-atajo .herr-icono img { width: 14px; height: 14px; }
+
+/* A «Crear» card over the chat (§4.10): the event cards' look (chat/avisos.css) plus what only it has. */
+.herr-plegado { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.herr-enlace { justify-self: start; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.herr-sitio { display: grid; gap: 4px; margin-top: 4px; }
+.herr-sitio select, .herr-donde { min-height: 44px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--c-line); background: var(--c-field); color: var(--c-ink); font: 400 14px Inter, sans-serif; }
+.herr-aviso { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 12px; background: color-mix(in srgb, var(--c-qr) 12%, transparent); font-size: 12.5px; }
+.herr-aviso button, .herr-info { min-width: 44px; min-height: 44px; border: 0; background: none; color: inherit; font-size: 18px; cursor: pointer; }
+.herr-info { margin-left: auto; font: italic 600 16px Georgia, serif; }

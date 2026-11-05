@@ -241,6 +241,15 @@ describe("a project's tools beside the chat", () => {
     expect((chatProps.ultimo?.borrador as { texto: string } | null)?.texto).toBe("> hola\n\n— Reservas\n");
   });
 
+  // A «Crear» card in the chat (§4.10): «Abrir» opens the tool it installed, read again from the person's tools.
+  it("a card's «Abrir» opens the installed tool, with the person's tools read again", async () => {
+    await paint();
+    const onAbrir = chatProps.ultimo?.onAbrirHerramienta as (id: string) => void;
+    await act(async () => onAbrir("q"));
+    expect(document.querySelector("[data-herr-abierta]")?.getAttribute("data-herr-abierta")).toBe("q");
+    expect(document.querySelector("[data-herr-abierta]")?.getAttribute("data-proyecto")).toBe("p1");
+  });
+
   it("the tab's tool opens with no project", async () => {
     await paint();
     await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
