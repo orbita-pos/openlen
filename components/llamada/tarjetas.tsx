@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AgentConfirmCard } from "@/components/workspace-v2/agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "@/components/workspace-v2/agent-reply-card";
+import { InstallConfirmCard } from "@/components/workspace-v2/tools/install-confirm-card";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import type { TarjetaDeLlamada } from "./puente-a-len";
 
@@ -75,6 +76,11 @@ export function TarjetasDeLaLlamada({ projectId, tarjetas }: { projectId: string
         ) : x.tipo === "respuesta" ? (
           <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
             <AgentReplyCard respuesta={x.respuesta} labels={etiquetas} />
+          </div>
+        ) : x.tipo === "instalar" ? (
+          // Herramientas, fase 5: el «Instalar» de una herramienta, la misma tarjeta que en el chat de la web.
+          <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
+            <InstallConfirmCard projectId={projectId} install={x.confirm} onInstalled={() => {}} />
           </div>
         ) : (
           <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">

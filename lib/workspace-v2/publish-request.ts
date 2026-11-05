@@ -30,8 +30,10 @@ export type PublishOutcome =
 
 /** A gated POST — publish, or install a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): both answer
  *  the same 428s and errors. `published` means it went through. */
-async function postGated(url: string, body: Record<string, unknown>): Promise<PublishOutcome> {
-  const res = await fetch(url, {
+type Send = (url: string, init: RequestInit) => Promise<Response>;
+
+async function postGated(url: string, body: Record<string, unknown>, send: Send = (u, i) => fetch(u, i)): Promise<PublishOutcome> {
+  const res = await send(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -82,8 +84,8 @@ export function postPublish(projectId: string, body: Record<string, unknown>): P
 }
 
 /** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same gates as publishing. */
-export function postInstall(projectId: string, body: Record<string, unknown>): Promise<PublishOutcome> {
-  return postGated(`/api/projects/${projectId}/install`, body);
+export function postInstall(projectId: string, body: Record<string, unknown>, send?: Send): Promise<PublishOutcome> {
+  return postGated(`/api/projects/${projectId}/install`, body, send);
 }
 
 export async function postInstallAfterSecurity(
@@ -91,8 +93,10 @@ export async function postInstallAfterSecurity(
   body: Record<string, unknown>,
   onView: (v: ReviewView) => void,
   wait: (projectId: string, fingerprint: string) => Promise<ReviewView | null> = waitForSecurityReview,
+  /** The phone app's own client (its key, openlen.com's address; phase 5, §4.14); the browser's fetch otherwise. */
+  send?: Send,
 ): Promise<PublishOutcome> {
-  return throughSecurity((b) => postInstall(projectId, b), projectId, body, onView, wait);
+  return throughSecurity((b) => postInstall(projectId, b, send), projectId, body, onView, wait);
 }
 
 async function throughSecurity(
