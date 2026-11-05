@@ -183,14 +183,18 @@ export function avisosDelTurno(args: {
   degradaciones?: readonly DegradacionConocida[];
   /** La lista de progreso que salió del historial (`todosForTurn`). */
   todoRestore?: string | null;
+  /** What changed on Len's «Crear» cards since he last heard (`toolCardStatusNotice`, spec local
+   *  2026-11-04-herramientas-hechas-por-len, §4.10): DeepSeek's action-card status, read with his next request. */
+  toolCardStatus?: string | null;
 }): string {
   const roto = degradacionesBlock(args.degradaciones ?? []);
   const lista = args.todoRestore ? `${args.todoRestore}\n\n` : "";
-  if (!roto && !lista) return "";
+  const tarjetas = args.toolCardStatus ? `${args.toolCardStatus}\n\n` : "";
+  if (!roto && !lista && !tarjetas) return "";
   return `
 
 SYSTEM (the user did NOT write this):
-${roto}${lista}`;
+${roto}${lista}${tarjetas}`;
 }
 
 /**
@@ -480,6 +484,8 @@ export interface BuildAgentMessagesArgs {
   writingLanguage?: string | null;
   /** Ver `avisosDelTurno.todoRestore`. */
   todoRestore?: string | null;
+  /** Ver `avisosDelTurno.toolCardStatus`. */
+  toolCardStatus?: string | null;
   /** Ver buildAgentContext.userMemory. */
   userMemory?: string | null;
   /** Ver buildAgentContext.cambios. */
@@ -596,6 +602,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const avisos = avisosDelTurno({
     degradaciones: args.degradaciones,
     todoRestore: args.todoRestore,
+    toolCardStatus: args.toolCardStatus,
   });
   // H4: con los resultados enteros en el historial, el techo cuenta también las
   // llamadas y sus respuestas, no sólo el texto (ver `textoDelHistorial`).

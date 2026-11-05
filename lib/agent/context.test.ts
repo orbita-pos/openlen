@@ -754,6 +754,31 @@ describe("avisosDelTurno — la lista de progreso (spec local 2026-10-15)", () =
   });
 });
 
+// «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what changed on Len's cards since he last
+// heard reaches his next request, behind the person's words, marked as the system's — never a turn of its own.
+describe("avisosDelTurno — the status of Len's «Crear» cards", () => {
+  const status = 'Latest status of action cards from user actions and background work.\n\n[{"action":"create_tool"}]';
+
+  it("goes in the system's notices", () => {
+    const a = avisosDelTurno({ toolCardStatus: status });
+    expect(a).toContain("SYSTEM (the user did NOT write this):");
+    expect(a).toContain('[{"action":"create_tool"}]');
+  });
+
+  it("reaches the turn's last message, after the person's words", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, toolCardStatus: status });
+    const last = r.messages.at(-1)!;
+    expect(last.role).toBe("user");
+    expect(last.content.indexOf("hola")).toBeLessThan(last.content.indexOf("Latest status of action cards"));
+  });
+
+  it("without it, the message is byte for byte as before", () => {
+    const base = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000 });
+    const none = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, toolCardStatus: null });
+    expect(none.messages).toEqual(base.messages);
+  });
+});
+
 // LEN 3.1 (spec local 2026-10-24-len-3-1-layers-0-1, §5.2): las escenas reales
 // arman sus turnos con `assembleTurnMessages`; tiene que ser el MISMO orden.
 describe("assembleTurnMessages", () => {
