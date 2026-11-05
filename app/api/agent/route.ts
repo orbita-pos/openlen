@@ -1003,7 +1003,11 @@ async function correrTurno(
   // never wakes Len). Marked delivered as of this read once the turn starts. Fail-soft: without the table, nothing.
   const tarjetasLeidasEn = new Date();
   const tarjetasCambiadas = toolsEnabled()
-    ? await conPlazo(async () => (await import("@/lib/tools/cards/store")).undeliveredCards(projectId, quien), MEMORIA_TIMEOUT_MS, []).catch(() => [])
+    ? await conPlazo(
+        async () => (await import("@/lib/tools/cards/actions")).reconcileOnRead(await (await import("@/lib/tools/cards/store")).undeliveredCards(projectId, quien)),
+        MEMORIA_TIMEOUT_MS,
+        [],
+      ).catch(() => [])
     : [];
   const estadoDeTarjetas = toolCardStatusNotice(tarjetasCambiadas);
 
@@ -1194,7 +1198,8 @@ async function correrTurno(
   const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
   // A scheduled task: the model reads DeepSeek's `[SCHEDULE REMINDER]` message, which carries the
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
-  const textoEnviado = withInvokedSkills(
+  // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
+  const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
       : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
@@ -2107,7 +2112,7 @@ async function correrTurno(
         const hostToolCreation = async (o: ToolCreationOrigin): Promise<AgentLoopResult> => {
           const creation = await import("@/lib/tools/cards/creation");
           const text = await creation.hostTheCreator(
-            { cardId: o.cardId, framing: programadaDelTurno?.framing ?? "", locale: agentSession.uiLocale ?? "en", launcher: subagents },
+            { cardId: o.cardId, framing: programadaDelTurno?.framing ?? "", locale: agentSession.uiLocale ?? "en", launcher: subagents, hostRowId: filaId },
             await creation.realCreationDeps(),
           );
           const ev = { type: "text" as const, text };

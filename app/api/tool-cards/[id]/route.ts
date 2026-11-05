@@ -3,6 +3,7 @@
 // background), settled → 200 with the card as it is, refused → 402 (plan), 404 (not theirs) or 409 with the reason.
 import { auth } from "@/auth";
 import { actOnCard, realActionDeps, type ToolCardVerb } from "@/lib/tools/cards/actions";
+import { toolSuggestionsEnabled } from "@/lib/tools/suggestions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,7 @@ const json = (body: unknown, status = 200) =>
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
   const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
+  if (!toolSuggestionsEnabled()) return json({ error: "tools_off" }, 404);
   const { id } = await params;
   const body = (await req.json().catch(() => null)) as { verb?: unknown; payload?: unknown; locale?: unknown; timeZone?: unknown } | null;
   const verb = body?.verb;

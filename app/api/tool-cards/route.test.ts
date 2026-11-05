@@ -8,12 +8,14 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/tools/cards/store", () => ({ cardsOfProject: vi.fn(), toCardView: (r: { id: string; phase: string }) => ({ id: r.id, phase: r.phase }) }));
-vi.mock("@/lib/tools/cards/actions", () => ({ actOnCard: vi.fn(), realActionDeps: vi.fn(async () => ({})) }));
+vi.mock("@/lib/tools/cards/actions", () => ({ actOnCard: vi.fn(), realActionDeps: vi.fn(async () => ({})), reconcileOnRead: vi.fn(async (rows: unknown[]) => rows) }));
+vi.mock("@/lib/tools/suggestions", () => ({ toolSuggestionsEnabled: vi.fn(() => true) }));
 
 const { auth } = await import("@/auth");
 const { exigirAcceso } = await import("@/lib/projects/acceso");
 const { cardsOfProject } = await import("@/lib/tools/cards/store");
-const { actOnCard } = await import("@/lib/tools/cards/actions");
+const { actOnCard, reconcileOnRead } = await import("@/lib/tools/cards/actions");
+const { toolSuggestionsEnabled } = await import("@/lib/tools/suggestions");
 const { GET } = await import("./route");
 const { POST } = await import("./[id]/route");
 
@@ -36,6 +38,21 @@ describe("GET /api/tool-cards?projectId=", () => {
     expect(await res.json()).toEqual({ cards: [{ id: "card-1", phase: "proposed" }], capCredits: 25 });
     expect(exigirAcceso).toHaveBeenCalledWith("p1", "u1", "ver");
     expect(cardsOfProject).toHaveBeenCalledWith("p1", "u1");
+  });
+
+  it("🔴 the cards are reconciled when read: one left «creando» by a restart comes back «interrumpida»", async () => {
+    vi.mocked(reconcileOnRead).mockResolvedValueOnce([{ id: "card-1", phase: "interrupted" }] as never);
+    const res = await GET(new Request("http://x/api/tool-cards?projectId=p1"));
+    expect(((await res.json()) as { cards: unknown }).cards).toEqual([{ id: "card-1", phase: "interrupted" }]);
+    expect(reconcileOnRead).toHaveBeenCalledWith([{ id: "card-1", phase: "proposed" }]);
+  });
+
+  it("🔴 the switches off (OPENLEN_TOOLS=0 or OPENLEN_TOOL_SUGGESTIONS=0): 404, for reading and for pressing", async () => {
+    vi.mocked(toolSuggestionsEnabled).mockReturnValue(false);
+    expect((await GET(new Request("http://x/api/tool-cards?projectId=p1"))).status).toBe(404);
+    expect((await press({ verb: "create" })).status).toBe(404);
+    expect(actOnCard).not.toHaveBeenCalled();
+    vi.mocked(toolSuggestionsEnabled).mockReturnValue(true);
   });
 
   it("no session: 401; no projectId: 400; no access: its answer", async () => {

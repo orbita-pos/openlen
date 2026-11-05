@@ -13,7 +13,6 @@ import { Info, Wrench, X } from "lucide-react";
 
 import { CUSTOM_LOCATION_MAX, type ToolCardView } from "@/lib/tools/cards/types";
 
-import { announceToolsChanged } from "./use-installed-tools";
 import { pressToolCard, toolCardsLive, type ToolCardPressResult } from "./use-tool-cards";
 
 const NOTICE_KEY = "openlen.toolCard.costNotice";
@@ -68,7 +67,6 @@ export function ToolSuggestionCard({
     const r = await onPress(verb, payload);
     setPending(null);
     if (r.status === "refused") setRefusal(r.reason);
-    if (r.status === "settled" && r.card.phase === "installed") announceToolsChanged();
   };
   const placePayload = (): Record<string, unknown> => (place === "custom" ? { customLocation: words.trim() } : { placement: place });
   const wordsOk = words.trim().length >= 1 && words.trim().length <= CUSTOM_LOCATION_MAX;

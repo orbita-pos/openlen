@@ -112,6 +112,31 @@ describe("pressToolCard", () => {
   });
 });
 
+describe("🔴 I3: a card that installs or uninstalls in the background tells the installed-tools list", () => {
+  it("creating → installed, and installed → removed, each announce once; nothing else does", () => {
+    const heard = vi.fn();
+    window.addEventListener("openlen:tools-changed", heard);
+    toolCardsLive.event("p1", card({ phase: "creating" }));
+    toolCardsLive.fromServer("p1", [card({ phase: "creating" })]);
+    expect(heard).not.toHaveBeenCalled();
+    toolCardsLive.fromServer("p1", [card({ phase: "installed", installationId: "inst-1" })]);
+    expect(heard).toHaveBeenCalledTimes(1);
+    toolCardsLive.fromServer("p1", [card({ phase: "installed", installationId: "inst-1" })]);
+    expect(heard).toHaveBeenCalledTimes(1);
+    toolCardsLive.fromServer("p1", [card({ phase: "removed", installationId: "inst-1" })]);
+    expect(heard).toHaveBeenCalledTimes(2);
+    window.removeEventListener("openlen:tools-changed", heard);
+  });
+
+  it("a card first seen already installed (a reload) announces nothing", () => {
+    const heard = vi.fn();
+    window.addEventListener("openlen:tools-changed", heard);
+    toolCardsLive.fromServer("p1", [card({ phase: "installed", installationId: "inst-1" })]);
+    expect(heard).not.toHaveBeenCalled();
+    window.removeEventListener("openlen:tools-changed", heard);
+  });
+});
+
 describe("toolCardsLive.event", () => {
   it("a stream card is sanitized: one without an id or a known phase is dropped", () => {
     toolCardsLive.event("p1", { ...card(), phase: "exploded" });

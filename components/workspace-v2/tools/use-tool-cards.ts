@@ -7,6 +7,8 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import type { ToolCardPhase, ToolCardReview, ToolCardView } from "@/lib/tools/cards/types";
 
+import { announceToolsChanged } from "./use-installed-tools";
+
 const PHASES: readonly ToolCardPhase[] = ["proposed", "dismissed", "replaced", "creating", "installing", "installed", "removed", "failed", "cancelled", "interrupted", "needs_review"];
 const WORKING: readonly ToolCardPhase[] = ["creating", "installing"];
 const LOOK_EVERY_MS = 60_000;
@@ -52,12 +54,22 @@ let cards: ReadonlyMap<string, ToolCardView & { projectId: string }> = new Map()
 let cap = DEFAULT_CAP_CREDITS;
 const listeners = new Set<() => void>();
 
+/** Phases where the person's installed tools changed: the rail and «Abrir» must hear it. */
+const TOOLS_CHANGE: readonly ToolCardPhase[] = ["installed", "removed"];
+
 function put(projectId: string, next: readonly ToolCardView[]): void {
   if (next.length === 0) return;
   const m = new Map(cards);
-  for (const c of next) m.set(c.id, { ...c, projectId });
+  let toolsChanged = false;
+  for (const c of next) {
+    const prev = cards.get(c.id);
+    // A card seen moving into installed or removed (not one first seen that way, as on a reload).
+    if (prev && prev.phase !== c.phase && TOOLS_CHANGE.includes(c.phase)) toolsChanged = true;
+    m.set(c.id, { ...c, projectId });
+  }
   cards = m;
   for (const l of listeners) l();
+  if (toolsChanged) announceToolsChanged();
 }
 
 export const toolCardsLive = {
