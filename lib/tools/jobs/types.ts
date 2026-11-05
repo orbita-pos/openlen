@@ -51,6 +51,15 @@ export const JOB_REFUSALS = [
 ] as const;
 export type JobRefusal = (typeof JOB_REFUSALS)[number];
 
+/** The install step's allowance on top of a job's own minutes. */
+export const INSTALL_ALLOWANCE_SECONDS = 120;
+
+/** The most a job may run — its minutes and the install allowance —, and so the most it is ever charged: what OpenLen's
+ *  confirmation shows («hasta N min», «hasta N créditos»). */
+export function jobCeilingSeconds(maxMinutes: number): number {
+  return maxMinutes * 60 + INSTALL_ALLOWANCE_SECONDS;
+}
+
 /** The detail of a job a restart cut: a deploy's exit (the runner's exit flush) or a crash (the next boot). */
 export const STOPPED_BY_RESTART = "stopped_by_restart";
 

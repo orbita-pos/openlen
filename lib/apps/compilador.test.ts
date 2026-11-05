@@ -30,6 +30,22 @@ describe("qué pasa por el compilador", () => {
   });
 });
 
+// A TOOL'S JOBS ARE NOT THE APP (spec local 2026-11-04-herramientas-hechas-por-len, §4.6): a script in /jobs runs in
+// OpenLen's box with Node or Python, never in the browser — like the tests, it isn't compiled with the app.
+describe("los trabajos de una herramienta no son de la app", () => {
+  it("un .mjs de /jobs que importa node:fs no rompe la app ni se sirve con ella", () => {
+    const r = compilarCarpeta(
+      app({
+        "/src/main.tsx": 'import React from "react";\nexport const App = () => <div />;',
+        "/jobs/export.mjs": 'import { readFileSync } from "node:fs";\nconsole.log(readFileSync);',
+        "/jobs/report.py": "print(1)",
+      }),
+    );
+    expect(r.errores).toEqual([]);
+    expect(Object.keys(r.ficheros).filter((f) => f.startsWith("/jobs/"))).toEqual([]);
+  });
+});
+
 describe("JSX y TypeScript, con las líneas en su sitio", () => {
   const FUENTE = [
     'import { useState } from "react";', // 1

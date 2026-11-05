@@ -764,7 +764,11 @@
       },
       "running": {
         "stop": "Detener",
-        "stopping": "Deteniendo…"
+        "stopping": "Deteniendo…",
+        "completed": "Terminado",
+        "failed": "Falló",
+        "killed": "Detenido",
+        "dismiss": "Cerrar"
       }
     },
     "files": {

@@ -75,7 +75,7 @@ export function useToolDialogs(o: { toolTitle: string; locale: string; caller: B
         caller={o.caller}
         locale={o.locale}
         timeZone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-        onSettled={(job) => setStarted((s) => s.filter((j) => j.id !== job.id))}
+        onDismiss={(id) => setStarted((s) => s.filter((j) => j.id !== id))}
       />
     </>
   );

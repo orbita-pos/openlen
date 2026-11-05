@@ -2584,6 +2584,8 @@ export const toolJobs = pgTable(
     finishedAt: timestamp("finishedAt", { mode: "date", withTimezone: true }),
     seconds: integer("seconds").notNull().default(0),
     chargedCentis: integer("chargedCentis").notNull().default(0),
+    /** The most it may run and be charged: its minutes and the install allowance (what the confirmation showed). */
+    maxSeconds: integer("maxSeconds").notNull().default(0),
   },
   (t) => [index("toolJobs_person_tool_started_idx").on(t.personId, t.toolProjectId, t.startedAt), index("toolJobs_status_idx").on(t.status)],
 );

@@ -121,6 +121,15 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
   };
   const field = (r: { result: unknown } | { error: BridgeError }, key: string): { result: unknown } | { error: BridgeError } =>
     "error" in r ? r : { result: record(r.result)[key] ?? null };
+  // The frame lives on the tool's own .app host: a link it gets must name OpenLen's origin, where the person's session
+  // opens the file — a relative one would resolve on the tool's host, without it.
+  const absolute = (url: unknown) => (typeof url === "string" && url.startsWith("/") ? new URL(url, window.location.origin).href : url);
+  const withLinks = (job: unknown): unknown => {
+    const j = record(job);
+    return Array.isArray(j.delivered) ? { ...j, delivered: j.delivered.map((f) => ({ ...record(f), url: absolute(record(f).url) })) } : job;
+  };
+  const jobsWithLinks = (r: { result: unknown } | { error: BridgeError }) =>
+    "error" in r ? r : { result: Array.isArray(r.result) ? r.result.map(withLinks) : withLinks(r.result) };
   const isRefusal = (message: string) => (JOB_REFUSALS as readonly string[]).includes(message);
 
   async function runJob(p: Record<string, unknown>): Promise<{ result: unknown } | { error: BridgeError }> {
@@ -141,7 +150,7 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
     if ("error" in started) return isRefusal(started.error.message) ? { result: { status: "refused", reason: started.error.message } } : started;
     const view = record(started.result).job as ToolJobView;
     o.onJobStarted?.(view);
-    return { result: { status: "started", job: view } };
+    return { result: { status: "started", job: withLinks(view) } };
   }
 
   async function pickFiles(p: Record<string, unknown>): Promise<{ result: unknown } | { error: BridgeError }> {
@@ -162,7 +171,8 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
     if (!(bytes instanceof Blob || bytes instanceof ArrayBuffer || ArrayBuffer.isView(bytes))) return { error: { code: -32602, message: "invalid_params" } };
     const name = typeof p.name === "string" && p.name ? p.name : "file";
     const file = new File([bytes as BlobPart], name, { type: typeof p.contentType === "string" ? p.contentType : "" });
-    return postFiles("/api/tools/deliver", [file]);
+    const delivered = await postFiles("/api/tools/deliver", [file]);
+    return "error" in delivered ? delivered : { result: { ...delivered.result, url: absolute(delivered.result.url) } };
   }
 
   async function handle(req: BridgeRequest): Promise<{ result: unknown } | { error: BridgeError }> {
@@ -189,11 +199,11 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
       case "jobs.run":
         return runJob(p);
       case "jobs.get":
-        return field(await get(`/api/tools/jobs/${encodeURIComponent(String(p.id ?? ""))}`), "job");
+        return jobsWithLinks(field(await get(`/api/tools/jobs/${encodeURIComponent(String(p.id ?? ""))}`), "job"));
       case "jobs.cancel":
-        return field(await relay(`/api/tools/jobs/${encodeURIComponent(String(p.id ?? ""))}/cancel`, {}), "job");
+        return jobsWithLinks(field(await relay(`/api/tools/jobs/${encodeURIComponent(String(p.id ?? ""))}/cancel`, {}), "job"));
       case "jobs.list":
-        return field(await get("/api/tools/jobs"), "jobs");
+        return jobsWithLinks(field(await get("/api/tools/jobs"), "jobs"));
       case "files.pick":
         return pickFiles(p);
       case "files.deliver":

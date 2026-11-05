@@ -764,7 +764,11 @@
       },
       "running": {
         "stop": "Stoppen",
-        "stopping": "Wird gestoppt…"
+        "stopping": "Wird gestoppt…",
+        "completed": "Fertig",
+        "failed": "Fehlgeschlagen",
+        "killed": "Gestoppt",
+        "dismiss": "Schließen"
       }
     },
     "files": {

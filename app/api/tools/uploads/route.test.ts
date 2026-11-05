@@ -62,6 +62,18 @@ describe("POST /api/tools/uploads", () => {
   });
 });
 
+describe("🔴 a body too big is refused before it is read (I3)", () => {
+  const huge = (route: typeof UPLOAD, url: string) =>
+    route(new Request(url, { method: "POST", body: "x", headers: { "content-type": "multipart/form-data; boundary=x", "content-length": String(2 ** 40) } }));
+  it("uploads and deliveries: 413, no caller asked, nothing saved", async () => {
+    expect((await huge(UPLOAD, "http://x/api/tools/uploads")).status).toBe(413);
+    expect((await huge(DELIVER, "http://x/api/tools/deliver")).status).toBe(413);
+    expect(resolveBridgeCaller).not.toHaveBeenCalled();
+    expect(uploads.saveToolUpload).not.toHaveBeenCalled();
+    expect(uploads.deliverFromTool).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /api/tools/deliver", () => {
   it("delivers the tool's file under its project and answers its link", async () => {
     const res = await post(DELIVER, form([new File([new Uint8Array(30)], "reservas.pdf", { type: "application/pdf" })]));

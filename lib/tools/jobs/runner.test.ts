@@ -1,19 +1,30 @@
 // @vitest-environment node
 //
 // THE JOB RUNNER (spec local 2026-11-04-herramientas-hechas-por-len, §4.6): it opens the tool project's box outside any
-// Len turn (holder = the job's id), runs the job in /tmp, polls it, and on settlement delivers `out/`, reads
-// `result.json`, pauses the box, releases it and charges the person the seconds it ran — on every path.
+// Len turn (holder = the job's id), runs the job in /tmp as its own user, polls it, and on settlement delivers `out/`,
+// reads `result.json`, pauses the box, releases it and charges the person the seconds it ran — on every path, never
+// more than the most the confirmation showed.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fakeDriver } from "@/lib/agent/sandbox/fake-driver";
 
-import { jobDir } from "./command";
+import {
+  JOB_KILL_NOW,
+  JOB_PREPARE_COMMAND,
+  JOB_ROOT,
+  JOB_USER,
+  jobCleanupCommand,
+  jobDir,
+  jobKillCommand,
+  jobPollCommand,
+  POLL_MARK,
+} from "./command";
 import type { ToolJobRow } from "./store";
 import type { ToolJobStatus } from "./types";
 
 vi.mock("server-only", () => ({}));
 
-const { runToolJob } = await import("./runner");
+const { JOB_NETWORK, runToolJob } = await import("./runner");
 
 const ID = "job-0123456789abcdef";
 const DIR = jobDir(ID);
@@ -43,14 +54,44 @@ const job = (over: Partial<ToolJobRow> = {}): ToolJobRow =>
 
 type Behaviour = (files: Map<string, string>) => void;
 
-function setup(o: { behave?: Behaviour; held?: boolean; maxMinutes?: number; status?: () => ToolJobStatus } = {}) {
+/** The box's side of the runner's commands, against the fake's files. */
+function boxAnswers(o: { behave?: Behaviour; prepareExit?: number }) {
+  return (command: string, f: Map<string, string>) => {
+    const drop = (prefix: string) => {
+      for (const p of [...f.keys()]) if (p.startsWith(prefix)) f.delete(p);
+    };
+    if (command === JOB_PREPARE_COMMAND) {
+      drop(`${JOB_ROOT}/`);
+      return { exitCode: o.prepareExit ?? 0 };
+    }
+    if (command.includes("launch.sh")) o.behave?.(f);
+    if (command === jobKillCommand() || command === JOB_KILL_NOW) {
+      if (!f.has(`${DIR}/exit`)) f.set(`${DIR}/exit`, "143");
+    }
+    if (command === jobCleanupCommand(ID)) drop(`${DIR}/`);
+    if (command === jobPollCommand(ID)) {
+      const last = (f.get(`${DIR}/progress`) ?? "").split("\n").filter(Boolean).at(-1) ?? "";
+      return { stdout: `${last}\n${POLL_MARK}\n${f.get(`${DIR}/exit`) ?? ""}` };
+    }
+    const tail = /^tail -c (\d+) '([^']+)'/.exec(command);
+    if (tail) return { stdout: (f.get(tail[2]!) ?? "").slice(-Number(tail[1])) };
+    return undefined;
+  };
+}
+
+function setup(
+  o: {
+    behave?: Behaviour;
+    held?: boolean;
+    maxMinutes?: number;
+    status?: () => ToolJobStatus;
+    prepareExit?: number;
+    boxRow?: { sandboxId: string | null; template: string | null; syncedManifest: Record<string, string> } | null;
+    files?: Record<string, string>;
+  } = {},
+) {
   let clock = 1_000_000;
-  const driver = fakeDriver({
-    onRun: (command, files) => {
-      if (command.includes("launch.sh")) o.behave?.(files);
-      if (command.startsWith("kill ")) files.set(`${DIR}/exit`, "143");
-    },
-  });
+  const driver = fakeDriver({ onRun: boxAnswers(o) });
   let settled: { status: string; set: Record<string, unknown> } | null = null;
   const flushes: Array<() => Promise<void>> = [];
   const d = {
@@ -62,8 +103,8 @@ function setup(o: { behave?: Behaviour; held?: boolean; maxMinutes?: number; sta
     template: "openlen-terminal-v5",
     hold: vi.fn(async () => !o.held),
     release: vi.fn(async () => {}),
-    boxRow: vi.fn(async () => null),
-    saveBox: vi.fn(async () => {}),
+    boxRow: vi.fn(async () => o.boxRow ?? null),
+    saveBox: vi.fn(async (_row: { sandboxId: string; syncedManifest: Record<string, string>; state: string }) => {}),
     jobStatus: vi.fn(async () => (o.status ? o.status() : "running") as ToolJobStatus),
     setProgress: vi.fn(async () => {}),
     settle: vi.fn(async (_id: string, status: string, set: Record<string, unknown>) => {
@@ -80,12 +121,12 @@ function setup(o: { behave?: Behaviour; held?: boolean; maxMinutes?: number; sta
     },
     log: () => {},
   };
-  const files = { "/jobs/pdf.py": "print('pdf')" };
-  const run = () => runToolJob(job(), { files, maxMinutes: o.maxMinutes ?? 10, script: "/jobs/pdf.py" }, d);
+  const files = o.files ?? { "/jobs/pdf.py": "print('pdf')" };
+  const run = () => runToolJob(job(), { files, maxMinutes: o.maxMinutes ?? 10, script: Object.keys(files).find((p) => p.startsWith("/jobs/") && /\.(py|mjs)$/.test(p)) ?? "/jobs/pdf.py" }, d);
   return { d, driver, run, settled: () => settled, flushes };
 }
 
-const box = (s: ReturnType<typeof setup>) => s.driver.files("fake-1");
+const box = (s: ReturnType<typeof setup>, id = "fake-1") => s.driver.files(id);
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -125,34 +166,113 @@ describe("runToolJob", () => {
     expect(JSON.parse(text.get(`${DIR}/input.json`) ?? "null")).toEqual({ size: "A4" });
     expect(bytes.get(`${DIR}/files/foto.jpg`)).toEqual(new Uint8Array([9, 9, 9]));
     expect([...box(s).keys()].filter((p) => p.startsWith(`${DIR}/`))).toEqual([]);
+    expect(s.driver.commands("fake-1")).toContain(jobCleanupCommand(ID));
   });
 
-  it("the box opens without the project's OpenLen hosts: a job never reaches the tool's backend", async () => {
+  it("🔴 the job runs as its own user, after the box is prepared for it, never as the box's user (C4)", async () => {
+    let launch = "";
+    const s: ReturnType<typeof setup> = setup({
+      behave: (f) => {
+        launch = f.get(`${DIR}/launch.sh`) ?? "";
+        f.set(`${DIR}/exit`, "0");
+      },
+    });
+    await s.run();
+    const commands = s.driver.commands("fake-1");
+    expect(commands[0]).toBe(JOB_PREPARE_COMMAND);
+    expect(commands.indexOf(`chmod -R a+rwX '${DIR}'`)).toBeGreaterThan(0);
+    expect(commands.indexOf(`chmod -R a+rwX '${DIR}'`)).toBeLessThan(commands.findIndex((c) => c.includes("launch.sh")));
+    expect(launch).toContain(`sudo -n -u ${JOB_USER} bash run.sh`);
+  });
+
+  it("a box that can't make the job's user: failed, nothing launched, still paused, released and charged", async () => {
+    const s = setup({ prepareExit: 1, behave: () => {} });
+    await s.run();
+    expect(s.settled()).toMatchObject({ status: "failed", set: { detail: "box_error" } });
+    expect(s.driver.commands("fake-1").some((c) => c.includes("launch.sh"))).toBe(false);
+    expect(s.driver.paused("fake-1")).toBe(true);
+    expect(s.d.release).toHaveBeenCalled();
+  });
+
+  it("🔴 a new box starts from an empty manifest, never the old box's (C2)", async () => {
+    const s = setup({
+      boxRow: { sandboxId: "fake-old", template: "openlen-terminal-v4", syncedManifest: { "/src/App.tsx": "abc", "/package.json": "def" } },
+      behave: (f) => f.set(`${DIR}/exit`, "0"),
+    });
+    await s.run();
+    const saved = s.d.saveBox.mock.calls.map((c) => c[0]);
+    expect(saved.length).toBeGreaterThan(0);
+    for (const row of saved) {
+      expect(row.sandboxId).toBe("fake-1");
+      expect(row.syncedManifest).toEqual({});
+    }
+  });
+
+  it("🔴 a box that can't be resumed is replaced by a new one, and the job runs (I4)", async () => {
+    const s = setup({
+      boxRow: { sandboxId: "fake-gone", template: "openlen-terminal-v5", syncedManifest: { "/src/App.tsx": "abc" } },
+      behave: (f) => f.set(`${DIR}/exit`, "0"),
+    });
+    await s.run();
+    expect(s.settled()).toMatchObject({ status: "completed" });
+    expect(s.d.saveBox.mock.calls.every((c) => c[0].sandboxId === "fake-1" && Object.keys(c[0].syncedManifest).length === 0)).toBe(true);
+  });
+
+  it("🔴 a resumed box gets the job's closed network, not the one Len's last turn left (C3)", async () => {
+    const driverBox = setup({ behave: (f) => f.set(`${DIR}/exit`, "0") });
+    // A Len turn opened the box with the tool's backend and canvas hosts.
+    const opened = await driverBox.driver.create({ template: "openlen-terminal-v5", metadata: {}, network: { hosts: ["ref.backend.example"], headers: { "x-openlen-caja": "m" } } });
+    await opened.pause();
+    const s = setup({ boxRow: { sandboxId: opened.id, template: "openlen-terminal-v5", syncedManifest: { "/src/App.tsx": "abc" } }, behave: (f) => f.set(`${DIR}/exit`, "0") });
+    // The same fake for both: reuse the first driver.
+    Object.assign(s.d, { driver: driverBox.driver });
+    await s.run();
+    expect(driverBox.driver.networkOf(opened.id)).toEqual(JOB_NETWORK);
+    expect(JOB_NETWORK).toEqual({ hosts: [], headers: {} });
+    expect(s.d.saveBox.mock.calls[0]![0].syncedManifest).toEqual({ "/src/App.tsx": "abc" });
+  });
+
+  it("a new box opens with the job's closed network too", async () => {
     const s = setup({ behave: (f) => f.set(`${DIR}/exit`, "0") });
     await s.run();
-    expect(s.driver.networkOf("fake-1")).toBeNull();
+    expect(s.driver.networkOf("fake-1")).toEqual(JOB_NETWORK);
   });
 
-  it("a script that fails: failed, with the end of its stderr", async () => {
+  it("a script that fails: failed, with the end of its stderr — read as a tail, never whole", async () => {
     const s = setup({
       behave: (f) => {
-        f.set(`${DIR}/stderr`, "Traceback ...\nValueError: no photos\n");
+        f.set(`${DIR}/stderr`, `${"noise\n".repeat(10_000)}Traceback ...\nValueError: no photos\n`);
         f.set(`${DIR}/exit`, "3");
       },
     });
     await s.run();
     expect(s.settled()).toMatchObject({ status: "failed" });
-    expect(String((s.settled()!.set as { detail: string }).detail)).toContain("ValueError: no photos");
+    const detail = String((s.settled()!.set as { detail: string }).detail);
+    expect(detail).toContain("ValueError: no photos");
+    expect(detail.length).toBeLessThan(2_100);
+    expect(s.driver.reads("fake-1")).not.toContain(`${DIR}/stderr`);
   });
 
-  it("🔴 past its minutes: killed with detail timeout, charged only up to then", async () => {
+  it("🔴 the progress is the poll's last line: the progress file is never read whole (I3)", async () => {
+    const s = setup({
+      behave: (f) => {
+        f.set(`${DIR}/progress`, `${"x\n".repeat(50_000)}99%\n`);
+        f.set(`${DIR}/exit`, "0");
+      },
+    });
+    await s.run();
+    expect(s.d.setProgress).toHaveBeenCalledWith(ID, "99%");
+    expect(s.driver.reads("fake-1")).not.toContain(`${DIR}/progress`);
+  });
+
+  it("🔴 past its minutes: killed with detail timeout, charged at most its ceiling — what the confirmation showed (I1)", async () => {
     const s = setup({ maxMinutes: 1 });
     await s.run();
     expect(s.settled()).toMatchObject({ status: "killed", set: { detail: "timeout" } });
-    expect(s.driver.commands("fake-1").some((c) => c.startsWith("kill "))).toBe(true);
+    expect(s.driver.commands("fake-1")).toContain(jobKillCommand());
     const seconds = (s.settled()!.set as { seconds: number }).seconds;
-    expect(seconds).toBeGreaterThanOrEqual(60);
-    expect(seconds).toBeLessThan(60 + 120 + 30);
+    expect(seconds).toBe(60 + 120);
+    expect(s.d.charge).toHaveBeenCalledWith(expect.objectContaining({ seconds: 180 }));
     expect(s.driver.paused("fake-1")).toBe(true);
   });
 
@@ -171,7 +291,7 @@ describe("runToolJob", () => {
     expect(s.d.release).not.toHaveBeenCalled();
   });
 
-  it("a result.json over 64 KB, or not JSON: no result, and the detail says why", async () => {
+  it("a result.json over 64 KB, or not JSON: no result, and the detail says why — and a big one is never read", async () => {
     const s = setup({
       behave: (f) => {
         f.set(`${DIR}/result.json`, JSON.stringify({ x: "y".repeat(70_000) }));
@@ -180,10 +300,53 @@ describe("runToolJob", () => {
     });
     await s.run();
     expect(s.settled()).toMatchObject({ status: "completed", set: { result: null, detail: "result_too_large" } });
+    expect(s.driver.reads("fake-1")).not.toContain(`${DIR}/result.json`);
+  });
+
+  it("🔴 an out/ file over 20 MB is never read, and the detail names it (I2, I3)", async () => {
+    let s!: ReturnType<typeof setup>;
+    s = setup({
+      behave: (f) => {
+        f.set(`${DIR}/out/small.txt`, "ok");
+        f.set(`${DIR}/out/big.mp4`, "x");
+        s.driver.bytesOf("fake-1").set(`${DIR}/out/big.mp4`, new Uint8Array(20 * 1024 * 1024 + 1));
+        f.set(`${DIR}/exit`, "0");
+      },
+    });
+    await s.run();
+    expect(s.d.deliver).toHaveBeenCalledTimes(1);
+    expect(s.d.deliver).toHaveBeenCalledWith(expect.objectContaining({ name: "small.txt" }));
+    expect(String((s.settled()!.set as { detail: string }).detail)).toContain("big.mp4");
+  });
+
+  it("🔴 a Node job installs /jobs's own package, never the app's /package.json (I5)", async () => {
+    const run = async (files: Record<string, string>) => {
+      let script = "";
+      const s: ReturnType<typeof setup> = setup({
+        files,
+        behave: (f) => {
+          script = f.get(`${DIR}/run.sh`) ?? "";
+          f.set(`${DIR}/exit`, "0");
+        },
+      });
+      await s.run();
+      return script;
+    };
+    const app = { "/package.json": JSON.stringify({ dependencies: { react: "18" } }), "/package-lock.json": "{}" };
+    expect(await run({ ...app, "/jobs/zip.mjs": "1" })).not.toMatch(/npm /);
+    expect(await run({ ...app, "/jobs/zip.mjs": "1", "/jobs/package.json": JSON.stringify({ dependencies: { archiver: "7" } }) })).toMatch(/cd jobs && npm install/);
+    expect(
+      await run({ ...app, "/jobs/zip.mjs": "1", "/jobs/package.json": JSON.stringify({ dependencies: { archiver: "7" } }), "/jobs/package-lock.json": "{}" }),
+    ).toMatch(/cd jobs && npm ci/);
+    expect(await run({ "/jobs/pdf.py": "1", "/jobs/requirements.txt": "reportlab" })).toMatch(/pip install --user --quiet -r 'jobs\/requirements\.txt'/);
   });
 
   it("the driver throwing still pauses, releases and charges; the job fails", async () => {
-    const s = setup({ behave: () => { throw new Error("box died"); } });
+    const s = setup({
+      behave: () => {
+        throw new Error("box died");
+      },
+    });
     await s.run();
     expect(s.settled()).toMatchObject({ status: "failed" });
     expect(s.d.release).toHaveBeenCalled();
@@ -210,7 +373,7 @@ describe("runToolJob", () => {
     expect(s.settled()).toMatchObject({ status: "failed", set: { detail: "stopped_by_restart" } });
     expect(s.d.release).toHaveBeenCalledTimes(1);
     expect(s.d.charge).toHaveBeenCalledTimes(1);
-    expect(s.driver.commands("fake-1").some((c) => c.startsWith("kill "))).toBe(true);
+    expect(s.driver.commands("fake-1")).toContain(JOB_KILL_NOW);
     expect(s.flushes).toEqual([]);
   });
 
