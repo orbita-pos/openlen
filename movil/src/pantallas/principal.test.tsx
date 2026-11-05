@@ -112,7 +112,7 @@ it("cambiar de página no arrastra una llamada ni la reinicia en el proyecto nue
 it.each([200, 503])("releer la lista por un aviso de la misma página conserva la llamada montada (%s)", async (status) => {
  const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
  let lectura = 0, completar!: (r: Response) => void;
- const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
+ const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta.startsWith("/api/tools?") ? Response.json({tools:[],paid:true,person:{name:""}}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
  host = document.createElement('div'); document.body.append(host); root = createRoot(host);
  await act(async () => root.render(<PantallaPrincipal cliente={{pedir,avisarAlCerrar:vi.fn()}} idioma="es" onSalir={vi.fn()}/>));
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'llamar')!.click());
@@ -150,6 +150,44 @@ it("the selector opens Delivered and Tasks", async () => {
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find(b => b.textContent === "tareas")!.click());
  expect(host.querySelector("#tareas-titulo")).not.toBeNull();
  expect(pedir).toHaveBeenCalledWith("/api/movil/tasks");
+});
+
+// The person's tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): «Herramientas» beside «Entregado» and
+// «Tareas»; with tools switched off on the server the button isn't there.
+describe("Herramientas in the selector", () => {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-05", chatHistory: [] };
+  async function paint(tools: Response) {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta.startsWith("/api/tools?")
+            ? tools.clone()
+            : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    return { pedir, botones: () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")] };
+  }
+
+  it("opens the tab", async () => {
+    const { pedir, botones } = await paint(Response.json({ tools: [], paid: true, person: { name: "Ana" } }));
+    const b = botones().find((x) => x.textContent === "titulo");
+    expect(b).toBeDefined();
+    await act(async () => b!.click());
+    expect(host.querySelector("#herramientas-titulo")).not.toBeNull();
+    expect(pedir).toHaveBeenCalledWith("/api/tools?locale=es");
+  });
+
+  it("tools switched off: no button", async () => {
+    const { botones } = await paint(Response.json({ error: "tools_off" }, { status: 404 }));
+    expect(botones().some((x) => x.textContent === "titulo")).toBe(false);
+    expect(botones().some((x) => x.textContent === "entregado")).toBe(true);
+  });
 });
 
 // A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).

@@ -15,6 +15,7 @@ import { textosAdjuntos } from "./textos-adjuntos";
 import { textosLenWatch } from "./textos-len-watch";
 import { deliveredTexts } from "./delivered-texts";
 import { overviewTexts } from "./overview-texts";
+import { textosHerramientas } from "./textos-herramientas";
 
 const claves = (o: unknown, p = ""): string[] =>
   typeof o === "object" && o !== null ? Object.entries(o).flatMap(([k, v]) => claves(v, p ? `${p}.${k}` : k)) : [p];
@@ -38,7 +39,7 @@ describe("los textos de la app", () => {
   });
 });
 
-for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo, adjuntos: textosAdjuntos, interfaz: textosInterfaz, lenWatch: textosLenWatch, entregado: deliveredTexts, resumen: overviewTexts })) {
+for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: textosGestion, avisos: textosAvisos, personalizacion: textosPersonalizacion, equipo: textosEquipo, adjuntos: textosAdjuntos, interfaz: textosInterfaz, lenWatch: textosLenWatch, entregado: deliveredTexts, resumen: overviewTexts, herramientas: textosHerramientas })) {
   for (const idioma of IDIOMAS) it(`${nombre}: ${idioma} completo`, () => {
     expect(claves(mapa[idioma]).sort()).toEqual(claves(mapa.es).sort());
     const validar = (o: unknown): void => {
