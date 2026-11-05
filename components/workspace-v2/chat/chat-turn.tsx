@@ -19,6 +19,7 @@ import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
+import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -435,6 +436,8 @@ export function LenTurn({
           onCancelled={() => onConfirmSettled(turn.id)}
         />
       )}
+      {/* «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the card Len proposed in this answer. */}
+      <ToolSuggestionCards projectId={projectId} rowId={turn.id} />
       {turn.respuesta && <AgentReplyCard respuesta={turn.respuesta} labels={labels} />}
       <TurnClose
         turn={turn}
