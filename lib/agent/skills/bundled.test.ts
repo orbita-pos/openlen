@@ -244,6 +244,14 @@ describe("bundled skills", () => {
     it("verify takes its screenshot after acting, the frame it presents", () => {
       expect(text()).toContain("after acting");
     });
+
+    // Motion (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.3): Kimi reads video; this model joins
+    // the frames into one image, with a script the skill brings, as the pdf skill brings its own.
+    it("verify serves contact_sheet.py, which joins frames into one image", () => {
+      const script = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/verify/scripts/contact_sheet.py`];
+      expect(script).toBeDefined();
+      for (const must of ["--out", "--label", "PIL"]) expect(script, must).toContain(must);
+    });
   });
 
   // SETUP-BRAND (§4.5): Claude's setup-writing-style turned into the business's brand, saved as the
