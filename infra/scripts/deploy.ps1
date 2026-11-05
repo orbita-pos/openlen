@@ -703,6 +703,19 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "   validado en la caja y recargado (sin corte)" -ForegroundColor DarkGray
 }
 
+# --- 9. IndexNow -------------------------------------------------------
+#
+# Avisa a Bing (y Yandex, Seznam, Naver) de que las portadas cambiaron, en vez
+# de esperar a su rastreador: ahí leen el favicon, el nombre del sitio y el
+# logo. La clave la lee del sitio YA desplegado (`/indexnow.txt`, derivada del
+# secreto de la caja), así que aquí no hace falta ningún secreto. NUNCA tumba
+# el deploy: la app ya está fuera; si falla, se repite con `npm run seo:indexnow`.
+Step 9 "IndexNow ping"
+& npx tsx --tsconfig tsconfig.eval.json scripts/indexnow-ping.ts
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "   IndexNow no acepto el aviso (la app YA esta desplegada). Repetir: npm run seo:indexnow" -ForegroundColor Yellow
+}
+
 # --- Cleanup local tarball --------------------------------------------
 Remove-Item -Force $tarballName
 

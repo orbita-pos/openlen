@@ -256,6 +256,8 @@ export default defineConfig({
       "lib/agent/telemetry/**/*.test.ts",
       "lib/agent/testing/**/*.test.ts",
       "lib/agent/replay-scenes/**/*.test.ts",
+      // IndexNow (lib/seo/indexnow.ts). LISTA BLANCA.
+      "lib/seo/**/*.test.ts",
       "scripts/len-replay-gate.test.ts",
       "scripts/modelos-comprobar.test.ts",
       "lib/ai/provider-error-code.test.ts",
