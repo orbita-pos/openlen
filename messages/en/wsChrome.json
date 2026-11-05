@@ -752,6 +752,30 @@
       "apply": "Apply",
       "cancel": "Cancel"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} wants to run “{job}”",
+        "subtitle": "It runs in OpenLen’s box and is charged to your credits per second. Nothing runs until you press Run.",
+        "minutes": "Up to {minutes} min",
+        "credits": "Up to {credits} credits",
+        "files": "Files it gets:",
+        "run": "Run",
+        "cancel": "Cancel"
+      },
+      "running": {
+        "stop": "Stop",
+        "stopping": "Stopping…"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} asks for files",
+        "subtitle": "It only gets the ones you choose here.",
+        "choose": "Choose files",
+        "use": "Give to the tool",
+        "cancel": "Cancel"
+      }
+    },
     "unavailable": "This tool can't open right now.",
     "page": {
       "title": "Tools",

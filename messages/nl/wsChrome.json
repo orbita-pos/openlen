@@ -752,6 +752,30 @@
       "apply": "Toepassen",
       "cancel": "Annuleren"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} wil “{job}” uitvoeren",
+        "subtitle": "Het draait in de box van OpenLen en wordt per seconde van je credits afgeschreven. Er draait niets tot je op Uitvoeren drukt.",
+        "minutes": "Tot {minutes} min",
+        "credits": "Tot {credits} credits",
+        "files": "Bestanden die het krijgt:",
+        "run": "Uitvoeren",
+        "cancel": "Annuleren"
+      },
+      "running": {
+        "stop": "Stoppen",
+        "stopping": "Stoppen…"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} vraagt om bestanden",
+        "subtitle": "Het krijgt alleen de bestanden die je hier kiest.",
+        "choose": "Bestanden kiezen",
+        "use": "Aan de tool geven",
+        "cancel": "Annuleren"
+      }
+    },
     "unavailable": "Deze tool kan nu niet worden geopend.",
     "page": {
       "title": "Tools",

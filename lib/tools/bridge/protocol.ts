@@ -5,7 +5,23 @@
 
 export const BRIDGE_CHANNEL = "openlen-tool";
 
-export const BRIDGE_METHODS = ["context", "backend", "projects", "forms", "visits", "query", "update", "sendPrompt"] as const;
+export const BRIDGE_METHODS = [
+  "context",
+  "backend",
+  "projects",
+  "forms",
+  "visits",
+  "query",
+  "update",
+  "sendPrompt",
+  // Phase 3 (§4.6): a tool's jobs in the box, and files in and out — answered by the workspace, never the bridge's server.
+  "jobs.run",
+  "jobs.get",
+  "jobs.cancel",
+  "jobs.list",
+  "files.pick",
+  "files.deliver",
+] as const;
 export type BridgeMethod = (typeof BRIDGE_METHODS)[number];
 
 export interface BridgeRequest {
@@ -57,6 +73,20 @@ export type UpdateResult =
   | { readonly status: "changed"; readonly current: Record<string, unknown> | null }
   | { readonly status: "declined" }
   | { readonly status: "refused"; readonly reason: "draft_no_production" | "eyes_never_write" | "owner_only" | "bad_change" };
+
+/** What OpenLen's confirmation shows before a tool's job runs (§4.4): from the version's declaration, never the frame. */
+export interface ToolJobAsk {
+  readonly name: string;
+  readonly title: string;
+  readonly maxMinutes: number;
+  readonly mostCentis: number;
+  readonly files: ReadonlyArray<{ readonly id: string; readonly name: string }>;
+}
+
+export type JobRunResult =
+  | { readonly status: "started"; readonly job: Record<string, unknown> }
+  | { readonly status: "declined" }
+  | { readonly status: "refused"; readonly reason: string };
 
 /** The workspace's colours a tool paints with (`app/[locale]/new/tokens.css`), plus its font. */
 export const TOOL_THEME_TOKENS: readonly string[] = [

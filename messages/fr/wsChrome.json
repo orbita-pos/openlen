@@ -752,6 +752,30 @@
       "apply": "Appliquer",
       "cancel": "Annuler"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} veut exécuter « {job} »",
+        "subtitle": "Il tourne dans la boîte d’OpenLen et est facturé sur vos crédits à la seconde. Rien ne tourne avant que vous appuyiez sur Exécuter.",
+        "minutes": "Jusqu’à {minutes} min",
+        "credits": "Jusqu’à {credits} crédits",
+        "files": "Fichiers reçus :",
+        "run": "Exécuter",
+        "cancel": "Annuler"
+      },
+      "running": {
+        "stop": "Arrêter",
+        "stopping": "Arrêt…"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} demande des fichiers",
+        "subtitle": "Il ne reçoit que ceux que vous choisissez ici.",
+        "choose": "Choisir des fichiers",
+        "use": "Donner à l’outil",
+        "cancel": "Annuler"
+      }
+    },
     "unavailable": "Cet outil ne peut pas s'ouvrir pour le moment.",
     "page": {
       "title": "Outils",

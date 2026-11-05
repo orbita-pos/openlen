@@ -8,7 +8,7 @@ import "server-only";
 
 import { INSTALL_ALLOWANCE_SECONDS, type RunnerDeps } from "./runner";
 import { jobById, jobsOf, requestCancel, toJobView, type insertJob, type ToolJobRow } from "./store";
-import { newJobId, UPLOADS_PER_PICK, type JobUpload, type ToolJobView } from "./types";
+import { newJobId, UPLOADS_PER_PICK, type JobRefusal, type JobUpload, type ToolJobView } from "./types";
 
 import { sandboxCenticredits } from "@/lib/agent/sandbox/billing";
 import type { SandboxConfig } from "@/lib/agent/sandbox/config";
@@ -27,17 +27,7 @@ export function jobMostCentis(maxMinutes: number): number {
   return sandboxCenticredits(maxMinutes * 60 + INSTALL_ALLOWANCE_SECONDS);
 }
 
-export type JobRefusal =
-  | "unknown_job"
-  | "bad_input"
-  | "bad_upload"
-  | "plan_required"
-  | "no_credits"
-  | "sandbox_off"
-  | "budget"
-  | "busy"
-  /** Len's eyes never run a job: they answer this without calling `startToolJob` (bridge/eyes.ts). */
-  | "eyes_never_run";
+export type { JobRefusal } from "./types";
 
 export interface StartDeps {
   /** The version the caller runs: the installed release's job files and locale files, or the draft's current ones. */

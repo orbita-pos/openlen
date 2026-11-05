@@ -7,6 +7,11 @@
 import { BRIDGE_CHANNEL } from "./protocol";
 
 export const BRIDGE_TIMEOUT_MS = 30_000;
+/** The methods that wait on the person — OpenLen's dialog, the file picker — wait this long (§4.4). */
+export const BRIDGE_PERSON_TIMEOUT_MS = 10 * 60_000;
+export const WAITS_ON_THE_PERSON: readonly string[] = ["update", "jobs.run", "files.pick"];
+/** How often `jobs.follow` asks. */
+export const JOB_FOLLOW_EVERY_MS = 2_000;
 
 export function toolBridgeClientSource(parentOrigins: readonly string[]): string {
   return `(function () {
@@ -14,6 +19,10 @@ export function toolBridgeClientSource(parentOrigins: readonly string[]): string
   var PARENTS = ${JSON.stringify(parentOrigins)};
   var CHANNEL = ${JSON.stringify(BRIDGE_CHANNEL)};
   var TIMEOUT = ${BRIDGE_TIMEOUT_MS};
+  var PERSON_TIMEOUT = ${BRIDGE_PERSON_TIMEOUT_MS};
+  var WAITS = ${JSON.stringify(WAITS_ON_THE_PERSON)};
+  var FOLLOW_EVERY = ${JOB_FOLLOW_EVERY_MS};
+  var SETTLED = ["completed", "killed", "failed"];
   var framed = window.parent && window.parent !== window;
   var next = 1;
   var pending = new Map();
@@ -48,7 +57,7 @@ export function toolBridgeClientSource(parentOrigins: readonly string[]): string
       var req = { jsonrpc: "2.0", id: id, method: method, channel: CHANNEL };
       if (params !== undefined) req.params = params;
       if (framed) {
-        var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, TIMEOUT);
+        var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, WAITS.indexOf(method) >= 0 ? PERSON_TIMEOUT : TIMEOUT);
         pending.set(id, { resolve: resolve, reject: reject, timer: timer });
         window.parent.postMessage(req, "*");
       } else if (typeof window.__openlenBridge === "function") {
@@ -67,6 +76,48 @@ export function toolBridgeClientSource(parentOrigins: readonly string[]): string
     return target;
   }
 
+  function idsOf(files) {
+    if (!files) return undefined;
+    return Array.prototype.map.call(files, function (f) { return typeof f === "string" ? f : f && f.id; });
+  }
+
+  // DeepSeek's job registry from the tool's side: follow asks every 2 s and tells each change until it settles.
+  function follow(id, onUpdate) {
+    return new Promise(function (resolve, reject) {
+      var last = "";
+      function ask() {
+        call("jobs.get", { id: id }).then(function (job) {
+          var seen = JSON.stringify(job);
+          if (seen !== last) { last = seen; if (typeof onUpdate === "function") { try { onUpdate(job); } catch (_) {} } }
+          if (job && SETTLED.indexOf(job.status) >= 0) resolve(job); else setTimeout(ask, FOLLOW_EVERY);
+        }, reject);
+      }
+      ask();
+    });
+  }
+
+  var jobs = Object.freeze({
+    run: function (name, options) {
+      var o = options || {};
+      return call("jobs.run", { name: String(name), input: o.input, files: idsOf(o.files) });
+    },
+    get: function (id) { return call("jobs.get", { id: String(id) }); },
+    cancel: function (id) { return call("jobs.cancel", { id: String(id) }); },
+    list: function () { return call("jobs.list"); },
+    follow: follow
+  });
+
+  var files = Object.freeze({
+    pick: function (options) {
+      var o = options || {};
+      return call("files.pick", { accept: o.accept, multiple: !!o.multiple });
+    },
+    deliver: function (file) {
+      var f = file || {};
+      return call("files.deliver", { name: String(f.name || "file"), contentType: f.contentType, bytes: f.bytes });
+    }
+  });
+
   window.openlen = Object.freeze({
     context: function () { return call("context"); },
     onContext: function (cb) { listeners.add(cb); return function () { listeners.delete(cb); }; },
@@ -76,7 +127,9 @@ export function toolBridgeClientSource(parentOrigins: readonly string[]): string
     visits: function (projectId, options) { return call("visits", assign({ projectId: projectId }, options)); },
     query: function (projectId, sql) { return call("query", { projectId: projectId, sql: sql }); },
     update: function (projectId, change) { return call("update", assign({ projectId: projectId }, change)); },
-    sendPrompt: function (text) { return call("sendPrompt", { text: String(text) }); }
+    sendPrompt: function (text) { return call("sendPrompt", { text: String(text) }); },
+    jobs: jobs,
+    files: files
   });
 })();
 `;
