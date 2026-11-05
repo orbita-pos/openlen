@@ -752,6 +752,30 @@
       "apply": "应用",
       "cancel": "取消"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} 想要运行「{job}」",
+        "subtitle": "它在 OpenLen 的沙盒中运行，按秒从你的额度中扣费。在你点击“运行”之前不会运行任何东西。",
+        "minutes": "最多 {minutes} 分钟",
+        "credits": "最多 {credits} 额度",
+        "files": "它会收到的文件：",
+        "run": "运行",
+        "cancel": "取消"
+      },
+      "running": {
+        "stop": "停止",
+        "stopping": "正在停止…"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} 需要文件",
+        "subtitle": "它只会收到你在这里选择的文件。",
+        "choose": "选择文件",
+        "use": "交给工具",
+        "cancel": "取消"
+      }
+    },
     "unavailable": "这个工具现在无法打开。",
     "page": {
       "title": "工具",

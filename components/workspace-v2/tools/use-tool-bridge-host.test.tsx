@@ -25,6 +25,9 @@ function setup(over: Partial<BridgeHostOptions> = {}) {
     theme: () => ({ mode: "light", tokens: { "--accent": "#e8613a" } }),
     onPrompt: null,
     onConfirmChange: vi.fn(async () => false),
+    onConfirmJob: vi.fn(async () => false),
+    onPickFiles: vi.fn(async () => null),
+    onJobStarted: vi.fn(),
     fetchImpl: fetchImpl as unknown as typeof fetch,
     timeZone: "America/Mexico_City",
     locale: "es",
@@ -129,6 +132,119 @@ describe("createToolBridgeHost", () => {
   });
 });
 
+describe("jobs and files", () => {
+  const DECLARED = { name: "export-video", title: "Exportar el vídeo", maxMinutes: 10, mostCentis: 332 };
+  const JOB = { id: "job-1", name: "export-video", title: "Exportar el vídeo", status: "running" };
+  /** A server that answers each route, and remembers what reached it. */
+  function server(over: Record<string, (init?: RequestInit) => Response> = {}) {
+    const routes: Record<string, (init?: RequestInit) => Response> = {
+      "GET /api/tools/jobs/declared": () => Response.json({ job: DECLARED }),
+      "POST /api/tools/jobs": () => Response.json({ job: JOB }),
+      "GET /api/tools/jobs": () => Response.json({ jobs: [JOB] }),
+      "GET /api/tools/jobs/job-1": () => Response.json({ job: JOB }),
+      "POST /api/tools/jobs/job-1/cancel": () => Response.json({ job: { ...JOB, status: "stopping" } }),
+      "POST /api/tools/uploads": () => Response.json({ uploads: [{ id: "up-1", name: "a.mp4", size: 3, contentType: "video/mp4" }] }),
+      "POST /api/tools/deliver": () => Response.json({ url: "/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf" }),
+      ...over,
+    };
+    const calls: Array<{ key: string; url: URL; init?: RequestInit }> = [];
+    const fetchImpl = vi.fn(async (input: string, init?: RequestInit) => {
+      const url = new URL(input, "http://x");
+      const key = `${init?.method ?? "GET"} ${url.pathname}`;
+      calls.push({ key, url, init });
+      return (routes[key] ?? (() => new Response("{}", { status: 404 })))(init);
+    });
+    return { fetchImpl: fetchImpl as unknown as typeof fetch, calls };
+  }
+
+  it("jobs.run: OpenLen's dialog shows the declaration's numbers; declined, nothing is posted", async () => {
+    const srv = server();
+    const s = setup({ fetchImpl: srv.fetchImpl });
+    await s.send(rpc(1, "jobs.run", { name: "export-video", input: { q: 1 }, files: [] }));
+    expect(s.opts.onConfirmJob).toHaveBeenCalledWith({ ...DECLARED, files: [] });
+    expect(srv.calls.map((c) => c.key)).toEqual(["GET /api/tools/jobs/declared"]);
+    expect(srv.calls[0]!.url.searchParams.get("name")).toBe("export-video");
+    expect(srv.calls[0]!.url.searchParams.get("installationId")).toBe("i1");
+    expect(s.answered()[0]).toMatchObject({ id: 1, result: { status: "declined" } });
+  });
+
+  it("jobs.run accepted: posted once with the caller, answered started, and the frame's bar hears of it", async () => {
+    const srv = server();
+    const s = setup({ fetchImpl: srv.fetchImpl, onConfirmJob: vi.fn(async () => true) });
+    await s.send(rpc(2, "jobs.run", { name: "export-video", input: { q: 1 }, files: ["up-1"] }));
+    const posts = srv.calls.filter((c) => c.key === "POST /api/tools/jobs");
+    expect(posts).toHaveLength(1);
+    expect(JSON.parse(String(posts[0]!.init!.body))).toEqual({
+      installationId: "i1",
+      timeZone: "America/Mexico_City",
+      locale: "es",
+      name: "export-video",
+      input: { q: 1 },
+      uploads: ["up-1"],
+    });
+    expect(s.answered()[0]).toMatchObject({ id: 2, result: { status: "started", job: JOB } });
+    expect(s.opts.onJobStarted).toHaveBeenCalledWith(JOB);
+  });
+
+  it("jobs.run: an undeclared job is refused without the dialog; a server refusal comes back as a refusal", async () => {
+    const s = setup({ fetchImpl: server({ "GET /api/tools/jobs/declared": () => Response.json({ error: "unknown_job" }, { status: 404 }) }).fetchImpl });
+    await s.send(rpc(3, "jobs.run", { name: "nope" }));
+    expect(s.opts.onConfirmJob).not.toHaveBeenCalled();
+    expect(s.answered()[0]).toMatchObject({ result: { status: "refused", reason: "unknown_job" } });
+    const t = setup({
+      onConfirmJob: vi.fn(async () => true),
+      fetchImpl: server({ "POST /api/tools/jobs": () => Response.json({ error: "no_credits" }, { status: 402 }) }).fetchImpl,
+    });
+    await t.send(rpc(4, "jobs.run", { name: "export-video" }));
+    expect(t.answered()[0]).toMatchObject({ result: { status: "refused", reason: "no_credits" } });
+  });
+
+  it("the dialog names the files picked in OpenLen's picker", async () => {
+    const srv = server();
+    const s = setup({ fetchImpl: srv.fetchImpl, onPickFiles: vi.fn(async () => [new File([new Uint8Array(3)], "a.mp4", { type: "video/mp4" })]) });
+    await s.send(rpc(1, "files.pick", { accept: "video/*", multiple: false }));
+    await s.send(rpc(2, "jobs.run", { name: "export-video", files: ["up-1"] }));
+    expect(s.opts.onConfirmJob).toHaveBeenCalledWith({ ...DECLARED, files: [{ id: "up-1", name: "a.mp4" }] });
+  });
+
+  it("files.pick: only what the person picked in the workspace's picker is uploaded and handed back; closed, null", async () => {
+    const srv = server();
+    const picked = new File([new Uint8Array(3)], "a.mp4", { type: "video/mp4" });
+    const s = setup({ fetchImpl: srv.fetchImpl, onPickFiles: vi.fn(async () => [picked]) });
+    await s.send(rpc(1, "files.pick", { accept: "video/*", multiple: true, files: ["C:/secret.txt"] }));
+    expect(s.opts.onPickFiles).toHaveBeenCalledWith({ accept: "video/*", multiple: true });
+    const body = srv.calls[0]!.init!.body as FormData;
+    expect(body.getAll("file")).toHaveLength(1);
+    expect((body.get("file") as File).name).toBe("a.mp4");
+    expect(body.get("installationId")).toBe("i1");
+    expect(s.answered()[0]).toMatchObject({ result: [{ id: "up-1", name: "a.mp4", size: 3, contentType: "video/mp4" }] });
+    const closed = setup({ fetchImpl: srv.fetchImpl });
+    await closed.send(rpc(2, "files.pick"));
+    expect(closed.answered()[0]).toMatchObject({ result: null });
+  });
+
+  it("files.deliver: the tool's bytes go to the private store as one file, and its link comes back", async () => {
+    const srv = server();
+    const s = setup({ fetchImpl: srv.fetchImpl });
+    await s.send(rpc(1, "files.deliver", { name: "r.pdf", contentType: "application/pdf", bytes: new Uint8Array([1, 2, 3]) }));
+    const file = (srv.calls[0]!.init!.body as FormData).get("file") as File;
+    expect([file.name, file.type, file.size]).toEqual(["r.pdf", "application/pdf", 3]);
+    expect(s.answered()[0]).toMatchObject({ result: { url: "/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf" } });
+  });
+
+  it("jobs.get, jobs.cancel and jobs.list are relayed with the caller", async () => {
+    const srv = server();
+    const s = setup({ fetchImpl: srv.fetchImpl, caller: { draftProjectId: "tool-1" } });
+    await s.send(rpc(1, "jobs.get", { id: "job-1" }));
+    await s.send(rpc(2, "jobs.cancel", { id: "job-1" }));
+    await s.send(rpc(3, "jobs.list"));
+    expect(srv.calls.map((c) => c.key)).toEqual(["GET /api/tools/jobs/job-1", "POST /api/tools/jobs/job-1/cancel", "GET /api/tools/jobs"]);
+    expect(srv.calls[0]!.url.searchParams.get("draftProjectId")).toBe("tool-1");
+    expect(JSON.parse(String(srv.calls[1]!.init!.body))).toMatchObject({ draftProjectId: "tool-1" });
+    expect(s.answered().map((a) => a.result)).toEqual([JOB, { ...JOB, status: "stopping" }, [JOB]]);
+  });
+});
+
 describe("useToolBridgeHost", () => {
   let root: Root | null = null;
   beforeEach(() => document.documentElement.classList.remove("dark"));
@@ -144,7 +260,16 @@ describe("useToolBridgeHost", () => {
     document.body.appendChild(iframe);
     vi.spyOn(iframe.contentWindow!, "postMessage").mockImplementation((m: unknown) => void posted.push(m));
     function Probe() {
-      useToolBridgeHost({ iframe: { current: iframe }, frameOrigin: ORIGIN, caller: { installationId: "i1" }, context: CONTEXT, onPrompt: null, onConfirmChange: async () => false });
+      useToolBridgeHost({
+        iframe: { current: iframe },
+        frameOrigin: ORIGIN,
+        caller: { installationId: "i1" },
+        context: CONTEXT,
+        onPrompt: null,
+        onConfirmChange: async () => false,
+        onConfirmJob: async () => false,
+        onPickFiles: async () => null,
+      });
       return null;
     }
     const div = document.createElement("div");

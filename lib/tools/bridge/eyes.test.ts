@@ -15,10 +15,12 @@ const installed: BridgeCaller = { ...base, mode: "installed", installation: { id
 
 async function exposed(caller: BridgeCaller, handle = vi.fn(async () => ({ result: [{ id: "p1" }] }))) {
   let fn: ((json: string) => Promise<string>) | null = null;
-  await installEyesBridge({ exposeFunction: async (_name, f) => void (fn = f) }, caller, { handle });
+  const jobs = vi.fn(async () => [{ id: "job-1" }]);
+  const job = vi.fn(async (_c: BridgeCaller, id: string) => (id === "job-1" ? { id } : null));
+  await installEyesBridge({ exposeFunction: async (_name, f) => void (fn = f) }, caller, { handle, jobs, job });
   const call = async (method: string, params?: unknown) =>
     JSON.parse(await fn!(JSON.stringify({ jsonrpc: "2.0", id: 1, method, ...(params ? { params } : {}), channel: "openlen-tool" }))) as Record<string, unknown>;
-  return { call, handle };
+  return { call, handle, jobs, job };
 }
 
 describe("installEyesBridge", () => {
@@ -52,7 +54,7 @@ describe("installEyesBridge", () => {
   it("the caller is read on every call, so the same tab can look in light and then in dark", async () => {
     let caller: BridgeCaller = installed;
     let fn: ((json: string) => Promise<string>) | null = null;
-    await installEyesBridge({ exposeFunction: async (_name, f) => void (fn = f) }, () => caller, { handle: vi.fn() });
+    await installEyesBridge({ exposeFunction: async (_name, f) => void (fn = f) }, () => caller, { handle: vi.fn(), jobs: vi.fn(), job: vi.fn() });
     const mode = async () => (JSON.parse(await fn!(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "context", channel: "openlen-tool" }))).result as { theme: { mode: string } }).theme.mode;
     expect(await mode()).toBe("light");
     caller = { ...installed, theme: "dark" };
@@ -61,6 +63,21 @@ describe("installEyesBridge", () => {
 
   it("sendPrompt: there is no chat here", async () => {
     expect((await (await exposed(draft)).call("sendPrompt", { text: "hola" })).result).toEqual({ status: "unavailable" });
+  });
+
+  it("a job never runs from the eyes, nor a file is picked, delivered or a job stopped: each says why", async () => {
+    const d = await exposed(draft);
+    expect((await d.call("jobs.run", { name: "export" })).result).toEqual({ status: "refused", reason: "eyes_never_run" });
+    for (const method of ["files.pick", "files.deliver", "jobs.cancel"]) expect((await d.call(method, { id: "job-1" })).error).toMatchObject({ message: "eyes_never_run" });
+    expect(d.handle).not.toHaveBeenCalled();
+  });
+
+  it("jobs.get and jobs.list answer from the draft's jobs, for this caller", async () => {
+    const d = await exposed(draft);
+    expect((await d.call("jobs.list")).result).toEqual([{ id: "job-1" }]);
+    expect(d.jobs).toHaveBeenCalledWith(draft);
+    expect((await d.call("jobs.get", { id: "job-1" })).result).toEqual({ id: "job-1" });
+    expect((await d.call("jobs.get", { id: "job-x" })).error).toMatchObject({ message: "not_found" });
   });
 
   it("anything else is JSON-RPC's method not found", async () => {

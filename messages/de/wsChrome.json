@@ -752,6 +752,30 @@
       "apply": "Anwenden",
       "cancel": "Abbrechen"
     },
+    "jobs": {
+      "confirm": {
+        "title": "{tool} möchte „{job}“ ausführen",
+        "subtitle": "Läuft in der Box von OpenLen und wird sekundengenau von deinen Credits abgebucht. Nichts läuft, bevor du auf Ausführen tippst.",
+        "minutes": "Bis zu {minutes} Min.",
+        "credits": "Bis zu {credits} Credits",
+        "files": "Dateien, die es bekommt:",
+        "run": "Ausführen",
+        "cancel": "Abbrechen"
+      },
+      "running": {
+        "stop": "Stoppen",
+        "stopping": "Wird gestoppt…"
+      }
+    },
+    "files": {
+      "pick": {
+        "title": "{tool} bittet um Dateien",
+        "subtitle": "Es bekommt nur die, die du hier auswählst.",
+        "choose": "Dateien auswählen",
+        "use": "Dem Tool geben",
+        "cancel": "Abbrechen"
+      }
+    },
     "unavailable": "Dieses Tool lässt sich gerade nicht öffnen.",
     "page": {
       "title": "Tools",

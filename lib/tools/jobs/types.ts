@@ -37,6 +37,20 @@ export interface ToolJobView {
   readonly chargedCentis: number;
 }
 
+/** Why a job didn't start (lib/tools/jobs/start.ts): each one the tool can read in `jobs.run`'s answer. */
+export const JOB_REFUSALS = [
+  "unknown_job",
+  "bad_input",
+  "bad_upload",
+  "plan_required",
+  "no_credits",
+  "sandbox_off",
+  "budget",
+  "busy",
+  "eyes_never_run",
+] as const;
+export type JobRefusal = (typeof JOB_REFUSALS)[number];
+
 /** The files the person picks in OpenLen's picker at once (and hands one job). */
 export const UPLOADS_PER_PICK = 8;
 
