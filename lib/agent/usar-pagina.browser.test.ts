@@ -406,7 +406,9 @@ describe("use_page — captura, eval y lo que hace el navegador", () => {
     expect(r.images ?? []).toHaveLength(0);
   }, 90_000);
 
-  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y «nothing changed»", async () => {
+  // With the canvas in view, the control arm no longer reads «nothing changed» (the report only reads text,
+  // spec local 2026-11-05-ojos-que-ven-el-movimiento): it says to look at the canvas.
+  it("🔴 el pointer lock que toma la página se dice; BRAZO DE CONTROL: si no lo pide, no hay hecho y se dice que se mire el canvas", async () => {
     const juego = (pide: boolean) =>
       marco(`<canvas id="c" width="400" height="300"></canvas><div id="ov">Click to play</div>
       <script>
@@ -417,7 +419,7 @@ describe("use_page — captura, eval y lo que hace el navegador", () => {
     expect(pide).toContain("the page took the pointer (pointer lock is on)");
     expect(pide).not.toMatch(/nothing (else )?changed/);
     expect(noPide).not.toContain("pointer lock");
-    expect(noPide).toMatch(/nothing changed/);
+    expect(noPide).toMatch(/a canvas is in view, and this report only reads the page's text/);
   }, 90_000);
 });
 
@@ -612,8 +614,8 @@ describe("use_page — another site", () => {
     });
   }, 120_000);
 
-  // Claude Code's and DeepSeek's browser tools act the same on any site: the canvas measure too.
-  it("🔴 on another site a key that moves a canvas says the canvas changed; CONTROL: a dead key says it didn't", async () => {
+  // Claude Code's and DeepSeek's browser tools act the same on any site: the canvas notice too.
+  it("🔴 on another site, with a canvas in view and no text changed, it says to look at the canvas", async () => {
     const { createServer } = await import("node:http");
     const { allowEgressOrigin } = await import("@/lib/security/egress-proxy");
     const juego = (vivo: boolean) =>
@@ -633,8 +635,8 @@ describe("use_page — another site", () => {
       const cerrar = allowEgressOrigin(host);
       try {
         const { informe } = await visitAnotherSite({ url: `http://${host}/`, pasos: [{ key: "ArrowRight" }], viewport: "desktop" }, { allowOrigins: [host] });
-        if (vivo) expect(informe).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
-        else expect(informe).toContain("the canvas didn't change.");
+        expect(informe).toMatch(/a canvas is in view, and this report only reads the page's text/);
+        expect(informe).not.toMatch(/the canvas (changed|didn't change)/);
       } finally {
         cerrar();
         await new Promise((r) => server.close(r));
@@ -719,12 +721,13 @@ describe("use_page — los pasos de Claude Code", () => {
       ${escucha ? 'document.getElementById("c").addEventListener("click", function (e) { document.getElementById("donde").textContent = "Clic en " + Math.round(e.offsetX) + "," + Math.round(e.offsetY); });' : ""}
     </script>`);
 
-  it("🔴 left_click hace clic en el punto, aunque allí no haya texto; BRAZO DE CONTROL: sin oyente, nothing changed", async () => {
+  it("🔴 left_click hace clic en el punto, aunque allí no haya texto; BRAZO DE CONTROL: sin oyente, se dice que nadie escucha y que se mire el canvas", async () => {
     const viva = await visitar(lienzo(true), [{ left_click: [224, 174] }]);
     const muerta = await visitar(lienzo(false), [{ left_click: [224, 174] }]);
     expect(viva).toContain("I clicked at (224, 174)");
     expect(viva).toContain("«Sin clic» → «Clic en 200,150»");
-    expect(muerta).toMatch(/nothing (else )?changed/);
+    expect(muerta).toMatch(/a canvas is in view, and this report only reads the page's text/);
+    expect(muerta).toContain("nor the page listens to the click");
   }, 90_000);
 
   // Claude Code's key takes several space-separated keys; a character outside a US keyboard («é») is
@@ -857,97 +860,49 @@ describe("use_page — los pasos de Claude Code", () => {
   }, 90_000);
 });
 
-// EL CANVAS, POR PÍXELES (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): un canvas no tiene
-// texto, así que un juego que se movía salía como «nothing changed». Ahora se mira el canvas antes y
-// después del paso, con lo que cambia solo, como ya se hacía con el texto.
-describe("use_page — el canvas, por píxeles", () => {
-  // Un juego: un cuadrado grande que la flecha derecha mueve 120 px; con `gira`, además un
-  // indicador pequeño que gira solo sin parar.
-  const juego = (o: { readonly vivo: boolean; readonly gira?: boolean }) =>
+// EL CANVAS, COMO LO MIRAN CLAUDE, DEEPSEEK Y KIMI (spec local 2026-11-05-ojos-que-ven-el-movimiento,
+// revisado el 05/11): ninguno mide píxeles solo; el modelo mira. Un canvas no tiene texto, así que con
+// uno a la vista `use_page` no afirma «nothing changed»: dice que el informe sólo lee texto y que se mire.
+describe("use_page — un canvas a la vista", () => {
+  const juego = (vivo: boolean) =>
     marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas>
     <script>
-      var c = document.getElementById("c"), g = c.getContext("2d"), x = 20, a = 0;
-      function pinta() {
-        g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300);
-        g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180);
-        ${o.gira ? 'g.save(); g.translate(560, 40); g.rotate(a); g.fillStyle = "#33c"; g.fillRect(-25, -6, 50, 12); g.restore(); a += 0.15;' : ""}
-        requestAnimationFrame(pinta);
-      }
+      var g = document.getElementById("c").getContext("2d"), x = 20;
+      function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
       pinta();
-      ${o.vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
+      ${vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
     </script>`);
+  const AVISO = /a canvas is in view, and this report only reads the page's text/;
 
-  it("🔴 un juego quieto: la tecla viva cambia el canvas; BRAZO DE CONTROL: la muerta no, y nothing changed", async () => {
-    const vivo = await visitar(juego({ vivo: true }), [{ key: "ArrowRight" }]);
-    const muerto = await visitar(juego({ vivo: false }), [{ key: "ArrowRight" }]);
-    expect(vivo).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
-    expect(vivo).not.toMatch(/nothing (else )?changed/);
-    expect(muerto).toContain("the canvas didn't change.");
-    expect(muerto).toMatch(/nothing (else )?changed/);
-  }, 90_000);
-
-  it("🔴 un juego que se anima solo: la tecla muerta no se confunde con un efecto; BRAZO DE CONTROL: la viva sí cambia el canvas", async () => {
-    const muerto = await visitar(juego({ vivo: false, gira: true }), [{ key: "ArrowRight" }]);
-    const vivo = await visitar(juego({ vivo: true, gira: true }), [{ key: "ArrowRight" }]);
-    expect(muerto).toContain("can't be told apart");
-    expect(muerto).not.toMatch(/the canvas changed:/);
-    expect(muerto).not.toMatch(/nothing (else )?changed/);
-    // Review (05/11): «can't be told apart» used to drop the one hard fact there was.
-    expect(muerto).toContain("nothing on the page listens to the keyboard");
-    expect(vivo).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+  it("🔴 con un canvas a la vista no dice «nothing changed»: dice que se mire; BRAZO DE CONTROL: sin oyente, además lo dice", async () => {
+    const vivo = await visitar(juego(true), [{ key: "ArrowRight" }]);
+    const muerto = await visitar(juego(false), [{ key: "ArrowRight" }]);
+    for (const informe of [vivo, muerto]) {
+      expect(informe).toMatch(AVISO);
+      expect(informe).not.toMatch(/nothing (else )?changed/);
+      expect(informe).not.toMatch(/the canvas (changed|didn't change|keeps changing)/);
+    }
     expect(vivo).not.toContain("nothing on the page listens to the keyboard");
+    expect(muerto).toContain("nothing on the page listens to the keyboard");
   }, 90_000);
 
-  // Review (05/11): the baseline was ~0.5 s and the step ≥ 1.5 s, so an animation whose change grows
-  // with time (a bar that fills) read as «changed» with a dead key.
-  it("🔴 una animación lenta que crece con el tiempo y una tecla muerta: no se distingue; BRAZO DE CONTROL: la tecla viva sí cambia el canvas", async () => {
-    const barra = (vivo: boolean) =>
-      marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas>
-      <script>
-        var g = document.getElementById("c").getContext("2d"), w = 0, y = 20;
-        function pinta() { w = (w + 1) % 600; g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#39c"; g.fillRect(0, 200, w, 100); g.fillStyle = "#c33"; g.fillRect(250, y, 100, 100); requestAnimationFrame(pinta); }
-        pinta();
-        ${vivo ? 'window.addEventListener("keydown", function () { y = y === 20 ? 90 : 20; });' : ""}
-      </script>`);
-    const muerta = await visitar(barra(false), [{ key: "ArrowRight" }]);
-    expect(muerta).toContain("can't be told apart");
-    expect(muerta).not.toMatch(/the canvas changed:/);
+  it("un canvas más abajo, tras un clic que lo trae a la vista: el aviso sale en el paso siguiente", async () => {
+    const abajo = marco(`<div style="height:2000px">Arriba</div><button id="b">Empezar</button><canvas width="600" height="300" style="display:block"></canvas>
+      <script>document.getElementById("b").addEventListener("click", function () {});</script>`);
+    const informe = await visitar(abajo, [{ click: "Empezar" }, { key: "ArrowRight" }]);
+    expect(informe.slice(informe.indexOf("2. key"))).toMatch(AVISO);
   }, 90_000);
 
-  // Review (05/11): Puppeteer's clip is in DOCUMENT coordinates; the tab's were passed, so on a scrolled
-  // page the canvas measure looked at the wrong place.
-  it("🔴 un canvas más abajo, tras un clic que desplaza la página: la tecla viva lo cambia; BRAZO DE CONTROL: la muerta no", async () => {
-    const abajo = (vivo: boolean) =>
-      marco(`<div style="height:2000px">Arriba</div><button id="b">Empezar</button>
-      <canvas id="c" width="600" height="300" style="display:block"></canvas>
-      <script>
-        var g = document.getElementById("c").getContext("2d"), x = 20;
-        function pinta() { g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300); g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180); requestAnimationFrame(pinta); }
-        pinta();
-        document.getElementById("b").addEventListener("click", function () {});
-        ${vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
-      </script>`);
-    const viva = await visitar(abajo(true), [{ click: "Empezar" }, { key: "ArrowRight" }]);
-    const muerta = await visitar(abajo(false), [{ click: "Empezar" }, { key: "ArrowRight" }]);
-    expect(viva.slice(viva.indexOf("2. key"))).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
-    expect(muerta.slice(muerta.indexOf("2. key"))).toContain("the canvas didn't change.");
-  }, 90_000);
-
-  it("un canvas oculto o de 0×0 no se mide y la visita acaba normal", async () => {
-    const oculto = marco(`<canvas width="300" height="200" style="display:none"></canvas><canvas width="0" height="0"></canvas><button id="b">Ok</button><p id="p">No</p>
-      <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("p").textContent = "Sí"; });</script>`);
+  it("un canvas oculto o de 0×0 no cuenta: «nothing changed» como siempre", async () => {
+    const oculto = marco(`<canvas width="300" height="200" style="display:none"></canvas><canvas width="0" height="0"></canvas><button id="b">Ok</button>
+      <script>document.getElementById("b").addEventListener("click", function () {});</script>`);
     const informe = await visitar(oculto, [{ click: "Ok" }]);
-    expect(informe).not.toContain("the canvas");
-    expect(informe).toContain("«No» → «Sí»");
+    expect(informe).not.toMatch(AVISO);
+    expect(informe).toMatch(/nothing (else )?changed/);
   }, 90_000);
 
-  it("una página sin canvas no gana ninguna línea del canvas", async () => {
-    const informe = await visitar(calculadora(true), [{ type: "3", into: "Metros" }]);
-    expect(informe).not.toContain("the canvas");
-  }, 90_000);
-
-  it("con canvasDiff apagado (sólo pruebas y medición) no se mide", async () => {
-    const { informe } = await usarPagina({ html: juego({ vivo: true }), pasos: [{ key: "ArrowRight" }], ruta: "/index.html" }, { canvasDiff: false });
-    expect(informe).not.toContain("the canvas");
+  it("una página sin canvas no gana el aviso", async () => {
+    const informe = await visitar(calculadora(false), [{ type: "3", into: "Metros" }]);
+    expect(informe).not.toMatch(AVISO);
   }, 90_000);
 });

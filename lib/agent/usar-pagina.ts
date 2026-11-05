@@ -46,8 +46,6 @@ import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { parseKey, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
-import { canvasLine, classifyCanvasChange, pixelChange, type CanvasVerdict, type MeasuredKind } from "@/lib/agent/canvas-change";
-import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -497,10 +495,9 @@ export const PRELUDIO_DE_USO = `
     escuchaElegido: function () { var e = R.elegido; return e ? { escucha: escuchaCampo(e) || escucha(e), propia: false, campo: true } : null; },
     antesDeActuar: antesDeActuar, tapadoAhora: function () { return R.elegido ? tapado(R.elegido) : ""; },
     ancla: ancla, sacar: sacar, enPunto: enPunto, escuchaTeclas: escuchaTeclas,
-    // EL CANVAS QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): los <canvas> y
-    // <video> visibles que tocan la pestaña, recortados a ella, el mayor primero — en coordenadas del
-    // DOCUMENTO, las que espera el clip de una captura de Puppeteer (con la página desplazada, las de la
-    // pestaña miraban otro sitio: revisión del 05/11).
+    // EL CANVAS QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento): los <canvas> y <video>
+    // visibles que tocan la pestaña, el mayor primero, con su tipo — para el aviso de que el informe sólo
+    // lee texto (en coordenadas del documento).
     lienzosVisibles: function () {
       var out = [];
       var vv = window.visualViewport;
@@ -560,75 +557,30 @@ function forma(linea: string): string {
 }
 
 /**
- * EL CANVAS DE UN PASO (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): el mayor canvas
- * visible, capturado pequeño (lado largo ≤ 128 px) al empezar y al acabar la espera de `quieta` —lo
- * que cambia SOLO— y después del paso. Sólo cuando hay canvas: una página sin él no paga nada.
+ * UN CANVAS A LA VISTA (spec local 2026-11-05-ojos-que-ven-el-movimiento, revisado el 05/11): Claude, DeepSeek
+ * (Playwright MCP) y el agente de Kimi no miden píxeles solos: el modelo mira capturas, un GIF o un vídeo
+ * cuando quiere. Este informe lee el TEXTO de la página, y un <canvas> o un <video> no tiene: con uno a la
+ * vista, el paso no puede afirmar «nothing changed», y lo dice para que se mire.
  */
-interface MedidaDelLienzo {
-  /** Del canvas, en coordenadas del documento: se toma DENTRO de `quieta`, después de que el paso haya
-   *  llevado su control a la vista, así que no envejece con ese desplazamiento. */
-  rect?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
-  /** A <canvas> or a <video>: the line names it by its kind. */
-  kind?: MeasuredKind;
-  primera?: PngCrudo | null;
-  antes?: PngCrudo | null;
+type LienzoALaVista = { readonly kind: "canvas" | "video" };
+
+function avisoDeLienzos(lienzos: readonly LienzoALaVista[]): string {
+  const canvas = lienzos.filter((l) => l.kind === "canvas").length;
+  const videos = lienzos.length - canvas;
+  const que = [canvas === 1 ? "a canvas" : canvas > 1 ? `${canvas} canvases` : "", videos === 1 ? "a video" : videos > 1 ? `${videos} videos` : ""]
+    .filter(Boolean)
+    .join(" and ");
+  const uno = lienzos.length === 1;
+  return `${que} ${uno ? "is" : "are"} in view, and this report only reads the page's text: what ${uno ? "it draws" : "they draw"} isn't in it. Look with a screenshot, or a zoom of ${uno ? "it" : "them"}.`;
 }
 
-/**
- * The canvas line of a step, from what `quieta` captured before acting and one capture now — the same in
- * the project's visit and on another site (Claude Code's and DeepSeek's browser tools act the same on any
- * site). Null when there was no canvas, or a capture failed.
- */
-async function lineaDelLienzo(
-  page: Page,
-  medida: MedidaDelLienzo | undefined,
-): Promise<{ readonly veredicto: CanvasVerdict; readonly linea: string } | null> {
-  if (!medida?.rect || !medida.primera || !medida.antes) return null;
-  const despues = await huellaDelLienzo(page, medida.rect);
-  if (!despues) return null;
-  const c = { selfChange: pixelChange(medida.primera, medida.antes), stepChange: pixelChange(medida.antes, despues) };
-  const veredicto = classifyCanvasChange(c);
-  return { veredicto, linea: canvasLine(veredicto, c, medida.kind) };
-}
-
-const LADO_DE_LA_HUELLA = 128;
-
-async function huellaDelLienzo(page: Page, rect: NonNullable<MedidaDelLienzo["rect"]>): Promise<PngCrudo | null> {
-  try {
-    const scale = Math.min(1, LADO_DE_LA_HUELLA / Math.max(rect.width, rect.height));
-    // ~45 ms each, whatever its size (measured 05/11: the cost is the compositor's readback, not the
-    // pixels; optimizeForSpeed takes it from ~53 to ~45).
-    const png = (await page.screenshot({ type: "png", clip: { ...rect, scale }, optimizeForSpeed: true })) as Uint8Array;
-    return decodificarPng(png);
-  } catch {
-    return null;
-  }
+async function lienzosALaVista(page: Page): Promise<LienzoALaVista[]> {
+  return (await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as LienzoALaVista[];
 }
 
 /** Espera a que la página se quede quieta y apunta lo que cambió SIN que nadie
- *  tocara nada: eso no es efecto de la acción que viene. Con un canvas, lo
- *  mismo por píxeles (`medida`). */
-async function quieta(page: Page, cambiantes: Set<string>, medida?: MedidaDelLienzo): Promise<Foto> {
-  if (medida) {
-    const lienzos = (await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as (NonNullable<MedidaDelLienzo["rect"]> & { kind: MeasuredKind })[];
-    const l = lienzos[0];
-    medida.rect = l ? { x: l.x, y: l.y, width: l.width, height: l.height } : undefined;
-    medida.kind = l?.kind;
-  }
-  const rect = medida?.rect;
-  const desde = Date.now();
-  if (medida && rect) medida.primera = await huellaDelLienzo(page, rect);
-  const fin = await quietaDelTexto(page, cambiantes);
-  if (medida && rect) {
-    // Lo de solo, en el MISMO tiempo que mira el paso (`VENTANA_MS`): medido en ~0,5 s contra ≥ 1,5 s,
-    // una animación que crece con el tiempo parecía efecto de una tecla muerta (revisión del 05/11).
-    await dormir(Math.max(0, VENTANA_MS - (Date.now() - desde)));
-    medida.antes = await huellaDelLienzo(page, rect);
-  }
-  return fin;
-}
-
-async function quietaDelTexto(page: Page, cambiantes: Set<string>): Promise<Foto> {
+ *  tocara nada: eso no es efecto de la acción que viene. */
+async function quieta(page: Page, cambiantes: Set<string>): Promise<Foto> {
   let prev = await foto(page);
   const hasta = Date.now() + QUIETUD_MS;
   let iguales = 0;
@@ -943,8 +895,6 @@ const storeSessionScript = (s: SignedInAs) => `
 export interface VisitaInternals {
   readonly lanzar?: () => Promise<Browser>;
   readonly plazoMs?: number;
-  /** El canvas por píxeles en cada paso (por defecto, sí). Sólo lo apagan las pruebas y la medición de CPU. */
-  readonly canvasDiff?: boolean;
 }
 
 interface Previo {
@@ -1011,14 +961,13 @@ async function actuar(
     { readonly read: string } | { readonly screenshot: string } | { readonly eval: string } | { readonly wait: number } | { readonly zoom: readonly [number, number, number, number] }
   >,
   cambiantes: Set<string>,
-  medida?: MedidaDelLienzo,
 ): Promise<Actuacion> {
   // LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): con el teclado y
   // con el ratón donde se diga, como una persona; lo demás del paso (qué cambió) es lo de siempre.
   if ("key" in paso) {
     const k = parseKey(paso.key);
     if (!k.ok) return { ok: false, hecho: `couldn't: ${k.error}` };
-    const antes = await quieta(page, cambiantes, medida);
+    const antes = await quieta(page, cambiantes);
     const escuchan = (await page.evaluate(US("escuchaTeclas()")).catch(() => true)) as boolean;
     const veces = paso.repeat ?? 1;
     const comoCaracter: string[] = [];
@@ -1055,7 +1004,7 @@ async function actuar(
     const puntos = "left_click" in paso ? [paso.left_click] : "hover" in paso ? [paso.hover] : [paso.left_click_drag, paso.coordinate];
     const fuera = puntos.find(([x, y]) => x >= width || y >= height);
     if (fuera) return { ok: false, hecho: `couldn't: (${fuera[0]}, ${fuera[1]}) is outside the ${width}×${height} tab.` };
-    const antes = await quieta(page, cambiantes, medida);
+    const antes = await quieta(page, cambiantes);
     const [x0, y0] = puntos[0]!;
     const sitio = (await page.evaluate(US(`enPunto(${x0}, ${y0})`)).catch(() => null)) as { texto: string; escucha: boolean; propia: boolean } | null;
     if ("left_click" in paso) {
@@ -1113,7 +1062,7 @@ async function actuar(
       };
     }
     const previo = (await page.evaluate(US("antesDeActuar()"))) as Previo | null;
-    const antes = await quieta(page, cambiantes, medida);
+    const antes = await quieta(page, cambiantes);
     const propio = lineaDelCampo(r.etiqueta || r.tipo || "input");
     const etiqueta = q(r.etiqueta || paso.into);
     if (SIN_TECLEAR.has(r.tipo ?? "")) {
@@ -1132,7 +1081,7 @@ async function actuar(
   const dentro = paso.within ?? "";
   // `choose` sobre un desplegable o una casilla actúa DENTRO de la búsqueda, así
   // que la foto de antes va primero.
-  let antes: Foto | null = esElige ? await quieta(page, cambiantes, medida) : null;
+  let antes: Foto | null = esElige ? await quieta(page, cambiantes) : null;
   const expr = `${esElige ? "opcion" : "control"}(${JSON.stringify(texto)}, ${JSON.stringify(dentro)})`;
   const r = (await page.evaluate(US(expr))) as ResultadoControl;
   if (r.n !== 1) {
@@ -1166,7 +1115,7 @@ async function actuar(
   // (lo que se dispara al verse no es efecto del clic) y se pulsa con el ratón,
   // como un visitante.
   const previo = (await page.evaluate(US("antesDeActuar()"))) as Previo | null;
-  antes = await quieta(page, cambiantes, medida);
+  antes = await quieta(page, cambiantes);
   const detalle: string[] = [];
   const tapa = (await page.evaluate(US("tapadoAhora()"))) as string;
   const handle = (await page.evaluateHandle(US("elegido()"))).asElement() as ElementHandle<Element> | null;
@@ -1574,9 +1523,7 @@ export async function visitAnotherSite(
         continue;
       }
       const before = page.url();
-      // The canvas measure too: Claude Code's and DeepSeek's browser tools act the same on any site.
-      const medida: MedidaDelLienzo | undefined = internals.canvasDiff === false || "reload" in paso ? undefined : {};
-      const accion = await actuar(page, paso, cambiantes, medida);
+      const accion = await actuar(page, paso, cambiantes);
       if (!accion.ok) {
         lineas.push(`${encabezado} → ${accion.hecho}`);
         break;
@@ -1584,8 +1531,6 @@ export async function visitAnotherSite(
       await dormir(VENTANA_MS);
       await settle();
       const detalle = [...accion.detalle];
-      const delLienzo = withoutHash(page.url()) === withoutHash(before) ? await lineaDelLienzo(page, medida) : null;
-      if (delLienzo) detalle.push(delLienzo.linea);
       const sale = (await page.evaluate(US("sacar()")).catch(() => ({ salidas: [], envios: [] }))) as {
         salidas: string[];
         envios: { campos: [string, string][] }[];
@@ -1611,6 +1556,11 @@ export async function visitAnotherSite(
         detalle.push(`now on ${page.url()}.`);
       } else {
         cambios = contarCambios(accion.antes, await foto(page), cambiantes, accion.propio).map((c) => c.texto);
+        // The same canvas notice as on the project's page: Claude's and DeepSeek's browser tools act the same on any site.
+        if (cambios.length === 0) {
+          const lienzos = await lienzosALaVista(page);
+          if (lienzos.length > 0) detalle.push(avisoDeLienzos(lienzos));
+        }
       }
       detalle.push(...(accion.alFinal ?? []));
       lineas.push(`${encabezado} → ${accion.hecho}`);
@@ -1775,9 +1725,7 @@ async function visitTab(
       for (const c of await esperarPaso(page, paso.wait, plazo)) lineas.push(`   · ${c}`);
       continue;
     }
-    // The canvas is found inside `quieta`, after the step brought its control into view (review 05/11).
-    const medida: MedidaDelLienzo | undefined = internals.canvasDiff === false || "reload" in paso ? undefined : {};
-    const accion = await actuar(page, paso, cambiantes, medida);
+    const accion = await actuar(page, paso, cambiantes);
     if (!accion.ok) {
       lineas.push(`${encabezado} → ${accion.hecho}`);
       break;
@@ -1786,13 +1734,6 @@ async function visitTab(
     await esperarALaRed(page, tab.opciones ?? undefined);
 
     const detalle = [...accion.detalle];
-    // EL CANVAS (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): cuánto cambió con el paso
-    // frente a lo que cambia solo. Un canvas que cambió, o que no se distingue de lo que cambia solo,
-    // no deja decir «nothing changed».
-    const delLienzo = sinHash(page.url()) === sinHash(doc.url) ? await lineaDelLienzo(page, medida) : null;
-    if (delLienzo) detalle.push(delLienzo.linea);
-    const veredictoDelLienzo: CanvasVerdict | null = delLienzo?.veredicto ?? null;
-    const lienzoSeMovio = veredictoDelLienzo !== null && veredictoDelLienzo !== "unchanged";
     // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
     // del script. Se apunta y se vuelve, porque los pasos siguen.
     let seFue = "";
@@ -1846,15 +1787,17 @@ async function visitTab(
     // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
     // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
     const nadaPropio = propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0;
-    // With a canvas that changes by itself the step can't say «nothing changed», but what nobody listens
-    // to is still a fact, and the one Len needs most there (review 05/11).
-    if (nadaPropio && (!lienzoSeMovio || veredictoDelLienzo === "only_by_itself")) {
+    // With a canvas or a video in view, the text can't say «nothing changed»: it says to look instead, as
+    // Claude's, DeepSeek's and Kimi's agents look. What nobody listens to is still a fact, and is said.
+    const lienzos = nadaPropio ? await lienzosALaVista(page) : [];
+    if (nadaPropio) {
       const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
+      if (lienzos.length > 0) detalle.push(avisoDeLienzos(lienzos));
       if ("reload" in paso) {
-        if (!lienzoSeMovio) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
+        if (lienzos.length === 0) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
       } else {
         const campo = accion.previo?.campo === true;
-        if (!lienzoSeMovio) {
+        if (lienzos.length === 0) {
           detalle.push(
             campo
               ? `nothing else changed: not what is shown, not the other fields, not what is saved in the browser${salvo}.`
