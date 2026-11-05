@@ -1,3 +1,4 @@
+import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -33,13 +34,22 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  // Google Search needs a raster favicon; the SVG remains available to clients.
+  // The whole icon set, declared here because this `icons` REPLACES the
+  // file-convention ones of `app/` (`favicon.ico`, `icon.svg`): without them in
+  // this list, neither reaches the <head>. Who reads what:
+  // - `/favicon.ico` (16/32/48): Bing, Brave, DuckDuckGo and old browsers ask
+  //   for the root file; it must also exist as a route (`app/favicon.ico`).
+  // - the PNGs: Google Search wants a raster, square, larger than 48px.
+  // - `icon.svg`: crisp tab icon in modern browsers.
+  // - `apple-touch-icon`: iOS home screen.
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/icon.svg", type: "image/svg+xml", sizes: "any" },
       { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
       { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: "/icon-192.png",
+    shortcut: "/favicon.ico",
     apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
   },
   title: {
@@ -66,21 +76,14 @@ export const metadata: Metadata = {
     title: "OpenLen — Landing pages you own. AI-built. Open source.",
     description:
       "Generate landing pages or pick from a library of templates. Publish to your subdomain with privacy-first analytics built in.",
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "OpenLen — open-source landing-page builder",
-      },
-    ],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "OpenLen — Landing pages you own",
     description:
       "Open-source landing-page builder. A library of templates, AI generation, privacy-first analytics, AGPLv3.",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   robots: {
     index: true,
@@ -152,7 +155,9 @@ export default async function LocaleLayout({
               "@type": "Organization",
               name: "OpenLen",
               url: SITE_URL,
-              logo: `${SITE_URL}/logo.png`,
+              // A file that exists: `/logo.png` was never in the repo and
+              // answered 404. Google wants ≥112×112 and crawlable.
+              logo: `${SITE_URL}/icon-512.png`,
               // Perfiles oficiales — desambiguan la marca frente a "OpenLens"
               // (otra empresa, una letra de diferencia) al buscar "openlen".
               sameAs: [
@@ -171,7 +176,10 @@ export default async function LocaleLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               name: "OpenLen",
-              url: SITE_URL,
+              // Google's documented fallback when it won't pick `name`:
+              // the domain in lowercase.
+              alternateName: ["openlen.com"],
+              url: `${SITE_URL}/`,
             }),
           }}
         />

@@ -1,3 +1,4 @@
+import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -49,13 +50,13 @@ export async function generateMetadata({
       description: t.pitch,
       type: "website",
       url: `https://openlen.com/templates/${t.id}`,
-      images: ["/og.png"],
+      images: [OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title: `${t.name} | OpenLen`,
       description: t.pitch,
-      images: ["/og.png"],
+      images: [OG_IMAGE],
     },
     alternates: {
       canonical: `https://openlen.com/templates/${t.id}`,
