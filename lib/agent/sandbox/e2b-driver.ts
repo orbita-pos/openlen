@@ -8,7 +8,7 @@
 // what this file uses, checked against e2b 2.56.0 (21/10).
 
 import type { BoxNetwork } from "./box-network";
-import { PAGE_CDNS } from "./box-network";
+import { CC0_ASSET_HOSTS, PAGE_CDNS } from "./box-network";
 import type { SandboxConfig } from "./config";
 import type { RunResult, SandboxDriver, SandboxHandle } from "./driver";
 
@@ -22,6 +22,7 @@ export const BOX_ALLOW_OUT: readonly string[] = [
   "*.githubusercontent.com",
   "esm.sh",
   ...PAGE_CDNS,
+  ...CC0_ASSET_HOSTS,
 ];
 
 /** E2B's network for a box: closed but the allow list and the project's hosts, each with its rule

@@ -133,6 +133,40 @@ describe("Caddy pasa /functions/v1 a Next SIN búfer (streaming)", () => {
   });
 });
 
+// THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.6): a game's models and sounds are files of the folder:
+// revalidated (ETag → 304), never immutable for a month — a /models/ship.glb Len changes under the same name must
+// reach the visitors — and with their own type, set here because the box's system table may not know them.
+describe("a game's files on the published site", () => {
+  const block = (name: string) => {
+    const i = paginas.indexOf(`\t@${name} {`);
+    expect(i, `no @${name}`).toBeGreaterThan(0);
+    return paginas.slice(i, paginas.indexOf("\n\t}", i));
+  };
+  const EXT = ["glb", "gltf", "bin", "hdr", "opus", "flac", "ogg", "mp3", "wav"];
+
+  it("are revalidated like the folder's files, never immutable, and @doc leaves them alone", () => {
+    for (const ext of EXT) {
+      expect(block("carpeta"), ext).toContain(`*.${ext}`);
+      expect(block("assets"), ext).not.toContain(`*.${ext}`);
+      expect(block("doc").split("\n").find((l) => l.includes("not path *.css")), ext).toContain(`*.${ext}`);
+    }
+  });
+
+  for (const [ext, type] of [
+    ["glb", "model/gltf-binary"],
+    ["gltf", "model/gltf+json"],
+    ["bin", "application/octet-stream"],
+    ["hdr", "image/vnd.radiance"],
+    ["opus", "audio/ogg"],
+    ["flac", "audio/flac"],
+  ] as const) {
+    it(`.${ext} goes out as ${type}, never on a canvas host nor on a Storage object`, () => {
+      const re = new RegExp(`@(\\w+) \\{\\n\\t\\tpath \\*\\.${ext}\\n\\t\\tnot header_regexp Host \\^lienzo-\\n\\t\\tnot path /storage/v1/\\*\\n\\t\\}\\n\\theader @\\1 Content-Type "${type.replace(/[+/.]/g, (c) => `\\${c}`)}"`);
+      expect(paginas).toMatch(re);
+    });
+  }
+});
+
 describe("Caddy pasa /ai/v1 a Next SIN búfer (la IA de las apps contesta en streaming)", () => {
   it("su handle lleva flush_interval -1", () => {
     const bloque = paginas.match(/handle \/ai\/v1\/\*\s*\{[\s\S]{0,300}?\n\t\}/);

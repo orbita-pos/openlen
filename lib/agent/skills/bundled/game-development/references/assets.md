@@ -18,15 +18,19 @@ Careful with **Quaternius**. Its license forbids redistributing the assets on th
 
 ## With the box
 
-The box can download from those three sites.
+The box can download from Poly Haven and ambientCG.
 
-- Download into /tmp, unzip, and copy only the files the game uses into /models, /textures, /sounds or /img.
-- Never link to a file on its own site (Poly Haven forbids scraping). A file on someone else's server breaks the published game the day it moves.
+- **Poly Haven:** its API (api.polyhaven.com) lists an asset's files and their links, and the files themselves come from dl.polyhaven.org. Its API terms ask for two things: a User-Agent of your own (`curl -A "OpenLen-game/1.0"`), and telling the person the asset came from Poly Haven. Its /ASSETS.md row is that credit; say it in your answer too.
+- **ambientCG:** `https://ambientcg.com/get?file=<name>_1K-JPG.zip` (curl -L follows it to its download host).
+- Download into /tmp, unzip, and copy only the files the game uses into /models, /textures, /sounds or /img. One asset at a time, only what the game uses: never bulk downloads.
+- Never link to a file on its own site. A file on someone else's server breaks the published game the day it moves.
 - Each file can be up to 50 MB. Compress GLB models with meshopt (references/three.md).
+
+**Kenney** doesn't serve its packs to anything that isn't a browser, so the box can't bring them. When a Kenney pack fits, tell the person which one (its page on kenney.nl): they download it and drop its files into the Code lens, and you take them from there.
 
 ## Without the box
 
-There is no way to bring a file from outside into the project. Build with what code makes:
+You can't bring a file from outside into the project yourself; the person can drop files into the Code lens. Build with what code makes:
 - **Shapes and materials:** three's geometries, or Phaser's Graphics and the textures it generates. This is how Kimi's method starts anyway: the blockout.
 - **Sounds synthesized with Web Audio:** an OscillatorNode with a GainNode envelope makes a jump, a coin or a hit.
 
