@@ -50,7 +50,8 @@ class LocalTerminal implements TerminalBackend {
 
 function setup(over: Partial<Parameters<typeof terminalForTurn>[1]> = {}, session: Partial<AgentSession> = {}) {
   const local = new LocalTerminal();
-  const s = { projectId: "p", userId: "owner", turnId: "turn-1", ...session } as AgentSession;
+  // A paid owner by default: the box's own behavior is what these tests look at (spec local 2026-11-05, §11).
+  const s = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, ...session } as AgentSession;
   const store = memoryStore();
   const driver = fakeDriver();
   const log = vi.fn();
@@ -86,11 +87,23 @@ describe("terminalForTurn", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it("an account outside OPENLEN_SANDBOX_ONLY_USERS gets today's terminal without a notice", async () => {
-    const { s, local, o, log } = setup({ env: { ...ENV, OPENLEN_SANDBOX_ONLY_USERS: "jesus" } });
-    expect(await terminalForTurn(s, o)).toBe(local);
-    expect(s.sandboxNotice).toBeUndefined();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("reason=only_users"));
+  // Jesús, 05/11 (spec local 2026-11-05-modo-juego-design, §11): the box is for the owner's paid plan, or the list.
+  it("🔴 a Free owner outside OPENLEN_SANDBOX_ONLY_USERS gets today's terminal without a notice", async () => {
+    for (const env of [ENV, { ...ENV, OPENLEN_SANDBOX_ONLY_USERS: "jesus" }]) {
+      const { s, local, o, log } = setup({ env }, { ownerPaid: false });
+      expect(await terminalForTurn(s, o)).toBe(local);
+      expect(s.sandboxNotice).toBeUndefined();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining("reason=plan"));
+      forgetAllBoxes();
+    }
+  });
+
+  it("a Free owner on the list, and a paid owner off it, get the box", async () => {
+    const free = setup({ env: { ...ENV, OPENLEN_SANDBOX_ONLY_USERS: "owner" } }, { ownerPaid: false });
+    expect(await terminalForTurn(free.s, free.o)).not.toBe(free.local);
+    forgetAllBoxes();
+    const paid = setup({ env: { ...ENV, OPENLEN_SANDBOX_ONLY_USERS: "jesus" } });
+    expect(await terminalForTurn(paid.s, paid.o)).not.toBe(paid.local);
   });
 
   it("a project with a system-named folder uses today's terminal with the notice", async () => {
@@ -326,7 +339,7 @@ describe("the project's box, shared", () => {
   it("a subagent of the turn joins the open box instead of falling back", async () => {
     const { s, o } = setup();
     s.terminal = await terminalForTurn(s, o);
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     expect(child.terminal).toBe(s.terminal);
     expect(child.sandboxNotice).toBeUndefined();
@@ -335,7 +348,7 @@ describe("the project's box, shared", () => {
   it("the box pauses, is let go and charged only when its last holder closes", async () => {
     const { s, o, store, charge } = setup();
     s.terminal = await terminalForTurn(s, o);
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     await closeTurnTerminal(s, { save: async () => {}, store, charge });
     expect(s.terminal).toBeUndefined();
@@ -349,9 +362,9 @@ describe("the project's box, shared", () => {
 
   it("a later turn joins the box a subagent still keeps", async () => {
     const { o } = setup();
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
-    const next = { projectId: "p", userId: "owner", turnId: "turn-2" } as AgentSession;
+    const next = { projectId: "p", userId: "owner", turnId: "turn-2", ownerPaid: true } as AgentSession;
     next.terminal = await terminalForTurn(next, o);
     expect(next.terminal).toBe(child.terminal);
     expect(next.sandboxNotice).toBeUndefined();
@@ -362,7 +375,7 @@ describe("the project's box, shared", () => {
     const driver = fakeDriver({ onRun: (_cmd, _files, run) => (run.background ? { pid: pid++ } : undefined) });
     const { s, o, store, charge } = setup({ driver });
     s.terminal = await terminalForTurn(s, o);
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     await child.terminal.ejecutar("sleep 9; echo child", { background: true, owner: "sub-1" });
     await closeTurnTerminal(s, { save: async () => {}, store, charge });
@@ -375,7 +388,7 @@ describe("the project's box, shared", () => {
     const { s, o } = setup();
     s.terminal = await terminalForTurn(s, o);
     await s.terminal.ejecutar("true", { owner: "turn-1", signal: opener.signal });
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     opener.abort();
     const theirs = await child.terminal.ejecutar("echo hi", { owner: "sub-1", signal: new AbortController().signal });
@@ -391,7 +404,7 @@ describe("the project's box, shared", () => {
     await s.terminal.ejecutar("true", { owner: "turn-1" });
     // Len's Edit and Write: saved, not in the box yet.
     files = { "/index.html": "b", "/about/index.html": "x" };
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     // So its first command pushes them in instead of saving the box's older copy over them.
     expect(child.fotoDeLaTerminal).toEqual({ "/index.html": "a" });
@@ -403,7 +416,7 @@ describe("the project's box, shared", () => {
   it("settling one holder waits for the command another holder is running", async () => {
     const { s, o } = setup();
     s.terminal = await terminalForTurn(s, o);
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     const release = await lockBox(child.terminal as TurnSandbox);
     let settled = false;
@@ -419,7 +432,7 @@ describe("the project's box, shared", () => {
     const { s, o, store, driver } = setup();
     s.terminal = await terminalForTurn(s, o);
     await s.terminal.ejecutar("true", { owner: "turn-1" });
-    const child = { projectId: "p", userId: "owner", turnId: "turn-1", terminalHolderId: "sub-1" } as AgentSession;
+    const child = { projectId: "p", userId: "owner", turnId: "turn-1", ownerPaid: true, terminalHolderId: "sub-1" } as AgentSession;
     child.terminal = await terminalForTurn(child, o);
     // A read-only child's background job wrote a project file.
     driver.files(store.rows.p!.sandboxId!).set("/index.html", "written by the child");
