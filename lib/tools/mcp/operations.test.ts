@@ -127,3 +127,63 @@ describe("callOperation", () => {
     expect(text).toMatch(/\[cut: \d+ more bytes\]$/);
   });
 });
+
+// OPENLEN_TOOLS=0 turns tools off ENTIRELY (spec §4.15), operations included — not only the functions switch.
+describe("operationsOn", () => {
+  const FUNCTIONS_ON = { OPENLEN_FUNCTIONS_ENGINE: "local", PAGES_DATABASE_URL: "postgres://x", PAGES_AUTHENTICATOR_PASSWORD: "y" };
+  it("on only with the functions on AND tools on", async () => {
+    const { operationsOn } = await import("./operations");
+    expect(operationsOn(FUNCTIONS_ON)).toBe(true);
+    expect(operationsOn({ ...FUNCTIONS_ON, OPENLEN_TOOLS: "0" })).toBe(false);
+    expect(operationsOn({})).toBe(false);
+  });
+});
+
+// Final review, Important 5 (Review Focus 2): a big answer is CUT, not an error that hides a write that happened; and a
+// call that may have run says so, so Len checks before calling again.
+describe("callOperation with big or slow answers", () => {
+  const route = { installationId: "i1", toolProjectId: "tool-1", releaseSha: "sha-1", function: "mcp", operation: "add_employee" };
+  const answering = (result: (method: string) => unknown, hang = false): McpSend => async (body) => {
+    const req = JSON.parse(body) as { id?: number; method: string };
+    if (req.id === undefined) return new Response(null, { status: 202 });
+    if (req.method === "initialize") return Response.json({ jsonrpc: "2.0", id: req.id, result: { protocolVersion: "2025-06-18", capabilities: {}, serverInfo: { name: "x", version: "1" } } });
+    if (hang) return new Promise<Response>(() => undefined);
+    return Response.json({ jsonrpc: "2.0", id: req.id, result: result(req.method) });
+  };
+
+  it("a 300 KB answer is cut to 30 KB with its note, not an error", async () => {
+    const d = deps({ send: vi.fn(async () => answering(() => ({ content: [{ type: "text", text: "y".repeat(300_000) }] }))) });
+    const out = await callOperation("u1", "a@b.c", route, {}, d);
+    expect(out.response.isError ?? false).toBe(false);
+    expect(String((out.response.content as Array<{ text: string }>)[0]!.text)).toMatch(/\[cut: \d+ more bytes\]$/);
+  });
+
+  it("a call that times out after it was sent says it may have run", async () => {
+    const d = deps({ send: vi.fn(async () => answering(() => ({}), true)), timeoutMs: 50 });
+    const out = await callOperation("u1", "a@b.c", route, {}, d);
+    expect(out.response.isError).toBe(true);
+    expect(JSON.stringify(out.response)).toContain("may have completed");
+  });
+});
+
+// Final review, Important 6: every installed operation rides every turn — a cap per person, oldest installs first.
+describe("operationsFor caps what one person's turns carry", () => {
+  it("at most 64 operations, the oldest installs first", async () => {
+    const tools = Array.from({ length: 32 }, (_, i) => op(`op${i}`));
+    const d = deps({
+      installations: vi.fn(async () => [1, 2, 3].map((n) => ROW({ id: `i${n}`, projectId: `tool-${n}`, releaseSha: `sha-${n}`, installedAt: new Date(`2026-11-0${n}T00:00:00Z`) }))),
+      releaseMcp: vi.fn(async (sha: string) => ({ serverName: `s${sha.slice(-1)}`, function: "mcp", tools }) as never),
+    });
+    const names = (await operationsFor("u1", d)).declarations.map((x) => String(x.name));
+    expect(names).toHaveLength(64);
+    expect(names.some((n) => n.startsWith("mcp__s3__"))).toBe(false);
+  });
+
+  it("at most 128 KB of declarations", async () => {
+    const big = Array.from({ length: 10 }, (_, i) => ({ name: `op${i}`, description: "d".repeat(2000), inputSchema: { type: "object", description: "x".repeat(15_000) } }));
+    const d = deps({ installations: vi.fn(async () => [ROW({})]), releaseMcp: vi.fn(async () => ({ serverName: "big", function: "mcp", tools: big }) as never) });
+    const decl = (await operationsFor("u1", d)).declarations;
+    expect(new TextEncoder().encode(JSON.stringify(decl)).byteLength).toBeLessThanOrEqual(128 * 1024);
+    expect(decl.length).toBeLessThan(10);
+  });
+});
