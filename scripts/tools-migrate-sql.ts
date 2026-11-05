@@ -94,4 +94,20 @@ export const CREATE_TOOLS: readonly string[] = [
   );`,
   `CREATE INDEX IF NOT EXISTS "toolJobs_person_tool_started_idx" ON "toolJobs" ("personId", "toolProjectId", "startedAt");`,
   `CREATE INDEX IF NOT EXISTS "toolJobs_status_idx" ON "toolJobs" ("status");`,
+  // Phase 3: what the person picked in OpenLen's own picker — the only files a job gets.
+  `CREATE TABLE IF NOT EXISTS "toolUploads" (
+    "id" text PRIMARY KEY,
+    "personId" text NOT NULL,
+    "toolProjectId" text NOT NULL,
+    "name" text NOT NULL,
+    "size" integer NOT NULL,
+    "contentType" text NOT NULL,
+    "pointer" text NOT NULL,
+    "createdAt" timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT "toolUploads_personId_users_id_fk"
+      FOREIGN KEY ("personId") REFERENCES "users"("id") ON DELETE CASCADE,
+    CONSTRAINT "toolUploads_toolProjectId_projects_id_fk"
+      FOREIGN KEY ("toolProjectId") REFERENCES "projects"("id") ON DELETE CASCADE
+  );`,
+  `CREATE INDEX IF NOT EXISTS "toolUploads_person_idx" ON "toolUploads" ("personId");`,
 ];

@@ -2588,6 +2588,23 @@ export const toolJobs = pgTable(
   (t) => [index("toolJobs_person_tool_started_idx").on(t.personId, t.toolProjectId, t.startedAt), index("toolJobs_status_idx").on(t.status)],
 );
 
+/** What a person picked in OpenLen's own picker for a tool (phase 3, §4.6): the only files a job gets. The bytes are a
+ *  blob (`pointer`, lib/files/blob.ts). Created by `npm run tools:migrate`. */
+export const toolUploads = pgTable(
+  "toolUploads",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toolProjectId: text("toolProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    size: integer("size").notNull(),
+    contentType: text("contentType").notNull(),
+    pointer: text("pointer").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("toolUploads_person_idx").on(t.personId)],
+);
+
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a
 // published site that stopped loading. `npm run len-watch:migrate`.
 export const lenWatchSettings = pgTable("lenWatchSettings", {
