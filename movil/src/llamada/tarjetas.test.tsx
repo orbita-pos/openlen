@@ -102,3 +102,36 @@ it("otro fallo: lo dice, y se puede volver a pulsar", async () => {
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("installCard.failed");
   expect([...host.querySelectorAll("button")].some((b) => b.textContent === "installCard.install")).toBe(true);
 });
+
+// Final review, Important 1: a tool installed from the phone shows at once (the app reads the person's tools again).
+it("una instalación que sale bien avisa a la app", async () => {
+  iniciar();
+  const onInstalada = vi.fn();
+  const s = pedidos([Response.json({ installation: { id: "i1" } })]);
+  await act(async () => root.render(<TarjetaDeLaApp x={instalar()} cliente={s.cliente} projectId="p1" idioma="es" onInstalada={onInstalada} />));
+  await pulsar("installCard.install");
+  expect(onInstalada).toHaveBeenCalledTimes(1);
+});
+
+// Final review, Important (Minor 1 re-graded): while it installs the card says so, and while the review runs, that.
+it("mientras instala lo dice, y mientras la revisión sigue en marcha, eso", async () => {
+  iniciar();
+  let segunda!: (r: Response) => void;
+  let n = 0;
+  const pedir = vi.fn(async () => (++n === 1 ? Response.json({ error: "security_review_pending", fingerprint: "fp" }, { status: 428 }) : new Promise<Response>((r) => { segunda = r; })));
+  await act(async () => root.render(<TarjetaDeLaApp x={instalar()} cliente={{ pedir, avisarAlCerrar: vi.fn() }} projectId="p1" idioma="es" />));
+  await pulsar("installCard.install");
+  expect(host.querySelector('[role="status"]')?.textContent).toContain("revisionSigue");
+  await act(async () => segunda(Response.json({ installation: { id: "i1" } })));
+  expect(host.textContent).toContain("instaladaProyecto");
+});
+
+it("mientras instala, sin revisión de por medio, dice «Instalando…»", async () => {
+  iniciar();
+  let resolver!: (r: Response) => void;
+  const pedir = vi.fn(() => new Promise<Response>((r) => { resolver = r; }));
+  await act(async () => root.render(<TarjetaDeLaApp x={instalar()} cliente={{ pedir, avisarAlCerrar: vi.fn() }} projectId="p1" idioma="es" />));
+  await pulsar("installCard.install");
+  expect(host.querySelector('[role="status"]')?.textContent).toContain("toolCard.installing");
+  await act(async () => resolver(Response.json({ installation: { id: "i1" } })));
+});

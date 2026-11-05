@@ -9,6 +9,7 @@ import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { ViewerFile } from "@/components/viewer/viewer";
+import { changeValueText } from "@/lib/backend/change-value-text";
 import type { ToolChange } from "@/lib/tools/bridge/host";
 import type { ToolJobAsk } from "@/lib/tools/bridge/protocol";
 import { TERMINAL_JOB_STATUSES, UPLOADS_PER_PICK, type ToolJobView } from "@/lib/tools/jobs/types";
@@ -49,9 +50,9 @@ export function HojaDeCambio({ herramienta, proyecto, cambio, onAplicar, onCance
         {Object.entries(cambio.set).map(([col, value]) => (
           <li key={col}>
             <code>{col}</code>
-            <s>{String(cambio.before[col] ?? "∅")}</s>
+            <s>{changeValueText(cambio.before[col])}</s>
             <span aria-hidden="true">→</span>
-            <b>{String(value)}</b>
+            <b>{changeValueText(value)}</b>
           </li>
         ))}
       </ul>
