@@ -2560,6 +2560,34 @@ export const toolCards = pgTable(
   (t) => [index("toolCards_project_person_phase_idx").on(t.projectId, t.personId, t.phase), index("toolCards_chatRowId_idx").on(t.chatRowId)],
 );
 
+/** A tool's jobs (phase 3, spec local 2026-11-04-herramientas-hechas-por-len, §4.6): DeepSeek's job registry —
+ *  `job-<16 hex>`, one owner (the person), a status decided once. Created by `npm run tools:migrate`. */
+export const toolJobs = pgTable(
+  "toolJobs",
+  {
+    id: text("id").primaryKey(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    toolProjectId: text("toolProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** Null: the owner ran the draft in the tool project's canvas. */
+    installationId: text("installationId"),
+    releaseSha: text("releaseSha"),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    status: text("status").$type<import("@/lib/tools/jobs/types").ToolJobStatus>().notNull().default("running"),
+    progress: text("progress"),
+    detail: text("detail"),
+    input: jsonb("input").$type<unknown>(),
+    uploads: jsonb("uploads").$type<import("@/lib/tools/jobs/types").JobUpload[]>().notNull().default([]),
+    result: jsonb("result").$type<unknown>(),
+    delivered: jsonb("delivered").$type<import("@/lib/tools/jobs/types").DeliveredFile[]>().notNull().default([]),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp("finishedAt", { mode: "date", withTimezone: true }),
+    seconds: integer("seconds").notNull().default(0),
+    chargedCentis: integer("chargedCentis").notNull().default(0),
+  },
+  (t) => [index("toolJobs_person_tool_started_idx").on(t.personId, t.toolProjectId, t.startedAt), index("toolJobs_status_idx").on(t.status)],
+);
+
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a
 // published site that stopped loading. `npm run len-watch:migrate`.
 export const lenWatchSettings = pgTable("lenWatchSettings", {

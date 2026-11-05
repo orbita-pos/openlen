@@ -67,4 +67,31 @@ export const CREATE_TOOLS: readonly string[] = [
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "toolSuggestions" boolean NOT NULL DEFAULT false;`,
   // Phase 3 (§4.6): the installed version's job files, kept apart from what its host serves.
   `ALTER TABLE "toolReleases" ADD COLUMN IF NOT EXISTS "jobFiles" jsonb NOT NULL DEFAULT '{}'::jsonb;`,
+  // Phase 3: a tool's jobs (DeepSeek's job registry, the person as the owner).
+  `CREATE TABLE IF NOT EXISTS "toolJobs" (
+    "id" text PRIMARY KEY,
+    "personId" text NOT NULL,
+    "toolProjectId" text NOT NULL,
+    "installationId" text,
+    "releaseSha" text,
+    "name" text NOT NULL,
+    "title" text NOT NULL,
+    "status" text NOT NULL DEFAULT 'running' CHECK ("status" IN ('running', 'stopping', 'completed', 'killed', 'failed')),
+    "progress" text,
+    "detail" text,
+    "input" jsonb,
+    "uploads" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "result" jsonb,
+    "delivered" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "startedAt" timestamptz NOT NULL DEFAULT now(),
+    "finishedAt" timestamptz,
+    "seconds" integer NOT NULL DEFAULT 0,
+    "chargedCentis" integer NOT NULL DEFAULT 0,
+    CONSTRAINT "toolJobs_personId_users_id_fk"
+      FOREIGN KEY ("personId") REFERENCES "users"("id") ON DELETE CASCADE,
+    CONSTRAINT "toolJobs_toolProjectId_projects_id_fk"
+      FOREIGN KEY ("toolProjectId") REFERENCES "projects"("id") ON DELETE CASCADE
+  );`,
+  `CREATE INDEX IF NOT EXISTS "toolJobs_person_tool_started_idx" ON "toolJobs" ("personId", "toolProjectId", "startedAt");`,
+  `CREATE INDEX IF NOT EXISTS "toolJobs_status_idx" ON "toolJobs" ("status");`,
 ];
