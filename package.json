@@ -89,7 +89,7 @@
     "pdf-skill:box-check": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/pdf-skill-box-check.ts",
     "eyes:box-check": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/eyes-box-check.ts",
     "games:box-check": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/games-box-check.ts",
-    "eyes:cpu-check":"tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/eyes-cpu-check.ts",
+    "eyes:cpu-check": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/eyes-cpu-check.ts",
     "sandbox:playwright-acceptance": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local scripts/sandbox-playwright-acceptance.ts",
     "sandbox:acceptance": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/sandbox-acceptance.ts",
     "security-review:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/security-review-migrate.ts",

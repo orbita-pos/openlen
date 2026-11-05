@@ -71,7 +71,7 @@ import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholde
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { KIND_PARAM, kindFromParam } from "@/components/workspace-v2/chat/nace-como";
+import { KIND_PARAM, kindFromParam, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
 import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
@@ -1080,6 +1080,10 @@ function NewV2Inner() {
     setNaceComo(kindFromUrl.current);
     if (projectParam) kindFromUrl.current = "pagina";
   }, [projectParam]);
+  // A «Juego» asked for while games are off here (a stale kind=game link) is a page, as the server makes it.
+  useEffect(() => {
+    setNaceComo((v) => naceComoDisponible(v, juegosDisponibles));
+  }, [juegosDisponibles]);
   // EL ESTADO VACÍO DEL CHAT DE LEN: un proyecto en blanco no tiene lienzo que
   // enseñar todavía. Como el «Session Intent hero» de DeepSeek, el centro es el
   // compositor, y enviar es el primer mensaje.
@@ -4057,7 +4061,7 @@ function NewV2Inner() {
                 // la app, y lo que quedaba debajo —un botón, un menú— no se podía elegir.
                 reservaDerecha={designMode ? DESIGN_PANEL_WIDTH : 0}
                 esApp={esApp}
-                esJuego={!!loadedProject?.game}
+                esJuego={juegosDisponibles && !!loadedProject?.game}
                 usesTestData={hasDatabase}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}

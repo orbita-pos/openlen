@@ -25,6 +25,12 @@ export function naceComoApp(v: string | null | undefined): v is NaceComoApp {
   return typeof v === "string" && COMO_APP.includes(v);
 }
 
+/** What the start page can really be born as: a game asked for (a stale `kind=game` link) while the server says
+ *  games are off (OPENLEN_GAMES=0) is a page, which is what the server makes of it. */
+export function naceComoDisponible<T extends "pagina" | NaceComoApp>(v: T, juegos: boolean): T | "pagina" {
+  return v === "game" && !juegos ? "pagina" : v;
+}
+
 // LA PORTADA TAMBIÉN ELIGE (la píldora del input, `hero-kind-picker.tsx`): su
 // elección viaja en la URL de /new como `kind=app` y marca la tarjeta App del
 // proyecto en blanco. Página no lleva nada: es lo de siempre.
