@@ -66,7 +66,7 @@ describe("canvasLine", () => {
   it("dice el hecho con sus cifras, sin veredicto", () => {
     expect(canvasLine("changed", { selfChange: 0, stepChange: 0.123 })).toBe("the canvas changed: 12.3 % of its pixels.");
     expect(canvasLine("changed", { selfChange: 0.02, stepChange: 0.2 })).toBe(
-      "the canvas changed: 20 % of its pixels (by itself it changes about 2 % in the same time).",
+      "the canvas changed: 20 % of its pixels (by itself it changes about 2 % in about the same time).",
     );
     expect(canvasLine("only_by_itself", { selfChange: 0.1, stepChange: 0.12 })).toBe(
       "the canvas keeps changing by itself (about 10 %) and this step's effect can't be told apart from that.",
