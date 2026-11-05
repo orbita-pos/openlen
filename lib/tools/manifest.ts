@@ -141,6 +141,14 @@ function metaOf(text: string | undefined): { title?: unknown; description?: unkn
   return record(record(parse(text))?.meta) as { title?: unknown; description?: unknown } | null;
 }
 
+/** The jobs a version can run (a job's start, §4.6): the ones `openlen.tool.jobs` declares well, with their script
+ *  among `files`. Installing already refused a version with problems; a draft is read as it is. */
+export function readToolJobs(files: Readonly<Record<string, string>>): Record<string, ToolJobDeclaration> {
+  const declared = record(record(record(parse(files[PACKAGE]))?.openlen)?.tool)?.jobs;
+  const jobs = readJobs(declared, files, []);
+  return Object.fromEntries(Object.entries(jobs).filter(([, job]) => files[job.script] !== undefined));
+}
+
 export function readToolManifest(
   files: Readonly<Record<string, string>>,
   o: { readonly personLocale: string; readonly placeholderIconSha: string },
