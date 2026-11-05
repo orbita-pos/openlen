@@ -64,8 +64,17 @@ function idiomaDe(idioma: string | undefined): string {
   return idioma && /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})?$/.test(idioma) ? idioma : "en";
 }
 
-/** El cascarón de una app: lo que carga `entrada`. Lo usan el esqueleto y la conversión de una página. */
-export function cascaronDeLaApp(o: { readonly titulo: string; readonly idioma?: string; readonly entrada?: string }): string {
+/** A game's shell fills the window (spec local 2026-11-05-modo-juego-design, §8.3). */
+const PANTALLA_COMPLETA = "\n  html, body, #root { height: 100%; margin: 0; overflow: hidden; }";
+
+/** El cascarón de una app: lo que carga `entrada`. Lo usan el esqueleto y la conversión de una página.
+ *  `pantallaCompleta` (a game's): the app takes the whole window. Without it, the shell is byte for byte as always. */
+export function cascaronDeLaApp(o: {
+  readonly titulo: string;
+  readonly idioma?: string;
+  readonly entrada?: string;
+  readonly pantallaCompleta?: boolean;
+}): string {
   const titulo = o.titulo.trim().slice(0, 120) || "App";
   return `<!doctype html>
 <html lang="${idiomaDe(o.idioma)}">
@@ -78,7 +87,7 @@ export function cascaronDeLaApp(o: { readonly titulo: string; readonly idioma?: 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 <style>
-  body { font-family: "Inter", system-ui, sans-serif; }
+  body { font-family: "Inter", system-ui, sans-serif; }${o.pantallaCompleta ? PANTALLA_COMPLETA : ""}
 </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased">
