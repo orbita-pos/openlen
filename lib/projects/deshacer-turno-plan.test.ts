@@ -196,6 +196,23 @@ describe("deshacer una conversión en app", () => {
     expect(plan.ok).toBe(true);
   });
 
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): a page converted into a GAME carries data.game
+  // too, and undoing it takes data.game away with data.app; a page's or an app's shape text doesn't change.
+  it("🔴 undoing a conversion into a game takes data.game away too, and redoing brings it back", () => {
+    const juego: ProjectData = { ...app, game: { bornAt: "2026-11-05T00:00:00Z" } };
+    const alJuego = cambiosDelTurnoParaDeshacer(foto(pagina, {}), foto(juego, src));
+    const plan = planearDeshacer(alJuego, { data: juego, ficheros: src });
+    if (!plan.ok) throw new Error(plan.motivo);
+    expect(plan.data).toEqual(pagina);
+    const rehacer = planearDeshacer(plan.inverso, { data: plan.data, ficheros: {} });
+    if (!rehacer.ok) throw new Error(rehacer.motivo);
+    expect(rehacer.data).toEqual(juego);
+  });
+
+  it("a page's and an app's shape text is the same as before games existed", () => {
+    expect(foto(app, {})[RUTA_FORMA]).toBe('{"app":{"catalogo":"2026-10","entrada":"/src/main.jsx"},"paginas":{}}');
+  });
+
   it("CONTRA-PRUEBA: si el dueño cambió el título de una página después, no se deshace nada", () => {
     const tocada = { ...cambios.find((c) => c.ruta === RUTA_FORMA)! };
     const despues = planearDeshacer([tocada], { data: { ...app, pages: { otra: { html: "x", title: "Otra" } } }, ficheros: src });

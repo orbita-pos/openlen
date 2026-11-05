@@ -36,6 +36,8 @@ import { textoDeDiagnostico } from "@/lib/apps/compilador";
 import { titleFromHtml } from "@/lib/projects/titulo-del-html";
 import { RUTA_APPS } from "@/lib/agent/ficheros/manual";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
+import type { GameOfProject } from "@/lib/games/types";
+import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
 export const CONVERTIR_EN_APP = "convert_to_app";
 
@@ -55,11 +57,11 @@ export function pantallaDeLaPagina(slug: string): { componente: string; ruta: st
   return { componente: /^[0-9]/.test(componente) ? `P${componente}` : componente, ruta: `#/${slug}` };
 }
 
-/** Cómo queda `data` tras voltear: el cascarón, sin páginas y con `data.app`. */
-export function dataConvertida(data: ProjectData, cascaron: string, app: AppDeProyecto): ProjectData {
+/** Cómo queda `data` tras voltear: el cascarón, sin páginas y con `data.app` (y `data.game`, si se convierte en juego). */
+export function dataConvertida(data: ProjectData, cascaron: string, app: AppDeProyecto, game?: GameOfProject): ProjectData {
   const { pages: _fuera, ...resto } = data;
   void _fuera;
-  return { ...resto, html: cascaron, app };
+  return { ...resto, html: cascaron, app, ...(game ? { game } : {}) };
 }
 
 /**
@@ -68,10 +70,15 @@ export function dataConvertida(data: ProjectData, cascaron: string, app: AppDePr
  */
 export const LA_PAGINA_QUE_CRECE = `- Some requests don't fit in a page but in an APP: accounts with login, a point of sale, a booking agenda, a panel whose data several screens share. When the user asks for one, offer to turn the project into an app with ask_user_question, and in that same question say in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that the whole turn can be undone. Only if they accept, convert it in that turn: read ${RUTA_APPS}, build the app in /src and then call ${CONVERTIR_EN_APP}. Never convert without their yes.`;
 
+/** A GAME (spec local 2026-11-05-modo-juego-design, §8.2): Kimi deduces the type from the description; the house
+ *  answer for an app is to offer converting and wait for a yes, and a game gets the same. Only with the skills on:
+ *  it is built from the game-development skill, whose SKILL.md is readable in any project. */
+const UN_JUEGO_QUE_CRECE = ` A game that will grow —levels, 3D, several files— fits better as a GAME project: offer it the same way, build it in /src reading ${CARPETA_SKILLS}/game-development/SKILL.md, and convert it with ${CONVERTIR_EN_APP} and game: true. A small one-file game the user only wants on this page can stay in the page.`;
+
 /** La misma viñeta con las skills encendidas: la guía de apps es la skill `convert-to-app` (spec local
- *  2026-10-27-len-five-skills). Apagadas, la de siempre. */
+ *  2026-10-27-len-five-skills), y un juego, la suya. Apagadas, la de siempre. */
 export function laPaginaQueCrece(conSkills: boolean): string {
-  return conSkills ? LA_PAGINA_QUE_CRECE.replace(`read ${RUTA_APPS}`, "load the convert-to-app skill") : LA_PAGINA_QUE_CRECE;
+  return conSkills ? LA_PAGINA_QUE_CRECE.replace(`read ${RUTA_APPS}`, "load the convert-to-app skill") + UN_JUEGO_QUE_CRECE : LA_PAGINA_QUE_CRECE;
 }
 
 export const DECLARACION_CONVERTIR_EN_APP = {
@@ -80,13 +87,23 @@ export const DECLARACION_CONVERTIR_EN_APP = {
     "Turns this page project into a web app, in one step: /index.html becomes the app's shell (keeping the home page's <title> and lang), EVERY page is removed and the project becomes an app from then on. " +
     `Use it ONLY after the user accepted converting, and only after you have written the whole app in /src: ${ENTRADA} mounting /src/App.tsx inside <HashRouter> into #root, each page as a screen (/menu/index.html → /src/screens/Menu.tsx at #/menu, the home at #/), what repeats as components, the loose JavaScript as React state and each form saving to a table. ` +
     "If the app in /src doesn't compile, nothing is converted and you get what to fix. After it, in this same turn, view_page and use_page open the app: pass the screen as file_path (\"#/menu\").",
-  parameters: { type: "OBJECT", properties: {} },
+  parameters: {
+    type: "OBJECT",
+    properties: {
+      game: {
+        type: "BOOLEAN",
+        description:
+          "Convert it into a GAME project instead (only after the user accepted a game): the shell fills the window, Len's game posture applies from then on, and /src needs no <HashRouter> —a game has no routes—, only the entry mounting it into #root.",
+      },
+    },
+  },
 } as const;
 
 /** El esqueleto de la entrada, para decirle a Len qué falta si no la escribió. */
 const ENTRADA_DE_EJEMPLO = esqueletoDeApp({ titulo: "App" }).ficheros[ENTRADA]!;
 
-export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps): Promise<ToolOutcome> {
+export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps, args: { readonly game?: unknown } = {}): Promise<ToolOutcome> {
+  const comoJuego = args.game === true;
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
   if (row.data.app) return { response: { ok: false, error: "This project is already an app: there is nothing to convert." } };
@@ -108,7 +125,8 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
   const app: AppDeProyecto = { catalogo: CATALOGO_ACTUAL, entrada };
   const portada = row.data.html ?? "";
   const idioma = idiomaDeLaPortada(portada);
-  const cascaron = cascaronDeLaApp({ titulo: titleFromHtml(portada) ?? row.title ?? "App", entrada, ...(idioma ? { idioma } : {}) });
+  const cascaron = cascaronDeLaApp({ titulo: titleFromHtml(portada) ?? row.title ?? "App", entrada, ...(idioma ? { idioma } : {}), pantallaCompleta: comoJuego });
+  const game: GameOfProject | undefined = comoJuego ? { bornAt: new Date().toISOString() } : undefined;
   const problemas = [
     ...erroresDeLaApp(app, ficheros).map(textoDeDiagnostico),
     ...problemasDelCascaron(app, cascaron, ficheros).map((d) => `${d.ruta} — ${d.mensaje}`),
@@ -134,12 +152,13 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
   await deps.saveProjectData(session.projectId, session.userId, (actual) => {
     // Si alguien lo convirtió entre medias, no se pisa.
     if (actual.app) return actual;
-    return dataConvertida(actual, cascaron, app);
+    return dataConvertida(actual, cascaron, app, game);
   });
 
   // EL RESTO DEL TURNO YA ES DE UNA APP: escribir /x/index.html se rechaza,
   // lo que no compila vuelve en <new-diagnostics>, y no hay página abierta.
   session.app = app;
+  if (game) session.game = true;
   session.page = null;
   session.carpetaAlEmpezar ??= new Map(Object.entries(ficheros));
 
@@ -148,14 +167,17 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps)
   return {
     response: {
       ok: true,
-      tool_result:
-        `Converted: this project is now a web app. /index.html is the shell that starts ${entrada}` +
-        (quitadas.length ? `, and the pages ${quitadas.join(", ")} were removed.` : ".") +
-        ` Now check the app works: view_page and use_page with file_path "#/"${pantallas.length ? ` and ${pantallas.map((p) => `"${p}"`).join(", ")}` : ""}.` +
-        " When you finish, tell the user in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that undoing this turn brings their page back.",
+      tool_result: comoJuego
+        ? `Converted: this project is now a game. /index.html is the shell that starts ${entrada}` +
+          (quitadas.length ? `, and the pages ${quitadas.join(", ")} were removed.` : ".") +
+          ' Now play it as the game-development skill says: use_page with its keys, and the box for what is held. When you finish, tell the user in one sentence that in a game the canvas can\'t be edited by hand and pages aren\'t translated automatically, and that undoing this turn brings their page back.'
+        : `Converted: this project is now a web app. /index.html is the shell that starts ${entrada}` +
+          (quitadas.length ? `, and the pages ${quitadas.join(", ")} were removed.` : ".") +
+          ` Now check the app works: view_page and use_page with file_path "#/"${pantallas.length ? ` and ${pantallas.map((p) => `"${p}"`).join(", ")}` : ""}.` +
+          " When you finish, tell the user in one sentence that in an app the canvas can't be edited by hand and pages aren't translated automatically, and that undoing this turn brings their page back.",
       removed_pages: quitadas,
     },
-    action: { tool: CONVERTIR_EN_APP, ok: true, summary: quitadas.length ? `${quitadas.length + 1} pages → app` : "page → app" },
+    action: { tool: CONVERTIR_EN_APP, ok: true, summary: comoJuego ? (quitadas.length ? `${quitadas.length + 1} pages → game` : "page → game") : quitadas.length ? `${quitadas.length + 1} pages → app` : "page → app" },
     updatedHtml: cascaron,
     page: null,
     appCambiada: true,

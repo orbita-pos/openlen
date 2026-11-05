@@ -3106,7 +3106,7 @@ async function ejecutarHerramienta(
       case "publish":
         return await toolPublicar(session, deps, args);
       case CONVERTIR_EN_APP:
-        return await toolConvertirEnApp(session, deps);
+        return await toolConvertirEnApp(session, deps, args);
       // La lista de progreso del usuario: el `todo_write` de DeepSeek.
       case TODO_WRITE:
         return toolTodoWrite(args);
