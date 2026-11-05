@@ -13,6 +13,8 @@ OpenLen puts `window.openlen` in the tool before its code runs; its types are in
 | `query(projectId, sql)` | Rows of that project's production database. `SELECT` only. Only for projects the person owns. |
 | `update(projectId, { table, key, set, before })` | Changes one production row after the person confirms it in OpenLen (see `data.md`). |
 | `sendPrompt(text)` | `{ status: "placed" }` puts the text in the person's chat with you, for them to send; `"unavailable"` in the rail. |
+| `jobs.run(name, { input?, files? })`, `jobs.get`, `jobs.list`, `jobs.cancel`, `jobs.follow` | A job in OpenLen's box, after the person confirms its cost (see `jobs.md`). |
+| `files.pick({ accept?, multiple? })`, `files.deliver({ name, contentType, bytes })` | OpenLen's own file picker, and a file the tool hands the person (see `jobs.md`). |
 
 ## The theme
 
