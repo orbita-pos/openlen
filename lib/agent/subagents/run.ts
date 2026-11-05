@@ -420,7 +420,10 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         closeOut: (m) => b.closeOut(spec.forked ? withPlanSection(m, ctx.planMode) : m),
         signal: abort.signal,
         runTool: async (name, args) => {
-          if (name === SEND_MESSAGE_TOOL) return sendToLen(args);
+          if (name === SEND_MESSAGE_TOOL) {
+            if (spec.delivery === "caller") return { response: { ok: false, error: "Your result goes to OpenLen through structured_output, not to Len: there is no one to message." } };
+            return sendToLen(args);
+          }
           if (name === STRUCTURED_OUTPUT_TOOL && spec.outputSchema) {
             const wrong = fitsSchema(args, spec.outputSchema);
             if (wrong) return { response: { ok: false, error: `structured_output doesn't fit its schema: ${wrong}` } };
@@ -827,7 +830,12 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) =>
           i === all.length - 1 ? withLine(o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m, w ?? null) : m,
         ),
-        tools: o.outputSchema ? [...tools, structuredOutputDeclaration(o.outputSchema)] : tools,
+        // Delivered to its caller (DeepSeek's `delivery: "caller"`): it reports only through its output, so it has no
+        // `send_message` — a message to Len would wake him with a turn nobody asked for.
+        tools: [
+          ...(o.delivery === "caller" ? tools.filter((t) => (t as { name?: unknown }).name !== SEND_MESSAGE_TOOL) : tools),
+          ...(o.outputSchema ? [structuredOutputDeclaration(o.outputSchema)] : []),
+        ],
         prior: NOTHING_YET,
         ...(w ? { worktree: w } : {}),
         ...(o.outputSchema ? { outputSchema: o.outputSchema } : {}),
