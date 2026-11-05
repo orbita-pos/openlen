@@ -226,6 +226,38 @@ describe("the launcher of Len's subagents", () => {
     await s.settled("r1");
   });
 
+  // DeepSeek's Creator activation (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): an output schema declares
+  // structured_output, whose call ends the run; delivered to the caller, no notice reaches Len.
+  const READY = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+  it("with an output schema: structured_output is declared, its call ends the run with no further model call", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: true })] });
+    const settledWith: unknown[] = [];
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async (r) => void settledWith.push(r) });
+    const row = await s.settled("r1");
+    expect(row.status).toBe("completed");
+    expect(s.brainTools[0]!.map((t) => (t as { name: string }).name)).toContain("structured_output");
+    expect(s.ran).not.toContain("structured_output");
+    for (let i = 0; i < 50 && settledWith.length === 0; i++) await new Promise((r) => setTimeout(r, 2));
+    expect(settledWith).toEqual([{ id: "r1", status: "completed", structured: { ready: true }, finalText: "" }]);
+  });
+
+  it("delivered to the caller: no notice for Len and no turn woken", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: false }), dice("Falta saber el horario.")] });
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async () => {} });
+    await s.settled("r1");
+    expect(takeNotices("p")).toEqual([]);
+    expect(s.noticeTurns).toEqual([]);
+  });
+
+  it("a structured_output that doesn't fit the schema is refused and the run goes on", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: "yes" }), llama("structured_output", { ready: true })] });
+    const settledWith: { structured: unknown }[] = [];
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async (r) => void settledWith.push(r as { structured: unknown }) });
+    await s.settled("r1");
+    for (let i = 0; i < 50 && settledWith.length === 0; i++) await new Promise((r) => setTimeout(r, 2));
+    expect(settledWith[0]?.structured).toEqual({ ready: true });
+  });
+
   it("when it finishes: settles, charges the owner, frees its slot and box, and leaves its notice", async () => {
     const s = setup();
     await s.launcher.launch({ description: "Find the menu", prompt: "Where is the menu?", preset: "general-purpose" });
