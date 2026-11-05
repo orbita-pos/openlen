@@ -51,6 +51,7 @@ function deps() {
     installTool: vi.fn(async (): Promise<{ status: number; body: Record<string, unknown> }> => ({ status: 200, body: { installation } })),
     loadTest: vi.fn(async (): Promise<{ ok: true } | { ok: false; errors: string[] }> => ({ ok: true })),
     markRemoved: vi.fn(async () => true),
+    stopRun: vi.fn((_id: string) => true),
     newId: () => "host-row-1",
     capCentis: 2500,
   };
@@ -221,6 +222,28 @@ describe("hostTheCreator (the host turn, no model call)", () => {
     l.launch.mockResolvedValueOnce({ ok: false, code: "budget", message: "no budget" });
     await hostTheCreator({ cardId: "card-1", framing: "{}", locale: "es", launcher: l }, d);
     expect(card).toMatchObject({ phase: "failed", error: "budget" });
+  });
+
+  it("🔴 «Cancelar» pressed while the creator was being launched: it is stopped", async () => {
+    const d = deps();
+    const l = launcher();
+    l.launch.mockImplementationOnce(async () => {
+      card = { ...card, phase: "cancelled", cancelRequested: true };
+      return { ok: true, id: "run-9" };
+    });
+    await hostTheCreator({ cardId: "card-1", framing: "{}", locale: "es", launcher: l }, d);
+    expect(d.stopRun).toHaveBeenCalledWith("run-9");
+  });
+
+  it("asked to cancel (still creating) while being launched: stopped too", async () => {
+    const d = deps();
+    const l = launcher();
+    l.launch.mockImplementationOnce(async () => {
+      card = { ...card, cancelRequested: true };
+      return { ok: true, id: "run-9" };
+    });
+    await hostTheCreator({ cardId: "card-1", framing: "{}", locale: "es", launcher: l }, d);
+    expect(d.stopRun).toHaveBeenCalledWith("run-9");
   });
 
   it("a card cancelled before the host started: nothing launched", async () => {

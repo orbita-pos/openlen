@@ -61,12 +61,14 @@ export interface CreationDeps {
   /** Opens the installed release once (`loadTestInstalled`) as the person. */
   loadTest(installation: { id: string }, personId: string, locale: string): Promise<{ ok: true } | { ok: false; errors: string[] }>;
   markRemoved(installationId: string, personId: string): Promise<boolean>;
+  /** The subagent registry's `stop`. */
+  stopRun(runId: string): boolean;
   newId(): string;
   capCentis: number;
 }
 
 export async function realCreationDeps(): Promise<CreationDeps> {
-  const [projects, born, store, install, tools, loadTest, launcher] = await Promise.all([
+  const [projects, born, store, install, tools, loadTest, launcher, registry] = await Promise.all([
     import("@/lib/projects"),
     import("@/lib/projects/born-as-tool"),
     import("./store"),
@@ -74,6 +76,7 @@ export async function realCreationDeps(): Promise<CreationDeps> {
     import("../store"),
     import("./load-test"),
     import("@/lib/agent/turnos-desde-el-servidor"),
+    import("@/lib/agent/subagents/registry"),
   ]);
   return {
     createProject: (personId, p) => projects.createProject(personId, p),
@@ -89,6 +92,7 @@ export async function realCreationDeps(): Promise<CreationDeps> {
       return loadTest.loadTestInstalled(row, { mode: "installed", installation: row, personId, personEmail, locale, timeZone: "UTC" });
     },
     markRemoved: tools.markRemoved,
+    stopRun: registry.stop,
     newId: () => crypto.randomUUID(),
     capCentis: creationCapCentis(),
   };
@@ -181,7 +185,9 @@ export async function hostTheCreator(
     await deps.casPhase(card.id, ["creating"], "failed", { error: launched.code });
     return text;
   }
-  await deps.casPhase(card.id, ["creating"], "creating", { creatorRunId: launched.id });
+  const stored = await deps.casPhase(card.id, ["creating"], "creating", { creatorRunId: launched.id });
+  // «Cancelar» pressed while it was being launched: the press found no run to stop, so it is stopped here.
+  if (!stored || stored.cancelRequested) deps.stopRun(launched.id);
   return text;
 }
 
