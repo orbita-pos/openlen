@@ -1,3 +1,4 @@
+import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
 import { MosaicWall } from "@/components/marketing/mosaic-wall";
@@ -47,13 +48,13 @@ export async function generateMetadata({
       siteName: "OpenLen",
       title,
       description,
-      images: ["/og.png"],
+      images: [OG_IMAGE],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["/og.png"],
+      images: [OG_IMAGE],
     },
   };
 }

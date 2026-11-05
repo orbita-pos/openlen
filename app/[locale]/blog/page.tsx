@@ -1,3 +1,4 @@
+import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ArrowRight } from "lucide-react";
@@ -15,13 +16,13 @@ export const metadata: Metadata = {
     description: "Product updates and releases from OpenLen.",
     type: "website",
     url: "https://openlen.com/blog",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Blog | OpenLen",
     description: "Product updates and releases from OpenLen.",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   alternates: { canonical: "https://openlen.com/blog" },
 };

@@ -1,3 +1,4 @@
+import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { listTemplates } from "@/lib/templates/store";
@@ -22,14 +23,14 @@ export const metadata: Metadata = {
       "Hand-built templates ready to fill with your info and publish.",
     type: "website",
     url: "https://openlen.com/templates",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: "Templates | OpenLen",
     description:
       "Hand-built templates for SaaS, ecommerce, creators, and more.",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   alternates: {
     canonical: "https://openlen.com/templates",
