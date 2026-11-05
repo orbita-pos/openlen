@@ -87,6 +87,7 @@ export const CREATE_TOOLS: readonly string[] = [
     "finishedAt" timestamptz,
     "seconds" integer NOT NULL DEFAULT 0,
     "chargedCentis" integer NOT NULL DEFAULT 0,
+    "maxSeconds" integer NOT NULL DEFAULT 0,
     CONSTRAINT "toolJobs_personId_users_id_fk"
       FOREIGN KEY ("personId") REFERENCES "users"("id") ON DELETE CASCADE,
     CONSTRAINT "toolJobs_toolProjectId_projects_id_fk"

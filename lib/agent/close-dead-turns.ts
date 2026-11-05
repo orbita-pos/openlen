@@ -30,6 +30,7 @@ import type { SandboxDriver } from "@/lib/agent/sandbox/driver";
 import { isNotFound, sandboxCleanupDriver } from "@/lib/agent/sandbox/reaper";
 import { releasePausedBox, releaseProjectSandbox, takeOverHoldsFromBeforeBoot, type DeadHold } from "@/lib/agent/sandbox/store";
 import { cutOffRowsOpenedBeforeBoot } from "@/lib/projects/chat";
+import { JOB_BOX_CLEANUP } from "@/lib/tools/jobs/command";
 
 export interface DeadTurnStore {
   cutOffRows(secondsSinceBoot: number): Promise<number>;
@@ -37,8 +38,8 @@ export interface DeadTurnStore {
   /** The box is paused: the row says so and lets it go. */
   releasePaused(projectId: string, token: string): Promise<void>;
   release(projectId: string, token: string): Promise<void>;
-  /** Who a tool's job is for (its box's payer); null when the row is gone. */
-  jobPerson?(jobId: string): Promise<string | null>;
+  /** Who a tool's job is for (its box's payer) and the most it may be charged; null when the row is gone. */
+  jobPayer?(jobId: string): Promise<{ personId: string; maxSeconds: number } | null>;
   /** Ends the live jobs from before this boot `failed`, with what the boot charged each one's box. */
   settleJobs?(secondsSinceBoot: number, charged: ReadonlyMap<string, { seconds: number; centicredits: number }>): Promise<number>;
 }
@@ -51,7 +52,7 @@ const postgresStore: DeadTurnStore = {
   takeOverHolds: takeOverHoldsFromBeforeBoot,
   releasePaused: releasePausedBox,
   release: releaseProjectSandbox,
-  jobPerson: async (jobId) => (await import("@/lib/tools/jobs/store")).jobPersonOf(jobId),
+  jobPayer: async (jobId) => (await import("@/lib/tools/jobs/store")).jobPayerOf(jobId),
   settleJobs: async (secondsSinceBoot, charged) => (await import("@/lib/tools/jobs/boot")).settleJobsOfThePreviousProcess(secondsSinceBoot, charged),
 };
 
@@ -121,7 +122,20 @@ async function closeDeadBoxes(
   let centicredits = 0;
   for (const h of dead) {
     let isPaused = false;
-    if (h.sandboxId && driver) {
+    const isJob = JOB_HOLDER.test(h.turnId);
+    // A job's processes were frozen with the box, and its folder holds the person's picked files: the box is opened
+    // (with no network but its own list) only to stop them and remove it, then paused — never left for Len's next turn.
+    if (isJob && h.sandboxId && driver) {
+      try {
+        const box = await driver.resume(h.sandboxId, { hosts: [], headers: {} });
+        await box.run(JOB_BOX_CLEANUP, { timeoutMs: 15_000 });
+        await box.pause();
+        isPaused = true;
+      } catch (e) {
+        if (!isNotFound(e)) log(`[dead-turns] could not clean the job's box ${h.sandboxId} project=${h.projectId}: ${message(e)}`);
+      }
+    }
+    if (!isPaused && h.sandboxId && driver) {
       try {
         await driver.pause(h.sandboxId);
         isPaused = true;
@@ -135,18 +149,20 @@ async function closeDeadBoxes(
       log(`[dead-turns] could not let go of the box of project=${h.projectId}: ${message(e)}`),
     );
     if (isPaused) paused++;
-    // A job's box is its person's; a job whose row is gone charges nobody (never the project's owner).
-    const isJob = JOB_HOLDER.test(h.turnId);
-    const payer = isJob ? await (store.jobPerson?.(h.turnId) ?? Promise.resolve(null)).catch(() => null) : h.ownerId;
-    if (payer && h.secondsRun > 0) {
-      const moved = await charge({ userId: payer, actorId: null, projectId: h.projectId, turnId: h.turnId, seconds: h.secondsRun }).catch(
+    // A job's box is its person's, never past the job's ceiling (what the confirmation showed); a job whose row is
+    // gone charges nobody (never the project's owner).
+    const job = isJob ? await (store.jobPayer?.(h.turnId) ?? Promise.resolve(null)).catch(() => null) : null;
+    const payer = isJob ? (job?.personId ?? null) : h.ownerId;
+    const seconds = job && job.maxSeconds > 0 ? Math.min(h.secondsRun, job.maxSeconds) : h.secondsRun;
+    if (payer && seconds > 0) {
+      const moved = await charge({ userId: payer, actorId: null, projectId: h.projectId, turnId: h.turnId, seconds }).catch(
         (e: unknown) => {
           log(`[dead-turns] could not charge the box of project=${h.projectId}: ${message(e)}`);
           return 0;
         },
       );
       centicredits += moved;
-      if (isJob) charged.set(h.turnId, { seconds: h.secondsRun, centicredits: moved });
+      if (isJob) charged.set(h.turnId, { seconds, centicredits: moved });
     }
   }
   return { holds: dead.length, paused, centicredits };

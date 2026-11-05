@@ -764,7 +764,11 @@
       },
       "running": {
         "stop": "중지",
-        "stopping": "중지하는 중…"
+        "stopping": "중지하는 중…",
+        "completed": "완료",
+        "failed": "실패",
+        "killed": "중지됨",
+        "dismiss": "닫기"
       }
     },
     "files": {

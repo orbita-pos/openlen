@@ -114,6 +114,12 @@ describe("tool jobs", () => {
     expect((await store.liveJobsFromBeforeBoot(60)).map((j) => j.id)).not.toContain(fresh.id);
   });
 
+  it("who pays a job's box, and the most it may be charged", async () => {
+    const a = await start({ maxSeconds: 720 });
+    expect(await store.jobPayerOf(a.id)).toEqual({ personId: "u1", maxSeconds: 720 });
+    expect(await store.jobPayerOf("job-ffffffffffffffff")).toBeNull();
+  });
+
   it("the view the tool reads carries no input, no uploads and no owner", async () => {
     const job = await start();
     const view = store.toJobView((await store.settleJob(job.id, "completed", { delivered: [{ name: "fotos.pdf", url: "/x", size: 99 }] }))!);

@@ -54,6 +54,7 @@ import { PISTAS_DEL_ENRUTADOR } from "./enrutador";
 // Lo que exporta cada fichero de cada catálogo, leído de sus bytes por
 // `npm run apps:vendor` (que lo comprueba con `--comprobar`).
 import EXPORTACIONES from "./exportaciones.json";
+import { isJobFile } from "./job-files";
 import { isTestSupportFile } from "./tests/test-files";
 import { DOTENV_PATH } from "./env/rules";
 import { dotEnvPublicVars } from "./env/dotenv";
@@ -595,7 +596,8 @@ export function compilarCarpeta(ctx: ContextoDeCompilacion): CarpetaCompilada {
     // LAS PRUEBAS NO SON DE LA APP (plan 04): ni se compilan con ella —importan
     // `vitest`, que no es del catálogo— ni se empaquetan ni se publican. Las
     // compila `compileTestFile` cuando Len corre `npm test`.
-    if (esApp && isTestSupportFile(ruta, ctx.carpeta)) continue;
+    // Ni los trabajos de una herramienta (/jobs): corren en la caja con Node o Python, nunca en el navegador.
+    if (esApp && (isTestSupportFile(ruta, ctx.carpeta) || isJobFile(ruta))) continue;
     if (!esFuenteCompilable(ruta, esApp)) {
       ficheros[ruta] = codigo;
       continue;

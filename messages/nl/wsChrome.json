@@ -764,7 +764,11 @@
       },
       "running": {
         "stop": "Stoppen",
-        "stopping": "Stoppen…"
+        "stopping": "Stoppen…",
+        "completed": "Klaar",
+        "failed": "Mislukt",
+        "killed": "Gestopt",
+        "dismiss": "Sluiten"
       }
     },
     "files": {

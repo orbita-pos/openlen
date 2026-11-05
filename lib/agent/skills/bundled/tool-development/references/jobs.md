@@ -1,6 +1,6 @@
 # Jobs: heavy work in OpenLen's box
 
-A job is a script of this tool that runs in OpenLen's box (the same machine as your terminal) when the person asks for it: exporting a video, a large PDF from files they upload, anything that needs Python or minutes of work. The tool asks for it with `window.openlen.jobs.run(...)`; OpenLen shows the person what it is and the most it can cost, and nothing runs until they press its button. It is charged to the person per second the box runs (about 0.28 credits a minute).
+A job is a script of this tool that runs in OpenLen's box (the same machine as your terminal) when the person asks for it: exporting a video, a large PDF from files they upload, anything that needs Python or minutes of work. The tool asks for it with `window.openlen.jobs.run(...)`; OpenLen shows the person what it is and the most it can cost, and nothing runs until they press its button. It is charged to the person per second the box runs (about 0.28 credits a minute), never more than its minutes plus 2 minutes for installing — the most the confirmation shows.
 
 Use a job only for that kind of work. A quick operation belongs in the tool itself or its own backend (`data.md`), and a report made from visitors' data is made in the tool (below).
 
@@ -34,7 +34,7 @@ Installing refuses a job that is badly declared, has no script or no title.
 
 ## What the script gets
 
-It runs in a copy of this version's /jobs, /package.json, /package-lock.json and /requirements.txt (that folder is its working directory), with these variables:
+It runs as its own user, in a copy of this version's /jobs (its working directory is the copy's root, so the script is `jobs/<file>`), with these variables:
 
 | Variable | What it is |
 |---|---|
@@ -46,8 +46,9 @@ It runs in a copy of this version's /jobs, /package.json, /package-lock.json and
 
 - `$OPENLEN_JOB_DIR/result.json`: JSON of at most 64 KB; the tool reads it as `job.result`.
 - Exit code 0 is `completed`. Anything else is `failed`, and `job.detail` carries the end of its stderr.
-- Dependencies: for Node, list them in /package.json `dependencies` and commit /package-lock.json (installed with `npm ci`; without a lockfile only Node's built-ins exist). For Python, /requirements.txt. Installing counts against the job's time (2 minutes of allowance).
-- The box's network reaches only npm, PyPI and GitHub — not the tool's backend, not OpenLen. Nothing the job writes enters this project.
+- Dependencies go in /jobs, never in /package.json (that one is the browser app's): for Node, /jobs/package.json `dependencies` (installed with `npm install`, or `npm ci` if there is a /jobs/package-lock.json); for Python, /jobs/requirements.txt. Installing counts against the 2 minutes of allowance.
+- The box's network reaches package registries, GitHub and the pages' CDNs — not the tool's backend, not OpenLen.
+- The job runs as its own user: it can't write in this project or read anyone's files in the box, and everything it leaves outside `out/` and `result.json` is removed when it ends.
 
 ```js
 // jobs/export-video.mjs
@@ -65,7 +66,7 @@ writeFileSync(join(env.OPENLEN_JOB_DIR, "result.json"), JSON.stringify({ videos:
 ```
 
 ```python
-# jobs/report.py
+# jobs/report.py  (its packages in jobs/requirements.txt)
 import json, os
 env = os.environ
 data = json.load(open(env["OPENLEN_JOB_INPUT"]))

@@ -41,6 +41,8 @@ export async function insertJob(input: {
   readonly title: string;
   readonly input: unknown;
   readonly uploads: readonly JobUpload[];
+  /** Its ceiling (lib/tools/jobs/types.ts, `jobCeilingSeconds`): the most a restart's boot may charge it. */
+  readonly maxSeconds?: number;
 }): Promise<ToolJobRow> {
   const [row] = await db
     .insert(j)
@@ -121,8 +123,8 @@ export function liveJobsFromBeforeBoot(secondsSinceBoot: number): Promise<ToolJo
     .where(and(inArray(j.status, [...LIVE]), sql`${j.startedAt} < now() - (${secondsSinceBoot}::double precision * interval '1 second')`));
 }
 
-/** Who a job is for — who pays its box. */
-export async function jobPersonOf(id: string): Promise<string | null> {
-  const [row] = await db.select({ personId: j.personId }).from(j).where(eq(j.id, id)).limit(1);
-  return row?.personId ?? null;
+/** Who a job is for — who pays its box — and the most it may be charged. */
+export async function jobPayerOf(id: string): Promise<{ personId: string; maxSeconds: number } | null> {
+  const [row] = await db.select({ personId: j.personId, maxSeconds: j.maxSeconds }).from(j).where(eq(j.id, id)).limit(1);
+  return row ?? null;
 }

@@ -87,6 +87,7 @@ describe("startToolJob", () => {
         title: "Exportar el vídeo",
         input: { quality: "high" },
         uploads: [{ id: "up-mine-1", name: "up-mine-1.jpg", size: 3 }],
+        maxSeconds: 10 * 60 + 120,
       },
     ]);
     expect(deps.runs).toEqual([{ job: expect.objectContaining({ id: "job-0123456789abcdef" }), o: { files: version.jobFiles, maxMinutes: 10, script: "/jobs/export.mjs" } }]);

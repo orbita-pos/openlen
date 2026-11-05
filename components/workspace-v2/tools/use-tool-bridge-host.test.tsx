@@ -229,7 +229,18 @@ describe("jobs and files", () => {
     await s.send(rpc(1, "files.deliver", { name: "r.pdf", contentType: "application/pdf", bytes: new Uint8Array([1, 2, 3]) }));
     const file = (srv.calls[0]!.init!.body as FormData).get("file") as File;
     expect([file.name, file.type, file.size]).toEqual(["r.pdf", "application/pdf", 3]);
-    expect(s.answered()[0]).toMatchObject({ result: { url: "/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf" } });
+    // 🔴 I2: the frame lives on the tool's own .app host; a relative link would resolve there, without the session.
+    expect(s.answered()[0]).toMatchObject({ result: { url: `${window.location.origin}/api/projects/tool-1/deliveries/deliver-x/ab-r.pdf` } });
+  });
+
+  it("🔴 a job's delivered files reach the frame as links on OpenLen's own origin (I2)", async () => {
+    const done = { ...JOB, status: "completed", delivered: [{ name: "r.pdf", url: "/api/projects/tool-1/deliveries/job-1/ab-r.pdf", size: 3 }] };
+    const s = setup({ fetchImpl: server({ "GET /api/tools/jobs/job-1": () => Response.json({ job: done }), "GET /api/tools/jobs": () => Response.json({ jobs: [done] }) }).fetchImpl });
+    await s.send(rpc(1, "jobs.get", { id: "job-1" }));
+    await s.send(rpc(2, "jobs.list"));
+    const url = `${window.location.origin}/api/projects/tool-1/deliveries/job-1/ab-r.pdf`;
+    expect(s.answered()[0]).toMatchObject({ result: { delivered: [{ url }] } });
+    expect(s.answered()[1]).toMatchObject({ result: [{ delivered: [{ url }] }] });
   });
 
   it("jobs.get, jobs.cancel and jobs.list are relayed with the caller", async () => {

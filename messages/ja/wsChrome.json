@@ -764,7 +764,11 @@
       },
       "running": {
         "stop": "停止",
-        "stopping": "停止中…"
+        "stopping": "停止中…",
+        "completed": "完了",
+        "failed": "失敗",
+        "killed": "停止",
+        "dismiss": "閉じる"
       }
     },
     "files": {

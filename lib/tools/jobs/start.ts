@@ -6,9 +6,9 @@
 // and that the tool's box is free — then writes the row and hands it to the runner, which never throws.
 import "server-only";
 
-import { INSTALL_ALLOWANCE_SECONDS, type RunnerDeps } from "./runner";
+import type { RunnerDeps } from "./runner";
 import { jobById, jobsOf, requestCancel, toJobView, type insertJob, type ToolJobRow } from "./store";
-import { newJobId, UPLOADS_PER_PICK, type JobRefusal, type JobUpload, type ToolJobView } from "./types";
+import { jobCeilingSeconds, newJobId, UPLOADS_PER_PICK, type JobRefusal, type JobUpload, type ToolJobView } from "./types";
 
 import { sandboxCenticredits } from "@/lib/agent/sandbox/billing";
 import type { SandboxConfig } from "@/lib/agent/sandbox/config";
@@ -24,7 +24,7 @@ export const JOBS_LISTED = 20;
 
 /** The most a job can cost, in centicredits: its minutes and the install allowance (what the confirmation shows). */
 export function jobMostCentis(maxMinutes: number): number {
-  return sandboxCenticredits(maxMinutes * 60 + INSTALL_ALLOWANCE_SECONDS);
+  return sandboxCenticredits(jobCeilingSeconds(maxMinutes));
 }
 
 export type { JobRefusal } from "./types";
@@ -98,6 +98,7 @@ export async function startToolJob(
     title: titleOf(job.titles, caller.locale, name),
     input: input.input,
     uploads,
+    maxSeconds: jobCeilingSeconds(job.maxMinutes),
   });
   d.run(row, { files: version.jobFiles, maxMinutes: job.maxMinutes, script: job.script });
   return { ok: true, job: toJobView(row) };

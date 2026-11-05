@@ -14,6 +14,7 @@ vi.mock("@/lib/agent/sandbox/reaper", async () => ({
 vi.mock("@/lib/projects/chat", () => ({ cutOffRowsOpenedBeforeBoot: vi.fn() }));
 
 const { BOOT_HOLD_PREFIX, closeTurnsOfThePreviousProcess } = await import("./close-dead-turns");
+const { JOB_BOX_CLEANUP } = await import("@/lib/tools/jobs/command");
 
 const KEY = { E2B_API_KEY: "e2b_test" };
 
@@ -26,7 +27,7 @@ function store(o: { rows?: number | Error; holds?: DeadHold[] | Error } = {}) {
     takeOverHolds: vi.fn((_s: number, _token: string) => answer(o.holds ?? [])),
     releasePaused: vi.fn(async (_p: string, _t: string) => {}),
     release: vi.fn(async (_p: string, _t: string) => {}),
-    jobPerson: vi.fn(async (id: string) => (id === "job-0123456789abcdef" ? "person" : null)),
+    jobPayer: vi.fn(async (id: string) => (id === "job-0123456789abcdef" ? { personId: "person", maxSeconds: 720 } : null)),
     settleJobs: vi.fn(async (_s: number, _charged: ReadonlyMap<string, { seconds: number; centicredits: number }>) => 0),
   };
 }
@@ -86,6 +87,46 @@ describe("closing what the previous process left mid-turn, at boot", () => {
     expect(s.settleJobs).toHaveBeenCalledTimes(1);
     expect(s.settleJobs.mock.calls[0]![0]).toBe(7);
     expect([...s.settleJobs.mock.calls[0]![1]]).toEqual([["job-0123456789abcdef", { seconds: 60, centicredits: 28 }]]);
+  });
+
+  it("🔴 a dead job is never charged past its ceiling, however late the boot (I1)", async () => {
+    const s = store({ holds: [hold({ projectId: "tool-1", turnId: "job-0123456789abcdef", ownerId: "owner", secondsRun: 4 * 3600 })] });
+    charge.mockClear();
+    await closeTurnsOfThePreviousProcess({ store: s, driver: driver(), charge, env: KEY, secondsSinceBoot: () => 7, log: () => {} });
+    expect(charge).toHaveBeenCalledWith(expect.objectContaining({ userId: "person", seconds: 720 }));
+    expect([...s.settleJobs.mock.calls[0]![1]]).toEqual([["job-0123456789abcdef", { seconds: 720, centicredits: 336 }]]);
+  });
+
+  it("🔴 a dead job's box is opened to stop its processes and remove its folder, then paused (I7)", async () => {
+    const ran: string[] = [];
+    let paused = false;
+    const d: SandboxDriver & { paused: string[] } = {
+      ...driver(),
+      resume: async () =>
+        ({
+          id: "sbx-1",
+          run: async (c: string) => {
+            ran.push(c);
+            return { stdout: "", stderr: "", exitCode: 0, timedOut: false };
+          },
+          pause: async () => {
+            paused = true;
+          },
+        }) as never,
+    };
+    const s = store({ holds: [hold({ projectId: "tool-1", sandboxId: "sbx-1", turnId: "job-0123456789abcdef", secondsRun: 60 })] });
+    await closeTurnsOfThePreviousProcess({ store: s, driver: d, charge, env: KEY, secondsSinceBoot: () => 7, log: () => {} });
+    expect(ran).toEqual([JOB_BOX_CLEANUP]);
+    expect(paused).toBe(true);
+    expect(d.paused).toEqual([]);
+    expect(s.releasePaused).toHaveBeenCalled();
+  });
+
+  it("a dead job's box that can't be opened is still paused as any other", async () => {
+    const d = driver();
+    const s = store({ holds: [hold({ projectId: "tool-1", sandboxId: "sbx-1", turnId: "job-0123456789abcdef", secondsRun: 60 })] });
+    await closeTurnsOfThePreviousProcess({ store: s, driver: d, charge, env: KEY, secondsSinceBoot: () => 7, log: () => {} });
+    expect(d.paused).toEqual(["sbx-1"]);
   });
 
   it("a job whose row is gone is let go without charging the project's owner", async () => {

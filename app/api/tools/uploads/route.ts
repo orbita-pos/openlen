@@ -5,13 +5,16 @@
 import { auth } from "@/auth";
 import { resolveBridgeCaller } from "@/lib/tools/bridge/caller";
 import { toolProjectOf } from "@/lib/tools/bridge/handlers";
-import { saveToolUpload, UPLOADS_PER_PICK } from "@/lib/tools/uploads";
+import { saveToolUpload, UPLOAD_MAX_BYTES, UPLOADS_PER_PICK } from "@/lib/tools/uploads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
+/** The most a pick may weigh, with the multipart's own overhead: past it, refused before the body is read. */
+const BODY_MAX_BYTES = UPLOADS_PER_PICK * UPLOAD_MAX_BYTES + 1024 * 1024;
 
 const field = (form: FormData, name: string) => {
   const v = form.get(name);
@@ -22,6 +25,7 @@ const field = (form: FormData, name: string) => {
 export async function POST(req: Request): Promise<Response> {
   const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
+  if (Number(req.headers.get("content-length") ?? 0) > BODY_MAX_BYTES) return json({ error: "too_large" }, 413);
   const form = await req.formData().catch(() => null);
   if (!form) return json({ error: "invalid" }, 400);
   const files = form.getAll("file").filter((f): f is File => typeof f !== "string");
