@@ -127,6 +127,7 @@ const mocks = vi.hoisted(() => {
   // UNA APP NACE (H10): el esqueleto, antes de leer el proyecto.
   nacerComoApp: vi.fn(async (_p: unknown) => true),
   bornAsTool: vi.fn(async (_p: unknown): Promise<"born" | "not_blank" | "plan_required"> => "born"),
+  bornAsGame: vi.fn(async (_p: unknown): Promise<"born" | "not_blank"> => "born"),
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): the launcher is checked by what the route hands it.
   createSubagentLauncher: vi.fn((_ctx: unknown, _io: unknown) => ({ launch: vi.fn(async () => ({ ok: true as const, id: "r1" })) })),
   launchSubagentNoticeTurn: vi.fn((_p: unknown) => {}),
@@ -229,6 +230,7 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno, addChangesToTurn: mocks.addChangesToTurn }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
+vi.mock("@/lib/projects/born-as-game", () => ({ bornAsGame: mocks.bornAsGame }));
 // «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
 const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
 vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
@@ -519,6 +521,64 @@ describe("POST /api/agent credit gate", () => {
     }));
     vi.unstubAllEnvs();
     expect(mocks.bornAsTool).not.toHaveBeenCalled();
+  });
+
+  // A GAME IS BORN the same way (spec local 2026-11-05-modo-juego-design, §8.1, §11): open, like apps.
+  it("naceComo: \"game\" makes the blank project a game before reading it, on any plan", async () => {
+    const orden: string[] = [];
+    mocks.bornAsGame.mockImplementationOnce(async () => (orden.push("nace"), "born"));
+    mocks.loadProject.mockImplementationOnce(async () => (orden.push("lee"), null));
+    const res = await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "un juego de naves", naceComo: "game", idioma: "es" }),
+    }));
+    expect(mocks.bornAsGame).toHaveBeenCalledWith({ projectId: "p1", userId: "u1", title: "Juego", locale: "es" });
+    expect(orden).toEqual(["nace", "lee"]);
+    expect(res.status).not.toBe(402);
+    expect(mocks.nacerComoApp).not.toHaveBeenCalled();
+    expect(mocks.bornAsTool).not.toHaveBeenCalled();
+  });
+
+  it("with OPENLEN_GAMES=0, naceComo: \"game\" is ignored", async () => {
+    vi.stubEnv("OPENLEN_GAMES", "0");
+    await POST(new Request("http://localhost/api/agent", {
+      method: "POST",
+      body: JSON.stringify({ projectId: "p1", prompt: "un juego", naceComo: "game" }),
+    }));
+    vi.unstubAllEnvs();
+    expect(mocks.bornAsGame).not.toHaveBeenCalled();
+  });
+
+  describe("a game's turn carries the game posture, and only a game's", () => {
+    const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const GAME = { bornAt: "2026-11-05T00:00:00Z" };
+    const turnWith = async (data: Record<string, unknown>) => {
+      mocks.loadProject.mockResolvedValueOnce({ title: "Naves", subdomain: null, publishedAt: null, userBrief: "", brief: null, generatedRuntime: null, data });
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "que salte más" }) }));
+    };
+    const shell = '<!doctype html><html><body><div id="root"></div></body></html>';
+
+    it("a game: game true, with its app", async () => {
+      await turnWith({ html: shell, app: APP, game: GAME });
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ app: APP, game: true, tool: false }));
+    });
+
+    it("🔴 with OPENLEN_GAMES=0 a game is the app it is", async () => {
+      vi.stubEnv("OPENLEN_GAMES", "0");
+      await turnWith({ html: shell, app: APP, game: GAME });
+      vi.unstubAllEnvs();
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ app: APP, game: false }));
+    });
+
+    it("🔴 data.game without data.app is not a game: the turn is a page's", async () => {
+      await turnWith({ html: "<html><body><h1>Hola</h1></body></html>", game: GAME });
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ app: null, game: false }));
+    });
+
+    it("an app is not a game", async () => {
+      await turnWith({ html: shell, app: APP });
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ app: APP, game: false }));
+    });
   });
 
   it("si la app no puede nacer, el turno sigue con el proyecto como está", async () => {
@@ -3913,6 +3973,18 @@ describe("POST /api/agent — Len's subagents", () => {
     mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => null;" });
     await pedir();
     expect((launcherArgs()[0] as unknown as { sessionBase: { tool?: boolean } }).sessionBase.tool).toBe(true);
+  });
+
+  it("in a game project, a child's session knows it is one and is offered game-development (spec local 2026-11-05-modo-juego-design, §8.4)", async () => {
+    mocks.loadProject.mockResolvedValue({
+      title: "Naves", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: '<!doctype html><html><body><div id="root"></div></body></html>', app: { catalogo: "2026-11", entrada: "/src/main.tsx" }, game: { bornAt: "2026-11-05T00:00:00Z" } },
+    });
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => null;" });
+    await pedir();
+    const base = (launcherArgs()[0] as unknown as { sessionBase: { game?: boolean; skills?: { get(name: string): unknown } } }).sessionBase;
+    expect(base.game).toBe(true);
+    expect(base.skills?.get("game-development")).toBeDefined();
   });
 
   it("the turn's tools get the launcher, and a child's event reaches the chat as `subagent`", async () => {
