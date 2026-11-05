@@ -90,6 +90,20 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [herramientas, setHerramientas] = useState<HerramientasDeLaPersona | "off" | null>(null);
   // The tool open full screen: a `rail` one from the tab (no project), a `project` one beside this project's chat.
   const [herramientaAbierta, setHerramientaAbierta] = useState<{ tool: InstalledToolView; proyecto: { id: string; title: string } | null } | null>(null);
+  // A «Crear» card's «Abrir»: the tool it installed, from the person's tools read again (it may be newer than the list).
+  const abrirHerramientaPorId = useCallback(async (installationId: string) => {
+    const l = await listarHerramientas(cliente, idioma).catch(() => null);
+    if (!l || l === "off") return;
+    setHerramientas(l);
+    const tool = l.tools.find((x) => x.id === installationId);
+    if (!tool || !sePuedeAbrir(tool)) return;
+    const actual = idActual.current;
+    const titulo = lista?.find((y) => y.id === actual)?.title ?? "";
+    setHerramientaAbierta({ tool, proyecto: tool.placement === "project" && actual ? { id: actual, title: titulo } : null });
+  }, [cliente, idioma, lista]);
+  const releerHerramientas = useCallback(() => {
+    void listarHerramientas(cliente, idioma).then(setHerramientas, () => {});
+  }, [cliente, idioma]);
   // What a project tool's `sendPrompt` leaves in the chat's composer.
   const [borrador, setBorrador] = useState<{ texto: string; n: number } | null>(null);
   useEffect(() => {
@@ -379,6 +393,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         onEnfocado={alEnfocarEnChat}
         resaltarAviso={avisoDelChat?.id === id ? avisoDelChat.tarjeta : null}
         borrador={borrador}
+        onAbrirHerramienta={(x) => void abrirHerramientaPorId(x)}
+        onAbrirProyecto={(x) => { setChatAbierto(false); abrirAviso(x); }}
+        onHerramientasCambiaron={releerHerramientas}
       />
       {herramientaAbierta && (
         <PantallaHerramienta

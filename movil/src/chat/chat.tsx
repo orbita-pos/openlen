@@ -23,6 +23,7 @@ import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
 import { AvisosDeLen } from "./avisos";
+import { TarjetasDeHerramientas } from "../herramientas/tool-cards";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -48,9 +49,13 @@ interface Props {
   /** A project tool's `sendPrompt` (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.14): each new `n`
    *  REPLACES the composer's text, as the web's `pendingDraft` does; the person sends it, never the app. */
   borrador?: { texto: string; n: number } | null;
+  /** The «Crear» cards (§4.10): «Abrir» an installed tool, «Abrir proyecto» a tool's project, and the person's tools changed. */
+  onAbrirHerramienta?: (installationId: string) => void;
+  onAbrirProyecto?: (projectId: string) => void;
+  onHerramientasCambiaron?: () => void;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -238,6 +243,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       <div className="ch-historial">
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): an event task's cards, over the conversation. */}
       <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />
+      <TarjetasDeHerramientas
+        cliente={cliente}
+        projectId={projectId}
+        abierto={abierto}
+        idioma={idioma}
+        onAbrirHerramienta={(id) => onAbrirHerramienta?.(id)}
+        onAbrirProyecto={(id) => onAbrirProyecto?.(id)}
+        onHerramientasCambiaron={() => onHerramientasCambiaron?.()}
+      />
       <div className="ch-log" ref={log} role="log" aria-live="polite" aria-relevant="additions text">
         <div className="ch-contenido" ref={contenido}>
         {filas}
