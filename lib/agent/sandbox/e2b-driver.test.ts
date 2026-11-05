@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PAGE_CDNS } from "./box-network";
+import { CC0_ASSET_HOSTS, PAGE_CDNS } from "./box-network";
 import { BOX_ALLOW_OUT, e2bDriver, type E2bSandboxLike, type E2bSdkLike } from "./e2b-driver";
 
 function fakeSdk() {
@@ -49,6 +49,19 @@ describe("e2bDriver", () => {
   it("the network's allow list: package registries, GitHub and the CDNs pages use", () => {
     // E2B doesn't cap allowOut (docs.e2b.dev, 21/10); the cap of 10 is for header rules.
     for (const h of ["registry.npmjs.org", "pypi.org", "github.com", "esm.sh", ...PAGE_CDNS]) expect(BOX_ALLOW_OUT).toContain(h);
+  });
+
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.5–8.6): a game's CC0 models and textures, downloaded
+  // where each source actually serves them (measured 05/11: ambientCG redirects to its download host). Not Kenney:
+  // its site answers 403 to anything that isn't a browser, so its packs come in by the person's own upload.
+  it("the CC0 asset hosts a game downloads from are allowed out, with no header rule", async () => {
+    expect([...CC0_ASSET_HOSTS].sort()).toEqual(["acg-download.struffelproductions.com", "ambientcg.com", "api.polyhaven.com", "dl.polyhaven.org"]);
+    for (const h of CC0_ASSET_HOSTS) expect(BOX_ALLOW_OUT).toContain(h);
+    expect(BOX_ALLOW_OUT).not.toContain("kenney.nl");
+    const { sdk } = fakeSdk();
+    await e2bDriver(config, async () => sdk).create({ template: "t", metadata: {}, network: { hosts: ["abc.openlen.app"], headers: { "x-openlen-caja": "p.mac" } } });
+    const opts = (sdk.Sandbox.create as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(Object.keys(opts.network.rules)).toEqual(["abc.openlen.app"]);
   });
 
   it("with the project's network: its hosts allowed, each with the marker header rule", async () => {
