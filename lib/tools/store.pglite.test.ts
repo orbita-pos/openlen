@@ -85,6 +85,17 @@ describe("tool installations", () => {
     expect(again.removedAt).toBeNull();
   });
 
+  it("a project has an active installation only while one is switched on and not removed (phase 4)", async () => {
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+    const row = await install();
+    expect(await store.hasActiveInstallation("p1")).toBe(true);
+    await store.setEnabled(row.id, "u1", false);
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+    await store.setEnabled(row.id, "u1", true);
+    await store.markRemoved(row.id, "u1");
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+  });
+
   it("another person can't switch it off", async () => {
     const row = await install();
     expect(await store.setEnabled(row.id, "u2", false)).toBe(false);
