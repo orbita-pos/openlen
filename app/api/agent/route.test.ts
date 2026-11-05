@@ -128,6 +128,8 @@ const mocks = vi.hoisted(() => {
   nacerComoApp: vi.fn(async (_p: unknown) => true),
   bornAsTool: vi.fn(async (_p: unknown): Promise<"born" | "not_blank" | "plan_required"> => "born"),
   bornAsGame: vi.fn(async (_p: unknown): Promise<"born" | "not_blank"> => "born"),
+  // The owner's plan, for the box (spec local 2026-11-05-modo-juego-design, §11).
+  getUserPlan: vi.fn(async (_userId: string): Promise<string> => "pro"),
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): the launcher is checked by what the route hands it.
   createSubagentLauncher: vi.fn((_ctx: unknown, _io: unknown) => ({ launch: vi.fn(async () => ({ ok: true as const, id: "r1" })) })),
   launchSubagentNoticeTurn: vi.fn((_p: unknown) => {}),
@@ -231,6 +233,7 @@ vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
 vi.mock("@/lib/projects/born-as-game", () => ({ bornAsGame: mocks.bornAsGame }));
+vi.mock("@/lib/limits", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/limits")>()), getUserPlan: mocks.getUserPlan }));
 // «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
 const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
 vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
@@ -578,6 +581,36 @@ describe("POST /api/agent credit gate", () => {
     it("an app is not a game", async () => {
       await turnWith({ html: shell, app: APP });
       expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ app: APP, game: false }));
+    });
+  });
+
+  // THE BOX IS FOR THE OWNER'S PAID PLAN (Jesús, 05/11; spec local 2026-11-05-modo-juego-design, §11).
+  describe("🔴 the box follows the owner's plan", () => {
+    const BOX = { E2B_API_KEY: "k", OPENLEN_SANDBOX: "", OPENLEN_TERMINAL: "", OPENLEN_SANDBOX_ONLY_USERS: "" };
+    const turn = async (plan: string) => {
+      for (const [k, v] of Object.entries(BOX)) vi.stubEnv(k, v);
+      mocks.getUserPlan.mockResolvedValueOnce(plan);
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "cambia el título" }) }));
+      vi.unstubAllEnvs();
+    };
+
+    it("a Free owner's turn has today's terminal, and Len is told so", async () => {
+      await turn("free");
+      expect(mocks.getUserPlan).toHaveBeenCalledWith("u1");
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ realTerminal: false }));
+    });
+
+    it("a paid owner's turn has the box", async () => {
+      await turn("pro");
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ realTerminal: true }));
+    });
+
+    it("a plan that can't be read counts as Free", async () => {
+      for (const [k, v] of Object.entries(BOX)) vi.stubEnv(k, v);
+      mocks.getUserPlan.mockRejectedValueOnce(new Error("la base no contesta"));
+      await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hola" }) }));
+      vi.unstubAllEnvs();
+      expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ realTerminal: false }));
     });
   });
 
@@ -1720,15 +1753,26 @@ describe("POST /api/agent — la terminal real en un despliegue por fases", () =
     return { bash: capacidades.realTerminal, manual: mensajes.realTerminal };
   }
 
-  it("🔴 el dueño fuera de la lista: ni bash ni el manual hablan de la caja", async () => {
+  // Jesús, 05/11 (spec local 2026-11-05-modo-juego-design, §11): the box is for the owner's paid plan; the list
+  // still adds accounts (test ones, even on Free).
+  it("🔴 un dueño Free fuera de la lista: ni bash ni el manual hablan de la caja", async () => {
     vi.stubEnv("E2B_API_KEY", "k");
     vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "otra-persona");
+    mocks.getUserPlan.mockResolvedValueOnce("free");
     expect(await loQueSeLeDiceALen()).toEqual({ bash: false, manual: false });
   });
 
-  it("el dueño en la lista: los dos, la caja", async () => {
+  it("un dueño Free en la lista: los dos, la caja", async () => {
     vi.stubEnv("E2B_API_KEY", "k");
     vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "u1");
+    mocks.getUserPlan.mockResolvedValueOnce("free");
+    expect(await loQueSeLeDiceALen()).toEqual({ bash: true, manual: true });
+  });
+
+  it("un dueño de pago fuera de la lista: los dos, la caja", async () => {
+    vi.stubEnv("E2B_API_KEY", "k");
+    vi.stubEnv("OPENLEN_SANDBOX_ONLY_USERS", "otra-persona");
+    mocks.getUserPlan.mockResolvedValueOnce("pro");
     expect(await loQueSeLeDiceALen()).toEqual({ bash: true, manual: true });
   });
 });
@@ -3982,8 +4026,10 @@ describe("POST /api/agent — Len's subagents", () => {
     });
     mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => null;" });
     await pedir();
-    const base = (launcherArgs()[0] as unknown as { sessionBase: { game?: boolean; skills?: { get(name: string): unknown } } }).sessionBase;
+    const base = (launcherArgs()[0] as unknown as { sessionBase: { game?: boolean; ownerPaid?: boolean; skills?: { get(name: string): unknown } } }).sessionBase;
     expect(base.game).toBe(true);
+    // A child shares the turn's box, so it carries the owner's plan (a paid one here).
+    expect(base.ownerPaid).toBe(true);
     expect(base.skills?.get("game-development")).toBeDefined();
   });
 

@@ -711,7 +711,10 @@ async function correrTurno(
   // EDGE FUNCTIONS (fase 2): sin motor no hay dónde guardar un secreto.
   // LA TERMINAL REAL: lo que bash y el manual dicen de la terminal sigue a la caja del dueño (en un
   // despliegue por fases, quien no está en la lista tiene la de siempre: terminalForTurn).
-  const realTerminal = realTerminalFor(userId);
+  // THE BOX IS FOR THE OWNER'S PAID PLAN (Jesús, 05/11; spec local 2026-11-05-modo-juego-design, §11): read once,
+  // here, for what Len is told and for the box the turn opens. A failed read is Free: only the list then decides.
+  const ownerPaid = await getUserPlan(userId).then((p) => p !== "free").catch(() => false);
+  const realTerminal = realTerminalFor(userId, process.env, ownerPaid);
   // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
   // and pull request protocol; without one it stays byte for byte as before.
   const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
@@ -970,7 +973,7 @@ async function correrTurno(
     mentionRefs.length > 0
       ? await resolveMentions(mentionRefs, {
           pageHtml: (p) => (p ? (project.data.pages?.[p]?.html ?? null) : (project.data.html ?? null)),
-          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno }, deps),
+          files: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno, ownerPaid }, deps),
         })
       : null;
   const seleccion = mentioned ? null : seleccionDelLienzo({ html: activeHtml, page: pageSlug, path: scopePath, hint: scopeHint });
@@ -1159,7 +1162,7 @@ async function correrTurno(
               projectId,
               ownerId: userId,
               personId: quien,
-              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno }, deps),
+              loadFiles: () => cargarFicherosDeLaTerminal({ projectId, userId, ...(miembro ? { personId: quien } : {}), mode, app: appDelTurno, tool: toolDelTurno, game: gameDelTurno, ownerPaid }, deps),
             }),
           GIT_STATUS_TIMEOUT_MS,
           null,
@@ -1416,6 +1419,8 @@ async function correrTurno(
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
     turnId: turnoId,
+    // The box is for the owner's paid plan (spec local 2026-11-05-modo-juego-design, §11).
+    ownerPaid,
     ...(miembro ? { personId: quien } : {}),
     mode,
     app: appDelTurno,
@@ -2114,6 +2119,8 @@ async function correrTurno(
                   ...(agentSession.uiLocale ? { uiLocale: agentSession.uiLocale } : {}),
                   zonaHoraria: agentSession.zonaHoraria,
                   ownerEmail,
+                  // A child shares the turn's box, which follows the owner's plan.
+                  ownerPaid,
                   // A child in a tool project installs and opens the installed tool, as Len does.
                   ...(toolDelTurno ? { tool: true } : {}),
                   ...(gameDelTurno ? { game: true } : {}),
