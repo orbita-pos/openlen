@@ -36,7 +36,7 @@ import type { BridgeCaller } from "@/lib/tools/bridge/handlers";
 import { injectToolBridge, TOOL_BRIDGE_PATH } from "@/lib/tools/bridge/inject";
 import { createHash } from "node:crypto";
 import { Script } from "node:vm";
-import type { Browser, CDPSession, ElementHandle, Page } from "puppeteer";
+import type { Browser, CDPSession, ElementHandle, KeyInput, Page } from "puppeteer";
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { InlineImage } from "@/lib/ai-gateway";
@@ -45,7 +45,7 @@ import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-
 import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
-import type { BrowserTabHolder, PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import { parseKey, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -72,12 +72,16 @@ export const PRELUDIO_DE_USO = `
   var TIPOS = { click: 1, mousedown: 1, mouseup: 1, pointerdown: 1, pointerup: 1, touchstart: 1, touchend: 1 };
   // Los de un CAMPO: teclear, mover una barra, elegir en un desplegable.
   var TIPOS_CAMPO = { input: 1, change: 1, keyup: 1, keydown: 1, keypress: 1 };
+  // Los del TECLADO, para el paso \`key\` (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5).
+  var TIPOS_TECLA = { keydown: 1, keyup: 1, keypress: 1 };
   var oyen = new Set();
   var oyenCampo = new Set();
+  var oyenTeclas = new Set();
   var orig = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (tipo, fn, op) {
     if (TIPOS[tipo]) oyen.add(this);
     if (TIPOS_CAMPO[tipo]) oyenCampo.add(this);
+    if (TIPOS_TECLA[tipo]) oyenTeclas.add(this);
     return orig.call(this, tipo, fn, op);
   };
   var R = { salidas: [], envios: [], elegido: null, hechos: [], webgl: "" };
@@ -460,6 +464,20 @@ export const PRELUDIO_DE_USO = `
     var campo = /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) && !/^(button|submit|reset|image)$/i.test(el.type || "");
     return campo ? { escucha: escuchaCampo(el), propia: false, campo: true } : { escucha: escucha(el), propia: accionPropia(el) };
   }
+  // LOS PASOS DE CLAUDE CODE: el elemento en un punto de la pestaña, su texto y si alguien escucha el
+  // clic; y si alguien escucha el teclado (window, document, el elemento con foco y sus contenedores).
+  function enPunto(x, y) {
+    var el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    return { texto: (textoDe(el) || el.tagName.toLowerCase()).slice(0, 60), escucha: escucha(el), propia: accionPropia(el) };
+  }
+  function escuchaTeclas() {
+    for (var n = document.activeElement || document.body; n; n = n.parentNode) {
+      if (oyenTeclas.has(n)) return true;
+      if (n.nodeType === 1 && (n.onkeydown || n.onkeyup || n.onkeypress)) return true;
+    }
+    return oyenTeclas.has(window) || oyenTeclas.has(document) || typeof window.onkeydown === "function" || typeof window.onkeyup === "function" || typeof document.onkeydown === "function";
+  }
   function ancla(href) {
     if (!href || href.charAt(0) !== "#" || href.length < 2) return null;
     var id = decodeURIComponent(href.slice(1));
@@ -476,7 +494,7 @@ export const PRELUDIO_DE_USO = `
     foto: foto, control: control, campo: campo, opcion: opcion, leer: leer,
     escuchaElegido: function () { var e = R.elegido; return e ? { escucha: escuchaCampo(e) || escucha(e), propia: false, campo: true } : null; },
     antesDeActuar: antesDeActuar, tapadoAhora: function () { return R.elegido ? tapado(R.elegido) : ""; },
-    ancla: ancla, sacar: sacar,
+    ancla: ancla, sacar: sacar, enPunto: enPunto, escuchaTeclas: escuchaTeclas,
     hechos: function () { var h = R.hechos.slice(); R.hechos.length = 0; return h; },
     webgl: function () { return R.webgl; },
     // El bloque que se captura (Puppeteer lo lleva a la vista y lo recorta).
@@ -653,7 +671,40 @@ function describirPaso(p: PasoDeUso): string {
   if ("reload" in p) return "reload";
   if ("screenshot" in p) return isScreen(p.screenshot) ? "screenshot of the screen" : `screenshot of ${q(p.screenshot)}`;
   if ("eval" in p) return "eval";
+  if ("key" in p) return `key ${q(p.key)}${p.repeat && p.repeat > 1 ? ` ×${p.repeat}` : ""}`;
+  if ("wait" in p) return `wait ${p.wait} s`;
+  if ("left_click" in p) return `left_click (${p.left_click[0]}, ${p.left_click[1]})`;
+  if ("hover" in p) return `hover (${p.hover[0]}, ${p.hover[1]})`;
+  if ("left_click_drag" in p) return `left_click_drag (${p.left_click_drag[0]}, ${p.left_click_drag[1]}) → (${p.coordinate[0]}, ${p.coordinate[1]})`;
+  if ("zoom" in p) return `zoom ${p.zoom[0]},${p.zoom[1]} → ${p.zoom[2]},${p.zoom[3]}`;
   return `read ${q(p.read)}`;
+}
+
+/** El tamaño de la pestaña, el de sus coordenadas (las de una captura de la pantalla). */
+const tamanoDe = (page: Page) => page.viewport() ?? { width: 1280, height: 900 };
+
+/** `zoom` (el de Claude Code): una región de la pestaña, a su resolución, recortada a la pestaña. */
+async function takeZoom(page: Page, z: readonly [number, number, number, number], images: InlineImage[]): Promise<string> {
+  const { width, height } = tamanoDe(page);
+  const x0 = Math.min(z[0], width), y0 = Math.min(z[1], height), x1 = Math.min(z[2], width), y1 = Math.min(z[3], height);
+  if (x1 <= x0 || y1 <= y0) return `the region ${z[0]},${z[1]} → ${z[2]},${z[3]} is outside the ${width}×${height} tab.`;
+  await twoFrames(page);
+  const dataBase64 = (await page.screenshot({ type: "jpeg", quality: 80, encoding: "base64", clip: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } })) as string;
+  images.push({ mimeType: "image/jpeg", dataBase64 });
+  return `attached below as image ${images.length} (the region ${x0},${y0} → ${x1},${y1} of the tab).`;
+}
+
+/**
+ * `wait` (el de Claude Code): el tiempo pasa de verdad y la página corre; lo que cambia mientras tanto
+ * cambia SOLO, así que se apunta en `cambiantes` para los pasos que vengan. Nunca más allá del plazo.
+ */
+async function esperarPaso(page: Page, segundos: number, plazo: number, cambiantes: Set<string>): Promise<string[]> {
+  const antes = await foto(page);
+  await dormir(Math.max(0, Math.min(segundos * 1000, plazo - Date.now())));
+  const despues = await foto(page);
+  for (const l of diferencia(antes.lineas, despues.lineas).flatMap((c) => [...c.quita, ...c.pone])) cambiantes.add(forma(l));
+  const cambios = contarCambios(antes, despues, new Set());
+  return cambios.length === 0 ? ["nothing on the page changed while waiting."] : cambios.map((c) => c.texto);
 }
 
 const isScreen = (target: string) => target.trim().toLowerCase() === "screen";
@@ -800,6 +851,8 @@ interface Previo {
   readonly propia: boolean;
   /** Es un campo (se teclea o se elige), no algo que se pulsa. */
   readonly campo?: boolean;
+  /** Es una tecla (`key`): «escucha» es si alguien escucha el teclado. */
+  readonly teclado?: boolean;
 }
 
 /** Las líneas de la foto que son el efecto DIRECTO de la acción. */
@@ -852,9 +905,70 @@ const SIN_TECLEAR = new Set(["range", "date", "time", "month", "week", "datetime
 
 async function actuar(
   page: Page,
-  paso: Exclude<PasoDeUso, { readonly read: string } | { readonly screenshot: string } | { readonly eval: string }>,
+  paso: Exclude<
+    PasoDeUso,
+    { readonly read: string } | { readonly screenshot: string } | { readonly eval: string } | { readonly wait: number } | { readonly zoom: readonly [number, number, number, number] }
+  >,
   cambiantes: Set<string>,
 ): Promise<Actuacion> {
+  // LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): con el teclado y
+  // con el ratón donde se diga, como una persona; lo demás del paso (qué cambió) es lo de siempre.
+  if ("key" in paso) {
+    const k = parseKey(paso.key);
+    if (!k.ok) return { ok: false, hecho: `couldn't: ${k.error}` };
+    const antes = await quieta(page, cambiantes);
+    const escuchan = (await page.evaluate(US("escuchaTeclas()")).catch(() => true)) as boolean;
+    const mods = k.keys.slice(0, -1) as KeyInput[];
+    const tecla = k.keys[k.keys.length - 1] as KeyInput;
+    const veces = paso.repeat ?? 1;
+    for (let i = 0; i < veces; i++) {
+      for (const m of mods) await page.keyboard.down(m);
+      await page.keyboard.press(tecla);
+      for (const m of [...mods].reverse()) await page.keyboard.up(m);
+    }
+    return {
+      ok: true,
+      hecho: `I pressed the key ${q(paso.key)}${veces > 1 ? ` (${veces} times)` : ""}.`,
+      antes,
+      detalle: [],
+      previo: { escucha: escuchan, propia: false, teclado: true },
+    };
+  }
+  if ("left_click" in paso || "hover" in paso || "left_click_drag" in paso) {
+    const { width, height } = tamanoDe(page);
+    const puntos = "left_click" in paso ? [paso.left_click] : "hover" in paso ? [paso.hover] : [paso.left_click_drag, paso.coordinate];
+    const fuera = puntos.find(([x, y]) => x >= width || y >= height);
+    if (fuera) return { ok: false, hecho: `couldn't: (${fuera[0]}, ${fuera[1]}) is outside the ${width}×${height} tab.` };
+    const antes = await quieta(page, cambiantes);
+    const [x0, y0] = puntos[0]!;
+    const sitio = (await page.evaluate(US(`enPunto(${x0}, ${y0})`)).catch(() => null)) as { texto: string; escucha: boolean; propia: boolean } | null;
+    if ("left_click" in paso) {
+      await page.mouse.click(x0, y0, { delay: 20 });
+      return {
+        ok: true,
+        hecho: `I clicked at (${x0}, ${y0})${sitio ? `, on ${q(sitio.texto, 60)}` : ""}.`,
+        antes,
+        detalle: [],
+        previo: sitio ? { escucha: sitio.escucha, propia: sitio.propia } : null,
+      };
+    }
+    if ("hover" in paso) {
+      await page.mouse.move(x0, y0);
+      return { ok: true, hecho: `I moved the mouse to (${x0}, ${y0})${sitio ? `, over ${q(sitio.texto, 60)}` : ""}.`, antes, detalle: [], previo: null };
+    }
+    const [x1, y1] = paso.coordinate;
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    await page.mouse.move(x1, y1, { steps: 12 });
+    await page.mouse.up();
+    return {
+      ok: true,
+      hecho: `I dragged from (${x0}, ${y0}) to (${x1}, ${y1})${sitio ? `, starting on ${q(sitio.texto, 60)}` : ""}.`,
+      antes,
+      detalle: [],
+      previo: null,
+    };
+  }
   if ("reload" in paso) {
     const antes = await foto(page);
     await page.reload({ waitUntil: "load", timeout: 20_000 });
@@ -1334,6 +1448,15 @@ export async function visitAnotherSite(
         if (r.stuck) break;
         continue;
       }
+      if ("zoom" in paso) {
+        lineas.push(`${encabezado} → ${await takeZoom(page, paso.zoom, images).catch(() => "the screenshot couldn't be taken this time.")}`);
+        continue;
+      }
+      if ("wait" in paso) {
+        lineas.push(`${encabezado} → I waited ${paso.wait} s.`);
+        for (const c of await esperarPaso(page, paso.wait, plazo, cambiantes)) lineas.push(`   · ${c}`);
+        continue;
+      }
       const before = page.url();
       const accion = await actuar(page, paso, cambiantes);
       if (!accion.ok) {
@@ -1523,6 +1646,15 @@ async function visitTab(
       }
       continue;
     }
+    if ("zoom" in paso) {
+      lineas.push(`${encabezado} → ${await takeZoom(page, paso.zoom, images).catch(() => "the screenshot couldn't be taken this time.")}`);
+      continue;
+    }
+    if ("wait" in paso) {
+      lineas.push(`${encabezado} → I waited ${paso.wait} s.`);
+      for (const c of await esperarPaso(page, paso.wait, plazo, cambiantes)) lineas.push(`   · ${c}`);
+      continue;
+    }
     const accion = await actuar(page, paso, cambiantes);
     if (!accion.ok) {
       lineas.push(`${encabezado} → ${accion.hecho}`);
@@ -1596,9 +1728,11 @@ async function visitTab(
         );
         if (accion.previo && !accion.previo.escucha && !accion.previo.propia) {
           detalle.push(
-            campo
-              ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
-              : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
+            accion.previo.teclado
+              ? "(note: nothing on the page listens to the keyboard —not the window, the document, nor what has the focus—: there is nothing behind the key.)"
+              : campo
+                ? "(note: neither this field, nor its form, nor the page listens to what is typed or chosen in it: there is nothing behind it.)"
+                : "(note: neither this control, nor its containers, nor the page listens to the click, the mouse or the touch, and the browser does nothing of its own when it is pressed: there is nothing behind it.)",
           );
         }
       }

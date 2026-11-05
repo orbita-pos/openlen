@@ -3,7 +3,7 @@
 // Code). Cada rechazo dice qué cambiar.
 import { describe, expect, it } from "vitest";
 
-import { MAX_EVAL_CHARS, MAX_PASOS, MAX_SCREENSHOTS_PER_VISIT, validarPasos } from "./pasos-de-uso";
+import { MAX_EVAL_CHARS, MAX_PASOS, MAX_SCREENSHOTS_PER_VISIT, parseKey, validarPasos } from "./pasos-de-uso";
 
 const error = (bruto: unknown) => {
   const r = validarPasos(bruto);
@@ -81,5 +81,65 @@ describe("validarPasos", () => {
   it("la lista de verbos del error nombra los nuevos", () => {
     expect(error([{}])).toContain("screenshot");
     expect(error([{}])).toContain("eval");
+  });
+});
+
+// LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): las acciones de su
+// herramienta `computer` del navegador, con sus nombres: key (+ repeat), wait, left_click, hover,
+// left_click_drag (+ coordinate) y zoom. Coordenadas = píxeles de la pestaña.
+describe("validarPasos — los pasos de Claude Code", () => {
+  it("🔴 acepta key, wait, left_click, hover, left_click_drag y zoom", () => {
+    const pasos = [
+      { key: "ctrl+k" },
+      { key: "ArrowLeft", repeat: 3 },
+      { wait: 2 },
+      { left_click: [640, 360] },
+      { hover: [10, 20] },
+      { left_click_drag: [100, 200], coordinate: [400, 200] },
+      { zoom: [0, 0, 320, 240] },
+    ];
+    expect(validarPasos(pasos)).toEqual({ ok: true, pasos });
+  });
+
+  it("parseKey traduce nombres y combinaciones a teclas de Puppeteer", () => {
+    expect(parseKey("ctrl+k")).toEqual({ ok: true, keys: ["Control", "k"] });
+    expect(parseKey("Return")).toEqual({ ok: true, keys: ["Enter"] });
+    expect(parseKey("up")).toEqual({ ok: true, keys: ["ArrowUp"] });
+    expect(parseKey("cmd+shift+Z")).toEqual({ ok: true, keys: ["Meta", "Shift", "Z"] });
+    expect(parseKey("space")).toEqual({ ok: true, keys: ["Space"] });
+    expect(parseKey("F5")).toEqual({ ok: true, keys: ["F5"] });
+  });
+
+  it("una tecla que no existe se rechaza antes de abrir nada, con ejemplos", () => {
+    const e = error([{ key: "Enterr" }]);
+    expect(e).toContain('"Enter"');
+    expect(e).toContain('"ArrowLeft"');
+    expect(error([{ key: "k+ctrl" }])).toContain("isn't a key");
+  });
+
+  it("wait es de más de 0 a 10 segundos", () => {
+    expect(error([{ wait: 0 }])).toContain("up to 10");
+    expect(error([{ wait: 11 }])).toContain("up to 10");
+    expect(error([{ wait: "2" }])).toContain("up to 10");
+  });
+
+  it("las coordenadas son dos números de 0 o más; zoom, cuatro, con el final después del principio", () => {
+    expect(error([{ left_click: [1] }])).toContain("Step 1: `left_click`");
+    expect(error([{ hover: ["a", 2] }])).toContain("Step 1: `hover`");
+    expect(error([{ left_click: [-5, 3] }])).toContain("Step 1: `left_click`");
+    expect(error([{ zoom: [10, 10, 5, 20] }])).toContain("Step 1: `zoom`");
+  });
+
+  it("coordinate sólo con left_click_drag, que lo necesita; repeat sólo con key, de 1 a 100", () => {
+    expect(error([{ left_click: [1, 1], coordinate: [2, 2] }])).toContain("`coordinate` only goes with `left_click_drag`");
+    expect(error([{ left_click_drag: [1, 1] }])).toContain("needs `coordinate`");
+    expect(error([{ wait: 1, repeat: 2 }])).toContain("`repeat` only goes with `key`");
+    expect(error([{ key: "a", repeat: 0 }])).toContain("from 1 to 100");
+  });
+
+  it("zoom cuenta como captura: tres capturas y un zoom son demasiadas", () => {
+    expect(error([{ screenshot: "screen" }, { screenshot: "screen" }, { screenshot: "screen" }, { zoom: [0, 0, 10, 10] }])).toContain(
+      `at most ${MAX_SCREENSHOTS_PER_VISIT} screenshots`,
+    );
   });
 });
