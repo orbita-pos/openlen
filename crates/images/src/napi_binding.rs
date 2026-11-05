@@ -108,6 +108,9 @@ pub struct ProcessResultJs {
     /// BlurHash + dominant color for the source image — suitable for
     /// `style.backgroundColor` + LQIP rendering on the client.
     pub placeholder: Option<PlaceholderJs>,
+    /// The oriented image's size, before any crop or resize.
+    pub source_width: u32,
+    pub source_height: u32,
 }
 
 fn envelope(kind: &str, retryable: bool, message: impl Into<String>) -> String {
@@ -212,6 +215,8 @@ pub async fn process_image(req: ProcessRequestJs) -> Result<ProcessResultJs> {
     Ok(ProcessResultJs {
         variants: variants_js,
         placeholder: placeholder_js,
+        source_width: result.source_width,
+        source_height: result.source_height,
     })
 }
 

@@ -86,6 +86,9 @@ export interface ProcessImageResult {
   variants: VariantOutput[];
   /** Present when the request set `placeholder: true`. */
   placeholder?: Placeholder;
+  /** The oriented image's size, before any crop or resize. */
+  sourceWidth: number;
+  sourceHeight: number;
 }
 
 // ─── Typed error envelope ────────────────────────────────────────────────
@@ -186,6 +189,8 @@ export async function processImage(
           height: raw.placeholder.height,
         }
       : undefined,
+    sourceWidth: raw.sourceWidth,
+    sourceHeight: raw.sourceHeight,
   };
 }
 
