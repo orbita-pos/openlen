@@ -107,7 +107,7 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
     ...(indice.length > 0 ? [RUTA_INDICE_DE_VERSIONES, ...versiones.keys()] : []),
     // F4 · el manual que se lee a demanda: texto fijo, en la misma carpeta oculta.
     // Una app tiene los suyos (`lib/agent/modo-app.ts`).
-    ...Object.keys(documentosDeLaPlataforma(session.app ?? null)),
+    ...Object.keys(documentosDeLaPlataforma(session.app ?? null, process.env, session.game === true)),
   ];
 
   const zona = session.zonaHoraria ?? ZONA_SIN_DATO;

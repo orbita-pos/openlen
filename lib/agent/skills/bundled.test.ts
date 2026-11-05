@@ -56,6 +56,53 @@ describe("bundled skills", () => {
     expect(bundledSkills({ app, env: {} }).map((b) => b.skill.name)).not.toContain("tool-development");
   });
 
+  // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.5): Kimi's method, three's official rules, Phaser's
+  // own agent skills copied as they are.
+  describe("game-development", () => {
+    const app = { catalogo: "2026-11", entrada: "/src/main.tsx" };
+    const inGame = () => bundledSkillFiles({ app, env: {}, game: true });
+    const skill = `${BUNDLED_SKILLS_DIR}/game-development`;
+
+    it("is offered only in a game, and its SKILL.md is readable in any project (to convert a page)", () => {
+      expect(bundledSkills({ app, env: {}, game: true }).map((b) => b.skill.name)).toContain("game-development");
+      expect(bundledSkills({ app, env: {} }).map((b) => b.skill.name)).not.toContain("game-development");
+      expect(bundledSkills().map((b) => b.skill.name)).not.toContain("game-development");
+      const inAPage = bundledSkillFiles({ app: null, env: {} });
+      for (const f of ["SKILL.md", "references/three.md", "references/assets.md"]) expect(inAPage[`${skill}/${f}`], f).toBeDefined();
+    });
+
+    it("Phaser's skills are served only in a game: the 28, each with its frontmatter, and the template", () => {
+      const skills = Object.entries(inGame()).filter(([p]) => /\/references\/phaser\/[^/]+\/SKILL\.md$/.test(p));
+      expect(skills).toHaveLength(28);
+      for (const [p, text] of skills) expect(text, p).toMatch(/^---\nname: [a-z0-9-]+\ndescription: /);
+      expect(inGame()[`${skill}/references/phaser/template-react-ts.md`]).toContain("export const PhaserGame = forwardRef");
+      expect(Object.keys(bundledSkillFiles({ app, env: {} })).some((p) => p.includes("/references/phaser/"))).toBe(false);
+      expect(Object.keys(bundledSkillFiles({ app: null, env: {} })).some((p) => p.includes("/references/phaser/"))).toBe(false);
+    });
+
+    it("SKILL.md teaches Kimi's method, the engines, what the platform can't serve, and checking by playing", () => {
+      const s = inGame()[`${skill}/SKILL.md`]!;
+      for (const x of ["blockout", "Kimi", "WebGLRenderer", "-compat", "meshopt", "/ASSETS.md", "verify", "When it moves", "references/phaser/", "references/three.md", "references/assets.md", "template-react-ts.md"]) {
+        expect(s, x).toContain(x);
+      }
+      expect(s).not.toContain("/assets/");
+      // Every reference it names exists.
+      for (const ref of s.match(/references\/[\w./-]+\.md/g) ?? []) expect(inGame()[`${skill}/${ref}`], ref).toBeDefined();
+    });
+
+    it("assets.md: with the box they are downloaded and copied; without it, shapes and sounds made in code", () => {
+      const a = inGame()[`${skill}/references/assets.md`]!;
+      for (const x of ["Kenney", "Poly Haven", "ambientCG", "Quaternius", "/ASSETS.md", "Web Audio", "Without the box"]) expect(a, x).toContain(x);
+    });
+
+    it("in a game, frontend-design is Claude's method, without the app guide", () => {
+      const f = inGame()[`${BUNDLED_SKILLS_DIR}/frontend-design/SKILL.md`]!;
+      expect(f).not.toContain("AN APP IS USED, NOT READ");
+      expect(f).toContain(FROM_CLAUDE_FRONTEND_DESIGN.slice(0, 80));
+      expect(bundledSkillFiles({ app, env: {} })[`${BUNDLED_SKILLS_DIR}/frontend-design/SKILL.md`]).toContain("AN APP IS USED, NOT READ");
+    });
+  });
+
   // A TOOL'S JOBS (spec local 2026-11-04-herramientas-hechas-por-len, §4.6): how to write one, the variables the box
   // gives it, and the rule that keeps visitors' data out of the box.
   it("tool-development teaches jobs: declared, the box's variables, out/ and result.json, and no visitor data", () => {
@@ -420,7 +467,7 @@ describe("bundled skills", () => {
     // DeepSeek's rule (creator-skills-progressive-disclosure): a short SKILL.md, the long recipes in
     // references/, and every file it names exists.
     it("every bundled skill keeps DeepSeek's shape, in every context", () => {
-      for (const ctx of [PAGE, PAGE_ARTIFACTS, APP_CTX, APP_ARTIFACTS]) {
+      for (const ctx of [PAGE, PAGE_ARTIFACTS, APP_CTX, APP_ARTIFACTS, { ...APP_CTX, game: true }]) {
         const files = bundledSkillFiles(ctx);
         for (const b of bundledSkills(ctx)) {
           const text = files[`${b.baseDir}/SKILL.md`]!;
