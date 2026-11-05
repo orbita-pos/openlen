@@ -1,5 +1,6 @@
 // The SQL of `npm run tools:migrate`, apart so the PGlite test creates the very same tables
-// (lib/tools/store.pglite.test.ts). Keep in step with lib/db/schema.ts (`toolReleases`, `toolInstallations`).
+// (lib/tools/store.pglite.test.ts). Keep in step with lib/db/schema.ts (`toolReleases`, `toolInstallations`, `toolCards`,
+// `users.toolSuggestions`).
 // Spec local 2026-11-04-herramientas-hechas-por-len, §4.2 and §4.12.
 export const CREATE_TOOLS: readonly string[] = [
   `CREATE TABLE IF NOT EXISTS "toolReleases" (
@@ -32,4 +33,36 @@ export const CREATE_TOOLS: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "toolInstallations_person_project_idx" ON "toolInstallations" ("personId", "projectId");`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "toolInstallations_hostLabel_idx" ON "toolInstallations" ("hostLabel");`,
   `CREATE INDEX IF NOT EXISTS "toolInstallations_personId_idx" ON "toolInstallations" ("personId");`,
+  // Phase 2 (§4.10): the «Crear» cards, and «Sugerencias de herramientas» — off until the person turns it on.
+  `CREATE TABLE IF NOT EXISTS "toolCards" (
+    "id" text PRIMARY KEY,
+    "projectId" text NOT NULL,
+    "chatRowId" text NOT NULL,
+    "personId" text NOT NULL,
+    "title" text NOT NULL,
+    "brief" text NOT NULL,
+    "initialContent" text,
+    "placement" text NOT NULL CHECK ("placement" IN ('rail', 'project')),
+    "customLocation" text,
+    "phase" text NOT NULL DEFAULT 'proposed',
+    "toolProjectId" text,
+    "hostRowId" text,
+    "creatorRunId" text,
+    "cancelRequested" boolean NOT NULL DEFAULT false,
+    "installationId" text,
+    "error" text,
+    "review" jsonb,
+    "createdAt" timestamptz NOT NULL DEFAULT now(),
+    "updatedAt" timestamptz NOT NULL DEFAULT now(),
+    "statusDeliveredAt" timestamptz,
+    CONSTRAINT "toolCards_projectId_projects_id_fk"
+      FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE,
+    CONSTRAINT "toolCards_personId_users_id_fk"
+      FOREIGN KEY ("personId") REFERENCES "users"("id") ON DELETE CASCADE,
+    CONSTRAINT "toolCards_toolProjectId_projects_id_fk"
+      FOREIGN KEY ("toolProjectId") REFERENCES "projects"("id") ON DELETE SET NULL
+  );`,
+  `CREATE INDEX IF NOT EXISTS "toolCards_project_person_phase_idx" ON "toolCards" ("projectId", "personId", "phase");`,
+  `CREATE INDEX IF NOT EXISTS "toolCards_chatRowId_idx" ON "toolCards" ("chatRowId");`,
+  `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "toolSuggestions" boolean NOT NULL DEFAULT false;`,
 ];

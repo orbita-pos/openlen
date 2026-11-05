@@ -24,7 +24,8 @@
     "desdeElHilo": "aus der Unterhaltung · {donde}",
     "scheduled": "Geplante Aufgabe «{title}» · {when}",
     "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht",
-    "fromSubagents": "Ergebnisse der Subagenten"
+    "fromSubagents": "Ergebnisse der Subagenten",
+    "toolCreation": "Tool erstellen"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",
@@ -140,7 +141,8 @@
       "artifact-motion": "Ein animiertes Video erstellen",
       "artifact-audio": "Ein Audio oder eine Sprachaufnahme erstellen",
       "schedule": "Eine Aufgabe planen, die Len zu einer Uhrzeit erledigt",
-      "tool-development": "Dieses Tool bauen, ändern, installieren oder prüfen"
+      "tool-development": "Dieses Tool bauen, ändern, installieren oder prüfen",
+      "tool-suggestions": "Ein Werkzeug für dein OpenLen vorschlagen"
     },
     "fileLimit": "Bis zu 4 Dateien pro Nachricht.",
     "fileTooBig": "Diese Datei ist größer als 20 MB.",
@@ -657,5 +659,40 @@
     "destructive": "Die Installation löscht Daten in seiner Datenbank. Trotzdem installieren?",
     "failed": "Es konnte nicht installiert werden ({reason}).",
     "installed": "Installiert."
+  },
+  "toolCard": {
+    "dismissed": "Verworfen: «{title}»",
+    "more": "Mehr anzeigen",
+    "less": "Weniger anzeigen",
+    "initialContent": "Anfangsinhalt",
+    "place": "Wo",
+    "inRail": "In der Leiste",
+    "inProject": "Im Projekt",
+    "custom": "Ort beschreiben",
+    "customPlaceholder": "Zum Beispiel: neben dem Chat jedes Projekts",
+    "notice": "Das Erstellen dauert ein paar Minuten und kostet bis zu {cap} Credits.",
+    "closeNotice": "Hinweis schließen",
+    "showNotice": "Hinweis zu Zeit und Credits anzeigen",
+    "create": "Erstellen",
+    "notNow": "Nicht jetzt",
+    "creating": "Tool wird erstellt…",
+    "cancel": "Abbrechen",
+    "cancelling": "Wird abgebrochen…",
+    "installing": "Wird installiert…",
+    "installed": "Installiert",
+    "open": "Öffnen",
+    "undo": "Rückgängig",
+    "removed": "Deinstalliert",
+    "restore": "Wiederherstellen",
+    "failed": "Konnte nicht erstellt werden",
+    "cancelled": "Abgebrochen",
+    "interrupted": "Unterbrochen",
+    "retry": "Erneut versuchen",
+    "needsReview": "Braucht deine Prüfung",
+    "installAnyway": "Trotzdem installieren",
+    "openProject": "Projekt öffnen",
+    "planRequired": "Tools gibt es in den bezahlten Plänen.",
+    "sourceMissing": "Diese Version gibt es nicht mehr: Bitte Len um einen neuen Vorschlag",
+    "refused": "Ging nicht: {reason}"
   }
 }

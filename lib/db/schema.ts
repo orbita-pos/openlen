@@ -82,6 +82,9 @@ export const users = pgTable("users", {
    *  columna se queda porque está en producción y quitarla es una migración
    *  aparte, que nadie ha decidido. */
   crearWriter: text("crearWriter"),
+  /** «Sugerencias de herramientas» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): Len may propose a tool
+   *  with a «Crear» card. Off until the person turns it on, as DeepSeek's experiment. `npm run tools:migrate`. */
+  toolSuggestions: boolean("toolSuggestions").notNull().default(false),
   image: text("image"),
   passwordHash: text("passwordHash"),
   /** When the password was last reset: sessions signed in before it are closed (lib/auth/session-cutoff.ts).
@@ -2520,6 +2523,38 @@ export const toolInstallations = pgTable(
     uniqueIndex("toolInstallations_hostLabel_idx").on(t.hostLabel),
     index("toolInstallations_personId_idx").on(t.personId),
   ],
+);
+
+/** «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): DeepSeek's card under one of Len's
+ *  answers, proposing a tool; one press builds it in the background and installs it. `npm run tools:migrate`. */
+export const toolCards = pgTable(
+  "toolCards",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The turn whose answer it follows. */
+    chatRowId: text("chatRowId").notNull(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    brief: text("brief").notNull(),
+    initialContent: text("initialContent"),
+    placement: text("placement").$type<"rail" | "project">().notNull(),
+    customLocation: text("customLocation"),
+    phase: text("phase").$type<import("@/lib/tools/cards/types").ToolCardPhase>().notNull().default("proposed"),
+    toolProjectId: text("toolProjectId").references(() => projects.id, { onDelete: "set null" }),
+    /** The host turn's row in the tool project (it launches the creator and closes). */
+    hostRowId: text("hostRowId"),
+    /** The creator's `subagentRuns` id. */
+    creatorRunId: text("creatorRunId"),
+    cancelRequested: boolean("cancelRequested").notNull().default(false),
+    installationId: text("installationId"),
+    error: text("error"),
+    review: jsonb("review").$type<import("@/lib/tools/cards/types").ToolCardReview>(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    statusDeliveredAt: timestamp("statusDeliveredAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [index("toolCards_project_person_phase_idx").on(t.projectId, t.personId, t.phase), index("toolCards_chatRowId_idx").on(t.chatRowId)],
 );
 
 // LEN WATCH (spec local 2026-10-30-len-watch): the owner's switches and the incidents of a

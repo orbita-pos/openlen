@@ -3884,7 +3884,7 @@ function NewV2Inner() {
                 navegación global, y ahí competían por el centro con el propio
                 contenido de la pantalla (el brief, la rejilla de páginas). */}
             {startSurface === "herramientas" ? (
-              <ToolsView tools={installedTools.tools} paid={installedTools.paid} onChanged={installedTools.reload} />
+              <ToolsView tools={installedTools.tools} paid={installedTools.paid} suggestions={installedTools.suggestions} onChanged={installedTools.reload} />
             ) : startSurface === "herramienta" ? (
               <ToolView tool={openToolData} person={installedTools.person} locale={locale} />
             ) : startSurface === "mispaginas" ? (

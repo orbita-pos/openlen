@@ -209,6 +209,8 @@ export type AgentStreamEvent =
   // The publish gate (Task 7): the model prepared a publish but MUST NOT
   // publish itself. The panel renders a confirm card whose button hits the
   // real publish endpoint — the user's tap is the only thing that publishes.
+  /** A «Crear» card `propose_action` accepted (spec local 2026-11-04-herramientas-hechas-por-len, §4.10). */
+  | { type: "tool_card"; card: import("@/lib/tools/cards/types").ToolCardView }
   | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
@@ -491,7 +493,7 @@ export interface AgentLoopResult {
    * Cerrarlos con los hechos delante es mejor para el dueño, pero no puede
    * cambiar quién paga sin que nadie lo decida. Ausente = se cobra como siempre.
    */
-  sinCobro?: "rechazos" | "conflicto";
+  sinCobro?: "rechazos" | "conflicto" | "host";
   /**
    * LO QUE EL BUCLE ESTIMÓ DE LOS INTENTOS FALLIDOS SIN USO del proveedor que
    * el cerebro dejó (spec local 2026-10-16-second-provider §3.4b). Va DENTRO de
@@ -1869,6 +1871,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     /** Lote 7-8 · el dueño descartó una pregunta para hablar: el turno cierra
      *  tras la tanda (ver el bloque que lo consume, antes del de `pregunta`). */
     let ownerTookOver = false;
+    /** A tool handed the run's result back (a child's `structured_output`): the run ends after this step. */
+    let handedBack = false;
     /** Pieza 8 · lo que las herramientas de la tanda dejan para el paso
      *  siguiente (`ToolOutcome.notice`, el `deferContext` de DeepSeek). */
     const avisos: string[] = [];
@@ -2099,6 +2103,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           args.onMutacion?.();
         }
 
+        // A «Crear» card: the chat draws it under this answer; the model reads the tool's own result.
+        if (outcome.toolCard) args.emit({ type: "tool_card", card: outcome.toolCard });
+
         // A confirm outcome (publish) NEVER carries out its action. Surface the
         // confirm card to the user and hand the model a fixed "waiting" state so
         // it closes the turn asking for the tap — never a payload it could read
@@ -2131,6 +2138,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           preguntaSinTexto = (outcome.preguntas ?? []).length > 0 && outcome.preguntas!.every((q) => q.intent);
         }
         if (outcome.dismissed) ownerTookOver = true;
+        if (outcome.final) handedBack = true;
         if (outcome.notice) avisos.push(outcome.notice);
         // La lista vigente es la última que escribió (también vacía).
         if (outcome.todos) currentTodos = outcome.todos;
@@ -2266,6 +2274,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });
       endedOnQuestion = true;
+      return buildResult(false);
+    }
+
+    // DeepSeek's structured output: the call is the hand-back; nothing else is asked of the model.
+    if (handedBack) {
+      messages.push(delAsistente(turnText, calls));
+      messages.push({ role: "user", content: "", functionResponses });
+      finalText = turnText.trim();
       return buildResult(false);
     }
 

@@ -23,8 +23,8 @@ describe("custom agent type paths", () => {
     expect([...BUILT_IN_AGENT_TYPES]).toEqual([...SUBAGENT_PRESETS]);
   });
 
-  it("the reserved names are Claude Code's three and OpenLen's two", () => {
-    expect([...RESERVED_AGENT_TYPES].sort()).toEqual(["Explore", "Plan", "general-purpose", "len-design", "len-office"]);
+  it("the reserved names are Claude Code's three, OpenLen's two and the «Crear» card's creator", () => {
+    expect([...RESERVED_AGENT_TYPES].sort()).toEqual(["Explore", "Plan", "creator", "general-purpose", "len-design", "len-office"]);
   });
 
   it("builds the path back", () => {

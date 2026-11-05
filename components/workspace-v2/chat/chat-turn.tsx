@@ -11,14 +11,15 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert } from "lucide-react";
-import { isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert, Wrench } from "lucide-react";
+import { isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
+import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -197,6 +198,13 @@ export function UserMessage({
             <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-event-task-turn="">
               <Bell size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("eventTasks.cardFrom", { task: turn.origen.title })}</span>
+            </div>
+          ) : turn.origen && isToolCreationOrigin(turn.origen) ? (
+            // «CREAR» ON A TOOL CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn in the
+            // person's tool project that launched the Creator; nobody typed it.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-tool-creation-turn="">
+              <Wrench size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.toolCreation")}</span>
             </div>
           ) : turn.origen && (
             <button
@@ -428,6 +436,8 @@ export function LenTurn({
           onCancelled={() => onConfirmSettled(turn.id)}
         />
       )}
+      {/* «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the card Len proposed in this answer. */}
+      <ToolSuggestionCards projectId={projectId} rowId={turn.id} />
       {turn.respuesta && <AgentReplyCard respuesta={turn.respuesta} labels={labels} />}
       <TurnClose
         turn={turn}

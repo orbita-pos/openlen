@@ -25,7 +25,7 @@ export interface InstallDeps {
   access(projectId: string, userId: string): Promise<AccesoAlProyecto | Response>;
   loadProject(projectId: string): Promise<{ data: ProjectData } | null>;
   files(projectId: string): Promise<Record<string, string>>;
-  securityGate(i: { projectId: string; actorId: string; accept?: string; locale: string }): Promise<{ stop: GatedPublishResult } | { fingerprint: string | null }>;
+  securityGate(i: { projectId: string; actorId: string; accept?: string; locale: string; waitWhenPending?: boolean }): Promise<{ stop: GatedPublishResult } | { fingerprint: string | null }>;
   entorno(projectId: string): Promise<Record<string, string>>;
   build(p: { projectId: string; html: string; files: Record<string, string>; app: NonNullable<ProjectData["app"]>; entorno: Record<string, string>; iconPath: string }): Promise<{
     sha: string;
@@ -103,6 +103,8 @@ export async function installTool(
     readonly confirmFingerprint?: string;
     readonly copyDraftData?: boolean;
     readonly skipMissingSecrets?: boolean;
+    /** Nobody is in front of it (a «Crear» card's install): wait for a review still running, as Len's `publish` does. */
+    readonly waitWhenPending?: boolean;
   },
   deps?: InstallDeps,
 ): Promise<{ status: number; body: Record<string, unknown> }> {
@@ -121,7 +123,13 @@ export async function installTool(
   const manifest = readToolManifest(files, { personLocale: i.locale, placeholderIconSha: PLACEHOLDER_ICON_SHA });
   if (!manifest.ok) return { status: 422, body: { error: "tool_manifest_invalid", problems: manifest.problems } };
 
-  const gate = await d.securityGate({ projectId: i.projectId, actorId: i.actorId, locale: i.locale, ...(i.acceptSecurityFingerprint ? { accept: i.acceptSecurityFingerprint } : {}) });
+  const gate = await d.securityGate({
+    projectId: i.projectId,
+    actorId: i.actorId,
+    locale: i.locale,
+    ...(i.acceptSecurityFingerprint ? { accept: i.acceptSecurityFingerprint } : {}),
+    ...(i.waitWhenPending ? { waitWhenPending: true } : {}),
+  });
   if ("stop" in gate) return gate.stop;
 
   try {

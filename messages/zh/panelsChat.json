@@ -24,7 +24,8 @@
     "desdeElHilo": "来自讨论 · {donde}",
     "scheduled": "定时任务「{title}」 · {when}",
     "lenWatch": "Len Watch · 你发布的网站无法加载",
-    "fromSubagents": "子代理的结果"
+    "fromSubagents": "子代理的结果",
+    "toolCreation": "创建工具"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",
@@ -140,7 +141,8 @@
       "artifact-motion": "制作动态视频",
       "artifact-audio": "制作音频或旁白",
       "schedule": "预约一个让 Len 在指定时间完成的任务",
-      "tool-development": "构建、修改、安装或检查这个工具"
+      "tool-development": "构建、修改、安装或检查这个工具",
+      "tool-suggestions": "为你的 OpenLen 提议一个工具"
     },
     "fileLimit": "每条消息最多 4 个文件。",
     "fileTooBig": "该文件超过 20 MB。",
@@ -657,5 +659,40 @@
     "destructive": "安装会删除它数据库中的数据。仍然安装吗？",
     "failed": "无法安装（{reason}）。",
     "installed": "已安装。"
+  },
+  "toolCard": {
+    "dismissed": "已搁置:«{title}»",
+    "more": "展开",
+    "less": "收起",
+    "initialContent": "初始内容",
+    "place": "位置",
+    "inRail": "在侧边栏",
+    "inProject": "在项目中",
+    "custom": "写下位置",
+    "customPlaceholder": "例如:每个项目的聊天旁边",
+    "notice": "创建需要几分钟,最多消耗 {cap} 积分。",
+    "closeNotice": "关闭提示",
+    "showNotice": "查看时间和积分提示",
+    "create": "创建",
+    "notNow": "暂不",
+    "creating": "正在创建工具…",
+    "cancel": "取消",
+    "cancelling": "正在取消…",
+    "installing": "正在安装…",
+    "installed": "已安装",
+    "open": "打开",
+    "undo": "撤销",
+    "removed": "已卸载",
+    "restore": "恢复",
+    "failed": "无法创建",
+    "cancelled": "已取消",
+    "interrupted": "已中断",
+    "retry": "重试",
+    "needsReview": "需要你审核",
+    "installAnyway": "仍然安装",
+    "openProject": "打开项目",
+    "planRequired": "工具属于付费方案。",
+    "sourceMissing": "该版本已不存在:请让 Len 重新提议",
+    "refused": "无法完成:{reason}"
   }
 }

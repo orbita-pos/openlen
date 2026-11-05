@@ -226,6 +226,38 @@ describe("the launcher of Len's subagents", () => {
     await s.settled("r1");
   });
 
+  // DeepSeek's Creator activation (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): an output schema declares
+  // structured_output, whose call ends the run; delivered to the caller, no notice reaches Len.
+  const READY = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+  it("with an output schema: structured_output is declared, its call ends the run with no further model call", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: true })] });
+    const settledWith: unknown[] = [];
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async (r) => void settledWith.push(r) });
+    const row = await s.settled("r1");
+    expect(row.status).toBe("completed");
+    expect(s.brainTools[0]!.map((t) => (t as { name: string }).name)).toContain("structured_output");
+    expect(s.ran).not.toContain("structured_output");
+    for (let i = 0; i < 50 && settledWith.length === 0; i++) await new Promise((r) => setTimeout(r, 2));
+    expect(settledWith).toEqual([{ id: "r1", status: "completed", structured: { ready: true }, finalText: "" }]);
+  });
+
+  it("delivered to the caller: no notice for Len and no turn woken", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: false }), dice("Falta saber el horario.")] });
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async () => {} });
+    await s.settled("r1");
+    expect(takeNotices("p")).toEqual([]);
+    expect(s.noticeTurns).toEqual([]);
+  });
+
+  it("a structured_output that doesn't fit the schema is refused and the run goes on", async () => {
+    const s = setup({ scripts: [llama("structured_output", { ready: "yes" }), llama("structured_output", { ready: true })] });
+    const settledWith: { structured: unknown }[] = [];
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "general-purpose", outputSchema: READY, delivery: "caller", onSettled: async (r) => void settledWith.push(r as { structured: unknown }) });
+    await s.settled("r1");
+    for (let i = 0; i < 50 && settledWith.length === 0; i++) await new Promise((r) => setTimeout(r, 2));
+    expect(settledWith[0]?.structured).toEqual({ ready: true });
+  });
+
   it("when it finishes: settles, charges the owner, frees its slot and box, and leaves its notice", async () => {
     const s = setup();
     await s.launcher.launch({ description: "Find the menu", prompt: "Where is the menu?", preset: "general-purpose" });
@@ -322,6 +354,8 @@ describe("the launcher of Len's subagents", () => {
     expect(child.readOnly).toBe(true);
     expect(child.turnId).toBe("turn-1");
     expect(child.terminalHolderId).toBe("r1");
+    // A child never proposes a «Crear» card (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+    expect(child.isSubagent).toBe(true);
   });
 
   it("the child is offered only its tools: no publish, no subagent; Explore no Write", async () => {
@@ -421,6 +455,19 @@ describe("continuable children (phase 2)", () => {
     expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: true, tool_result: "message delivered to agent len" });
   });
 
+  it("🔴 a child delivered to its caller (the «Crear» card's creator) can't message Len: no send_message, no notice, Len never woken", async () => {
+    const ready = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Lista en /" }), llama("structured_output", { ready: true })] });
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "creator", outputSchema: ready, delivery: "caller", onSettled: async () => {} });
+    await s.settled("r1");
+    const offered = s.brainTools[0]!.map((t) => (t as { name: string }).name);
+    expect(offered).not.toContain("send_message");
+    expect(offered).toContain("structured_output");
+    expect(takeNotices("p")).toEqual([]);
+    expect(s.noticeTurns).toHaveLength(0);
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false });
+  });
+
   it("a tool call after its message brings the closing message back", async () => {
     const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Half done" }), llama("Read", { file_path: "/b" }), dice("All done")] });
     await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
@@ -478,6 +525,16 @@ describe("waking an idle child (phase 2)", () => {
     expect(takeNotices("p").map((n) => n.text)).toEqual([
       "Background subagent r1 finished and will do no further work unless you send it more.\n\nIts closing message:\nFooter done too",
     ]);
+  });
+
+  it("🔴 a «Crear» card's creator can't be messaged or woken by Len: its result is the card's", async () => {
+    const s = setup({ scripts: [dice("Built")] });
+    const ready = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+    const r = await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "creator", outputSchema: ready, delivery: "caller", onSettled: async () => {} });
+    expect(r).toMatchObject({ ok: true });
+    await s.settled("r1");
+    expect(await s.launcher.send({ id: "r1", message: "Now publish it." })).toMatchObject({ ok: false, code: "unavailable" });
+    expect(s.g.seen).toHaveLength(1);
   });
 
   it("a running child gets Len's message in its inbox instead", async () => {

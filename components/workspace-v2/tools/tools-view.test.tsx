@@ -46,12 +46,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function render(tools: InstalledToolView[], paid = true) {
+async function render(tools: InstalledToolView[], paid = true, suggestions?: { available: boolean; on: boolean }) {
   const reload = vi.fn();
   const div = document.createElement("div");
   document.body.appendChild(div);
   root = createRoot(div);
-  await act(async () => root!.render(<ToolsView tools={tools} paid={paid} onChanged={reload} />));
+  await act(async () => root!.render(<ToolsView tools={tools} paid={paid} onChanged={reload} {...(suggestions ? { suggestions } : {})} />));
   return reload;
 }
 const byText = (text: string) => [...document.querySelectorAll("button")].find((b) => b.textContent === text)!;
@@ -97,5 +97,33 @@ describe("ToolsView", () => {
     await render([tool({ status: "plan_required", frameUrl: null })], false);
     expect(byText("tools.page.ask").disabled).toBe(true);
     expect(document.body.textContent).toContain("tools.planRequired");
+  });
+
+  // «SUGERENCIAS DE HERRAMIENTAS» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the person's own switch
+  // for the «Crear» card, off until they turn it on, with one line of what it does.
+  it("«Sugerencias de herramientas»: its state and one line; switching it PATCHes the person's setting", async () => {
+    const reload = await render([], true, { available: true, on: false });
+    const box = document.querySelector("[data-tool-suggestions]")!;
+    expect(box.textContent).toContain("tools.page.suggestions");
+    expect(box.textContent).toContain("tools.page.suggestionsHint");
+    const sw = box.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    expect(sw.getAttribute("aria-checked")).toBe("false");
+    await act(async () => sw.click());
+    expect(fetchMock).toHaveBeenCalledWith("/api/tools/settings", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ suggestions: true }) }));
+    expect(reload).toHaveBeenCalled();
+  });
+
+  it("not available (switched off for everyone, or no subagents): no switch", async () => {
+    await render([], true, { available: false, on: false });
+    expect(document.querySelector("[data-tool-suggestions]")).toBeNull();
+    if (root) act(() => root!.unmount());
+    root = null;
+    await render([]);
+    expect(document.querySelector("[data-tool-suggestions]")).toBeNull();
+  });
+
+  it("on Free the switch can't be turned on", async () => {
+    await render([], false, { available: true, on: false });
+    expect(document.querySelector<HTMLButtonElement>("[data-tool-suggestions] [role='switch']")!.disabled).toBe(true);
   });
 });

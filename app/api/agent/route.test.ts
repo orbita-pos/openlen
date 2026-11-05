@@ -229,6 +229,23 @@ vi.mock("@/lib/projects/versions", () => ({ listVersions: mocks.listVersions }))
 vi.mock("@/lib/projects/deshacer-turno", () => ({ guardarCambiosDelTurno: mocks.guardarCambiosDelTurno, addChangesToTurn: mocks.addChangesToTurn }));
 vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoApp }));
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
+// «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
+const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
+vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
+// «Crear» cards changed since Len last heard (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+const cardsStore = vi.hoisted(() => ({ undeliveredCards: vi.fn(async (_p: string, _person: string): Promise<unknown[]> => []), markDelivered: vi.fn(async (_ids: readonly string[], _at: Date) => {}) }));
+vi.mock("@/lib/tools/cards/store", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/cards/store")>()), ...cardsStore }));
+const reconciled = vi.hoisted(() => ({ reconcileOnRead: vi.fn(async (rows: unknown[]) => rows) }));
+vi.mock("@/lib/tools/cards/actions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/cards/actions")>()), ...reconciled }));
+// «Crear» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn's card lives in a fake store.
+const creationCard = vi.hoisted(() => ({ row: { id: "card-1", title: "Reservas de hoy", phase: "creating", personId: "u1", toolProjectId: "p1", creatorRunId: null as string | null, hostRowId: null as string | null } }));
+vi.mock("@/lib/tools/cards/creation", async (orig) => ({
+  ...(await orig<typeof import("@/lib/tools/cards/creation")>()),
+  realCreationDeps: async () => ({
+    cardById: async () => creationCard.row,
+    casPhase: async (_id: string, _from: readonly string[], to: string, set: Record<string, unknown> = {}) => (creationCard.row = { ...creationCard.row, ...set, phase: to }),
+  }),
+}));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 vi.mock("@/lib/projects/chat", () => ({
@@ -2056,6 +2073,54 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ skillCatalogMessage?: string | null; personalSkills?: string | null }])[0];
     const fila = () =>
       (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skills?: string; skillsDigest?: string } | null }])[1];
+
+    it("«Sugerencias de herramientas» on for whoever speaks: tool-suggestions is in the catalog; off, it isn't", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      suggestionsTo.mockResolvedValueOnce(true);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage).toMatch(/- `tool-suggestions`: /);
+      expect(suggestionsTo).toHaveBeenLastCalledWith("u1", false);
+      suggestionsTo.mockResolvedValueOnce(false);
+      await readEvents(await pedir());
+      expect(argsQueRecibio().skillCatalogMessage ?? "").not.toMatch(/tool-suggestions/);
+    });
+
+    it("the cards changed since Len last heard reach this request, and are marked delivered as of the read", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      const changed = { id: "card-1", title: "Reservas de hoy", phase: "installed", placement: "rail", customLocation: null, error: null };
+      cardsStore.undeliveredCards.mockResolvedValueOnce([changed]);
+      const before = Date.now();
+      await readEvents(await pedir());
+      expect(cardsStore.undeliveredCards).toHaveBeenLastCalledWith("p1", "u1");
+      // Reconciled before Len hears it: a card a restart left «creando» reaches him as interrupted.
+      expect(reconciled.reconcileOnRead).toHaveBeenCalledWith([changed]);
+      const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ toolCardStatus?: string | null }])[0];
+      expect(args.toolCardStatus).toMatch(/^Latest status of action cards/);
+      expect(args.toolCardStatus).toContain('"id":"card-1"');
+      const [ids, at] = cardsStore.markDelivered.mock.calls.at(-1)!;
+      expect(ids).toEqual(["card-1"]);
+      expect(at.getTime()).toBeGreaterThanOrEqual(before);
+      // Nothing changed: no notice, nothing marked.
+      cardsStore.markDelivered.mockClear();
+      await readEvents(await pedir());
+      expect((mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ toolCardStatus?: string | null }])[0].toolCardStatus ?? null).toBeNull();
+      expect(cardsStore.markDelivered).not.toHaveBeenCalled();
+    });
+
+    it("offered: Len is declared propose_action, its session knows this turn's row and starts with no skill loaded this turn", async () => {
+      turno();
+      mocks.turnosParaElHistorial.mockResolvedValue([]);
+      suggestionsTo.mockResolvedValueOnce(true);
+      await readEvents(await pedir());
+      const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { tools: { name: string }[] };
+      expect(args.tools.map((t) => t.name)).toContain("propose_action");
+      suggestionsTo.mockResolvedValueOnce(false);
+      await readEvents(await pedir());
+      const off = mocks.runAgentLoop.mock.calls.at(-1)![0] as { tools: { name: string }[] };
+      expect(off.tools.map((t) => t.name)).not.toContain("propose_action");
+    });
 
     it("the first turn carries the catalog; the second, with nothing changed, none", async () => {
       turno();
@@ -4116,6 +4181,57 @@ describe("POST /api/agent — Len's subagents", () => {
     await readEvents(res);
     const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
     expect(paraElModelo.prompt).toBe("Background subagent r1 finished.");
+  });
+
+  it("«Crear»'s host turn calls no model, launches the creator for the caller, charges nothing, and its cap is the lower", async () => {
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null };
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    const framing = '{"task":"Build one new OpenLen tool"}';
+    const eventos = await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777", idioma: "es", zonaHoraria: "UTC" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing, origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+    const launcher = mocks.createSubagentLauncher.mock.results.at(-1)!.value as { launch: ReturnType<typeof vi.fn> };
+    expect(launcher.launch).toHaveBeenCalledTimes(1);
+    expect(launcher.launch.mock.calls[0]![0]).toMatchObject({ preset: "creator", description: "Reservas de hoy", prompt: framing, delivery: "caller", outputSchema: { required: ["ready"] } });
+    expect(creationCard.row.creatorRunId).toBe("r1");
+    expect((launcherArgs()[0] as unknown as { spend: { cap: number } }).spend.cap).toBe(2500);
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
+    expect(eventos.filter((e) => e.event === "text").map((e) => (e.data as { text: string }).text).join("")).toContain("Creando «Reservas de hoy»");
+  });
+
+  it("the host turn's row carries the creator's step, so whoever opens the tool project sees it working", async () => {
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null, hostRowId: null } as typeof creationCard.row;
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    const eventos = await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "{}", origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    const acciones = eventos.filter((e) => e.event === "action").map((e) => e.data);
+    expect(acciones.at(-1)).toMatchObject({ tool: "subagent", status: "done", summary: "Reservas de hoy", subagent: { id: "r1", preset: "creator" } });
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { actions?: { tool: string; subagent?: { id: string } }[] }])[1];
+    expect(fila.actions?.find((x) => x.tool === "subagent")?.subagent?.id).toBe("r1");
+  });
+
+  it("🔴 the host turn's row keeps the plain account, never the Creator's task; a host whose card has a newer row launches nothing", async () => {
+    const sentText = "«Crear» on a tool card started this project: a background creator subagent builds the tool «Reservas de hoy» here.";
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null, hostRowId: "99999999-9999-4999-8999-999999999999" } as typeof creationCard.row;
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: '{"task":"x","completion":"structured_output"}', sentText, origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    const transcript = (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1].transcript;
+    expect(transcript?.sentText).toBe(sentText);
+    const launcher = mocks.createSubagentLauncher.mock.results.at(-1)!.value as { launch: ReturnType<typeof vi.fn> };
+    expect(launcher.launch).not.toHaveBeenCalled();
+    creationCard.row = { ...creationCard.row, hostRowId: null } as typeof creationCard.row;
+  });
+
+  it("a lower ceiling never raises the plan's", async () => {
+    mocks.techoDelTurno.mockReturnValue(100);
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null };
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "Crear", turnId: "88888888-8888-4888-8888-888888888888" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "{}", origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }));
+    expect((launcherArgs()[0] as unknown as { spend: { cap: number } }).spend.cap).toBe(100);
   });
 
   it("what the children spent counts against the turn's cap", async () => {

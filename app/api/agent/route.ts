@@ -111,12 +111,13 @@ import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, TOOL_OUTCOME_UNKNOWN, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
+import { isToolCreationOrigin, type ToolCreationOrigin } from "@/lib/projects/types";
 import { randomUUID } from "node:crypto";
 import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
 import { createArtifactAgent } from "@/lib/artifacts/tools";
 
-import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente, queuedDirections } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
 import {
@@ -154,7 +155,10 @@ import { cambiosDelTurnoParaDeshacer, conForma } from "@/lib/projects/deshacer-t
 import { addChangesToTurn, guardarCambiosDelTurno } from "@/lib/projects/deshacer-turno";
 import { nacerComoApp } from "@/lib/projects/nacer-como-app";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
+import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
+import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
+import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
 import { declarationsOfTool } from "@/lib/agent/tool-mode";
 import { parseDesignRequest } from "@/lib/agent/design-request";
 import { designBlock } from "@/lib/agent/design-block";
@@ -703,7 +707,13 @@ async function correrTurno(
     return resolveAgentTypes({ project: projectTypes, personal: personalTypes });
   };
   let agentTypes = await loadAgentTypes();
-  const conPostura = (d: Record<string, unknown>[]) => (toolDelTurno ? declarationsOfTool(d) : d);
+  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): `tool-suggestions` and Len's
+  // `propose_action` for whoever speaks, with «Sugerencias de herramientas» on, a paid plan, outside a tool project.
+  const ofrecerSugerencias = await suggestionsOfferedTo(quien, toolDelTurno).catch(() => false);
+  const conPostura = (d: Record<string, unknown>[]) => {
+    const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
+    return ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
+  };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
   const refreshAgentTypes = (): Promise<void> => {
@@ -988,6 +998,18 @@ async function correrTurno(
   // sepa que «hay lista», y una línea con ella SÓLO si ya no está en el historial.
   // Fail-soft: sin la base, el turno sigue sin lista.
   const listaDelTurno = todosForTurn(await latestTodoListForChat(projectId).catch(() => null), history);
+  // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what the person or the background work
+  // changed on this person's cards since Len last heard, read with this request (DeepSeek's action-card status; it
+  // never wakes Len). Marked delivered as of this read once the turn starts. Fail-soft: without the table, nothing.
+  const tarjetasLeidasEn = new Date();
+  const tarjetasCambiadas = toolsEnabled()
+    ? await conPlazo(
+        async () => (await import("@/lib/tools/cards/actions")).reconcileOnRead(await (await import("@/lib/tools/cards/store")).undeliveredCards(projectId, quien)),
+        MEMORIA_TIMEOUT_MS,
+        [],
+      ).catch(() => [])
+    : [];
+  const estadoDeTarjetas = toolCardStatusNotice(tarjetasCambiadas);
 
   const state = summarizeProjectState(
     {
@@ -1129,7 +1151,26 @@ async function correrTurno(
         conPlazo(async () => (await deps.skillStore?.list("personal", quien)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
       ])
     : [[], []];
-  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
+  if (ofrecerSugerencias) {
+    deps.toolCards = {
+      insertCard: async (input) => {
+        const { insertCard, toCardView } = await import("@/lib/tools/cards/store");
+        return toCardView(await insertCard(input));
+      },
+      queued: (turnId) => queuedDirections(turnId),
+    };
+    const idiomaDelCatalogo = typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en";
+    deps.suggestionCatalog = async () => {
+      const [{ listInstallations }, { toInstalledToolView }, { suggestionCatalog }] = await Promise.all([
+        import("@/lib/tools/store"),
+        import("@/lib/tools/view"),
+        import("@/lib/tools/cards/catalog"),
+      ]);
+      const rows = await listInstallations(quien);
+      return suggestionCatalog({ installed: rows.map((r) => toInstalledToolView(r, { locale: idiomaDelCatalogo, requestHost: null, plan: "pro", releaseExists: true })) });
+    };
+  }
+  const skillsDelTurno = skillsOn ? resolveSkills({ bundled: bundledSkills({ app: appDelTurno ?? null, env: process.env, tool: toolDelTurno, toolSuggestions: ofrecerSugerencias }), project: skillsDelProyecto, personal: skillsPersonales }) : EMPTY_SKILL_SET;
   const presupuestoDeSkills = catalogBudgetChars(MODEL_WINDOW_TOKENS);
   const catalogoDelTurno = skillsOn
     ? skillCatalogMessage(
@@ -1157,7 +1198,8 @@ async function correrTurno(
   const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
   // A scheduled task: the model reads DeepSeek's `[SCHEDULE REMINDER]` message, which carries the
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
-  const textoEnviado = withInvokedSkills(
+  // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
+  const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
       : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
@@ -1225,6 +1267,7 @@ async function correrTurno(
     equipo: compartido,
     history,
     todoRestore: listaDelTurno.restoreLine,
+    toolCardStatus: estadoDeTarjetas,
     attachedImages: attachedImages.map((f) => (pixelesDe(f.url) ? { ...f, visible: true } : f)),
     ...(attachedFiles.length > 0 ? { attachedFiles } : {}),
     seleccion,
@@ -1326,6 +1369,8 @@ async function correrTurno(
     // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
     // put in this message: `skill` answers «already loaded» for them.
     loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
+    // What a `skill` call answered in THIS turn (DeepSeek's `turnLoads`): `propose_action` needs its skill here.
+    turnSkillLoads: new Set<string>(),
     projectId,
     userId,
     // LA TERMINAL REAL: el turno tiene la caja del proyecto y su fila en el libro.
@@ -1525,6 +1570,8 @@ async function correrTurno(
       // cuando el cliente se entera de que acabó.
       const filaId = turnIdDelCliente ?? turnoId;
       ledgerRefId = filaId;
+      // The answer a «Crear» card follows (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
+      agentSession.chatRowId = filaId;
       /** Lo que el usuario escribió a media faena, con la misma forma que el
        *  panel (`↳`): si no está el panel, la fila la escribe el servidor. */
       const correcciones: string[] = [];
@@ -1775,6 +1822,8 @@ async function correrTurno(
           const margen = await margenDeMiembros(projectId);
           if (margen != null) techo = Math.min(techo, margen);
         }
+        // «Crear» on a tool card: what one creation may spend (`OPENLEN_TOOL_CREATION_CAP`), never above the plan's.
+        if (programadaDelTurno?.ceilingCentis !== undefined) techo = Math.min(techo, programadaDelTurno.ceilingCentis);
         // LEN'S SUBAGENTS: what they spend counts against this same cap, also after this turn closes.
         let lenSpent = 0;
         const spend = createTurnSpend(techo, () => lenSpent);
@@ -2049,7 +2098,53 @@ async function correrTurno(
               },
             }
           : { ...deps, planMode, goal, scheduledTasks, stillWorking, turnSignal, ...(subagents ? { subagents } : {}) };
-        const result = await runAgentLoop({
+        // «CREAR» ON A TOOL CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn calls no
+        // model. It launches the `creator` child for the card — DeepSeek's `delivery: "caller"` and `{ ready }` schema,
+        // whose settlement the card's code installs — and closes, charging nothing (`sinCobro: "host"`); the child
+        // spends within this turn's cap and outlives it.
+        const creacionDelTurno = programadaDelTurno && isToolCreationOrigin(programadaDelTurno.origin) ? programadaDelTurno.origin : null;
+        // The turn starts: the cards' status read above is now Len's.
+        if (tarjetasCambiadas.length > 0) {
+          void import("@/lib/tools/cards/store")
+            .then((s) => s.markDelivered(tarjetasCambiadas.map((c) => c.id), tarjetasLeidasEn))
+            .catch((err: unknown) => console.warn("[agent] couldn't mark the cards' status delivered", err));
+        }
+        const hostToolCreation = async (o: ToolCreationOrigin): Promise<AgentLoopResult> => {
+          const creation = await import("@/lib/tools/cards/creation");
+          const { text, runId } = await creation.hostTheCreator(
+            { cardId: o.cardId, framing: programadaDelTurno?.framing ?? "", locale: agentSession.uiLocale ?? "en", launcher: subagents, hostRowId: filaId },
+            await creation.realCreationDeps(),
+          );
+          // The creator's step, as a `subagent` call leaves it: its card shows under this row, live and on reload.
+          const pasos = runId
+            ? [
+                { type: "action" as const, tool: "subagent", status: "running" as const, summary: o.title },
+                { type: "action" as const, tool: "subagent", status: "done" as const, summary: o.title, subagent: { id: runId, preset: "creator" } },
+              ]
+            : [];
+          for (const ev of [...pasos, { type: "text" as const, text }]) {
+            registro.observar(ev);
+            avance.tocar();
+            emit(ev.type, ev);
+          }
+          return {
+            finalText: text,
+            transcripcion: [{ role: "assistant", content: text }],
+            usage: { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 },
+            turns: 0,
+            toolCalls: 0,
+            terminalError: false,
+            topeAlcanzado: null,
+            errorCode: null,
+            mutoDurable: false,
+            aplicado: [],
+            rechazos: [],
+            sinCobro: "host",
+          };
+        };
+        const result = creacionDelTurno
+          ? await hostToolCreation(creacionDelTurno)
+          : await runAgentLoop({
           messages,
           tools,
           ...(stepRecorder ? { onStepTools: stepRecorder.onStepTools } : {}),
@@ -2354,7 +2449,7 @@ async function correrTurno(
         });
         // Para el enfriamiento: 3 turnos seguidos con respaldo saltan al
         // principal 5 min (`lib/agent/provider-health.ts`).
-        noteTurn({ primary: brain.firstProvider(), fellBack: brain.fellBack(), now: Date.now() });
+        if (!creacionDelTurno) noteTurn({ primary: brain.firstProvider(), fellBack: brain.fellBack(), now: Date.now() });
         const gastoTokens = inputTokens + outputTokens > 0;
         if (!result.terminalError && !result.sinCobro) {
           // La entrada cacheada SÍ se cobra más barata desde el 2026-08-28:

@@ -24,7 +24,8 @@
     "desdeElHilo": "from the thread · {donde}",
     "scheduled": "Scheduled task «{title}» · {when}",
     "lenWatch": "Len Watch · your published site wasn't loading",
-    "fromSubagents": "Results from the subagents"
+    "fromSubagents": "Results from the subagents",
+    "toolCreation": "Create tool"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
@@ -140,7 +141,8 @@
       "artifact-motion": "Make a motion video",
       "artifact-audio": "Make an audio or a narration",
       "schedule": "Schedule a task for Len to do at a set time",
-      "tool-development": "Build, change, install or check this tool"
+      "tool-development": "Build, change, install or check this tool",
+      "tool-suggestions": "Propose a tool for your OpenLen"
     },
     "fileLimit": "Up to 4 files per message.",
     "fileTooBig": "That file is over 20 MB.",
@@ -657,5 +659,40 @@
     "destructive": "Installing deletes data in its database. Install anyway?",
     "failed": "It couldn't be installed ({reason}).",
     "installed": "Installed."
+  },
+  "toolCard": {
+    "dismissed": "Dismissed: «{title}»",
+    "more": "Show more",
+    "less": "Show less",
+    "initialContent": "Initial content",
+    "place": "Where",
+    "inRail": "In the rail",
+    "inProject": "In the project",
+    "custom": "Write where",
+    "customPlaceholder": "For example: next to each project's chat",
+    "notice": "Building it takes a few minutes and spends up to {cap} credits.",
+    "closeNotice": "Close notice",
+    "showNotice": "Show time and credits notice",
+    "create": "Create",
+    "notNow": "Not now",
+    "creating": "Building the tool…",
+    "cancel": "Cancel",
+    "cancelling": "Cancelling…",
+    "installing": "Installing…",
+    "installed": "Installed",
+    "open": "Open",
+    "undo": "Undo",
+    "removed": "Uninstalled",
+    "restore": "Restore",
+    "failed": "Couldn't build it",
+    "cancelled": "Cancelled",
+    "interrupted": "Interrupted",
+    "retry": "Retry",
+    "needsReview": "Needs your review",
+    "installAnyway": "Install anyway",
+    "openProject": "Open project",
+    "planRequired": "Tools are part of the paid plans.",
+    "sourceMissing": "That version is gone: ask Len for a new proposal",
+    "refused": "Couldn't do it: {reason}"
   }
 }

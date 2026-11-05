@@ -6,6 +6,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
 vi.mock("@/lib/tools/enabled", () => ({ toolsEnabled: vi.fn(() => true) }));
 vi.mock("@/lib/limits", () => ({ getUserPlan: vi.fn(async () => "pro") }));
+vi.mock("@/lib/tools/suggestions", () => ({ toolSuggestionsEnabled: vi.fn(() => true), suggestionsOn: vi.fn(async () => false) }));
 vi.mock("@/lib/tools/store", () => ({ listInstallations: vi.fn(), releaseExists: vi.fn(async () => true), personName: vi.fn(async () => "Ana"), installationById: vi.fn(), readRelease: vi.fn() }));
 
 const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
@@ -61,6 +62,18 @@ describe("GET /api/tools", () => {
   it("a removed one says removed", async () => {
     vi.mocked(store.listInstallations).mockResolvedValue([{ ...ROW, removedAt: new Date() }] as never);
     expect(((await (await list()).json()) as { tools: Array<{ status: string }> }).tools[0]?.status).toBe("removed");
+  });
+
+  it("«Sugerencias de herramientas»: whether the page offers the switch, and the person's own state", async () => {
+    const suggestions = await import("@/lib/tools/suggestions");
+    vi.mocked(suggestions.suggestionsOn).mockResolvedValueOnce(true);
+    expect(((await (await list()).json()) as { suggestions: unknown }).suggestions).toEqual({ available: true, on: true });
+    expect(suggestions.suggestionsOn).toHaveBeenCalledWith("u1");
+    vi.mocked(suggestions.toolSuggestionsEnabled).mockReturnValueOnce(false);
+    expect(((await (await list()).json()) as { suggestions: unknown }).suggestions).toEqual({ available: false, on: false });
+    vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+    expect(((await (await list()).json()) as { suggestions: { available: boolean } }).suggestions.available).toBe(false);
+    vi.unstubAllEnvs();
   });
 
   it("nobody signed in: 401; tools off: 404", async () => {

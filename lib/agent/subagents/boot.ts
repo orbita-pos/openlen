@@ -5,6 +5,7 @@
 //
 // Pure: instrumentation.ts hands it the real store and `launchSubagentNoticeTurn`.
 
+import { HIDDEN_AGENT_TYPES } from "./agent-paths";
 import { settlementNotice, type SubagentStopReason, type WorktreeOutcome } from "./notice";
 import type { SubagentRunRow } from "./store";
 import type * as store from "./store";
@@ -71,6 +72,9 @@ export async function closeSubagentsOfThePreviousProcess(io: BootIO): Promise<nu
       const worktree = recovered.has(r.id) ? recovered.get(r.id) : r.worktreeOutcome;
       // Marked before the turn is launched: a failure after that loses the notice rather than repeating it.
       if (!(await io.store.markNoticeDelivered(r.id))) continue;
+      // A hidden type (the «Crear» card's creator) hands its result to whoever launched it — DeepSeek's
+      // `delivery: "caller"` — never to Len; a card it left mid-build is reconciled by the card itself.
+      if (HIDDEN_AGENT_TYPES.has(r.preset)) continue;
       if (io.now() - (r.settledAt?.getTime() ?? io.now()) > TELL_UP_TO_MS) continue;
       notices.push({
         id: r.id,

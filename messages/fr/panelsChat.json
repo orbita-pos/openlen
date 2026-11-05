@@ -24,7 +24,8 @@
     "desdeElHilo": "depuis le fil · {donde}",
     "scheduled": "Tâche planifiée «{title}» · {when}",
     "lenWatch": "Len Watch · votre site publié ne se chargeait pas",
-    "fromSubagents": "Résultats des sous-agents"
+    "fromSubagents": "Résultats des sous-agents",
+    "toolCreation": "Créer un outil"
   },
   "proceso": {
     "completadoEn": "Terminé en <d>{duracion}</d>",
@@ -140,7 +141,8 @@
       "artifact-motion": "Créer une vidéo animée",
       "artifact-audio": "Créer un audio ou une narration",
       "schedule": "Planifier une tâche que Len fera à une heure donnée",
-      "tool-development": "Construire, modifier, installer ou vérifier cet outil"
+      "tool-development": "Construire, modifier, installer ou vérifier cet outil",
+      "tool-suggestions": "Proposer un outil pour votre OpenLen"
     },
     "fileLimit": "4 fichiers maximum par message.",
     "fileTooBig": "Ce fichier dépasse 20 Mo.",
@@ -657,5 +659,40 @@
     "destructive": "L'installation supprime des données de sa base. Installer quand même ?",
     "failed": "Impossible d'installer ({reason}).",
     "installed": "Installé."
+  },
+  "toolCard": {
+    "dismissed": "Écartée : «{title}»",
+    "more": "Voir plus",
+    "less": "Voir moins",
+    "initialContent": "Contenu initial",
+    "place": "Où",
+    "inRail": "Dans la barre",
+    "inProject": "Dans le projet",
+    "custom": "Écrire où",
+    "customPlaceholder": "Par exemple : à côté du chat de chaque projet",
+    "notice": "La créer prend quelques minutes et coûte jusqu'à {cap} crédits.",
+    "closeNotice": "Fermer l'avis",
+    "showNotice": "Voir l'avis de durée et de crédits",
+    "create": "Créer",
+    "notNow": "Pas maintenant",
+    "creating": "Création de l'outil…",
+    "cancel": "Annuler",
+    "cancelling": "Annulation…",
+    "installing": "Installation…",
+    "installed": "Installé",
+    "open": "Ouvrir",
+    "undo": "Annuler l'installation",
+    "removed": "Désinstallé",
+    "restore": "Restaurer",
+    "failed": "Impossible de le créer",
+    "cancelled": "Annulée",
+    "interrupted": "Interrompue",
+    "retry": "Réessayer",
+    "needsReview": "Demande votre vérification",
+    "installAnyway": "Installer quand même",
+    "openProject": "Ouvrir le projet",
+    "planRequired": "Les outils font partie des offres payantes.",
+    "sourceMissing": "Cette version n'existe plus : demandez à Len une nouvelle proposition",
+    "refused": "Impossible : {reason}"
   }
 }
