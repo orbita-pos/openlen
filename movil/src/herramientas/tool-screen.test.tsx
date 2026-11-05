@@ -192,10 +192,32 @@ describe("PantallaHerramienta", () => {
     expect(s.onCerrar).toHaveBeenCalled();
   });
 
-  it("files.deliver: the app's viewer opens what was delivered", async () => {
+  // A deferred minor of the final review, fixed at Jesús's request: the tool can't put the viewer over itself without a
+  // tap — what it delivers waits in the screen's bottom line, each file with its name; tapping one opens it.
+  it("files.deliver: the file waits in the line with its name; a tap opens it in the app's viewer", async () => {
     const s = await paint();
     await s.ask(rpc(7, "files.deliver", { name: "r.pdf", contentType: "application/pdf", bytes: new Uint8Array([1]) }));
-    expect(document.querySelector("[data-viewer]")?.getAttribute("data-url")).toBe("/api/projects/t1/deliveries/x/ab-r.pdf");
+    expect(document.querySelector("[data-viewer]")).toBeNull();
+    await s.ask(rpc(8, "files.deliver", { name: "s.pdf", contentType: "application/pdf", bytes: new Uint8Array([2]) }));
+    const files = [...document.querySelectorAll<HTMLButtonElement>("[data-herr-entregado]")];
+    expect(files.map((b) => b.textContent)).toEqual(["r.pdf", "s.pdf"]);
+    await act(async () => files[0]!.click());
+    expect(document.querySelector("[data-viewer]")?.getAttribute("data-viewer")).toBe("r.pdf");
+  });
+
+  // A deferred minor of the final review: two questions of different kinds can't be open at once — a new one answers
+  // the open one «no», whatever its kind, so the sheet on screen is always the one back closes.
+  it("a new question of another kind answers the open one «no»: one sheet at a time", async () => {
+    const s = await paint();
+    await s.ask(rpc(20, "update", { projectId: "p1", table: "reservas", key: { id: 1 }, set: { a: 1 }, before: { a: 2 } }));
+    await s.ask(rpc(21, "jobs.run", { name: "export" }));
+    expect(document.querySelector("[data-herr-cambio]")).toBeNull();
+    expect(document.querySelector("[data-herr-trabajo]")).not.toBeNull();
+    expect(s.answers().find((a) => a.id === 20)).toMatchObject({ result: { status: "declined" } });
+    await s.ask(rpc(22, "files.pick", {}));
+    expect(document.querySelector("[data-herr-trabajo]")).toBeNull();
+    expect(document.querySelector("[data-herr-ficheros]")).not.toBeNull();
+    expect(s.answers().find((a) => a.id === 21)).toMatchObject({ result: { status: "declined" } });
   });
 
   it("🔴 Review Focus 1: the back button with a sheet open closes the sheet (declined), not the screen", async () => {

@@ -17,10 +17,12 @@ import "./herramientas.css";
 /** A tool's icon, fetched with the key; nothing while it loads or when it has none. */
 export function IconoDeHerramienta({ cliente, tool }: { cliente: ClienteDeOpenLen; tool: InstalledToolView }) {
   const [src, setSrc] = useState<string | null>(null);
+  // A refreshed list brings new objects for the same tools: the icon follows its tool and its URL, not the object.
+  const { id, iconUrl } = tool;
   useEffect(() => {
     let alive = true;
     let made: string | null = null;
-    void iconoDeHerramienta(cliente, tool).then((url) => {
+    void iconoDeHerramienta(cliente, { ...tool, id, iconUrl }).then((url) => {
       made = url;
       if (alive) setSrc(url);
       else if (url) URL.revokeObjectURL(url);
@@ -29,7 +31,8 @@ export function IconoDeHerramienta({ cliente, tool }: { cliente: ClienteDeOpenLe
       alive = false;
       if (made) URL.revokeObjectURL(made);
     };
-  }, [cliente, tool]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cliente, id, iconUrl]);
   return <span className="herr-icono" aria-hidden="true">{src ? <img src={src} alt="" /> : null}</span>;
 }
 

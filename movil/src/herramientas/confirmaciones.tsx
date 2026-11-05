@@ -132,6 +132,26 @@ export function HojaDeFicheros({ herramienta, accept, multiple, onElegidos, onCa
   );
 }
 
+/** What the tool delivered, waiting for the person's tap: each file by its name opens in the phone's viewer. A tool
+ *  never puts the viewer over itself — on the web the person clicks the link too. */
+export function LineaDeEntregados({ ficheros, onVer, onCerrar }: { ficheros: readonly ViewerFile[]; onVer: (file: ViewerFile) => void; onCerrar: () => void }) {
+  const t = useTranslations("movil.herramientas.tools");
+  return (
+    <div className="herr-linea" data-herr-entregados="">
+      <div className="herr-trabajo">
+        {ficheros.map((f, i) => (
+          <button key={`${f.url}-${i}`} type="button" data-herr-entregado="" onClick={() => onVer(f)}>
+            {f.name}
+          </button>
+        ))}
+        <button type="button" onClick={onCerrar}>
+          {t("jobs.running.dismiss")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const SEGUIR_CADA_MS = 2_000;
 const vivo = (j: ToolJobView) => !TERMINAL_JOB_STATUSES.includes(j.status);
 /** m:ss, or h:mm:ss past an hour — the web's line. */

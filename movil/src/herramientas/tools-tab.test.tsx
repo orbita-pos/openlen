@@ -8,8 +8,8 @@ vi.mock("use-intl", () => ({ useTranslations: () => (k: string) => k }));
 vi.mock("../api/herramientas", async (original) => ({ ...(await original<typeof import("../api/herramientas")>()), listarHerramientas: vi.fn(), iconoDeHerramienta: vi.fn(async () => null) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 
-import { listarHerramientas } from "../api/herramientas";
-import { ToolsTab } from "./tools-tab";
+import { iconoDeHerramienta, listarHerramientas } from "../api/herramientas";
+import { IconoDeHerramienta, ToolsTab } from "./tools-tab";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -87,6 +87,20 @@ describe("ToolsTab", () => {
     expect(host.textContent).toContain("reintentar");
     await act(async () => host.querySelector<HTMLButtonElement>(".gestion-error button")!.click());
     expect(host.querySelectorAll("[data-tool-row]")).toHaveLength(1);
+  });
+
+  // A deferred minor of the final review: a refreshed list gives new objects for the same tools; their icons stay.
+  it("an icon is fetched once for the same tool and icon, whatever object brings it", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const cliente = {} as never;
+    await act(async () => root.render(<IconoDeHerramienta cliente={cliente} tool={tool("a") as never} />));
+    await act(async () => root.render(<IconoDeHerramienta cliente={cliente} tool={tool("a") as never} />));
+    expect(iconoDeHerramienta).toHaveBeenCalledTimes(1);
+    await act(async () => root.render(<IconoDeHerramienta cliente={cliente} tool={tool("a", { iconUrl: "/api/tools/a/icon?v=2" }) as never} />));
+    expect(iconoDeHerramienta).toHaveBeenCalledTimes(2);
   });
 
   it("the list is read again every time the tab opens: a tool removed on the web is gone (Review Focus 3)", async () => {
