@@ -1,9 +1,8 @@
-// What the /api/tools/jobs routes share: the person (the browser session only, as the bridge and `data-change`; the
-// phone uses tools from phase 5 on, spec §4.14), the caller named like the bridge's (`installationId` or
+// What the /api/tools/jobs routes share: the person (the workspace's session or the phone app's key, as the bridge and
+// `data-change` — the route reads it with `usuarioDeLaPeticion`, phase 5, spec §4.14), the caller named like the bridge's (`installationId` or
 // `draftProjectId`, `locale`, `timeZone`) from the body or the query, and each refusal's status.
 import "server-only";
 
-import { auth } from "@/auth";
 import { resolveBridgeCaller } from "@/lib/tools/bridge/caller";
 import type { BridgeCaller } from "@/lib/tools/bridge/handlers";
 
@@ -27,8 +26,7 @@ export const REFUSAL_STATUS: Readonly<Record<JobRefusal, number>> = {
 const CALLER_FIELDS = ["installationId", "draftProjectId", "locale", "timeZone"] as const;
 
 /** The person and the tool asking, or the response that refuses them. */
-export async function jobsCaller(source: URLSearchParams | Record<string, unknown>): Promise<{ caller: BridgeCaller } | { response: Response }> {
-  const userId = (await auth())?.user?.id;
+export async function jobsCaller(userId: string | null, source: URLSearchParams | Record<string, unknown>): Promise<{ caller: BridgeCaller } | { response: Response }> {
   if (!userId) return { response: json({ error: "unauthorized" }, 401) };
   const read = (k: string) => (source instanceof URLSearchParams ? (source.get(k) ?? undefined) : source[k]);
   const who = await resolveBridgeCaller(userId, Object.fromEntries(CALLER_FIELDS.map((k) => [k, read(k)])));

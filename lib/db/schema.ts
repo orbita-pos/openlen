@@ -2519,6 +2519,8 @@ export const toolInstallations = pgTable(
     descriptions: jsonb("descriptions").$type<Record<string, string>>().notNull().default({}),
     iconPath: text("iconPath").notNull(),
     hostLabel: text("hostLabel").notNull(),
+    /** Phase 5 (§4.14): the phone's own private label, framed only by the phone app — set when the phone first opens it. */
+    phoneHostLabel: text("phoneHostLabel"),
     enabled: boolean("enabled").notNull().default(true),
     installedAt: timestamp("installedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
@@ -2527,6 +2529,7 @@ export const toolInstallations = pgTable(
   (t) => [
     uniqueIndex("toolInstallations_person_project_idx").on(t.personId, t.projectId),
     uniqueIndex("toolInstallations_hostLabel_idx").on(t.hostLabel),
+    uniqueIndex("toolInstallations_phoneHostLabel_idx").on(t.phoneHostLabel),
     index("toolInstallations_personId_idx").on(t.personId),
   ],
 );

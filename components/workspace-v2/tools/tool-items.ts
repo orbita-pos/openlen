@@ -7,6 +7,8 @@ import type { RailToolItem } from "../rail-model";
 
 import type { BridgeHostCaller } from "./use-tool-bridge-host";
 
+export { toolPromptDraft } from "@/lib/tools/prompt-draft";
+
 const canOpen = (t: InstalledToolView) => t.enabled && t.status === "ok" && !!t.frameUrl;
 
 export function railToolItems(tools: readonly InstalledToolView[]): RailToolItem[] {
@@ -15,15 +17,6 @@ export function railToolItems(tools: readonly InstalledToolView[]): RailToolItem
 
 export function projectToolItems(tools: readonly InstalledToolView[]): InstalledToolView[] {
   return tools.filter((t) => t.placement === "project" && canOpen(t));
-}
-
-/** What a tool's `sendPrompt` puts in Len's composer (§4.4): its text quoted, signed with the tool's name. */
-export function toolPromptDraft(text: string, toolTitle: string): string {
-  const quoted = text
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n");
-  return `${quoted}\n\n— ${toolTitle}\n`;
 }
 
 export type ToolLens = `tool:${string}`;

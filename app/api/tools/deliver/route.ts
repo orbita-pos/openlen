@@ -3,7 +3,8 @@
 // store as Len's `present`, under the tool's project → `{ url }`, a download only whoever can see that project opens
 // (`/api/projects/<id>/deliveries/…`). Multipart: the caller (`installationId` or `draftProjectId`) and one `file`.
 // The workspace relays `files.deliver`; Len's eyes never call it (they refuse the method).
-import { auth } from "@/auth";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { resolveBridgeCaller } from "@/lib/tools/bridge/caller";
 import { toolProjectOf } from "@/lib/tools/bridge/handlers";
 import { MAX_DELIVERABLE_BYTES } from "@/lib/agent/skills/present";
@@ -23,8 +24,8 @@ const field = (form: FormData, name: string) => {
   return typeof v === "string" ? v : undefined;
 };
 
-export async function POST(req: Request): Promise<Response> {
-  const userId = (await auth())?.user?.id;
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   if (Number(req.headers.get("content-length") ?? 0) > BODY_MAX_BYTES) return json({ error: "too_large" }, 413);
   const form = await req.formData().catch(() => null);
@@ -47,4 +48,6 @@ export async function POST(req: Request): Promise<Response> {
     if (code === "no_store") return json({ error: "no_store" }, 503);
     throw err;
   }
-}
+});
+
+export const OPTIONS = respuestaPrevia;

@@ -2,7 +2,8 @@
 // in OpenLen's own picker — the workspace's `<input type="file">`, never the tool's frame — saved for that person under
 // the tool's project. Their ids are the only way a file reaches a job (`jobs.run` → `uploadsOf`). Multipart: the
 // caller (`installationId` or `draftProjectId`, `locale`, `timeZone`) and up to 8 `file`s.
-import { auth } from "@/auth";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { resolveBridgeCaller } from "@/lib/tools/bridge/caller";
 import { toolProjectOf } from "@/lib/tools/bridge/handlers";
 import { saveToolUpload, UPLOAD_MAX_BYTES, UPLOADS_PER_PICK } from "@/lib/tools/uploads";
@@ -21,9 +22,9 @@ const field = (form: FormData, name: string) => {
   return typeof v === "string" ? v : undefined;
 };
 
-// Only the workspace's browser session: the phone uses tools from phase 5 on (spec §4.14).
-export async function POST(req: Request): Promise<Response> {
-  const userId = (await auth())?.user?.id;
+// The workspace's session or the phone app's key (phase 5, spec §4.14): the picker is OpenLen's in both.
+export const POST = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   if (Number(req.headers.get("content-length") ?? 0) > BODY_MAX_BYTES) return json({ error: "too_large" }, 413);
   const form = await req.formData().catch(() => null);
@@ -50,4 +51,6 @@ export async function POST(req: Request): Promise<Response> {
     }
   }
   return json({ uploads });
-}
+});
+
+export const OPTIONS = respuestaPrevia;

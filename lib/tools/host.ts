@@ -17,6 +17,15 @@ export function toolHostLabel(installationId: string, env: Env = process.env): s
   return LIENZO_PREFIJO + mark.slice(0, 32);
 }
 
+/** THE PHONE'S OWN LABEL for the same installation (phase 5, §4.14): framed only by the phone app's origins, so the
+ *  workspace's label stays framed only by openlen.com — what `/api/movil/canvas` does with `framedBy` on its document. */
+export function toolPhoneHostLabel(installationId: string, env: Env = process.env): string | null {
+  const secret = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim();
+  if (!secret) return null;
+  const mark = createHmac("sha256", secret).update(`openlen-tool-phone:${installationId.toLowerCase()}`).digest("hex");
+  return LIENZO_PREFIJO + mark.slice(0, 32);
+}
+
 /** Where the workspace frames the tool: its private host, with the release in the query so a reinstall
  *  never shows a cached older one. `null` = no isolated host here (the canvas origin is switched off). */
 export function toolFrameUrl(

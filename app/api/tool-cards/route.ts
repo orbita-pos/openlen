@@ -1,7 +1,8 @@
 // THE «CREAR» CARDS OF A PROJECT (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the session person's own
-// cards in that project's chat, oldest first — each is drawn under the answer it follows. Only the workspace's browser
-// session: the phone uses tools from phase 5.
-import { auth } from "@/auth";
+// cards in that project's chat, oldest first — each is drawn under the answer it follows. The workspace's session or the
+// phone app's key (phase 5, §4.14): the phone draws the same cards over its conversation.
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits-client";
 import { reconcileOnRead } from "@/lib/tools/cards/actions";
@@ -15,8 +16,8 @@ export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
-export async function GET(req: Request): Promise<Response> {
-  const userId = (await auth())?.user?.id;
+export const GET = paraLaApp(async (req: Request): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   // OPENLEN_TOOLS=0 or OPENLEN_TOOL_SUGGESTIONS=0 turns the «Crear» card off for everyone, cards already shown too.
   if (!toolSuggestionsEnabled()) return json({ error: "tools_off" }, 404);
@@ -28,4 +29,6 @@ export async function GET(req: Request): Promise<Response> {
   const rows = await reconcileOnRead(await cardsOfProject(projectId, userId));
   // The card names what one creation may spend at most (`OPENLEN_TOOL_CREATION_CAP`), in credits.
   return json({ cards: rows.map(toCardView), capCredits: creationCapCentis() / CENTICREDITOS_POR_CREDITO });
-}
+});
+
+export const OPTIONS = respuestaPrevia;
