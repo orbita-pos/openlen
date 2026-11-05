@@ -181,18 +181,29 @@ type EstadoDeInstalar =
  *  `publish` de Len en una herramienta, con las mismas puertas que la tarjeta de la web y su texto. El servidor espera
  *  una revisión de seguridad que sigue en marcha (`waitWhenPending`); lo que encuentre, y lo que borre datos reales,
  *  sólo lo acepta este toque — nunca Len. */
-function Instalar({ cliente, projectId, idioma, confirm }: { cliente: ClienteDeOpenLen; projectId: string; idioma: string; confirm: ConfirmarInstalar }) {
+function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { cliente: ClienteDeOpenLen; projectId: string; idioma: string; confirm: ConfirmarInstalar; onInstalada?: () => void }) {
   const t = useTranslations("movil.herramientas");
   const [estado, setEstado] = useState<EstadoDeInstalar>({ fase: "listo" });
+  // The security review is still running and the server is waiting for it: the card says so meanwhile.
+  const [revisando, setRevisando] = useState(false);
   const [aceptado, setAceptado] = useState<{ acceptSecurityFingerprint?: string; confirmFingerprint?: string }>({});
   const instalar = async (extra: { acceptSecurityFingerprint?: string; confirmFingerprint?: string } = {}) => {
     const todo = { ...aceptado, ...extra };
     setAceptado(todo);
     setEstado({ fase: "instalando" });
-    const r: PublishOutcome = await postInstallAfterSecurity(projectId, { locale: idioma, waitWhenPending: true, ...todo }, () => {}, async () => null, (u, i) => cliente.pedir(u, i)).catch(
-      () => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome,
-    );
-    if (r.kind === "published") setEstado({ fase: "instalada" });
+    setRevisando(false);
+    const r: PublishOutcome = await postInstallAfterSecurity(
+      projectId,
+      { locale: idioma, waitWhenPending: true, ...todo },
+      (v) => setRevisando(v.status === "running"),
+      async () => null,
+      (u, i) => cliente.pedir(u, i),
+    ).catch(() => ({ kind: "error", status: 0, error: "network" }) as PublishOutcome);
+    setRevisando(false);
+    if (r.kind === "published") {
+      setEstado({ fase: "instalada" });
+      onInstalada?.();
+    }
     else if (r.kind === "security_findings") setEstado({ fase: "hallazgos", huella: r.view.fingerprint, titulos: r.view.blocking.map((f) => f.description || f.category) });
     else if (r.kind === "needs_confirmation") setEstado({ fase: "borraDatos", huella: r.fingerprint });
     else if (r.kind === "security_review_pending") setEstado({ fase: "revisionSigue" });
@@ -218,6 +229,7 @@ function Instalar({ cliente, projectId, idioma, confirm }: { cliente: ClienteDeO
           )}
           {estado.fase === "borraDatos" && <div className="nx-vs" role="alert">{t("installCard.destructive")}</div>}
           {estado.fase === "revisionSigue" && <div className="nx-vs" role="status">{t("revisionSigue")}</div>}
+          {estado.fase === "instalando" && <div className="nx-vs" role="status">{revisando ? t("revisionSigue") : t("toolCard.installing")}</div>}
           {estado.fase === "error" && <div className="nx-vs" role="alert">{t("installCard.failed", { reason: estado.motivo })}</div>}
           <div className="nx-acts">
             {estado.fase === "hallazgos" ? (
@@ -236,10 +248,10 @@ function Instalar({ cliente, projectId, idioma, confirm }: { cliente: ClienteDeO
   );
 }
 
-export function TarjetaDeLaApp({ x, cliente, projectId, idioma }: { x: TarjetaDeLlamada; cliente: ClienteDeOpenLen; projectId: string; idioma: string }) {
+export function TarjetaDeLaApp({ x, cliente, projectId, idioma, onInstalada }: { x: TarjetaDeLlamada; cliente: ClienteDeOpenLen; projectId: string; idioma: string; onInstalada?: () => void }) {
   if (x.tipo === "visitas") return <Visitas cliente={cliente} projectId={projectId} idioma={idioma} />;
   if (x.tipo === "respuesta") return <Borrador cliente={cliente} r={x.respuesta} />;
   if (x.tipo === "publicar") return <Publicar cliente={cliente} projectId={projectId} confirm={x.confirm} />;
-  if (x.tipo === "instalar") return <Instalar cliente={cliente} projectId={projectId} idioma={idioma} confirm={x.confirm} />;
+  if (x.tipo === "instalar") return <Instalar cliente={cliente} projectId={projectId} idioma={idioma} confirm={x.confirm} onInstalada={onInstalada} />;
   return <div className="nx"><div className="nx-what" style={{ whiteSpace: "pre-wrap" }}>{x.texto}</div></div>;
 }

@@ -188,11 +188,20 @@ export function PantallaHerramienta({
             {t("cargando")}
           </p>
         ) : "error" in marco ? (
+          // Gone (switched off or removed on the web) and the Free plan won't change by trying again; anything else may.
           <div className="herr-estado" role="alert">
-            <p>{t("noAbre")}</p>
-            <button type="button" data-herr-reintentar="" onClick={() => setIntento((n) => n + 1)}>
-              {t("reintentar")}
-            </button>
+            {marco.error === "not_found" ? (
+              <p>{t("yaNoEsta")}</p>
+            ) : marco.error === "plan_required" ? (
+              <p>{t("tools.planRequired")}</p>
+            ) : (
+              <>
+                <p>{t("noAbre")}</p>
+                <button type="button" data-herr-reintentar="" onClick={() => setIntento((n) => n + 1)}>
+                  {t("reintentar")}
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <iframe ref={iframe} data-herr-marco="" src={marco.url} title={tool.title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} />

@@ -235,13 +235,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   }, [cliente, id]);
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) void cargar(true); });
+      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) { void cargar(true); releerHerramientas(); } });
       return () => { void listener.then((l) => l.remove()); };
     }
-    const volver = () => { if (document.visibilityState === "visible") void cargar(true); };
+    const volver = () => { if (document.visibilityState === "visible") { void cargar(true); releerHerramientas(); } };
     document.addEventListener("visibilitychange", volver);
     return () => document.removeEventListener("visibilitychange", volver);
-  }, [cargar]);
+  }, [cargar, releerHerramientas]);
 
   // El chat (pieza 2). Si cuelgas o cierras con Len trabajando, el chat se
   // vuelve a enganchar al turno (lo que antes hacía aquí la hoja).
@@ -405,7 +405,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           persona={herramientas && herramientas !== "off" ? herramientas.person : { name: "" }}
           proyecto={herramientaAbierta.proyecto}
           idioma={idioma}
-          onCerrar={() => setHerramientaAbierta(null)}
+          onCerrar={() => { setHerramientaAbierta(null); releerHerramientas(); }}
           onPrompt={herramientaAbierta.proyecto ? (texto) => { setBorrador({ texto, n: Date.now() }); setChatAbierto(true); } : null}
         />
       )}

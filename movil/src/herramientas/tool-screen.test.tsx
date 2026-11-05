@@ -234,6 +234,29 @@ describe("PantallaHerramienta", () => {
     expect(document.querySelector("iframe[data-herr-marco]")).not.toBeNull();
   });
 
+  // Final review, Important 1: a tool removed on the web says so, with no «Reintentar» that can never work.
+  it("a tool no longer installed says so, without «Reintentar»; the Free plan says the paid plan's notice", async () => {
+    await paint({ over: { "POST /api/movil/tools/i1/open": () => Response.json({ error: "not_found" }, { status: 404 }) } });
+    expect(document.body.textContent).toContain("yaNoEsta");
+    expect(document.querySelector("[data-herr-reintentar]")).toBeNull();
+    act(() => root!.unmount());
+    root = null;
+    document.body.innerHTML = "";
+    await paint({ over: { "POST /api/movil/tools/i1/open": () => Response.json({ error: "plan_required" }, { status: 402 }) } });
+    expect(document.body.textContent).toContain("tools.planRequired");
+    expect(document.querySelector("[data-herr-reintentar]")).toBeNull();
+  });
+
+  // Final review (Minor 5 re-graded): option B's consent needs the change readable — a jsonb value as JSON.
+  it("the change sheet shows a jsonb value as JSON, not [object Object]", async () => {
+    const s = await paint();
+    await s.ask(rpc(10, "update", { projectId: "p1", table: "reservas", key: { id: 1 }, set: { extra: { mesa: 4 } }, before: { extra: { mesa: 2 } } }));
+    const sheet = document.querySelector("[data-herr-cambio]")!;
+    expect(sheet.textContent).toContain('{"mesa":4}');
+    expect(sheet.textContent).toContain('{"mesa":2}');
+    expect(sheet.textContent).not.toContain("[object Object]");
+  });
+
   it("🔴 Review Focus 5: switching the phone's theme sends the tool its context again", async () => {
     const s = await paint();
     await act(async () => {

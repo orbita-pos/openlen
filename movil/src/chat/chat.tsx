@@ -209,7 +209,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "verEnTuPagina"));
     return (
       <div key={e.clave} className={cls} data-clave={e.clave}>
-        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} />
+        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} onInstalada={() => onHerramientasCambiaron?.()} />
         {leido && <span className="ch-rcpt">{t("leido")}</span>}
       </div>
     );
@@ -350,13 +350,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   );
 }
 
-function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
+function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada }: {
   e: ElementoDelHilo;
   chat: Chat;
   cliente: ClienteDeOpenLen;
   projectId: string;
   idioma: string;
   onVerPagina: () => void;
+  /** A tool installed from a card here: the app reads the person's tools again. */
+  onInstalada: () => void;
 }) {
   const t = useTranslations("movil.chat");
   const ta = useTranslations("movil.adjuntos");
@@ -433,7 +435,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
     case "tarjeta":
       return (
         <div className="ch-card">
-          <TarjetaDeLaApp x={e.tarjeta} cliente={cliente} projectId={projectId} idioma={idioma} />
+          <TarjetaDeLaApp x={e.tarjeta} cliente={cliente} projectId={projectId} idioma={idioma} onInstalada={onInstalada} />
         </div>
       );
     case "entregado":

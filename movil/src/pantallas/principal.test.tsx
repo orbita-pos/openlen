@@ -17,8 +17,8 @@ const chatProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
 vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => { chatProps.ultimo = p; return null; } }));
 // The tool's screen is its own test's (tool-screen.test.tsx): here, which tool opened, where, and its `sendPrompt`.
 vi.mock("../herramientas/tool-screen", () => ({
-  PantallaHerramienta: ({ tool, proyecto, onPrompt }: { tool: { id: string }; proyecto: { id: string } | null; onPrompt: ((d: string) => void) | null }) => (
-    <div data-herr-abierta={tool.id} data-proyecto={proyecto?.id ?? ""}>{onPrompt && <button data-herr-prompt="" onClick={() => onPrompt("> hola\n\n— Reservas\n")} />}</div>
+  PantallaHerramienta: ({ tool, proyecto, onPrompt, onCerrar }: { tool: { id: string }; proyecto: { id: string } | null; onPrompt: ((d: string) => void) | null; onCerrar: () => void }) => (
+    <div data-herr-abierta={tool.id} data-proyecto={proyecto?.id ?? ""}>{onPrompt && <button data-herr-prompt="" onClick={() => onPrompt("> hola\n\n— Reservas\n")} />}<button data-herr-cerrar="" onClick={onCerrar} /></div>
   ),
 }));
 vi.mock("../chat/use-chat", () => ({ useChat: () => ({ trabajando: false }) }));
@@ -204,6 +204,7 @@ describe("a project's tools beside the chat", () => {
   afterEach(() => vi.unstubAllGlobals());
   const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-05", chatHistory: [] };
   const tool = (id: string, placement: "rail" | "project") => ({ id, projectId: `t-${id}`, title: `Tool ${id}`, description: "", placement, iconUrl: `/api/tools/${id}/icon`, iconTinted: true, frameUrl: "x", frameOrigin: "x", releaseSha: "sha", enabled: true, installedAt: "2026-11-05T10:00:00Z", status: "ok" });
+  let herramientas = () => [tool("r", "rail"), tool("q", "project")];
   async function paint() {
     const pedir = vi.fn(async (ruta: string) =>
       ruta === "/api/projects"
@@ -211,7 +212,7 @@ describe("a project's tools beside the chat", () => {
         : ruta.endsWith("/preview")
           ? Response.json({ enabled: true, token: "vista" })
           : ruta.startsWith("/api/tools?")
-            ? Response.json({ tools: [tool("r", "rail"), tool("q", "project")], paid: true, person: { name: "Ana" } })
+            ? Response.json({ tools: herramientas(), paid: true, person: { name: "Ana" } })
             : ruta.startsWith("/api/tools/")
               ? new Response("x", { status: 404 })
               : Response.json({ project: proyecto }),
@@ -220,7 +221,39 @@ describe("a project's tools beside the chat", () => {
     document.body.append(host);
     root = createRoot(host);
     await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    return pedir;
   }
+  const lecturas = (pedir: ReturnType<typeof vi.fn>) => pedir.mock.calls.filter((c) => String(c[0]).startsWith("/api/tools?")).length;
+  const atajos = () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].map((b) => b.textContent);
+
+  // Final review, Important 1 (Review Focus 3): a tool removed on the web must not stay as a dead button.
+  it("closing a tool screen reads the person's tools again: one removed on the web is gone from the row", async () => {
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+    const pedir = await paint();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].find((b) => b.textContent === "Tool q")!.click());
+    herramientas = () => [tool("r", "rail")];
+    const antes = lecturas(pedir);
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-herr-cerrar]")!.click());
+    expect(lecturas(pedir)).toBeGreaterThan(antes);
+    expect(atajos()).not.toContain("Tool q");
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+  });
+
+  it("coming back to the app reads the person's tools again", async () => {
+    herramientas = () => [tool("r", "rail")];
+    const pedir = await paint();
+    expect(atajos()).not.toContain("Tool q");
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+    const antes = lecturas(pedir);
+    const visibilidad = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+    } finally {
+      visibilidad.mockRestore();
+    }
+    expect(lecturas(pedir)).toBeGreaterThan(antes);
+    expect(atajos()).toContain("Tool q");
+  });
 
   it("a project tool is a button in the sheet's row and opens in this project; a rail tool isn't there", async () => {
     await paint();
