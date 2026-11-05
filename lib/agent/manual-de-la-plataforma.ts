@@ -398,6 +398,8 @@ export function buildManualDeLaPlataforma(
 export function documentosDeLaPlataforma(
   app: AppDeProyecto | null = null,
   env: Readonly<Record<string, string | undefined>> = process.env,
+  /** A game (spec local 2026-11-05-modo-juego-design, §8.5): its skills, Phaser's included, and its design guide. */
+  game = false,
 ): Readonly<Record<string, string>> {
   // Con las skills encendidas, los manuales de los entregables SON skills (spec local
   // 2026-10-27-len-five-skills, §4.2): no se sirven en /.openlen/docs. Apagadas, como siempre.
@@ -405,7 +407,7 @@ export function documentosDeLaPlataforma(
   const artifacts = env.OPENLEN_ARTIFACTS === "1" && !skillsOn ? artifactManuals : {};
   // Las skills de Len (spec local 2026-10-26-len-skills): /.openlen/skills, como un documento más.
   // Los tipos de subagente de OpenLen (spec local 2026-11-02-subagentes-de-len-fase-4, §3), con sus skills.
-  const skills = { ...(skillsOn ? bundledSkillFiles({ app, env }) : {}), ...(subagentsEnabled(env) ? bundledAgentFiles() : {}) };
+  const skills = { ...(skillsOn ? bundledSkillFiles({ app, env, game }) : {}), ...(subagentsEnabled(env) ? bundledAgentFiles() : {}) };
   // Con las skills encendidas, las guías también son skills (`frontend-design`, `convert-to-app`):
   // /.openlen/docs se queda sin nada que servir.
   if (skillsOn) return skills;
@@ -432,7 +434,7 @@ export function textoDeLaPlataforma(
   game = false,
 ): string | null {
   if (ruta === RUTA_MANUAL) return buildManualDeLaPlataforma(process.env, mode, app, realTerminal, tool, game);
-  const docs = documentosDeLaPlataforma(app);
+  const docs = documentosDeLaPlataforma(app, process.env, game);
   return Object.hasOwn(docs, ruta) ? docs[ruta]! : null;
 }
 
