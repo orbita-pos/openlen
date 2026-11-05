@@ -766,7 +766,9 @@
       "remove": "移除",
       "restore": "恢复",
       "releaseGone": "那个版本已经不在了。请 Len 重新安装。",
-      "failed": "没有成功。请再试一次。"
+      "failed": "没有成功。请再试一次。",
+      "suggestions": "工具建议",
+      "suggestionsHint": "Len 发现某个工具对你有帮助时会提议;在你点「创建」之前不会创建任何东西。"
     }
   }
 }
