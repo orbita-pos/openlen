@@ -22,6 +22,11 @@ import { SinRed } from "./sin-red";
 import { Selector } from "./selector";
 import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
+import { ToolsTab } from "../herramientas/tools-tab";
+import { listarHerramientas, sePuedeAbrir, type HerramientasDeLaPersona } from "../api/herramientas";
+import { IconoDeHerramienta } from "../herramientas/tools-tab";
+import { PantallaHerramienta } from "../herramientas/tool-screen";
+import type { InstalledToolView } from "@/lib/tools/types";
 import { fetchDelivered } from "../api/overview";
 import { PhoneViewer } from "../viewer/phone-viewer";
 import type { ViewerFile } from "@/components/viewer/viewer";
@@ -57,6 +62,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const tr = useTranslations("movil.resumen");
   const ta = useTranslations("movil.adjuntos");
   const ti = useTranslations("movil.interfaz");
+  const th = useTranslations("movil.herramientas");
   const [lista, setLista] = useState<ProyectoEnLista[] | null>(null);
   const [sinRed, setSinRed] = useState(false);
   const [id, setId] = useState<string | null>(() => localStorage.getItem(ULTIMO));
@@ -78,7 +84,35 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const alEnfocarEnChat = useCallback(() => setEnfocarEnChat(null), []);
   const [conPip, setConPip] = useState(false);
   const [recarga, setRecarga] = useState(0);
-  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | null>(null);
+  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | null>(null);
+  // The person's tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): read when the app opens and on every
+  // reload; `"off"` hides «Herramientas» (tools switched off on the server); a failure keeps it (the tab offers «Reintentar»).
+  const [herramientas, setHerramientas] = useState<HerramientasDeLaPersona | "off" | null>(null);
+  // The tool open full screen: a `rail` one from the tab (no project), a `project` one beside this project's chat.
+  const [herramientaAbierta, setHerramientaAbierta] = useState<{ tool: InstalledToolView; proyecto: { id: string; title: string } | null } | null>(null);
+  // A «Crear» card's «Abrir»: the tool it installed, from the person's tools read again (it may be newer than the list).
+  const abrirHerramientaPorId = useCallback(async (installationId: string) => {
+    const l = await listarHerramientas(cliente, idioma).catch(() => null);
+    if (!l || l === "off") return;
+    setHerramientas(l);
+    const tool = l.tools.find((x) => x.id === installationId);
+    if (!tool || !sePuedeAbrir(tool)) return;
+    const actual = idActual.current;
+    const titulo = lista?.find((y) => y.id === actual)?.title ?? "";
+    setHerramientaAbierta({ tool, proyecto: tool.placement === "project" && actual ? { id: actual, title: titulo } : null });
+  }, [cliente, idioma, lista]);
+  const releerHerramientas = useCallback(() => {
+    void listarHerramientas(cliente, idioma).then(setHerramientas, () => {});
+  }, [cliente, idioma]);
+  // What a project tool's `sendPrompt` leaves in the chat's composer.
+  const [borrador, setBorrador] = useState<{ texto: string; n: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    listarHerramientas(cliente, idioma).then((x) => alive && setHerramientas(x), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [cliente, idioma, recarga]);
   const idActual = useRef(id);
   const paginaCargada = useRef<string | null>(null);
   // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
@@ -201,13 +235,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   }, [cliente, id]);
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) void cargar(true); });
+      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) { void cargar(true); releerHerramientas(); } });
       return () => { void listener.then((l) => l.remove()); };
     }
-    const volver = () => { if (document.visibilityState === "visible") void cargar(true); };
+    const volver = () => { if (document.visibilityState === "visible") { void cargar(true); releerHerramientas(); } };
     document.addEventListener("visibilitychange", volver);
     return () => document.removeEventListener("visibilitychange", volver);
-  }, [cargar]);
+  }, [cargar, releerHerramientas]);
 
   // El chat (pieza 2). Si cuelgas o cierras con Len trabajando, el chat se
   // vuelve a enganchar al turno (lo que antes hacía aquí la hoja).
@@ -300,6 +334,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           <Selector proyectos={lista} actual={id} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} top={<>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
+            {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}
           </>}>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("look"); }}>{te("tuLen")}</button>
             <ControlAvisos avisos={avisos} />
@@ -331,6 +366,11 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
                 <button type="button" onClick={() => setPanel("gestion")}>{te("gestionar")}</button>
                 <button type="button" onClick={() => setPanel("comparar")}>{te("comparar")}</button>
                 <button type="button" onClick={() => setPanel("equipo")}>{tq("titulo")}</button>
+                {id && herramientas && herramientas !== "off" && herramientas.paid && herramientas.tools.filter((x) => x.placement === "project" && sePuedeAbrir(x)).map((x) => (
+                  <button key={x.id} type="button" className="herr-atajo" data-tool-shortcut={x.id} onClick={() => setHerramientaAbierta({ tool: x, proyecto: { id, title: p?.title ?? lista?.find((y) => y.id === id)?.title ?? "" } })}>
+                    <IconoDeHerramienta cliente={cliente} tool={x} />{x.title}
+                  </button>
+                ))}
               </div>
               {avisos.recibido && <ControlAvisos avisos={avisos} />}
             </div>
@@ -352,7 +392,23 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         enfocar={enfocarEnChat}
         onEnfocado={alEnfocarEnChat}
         resaltarAviso={avisoDelChat?.id === id ? avisoDelChat.tarjeta : null}
+        borrador={borrador}
+        onAbrirHerramienta={(x) => void abrirHerramientaPorId(x)}
+        onAbrirProyecto={(x) => { setChatAbierto(false); abrirAviso(x); }}
+        onHerramientasCambiaron={releerHerramientas}
       />
+      {herramientaAbierta && (
+        <PantallaHerramienta
+          key={herramientaAbierta.tool.id}
+          cliente={cliente}
+          tool={herramientaAbierta.tool}
+          persona={herramientas && herramientas !== "off" ? herramientas.person : { name: "" }}
+          proyecto={herramientaAbierta.proyecto}
+          idioma={idioma}
+          onCerrar={() => { setHerramientaAbierta(null); releerHerramientas(); }}
+          onPrompt={herramientaAbierta.proyecto ? (texto) => { setBorrador({ texto, n: Date.now() }); setChatAbierto(true); } : null}
+        />
+      )}
 
       <PanelAnimado contexto={id}
         paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel ?? ""}
@@ -363,7 +419,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
-          : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} /> : null}
+          : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
+          : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}

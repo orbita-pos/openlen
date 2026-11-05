@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: vi.fn(async (k: string) => (k === "phone-key-0123456789abcdef" ? "u1" : null)) }));
 vi.mock("@/lib/tools/bridge/caller", () => ({ resolveBridgeCaller: vi.fn() }));
 vi.mock("@/lib/tools/jobs/start", () => ({
   startToolJob: vi.fn(),
@@ -33,6 +34,33 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
   vi.mocked(resolveBridgeCaller).mockResolvedValue({ caller } as never);
+});
+
+// Phase 5 (§4.14): the phone app starts and follows a tool's jobs with its key, after drawing the confirmation itself.
+describe("the jobs routes with the phone's key", () => {
+  const withKey = (url: string, init: RequestInit = {}, key = "phone-key-0123456789abcdef") =>
+    new Request(url, { ...init, headers: { ...(init.headers as Record<string, string>), authorization: `Bearer ${key}`, origin: "https://localhost" } });
+
+  it("a job starts as that person, with the app's CORS", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    vi.mocked(start.startToolJob).mockResolvedValue({ ok: true, job: { id: "job-1", status: "running" } as never });
+    const res = await jobs.POST(withKey("http://x/api/tools/jobs", { method: "POST", body: JSON.stringify({ installationId: "inst-1", name: "export-video" }) }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://localhost");
+    expect(resolveBridgeCaller).toHaveBeenCalledWith("u1", expect.anything());
+  });
+
+  it("one job, its cancel and the declaration too", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    expect((await one.GET(withKey("http://x/api/tools/jobs/job-mine?installationId=inst-1"), ctx("job-mine"))).status).toBe(200);
+    expect((await cancel.POST(withKey("http://x/api/tools/jobs/job-mine/cancel", { method: "POST", body: JSON.stringify({ installationId: "inst-1" }) }), ctx("job-mine"))).status).toBe(200);
+    expect((await declared.GET(withKey("http://x/api/tools/jobs/declared?installationId=inst-1&name=export-video"))).status).toBe(200);
+  });
+
+  it("a key that doesn't resolve: 401", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
+    expect((await jobs.GET(withKey("http://x/api/tools/jobs?installationId=inst-1", {}, "not-a-key-0123456789abcdef"))).status).toBe(401);
+  });
 });
 
 describe("POST /api/tools/jobs", () => {

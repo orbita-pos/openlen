@@ -75,7 +75,7 @@ export async function GET(
       const tool = await installationByLabel(etiqueta).catch(() => null);
       if (tool) {
         const { serveToolRelease } = await import("@/lib/tools/serve");
-        return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language") });
+        return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language"), servedTo: tool.servedTo });
       }
     }
   }

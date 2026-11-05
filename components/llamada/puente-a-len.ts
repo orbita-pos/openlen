@@ -20,6 +20,8 @@ export type TarjetaDeLlamada =
   | { tipo: "visitas" }
   | { tipo: "texto"; texto: string }
   | { tipo: "respuesta"; respuesta: RespuestaPreparada }
+  // Herramientas, fase 5: lo que deja el `publish` de Len en un proyecto que es una herramienta.
+  | { tipo: "instalar"; confirm: { title: string; placement: "rail" | "project" } }
   | {
       tipo: "publicar";
       confirm: {
@@ -89,6 +91,10 @@ export function fraseDeAvance(herramienta: string): string | null {
  *  usan la llamada y el chat de la app: una sola lectura del evento. */
 export function tarjetaDeConfirmacion(d: Record<string, unknown>): TarjetaDeLlamada | null {
   if (d.action === "responder") return { tipo: "respuesta", respuesta: d as unknown as RespuestaPreparada };
+  // Herramientas, fase 5 (§4.14): el `publish` de Len en una herramienta deja «Instalar»; el teléfono la pulsa.
+  if (d.action === "install" && typeof d.title === "string" && d.title) {
+    return { tipo: "instalar", confirm: { title: d.title, placement: d.placement === "project" ? "project" : "rail" } };
+  }
   if (d.action === "publish" && typeof d.subdominio === "string") {
     const cambiosDeDatos = dataChangesForCard(d.cambiosDeDatos);
     // Lo que falta en producción (las Edge Functions) y lo grave de la revisión

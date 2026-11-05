@@ -14,6 +14,7 @@
 //
 // The cards are rows of their own (`eventTaskCards`), never chat messages: the conversation's history never
 // carries what a judge wrote from a visitor's data.
+import { changeValueText } from "@/lib/backend/change-value-text";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -163,9 +164,9 @@ export function DataChangeRows({ change }: { change: { readonly set: Readonly<Re
           <tr key={col} data-event-column={col}>
             <td className="py-0.5 pr-2 font-mono text-[11.5px] fg-muted">{col}</td>
             <td className="py-0.5 fg">
-              <span className="fg-faint line-through">{String(change.before[col] ?? "∅")}</span>
+              <span className="fg-faint line-through">{changeValueText(change.before[col])}</span>
               <span className="px-1.5 fg-faint">→</span>
-              <span className="font-medium">{String(value)}</span>
+              <span className="font-medium">{changeValueText(value)}</span>
             </td>
           </tr>
         ))}

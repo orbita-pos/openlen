@@ -15,9 +15,11 @@ vi.mock("../cara", () => ({ Cara: () => null }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../deslizar", () => ({ useDeslizar: () => null }));
 vi.mock("./use-nota", () => ({ useNota: () => ({ niveles: [], segundos: 0 }) }));
-vi.mock("../llamada/tarjetas", () => ({ TarjetaDeLaApp: () => null }));
+const tarjetaProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
+vi.mock("../llamada/tarjetas", () => ({ TarjetaDeLaApp: (p: Record<string, unknown>) => { tarjetaProps.ultimo = p; return null; } }));
 // An event task's cards poll their own route; they have their own test (avisos.test.tsx).
 vi.mock("./avisos", () => ({ AvisosDeLen: () => null }));
+vi.mock("../herramientas/tool-cards", () => ({ TarjetasDeHerramientas: () => null }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root, host: HTMLDivElement;
 const cerrar = vi.fn();
@@ -36,6 +38,29 @@ function pintar(elementos: ElementoDelHilo[], trabajando = false, turnoId: strin
  act(() => root.render(<PantallaChat abierto={abierto} chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} enfocar={enfocar?.clave} onEnfocado={enfocar?.alEnfocar} />));
  return host.querySelector<HTMLDivElement>(".ch-log")!;
 }
+// Herramientas, fase 5 (§4.4, §4.14): lo que manda una herramienta con `sendPrompt` llena el cuadro, como el
+// `pendingDraft` de la web; lo envía la persona, nunca la app.
+it("el borrador de una herramienta sustituye el texto del cuadro y no se envía nada", () => {
+ const chat = { elementos: [], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ const dibujar = (borrador: { texto: string; n: number } | null) => act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} borrador={borrador} />));
+ dibujar(null);
+ const campo = host.querySelector<HTMLTextAreaElement>("textarea")!;
+ act(() => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(campo, "lo que había"); campo.dispatchEvent(new Event("input", { bubbles: true })); });
+ dibujar({ texto: "> Confirma a Ana\n\n— Reservas\n", n: 1 });
+ expect(campo.value).toBe("> Confirma a Ana\n\n— Reservas\n");
+ expect((chat as unknown as { mandar: ReturnType<typeof vi.fn> }).mandar).not.toHaveBeenCalled();
+ expect(cliente.pedir).not.toHaveBeenCalled();
+});
+
+// Final review, Important 1: «Instalar» que sale bien en el chat llega a la app, que relee las herramientas.
+it("una instalación desde una tarjeta del chat avisa de que cambiaron las herramientas", () => {
+ const onHerramientasCambiaron = vi.fn();
+ const chat = { elementos: [{ clave: "c1", t: 1, tipo: "tarjeta", tarjeta: { tipo: "instalar", confirm: { title: "Reservas", placement: "project" } } }], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} onHerramientasCambiaron={onHerramientasCambiaron} />));
+ (tarjetaProps.ultimo?.onInstalada as () => void)();
+ expect(onHerramientasCambiaron).toHaveBeenCalledTimes(1);
+});
+
 it("no muestra leído para un mensaje pendiente ni una subida fallida", () => {
  pintar([mensaje("enviando")], true);
  expect(host.textContent).not.toContain("leido"); expect(host.textContent).toContain("enviando");

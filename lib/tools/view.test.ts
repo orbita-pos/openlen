@@ -14,6 +14,7 @@ const row = (over: Partial<ToolInstallationRow> = {}): ToolInstallationRow => ({
   descriptions: { en: "Today's bookings", es: "Las reservas de hoy" },
   iconPath: "/icon.svg",
   hostLabel: "lienzo-0123456789abcdef0123456789abcdef",
+  phoneHostLabel: null,
   enabled: true,
   installedAt: new Date("2026-11-04T10:00:00Z"),
   updatedAt: new Date("2026-11-04T10:00:00Z"),

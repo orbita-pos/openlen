@@ -5,7 +5,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -120,9 +120,21 @@ export async function listInstallations(personId: string): Promise<ToolInstallat
   return db.select().from(i).where(eq(i.personId, personId)).orderBy(asc(i.installedAt));
 }
 
-export async function installationByLabel(label: string): Promise<ToolInstallationRow | null> {
-  const [row] = await db.select().from(i).where(eq(i.hostLabel, label)).limit(1);
-  return row ?? null;
+/** Who frames a tool on a label: the workspace (`hostLabel`) or the phone app (`phoneHostLabel`, phase 5). */
+export type ToolServedTo = "workspace" | "phone";
+
+export async function installationByLabel(label: string): Promise<(ToolInstallationRow & { servedTo: ToolServedTo }) | null> {
+  const [row] = await db
+    .select()
+    .from(i)
+    .where(or(eq(i.hostLabel, label), eq(i.phoneHostLabel, label)))
+    .limit(1);
+  return row ? { ...row, servedTo: row.hostLabel === label ? "workspace" : "phone" } : null;
+}
+
+/** Keeps the phone's label on the row (phase 5): it is an HMAC of the id, so writing it again changes nothing. */
+export async function setPhoneHostLabel(installationId: string, label: string): Promise<void> {
+  await db.update(i).set({ phoneHostLabel: label }).where(eq(i.id, installationId));
 }
 
 /** Whether the tool project has an installation switched on and not removed: its production functions answer (phase 4). */

@@ -1,5 +1,6 @@
 // POST /api/tools/bridge and /api/tools/data-change (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): the
-// workspace relays a tool's request with the person's session; the frame never holds one.
+// workspace relays a tool's request with the person's session; the frame never holds one. Since phase 5 (§4.14) the
+// phone app relays it too, with its key: it draws OpenLen's confirmations itself.
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -62,19 +63,34 @@ describe("POST /api/tools/bridge", () => {
 
   it("not a request, or nobody signed in", async () => {
     expect((await BRIDGE(req({ installationId: "i1", request: { method: "projects" } }))).status).toBe(400);
-    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    vi.mocked(usuarioDeLaPeticion).mockResolvedValue(null);
     expect((await BRIDGE(req({ installationId: "i1", request: rpc("projects") }))).status).toBe(401);
   });
 
-  it("only the browser session of the workspace: a phone key alone is refused, on both routes (phase 1)", async () => {
+  // Phase 5 (§4.14): the phone app is the bridge's parent too. Who asks is whoever the key or the session says
+  // (`usuarioDeLaPeticion`), and a key that doesn't resolve is a 401 even with a browser session around.
+  it("with the phone's key, both routes answer as that person", async () => {
     vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
     vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u1");
-    const bearer = (body: unknown) => new Request("http://x", { method: "POST", headers: { authorization: "Bearer phone-key" }, body: JSON.stringify(body) });
-    expect((await BRIDGE(bearer({ installationId: "i1", request: rpc("projects") }))).status).toBe(401);
+    const bearer = (body: unknown) => new Request("http://x", { method: "POST", headers: { authorization: "Bearer phone-key-0123456789abcdef" }, body: JSON.stringify(body) });
+    expect((await BRIDGE(bearer({ installationId: "i1", request: rpc("projects") }))).status).toBe(200);
     const change = { projectId: "p1", table: "reservas", key: { id: 1 }, set: { estado: "ok" }, before: { estado: "no" } };
-    expect((await CHANGE(bearer({ installationId: "i1", change }))).status).toBe(401);
-    expect(handleBridgeCall).not.toHaveBeenCalled();
+    expect((await CHANGE(bearer({ installationId: "i1", change }))).status).toBe(200);
+    expect(resolveBridgeCaller).toHaveBeenCalledWith("u1", expect.anything());
+    expect(applyToolDataChange).toHaveBeenCalledWith(CALLER, change);
+  });
+
+  it("a key that doesn't resolve is 401, whatever cookie is around", async () => {
+    vi.mocked(usuarioDeLaPeticion).mockResolvedValue(null);
+    const change = { projectId: "p1", table: "reservas", key: { id: 1 }, set: { estado: "ok" }, before: { estado: "no" } };
+    expect((await CHANGE(req({ installationId: "i1", change }))).status).toBe(401);
     expect(applyToolDataChange).not.toHaveBeenCalled();
+  });
+
+  it("the phone app's origin gets its CORS headers", async () => {
+    const change = { projectId: "p1", table: "reservas", key: { id: 1 }, set: { estado: "ok" }, before: { estado: "no" } };
+    const res = await CHANGE(new Request("http://x", { method: "POST", headers: { origin: "https://localhost" }, body: JSON.stringify({ installationId: "i1", change }) }));
+    expect(res.headers.get("access-control-allow-origin")).toBe("https://localhost");
   });
 });
 

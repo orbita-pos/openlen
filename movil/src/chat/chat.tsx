@@ -23,6 +23,7 @@ import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
 import { AvisosDeLen } from "./avisos";
+import { TarjetasDeHerramientas } from "../herramientas/tool-cards";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
@@ -45,9 +46,16 @@ interface Props {
   onEnfocado?: () => void;
   /** An event task's push: the card to bring into view over the conversation. */
   resaltarAviso?: string | null;
+  /** A project tool's `sendPrompt` (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.14): each new `n`
+   *  REPLACES the composer's text, as the web's `pendingDraft` does; the person sends it, never the app. */
+  borrador?: { texto: string; n: number } | null;
+  /** The «Crear» cards (§4.10): «Abrir» an installed tool, «Abrir proyecto» a tool's project, and the person's tools changed. */
+  onAbrirHerramienta?: (installationId: string) => void;
+  onAbrirProyecto?: (projectId: string) => void;
+  onHerramientasCambiaron?: () => void;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -68,6 +76,14 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const [archivos,setArchivos] = useState<File[]>([]);
   const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
   useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
+  const borradorN = borrador?.n;
+  useEffect(() => {
+    if (borradorN === undefined || !borrador) return;
+    setTexto(borrador.texto);
+    campo.current?.focus({ preventScroll: true });
+    // Only a new draft (its `n`) replaces what is written.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [borradorN]);
   const vistos = useRef(chat.elementos.length);
   const deslizar = useDeslizar({ hacia: "derecha", rapido: true, activo: abierto, clave: projectId, alSoltar: onCerrar });
   useAtras(abierto, onCerrar);
@@ -193,7 +209,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "verEnTuPagina"));
     return (
       <div key={e.clave} className={cls} data-clave={e.clave}>
-        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} />
+        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} onInstalada={() => onHerramientasCambiaron?.()} />
         {leido && <span className="ch-rcpt">{t("leido")}</span>}
       </div>
     );
@@ -227,6 +243,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       <div className="ch-historial">
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): an event task's cards, over the conversation. */}
       <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />
+      <TarjetasDeHerramientas
+        cliente={cliente}
+        projectId={projectId}
+        abierto={abierto}
+        idioma={idioma}
+        onAbrirHerramienta={(id) => onAbrirHerramienta?.(id)}
+        onAbrirProyecto={(id) => onAbrirProyecto?.(id)}
+        onHerramientasCambiaron={() => onHerramientasCambiaron?.()}
+      />
       <div className="ch-log" ref={log} role="log" aria-live="polite" aria-relevant="additions text">
         <div className="ch-contenido" ref={contenido}>
         {filas}
@@ -325,13 +350,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   );
 }
 
-function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
+function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada }: {
   e: ElementoDelHilo;
   chat: Chat;
   cliente: ClienteDeOpenLen;
   projectId: string;
   idioma: string;
   onVerPagina: () => void;
+  /** A tool installed from a card here: the app reads the person's tools again. */
+  onInstalada: () => void;
 }) {
   const t = useTranslations("movil.chat");
   const ta = useTranslations("movil.adjuntos");
@@ -408,7 +435,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina }: {
     case "tarjeta":
       return (
         <div className="ch-card">
-          <TarjetaDeLaApp x={e.tarjeta} cliente={cliente} projectId={projectId} idioma={idioma} />
+          <TarjetaDeLaApp x={e.tarjeta} cliente={cliente} projectId={projectId} idioma={idioma} onInstalada={onInstalada} />
         </div>
       );
     case "entregado":

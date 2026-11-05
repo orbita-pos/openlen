@@ -52,3 +52,17 @@ describe("DataChangeDialog", () => {
     expect(r.onCancel).toHaveBeenCalledTimes(1);
   });
 });
+
+// Final review of phase 5 (Minor 5 re-graded): the person can only accept what they can read — a jsonb value as JSON.
+describe("DataChangeDialog — a jsonb value", () => {
+  it("reads as JSON, never [object Object]", () => {
+    const div = document.createElement("div");
+    document.body.appendChild(div);
+    const root = createRoot(div);
+    roots.push(root);
+    const change = { projectId: "p1", table: "reservas", key: { id: 12 }, set: { extra: { mesa: 4 } }, before: { extra: { mesa: 2 } } };
+    act(() => root.render(<DataChangeDialog open toolTitle="Reservas" projectTitle="Café" change={change} onAccept={vi.fn()} onCancel={vi.fn()} />));
+    expect(document.body.textContent).toContain('{"mesa":4}');
+    expect(document.body.textContent).not.toContain("[object Object]");
+  });
+});

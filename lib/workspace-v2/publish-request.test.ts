@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { postPublish } from "./publish-request";
+import { postInstallAfterSecurity, postPublish } from "./publish-request";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -53,5 +53,18 @@ describe("postPublish — las Edge Functions", () => {
     expect(await postPublish("p1", { subdomain: "x" })).toEqual({ kind: "functions_failed" });
     reply(428, { error: "confirmation_required", destructive: [], fingerprint: "a".repeat(64) });
     expect((await postPublish("p1", { subdomain: "x" })).kind).toBe("needs_confirmation");
+  });
+});
+
+// Phase 5 of the tools (§4.14): the phone's «Instalar» card posts with its own client (its key, openlen.com's address).
+describe("postInstallAfterSecurity — with the caller's own send", () => {
+  it("the install POST goes through send, never the global fetch", async () => {
+    const global = vi.fn();
+    vi.stubGlobal("fetch", global);
+    const send = vi.fn(async () => new Response(JSON.stringify({ installation: { id: "i1" } }), { status: 200 }));
+    const outcome = await postInstallAfterSecurity("p1", { locale: "es", waitWhenPending: true }, () => {}, async () => null, send);
+    expect(outcome.kind).toBe("published");
+    expect(send).toHaveBeenCalledWith("/api/projects/p1/install", expect.objectContaining({ method: "POST", body: JSON.stringify({ locale: "es", waitWhenPending: true }) }));
+    expect(global).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -13,7 +13,14 @@ const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: numb
 vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: (o: { alMedir?: (v: number) => void }) => { hoja.alMedir = o.alMedir ?? null; return null; } }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../llamada/llamada", () => ({ Llamada: ({ projectId }: { projectId: string }) => <div data-llamada={projectId} /> }));
-vi.mock("../chat/chat", () => ({ PantallaChat: () => null }));
+const chatProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
+vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => { chatProps.ultimo = p; return null; } }));
+// The tool's screen is its own test's (tool-screen.test.tsx): here, which tool opened, where, and its `sendPrompt`.
+vi.mock("../herramientas/tool-screen", () => ({
+  PantallaHerramienta: ({ tool, proyecto, onPrompt, onCerrar }: { tool: { id: string }; proyecto: { id: string } | null; onPrompt: ((d: string) => void) | null; onCerrar: () => void }) => (
+    <div data-herr-abierta={tool.id} data-proyecto={proyecto?.id ?? ""}>{onPrompt && <button data-herr-prompt="" onClick={() => onPrompt("> hola\n\n— Reservas\n")} />}<button data-herr-cerrar="" onClick={onCerrar} /></div>
+  ),
+}));
 vi.mock("../chat/use-chat", () => ({ useChat: () => ({ trabajando: false }) }));
 
 let root: Root;
@@ -112,7 +119,7 @@ it("cambiar de página no arrastra una llamada ni la reinicia en el proyecto nue
 it.each([200, 503])("releer la lista por un aviso de la misma página conserva la llamada montada (%s)", async (status) => {
  const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
  let lectura = 0, completar!: (r: Response) => void;
- const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
+ const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta.startsWith("/api/tools?") ? Response.json({tools:[],paid:true,person:{name:""}}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
  host = document.createElement('div'); document.body.append(host); root = createRoot(host);
  await act(async () => root.render(<PantallaPrincipal cliente={{pedir,avisarAlCerrar:vi.fn()}} idioma="es" onSalir={vi.fn()}/>));
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'llamar')!.click());
@@ -150,6 +157,142 @@ it("the selector opens Delivered and Tasks", async () => {
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find(b => b.textContent === "tareas")!.click());
  expect(host.querySelector("#tareas-titulo")).not.toBeNull();
  expect(pedir).toHaveBeenCalledWith("/api/movil/tasks");
+});
+
+// The person's tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): «Herramientas» beside «Entregado» and
+// «Tareas»; with tools switched off on the server the button isn't there.
+describe("Herramientas in the selector", () => {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-05", chatHistory: [] };
+  async function paint(tools: Response) {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta.startsWith("/api/tools?")
+            ? tools.clone()
+            : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    return { pedir, botones: () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")] };
+  }
+
+  it("opens the tab", async () => {
+    const { pedir, botones } = await paint(Response.json({ tools: [], paid: true, person: { name: "Ana" } }));
+    const b = botones().find((x) => x.textContent === "titulo");
+    expect(b).toBeDefined();
+    await act(async () => b!.click());
+    expect(host.querySelector("#herramientas-titulo")).not.toBeNull();
+    expect(pedir).toHaveBeenCalledWith("/api/tools?locale=es");
+  });
+
+  it("tools switched off: no button", async () => {
+    const { botones } = await paint(Response.json({ error: "tools_off" }, { status: 404 }));
+    expect(botones().some((x) => x.textContent === "titulo")).toBe(false);
+    expect(botones().some((x) => x.textContent === "entregado")).toBe(true);
+  });
+});
+
+// A project's tools beside its chat (§4.14): one button each in the sheet's row; a rail tool is the tab's, not here.
+describe("a project's tools beside the chat", () => {
+  // Closing a panel animates its exit, which asks matchMedia (jsdom has none).
+  beforeEach(() => vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })));
+  afterEach(() => vi.unstubAllGlobals());
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-05", chatHistory: [] };
+  const tool = (id: string, placement: "rail" | "project") => ({ id, projectId: `t-${id}`, title: `Tool ${id}`, description: "", placement, iconUrl: `/api/tools/${id}/icon`, iconTinted: true, frameUrl: "x", frameOrigin: "x", releaseSha: "sha", enabled: true, installedAt: "2026-11-05T10:00:00Z", status: "ok" });
+  let herramientas = () => [tool("r", "rail"), tool("q", "project")];
+  async function paint() {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta.startsWith("/api/tools?")
+            ? Response.json({ tools: herramientas(), paid: true, person: { name: "Ana" } })
+            : ruta.startsWith("/api/tools/")
+              ? new Response("x", { status: 404 })
+              : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    return pedir;
+  }
+  const lecturas = (pedir: ReturnType<typeof vi.fn>) => pedir.mock.calls.filter((c) => String(c[0]).startsWith("/api/tools?")).length;
+  const atajos = () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].map((b) => b.textContent);
+
+  // Final review, Important 1 (Review Focus 3): a tool removed on the web must not stay as a dead button.
+  it("closing a tool screen reads the person's tools again: one removed on the web is gone from the row", async () => {
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+    const pedir = await paint();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].find((b) => b.textContent === "Tool q")!.click());
+    herramientas = () => [tool("r", "rail")];
+    const antes = lecturas(pedir);
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-herr-cerrar]")!.click());
+    expect(lecturas(pedir)).toBeGreaterThan(antes);
+    expect(atajos()).not.toContain("Tool q");
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+  });
+
+  it("coming back to the app reads the person's tools again", async () => {
+    herramientas = () => [tool("r", "rail")];
+    const pedir = await paint();
+    expect(atajos()).not.toContain("Tool q");
+    herramientas = () => [tool("r", "rail"), tool("q", "project")];
+    const antes = lecturas(pedir);
+    const visibilidad = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+    } finally {
+      visibilidad.mockRestore();
+    }
+    expect(lecturas(pedir)).toBeGreaterThan(antes);
+    expect(atajos()).toContain("Tool q");
+  });
+
+  it("a project tool is a button in the sheet's row and opens in this project; a rail tool isn't there", async () => {
+    await paint();
+    const row = [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")];
+    expect(row.map((b) => b.textContent)).toContain("Tool q");
+    expect(row.map((b) => b.textContent)).not.toContain("Tool r");
+    await act(async () => row.find((b) => b.textContent === "Tool q")!.click());
+    const open = document.querySelector("[data-herr-abierta]");
+    expect(open?.getAttribute("data-herr-abierta")).toBe("q");
+    expect(open?.getAttribute("data-proyecto")).toBe("p1");
+  });
+
+  it("its sendPrompt fills the chat's composer and opens the chat", async () => {
+    await paint();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".ent-shortcuts button")].find((b) => b.textContent === "Tool q")!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-herr-prompt]")!.click());
+    expect(chatProps.ultimo?.abierto).toBe(true);
+    expect((chatProps.ultimo?.borrador as { texto: string } | null)?.texto).toBe("> hola\n\n— Reservas\n");
+  });
+
+  // A «Crear» card in the chat (§4.10): «Abrir» opens the tool it installed, read again from the person's tools.
+  it("a card's «Abrir» opens the installed tool, with the person's tools read again", async () => {
+    await paint();
+    const onAbrir = chatProps.ultimo?.onAbrirHerramienta as (id: string) => void;
+    await act(async () => onAbrir("q"));
+    expect(document.querySelector("[data-herr-abierta]")?.getAttribute("data-herr-abierta")).toBe("q");
+    expect(document.querySelector("[data-herr-abierta]")?.getAttribute("data-proyecto")).toBe("p1");
+  });
+
+  it("the tab's tool opens with no project", async () => {
+    await paint();
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find((x) => x.textContent === "titulo")!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-tool-row]")!.click());
+    const open = document.querySelector("[data-herr-abierta]");
+    expect(open?.getAttribute("data-herr-abierta")).toBe("r");
+    expect(open?.getAttribute("data-proyecto")).toBe("");
+    expect(document.querySelector("[data-herr-prompt]")).toBeNull();
+  });
 });
 
 // A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
