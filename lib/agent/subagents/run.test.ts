@@ -455,6 +455,19 @@ describe("continuable children (phase 2)", () => {
     expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: true, tool_result: "message delivered to agent len" });
   });
 
+  it("🔴 a child delivered to its caller (the «Crear» card's creator) can't message Len: no send_message, no notice, Len never woken", async () => {
+    const ready = { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] } as const;
+    const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Lista en /" }), llama("structured_output", { ready: true })] });
+    await s.launcher.launch({ description: "Crear", prompt: "Build it", preset: "creator", outputSchema: ready, delivery: "caller", onSettled: async () => {} });
+    await s.settled("r1");
+    const offered = s.brainTools[0]!.map((t) => (t as { name: string }).name);
+    expect(offered).not.toContain("send_message");
+    expect(offered).toContain("structured_output");
+    expect(takeNotices("p")).toEqual([]);
+    expect(s.noticeTurns).toHaveLength(0);
+    expect(s.g.seen[1]!.at(-1)!.functionResponses?.[0]?.response).toMatchObject({ ok: false });
+  });
+
   it("a tool call after its message brings the closing message back", async () => {
     const s = setup({ scripts: [llama("send_message", { agent_id: "len", message: "Half done" }), llama("Read", { file_path: "/b" }), dice("All done")] });
     await s.launcher.launch({ description: "a", prompt: "b", preset: "Explore" });
