@@ -82,7 +82,8 @@
       "codigo": "Code",
       "terminal": "Terminal",
       "cambios": "Änderungen",
-      "app": "App"
+      "app": "App",
+      "game": "Spiel"
     },
     "toolbar": {
       "editPage": "Seite bearbeiten (⌘E)",
@@ -321,6 +322,11 @@
       "appPlaceholder": "Beschreibe deine App: was sie tut, wer sie nutzt…",
       "headline": "Deine nächste App beginnt hier",
       "subtitle": "Sag Len, was sie können soll, und er baut sie: ihre Screens, ihre Daten und ihren Login.",
+      "game": "Spiel",
+      "gameHint": "Ein Browserspiel, 2D oder 3D, zum Spielen und Teilen",
+      "gameHeadline": "Was möchtest du spielen?",
+      "gameSubtitle": "Beschreib Len das Spiel, und er baut es: seine Welt, die Steuerung und wie man gewinnt.",
+      "gamePlaceholder": "Ein Raumschiff, das Asteroiden ausweicht…",
       "tool": "Tool",
       "toolHint": "Ein eigener Bildschirm in OpenLen, gebaut von Len.",
       "toolHeadline": "Welches Tool brauchst du?",

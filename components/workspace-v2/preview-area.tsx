@@ -135,6 +135,8 @@ interface PreviewAreaProps {
    *  corriendo, sin edición visual; la lente Código va la primera, y si el
    *  lienzo real no responde lo dice (en local, el cascarón no arranca nada). */
   esApp?: boolean;
+  /** A GAME (spec local 2026-11-05-modo-juego-design, §8.6): an app whose preview lens is called «Juego». */
+  esJuego?: boolean;
   /** AN APP BEING BORN (`useAppBirth`): Len's workshop covers the «App» lens
    *  until the first turn ends, instead of the skeleton's blank page. */
   appBirth?: AppBirthView | null;
@@ -315,6 +317,7 @@ export function PreviewArea({
   redesigning = false,
   inspectMode = false,
   esApp = false,
+  esJuego = false,
   appBirth = null,
   appName = "",
   designMode = false,
@@ -988,7 +991,7 @@ export function PreviewArea({
                 ...(esApp
                   ? [
                       { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
-                      { value: "pagina" as const, label: t("preview.lente.app"), icon: Eye },
+                      { value: "pagina" as const, label: t(esJuego ? "preview.lente.game" : "preview.lente.app"), icon: Eye },
                     ]
                   : [
                       { value: "pagina" as const, label: t("preview.lente.pagina"), icon: Eye },
