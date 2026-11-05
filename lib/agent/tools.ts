@@ -168,6 +168,8 @@ import {
 } from "@/lib/agent/resultados";
 import type { AttachedFile } from "@/lib/projects/chat-files";
 import type { PdfPages } from "@/lib/agent/pdf-pages";
+import type { ImageForModel } from "@/lib/agent/image-for-model";
+import type { ImageRegion } from "@/lib/agent/image-region";
 import type { AgentReview } from "@/lib/security-review/review";
 import type { Finding } from "@/lib/security-review/types";
 import { agentBlockedText, ENDING_FOR_LEN, findingLineForAgent } from "@/lib/security-review/view";
@@ -414,8 +416,9 @@ export interface AgentDeps {
   indexDeliveries?(projectId: string, turnId: string, files: readonly DeliveredFile[]): Promise<void>;
   /** A PDF's pages as images (`renderPdfPages`); a double in the tests. */
   pdfPages?: (pdf: Uint8Array, range: { first: number; last: number } | null) => Promise<PdfPages>;
-  /** An image made in the box, as `Read` shows it (`lib/agent/image-for-model.ts`); a double in the tests. */
-  imageForModel?: (bytes: Uint8Array) => Promise<{ image: InlineImage; width: number; height: number }>;
+  /** An image, as `Read` shows it (`lib/agent/image-for-model.ts`), cut to Kimi Code's `region` first
+   *  when one comes; a double in the tests. */
+  imageForModel?: (bytes: Uint8Array, opts?: { readonly region?: ImageRegion }) => Promise<ImageForModel>;
   loadProject(projectId: string, userId: string): Promise<{
     data: ProjectData;
     title: string;
@@ -902,9 +905,9 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     },
     // `Read` of an image made in the box (spec local 2026-10-27-len-pdf-skill, §4.7). Lazy import: the
     // native image binding.
-    async imageForModel(bytes) {
+    async imageForModel(bytes, opts) {
       const { imageForModel } = await import("@/lib/agent/image-for-model");
-      return imageForModel(bytes);
+      return imageForModel(bytes, opts);
     },
     // The skills of /.len/skills and ~/.len/skills. Lazy import, like the notes: the database.
     skillStore: {
