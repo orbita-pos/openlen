@@ -7,10 +7,12 @@ Usage: python3 contact_sheet.py --out <sheet.png> [--label "<text>" ...] <frame.
 A folder means its .png files, by name. Up to 12 frames, in up to 4 columns, every cell the size and
 shape of the first frame scaled to fit; under each cell a strip with its number (#1, #2, ...) and its
 label when one is given: one --label per frame, in the same order (for example the time and the key:
-"t=400ms ArrowRight"). The sheet is at most 1000 px wide, the width Read shows without shrinking.
+"t=400ms ArrowRight"). The sheet is at most 1708 px wide: the widest edge DeepSeek V4.1 (Len's model)
+keeps for a 16:9 image on its token grid, so Read sends it with the detail the model can use.
 
 Prints the sheet's path and size. Exits 1 with the reason on stderr, writing nothing, when there are
-no frames or more than 12, a file isn't an image, or the labels don't match the frames.
+no frames or more than 12, a file isn't an image, the labels don't match the frames, or the arguments
+are wrong (a missing --out included).
 
 Written for OpenLen (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.3): Kimi Code reads video;
 this model reads images, so the frames go together in one. With Pillow.
@@ -23,7 +25,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 MAX_FRAMES = 12
 MAX_COLUMNS = 4
-MAX_WIDTH = 1000
+MAX_WIDTH = 1708
 STRIP = 22
 GAP = 4
 FONT_FILE = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -48,8 +50,15 @@ def font():
         return ImageFont.load_default()
 
 
+class Parser(argparse.ArgumentParser):
+    """Wrong arguments exit 1 with the reason, like every other refusal of this script (argparse uses 2)."""
+
+    def error(self, message):
+        fail(f"{message}. Usage: contact_sheet.py --out <sheet.png> [--label <text> ...] <frame.png> [...] | <folder>")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Join frames into one image.")
+    parser = Parser(description="Join frames into one image.")
     parser.add_argument("--out", required=True, help="the sheet to write (.png)")
     parser.add_argument("--label", action="append", default=[], help="one per frame, in order")
     parser.add_argument("frames", nargs="+", help="the frames, or one folder of .png files")

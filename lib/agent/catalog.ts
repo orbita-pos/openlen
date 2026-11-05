@@ -355,7 +355,7 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
                 key: {
                   type: "STRING",
                   description:
-                    'A key or a combination, pressed once (not held): "Enter", "Escape", "Tab", "ArrowLeft", "Space", "a", "ctrl+k". To check something that moves while a key is HELD, use Playwright in the terminal when there is one.',
+                    'A key or a combination, pressed once (not held): "Enter", "Escape", "Tab", "ArrowLeft", "Space", "a", "ctrl+k"; several separated by spaces are pressed one after the other ("Backspace Backspace"). To check something that moves while a key is HELD, use Playwright in the terminal when there is one.',
                 },
                 repeat: { type: "NUMBER", description: "With key: how many times to press it, 1 to 100." },
                 wait: {
@@ -365,7 +365,8 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
                 left_click: {
                   type: "ARRAY",
                   items: { type: "NUMBER" },
-                  description: "[x, y]: a click at that point, for what has no text (a canvas, a map, an icon). Pixels of the tab, as in a screenshot of the screen (1280×900 on a desktop).",
+                  description:
+                    "[x, y]: a click at that point, for what has no text (a canvas, a map, an icon). Pixels of the tab, as in a screenshot of the screen (1280×900 on a desktop); a screenshot of a block says where the block is, to add to a point of it.",
                 },
                 hover: { type: "ARRAY", items: { type: "NUMBER" }, description: "[x, y]: moves the mouse there, as a visitor pointing at something. Pixels of the tab." },
                 left_click_drag: {

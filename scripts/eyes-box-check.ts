@@ -179,7 +179,9 @@ async function main() {
     const labels = Array.from({ length: 8 }, (_, i) => `--label 't=${(i + 1) * 100}ms'`).join(" ");
     const sheet = await run(box, `python3 ${D}/contact_sheet.py --out ${D}/sheet.png ${labels} ${D}/frames && python3 ${D}/pixel.py ${D}/sheet.png`);
     const size = sheet.exitCode === 0 ? (JSON.parse(sheet.stdout.trim().split("\n").pop()!) as Record<string, { size: number[] }>)[`${D}/sheet.png`]?.size : undefined;
-    check("contact_sheet.py joins the 8 frames into one image at most 1000 px wide", !!size && size[0]! <= 1000, size ? `${size.join("×")}` : short(sheet));
+    check("contact_sheet.py joins the 8 frames into one image at most 1708 px wide (DeepSeek V4.1's 16:9 edge)", !!size && size[0]! <= 1708, size ? `${size.join("×")}` : short(sheet));
+    const noOut = await run(box, `python3 ${D}/contact_sheet.py ${D}/frames`);
+    check("contact_sheet.py without --out exits 1 with the reason", noOut.exitCode === 1 && /--out/.test(noOut.stderr), short(noOut));
   } finally {
     await box.kill().catch(() => undefined);
   }

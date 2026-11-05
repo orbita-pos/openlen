@@ -67,5 +67,7 @@ export const READ_BACK_NOTE = "If you generate or edit images via commands or sc
 
 export const VIDEO_FILE = /\.(webm|mp4|mov|mkv|avi|m4v)$/i;
 
+/** Kimi Code reads video; this model doesn't. As Kimi's own training does with media, the way is code that
+ *  turns it into images: frames of a page in motion, or frames of the video itself through a <video>. */
 export const videoReadError = (path: string) =>
-  `This model can't read video: ${path}. To look at motion, take screenshots at intervals (Playwright's page.clock steps time) and read them, or join them into one image with the verify skill's scripts/contact_sheet.py.`;
+  `This model can't read video: ${path}. Look at it as images instead: a page in motion, by taking screenshots at intervals with Playwright (page.clock steps time); a video file, by opening it in a page as a <video>, setting its currentTime and taking a screenshot of each moment. Join several into one image with the verify skill's scripts/contact_sheet.py, then Read it.`;

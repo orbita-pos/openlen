@@ -46,7 +46,7 @@ import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { parseKey, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
-import { canvasLine, classifyCanvasChange, pixelChange, type CanvasVerdict } from "@/lib/agent/canvas-change";
+import { canvasLine, classifyCanvasChange, pixelChange, type CanvasVerdict, type MeasuredKind } from "@/lib/agent/canvas-change";
 import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
@@ -510,7 +510,7 @@ export const PRELUDIO_DE_USO = `
         var r = el.getBoundingClientRect();
         var x0 = Math.max(0, r.left), y0 = Math.max(0, r.top), x1 = Math.min(innerWidth, r.right), y1 = Math.min(innerHeight, r.bottom);
         if (x1 - x0 < 2 || y1 - y0 < 2) return;
-        out.push({ x: x0 + dx, y: y0 + dy, width: x1 - x0, height: y1 - y0 });
+        out.push({ x: x0 + dx, y: y0 + dy, width: x1 - x0, height: y1 - y0, kind: el.tagName === "VIDEO" ? "video" : "canvas" });
       });
       out.sort(function (a, b) { return b.width * b.height - a.width * a.height; });
       return out.slice(0, 4);
@@ -568,8 +568,27 @@ interface MedidaDelLienzo {
   /** Del canvas, en coordenadas del documento: se toma DENTRO de `quieta`, después de que el paso haya
    *  llevado su control a la vista, así que no envejece con ese desplazamiento. */
   rect?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  /** A <canvas> or a <video>: the line names it by its kind. */
+  kind?: MeasuredKind;
   primera?: PngCrudo | null;
   antes?: PngCrudo | null;
+}
+
+/**
+ * The canvas line of a step, from what `quieta` captured before acting and one capture now — the same in
+ * the project's visit and on another site (Claude Code's and DeepSeek's browser tools act the same on any
+ * site). Null when there was no canvas, or a capture failed.
+ */
+async function lineaDelLienzo(
+  page: Page,
+  medida: MedidaDelLienzo | undefined,
+): Promise<{ readonly veredicto: CanvasVerdict; readonly linea: string } | null> {
+  if (!medida?.rect || !medida.primera || !medida.antes) return null;
+  const despues = await huellaDelLienzo(page, medida.rect);
+  if (!despues) return null;
+  const c = { selfChange: pixelChange(medida.primera, medida.antes), stepChange: pixelChange(medida.antes, despues) };
+  const veredicto = classifyCanvasChange(c);
+  return { veredicto, linea: canvasLine(veredicto, c, medida.kind) };
 }
 
 const LADO_DE_LA_HUELLA = 128;
@@ -591,8 +610,10 @@ async function huellaDelLienzo(page: Page, rect: NonNullable<MedidaDelLienzo["re
  *  mismo por píxeles (`medida`). */
 async function quieta(page: Page, cambiantes: Set<string>, medida?: MedidaDelLienzo): Promise<Foto> {
   if (medida) {
-    const lienzos = (await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as NonNullable<MedidaDelLienzo["rect"]>[];
-    medida.rect = lienzos[0];
+    const lienzos = (await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as (NonNullable<MedidaDelLienzo["rect"]> & { kind: MeasuredKind })[];
+    const l = lienzos[0];
+    medida.rect = l ? { x: l.x, y: l.y, width: l.width, height: l.height } : undefined;
+    medida.kind = l?.kind;
   }
   const rect = medida?.rect;
   const desde = Date.now();
@@ -814,6 +835,13 @@ async function takeScreenshot(page: Page, target: string, images: InlineImage[])
     await handle.scrollIntoView().catch(() => undefined);
     await twoFrames(page);
     dataBase64 = (await handle.screenshot({ type: "jpeg", quality: 80, encoding: "base64" })) as string;
+    // Where the block is in the tab, as Kimi Code's region note says the offset to add: a point of this image
+    // becomes coordinates for left_click, hover or zoom (spec local 2026-11-05-ojos-que-ven-el-movimiento).
+    const box = await handle.boundingBox().catch(() => null);
+    images.push({ mimeType: "image/jpeg", dataBase64 });
+    if (!box) return `attached below as image ${images.length}.`;
+    const [x0, y0, x1, y1] = [box.x, box.y, box.x + box.width, box.y + box.height].map((n) => Math.max(0, Math.round(n)));
+    return `attached below as image ${images.length}. The block is at (${x0}, ${y0}) → (${x1}, ${y1}) of the tab: add (${x0}, ${y0}) to a point of this image to use it with left_click, hover or zoom.`;
   }
   images.push({ mimeType: "image/jpeg", dataBase64 });
   return `attached below as image ${images.length}${isScreen(target) ? " (what a visitor sees on a 1280×900 desktop screen)" : ""}.`;
@@ -992,19 +1020,33 @@ async function actuar(
     if (!k.ok) return { ok: false, hecho: `couldn't: ${k.error}` };
     const antes = await quieta(page, cambiantes, medida);
     const escuchan = (await page.evaluate(US("escuchaTeclas()")).catch(() => true)) as boolean;
-    const mods = k.keys.slice(0, -1) as KeyInput[];
-    const tecla = k.keys[k.keys.length - 1] as KeyInput;
     const veces = paso.repeat ?? 1;
+    const comoCaracter: string[] = [];
     for (let i = 0; i < veces; i++) {
-      for (const m of mods) await page.keyboard.down(m);
-      await page.keyboard.press(tecla);
-      for (const m of [...mods].reverse()) await page.keyboard.up(m);
+      for (const combo of k.combos) {
+        const mods = combo.slice(0, -1) as KeyInput[];
+        const tecla = combo[combo.length - 1]!;
+        for (const m of mods) await page.keyboard.down(m);
+        try {
+          await page.keyboard.press(tecla as KeyInput);
+        } catch (e) {
+          // A character outside Puppeteer's US keyboard («é», «ñ»): typed as a character, Puppeteer's own
+          // way (sendCharacter: input without keydown). With modifiers there is no such way: said so.
+          if (mods.length > 0 || [...tecla].length !== 1 || !/Unknown key/i.test(String(e))) {
+            for (const m of [...mods].reverse()) await page.keyboard.up(m);
+            return { ok: false, hecho: `couldn't: ${q(combo.join("+"))} isn't a key this browser's keyboard has.` };
+          }
+          await page.keyboard.sendCharacter(tecla);
+          if (!comoCaracter.includes(tecla)) comoCaracter.push(tecla);
+        }
+        for (const m of [...mods].reverse()) await page.keyboard.up(m);
+      }
     }
     return {
       ok: true,
       hecho: `I pressed the key ${q(paso.key)}${veces > 1 ? ` (${veces} times)` : ""}.`,
       antes,
-      detalle: [],
+      detalle: comoCaracter.map((c) => `(note: ${q(c)} isn't on this browser's US keyboard, so it was typed as a character: the page got its input, not a keydown.)`),
       previo: { escucha: escuchan, propia: false, teclado: true },
     };
   }
@@ -1532,7 +1574,9 @@ export async function visitAnotherSite(
         continue;
       }
       const before = page.url();
-      const accion = await actuar(page, paso, cambiantes);
+      // The canvas measure too: Claude Code's and DeepSeek's browser tools act the same on any site.
+      const medida: MedidaDelLienzo | undefined = internals.canvasDiff === false || "reload" in paso ? undefined : {};
+      const accion = await actuar(page, paso, cambiantes, medida);
       if (!accion.ok) {
         lineas.push(`${encabezado} → ${accion.hecho}`);
         break;
@@ -1540,6 +1584,8 @@ export async function visitAnotherSite(
       await dormir(VENTANA_MS);
       await settle();
       const detalle = [...accion.detalle];
+      const delLienzo = withoutHash(page.url()) === withoutHash(before) ? await lineaDelLienzo(page, medida) : null;
+      if (delLienzo) detalle.push(delLienzo.linea);
       const sale = (await page.evaluate(US("sacar()")).catch(() => ({ salidas: [], envios: [] }))) as {
         salidas: string[];
         envios: { campos: [string, string][] }[];
@@ -1743,15 +1789,9 @@ async function visitTab(
     // EL CANVAS (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): cuánto cambió con el paso
     // frente a lo que cambia solo. Un canvas que cambió, o que no se distingue de lo que cambia solo,
     // no deja decir «nothing changed».
-    let veredictoDelLienzo: CanvasVerdict | null = null;
-    if (medida?.rect && medida.primera && medida.antes && sinHash(page.url()) === sinHash(doc.url)) {
-      const despuesDelLienzo = await huellaDelLienzo(page, medida.rect);
-      if (despuesDelLienzo) {
-        const c = { selfChange: pixelChange(medida.primera, medida.antes), stepChange: pixelChange(medida.antes, despuesDelLienzo) };
-        veredictoDelLienzo = classifyCanvasChange(c);
-        detalle.push(canvasLine(veredictoDelLienzo, c));
-      }
-    }
+    const delLienzo = sinHash(page.url()) === sinHash(doc.url) ? await lineaDelLienzo(page, medida) : null;
+    if (delLienzo) detalle.push(delLienzo.linea);
+    const veredictoDelLienzo: CanvasVerdict | null = delLienzo?.veredicto ?? null;
     const lienzoSeMovio = veredictoDelLienzo !== null && veredictoDelLienzo !== "unchanged";
     // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
     // del script. Se apunta y se vuelve, porque los pasos siguen.

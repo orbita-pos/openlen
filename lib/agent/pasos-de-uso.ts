@@ -77,29 +77,34 @@ const TECLAS: Record<string, string> = {
  * Una tecla o combinación como las del `key` de Claude Code («Enter», «ctrl+a») a nombres de
  * Puppeteer (`KeyInput`): los modificadores delante, la tecla al final.
  */
-export function parseKey(text: string): { readonly ok: true; readonly keys: string[] } | { readonly ok: false; readonly error: string } {
+export function parseKey(text: string): { readonly ok: true; readonly combos: string[][] } | { readonly ok: false; readonly error: string } {
   const malo = {
     ok: false as const,
-    error: `"${text}" isn't a key name. Use names like "Enter", "Escape", "Tab", "Backspace", "Space", "ArrowLeft", "PageDown", "F5" or one character like "a", and combinations like "ctrl+k" or "shift+Tab".`,
+    error: `"${text}" isn't a key name. Use names like "Enter", "Escape", "Tab", "Backspace", "Space", "ArrowLeft", "PageDown", "F5" or one character like "a", combinations like "ctrl+k" or "shift+Tab", and several separated by spaces like "Backspace Backspace".`,
   };
   const t = text.trim();
   if (t === "") return malo;
-  const partes = t === "+" ? ["+"] : t.split("+").map((p) => p.trim());
-  const keys: string[] = [];
-  for (const [i, p] of partes.entries()) {
-    const bajo = p.toLowerCase();
-    const ultima = i === partes.length - 1;
-    const mod = MODIFICADORES[bajo];
-    if (mod && (!ultima || partes.length === 1)) {
-      keys.push(mod);
-      continue;
+  // Several keys separated by spaces, one after the other — Claude Code's `key` («"Backspace Backspace Delete"»).
+  const combos: string[][] = [];
+  for (const combo of t.split(/\s+/)) {
+    const partes = combo === "+" ? ["+"] : combo.split("+");
+    const keys: string[] = [];
+    for (const [i, p] of partes.entries()) {
+      const bajo = p.toLowerCase();
+      const ultima = i === partes.length - 1;
+      const mod = MODIFICADORES[bajo];
+      if (mod && (!ultima || partes.length === 1)) {
+        keys.push(mod);
+        continue;
+      }
+      if (!ultima || p === "") return malo;
+      const tecla = TECLAS[bajo] ?? (/^f([1-9]|1[0-2])$/.test(bajo) ? bajo.toUpperCase() : [...p].length === 1 ? p : null);
+      if (!tecla) return malo;
+      keys.push(tecla);
     }
-    if (!ultima) return malo;
-    const tecla = TECLAS[bajo] ?? (/^f([1-9]|1[0-2])$/.test(bajo) ? bajo.toUpperCase() : [...p].length === 1 ? p : null);
-    if (!tecla) return malo;
-    keys.push(tecla);
+    combos.push(keys);
   }
-  return { ok: true, keys };
+  return { ok: true, combos };
 }
 
 /** Dos (o cuatro) números finitos de 0 o más. */
