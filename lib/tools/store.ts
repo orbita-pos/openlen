@@ -9,6 +9,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
+import type { ReleaseMcp } from "./mcp/discover";
 import type { ToolPlacement, ToolReleaseFile } from "./types";
 
 export type ToolInstallationRow = typeof schema.toolInstallations.$inferSelect;
@@ -21,8 +22,17 @@ export async function saveRelease(
   projectId: string,
   files: Record<string, ToolReleaseFile>,
   jobFiles: Record<string, string> = {},
+  mcp: ReleaseMcp | null = null,
 ): Promise<void> {
-  await db.insert(r).values({ sha, projectId, files, jobFiles }).onConflictDoNothing({ target: r.sha });
+  // A version's files never change; its operations may be found later (installed again once the functions are on).
+  const insert = db.insert(r).values({ sha, projectId, files, jobFiles, mcp: mcp as never });
+  await (mcp ? insert.onConflictDoUpdate({ target: r.sha, set: { mcp: mcp as never } }) : insert.onConflictDoNothing({ target: r.sha }));
+}
+
+/** A version's MCP server and operations (phase 4), or null. */
+export async function readReleaseMcp(sha: string): Promise<ReleaseMcp | null> {
+  const [row] = await db.select({ mcp: r.mcp }).from(r).where(eq(r.sha, sha)).limit(1);
+  return (row?.mcp as ReleaseMcp | null | undefined) ?? null;
 }
 
 /** A version's job files (phase 3, §4.6): what its jobs run; `{}` for a version without jobs, null for none. */

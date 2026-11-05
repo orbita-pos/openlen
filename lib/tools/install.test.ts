@@ -57,13 +57,69 @@ const deps = (over: Partial<InstallDeps> = {}): InstallDeps => ({
 const install = (d: InstallDeps, over: Partial<Parameters<typeof installTool>[0]> = {}) =>
   installTool({ projectId: "p1", actorId: "u1", locale: "es", requestHost: "localhost:3000", ...over }, d);
 
+// PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): a tool with an MCP server.
+const MCP_FILES: Record<string, string> = {
+  ...FILES,
+  "/package.json": JSON.stringify({ ...JSON.parse(PKG), openlen: { tool: { placement: "rail", mcp: { serverName: "calc", function: "mcp" } } } }),
+  "/supabase/functions/mcp/index.ts": "Deno.serve(() => new Response())",
+};
+const MCP = { serverName: "calc", function: "mcp", tools: [{ name: "add", description: "Add", inputSchema: { type: "object" } }] };
+
+describe("installing a tool with operations (phase 4)", () => {
+  it("with the functions on: asks for its operations after deploying, and keeps them with the version", async () => {
+    const order: string[] = [];
+    const d = deps({
+      files: vi.fn(async () => MCP_FILES),
+      prepareFunctions: vi.fn(async () => ({ deploy: async () => void order.push("deploy") })),
+      discover: vi.fn(async () => (order.push("discover"), { ok: true as const, mcp: MCP, problems: [] })),
+    });
+    const r = await install(d);
+    expect(r.status).toBe(200);
+    expect(order).toEqual(["deploy", "discover"]);
+    expect(d.discover).toHaveBeenCalledWith({ projectId: "p1", actorId: "u1", mcp: { serverName: "calc", function: "mcp" } });
+    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), expect.any(Object), MCP);
+    expect(r.body).not.toHaveProperty("operationsLeftOut");
+  });
+
+  it("operations left out come back in the answer; the install goes on", async () => {
+    const d = deps({
+      files: vi.fn(async () => MCP_FILES),
+      prepareFunctions: vi.fn(async () => ({ deploy: async () => undefined })),
+      discover: vi.fn(async () => ({ ok: true as const, mcp: MCP, problems: ["add numbers: its name must be letters"] })),
+    });
+    const r = await install(d);
+    expect(r.status).toBe(200);
+    expect(r.body.operationsLeftOut).toEqual(["add numbers: its name must be letters"]);
+  });
+
+  it("a server that doesn't answer MCP: 422 mcp_failed with the reason, nothing saved or installed", async () => {
+    const d = deps({
+      files: vi.fn(async () => MCP_FILES),
+      prepareFunctions: vi.fn(async () => ({ deploy: async () => undefined })),
+      discover: vi.fn(async () => ({ ok: false as const, error: "HTTP 500 from the server" })),
+    });
+    const r = await install(d);
+    expect(r).toEqual({ status: 422, body: { error: "mcp_failed", detail: "HTTP 500 from the server" } });
+    expect(d.saveRelease).not.toHaveBeenCalled();
+    expect(d.upsertInstallation).not.toHaveBeenCalled();
+  });
+
+  it("the functions off: installed without operations, nothing asked", async () => {
+    const d = deps({ files: vi.fn(async () => MCP_FILES), discover: vi.fn() });
+    const r = await install(d);
+    expect(r.status).toBe(200);
+    expect(d.discover).not.toHaveBeenCalled();
+    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), expect.any(Object), null);
+  });
+});
+
 describe("installTool", () => {
   it("installs through the gates and answers the installation", async () => {
     const d = deps();
     const r = await install(d);
     expect(r.status).toBe(200);
     expect((r.body.installation as { placement: string; id: string }).placement).toBe("rail");
-    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), { "/jobs/pdf.py": "print(1)" });
+    expect(d.saveRelease).toHaveBeenCalledWith("sha1", "p1", expect.any(Object), { "/jobs/pdf.py": "print(1)" }, null);
     expect(d.upsertInstallation).toHaveBeenCalledWith(expect.objectContaining({ personId: "u1", projectId: "p1", releaseSha: "sha1", placement: "rail", iconPath: "/icon.svg" }));
     expect(d.markPublished).toHaveBeenCalledWith("p1", "fp1");
   });

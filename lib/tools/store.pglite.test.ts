@@ -123,6 +123,17 @@ describe("tool releases", () => {
     expect(await store.readReleaseJobs("missing")).toBeNull();
   });
 
+  it("a version's operations (phase 4): none at first, kept once found — installed again with the functions on", async () => {
+    const files = { "/index.html": { content: "<html></html>", contentType: "text/html" } };
+    await store.saveRelease("sha-mcp", "p1", files, {});
+    expect(await store.readReleaseMcp("sha-mcp")).toBeNull();
+    const mcp = { serverName: "calc", function: "mcp", tools: [{ name: "add", description: "Add", inputSchema: { type: "object" } }] };
+    await store.saveRelease("sha-mcp", "p1", files, {}, mcp);
+    expect(await store.readReleaseMcp("sha-mcp")).toEqual(mcp);
+    await store.saveRelease("sha-mcp", "p1", files, {});
+    expect(await store.readReleaseMcp("sha-mcp")).toEqual(mcp);
+  });
+
   it("saving is idempotent on the sha", async () => {
     const files = { "/index.html": { content: "<html></html>", contentType: "text/html" } };
     await store.saveRelease("sha-1", "p1", files);

@@ -13,7 +13,8 @@ import type { AccesoAlProyecto } from "@/lib/projects/acceso";
 import type { GatedPublishResult } from "@/lib/projects/publish-through-gates";
 import type { ProjectData } from "@/lib/projects/types";
 
-import { readToolManifest } from "./manifest";
+import { readToolManifest, type ToolMcpDeclaration } from "./manifest";
+import type { ReleaseMcp } from "./mcp/discover";
 import { PLACEHOLDER_ICON_SHA } from "./skeleton";
 import type { ToolInstallationRow } from "./store";
 import type { ToolPlacement, ToolReleaseFile } from "./types";
@@ -35,7 +36,9 @@ export interface InstallDeps {
   }>;
   prepareFunctions(projectId: string, o: { skipMissingSecrets: boolean }): Promise<{ deploy(): Promise<void> } | null>;
   dataChanges(o: { projectId: string; confirmFingerprint?: string; copyDraftData?: boolean }): Promise<void>;
-  saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>, jobFiles?: Record<string, string>): Promise<void>;
+  saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>, jobFiles?: Record<string, string>, mcp?: ReleaseMcp | null): Promise<void>;
+  /** Phase 4 (§4.7): ask the tool's live MCP server for its operations, as the installer. */
+  discover?(i: { projectId: string; actorId: string; mcp: ToolMcpDeclaration }): Promise<{ ok: true; mcp: ReleaseMcp; problems: string[] } | { ok: false; error: string }>;
   upsertInstallation(i: {
     personId: string;
     projectId: string;
@@ -80,6 +83,10 @@ export async function realInstallDeps(): Promise<InstallDeps> {
     entorno: (p) => entorno.entornoPublicoDeLaApp(p, "production"),
     build: (p) => release.buildToolRelease(p),
     prepareFunctions: (p, o) => fns.prepareFunctionsForPublish(p, { mode: "owner", skipMissingSecrets: o.skipMissingSecrets }),
+    discover: async (i) => {
+      const { discoverOperations, realOperationSend } = await import("./mcp/discover");
+      return discoverOperations({ toolProjectId: i.projectId, email: await store.personEmail(i.actorId), mcp: i.mcp }, { send: realOperationSend });
+    },
     dataChanges: async (o) => {
       const { backendConfigured } = await import("@/lib/backend/pg");
       if (backendConfigured()) await data.publishDataChanges({ ...o, mode: "owner" });
@@ -143,7 +150,17 @@ export async function installTool(
       ...(i.copyDraftData !== undefined ? { copyDraftData: i.copyDraftData } : {}),
     });
     await functions?.deploy();
-    await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {});
+    // Phase 4 (§4.7): with its functions deployed, the operations its MCP server lists, once — what Len is declared.
+    // With the functions off there is nothing deployed to ask: installed as an app with functions publishes today.
+    let mcp: ReleaseMcp | null = null;
+    let operationsLeftOut: string[] = [];
+    if (functions && manifest.manifest.mcp && d.discover) {
+      const found = await d.discover({ projectId: i.projectId, actorId: i.actorId, mcp: manifest.manifest.mcp });
+      if (!found.ok) return { status: 422, body: { error: "mcp_failed", detail: found.error } };
+      mcp = found.mcp;
+      operationsLeftOut = found.problems;
+    }
+    await d.saveRelease(release.sha, i.projectId, release.files, release.jobFiles ?? {}, mcp);
     const row = await d.upsertInstallation({
       personId: i.actorId,
       projectId: i.projectId,
@@ -158,7 +175,7 @@ export async function installTool(
       await d.markPublished(i.projectId, gate.fingerprint).catch((err: unknown) => console.warn("[tools] could not keep the installed version as the security review's base", err));
     }
     const installation = toInstalledToolView(row, { locale: i.locale, requestHost: i.requestHost, plan: "pro", releaseExists: true });
-    return { status: 200, body: { installation } };
+    return { status: 200, body: { installation, ...(operationsLeftOut.length > 0 ? { operationsLeftOut } : {}) } };
   } catch (err) {
     if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
     const dataError = dataChangesErrorBody(err);
