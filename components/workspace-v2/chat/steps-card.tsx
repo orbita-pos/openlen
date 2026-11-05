@@ -268,7 +268,12 @@ function StepRow({
   // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes
   // (como `agent-action-card.tsx`).
   const tool = currentToolName(action.tool);
-  const label = !KNOWN_TOOLS.has(tool)
+  // An installed tool's operation (spec local 2026-11-04-herramientas-hechas-por-len, §4.7), named as Claude Code
+  // shows an MCP tool: «server - operation (MCP)».
+  const mcp = /^mcp__(.+?)__(.+)$/.exec(action.tool);
+  const label = mcp
+    ? `${mcp[1]} - ${mcp[2]} (MCP)`
+    : !KNOWN_TOOLS.has(tool)
     ? action.tool
     : ARTIFACT_FILE_TOOLS.has(tool as ArtifactToolLabel) && isArtifactFile(action.summary)
       ? t(`agent.toolArtifact.${tool as ArtifactToolLabel}`)

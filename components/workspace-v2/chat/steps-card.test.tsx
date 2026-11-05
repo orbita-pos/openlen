@@ -108,6 +108,12 @@ describe("la tarjeta de los pasos", () => {
   // 11 herramientas pasaran al inglés pintaba `ver_visitas`, `mirar_pagina` y
   // `usar_pagina` crudos en esta tarjeta (la hermana, `agent-action-card`, ya
   // los traducía).
+  it("🔴 una operación de una herramienta instalada sale como la enseña Claude Code: «servidor - operación (MCP)»", () => {
+    const host = pintar([{ tool: "mcp__empleados__add_employee", status: "done", summary: "" } as AgentAction]);
+    expect(host.textContent).toContain("empleados - add_employee (MCP)");
+    expect(host.textContent).not.toContain("mcp__");
+  });
+
   it("🔴 una fila guardada con el nombre de antes sale con la etiqueta de hoy", () => {
     const host = pintar([
       { tool: "ver_visitas", status: "done", summary: "" } as AgentAction,

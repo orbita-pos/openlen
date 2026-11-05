@@ -66,6 +66,8 @@ function entrada(dep: FunctionsDependency): string {
 // the functions bundler resolves to the catalog's file). 2026-11 has none: its bytes don't move.
 const SHARED: Readonly<Record<string, { readonly file: string; readonly specs: readonly string[] }>> = {
   "2026-12": { file: "react-shared.mjs", specs: ["react", "react/jsx-runtime", "react-dom/server", "react-email", "@react-email/render"] },
+  // 2027-01 keeps 2026-12's one React (it adds zod 4 and the MCP server, neither of which is React).
+  "2027-01": { file: "react-shared.mjs", specs: ["react", "react/jsx-runtime", "react-dom/server", "react-email", "@react-email/render"] },
 };
 const compartido = SHARED[nombre] ?? null;
 const IDENTIFICADOR = /^[A-Za-z_$][\w$]*$/;

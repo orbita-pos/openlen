@@ -6,7 +6,7 @@
 // `invokeFunctionInternally` es el `curl` de la terminal de Len: SIEMPRE el
 // borrador (Len no toca producción).
 
-import { isInstalledToolOrigin } from "@/lib/tools/environment";
+import { isInstalledToolOrigin, toolLiveIsPublished } from "@/lib/tools/environment";
 import "server-only";
 
 import { decideEnvironment } from "@/lib/backend/environment-routing";
@@ -67,7 +67,9 @@ function realGatewayDeps(): GatewayDeps {
         ref: rec.ref,
         host,
         environment,
-        published: hb.pageSub !== null,
+        // An installed tool is never published, yet its production functions are what its screen and Len's
+        // operations call (spec local 2026-11-04-herramientas-hechas-por-len, §4.7).
+        published: hb.pageSub !== null || (await toolLiveIsPublished(rec.projectId)),
         publishableKey: rec.publishableKey,
         secretKeyHash: rec.secretKeyHash,
         // Lo que se tapa en lo que Len lee: la clave del servicio y los secretos
@@ -128,4 +130,21 @@ export function serveFunctions(req: Request): Promise<Response> {
 
 export function invokeFunctionInternally(req: Request): Promise<Response> {
   return handleFunctionsRequest(req, realGatewayDeps(), { forceDraft: true });
+}
+
+/** AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): OpenLen calling a tool's
+ *  PRODUCTION function in-process — to list its MCP tools right after installing deploys them (before the installation
+ *  row exists, so before `toolLiveIsPublished` would say yes) and for Len's calls. Production only: a request the routing
+ *  sends to the draft is refused. Never reached from outside: it is not a route. */
+export function invokeToolFunctionLive(req: Request): Promise<Response> {
+  const deps = realGatewayDeps();
+  return handleFunctionsRequest(req, {
+    ...deps,
+    async resolve(r, o) {
+      const target = await deps.resolve(r, o);
+      if (!target || "forbidden" in target) return target;
+      if (target.environment !== "live") return { forbidden: "an installed tool's operations run in production only" };
+      return { ...target, published: true };
+    },
+  });
 }

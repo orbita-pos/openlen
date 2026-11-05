@@ -14,7 +14,7 @@ const all = [
   "Read", "Edit", "Write", "Grep", "Glob", "bash", "view_page", "use_page", "skill", "web_search", "publish", "ask_user_question",
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
-  "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action",
+  "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
 ].map((name) => ({ name }));
 const names = (p: SubagentPreset, plan = false) => childToolDeclarations(all, p, plan).map((d) => d.name);
 
@@ -25,6 +25,12 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
         expect(names(p)).not.toContain(gone);
       }
     }
+  });
+
+  // TOOLS MADE BY LEN, PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.7; plan decision 4): an installed
+  // tool's operations write the person's production — the main turn only, never a child (Explore and Plan are read-only).
+  it("no child, of any type or a custom one, gets an installed tool's operations", () => {
+    for (const p of SUBAGENT_PRESETS) expect(names(p).filter((n) => String(n).startsWith("mcp__"))).toEqual([]);
   });
 
   it("no child proposes a «Crear» card (DeepSeek: «Cards are offered in the main conversation only»)", () => {

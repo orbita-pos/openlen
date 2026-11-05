@@ -85,6 +85,17 @@ describe("tool installations", () => {
     expect(again.removedAt).toBeNull();
   });
 
+  it("a project has an active installation only while one is switched on and not removed (phase 4)", async () => {
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+    const row = await install();
+    expect(await store.hasActiveInstallation("p1")).toBe(true);
+    await store.setEnabled(row.id, "u1", false);
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+    await store.setEnabled(row.id, "u1", true);
+    await store.markRemoved(row.id, "u1");
+    expect(await store.hasActiveInstallation("p1")).toBe(false);
+  });
+
   it("another person can't switch it off", async () => {
     const row = await install();
     expect(await store.setEnabled(row.id, "u2", false)).toBe(false);
@@ -110,6 +121,17 @@ describe("tool releases", () => {
     await store.saveRelease("sha-k", "p1", { "/index.html": { content: "<html></html>", contentType: "text/html" } });
     expect(await store.readReleaseJobs("sha-k")).toEqual({});
     expect(await store.readReleaseJobs("missing")).toBeNull();
+  });
+
+  it("a version's operations (phase 4): none at first, kept once found — installed again with the functions on", async () => {
+    const files = { "/index.html": { content: "<html></html>", contentType: "text/html" } };
+    await store.saveRelease("sha-mcp", "p1", files, {});
+    expect(await store.readReleaseMcp("sha-mcp")).toBeNull();
+    const mcp = { serverName: "calc", function: "mcp", tools: [{ name: "add", description: "Add", inputSchema: { type: "object" } }] };
+    await store.saveRelease("sha-mcp", "p1", files, {}, mcp);
+    expect(await store.readReleaseMcp("sha-mcp")).toEqual(mcp);
+    await store.saveRelease("sha-mcp", "p1", files, {});
+    expect(await store.readReleaseMcp("sha-mcp")).toEqual(mcp);
   });
 
   it("saving is idempotent on the sha", async () => {
