@@ -24,7 +24,8 @@
     "desdeElHilo": "vanuit de draad · {donde}",
     "scheduled": "Geplande taak «{title}» · {when}",
     "lenWatch": "Len Watch · je gepubliceerde site laadde niet",
-    "fromSubagents": "Resultaten van de subagents"
+    "fromSubagents": "Resultaten van de subagents",
+    "toolCreation": "Tool maken"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",

@@ -99,6 +99,14 @@ describe("installTool", () => {
     expect((r.body.problems as Array<{ code: string }>)[0]?.code).toBe("missing_meta");
   });
 
+  it("nobody in front of it (a «Crear» card): the gate waits for a review still running", async () => {
+    const d = deps();
+    await install(d, { waitWhenPending: true });
+    expect(d.securityGate).toHaveBeenCalledWith(expect.objectContaining({ waitWhenPending: true }));
+    await install(d);
+    expect(d.securityGate).toHaveBeenLastCalledWith(expect.not.objectContaining({ waitWhenPending: true }));
+  });
+
   it("the security review still running: 428, nothing saved", async () => {
     const d = deps({ securityGate: vi.fn(async () => ({ stop: { status: 428, body: { error: "security_review_pending", fingerprint: "fp" } } })) });
     expect((await install(d)).body.error).toBe("security_review_pending");

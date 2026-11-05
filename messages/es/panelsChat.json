@@ -24,7 +24,8 @@
     "desdeElHilo": "desde el hilo · {donde}",
     "scheduled": "Tarea programada «{title}» · {when}",
     "lenWatch": "Len Watch · tu sitio publicado no cargaba",
-    "fromSubagents": "Resultados de los subagentes"
+    "fromSubagents": "Resultados de los subagentes",
+    "toolCreation": "Crear herramienta"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",

@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin } from "@/lib/projects/types";
+import type { EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin, ToolCreationOrigin } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -62,13 +62,15 @@ export interface ScheduledRequest {
   readonly framing: string;
   /** A scheduled task's run, a Len Watch turn (spec local 2026-10-30-len-watch) or the subagents' notices
    *  (spec local 2026-11-01-subagentes-de-len): all arrive framed. */
-  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin;
+  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
   /** Whose chat the row goes to, when the tools act on another project: a Len Watch worktree's turn lives in its
    *  parent's chat (spec local 2026-10-30-len-watch, §5.5). */
   readonly chatProjectId?: string;
+  /** A lower ceiling than the plan's, in centicredits (a tool's creation: `OPENLEN_TOOL_CREATION_CAP`). */
+  readonly ceilingCentis?: number;
 }
 
 type Corredor = (
@@ -290,6 +292,43 @@ export function launchEventTaskTurn(p: FramedTurn<EventTaskOrigin>): void {
 }
 
 /**
+ * «CREAR» ON A TOOL CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn in the person's tool
+ * project. It calls no model: the route launches the `creator` child with DeepSeek's `delivery: "caller"` and closes,
+ * charging nothing; the child spends within `ceilingCentis`. With no reply (no credits, subagents off, the queue)
+ * `fail` gets the reason, and the card says it.
+ */
+export function launchToolCreationHost(p: {
+  readonly userId: string;
+  readonly projectId: string;
+  readonly texto: string;
+  readonly framing: string;
+  readonly origin: ToolCreationOrigin;
+  readonly timeZone: string;
+  readonly locale: string;
+  readonly filaId: string;
+  readonly ceilingCentis: number;
+  readonly fail: (reason: string | null) => Promise<void>;
+}): void {
+  launchFramedTurn<ToolCreationOrigin>(
+    {
+      userId: p.userId,
+      projectId: p.projectId,
+      texto: p.texto,
+      framing: p.framing,
+      origin: p.origin,
+      timeZone: p.timeZone,
+      locale: p.locale,
+      filaId: p.filaId,
+      ceilingCentis: p.ceilingCentis,
+      reply: async () => {},
+      fail: (fallo) => p.fail(fallo?.code ?? fallo?.motivo ?? null),
+      onStart: async () => {},
+    },
+    "tool-creation",
+  );
+}
+
+/**
  * THE TURN THAT WAKES LEN WITH ITS SUBAGENTS' NOTICES (spec local 2026-11-01-subagentes-de-len, §4.6): a child
  * finished while no Len turn was alive in the project. As DeepSeek's notice reaching an idle parent starts one
  * model request, this starts one turn: it waits its turn in the project's queue and, when it starts, takes
@@ -334,7 +373,7 @@ export function launchSubagentNoticeTurn(p: {
   );
 }
 
-interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin> {
+interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin> {
   readonly userId: string;
   readonly projectId: string;
   /** What the chat row shows as the person's message. */
@@ -356,9 +395,11 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   readonly resolveAtStart?: () => { framing: string; origin: O } | null;
   /** More of the request's body (the subagents' turn: the launching turn's effort and mode). */
   readonly extraBody?: Readonly<Record<string, unknown>>;
+  /** `ScheduledRequest.ceilingCentis`. */
+  readonly ceilingCentis?: number;
 }
 
-function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin>(
+function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin>(
   p: FramedTurn<O>,
   label: string,
   o: { readonly quietWhenNoReply?: boolean } = {},
@@ -384,6 +425,7 @@ function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentO
           await p.reply(text, cards, finalText);
         },
         ...(p.chatProjectId ? { chatProjectId: p.chatProjectId } : {}),
+        ...(p.ceilingCentis !== undefined ? { ceilingCentis: p.ceilingCentis } : {}),
       };
       const errores = await runTurn(
         correr,

@@ -232,6 +232,15 @@ vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }))
 // «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
 const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
 vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
+// «Crear» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn's card lives in a fake store.
+const creationCard = vi.hoisted(() => ({ row: { id: "card-1", title: "Reservas de hoy", phase: "creating", personId: "u1", toolProjectId: "p1", creatorRunId: null as string | null } }));
+vi.mock("@/lib/tools/cards/creation", async (orig) => ({
+  ...(await orig<typeof import("@/lib/tools/cards/creation")>()),
+  realCreationDeps: async () => ({
+    cardById: async () => creationCard.row,
+    casPhase: async (_id: string, _from: readonly string[], to: string, set: Record<string, unknown> = {}) => (creationCard.row = { ...creationCard.row, ...set, phase: to }),
+  }),
+}));
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 vi.mock("@/lib/projects/chat", () => ({
@@ -4144,6 +4153,31 @@ describe("POST /api/agent — Len's subagents", () => {
     await readEvents(res);
     const paraElModelo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0];
     expect(paraElModelo.prompt).toBe("Background subagent r1 finished.");
+  });
+
+  it("«Crear»'s host turn calls no model, launches the creator for the caller, charges nothing, and its cap is the lower", async () => {
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null };
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    const framing = '{"task":"Build one new OpenLen tool"}';
+    const eventos = await readEvents(
+      await corredor()("u1", { projectId: "p1", prompt: "Crear «Reservas de hoy»", turnId: "77777777-7777-4777-8777-777777777777", idioma: "es", zonaHoraria: "UTC" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing, origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }),
+    );
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+    const launcher = mocks.createSubagentLauncher.mock.results.at(-1)!.value as { launch: ReturnType<typeof vi.fn> };
+    expect(launcher.launch).toHaveBeenCalledTimes(1);
+    expect(launcher.launch.mock.calls[0]![0]).toMatchObject({ preset: "creator", description: "Reservas de hoy", prompt: framing, delivery: "caller", outputSchema: { required: ["ready"] } });
+    expect(creationCard.row.creatorRunId).toBe("r1");
+    expect((launcherArgs()[0] as unknown as { spend: { cap: number } }).spend.cap).toBe(2500);
+    expect(mocks.chargeCredits).not.toHaveBeenCalled();
+    expect(eventos.filter((e) => e.event === "text").map((e) => (e.data as { text: string }).text).join("")).toContain("Creando «Reservas de hoy»");
+  });
+
+  it("a lower ceiling never raises the plan's", async () => {
+    mocks.techoDelTurno.mockReturnValue(100);
+    creationCard.row = { ...creationCard.row, phase: "creating", creatorRunId: null };
+    const origin = { kind: "tool_creation" as const, cardId: "card-1", title: "Reservas de hoy" };
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "Crear", turnId: "88888888-8888-4888-8888-888888888888" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "{}", origin, onReply: vi.fn(async () => {}), ceilingCentis: 2500 } }));
+    expect((launcherArgs()[0] as unknown as { spend: { cap: number } }).spend.cap).toBe(100);
   });
 
   it("what the children spent counts against the turn's cap", async () => {
