@@ -766,7 +766,9 @@
       "remove": "Remove",
       "restore": "Restore",
       "releaseGone": "That version isn't there any more. Ask Len to install it again.",
-      "failed": "That didn't work. Try again."
+      "failed": "That didn't work. Try again.",
+      "suggestions": "Tool suggestions",
+      "suggestionsHint": "Len proposes a tool when he sees it would help you; nothing is built until you press «Create»."
     }
   }
 }

@@ -24,7 +24,8 @@
     "desdeElHilo": "스레드에서 · {donde}",
     "scheduled": "예약 작업 «{title}» · {when}",
     "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요",
-    "fromSubagents": "서브에이전트 결과"
+    "fromSubagents": "서브에이전트 결과",
+    "toolCreation": "도구 만들기"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",
@@ -140,7 +141,8 @@
       "artifact-motion": "모션 영상 만들기",
       "artifact-audio": "오디오나 내레이션 만들기",
       "schedule": "Len이 정해진 시간에 할 작업 예약하기",
-      "tool-development": "이 도구를 만들고, 바꾸고, 설치하고, 확인하기"
+      "tool-development": "이 도구를 만들고, 바꾸고, 설치하고, 확인하기",
+      "tool-suggestions": "OpenLen에서 쓸 도구 제안하기"
     },
     "fileLimit": "메시지당 파일은 4개까지예요.",
     "fileTooBig": "그 파일은 20MB를 넘어요.",
@@ -657,5 +659,40 @@
     "destructive": "설치하면 데이터베이스의 데이터가 삭제돼요. 그래도 설치할까요?",
     "failed": "설치하지 못했어요({reason}).",
     "installed": "설치했어요."
+  },
+  "toolCard": {
+    "dismissed": "보류함: «{title}»",
+    "more": "더 보기",
+    "less": "접기",
+    "initialContent": "초기 내용",
+    "place": "위치",
+    "inRail": "레일에",
+    "inProject": "프로젝트 안에",
+    "custom": "위치 직접 쓰기",
+    "customPlaceholder": "예: 각 프로젝트의 채팅 옆",
+    "notice": "만드는 데 몇 분이 걸리고 최대 {cap} 크레딧을 씁니다.",
+    "closeNotice": "알림 닫기",
+    "showNotice": "시간과 크레딧 알림 보기",
+    "create": "만들기",
+    "notNow": "나중에",
+    "creating": "도구를 만드는 중…",
+    "cancel": "취소",
+    "cancelling": "취소하는 중…",
+    "installing": "설치하는 중…",
+    "installed": "설치됨",
+    "open": "열기",
+    "undo": "되돌리기",
+    "removed": "제거됨",
+    "restore": "복원",
+    "failed": "만들지 못했습니다",
+    "cancelled": "취소됨",
+    "interrupted": "중단됨",
+    "retry": "다시 시도",
+    "needsReview": "검토가 필요합니다",
+    "installAnyway": "그래도 설치",
+    "openProject": "프로젝트 열기",
+    "planRequired": "도구는 유료 요금제에서 쓸 수 있습니다.",
+    "sourceMissing": "그 버전은 더 이상 없습니다: Len에게 새 제안을 요청하세요",
+    "refused": "할 수 없었습니다: {reason}"
   }
 }

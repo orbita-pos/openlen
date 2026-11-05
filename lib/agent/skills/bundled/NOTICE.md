@@ -83,3 +83,9 @@ guide, which comes first and wins where they differ; the critique uses Len's `vi
 `references/`) and the same workflow (resolve the destination, read only what is needed, display record,
 install as the first preview, verify in place, fix, report), written in our own words for OpenLen's tools
 (spec local 2026-11-04-herramientas-hechas-por-len, §4.8).
+
+`tool-suggestions` is ours, after DeepSeek Harness's Personalized pages skill
+(`packages/experimental/creation-recommendations/skills/personalized-pages.md` and the catalog its loader appends,
+`src/skill.ts`, at `fcc0ad4621`, MIT): the same sections, rules, fields and order, with OpenLen's tools in place of
+DSH pages, `create_tool` in place of `create_personalized_page`, and our own examples
+(spec local 2026-11-04-herramientas-hechas-por-len, §4.10).

@@ -14,6 +14,7 @@
 // OpenLen's two. Answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
+import type { SubagentStopReason } from "./notice";
 
 import { BUNDLED_AGENT_TYPES } from "./bundled-types";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
@@ -198,11 +199,26 @@ export type SendResult =
   | { ok: true; resumed: boolean; preset: string; description: string }
   | { ok: false; code: "unavailable" | "too_many_subagents" | "turn_budget_reached"; message: string };
 
+/** What a launch carries. `outputSchema`, `delivery` and `onSettled` are DeepSeek's activation options
+ *  (`ctx.subagents.startActivation`), used by the «Crear» card (spec local 2026-11-04-herramientas-hechas-por-len, §4.10):
+ *  the child is declared `structured_output` and its call ends the run; delivered to the caller, Len hears nothing and
+ *  `onSettled` gets the result. */
+export interface LaunchOptions {
+  description: string;
+  prompt: string;
+  preset: string;
+  fromSkill?: string;
+  isolation?: "worktree";
+  outputSchema?: { readonly type: "object"; readonly properties: Readonly<Record<string, { readonly type: string }>>; readonly required: readonly string[] };
+  delivery?: "caller";
+  onSettled?: (r: { id: string; status: SubagentStopReason; structured: Record<string, unknown> | null; finalText: string }) => Promise<void>;
+}
+
 export interface SubagentsDeps {
   /** Re-read project/speaker types after their files changed, before validating a launch. */
   refreshTypes?(): Promise<void>;
   typeNames(): readonly string[];
-  launch(o: { description: string; prompt: string; preset: string; fromSkill?: string; isolation?: "worktree" }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
+  launch(o: LaunchOptions): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** `subagent_fork`: a general-purpose child seeded with Len's completed turns (phase 2). */
   fork(o: { description: string; prompt: string; isolation?: "worktree" }): Promise<{ ok: true; id: string } | { ok: false; code: LaunchRefusal; message: string }>;
   /** Len's `send_message` to one of his children (phase 2). */

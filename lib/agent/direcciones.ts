@@ -161,6 +161,12 @@ export function dirigir(
   return "ok";
 }
 
+/** How many messages the person sent while this turn runs, not yet read: DeepSeek's queued count, which keeps a
+ *  «Crear» card from showing (spec local 2026-11-04-herramientas-hechas-por-len, §4.10). */
+export function queuedDirections(turnoId: string): number {
+  return abiertos.get(turnoId)?.pendientes.length ?? 0;
+}
+
 /**
  * Lo que haya pendiente, y se CONSUME.
  *

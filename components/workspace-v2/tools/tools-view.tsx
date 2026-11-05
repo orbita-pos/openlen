@@ -4,7 +4,8 @@
 // installed tool with its icon, name and line in the person's language, where it goes, a switch, its version and
 // date, its project (to change it with Len), and «Quitar» or «Restaurar»; one that can't open says why. On top,
 // «Pedir a Len una herramienta» — DeepSeek's «Let the agent create a plugin»: a blank project born as a tool,
-// with nothing sent.
+// with nothing sent. And «Sugerencias de herramientas» (phase 2, §4.10): the person's own switch for the «Crear» card,
+// off until they turn it on, shown only where the card can exist at all.
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -16,7 +17,18 @@ import { ToolIcon } from "./tool-icon";
 
 export const NEW_TOOL_HREF = `/new?${KIND_PARAM}=tool`;
 
-export function ToolsView({ tools, paid, onChanged }: { tools: readonly InstalledToolView[]; paid: boolean; onChanged: () => void }) {
+export function ToolsView({
+  tools,
+  paid,
+  onChanged,
+  suggestions,
+}: {
+  tools: readonly InstalledToolView[];
+  paid: boolean;
+  onChanged: () => void;
+  /** GET /api/tools's `suggestions`: whether the switch exists here, and the person's state. */
+  suggestions?: { available: boolean; on: boolean };
+}) {
   const t = useTranslations("wsChrome");
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -55,6 +67,27 @@ export function ToolsView({ tools, paid, onChanged }: { tools: readonly Installe
             {t("tools.page.ask")}
           </button>
         </div>
+
+        {suggestions?.available ? (
+          <div className="mt-6 flex items-center gap-4 rounded-lg border bd bg-elev px-4 py-3" data-tool-suggestions="">
+            <div className="min-w-0 flex-1">
+              <p className="text-[13.5px] font-semibold fg">{t("tools.page.suggestions")}</p>
+              <p className="text-[12px] fg-muted">{t("tools.page.suggestionsHint")}</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={suggestions.on}
+              aria-label={t("tools.page.suggestions")}
+              disabled={!paid || busy === "suggestions"}
+              title={paid ? undefined : t("tools.planRequired")}
+              onClick={() => act("suggestions", "/api/tools/settings", { method: "PATCH", body: JSON.stringify({ suggestions: !suggestions.on }) })}
+              className={`relative h-5 w-9 shrink-0 rounded-full transition disabled:opacity-50 ${suggestions.on ? "bg-[var(--accent)]" : "bg-hover"}`}
+            >
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${suggestions.on ? "left-[18px]" : "left-0.5"}`} />
+            </button>
+          </div>
+        ) : null}
 
         {tools.length === 0 ? (
           <p className="mt-10 text-center text-[13px] fg-faint">{t("tools.page.empty")}</p>

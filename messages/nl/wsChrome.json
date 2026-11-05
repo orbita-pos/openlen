@@ -766,7 +766,9 @@
       "remove": "Verwijderen",
       "restore": "Herstellen",
       "releaseGone": "Die versie is er niet meer. Vraag Len om hem opnieuw te installeren.",
-      "failed": "Dat lukte niet. Probeer het opnieuw."
+      "failed": "Dat lukte niet. Probeer het opnieuw.",
+      "suggestions": "Toolsuggesties",
+      "suggestionsHint": "Len stelt een tool voor als hij ziet dat die je helpt; er wordt niets gemaakt tot je op «Maken» drukt."
     }
   }
 }

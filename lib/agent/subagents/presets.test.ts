@@ -14,7 +14,7 @@ const all = [
   "Read", "Edit", "Write", "Grep", "Glob", "bash", "view_page", "use_page", "skill", "web_search", "publish", "ask_user_question",
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
-  "send_message", "subagent_fork", "interrupt_agent", "list_agents",
+  "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action",
 ].map((name) => ({ name }));
 const names = (p: SubagentPreset, plan = false) => childToolDeclarations(all, p, plan).map((d) => d.name);
 
@@ -25,6 +25,10 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
         expect(names(p)).not.toContain(gone);
       }
     }
+  });
+
+  it("no child proposes a «Crear» card (DeepSeek: «Cards are offered in the main conversation only»)", () => {
+    for (const p of SUBAGENT_PRESETS) expect(names(p)).not.toContain("propose_action");
   });
 
   it("children keep send_message (to Len) and lose subagent_fork, interrupt_agent and list_agents (depth 1)", () => {

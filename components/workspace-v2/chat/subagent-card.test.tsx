@@ -226,6 +226,12 @@ describe("the subagents of a turn", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/agent/subagents/r1/stop", expect.objectContaining({ method: "POST" }));
   });
 
+  it("«Crear»'s host turn in the tool project says where it came from (spec local 2026-11-04-herramientas-hechas-por-len, §4.10)", () => {
+    const turn = restoreTurn({ id: "h1", userText: "Crear «Reservas de hoy»", assistantReasoning: "", status: "applied", appliedAt: 0, origen: { kind: "tool_creation", cardId: "c1", title: "Reservas de hoy" } });
+    const host = paint(<UserMessage turn={turn} initial="A" />);
+    expect(host.querySelector("[data-tool-creation-turn]")!.textContent).toContain("turn.toolCreation");
+  });
+
   it("the turn that brings their results back says so", () => {
     const turn = restoreTurn({ id: "n1", userText: "", assistantReasoning: "", status: "applied", appliedAt: 0, origen: { kind: "subagents", ids: ["r1"] } });
     const host = paint(<UserMessage turn={turn} initial="A" />);

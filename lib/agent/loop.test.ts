@@ -994,6 +994,28 @@ describe("runAgentLoop", () => {
     expect(r.errorCode).toBeNull();
   });
 
+  // «Crear» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): an accepted propose_action puts its card in the chat.
+  it("a card propose_action accepted is emitted once, and the model reads the tool's own result", async () => {
+    const events: AgentStreamEvent[] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "propose_action", args: {} }, done],
+      [{ type: "text_delta", text: "Si quieres, la creo." }, done],
+    );
+    const card = { id: "card-1", chatRowId: "row-1", title: "Reservas", brief: "b", initialContent: null, placement: "rail" as const, customLocation: null, phase: "proposed" as const, toolProjectId: null, installationId: null, error: null, review: null };
+    const callsSeen: Message[][] = [];
+    await runAgentLoop({
+      messages: [{ role: "user", content: "quiero llevar mis reservas" }], tools: [],
+      openStream: (messages) => {
+        callsSeen.push([...messages]);
+        return stream(messages);
+      },
+      runTool: async () => ({ response: { ok: true, tool_result: "Card shown below your answer." }, toolCard: card }),
+      emit: (e) => events.push(e),
+    });
+    expect(events.filter((e) => e.type === "tool_card")).toEqual([{ type: "tool_card", card }]);
+    expect(JSON.stringify(callsSeen[1])).toContain("Card shown below your answer.");
+  });
+
   // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card mechanism, its own waiting state.
   it("an install confirm emits its card and feeds the model a fixed waiting state with the tool", async () => {
     const events: AgentStreamEvent[] = [];

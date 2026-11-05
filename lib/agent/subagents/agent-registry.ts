@@ -5,7 +5,7 @@ import type { SkillScope } from "@/lib/agent/skills/paths";
 import { parseAgentFile, type AgentDefinition } from "./agent-file";
 import { BUILT_IN_AGENT_TYPES, OPENLEN_AGENT_TYPES } from "./agent-paths";
 import type { StoredAgent } from "./agent-store";
-import { BUNDLED_AGENT_TYPES } from "./bundled-types";
+import { BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE } from "./bundled-types";
 
 export interface ResolvedAgentType {
   readonly agent: AgentDefinition;
@@ -43,11 +43,13 @@ export function resolveAgentTypes(o: { project: readonly StoredAgent[]; personal
   }
   const custom = [...byName.values()].sort((a, b) => a.agent.name.localeCompare(b.agent.name));
   const ours = new Map(bundled.map((t) => [t.agent.name, t]));
+  // Started only by OpenLen (the «Crear» card): resolved by name, never listed.
+  const hidden = new Map<string, ResolvedAgentType>([[CREATOR_AGENT_TYPE.name, { agent: CREATOR_AGENT_TYPE, scope: "bundled", covers: null }]]);
   return {
     bundled,
     custom,
     refused,
-    get: (name) => ours.get(name) ?? byName.get(name),
+    get: (name) => ours.get(name) ?? hidden.get(name) ?? byName.get(name),
     names: () => [...BUILT_IN_AGENT_TYPES, ...bundled.map((a) => a.agent.name), ...custom.map((a) => a.agent.name)],
   };
 }

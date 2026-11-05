@@ -357,8 +357,20 @@ export interface EventTaskOrigin {
   title: string;
 }
 
+/** «Crear» on a tool card (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn in the person's tool
+ *  project that launches the Creator; nobody typed it and no model answers it. */
+export interface ToolCreationOrigin {
+  kind: "tool_creation";
+  cardId: string;
+  title: string;
+}
+
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin;
+
+export function isToolCreationOrigin(o: TurnOrigin): o is ToolCreationOrigin {
+  return "kind" in o && o.kind === "tool_creation";
+}
 
 export function isEventTaskOrigin(o: TurnOrigin): o is EventTaskOrigin {
   return "kind" in o && o.kind === "event_task";
