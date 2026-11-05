@@ -120,6 +120,10 @@ pub struct ProcessResult {
     /// the BlurHash + dominant color computed from the oriented source,
     /// suitable for `style.backgroundColor` + `<img>` LQIP rendering.
     pub placeholder: Option<Placeholder>,
+    /// The oriented image's size, before any crop or resize — what Kimi
+    /// Code's `ReadMediaFile` calls the original dimensions.
+    pub source_width: u32,
+    pub source_height: u32,
 }
 
 /// Effective output dimensions given the variant's bounds and the input
@@ -189,6 +193,8 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
             whole.height()
         )));
     }
+
+    let (source_width, source_height) = (whole.width(), whole.height());
 
     // 2b. Crop if asked: what follows (placeholder, resize, encode) sees only
     //     the rectangle, as if it were the whole image.
@@ -273,6 +279,8 @@ pub fn process_image(req: ProcessRequest) -> Result<ProcessResult, ImageError> {
     Ok(ProcessResult {
         variants: outputs,
         placeholder,
+        source_width,
+        source_height,
     })
 }
 
@@ -569,6 +577,30 @@ mod tests {
             crop: Some(CropRegion { x: 0, y: 0, width: 0, height: 10 }),
         });
         assert!(matches!(empty, Err(ImageError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn result_reports_the_oriented_source_size() {
+        let whole = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![Variant { width: 40, ..png_variant() }],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: None,
+        })
+        .unwrap();
+        assert_eq!((whole.source_width, whole.source_height), (100, 50));
+        let cropped = process_image(ProcessRequest {
+            input: halves_png(100, 50),
+            variants: vec![png_variant()],
+            auto_orient: false,
+            without_enlargement: true,
+            placeholder: false,
+            crop: Some(CropRegion { x: 0, y: 0, width: 10, height: 10 }),
+        })
+        .unwrap();
+        assert_eq!((cropped.source_width, cropped.source_height), (100, 50), "the size before the crop");
     }
 
     #[test]
