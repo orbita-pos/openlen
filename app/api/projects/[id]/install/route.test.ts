@@ -50,6 +50,13 @@ describe("POST install", () => {
     expect(await res.json()).toEqual({ error: "security_findings" });
   });
 
+  // Phase 5 (§4.14): the phone's «Instalar» card has no review panel to poll, so the server waits for a running
+  // security review, as the «Crear» card's install does.
+  it("waitWhenPending reaches installTool", async () => {
+    expect((await post({ locale: "es", waitWhenPending: true })).status).toBe(200);
+    expect(installTool).toHaveBeenCalledWith(expect.objectContaining({ waitWhenPending: true }));
+  });
+
   it("a malformed body: 400", async () => {
     expect((await post({ copyDraftData: "yes" })).status).toBe(400);
   });

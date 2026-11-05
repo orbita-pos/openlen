@@ -1,7 +1,8 @@
 // A PRESS ON A «CREAR» CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): DeepSeek's action-card verbs,
 // acted on as the session person (`actOnCard`: the card must be theirs). accepted → 202 (the work goes on in the
 // background), settled → 200 with the card as it is, refused → 402 (plan), 404 (not theirs) or 409 with the reason.
-import { auth } from "@/auth";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { actOnCard, realActionDeps, type ToolCardVerb } from "@/lib/tools/cards/actions";
 import { toolSuggestionsEnabled } from "@/lib/tools/suggestions";
 
@@ -13,8 +14,8 @@ const VERBS: readonly ToolCardVerb[] = ["create", "dismiss", "cancel", "undo", "
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
-  const userId = (await auth())?.user?.id;
+export const POST = paraLaApp(async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
   if (!userId) return json({ error: "unauthorized" }, 401);
   if (!toolSuggestionsEnabled()) return json({ error: "tools_off" }, 404);
   const { id } = await params;
@@ -39,4 +40,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (result.reason === "plan_required") return json(result, 402);
   if (result.reason === "unknown") return json(result, 404);
   return json(result, 409);
-}
+});
+
+export const OPTIONS = respuestaPrevia;
