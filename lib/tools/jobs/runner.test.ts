@@ -384,6 +384,21 @@ describe("runToolJob", () => {
     expect(s.flushes).toEqual([]);
   });
 
+  it("🔴 a delivery that fails never turns a finished job into a box error: it stays completed and the detail names the file (real check)", async () => {
+    const s = setup({
+      behave: (f) => {
+        f.set(`${DIR}/out/fotos.pdf`, "%PDF-1.4");
+        f.set(`${DIR}/result.json`, JSON.stringify({ pages: 2 }));
+        f.set(`${DIR}/exit`, "0");
+      },
+    });
+    s.d.deliver.mockRejectedValueOnce(new Error("no_store"));
+    await s.run();
+    expect(s.settled()).toMatchObject({ status: "completed", set: { result: { pages: 2 }, delivered: [] } });
+    expect(String((s.settled()!.set as { detail: string }).detail)).toContain("fotos.pdf");
+    expect(s.driver.paused("fake-1")).toBe(true);
+  });
+
   it("at most four files are delivered", async () => {
     const s = setup({
       behave: (f) => {

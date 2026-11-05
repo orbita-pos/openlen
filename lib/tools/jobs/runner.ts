@@ -242,8 +242,14 @@ export async function runToolJob(
       }
       const b = (await handle.readBytes?.([path]))?.[path];
       if (!b) continue;
-      const { url } = await d.deliver({ toolProjectId: projectId, jobId: job.id, name: n, bytes: b, contentType: contentTypeFor(n) });
-      delivered.push({ name: n, url, size: b.byteLength });
+      // A delivery that fails is that file's, never the job's: what it finished stays finished, and the detail says it.
+      try {
+        const { url } = await d.deliver({ toolProjectId: projectId, jobId: job.id, name: n, bytes: b, contentType: contentTypeFor(n) });
+        delivered.push({ name: n, url, size: b.byteLength });
+      } catch (e) {
+        d.log(`[tool-jobs] ${job.id} couldn't deliver ${n}: ${String(e)}`);
+        skipped.push(`${n} (couldn't be delivered)`);
+      }
     }
     const resultPath = `${dir}/result.json`;
     const resultSize = exiting ? null : ((await handle.fileSize?.(resultPath)) ?? null);
