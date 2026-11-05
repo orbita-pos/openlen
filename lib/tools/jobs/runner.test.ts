@@ -52,7 +52,12 @@ function setup(o: { behave?: Behaviour; held?: boolean; maxMinutes?: number; sta
     },
   });
   let settled: { status: string; set: Record<string, unknown> } | null = null;
+  const flushes: Array<() => Promise<void>> = [];
   const d = {
+    onExit: vi.fn((flush: () => Promise<void>) => {
+      flushes.push(flush);
+      return () => void flushes.splice(flushes.indexOf(flush), 1);
+    }),
     driver,
     template: "openlen-terminal-v5",
     hold: vi.fn(async () => !o.held),
@@ -77,7 +82,7 @@ function setup(o: { behave?: Behaviour; held?: boolean; maxMinutes?: number; sta
   };
   const files = { "/jobs/pdf.py": "print('pdf')" };
   const run = () => runToolJob(job(), { files, maxMinutes: o.maxMinutes ?? 10, script: "/jobs/pdf.py" }, d);
-  return { d, driver, run, settled: () => settled };
+  return { d, driver, run, settled: () => settled, flushes };
 }
 
 const box = (s: ReturnType<typeof setup>) => s.driver.files("fake-1");
@@ -183,6 +188,37 @@ describe("runToolJob", () => {
     expect(s.settled()).toMatchObject({ status: "failed" });
     expect(s.d.release).toHaveBeenCalled();
     expect(s.d.charge).toHaveBeenCalled();
+  });
+
+  it("🔴 a deploy's exit while it runs: killed in the box, the box paused and released, the seconds charged, failed «stopped_by_restart» — once", async () => {
+    let s!: ReturnType<typeof setup>;
+    let exited = false;
+    s = setup({
+      status: () => {
+        // The signal arrives mid-run: the exit flush runs while the runner still polls.
+        if (!exited && s.flushes.length > 0) {
+          exited = true;
+          void s.flushes[0]!();
+        }
+        return "running";
+      },
+      behave: () => {},
+      maxMinutes: 1,
+    });
+    await s.run();
+    expect(s.d.settle).toHaveBeenCalledTimes(1);
+    expect(s.settled()).toMatchObject({ status: "failed", set: { detail: "stopped_by_restart" } });
+    expect(s.d.release).toHaveBeenCalledTimes(1);
+    expect(s.d.charge).toHaveBeenCalledTimes(1);
+    expect(s.driver.commands("fake-1").some((c) => c.startsWith("kill "))).toBe(true);
+    expect(s.flushes).toEqual([]);
+  });
+
+  it("a job that ends on its own lets go of its exit flush", async () => {
+    const s = setup({ behave: (f) => f.set(`${DIR}/exit`, "0") });
+    await s.run();
+    expect(s.d.onExit).toHaveBeenCalledTimes(1);
+    expect(s.flushes).toEqual([]);
   });
 
   it("at most four files are delivered", async () => {

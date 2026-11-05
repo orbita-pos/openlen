@@ -100,6 +100,20 @@ describe("tool jobs", () => {
     expect((await store.runningJobs()).map((j) => j.id).sort()).toEqual([a.id, b.id].sort());
   });
 
+  it("at boot: the live jobs started before this process booted, and only those", async () => {
+    const old = await start();
+    const oldStopping = await start();
+    const oldDone = await start();
+    const fresh = await start();
+    await store.requestCancel(oldStopping.id);
+    await store.settleJob(oldDone.id, "completed", {});
+    await (base.pg as PGlite).query(
+      `UPDATE "toolJobs" SET "startedAt" = now() - interval '10 minutes' WHERE "id" IN ('${old.id}', '${oldStopping.id}', '${oldDone.id}')`,
+    );
+    expect((await store.liveJobsFromBeforeBoot(60)).map((j) => j.id).sort()).toEqual([old.id, oldStopping.id].sort());
+    expect((await store.liveJobsFromBeforeBoot(60)).map((j) => j.id)).not.toContain(fresh.id);
+  });
+
   it("the view the tool reads carries no input, no uploads and no owner", async () => {
     const job = await start();
     const view = store.toJobView((await store.settleJob(job.id, "completed", { delivered: [{ name: "fotos.pdf", url: "/x", size: 99 }] }))!);

@@ -5,8 +5,10 @@
 // its own process group, and polls it every 5 s (each poll runs a command, which keeps E2B from pausing the box): its
 // progress line, a cancel request, its ceiling of minutes, its exit. On settlement it delivers `out/` (like Len's
 // `present`: at most 4 files of 20 MB), reads `result.json` (64 KB of JSON), removes its folder, pauses the box,
-// releases it and charges the person the seconds it ran — on every path, also when the box fails. Nothing a job
-// writes enters the project's files. `runToolJob` never throws: it always settles the row.
+// releases it and charges the person the seconds it ran — on every path, also when the box fails, and when a deploy's
+// SIGTERM arrives mid-run (`onExit`: the job is killed and closed the same way, `failed` «stopped_by_restart»; what dies
+// at once is closed at the next boot, lib/tools/jobs/boot.ts). Nothing a job writes enters the project's files.
+// `runToolJob` never throws: it always settles the row, once.
 import "server-only";
 
 import type { BoxNetwork } from "@/lib/agent/sandbox/box-network";
@@ -17,7 +19,7 @@ import { isBlobPointer, parsePointer } from "@/lib/files/blob-pointer";
 
 import { INSTALL_FAILED_EXIT, jobDir, jobKillCommand, jobLaunchScript, jobShellScript } from "./command";
 import type { ToolJobRow } from "./store";
-import type { DeliveredFile, ToolJobStatus } from "./types";
+import { STOPPED_BY_RESTART, type DeliveredFile, type ToolJobStatus } from "./types";
 
 export const POLL_EVERY_MS = 5_000;
 /** The install step's allowance on top of the job's own minutes (also in what the confirmation shows). */
@@ -57,7 +59,12 @@ export interface RunnerDeps {
   now(): number;
   sleep(ms: number): Promise<void>;
   log(line: string): void;
+  /** The process's exit flush (lib/agent/exit-flush.ts): `flush` runs before a deploy's exit; returns how to let go. */
+  onExit?(flush: () => Promise<void>): () => void;
 }
+
+/** What the exit flush gives the kill: the whole flush has 5 s. */
+const EXIT_KILL_MS = 2_000;
 
 /** The box's network for a job: none of the project's OpenLen hosts — only the box's own allowlist (npm, PyPI,
  *  GitHub). A job never reaches the tool's backend. */
@@ -101,6 +108,11 @@ export async function runToolJob(
   let detail: string | null = null;
   let result: unknown = null;
   const delivered: DeliveredFile[] = [];
+  // Closing happens once: the run's own end, or the exit flush when a deploy cuts it — whichever comes first.
+  let exiting = false;
+  let closing: Promise<void> | null = null;
+  const close = (end: { readonly status: Terminal; readonly detail: string | null }) => (closing ??= closeTheJob(end));
+  let letGo = () => {};
   try {
     const row = await d.boxRow(projectId);
     synced = row?.syncedManifest ?? {};
@@ -111,6 +123,12 @@ export async function runToolJob(
     }
     openedAt = d.now();
     await d.saveBox({ projectId, sandboxId: handle.id, template: d.template, state: "running", syncedManifest: synced, pausedAt: null });
+    letGo =
+      d.onExit?.(async () => {
+        exiting = true;
+        await handle?.run(jobKillCommand(job.id), { timeoutMs: EXIT_KILL_MS }).catch(() => undefined);
+        await close({ status: "failed", detail: STOPPED_BY_RESTART });
+      }) ?? letGo;
 
     // The version's files, the input and the picked files — all under the job's folder.
     const text: Record<string, string> = {};
@@ -138,6 +156,7 @@ export async function runToolJob(
     let exit: number | null = null;
     for (;;) {
       await d.sleep(POLL_EVERY_MS);
+      if (exiting) break;
       await handle.run(":", { timeoutMs: 10_000 });
       const seen = await handle.read([`${dir}/progress`, `${dir}/exit`]);
       const progress = textOf(seen[`${dir}/progress`]).split("\n").map((l) => l.trim()).filter(Boolean).at(-1) ?? "";
@@ -174,8 +193,9 @@ export async function runToolJob(
       }
     }
 
-    // What it left: `out/` delivered, `result.json` read — also after a cancel or a timeout, what it got done.
-    const names = (await handle.list(`${dir}/out`)).sort().slice(0, PRESENT_MAX_FILES);
+    // What it left: `out/` delivered, `result.json` read — also after a cancel or a timeout, what it got done (not when
+    // a deploy cut it: the exit flush closes it at once).
+    const names = exiting ? [] : (await handle.list(`${dir}/out`)).sort().slice(0, PRESENT_MAX_FILES);
     if (names.length > 0) {
       const got = (await handle.readBytes?.(names.map((n) => `${dir}/out/${n}`))) ?? {};
       for (const n of names) {
@@ -185,7 +205,7 @@ export async function runToolJob(
         delivered.push({ name: n, url, size: b.byteLength });
       }
     }
-    const raw = textOf((await handle.read([`${dir}/result.json`]))[`${dir}/result.json`]);
+    const raw = exiting ? "" : textOf((await handle.read([`${dir}/result.json`]))[`${dir}/result.json`]);
     if (raw) {
       if (new TextEncoder().encode(raw).byteLength > RESULT_MAX_BYTES) detail ??= "result_too_large";
       else {
@@ -202,22 +222,28 @@ export async function runToolJob(
     detail = handle ? "box_error" : "open_failed";
   }
 
+  letGo();
+  // A deploy's exit may break the loop before its flush reaches `close`: the job ends as the restart's either way.
+  await close(exiting ? { status: "failed", detail: STOPPED_BY_RESTART } : { status, detail });
+
   // Always: the folder goes, the box pauses, the hold is released and the seconds are charged.
-  let seconds = 0;
-  let charged = 0;
-  if (handle) {
-    await handle.remove([dir]).catch(() => undefined);
-    await handle.pause().catch((e: unknown) => d.log(`[tool-jobs] ${job.id} couldn't pause its box: ${String(e)}`));
-    seconds = Math.max(1, Math.ceil((d.now() - openedAt) / 1000));
+  async function closeTheJob(end: { readonly status: Terminal; readonly detail: string | null }): Promise<void> {
+    let seconds = 0;
+    let charged = 0;
+    if (handle) {
+      await handle.remove([dir]).catch(() => undefined);
+      await handle.pause().catch((e: unknown) => d.log(`[tool-jobs] ${job.id} couldn't pause its box: ${String(e)}`));
+      seconds = Math.max(1, Math.ceil((d.now() - openedAt) / 1000));
+      await d
+        .saveBox({ projectId, sandboxId: handle.id, template: d.template, state: "paused", syncedManifest: synced, pausedAt: new Date(d.now()) })
+        .catch(() => undefined);
+    }
+    await d.release(projectId, job.id).catch(() => undefined);
+    if (handle) charged = await d.charge({ userId: job.personId, projectId, turnId: job.id, seconds }).catch(() => 0);
     await d
-      .saveBox({ projectId, sandboxId: handle.id, template: d.template, state: "paused", syncedManifest: synced, pausedAt: new Date(d.now()) })
-      .catch(() => undefined);
+      .settle(job.id, end.status, { detail: end.detail, result, delivered, seconds, chargedCentis: charged })
+      .catch((e: unknown) => d.log(`[tool-jobs] ${job.id} couldn't be settled: ${String(e)}`));
   }
-  await d.release(projectId, job.id).catch(() => undefined);
-  if (handle) charged = await d.charge({ userId: job.personId, projectId, turnId: job.id, seconds }).catch(() => 0);
-  await d
-    .settle(job.id, status, { detail, result, delivered, seconds, chargedCentis: charged })
-    .catch((e: unknown) => d.log(`[tool-jobs] ${job.id} couldn't be settled: ${String(e)}`));
 }
 
 function textOf(v: { readonly text: string } | { readonly binary: true; readonly size: number } | undefined): string {

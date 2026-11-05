@@ -185,7 +185,7 @@ export async function realStartDeps(): Promise<StartDeps> {
 /** The runner's real hands: the project's E2B box through the same store as Len's turns, the delivery store, the
  *  credit ledger. Built only with the box on. */
 export async function realRunnerDeps(): Promise<RunnerDeps> {
-  const [{ sandboxConfig }, { e2bDriver }, sandboxStore, { chargeSandbox }, jobStore, blob, uploads] = await Promise.all([
+  const [{ sandboxConfig }, { e2bDriver }, sandboxStore, { chargeSandbox }, jobStore, blob, uploads, { flushOnExit }] = await Promise.all([
     import("@/lib/agent/sandbox/config"),
     import("@/lib/agent/sandbox/e2b-driver"),
     import("@/lib/agent/sandbox/store"),
@@ -193,6 +193,7 @@ export async function realRunnerDeps(): Promise<RunnerDeps> {
     import("./store"),
     import("@/lib/files/blob"),
     import("../uploads"),
+    import("@/lib/agent/exit-flush"),
   ]);
   const config = sandboxConfig();
   if (!config) throw new Error("the box is off");
@@ -216,5 +217,6 @@ export async function realRunnerDeps(): Promise<RunnerDeps> {
     now: Date.now,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     log: (line) => console.log(line),
+    onExit: flushOnExit,
   };
 }

@@ -26,6 +26,8 @@ function store(o: { rows?: number | Error; holds?: DeadHold[] | Error } = {}) {
     takeOverHolds: vi.fn((_s: number, _token: string) => answer(o.holds ?? [])),
     releasePaused: vi.fn(async (_p: string, _t: string) => {}),
     release: vi.fn(async (_p: string, _t: string) => {}),
+    jobPerson: vi.fn(async (id: string) => (id === "job-0123456789abcdef" ? "person" : null)),
+    settleJobs: vi.fn(async (_s: number, _charged: ReadonlyMap<string, { seconds: number; centicredits: number }>) => 0),
   };
 }
 
@@ -56,6 +58,7 @@ describe("closing what the previous process left mid-turn, at boot", () => {
       holds: 1,
       paused: 1,
       centicredits: 56,
+      jobs: 0,
     });
     expect(s.cutOffRows).toHaveBeenCalledWith(4.5);
     expect(s.takeOverHolds).toHaveBeenCalledWith(4.5, expect.stringMatching(new RegExp(`^${BOOT_HOLD_PREFIX}`)));
@@ -72,6 +75,33 @@ describe("closing what the previous process left mid-turn, at boot", () => {
     expect(s.releasePaused).toHaveBeenCalledWith("p1", token);
     expect(s.release).not.toHaveBeenCalled();
     expect(charge).toHaveBeenCalledWith({ userId: "owner", actorId: null, projectId: "p1", turnId: "dead-turn", seconds: 90 });
+  });
+
+  it("🔴 a tool's job that died with the process: its box is charged to the job's person, not the project's owner, and its row ends failed once", async () => {
+    const s = store({ holds: [hold({ projectId: "tool-1", turnId: "job-0123456789abcdef", ownerId: "owner", secondsRun: 60 })] });
+    charge.mockClear();
+    await closeTurnsOfThePreviousProcess({ store: s, driver: driver(), charge, env: KEY, secondsSinceBoot: () => 7, log: () => {} });
+    expect(charge).toHaveBeenCalledTimes(1);
+    expect(charge).toHaveBeenCalledWith({ userId: "person", actorId: null, projectId: "tool-1", turnId: "job-0123456789abcdef", seconds: 60 });
+    expect(s.settleJobs).toHaveBeenCalledTimes(1);
+    expect(s.settleJobs.mock.calls[0]![0]).toBe(7);
+    expect([...s.settleJobs.mock.calls[0]![1]]).toEqual([["job-0123456789abcdef", { seconds: 60, centicredits: 28 }]]);
+  });
+
+  it("a job whose row is gone is let go without charging the project's owner", async () => {
+    const s = store({ holds: [hold({ turnId: "job-ffffffffffffffff", ownerId: "owner", secondsRun: 60 })] });
+    charge.mockClear();
+    await closeTurnsOfThePreviousProcess({ store: s, driver: driver(), charge, env: KEY, secondsSinceBoot: () => 1, log: () => {} });
+    expect(charge).not.toHaveBeenCalled();
+  });
+
+  it("the jobs are settled even without E2B, and a failure there stops nothing", async () => {
+    const s = store();
+    await closeTurnsOfThePreviousProcess({ store: s, driver: null, charge, env: {}, secondsSinceBoot: () => 3, log: () => {} });
+    expect(s.settleJobs).toHaveBeenCalledWith(3, new Map());
+    const broken = store({ rows: 2 });
+    broken.settleJobs.mockRejectedValueOnce(new Error("no table"));
+    expect(await closeTurnsOfThePreviousProcess({ store: broken, driver: null, charge, env: {}, secondsSinceBoot: () => 3, log: () => {} })).toMatchObject({ rows: 2 });
   });
 
   it("a turn that died before opening its box, or whose project is gone, is let go without a charge", async () => {
@@ -119,6 +149,7 @@ describe("closing what the previous process left mid-turn, at boot", () => {
       holds: 0,
       paused: 0,
       centicredits: 0,
+      jobs: 0,
     });
     expect(log).not.toHaveBeenCalled();
   });

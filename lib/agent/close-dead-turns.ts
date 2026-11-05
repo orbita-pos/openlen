@@ -14,6 +14,10 @@
 // cost, until its 15-minute timeout. A deploy's SIGTERM usually spares this: the turn closes its own box
 // before the exit (exit-flush.ts), to the second; what reaches here is what died at once (a crash, a kill).
 //
+// A TOOL'S JOB (lib/tools/jobs/, spec local 2026-11-04-herramientas-hechas-por-len, §4.6) holds the tool project's box
+// as `job-<id>` outside any turn: its box is closed the same way but charged to the job's PERSON — who pressed «Ejecutar»
+// and pays it — never the project's owner, and then its row ends `failed` once («stopped_by_restart»).
+//
 // This only closes. What the next turn reads of a cut row —what Len saw, and Claude Code's
 // interruption mark— is lib/agent/transcripcion.ts's; the thread and email requests a restart left
 // unanswered are retaken by turnos-desde-el-servidor.ts and len-email/run.ts.
@@ -33,13 +37,22 @@ export interface DeadTurnStore {
   /** The box is paused: the row says so and lets it go. */
   releasePaused(projectId: string, token: string): Promise<void>;
   release(projectId: string, token: string): Promise<void>;
+  /** Who a tool's job is for (its box's payer); null when the row is gone. */
+  jobPerson?(jobId: string): Promise<string | null>;
+  /** Ends the live jobs from before this boot `failed`, with what the boot charged each one's box. */
+  settleJobs?(secondsSinceBoot: number, charged: ReadonlyMap<string, { seconds: number; centicredits: number }>): Promise<number>;
 }
+
+/** A tool's job holds a box as its own id (lib/tools/jobs/types.ts, `newJobId`). */
+const JOB_HOLDER = /^job-[0-9a-f]{16}$/;
 
 const postgresStore: DeadTurnStore = {
   cutOffRows: cutOffRowsOpenedBeforeBoot,
   takeOverHolds: takeOverHoldsFromBeforeBoot,
   releasePaused: releasePausedBox,
   release: releaseProjectSandbox,
+  jobPerson: async (jobId) => (await import("@/lib/tools/jobs/store")).jobPersonOf(jobId),
+  settleJobs: async (secondsSinceBoot, charged) => (await import("@/lib/tools/jobs/boot")).settleJobsOfThePreviousProcess(secondsSinceBoot, charged),
 };
 
 type Charge = typeof chargeSandbox;
@@ -58,7 +71,7 @@ export async function closeTurnsOfThePreviousProcess(
     readonly env?: Readonly<Record<string, string | undefined>>;
     readonly log?: (line: string) => void;
   } = {},
-): Promise<{ rows: number; holds: number; paused: number; centicredits: number }> {
+): Promise<{ rows: number; holds: number; paused: number; centicredits: number; jobs: number }> {
   const store = o.store ?? postgresStore;
   const uptime = o.secondsSinceBoot ?? (() => process.uptime());
   const log = o.log ?? ((line: string) => console.info(line));
@@ -67,16 +80,25 @@ export async function closeTurnsOfThePreviousProcess(
     log(`[dead-turns] could not cut off the previous process's turn rows: ${message(e)}`);
     return 0;
   });
+  const charged = new Map<string, { seconds: number; centicredits: number }>();
   const boxes = env.E2B_API_KEY
-    ? await closeDeadBoxes(store, uptime(), o.driver === undefined ? sandboxCleanupDriver(env) : o.driver, o.charge ?? chargeSandbox, log)
+    ? await closeDeadBoxes(store, uptime(), o.driver === undefined ? sandboxCleanupDriver(env) : o.driver, o.charge ?? chargeSandbox, log, charged)
     : { holds: 0, paused: 0, centicredits: 0 };
-  if (rows > 0 || boxes.holds > 0) {
+  // After the boxes, so each job's row says what its box ran and cost. Without E2B there is no job to close, but the
+  // rows are cheap to look at (and the table may not exist yet: that is only logged).
+  const jobs = store.settleJobs
+    ? await store.settleJobs(uptime(), charged).catch((e: unknown) => {
+        log(`[dead-turns] could not close the previous process's tool jobs: ${message(e)}`);
+        return 0;
+      })
+    : 0;
+  if (rows > 0 || boxes.holds > 0 || jobs > 0) {
     log(
-      `[dead-turns] the previous process left ${rows} turn row(s) cut off and ${boxes.holds} box hold(s) released` +
+      `[dead-turns] the previous process left ${rows} turn row(s) cut off${jobs > 0 ? `, ${jobs} tool job(s) stopped` : ""} and ${boxes.holds} box hold(s) released` +
         ` (${boxes.paused} paused, ${boxes.centicredits} centicredits charged)`,
     );
   }
-  return { rows, ...boxes };
+  return { rows, ...boxes, jobs };
 }
 
 async function closeDeadBoxes(
@@ -85,6 +107,7 @@ async function closeDeadBoxes(
   driver: SandboxDriver | null,
   charge: Charge,
   log: (line: string) => void,
+  charged: Map<string, { seconds: number; centicredits: number }>,
 ): Promise<{ holds: number; paused: number; centicredits: number }> {
   const token = `${BOOT_HOLD_PREFIX}${randomUUID()}`;
   let dead: DeadHold[];
@@ -112,13 +135,18 @@ async function closeDeadBoxes(
       log(`[dead-turns] could not let go of the box of project=${h.projectId}: ${message(e)}`),
     );
     if (isPaused) paused++;
-    if (h.ownerId && h.secondsRun > 0) {
-      centicredits += await charge({ userId: h.ownerId, actorId: null, projectId: h.projectId, turnId: h.turnId, seconds: h.secondsRun }).catch(
+    // A job's box is its person's; a job whose row is gone charges nobody (never the project's owner).
+    const isJob = JOB_HOLDER.test(h.turnId);
+    const payer = isJob ? await (store.jobPerson?.(h.turnId) ?? Promise.resolve(null)).catch(() => null) : h.ownerId;
+    if (payer && h.secondsRun > 0) {
+      const moved = await charge({ userId: payer, actorId: null, projectId: h.projectId, turnId: h.turnId, seconds: h.secondsRun }).catch(
         (e: unknown) => {
           log(`[dead-turns] could not charge the box of project=${h.projectId}: ${message(e)}`);
           return 0;
         },
       );
+      centicredits += moved;
+      if (isJob) charged.set(h.turnId, { seconds: h.secondsRun, centicredits: moved });
     }
   }
   return { holds: dead.length, paused, centicredits };
