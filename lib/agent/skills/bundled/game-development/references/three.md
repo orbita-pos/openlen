@@ -1,6 +1,6 @@
 # three.js here
 
-Written from three.js's own sources (MIT): its guide for language models (threejs.org/docs/llms.txt) and its manual, for three 0.187.0. three changes its API often: the types and the lint that check the files you change catch what no longer exists.
+Written from three.js's own sources (MIT): its guide for language models (threejs.org/docs/llms.txt) and its manual, for three r186–r187 (installing gives you the newest version published more than 7 days ago). three changes its API often: the types and the lint that check the files you change catch what no longer exists.
 
 ## Import
 
