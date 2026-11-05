@@ -13,7 +13,7 @@
 //
 // Puro y sin imports: lo leen el empaquetador, la terminal y las pruebas.
 
-export const FUNCTIONS_CATALOG_CURRENT = "2026-12";
+export const FUNCTIONS_CATALOG_CURRENT = "2027-01";
 
 export interface FunctionsDependency {
   /** El nombre en npm: lo que va tras `npm:` o en `esm.sh/`. */
@@ -54,6 +54,25 @@ export const FUNCTIONS_CATALOGS: Readonly<Record<string, FunctionsCatalog>> = {
       { name: "react-dom", version: "19.3.1", file: "react-dom-server.mjs", for: "react-dom/server (renderToStaticMarkup); a function has no DOM.", subpaths: { "/server": "react-dom-server.mjs" } },
       { name: "react-email", version: "6.11.1", file: "react-email.mjs", for: "email templates as React components (Html, Body, Heading, Text, Button, Img…) and render; send one with resend's `react:`." },
       { name: "@react-email/render", version: "2.1.0", file: "react-email-render.mjs", for: "turning a React Email template into HTML (render, also in react-email)." },
+    ],
+  },
+  // TOOLS MADE BY LEN, PHASE 4 (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): 2026-12 with zod 4 and
+  // Supabase's MCP server (supabase.com/docs/guides/getting-started/byo-mcp: McpServer, registerTool and
+  // createMcpHandler), which needs zod 4. The functions are off everywhere, so no deployed function moves from zod 3.
+  "2027-01": {
+    dependencies: [
+      ...CATALOG_2026_11.filter((d) => d.name !== "zod"),
+      { name: "zod", version: "4.6.7", file: "zod.mjs", for: "validating request bodies, and an MCP tool's inputSchema." },
+      { name: "react", version: "19.3.1", file: "react.mjs", for: "JSX in a .tsx function, for email templates.", subpaths: { "/jsx-runtime": "react-jsx-runtime.mjs" } },
+      { name: "react-dom", version: "19.3.1", file: "react-dom-server.mjs", for: "react-dom/server (renderToStaticMarkup); a function has no DOM.", subpaths: { "/server": "react-dom-server.mjs" } },
+      { name: "react-email", version: "6.11.1", file: "react-email.mjs", for: "email templates as React components (Html, Body, Heading, Text, Button, Img…) and render; send one with resend's `react:`." },
+      { name: "@react-email/render", version: "2.1.0", file: "react-email-render.mjs", for: "turning a React Email template into HTML (render, also in react-email)." },
+      {
+        name: "@modelcontextprotocol/server",
+        version: "2.4.0",
+        file: "modelcontextprotocol-server.mjs",
+        for: "an MCP server in an Edge Function: McpServer, registerTool and createMcpHandler (Deno.serve((req) => handler.fetch(req))).",
+      },
     ],
   },
 };

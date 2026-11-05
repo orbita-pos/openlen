@@ -1,0 +1,19 @@
+{
+  "catalog": "2027-01",
+  "files": {
+    "react-shared.mjs": "f16995c74051935accee7743ca1ac067c57235c5decdb7377e65ae59425a3324",
+    "supabase-js.mjs": "3f6382b662ed023cfce2a62c18a245594b372dfaa4dcd03c965d8209e388f073",
+    "stripe.mjs": "51ec9bd472950d2d173c617c83d37c9fa84edd3531d429461309b98f9fb03976",
+    "resend.mjs": "325e605f8bf48efaf2aef2cb4c7cfef7f697fdfc854006277751b2b76f07f22c",
+    "openai.mjs": "e7fad53da511934de715e71a3c002f7279c2a8095028a793f08c77f35d203a0f",
+    "mercadopago.mjs": "ab14195f7c0d5f72e4ae47b44e1a88f24637160eb8ac1f9ddaeb18bbcdc3071a",
+    "zod.mjs": "6dbcb569217000f1553470396e5852d1d63c3acc3fb392e2e718de5a2c15f120",
+    "react.mjs": "dba1a470f1cd4bfab586c73fa834af6aa393aa67853335f2745f9c609217eda3",
+    "react-jsx-runtime.mjs": "3802ed40b3e07d2734d028101d6066e26e549ab70a0a81cc1c487bc05c763274",
+    "react-dom-server.mjs": "a270de8b82cd76272466426579eba67530212e084260bae3f1ebcdc3b00f0c73",
+    "react-email.mjs": "4b9e34972f7066f57469fd58b508d33dfd196917fd67d5d1f2084306ef5ed9bd",
+    "react-email-render.mjs": "460db2dedbece4d6578c5595ddb6c768b9364b70cf57bccd8aeac69cfc88ac0a",
+    "modelcontextprotocol-server.mjs": "a57c0f0cc3f113977d1d98291702b9990817a70c3b1e1304fc0434ee62a2a57e",
+    "LICENCIAS.txt": "a5a148326c1c5b660479263d50d0147501dff7452790ee075691104b90dd741d"
+  }
+}
