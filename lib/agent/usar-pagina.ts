@@ -46,6 +46,8 @@ import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
 import { installSubresourceSsrfGuard } from "@/lib/security/render-ssrf-guard";
 import { parseKey, type BrowserTabHolder, type PasoDeUso } from "@/lib/agent/pasos-de-uso";
+import { canvasLine, classifyCanvasChange, pixelChange } from "@/lib/agent/canvas-change";
+import { decodificarPng, type PngCrudo } from "@/lib/ai/png-crudo";
 
 export type { PasoDeUso } from "@/lib/agent/pasos-de-uso";
 
@@ -495,6 +497,20 @@ export const PRELUDIO_DE_USO = `
     escuchaElegido: function () { var e = R.elegido; return e ? { escucha: escuchaCampo(e) || escucha(e), propia: false, campo: true } : null; },
     antesDeActuar: antesDeActuar, tapadoAhora: function () { return R.elegido ? tapado(R.elegido) : ""; },
     ancla: ancla, sacar: sacar, enPunto: enPunto, escuchaTeclas: escuchaTeclas,
+    // EL CANVAS QUE SE VE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): los <canvas> y
+    // <video> visibles que tocan la pestaña, recortados a ella, el mayor primero.
+    lienzosVisibles: function () {
+      var out = [];
+      document.querySelectorAll("canvas, video").forEach(function (el) {
+        if (!visible(el)) return;
+        var r = el.getBoundingClientRect();
+        var x0 = Math.max(0, r.left), y0 = Math.max(0, r.top), x1 = Math.min(innerWidth, r.right), y1 = Math.min(innerHeight, r.bottom);
+        if (x1 - x0 < 2 || y1 - y0 < 2) return;
+        out.push({ x: x0, y: y0, width: x1 - x0, height: y1 - y0 });
+      });
+      out.sort(function (a, b) { return b.width * b.height - a.width * a.height; });
+      return out.slice(0, 4);
+    },
     hechos: function () { var h = R.hechos.slice(); R.hechos.length = 0; return h; },
     webgl: function () { return R.webgl; },
     // El bloque que se captura (Puppeteer lo lleva a la vista y lo recorta).
@@ -539,9 +555,40 @@ function forma(linea: string): string {
   return linea.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\d+([.,]\d+)*/g, "#").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * EL CANVAS DE UN PASO (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): el mayor canvas
+ * visible, capturado pequeño (lado largo ≤ 128 px) al empezar y al acabar la espera de `quieta` —lo
+ * que cambia SOLO— y después del paso. Sólo cuando hay canvas: una página sin él no paga nada.
+ */
+interface MedidaDelLienzo {
+  readonly rect: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  primera?: PngCrudo | null;
+  antes?: PngCrudo | null;
+}
+
+const LADO_DE_LA_HUELLA = 128;
+
+async function huellaDelLienzo(page: Page, rect: MedidaDelLienzo["rect"]): Promise<PngCrudo | null> {
+  try {
+    const scale = Math.min(1, LADO_DE_LA_HUELLA / Math.max(rect.width, rect.height));
+    const png = (await page.screenshot({ type: "png", clip: { ...rect, scale } })) as Uint8Array;
+    return decodificarPng(png);
+  } catch {
+    return null;
+  }
+}
+
 /** Espera a que la página se quede quieta y apunta lo que cambió SIN que nadie
- *  tocara nada: eso no es efecto de la acción que viene. */
-async function quieta(page: Page, cambiantes: Set<string>): Promise<Foto> {
+ *  tocara nada: eso no es efecto de la acción que viene. Con un canvas, lo
+ *  mismo por píxeles (`medida`). */
+async function quieta(page: Page, cambiantes: Set<string>, medida?: MedidaDelLienzo): Promise<Foto> {
+  if (medida) medida.primera = await huellaDelLienzo(page, medida.rect);
+  const fin = await quietaDelTexto(page, cambiantes);
+  if (medida) medida.antes = await huellaDelLienzo(page, medida.rect);
+  return fin;
+}
+
+async function quietaDelTexto(page: Page, cambiantes: Set<string>): Promise<Foto> {
   let prev = await foto(page);
   const hasta = Date.now() + QUIETUD_MS;
   let iguales = 0;
@@ -844,6 +891,8 @@ const storeSessionScript = (s: SignedInAs) => `
 export interface VisitaInternals {
   readonly lanzar?: () => Promise<Browser>;
   readonly plazoMs?: number;
+  /** El canvas por píxeles en cada paso (por defecto, sí). Sólo lo apagan las pruebas y la medición de CPU. */
+  readonly canvasDiff?: boolean;
 }
 
 interface Previo {
@@ -910,13 +959,14 @@ async function actuar(
     { readonly read: string } | { readonly screenshot: string } | { readonly eval: string } | { readonly wait: number } | { readonly zoom: readonly [number, number, number, number] }
   >,
   cambiantes: Set<string>,
+  medida?: MedidaDelLienzo,
 ): Promise<Actuacion> {
   // LOS PASOS DE CLAUDE CODE (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): con el teclado y
   // con el ratón donde se diga, como una persona; lo demás del paso (qué cambió) es lo de siempre.
   if ("key" in paso) {
     const k = parseKey(paso.key);
     if (!k.ok) return { ok: false, hecho: `couldn't: ${k.error}` };
-    const antes = await quieta(page, cambiantes);
+    const antes = await quieta(page, cambiantes, medida);
     const escuchan = (await page.evaluate(US("escuchaTeclas()")).catch(() => true)) as boolean;
     const mods = k.keys.slice(0, -1) as KeyInput[];
     const tecla = k.keys[k.keys.length - 1] as KeyInput;
@@ -939,7 +989,7 @@ async function actuar(
     const puntos = "left_click" in paso ? [paso.left_click] : "hover" in paso ? [paso.hover] : [paso.left_click_drag, paso.coordinate];
     const fuera = puntos.find(([x, y]) => x >= width || y >= height);
     if (fuera) return { ok: false, hecho: `couldn't: (${fuera[0]}, ${fuera[1]}) is outside the ${width}×${height} tab.` };
-    const antes = await quieta(page, cambiantes);
+    const antes = await quieta(page, cambiantes, medida);
     const [x0, y0] = puntos[0]!;
     const sitio = (await page.evaluate(US(`enPunto(${x0}, ${y0})`)).catch(() => null)) as { texto: string; escucha: boolean; propia: boolean } | null;
     if ("left_click" in paso) {
@@ -997,7 +1047,7 @@ async function actuar(
       };
     }
     const previo = (await page.evaluate(US("antesDeActuar()"))) as Previo | null;
-    const antes = await quieta(page, cambiantes);
+    const antes = await quieta(page, cambiantes, medida);
     const propio = lineaDelCampo(r.etiqueta || r.tipo || "input");
     const etiqueta = q(r.etiqueta || paso.into);
     if (SIN_TECLEAR.has(r.tipo ?? "")) {
@@ -1016,7 +1066,7 @@ async function actuar(
   const dentro = paso.within ?? "";
   // `choose` sobre un desplegable o una casilla actúa DENTRO de la búsqueda, así
   // que la foto de antes va primero.
-  let antes: Foto | null = esElige ? await quieta(page, cambiantes) : null;
+  let antes: Foto | null = esElige ? await quieta(page, cambiantes, medida) : null;
   const expr = `${esElige ? "opcion" : "control"}(${JSON.stringify(texto)}, ${JSON.stringify(dentro)})`;
   const r = (await page.evaluate(US(expr))) as ResultadoControl;
   if (r.n !== 1) {
@@ -1050,7 +1100,7 @@ async function actuar(
   // (lo que se dispara al verse no es efecto del clic) y se pulsa con el ratón,
   // como un visitante.
   const previo = (await page.evaluate(US("antesDeActuar()"))) as Previo | null;
-  antes = await quieta(page, cambiantes);
+  antes = await quieta(page, cambiantes, medida);
   const detalle: string[] = [];
   const tapa = (await page.evaluate(US("tapadoAhora()"))) as string;
   const handle = (await page.evaluateHandle(US("elegido()"))).asElement() as ElementHandle<Element> | null;
@@ -1655,7 +1705,12 @@ async function visitTab(
       for (const c of await esperarPaso(page, paso.wait, plazo, cambiantes)) lineas.push(`   · ${c}`);
       continue;
     }
-    const accion = await actuar(page, paso, cambiantes);
+    const lienzos =
+      internals.canvasDiff === false || "reload" in paso
+        ? []
+        : ((await page.evaluate(US("lienzosVisibles()")).catch(() => [])) as MedidaDelLienzo["rect"][]);
+    const medida: MedidaDelLienzo | undefined = lienzos[0] ? { rect: lienzos[0] } : undefined;
+    const accion = await actuar(page, paso, cambiantes, medida);
     if (!accion.ok) {
       lineas.push(`${encabezado} → ${accion.hecho}`);
       break;
@@ -1664,6 +1719,19 @@ async function visitTab(
     await esperarALaRed(page, tab.opciones ?? undefined);
 
     const detalle = [...accion.detalle];
+    // EL CANVAS (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): cuánto cambió con el paso
+    // frente a lo que cambia solo. Un canvas que cambió, o que no se distingue de lo que cambia solo,
+    // no deja decir «nothing changed».
+    let lienzoSeMovio = false;
+    if (medida?.primera && medida.antes && sinHash(page.url()) === sinHash(doc.url)) {
+      const despuesDelLienzo = await huellaDelLienzo(page, medida.rect);
+      if (despuesDelLienzo) {
+        const c = { selfChange: pixelChange(medida.primera, medida.antes), stepChange: pixelChange(medida.antes, despuesDelLienzo) };
+        const veredicto = classifyCanvasChange(c);
+        detalle.push(canvasLine(veredicto, c));
+        lienzoSeMovio = veredicto !== "unchanged";
+      }
+    }
     // ¿Se fue la página? Por algo que el preludio no vio o por un `location`
     // del script. Se apunta y se vuelve, porque los pasos siguen.
     let seFue = "";
@@ -1716,7 +1784,7 @@ async function visitTab(
 
     // Lo que cambia solo no es efecto del paso: si es lo ÚNICO que cambió,
     // el paso no hizo nada, y se dice (el contador que tapaba el botón muerto).
-    if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0) {
+    if (propios.length === 0 && salidas.length === 0 && sale.envios.length === 0 && !seFue && hechosDelNavegador.length === 0 && !lienzoSeMovio) {
       const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
       if ("reload" in paso) detalle.push(`after reloading, the page looks the same as before reloading${salvo}.`);
       else {

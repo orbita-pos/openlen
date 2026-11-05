@@ -771,3 +771,60 @@ describe("use_page — los pasos de Claude Code", () => {
     expect(informe).toContain("the region 0,0 → 320,240 of the tab");
   }, 90_000);
 });
+
+// EL CANVAS, POR PÍXELES (spec local 2026-11-05-ojos-que-ven-el-movimiento, §8.5): un canvas no tiene
+// texto, así que un juego que se movía salía como «nothing changed». Ahora se mira el canvas antes y
+// después del paso, con lo que cambia solo, como ya se hacía con el texto.
+describe("use_page — el canvas, por píxeles", () => {
+  // Un juego: un cuadrado grande que la flecha derecha mueve 120 px; con `gira`, además un
+  // indicador pequeño que gira solo sin parar.
+  const juego = (o: { readonly vivo: boolean; readonly gira?: boolean }) =>
+    marco(`<canvas id="c" width="600" height="300" style="display:block"></canvas>
+    <script>
+      var c = document.getElementById("c"), g = c.getContext("2d"), x = 20, a = 0;
+      function pinta() {
+        g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 300);
+        g.fillStyle = "#c33"; g.fillRect(x, 60, 180, 180);
+        ${o.gira ? 'g.save(); g.translate(560, 40); g.rotate(a); g.fillStyle = "#33c"; g.fillRect(-25, -6, 50, 12); g.restore(); a += 0.15;' : ""}
+        requestAnimationFrame(pinta);
+      }
+      pinta();
+      ${o.vivo ? 'window.addEventListener("keydown", function (e) { if (e.key === "ArrowRight") x += 120; });' : ""}
+    </script>`);
+
+  it("🔴 un juego quieto: la tecla viva cambia el canvas; BRAZO DE CONTROL: la muerta no, y nothing changed", async () => {
+    const vivo = await visitar(juego({ vivo: true }), [{ key: "ArrowRight" }]);
+    const muerto = await visitar(juego({ vivo: false }), [{ key: "ArrowRight" }]);
+    expect(vivo).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+    expect(vivo).not.toMatch(/nothing (else )?changed/);
+    expect(muerto).toContain("the canvas didn't change.");
+    expect(muerto).toMatch(/nothing (else )?changed/);
+  }, 90_000);
+
+  it("🔴 un juego que se anima solo: la tecla muerta no se confunde con un efecto; BRAZO DE CONTROL: la viva sí cambia el canvas", async () => {
+    const muerto = await visitar(juego({ vivo: false, gira: true }), [{ key: "ArrowRight" }]);
+    const vivo = await visitar(juego({ vivo: true, gira: true }), [{ key: "ArrowRight" }]);
+    expect(muerto).toContain("can't be told apart");
+    expect(muerto).not.toMatch(/the canvas changed:/);
+    expect(muerto).not.toMatch(/nothing (else )?changed/);
+    expect(vivo).toMatch(/the canvas changed: [\d.]+ % of its pixels/);
+  }, 90_000);
+
+  it("un canvas oculto o de 0×0 no se mide y la visita acaba normal", async () => {
+    const oculto = marco(`<canvas width="300" height="200" style="display:none"></canvas><canvas width="0" height="0"></canvas><button id="b">Ok</button><p id="p">No</p>
+      <script>document.getElementById("b").addEventListener("click", function () { document.getElementById("p").textContent = "Sí"; });</script>`);
+    const informe = await visitar(oculto, [{ click: "Ok" }]);
+    expect(informe).not.toContain("the canvas");
+    expect(informe).toContain("«No» → «Sí»");
+  }, 90_000);
+
+  it("una página sin canvas no gana ninguna línea del canvas", async () => {
+    const informe = await visitar(calculadora(true), [{ type: "3", into: "Metros" }]);
+    expect(informe).not.toContain("the canvas");
+  }, 90_000);
+
+  it("con canvasDiff apagado (sólo pruebas y medición) no se mide", async () => {
+    const { informe } = await usarPagina({ html: juego({ vivo: true }), pasos: [{ key: "ArrowRight" }], ruta: "/index.html" }, { canvasDiff: false });
+    expect(informe).not.toContain("the canvas");
+  }, 90_000);
+});

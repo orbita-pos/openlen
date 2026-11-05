@@ -425,6 +425,8 @@ export default defineConfig({
       "app/api/commons-credit/route.test.ts",
       "lib/workspace-v2/upload-attachment.test.ts",
       "lib/agent/pasos-de-uso.test.ts",
+      // El canvas por píxeles de use_page (spec local 2026-11-05-ojos-que-ven-el-movimiento). LISTA BLANCA.
+      "lib/agent/canvas-change.test.ts",
       // Los ojos como Claude Code (14/10): las capturas que vuelven a Len. LISTA BLANCA.
       "lib/agent/screenshots-in-context.test.ts",
       "lib/business-profiles/**/*.test.ts",
