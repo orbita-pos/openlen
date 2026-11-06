@@ -31,9 +31,10 @@ const PersonContext = createContext(false);
 
 /** Whether the PERSON is typing or dictating in the box — what the home's light answers to (spec local
  *  2026-11-06-portada-solo-input). Not the face's state: that also lights up while the box types its own examples
- *  (`ghost`) and while the sign-in dialog is open after sending (`sent`), and the light would pulse by itself. */
+ *  (`ghost`) and while the sign-in dialog is open after sending (`sent`), and the light would pulse by itself. Once
+ *  sent, nobody is typing — even with Enter, which leaves the box focused and full while the dialog is open. */
 export function personActive(s: Signals): boolean {
-  return (s.focused && s.hasText) || s.listening;
+  return !s.sent && ((s.focused && s.hasText) || s.listening);
 }
 
 export function HeroLenProvider({ children }: { children: ReactNode }) {
