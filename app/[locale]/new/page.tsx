@@ -15,6 +15,8 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
+import type { FirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { useFirstMessageOnArrival } from "@/components/workspace-v2/use-first-message-on-arrival";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { DESIGN_PANEL_WIDTH, DesignPanel } from "@/components/workspace-v2/design-mode/design-panel";
@@ -883,6 +885,9 @@ function NewV2Inner() {
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
+  // The brief this tab ARRIVED with: the URL loses it when the blank project opens, and the home's ticket is sent
+  // only for it (`useFirstMessageOnArrival`, below).
+  const arrivalBriefRef = useRef(briefParam);
   const preparedBriefParam = useMemo(
     () => prepareGenerationBriefInput(briefParam),
     [briefParam],
@@ -1001,8 +1006,11 @@ function NewV2Inner() {
   // Session» de DeepSeek (`packages/client/ui-workspace/README.md`): `/new` sin
   // proyecto toma el blanco que ya hubiera (o crea uno) y lo abre; con él
   // abierto, el centro es el estado vacío del chat, y enviar es un mensaje
-  // normal a `/api/agent`. NADA SE MANDA SOLO: un brief en la URL (la portada,
-  // un enlace viejo con `autostart=1`) sólo RELLENA el compositor.
+  // normal a `/api/agent`. Un brief en la URL (un enlace viejo con
+  // `autostart=1`, cualquier enlace de fuera) sólo RELLENA el compositor. Lo
+  // que la persona ENVIÓ desde la portada sí se manda al llegar (06/11, Jesús:
+  // «dos inputs así es duplicación»): no por la URL, por el pase de un solo uso
+  // que deja la portada en esta pestaña (`useFirstMessageOnArrival`).
   const [blankFailure, setBlankFailure] = useState<ProjectLoadFailure | null>(null);
   const [blankAttempt, setBlankAttempt] = useState(0);
   /** El blanco al que se acaba de redirigir: mientras carga ya se sabe que es la
@@ -1102,10 +1110,13 @@ function NewV2Inner() {
   // ENVIAR DESDE LA ENTRADA. El usuario ya pulsó enviar: el borrador que se
   // manda solo aquí es SU envío, no uno automático. Las fotos se suben antes
   // (Len las recibe por su dirección) y la referencia viaja con el mensaje.
-  const handleHeroSend = useCallback(async () => {
+  // `fromHome`: what the person sent from the home — its text and its pill —, sent on arrival.
+  const handleHeroSend = useCallback(async (fromHome?: FirstMessage) => {
     if (!loadedProjectId || heroSending) return;
-    const brief = trimGenerationBrief(aiPrompt);
+    const brief = trimGenerationBrief(fromHome?.brief ?? aiPrompt);
     if (!isGenerationBriefLengthValid(brief)) return;
+    const kind = fromHome?.kind ?? naceComo;
+    if (fromHome) setNaceComo(kind);
     setHeroSending(true);
     try {
       // DOS ORIGENES, UN LOTE, como hacía Crear. Las del heroe cruzan por
@@ -1125,7 +1136,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComo !== "pagina" ? { naceComo, idioma: locale } : {}),
+        ...(kind !== "pagina" ? { naceComo: kind, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1139,6 +1150,13 @@ function NewV2Inner() {
       setHeroSending(false);
     }
   }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiPdfs, naceComo, locale, toast, t]);
+  // WHAT THE HOME SENT GOES OUT ON ARRIVAL: one send, not a second box with the same text. Only with the home's
+  // ticket in this tab, and only for the brief the tab arrived with.
+  useFirstMessageOnArrival({
+    arrivalBrief: arrivalBriefRef.current,
+    ready: proyectoEnBlanco && !!loadedProjectId,
+    send: (message) => void handleHeroSend(message),
+  });
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;

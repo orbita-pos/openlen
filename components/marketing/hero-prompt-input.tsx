@@ -26,6 +26,7 @@ import {
   olvidarReferenciasEnTransito,
 } from "@/lib/referencia-en-transito";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
+import { dropFirstMessage, leaveFirstMessage } from "@/lib/marketing/first-message-in-transit";
 import {
   GenerationBriefLimitFeedback,
   useGenerationBriefLimit,
@@ -158,6 +159,9 @@ export function HeroPromptInput() {
         referencias.map((r) => ({ dataUrl: r.dataUrl, nombre: r.nombre })),
       );
     }
+    // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
+    // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
+    leaveFirstMessage({ brief: value, kind });
     if (status === "authenticated") {
       setSubmitting(true);
       router.push(target);
@@ -444,7 +448,14 @@ export function HeroPromptInput() {
       {/* No example chips under the box any more (Jesús, 06/11: «quitemos el example», for a cleaner home): the box
           types its own examples while nobody touches it (`use-ghost-typing.ts`), which says the same thing quietly. */}
       {loginOpen && (
-        <SignInDialog next={target} onClose={() => setLoginOpen(false)} />
+        <SignInDialog
+          next={target}
+          onClose={() => {
+            // Closed, not followed: what they wrote is not on its way to /new any more.
+            dropFirstMessage();
+            setLoginOpen(false);
+          }}
+        />
       )}
     </div>
   );
