@@ -15,6 +15,9 @@ describe("personActive", () => {
   it("nothing, nobody", () => expect(personActive(base)).toBe(false));
   it("🔴 the box typing its own examples is not the person", () => expect(personActive({ ...base, ghost: true })).toBe(false));
   it("🔴 the sign-in dialog open after sending is not the person typing", () => expect(personActive({ ...base, sent: true })).toBe(false));
+  // Final review, 06/11: sending with Enter keeps the box focused and full while the sign-in dialog is open.
+  it("🔴 sent with Enter (box still focused, with text) is not typing either", () =>
+    expect(personActive({ ...base, focused: true, hasText: true, sent: true })).toBe(false));
   it("focus without text is not typing", () => expect(personActive({ ...base, focused: true })).toBe(false));
   it("focus with text is", () => expect(personActive({ ...base, focused: true, hasText: true })).toBe(true));
   it("dictating is", () => expect(personActive({ ...base, listening: true })).toBe(true));
