@@ -2,6 +2,9 @@
    one huge, very quiet light born right under the input, darker above, fine concentric rings — in OpenLen's orange,
    at the «medio» strength he chose. Orange goes brown when it darkens, so each stop leans redder as it fades.
 
+   It needs a stacking context above the page's background: the home's wrapper is `isolate` (not the hero section,
+   where it trapped the sign-in dialog under the menu and footer).
+
    The box is the size of the screen and is placed so that its 63 % line sits right under the input (it lives inside
    the input's wrapper), so the light peaks under the box on any screen. The light layer bleeds 10 % past the box, as
    in the approved mockup: the gradients' percentages are measured on that larger layer. */

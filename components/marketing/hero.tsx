@@ -49,11 +49,11 @@ export async function Hero() {
   return (
   // `-mt-14 pt-14`: la sección sube bajo la nav (que es transparente arriba)
   // y devuelve esos 56px como relleno, así que el fondo es uno solo.
-    // `isolate`: the light (`HomeGlow`, z-index -1) paints above the page's background only inside a stacking context
-    // of its own. `flex-1` + centred: the hero fills what the menu and the one-row footer leave of the screen (the
-    // home's `<main>` is a flex column, see `MarketingChrome`), so the footer stays inside the first screen. No
-    // `overflow-hidden` here: it cut the light right above the footer, a hard band; the home's wrapper clips instead.
-    <section className="relative isolate -mt-14 flex flex-1 flex-col justify-center pt-14">
+    // `flex-1` + centred: the hero fills what the menu and the one-row footer leave of the screen (the home's `<main>`
+    // is a flex column, see `MarketingChrome`), so the footer stays inside the first screen. No stacking context and no
+    // clipping here — both live on the home's wrapper (`app/[locale]/page.tsx`): `overflow-hidden` here cut the light
+    // right above the footer (a hard band), and `isolate` here trapped the sign-in dialog under the menu and footer.
+    <section className="relative -mt-14 flex flex-1 flex-col justify-center pt-14">
       {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
           referencia): un aviso en píldora, UN titular con Len dentro haciendo
           de «o» y, donde Grok pone dos botones, la caja

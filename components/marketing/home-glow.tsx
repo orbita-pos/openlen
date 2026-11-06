@@ -1,8 +1,9 @@
 "use client";
 
 // The home's light (spec local 2026-11-06-portada-solo-input; the why and the values are in `home-glow.css`). It goes
-// inside the input's wrapper, which is `relative`, and the hero `<section>` is `isolate`: with `z-index: -1` and no
-// stacking context of its own above it, the page's background would paint over the light.
+// inside the input's wrapper, which is `relative`, and the home's wrapper (`app/[locale]/page.tsx`) is `isolate`: with
+// `z-index: -1` and no stacking context above it, the page's background would paint over the light. Not the hero
+// `<section>`: there it trapped the sign-in dialog under the menu and the footer.
 
 import { useHeroLenPersonActive } from "./hero-len";
 import "./home-glow.css";
