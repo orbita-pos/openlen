@@ -1,5 +1,6 @@
-// The home acts on the hash it arrives with, on load AND on a later `hashchange` (a client navigation to `/#pricing`
-// doesn't reload the page). Same manual react-dom + act() harness as hero-kind-picker.test.tsx.
+// The home acts on the hash it arrives with, on mount (a fresh load, or a client navigation from another page) AND on a
+// later `hashchange` while the home is open (a plain anchor, the address bar, back/forward — Next's own navigations use
+// `pushState`, which fires none). Same manual react-dom + act() harness as hero-kind-picker.test.tsx.
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -35,7 +36,7 @@ describe("the home's hash router", () => {
     expect(replace).toHaveBeenCalledWith("/pricing");
   });
 
-  it("🔴 a later hashchange to #features (client navigation) goes to the features page", () => {
+  it("🔴 a later hashchange to #features (a plain anchor, the address bar, back/forward) goes to the features page", () => {
     mount();
     expect(replace).not.toHaveBeenCalled();
     history.replaceState(null, "", "/#features");

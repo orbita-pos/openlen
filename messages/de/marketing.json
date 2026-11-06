@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Dein eigener Webentwickler. <len></len> <gradient>Len.</gradient>",
-    "announce": "<strong>Len baut jetzt Apps</strong><dot></dot>Kostenlos testen",
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Sag Len, was du brauchst …",
     "generate": "Erstellen",
-    "tryLabel": "Zum Beispiel",
     "dictate": "Diktieren",
     "stopDictating": "Diktat beenden",
     "micDenied": "Dein Browser hat das Mikrofon blockiert. Erlaube es in der Adressleiste, um zu diktieren.",
@@ -35,24 +33,6 @@
     "removeImage": "Bild entfernen",
     "attachedAlt": "Angehängte Referenz",
     "micSilent": "Das Mikrofon wurde geöffnet, aber nichts erkannt. Prüfe, ob Chrome den richtigen Eingang nutzt und du eine Verbindung hast — die Spracherkennung läuft beim Dienst deines Browsers, nicht bei OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Meine Bäckerei",
-        "prompt": "Eine Seite für meine Bäckerei „La Espiga“: süßes Gebäck, Torten auf Bestellung, Öffnungszeiten, Anfahrt und ein Button zum Bestellen per WhatsApp."
-      },
-      "barber": {
-        "label": "Barbershop-Termine",
-        "prompt": "Eine Seite für meinen Barbershop mit drei Barbieren: Schnitte und Preise, Fotos vom Laden und ein Formular, um einen Termin zu buchen."
-      },
-      "photographer": {
-        "label": "Foto-Portfolio",
-        "prompt": "Mein Portfolio als Hochzeitsfotografin: eine Galerie pro Hochzeit, was jedes Paket enthält, und ein Formular, um einen Termin anzufragen."
-      },
-      "course": {
-        "label": "Mein Online-Kurs",
-        "prompt": "Eine Landingpage für meinen Online-Backkurs: Lehrplan Woche für Woche, Preis 49 $, Stimmen von Teilnehmerinnen und ein Button zur Anmeldung."
-      }
-    },
     "ghost": [
       "Eine Seite für meine Bäckerei, mit Bestellungen per WhatsApp",
       "Online-Termine für meinen Barbershop",

@@ -36,12 +36,6 @@ import { HeroKindPicker } from "./hero-kind-picker";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LO QUE LE PEDIRÍAS A UN DESARROLLADOR (04/10). La portada enseñaba las ideas
-// del taller (`QUICK_PROMPTS`: «SaaS launch», «Coffee subscription»…), en inglés
-// en todos los idiomas y con cara de demo de SaaS. Aquí van encargos de negocio
-// de verdad, traducidos, en la voz de quien se lo pide a Len.
-const HERO_ASKS = ["bakery", "barber", "photographer", "course"] as const;
-
 // Hero prompt input — the homepage entry into AI generation. Mirrors the
 // /new AI brief panel: same quick-prompts, same composer affordances.
 //
@@ -447,26 +441,8 @@ export function HeroPromptInput() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
-        <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400 font-semibold mr-1">
-          {t("heroPrompt.tryLabel")}
-        </span>
-        {HERO_ASKS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => {
-              briefLimit.replaceValue(t(`heroPrompt.asks.${key}.prompt`));
-              taRef.current?.focus();
-            }}
-            className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[12px] text-zinc-700 dark:text-zinc-300 ring-1 ring-zinc-200 dark:ring-zinc-800 bg-white/70 dark:bg-zinc-950/70 backdrop-blur hover:bg-white dark:hover:bg-zinc-900 hover:ring-zinc-300 dark:hover:ring-zinc-700 transition"
-          >
-            <Sparkles size={10} className="text-coral-500" />
-            {t(`heroPrompt.asks.${key}.label`)}
-          </button>
-        ))}
-      </div>
-
+      {/* No example chips under the box any more (Jesús, 06/11: «quitemos el example», for a cleaner home): the box
+          types its own examples while nobody touches it (`use-ghost-typing.ts`), which says the same thing quietly. */}
       {loginOpen && (
         <SignInDialog next={target} onClose={() => setLoginOpen(false)} />
       )}

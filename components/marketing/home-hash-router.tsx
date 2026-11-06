@@ -1,7 +1,10 @@
 "use client";
 
-// Acts on the home's hash (`lib/marketing/home-hash.ts`) on load and on every later `hashchange`: a client navigation
-// to `/#pricing` doesn't reload the page, so reading it once on mount would miss it. Renders nothing.
+// Acts on the home's hash (`lib/marketing/home-hash.ts`) on mount and on every later `hashchange`. The mount covers a
+// fresh load and a client navigation from another page (Next updates the URL before effects run). `hashchange` covers
+// what changes the hash while the home is open: a plain `<a href="#pricing">`, an edit in the address bar, back and
+// forward. (A Next `<Link>` to `/#pricing` rendered ON the home would use `pushState`, which fires no `hashchange`:
+// none exists, and none should.) Renders nothing.
 
 import { useEffect } from "react";
 import { useRouter } from "@/i18n/navigation";

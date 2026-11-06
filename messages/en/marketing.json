@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Your <len>o</len>wn web developer. <gradient>Len.</gradient>",
-    "announce": "<strong>Len now builds apps</strong><dot></dot>Try it free",
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "Star on GitHub",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Tell Len what you need…",
     "generate": "Generate",
-    "tryLabel": "For example",
     "dictate": "Dictate",
     "stopDictating": "Stop dictating",
     "micDenied": "Your browser blocked the microphone. Allow it in the address bar to dictate.",
@@ -35,24 +33,6 @@
     "removeImage": "Remove image",
     "attachedAlt": "Attached reference",
     "micSilent": "The microphone opened but nothing was recognised. Check that Chrome is using the right input, and that you have a connection — speech recognition runs on your browser's voice service, not on OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "My bakery",
-        "prompt": "A page for my bakery «La Espiga»: sweet bread, custom cakes, opening hours, directions and a button to order on WhatsApp."
-      },
-      "barber": {
-        "label": "Barbershop bookings",
-        "prompt": "A page for my barbershop with three barbers: cuts and prices, photos of the shop and a form to book a slot."
-      },
-      "photographer": {
-        "label": "Photo portfolio",
-        "prompt": "My wedding photographer portfolio: a gallery per wedding, what each package includes and a form to request a date."
-      },
-      "course": {
-        "label": "My online course",
-        "prompt": "A landing page for my online baking course: week-by-week syllabus, $49 price, student testimonials and a sign-up button."
-      }
-    },
     "ghost": [
       "A page for my bakery, with WhatsApp orders",
       "Online booking for my barbershop",

@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Il tuo sviluppat<len>o</len>re web personale. <gradient>Len.</gradient>",
-    "announce": "<strong>Len ora crea app</strong><dot></dot>Provalo gratis",
     "pagesThisWeek": "<strong>{count, number}</strong> pagine generate questa settimana",
     "githubAria": "OpenLen su GitHub",
     "starOnGithub": "Lascia una stella su GitHub",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Racconta a Len di cosa hai bisogno…",
     "generate": "Genera",
-    "tryLabel": "Per esempio",
     "dictate": "Detta",
     "stopDictating": "Interrompi la dettatura",
     "micDenied": "Il browser ha bloccato il microfono. Consentilo nella barra degli indirizzi per dettare.",
@@ -35,24 +33,6 @@
     "removeImage": "Rimuovi l'immagine",
     "attachedAlt": "Riferimento allegato",
     "micSilent": "Il microfono si è aperto ma non è stato riconosciuto nulla. Controlla che Chrome usi l'ingresso giusto e che tu abbia connessione — il riconoscimento vocale gira sul servizio del tuo browser, non su OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "La mia panetteria",
-        "prompt": "Una pagina per la mia panetteria «La Espiga»: pan dolce, torte su ordinazione, orari, come arrivare e un pulsante per ordinare su WhatsApp."
-      },
-      "barber": {
-        "label": "Prenotazioni barbiere",
-        "prompt": "Una pagina per la mia barberia con tre barbieri: tagli e prezzi, foto del locale e un modulo per prenotare un orario."
-      },
-      "photographer": {
-        "label": "Portfolio fotografico",
-        "prompt": "Il mio portfolio da fotografa di matrimoni: una galleria per ogni matrimonio, cosa include ogni pacchetto e un modulo per richiedere una data."
-      },
-      "course": {
-        "label": "Il mio corso online",
-        "prompt": "Una landing page per il mio corso online di pasticceria: programma settimana per settimana, prezzo di $49, testimonianze delle allieve e un pulsante per iscriversi."
-      }
-    },
     "ghost": [
       "Una pagina per la mia panetteria, con ordini su WhatsApp",
       "Prenotazioni online per la mia barberia",

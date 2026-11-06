@@ -40,12 +40,14 @@ describe("the home's chrome", () => {
   it("🔴 has no theme toggle and a one-row footer with the legal links", () => {
     const host = mount("home");
     expect(toggle(host)).toBeNull();
-    const links = hrefs(host);
+    // Only the footer row's own links: /docs and GitHub are in the menu too, and must not satisfy this by accident.
+    const footer = host.querySelector<HTMLElement>("[data-home-footer]");
+    expect(footer).not.toBeNull();
+    const links = hrefs(footer!);
     expect(links).toContain("/privacy");
     expect(links).toContain("/terms");
     expect(links).toContain("/docs");
     expect(links).toContain("https://github.com/orbita-pos/openlen");
-    expect(host.querySelector("[data-home-footer]")).not.toBeNull();
     expect(host.textContent).not.toContain("footer.product.title");
   });
 });

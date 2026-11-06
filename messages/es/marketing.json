@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Tu pr<len>o</len>pio desarrollador web. <gradient>Len.</gradient>",
-    "announce": "<strong>Len ya hace apps</strong><dot></dot>Pruébalo gratis",
     "pagesThisWeek": "<strong>{count, number}</strong> páginas generadas esta semana",
     "githubAria": "OpenLen en GitHub",
     "starOnGithub": "Dale una estrella en GitHub",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Cuéntale a Len qué necesitas…",
     "generate": "Generar",
-    "tryLabel": "Por ejemplo",
     "dictate": "Dictar",
     "stopDictating": "Dejar de dictar",
     "micDenied": "Tu navegador bloqueó el micrófono. Permítelo en la barra de direcciones para dictar.",
@@ -35,24 +33,6 @@
     "removeImage": "Quitar la imagen",
     "attachedAlt": "Referencia adjunta",
     "micSilent": "El micrófono se abrió pero no se reconoció nada. Comprueba que Chrome esté usando la entrada correcta y que tengas conexión — el reconocimiento de voz corre en el servicio de tu navegador, no en OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Mi panadería",
-        "prompt": "Una página para mi panadería «La Espiga»: pan dulce, pasteles por encargo, el horario, cómo llegar y un botón para pedir por WhatsApp."
-      },
-      "barber": {
-        "label": "Reservas de barbería",
-        "prompt": "Página para mi barbería con tres barberos: los cortes con sus precios, fotos del local y un formulario para apartar hora."
-      },
-      "photographer": {
-        "label": "Portafolio de fotos",
-        "prompt": "Mi portafolio de fotógrafa de bodas: galerías por boda, lo que incluye cada paquete y un formulario para pedir fecha."
-      },
-      "course": {
-        "label": "Mi curso en línea",
-        "prompt": "Landing para mi curso en línea de repostería: temario por semanas, precio de $49, testimonios de alumnas y un botón para inscribirse."
-      }
-    },
     "ghost": [
       "Una página para mi panadería, con pedidos por WhatsApp",
       "Reservas en línea para mi barbería",
