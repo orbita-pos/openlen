@@ -12,7 +12,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CaraDeLen, type EstadoDeLaCara } from "@/components/llamada/cara-de-len";
 
-type Signals = {
+export type Signals = {
   focused: boolean;
   hasText: boolean;
   listening: boolean;
@@ -27,6 +27,14 @@ const GREETING_MS = 2400;
 
 const ReportContext = createContext<(patch: Partial<Signals>) => void>(() => {});
 const StateContext = createContext<EstadoDeLaCara>("reposo");
+const PersonContext = createContext(false);
+
+/** Whether the PERSON is typing or dictating in the box — what the home's light answers to (spec local
+ *  2026-11-06-portada-solo-input). Not the face's state: that also lights up while the box types its own examples
+ *  (`ghost`) and while the sign-in dialog is open after sending (`sent`), and the light would pulse by itself. */
+export function personActive(s: Signals): boolean {
+  return (s.focused && s.hasText) || s.listening;
+}
 
 export function HeroLenProvider({ children }: { children: ReactNode }) {
   const [signals, setSignals] = useState(INITIAL);
@@ -53,11 +61,20 @@ export function HeroLenProvider({ children }: { children: ReactNode }) {
     return "reposo";
   }, [signals, greeting]);
 
+  const person = personActive(signals);
+
   return (
     <ReportContext.Provider value={report}>
-      <StateContext.Provider value={state}>{children}</StateContext.Provider>
+      <StateContext.Provider value={state}>
+        <PersonContext.Provider value={person}>{children}</PersonContext.Provider>
+      </StateContext.Provider>
     </ReportContext.Provider>
   );
+}
+
+/** See `personActive`. `false` outside the provider. */
+export function useHeroLenPersonActive(): boolean {
+  return useContext(PersonContext);
 }
 
 export function useHeroLenReport() {
