@@ -17,10 +17,13 @@ import { cn } from "@/lib/cn";
 export function HomeQuestion({
   now = () => new Date(),
   random = Math.random,
+  as: Heading = "h1",
 }: {
   /** The visitor's clock and the dice — injectable for tests. */
   now?: () => Date;
   random?: () => number;
+  /** The home's h1; /new's start screen (06/11, the same screen) already has its own h1, so there it is an h2. */
+  as?: "h1" | "h2";
 }) {
   const t = useTranslations("marketing");
   const [question, setQuestion] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export function HomeQuestion({
   }, []);
 
   return (
-    <h1
+    <Heading
       className={cn(
         "home-question max-w-[48rem] text-balance text-[30px] font-medium leading-[1.12] tracking-[-0.03em] sm:text-[40px] md:text-[46px]",
         "transition-opacity duration-500 motion-reduce:transition-none",
@@ -43,6 +46,6 @@ export function HomeQuestion({
       )}
     >
       {question ?? t("hero.question")}
-    </h1>
+    </Heading>
   );
 }

@@ -1,0 +1,101 @@
+// THE START RAIL (Jesús, 06/11, on Gemini's sidebar: «/new y / quiero que sea compartido»): the home and /new without
+// a project share one frame — a rail of icons on the left with where you can go (Crear, Plantillas, Mis páginas,
+// Comunidad, Herramientas) and the account at its foot; a light row on top with the name and, on the right, the
+// corner (sign in, or your credits). On a phone the rail is a drawer behind a menu button.
+// Same manual react-dom + act() harness as the marketing tests.
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
+
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
+import { StartRail, StartTopRow, type StartItem } from "./start-rail";
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const roots: Root[] = [];
+afterEach(() => {
+  roots.splice(0).forEach((r) => act(() => r.unmount()));
+  document.body.innerHTML = "";
+});
+function mount(node: React.ReactNode) {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  roots.push(root);
+  act(() => root.render(node));
+  return host;
+}
+
+const items = (onSelect = vi.fn()): StartItem[] => [
+  { key: "crear", label: "Crear", href: "/new" },
+  { key: "plantillas", label: "Plantillas", href: "/templates" },
+  { key: "mispaginas", label: "Mis páginas", onSelect },
+  { key: "comunidad", label: "Comunidad", href: "/explore" },
+];
+
+describe("the start rail", () => {
+  it("🔴 draws each place as an icon in the rail, named, with the current one marked", () => {
+    const host = mount(<StartRail items={items()} active="comunidad" mark={<span data-mark />} />);
+    const rail = host.querySelector("[data-start-rail]")!;
+    expect(rail).not.toBeNull();
+    expect(rail.querySelector("[data-mark]")).not.toBeNull();
+    const links = [...rail.querySelectorAll<HTMLElement>("[data-start-item]")];
+    expect(links.map((l) => l.getAttribute("aria-label"))).toEqual(["Crear", "Plantillas", "Mis páginas", "Comunidad"]);
+    expect(rail.querySelector('a[href="/explore"]')?.getAttribute("aria-current")).toBe("page");
+    expect(rail.querySelector('a[href="/new"]')?.getAttribute("aria-current")).toBeNull();
+  });
+
+  it("an item without a link does its action in place (the workspace changes view without reloading)", () => {
+    const onSelect = vi.fn();
+    const host = mount(<StartRail items={items(onSelect)} active="crear" mark={null} />);
+    const mine = host.querySelector<HTMLButtonElement>('[data-start-rail] button[aria-label="Mis páginas"]')!;
+    act(() => mine.click());
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 the account sits at the rail's foot", () => {
+    const host = mount(<StartRail items={items()} active="crear" mark={null} account={<span data-account />} />);
+    expect(host.querySelector("[data-start-rail] [data-account]")).not.toBeNull();
+  });
+
+  it("🔴 on a phone it is a drawer: the menu button opens it with the names, and choosing closes it", () => {
+    const onClose = vi.fn();
+    const closed = mount(<StartRail items={items()} active="crear" mark={null} drawerOpen={false} onCloseDrawer={onClose} />);
+    expect(closed.querySelector("[data-start-drawer]")).toBeNull();
+
+    const open = mount(<StartRail items={items()} active="crear" mark={null} drawerOpen onCloseDrawer={onClose} />);
+    const drawer = open.querySelector("[data-start-drawer]")!;
+    expect(drawer).not.toBeNull();
+    expect(drawer.textContent).toContain("Mis páginas");
+    act(() => drawer.querySelector<HTMLAnchorElement>('a[href="/explore"]')!.click());
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("the drawer closes with Escape", () => {
+    const onClose = vi.fn();
+    mount(<StartRail items={items()} active="crear" mark={null} drawerOpen onCloseDrawer={onClose} />);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("the start top row", () => {
+  it("🔴 has the name on the left, the corner on the right, and a menu button for the phone", () => {
+    const onOpenMenu = vi.fn();
+    const host = mount(<StartTopRow homeHref="/" onOpenMenu={onOpenMenu} right={<span data-corner />} />);
+    expect(host.querySelector('a[href="/"]')?.textContent).toBe("OpenLen");
+    expect(host.querySelector("[data-corner]")).not.toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>('button[aria-label="nav.menu"]')!.click());
+    expect(onOpenMenu).toHaveBeenCalledTimes(1);
+  });
+});

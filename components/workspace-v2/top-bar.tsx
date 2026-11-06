@@ -43,7 +43,6 @@ import { useToast } from "./toast";
 import { QRCodeSVG } from "qrcode.react";
 import { CreditPill } from "@/components/app/credit-pill";
 import { OpenLenMark } from "@/components/openlen-logo";
-import { AccountMenu } from "./account-menu";
 import { LenWatchSettings } from "./len-watch/len-watch-settings";
 import { defaultLogoDataUrl } from "@/lib/branding/default-logo";
 import { visibleProjects } from "@/lib/projects/blank";
@@ -139,30 +138,11 @@ interface TopBarProps {
   onDeployGitHub?: () => void;
   /** Open «Conectar GitHub» (the GitHub App: Len pushes to the person's repository). Undefined hides the entry. */
   onConnectGitHub?: () => void;
-  /** LA BARRA DE LA PANTALLA DE INICIO. Presente = no hay proyecto abierto, y
-   *  entonces esta barra es OTRA: sin nombre de proyecto, sin guardado y sin
-   *  Deploy —no hay nada de eso—, con las tres superficies globales en el
-   *  centro y la cuenta a la derecha.
-   *
-   *  La cuenta viene aquí porque en esa pantalla NO HAY RAIL, que es donde vive
-   *  normalmente: sin esto el usuario se queda sin idioma, sin tema y sin
-   *  cerrar sesión en cuanto sale de un proyecto. */
-  inicio?: {
-    activa: StartTab;
-    onIr: (s: StartTab) => void;
-    etiqueta: (s: StartTab) => string;
-    /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.11): the Herramientas tab, when tools are on. */
-    conHerramientas?: boolean;
-    dark: boolean;
-    onToggleDark: () => void;
-    soundVolume?: number;
-    onSoundVolume?: (v: number) => void;
-    onToggleSoundMute?: () => void;
-  };
+  // ⚰️ AQUÍ VIVÍA LA BARRA DE LA PANTALLA DE INICIO: sin proyecto, esta barra se volvía la navegación global (Crear,
+  // Mis páginas, Comunidad, Herramientas) con la cuenta a la derecha. Desde el 06/11 esa pantalla es la de la portada
+  // (Jesús, sobre la de Gemini: «/new y / quiero que sea compartido»): no tiene barra, sino un rail con esos sitios y la
+  // cuenta a su pie (`start-rail.tsx`). Esta barra sólo existe con un proyecto abierto.
 }
-
-/** The start page's global tabs. */
-export type StartTab = "crear" | "mispaginas" | "comunidad" | "herramientas";
 
 export function TopBar({
   esApp = false,
@@ -185,7 +165,6 @@ export function TopBar({
   onDeployVercel,
   onDeployGitHub,
   onConnectGitHub,
-  inicio,
   onMiembros,
   onEnvVars,
 }: TopBarProps) {
@@ -549,32 +528,6 @@ export function TopBar({
             Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>
         </Link>
-        {inicio ? (
-          // LAS TRES SUPERFICIES GLOBALES, EN LA BARRA. Vivían flotando debajo
-          // de ella, en el centro del lienzo, donde competían con el propio
-          // contenido de la pantalla. Aquí son lo que son: la navegación.
-          <>
-            <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
-            <nav className="flex items-center gap-0.5 min-w-0">
-              {(inicio.conHerramientas ? (["crear", "mispaginas", "comunidad", "herramientas"] as const) : (["crear", "mispaginas", "comunidad"] as const)).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => inicio.onIr(s)}
-                  aria-current={inicio.activa === s ? "page" : undefined}
-                  className={`h-7 px-2.5 sm:px-3 rounded-md text-[12.5px] font-medium whitespace-nowrap transition ${
-                    inicio.activa === s
-                      ? "bg-hover fg"
-                      : "fg-muted hover:fg hover:bg-hover"
-                  }`}
-                >
-                  {inicio.etiqueta(s)}
-                </button>
-              ))}
-            </nav>
-          </>
-        ) : (
-          <>
         <div className="h-5 w-px bg-[color:var(--border)] hidden md:block" />
         <div className="relative min-w-0" ref={proyectosRef}>
         <button
@@ -761,12 +714,10 @@ export function TopBar({
             </>
           )}
         </span>
-          </>
-        )}
       </div>
       <div className="absolute left-1/2 -translate-x-1/2" />
       <div className="flex items-center gap-1">
-        {projectId && !inicio && !projectLoading && !projectUnavailable && (
+        {projectId && !projectLoading && !projectUnavailable && (
           <ArtifactTray projectId={projectId} enabled={artifactsEnabled} readOnly={artifactsReadOnly} data={artifactsData} onOpen={onOpenArtifact} />
         )}
         {/* LOS MIEMBROS (compartir el proyecto): invitar a trabajar en él. */}
@@ -1243,24 +1194,10 @@ export function TopBar({
         </>
         )}
         <CreditPill />
-        {/* ⚰️ EDITANDO, AQUÍ VIVÍAN EL IDIOMA, EL CLARO/OSCURO Y EL AVATAR. Se
-            fueron al pie del rail el 2026-08-31 (`account-menu.tsx`): son
-            ajustes de la PERSONA, no del sitio que edita, y cobraban tres
-            huecos permanentes en la fila donde vive el nombre del proyecto, los
-            créditos y Publicar.
-            EN LA PANTALLA DE INICIO VUELVEN, porque ahí no hay rail donde
-            alojarlos y sin esto te quedas sin idioma, sin tema y sin cerrar
-            sesión en cuanto sales de un proyecto. */}
-        {inicio && (
-          <AccountMenu
-            lugar="barra"
-            dark={inicio.dark}
-            onToggleDark={inicio.onToggleDark}
-            soundVolume={inicio.soundVolume}
-            onSoundVolume={inicio.onSoundVolume}
-            onToggleSoundMute={inicio.onToggleSoundMute}
-          />
-        )}
+        {/* ⚰️ AQUÍ VIVÍAN EL IDIOMA, EL CLARO/OSCURO Y EL AVATAR. Se fueron al
+            pie del rail el 2026-08-31 (`account-menu.tsx`): son ajustes de la
+            PERSONA, no del sitio que edita. Volvían aquí en la pantalla de
+            inicio, que no tenía rail; desde el 06/11 lo tiene (`start-rail.tsx`). */}
       </div>
     </header>
     {qrUrl && (

@@ -1,7 +1,7 @@
 import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
-import { MarketingChrome } from "@/components/marketing/marketing-chrome";
+import { HomeShell } from "@/components/marketing/home-shell";
 import { HomeHashRouter } from "@/components/marketing/home-hash-router";
 import { HeroLenProvider } from "@/components/marketing/hero-len";
 import { countTemplates } from "@/lib/templates/store";
@@ -61,7 +61,8 @@ export async function generateMetadata({
 // `dark` FIJO: la luz está hecha para negro, así que la portada es oscura
 // aunque la persona tenga el sitio en claro. Tailwind (`darkMode: "class"`)
 // aplica `dark:` a todo lo que cuelga de un `.dark`, sin tocar la preferencia
-// guardada; por eso el menú de aquí no lleva el botón de tema.
+// guardada; y los tokens del taller (`.dark .workspace-v2`) también, así que
+// el marco de inicio (`home-shell.tsx`) sale en oscuro.
 //
 // `overflow-clip` EN LOS DOS EJES: la luz sangra por todos lados (pasa por
 // detrás del pie, y su caja baja más allá de la pantalla) y es aquí donde se
@@ -76,13 +77,15 @@ export default function HomePage() {
   return (
     // `home-page`: `home-glow.css` sizes and paints the <body> after it (`body:has(.home-page)`).
     <div className="home-page dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
-      {/* Len's face lives in the menu and the box lives in the hero: one provider around both, so the face listens
+      {/* Len's face crowns the rail and the box lives in the hero: one provider around both, so the face listens
           while you type and thinks when you send. */}
       <HeroLenProvider>
-        <MarketingChrome variant="home">
+        {/* THE START FRAME (06/11, Jesús: «/new y / quiero que sea compartido»): the same rail and top row as /new
+            without a project, like Gemini's. */}
+        <HomeShell>
           <Hero />
           <HomeHashRouter />
-        </MarketingChrome>
+        </HomeShell>
       </HeroLenProvider>
     </div>
   );
