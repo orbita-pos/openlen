@@ -57,6 +57,7 @@ export default defineConfig({
       "components/marketing/home-hash-router.test.tsx",
       "components/marketing/hero-len.test.tsx",
       "components/marketing/home-glow.test.tsx",
+      "components/marketing/marketing-chrome.test.tsx",
       "tools/template-visual-metadata-reviewer/**/*.test.ts",
       "tools/template-visual-metadata-reviewer/**/*.test.tsx",
       "tools/visual-engine-2a-reviewer/**/*.test.ts",
