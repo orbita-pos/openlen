@@ -13,7 +13,29 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Je eigen web<len>o</len>ntwikkelaar. <gradient>Len.</gradient>",
+    "question": "Waar beginnen we mee?",
+    "questions": {
+      "morning": [
+        "Goedemorgen. Waar beginnen we mee?",
+        "Wat maken we vandaag?",
+        "Koffie in de hand. Wat bouwen we?"
+      ],
+      "afternoon": [
+        "Waar gaan we mee verder?",
+        "Wat maken we vanmiddag?",
+        "Goedemiddag. Wat bouwen we?"
+      ],
+      "evening": [
+        "Goedenavond. Wat gaan we doen?",
+        "Wat maken we vandaag nog af?",
+        "Zetten we het klaar voor morgen?"
+      ],
+      "night": [
+        "Nog wakker? Vertel me je idee.",
+        "Op dit uur komen de beste ideeën. Wat is het jouwe?",
+        "Kun je niet slapen? Laten we je pagina maken."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",

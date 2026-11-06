@@ -20,6 +20,16 @@ import { MarketingChrome } from "./marketing-chrome";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// jsdom has no matchMedia; Len's face asks about reduced motion.
+window.matchMedia = ((query: string) => ({
+  matches: false,
+  media: query,
+  addEventListener: () => {},
+  removeEventListener: () => {},
+  addListener: () => {},
+  removeListener: () => {},
+})) as unknown as typeof window.matchMedia;
+
 const roots: Root[] = [];
 afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
@@ -50,6 +60,12 @@ describe("the home's chrome", () => {
     expect(links).toContain("https://github.com/orbita-pos/openlen");
     expect(host.textContent).not.toContain("footer.product.title");
   });
+
+  // Jesús, 06/11: the question has no face in it; Len's face goes to the menu, where the brand mark was.
+  it("🔴 the menu's mark is Len's live face", () => {
+    const host = mount("home");
+    expect(host.querySelector("header [data-len-mark]")).not.toBeNull();
+  });
 });
 
 describe("every other marketing page", () => {
@@ -58,6 +74,7 @@ describe("every other marketing page", () => {
     expect(toggle(host)).not.toBeNull();
     expect(host.textContent).toContain("footer.product.title");
     expect(host.querySelector("[data-home-footer]")).toBeNull();
+    expect(host.querySelector("[data-len-mark]")).toBeNull();
   });
 });
 

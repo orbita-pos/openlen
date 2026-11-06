@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight, Menu, Moon, Sun, X } from "lucide-react";
@@ -23,9 +23,11 @@ export interface NavProps {
   onToggleDark: () => void;
   /** `false` on the home: it is always dark, so the toggle would do nothing there. */
   themeToggle?: boolean;
+  /** What stands where the brand mark goes; on the home, Len's live face. */
+  mark?: ReactNode;
 }
 
-export function Nav({ dark, onToggleDark, themeToggle = true }: NavProps) {
+export function Nav({ dark, onToggleDark, themeToggle = true, mark }: NavProps) {
   const t = useTranslations("marketing");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -61,7 +63,7 @@ export function Nav({ dark, onToggleDark, themeToggle = true }: NavProps) {
           onClick={() => setMenuOpen(false)}
           className="flex items-center gap-2 group mr-4 lg:mr-8"
         >
-          <OpenLenMark className="h-6 w-6 shrink-0" />
+          {mark ?? <OpenLenMark className="h-6 w-6 shrink-0" />}
           <span className="font-semibold tracking-tight text-[15px]">
             Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>

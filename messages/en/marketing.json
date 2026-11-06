@@ -13,7 +13,29 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Your <len>o</len>wn web developer. <gradient>Len.</gradient>",
+    "question": "Where should we start?",
+    "questions": {
+      "morning": [
+        "Good morning. Where should we start?",
+        "What are we making today?",
+        "Coffee in hand. What are we building?"
+      ],
+      "afternoon": [
+        "What's next?",
+        "What are we making this afternoon?",
+        "Good afternoon. What are we building?"
+      ],
+      "evening": [
+        "Good evening. What are we making?",
+        "What should we get done today?",
+        "Shall we have it ready for tomorrow?"
+      ],
+      "night": [
+        "Up late? Tell me your idea.",
+        "The best ideas come at this hour. What's yours?",
+        "Can't sleep? Let's make your page."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> pages generated this week",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "Star on GitHub",

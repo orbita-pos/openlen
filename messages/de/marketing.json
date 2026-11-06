@@ -13,7 +13,29 @@
     "menu": "Menü"
   },
   "hero": {
-    "title": "Dein eigener Webentwickler. <len></len> <gradient>Len.</gradient>",
+    "question": "Womit fangen wir an?",
+    "questions": {
+      "morning": [
+        "Guten Morgen. Womit fangen wir an?",
+        "Was machen wir heute?",
+        "Kaffee in der Hand. Was bauen wir?"
+      ],
+      "afternoon": [
+        "Womit machen wir weiter?",
+        "Was machen wir heute Nachmittag?",
+        "Guten Tag. Was bauen wir?"
+      ],
+      "evening": [
+        "Guten Abend. Was machen wir?",
+        "Was bringen wir heute noch fertig?",
+        "Machen wir es für morgen fertig?"
+      ],
+      "night": [
+        "Noch wach? Erzähl mir deine Idee.",
+        "Um diese Uhrzeit kommen die besten Ideen. Was ist deine?",
+        "Kannst du nicht schlafen? Bauen wir deine Seite."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren",

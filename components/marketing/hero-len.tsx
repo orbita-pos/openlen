@@ -82,10 +82,21 @@ export function useHeroLenReport() {
   return useContext(ReportContext);
 }
 
-/** El estado que toca ahora (saludo, escucha, pensando…), para la cara que
- *  hace de «o» en el titular (`len-letra.tsx`). */
+/** El estado que toca ahora (saludo, escucha, pensando…), para la cara de Len. */
 export function useHeroLenState() {
   return useContext(StateContext);
+}
+
+/** LEN EN EL MENÚ DE LA PORTADA (Jesús, 06/11): la pregunta va sin cara, y la cara viva pasa al sitio de la marca.
+ *  Saluda al llegar, escucha mientras escribes o dictas en la caja y piensa al enviar — el proveedor envuelve la
+ *  portada entera (`app/[locale]/page.tsx`), así que el menú y la caja comparten estado. */
+export function HeroLenMark({ className }: { className?: string }) {
+  const state = useContext(StateContext);
+  return (
+    <span data-len-mark className={className ? `relative inline-block ${className}` : "relative inline-block"} aria-hidden>
+      <CaraDeLen estado={state} props="none" className="absolute inset-0" />
+    </span>
+  );
 }
 
 export function HeroLenFace({ className }: { className?: string }) {

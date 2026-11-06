@@ -13,7 +13,29 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Il tuo sviluppat<len>o</len>re web personale. <gradient>Len.</gradient>",
+    "question": "Da dove cominciamo?",
+    "questions": {
+      "morning": [
+        "Buongiorno. Da dove cominciamo?",
+        "Cosa facciamo oggi?",
+        "Caffè in mano. Cosa costruiamo?"
+      ],
+      "afternoon": [
+        "Con cosa andiamo avanti?",
+        "Cosa facciamo questo pomeriggio?",
+        "Buon pomeriggio. Cosa costruiamo?"
+      ],
+      "evening": [
+        "Buonasera. Cosa facciamo?",
+        "Cosa chiudiamo oggi?",
+        "Lo prepariamo per domani?"
+      ],
+      "night": [
+        "Ancora in piedi? Raccontami la tua idea.",
+        "A quest'ora arrivano le idee migliori. Qual è la tua?",
+        "Non riesci a dormire? Facciamo la tua pagina."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> pagine generate questa settimana",
     "githubAria": "OpenLen su GitHub",
     "starOnGithub": "Lascia una stella su GitHub",

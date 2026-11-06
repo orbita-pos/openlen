@@ -1,9 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
-import { LenLetra } from "./len-letra";
 import { HeroPromptInput } from "./hero-prompt-input";
-import { HeroLenProvider } from "./hero-len";
 import { HomeGlow } from "./home-glow";
+import { HomeQuestion } from "./home-question";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -37,7 +36,9 @@ import { HomeGlow } from "./home-glow";
 // Gemini, medida sobre la captura de Jesús, en el naranja de OpenLen). Vive en
 // `home-glow.tsx`, dentro del envoltorio de la caja. Y se fueron la píldora de
 // aviso de arriba («se ve como un blog») y los ejemplos bajo la caja (Jesús:
-// «que se vea más limpio»): queda el titular, la caja y la luz.
+// «que se vea más limpio»): queda el titular, la caja y la luz. Y el titular
+// es una pregunta que cambia con la hora (`home-question.tsx`); la cara de Len,
+// en el menú.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function Hero() {
@@ -54,32 +55,19 @@ export async function Hero() {
     // `overflow-hidden` here cut the light right above the footer (a hard band), and `isolate` here trapped the
     // sign-in dialog under the menu and footer.
     <section className="relative -mt-14 flex flex-1 flex-col justify-center pt-14">
-      {/* THE ONLY SCREEN (06/11): one headline with Len as its «o» and, under it, the box — the way in, not a button
-          that leads to it (Jesús, 09/10). Behind the box, its light (`HomeGlow`); nothing else — no announcement pill,
-          no example chips, no product mockup (that lives on /features now).
-
-          The provider wraps the headline and the box: the face that plays the «o» waves on arrival, then listens
-          while you type or dictate, and thinks when you send. */}
-      <HeroLenProvider>
-      {/* `max-height: 500px` (a phone in landscape): less air above and between, so the box is in the first screen
-          without touching the headline. */}
+      {/* THE ONLY SCREEN (06/11): the question and, under it, the box — the way in, not a button that leads to it
+          (Jesús, 09/10). Behind the box, its light (`HomeGlow`); nothing else — no announcement pill, no example chips,
+          no product mockup (that lives on /features now). Len's face left the headline for the menu, where the brand
+          mark was (`HeroLenMark`): `HeroLenProvider` wraps the whole home in `app/[locale]/page.tsx`, so the face in
+          the menu still waves on arrival, listens while you type or dictate here, and thinks when you send. */}
+      {/* `max-height: 500px` (a phone in landscape): less air above and between, so the box is in the first screen. */}
       <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-4 sm:pt-24 [@media(max-height:500px)]:pt-4">
         <div className="flex flex-col items-center text-center">
-          {/* `data-len-hide`: mientras se ve el titular (con la cara dentro),
-              la cara que acompaña al bajar (len-companion.tsx) espera. */}
-          <h1
-            data-len-hide
-            className="max-w-[60rem] text-balance text-[40px] sm:text-[60px] md:text-[76px] font-semibold tracking-tightest leading-[1.04]"
-          >
-            {t.rich("hero.title", {
-              len: (chunks) => <LenLetra>{chunks}</LenLetra>,
-              gradient: (chunks) => (
-                <span className="serif-accent bg-gradient-to-br from-coral-600 via-coral-700 to-rose-600 bg-clip-text text-transparent pr-[0.06em]">
-                  {chunks}
-                </span>
-              ),
-            })}
-          </h1>
+          {/* Shown by the browser once it knows the time of day; without JavaScript, the neutral question as it is. */}
+          <noscript>
+            <style>{".home-question{opacity:1!important}"}</style>
+          </noscript>
+          <HomeQuestion />
 
           {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
               titular y la caja bastan; lo que hace Len lo cuenta /features. */}
@@ -102,7 +90,6 @@ export async function Hero() {
           )}
         </div>
       </div>
-      </HeroLenProvider>
     </section>
   );
 }

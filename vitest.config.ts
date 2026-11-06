@@ -60,6 +60,7 @@ export default defineConfig({
       "components/marketing/marketing-chrome.test.tsx",
       "components/marketing/len-companion.test.tsx",
       "components/locale-switcher.test.tsx",
+      "components/marketing/home-question.test.tsx",
       "tools/template-visual-metadata-reviewer/**/*.test.ts",
       "tools/template-visual-metadata-reviewer/**/*.test.tsx",
       "tools/visual-engine-2a-reviewer/**/*.test.ts",
