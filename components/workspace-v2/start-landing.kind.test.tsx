@@ -11,10 +11,11 @@ import type { NaceComo } from "./tarjetas-nace-como";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
-  useLocale: () => "es",
-}));
+vi.mock("next-intl", () => {
+  const t = (key: string) => key;
+  (t as unknown as { raw: (k: string) => unknown }).raw = (k: string) => (k.startsWith("hero.questions.") ? ["q0", "q1", "q2"] : []);
+  return { useTranslations: () => t, useLocale: () => "es" };
+});
 vi.mock("@/lib/uso/cliente", () => ({ registrarUso: () => {} }));
 vi.mock("./use-templates", () => ({ useTemplates: () => ({ templates: [], isLoading: false, error: null }) }));
 
@@ -22,6 +23,7 @@ import { HeroComposer, StartLanding } from "./start-landing";
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
+const pegados: number[] = [];
 const state: BriefFormState = { prompt: "", setPrompt: () => {}, fotos: [], setFotos: () => {} };
 
 function Landing() {
@@ -33,8 +35,7 @@ function Landing() {
       generating={false}
       effort="low"
       onEffortChange={() => {}}
-      onPreviewTemplate={() => {}}
-      onPaste={() => {}}
+      onPaste={() => pegados.push(1)}
       naceComo={v}
       onNaceComoChange={(x) => {
         vistos.push(x);
@@ -61,6 +62,29 @@ afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
   document.body.innerHTML = "";
   vistos.length = 0;
+  pegados.length = 0;
+});
+
+describe("the /new start screen is the home's (Jesús, 06/11: «/new y / quiero que sea compartido»)", () => {
+  it("🔴 the question of the time of day over the box, and nothing under it: no gallery, no paste link", () => {
+    const c = mount(<Landing />);
+    const question = c.querySelector(".home-question");
+    expect(question).not.toBeNull();
+    // /new already has its own (hidden) h1: the question is the screen's h2 here.
+    expect(question!.tagName).toBe("H2");
+    expect(question!.textContent).toMatch(/^q[012]$/);
+    expect(c.textContent).not.toContain("start.galleryHeading");
+    expect(c.textContent).not.toContain("start.pasteHtml");
+  });
+
+  it("🔴 «Pegar HTML» moved into the box's + menu, and opens the paste flow", () => {
+    const c = mount(<Landing />);
+    act(() => c.querySelector<HTMLButtonElement>('button[aria-label="newChat.composer.plus"]')!.click());
+    const paste = [...c.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((b) => b.textContent?.includes("start.pasteTitle"))!;
+    expect(paste.textContent).toContain("start.pasteHint");
+    act(() => paste.click());
+    expect(pegados).toEqual([1]);
+  });
 });
 
 describe("the kind choice on the /new start screen", () => {
@@ -75,13 +99,13 @@ describe("the kind choice on the /new start screen", () => {
     expect(send.parentElement!.contains(p)).toBe(true);
   });
 
-  it("choosing Juego in the pill changes what the project is born as, and the headline follows", () => {
+  it("choosing Juego in the pill changes what the project is born as, and the box's placeholder follows", () => {
     const c = mount(<Landing />);
     act(() => pill(c)!.click());
     const juego = [...c.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')].find((b) => b.textContent?.includes("start.kind.gameHint"))!;
     act(() => juego.click());
     expect(vistos).toEqual(["game"]);
-    expect(c.querySelector("h2")?.textContent).toBe("start.kind.gameHeadline");
+    expect(c.querySelector("textarea")?.getAttribute("placeholder")).toBe("start.kind.gamePlaceholder");
     expect(pill(c)!.textContent).toContain("start.kind.game");
   });
 

@@ -341,7 +341,10 @@
       "toolHeadline": "Welke tool heb je nodig?",
       "toolSubtitle": "Len bouwt hem en hij blijft in je OpenLen: in de zijbalk of in je projecten.",
       "toolPlaceholder": "Iets om de reserveringen van vandaag te zien en te bevestigen…"
-    }
+    },
+    "closeMenu": "Menu sluiten",
+    "pasteTitle": "HTML plakken",
+    "pasteHint": "Begin met een pagina die je al hebt"
   },
   "empty": {
     "badge": "OpenLen-werkruimte",
@@ -454,7 +457,8 @@
     "crear": "Maken",
     "mispaginas": "Mijn pagina’s",
     "comunidad": "Community",
-    "herramientas": "Tools"
+    "herramientas": "Tools",
+    "plantillas": "Templates"
   },
   "resultadosTabs": {
     "page": "Pagina",

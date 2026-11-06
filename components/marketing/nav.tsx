@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { ArrowRight, Menu, Moon, Sun, X } from "lucide-react";
@@ -21,13 +21,9 @@ const links = [
 export interface NavProps {
   dark: boolean;
   onToggleDark: () => void;
-  /** `false` on the home: it is always dark, so the toggle would do nothing there. */
-  themeToggle?: boolean;
-  /** What stands where the brand mark goes; on the home, Len's live face. */
-  mark?: ReactNode;
 }
 
-export function Nav({ dark, onToggleDark, themeToggle = true, mark }: NavProps) {
+export function Nav({ dark, onToggleDark }: NavProps) {
   const t = useTranslations("marketing");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -63,7 +59,7 @@ export function Nav({ dark, onToggleDark, themeToggle = true, mark }: NavProps) 
           onClick={() => setMenuOpen(false)}
           className="flex items-center gap-2 group mr-4 lg:mr-8"
         >
-          {mark ?? <OpenLenMark className="h-6 w-6 shrink-0" />}
+          <OpenLenMark className="h-6 w-6 shrink-0" />
           <span className="font-semibold tracking-tight text-[15px]">
             Open<span className="text-coral-700 dark:text-coral-400">Len</span>
           </span>
@@ -94,16 +90,14 @@ export function Nav({ dark, onToggleDark, themeToggle = true, mark }: NavProps) 
 
         <div className="flex items-center gap-1">
           <LocaleSwitcher />
-          {themeToggle && (
-            <button
-              type="button"
-              onClick={onToggleDark}
-              aria-label={t("nav.toggleDark")}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
-            >
-              {dark ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onToggleDark}
+            aria-label={t("nav.toggleDark")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+          >
+            {dark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <Link
             href="/login"
             className="ml-1 hidden sm:inline-flex items-center h-10 px-4 rounded-full text-[14.5px] font-medium bg-zinc-900/[0.06] text-zinc-800 hover:bg-zinc-900/[0.1] dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/[0.15] transition-colors"

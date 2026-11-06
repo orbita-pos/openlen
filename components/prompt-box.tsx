@@ -176,6 +176,17 @@ export interface PromptBoxProps {
   addFilesRef?: MutableRefObject<((files: File[]) => void) | null>;
   /** The text area (see the header). */
   textArea?: PromptBoxTextArea;
+  /** More ways in, under the attachments in the `+` menu (/new: «Pegar HTML», since 06/11 out from under the box). */
+  moreOptions?: readonly PromptBoxOption[];
+}
+
+/** One more entry of the `+` menu: what it is, what it does said under it, and the action. */
+export interface PromptBoxOption {
+  key: string;
+  icon: ReactNode;
+  title: string;
+  hint: string;
+  onSelect: () => void;
 }
 
 export function PromptBox({
@@ -199,6 +210,7 @@ export function PromptBox({
   onTyped,
   addFilesRef,
   textArea = PLAIN_TEXT_AREA,
+  moreOptions = [],
 }: PromptBoxProps) {
   const s = SKINS[piel];
   const tm = useTranslations("marketing");
@@ -506,6 +518,21 @@ export function PromptBox({
                     }}
                   />
                 )}
+                {moreOptions.map((option) => (
+                  <PlusOption
+                    key={option.key}
+                    skin={piel}
+                    icon={option.icon}
+                    title={option.title}
+                    hint={option.hint}
+                    count={0}
+                    disabled={false}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      option.onSelect();
+                    }}
+                  />
+                ))}
               </div>
             )}
           </div>

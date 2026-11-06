@@ -333,7 +333,10 @@
       "toolHeadline": "どんなツールが必要ですか？",
       "toolSubtitle": "Len が作り、あなたの OpenLen に残ります。サイドバーか、プロジェクトの中に。",
       "toolPlaceholder": "今日の予約を見て確定できるもの…"
-    }
+    },
+    "closeMenu": "メニューを閉じる",
+    "pasteTitle": "HTMLを貼り付け",
+    "pasteHint": "手元にあるページから始める"
   },
   "empty": {
     "badge": "OpenLen ワークスペース",
@@ -454,7 +457,8 @@
     "crear": "作成",
     "mispaginas": "マイページ",
     "comunidad": "コミュニティ",
-    "herramientas": "ツール"
+    "herramientas": "ツール",
+    "plantillas": "テンプレート"
   },
   "resultadosTabs": {
     "page": "ページ",

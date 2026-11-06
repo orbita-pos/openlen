@@ -33,18 +33,17 @@ describe("la barra superior, EDITANDO, no habla de la persona", () => {
   // La decisión que hay que clavar no es «la barra nunca», es «la barra NO
   // cuando estás editando»: ahí el rail existe y esos tres huecos se los quitan
   // al nombre del proyecto, a los créditos y a Publicar.
-  it("no pinta el idioma ni el avatar por su cuenta: sólo tras `inicio`", () => {
+  // 🔴 Y DESDE EL 06/11, TAMPOCO EN LA PANTALLA DE INICIO: ahí ya no hay barra
+  // (Jesús, sobre la de Gemini: «/new y / quiero que sea compartido»). Sin
+  // proyecto, el marco de inicio pone su propio rail —con la navegación global—
+  // y la cuenta a SU pie (`start-rail.tsx`). La barra vuelve a hablar sólo del
+  // proyecto, y el modo `inicio` que la volvía navegación se fue.
+  it("no pinta el idioma ni el avatar, nunca: la cuenta vive al pie de un rail", () => {
     const barra = leer("top-bar.tsx");
-    // El selector de idioma NO lo monta la barra ni en la pantalla de inicio:
-    // va dentro del menú de cuenta, que es quien lo lleva.
     expect(barra).not.toMatch(/LocaleSwitcher/);
     expect(barra).not.toMatch(/profileOpen/);
-    // El único AccountMenu de la barra cuelga de `inicio`, o sea que editando
-    // no se pinta. Sin esta comprobación, un `<AccountMenu>` suelto devolvería
-    // el avatar a la barra del editor sin que nadie se enterara.
-    const montajes = barra.match(/<AccountMenu/g) ?? [];
-    expect(montajes.length, "la barra monta más de un AccountMenu").toBe(1);
-    expect(barra).toMatch(/\{inicio && \(\s*<AccountMenu/);
+    expect(barra).not.toMatch(/<AccountMenu/);
+    expect(barra).not.toMatch(/\binicio\b/);
   });
 
   it("y ni siquiera lee la sesión: habla del PROYECTO", () => {
@@ -59,20 +58,20 @@ describe("las dos pantallas del taller", () => {
     readFileSync(join(process.cwd(), "app/[locale]/new/page.tsx"), "utf8"),
   );
 
-  it("el rail sólo existe con una página abierta", () => {
+  it("el rail del proyecto sólo existe con una página abierta; sin ella, el de inicio", () => {
     // Y no en el proyecto en blanco (12/10): hasta el primer mensaje es la
-    // portada, con la misma barra de inicio y sin rail.
-    expect(pagina).toMatch(/\{!pantallaDeInicio && \(\s*<LeftSidebar/);
+    // portada, con el marco de inicio.
+    expect(pagina).toMatch(/\{pantallaDeInicio \? \(\s*<StartRail[\s\S]*?\) : \(\s*<LeftSidebar/);
     expect(pagina).toMatch(/const pantallaDeInicio =\s*!enElEditor \|\|\s*proyectoEnBlanco \|\|/);
   });
 
-  it("y sin ella la barra recibe la navegación global", () => {
-    expect(pagina).toMatch(/inicio=\{/);
-    // Las tres superficies suben A la barra. Lo que NO debe volver es la tira de
-    // pestañas en el centro del lienzo: eran dos navegaciones compitiendo, y la
-    // de abajo le robaba el centro al propio contenido de la pantalla.
-    // Se busca su marca —el `aria-current` de la tira—, no la clave de i18n:
-    // esa la sigue usando la barra para poner las etiquetas.
+  it("y sin ella no hay barra: la navegación global va en el rail de inicio, con la cuenta a su pie (06/11)", () => {
+    expect(pagina).toMatch(/\{!pantallaDeInicio && \(\s*<TopBar/);
+    expect(pagina).not.toMatch(/inicio=\{/);
+    expect(pagina).toMatch(/<StartRail[\s\S]{0,1500}account=\{\s*<AccountMenu/);
+    // Lo que NO debe volver es la tira de pestañas en el centro del lienzo: eran
+    // dos navegaciones compitiendo, y la de abajo le robaba el centro al propio
+    // contenido de la pantalla.
     expect(pagina).not.toMatch(/aria-current=\{startSurface === s/);
   });
 });

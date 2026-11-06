@@ -35,40 +35,19 @@ afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
   document.body.innerHTML = "";
 });
-function mount(variant?: "home" | "default") {
+function mount() {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  act(() => root.render(<MarketingChrome {...(variant ? { variant } : {})}>contenido</MarketingChrome>));
+  act(() => root.render(<MarketingChrome>contenido</MarketingChrome>));
   return host;
 }
 const hrefs = (host: HTMLElement) => [...host.querySelectorAll("a")].map((a) => a.getAttribute("href"));
 const toggle = (host: HTMLElement) => host.querySelector('button[aria-label="nav.toggleDark"]');
 
-describe("the home's chrome", () => {
-  it("🔴 has no theme toggle and a one-row footer with the legal links", () => {
-    const host = mount("home");
-    expect(toggle(host)).toBeNull();
-    // Only the footer row's own links: /docs and GitHub are in the menu too, and must not satisfy this by accident.
-    const footer = host.querySelector<HTMLElement>("[data-home-footer]");
-    expect(footer).not.toBeNull();
-    const links = hrefs(footer!);
-    expect(links).toContain("/privacy");
-    expect(links).toContain("/terms");
-    expect(links).toContain("/docs");
-    expect(links).toContain("https://github.com/orbita-pos/openlen");
-    expect(host.textContent).not.toContain("footer.product.title");
-  });
-
-  // Jesús, 06/11: the question has no face in it; Len's face goes to the menu, where the brand mark was.
-  it("🔴 the menu's mark is Len's live face", () => {
-    const host = mount("home");
-    expect(host.querySelector("header [data-len-mark]")).not.toBeNull();
-  });
-});
-
-describe("every other marketing page", () => {
+// The home left this chrome on 06/11 for the start frame (`home-shell.tsx`, tested in `home-shell.test.tsx`).
+describe("every marketing page", () => {
   it("keeps the toggle and the big footer", () => {
     const host = mount();
     expect(toggle(host)).not.toBeNull();
@@ -79,8 +58,8 @@ describe("every other marketing page", () => {
 });
 
 describe("Features and Pricing are pages", () => {
-  it.each(["home", "default"] as const)("🔴 the menu and the footer link to /features and /pricing (%s)", (variant) => {
-    const links = hrefs(mount(variant));
+  it("🔴 the menu and the footer link to /features and /pricing", () => {
+    const links = hrefs(mount());
     expect(links).toContain("/features");
     expect(links).toContain("/pricing");
     expect(links).not.toContain("/#features");

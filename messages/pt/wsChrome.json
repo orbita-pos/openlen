@@ -341,7 +341,10 @@
       "toolHeadline": "De que ferramenta você precisa?",
       "toolSubtitle": "O Len a constrói e ela fica no seu OpenLen: na barra lateral ou dentro dos seus projetos.",
       "toolPlaceholder": "Algo para ver as reservas de hoje e confirmá-las…"
-    }
+    },
+    "closeMenu": "Fechar menu",
+    "pasteTitle": "Colar HTML",
+    "pasteHint": "Comece a partir de uma página que você já tem"
   },
   "empty": {
     "badge": "Espaço de trabalho OpenLen",
@@ -454,7 +457,8 @@
     "crear": "Criar",
     "mispaginas": "Minhas páginas",
     "comunidad": "Comunidade",
-    "herramientas": "Ferramentas"
+    "herramientas": "Ferramentas",
+    "plantillas": "Templates"
   },
   "resultadosTabs": {
     "page": "Página",

@@ -48,13 +48,11 @@ export async function Hero() {
   const pagesLive = await countLiveProjects().catch(() => 0);
 
   return (
-    // `-mt-14 pt-14`: the section rises under the menu (transparent at the top) and gives those 56 px back as padding,
-    // so the background is one. `flex-1` + centred: the hero fills what the menu and the one-row footer leave of the
-    // screen (the home's `<main>` is a flex column, see `MarketingChrome`), so the footer stays inside the first
-    // screen. No stacking context and no clipping here — both live on the home's wrapper (`app/[locale]/page.tsx`):
-    // `overflow-hidden` here cut the light right above the footer (a hard band), and `isolate` here trapped the
-    // sign-in dialog under the menu and footer.
-    <section className="relative -mt-14 flex flex-1 flex-col justify-center pt-14">
+    // `flex-1` + centred: the hero fills what the start frame's top row and the one-row footer leave of the screen (the
+    // home's `<main>` is a flex column, see `home-shell.tsx`), so the footer stays inside the first screen. No stacking
+    // context and no clipping here — both live on the home's wrapper (`app/[locale]/page.tsx`): `overflow-hidden` here
+    // cut the light right above the footer (a hard band), and `isolate` here trapped the sign-in dialog under the menu.
+    <section className="relative flex flex-1 flex-col justify-center">
       {/* THE ONLY SCREEN (06/11): the question and, under it, the box — the way in, not a button that leads to it
           (Jesús, 09/10). Behind the box, its light (`HomeGlow`); nothing else — no announcement pill, no example chips,
           no product mockup (that lives on /features now). Len's face left the headline for the menu, where the brand

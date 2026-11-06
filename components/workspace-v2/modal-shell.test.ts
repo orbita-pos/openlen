@@ -40,6 +40,9 @@ const PENDIENTES: readonly string[] = [
   // Un desplegable, no un modal: lleva velo pero no trampa de foco. Habrá que
   // mirar si de verdad es un diálogo antes de migrarlo.
   "top-bar.tsx",
+  // El cajón del rail de inicio en el teléfono (06/11): sale por la IZQUIERDA a
+  // toda altura, y `ModalShell` sólo centra. Migrarlo pide una forma de cajón.
+  "start-rail.tsx",
 ];
 
 /** Los que YA usan `ModalShell`. No pueden volver a escribir el suyo. */

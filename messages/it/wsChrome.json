@@ -333,7 +333,10 @@
       "toolHeadline": "Di che strumento hai bisogno?",
       "toolSubtitle": "Len lo costruisce e resta nel tuo OpenLen: nella barra laterale o dentro i tuoi progetti.",
       "toolPlaceholder": "Qualcosa per vedere le prenotazioni di oggi e confermarle…"
-    }
+    },
+    "closeMenu": "Chiudi menu",
+    "pasteTitle": "Incolla HTML",
+    "pasteHint": "Parti da una pagina che hai già"
   },
   "empty": {
     "badge": "Spazio di lavoro OpenLen",
@@ -454,7 +457,8 @@
     "crear": "Crea",
     "mispaginas": "Le mie pagine",
     "comunidad": "Community",
-    "herramientas": "Strumenti"
+    "herramientas": "Strumenti",
+    "plantillas": "Template"
   },
   "resultadosTabs": {
     "page": "Pagina",
