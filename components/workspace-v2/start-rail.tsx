@@ -24,6 +24,7 @@ import { FolderOpen, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, Square
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "./ui";
+import "./start-rail.css";
 
 export type StartItemKey = "crear" | "plantillas" | "mispaginas" | "comunidad" | "herramientas";
 
@@ -45,6 +46,9 @@ const ICONS: Record<StartItemKey, typeof SquarePen> = {
 
 /** Whether the rail was left open, per browser (a convenience, like the chat's width). */
 const OPEN_KEY = "openlen:start-rail-open";
+
+/** How long the phone's drawer takes to slide out (`start-drawer-out` in start-rail.css is .18 s). */
+const DRAWER_EXIT_MS = 200;
 
 export function StartRail({
   items,
@@ -100,6 +104,17 @@ export function StartRail({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [drawerOpen, onCloseDrawer]);
+  // THE DRAWER SLIDES (start-rail.css): it stays on the page while it slides back out, and leaves when that ends —
+  // by the clock, not `animationend`, which never fires with reduced motion (no animation) and would keep it forever.
+  const [drawerShown, setDrawerShown] = useState(drawerOpen);
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerShown(true);
+      return;
+    }
+    const leave = window.setTimeout(() => setDrawerShown(false), DRAWER_EXIT_MS);
+    return () => window.clearTimeout(leave);
+  }, [drawerOpen]);
   return (
     <>
       {/* `self-stretch`, not `h-full`: on the home the frame only has a min-height, so 100% was the icons' height and
@@ -153,10 +168,17 @@ export function StartRail({
         </div>
       </aside>
 
-      {drawerOpen && (
-        <div data-start-drawer className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
-          <div aria-hidden className="absolute inset-0 bg-black/45" onClick={onCloseDrawer} />
-          <nav className="relative flex h-full w-64 max-w-[80vw] flex-col gap-1 border-r bd bg-elev p-3 shadow-elev">
+      {(drawerOpen || drawerShown) && (
+        <div
+          data-start-drawer
+          data-state={drawerOpen ? "open" : "closed"}
+          className={cn("start-drawer fixed inset-0 z-50 flex md:hidden", !drawerOpen && "pointer-events-none")}
+          role="dialog"
+          aria-modal="true"
+          {...(drawerOpen ? {} : { "aria-hidden": true })}
+        >
+          <div aria-hidden className="start-drawer__scrim absolute inset-0 bg-black/45" onClick={onCloseDrawer} />
+          <nav className="start-drawer__panel relative flex h-full w-64 max-w-[80vw] flex-col gap-1 border-r bd bg-elev p-3 shadow-elev">
             {/* No mark here: the top row already says OpenLen, and a second copy of the logo's SVG points at the
                 gradient `id` of the first —inside the hidden rail—, so it painted nothing (measured 06/11). */}
             <div className="mb-3 flex items-center justify-end">
