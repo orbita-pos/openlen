@@ -229,6 +229,7 @@
     "appSinLienzo": "De app kan hier niet draaien: het echte canvas reageert niet. De code staat in de lens Code, en gepubliceerd werkt hij.",
     "verCodigo": "Code bekijken",
     "direccionApp": "App",
+    "direccionGame": "Game",
     "ide": {
       "nuevoArchivo": "Nieuw bestand",
       "nuevaCarpeta": "Nieuwe map",

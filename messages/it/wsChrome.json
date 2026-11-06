@@ -221,6 +221,7 @@
     "appSinLienzo": "L’app non può girare qui: la vera tela non risponde. Il suo codice è nella vista Codice, e una volta pubblicata funziona.",
     "verCodigo": "Vedi il codice",
     "direccionApp": "App",
+    "direccionGame": "Gioco",
     "ide": {
       "nuevoArchivo": "Nuovo file",
       "nuevaCarpeta": "Nuova cartella",

@@ -1579,6 +1579,8 @@ function NewV2Inner() {
   // ni elegir un elemento para el chat; se cambia hablando con Len o en la
   // lente Código.
   const esApp = !!loadedProject?.app;
+  // A game is an app with `data.game`; with games off (OPENLEN_GAMES=0) it reads as an app.
+  const esJuego = esApp && juegosDisponibles && !!loadedProject?.game;
   // AN APP BEING BORN: the first turn of a project that is (or was just asked to
   // be, before the reload that brings the skeleton) an app. Meanwhile the
   // canvas shows Len's workshop instead of the skeleton's blank «App» page.
@@ -3792,6 +3794,7 @@ function NewV2Inner() {
           sectionSelectMode={esApp ? mentionPick : sectionSelectMode}
           onToggleSectionSelect={esApp ? (designAvailable ? (active) => setMentionPick(active) : undefined) : (active) => setSectionSelectMode(active)}
           esApp={esApp}
+          esJuego={esJuego}
           incomingMention={incomingMention}
           onIncomingMentionConsumed={() => setIncomingMention(null)}
           pendingDraft={pendingChatDraft}
@@ -4022,6 +4025,7 @@ function NewV2Inner() {
                     onCreate={createSitePage}
                     onDelete={deleteSitePage}
                     esApp={esApp}
+                    esJuego={esJuego}
                   />
                 }
                 pendientes={pendientes}
@@ -4061,7 +4065,7 @@ function NewV2Inner() {
                 // la app, y lo que quedaba debajo —un botón, un menú— no se podía elegir.
                 reservaDerecha={designMode ? DESIGN_PANEL_WIDTH : 0}
                 esApp={esApp}
-                esJuego={juegosDisponibles && !!loadedProject?.game}
+                esJuego={esJuego}
                 usesTestData={hasDatabase}
                 insertRequest={insertRequest}
                 removeRequest={removeRequest}

@@ -221,6 +221,7 @@
     "appSinLienzo": "ここではアプリを実行できません：実際のキャンバスが応答していません。コードは「コード」レンズにあり、公開すれば動きます。",
     "verCodigo": "コードを見る",
     "direccionApp": "アプリ",
+    "direccionGame": "ゲーム",
     "ide": {
       "nuevoArchivo": "新しいファイル",
       "nuevaCarpeta": "新しいフォルダー",

@@ -45,6 +45,8 @@ export interface AddressBarProps {
    *  propio menú), así que no hay rutas que elegir ni páginas que crear o
    *  borrar desde aquí: sólo la dirección. */
   esApp?: boolean;
+  /** The app is a game: the same bar, saying «Juego» instead of «App». */
+  esJuego?: boolean;
 }
 
 export function AddressBar({
@@ -56,6 +58,7 @@ export function AddressBar({
   onCreate,
   onDelete,
   esApp = false,
+  esJuego = false,
 }: AddressBarProps) {
   const t = useTranslations("wsChrome");
   const [abierto, setAbierto] = useState(false);
@@ -94,7 +97,7 @@ export function AddressBar({
       <div className="w-full min-w-0 h-7 pl-2.5 pr-2.5 inline-flex items-center gap-1.5 rounded-full border bd bg-elev text-[12px]">
         <Globe size={ICONO_BARRA} className="shrink-0 fg-faint" />
         {subdomain && <span className="fg-faint truncate min-w-0 hidden sm:inline">{subdomain}.{baseHost}</span>}
-        <span className="fg font-medium truncate min-w-0">{t("preview.direccionApp")}</span>
+        <span className="fg font-medium truncate min-w-0">{t(esJuego ? "preview.direccionGame" : "preview.direccionApp")}</span>
       </div>
     );
   }

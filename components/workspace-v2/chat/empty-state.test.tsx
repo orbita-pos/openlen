@@ -30,12 +30,12 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function montar(esApp: boolean, onPick: (texto: string) => void = () => {}) {
+function montar(esApp: boolean, onPick: (texto: string) => void = () => {}, esJuego = false) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  act(() => root.render(<EmptyState onPick={onPick} disabled={false} esApp={esApp} />));
+  act(() => root.render(<EmptyState onPick={onPick} disabled={false} esApp={esApp} esJuego={esJuego} />));
   return host;
 }
 
@@ -60,6 +60,28 @@ describe("el chat vacío", () => {
     const host = montar(true, onPick);
     act(() => host.querySelector("button")!.click());
     expect(onPick).toHaveBeenCalledWith("newChat.emptyApp.suggestions.data");
+  });
+
+  // Visto en el navegador el 05/11: un juego es una app, y su chat vacío decía
+  // «¿Qué le hacemos hoy a tu app?» y proponía una base de datos y un inicio de
+  // sesión a un esqueleto que no tiene backend.
+  it("🔴 en un juego: su título y sus sugerencias (pantallas, móvil, jugar, publicar)", () => {
+    const host = montar(true, () => {}, true);
+    expect(host.querySelector("h2")?.textContent).toBe("newChat.emptyGame.title");
+    expect(sugerencias(host)).toEqual([
+      "newChat.emptyGame.suggestions.screens",
+      "newChat.emptyGame.suggestions.touch",
+      "newChat.emptyGame.suggestions.play",
+      "newChat.emptyGame.suggestions.publish",
+    ]);
+    expect(host.querySelector("p")?.textContent).toBe("newChat.empty.subtitle");
+  });
+
+  it("una sugerencia del juego se manda tal cual", () => {
+    const onPick = vi.fn();
+    const host = montar(true, onPick, true);
+    act(() => host.querySelector("button")!.click());
+    expect(onPick).toHaveBeenCalledWith("newChat.emptyGame.suggestions.screens");
   });
 
   it("en una página, como siempre", () => {

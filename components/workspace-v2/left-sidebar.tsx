@@ -319,6 +319,8 @@ interface LeftSidebarProps {
   pendingAttachments?: PendingAttachments | null;
   /** El proyecto es una app: el chat habla de la app, no de «tu página». */
   esApp?: boolean;
+  /** The app is a game: the empty chat and the composer talk about the game. */
+  esJuego?: boolean;
   /** Opens the Publish modal (Len Watch's Approve, when a publish gate needs a review). */
   onOpenPublish?: () => void;
   /** The account section shown in the workspace CENTER ("page" = the canvas).
@@ -393,6 +395,7 @@ export function LeftSidebar({
   onPendingDraftConsumed,
   pendingAttachments = null,
   esApp = false,
+  esJuego = false,
   onOpenPublish,
   sitePages = [],
   activeSitePage = null,
@@ -635,6 +638,7 @@ export function LeftSidebar({
                 onPendingDraftConsumed={onPendingDraftConsumed}
                 pendingAttachments={pendingAttachments}
                 esApp={esApp}
+                esJuego={esJuego}
                 onClose={onToggleCollapse}
                 centered={filling}
                 onOpenPublish={onOpenPublish}
