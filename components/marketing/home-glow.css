@@ -1,0 +1,72 @@
+/* THE HOME'S LIGHT (spec local 2026-11-06-portada-solo-input). Gemini's background — measured on Jesús's screenshot:
+   one huge, very quiet light born right under the input, darker above, fine concentric rings — in OpenLen's orange,
+   at the «medio» strength he chose. Orange goes brown when it darkens, so each stop leans redder as it fades.
+
+   The box is the size of the screen and is placed so that its 63 % line sits right under the input (it lives inside
+   the input's wrapper), so the light peaks under the box on any screen. The light layer bleeds 10 % past the box, as
+   in the approved mockup: the gradients' percentages are measured on that larger layer. */
+
+.home-glow {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 63svh);
+  width: 100vw;
+  height: 100svh;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.home-glow__light,
+.home-glow__boost {
+  position: absolute;
+  inset: -10%;
+}
+
+.home-glow__light {
+  background:
+    radial-gradient(ellipse 24% 17% at 50% 60%, rgba(255,110,64,.20), transparent 70%),
+    radial-gradient(ellipse 42% 46% at 50% 63%, #7c2a11 0%, #632011 20%, #3d140f 42%, #1f100e 66%, transparent 86%),
+    radial-gradient(ellipse 30% 22% at 42% 18%, rgba(8,4,4,.75), transparent 70%);
+  animation: home-glow-breathe 14s ease-in-out infinite;
+}
+
+/* What rises while the person types or dictates: a little more light right under the box. */
+.home-glow__boost {
+  background: radial-gradient(ellipse 28% 20% at 50% 60%, rgba(255,110,64,.18), transparent 70%);
+  opacity: 0;
+  transform: scale(1);
+  transition: opacity .6s ease, transform .6s ease;
+}
+
+.home-glow[data-active="true"] .home-glow__boost {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.home-glow__rings {
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background: repeating-radial-gradient(ellipse 60% 70% at 50% 64%, rgba(255,255,255,.012) 0 2px, transparent 2px 26px);
+}
+
+/* Grain, so the long gradient doesn't band. */
+.home-glow__grain {
+  position: absolute;
+  inset: 0;
+  opacity: .07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+@keyframes home-glow-breathe {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: .92; }
+  50% { transform: translate(1.2%, -1.5%) scale(1.04); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-glow__light { animation: none; }
+  .home-glow__boost { transition: none; }
+  .home-glow[data-active="true"] .home-glow__boost { opacity: 0; transform: none; }
+}

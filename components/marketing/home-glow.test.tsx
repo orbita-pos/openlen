@@ -1,0 +1,88 @@
+// The home's light (spec local 2026-11-06-portada-solo-input): Gemini's background in OpenLen's orange, «medio». It
+// rises only with what the person does, and stands still for whoever asks the system for less motion.
+import { afterEach, describe, expect, it } from "vitest";
+import { act, useEffect } from "react";
+import { createRoot, type Root } from "react-dom/client";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { HeroLenProvider, useHeroLenReport, type Signals } from "./hero-len";
+import { HomeGlow } from "./home-glow";
+
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const roots: Root[] = [];
+afterEach(() => {
+  roots.splice(0).forEach((r) => act(() => r.unmount()));
+  document.body.innerHTML = "";
+});
+
+let reportNow: (patch: Partial<Signals>) => void = () => {};
+function Reporter() {
+  const report = useHeroLenReport();
+  useEffect(() => {
+    reportNow = report;
+  }, [report]);
+  return null;
+}
+
+function mount() {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  roots.push(root);
+  act(() =>
+    root.render(
+      <HeroLenProvider>
+        <Reporter />
+        <HomeGlow />
+      </HeroLenProvider>,
+    ),
+  );
+  return () => host.querySelector<HTMLElement>("[data-home-glow]")!;
+}
+
+describe("the home's light", () => {
+  it("is decorative: hidden from assistive technology", () => {
+    const glow = mount();
+    expect(glow().getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("🔴 rises while the person types, and goes back when they stop", () => {
+    const glow = mount();
+    expect(glow().dataset.active).toBe("false");
+    act(() => reportNow({ focused: true, hasText: true }));
+    expect(glow().dataset.active).toBe("true");
+    act(() => reportNow({ focused: false }));
+    expect(glow().dataset.active).toBe("false");
+  });
+
+  it("🔴 does not rise with the box typing its own examples", () => {
+    const glow = mount();
+    act(() => reportNow({ ghost: true }));
+    expect(glow().dataset.active).toBe("false");
+  });
+});
+
+describe("its stylesheet", () => {
+  // jsdom's import.meta.url isn't a file URL: read it from the repo root (vitest's cwd).
+  const css = readFileSync(join(process.cwd(), "components/marketing/home-glow.css"), "utf8");
+
+  it("carries the approved «medio» light, verbatim", () => {
+    expect(css).toContain("radial-gradient(ellipse 42% 46% at 50% 63%, #7c2a11 0%, #632011 20%, #3d140f 42%, #1f100e 66%, transparent 86%)");
+    expect(css).toContain("radial-gradient(ellipse 24% 17% at 50% 60%, rgba(255,110,64,.20), transparent 70%)");
+    expect(css).toContain("radial-gradient(ellipse 30% 22% at 42% 18%, rgba(8,4,4,.75), transparent 70%)");
+    expect(css).toContain("repeating-radial-gradient(ellipse 60% 70% at 50% 64%, rgba(255,255,255,.012) 0 2px, transparent 2px 26px)");
+  });
+
+  it("breathes in 14 seconds", () => {
+    expect(css).toMatch(/animation:\s*home-glow-breathe 14s ease-in-out infinite/);
+  });
+
+  it("🔴 stands still with reduced motion: no breathing, no rising", () => {
+    const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduced.length).toBeGreaterThan(40);
+    expect(reduced).toContain("animation: none");
+    expect(reduced).toMatch(/\[data-active="true"\][^{]*\{[^}]*opacity:\s*0/);
+  });
+});
