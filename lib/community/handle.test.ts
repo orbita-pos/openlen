@@ -25,4 +25,10 @@ describe("validateHandle", () => {
     expect(validateHandle("admin").ok).toBe(false);
     expect(validateHandle("new").ok).toBe(false);
   });
+  // /features and /pricing are pages since 06/11 (spec local 2026-11-06-portada-solo-input): a profile with that name
+  // would be hidden behind them.
+  it("🔴 rejects the names of the new marketing pages", () => {
+    expect(validateHandle("features")).toEqual({ ok: false, reason: "reserved" });
+    expect(validateHandle("pricing")).toEqual({ ok: false, reason: "reserved" });
+  });
 });

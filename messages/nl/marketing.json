@@ -329,5 +329,18 @@
     "cta": "Zo koppel je hem",
     "worksWith": "Werkt met",
     "anyClient": "En met elke andere client die MCP spreekt."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Wat Len voor je pagina doet",
+      "description": "Len bouwt je pagina of app, publiceert die op je domein, laat zien wie hem bezocht en wie je schreef, en werkt met Claude, ChatGPT en meer. Open source.",
+      "heading": "Wat Len voor je doet",
+      "subheading": "Vertel wat je nodig hebt. Len bouwt het, publiceert het en laat je weten wanneer iemand je schrijft."
+    },
+    "pricing": {
+      "title": "OpenLen — Prijzen",
+      "description": "Begin gratis. Abonnementen voor wanneer je Len echt gebruikt, met credits voor pagina's, apps en games. Open source, AGPLv3.",
+      "heading": "Prijzen"
+    }
   }
 }
