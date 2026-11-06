@@ -333,7 +333,7 @@
   "pages": {
     "features": {
       "title": "OpenLen — Ce que Len fait pour votre page",
-      "description": "Len construit votre page ou votre app, la publie sur votre domaine, vous dit qui l'a visitée et qui vous a écrit, et fonctionne avec Claude, ChatGPT et d'autres. Open source.",
+      "description": "Len construit votre page ou votre app, la publie sur votre domaine, vous dit qui l'a visitée et qui vous a écrit, et se connecte à l'assistant IA que vous utilisez déjà. Open source.",
       "heading": "Ce que Len fait pour vous",
       "subheading": "Dites-lui ce dont vous avez besoin. Il le construit, le publie et vous prévient quand quelqu'un vous écrit."
     },

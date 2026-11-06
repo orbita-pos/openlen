@@ -333,7 +333,7 @@
   "pages": {
     "features": {
       "title": "OpenLen — Len 能为你的页面做什么",
-      "description": "Len 为你搭建页面或应用，发布到你的域名，告诉你谁来访问过、谁给你留了言，还能和 Claude、ChatGPT 等一起工作。开源。",
+      "description": "Len 为你搭建页面或应用，发布到你的域名，告诉你谁来访问过、谁给你留了言，还能连接你已经在用的 AI 助手。开源。",
       "heading": "Len 能为你做什么",
       "subheading": "告诉它你需要什么。它来搭建、发布，有人联系你时会通知你。"
     },
