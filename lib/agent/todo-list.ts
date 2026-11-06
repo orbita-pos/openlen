@@ -138,7 +138,7 @@ export function todosForTurn(
   return { initialTodos: [...latest], restoreLine };
 }
 
-const NEAR_CAP_HEAD = "SYSTEM (the user did NOT write this): this turn has used most of its budget. ";
+const NEAR_CAP_HEAD = "SYSTEM (the user did NOT write this): the credits left in the user's account are almost used up. ";
 const GOAL_TAIL = " The next goal round continues on its own, so do not ask.";
 
 /** The one notice at `NEAR_TURN_CAP_RATIO` of the turn cap (spec §4.3). */

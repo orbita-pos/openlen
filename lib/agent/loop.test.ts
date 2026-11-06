@@ -2991,7 +2991,7 @@ describe("el techo de dinero del turno", () => {
     );
 
   // LA LISTA DE PROGRESO (spec local 2026-10-15) — REVIEW FOCUS 4.
-  const avisos = (m: Message[]) => m.filter((x) => x.role === "user" && String(x.content).includes("this turn has used most of its budget"));
+  const avisos = (m: Message[]) => m.filter((x) => x.role === "user" && String(x.content).includes("the credits left in the user's account are almost used up"));
 
   it("🔴 al cruzar el 70 % sale UN aviso, y no se repite en las vueltas siguientes", async () => {
     const vistos: Message[][] = [];
@@ -3107,7 +3107,7 @@ describe("el techo de dinero del turno", () => {
       emit: () => {},
       excedePresupuesto: (g) => g.outputTokens >= 100,
     });
-    expect(instrucciones[0]).toContain("spending cap");
+    expect(instrucciones[0]).toContain("ran out of credits");
     expect(instrucciones[0]).toContain("1. [completed] Inicio");
     expect(instrucciones[0]).toContain("2. [in_progress] Menú");
   });
@@ -3136,7 +3136,7 @@ describe("el techo de dinero del turno", () => {
     expect(events.some((e) => e.type === "error")).toBe(false);
     expect(r.finalText).toContain("tope de gasto");
     // Se le dice POR QUÉ para: el gasto, no los pasos.
-    expect(instrucciones[0]).toContain("spending cap");
+    expect(instrucciones[0]).toContain("ran out of credits");
     expect(instrucciones[0]).not.toContain("step limit");
     // Se pregunta ANTES de cada llamada, con lo acumulado: 0, 50 y 100.
     expect(vistos).toEqual([0, 50, 100]);
