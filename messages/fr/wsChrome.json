@@ -221,6 +221,7 @@
     "appSinLienzo": "L’app ne peut pas tourner ici : le vrai canevas ne répond pas. Son code est dans l’onglet Code, et une fois publiée elle fonctionne.",
     "verCodigo": "Voir le code",
     "direccionApp": "App",
+    "direccionGame": "Jeu",
     "ide": {
       "nuevoArchivo": "Nouveau fichier",
       "nuevaCarpeta": "Nouveau dossier",

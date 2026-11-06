@@ -90,6 +90,8 @@ export interface NewChatPanelProps {
   pendingAttachments?: PendingAttachments | null;
   /** El proyecto es una app: la caja vacía habla de la app. */
   esApp?: boolean;
+  /** The app is a game (`data.game`, with games on): the empty chat and the composer talk about the game. */
+  esJuego?: boolean;
   /** En el móvil el panel tapa la pantalla: la ✕ de la cabecera lo cierra. */
   onClose?: () => void;
   /** Un lector del proyecto compartido: lee la conversación, no escribe. */
@@ -107,6 +109,9 @@ const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
 const CENTERED_PADDING = "px-[max(1rem,calc((100%_-_760px)/2))]";
 // En una app no hay portada ni formulario de contacto: sus datos y su login.
 const APP_SUGGESTIONS = ["data", "login", "mobile", "publish"] as const;
+// A game is born without a backend: its screens, playing it on a phone, a test
+// that is playing it (the skill's method), and publishing.
+const GAME_SUGGESTIONS = ["screens", "touch", "play", "publish"] as const;
 
 export function NewChatPanel(props: NewChatPanelProps) {
   const { flatProjectId, onFlatHtmlUpdate, flatProjectPage = null, projectLoading = false } = props;
@@ -166,6 +171,7 @@ function AgentChatView({
   onPendingDraftConsumed,
   pendingAttachments = null,
   esApp = false,
+  esJuego = false,
   onClose,
   soloLectura = false,
   onOpenPublish,
@@ -509,6 +515,7 @@ function AgentChatView({
             disabled={chat.busy}
             sinSugerencias={soloLectura}
             esApp={esApp}
+            esJuego={esJuego}
             onPick={(text) => {
               chat.setDraft(text);
               queueMicrotask(() => chat.taRef.current?.focus());
@@ -611,6 +618,7 @@ function AgentChatView({
             goalChip={chat.goalChip}
             goalAvailable={chat.goalAvailable}
             esApp={esApp}
+            esJuego={esJuego}
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(secretGuard ? { secretGuard } : {})}
             compacta={flotante}
@@ -862,6 +870,7 @@ export function EmptyState({
   disabled,
   sinSugerencias = false,
   esApp = false,
+  esJuego = false,
 }: {
   onPick: (text: string) => void;
   disabled: boolean;
@@ -869,12 +878,16 @@ export function EmptyState({
   sinSugerencias?: boolean;
   /** El proyecto es una app: su título y sus sugerencias (el subtítulo es el mismo). */
   esApp?: boolean;
+  /** The app is a game: its own title and suggestions (same subtitle). */
+  esJuego?: boolean;
 }) {
   const t = useTranslations("panelsChat");
-  const title = esApp ? t("newChat.emptyApp.title") : t("newChat.empty.title");
-  const suggestions = esApp
-    ? APP_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyApp.suggestions.${key}`) }))
-    : SUGGESTIONS.map((key) => ({ key, text: t(`newChat.empty.suggestions.${key}`) }));
+  const title = esJuego ? t("newChat.emptyGame.title") : esApp ? t("newChat.emptyApp.title") : t("newChat.empty.title");
+  const suggestions = esJuego
+    ? GAME_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyGame.suggestions.${key}`) }))
+    : esApp
+      ? APP_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyApp.suggestions.${key}`) }))
+      : SUGGESTIONS.map((key) => ({ key, text: t(`newChat.empty.suggestions.${key}`) }));
   return (
     <div className="nc-up my-auto grid justify-items-center gap-2 px-1 py-3 text-center">
       <CaraDeLen estado="reposo" props="compact" className="mb-2.5 h-[84px] w-[84px]" />

@@ -221,6 +221,7 @@
     "appSinLienzo": "Aquí no se puede ejecutar la app: el lienzo real no responde. Su código está en la lente Código, y publicada funciona.",
     "verCodigo": "Ver el código",
     "direccionApp": "App",
+    "direccionGame": "Juego",
     "ide": {
       "nuevoArchivo": "Nuevo archivo",
       "nuevaCarpeta": "Nueva carpeta",

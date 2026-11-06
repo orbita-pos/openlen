@@ -80,6 +80,7 @@
     "removeImage": "첨부된 이미지 제거",
     "placeholder": "페이지의 모습이나 문구를 어떻게 만들지 설명해 주세요…",
     "placeholderApp": "앱이 무엇을 해야 하는지, 어떻게 보여야 하는지 설명해 주세요…",
+    "placeholderGame": "게임을 어떻게 플레이하는지, 어떻게 보여야 하는지 설명해 주세요…",
     "placeholderScoped": "선택한 {target} 변경…",
     "attachImage": "이미지 첨부",
     "attachImageTitle": "페이지에 삽입할 이미지를 첨부하세요",
@@ -233,6 +234,15 @@
         "publish": "내 앱을 게시해 줘"
       }
     },
+    "emptyGame": {
+      "title": "오늘은 게임에 무엇을 해 볼까요?",
+      "suggestions": {
+        "screens": "시작 화면과 게임 오버 화면을 추가해 줘",
+        "touch": "모바일에서 손가락으로 플레이할 수 있게 해 줘",
+        "play": "한 판 해 보고 뭐가 안 되는지 알려 줘",
+        "publish": "내 게임을 게시해 줘"
+      }
+    },
     "steps": {
       "running": "Len이 작업 중",
       "done": "{count, plural, other {Len이 #단계를 진행함}}",
@@ -331,7 +341,8 @@
       "plus": "이미지 등",
       "on": "켜짐",
       "disclaimer": "Len도 실수할 수 있습니다. 게시하기 전에 페이지를 확인하세요.",
-      "disclaimerApp": "Len도 실수할 수 있습니다. 게시하기 전에 앱을 직접 써 보세요."
+      "disclaimerApp": "Len도 실수할 수 있습니다. 게시하기 전에 앱을 직접 써 보세요.",
+      "disclaimerGame": "Len도 실수할 수 있습니다. 게시하기 전에 게임을 직접 해 보세요."
     },
     "layout": {
       "float": "채팅 분리",

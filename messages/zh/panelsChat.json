@@ -80,6 +80,7 @@
     "removeImage": "移除已附加的图片",
     "placeholder": "描述你的页面应该长什么样、读起来如何…",
     "placeholderApp": "描述你的应用应该做什么、长什么样…",
+    "placeholderGame": "描述你的游戏怎么玩、长什么样…",
     "placeholderScoped": "修改选中的{target}…",
     "attachImage": "附加图片",
     "attachImageTitle": "附加一张图片，插入到页面中",
@@ -233,6 +234,15 @@
         "publish": "发布我的应用"
       }
     },
+    "emptyGame": {
+      "title": "今天想给你的游戏做点什么？",
+      "suggestions": {
+        "screens": "加一个开始画面和一个游戏结束画面",
+        "touch": "让它在手机上能用手指玩",
+        "play": "玩一局，告诉我哪里有问题",
+        "publish": "发布我的游戏"
+      }
+    },
     "steps": {
       "running": "Len 正在工作",
       "done": "{count, plural, other {Len 完成了 # 个步骤}}",
@@ -331,7 +341,8 @@
       "plus": "图片等",
       "on": "已开启",
       "disclaimer": "Len 可能会出错。发布前请检查你的页面。",
-      "disclaimerApp": "Len 可能会出错。发布前请先试用你的应用。"
+      "disclaimerApp": "Len 可能会出错。发布前请先试用你的应用。",
+      "disclaimerGame": "Len 可能会出错。发布前请先玩一玩你的游戏。"
     },
     "layout": {
       "float": "弹出聊天",

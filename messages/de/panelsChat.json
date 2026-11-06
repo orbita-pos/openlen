@@ -80,6 +80,7 @@
     "removeImage": "Angehängtes Bild entfernen",
     "placeholder": "Beschreibe, wie deine Seite aussehen oder klingen soll…",
     "placeholderApp": "Beschreibe, was deine App tun oder wie sie aussehen soll…",
+    "placeholderGame": "Beschreibe, wie dein Spiel funktioniert oder wie es aussehen soll…",
     "placeholderScoped": "{target} ändern…",
     "attachImage": "Bild anhängen",
     "attachImageTitle": "Ein Bild anhängen, um es in die Seite einzufügen",
@@ -233,6 +234,15 @@
         "publish": "Veröffentliche meine App"
       }
     },
+    "emptyGame": {
+      "title": "Was machen wir heute mit deinem Spiel?",
+      "suggestions": {
+        "screens": "Füge einen Startbildschirm und einen Game-over-Bildschirm hinzu",
+        "touch": "Mach es auf dem Handy per Touch spielbar",
+        "play": "Spiel eine Runde und sag mir, was nicht klappt",
+        "publish": "Veröffentliche mein Spiel"
+      }
+    },
     "steps": {
       "running": "Len arbeitet",
       "done": "{count, plural, one {Len hat # Schritt gemacht} other {Len hat # Schritte gemacht}}",
@@ -331,7 +341,8 @@
       "plus": "Bild und mehr",
       "on": "Aktiv",
       "disclaimer": "Len kann sich irren. Prüf deine Seite, bevor du sie veröffentlichst.",
-      "disclaimerApp": "Len kann sich irren. Probier deine App aus, bevor du sie veröffentlichst."
+      "disclaimerApp": "Len kann sich irren. Probier deine App aus, bevor du sie veröffentlichst.",
+      "disclaimerGame": "Len kann sich irren. Probier dein Spiel aus, bevor du es veröffentlichst."
     },
     "layout": {
       "float": "Chat lösen",

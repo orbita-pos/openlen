@@ -221,6 +221,7 @@
     "appSinLienzo": "The app can't run here: the real canvas isn't responding. Its code is in the Code lens, and it works once published.",
     "verCodigo": "View the code",
     "direccionApp": "App",
+    "direccionGame": "Game",
     "ide": {
       "nuevoArchivo": "New file",
       "nuevaCarpeta": "New folder",
