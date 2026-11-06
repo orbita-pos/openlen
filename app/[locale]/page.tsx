@@ -73,7 +73,8 @@ export async function generateMetadata({
 // y del pie (z-10).
 export default function HomePage() {
   return (
-    <div className="dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
+    // `home-page`: `home-glow.css` sizes and paints the <body> after it (`body:has(.home-page)`).
+    <div className="home-page dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
       <MarketingChrome variant="home">
         <Hero />
         <HomeHashRouter />
