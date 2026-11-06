@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 
 import { CreateSandbox } from "./view";
 
-// Dev-only: los dos inputs de Crear —el de la portada y el de /new sin
-// proyecto— con los componentes DE VERDAD y sin sesión, para verlos y
-// compararlos con el compositor del chat nuevo. `?tema=oscuro` lo pinta en
+// Dev-only: el input de Crear —el de la portada, el único desde el 06/11— con
+// el componente DE VERDAD y sin sesión, para verlo y compararlo con el
+// compositor del chat nuevo. `?tema=oscuro` lo pinta en
 // oscuro. 404 en producción, como /dev/chat.
 export default async function CreateSandboxPage({
   searchParams,

@@ -73,7 +73,7 @@ export function GlobalRail({
       </Link>
 
       <Link
-        href="/new"
+        href="/"
         title={t("header.newPage")}
         aria-label={t("header.newPage")}
         className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-coral-500 text-white shadow-[0_4px_14px_-4px_rgba(255,90,54,0.6)] hover:bg-coral-600 active:scale-95 transition"

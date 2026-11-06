@@ -13,5 +13,5 @@ export default async function BusinessPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  redirect({ href: "/new", locale });
+  redirect({ href: "/", locale });
 }

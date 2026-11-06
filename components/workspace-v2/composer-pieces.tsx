@@ -3,7 +3,7 @@
 // Las piezas del compositor del chat nuevo que comparten los compositores del
 // taller: la ficha de lo que va con el mensaje (`ComposerChip`) y la opción del
 // menú `+` (`ComposerPlusOption`). Son las de `chat/chat-composer.tsx`, tal
-// cual; las usa también Crear (`start-landing.tsx`) para verse como el chat.
+// cual.
 // Viven bajo `.nc` (chat/new-chat.css): de ahí salen `--nc-accent-text` y las
 // animaciones.
 

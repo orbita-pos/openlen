@@ -81,6 +81,15 @@ describe("las dos pantallas del taller", () => {
     expect(pagina).toMatch(/\{ key: "crear", label: tws\("startTabs\.crear"\), href: "\/" \}/);
     expect(pagina).not.toMatch(/key: "crear"[^}]*router\.replace\("\/new"\)/);
   });
+
+  // Jesús, 06/11: «si estoy en My pages y le doy a Len me lleva a create, ¿no sería lo mismo que antes?». Len's face
+  // and the name «OpenLen» in /new's start rail go home too: `/new` opened the blank project, the old Crear again.
+  it("🔴 Len y el nombre del rail de inicio llevan a /, no a /new", () => {
+    const rail = pagina.slice(pagina.indexOf("<StartRail"), pagina.indexOf("account={", pagina.indexOf("<StartRail")));
+    expect(rail).toMatch(/mark=\{\s*<Link href="\/" aria-label="OpenLen"/);
+    expect(rail).toMatch(/homeHref="\/"/);
+    expect(rail).not.toMatch(/href="\/new"|homeHref="\/new"/);
+  });
 });
 
 describe("el menú de cuenta", () => {

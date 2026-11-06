@@ -5,10 +5,9 @@
 // con la piel del `+`, con los textos y los dibujos en miniatura de
 // `tarjetas-nace-como.tsx`. Lo elegido viaja a /new en la URL (`newProjectHref`).
 //
-// THE SAME PILL IN THE /new COMPOSER (Jesús, 06/11: «que el input tenga un
-// select como lo tiene la page /, porque así como lo tenemos con un grid baja
-// el input y se ve feo»): the four cards above it are gone; there it wears the
-// workspace's tokens (`piel="taller"`) and also offers Herramienta.
+// It offers Herramienta too (06/11), and lives in the only box, the home's
+// (Jesús, 06/11: «¿para qué tener 2 inputs?»): /new's box, with its own skin of
+// this pill in the workspace's tokens, went away that day.
 //
 // El menú se ancla al primer antepasado con `position: relative` —en la
 // portada, la barra del input—, no a la píldora: anclado a ella se salía por la
@@ -32,8 +31,6 @@ import {
 } from "@/components/workspace-v2/tarjetas-nace-como";
 import { cn } from "@/lib/cn";
 
-/** Two skins: the home page's (zinc and coral, like the rest of the marketing site) and the workspace's (its
- *  tokens, like the `+` beside it in the /new composer). Same pill, same menu, same behaviour. */
 /** The menu's gap from its anchor (the `8px` of the two sides below). */
 const HUECO = 8;
 const HACIA = { arriba: "bottom-[calc(100%+8px)]", abajo: "top-[calc(100%+8px)]" } as const;
@@ -48,41 +45,23 @@ export function ladoQueCabe(preferido: Lado, alto: number, arriba: number, abajo
   return arriba > abajo ? "arriba" : "abajo";
 }
 
-const PIELES = {
-  portada: {
-    /** The home page's input sits low on the page: the menu prefers upwards. */
-    lado: "arriba" as Lado,
-    pill: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
-    pillElegida: "text-coral-600 dark:text-coral-400",
-    pillNeutra: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100",
-    pillAbierta: "bg-zinc-100 dark:bg-zinc-900",
-    menu: "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950",
-    rotulo: "text-zinc-500 dark:text-zinc-400",
-    opcion: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
-    dibujo: "bg-zinc-50 dark:bg-zinc-900",
-    dibujoElegido: "border-coral-500/40 text-coral-500",
-    dibujoNeutro: "border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500",
-    titulo: "text-zinc-900 dark:text-zinc-100",
-    linea: "text-zinc-500 dark:text-zinc-400",
-    marca: "text-coral-600 dark:text-coral-400",
-  },
-  taller: {
-    /** The /new composer of a project's chat sits near the top: upwards hid Página and App behind the header (06/11). */
-    lado: "abajo" as Lado,
-    pill: "hover:bg-side",
-    pillElegida: "text-[var(--nc-accent-text)]",
-    pillNeutra: "fg-muted hover:fg",
-    pillAbierta: "bg-side",
-    menu: "bd-strong bg-elev",
-    rotulo: "fg-faint",
-    opcion: "hover:bg-side",
-    dibujo: "bg-app",
-    dibujoElegido: "border-[color:var(--accent)] text-[color:var(--accent)]",
-    dibujoNeutro: "bd fg-faint",
-    titulo: "fg",
-    linea: "fg-muted",
-    marca: "text-[var(--nc-accent-text)]",
-  },
+/** The pill's look: the home's zinc and coral, like the `+` beside it. */
+const PIEL = {
+  /** The home page's input sits low on the page: the menu prefers upwards. */
+  lado: "arriba" as Lado,
+  pill: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
+  pillElegida: "text-coral-600 dark:text-coral-400",
+  pillNeutra: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100",
+  pillAbierta: "bg-zinc-100 dark:bg-zinc-900",
+  menu: "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950",
+  rotulo: "text-zinc-500 dark:text-zinc-400",
+  opcion: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
+  dibujo: "bg-zinc-50 dark:bg-zinc-900",
+  dibujoElegido: "border-coral-500/40 text-coral-500",
+  dibujoNeutro: "border-zinc-200 text-zinc-400 dark:border-zinc-800 dark:text-zinc-500",
+  titulo: "text-zinc-900 dark:text-zinc-100",
+  linea: "text-zinc-500 dark:text-zinc-400",
+  marca: "text-coral-600 dark:text-coral-400",
 } as const;
 
 export function HeroKindPicker({
@@ -92,7 +71,6 @@ export function HeroKindPicker({
   conHerramienta = false,
   herramientaBloqueada,
   disabled = false,
-  piel = "portada",
 }: {
   value: NaceComo;
   onChange: (v: NaceComo) => void;
@@ -105,12 +83,11 @@ export function HeroKindPicker({
   herramientaBloqueada?: string;
   /** While the first message is being sent: the pill doesn't open. */
   disabled?: boolean;
-  piel?: keyof typeof PIELES;
 }) {
   const t = useTranslations("wsChrome");
   const [open, setOpen] = useState(false);
   const mando = useMandoDesplegable({ abierto: open, cerrar: () => setOpen(false) });
-  const s = PIELES[piel];
+  const s = PIEL;
   const refMenu = useRef<HTMLDivElement>(null);
   const [lado, setLado] = useState<Lado>(s.lado);
   // In a window too short for it on either side, it scrolls inside the room it has instead of running off.
@@ -180,7 +157,9 @@ export function HeroKindPicker({
           data-lado={lado}
           style={tope === null ? undefined : { maxHeight: tope }}
           className={cn(
-            "nc-card-in absolute left-0 z-20 w-[310px] max-w-full overflow-y-auto overscroll-contain rounded-[14px] border p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]",
+            // `kind-menu-scroll` (tokens.css): when a short window makes it scroll, a quiet thin thumb, not the
+            // browser's generic bar with its arrows (Jesús, 06/11).
+            "kind-menu-scroll nc-card-in absolute left-0 z-20 w-[310px] max-w-full overflow-y-auto overscroll-contain rounded-[14px] border p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]",
             HACIA[lado],
             s.menu,
           )}
