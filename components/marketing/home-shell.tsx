@@ -72,7 +72,9 @@ export function HomeShell({ children }: { children: ReactNode }) {
     );
 
   return (
-    <div className="workspace-v2 flex min-h-[100svh] flex-1">
+    // `!bg-transparent`: `.workspace-v2` paints the workspace's background, which covered the home's light (it sits at
+    // z-index -1, under every in-flow background of the home).
+    <div className="workspace-v2 flex min-h-[100svh] flex-1 !bg-transparent">
       <StartRail
         items={items}
         active="crear"

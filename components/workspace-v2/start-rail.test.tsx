@@ -71,9 +71,11 @@ describe("the start rail", () => {
     const closed = mount(<StartRail items={items()} active="crear" mark={null} drawerOpen={false} onCloseDrawer={onClose} />);
     expect(closed.querySelector("[data-start-drawer]")).toBeNull();
 
-    const open = mount(<StartRail items={items()} active="crear" mark={null} drawerOpen onCloseDrawer={onClose} />);
+    const open = mount(<StartRail items={items()} active="crear" mark={<span data-mark />} drawerOpen onCloseDrawer={onClose} />);
     const drawer = open.querySelector("[data-start-drawer]")!;
     expect(drawer).not.toBeNull();
+    // The logo is not repeated: its SVG's gradient id would point at the hidden rail's copy and paint nothing.
+    expect(drawer.querySelector("[data-mark]")).toBeNull();
     expect(drawer.textContent).toContain("Mis páginas");
     act(() => drawer.querySelector<HTMLAnchorElement>('a[href="/explore"]')!.click());
     expect(onClose).toHaveBeenCalled();

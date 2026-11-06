@@ -57,6 +57,8 @@ describe("the home in the start frame", () => {
     const host = mount();
     const frame = host.querySelector(".workspace-v2")!;
     expect(frame).not.toBeNull();
+    // Without its own background: `.workspace-v2` paints one, and it covered the home's light (z-index -1).
+    expect(frame.className).toContain("!bg-transparent");
     expect(frame.querySelector("[data-start-rail]")).not.toBeNull();
     expect(frame.querySelector("[data-start-top]")).not.toBeNull();
     expect(frame.querySelector("main [data-hero]")).not.toBeNull();
