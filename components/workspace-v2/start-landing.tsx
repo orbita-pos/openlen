@@ -110,7 +110,8 @@ export function StartLanding({
         <div className="relative mx-auto w-full max-w-5xl px-6 pb-24 [@media(max-height:500px)]:pb-4">
           <div className="flex flex-col items-center text-center">
             <HomeQuestion as="h2" />
-            <div className="relative mt-8 w-full max-w-3xl text-left [@media(max-height:500px)]:mt-5">
+            {/* 660 px, Gemini's width, as the home's (Jesús, 06/11). */}
+            <div className="relative mt-8 w-full max-w-[660px] text-left [@media(max-height:500px)]:mt-5">
               {/* The home's light, in both themes: in the light one it is a warm haze (home-glow.css, 06/11). */}
               <HomeGlow />
               <HeroComposer

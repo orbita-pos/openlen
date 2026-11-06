@@ -5,6 +5,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import type { BriefFormState } from "@/components/workspace/types";
 import type { NaceComo } from "./tarjetas-nace-como";
@@ -75,6 +77,16 @@ describe("the /new start screen is the home's (Jesús, 06/11: «/new y / quiero 
     expect(question!.textContent).toMatch(/^q[012]$/);
     expect(c.textContent).not.toContain("start.galleryHeading");
     expect(c.textContent).not.toContain("start.pasteHtml");
+  });
+
+  // Jesús, 06/11: «el input de 660 … que sea menos ancho», like Gemini's. The home's hero has the same width.
+  it("🔴 the box is 660 px wide at most, like Gemini's, on /new and on the home", () => {
+    const c = mount(<Landing />);
+    const wrapper = c.querySelector("[data-prompt-box]")!.parentElement!;
+    expect(wrapper.className.split(/\s+/)).toContain("max-w-[660px]");
+    const hero = readFileSync(join(process.cwd(), "components/marketing/hero.tsx"), "utf8");
+    expect(hero).toContain("max-w-[660px]");
+    expect(hero).not.toContain("max-w-3xl");
   });
 
   it("🔴 the light is there in both themes: nothing hides it in the light one (it has its own, home-glow.css)", () => {

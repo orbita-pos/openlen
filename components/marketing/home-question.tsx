@@ -40,7 +40,8 @@ export function HomeQuestion({
   return (
     <Heading
       className={cn(
-        "home-question max-w-[48rem] text-balance text-[30px] font-medium leading-[1.12] tracking-[-0.03em] sm:text-[40px] md:text-[46px]",
+        // 36 px on a desktop, Gemini's size (Jesús, 06/11); smaller on a phone.
+        "home-question max-w-[48rem] text-balance text-[28px] font-medium leading-[1.15] tracking-[-0.025em] sm:text-[32px] md:text-[36px]",
         "transition-opacity duration-500 motion-reduce:transition-none",
         ready ? "opacity-100" : "opacity-0",
       )}
