@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
-import { HeroKindPicker } from "./hero-kind-picker";
+import { HeroKindPicker, ladoQueCabe } from "./hero-kind-picker";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -142,5 +142,40 @@ describe("the pill inside the /new composer", () => {
     const portada = render();
     act(() => disparador(portada).click());
     expect(portada.querySelector<HTMLElement>('[role="menu"]')!.className).toContain("bottom-[calc(100%+8px)]");
+  });
+});
+
+// Jesús, 06/11: «en el select no se ve todo, se esconde». Without its top bar /new put the box mid-screen, and the
+// four options opening downwards ran off the bottom of the window: Herramienta was cut in half.
+describe("the menu opens where it fits", () => {
+  it("🔴 prefers its skin's side, flips when that side is short, and takes the roomier when neither fits", () => {
+    expect(ladoQueCabe("abajo", 360, 400, 300)).toBe("arriba");
+    expect(ladoQueCabe("abajo", 360, 400, 380)).toBe("abajo");
+    expect(ladoQueCabe("abajo", 360, 100, 500)).toBe("abajo");
+    expect(ladoQueCabe("arriba", 360, 100, 500)).toBe("abajo");
+    expect(ladoQueCabe("arriba", 360, 400, 380)).toBe("arriba");
+    expect(ladoQueCabe("abajo", 600, 300, 200)).toBe("arriba");
+    expect(ladoQueCabe("abajo", 600, 200, 300)).toBe("abajo");
+  });
+
+  it("🔴 in /new with the box mid-screen and no room below, it opens upwards", () => {
+    const ancla = document.createElement("div");
+    ancla.getBoundingClientRect = () => ({ top: 404, bottom: 524, left: 0, right: 820, width: 820, height: 120, x: 0, y: 404, toJSON: () => ({}) });
+    const offsetParent = vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockReturnValue(ancla);
+    const offsetHeight = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(380);
+    const alto = window.innerHeight;
+    window.innerHeight = 900;
+    try {
+      const c = render({ conJuego: true, conHerramienta: true, piel: "taller" });
+      act(() => disparador(c).click());
+      const menu = c.querySelector<HTMLElement>('[role="menu"]')!;
+      expect(menu.dataset.lado).toBe("arriba");
+      expect(menu.className).toContain("bottom-[calc(100%+8px)]");
+      expect(menu.className).not.toContain("top-[calc(100%+8px)]");
+    } finally {
+      offsetParent.mockRestore();
+      offsetHeight.mockRestore();
+      window.innerHeight = alto;
+    }
   });
 });
