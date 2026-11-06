@@ -57,6 +57,7 @@ import {
   getCreditState,
   noCreditsMessage,
   returnCredits,
+  techoDelTurno,
   type CreditState,
 } from "./credits";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
@@ -586,5 +587,17 @@ describe("los créditos de los planes de pago, contra la portada", () => {
 describe("la lista de progreso (spec local 2026-10-15)", () => {
   it("el aviso de la lista de progreso va al 70 % del techo", () => {
     expect(NEAR_TURN_CAP_RATIO).toBe(0.7);
+  });
+});
+
+describe("sin techo por turno (06/11, como Claude Code y DeepSeek)", () => {
+  it("el turno puede gastar todo el saldo, en cualquier plan", () => {
+    const c = CENTICREDITOS_POR_CREDITO;
+    expect(techoDelTurno({ plan: "pro", balance: 400 * c })).toBe(400 * c);
+    expect(techoDelTurno({ plan: "free", balance: 20 * c })).toBe(20 * c);
+    expect(techoDelTurno({ plan: "ultra", balance: 8000 * c })).toBe(8000 * c);
+  });
+  it("un saldo negativo no da un techo negativo", () => {
+    expect(techoDelTurno({ plan: "pro", balance: -5 })).toBe(0);
   });
 });

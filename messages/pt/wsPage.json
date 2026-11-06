@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "O agente atingiu o limite de passos por turno.",
       "tool_limit": "O agente atingiu o limite de ações por turno.",
-      "budget_limit": "O Len parou ao chegar ao limite de gasto de um turno. O que ele fez ficou salvo; se quiser que continue, é só pedir.",
+      "budget_limit": "O Len parou porque sua conta ficou sem créditos. O que ele fez ficou salvo; quando tiver créditos de novo, peça para ele continuar.",
       "cancelled": "O turno foi cancelado.",
       "truncated": "A resposta ficou sem espaço várias vezes seguidas — peça ao Len para continuar.",
       "context_too_long": "Esta conversa é longa demais e não foi possível resumi-la. Escreva /compact ou comece uma nova conversa.",

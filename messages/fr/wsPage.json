@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
       "tool_limit": "L'agent a atteint sa limite d'actions par tour.",
-      "budget_limit": "Len s'est arrêté à la limite de dépense d'un tour. Ce qu'il a fait est enregistré ; demandez-lui de continuer si vous voulez la suite.",
+      "budget_limit": "Len s'est arrêté car votre compte n'a plus de crédits. Ce qu'il a fait est enregistré ; quand vous aurez de nouveau des crédits, demandez-lui de continuer.",
       "cancelled": "Le tour a été annulé.",
       "truncated": "La réponse a manqué d'espace plusieurs fois de suite — demandez à Len de continuer.",
       "context_too_long": "Cette conversation est trop longue et n'a pas pu être résumée. Écrivez /compact ou commencez une nouvelle conversation.",

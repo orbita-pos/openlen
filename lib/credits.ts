@@ -78,30 +78,23 @@ export const CREDITS_BY_PLAN: Record<Plan, number> = {
 };
 
 /**
- * LEN 2.1 · LO MÁS QUE PUEDE GASTAR UN TURNO DEL AGENTE, por plan. Los fijó
- * Jesús el 2026-09-30: 30 créditos PRO, 10 free.
+ * LO QUE PUEDE GASTAR ESTE TURNO: el saldo con el que empieza, y nada más.
  *
- * POR QUÉ. Desde H1 el turno no topa vueltas, el saldo sólo se mira al
- * arrancar y el débito se recorta en 0 (`debitCredits`), así que un turno largo
- * lo pagaba OpenLen. Y desde 2.1 el turno sigue aunque el cliente se vaya: sin
- * esto, un turno sin nadie delante no tendría ningún límite. El más caro medido
- * en producción costó 23 (el de 25 minutos del 28/09, un PRO): el techo lo deja
- * pasar y corta el que se desboca.
+ * 🔴 SIN TECHO POR TURNO (Jesús, 2026-11-06: «ya no debería de parar, Claude
+ * Code o DeepSeek no paran»). Del 30/09 al 06/11 hubo uno por plan (30 créditos
+ * de pago, 10 free), fijado cuando el turno más caro medido costaba 23. Con los
+ * subagentes, que cuentan contra el mismo techo (`lib/agent/subagents/spend.ts`),
+ * un juego con tres en paralelo lo pasaba en un turno normal: el 06/11 dos turnos
+ * del mismo proyecto pararon con Len a 12 y 17 créditos y sus hijos completando
+ * 34 y 40. Como en Claude Code (su `maxBudgetUsd` sólo existe si alguien lo pone)
+ * y en DeepSeek (no tiene), el turno para cuando se acaba el saldo o lo para el
+ * usuario; un turno colgado lo sigue cortando el reloj de silencio.
+ *
+ * Con el saldo dentro, el turno para donde se acaba el dinero en vez de dejar
+ * que el recorte a 0 de `debitCredits` lo regale.
  */
-export const TECHO_POR_TURNO: Record<Plan, number> = {
-  free: 10 * CENTICREDITOS_POR_CREDITO,
-  pro: 30 * CENTICREDITOS_POR_CREDITO,
-  // Max y Ultra = Pro (lib/plan.ts): el techo corta el turno que se desboca,
-  // no es lo que se vende.
-  max: 30 * CENTICREDITOS_POR_CREDITO,
-  ultra: 30 * CENTICREDITOS_POR_CREDITO,
-};
-
-/** Lo que puede gastar ESTE turno: el techo de su plan o el saldo con el que
- *  empieza, lo que sea menos. Con el saldo dentro, el turno para donde se
- *  acaba el dinero en vez de dejar que el recorte a 0 lo regale. */
 export function techoDelTurno(state: Pick<CreditState, "plan" | "balance">): number {
-  return Math.max(0, Math.min(TECHO_POR_TURNO[state.plan], state.balance));
+  return Math.max(0, state.balance);
 }
 
 /** LA LISTA DE PROGRESO (spec local 2026-10-15): pasado este tanto del techo
