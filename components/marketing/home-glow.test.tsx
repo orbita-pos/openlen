@@ -101,6 +101,18 @@ describe("its stylesheet", () => {
     expect(wrapper).toContain("overflow-clip");
   });
 
+  // Final review, 06/11: on real phones `100vh` (the body's `min-h-screen`) is the LARGE viewport, taller than the
+  // home's 100svh, so a strip of the body's background (white for light-theme visitors) showed under the home, and in
+  // the overscroll bounce. On the home, the body is one small viewport tall and the home's own colour.
+  it("🔴 on the home, the body is 100svh tall and the home's colour", () => {
+    const rule = css.slice(css.indexOf("body:has(.home-page)"), css.indexOf("}", css.indexOf("body:has(.home-page)")));
+    expect(rule).toMatch(/min-height:\s*100svh/);
+    expect(rule).toMatch(/background-color:\s*#100d0c/);
+    const page = readFileSync(join(process.cwd(), "app/[locale]/page.tsx"), "utf8");
+    const wrapper = (/<div className="([^"]*dark[^"]*)"/.exec(page)?.[1] ?? "").split(/\s+/);
+    expect(wrapper).toContain("home-page");
+  });
+
   it("🔴 stands still with reduced motion: no breathing, no rising", () => {
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
     expect(reduced.length).toBeGreaterThan(40);
