@@ -12,7 +12,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CaraDeLen, type EstadoDeLaCara } from "@/components/llamada/cara-de-len";
 
-type Signals = {
+export type Signals = {
   focused: boolean;
   hasText: boolean;
   listening: boolean;
@@ -27,6 +27,15 @@ const GREETING_MS = 2400;
 
 const ReportContext = createContext<(patch: Partial<Signals>) => void>(() => {});
 const StateContext = createContext<EstadoDeLaCara>("reposo");
+const PersonContext = createContext(false);
+
+/** Whether the PERSON is typing or dictating in the box — what the home's light answers to (spec local
+ *  2026-11-06-portada-solo-input). Not the face's state: that also lights up while the box types its own examples
+ *  (`ghost`) and while the sign-in dialog is open after sending (`sent`), and the light would pulse by itself. Once
+ *  sent, nobody is typing — even with Enter, which leaves the box focused and full while the dialog is open. */
+export function personActive(s: Signals): boolean {
+  return !s.sent && ((s.focused && s.hasText) || s.listening);
+}
 
 export function HeroLenProvider({ children }: { children: ReactNode }) {
   const [signals, setSignals] = useState(INITIAL);
@@ -53,21 +62,41 @@ export function HeroLenProvider({ children }: { children: ReactNode }) {
     return "reposo";
   }, [signals, greeting]);
 
+  const person = personActive(signals);
+
   return (
     <ReportContext.Provider value={report}>
-      <StateContext.Provider value={state}>{children}</StateContext.Provider>
+      <StateContext.Provider value={state}>
+        <PersonContext.Provider value={person}>{children}</PersonContext.Provider>
+      </StateContext.Provider>
     </ReportContext.Provider>
   );
+}
+
+/** See `personActive`. `false` outside the provider. */
+export function useHeroLenPersonActive(): boolean {
+  return useContext(PersonContext);
 }
 
 export function useHeroLenReport() {
   return useContext(ReportContext);
 }
 
-/** El estado que toca ahora (saludo, escucha, pensando…), para la cara que
- *  hace de «o» en el titular (`len-letra.tsx`). */
+/** El estado que toca ahora (saludo, escucha, pensando…), para la cara de Len. */
 export function useHeroLenState() {
   return useContext(StateContext);
+}
+
+/** LEN EN EL MENÚ DE LA PORTADA (Jesús, 06/11): la pregunta va sin cara, y la cara viva pasa al sitio de la marca.
+ *  Saluda al llegar, escucha mientras escribes o dictas en la caja y piensa al enviar — el proveedor envuelve la
+ *  portada entera (`app/[locale]/page.tsx`), así que el menú y la caja comparten estado. */
+export function HeroLenMark({ className }: { className?: string }) {
+  const state = useContext(StateContext);
+  return (
+    <span data-len-mark className={className ? `relative inline-block ${className}` : "relative inline-block"} aria-hidden>
+      <CaraDeLen estado={state} props="none" className="absolute inset-0" />
+    </span>
+  );
 }
 
 export function HeroLenFace({ className }: { className?: string }) {

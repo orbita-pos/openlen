@@ -58,6 +58,8 @@ export function LocaleSwitcher({
   // Se decide midiendo, no con un prop: los cuatro sitios que lo montan tienen
   // anclajes distintos y ninguno debería tener que acordarse de esto.
   const [arriba, setArriba] = useState(false);
+  // La altura de la lista, medida al abrir: nunca más que el hueco del lado al que abre (max-h-72 = 288 px).
+  const [alto, setAlto] = useState(288);
   const ref = useRef<HTMLDivElement>(null);
   // While an AI generation is in flight on /new, switching locale would
   // navigate + remount the workspace and drop the page being built — so the
@@ -99,8 +101,19 @@ export function LocaleSwitcher({
           // Se mide ANTES de pintar la lista —en el disparador, que ya está en
           // pantalla— para que no haya un fotograma con la lista en el sitio
           // equivocado. 296px = max-h-72 (288) + el hueco de 8.
+          //
+          // Abre hacia el lado con MÁS hueco si abajo no caben los 296, y la
+          // lista nunca pasa de ese hueco (06/11): en el pie de la portada, en
+          // una ventana baja, abría hacia abajo (sólo subía con ≥ 296 arriba) y
+          // el `overflow-clip` de la portada la cortaba.
           const r = ref.current?.getBoundingClientRect();
-          if (r) setArriba(window.innerHeight - r.bottom < 296 && r.top > 296);
+          if (r) {
+            const abajo = window.innerHeight - r.bottom - 8;
+            const encima = r.top - 8;
+            const sube = abajo < 288 && encima > abajo;
+            setArriba(sube);
+            setAlto(Math.max(120, Math.min(288, sube ? encima : abajo)));
+          }
           setOpen((v) => !v);
         }}
         disabled={pending || busy}
@@ -133,6 +146,7 @@ export function LocaleSwitcher({
         <div
           role="listbox"
           aria-label={t("language")}
+          style={{ maxHeight: alto }}
           className={cn(
             "absolute right-0 z-50 max-h-72 w-44 overflow-y-auto p-1",
             arriba ? "bottom-full mb-2" : "mt-2",

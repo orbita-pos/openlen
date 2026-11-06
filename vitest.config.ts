@@ -53,6 +53,16 @@ export default defineConfig({
       "components/workspace/publish-modal-datos.test.tsx",
       // La píldora Página/App del input de la portada. LISTA BLANCA.
       "components/marketing/hero-kind-picker.test.tsx",
+      // La portada es sólo el input (spec local 2026-11-06-portada-solo-input). LISTA BLANCA.
+      "components/marketing/home-hash-router.test.tsx",
+      "components/marketing/hero-len.test.tsx",
+      "components/marketing/hero-prompt-input.test.tsx",
+      "components/marketing/home-shell.test.tsx",
+      "components/marketing/home-glow.test.tsx",
+      "components/marketing/marketing-chrome.test.tsx",
+      "components/marketing/len-companion.test.tsx",
+      "components/locale-switcher.test.tsx",
+      "components/marketing/home-question.test.tsx",
       "tools/template-visual-metadata-reviewer/**/*.test.ts",
       "tools/template-visual-metadata-reviewer/**/*.test.tsx",
       "tools/visual-engine-2a-reviewer/**/*.test.ts",

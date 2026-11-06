@@ -13,8 +13,29 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "V<len>o</len>tre propre développeur web. <gradient>Len.</gradient>",
-    "announce": "<strong>Len crée maintenant des apps</strong><dot></dot>Essayer gratuitement",
+    "question": "Par quoi on commence ?",
+    "questions": {
+      "morning": [
+        "Bonjour. Par quoi on commence ?",
+        "On fait quoi aujourd'hui ?",
+        "Café à la main. On construit quoi ?"
+      ],
+      "afternoon": [
+        "On continue avec quoi ?",
+        "On fait quoi cet après-midi ?",
+        "Bon après-midi. On construit quoi ?"
+      ],
+      "evening": [
+        "Bonsoir. On fait quoi ?",
+        "Qu'est-ce qu'on termine aujourd'hui ?",
+        "On le prépare pour demain ?"
+      ],
+      "night": [
+        "Encore debout ? Racontez-moi votre idée.",
+        "Les meilleures idées arrivent à cette heure-ci. Quelle est la vôtre ?",
+        "Pas sommeil ? Faisons votre page."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> pages générées cette semaine",
     "githubAria": "OpenLen sur GitHub",
     "starOnGithub": "Mettre une étoile sur GitHub",
@@ -23,7 +44,6 @@
   "heroPrompt": {
     "placeholder": "Dites à Len ce dont vous avez besoin…",
     "generate": "Générer",
-    "tryLabel": "Par exemple",
     "dictate": "Dicter",
     "stopDictating": "Arrêter la dictée",
     "micDenied": "Votre navigateur a bloqué le micro. Autorisez-le dans la barre d'adresse pour dicter.",
@@ -35,24 +55,6 @@
     "removeImage": "Retirer l'image",
     "attachedAlt": "Référence jointe",
     "micSilent": "Le micro s'est ouvert mais rien n'a été reconnu. Vérifiez que Chrome utilise la bonne entrée et que vous avez une connexion — la reconnaissance vocale tourne sur le service de votre navigateur, pas sur OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Ma boulangerie",
-        "prompt": "Une page pour ma boulangerie « La Espiga » : viennoiseries, gâteaux sur commande, horaires, plan d’accès et un bouton pour commander sur WhatsApp."
-      },
-      "barber": {
-        "label": "Réservations barbier",
-        "prompt": "Une page pour mon salon de barbier avec trois barbiers : coupes et tarifs, photos du salon et un formulaire pour réserver un créneau."
-      },
-      "photographer": {
-        "label": "Portfolio photo",
-        "prompt": "Mon portfolio de photographe de mariage : une galerie par mariage, le contenu de chaque formule et un formulaire pour demander une date."
-      },
-      "course": {
-        "label": "Ma formation en ligne",
-        "prompt": "Une landing page pour ma formation en ligne de pâtisserie : programme semaine par semaine, prix de 49 $, témoignages d’élèves et un bouton d’inscription."
-      }
-    },
     "ghost": [
       "Une page pour ma boulangerie, avec commandes sur WhatsApp",
       "La réservation en ligne pour mon salon de barbier",
@@ -329,5 +331,18 @@
     "cta": "Comment le connecter",
     "worksWith": "Fonctionne avec",
     "anyClient": "Et avec tout autre client qui parle MCP."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Ce que Len fait pour votre page",
+      "description": "Len construit votre page ou votre app, la publie sur votre domaine, vous dit qui l'a visitée et qui vous a écrit, et se connecte à l'assistant IA que vous utilisez déjà. Open source.",
+      "heading": "Ce que Len fait pour vous",
+      "subheading": "Dites-lui ce dont vous avez besoin. Il le construit, le publie et vous prévient quand quelqu'un vous écrit."
+    },
+    "pricing": {
+      "title": "OpenLen — Tarifs",
+      "description": "Commencez gratuitement. Des formules pour quand vous utilisez Len pour de vrai, avec des crédits pour les pages, les apps et les jeux. Open source, AGPLv3.",
+      "heading": "Tarifs"
+    }
   }
 }

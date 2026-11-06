@@ -21,6 +21,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPaths = [
     { path: "", changeFrequency: "weekly" as const, priority: 1.0 },
     { path: "/templates", changeFrequency: "weekly" as const, priority: 0.9 },
+    // Pages since 06/11 (spec local 2026-11-06-portada-solo-input): what the home used to say lives here now.
+    { path: "/features", changeFrequency: "monthly" as const, priority: 0.8 },
+    { path: "/pricing", changeFrequency: "monthly" as const, priority: 0.8 },
   ];
 
   const templates = await listTemplates();

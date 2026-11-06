@@ -12,8 +12,9 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 
 const links = [
   { labelKey: "nav.links.templates", href: "/templates" },
-  { labelKey: "nav.links.features", href: "/#features" },
-  { labelKey: "nav.links.pricing", href: "/#pricing" },
+  // Pages since 06/11 (spec local 2026-11-06-portada-solo-input): the home is only the input.
+  { labelKey: "nav.links.features", href: "/features" },
+  { labelKey: "nav.links.pricing", href: "/pricing" },
   { labelKey: "nav.links.docs", href: "/docs" },
 ] as const;
 

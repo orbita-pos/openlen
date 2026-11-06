@@ -9,6 +9,8 @@ import { Footer } from "./footer";
  * Client-side wrapper that owns the dark-mode hook + renders Nav + Footer
  * around its children. Lets server-rendered marketing pages compose the
  * standard chrome without each one needing to be `"use client"` themselves.
+ *
+ * The home is not here since 06/11: it is the start frame, shared with /new (`home-shell.tsx`).
  */
 export function MarketingChrome({ children }: { children: ReactNode }) {
   const [dark, toggleDark] = useDarkMode();

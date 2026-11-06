@@ -13,8 +13,29 @@
     "menu": "菜单"
   },
   "hero": {
-    "title": "你的专属网页开发者。<len></len><gradient>Len。</gradient>",
-    "announce": "<strong>Len 现在也能做应用了</strong><dot></dot>免费试用",
+    "question": "我们从哪里开始？",
+    "questions": {
+      "morning": [
+        "早上好。我们从哪里开始？",
+        "今天做点什么？",
+        "咖啡在手。我们做点什么？"
+      ],
+      "afternoon": [
+        "接下来做什么？",
+        "今天下午做点什么？",
+        "下午好。我们做点什么？"
+      ],
+      "evening": [
+        "晚上好。我们做点什么？",
+        "今天要完成什么？",
+        "要不要为明天准备好？"
+      ],
+      "night": [
+        "还没睡？说说你的想法。",
+        "好点子总在这个时候出现。你的是什么？",
+        "睡不着？我们来做你的页面吧。"
+      ]
+    },
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "在 GitHub 上 Star",
@@ -23,7 +44,6 @@
   "heroPrompt": {
     "placeholder": "告诉 Len 你需要什么……",
     "generate": "生成",
-    "tryLabel": "例如",
     "dictate": "语音输入",
     "stopDictating": "停止语音输入",
     "micDenied": "浏览器已阻止麦克风。请在地址栏中允许后即可语音输入。",
@@ -35,24 +55,6 @@
     "removeImage": "移除图片",
     "attachedAlt": "已添加的参考图",
     "micSilent": "麦克风已开启，但未识别到任何内容。请确认 Chrome 使用的是正确的输入设备，并且网络可用——语音识别运行在浏览器的语音服务上，而不是 OpenLen。",
-    "asks": {
-      "bakery": {
-        "label": "我的面包店",
-        "prompt": "为我的面包店「La Espiga」做一个页面：甜面包、定制蛋糕、营业时间、交通路线，以及一个通过 WhatsApp 下单的按钮。"
-      },
-      "barber": {
-        "label": "理发店预约",
-        "prompt": "为我的理发店做一个页面，店里有三位理发师：剪发项目和价格、店面照片，以及一个预约时段的表单。"
-      },
-      "photographer": {
-        "label": "摄影作品集",
-        "prompt": "我的婚礼摄影作品集：每场婚礼一个相册、每个套餐包含的内容，以及一个预约档期的表单。"
-      },
-      "course": {
-        "label": "我的在线课程",
-        "prompt": "为我的在线烘焙课程做一个着陆页：按周排列的课程大纲、49 美元的价格、学员评价和一个报名按钮。"
-      }
-    },
     "ghost": [
       "一个能用 WhatsApp 下单的面包店页面",
       "理发店的在线预约",
@@ -329,5 +331,18 @@
     "cta": "如何连接",
     "worksWith": "支持",
     "anyClient": "以及任何支持 MCP 的其他客户端。"
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Len 能为你的页面做什么",
+      "description": "Len 为你搭建页面或应用，发布到你的域名，告诉你谁来访问过、谁给你留了言，还能连接你已经在用的 AI 助手。开源。",
+      "heading": "Len 能为你做什么",
+      "subheading": "告诉它你需要什么。它来搭建、发布，有人联系你时会通知你。"
+    },
+    "pricing": {
+      "title": "OpenLen — 定价",
+      "description": "免费开始。真正用起来时有相应的方案，附带用于页面、应用和游戏的积分。开源，AGPLv3。",
+      "heading": "定价"
+    }
   }
 }

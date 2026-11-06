@@ -333,7 +333,10 @@
       "toolHeadline": "De quel outil avez-vous besoin ?",
       "toolSubtitle": "Len le construit et il reste dans votre OpenLen : dans la barre latérale ou dans vos projets.",
       "toolPlaceholder": "Quelque chose pour voir les réservations du jour et les confirmer…"
-    }
+    },
+    "closeMenu": "Fermer le menu",
+    "pasteTitle": "Coller du HTML",
+    "pasteHint": "Partez d'une page que vous avez déjà"
   },
   "empty": {
     "badge": "Espace de travail OpenLen",
@@ -454,7 +457,8 @@
     "crear": "Créer",
     "mispaginas": "Mes pages",
     "comunidad": "Communauté",
-    "herramientas": "Outils"
+    "herramientas": "Outils",
+    "plantillas": "Modèles"
   },
   "resultadosTabs": {
     "page": "Page",

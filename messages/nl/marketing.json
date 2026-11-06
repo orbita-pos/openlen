@@ -13,8 +13,29 @@
     "menu": "Menu"
   },
   "hero": {
-    "title": "Je eigen web<len>o</len>ntwikkelaar. <gradient>Len.</gradient>",
-    "announce": "<strong>Len bouwt nu ook apps</strong><dot></dot>Probeer gratis",
+    "question": "Waar beginnen we mee?",
+    "questions": {
+      "morning": [
+        "Goedemorgen. Waar beginnen we mee?",
+        "Wat maken we vandaag?",
+        "Koffie in de hand. Wat bouwen we?"
+      ],
+      "afternoon": [
+        "Waar gaan we mee verder?",
+        "Wat maken we vanmiddag?",
+        "Goedemiddag. Wat bouwen we?"
+      ],
+      "evening": [
+        "Goedenavond. Wat gaan we doen?",
+        "Wat maken we vandaag nog af?",
+        "Zetten we het klaar voor morgen?"
+      ],
+      "night": [
+        "Nog wakker? Vertel me je idee.",
+        "Op dit uur komen de beste ideeën. Wat is het jouwe?",
+        "Kun je niet slapen? Laten we je pagina maken."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",
@@ -23,7 +44,6 @@
   "heroPrompt": {
     "placeholder": "Vertel Len wat je nodig hebt…",
     "generate": "Genereren",
-    "tryLabel": "Bijvoorbeeld",
     "dictate": "Dicteren",
     "stopDictating": "Stoppen met dicteren",
     "micDenied": "Je browser blokkeerde de microfoon. Sta hem toe in de adresbalk om te dicteren.",
@@ -35,24 +55,6 @@
     "removeImage": "Afbeelding verwijderen",
     "attachedAlt": "Toegevoegde referentie",
     "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Mijn bakkerij",
-        "prompt": "Een pagina voor mijn bakkerij ‘La Espiga’: zoet brood, taarten op bestelling, openingstijden, routebeschrijving en een knop om via WhatsApp te bestellen."
-      },
-      "barber": {
-        "label": "Afspraken barbershop",
-        "prompt": "Een pagina voor mijn barbershop met drie barbiers: knipbeurten en prijzen, foto’s van de zaak en een formulier om een tijdslot te boeken."
-      },
-      "photographer": {
-        "label": "Fotoportfolio",
-        "prompt": "Mijn portfolio als trouwfotograaf: een galerij per bruiloft, wat elk pakket inhoudt en een formulier om een datum aan te vragen."
-      },
-      "course": {
-        "label": "Mijn online cursus",
-        "prompt": "Een landingspagina voor mijn online bakcursus: lesprogramma per week, prijs $49, ervaringen van cursisten en een inschrijfknop."
-      }
-    },
     "ghost": [
       "Een pagina voor mijn bakkerij, met bestellen via WhatsApp",
       "Online afspraken voor mijn barbershop",
@@ -329,5 +331,18 @@
     "cta": "Zo koppel je hem",
     "worksWith": "Werkt met",
     "anyClient": "En met elke andere client die MCP spreekt."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Wat Len voor je pagina doet",
+      "description": "Len bouwt je pagina of app, publiceert die op je domein, laat zien wie hem bezocht en wie je schreef, en koppelt met de AI-assistent die je al gebruikt. Open source.",
+      "heading": "Wat Len voor je doet",
+      "subheading": "Vertel wat je nodig hebt. Len bouwt het, publiceert het en laat je weten wanneer iemand je schrijft."
+    },
+    "pricing": {
+      "title": "OpenLen — Prijzen",
+      "description": "Begin gratis. Abonnementen voor wanneer je Len echt gebruikt, met credits voor pagina's, apps en games. Open source, AGPLv3.",
+      "heading": "Prijzen"
+    }
   }
 }
