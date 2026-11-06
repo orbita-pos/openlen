@@ -66,9 +66,14 @@ export async function generateMetadata({
 // detrás del pie, y su caja baja más allá de la pantalla) y es aquí donde se
 // recorta, sin barra de scroll. `clip` y no `hidden` (2026-09-02): recorta
 // sin crear un contenedor de scroll, que rompería el `sticky` de la nav.
+//
+// `isolate` AQUÍ y no en el héroe: la luz (z-index -1) necesita un contexto
+// de apilamiento por encima del fondo de la página; puesto en el héroe,
+// encerraba el diálogo de entrar (`fixed z-[60]`) por debajo del menú (z-50)
+// y del pie (z-10).
 export default function HomePage() {
   return (
-    <div className="dark relative flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
+    <div className="dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
       <MarketingChrome variant="home">
         <Hero />
         <HomeHashRouter />

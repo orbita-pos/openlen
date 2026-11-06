@@ -87,14 +87,18 @@ describe("its stylesheet", () => {
     expect(grain).toMatch(/inset:\s*-100svh\s+-50vw/);
   });
 
-  it("🔴 the hero doesn't clip the light; the home's wrapper clips both axes", () => {
+  // The stacking context that keeps the light (z-index -1) above the page's background lives on the HOME'S WRAPPER,
+  // not on the hero: on the hero it trapped the sign-in dialog (`fixed z-[60]`, inside the hero) under the sticky menu
+  // (z-50) and the footer row (z-10) — found in the final review, 06/11.
+  it("🔴 the hero doesn't clip the light nor trap the sign-in dialog; the home's wrapper isolates and clips", () => {
     const hero = readFileSync(join(process.cwd(), "components/marketing/hero.tsx"), "utf8");
     const section = /<section className="([^"]+)"/.exec(hero)?.[1] ?? "";
-    expect(section).toContain("isolate");
+    expect(section.split(/\s+/)).not.toContain("isolate");
     expect(section).not.toContain("overflow-hidden");
     const page = readFileSync(join(process.cwd(), "app/[locale]/page.tsx"), "utf8");
-    const wrapper = /<div className="([^"]*dark[^"]*)"/.exec(page)?.[1] ?? "";
-    expect(wrapper.split(/\s+/)).toContain("overflow-clip");
+    const wrapper = (/<div className="([^"]*dark[^"]*)"/.exec(page)?.[1] ?? "").split(/\s+/);
+    expect(wrapper).toContain("isolate");
+    expect(wrapper).toContain("overflow-clip");
   });
 
   it("🔴 stands still with reduced motion: no breathing, no rising", () => {
