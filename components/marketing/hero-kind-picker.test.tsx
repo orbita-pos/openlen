@@ -16,12 +16,13 @@ vi.mock("next-intl", () => ({
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
-function Arnes({ conJuego = false }: { conJuego?: boolean }) {
+type Opts = { conJuego?: boolean; conHerramienta?: boolean; herramientaBloqueada?: string; disabled?: boolean; piel?: "portada" | "taller" };
+function Arnes(o: Opts) {
   const [v, setV] = useState<NaceComo>("pagina");
   return (
     <HeroKindPicker
       value={v}
-      conJuego={conJuego}
+      {...o}
       onChange={(x) => {
         vistos.push(x);
         setV(x);
@@ -29,7 +30,7 @@ function Arnes({ conJuego = false }: { conJuego?: boolean }) {
     />
   );
 }
-function render(o: { conJuego?: boolean } = {}) {
+function render(o: Opts = {}) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   act(() => {
@@ -84,5 +85,62 @@ describe("la píldora Página/App de la portada", () => {
     act(() => opciones(c)[2].click());
     expect(vistos).toEqual(["game"]);
     expect(disparador(c).textContent).toContain("start.kind.game");
+  });
+});
+
+// THE SAME PILL IN /new (Jesús, 06/11: «que el input tenga un select como lo tiene la page /»): the four cards
+// above the composer pushed it down; now the choice lives inside it, so it also offers Herramienta.
+describe("the pill inside the /new composer", () => {
+  it("with games and tools on: Página, App, Juego, Herramienta — and choosing Herramienta makes the pill say it", () => {
+    const c = render({ conJuego: true, conHerramienta: true, piel: "taller" });
+    act(() => disparador(c).click());
+    expect(opciones(c).map((o) => o.textContent)).toEqual([
+      expect.stringContaining("start.kind.pageHint"),
+      expect.stringContaining("start.kind.appHint"),
+      expect.stringContaining("start.kind.gameHint"),
+      expect.stringContaining("start.kind.toolHint"),
+    ]);
+    act(() => opciones(c)[3].click());
+    expect(vistos).toEqual(["tool"]);
+    expect(disparador(c).textContent).toContain("start.kind.tool");
+  });
+
+  it("🔴 on Free, Herramienta says why and can't be chosen", () => {
+    const c = render({ conHerramienta: true, herramientaBloqueada: "Necesitas un plan de pago", piel: "taller" });
+    act(() => disparador(c).click());
+    const tool = opciones(c)[2];
+    expect(tool.textContent).toContain("Necesitas un plan de pago");
+    expect(tool.disabled).toBe(true);
+    act(() => tool.click());
+    expect(vistos).toEqual([]);
+  });
+
+  it("while the first message is being sent, the pill doesn't open", () => {
+    const c = render({ disabled: true, piel: "taller" });
+    expect(disparador(c).disabled).toBe(true);
+    act(() => disparador(c).click());
+    expect(opciones(c)).toHaveLength(0);
+  });
+
+  it("in the workspace it wears the workspace's tokens, not the home page's zinc", () => {
+    const c = render({ piel: "taller" });
+    act(() => disparador(c).click());
+    const menu = c.querySelector<HTMLElement>('[role="menu"]')!;
+    expect(menu.className).toContain("bg-elev");
+    expect(menu.className).not.toContain("bg-white");
+    expect(disparador(c).className).not.toContain("zinc");
+  });
+
+  // Seen in the browser on 06/11: in /new the composer sits near the top, under the header, so a menu opening
+  // upwards (as on the home page, where the input sits low) hid Página and App behind the header.
+  it("🔴 in the workspace the menu opens downwards; on the home page, upwards as before", () => {
+    const taller = render({ piel: "taller" });
+    act(() => disparador(taller).click());
+    const abajo = taller.querySelector<HTMLElement>('[role="menu"]')!.className;
+    expect(abajo).toContain("top-[calc(100%+8px)]");
+    expect(abajo).not.toContain("bottom-[calc(100%+8px)]");
+    const portada = render();
+    act(() => disparador(portada).click());
+    expect(portada.querySelector<HTMLElement>('[role="menu"]')!.className).toContain("bottom-[calc(100%+8px)]");
   });
 });

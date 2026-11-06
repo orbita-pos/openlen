@@ -38,7 +38,8 @@ import { useFileDrop } from "./chat/use-file-drop";
 import { DropOverlay } from "./chat/drop-overlay";
 import { useToast } from "./toast";
 import { registrarUso } from "@/lib/uso/cliente";
-import { TarjetasNaceComo, type NaceComo } from "./tarjetas-nace-como";
+import type { NaceComo } from "./tarjetas-nace-como";
+import { HeroKindPicker } from "@/components/marketing/hero-kind-picker";
 import { CajaConMenciones } from "./hilos-del-codigo";
 import { hasLink } from "@/lib/chat/links";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
@@ -59,16 +60,25 @@ export interface StartLandingProps {
   onPreviewTemplate: (t: TemplateSpec) => void;
   /** Switch to the paste-HTML entry flow. */
   onPaste: () => void;
-  /** Página o App: las dos tarjetas de encima del compositor. */
+  /** What the project is born as: the pill in the composer's row (it was a grid of cards above it until 06/11). */
   naceComo: NaceComo;
   onNaceComoChange: (v: NaceComo) => void;
-  /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): the third card, when tools are on. */
+  /** TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): Herramienta in the pill, when tools are on. */
   conHerramienta?: boolean;
   /** Why the tool card can't be chosen (the Free plan). */
   herramientaBloqueada?: string;
-  /** THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): the «Juego» card, when games are on. */
+  /** THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Juego in the pill, when games are on. */
   conJuego?: boolean;
 }
+
+/** The kind choice the start screen hands its composer. */
+type KindChoice = {
+  value: NaceComo;
+  onChange: (v: NaceComo) => void;
+  conJuego: boolean;
+  conHerramienta: boolean;
+  herramientaBloqueada?: string;
+};
 
 /** What the empty state says for each kind: its headline, its subtitle and the composer's placeholder. */
 const TEXTS: Record<NaceComo, { headline: string; subtitle: string; placeholder?: string }> = {
@@ -168,11 +178,10 @@ export function StartLanding({
             </p>
           </div>
 
-          {/* PÁGINA O APP, y debajo el compositor de siempre. */}
+          {/* The composer, with what the project is born as in its own row — the
+              home page's pill (Jesús, 06/11: the grid of cards above it pushed it
+              down). */}
           <div className="max-w-2xl mx-auto">
-            <div className="mb-4">
-              <TarjetasNaceComo value={naceComo} onChange={onNaceComoChange} disabled={generating} conJuego={conJuego} conHerramienta={conHerramienta} {...(herramientaBloqueada ? { herramientaBloqueada } : {})} />
-            </div>
             <HeroComposer
               state={aiState}
               onGenerate={onGenerate}
@@ -180,6 +189,7 @@ export function StartLanding({
               effort={effort}
               onEffortChange={onEffortChange}
               addFilesRef={addFilesRef}
+              kind={{ value: naceComo, onChange: onNaceComoChange, conJuego, conHerramienta, ...(herramientaBloqueada ? { herramientaBloqueada } : {}) }}
               {...(TEXTS[naceComo].placeholder ? { placeholder: tw(TEXTS[naceComo].placeholder) } : {})}
             />
             {/* Pegar HTML y la galería son de PÁGINAS: con App elegida no hay
@@ -353,6 +363,7 @@ export function HeroComposer({
   onEffortChange,
   placeholder,
   addFilesRef,
+  kind,
 }: {
   state: BriefFormState;
   onGenerate: () => void;
@@ -363,6 +374,8 @@ export function HeroComposer({
   placeholder?: string;
   /** Where the composer lends its way in to a drop zone around it (the start screen). */
   addFilesRef?: MutableRefObject<((files: File[]) => void) | null>;
+  /** What the project is born as: the home page's pill in this composer's row (Jesús, 06/11). Absent = no pill. */
+  kind?: KindChoice;
 }) {
   const t = useTranslations("panelsA");
   const tm = useTranslations("marketing");
@@ -684,6 +697,17 @@ export function HeroComposer({
             >
               {dictado.escuchando ? <Square size={11} className="fill-current" /> : <Mic size={15} />}
             </button>
+          )}
+          {kind && (
+            <HeroKindPicker
+              piel="taller"
+              value={kind.value}
+              onChange={kind.onChange}
+              disabled={generating}
+              conJuego={kind.conJuego}
+              conHerramienta={kind.conHerramienta}
+              {...(kind.herramientaBloqueada ? { herramientaBloqueada: kind.herramientaBloqueada } : {})}
+            />
           )}
           {/* ⚰️ Aquí iba el selector de QUÉ MOTOR ESCRIBE; se fue con Crear
               (2026-10-06). El botón se queda al final de la fila. */}
