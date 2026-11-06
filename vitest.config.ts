@@ -56,6 +56,7 @@ export default defineConfig({
       // La portada es sólo el input (spec local 2026-11-06-portada-solo-input). LISTA BLANCA.
       "components/marketing/home-hash-router.test.tsx",
       "components/marketing/hero-len.test.tsx",
+      "components/marketing/hero-prompt-input.test.tsx",
       "components/marketing/home-glow.test.tsx",
       "components/marketing/marketing-chrome.test.tsx",
       "components/marketing/len-companion.test.tsx",
