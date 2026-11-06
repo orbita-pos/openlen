@@ -329,5 +329,18 @@
     "cta": "接続方法",
     "worksWith": "対応クライアント",
     "anyClient": "MCP に対応したほかのクライアントでも使えます。"
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Len があなたのページにできること",
+      "description": "Len はページやアプリを作り、あなたのドメインで公開し、誰が訪れて誰が連絡してきたかを伝え、Claude や ChatGPT などとも連携します。オープンソース。",
+      "heading": "Len があなたにできること",
+      "subheading": "必要なことを伝えるだけ。Len が作って公開し、誰かから連絡があればお知らせします。"
+    },
+    "pricing": {
+      "title": "OpenLen — 料金",
+      "description": "無料で始められます。本格的に使うときのプランには、ページ・アプリ・ゲーム用のクレジットが付きます。オープンソース、AGPLv3。",
+      "heading": "料金"
+    }
   }
 }

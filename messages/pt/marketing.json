@@ -329,5 +329,18 @@
     "cta": "Como conectar",
     "worksWith": "Funciona com",
     "anyClient": "E com qualquer outro cliente que fale MCP."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — O que o Len faz pela sua página",
+      "description": "O Len constrói sua página ou app, publica no seu domínio, mostra quem visitou e quem te escreveu, e trabalha com Claude, ChatGPT e mais. Código aberto.",
+      "heading": "O que o Len faz por você",
+      "subheading": "Conte o que você precisa. Ele constrói, publica e te avisa quando alguém te escreve."
+    },
+    "pricing": {
+      "title": "OpenLen — Preços",
+      "description": "Comece grátis. Planos para quando você usar o Len de verdade, com créditos para páginas, apps e jogos. Código aberto, AGPLv3.",
+      "heading": "Preços"
+    }
   }
 }

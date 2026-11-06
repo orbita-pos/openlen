@@ -329,5 +329,18 @@
     "cta": "如何连接",
     "worksWith": "支持",
     "anyClient": "以及任何支持 MCP 的其他客户端。"
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Len 能为你的页面做什么",
+      "description": "Len 为你搭建页面或应用，发布到你的域名，告诉你谁来访问过、谁给你留了言，还能和 Claude、ChatGPT 等一起工作。开源。",
+      "heading": "Len 能为你做什么",
+      "subheading": "告诉它你需要什么。它来搭建、发布，有人联系你时会通知你。"
+    },
+    "pricing": {
+      "title": "OpenLen — 价格",
+      "description": "免费开始。真正用起来时有相应的方案，附带用于页面、应用和游戏的积分。开源，AGPLv3。",
+      "heading": "价格"
+    }
   }
 }

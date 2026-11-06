@@ -329,5 +329,18 @@
     "cta": "So verbindest du ihn",
     "worksWith": "Funktioniert mit",
     "anyClient": "Und mit jedem anderen Client, der MCP spricht."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Was Len für deine Seite tut",
+      "description": "Len baut deine Seite oder App, veröffentlicht sie auf deiner Domain, zeigt dir, wer sie besucht und wer dir geschrieben hat, und arbeitet mit Claude, ChatGPT und mehr. Open Source.",
+      "heading": "Was Len für dich tut",
+      "subheading": "Sag ihm, was du brauchst. Er baut es, veröffentlicht es und sagt dir Bescheid, wenn dir jemand schreibt."
+    },
+    "pricing": {
+      "title": "OpenLen — Preise",
+      "description": "Starte kostenlos. Pläne für die echte Nutzung von Len, mit Credits für Seiten, Apps und Spiele. Open Source, AGPLv3.",
+      "heading": "Preise"
+    }
   }
 }
