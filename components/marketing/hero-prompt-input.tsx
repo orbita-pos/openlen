@@ -1,164 +1,78 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
-import {
-  ArrowUp,
-  ImageIcon,
-  Loader2,
-  Mic,
-  Plus,
-  Sparkles,
-  Square,
-  X,
-} from "lucide-react";
-import "@/components/workspace-v2/chat/new-chat.css";
-import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
-import { cn } from "@/lib/cn";
-import { useDictado } from "./use-dictado";
+import { Sparkles, X } from "lucide-react";
 import { useHeroLenReport } from "./hero-len";
 import { useGhostTyping } from "./use-ghost-typing";
-import { reducirImagen } from "./reducir-imagen";
 import {
   dejarReferenciasEnTransito,
   olvidarReferenciasEnTransito,
 } from "@/lib/referencia-en-transito";
-import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import { dropFirstMessage, leaveFirstMessage } from "@/lib/marketing/first-message-in-transit";
-import {
-  GenerationBriefLimitFeedback,
-  useGenerationBriefLimit,
-} from "@/components/generation-brief-limit";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
 import { newProjectHref } from "@/components/workspace-v2/chat/nace-como";
-import { HeroKindPicker } from "./hero-kind-picker";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
+import { PromptBox, type PromptBoxPhoto } from "@/components/prompt-box";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Hero prompt input — the homepage entry into AI generation. Mirrors the
-// /new AI brief panel: same quick-prompts, same composer affordances.
+// THE HOME'S BOX — the way in (Jesús, 09/10: the box itself, not a button that leads to it).
 //
-// Submit, when signed in, routes to /new?brief=… — the brief arrives WRITTEN
-// in the blank project's composer and nothing is sent until the user does
-// (plans/crear-es-len, like DeepSeek). When signed out, a dialog asks the user
-// to sign in first — the brief rides along via ?next= so nothing is lost.
+// It is /new's box (`components/prompt-box.tsx`, Jesús, 06/11: «dos inputs así es duplicación») in the home's
+// colours. What stays here is what is the home's: the text lives here until it is sent, the box types examples while
+// nobody touches it, Len's face in the menu watches it, and «send» is THE send: it leaves the one-use ticket /new sends
+// on arrival (`lib/marketing/first-message-in-transit.ts`) and goes to /new with the brief — which, if the storage is
+// blocked, still arrives written in /new's box. Signed out, a dialog asks to sign in first; the brief rides along in
+// `?next=` and the ticket waits in this tab, unless the dialog is closed.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function HeroPromptInput() {
   const t = useTranslations("marketing");
-  const tp = useTranslations("panelsA");
-  const locale = useLocale();
+  const tw = useTranslations("wsChrome");
   const router = useRouter();
   const { status } = useSession();
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
-  // PÁGINA O APP (la píldora del input). Página por defecto, como en /new.
+  // What the project is born as (the pill). A page by default, as in /new.
   const [kind, setKind] = useState<NaceComo>("pagina");
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Juego in the pill, unless games are off here.
   const juegos = useGamesAvailable();
-  const tw = useTranslations("wsChrome");
-  // LAS FOTOS ADJUNTAS. Hasta `MAX_REFERENCIAS`.
-  //
-  // AQUI DECIA "una sola a proposito", y el motivo que daba era bueno: con dos
-  // referencias el modelo promedia dos direcciones visuales y saca una tercera
-  // que no es ninguna de las dos. Eso NO era un capricho y sigue siendo verdad.
-  //
-  // Lo que estaba mal era la solucion. El problema no es que haya dos imagenes:
-  // es que llegaban al modelo SIN UNA LINEA que dijera que eran, y ante dos
-  // imagenes mudas promediar es lo razonable. Casi nunca son dos versiones del
-  // mismo estilo — son el logo, el local y un tablero de inspiracion, tres
-  // cosas distintas que la pagina necesita a la vez—, y obligar a elegir una
-  // era pagar el precio entero para no escribir esa linea.
-  //
-  // Ahora la linea existe: el contexto de Len antepone un bloque cuando llegan
-  // varias (`attachedImagesBlock`, lib/agent/context.ts; hasta el 2026-10-06
-  // lo hacia `/api/generate`), diciendole que las lea por separado y con que
-  // criterio resolver si se contradicen. El riesgo se trata donde vive, en el prompt.
-  const [referencias, setReferencias] = useState<
-    { dataUrl: string; nombre: string; bytes: number }[]
-  >([]);
-  const [leyendoFoto, setLeyendoFoto] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const taRef = useRef<HTMLTextAreaElement>(null);
-  // El menú del `+`, con el gancho del chat: Esc, clic fuera y flechas.
-  const [plusOpen, setPlusOpen] = useState(false);
-  const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
-  const tc = useTranslations("panelsChat");
-  const briefLimit = useGenerationBriefLimit({
-    value,
-    onValueChange: setValue,
-  });
+  // THE PHOTOS, up to `MAX_REFERENCIAS`. Several are fine: Len's context says how to read each one
+  // (`attachedImagesBlock`, lib/agent/context.ts) — the logo, the shop and a mood board are three different things.
+  const [photos, setPhotos] = useState<readonly PromptBoxPhoto[]>([]);
+  const [activity, setActivity] = useState({ focused: false, listening: false });
+  const onActivity = useCallback((a: { focused: boolean; listening: boolean }) => setActivity(a), []);
 
-  // EL DICTADO ESCRIBE COMO ESCRIBE UNA PERSONA: por `replaceValue`, el mismo
-  // camino que las pastillas de ideas. Asi el limite de brief lo recorta igual
-  // y el contador de caracteres cuenta igual. Meterlo con `setValue` directo se
-  // saltaria el tope y el usuario perderia el final de su frase al enviar.
-  const dictado = useDictado({
-    idioma: locale,
-    onTexto: (fragmento) => {
-      setValue((previo) => {
-        // Un espacio si ya habia algo, y ninguno al empezar. El motor entrega
-        // los trozos sin separador.
-        const junto = previo ? `${previo.replace(/\s+$/, "")} ${fragmento.trim()}` : fragmento.trim();
-        return junto.slice(0, briefLimit.maxLength);
-      });
-    },
-  });
-
-  // LA CARA DE LEN DEL HÉROE mira esta caja: escucha mientras escribes o
-  // dictas y piensa al enviar (hero-len.tsx). Fuera del héroe, no-op.
-  const reportLen = useHeroLenReport();
-  const [focused, setFocused] = useState(false);
-  // Teclea sola mientras está vacía y nadie la toca (use-ghost-typing.ts).
-  // Sus ejemplos son de páginas: con App elegida se calla y habla el
-  // placeholder de las apps.
+  // Types by itself while empty and untouched (use-ghost-typing.ts). Its examples are pages: with another kind it
+  // stays quiet and that kind's placeholder speaks.
   const ghost = useGhostTyping(
     t.raw("heroPrompt.ghost") as string[],
-    kind === "pagina" && !focused && value === "" && referencias.length === 0 && !dictado.escuchando,
+    kind === "pagina" && !activity.focused && value === "" && photos.length === 0 && !activity.listening,
   );
+  // LEN'S FACE IN THE MENU watches this box: it listens while you type or dictate and thinks when you send
+  // (hero-len.tsx). Outside the home, a no-op.
+  const reportLen = useHeroLenReport();
   useEffect(() => {
     reportLen({
-      focused,
+      focused: activity.focused,
       hasText: value.trim().length > 0,
-      listening: dictado.escuchando,
+      listening: activity.listening,
       sent: submitting || loginOpen,
       ghost: ghost.typing,
     });
-  }, [reportLen, focused, value, dictado.escuchando, submitting, loginOpen, ghost.typing]);
+  }, [reportLen, activity, value, submitting, loginOpen, ghost.typing]);
 
-  // Auto-grow up to ~10 lines.
-  useEffect(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 240) + "px";
-  }, [value]);
-
-  // Match the /new brief panel — a real brief needs a little substance.
-  const canSend = briefLimit.isValid;
-
-  // RELLENA Y NO ENVÍA (plans/crear-es-len), como DeepSeek con
-  // `startSession(…, { prompt })`: el brief llega ESCRITO al compositor del
-  // proyecto en blanco y el usuario pulsa enviar. Sin `autostart`. Con App
-  // elegida, lleva `kind=app` y /new abre con la tarjeta App marcada.
+  // The brief WRITTEN in /new's URL too: it fills /new's box if the ticket can't be read there. With another kind, `kind=`.
   const target = newProjectHref(value, kind);
 
   const submit = () => {
-    if (!canSend || submitting || status === "loading") return;
-    // Si sigue escuchando al enviar, el motor sigue vivo tras la navegacion y
-    // el micro del navegador se queda encendido.
-    dictado.parar();
-    // Las fotos no caben en la URL, asi que cruzan por `sessionStorage`. Se
-    // dejan ANTES de navegar y ANTES de abrir el dialogo de registro: el
-    // visitante sin sesion se va a /register y vuelve, y tienen que seguir ahi.
-    if (referencias.length) {
-      dejarReferenciasEnTransito(
-        referencias.map((r) => ({ dataUrl: r.dataUrl, nombre: r.nombre })),
-      );
-    }
+    if (submitting || status === "loading") return;
+    // Photos don't fit in a URL: they cross in `sessionStorage`, left BEFORE navigating and BEFORE the sign-in
+    // dialog — the signed-out visitor goes to /register and comes back, and they must still be there.
+    if (photos.length) dejarReferenciasEnTransito(photos);
     // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
     // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
     leaveFirstMessage({ brief: value, kind });
@@ -170,280 +84,34 @@ export function HeroPromptInput() {
     }
   };
 
-  const elegirFotos = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    // El hueco QUE QUEDA, no el tope. Quien ya tiene tres y elige otras tres
-    // se queda con cuatro, no con seis ni con un aviso.
-    const hueco = MAX_REFERENCIAS - referencias.length;
-    if (hueco <= 0) return;
-    setLeyendoFoto(true);
-    try {
-      // EN PARALELO. `reducirImagen` decodifica fuera del hilo principal, asi
-      // que cuatro a la vez tardan lo que la mas lenta; en serie tardarian la
-      // suma, y el compositor se queda con el reloj girando ese rato entero.
-      const reducidas = await Promise.all(
-        Array.from(files)
-          .slice(0, hueco)
-          .map(async (file) => {
-            const r = await reducirImagen(file);
-            // `null` = no era una imagen que el navegador sepa decodificar. No
-            // se grita: esa se cae y las demas entran igual.
-            return r ? { dataUrl: r.dataUrl, nombre: file.name, bytes: r.bytes } : null;
-          }),
-      );
-      const buenas = reducidas.filter((r): r is NonNullable<typeof r> => r !== null);
-      if (buenas.length) {
-        setReferencias((previas) => [...previas, ...buenas].slice(0, MAX_REFERENCIAS));
-      }
-    } finally {
-      setLeyendoFoto(false);
-      // El input se vacia SIEMPRE. Sin esto, elegir el mismo fichero dos veces
-      // seguidas no dispara `change` y parece que el boton se rompio.
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const quitarFoto = (indice: number) => {
-    setReferencias((previas) => previas.filter((_, i) => i !== indice));
-    // Tambien del transito: si ya se habia dejado ahi (envio + vuelta del
-    // registro), quitarla de la caja tiene que quitarla de verdad. Se limpia
-    // ENTERO y no se reescribe el resto: `submit` lo vuelve a dejar con lo que
-    // haya justo antes de navegar, asi que reescribir aqui seria adelantar un
-    // trabajo que se repite igual.
-    olvidarReferenciasEnTransito();
-  };
-
   return (
     <div className="relative">
-      {/* LA PIEL DEL CHAT NUEVO (Jesús, 03/10: «que sean como el chat nuevo»):
-          la caja de radio 16 con su borde, las fichas encima del texto, el `+`
-          con su menú, y el botón cuadrado al final. En los colores de la
-          portada —aquí no viven los tokens del taller—; `.nc` sólo trae las
-          animaciones de chat/new-chat.css. Lo que HACE no cambia. */}
-      <div className="nc">
-        <div className="relative rounded-[16px] border border-zinc-300 bg-white px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition focus-within:border-coral-400 focus-within:shadow-[0_0_0_4px_rgb(255_90_54/0.13)] dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-coral-500">
-          {/* LAS FOTOS VAN ARRIBA, DENTRO DE LA TARJETA (Jesus, 2026-08-28:
-              "que se pongan arriba del input asi bonito"), ahora como las
-              fichas del chat: dentro, y la caja crece con ellas. */}
-          {referencias.length > 0 && (
-            <div className="mb-1 flex flex-wrap gap-1.5">
-              {referencias.map((referencia, i) => (
-                <span
-                  key={`${referencia.nombre}-${i}`}
-                  title={referencia.nombre}
-                  className="nc-pop inline-flex max-w-full items-center gap-1.5 rounded-lg border border-coral-500/30 bg-coral-500/[0.07] py-[3px] pl-[7px] pr-1 text-[11.5px] text-zinc-800 dark:text-zinc-100"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={referencia.dataUrl} alt="" className="h-[18px] w-[18px] shrink-0 rounded object-cover" />
-                  <span className="min-w-0 max-w-[180px] truncate">{referencia.nombre || t("heroPrompt.attachedAlt")}</span>
-                  <button
-                    type="button"
-                    onClick={() => quitarFoto(i)}
-                    aria-label={t("heroPrompt.removeImage")}
-                    className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] text-zinc-500 hover:bg-coral-500/15 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-                  >
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="relative">
-          {ghost.text && (
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 mt-0.5 text-[15px] leading-normal text-zinc-500 dark:text-zinc-400"
-            >
-              {ghost.text}
-              <span className="ml-px inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse rounded-full bg-coral-500" />
-            </div>
-          )}
-          <textarea
-            id="hero-prompt"
-            ref={taRef}
-            value={value}
-            onChange={briefLimit.onChange}
-            onPaste={briefLimit.onPaste}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            onKeyDown={(e) => {
-              // COMO EN EL CHAT: Enter manda y Mayús+Enter salta de línea. El
-              // ⌘/Ctrl+Enter de antes sigue valiendo. Mientras un IME compone
-              // (japonés, coreano, chino), Enter confirma la palabra y no manda.
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            rows={1}
-            placeholder={
-              ghost.text
-                ? ""
-                : kind === "app"
-                  ? tw("start.kind.appPlaceholder")
-                  : t("heroPrompt.placeholder")
-            }
-            maxLength={briefLimit.maxLength}
-            aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
-            className="mt-0.5 block w-full resize-none bg-transparent text-[15px] leading-normal text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-            style={{ minHeight: 52 }}
-          />
-          </div>
-
-          {/* LO QUE EL MOTOR VA OYENDO, antes de darlo por bueno. Sin esto,
-              dictar se siente roto: entre que hablas y que el motor cierra la
-              frase la caja no cambia. No entra en el textarea a proposito: es
-              texto que el motor todavia puede CORREGIR. */}
-          {dictado.escuchando && (
-            <p className="pb-1 text-[12.5px] italic text-zinc-500 dark:text-zinc-400" aria-live="polite">
-              {dictado.parcial || t("heroPrompt.listening")}
-            </p>
-          )}
-          {/* EL MOTOR ABRIO Y NO OYO NADA, y EL PERMISO DENEGADO: los dos se
-              dicen, porque un fallo real no puede verse igual que escuchar. */}
-          {dictado.mudo && (
-            <p className="pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
-              {t("heroPrompt.micSilent")}
-            </p>
-          )}
-          {dictado.denegado && (
-            <p className="pb-1 text-[12px] text-amber-600 dark:text-amber-400" role="status">
-              {t("heroPrompt.micDenied")}
-            </p>
-          )}
-
-          <GenerationBriefLimitFeedback
-            valueLength={value.length}
-            state={briefLimit}
-            warningText={tp("aiBrief.trimmed", { max: briefLimit.maxLength })}
-            className="pb-1 text-[11px]"
-            warningClassName="text-amber-600 dark:text-amber-400"
-            counterClassName="text-zinc-500 dark:text-zinc-400"
-          />
-
-          {/* `relative`: el menú de la píldora Página/App se ancla aquí. */}
-          <div className="relative mt-0.5 flex items-center gap-[3px]">
-            {/* El `<input>` real va oculto: su aspecto nativo no se puede
-                estilar. `accept` FILTRA, no valida — el reductor y el servidor
-                vuelven a comprobar el tipo. */}
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              accept="image/png,image/jpeg,image/webp,image/avif"
-              className="sr-only"
-              tabIndex={-1}
-              onChange={(e) => void elegirFotos(e.target.files)}
-            />
-            {/* EL `+` ABRE SU MENÚ, como en el chat. */}
-            <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
-              <button
-                type="button"
-                ref={plus.refDisparador}
-                aria-label={tc("newChat.composer.plus")}
-                title={tc("newChat.composer.plus")}
-                aria-haspopup="menu"
-                aria-expanded={plusOpen}
-                onClick={() => setPlusOpen((x) => !x)}
-                className={cn(
-                  "grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-zinc-100 dark:hover:bg-zinc-900",
-                  referencias.length > 0
-                    ? "text-coral-600 dark:text-coral-400"
-                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
-                )}
-              >
-                {leyendoFoto ? (
-                  <Loader2 size={15} className="animate-spin" />
-                ) : (
-                  <Plus size={16} className={cn("transition-transform duration-200", plusOpen && "rotate-45")} />
-                )}
-              </button>
-              {plusOpen && (
-                <div
-                  role="menu"
-                  aria-label={tc("newChat.composer.plus")}
-                  className="nc-card-in absolute bottom-[calc(100%+8px)] left-0 z-20 w-[290px] rounded-[14px] border border-zinc-300 bg-white p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)] dark:border-zinc-700 dark:bg-zinc-950"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    disabled={leyendoFoto || referencias.length >= MAX_REFERENCIAS}
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="nc-up flex w-full items-center gap-2.5 rounded-[10px] p-2 text-left hover:bg-zinc-100 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent dark:hover:bg-zinc-900"
-                  >
-                    <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-[9px] bg-coral-500/10 text-coral-600 dark:text-coral-400">
-                      <ImageIcon size={15} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <b className="block text-[13px] font-semibold text-zinc-900 dark:text-zinc-100">
-                        {t("heroPrompt.attachImages")}
-                      </b>
-                      <small className="block text-[11.5px] leading-snug text-zinc-500 dark:text-zinc-400">
-                        {referencias.length >= MAX_REFERENCIAS
-                          ? t("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
-                          : t("heroPrompt.attachImagesHint", { max: MAX_REFERENCIAS })}
-                      </small>
-                    </span>
-                    {referencias.length > 0 && (
-                      <span className="shrink-0 text-[11px] font-semibold text-coral-600 dark:text-coral-400">
-                        {referencias.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-            {/* EL MICROFONO, sólo si la API EXISTE — se comprueba el objeto, no
-                una lista de navegadores. En Firefox no se pinta: un control gris
-                que no responde es peor que ninguno. */}
-            {dictado.soportado && (
-              <button
-                type="button"
-                onClick={dictado.alternar}
-                aria-pressed={dictado.escuchando}
-                aria-label={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
-                title={dictado.escuchando ? t("heroPrompt.stopDictating") : t("heroPrompt.dictate")}
-                className={cn(
-                  "grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-zinc-100 dark:hover:bg-zinc-900",
-                  dictado.escuchando
-                    ? "bg-zinc-100 text-coral-600 dark:bg-zinc-900 dark:text-coral-400"
-                    : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
-                )}
-              >
-                {dictado.escuchando ? (
-                  <span className="relative inline-flex h-4 w-4 items-center justify-center">
-                    {/* El halo late para que se vea que el micro esta ABIERTO. */}
-                    <span className="absolute inset-0 rounded-full bg-coral-500/30 motion-safe:animate-ping" />
-                    <Square size={9} className="relative fill-current" />
-                  </span>
-                ) : (
-                  <Mic size={15} />
-                )}
-              </button>
-            )}
-            <HeroKindPicker value={kind} onChange={setKind} conJuego={juegos} />
-            {/* EL BOTÓN DEL CHAT: cuadrado redondeado, siempre del mismo tamaño;
-                sólo cambia de color al haber algo que mandar. */}
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!canSend || submitting || status === "loading"}
-              aria-label={t("heroPrompt.generate")}
-              title={t("heroPrompt.generate")}
-              className={cn(
-                "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default",
-                canSend ? "bg-coral-500 hover:bg-coral-600" : "bg-zinc-300 dark:bg-zinc-700",
-              )}
-            >
-              {submitting ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={16} />}
-            </button>
-          </div>
-        </div>
-      </div>
+      <PromptBox
+        piel="portada"
+        id="hero-prompt"
+        value={value}
+        onValueChange={setValue}
+        photos={photos}
+        onPhotosChange={(next) => {
+          setPhotos(next);
+          // Also out of the transit: if they were already left there (a send and a trip to sign up), removing one
+          // here must really remove it. Emptied WHOLE: `submit` leaves what is there again right before going.
+          olvidarReferenciasEnTransito();
+        }}
+        kind={{ value: kind, onChange: setKind, conJuego: juegos }}
+        placeholder={
+          kind === "app"
+            ? tw("start.kind.appPlaceholder")
+            : kind === "game"
+              ? tw("start.kind.gamePlaceholder")
+              : t("heroPrompt.placeholder")
+        }
+        ghost={ghost.text || null}
+        onActivity={onActivity}
+        onSend={submit}
+        sending={submitting}
+        sendDisabled={status === "loading"}
+      />
 
       {/* No example chips under the box any more (Jesús, 06/11: «quitemos el example», for a cleaner home): the box
           types its own examples while nobody touches it (`use-ghost-typing.ts`), which says the same thing quietly. */}

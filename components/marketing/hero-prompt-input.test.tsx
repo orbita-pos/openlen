@@ -66,6 +66,12 @@ function type(el: HTMLElement, text: string) {
 const sendButton = (el: HTMLElement) => el.querySelector<HTMLButtonElement>('button[aria-label="heroPrompt.generate"]')!;
 
 describe("the home's box", () => {
+  it("🔴 is the same box as /new's: the shared PromptBox, in the home's colours", () => {
+    const el = mount();
+    expect(el.querySelector('[data-prompt-box="portada"]')).not.toBeNull();
+    expect(el.querySelector('[data-prompt-box="portada"] #hero-prompt')).not.toBeNull();
+  });
+
   it("🔴 signed in, sending leaves the ticket /new sends on arrival, and goes to /new with the brief", () => {
     const el = mount();
     type(el, BRIEF);
