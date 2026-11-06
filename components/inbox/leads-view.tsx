@@ -60,7 +60,7 @@ function EmptyState() {
         {t("inbox.emptyHint")}
       </p>
       <Link
-        href="/new"
+        href="/"
         className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-coral-500 text-white text-[13px] font-semibold hover:bg-coral-600 transition"
       >
         {t("inbox.createCta")}

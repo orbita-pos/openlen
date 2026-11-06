@@ -74,7 +74,7 @@ export function ResetForm({ token }: { token: string }) {
         router.push("/login");
         return;
       }
-      router.push("/new");
+      router.push("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.errors.generic"));

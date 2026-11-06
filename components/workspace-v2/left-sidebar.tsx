@@ -596,8 +596,8 @@ export function LeftSidebar({
         {entryMode === "paste" ? (
           <PastePanel />
         ) : entryMode === "ai" ? (
-          // Bare /new (no page): the AI brief lives in the center (StartLanding),
-          // so the sidebar shows the gallery here — never a duplicate composer.
+          // /new without a page: the only box is the home's (06/11), so the sidebar
+          // shows the gallery here — never a composer of its own.
           // The sidebar AI/chat is reserved for editing an existing page.
           <TemplatesPanel
             onPreview={(t) =>

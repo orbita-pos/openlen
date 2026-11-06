@@ -33,7 +33,7 @@ export default async function VerifyPage({
   return (
     <Card title={ok ? t("verify.ok") : t("verify.invalid")} subtitle={ok ? t("verify.okBody") : t("verify.invalidBody")}>
       <Link
-        href="/new"
+        href="/"
         className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-coral-500 px-4 text-sm font-medium text-white hover:bg-coral-600 active:bg-coral-700 btn-coral-shadow"
       >
         {t("verify.continue")} <ArrowRight size={15} />

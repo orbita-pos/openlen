@@ -67,7 +67,8 @@ function hasSessionCookie(req: NextRequest): boolean {
 // Mirror register/login page sanitizeNext: keep an in-app ?next= path, reject
 // offsite / protocol-relative values.
 function sanitizeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  // Home, not /new: the home's box is the only one (06/11).
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
   return raw;
 }
 
@@ -195,6 +196,14 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
 
   // A brief in the URL without an explicit mode opens the AI entry flow.
   if (bare === "/new") {
+    // ONE BOX, THE HOME'S (Jesús, 06/11: «¿para qué tener 2 inputs?»): /new has no box of its own, so a bare /new —
+    // after signing in, a «new page» button, an old bookmark, an email — goes straight to the home here, without
+    // loading the workspace just to send it back. What the home sends always carries `?brief=`, so it never lands here.
+    if (!search || search === "?") {
+      const seg = pathname.split("/")[1];
+      const home = locales.includes(seg) ? `/${seg}` : "/";
+      return fixRedirectHost(NextResponse.redirect(new URL(home, req.nextUrl.origin)), req);
+    }
     const params = new URLSearchParams(search);
     if (params.has("brief") && !params.has("mode")) {
       params.set("mode", "ai");
@@ -213,7 +222,8 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
     const locale = localeFromPath(pathname);
     const target = sanitizeNext(req.nextUrl.searchParams.get("next"));
     return fixRedirectHost(
-      NextResponse.redirect(new URL(`/${locale}${target}`, req.nextUrl.origin)),
+      // `/es`, not `/es/`: the trailing slash would cost one more redirect.
+      NextResponse.redirect(new URL(target === "/" ? `/${locale}` : `/${locale}${target}`, req.nextUrl.origin)),
       req,
     );
   }

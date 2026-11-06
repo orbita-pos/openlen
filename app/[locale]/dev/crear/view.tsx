@@ -1,16 +1,14 @@
 "use client";
 
-// /dev/crear (ver page.tsx): el input de Crear de la portada y el de /new sin
-// proyecto, montados tal cual, uno encima del otro. Lo único de mentira es el
-// estado del brief del de /new, que en el taller vive en la página.
+// /dev/crear (ver page.tsx): el input de Crear —desde el 06/11 hay UNO, el de la
+// portada (Jesús: «¿para qué tener 2 inputs?»)— montado tal cual, debajo del
+// compositor del chat nuevo para compararlos.
 
 import "../../new/tokens.css";
 
 import { useEffect, useRef, useState } from "react";
 
 import { HeroPromptInput } from "@/components/marketing/hero-prompt-input";
-import { HeroComposer } from "@/components/workspace-v2/start-landing";
-import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
 import "@/components/workspace-v2/chat/new-chat.css";
 import { ChatComposer } from "@/components/workspace-v2/chat/chat-composer";
 import type { EsfuerzoAgente } from "@/lib/agent/esfuerzo";
@@ -20,9 +18,6 @@ export function CreateSandbox({ dark }: { dark: boolean }) {
     document.documentElement.classList.toggle("dark", dark);
   }, [dark]);
 
-  const [prompt, setPrompt] = useState("");
-  const [fotos, setFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
-  const [effort, setEffort] = useState<PageEffort>("low");
   const [chatText, setChatText] = useState("");
   const [chatEffort, setChatEffort] = useState<EsfuerzoAgente>("auto");
   const chatRef = useRef<HTMLTextAreaElement>(null);
@@ -59,16 +54,6 @@ export function CreateSandbox({ dark }: { dark: boolean }) {
         <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Portada</p>
         <HeroPromptInput />
       </section>
-      <div className="workspace-v2 mx-auto mt-14 max-w-2xl rounded-2xl bg-app p-6" data-sandbox="new">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] fg-faint">/new sin proyecto</p>
-        <HeroComposer
-          state={{ prompt, setPrompt, fotos, setFotos }}
-          onGenerate={() => {}}
-          generating={false}
-          effort={effort}
-          onEffortChange={setEffort}
-        />
-      </div>
     </div>
   );
 }

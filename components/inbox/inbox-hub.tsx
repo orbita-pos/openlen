@@ -52,7 +52,7 @@ export function InboxHub({ franja }: { franja?: ReactNode } = {}) {
       <header className="shrink-0 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-2 px-3 pt-3 sm:px-5">
           <Link
-            href="/new"
+            href="/"
             aria-label={t("backToWorkspace")}
             title={t("backToWorkspace")}
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"

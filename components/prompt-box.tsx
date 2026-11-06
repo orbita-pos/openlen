@@ -1,22 +1,20 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THE ONE BOX — the home's input and /new's are this component (Jesús, 06/11: «dos inputs así es duplicación»).
+// THE ONE BOX — where you write what Len makes, on the home (Jesús, 06/11: «¿para qué tener 2 inputs?»).
 //
-// They had grown apart as two copies of the same thing (`hero-prompt-input.tsx` and `HeroComposer` in
-// `start-landing.tsx`): the same photos, dictation, brief limit, `+` menu, kind pill and square send button, written
-// twice, each with fixes the other lacked. Now there is one box with two skins, as the kind pill already had
-// (`hero-kind-picker.tsx`): `portada`, in the marketing site's zinc and coral (the workspace's tokens don't live on the
-// home), and `taller`, in the workspace's tokens under `.nc` (chat/new-chat.css).
+// There were two: the home's (`hero-prompt-input.tsx`) and /new's (`HeroComposer` in `start-landing.tsx`), first as
+// two copies, then as this component in two skins. On 06/11 /new's went away: /new has no box of its own — it opens
+// the blank project only to send what the home sent (`useFirstMessageOnArrival`), and sends everything else back here.
+// So this is the box, in the home's zinc and coral.
 //
-// WHAT STAYS WITH EACH PAGE is what is really theirs: where the text lives, and what «send» does. The home keeps its
-// own state, types examples while nobody touches it (`ghost`), tells Len's face in the menu what it's doing
-// (`onActivity`) and, on send, leaves the ticket /new sends on arrival; /new keeps its state in the page, counts its
-// usage events (`onTyped`) and sends the first message to Len. Files beyond photos (PDF, video), dropping and pasting
-// them are /new's: the home has nowhere to upload them before the visitor has an account.
-//
-// THE TEXT AREA IS LENT (`textArea`): /new's paints URLs blue as you type (`CajaConMenciones`), which lives with the
-// workspace's thread code; passing it in keeps that code out of the home's bundle. Without it, a plain textarea.
+// WHAT IT TAKES IS EVERYTHING /new's took (Jesús, 06/11: «debe ser el que tenga todo»): photos AND files (PDF,
+// video…) in the `+`, pasting a screenshot or a file into the text, dropping files anywhere on the screen
+// (`addFilesRef`, lent to the home's drop zone), «Pegar HTML» for a page (`moreOptions`), the kind pill, dictation,
+// and URLs painted blue as you type. The files cross to /new in IndexedDB (`lib/marketing/files-in-transit.ts`), since
+// they can't be uploaded before the visitor has an account. What stays with the page (`hero-prompt-input.tsx`) is where
+// the text lives and what «send» does: the examples typed while nobody touches it (`ghost`), Len's face watching it
+// (`onActivity`), the create funnel (`onTyped`) and the ticket /new sends on arrival.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -42,9 +40,8 @@ import { MAX_FILES_PER_MESSAGE, videoKindFromMime, videoKindFromName } from "@/l
 import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
 import { classifyDroppedFiles, pastedFiles } from "@/lib/workspace-v2/classify-dropped-files";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
+import { splitLinks } from "@/lib/chat/links";
 import { cn } from "@/lib/cn";
-
-export type PromptBoxSkin = "portada" | "taller";
 
 /** A photo for Len, already reduced (`reducirImagen`), as a `data:` URI. */
 export interface PromptBoxPhoto {
@@ -61,96 +58,113 @@ export interface KindChoice {
   herramientaBloqueada?: string;
 }
 
-/** The text area the box uses (see the header): it gets the ref, the value, the skin's type and every handler. */
-export type PromptBoxTextArea = (p: {
+/** THE BOX'S TEXT AREA: a URL turns blue while it's written, as in the chat, on both pages. A `textarea` can't colour
+ *  part of its text, so with a link in it the text goes transparent (the caret and the selection still show) over a
+ *  copy with the same measure that paints it — the chat's `CajaConMenciones`, without the mentions a first message
+ *  has nobody for, and light enough for the home. Without a link it is a plain textarea: the SAME element, so the
+ *  first link painting itself doesn't remount it or steal the focus. */
+function LinkTextArea({
+  cajaRef,
+  value,
+  medida,
+  ink,
+  caret,
+  props,
+}: {
   cajaRef: RefObject<HTMLTextAreaElement | null>;
   value: string;
-  /** The skin's size, line height and colour. */
+  /** The skin's size and line height: where each letter falls, worn by both layers. */
   medida: string;
+  /** The skin's text colour: on the textarea, or —with a link— on the copy behind it while the textarea is clear. */
+  ink: string;
+  /** The caret's colour while the text is transparent. */
+  caret: string;
   props: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value">;
-}) => ReactNode;
+}) {
+  const copy = useRef<HTMLSpanElement>(null);
+  const pieces = splitLinks(value);
+  const painted = pieces.some((p) => p.href !== undefined);
+  return (
+    <span className="relative block">
+      {painted && (
+        <span
+          ref={copy}
+          aria-hidden="true"
+          data-link-copy=""
+          className={cn("pointer-events-none absolute inset-0 block overflow-hidden whitespace-pre-wrap break-words", medida, ink)}
+        >
+          {pieces.map((p, i) =>
+            p.href ? (
+              <span key={i} className="text-link" data-link="">
+                {p.text}
+              </span>
+            ) : (
+              p.text
+            ),
+          )}
+          {/* A final break like the textarea's: otherwise an empty last line takes no room. */}
+          {"\n"}
+        </span>
+      )}
+      <textarea
+        ref={cajaRef}
+        value={value}
+        {...props}
+        onScroll={(e) => {
+          if (copy.current) copy.current.scrollTop = e.currentTarget.scrollTop;
+          props.onScroll?.(e);
+        }}
+        className={cn(
+          "relative block w-full resize-none bg-transparent",
+          medida,
+          painted ? cn("text-transparent", caret) : ink,
+          props.className,
+        )}
+      />
+    </span>
+  );
+}
 
-const PLAIN_TEXT_AREA: PromptBoxTextArea = ({ cajaRef, value, medida, props }) => (
-  <textarea
-    ref={cajaRef}
-    value={value}
-    {...props}
-    className={cn("relative block w-full resize-none bg-transparent", medida, props.className)}
-  />
-);
-
-/** The two skins. Same box, same behaviour; only the colours (and the home's slightly bigger type) change. */
-const SKINS = {
-  portada: {
-    box: "border-zinc-300 bg-white focus-within:border-coral-400 focus-within:shadow-[0_0_0_4px_rgb(255_90_54/0.13)] dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-coral-500",
-    chip: "border-coral-500/30 bg-coral-500/[0.07] text-zinc-800 dark:text-zinc-100",
-    chipRemove: "text-zinc-500 hover:bg-coral-500/15 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
-    medida: "text-[15px] leading-normal text-zinc-900 dark:text-zinc-100",
-    text: "outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
-    minHeight: 52,
-    maxHeight: 240,
-    ghost: "text-[15px] leading-normal text-zinc-500 dark:text-zinc-400",
-    listening: "text-[12.5px] italic text-zinc-500 dark:text-zinc-400",
-    warn: "text-[12px] text-amber-600 dark:text-amber-400",
-    counter: "text-zinc-500 dark:text-zinc-400",
-    // `relative`: on the home the pill's menu anchors to this row and opens upwards from it.
-    row: "relative",
-    tool: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
-    toolOn: "text-coral-600 dark:text-coral-400",
-    toolOff: "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
-    micOn: "bg-zinc-100 dark:bg-zinc-900",
-    menu: "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950",
-    option: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
-    optionIcon: "bg-coral-500/10 text-coral-600 dark:text-coral-400",
-    optionTitle: "text-zinc-900 dark:text-zinc-100",
-    optionHint: "text-zinc-500 dark:text-zinc-400",
-    accent: "text-coral-600 dark:text-coral-400",
-    sendOn: "bg-coral-500 hover:bg-coral-600",
-    sendOff: "bg-zinc-300 dark:bg-zinc-700",
-  },
-  taller: {
-    box: "nc-composer bd-strong bg-elev",
-    chip: "border-[color:color-mix(in_oklab,var(--accent)_30%,transparent)] bg-accent-soft fg",
-    chipRemove: "fg-muted hover:bg-[color-mix(in_oklab,var(--accent)_15%,transparent)] hover:fg",
-    medida: "text-[14px] leading-normal",
-    text: "outline-none placeholder:fg-faint nice-scroll disabled:opacity-60",
-    minHeight: 44,
-    maxHeight: 160,
-    ghost: "text-[14px] leading-normal fg-faint",
-    listening: "text-[12px] italic fg-faint",
-    warn: "text-[11.5px] text-amber-600 dark:text-amber-400",
-    counter: "fg-faint",
-    // No `relative`: in /new the pill's menu anchors to the box and opens downwards, under the header.
-    row: "",
-    tool: "hover:bg-side",
-    toolOn: "text-[var(--nc-accent-text)]",
-    toolOff: "fg-muted hover:fg",
-    micOn: "bg-side",
-    menu: "bd-strong bg-elev",
-    option: "hover:bg-side",
-    optionIcon: "bg-accent-soft text-[var(--nc-accent-text)]",
-    optionTitle: "",
-    optionHint: "fg-muted",
-    accent: "text-[var(--nc-accent-text)]",
-    sendOn: "bg-[var(--accent-strong)]",
-    sendOff: "bg-[var(--border-strong)]",
-  },
+/** The box's look: the home's zinc and coral, its slightly bigger type. */
+const SKIN = {
+  box: "border-zinc-300 bg-white focus-within:border-coral-400 focus-within:shadow-[0_0_0_4px_rgb(255_90_54/0.13)] dark:border-zinc-700 dark:bg-zinc-950 dark:focus-within:border-coral-500",
+  chip: "border-coral-500/30 bg-coral-500/[0.07] text-zinc-800 dark:text-zinc-100",
+  chipRemove: "text-zinc-500 hover:bg-coral-500/15 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
+  medida: "text-[15px] leading-normal",
+  // The text's colour, apart from `medida`: with a link in it, it goes on the painted copy, and the textarea goes
+  // transparent — `dark:text-zinc-100` on the textarea outranked `text-transparent` and covered the blue (06/11).
+  ink: "text-zinc-900 dark:text-zinc-100",
+  caret: "caret-zinc-900 dark:caret-zinc-100",
+  text: "outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
+  minHeight: 52,
+  maxHeight: 240,
+  ghost: "text-[15px] leading-normal text-zinc-500 dark:text-zinc-400",
+  listening: "text-[12.5px] italic text-zinc-500 dark:text-zinc-400",
+  warn: "text-[12px] text-amber-600 dark:text-amber-400",
+  counter: "text-zinc-500 dark:text-zinc-400",
+  // `relative`: on the home the pill's menu anchors to this row and opens upwards from it.
+  row: "relative",
+  tool: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
+  toolOn: "text-coral-600 dark:text-coral-400",
+  toolOff: "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100",
+  micOn: "bg-zinc-100 dark:bg-zinc-900",
+  menu: "border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950",
+  option: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
+  optionIcon: "bg-coral-500/10 text-coral-600 dark:text-coral-400",
+  optionTitle: "text-zinc-900 dark:text-zinc-100",
+  optionHint: "text-zinc-500 dark:text-zinc-400",
+  accent: "text-coral-600 dark:text-coral-400",
+  sendOn: "bg-coral-500 hover:bg-coral-600",
+  sendOff: "bg-zinc-300 dark:bg-zinc-700",
 } as const;
 
 export interface PromptBoxProps {
-  piel: PromptBoxSkin;
   value: string;
   onValueChange: (v: string) => void;
-  /** /new's deep-link truncation notice: the fields of `BriefFormState` that `useGenerationBriefLimit` reads. */
-  truncation?: {
-    value?: string | null;
-    onValueChange?: (v: string | null) => void;
-    token?: string | null;
-    onTokenChange?: (t: string | null) => void;
-  };
   photos: readonly PromptBoxPhoto[];
   onPhotosChange: (photos: readonly PromptBoxPhoto[]) => void;
-  /** Files for Len beyond photos (PDF, video…), uploaded with the first message: /new only. Absent = photos only. */
+  /** Files for Len beyond photos (PDF, video…), uploaded with the first message — on the home, after crossing to /new
+   *  in IndexedDB. Absent = photos only. */
   files?: readonly File[];
   onFilesChange?: (files: readonly File[]) => void;
   /** The pill. Absent = no pill. */
@@ -160,8 +174,6 @@ export interface PromptBoxProps {
   onSend: () => void;
   /** The send is on its way: a spinner on the button. */
   sending?: boolean;
-  /** Everything held while the send goes (/new: its first message to Len). */
-  locked?: boolean;
   /** The button held without holding the box (the home while it learns whether you're signed in). */
   sendDisabled?: boolean;
   /** The textarea's id (the home's is `hero-prompt`: `#ask` focuses it). */
@@ -172,11 +184,9 @@ export interface PromptBoxProps {
   onActivity?: (a: { focused: boolean; listening: boolean }) => void;
   /** Text came in by any door — keyboard, paste or dictation (/new counts it, never with the text). */
   onTyped?: () => void;
-  /** Where the box lends its way in to a drop zone around it (/new's start screen). */
+  /** Where the box lends its way in to a drop zone around it (the start screen's, on the home and in /new). */
   addFilesRef?: MutableRefObject<((files: File[]) => void) | null>;
-  /** The text area (see the header). */
-  textArea?: PromptBoxTextArea;
-  /** More ways in, under the attachments in the `+` menu (/new: «Pegar HTML», since 06/11 out from under the box). */
+  /** More ways in, under the attachments in the `+` menu («Pegar HTML» for a page, on both pages). */
   moreOptions?: readonly PromptBoxOption[];
 }
 
@@ -190,10 +200,8 @@ export interface PromptBoxOption {
 }
 
 export function PromptBox({
-  piel,
   value,
   onValueChange,
-  truncation,
   photos,
   onPhotosChange,
   files,
@@ -202,17 +210,15 @@ export function PromptBox({
   placeholder,
   onSend,
   sending = false,
-  locked = false,
   sendDisabled = false,
   id,
   ghost,
   onActivity,
   onTyped,
   addFilesRef,
-  textArea = PLAIN_TEXT_AREA,
   moreOptions = [],
 }: PromptBoxProps) {
-  const s = SKINS[piel];
+  const s = SKIN;
   const tm = useTranslations("marketing");
   const tp = useTranslations("panelsA");
   const tc = useTranslations("panelsChat");
@@ -229,10 +235,6 @@ export function PromptBox({
   const briefLimit = useGenerationBriefLimit({
     value,
     onValueChange,
-    externallyTruncatedValue: truncation?.value,
-    onTruncatedValueChange: truncation?.onValueChange,
-    externalAnnouncementToken: truncation?.token,
-    onExternalAnnouncementTokenChange: truncation?.onTokenChange,
   });
   const fileList = files ?? [];
 
@@ -250,7 +252,7 @@ export function PromptBox({
     onActivity?.({ focused, listening: dictado.escuchando });
   }, [onActivity, focused, dictado.escuchando]);
 
-  // Grows with the text, up to the skin's height.
+  // Grows with the text, up to the box's height.
   useEffect(() => {
     const el = taRef.current;
     if (!el) return;
@@ -258,7 +260,7 @@ export function PromptBox({
     el.style.height = `${Math.min(el.scrollHeight, s.maxHeight)}px`;
   }, [value, s.maxHeight]);
 
-  const canSend = briefLimit.isValid && !sending && !locked && !sendDisabled;
+  const canSend = briefLimit.isValid && !sending && !sendDisabled;
   const send = () => {
     if (!canSend) return;
     // Still listening at send time, the engine outlives the navigation and the browser's mic stays on.
@@ -295,7 +297,7 @@ export function PromptBox({
   // DROP OR PASTE (spec local 2026-10-27-chat-drop-and-images), where the box takes files: photos to the photos,
   // files (and videos) to the files; what doesn't go is said.
   const addFiles = (incoming: readonly File[]) => {
-    if (!onFilesChange || locked || incoming.length === 0) return;
+    if (!onFilesChange || incoming.length === 0) return;
     const c = classifyDroppedFiles(incoming, {
       photos: Math.max(0, MAX_REFERENCIAS - photos.length),
       files: Math.max(0, MAX_FILES_PER_MESSAGE - fileList.length),
@@ -316,7 +318,7 @@ export function PromptBox({
     // THE NEW CHAT'S SKIN (Jesús, 03/10: «que sean como el chat nuevo»): the radius-16 box with its border, the chips
     // above the text, the `+` with its menu, and the square button at the end. `.nc` brings the animations (and, in the
     // workspace, its tokens) of chat/new-chat.css.
-    <div className="nc" data-prompt-box={piel}>
+    <div className="nc" data-prompt-box="portada">
       <div
         className={cn(
           "relative rounded-[16px] border px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition",
@@ -329,10 +331,9 @@ export function PromptBox({
           {photos.map((photo, i) => (
             <Chip
               key={`${photo.nombre}-${i}`}
-              skin={piel}
               title={photo.nombre}
               removeLabel={tm("heroPrompt.removeImage")}
-              {...(locked ? {} : { onRemove: () => onPhotosChange(photos.filter((_, j) => j !== i)) })}
+              onRemove={() => onPhotosChange(photos.filter((_, j) => j !== i))}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={photo.dataUrl} alt="" className="h-[18px] w-[18px] shrink-0 rounded object-cover" />
@@ -343,10 +344,9 @@ export function PromptBox({
             fileList.map((file, i) => (
               <Chip
                 key={`${file.name}-${i}`}
-                skin={piel}
-                title={file.name}
+                  title={file.name}
                 removeLabel={tc("composer.removeFile")}
-                {...(locked ? {} : { onRemove: () => onFilesChange(fileList.filter((_, j) => j !== i)) })}
+                onRemove={() => onFilesChange(fileList.filter((_, j) => j !== i))}
               >
                 {videoKindFromMime(file.type) ?? videoKindFromName(file.name) ? (
                   <Film size={14} className={cn("shrink-0", s.accent)} />
@@ -365,11 +365,13 @@ export function PromptBox({
               <span className="ml-px inline-block h-[1.05em] w-[2px] translate-y-[0.15em] animate-pulse rounded-full bg-coral-500" />
             </div>
           )}
-          {textArea({
-            cajaRef: taRef,
-            value,
-            medida: s.medida,
-            props: {
+          <LinkTextArea
+            cajaRef={taRef}
+            value={value}
+            medida={s.medida}
+            ink={s.ink}
+            caret={s.caret}
+            props={{
               ...(id ? { id } : {}),
               onChange: (e) => {
                 onTyped?.();
@@ -398,14 +400,13 @@ export function PromptBox({
                 }
               },
               rows: 1,
-              disabled: locked,
               placeholder: ghost ? "" : placeholder,
               maxLength: briefLimit.maxLength,
               ...(briefLimit.warningVisible ? { "aria-describedby": briefLimit.feedbackId } : {}),
               className: s.text,
               style: { minHeight: s.minHeight },
-            },
-          })}
+            }}
+          />
         </div>
 
         {/* WHAT THE ENGINE IS HEARING, before it settles. Outside the textarea on purpose: the engine can still
@@ -470,7 +471,6 @@ export function PromptBox({
               aria-haspopup="menu"
               aria-expanded={plusOpen}
               onClick={() => setPlusOpen((x) => !x)}
-              disabled={locked}
               className={toolClass(photos.length > 0)}
             >
               {readingPhoto ? (
@@ -489,8 +489,7 @@ export function PromptBox({
                 )}
               >
                 <PlusOption
-                  skin={piel}
-                  icon={<ImageIcon size={15} />}
+                      icon={<ImageIcon size={15} />}
                   title={tm("heroPrompt.attachImages")}
                   hint={
                     photos.length >= MAX_REFERENCIAS
@@ -506,8 +505,7 @@ export function PromptBox({
                 />
                 {onFilesChange && (
                   <PlusOption
-                    skin={piel}
-                    icon={<FileText size={15} />}
+                          icon={<FileText size={15} />}
                     title={tc("composer.attachFile")}
                     hint={tc("composer.attachFileHint")}
                     count={fileList.length}
@@ -521,8 +519,7 @@ export function PromptBox({
                 {moreOptions.map((option) => (
                   <PlusOption
                     key={option.key}
-                    skin={piel}
-                    icon={option.icon}
+                          icon={option.icon}
                     title={option.title}
                     hint={option.hint}
                     count={0}
@@ -545,7 +542,6 @@ export function PromptBox({
               aria-pressed={dictado.escuchando}
               aria-label={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
               title={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
-              disabled={locked}
               className={cn(toolClass(dictado.escuchando), dictado.escuchando && s.micOn)}
             >
               {dictado.escuchando ? (
@@ -561,10 +557,8 @@ export function PromptBox({
           )}
           {kind && (
             <HeroKindPicker
-              piel={piel}
               value={kind.value}
               onChange={kind.onChange}
-              disabled={locked}
               conJuego={kind.conJuego}
               conHerramienta={kind.conHerramienta ?? false}
               {...(kind.herramientaBloqueada ? { herramientaBloqueada: kind.herramientaBloqueada } : {})}
@@ -575,8 +569,8 @@ export function PromptBox({
             type="button"
             onClick={send}
             disabled={!canSend}
-            aria-label={piel === "portada" ? tm("heroPrompt.generate") : tp("aiBrief.generate")}
-            title={piel === "portada" ? tm("heroPrompt.generate") : tp("aiBrief.generate")}
+            aria-label={tm("heroPrompt.generate")}
+            title={tm("heroPrompt.generate")}
             className={cn(
               "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default",
               briefLimit.isValid || sending ? s.sendOn : s.sendOff,
@@ -590,21 +584,19 @@ export function PromptBox({
   );
 }
 
-/** What goes with the message: a photo or a file, with its ✕ unless the box is held. */
+/** What goes with the message: a photo or a file, with its ✕. */
 function Chip({
-  skin,
   children,
   title,
   onRemove,
   removeLabel,
 }: {
-  skin: PromptBoxSkin;
   children: ReactNode;
   title?: string;
   onRemove?: () => void;
   removeLabel: string;
 }) {
-  const s = SKINS[skin];
+  const s = SKIN;
   return (
     <span
       title={title}
@@ -630,7 +622,6 @@ function Chip({
 
 /** An option of the `+` menu, with what it does said under it and how many are in. */
 function PlusOption({
-  skin,
   icon,
   title,
   hint,
@@ -638,7 +629,6 @@ function PlusOption({
   onClick,
   disabled,
 }: {
-  skin: PromptBoxSkin;
   icon: ReactNode;
   title: string;
   hint: string;
@@ -646,7 +636,7 @@ function PlusOption({
   onClick: () => void;
   disabled: boolean;
 }) {
-  const s = SKINS[skin];
+  const s = SKIN;
   return (
     <button
       type="button"

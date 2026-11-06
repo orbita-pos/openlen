@@ -16,7 +16,7 @@ vi.mock("next-intl", () => ({
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
-type Opts = { conJuego?: boolean; conHerramienta?: boolean; herramientaBloqueada?: string; disabled?: boolean; piel?: "portada" | "taller" };
+type Opts = { conJuego?: boolean; conHerramienta?: boolean; herramientaBloqueada?: string; disabled?: boolean };
 function Arnes(o: Opts) {
   const [v, setV] = useState<NaceComo>("pagina");
   return (
@@ -90,9 +90,9 @@ describe("la píldora Página/App de la portada", () => {
 
 // THE SAME PILL IN /new (Jesús, 06/11: «que el input tenga un select como lo tiene la page /»): the four cards
 // above the composer pushed it down; now the choice lives inside it, so it also offers Herramienta.
-describe("the pill inside the /new composer", () => {
+describe("Herramienta, and the pill while sending", () => {
   it("with games and tools on: Página, App, Juego, Herramienta — and choosing Herramienta makes the pill say it", () => {
-    const c = render({ conJuego: true, conHerramienta: true, piel: "taller" });
+    const c = render({ conJuego: true, conHerramienta: true });
     act(() => disparador(c).click());
     expect(opciones(c).map((o) => o.textContent)).toEqual([
       expect.stringContaining("start.kind.pageHint"),
@@ -106,7 +106,7 @@ describe("the pill inside the /new composer", () => {
   });
 
   it("🔴 on Free, Herramienta says why and can't be chosen", () => {
-    const c = render({ conHerramienta: true, herramientaBloqueada: "Necesitas un plan de pago", piel: "taller" });
+    const c = render({ conHerramienta: true, herramientaBloqueada: "Necesitas un plan de pago" });
     act(() => disparador(c).click());
     const tool = opciones(c)[2];
     expect(tool.textContent).toContain("Necesitas un plan de pago");
@@ -116,32 +116,20 @@ describe("the pill inside the /new composer", () => {
   });
 
   it("while the first message is being sent, the pill doesn't open", () => {
-    const c = render({ disabled: true, piel: "taller" });
+    const c = render({ disabled: true });
     expect(disparador(c).disabled).toBe(true);
     act(() => disparador(c).click());
     expect(opciones(c)).toHaveLength(0);
   });
 
-  it("in the workspace it wears the workspace's tokens, not the home page's zinc", () => {
-    const c = render({ piel: "taller" });
+  // /new's box, with its own skin of this pill, went away on 06/11 (Jesús: «¿para qué tener 2 inputs?»): one look.
+  it("🔴 wears the home's zinc and coral, and prefers to open upwards", () => {
+    const c = render();
     act(() => disparador(c).click());
     const menu = c.querySelector<HTMLElement>('[role="menu"]')!;
-    expect(menu.className).toContain("bg-elev");
-    expect(menu.className).not.toContain("bg-white");
-    expect(disparador(c).className).not.toContain("zinc");
-  });
-
-  // Seen in the browser on 06/11: in /new the composer sits near the top, under the header, so a menu opening
-  // upwards (as on the home page, where the input sits low) hid Página and App behind the header.
-  it("🔴 in the workspace the menu opens downwards; on the home page, upwards as before", () => {
-    const taller = render({ piel: "taller" });
-    act(() => disparador(taller).click());
-    const abajo = taller.querySelector<HTMLElement>('[role="menu"]')!.className;
-    expect(abajo).toContain("top-[calc(100%+8px)]");
-    expect(abajo).not.toContain("bottom-[calc(100%+8px)]");
-    const portada = render();
-    act(() => disparador(portada).click());
-    expect(portada.querySelector<HTMLElement>('[role="menu"]')!.className).toContain("bottom-[calc(100%+8px)]");
+    expect(menu.className).toContain("bg-white");
+    expect(menu.className).not.toContain("bg-elev");
+    expect(menu.className).toContain("bottom-[calc(100%+8px)]");
   });
 });
 
@@ -158,24 +146,40 @@ describe("the menu opens where it fits", () => {
     expect(ladoQueCabe("abajo", 600, 200, 300)).toBe("abajo");
   });
 
-  it("🔴 in /new with the box mid-screen and no room below, it opens upwards", () => {
+  it("🔴 with the box high on the screen and no room above, it opens downwards", () => {
     const ancla = document.createElement("div");
-    ancla.getBoundingClientRect = () => ({ top: 404, bottom: 524, left: 0, right: 820, width: 820, height: 120, x: 0, y: 404, toJSON: () => ({}) });
+    ancla.getBoundingClientRect = () => ({ top: 200, bottom: 320, left: 0, right: 820, width: 820, height: 120, x: 0, y: 200, toJSON: () => ({}) });
     const offsetParent = vi.spyOn(HTMLElement.prototype, "offsetParent", "get").mockReturnValue(ancla);
     const offsetHeight = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(380);
     const alto = window.innerHeight;
     window.innerHeight = 900;
     try {
-      const c = render({ conJuego: true, conHerramienta: true, piel: "taller" });
+      const c = render({ conJuego: true, conHerramienta: true });
       act(() => disparador(c).click());
       const menu = c.querySelector<HTMLElement>('[role="menu"]')!;
-      expect(menu.dataset.lado).toBe("arriba");
-      expect(menu.className).toContain("bottom-[calc(100%+8px)]");
-      expect(menu.className).not.toContain("top-[calc(100%+8px)]");
+      expect(menu.dataset.lado).toBe("abajo");
+      expect(menu.className).toContain("top-[calc(100%+8px)]");
+      expect(menu.className).not.toContain("bottom-[calc(100%+8px)]");
     } finally {
       offsetParent.mockRestore();
       offsetHeight.mockRestore();
       window.innerHeight = alto;
     }
+  });
+});
+
+// Jesús, 06/11: «el scroll que aparece se ve feo, es el genérico». In a window too short for it, the menu scrolls inside
+// with the app's own quiet thumb — no arrows, no track —, never the browser's default bar.
+describe("the menu's scroll", () => {
+  it("🔴 wears `kind-menu-scroll`, and tokens.css draws it thin, without arrows or a track", async () => {
+    const c = render();
+    act(() => disparador(c).click());
+    expect(c.querySelector<HTMLElement>('[role="menu"]')!.className).toContain("kind-menu-scroll");
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(join(process.cwd(), "app/[locale]/new/tokens.css"), "utf8");
+    expect(css).toMatch(/\.kind-menu-scroll::-webkit-scrollbar-button\s*\{[^}]*display:\s*none/);
+    expect(css).toMatch(/\.kind-menu-scroll::-webkit-scrollbar-track\s*\{[^}]*background:\s*transparent/);
+    expect(css).toMatch(/\.kind-menu-scroll::-webkit-scrollbar-thumb\s*\{[^}]*border-radius:\s*999px/);
   });
 });
