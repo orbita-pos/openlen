@@ -79,6 +79,24 @@ describe("its stylesheet", () => {
     expect(css).toMatch(/animation:\s*home-glow-breathe 14s ease-in-out infinite/);
   });
 
+  // Seen in the browser on 06/11: two hard horizontal bands — the grain started at the light's box (~146 px down) and
+  // the hero section clipped the light right above the footer. The grain bleeds far past the box, and nothing
+  // between the light and the page clips it: the page wrapper clips both axes instead (no scroll, no bands).
+  it("🔴 the grain bleeds far past the light's box, so its edge never shows", () => {
+    const grain = css.slice(css.indexOf(".home-glow__grain {"), css.indexOf("}", css.indexOf(".home-glow__grain {")));
+    expect(grain).toMatch(/inset:\s*-100svh\s+-50vw/);
+  });
+
+  it("🔴 the hero doesn't clip the light; the home's wrapper clips both axes", () => {
+    const hero = readFileSync(join(process.cwd(), "components/marketing/hero.tsx"), "utf8");
+    const section = /<section className="([^"]+)"/.exec(hero)?.[1] ?? "";
+    expect(section).toContain("isolate");
+    expect(section).not.toContain("overflow-hidden");
+    const page = readFileSync(join(process.cwd(), "app/[locale]/page.tsx"), "utf8");
+    const wrapper = /<div className="([^"]*dark[^"]*)"/.exec(page)?.[1] ?? "";
+    expect(wrapper.split(/\s+/)).toContain("overflow-clip");
+  });
+
   it("🔴 stands still with reduced motion: no breathing, no rising", () => {
     const reduced = css.slice(css.indexOf("@media (prefers-reduced-motion: reduce)"));
     expect(reduced.length).toBeGreaterThan(40);
