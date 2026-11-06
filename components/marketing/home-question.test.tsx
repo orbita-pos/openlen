@@ -30,6 +30,14 @@ afterEach(() => {
 const at = (h: number) => () => new Date(2026, 10, 6, h, 30);
 
 describe("the home's question", () => {
+  // Jesús, 06/11: «que el texto … sea de 36 px … el de Gemini es de 36 px». Smaller on a phone.
+  it("🔴 is Gemini's size: 36 px on a desktop, never the 46 px it was", () => {
+    const html = renderToString(<HomeQuestion now={at(9)} random={() => 0} />);
+    expect(html).toContain("md:text-[36px]");
+    expect(html).not.toContain("46px");
+    expect(html).not.toContain("40px");
+  });
+
   it("🔴 the server renders the neutral question, as the H1, waiting to fade in", () => {
     const html = renderToString(<HomeQuestion now={at(9)} random={() => 0} />);
     expect(html).toContain("<h1");

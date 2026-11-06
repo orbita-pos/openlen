@@ -74,8 +74,9 @@ export async function Hero() {
 
           {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
               titular y la caja bastan; lo que hace Len lo cuenta /features. */}
-          {/* `max-w-3xl` (Jesús, 06/11: «haz el input más largo»): a wide bar, like Gemini's. */}
-          <div className="relative mt-8 w-full max-w-3xl text-left [@media(max-height:500px)]:mt-5">
+          {/* 660 px, Gemini's width (Jesús, 06/11: «el input de 660 … que sea menos ancho»; it had gone to 768 with «haz
+              el input más largo», and opened that read too wide). /new's start screen has the same. */}
+          <div className="relative mt-8 w-full max-w-[660px] text-left [@media(max-height:500px)]:mt-5">
             <HomeGlow />
             <HeroPromptInput />
           </div>
