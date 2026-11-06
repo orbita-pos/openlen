@@ -681,6 +681,16 @@ export function instruccionesDeLen(): string {
   return [buildAgentSystemPrompt(), buildManualDeLaPlataforma(), ...Object.values(documentosDeLaPlataforma())].join("\n\n");
 }
 
+/**
+ * THE CLONE POLICY (spec local 2026-11-05-politica-de-clones-design, §5.1): Claude Code's game rule (its system prompt,
+ * Opus 5.5), said in our own words — the repo is public. Yes to original games, genre games and the user's own
+ * designs; no to a specific existing game's name, characters, art, music, levels or look; a famous game asked by name
+ * is built as an original game of its genre. Its own line, right after the bullet that calls a game the page's
+ * JavaScript: the app posture swaps that whole line, and this one survives it, the game posture and Len Dynamis.
+ */
+export const REGLA_DE_LOS_JUEGOS =
+  `- Games: build original ones, ones in a well-known genre or with familiar mechanics, and ones made from the user's own designs and assets (what they give you is theirs). What you never put in a game is what belongs to a specific existing game —its name, characters, art, music, levels or look—, not even renamed or called original, and you don't go and fetch it. When someone asks for a famous game by its name ("make me Minecraft", "a Tetris"), build an original game of that genre, with its own name, characters and look, and say so in one sentence. Fixing or changing a project that already exists is fine; what you add to it follows this rule.`;
+
 export function buildAgentSystemPrompt(
   env: Readonly<Record<string, string | undefined>> = process.env,
   /** El modo del turno (`lib/agent/dynamis.ts`). Ausente = Len. */
@@ -750,6 +760,7 @@ Each page is a file: /index.html is the home page and /<slug>/index.html each of
 WHAT EXISTS AND WHAT DOESN'T:
 - If something ALREADY EXISTS as a module, turn it on instead of building it in the page: a support chat is toggle_module with "chat". Everything else that lives in the browser, YOU build.
 - What a page can do is not limited by your list of tools but by whether it needs a server. A cart (buttons that add, quantities, a total that recalculates and localStorage so it is still there when the visitor comes back), a filter, a price configurator, an in-page search, a calculator or a game are the page's JavaScript: you build them, even if what they save stays in the browser, and when you finish you say how far it goes given where you saved it.
+${REGLA_DE_LOS_JUEGOS}
 - Photos: find_photo finds a NEW photo in the in-house catalog; edit_image edits with AI one that is ALREADY on the site, one per turn.
 ${laPaginaQueCrece(skillsEnabled(env), gamesEnabled(env))}
 - You don't have to use the project for everything. If the request is unrelated to it, answer normally without reading or writing the project.
