@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "智能体已达到每轮步骤上限。",
       "tool_limit": "智能体已达到每轮操作上限。",
-      "budget_limit": "Len 已达到单轮使用上限，已停止。已完成的内容已保存；如需继续，请再告诉它。",
+      "budget_limit": "你的账户积分已用完，Len 已停止。已完成的内容已保存；积分恢复后，请让它继续。",
       "cancelled": "该轮已被取消。",
       "truncated": "回复连续多次超出空间限制，请让 Len 继续。",
       "context_too_long": "此对话太长，无法总结。请输入 /compact 或开始新的对话。",

@@ -674,7 +674,7 @@ const WRAP_UP_INSTRUCTION =
 /** El mismo cierre, para el techo de DINERO del turno (Len 2.1): lo que cambia
  *  es el porqué, que el usuario tiene que poder entender. */
 const WRAP_UP_PRESUPUESTO =
-  "SYSTEM: You reached this turn's spending cap and can no longer use tools. Close by talking to the user in THEIR language: briefly sum up what you managed to do and what is still pending, and tell them to ask you to carry on if they want to continue. Don't claim to have done what wasn't applied.";
+  "SYSTEM: The user's account ran out of credits and you can no longer use tools. Close by talking to the user in THEIR language: briefly sum up what you managed to do and what is still pending, and tell them that once they have credits again they can ask you to carry on. Don't claim to have done what wasn't applied.";
 
 // ⚰️ Aquí vivía `buildVisualFixInstruction`, que redactaba «SISTEMA
 // (verificación visual automática — el usuario NO escribió esto)» y le mandaba
@@ -1437,7 +1437,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     }
     args.emit({
       type: "error",
-      message: code === "budget_limit" ? "El agente llegó al tope de gasto del turno" : "El agente alcanzó su límite de pasos",
+      message: code === "budget_limit" ? "Se acabó el saldo de la cuenta" : "El agente alcanzó su límite de pasos",
       code,
     });
     return buildResult(true, code);

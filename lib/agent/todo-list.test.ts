@@ -126,7 +126,7 @@ describe("todosForTurn", () => {
 describe("the notices", () => {
   it("with a list and no goal, it asks to finish the step and ask about the next one", () => {
     const n = nearCapNotice({ hasList: true, goalContinues: false });
-    expect(n.startsWith("SYSTEM (the user did NOT write this): this turn has used most of its budget.")).toBe(true);
+    expect(n.startsWith("SYSTEM (the user did NOT write this): the credits left in the user's account are almost used up.")).toBe(true);
     expect(n).toContain("ask whether to continue with the next step, naming it");
   });
 

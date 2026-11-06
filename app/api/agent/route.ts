@@ -2557,7 +2557,9 @@ async function correrTurno(
           // llamada y el cierre— lo paga la casa: el techo es la promesa.
           const alTecho = Math.min(credits, techo);
           console.log(
-            `[agent] tope de gasto — ${alTecho} credits (gastado ${credits}, techo ${techo})` +
+            // Con lo de los subagentes: el techo los cuenta (`spend.over()`), y sin ellos la línea
+            // decía «gastado 1214, techo 3000» de un turno que sí llegó (06/11, hijos 2188).
+            `[agent] tope de gasto — ${alTecho} credits (gastado ${credits}, subagentes ${spend.children()}, techo ${techo})` +
               ` / vueltas=${result.turns} llamadas=${result.toolCalls} motivo=budget_limit`,
           );
           await chargeCredits(userId, alTecho, turnoDelLibro("budget_limit"));

@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",
       "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",
-      "budget_limit": "Len hat an der Ausgabengrenze für einen Zug angehalten. Was erledigt ist, ist gespeichert; bitte ihn weiterzumachen, wenn du mehr willst.",
+      "budget_limit": "Len hat angehalten, weil dein Konto keine Credits mehr hat. Was erledigt ist, ist gespeichert; sobald du wieder Credits hast, bitte ihn weiterzumachen.",
       "cancelled": "Der Zug wurde abgebrochen.",
       "truncated": "Der Antwort ist mehrmals hintereinander der Platz ausgegangen – bitte Len, weiterzumachen.",
       "context_too_long": "Diese Unterhaltung ist zu lang und konnte nicht zusammengefasst werden. Schreib /compact oder beginne eine neue Unterhaltung.",
