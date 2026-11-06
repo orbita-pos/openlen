@@ -520,7 +520,7 @@ export function TopBar({
     <header className="relative z-[35] h-[60px] shrink-0 border-b bd bg-app flex items-center justify-between px-2 sm:px-4 gap-2 sm:gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <Link
-          href="/new"
+          href="/"
           className="flex items-center gap-2 shrink-0 rounded-md -mx-1 px-1 py-0.5 hover:bg-hover transition"
         >
           <OpenLenMark className="h-7 w-7 shrink-0" />

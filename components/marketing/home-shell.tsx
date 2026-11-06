@@ -26,6 +26,7 @@ import { useDarkMode } from "@/lib/use-dark-mode";
 import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { StartRail, StartTopRow, type StartItem } from "@/components/workspace-v2/start-rail";
 import { HeroLenMark } from "./hero-len";
+import { HomeDropZone } from "./home-drop";
 import { HomeFooter } from "./home-footer";
 
 /** Where «Mis páginas» lands after signing in. */
@@ -87,8 +88,9 @@ export function HomeShell({
 
   return (
     // `!bg-transparent`: `.workspace-v2` paints the workspace's background, which covered the home's light (it sits at
-    // z-index -1, under every in-flow background of the home).
-    <div className="workspace-v2 flex min-h-[100svh] flex-1 !bg-transparent">
+    // z-index -1, under every in-flow background of the home). The whole frame takes dropped files, as /new's start
+    // screen does (`HomeDropZone`), for the box below.
+    <HomeDropZone className="workspace-v2 flex min-h-[100svh] flex-1 !bg-transparent">
       <StartRail
         items={items}
         active="crear"
@@ -108,6 +110,6 @@ export function HomeShell({
         <main className="flex flex-1 flex-col">{children}</main>
         <HomeFooter />
       </div>
-    </div>
+    </HomeDropZone>
   );
 }

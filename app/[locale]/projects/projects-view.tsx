@@ -1787,7 +1787,7 @@ function EmptyState() {
 
       <div className="mt-8 flex items-center justify-center gap-3">
         <Link
-          href="/new"
+          href="/"
           className="inline-flex items-center gap-1.5 h-11 px-5 rounded-lg bg-coral-500 text-white text-[14px] font-medium hover:bg-coral-600 btn-coral-shadow transition"
         >
           {t("empty.startFromScratch")} <Sparkles size={14} />
@@ -1825,7 +1825,7 @@ function NoResults({
           {t("noResults.clearSearch")}
         </button>
         <Link
-          href="/new"
+          href="/"
           className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-coral-500 text-white text-[13px] font-medium hover:bg-coral-600 btn-coral-shadow transition"
         >
           <Plus size={13} /> {t("noResults.createNew")}

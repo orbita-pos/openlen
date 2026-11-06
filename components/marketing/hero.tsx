@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
+import { toolsEnabled } from "@/lib/tools/enabled";
 import { HeroPromptInput } from "./hero-prompt-input";
 import { HomeGlow } from "./home-glow";
 import { HomeQuestion } from "./home-question";
@@ -78,7 +79,7 @@ export async function Hero() {
               el input más largo», and opened that read too wide). /new's start screen has the same. */}
           <div className="relative mt-8 w-full max-w-[660px] text-left [@media(max-height:500px)]:mt-5">
             <HomeGlow />
-            <HeroPromptInput />
+            <HeroPromptInput tools={toolsEnabled()} />
           </div>
 
           {pagesLive > 0 && (

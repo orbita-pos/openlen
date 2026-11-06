@@ -17,7 +17,7 @@ export default function ChooseHandle() {
       <HandleDialog
         open
         onClose={() => {
-          if (!saved.current) router.replace("/new");
+          if (!saved.current) router.replace("/");
         }}
         onSaved={(h) => {
           saved.current = true;

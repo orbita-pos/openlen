@@ -20,8 +20,9 @@ import {
 // Reject offsite ?next= so a crafted URL can't bounce the user to another
 // domain after sign-up.
 function sanitizeNext(raw: string | null): string {
-  if (!raw) return "/new";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/new";
+  // Home, not /new: the home's box is the only one (06/11).
+  if (!raw) return "/";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
   return raw;
 }
 
