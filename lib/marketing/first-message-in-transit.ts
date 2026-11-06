@@ -57,6 +57,23 @@ export function takeFirstMessage(arrivalBrief: string | null, now: number = Date
   } catch {
     return null;
   }
+  return parseTicket(raw, arrivalBrief, now);
+}
+
+/** Whether /new arrives with a ticket it will send — WITHOUT spending it. /new has no box of its own (Jesús, 06/11:
+ *  «¿para qué tener 2 inputs?»): with a ticket it opens the blank project and sends; without one it goes back to the
+ *  home's box before opening anything. */
+export function hasFirstMessage(arrivalBrief: string | null, now: number = Date.now()): boolean {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(KEY);
+  } catch {
+    return false;
+  }
+  return parseTicket(raw, arrivalBrief, now) !== null;
+}
+
+function parseTicket(raw: string | null, arrivalBrief: string | null, now: number): FirstMessage | null {
   if (!raw) return null;
   let ticket: { brief?: unknown; kind?: unknown; at?: unknown };
   try {

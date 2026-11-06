@@ -15,7 +15,8 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
-import type { FirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { takeFilesInTransit } from "@/lib/marketing/files-in-transit";
+import { hasFirstMessage, type FirstMessage } from "@/lib/marketing/first-message-in-transit";
 import { useFirstMessageOnArrival } from "@/components/workspace-v2/use-first-message-on-arrival";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -33,12 +34,7 @@ import { mentionFromDesignSelection, mentionFromPagePick } from "@/lib/mentions/
 import { registerMentionCanvas } from "@/components/workspace-v2/mention-highlight";
 import { isMentionSig, type IncomingMention, type MentionKind } from "@/lib/mentions/types";
 import { PublishModal } from "@/components/workspace/publish-modal";
-import {
-  isGenerationBriefLengthValid,
-  prepareGenerationBriefInput,
-  shouldSyncGenerationBriefParam,
-  trimGenerationBrief,
-} from "@/lib/generation/brief-contract";
+import { isGenerationBriefLengthValid, trimGenerationBrief } from "@/lib/generation/brief-contract";
 import { scanController } from "@/lib/workspace-v2/scan-controller";
 import type {
   FormConfig,
@@ -74,10 +70,8 @@ import { StartColumn, StartRail, StartTopRow, type StartItem } from "@/component
 import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { HeroLenMark } from "@/components/marketing/hero-len";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
-import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { KIND_PARAM, kindFromParam, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
-import type { PageEffort } from "@/components/workspace-v2/panels/ai-brief-panel";
+import { homeHref, KIND_PARAM, kindFromParam, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
@@ -511,7 +505,8 @@ function NewV2Inner() {
     const pid = searchParams.get("project");
     if (!pid) return;
     if (centerView === "projects" || centerView === "explore" || centerView === "templates" || centerView === "tools") {
-      router.replace(centerView === "templates" ? "/new" : `/new?view=${centerView}`);
+      // The gallery lives at ?mode=template since 06/11 (a bare /new is the home now, which has no gallery).
+      router.replace(centerView === "templates" ? "/new?mode=template" : `/new?view=${centerView}`);
     }
   }, [centerView, searchParams, router]);
   const setCenterView = useCallback(
@@ -522,7 +517,8 @@ function NewV2Inner() {
       // Leaving a tool forgets which one was open.
       if (v !== "tool") params.delete("tool");
       const qs = params.toString();
-      router.replace(qs ? `/new?${qs}` : "/new");
+      // Nothing left in the URL is the start screen, which is the home (06/11).
+      router.replace(qs ? `/new?${qs}` : "/");
     },
     [searchParams, router],
   );
@@ -836,15 +832,9 @@ function NewV2Inner() {
     pendingInsertRef.current = { id: "motion", name: t("drop.sectionName") };
   };
 
-  // El brief del estado vacío vive aquí para que sobreviva a los cambios de
-  // panel; enviarlo es el primer mensaje a Len (ver «EL PROYECTO EN BLANCO»).
-  // ⚰️ Aquí se contaba por qué `/api/generate` escribía la página de una
-  // pasada; la ruta se fue con Crear el 2026-10-06 (plans/crear-es-len).
-  //
-  // El dial de esfuerzo queda aparcado: en esta ruta no compra nada todavía, y
-  // un selector que no compra nada es exactamente la mentira que se arregló en
-  // `lib/document/page-effort.ts`. Su maquinaria sigue intacta.
-  const [effort, setEffort] = useState<PageEffort>("low");
+  // ⚰️ AQUÍ VIVÍAN EL BRIEF DEL ESTADO VACÍO, SUS FOTOS, SUS PDF Y EL DIAL DE ESFUERZO aparcado, retirados el
+  // 2026-11-06 con la caja de /new (Jesús: «¿para qué tener 2 inputs?»): la única caja es la de la portada, que
+  // manda su primer mensaje por el pase (`useFirstMessageOnArrival`, «EL PROYECTO EN BLANCO» más abajo).
   // ⚰️ Aquí vivía `useGeneration` —el cliente de `/api/generate`— con su estado
   // `generating`. Crear es el primer mensaje a Len desde el 2026-10-06
   // (plans/crear-es-len): ver «EL PROYECTO EN BLANCO» más abajo.
@@ -887,83 +877,12 @@ function NewV2Inner() {
       // update already got it out of the user's way for this session.
     });
   }, [loadedProject?.id]);
-  // Brief can be pre-filled from a deep link (homepage hero CTA, projects
-  // example cards, etc.) via ?brief=<urlencoded>.
+  // THE BRIEF THIS TAB ARRIVED WITH (`?brief=`): the home's ticket is sent only for it (`useFirstMessageOnArrival`,
+  // below), and the URL loses it when the blank project opens. Without the ticket it goes back, with the `?kind=`, to
+  // the home's box — the only one since 06/11 (Jesús: «¿para qué tener 2 inputs?») —, which only fills (`homeHref`).
   const briefParam = searchParams.get("brief");
-  // The brief this tab ARRIVED with: the URL loses it when the blank project opens, and the home's ticket is sent
-  // only for it (`useFirstMessageOnArrival`, below).
   const arrivalBriefRef = useRef(briefParam);
-  const preparedBriefParam = useMemo(
-    () => prepareGenerationBriefInput(briefParam),
-    [briefParam],
-  );
-  const [aiPrompt, setAiPrompt] = useState(() => preparedBriefParam.value);
-  const [truncatedPrompt, setTruncatedPrompt] = useState<string | null>(() =>
-    preparedBriefParam.truncated ? preparedBriefParam.value : null,
-  );
-  const [truncationAnnouncementToken, setTruncationAnnouncementToken] =
-    useState<string | null>(() =>
-      preparedBriefParam.truncated ? "deep-link-1" : null,
-    );
-  const truncationAnnouncementSequenceRef = useRef(
-    preparedBriefParam.truncated ? 2 : 1,
-  );
-  const processedBriefParamRef = useRef(briefParam);
-  const normalizedBriefParamRef = useRef<{ value: string | null } | null>(null);
-  useEffect(() => {
-    const previousBriefParam = processedBriefParamRef.current;
-    if (previousBriefParam === briefParam) return;
-    processedBriefParamRef.current = briefParam;
-    const ownNormalization = normalizedBriefParamRef.current;
-    normalizedBriefParamRef.current = null;
-    if (
-      !shouldSyncGenerationBriefParam(
-        previousBriefParam,
-        briefParam,
-        ownNormalization?.value,
-      )
-    ) {
-      return;
-    }
-
-    setAiPrompt(preparedBriefParam.value);
-    setTruncatedPrompt(
-      preparedBriefParam.truncated ? preparedBriefParam.value : null,
-    );
-    setTruncationAnnouncementToken(
-      preparedBriefParam.truncated
-        ? `deep-link-${truncationAnnouncementSequenceRef.current++}`
-        : null,
-    );
-  }, [briefParam, preparedBriefParam]);
-  // Las fotos adjuntas al brief. Viven junto a él y no dentro del compositor
-  // porque quien manda el primer mensaje a Len es esta página. Se limpian al generar: son de
-  // ESE brief, y dejarlas puestas haria que la siguiente pagina naciera mirando
-  // referencias que el usuario ya no tiene delante.
-  const [aiFotos, setAiFotos] = useState<readonly { dataUrl: string; nombre: string }[]>([]);
-  // Los PDF del estado vacío (26/10): se suben con el primer mensaje, como las fotos.
-  const [aiPdfs, setAiPdfs] = useState<readonly File[]>([]);
-  const aiBriefFormState = useMemo(
-    () => ({
-      prompt: aiPrompt,
-      setPrompt: setAiPrompt,
-      truncatedPrompt,
-      setTruncatedPrompt,
-      truncationAnnouncementToken,
-      setTruncationAnnouncementToken,
-      fotos: aiFotos,
-      setFotos: setAiFotos,
-      pdfs: aiPdfs,
-      setPdfs: setAiPdfs,
-    }),
-    [
-      aiPrompt,
-      truncatedPrompt,
-      truncationAnnouncementToken,
-      aiFotos,
-      aiPdfs,
-    ],
-  );
+  const arrivalKindRef = useRef(kindFromParam(searchParams.get(KIND_PARAM)));
   // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
   // lente —una fila de la tarjeta de cambios, una ruta (la #9 de
   // plans/len-agente-2026)— el panel se aparta. Si no, la lente se abría DETRÁS.
@@ -1008,14 +927,15 @@ function NewV2Inner() {
   // ─── EL PROYECTO EN BLANCO (plans/crear-es-len, 2026-10-06) ───────────────
   //
   // Crear es el PRIMER MENSAJE A LEN en un proyecto en blanco, como la «New
-  // Session» de DeepSeek (`packages/client/ui-workspace/README.md`): `/new` sin
-  // proyecto toma el blanco que ya hubiera (o crea uno) y lo abre; con él
-  // abierto, el centro es el estado vacío del chat, y enviar es un mensaje
-  // normal a `/api/agent`. Un brief en la URL (un enlace viejo con
-  // `autostart=1`, cualquier enlace de fuera) sólo RELLENA el compositor. Lo
-  // que la persona ENVIÓ desde la portada sí se manda al llegar (06/11, Jesús:
-  // «dos inputs así es duplicación»): no por la URL, por el pase de un solo uso
-  // que deja la portada en esta pestaña (`useFirstMessageOnArrival`).
+  // Session» de DeepSeek (`packages/client/ui-workspace/README.md`), y se ESCRIBE
+  // EN UNA SOLA CAJA, la de la portada (06/11, Jesús: «¿para qué tener 2
+  // inputs?»). Lo que la persona envió allí llega con el pase de un solo uso de
+  // esta pestaña (`useFirstMessageOnArrival`): `/new` toma el blanco que ya
+  // hubiera (o crea uno), lo abre y lo manda, sin caja de por medio. Sin pase
+  // —un enlace con `?brief=`, una pestaña vieja, recargar— `/new` no abre nada:
+  // vuelve a la caja de la portada con el brief y el `kind`, que sólo la
+  // RELLENAN (`homeHref`). Un `/new` pelado ni llega aquí: el middleware lo manda
+  // a la portada sin cargar el taller.
   const [blankFailure, setBlankFailure] = useState<ProjectLoadFailure | null>(null);
   const [blankAttempt, setBlankAttempt] = useState(0);
   /** El blanco al que se acaba de redirigir: mientras carga ya se sabe que es la
@@ -1032,6 +952,11 @@ function NewV2Inner() {
   const resolvingBlank = entryMode === "ai" && startSurface === "crear";
   useEffect(() => {
     if (!resolvingBlank) return;
+    // Nothing the home sent: back to its box, with what the link carried, before any blank project opens.
+    if (!hasFirstMessage(arrivalBriefRef.current)) {
+      router.replace(homeHref(arrivalBriefRef.current, arrivalKindRef.current));
+      return;
+    }
     let vivo = true;
     setBlankFailure(null);
     void fetch("/api/projects", { method: "POST" })
@@ -1039,9 +964,8 @@ function NewV2Inner() {
         if (!r.ok) throw r.status;
         const d = (await r.json().catch(() => null)) as { id?: unknown } | null;
         if (typeof d?.id !== "string" || !d.id) throw 0;
-        // El brief que trajera la URL ya está en `aiPrompt` (nace de él), y el
-        // componente no se vuelve a montar al cambiar la URL: no hace falta
-        // llevarlo. `mode` y `autostart` se quedan atrás.
+        // El brief que llegó lo guarda `arrivalBriefRef`, y el componente no se
+        // vuelve a montar al cambiar la URL: no hace falta llevarlo.
         if (vivo) {
           blankIdRef.current = d.id;
           router.replace(`/new?project=${encodeURIComponent(d.id)}`);
@@ -1112,29 +1036,26 @@ function NewV2Inner() {
   // Con el estado vacío en el centro, la barra lateral va plegada (una vez por
   // visita: ver use-collapse-while-blank.ts).
   useCollapseWhileBlank({ isBlank: proyectoEnBlanco, projectId: loadedProjectId, collapse: () => setLeftCollapsed(true) });
-  // ENVIAR DESDE LA ENTRADA. El usuario ya pulsó enviar: el borrador que se
+  // ENVIAR LO QUE MANDÓ LA PORTADA. La persona ya pulsó enviar allí: lo que se
   // manda solo aquí es SU envío, no uno automático. Las fotos se suben antes
   // (Len las recibe por su dirección) y la referencia viaja con el mensaje.
-  // `fromHome`: what the person sent from the home — its text and its pill —, sent on arrival.
-  const handleHeroSend = useCallback(async (fromHome?: FirstMessage) => {
+  const handleHeroSend = useCallback(async (fromHome: FirstMessage) => {
     if (!loadedProjectId || heroSending) return;
-    const brief = trimGenerationBrief(fromHome?.brief ?? aiPrompt);
+    const brief = trimGenerationBrief(fromHome.brief);
     if (!isGenerationBriefLengthValid(brief)) return;
-    const kind = fromHome?.kind ?? naceComo;
-    if (fromHome) setNaceComo(kind);
+    const kind = fromHome.kind;
+    setNaceComo(kind);
     setHeroSending(true);
     try {
-      // DOS ORIGENES, UN LOTE, como hacía Crear. Las del heroe cruzan por
-      // `sessionStorage` —no caben en la URL— y se LEEN Y SE BORRAN aqui. Manda
-      // el compositor, Y NO SE MEZCLAN: si el usuario adjunto algo AQUI, es lo
-      // que tiene delante; aun asi se consume el transito.
-      const delTransito = tomarReferenciasEnTransito();
-      const fotos = aiFotos.length > 0 ? aiFotos : delTransito;
+      // LO QUE ADJUNTÓ LA PORTADA: sus fotos cruzan por `sessionStorage` —no caben en la URL— y sus archivos (PDF,
+      // vídeo…) por IndexedDB (`lib/marketing/files-in-transit.ts`); los dos se LEEN Y SE BORRAN aquí.
+      const fotos = tomarReferenciasEnTransito();
       const subidas = fotos.length > 0 ? await uploadPhotos(fotos, loadedProjectId) : { images: [], failed: 0 };
       if (subidas.failed > 0) toast.error(t("toast.photosNotUploaded", { count: subidas.failed }));
-      const pdfsSubidos = await Promise.all(aiPdfs.map((pdf) => uploadAttachment(pdf, loadedProjectId)));
+      const pdfs = await takeFilesInTransit();
+      const pdfsSubidos = await Promise.all(pdfs.map((pdf) => uploadAttachment(pdf, loadedProjectId)));
       const files = pdfsSubidos.flatMap((r) => (r.ok ? [r.file] : []));
-      if (files.length < aiPdfs.length) toast.error(t("toast.filesNotUploaded", { count: aiPdfs.length - files.length }));
+      if (files.length < pdfs.length) toast.error(t("toast.filesNotUploaded", { count: pdfs.length - files.length }));
       // Con App elegida, el primer mensaje lleva `naceComo` y el idioma de la
       // interfaz: el servidor le pone el esqueleto antes del turno, con ese
       // `lang` en el cascarón (`lib/projects/nacer-como-app.ts`).
@@ -1148,19 +1069,18 @@ function NewV2Inner() {
       setHeroSent(true);
       setMode("chat");
       setLeftCollapsed(false);
-      setAiFotos([]);
-      setAiPdfs([]);
-      setAiPrompt("");
     } finally {
       setHeroSending(false);
     }
-  }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiPdfs, naceComo, locale, toast, t]);
+  }, [loadedProjectId, heroSending, locale, toast, t]);
   // WHAT THE HOME SENT GOES OUT ON ARRIVAL: one send, not a second box with the same text. Only with the home's
-  // ticket in this tab, and only for the brief the tab arrived with.
+  // ticket in this tab, and only for the brief the tab arrived with. A blank project with nothing to send (a reload,
+  // an old tab) has no box here any more: back to the home's (Jesús, 06/11: «¿para qué tener 2 inputs?»).
   useFirstMessageOnArrival({
     arrivalBrief: arrivalBriefRef.current,
     ready: proyectoEnBlanco && !!loadedProjectId,
     send: (message) => void handleHeroSend(message),
+    onNothing: () => router.replace(homeHref(arrivalBriefRef.current, arrivalKindRef.current)),
   });
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
@@ -3725,13 +3645,15 @@ function NewV2Inner() {
             items={startItems}
             active={entryMode === "template" ? "plantillas" : startSurface === "herramienta" ? "herramientas" : startSurface}
             // Len's face, as on the home (Jesús, 06/11: «el Len se esconde por el logo»): going from / to «Mis
-            // páginas» swapped it for the static logo. Here no box reports to it, so it rests.
+            // páginas» swapped it for the static logo. Here no box reports to it, so it rests. It and the name go to
+            // the home, like Crear (Jesús, 06/11: «si estoy en My pages y le doy a Len me lleva a create, ¿no sería lo
+            // mismo que antes?»): `/new` opened the blank project, the old Crear under another button.
             mark={
-              <Link href="/new" aria-label="OpenLen" className="flex">
+              <Link href="/" aria-label="OpenLen" className="flex">
                 <HeroLenMark className="h-8 w-8 shrink-0" />
               </Link>
             }
-            homeHref="/new"
+            homeHref="/"
             account={
               <AccountMenu
                 dark={dark}
@@ -4016,23 +3938,11 @@ function NewV2Inner() {
               />
             </div>
           ) : (
-            // EL ESTADO VACÍO DEL CHAT DE LEN (plans/crear-es-len): el
-            // compositor de la entrada de siempre, y enviar es el primer
-            // mensaje (`handleHeroSend`).
-            <div className="flex-1 min-w-0 min-h-0 flex flex-col bg-app">
-              <StartLanding
-                aiState={aiBriefFormState}
-                onGenerate={() => void handleHeroSend()}
-                generating={heroSending}
-                effort={effort}
-                onEffortChange={setEffort}
-                onPaste={() => router.push("/new?mode=paste")}
-                naceComo={naceComo}
-                conJuego={juegosDisponibles}
-                conHerramienta={installedTools.available}
-                herramientaBloqueada={installedTools.paid ? undefined : tws("tools.planRequired")}
-                onNaceComoChange={setNaceComo}
-              />
+            // THE BLANK PROJECT HAS NO BOX (Jesús, 06/11: «¿para qué tener 2 inputs?»): what the home sent is on its
+            // way (`useFirstMessageOnArrival` turns this into the chat with Len working), or there is nothing to send
+            // and the page is going back to the home's box. Either way, a quiet wait — never a second box.
+            <div className="flex-1 min-w-0 min-h-0 flex items-center justify-center bg-app" data-blank-waiting="">
+              <div className="text-[12px] fg-faint">{t("editing.loading")}</div>
             </div>
           ))}
         {entryMode === "editing" && !proyectoEnBlanco && !previewingTemplate &&

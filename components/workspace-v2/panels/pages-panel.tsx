@@ -105,7 +105,7 @@ export function PagesPanel({ currentProjectId }: PagesPanelProps) {
   );
 
   const onNewPage = useCallback(() => {
-    router.push("/new");
+    router.push("/");
   }, [router]);
 
   return (

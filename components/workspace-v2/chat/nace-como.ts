@@ -48,3 +48,22 @@ export function newProjectHref(brief: string, kind: "pagina" | NaceComoApp): str
   const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
   return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }
+
+/** The way back to the home's box, the ONLY box (Jesús, 06/11: «¿para qué tener 2 inputs?»): where /new sends a link
+ *  that carries a brief or a kind the home didn't send — they only FILL the home's box (`homeArrival`), as they only
+ *  filled /new's. Nothing to carry is plain `/`. */
+export function homeHref(brief: string | null, kind: "pagina" | NaceComoApp): string {
+  const qs = new URLSearchParams();
+  if (brief && brief.trim()) qs.set("brief", brief.trim());
+  if (kind !== "pagina") qs.set(KIND_PARAM, kind);
+  const s = qs.toString();
+  return s ? `/?${s}` : "/";
+}
+
+/** What a link to the home carries for its box (`?brief=`, `?kind=`): it fills, never sends. */
+export function homeArrival(search: string): { brief: string; kind: "pagina" | NaceComoApp } | null {
+  const qs = new URLSearchParams(search);
+  const brief = qs.get("brief")?.trim() ?? "";
+  const kind = kindFromParam(qs.get(KIND_PARAM));
+  return brief || kind !== "pagina" ? { brief, kind } : null;
+}

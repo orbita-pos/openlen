@@ -1,5 +1,5 @@
 // What choosing App adds to the first message. The cards these tests used to drive went on 06/11 (the choice is the
-// composer's pill now: components/marketing/hero-kind-picker.test.tsx and start-landing.kind.test.tsx).
+// composer's pill now: components/marketing/hero-kind-picker.test.tsx and hero-prompt-input.test.tsx).
 import { describe, expect, it } from "vitest";
 
 describe("lo que elegir App añade al primer mensaje", () => {

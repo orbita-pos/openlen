@@ -137,7 +137,7 @@ export function AiBriefPanel({
             {/* Just the effort chooser on the left — the editing affordances
                 (image / scope / autofill) belong to the edit chat, not the
                 brief, and crowding them here overflowed the row. */}
-            {/* Dial aparcado — ver el comentario en start-landing.tsx. */}
+            {/* Dial aparcado: en esta ruta no compra nada todavía (`lib/document/page-effort.ts`). */}
             <div className="flex items-center gap-0.5 min-w-0" />
             <button
               type="button"

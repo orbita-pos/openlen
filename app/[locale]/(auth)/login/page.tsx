@@ -46,7 +46,8 @@ export default async function LoginPage({
 // Only allow same-origin relative paths so a crafted ?next=https://evil.com
 // doesn't bounce the user off-site after sign-in.
 function sanitizeNext(next?: string): string {
-  if (!next) return "/new";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/new";
+  // Home, not /new: the home's box is the only one (06/11).
+  if (!next) return "/";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/";
   return next;
 }

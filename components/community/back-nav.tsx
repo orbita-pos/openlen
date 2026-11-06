@@ -8,7 +8,7 @@ import { Link } from "@/i18n/navigation";
 export default function BackNav({
   title,
   icon,
-  backHref = "/new",
+  backHref = "/",
   backLabel = "Back to workspace",
 }: {
   title: string;
