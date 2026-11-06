@@ -333,7 +333,10 @@
       "toolHeadline": "你需要什么工具？",
       "toolSubtitle": "Len 来做，它会留在你的 OpenLen 里：在侧边栏，或在你的项目里。",
       "toolPlaceholder": "能查看并确认今天预订的东西…"
-    }
+    },
+    "closeMenu": "关闭菜单",
+    "pasteTitle": "粘贴 HTML",
+    "pasteHint": "从你已有的页面开始"
   },
   "empty": {
     "badge": "OpenLen 工作区",
@@ -454,7 +457,8 @@
     "crear": "创建",
     "mispaginas": "我的页面",
     "comunidad": "社区",
-    "herramientas": "工具"
+    "herramientas": "工具",
+    "plantillas": "模板"
   },
   "resultadosTabs": {
     "page": "页面",

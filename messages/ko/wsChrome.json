@@ -333,7 +333,10 @@
       "toolHeadline": "어떤 도구가 필요하세요?",
       "toolSubtitle": "Len이 만들어 내 OpenLen에 남아요. 사이드바나 프로젝트 안에요.",
       "toolPlaceholder": "오늘 예약을 보고 확정할 수 있는 것…"
-    }
+    },
+    "closeMenu": "메뉴 닫기",
+    "pasteTitle": "HTML 붙여넣기",
+    "pasteHint": "이미 있는 페이지에서 시작하기"
   },
   "empty": {
     "badge": "OpenLen 워크스페이스",
@@ -454,7 +457,8 @@
     "crear": "만들기",
     "mispaginas": "내 페이지",
     "comunidad": "커뮤니티",
-    "herramientas": "도구"
+    "herramientas": "도구",
+    "plantillas": "템플릿"
   },
   "resultadosTabs": {
     "page": "페이지",

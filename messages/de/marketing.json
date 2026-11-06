@@ -13,8 +13,29 @@
     "menu": "Menü"
   },
   "hero": {
-    "title": "Dein eigener Webentwickler. <len></len> <gradient>Len.</gradient>",
-    "announce": "<strong>Len baut jetzt Apps</strong><dot></dot>Kostenlos testen",
+    "question": "Womit fangen wir an?",
+    "questions": {
+      "morning": [
+        "Guten Morgen. Womit fangen wir an?",
+        "Was machen wir heute?",
+        "Kaffee in der Hand. Was bauen wir?"
+      ],
+      "afternoon": [
+        "Womit machen wir weiter?",
+        "Was machen wir heute Nachmittag?",
+        "Guten Tag. Was bauen wir?"
+      ],
+      "evening": [
+        "Guten Abend. Was machen wir?",
+        "Was bringen wir heute noch fertig?",
+        "Machen wir es für morgen fertig?"
+      ],
+      "night": [
+        "Noch wach? Erzähl mir deine Idee.",
+        "Um diese Uhrzeit kommen die besten Ideen. Was ist deine?",
+        "Kannst du nicht schlafen? Bauen wir deine Seite."
+      ]
+    },
     "pagesThisWeek": "<strong>{count, number}</strong> Seiten diese Woche erstellt",
     "githubAria": "OpenLen auf GitHub",
     "starOnGithub": "Auf GitHub mit Stern markieren",
@@ -23,7 +44,6 @@
   "heroPrompt": {
     "placeholder": "Sag Len, was du brauchst …",
     "generate": "Erstellen",
-    "tryLabel": "Zum Beispiel",
     "dictate": "Diktieren",
     "stopDictating": "Diktat beenden",
     "micDenied": "Dein Browser hat das Mikrofon blockiert. Erlaube es in der Adressleiste, um zu diktieren.",
@@ -35,24 +55,6 @@
     "removeImage": "Bild entfernen",
     "attachedAlt": "Angehängte Referenz",
     "micSilent": "Das Mikrofon wurde geöffnet, aber nichts erkannt. Prüfe, ob Chrome den richtigen Eingang nutzt und du eine Verbindung hast — die Spracherkennung läuft beim Dienst deines Browsers, nicht bei OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Meine Bäckerei",
-        "prompt": "Eine Seite für meine Bäckerei „La Espiga“: süßes Gebäck, Torten auf Bestellung, Öffnungszeiten, Anfahrt und ein Button zum Bestellen per WhatsApp."
-      },
-      "barber": {
-        "label": "Barbershop-Termine",
-        "prompt": "Eine Seite für meinen Barbershop mit drei Barbieren: Schnitte und Preise, Fotos vom Laden und ein Formular, um einen Termin zu buchen."
-      },
-      "photographer": {
-        "label": "Foto-Portfolio",
-        "prompt": "Mein Portfolio als Hochzeitsfotografin: eine Galerie pro Hochzeit, was jedes Paket enthält, und ein Formular, um einen Termin anzufragen."
-      },
-      "course": {
-        "label": "Mein Online-Kurs",
-        "prompt": "Eine Landingpage für meinen Online-Backkurs: Lehrplan Woche für Woche, Preis 49 $, Stimmen von Teilnehmerinnen und ein Button zur Anmeldung."
-      }
-    },
     "ghost": [
       "Eine Seite für meine Bäckerei, mit Bestellungen per WhatsApp",
       "Online-Termine für meinen Barbershop",
@@ -329,5 +331,18 @@
     "cta": "So verbindest du ihn",
     "worksWith": "Funktioniert mit",
     "anyClient": "Und mit jedem anderen Client, der MCP spricht."
+  },
+  "pages": {
+    "features": {
+      "title": "OpenLen — Was Len für deine Seite tut",
+      "description": "Len baut deine Seite oder App, veröffentlicht sie auf deiner Domain, zeigt dir, wer sie besucht und wer dir geschrieben hat, und verbindet sich mit dem KI-Assistenten, den du schon nutzt. Open Source.",
+      "heading": "Was Len für dich tut",
+      "subheading": "Sag ihm, was du brauchst. Er baut es, veröffentlicht es und sagt dir Bescheid, wenn dir jemand schreibt."
+    },
+    "pricing": {
+      "title": "OpenLen — Preise",
+      "description": "Starte kostenlos. Pläne für die echte Nutzung von Len, mit Credits für Seiten, Apps und Spiele. Open Source, AGPLv3.",
+      "heading": "Preise"
+    }
   }
 }

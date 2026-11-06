@@ -6,7 +6,7 @@ import { Link } from "@/i18n/navigation";
 import { GithubIcon } from "@/components/ui/brand-icons";
 import { OpenLenMark } from "@/components/openlen-logo";
 
-const REPO = "https://github.com/orbita-pos/openlen";
+export const REPO = "https://github.com/orbita-pos/openlen";
 const LICENSE_URL = `${REPO}/blob/master/LICENSE`;
 
 // Client component: it's rendered inside MarketingChrome ("use client"), so it
@@ -22,8 +22,8 @@ export function Footer() {
     {
       title: t("footer.product.title"),
       links: [
-        { label: t("footer.product.features"), href: "/#features" },
-        { label: t("footer.product.pricing"), href: "/#pricing" },
+        { label: t("footer.product.features"), href: "/features" },
+        { label: t("footer.product.pricing"), href: "/pricing" },
       ],
     },
     {

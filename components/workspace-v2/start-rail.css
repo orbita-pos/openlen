@@ -1,0 +1,34 @@
+/* THE PHONE'S DRAWER SLIDES (Jesús, 06/11: «Slide from the left»). Opening, the panel comes in from the left edge and
+   the scrim fades in; closing, both go back the same way, quicker, and the drawer leaves the page when they finish
+   (`start-rail.tsx` waits the exit's length). With reduced motion, it simply appears and goes. */
+
+@keyframes start-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+@keyframes start-drawer-out {
+  from { transform: none; }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes start-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes start-scrim-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.start-drawer[data-state="open"] .start-drawer__panel { animation: start-drawer-in .24s cubic-bezier(.2, .8, .2, 1) both; }
+.start-drawer[data-state="closed"] .start-drawer__panel { animation: start-drawer-out .18s cubic-bezier(.4, 0, 1, 1) both; }
+.start-drawer[data-state="open"] .start-drawer__scrim { animation: start-scrim-in .24s ease-out both; }
+.start-drawer[data-state="closed"] .start-drawer__scrim { animation: start-scrim-out .18s ease-in both; }
+
+/* `[data-state]`: as specific as the rules above, and later, so it wins over both states. */
+@media (prefers-reduced-motion: reduce) {
+  .start-drawer[data-state] .start-drawer__panel,
+  .start-drawer[data-state] .start-drawer__scrim { animation: none; }
+}

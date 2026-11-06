@@ -15,7 +15,9 @@ import {
 } from "react";
 import { useSearchParams } from "next/navigation";
 import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
-import { useRouter } from "@/i18n/navigation";
+import type { FirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { useFirstMessageOnArrival } from "@/components/workspace-v2/use-first-message-on-arrival";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { DESIGN_PANEL_WIDTH, DesignPanel } from "@/components/workspace-v2/design-mode/design-panel";
 import {
@@ -67,7 +69,11 @@ import {
   type SectionView,
 } from "@/components/workspace-v2/left-sidebar";
 import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-v2/icons";
-import { PreviewPlaceholder } from "@/components/workspace-v2/preview-placeholder";
+import { TemplateGallery } from "@/components/workspace-v2/template-gallery";
+import { StartColumn, StartRail, StartTopRow, type StartItem } from "@/components/workspace-v2/start-rail";
+import { AccountMenu } from "@/components/workspace-v2/account-menu";
+import { CreditPill } from "@/components/app/credit-pill";
+import { OpenLenMark } from "@/components/openlen-logo";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
@@ -359,6 +365,8 @@ function NewV2Inner() {
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): the «Juego» card, unless games are off here.
   const juegosDisponibles = useGamesAvailable();
   const [dark, toggleDark] = useDarkMode();
+  // The start rail's drawer on a phone (06/11: without a project, the start frame).
+  const [startMenuOpen, setStartMenuOpen] = useState(false);
   const toast = useToast();
   // Editor sound (creamy click on rail switching) + the mute/volume control,
   // which lives in TopBar's avatar menu — it governs the app-wide click sound
@@ -883,6 +891,9 @@ function NewV2Inner() {
   // Brief can be pre-filled from a deep link (homepage hero CTA, projects
   // example cards, etc.) via ?brief=<urlencoded>.
   const briefParam = searchParams.get("brief");
+  // The brief this tab ARRIVED with: the URL loses it when the blank project opens, and the home's ticket is sent
+  // only for it (`useFirstMessageOnArrival`, below).
+  const arrivalBriefRef = useRef(briefParam);
   const preparedBriefParam = useMemo(
     () => prepareGenerationBriefInput(briefParam),
     [briefParam],
@@ -1001,8 +1012,11 @@ function NewV2Inner() {
   // Session» de DeepSeek (`packages/client/ui-workspace/README.md`): `/new` sin
   // proyecto toma el blanco que ya hubiera (o crea uno) y lo abre; con él
   // abierto, el centro es el estado vacío del chat, y enviar es un mensaje
-  // normal a `/api/agent`. NADA SE MANDA SOLO: un brief en la URL (la portada,
-  // un enlace viejo con `autostart=1`) sólo RELLENA el compositor.
+  // normal a `/api/agent`. Un brief en la URL (un enlace viejo con
+  // `autostart=1`, cualquier enlace de fuera) sólo RELLENA el compositor. Lo
+  // que la persona ENVIÓ desde la portada sí se manda al llegar (06/11, Jesús:
+  // «dos inputs así es duplicación»): no por la URL, por el pase de un solo uso
+  // que deja la portada en esta pestaña (`useFirstMessageOnArrival`).
   const [blankFailure, setBlankFailure] = useState<ProjectLoadFailure | null>(null);
   const [blankAttempt, setBlankAttempt] = useState(0);
   /** El blanco al que se acaba de redirigir: mientras carga ya se sabe que es la
@@ -1102,10 +1116,13 @@ function NewV2Inner() {
   // ENVIAR DESDE LA ENTRADA. El usuario ya pulsó enviar: el borrador que se
   // manda solo aquí es SU envío, no uno automático. Las fotos se suben antes
   // (Len las recibe por su dirección) y la referencia viaja con el mensaje.
-  const handleHeroSend = useCallback(async () => {
+  // `fromHome`: what the person sent from the home — its text and its pill —, sent on arrival.
+  const handleHeroSend = useCallback(async (fromHome?: FirstMessage) => {
     if (!loadedProjectId || heroSending) return;
-    const brief = trimGenerationBrief(aiPrompt);
+    const brief = trimGenerationBrief(fromHome?.brief ?? aiPrompt);
     if (!isGenerationBriefLengthValid(brief)) return;
+    const kind = fromHome?.kind ?? naceComo;
+    if (fromHome) setNaceComo(kind);
     setHeroSending(true);
     try {
       // DOS ORIGENES, UN LOTE, como hacía Crear. Las del heroe cruzan por
@@ -1125,7 +1142,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(naceComo !== "pagina" ? { naceComo, idioma: locale } : {}),
+        ...(kind !== "pagina" ? { naceComo: kind, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1139,6 +1156,13 @@ function NewV2Inner() {
       setHeroSending(false);
     }
   }, [loadedProjectId, heroSending, aiPrompt, aiFotos, aiPdfs, naceComo, locale, toast, t]);
+  // WHAT THE HOME SENT GOES OUT ON ARRIVAL: one send, not a second box with the same text. Only with the home's
+  // ticket in this tab, and only for the brief the tab arrived with.
+  useFirstMessageOnArrival({
+    arrivalBrief: arrivalBriefRef.current,
+    ready: proyectoEnBlanco && !!loadedProjectId,
+    send: (message) => void handleHeroSend(message),
+  });
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const data = e.data;
@@ -3595,6 +3619,18 @@ function NewV2Inner() {
   // crudo en la barra (ensayo de caja, 07/10). El taller de una app que nace
   // lo dice igual.
   const shownProjectName = projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName;
+  // WHERE THE START RAIL GOES (06/11): the places that were tabs in the start bar, plus Plantillas (the gallery,
+  // which lived under the box). In place, without reloading; Crear in the blank project is already there — going to
+  // `/new` would look for it again.
+  const startItems: StartItem[] = [
+    { key: "crear", label: tws("startTabs.crear"), onSelect: () => { if (!enElEditor) router.replace("/new"); } },
+    { key: "plantillas", label: tws("startTabs.plantillas"), onSelect: () => router.replace("/new?mode=template") },
+    { key: "mispaginas", label: tws("startTabs.mispaginas"), onSelect: () => router.replace("/new?view=projects") },
+    { key: "comunidad", label: tws("startTabs.comunidad"), onSelect: () => router.replace("/new?view=explore") },
+    ...(installedTools.available
+      ? [{ key: "herramientas" as const, label: tws("startTabs.herramientas"), onSelect: () => router.replace("/new?view=tools") }]
+      : []),
+  ];
   // Nada que ver todavía y el chat abierto: la conversación ocupa el centro (como Claude antes de un artefacto).
   const chatEnElCentro =
     entryMode === "editing" &&
@@ -3620,6 +3656,10 @@ function NewV2Inner() {
   return (
     <WorkspaceArtifactsContext.Provider value={workspaceArtifacts}>
     <div className="workspace-v2 h-full flex flex-col">
+      {/* SIN PROYECTO NO HAY BARRA (06/11, Jesús, sobre la de Gemini: «/new y / quiero que sea compartido»): la
+          pantalla de inicio es la de la portada, con su rail a la izquierda (`StartRail`, abajo) y una fila ligera
+          arriba. La barra habla sólo del proyecto. */}
+      {!pantallaDeInicio && (
       <TopBar
         esApp={esApp}
         projectName={shownProjectName}
@@ -3673,39 +3713,36 @@ function NewV2Inner() {
               }
             : undefined
         }
-        // SIN PROYECTO ABIERTO LA BARRA ES OTRA, Y EL RAIL NO EXISTE.
-        //
-        // El rail entero actúa SOBRE una página —Chat, Resultados, Mensajes,
-        // Versiones—, así que sin página abierta son cuatro iconos
-        // que no llevan a ningún sitio. Y la cuenta vive a su pie, o sea que se
-        // iría con él: por eso vuelve a la barra en esta pantalla. Lo mismo con
-        // el proyecto en blanco (`pantallaDeInicio`).
-        inicio={
-          !pantallaDeInicio
-            ? undefined
-            : {
-                activa: startSurface === "herramienta" ? "herramientas" : startSurface,
-                conHerramientas: installedTools.available,
-                onIr: (s) => {
-                  // En el blanco ya estás en «Crear»: ir a `/new` lo volvería a buscar.
-                  if (s === "crear" && enElEditor) return;
-                  router.replace(
-                    s === "crear"
-                      ? "/new"
-                      : `/new?view=${s === "mispaginas" ? "projects" : s === "herramientas" ? "tools" : "explore"}`,
-                  );
-                },
-                etiqueta: (s) => tws(`startTabs.${s}`),
-                dark,
-                onToggleDark: toggleDark,
-                soundVolume,
-                onSoundVolume: setSoundVolume,
-                onToggleSoundMute: toggleSoundMute,
-              }
-        }
       />
+      )}
       <div className="flex-1 min-h-0 flex relative">
-        {!pantallaDeInicio && (
+        {pantallaDeInicio ? (
+          // EL RAIL DE INICIO: el rail del proyecto actúa SOBRE una página —Chat, Resultados, Mensajes, Versiones—,
+          // así que sin página son iconos que no llevan a ningún sitio. Éste lleva a dónde se puede ir, y la cuenta
+          // a su pie, como el del proyecto.
+          <StartRail
+            items={startItems}
+            active={entryMode === "template" ? "plantillas" : startSurface === "herramienta" ? "herramientas" : startSurface}
+            mark={
+              <Link href="/new" aria-label="OpenLen" className="flex">
+                <OpenLenMark className="h-7 w-7 shrink-0" />
+              </Link>
+            }
+            account={
+              <AccountMenu
+                dark={dark}
+                onToggleDark={toggleDark}
+                soundVolume={soundVolume}
+                onSoundVolume={setSoundVolume}
+                onToggleSoundMute={toggleSoundMute}
+              />
+            }
+            // The credits live in the open rail, not in a corner (Jesús, 06/11).
+            credits={<CreditPill />}
+            drawerOpen={startMenuOpen}
+            onCloseDrawer={() => setStartMenuOpen(false)}
+          />
+        ) : (
         <LeftSidebar
           dark={dark}
           onToggleDark={toggleDark}
@@ -3811,6 +3848,10 @@ function NewV2Inner() {
           onOpenTool={openTool}
         />
         )}
+        <StartColumn
+          on={pantallaDeInicio}
+          top={<StartTopRow homeHref="/new" onOpenMenu={() => setStartMenuOpen(true)} />}
+        >
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y
             tree exactly one main region (fixes landmark-one-main + region). The
@@ -3885,7 +3926,13 @@ function NewV2Inner() {
               />
             </div>
           ) : (
-            <PreviewPlaceholder mode="template" />
+            // PLANTILLAS, from the start rail (06/11): the gallery lived under /new's box; picking one previews it here.
+            <TemplateGallery
+              onPreviewTemplate={(tpl) => {
+                setPreviewingTemplate(tpl);
+                setTemplateError(null);
+              }}
+            />
           ))}
         {entryMode === "ai" && (
           // SIN PROYECTO, LA ENTRADA DE CREAR YA NO VIVE AQUÍ (plans/crear-es-len):
@@ -3975,10 +4022,6 @@ function NewV2Inner() {
                 generating={heroSending}
                 effort={effort}
                 onEffortChange={setEffort}
-                onPreviewTemplate={(tpl) => {
-                  setPreviewingTemplate(tpl);
-                  setTemplateError(null);
-                }}
                 onPaste={() => router.push("/new?mode=paste")}
                 naceComo={naceComo}
                 conJuego={juegosDisponibles}
@@ -4419,6 +4462,7 @@ function NewV2Inner() {
           </>
         )}
         </main>
+        </StartColumn>
       </div>
       {/* ⚰️ AQUÍ IBA LA BARRA DE ESTADO, el pie del taller. Se fue el
           2026-08-31 con sus tres inquilinos, y cada uno se iba por su cuenta:

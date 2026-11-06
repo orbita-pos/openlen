@@ -9,6 +9,8 @@ export const RESERVED_HANDLES = new Set([
   "signup", "logout", "u", "p", "c", "f", "blog", "docs", "support", "business",
   "analytics", "inbox", "messages", "templates", "dev", "terms", "privacy",
   "about", "help", "pricing", "openlen", "me", "static", "assets", "public",
+  // A page since 06/11 (spec local 2026-11-06-portada-solo-input): a profile with this name would sit behind it.
+  "features",
 ]);
 
 export function normalizeHandle(raw: string): string {
