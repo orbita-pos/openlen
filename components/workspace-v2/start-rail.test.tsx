@@ -6,6 +6,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
 vi.mock("@/i18n/navigation", () => ({
@@ -79,6 +81,46 @@ describe("the start rail", () => {
     expect(drawer.textContent).toContain("Mis páginas");
     act(() => drawer.querySelector<HTMLAnchorElement>('a[href="/explore"]')!.click());
     expect(onClose).toHaveBeenCalled();
+  });
+
+  // Jesús, 06/11: «Slide from the left». It slid nowhere: it appeared and vanished at once.
+  it("🔴 slides in from the left when opened, slides back out when closed, and only then leaves", () => {
+    vi.useFakeTimers();
+    try {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      roots.push(root);
+      const draw = (open: boolean) =>
+        act(() => root.render(<StartRail items={items()} active="crear" mark={null} drawerOpen={open} onCloseDrawer={() => {}} />));
+
+      draw(true);
+      const drawer = host.querySelector<HTMLElement>("[data-start-drawer]")!;
+      expect(drawer.dataset.state).toBe("open");
+      expect(drawer.querySelector(".start-drawer__panel")).not.toBeNull();
+      expect(drawer.querySelector(".start-drawer__scrim")).not.toBeNull();
+
+      draw(false);
+      // Still there, sliding out, and no longer in the way of a tap.
+      const leaving = host.querySelector<HTMLElement>("[data-start-drawer]")!;
+      expect(leaving.dataset.state).toBe("closed");
+      expect(leaving.className).toContain("pointer-events-none");
+
+      act(() => vi.advanceTimersByTime(250));
+      expect(host.querySelector("[data-start-drawer]")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("🔴 the slide is from the left, quick, and still with reduced motion", () => {
+    const css = readFileSync(join(process.cwd(), "components/workspace-v2/start-rail.css"), "utf8");
+    expect(css).toMatch(/@keyframes start-drawer-in\s*\{[^}]*translateX\(-100%\)/);
+    expect(css).toMatch(/@keyframes start-drawer-out\s*\{[\s\S]*?translateX\(-100%\)/);
+    expect(css).toMatch(/\[data-state="open"\] \.start-drawer__panel\s*\{[^}]*start-drawer-in/);
+    expect(css).toMatch(/\[data-state="closed"\] \.start-drawer__panel\s*\{[^}]*start-drawer-out/);
+    const reduced = css.slice(css.indexOf("prefers-reduced-motion"));
+    expect(reduced).toContain("animation: none");
   });
 
   it("the drawer closes with Escape", () => {
