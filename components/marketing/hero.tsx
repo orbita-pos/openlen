@@ -60,8 +60,11 @@ export async function Hero() {
           no product mockup (that lives on /features now). Len's face left the headline for the menu, where the brand
           mark was (`HeroLenMark`): `HeroLenProvider` wraps the whole home in `app/[locale]/page.tsx`, so the face in
           the menu still waves on arrival, listens while you type or dictate here, and thinks when you send. */}
-      {/* `max-height: 500px` (a phone in landscape): less air above and between, so the box is in the first screen. */}
-      <div className="relative mx-auto max-w-5xl px-6 pt-16 pb-4 sm:pt-24 [@media(max-height:500px)]:pt-4">
+      {/* WHERE IT SITS, like Gemini's (measured on Jesús's screenshot, 06/11): the BOX at the middle of the screen and
+          the question ~106 px above it. No top padding (it pushed the whole block down), and a bottom padding about
+          the question's height plus the gap, so what the centring puts in the middle is the box, not the block.
+          `max-height: 500px` (a phone in landscape): no lift, so the box stays in the first screen. */}
+      <div className="relative mx-auto max-w-5xl px-6 pb-24 [@media(max-height:500px)]:pb-4">
         <div className="flex flex-col items-center text-center">
           {/* Shown by the browser once it knows the time of day; without JavaScript, the neutral question as it is. */}
           <noscript>
@@ -71,7 +74,7 @@ export async function Hero() {
 
           {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
               titular y la caja bastan; lo que hace Len lo cuenta /features. */}
-          <div className="relative mt-12 w-full max-w-2xl text-left [@media(max-height:500px)]:mt-5">
+          <div className="relative mt-8 w-full max-w-2xl text-left [@media(max-height:500px)]:mt-5">
             <HomeGlow />
             <HeroPromptInput />
           </div>
