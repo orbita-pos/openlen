@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "The agent hit its per-turn step limit.",
       "tool_limit": "The agent hit its per-turn action limit.",
-      "budget_limit": "Len stopped at the spending limit for a single turn. What it did is saved; ask it to keep going if you want more.",
+      "budget_limit": "Len stopped because your account ran out of credits. What it did is saved; once you have credits again, ask it to keep going.",
       "cancelled": "The turn was cancelled.",
       "truncated": "The response ran out of room several times in a row — ask Len to keep going.",
       "context_too_long": "This conversation is too long and couldn't be summarized. Type /compact or start a new conversation.",

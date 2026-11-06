@@ -126,7 +126,7 @@
     "errors": {
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",
       "tool_limit": "L'agente ha raggiunto il limite di azioni per turno.",
-      "budget_limit": "Len si è fermato al limite di spesa di un turno. Quello che ha fatto è salvato; chiedigli di continuare se vuoi andare avanti.",
+      "budget_limit": "Len si è fermato perché il tuo account ha finito i crediti. Quello che ha fatto è salvato; quando avrai di nuovo crediti, chiedigli di continuare.",
       "cancelled": "Il turno è stato annullato.",
       "truncated": "La risposta ha esaurito lo spazio più volte di fila — chiedi a Len di continuare.",
       "context_too_long": "Questa conversazione è troppo lunga e non è stato possibile riassumerla. Scrivi /compact o inizia una nuova conversazione.",
