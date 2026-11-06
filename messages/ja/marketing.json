@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "あなた専属のWeb開発者。<len></len><gradient>Len。</gradient>",
-    "announce": "<strong>Len がアプリも作れるように</strong><dot></dot>無料で試す",
     "pagesThisWeek": "今週生成されたページ数は <strong>{count, number}</strong>",
     "githubAria": "GitHub の OpenLen",
     "starOnGithub": "GitHub でスターを付ける",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Lenに必要なことを伝えてください…",
     "generate": "生成",
-    "tryLabel": "例えば",
     "dictate": "音声入力",
     "stopDictating": "音声入力を停止",
     "micDenied": "ブラウザがマイクをブロックしました。アドレスバーで許可すると音声入力できます。",
@@ -35,24 +33,6 @@
     "removeImage": "画像を削除",
     "attachedAlt": "添付した参考画像",
     "micSilent": "マイクは開きましたが、何も認識されませんでした。Chrome が正しい入力を使っているか、接続があるかを確認してください。音声認識は OpenLen ではなくブラウザの音声サービスで動きます。",
-    "asks": {
-      "bakery": {
-        "label": "私のパン屋",
-        "prompt": "私のパン屋「La Espiga」のページ。菓子パン、オーダーケーキ、営業時間、アクセス、WhatsAppで注文できるボタン付き。"
-      },
-      "barber": {
-        "label": "理容室の予約",
-        "prompt": "理容師が3人いる理容室のページ。カットメニューと料金、店内の写真、予約フォーム付き。"
-      },
-      "photographer": {
-        "label": "写真のポートフォリオ",
-        "prompt": "ウェディングフォトグラファーとしての私のポートフォリオ。結婚式ごとのギャラリー、各プランの内容、日程を問い合わせるフォーム付き。"
-      },
-      "course": {
-        "label": "私のオンライン講座",
-        "prompt": "お菓子作りのオンライン講座のランディングページ。週ごとのカリキュラム、価格49ドル、受講生の声、申し込みボタン付き。"
-      }
-    },
     "ghost": [
       "WhatsAppで注文できる、パン屋のページ",
       "理容室のオンライン予約",

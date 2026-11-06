@@ -14,7 +14,6 @@
   },
   "hero": {
     "title": "Je eigen web<len>o</len>ntwikkelaar. <gradient>Len.</gradient>",
-    "announce": "<strong>Len bouwt nu ook apps</strong><dot></dot>Probeer gratis",
     "pagesThisWeek": "<strong>{count, number}</strong> pagina's deze week gegenereerd",
     "githubAria": "OpenLen op GitHub",
     "starOnGithub": "Geef een ster op GitHub",
@@ -23,7 +22,6 @@
   "heroPrompt": {
     "placeholder": "Vertel Len wat je nodig hebt…",
     "generate": "Genereren",
-    "tryLabel": "Bijvoorbeeld",
     "dictate": "Dicteren",
     "stopDictating": "Stoppen met dicteren",
     "micDenied": "Je browser blokkeerde de microfoon. Sta hem toe in de adresbalk om te dicteren.",
@@ -35,24 +33,6 @@
     "removeImage": "Afbeelding verwijderen",
     "attachedAlt": "Toegevoegde referentie",
     "micSilent": "De microfoon ging open maar er werd niets herkend. Controleer of Chrome de juiste invoer gebruikt en of je verbinding hebt — spraakherkenning draait op de spraakdienst van je browser, niet op OpenLen.",
-    "asks": {
-      "bakery": {
-        "label": "Mijn bakkerij",
-        "prompt": "Een pagina voor mijn bakkerij ‘La Espiga’: zoet brood, taarten op bestelling, openingstijden, routebeschrijving en een knop om via WhatsApp te bestellen."
-      },
-      "barber": {
-        "label": "Afspraken barbershop",
-        "prompt": "Een pagina voor mijn barbershop met drie barbiers: knipbeurten en prijzen, foto’s van de zaak en een formulier om een tijdslot te boeken."
-      },
-      "photographer": {
-        "label": "Fotoportfolio",
-        "prompt": "Mijn portfolio als trouwfotograaf: een galerij per bruiloft, wat elk pakket inhoudt en een formulier om een datum aan te vragen."
-      },
-      "course": {
-        "label": "Mijn online cursus",
-        "prompt": "Een landingspagina voor mijn online bakcursus: lesprogramma per week, prijs $49, ervaringen van cursisten en een inschrijfknop."
-      }
-    },
     "ghost": [
       "Een pagina voor mijn bakkerij, met bestellen via WhatsApp",
       "Online afspraken voor mijn barbershop",
