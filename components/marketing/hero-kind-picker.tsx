@@ -13,8 +13,13 @@
 // El menú se ancla al primer antepasado con `position: relative` —en la
 // portada, la barra del input—, no a la píldora: anclado a ella se salía por la
 // derecha en un móvil.
+//
+// IT OPENS WHERE IT FITS (Jesús, 06/11: «en el select no se ve todo, se
+// esconde»): each skin has the side it prefers, but once /new lost its top bar
+// the box sat mid-screen and the four options ran off the bottom. Opening, it
+// measures the room above and below its anchor and flips when its side is short.
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft, Wrench } from "lucide-react";
 import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
@@ -29,10 +34,24 @@ import { cn } from "@/lib/cn";
 
 /** Two skins: the home page's (zinc and coral, like the rest of the marketing site) and the workspace's (its
  *  tokens, like the `+` beside it in the /new composer). Same pill, same menu, same behaviour. */
+/** The menu's gap from its anchor (the `8px` of the two sides below). */
+const HUECO = 8;
+const HACIA = { arriba: "bottom-[calc(100%+8px)]", abajo: "top-[calc(100%+8px)]" } as const;
+type Lado = keyof typeof HACIA;
+
+/** Which side the menu opens to: the preferred one when it fits, else the other when IT fits, else the roomier. */
+export function ladoQueCabe(preferido: Lado, alto: number, arriba: number, abajo: number): Lado {
+  const cabe = (lado: Lado) => (lado === "arriba" ? arriba : abajo) >= alto;
+  const otro: Lado = preferido === "arriba" ? "abajo" : "arriba";
+  if (cabe(preferido)) return preferido;
+  if (cabe(otro)) return otro;
+  return arriba > abajo ? "arriba" : "abajo";
+}
+
 const PIELES = {
   portada: {
-    /** The home page's input sits low on the page: the menu opens upwards. */
-    hacia: "bottom-[calc(100%+8px)]",
+    /** The home page's input sits low on the page: the menu prefers upwards. */
+    lado: "arriba" as Lado,
     pill: "hover:bg-zinc-100 dark:hover:bg-zinc-900",
     pillElegida: "text-coral-600 dark:text-coral-400",
     pillNeutra: "text-zinc-600 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-100",
@@ -48,8 +67,8 @@ const PIELES = {
     marca: "text-coral-600 dark:text-coral-400",
   },
   taller: {
-    /** The /new composer sits near the top, under the header: upwards hid Página and App behind it (06/11). */
-    hacia: "top-[calc(100%+8px)]",
+    /** The /new composer of a project's chat sits near the top: upwards hid Página and App behind the header (06/11). */
+    lado: "abajo" as Lado,
     pill: "hover:bg-side",
     pillElegida: "text-[var(--nc-accent-text)]",
     pillNeutra: "fg-muted hover:fg",
@@ -92,6 +111,23 @@ export function HeroKindPicker({
   const [open, setOpen] = useState(false);
   const mando = useMandoDesplegable({ abierto: open, cerrar: () => setOpen(false) });
   const s = PIELES[piel];
+  const refMenu = useRef<HTMLDivElement>(null);
+  const [lado, setLado] = useState<Lado>(s.lado);
+  // In a window too short for it on either side, it scrolls inside the room it has instead of running off.
+  const [tope, setTope] = useState<number | null>(null);
+  // Before it paints: measured against the window, from the anchor the menu hangs off (its `offsetParent`).
+  useLayoutEffect(() => {
+    if (!open) return;
+    const menu = refMenu.current;
+    const ancla = menu?.offsetParent?.getBoundingClientRect();
+    if (!menu || !ancla) return;
+    const arriba = ancla.top - HUECO;
+    const abajo = window.innerHeight - ancla.bottom - HUECO;
+    const elegido = ladoQueCabe(s.lado, menu.scrollHeight || menu.offsetHeight, arriba, abajo);
+    const sitio = elegido === "arriba" ? arriba : abajo;
+    setLado(elegido);
+    setTope((menu.scrollHeight || menu.offsetHeight) > sitio ? Math.max(sitio, 0) : null);
+  }, [open, s.lado]);
   const opciones: ReadonlyArray<{ id: NaceComo; titulo: string; linea: string; dibujo: ReactNode; bloqueada?: boolean }> = [
     { id: "pagina", titulo: t("start.kind.page"), linea: t("start.kind.pageHint"), dibujo: <DibujoPagina /> },
     { id: "app", titulo: t("start.kind.app"), linea: t("start.kind.appHint"), dibujo: <DibujoApp /> },
@@ -138,11 +174,14 @@ export function HeroKindPicker({
       </button>
       {open && (
         <div
+          ref={refMenu}
           role="menu"
           aria-label={t("start.kind.label")}
+          data-lado={lado}
+          style={tope === null ? undefined : { maxHeight: tope }}
           className={cn(
-            "nc-card-in absolute left-0 z-20 w-[310px] max-w-full rounded-[14px] border p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]",
-            s.hacia,
+            "nc-card-in absolute left-0 z-20 w-[310px] max-w-full overflow-y-auto overscroll-contain rounded-[14px] border p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]",
+            HACIA[lado],
             s.menu,
           )}
         >

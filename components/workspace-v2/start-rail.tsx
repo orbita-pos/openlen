@@ -5,9 +5,14 @@
 // «/new y / quiero que sea compartido»).
 //
 // Like Gemini: a rail of icons on the left with where you can go —Crear, Plantillas, Mis páginas, Comunidad,
-// Herramientas— and the account at its foot; a light row on top with the name on the left and, on the right, the
-// corner (sign in and try it free without an account, your credits with one). In the middle, the same question and
-// the same box (`components/prompt-box.tsx`). On a phone the rail is a drawer behind a menu button.
+// Herramientas— crowned by Len's face, and the account at its foot. In the middle, the same question and the same box
+// (`components/prompt-box.tsx`). On a phone the rail is a drawer behind a menu button.
+//
+// NO BAR ON TOP (Jesús, 06/11: «el navbar en /new sí hay navbar y en / no, quitemos ese navbar»): on /new the row
+// read as a bar —the light starts under it—, on the home it didn't. Gone from both: the name «OpenLen» shows only
+// with the rail open, beside Len, and the credits went into the account's menu. What stays up there is only what has
+// nowhere else to go, floating over the light without a row: the corner for whoever has no account (Precios,
+// Iniciar sesión, Pruébalo gratis) and, on a phone, the button that opens the drawer.
 //
 // Until 06/11 /new carried these places as tabs in its top bar (`TopBar`'s start mode), and the home had the marketing
 // menu. Inside a project nothing changes: the workspace keeps its own rail (`left-sidebar.tsx`), whose look this one
@@ -50,31 +55,47 @@ const OPEN_KEY = "openlen:start-rail-open";
 /** How long the phone's drawer takes to slide out (`start-drawer-out` in start-rail.css is .18 s). */
 const DRAWER_EXIT_MS = 200;
 
+/** The name, in the open rail and atop the phone's drawer — never in a bar (Jesús, 06/11). Text, not the logo's SVG,
+ *  so a second copy can't point at the first one's gradient `id` and paint nothing. */
+function StartName({ href, onClick }: { href: string; onClick?: () => void }) {
+  return (
+    <Link
+      href={href}
+      data-start-name
+      onClick={onClick}
+      className="truncate rounded-md px-1 text-[17px] font-semibold tracking-tight fg"
+    >
+      Open<span className="text-coral-700 dark:text-coral-400">Len</span>
+    </Link>
+  );
+}
+
 export function StartRail({
   items,
   active,
   mark,
+  homeHref,
   account,
-  credits,
   drawerOpen = false,
   onCloseDrawer,
 }: {
   items: readonly StartItem[];
   active: StartItemKey | null;
-  /** What crowns the rail: the brand's mark (on the home, Len's live face). */
+  /** What crowns the rail: Len's face, on the home and on /new alike (Jesús, 06/11: «quiero a Len»). */
   mark: ReactNode;
-  /** The account at the rail's foot (`AccountMenu`, which pins itself there); none without a session. */
+  /** Where the name goes, beside the mark in the open rail and atop the drawer. */
+  homeHref: string;
+  /** The account at the rail's foot (`AccountMenu`, which pins itself there, with the credits inside); none without a
+   *  session. */
   account?: ReactNode;
-  /** The credits, above the account — only with the rail open, and in the phone's drawer (Jesús, 06/11). */
-  credits?: ReactNode;
-  /** The phone's drawer, opened by the top row's menu button. */
+  /** The phone's drawer, opened by the menu button over the content. */
   drawerOpen?: boolean;
   onCloseDrawer?: () => void;
 }) {
   const t = useTranslations("marketing");
   const tw = useTranslations("wsChrome");
-  // THE RAIL OPENS, like Gemini's: a button at its top widens it with the names, and then it shows the credits
-  // (Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren»). Closed by default; remembered here.
+  // THE RAIL OPENS, like Gemini's: a button at its top widens it with the names and the name «OpenLen» beside Len.
+  // Closed by default; remembered here.
   const [open, setOpen] = useState(false);
   // It slides only when pressed: coming back open from storage, it is simply open (no slide on every visit).
   const [slides, setSlides] = useState(false);
@@ -128,8 +149,11 @@ export function StartRail({
           open ? "w-60 px-2.5" : "w-14 items-center",
         )}
       >
-        <div className={cn("mb-3 flex items-center", open ? "justify-between pl-1" : "flex-col gap-2")}>
-          <div className="flex h-8 w-8 items-center justify-center">{mark}</div>
+        <div className={cn("mb-3 flex items-center", open ? "justify-between gap-1 pl-1" : "flex-col gap-2")}>
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center">{mark}</div>
+            {open ? <StartName href={homeHref} /> : null}
+          </div>
           <Tooltip label={open ? tw("start.closeMenu") : t("nav.menu")} side="right">
             <button
               type="button"
@@ -162,10 +186,7 @@ export function StartRail({
             </Tooltip>
           );
         })}
-        <div className={cn("mt-auto flex flex-col gap-2", open ? "items-start pl-1" : "items-center")}>
-          {open && credits ? <div className="flex">{credits}</div> : null}
-          {account ?? null}
-        </div>
+        <div className={cn("mt-auto flex flex-col", open ? "items-start pl-1" : "items-center")}>{account ?? null}</div>
       </aside>
 
       {(drawerOpen || drawerShown) && (
@@ -179,9 +200,10 @@ export function StartRail({
         >
           <div aria-hidden className="start-drawer__scrim absolute inset-0 bg-black/45" onClick={onCloseDrawer} />
           <nav className="start-drawer__panel relative flex h-full w-64 max-w-[80vw] flex-col gap-1 border-r bd bg-elev p-3 shadow-elev">
-            {/* No mark here: the top row already says OpenLen, and a second copy of the logo's SVG points at the
-                gradient `id` of the first —inside the hidden rail—, so it painted nothing (measured 06/11). */}
-            <div className="mb-3 flex items-center justify-end">
+            {/* The name and no mark: a second copy of the mark's SVG points at the gradient `id` of the first —inside
+                the hidden rail—, so it painted nothing (measured 06/11). */}
+            <div className="mb-3 flex items-center justify-between pl-1">
+              <StartName href={homeHref} {...(onCloseDrawer ? { onClick: onCloseDrawer } : {})} />
               <button
                 type="button"
                 onClick={onCloseDrawer}
@@ -206,10 +228,7 @@ export function StartRail({
                 </ItemControl>
               );
             })}
-            <div className="mt-auto flex flex-col items-start gap-2">
-              {credits ? <div className="flex">{credits}</div> : null}
-              {account ?? null}
-            </div>
+            <div className="mt-auto flex flex-col items-start">{account ?? null}</div>
           </nav>
         </div>
       )}
@@ -258,33 +277,26 @@ function ItemControl({
   );
 }
 
-/** The light row above the content: the name on the left (with the phone's menu button), the corner on the right. */
-export function StartTopRow({
-  homeHref,
-  onOpenMenu,
-  right,
-}: {
-  homeHref: string;
-  onOpenMenu: () => void;
-  right?: ReactNode;
-}) {
+/** What is left on top once the bar went (Jesús, 06/11): the phone's menu button on the left and the corner on the
+ *  right. No name and no row of its own on a computer — there it floats over the content's top right (`md:absolute`,
+ *  against the column, which is `relative`), so the light runs to the top edge. On a phone it keeps its height: the
+ *  menu button must not sit on top of what is under it. */
+export function StartTopRow({ onOpenMenu, right }: { onOpenMenu: () => void; right?: ReactNode }) {
   const t = useTranslations("marketing");
   return (
-    <div data-start-top className="relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 px-3 sm:px-5">
-      <div className="flex min-w-0 items-center gap-1">
-        <button
-          type="button"
-          onClick={onOpenMenu}
-          aria-label={t("nav.menu")}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg fg-muted transition hover:bg-hover hover:fg md:hidden"
-        >
-          <Menu size={18} />
-        </button>
-        <Link href={homeHref} className="rounded-md px-1 text-[17px] font-semibold tracking-tight fg">
-          Open<span className="text-coral-700 dark:text-coral-400">Len</span>
-        </Link>
-      </div>
-      <div className="flex items-center gap-1.5">{right}</div>
+    <div
+      data-start-top
+      className="pointer-events-none relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 px-3 sm:px-5 md:absolute md:inset-x-0 md:top-0"
+    >
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        aria-label={t("nav.menu")}
+        className="pointer-events-auto inline-flex h-9 w-9 items-center justify-center rounded-lg fg-muted transition hover:bg-hover hover:fg md:hidden"
+      >
+        <Menu size={18} />
+      </button>
+      <div className="pointer-events-auto ml-auto flex items-center gap-1.5">{right}</div>
     </div>
   );
 }
@@ -293,7 +305,7 @@ export function StartTopRow({
 export function StartColumn({ on, top, children }: { on: boolean; top: ReactNode; children: ReactNode }) {
   if (!on) return <>{children}</>;
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
       {top}
       <div className="relative flex min-h-0 flex-1">{children}</div>
     </div>

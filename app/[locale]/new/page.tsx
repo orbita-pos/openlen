@@ -72,8 +72,7 @@ import { AlertTriangle, Check, Sparkles, Undo, X } from "@/components/workspace-
 import { TemplateGallery } from "@/components/workspace-v2/template-gallery";
 import { StartColumn, StartRail, StartTopRow, type StartItem } from "@/components/workspace-v2/start-rail";
 import { AccountMenu } from "@/components/workspace-v2/account-menu";
-import { CreditPill } from "@/components/app/credit-pill";
-import { OpenLenMark } from "@/components/openlen-logo";
+import { HeroLenMark } from "@/components/marketing/hero-len";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import { StartLanding } from "@/components/workspace-v2/start-landing";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
@@ -3620,10 +3619,12 @@ function NewV2Inner() {
   // lo dice igual.
   const shownProjectName = projectName === UNTITLED_PROJECT_TITLE ? tProjects("newProject") : projectName;
   // WHERE THE START RAIL GOES (06/11): the places that were tabs in the start bar, plus Plantillas (the gallery,
-  // which lived under the box). In place, without reloading; Crear in the blank project is already there — going to
-  // `/new` would look for it again.
+  // which lived under the box). In place, without reloading — all but Crear, which goes to the home (Jesús, 06/11:
+  // «si me voy a pages y regreso, ahora el Create es /new y no /» → «always to /»): creating has ONE address. It used
+  // to open the blank project here, the same question and box under another URL; what is sent from / reaches /new
+  // with Len already working (`useFirstMessageOnArrival`), so nothing is lost but an instant switch.
   const startItems: StartItem[] = [
-    { key: "crear", label: tws("startTabs.crear"), onSelect: () => { if (!enElEditor) router.replace("/new"); } },
+    { key: "crear", label: tws("startTabs.crear"), href: "/" },
     { key: "plantillas", label: tws("startTabs.plantillas"), onSelect: () => router.replace("/new?mode=template") },
     { key: "mispaginas", label: tws("startTabs.mispaginas"), onSelect: () => router.replace("/new?view=projects") },
     { key: "comunidad", label: tws("startTabs.comunidad"), onSelect: () => router.replace("/new?view=explore") },
@@ -3723,11 +3724,14 @@ function NewV2Inner() {
           <StartRail
             items={startItems}
             active={entryMode === "template" ? "plantillas" : startSurface === "herramienta" ? "herramientas" : startSurface}
+            // Len's face, as on the home (Jesús, 06/11: «el Len se esconde por el logo»): going from / to «Mis
+            // páginas» swapped it for the static logo. Here no box reports to it, so it rests.
             mark={
               <Link href="/new" aria-label="OpenLen" className="flex">
-                <OpenLenMark className="h-7 w-7 shrink-0" />
+                <HeroLenMark className="h-8 w-8 shrink-0" />
               </Link>
             }
+            homeHref="/new"
             account={
               <AccountMenu
                 dark={dark}
@@ -3735,10 +3739,10 @@ function NewV2Inner() {
                 soundVolume={soundVolume}
                 onSoundVolume={setSoundVolume}
                 onToggleSoundMute={toggleSoundMute}
+                // The credits live in the account's menu (Jesús, 06/11).
+                credits
               />
             }
-            // The credits live in the open rail, not in a corner (Jesús, 06/11).
-            credits={<CreditPill />}
             drawerOpen={startMenuOpen}
             onCloseDrawer={() => setStartMenuOpen(false)}
           />
@@ -3850,7 +3854,7 @@ function NewV2Inner() {
         )}
         <StartColumn
           on={pantallaDeInicio}
-          top={<StartTopRow homeHref="/new" onOpenMenu={() => setStartMenuOpen(true)} />}
+          top={<StartTopRow onOpenMenu={() => setStartMenuOpen(true)} />}
         >
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y

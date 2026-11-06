@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { signOut, useSession } from "next-auth/react";
 import { Plug, UserRound } from "lucide-react";
+import { CreditRow, useCredits } from "@/components/app/credit-pill";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { Link } from "@/i18n/navigation";
 import { ICONO_BARRA, Moon, Sun, Volume2, VolumeX } from "./icons";
@@ -37,6 +38,10 @@ interface AccountMenuProps {
    *  `barra` — arriba a la derecha, sin rail: abre hacia ABAJO y alineado a
    *  la derecha. Es la pantalla de inicio, donde no hay rail que lo aloje. */
   lugar?: "rail" | "barra";
+  /** The credits as a row under the name (Jesús, 06/11: «donde se ve los créditos mételo al dropdown del icono del
+   *  user»). Only in the start frame —the home and /new without a project—: inside a project the top bar already
+   *  shows the pill, and a second copy would be the same number twice. */
+  credits?: boolean;
 }
 
 export function AccountMenu({
@@ -46,6 +51,7 @@ export function AccountMenu({
   onSoundVolume,
   onToggleSoundMute,
   lugar = "rail",
+  credits = false,
 }: AccountMenuProps) {
   // `topbar`, NO `wsChrome`. Los textos de este menú —el tema, el sonido, la
   // cuenta— viven en `messages/*/topbar.json` desde que el menú estaba arriba,
@@ -57,6 +63,7 @@ export function AccountMenu({
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const balance = useCredits(credits);
   // EL PLAN, para ofrecer «Gestionar suscripción» a quien paga. Ese enlace
   // vivía en `components/app/app-header.tsx` y `dashboard-shell.tsx`, que nadie
   // monta desde el rail unificado (`66cd8fa8`): un Pro no tenía desde la app
@@ -202,6 +209,8 @@ export function AccountMenu({
               </div>
             )}
           </div>
+
+          {credits && <CreditRow credits={balance} />}
 
           {/* TU PERFIL (/me → /@handle, o elegir el @ primero). */}
           <Link
