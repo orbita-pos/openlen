@@ -229,6 +229,7 @@
     "appSinLienzo": "O app não pode rodar aqui: o canvas real não responde. O código está na lente Código, e publicado funciona.",
     "verCodigo": "Ver o código",
     "direccionApp": "App",
+    "direccionGame": "Jogo",
     "ide": {
       "nuevoArchivo": "Novo arquivo",
       "nuevaCarpeta": "Nova pasta",

@@ -17,7 +17,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-function Compositor({ busy = false, conPlan = true, esApp = false, compacta = false, value = "" }: { busy?: boolean; conPlan?: boolean; esApp?: boolean; compacta?: boolean; value?: string }) {
+function Compositor({ busy = false, conPlan = true, esApp = false, esJuego = false, compacta = false, value = "" }: { busy?: boolean; conPlan?: boolean; esApp?: boolean; esJuego?: boolean; compacta?: boolean; value?: string }) {
   const [plan, setPlan] = useState(false);
   const ta = useRef<HTMLTextAreaElement | null>(null);
   return (
@@ -43,6 +43,7 @@ function Compositor({ busy = false, conPlan = true, esApp = false, compacta = fa
       planMode={plan || (busy && conPlan)}
       {...(conPlan ? { onTogglePlan: () => setPlan((p) => !p) } : {})}
       esApp={esApp}
+      esJuego={esJuego}
       compacta={compacta}
     />
   );
@@ -174,6 +175,13 @@ describe("la caja vacía en una app", () => {
     const aviso = (host: HTMLElement) => [...host.querySelectorAll("p")].map((p) => p.textContent).find((x) => x?.startsWith("newChat.composer.disclaimer"));
     expect(aviso(montar({ esApp: true }))).toBe("newChat.composer.disclaimerApp");
     expect(aviso(montar())).toBe("newChat.composer.disclaimer");
+  });
+
+  it("🔴 en un juego, la caja y el aviso hablan del juego (visto en el navegador el 05/11)", () => {
+    const host = montar({ esApp: true, esJuego: true });
+    expect(host.querySelector("textarea")?.getAttribute("placeholder")).toBe("composer.placeholderGame");
+    const aviso = [...host.querySelectorAll("p")].map((p) => p.textContent).find((x) => x?.startsWith("newChat.composer.disclaimer"));
+    expect(aviso).toBe("newChat.composer.disclaimerGame");
   });
 });
 

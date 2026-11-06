@@ -221,6 +221,7 @@
     "appSinLienzo": "Die App kann hier nicht laufen: Die echte Leinwand antwortet nicht. Ihr Code ist in der Ansicht Code, und veröffentlicht funktioniert sie.",
     "verCodigo": "Code ansehen",
     "direccionApp": "App",
+    "direccionGame": "Spiel",
     "ide": {
       "nuevoArchivo": "Neue Datei",
       "nuevaCarpeta": "Neuer Ordner",

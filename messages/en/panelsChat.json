@@ -80,6 +80,7 @@
     "removeImage": "Remove attached image",
     "placeholder": "Describe how your page should look or read…",
     "placeholderApp": "Describe what your app should do or how it should look…",
+    "placeholderGame": "Describe how your game plays or how it should look…",
     "placeholderScoped": "Change the selected {target}…",
     "attachImage": "Attach an image",
     "attachImageTitle": "Attach an image to insert into the page",
@@ -233,6 +234,15 @@
         "publish": "Publish my app"
       }
     },
+    "emptyGame": {
+      "title": "What shall we do to your game today?",
+      "suggestions": {
+        "screens": "Add a start screen and a game-over screen",
+        "touch": "Make it playable by touch on mobile",
+        "play": "Play a round and tell me what breaks",
+        "publish": "Publish my game"
+      }
+    },
     "steps": {
       "running": "Len is working",
       "done": "{count, plural, one {Len took # step} other {Len took # steps}}",
@@ -331,7 +341,8 @@
       "plus": "Image and more",
       "on": "On",
       "disclaimer": "Len can make mistakes. Check your page before publishing it.",
-      "disclaimerApp": "Len can make mistakes. Try your app before publishing it."
+      "disclaimerApp": "Len can make mistakes. Try your app before publishing it.",
+      "disclaimerGame": "Len can make mistakes. Try your game before publishing it."
     },
     "layout": {
       "float": "Pop out the chat",

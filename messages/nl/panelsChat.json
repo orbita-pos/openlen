@@ -80,6 +80,7 @@
     "removeImage": "Bijgevoegde afbeelding verwijderen",
     "placeholder": "Beschrijf hoe je pagina eruit moet zien of moet lezen…",
     "placeholderApp": "Beschrijf wat je app moet doen of hoe hij eruit moet zien…",
+    "placeholderGame": "Beschrijf hoe je game werkt of hoe hij eruit moet zien…",
     "placeholderScoped": "Wijzig de geselecteerde {target}…",
     "attachImage": "Een afbeelding bijvoegen",
     "attachImageTitle": "Voeg een afbeelding toe om in de pagina in te voegen",
@@ -233,6 +234,15 @@
         "publish": "Publiceer mijn app"
       }
     },
+    "emptyGame": {
+      "title": "Wat doen we vandaag met je game?",
+      "suggestions": {
+        "screens": "Voeg een startscherm en een game-over-scherm toe",
+        "touch": "Maak het op mobiel speelbaar met je vinger",
+        "play": "Speel een potje en vertel me wat er misgaat",
+        "publish": "Publiceer mijn game"
+      }
+    },
     "steps": {
       "running": "Len is bezig",
       "done": "{count, plural, one {Len deed # stap} other {Len deed # stappen}}",
@@ -331,7 +341,8 @@
       "plus": "Afbeelding en meer",
       "on": "Aan",
       "disclaimer": "Len kan zich vergissen. Controleer je pagina voordat je hem publiceert.",
-      "disclaimerApp": "Len kan zich vergissen. Probeer je app uit voordat je hem publiceert."
+      "disclaimerApp": "Len kan zich vergissen. Probeer je app uit voordat je hem publiceert.",
+      "disclaimerGame": "Len kan zich vergissen. Probeer je game uit voordat je hem publiceert."
     },
     "layout": {
       "float": "Chat losmaken",

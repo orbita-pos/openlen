@@ -78,6 +78,7 @@ export function ChatComposer({
   etiquetaEnviar,
   placeholder,
   esApp = false,
+  esJuego = false,
   mencionables,
   bloqueado = false,
   secretGuard,
@@ -141,6 +142,8 @@ export function ChatComposer({
   placeholder?: string;
   /** El proyecto es una app: la caja vacía habla de la app, no de «tu página». */
   esApp?: boolean;
+  /** The app is a game: the empty box and the line below talk about the game. */
+  esJuego?: boolean;
   /** EL CHAT DEL EQUIPO: con gente, «@» sugiere a Len (si puede) y a cada
    *  persona, y las menciones se ven en su color dentro de la caja, como en los
    *  hilos del código. Sin esto, la caja de siempre. */
@@ -358,7 +361,7 @@ export function ChatComposer({
                 ? t("newChat.goal.placeholder")
                 : scopedSelection
                 ? t("composer.placeholderScoped", { target: scopedSelection.hint.split(" ")[0] ?? "" })
-                : (placeholder ?? t(esApp ? "composer.placeholderApp" : "composer.placeholder")),
+                : (placeholder ?? t(esJuego ? "composer.placeholderGame" : esApp ? "composer.placeholderApp" : "composer.placeholder")),
             style: { minHeight: compacta ? 36 : 44 },
           };
           // UNA sola caja, con o sin gente: si la gente llega mientras se
@@ -549,7 +552,7 @@ export function ChatComposer({
         </div>
       </div>
       {debajo}
-      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
+      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esJuego ? "newChat.composer.disclaimerGame" : esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
     </div>
   );
 }

@@ -80,6 +80,7 @@
     "removeImage": "Quitar la imagen adjunta",
     "placeholder": "Describe cómo debería verse o leerse tu página…",
     "placeholderApp": "Describe qué debería hacer tu app o cómo debería verse…",
+    "placeholderGame": "Describe cómo se juega o cómo debería verse tu juego…",
     "placeholderScoped": "Cambia el {target} seleccionado…",
     "attachImage": "Adjuntar una imagen",
     "attachImageTitle": "Adjunta una imagen para insertarla en la página",
@@ -233,6 +234,15 @@
         "publish": "Publica mi app"
       }
     },
+    "emptyGame": {
+      "title": "¿Qué le hacemos hoy a tu juego?",
+      "suggestions": {
+        "screens": "Añade una pantalla de inicio y otra de fin de partida",
+        "touch": "Haz que se pueda jugar con el dedo en el móvil",
+        "play": "Juega una partida y dime qué falla",
+        "publish": "Publica mi juego"
+      }
+    },
     "steps": {
       "running": "Len está trabajando",
       "done": "{count, plural, one {Len hizo # paso} other {Len hizo # pasos}}",
@@ -331,7 +341,8 @@
       "plus": "Imagen y más",
       "on": "Activo",
       "disclaimer": "Len puede equivocarse. Revisa tu página antes de publicarla.",
-      "disclaimerApp": "Len puede equivocarse. Prueba tu app antes de publicarla."
+      "disclaimerApp": "Len puede equivocarse. Prueba tu app antes de publicarla.",
+      "disclaimerGame": "Len puede equivocarse. Prueba tu juego antes de publicarlo."
     },
     "layout": {
       "float": "Sacar el chat",
