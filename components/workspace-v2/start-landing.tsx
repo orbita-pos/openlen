@@ -2,7 +2,7 @@
 //
 // SINCE 06/11 IT IS THE HOME'S SCREEN (Jesús, on Gemini: «/new y / quiero que sea compartido»): the question of the
 // time of day, and under it the box — the home's own (`components/prompt-box.tsx`) in the workspace's tokens —, with
-// the home's light behind it in the dark theme (it is made for black). Around it, the start frame's rail and top row
+// the home's light behind it (in the light theme, its own warm haze). Around it, the start frame's rail and top row
 // (`start-rail.tsx`, mounted by the page). Nothing under the box any more: the template gallery has its place in the
 // rail («Plantillas», `template-gallery.tsx`) and «Pegar HTML» went into the box's `+` menu.
 
@@ -111,10 +111,8 @@ export function StartLanding({
           <div className="flex flex-col items-center text-center">
             <HomeQuestion as="h2" />
             <div className="relative mt-8 w-full max-w-3xl text-left [@media(max-height:500px)]:mt-5">
-              {/* The home's light is made for black: in the light theme there is none. */}
-              <div className="hidden dark:block">
-                <HomeGlow />
-              </div>
+              {/* The home's light, in both themes: in the light one it is a warm haze (home-glow.css, 06/11). */}
+              <HomeGlow />
               <HeroComposer
                 state={aiState}
                 onGenerate={onGenerate}

@@ -91,6 +91,48 @@ describe("the start rail", () => {
   });
 });
 
+// Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren». Like Gemini's, the rail opens: a button at
+// its top widens it with the names, and then —only then— it shows the credits above the account.
+describe("the rail opens, like Gemini's", () => {
+  const named = (host: HTMLElement, label: string) =>
+    host.querySelector(`[data-start-rail] [data-start-item][aria-label="${label}"]`)!.textContent;
+
+  it("🔴 the button at its top widens it with the names, and the credits show only then", () => {
+    localStorage.clear();
+    const host = mount(<StartRail items={items()} active="crear" mark={null} credits={<span data-credits />} />);
+    const rail = host.querySelector("[data-start-rail]")!;
+    expect(rail.getAttribute("data-open")).toBe("false");
+    expect(named(host, "Mis páginas")).toBe("");
+    expect(rail.querySelector("[data-credits]")).toBeNull();
+
+    act(() => rail.querySelector<HTMLButtonElement>('button[aria-label="nav.menu"]')!.click());
+    expect(rail.getAttribute("data-open")).toBe("true");
+    expect(named(host, "Mis páginas")).toBe("Mis páginas");
+    expect(rail.querySelector("[data-credits]")).not.toBeNull();
+
+    act(() => rail.querySelector<HTMLButtonElement>('button[aria-label="start.closeMenu"]')!.click());
+    expect(rail.getAttribute("data-open")).toBe("false");
+    expect(rail.querySelector("[data-credits]")).toBeNull();
+  });
+
+  it("remembers whether it was open, and comes back open without sliding open on every visit", () => {
+    localStorage.setItem("openlen:start-rail-open", "1");
+    const host = mount(<StartRail items={items()} active="crear" mark={null} />);
+    const rail = host.querySelector("[data-start-rail]")!;
+    expect(rail.getAttribute("data-open")).toBe("true");
+    expect(rail.className).not.toContain("transition-[width]");
+    // It slides only when someone presses the button.
+    act(() => rail.querySelector<HTMLButtonElement>('button[aria-expanded]')!.click());
+    expect(rail.className).toContain("transition-[width]");
+    localStorage.clear();
+  });
+
+  it("🔴 the phone's drawer carries the credits too", () => {
+    const host = mount(<StartRail items={items()} active="crear" mark={null} credits={<span data-credits />} drawerOpen onCloseDrawer={() => {}} />);
+    expect(host.querySelector("[data-start-drawer] [data-credits]")).not.toBeNull();
+  });
+});
+
 describe("the start top row", () => {
   it("🔴 has the name on the left, the corner on the right, and a menu button for the phone", () => {
     const onOpenMenu = vi.fn();

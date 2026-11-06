@@ -3737,6 +3737,8 @@ function NewV2Inner() {
                 onToggleSoundMute={toggleSoundMute}
               />
             }
+            // The credits live in the open rail, not in a corner (Jesús, 06/11).
+            credits={<CreditPill />}
             drawerOpen={startMenuOpen}
             onCloseDrawer={() => setStartMenuOpen(false)}
           />
@@ -3848,7 +3850,7 @@ function NewV2Inner() {
         )}
         <StartColumn
           on={pantallaDeInicio}
-          top={<StartTopRow homeHref="/new" onOpenMenu={() => setStartMenuOpen(true)} right={<CreditPill />} />}
+          top={<StartTopRow homeHref="/new" onOpenMenu={() => setStartMenuOpen(true)} />}
         >
         {/* One <main> landmark for the workspace center. `contents` keeps the
             flex layout byte-identical (generates no box) while giving the a11y

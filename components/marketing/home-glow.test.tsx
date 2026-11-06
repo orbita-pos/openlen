@@ -75,6 +75,19 @@ describe("its stylesheet", () => {
     expect(css).toContain("repeating-radial-gradient(ellipse 60% 70% at 50% 64%, rgba(255,255,255,.012) 0 2px, transparent 2px 26px)");
   });
 
+  // Jesús, 06/11, on /new in the light theme: «¿por qué en blanco no tiene ese brillo que sí tiene el negro?» — Gemini
+  // keeps its light in its light theme too. Outside a `.dark`, the light is a warm haze over the light page (the dark
+  // one's browns would be a smudge there); inside one —the home, always dark— nothing changes.
+  it("🔴 has its own light for the light theme, and leaves the dark one as it is", () => {
+    const light = css.slice(css.indexOf(".home-glow:not(.dark *) .home-glow__light {"));
+    const rule = light.slice(0, light.indexOf("}"));
+    expect(rule.length).toBeGreaterThan(60);
+    expect(rule).toMatch(/radial-gradient\(ellipse 42% 46% at 50% 63%, rgba\(255,\s*1\d\d,\s*\d+,\s*\.\d+\)/);
+    expect(rule).not.toContain("#7c2a11");
+    expect(rule).not.toContain("rgba(8,4,4");
+    expect(css).toMatch(/\.home-glow:not\(\.dark \*\) \.home-glow__rings \{[^}]*rgba\(1\d\d,\s*\d+,\s*\d+,\s*\.0\d+\)/);
+  });
+
   it("breathes in 14 seconds", () => {
     expect(css).toMatch(/animation:\s*home-glow-breathe 14s ease-in-out infinite/);
   });

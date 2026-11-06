@@ -77,6 +77,13 @@ describe("the /new start screen is the home's (Jesús, 06/11: «/new y / quiero 
     expect(c.textContent).not.toContain("start.pasteHtml");
   });
 
+  it("🔴 the light is there in both themes: nothing hides it in the light one (it has its own, home-glow.css)", () => {
+    const c = mount(<Landing />);
+    const glow = c.querySelector("[data-home-glow]");
+    expect(glow).not.toBeNull();
+    expect(glow!.parentElement!.className.split(/\s+/)).not.toContain("hidden");
+  });
+
   it("🔴 «Pegar HTML» moved into the box's + menu, and opens the paste flow", () => {
     const c = mount(<Landing />);
     act(() => c.querySelector<HTMLButtonElement>('button[aria-label="newChat.composer.plus"]')!.click());

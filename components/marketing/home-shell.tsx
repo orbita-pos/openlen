@@ -6,7 +6,8 @@
 //
 // Without an account its places go to their public pages (Plantillas, Comunidad) or to sign in (Mis páginas), and the
 // corner offers Precios, Iniciar sesión and Pruébalo gratis, like Gemini's «Get app» and «Upgrade». With one, they
-// open in the workspace, the corner shows the credits and the account sits at the rail's foot. While the session
+// open in the workspace, and the account sits at the rail's foot with the credits above it when the rail is open
+// (Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren»). While the session
 // loads the corner stays empty, so nobody signed in sees «sign in» flash. Features, Docs, GitHub and the legal pages
 // live in the footer row: the rail is for using OpenLen, not a site menu.
 //
@@ -45,10 +46,9 @@ export function HomeShell({ children }: { children: ReactNode }) {
     { key: "comunidad", label: tw("startTabs.comunidad"), href: signedIn ? "/new?view=explore" : "/explore" },
   ];
 
+  // With an account the corner is empty: the credits live in the open rail (Jesús, 06/11).
   const corner =
-    status === "loading" ? null : signedIn ? (
-      <CreditPill />
-    ) : (
+    status === "loading" || signedIn ? null : (
       <>
         <Link
           href="/pricing"
@@ -83,7 +83,7 @@ export function HomeShell({ children }: { children: ReactNode }) {
             <HeroLenMark className="h-8 w-8 shrink-0" />
           </Link>
         }
-        {...(signedIn ? { account: <AccountMenu dark={dark} onToggleDark={toggleDark} /> } : {})}
+        {...(signedIn ? { account: <AccountMenu dark={dark} onToggleDark={toggleDark} />, credits: <CreditPill /> } : {})}
         drawerOpen={menuOpen}
         onCloseDrawer={() => setMenuOpen(false)}
       />
