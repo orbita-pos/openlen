@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { CaraDeLen, type EstadoDeLaCara } from "@/components/llamada/cara-de-len";
 import { cn } from "@/lib/cn";
 
@@ -29,6 +30,7 @@ const BUBBLE_MS = 4500;
 
 export function LenCompanion() {
   const t = useTranslations("marketing.lenCompanion");
+  const router = useRouter();
   const [hidden, setHidden] = useState(true);
   const [section, setSection] = useState<string | null>(null);
   const [asleep, setAsleep] = useState(false);
@@ -105,6 +107,12 @@ export function LenCompanion() {
       : (section && SECTION_STATE[section]) || "reposo";
 
   const ask = () => {
+    // A page without the box (/features, since the home is only the input — spec local
+    // 2026-11-06-portada-solo-input): the home's box, focused by `HomeHashRouter`.
+    if (!document.getElementById("hero-prompt")) {
+      router.push("/#ask");
+      return;
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
     window.setTimeout(() => document.getElementById("hero-prompt")?.focus({ preventScroll: true }), 650);
   };
