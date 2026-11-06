@@ -12,17 +12,20 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 
 const links = [
   { labelKey: "nav.links.templates", href: "/templates" },
-  { labelKey: "nav.links.features", href: "/#features" },
-  { labelKey: "nav.links.pricing", href: "/#pricing" },
+  // Pages since 06/11 (spec local 2026-11-06-portada-solo-input): the home is only the input.
+  { labelKey: "nav.links.features", href: "/features" },
+  { labelKey: "nav.links.pricing", href: "/pricing" },
   { labelKey: "nav.links.docs", href: "/docs" },
 ] as const;
 
 export interface NavProps {
   dark: boolean;
   onToggleDark: () => void;
+  /** `false` on the home: it is always dark, so the toggle would do nothing there. */
+  themeToggle?: boolean;
 }
 
-export function Nav({ dark, onToggleDark }: NavProps) {
+export function Nav({ dark, onToggleDark, themeToggle = true }: NavProps) {
   const t = useTranslations("marketing");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -89,14 +92,16 @@ export function Nav({ dark, onToggleDark }: NavProps) {
 
         <div className="flex items-center gap-1">
           <LocaleSwitcher />
-          <button
-            type="button"
-            onClick={onToggleDark}
-            aria-label={t("nav.toggleDark")}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
-          >
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          {themeToggle && (
+            <button
+              type="button"
+              onClick={onToggleDark}
+              aria-label={t("nav.toggleDark")}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-zinc-600 hover:text-zinc-900 hover:bg-zinc-900/[0.04] dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+            >
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          )}
           <Link
             href="/login"
             className="ml-1 hidden sm:inline-flex items-center h-10 px-4 rounded-full text-[14.5px] font-medium bg-zinc-900/[0.06] text-zinc-800 hover:bg-zinc-900/[0.1] dark:bg-white/10 dark:text-zinc-100 dark:hover:bg-white/[0.15] transition-colors"
