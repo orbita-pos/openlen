@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
 import { HomeHashRouter } from "@/components/marketing/home-hash-router";
+import { HeroLenProvider } from "@/components/marketing/hero-len";
 import { countTemplates } from "@/lib/templates/store";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
@@ -75,10 +76,14 @@ export default function HomePage() {
   return (
     // `home-page`: `home-glow.css` sizes and paints the <body> after it (`body:has(.home-page)`).
     <div className="home-page dark relative isolate flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
-      <MarketingChrome variant="home">
-        <Hero />
-        <HomeHashRouter />
-      </MarketingChrome>
+      {/* Len's face lives in the menu and the box lives in the hero: one provider around both, so the face listens
+          while you type and thinks when you send. */}
+      <HeroLenProvider>
+        <MarketingChrome variant="home">
+          <Hero />
+          <HomeHashRouter />
+        </MarketingChrome>
+      </HeroLenProvider>
     </div>
   );
 }

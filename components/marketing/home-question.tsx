@@ -1,0 +1,48 @@
+"use client";
+
+// THE HOME'S QUESTION (Jesús, 06/11): «¿Con qué empezamos?» instead of a slogan — OpenLen is an input, like Gemini's
+// home — and different with the visitor's own time of day, the way claude.ai's greeting changes from morning to
+// night. Several per slot and per locale (`marketing.hero.questions.<slot>`), one at random per visit
+// (`lib/marketing/home-question.ts`). «Tu propio desarrollador web» lives on in the page's title and on len.openlen.com.
+//
+// The server can't know the visitor's clock, so it renders the neutral `hero.question` — what crawlers and no-JS
+// visitors read (the hero adds a <noscript> that shows it) — invisible; in the browser the question of the hour
+// replaces it and fades in, so the swap is never seen.
+
+import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { pickQuestion, questionSlot } from "@/lib/marketing/home-question";
+import { cn } from "@/lib/cn";
+
+export function HomeQuestion({
+  now = () => new Date(),
+  random = Math.random,
+}: {
+  /** The visitor's clock and the dice — injectable for tests. */
+  now?: () => Date;
+  random?: () => number;
+}) {
+  const t = useTranslations("marketing");
+  const [question, setQuestion] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const list = t.raw(`hero.questions.${questionSlot(now().getHours())}`);
+    setQuestion(pickQuestion(Array.isArray(list) ? (list as string[]) : [], random()));
+    setReady(true);
+    // Once, on mount: the question doesn't change under the visitor's eyes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <h1
+      className={cn(
+        "home-question max-w-[48rem] text-balance text-[30px] font-medium leading-[1.12] tracking-[-0.03em] sm:text-[40px] md:text-[46px]",
+        "transition-opacity duration-500 motion-reduce:transition-none",
+        ready ? "opacity-100" : "opacity-0",
+      )}
+    >
+      {question ?? t("hero.question")}
+    </h1>
+  );
+}

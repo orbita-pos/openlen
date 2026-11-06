@@ -13,7 +13,29 @@
     "menu": "菜单"
   },
   "hero": {
-    "title": "你的专属网页开发者。<len></len><gradient>Len。</gradient>",
+    "question": "我们从哪里开始？",
+    "questions": {
+      "morning": [
+        "早上好。我们从哪里开始？",
+        "今天做点什么？",
+        "咖啡在手。我们做点什么？"
+      ],
+      "afternoon": [
+        "接下来做什么？",
+        "今天下午做点什么？",
+        "下午好。我们做点什么？"
+      ],
+      "evening": [
+        "晚上好。我们做点什么？",
+        "今天要完成什么？",
+        "要不要为明天准备好？"
+      ],
+      "night": [
+        "还没睡？说说你的想法。",
+        "好点子总在这个时候出现。你的是什么？",
+        "睡不着？我们来做你的页面吧。"
+      ]
+    },
     "pagesThisWeek": "本周已生成 <strong>{count, number}</strong> 个页面",
     "githubAria": "OpenLen on GitHub",
     "starOnGithub": "在 GitHub 上 Star",
