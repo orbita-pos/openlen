@@ -20,7 +20,8 @@ export function MarketingChrome({ children, variant = "default" }: { children: R
   return (
     <>
       <Nav dark={dark} onToggleDark={toggleDark} themeToggle={!home} />
-      <main className="flex-1">{children}</main>
+      {/* On the home, a flex column: its hero grows to fill the screen between the menu and the footer row. */}
+      <main className={home ? "flex flex-1 flex-col" : "flex-1"}>{children}</main>
       {home ? <HomeFooter /> : <Footer />}
     </>
   );

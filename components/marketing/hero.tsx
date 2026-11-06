@@ -1,11 +1,11 @@
 import { getTranslations } from "next-intl/server";
 import { countLiveProjects } from "@/lib/projects";
-import { HeroProduct } from "./hero-product";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { LenLetra } from "./len-letra";
 import { HeroPromptInput } from "./hero-prompt-input";
 import { HeroLenProvider } from "./hero-len";
+import { HomeGlow } from "./home-glow";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HÉROE — rediseñado el 2026-08-28 sobre la referencia de Jesús (Lovable).
@@ -30,6 +30,14 @@ import { HeroLenProvider } from "./hero-len";
 // LO QUE BAJA: la maqueta del producto. Sigue estando y sigue siendo buena,
 // pero deja de pelearse con el prompt por el primer pantallazo: ahora es el
 // segundo compás, el «y esto es lo que te llevas».
+//
+// 06/11 — LA PORTADA ES SÓLO EL INPUT (spec local 2026-11-06-portada-solo-input).
+// El héroe ocupa la pantalla y es lo único: la maqueta se fue a /features. Y
+// vuelve una luz, pero no la de antes: el 09/10 se quitaron la malla coral y el
+// `aurora-dawn` por manchas de color que competían con el titular; ésta es UNA
+// luz, enorme y tenue, que nace debajo de la caja (la receta del fondo de
+// Gemini, medida sobre la captura de Jesús, en el naranja de OpenLen). Vive en
+// `home-glow.tsx`, dentro del envoltorio de la caja.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function Hero() {
@@ -41,7 +49,10 @@ export async function Hero() {
   return (
   // `-mt-14 pt-14`: la sección sube bajo la nav (que es transparente arriba)
   // y devuelve esos 56px como relleno, así que el fondo es uno solo.
-    <section className="relative -mt-14 pt-14">
+    // `isolate`: the light (`HomeGlow`, z-index -1) paints above the page's background only inside a stacking context
+    // of its own. `flex-1` + centred: the hero fills what the menu and the one-row footer leave of the screen (the
+    // home's `<main>` is a flex column, see `MarketingChrome`), so the footer stays inside the first screen.
+    <section className="relative isolate -mt-14 flex flex-1 flex-col justify-center overflow-hidden pt-14">
       {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
           referencia): un aviso en píldora, UN titular con Len dentro haciendo
           de «o» y, donde Grok pone dos botones, la caja
@@ -89,7 +100,8 @@ export async function Hero() {
 
           {/* Sin subtítulo (10/10, Jesús: «para que se vea más clean»): el
               titular y la caja bastan; lo que hace Len lo enseña la maqueta. */}
-          <div className="mt-12 w-full max-w-2xl text-left">
+          <div className="relative mt-12 w-full max-w-2xl text-left">
+            <HomeGlow />
             <HeroPromptInput />
           </div>
 
@@ -108,16 +120,6 @@ export async function Hero() {
         </div>
       </div>
       </HeroLenProvider>
-
-      {/* Segundo compás: la maqueta del producto, pegada a los botones como en
-          la de Grok — asoma ya en el primer pantallazo. Sangra por abajo (estilo Framer/Linear) para que se lea
-          como «sigue leyendo», no como el final de la sección. */}
-      <div id="features" data-len-section="taller" className="relative mx-auto max-w-[88rem] scroll-mt-20 px-6 mt-14 pb-20 sm:mt-16 sm:pb-24">
-        <div className="relative">
-          <HeroProduct />
-        </div>
-      </div>
-
     </section>
   );
 }

@@ -1,22 +1,15 @@
 import { OG_IMAGE } from "@/lib/seo/og-image";
 import type { Metadata } from "next";
 import { Hero } from "@/components/marketing/hero";
-import { MosaicWall } from "@/components/marketing/mosaic-wall";
-import { AnalyticsLeads } from "@/components/marketing/analytics-leads";
-import { ConnectYourAi } from "@/components/marketing/connect-your-ai";
-import { Trust } from "@/components/marketing/trust";
-import { Pricing } from "@/components/marketing/pricing";
-import { FinalCta } from "@/components/marketing/final-cta";
 import { MarketingChrome } from "@/components/marketing/marketing-chrome";
-import { LenCompanion } from "@/components/marketing/len-companion";
+import { HomeHashRouter } from "@/components/marketing/home-hash-router";
 import { countTemplates } from "@/lib/templates/store";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
-// Revalidate every 60s. The page reads template thumbnails + counts from
-// DB at build time — without ISR, generating new thumbnails via
-// `templates:thumbnails` wouldn't propagate to the homepage until the
-// next full deploy. 60s gives sub-minute freshness without making every
+// Revalidate every 60s. The page reads the template count (metadata) and the
+// live-pages count (hero) from the DB — without ISR they wouldn't move until
+// the next full deploy. 60s gives sub-minute freshness without making every
 // visitor pay the SSR cost.
 export const revalidate = 60;
 
@@ -59,40 +52,24 @@ export async function generateMetadata({
   };
 }
 
-// `overflow-x-clip` — LA PORTADA TENIA BARRA HORIZONTAL.
+// LA PORTADA ES SÓLO EL INPUT (Jesús, 06/11: «OpenLen sea solo un input y
+// toda la info como pricing la moveremos a páginas propias»; spec local
+// 2026-11-06-portada-solo-input). Una pantalla: el menú, el héroe de siempre
+// y su luz. Lo que había debajo vive ahora en /features y /pricing.
 //
-// Medido el 2026-09-02 a 889px de ancho: 43px de desborde, 28 elementos
-// asomando por la derecha. Todos decorativos y todos por lo mismo — manchas
-// de color colocadas con insets NEGATIVOS (`hero-mesh__blob--b`,
-// `-right-24`, `-inset-x-20`) para que el difuminado sangre por el borde.
-// Sangrar es lo que se les pide; lo que faltaba era recortarlas.
+// `dark` FIJO: la luz está hecha para negro, así que la portada es oscura
+// aunque la persona tenga el sitio en claro. Tailwind (`darkMode: "class"`)
+// aplica `dark:` a todo lo que cuelga de un `.dark`, sin tocar la preferencia
+// guardada; por eso el menú de aquí no lleva el botón de tema.
 //
-// `clip` Y NO `hidden`: los dos hacen lo mismo a la vista, pero `hidden`
-// crea un contenedor de scroll y eso ROMPE `position: sticky` en todo lo
-// que cuelga — aqui, la nav (`sticky top-3`) y la primera columna de la
-// tabla comparativa (`sticky left-0`). `clip` recorta sin crear scroller,
-// que es exactamente para lo que existe.
-//
-// Va en el envoltorio y no en el <body>: los 28 cuelgan de aqui, y clipar
-// el body es un martillo global que afecta a rutas que no tienen el fallo.
+// `overflow-x-clip` (2026-09-02): recorta sin crear un contenedor de scroll,
+// que rompería el `position: sticky` de la nav.
 export default function HomePage() {
   return (
-    <div className="relative min-h-screen flex flex-col overflow-x-clip">
-      <MarketingChrome>
-        {/* 04/10: de ocho secciones a seis. Se fueron Funciones (vendía
-            plantillas y HTML, lo de antes de Len; la analítica ya la cuenta
-            AnalyticsLeads y lo de «tuya» Trust) y la Comparativa (precios de
-            Carrd y Linktree «a mayo de 2026»: con Len ya no compite ahí). El
-            ancla `#features` de la nav y el pie vive ahora en la maqueta del
-            taller, en el héroe. */}
+    <div className="dark relative flex min-h-[100svh] flex-col overflow-x-clip bg-[#100d0c] text-zinc-50">
+      <MarketingChrome variant="home">
         <Hero />
-        <MosaicWall />
-        <AnalyticsLeads />
-        <ConnectYourAi />
-        <Trust />
-        <Pricing />
-        <FinalCta />
-        <LenCompanion />
+        <HomeHashRouter />
       </MarketingChrome>
     </div>
   );
