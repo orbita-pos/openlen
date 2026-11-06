@@ -80,6 +80,7 @@
     "removeImage": "添付した画像を削除",
     "placeholder": "ページの見た目や文章をどうしたいか説明してください…",
     "placeholderApp": "アプリに何をさせたいか、どんな見た目にしたいか説明してください…",
+    "placeholderGame": "ゲームの遊び方や、どんな見た目にしたいか説明してください…",
     "placeholderScoped": "選択した{target}を変更…",
     "attachImage": "画像を添付",
     "attachImageTitle": "ページに挿入する画像を添付します",
@@ -233,6 +234,15 @@
         "publish": "アプリを公開して"
       }
     },
+    "emptyGame": {
+      "title": "今日はゲームに何をしましょう？",
+      "suggestions": {
+        "screens": "スタート画面とゲームオーバー画面を追加して",
+        "touch": "スマホで指で遊べるようにして",
+        "play": "一回遊んで、おかしいところを教えて",
+        "publish": "ゲームを公開して"
+      }
+    },
     "steps": {
       "running": "Len が作業中",
       "done": "{count, plural, other {Len が # ステップ実行}}",
@@ -331,7 +341,8 @@
       "plus": "画像など",
       "on": "オン",
       "disclaimer": "Len は間違えることがあります。公開する前にページを確認してください。",
-      "disclaimerApp": "Len は間違えることがあります。公開する前にアプリを試してください。"
+      "disclaimerApp": "Len は間違えることがあります。公開する前にアプリを試してください。",
+      "disclaimerGame": "Len は間違えることがあります。公開する前にゲームを遊んでみてください。"
     },
     "layout": {
       "float": "チャットを切り離す",

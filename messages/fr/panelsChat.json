@@ -80,6 +80,7 @@
     "removeImage": "Retirer l'image jointe",
     "placeholder": "Décrivez l'apparence ou le contenu souhaité de votre page…",
     "placeholderApp": "Décrivez ce que votre app doit faire ou à quoi elle doit ressembler…",
+    "placeholderGame": "Décrivez comment se joue votre jeu ou à quoi il doit ressembler…",
     "placeholderScoped": "Modifier le {target} sélectionné…",
     "attachImage": "Joindre une image",
     "attachImageTitle": "Joindre une image à insérer dans la page",
@@ -233,6 +234,15 @@
         "publish": "Publie mon app"
       }
     },
+    "emptyGame": {
+      "title": "Qu'est-ce qu'on fait aujourd'hui sur votre jeu ?",
+      "suggestions": {
+        "screens": "Ajoute un écran d'accueil et un écran de fin de partie",
+        "touch": "Rends-le jouable au doigt sur mobile",
+        "play": "Joue une partie et dis-moi ce qui ne va pas",
+        "publish": "Publie mon jeu"
+      }
+    },
     "steps": {
       "running": "Len travaille",
       "done": "{count, plural, one {Len a fait # étape} other {Len a fait # étapes}}",
@@ -331,7 +341,8 @@
       "plus": "Image et plus",
       "on": "Actif",
       "disclaimer": "Len peut se tromper. Vérifiez votre page avant de la publier.",
-      "disclaimerApp": "Len peut se tromper. Testez votre app avant de la publier."
+      "disclaimerApp": "Len peut se tromper. Testez votre app avant de la publier.",
+      "disclaimerGame": "Len peut se tromper. Testez votre jeu avant de le publier."
     },
     "layout": {
       "float": "Détacher le chat",

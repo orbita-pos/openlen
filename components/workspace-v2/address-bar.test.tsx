@@ -15,7 +15,7 @@ vi.mock("next-intl", () => ({
 }));
 
 const roots: Root[] = [];
-function render(esApp: boolean) {
+function render(esApp: boolean, esJuego = false) {
   const container = document.createElement("div");
   document.body.appendChild(container);
   act(() => {
@@ -30,6 +30,7 @@ function render(esApp: boolean) {
         onCreate={async () => null}
         onDelete={async () => false}
         esApp={esApp}
+        esJuego={esJuego}
       />,
     );
     roots.push(root);
@@ -55,5 +56,13 @@ describe("la barra de dirección", () => {
     expect(c.querySelector("button")).toBeNull();
     expect(c.textContent).toContain("cafe.openlen.app");
     expect(c.textContent).toContain("preview.direccionApp");
+  });
+
+  it("🔴 en un juego, la misma barra con «Juego» en vez de «App» (visto en el navegador el 05/11)", () => {
+    const c = render(true, true);
+    expect(c.querySelector("button")).toBeNull();
+    expect(c.textContent).toContain("cafe.openlen.app");
+    expect(c.textContent).toContain("preview.direccionGame");
+    expect(c.textContent).not.toContain("preview.direccionApp");
   });
 });
