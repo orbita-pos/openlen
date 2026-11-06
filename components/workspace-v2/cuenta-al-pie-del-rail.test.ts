@@ -74,6 +74,13 @@ describe("las dos pantallas del taller", () => {
     // contenido de la pantalla.
     expect(pagina).not.toMatch(/aria-current=\{startSurface === s/);
   });
+
+  // Jesús, 06/11: «si me voy a pages y regreso a /, ahora el Create es /new y no /» → «always to /». Creating has
+  // one address: Crear in /new's start rail is a link to the home, not the blank project opened in place.
+  it("🔴 Crear lleva a la portada, /, no al proyecto en blanco de /new", () => {
+    expect(pagina).toMatch(/\{ key: "crear", label: tws\("startTabs\.crear"\), href: "\/" \}/);
+    expect(pagina).not.toMatch(/key: "crear"[^}]*router\.replace\("\/new"\)/);
+  });
 });
 
 describe("el menú de cuenta", () => {

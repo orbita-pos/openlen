@@ -21,16 +21,15 @@ import {
 // that same announcement covers it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function CreditPill() {
-  const t = useTranslations("projects");
-  const locale = useLocale();
-  const [credits, setCredits] = useState<{
-    balance: number;
-    allotment: number;
-    refillsAt: string | null;
-  } | null>(null);
+export type Credits = { balance: number; allotment: number; refillsAt: string | null };
+
+/** The balance from /api/usage, fetched on mount and again whenever a turn announces its debit finished. `null`
+ *  while loading, when signed out (the fetch 401s) and when not `enabled`. */
+export function useCredits(enabled = true): Credits | null {
+  const [credits, setCredits] = useState<Credits | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     let requestSequence = 0;
     const refresh = () => {
@@ -60,7 +59,26 @@ export function CreditPill() {
       cancelled = true;
       window.removeEventListener(CREDIT_BALANCE_CHANGED_EVENT, refresh);
     };
-  }, []);
+  }, [enabled]);
+
+  return enabled ? credits : null;
+}
+
+/** The renewal line («Renews on November 30, 2026»), or null without a date. */
+function useRefillLabel(credits: Credits | null): string | null {
+  const t = useTranslations("projects");
+  const locale = useLocale();
+  const refillDate = credits?.refillsAt ? new Date(credits.refillsAt) : null;
+  return refillDate && Number.isFinite(refillDate.getTime())
+    ? t("creditPill.refillsAt", { date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(refillDate) })
+    : null;
+}
+
+export function CreditPill() {
+  const t = useTranslations("projects");
+  const locale = useLocale();
+  const credits = useCredits();
+  const refillLabel = useRefillLabel(credits);
 
   if (!credits) return null;
   // El saldo llega en CENTICRÉDITOS (ver lib/credits.ts). Se enseña en
@@ -82,13 +100,6 @@ export function CreditPill() {
     balance: saldo,
     allotment: formatCredits(credits.allotment),
   });
-  const refillDate = credits.refillsAt ? new Date(credits.refillsAt) : null;
-  const refillLabel =
-    refillDate && Number.isFinite(refillDate.getTime())
-      ? t("creditPill.refillsAt", {
-          date: new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(refillDate),
-        })
-      : null;
   const tooltip = refillLabel ? `${baseTooltip}. ${refillLabel}` : baseTooltip;
   const accessibleLabel = `${tooltip}${low ? `. ${t("creditPill.low")}` : ""}${
     empty ? `. ${t("creditPill.empty")}` : ""
@@ -146,5 +157,62 @@ export function CreditPill() {
     >
       {inner}
     </span>
+  );
+}
+
+/** THE CREDITS IN THE ACCOUNT'S MENU (Jesús, 06/11: «donde se ve los créditos mételo al dropdown del icono del
+ *  user»): the start frame lost its pill in the open rail; there they are one row under the name — the balance with
+ *  the word, the renewal under it, and, out of credits, the same way to Pro the pill offers. Nothing while loading.
+ *  The balance comes from the menu (`useCredits`, fetched when the menu mounts), so opening it doesn't make the row
+ *  pop in a moment later. */
+export function CreditRow({ credits }: { credits: Credits | null }) {
+  const t = useTranslations("projects");
+  const locale = useLocale();
+  const refillLabel = useRefillLabel(credits);
+  if (!credits) return null;
+  const empty = credits.balance <= 0;
+  const low = !empty && credits.balance <= 3 * CENTICREDITOS_POR_CREDITO;
+  const state = empty ? "empty" : low ? "low" : "normal";
+  const body = (
+    <>
+      {low || empty ? (
+        <TriangleAlert size={14} aria-hidden="true" className="mt-px shrink-0" />
+      ) : (
+        <Coins size={14} aria-hidden="true" className="mt-px shrink-0 text-coral-500" />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className="block tabular-nums">
+          {t("creditPill.tooltip", { balance: formatCredits(credits.balance), allotment: formatCredits(credits.allotment) })}
+        </span>
+        {empty || low ? (
+          <span className="block text-[11px] font-medium">
+            {empty ? `${t("creditPill.empty")} · Pro` : t("creditPill.low")}
+          </span>
+        ) : refillLabel ? (
+          <span className="block text-[11px] fg-faint">{refillLabel}</span>
+        ) : null}
+      </span>
+    </>
+  );
+  const className = cn(
+    "flex w-full items-start gap-2.5 border-b bd px-2.5 py-2 text-left text-[12.5px]",
+    empty ? "text-red-700 dark:text-red-300" : low ? "text-amber-800 dark:text-amber-200" : "fg",
+  );
+  if (empty) {
+    return (
+      <a
+        href={`/api/billing/checkout?locale=${locale}`}
+        data-credit-row
+        data-credit-state={state}
+        className={cn(className, "transition hover:bg-hover")}
+      >
+        {body}
+      </a>
+    );
+  }
+  return (
+    <div data-credit-row data-credit-state={state} className={className}>
+      {body}
+    </div>
   );
 }
