@@ -81,14 +81,17 @@ describe("the home in the start frame", () => {
     expect(host.querySelector("[data-account-menu]")).toBeNull();
   });
 
-  it("🔴 with an account: the places open in the workspace, the corner shows your credits, the account sits at the foot", () => {
+  it("🔴 with an account: the places open in the workspace, the credits live in the open rail, the account at its foot", () => {
     status = "authenticated";
     const host = mount();
     expect(railHref(host, "startTabs.plantillas")).toBe("/new?mode=template");
     expect(railHref(host, "startTabs.mispaginas")).toBe("/new?view=projects");
     expect(railHref(host, "startTabs.comunidad")).toBe("/new?view=explore");
-    expect(host.querySelector("[data-start-top] [data-credit-pill]")).not.toBeNull();
+    // Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren» — not in the corner.
+    expect(host.querySelector("[data-start-top] [data-credit-pill]")).toBeNull();
     expect(host.querySelector('[data-start-top] a[href="/login"]')).toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>('[data-start-rail] button[aria-label="nav.menu"]')!.click());
+    expect(host.querySelector("[data-start-rail] [data-credit-pill]")).not.toBeNull();
     expect(host.querySelector("[data-start-rail] [data-account-menu]")).not.toBeNull();
   });
 

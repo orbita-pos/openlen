@@ -18,9 +18,9 @@
 // wraps itself in one (under its `.dark`, so the dark tokens).
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { FolderOpen, LayoutTemplate, Menu, SquarePen, Users, Wrench, X } from "lucide-react";
+import { FolderOpen, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, SquarePen, Users, Wrench, X } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "./ui";
@@ -43,11 +43,15 @@ const ICONS: Record<StartItemKey, typeof SquarePen> = {
   herramientas: Wrench,
 };
 
+/** Whether the rail was left open, per browser (a convenience, like the chat's width). */
+const OPEN_KEY = "openlen:start-rail-open";
+
 export function StartRail({
   items,
   active,
   mark,
   account,
+  credits,
   drawerOpen = false,
   onCloseDrawer,
 }: {
@@ -57,11 +61,36 @@ export function StartRail({
   mark: ReactNode;
   /** The account at the rail's foot (`AccountMenu`, which pins itself there); none without a session. */
   account?: ReactNode;
+  /** The credits, above the account — only with the rail open, and in the phone's drawer (Jesús, 06/11). */
+  credits?: ReactNode;
   /** The phone's drawer, opened by the top row's menu button. */
   drawerOpen?: boolean;
   onCloseDrawer?: () => void;
 }) {
+  const t = useTranslations("marketing");
   const tw = useTranslations("wsChrome");
+  // THE RAIL OPENS, like Gemini's: a button at its top widens it with the names, and then it shows the credits
+  // (Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren»). Closed by default; remembered here.
+  const [open, setOpen] = useState(false);
+  // It slides only when pressed: coming back open from storage, it is simply open (no slide on every visit).
+  const [slides, setSlides] = useState(false);
+  useEffect(() => {
+    try {
+      setOpen(localStorage.getItem(OPEN_KEY) === "1");
+    } catch {
+      /* no storage: it starts closed */
+    }
+  }, []);
+  const toggle = () => {
+    const next = !open;
+    setSlides(true);
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_KEY, next ? "1" : "0");
+    } catch {
+      /* not remembered, still toggled */
+    }
+  };
   // Escape closes the phone's drawer, as any dialog.
   useEffect(() => {
     if (!drawerOpen || !onCloseDrawer) return;
@@ -75,11 +104,42 @@ export function StartRail({
     <>
       {/* `self-stretch`, not `h-full`: on the home the frame only has a min-height, so 100% was the icons' height and
           the account sat right under them instead of at the foot. */}
-      <aside data-start-rail className="hidden w-14 shrink-0 flex-col items-center gap-1 self-stretch pb-1 pt-3 md:flex">
-        <div className="mb-3 flex h-8 w-8 items-center justify-center">{mark}</div>
+      <aside
+        data-start-rail
+        data-open={String(open)}
+        className={cn(
+          "hidden shrink-0 flex-col gap-1 self-stretch pb-1 pt-3 md:flex",
+          slides && "transition-[width] duration-200 motion-reduce:transition-none",
+          open ? "w-60 px-2.5" : "w-14 items-center",
+        )}
+      >
+        <div className={cn("mb-3 flex items-center", open ? "justify-between pl-1" : "flex-col gap-2")}>
+          <div className="flex h-8 w-8 items-center justify-center">{mark}</div>
+          <Tooltip label={open ? tw("start.closeMenu") : t("nav.menu")} side="right">
+            <button
+              type="button"
+              onClick={toggle}
+              aria-label={open ? tw("start.closeMenu") : t("nav.menu")}
+              aria-expanded={open}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg fg-muted transition hover:bg-hover hover:fg"
+            >
+              {open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+            </button>
+          </Tooltip>
+        </div>
         {items.map((item) => {
           const Icon = ICONS[item.key];
-          return (
+          return open ? (
+            <ItemControl
+              key={item.key}
+              item={item}
+              active={item.key === active}
+              className="h-9 w-full gap-3 rounded-lg px-2.5 text-[13.5px] font-medium"
+            >
+              <Icon size={18} className="shrink-0" />
+              <span className="truncate">{item.label}</span>
+            </ItemControl>
+          ) : (
             <Tooltip key={item.key} label={item.label} side="right">
               <ItemControl item={item} active={item.key === active} className="h-9 w-9 justify-center rounded-lg">
                 <Icon size={18} />
@@ -87,7 +147,10 @@ export function StartRail({
             </Tooltip>
           );
         })}
-        {account ?? null}
+        <div className={cn("mt-auto flex flex-col gap-2", open ? "items-start pl-1" : "items-center")}>
+          {open && credits ? <div className="flex">{credits}</div> : null}
+          {account ?? null}
+        </div>
       </aside>
 
       {drawerOpen && (
@@ -121,7 +184,10 @@ export function StartRail({
                 </ItemControl>
               );
             })}
-            {account ? <div className="mt-auto flex">{account}</div> : null}
+            <div className="mt-auto flex flex-col items-start gap-2">
+              {credits ? <div className="flex">{credits}</div> : null}
+              {account ?? null}
+            </div>
           </nav>
         </div>
       )}

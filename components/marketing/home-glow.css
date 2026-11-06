@@ -64,6 +64,31 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
+/* THE LIGHT THEME (Jesús, 06/11, on /new: «¿por qué en blanco no tiene ese brillo que sí tiene el negro?»). Gemini keeps
+   its light in its light theme: the same huge quiet light under the input, as a haze over the white page. Here the
+   dark recipe's browns would be a smudge, so outside a `.dark` the light is a warm peach haze in OpenLen's orange that
+   fades into the page, the top lifts to white instead of darkening, and the rings are faint warm lines. Inside a
+   `.dark` —the home, always dark; /new in the dark theme— the rules above stand untouched. `:not(.dark *)`: not under
+   any `.dark`, whichever element carries it (the home's wrapper, or <html>). */
+.home-glow:not(.dark *) .home-glow__light {
+  background:
+    radial-gradient(ellipse 24% 17% at 50% 60%, rgba(255,110,64,.16), transparent 70%),
+    radial-gradient(ellipse 42% 46% at 50% 63%, rgba(255,128,80,.30) 0%, rgba(255,150,105,.22) 22%, rgba(255,186,150,.12) 46%, rgba(255,220,200,.05) 68%, transparent 86%),
+    radial-gradient(ellipse 30% 22% at 42% 18%, rgba(255,255,255,.55), transparent 70%);
+}
+
+.home-glow:not(.dark *) .home-glow__boost {
+  background: radial-gradient(ellipse 28% 20% at 50% 60%, rgba(255,110,64,.14), transparent 70%);
+}
+
+.home-glow:not(.dark *) .home-glow__rings {
+  background: repeating-radial-gradient(ellipse 60% 70% at 50% 64%, rgba(160,70,30,.03) 0 2px, transparent 2px 26px);
+}
+
+.home-glow:not(.dark *) .home-glow__grain {
+  opacity: .05;
+}
+
 /* On the home, the body is one SMALL viewport tall and the home's own colour. Its `min-h-screen` is 100vh, which on
    real phones is the large viewport (toolbars hidden): taller than the home's 100svh, so a strip of the body's
    background — white for light-theme visitors — showed under the home and in the overscroll bounce (final review,
