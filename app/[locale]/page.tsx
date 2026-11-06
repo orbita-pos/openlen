@@ -5,6 +5,7 @@ import { HomeShell } from "@/components/marketing/home-shell";
 import { HomeHashRouter } from "@/components/marketing/home-hash-router";
 import { HeroLenProvider } from "@/components/marketing/hero-len";
 import { countTemplates } from "@/lib/templates/store";
+import { toolsEnabled } from "@/lib/tools/enabled";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
@@ -82,7 +83,7 @@ export default function HomePage() {
       <HeroLenProvider>
         {/* THE START FRAME (06/11, Jesús: «/new y / quiero que sea compartido»): the same rail and top row as /new
             without a project, like Gemini's. */}
-        <HomeShell>
+        <HomeShell tools={toolsEnabled()}>
           <Hero />
           <HomeHashRouter />
         </HomeShell>

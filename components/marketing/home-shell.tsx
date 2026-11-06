@@ -4,12 +4,14 @@
 // and top row as /new without a project (`components/workspace-v2/start-rail.tsx`), around the hero. It replaces the
 // marketing menu on the home; every other marketing page keeps `MarketingChrome`.
 //
-// Without an account its places go to their public pages (Plantillas, Comunidad) or to sign in (Mis páginas), and the
-// corner offers Precios, Iniciar sesión and Pruébalo gratis, like Gemini's «Get app» and «Upgrade». With one, they
-// open in the workspace, and the account sits at the rail's foot with the credits above it when the rail is open
-// (Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren»). While the session
-// loads the corner stays empty, so nobody signed in sees «sign in» flash. Features, Docs, GitHub and the legal pages
-// live in the footer row: the rail is for using OpenLen, not a site menu.
+// THE SAME RAIL AS /new (Jesús, 06/11: «le doy a My pages, me lleva a /new y se cambia el sidebar»): the same places
+// —Herramientas too, whenever tools are on— under the same face. Without an account its places go to their public
+// pages (Plantillas, Comunidad) or to sign in first (Mis páginas, Herramientas), and the corner, floating over the
+// light, offers Precios, Iniciar sesión and Pruébalo gratis, like Gemini's «Get app» and «Upgrade». With one, they
+// open in the workspace, and the account sits at the rail's foot with the credits inside its menu (Jesús, 06/11:
+// «donde se ve los créditos mételo al dropdown del icono del user»). While the session loads the corner stays empty,
+// so nobody signed in sees «sign in» flash. Features, Docs, GitHub and the legal pages live in the footer row: the
+// rail is for using OpenLen, not a site menu.
 //
 // The workspace's tokens come with it (`.workspace-v2` here, under the home's fixed `.dark`): the rail, the credits
 // pill and the account menu are the workspace's own.
@@ -21,7 +23,6 @@ import { ArrowRight } from "lucide-react";
 import "@/app/[locale]/new/tokens.css";
 import { Link } from "@/i18n/navigation";
 import { useDarkMode } from "@/lib/use-dark-mode";
-import { CreditPill } from "@/components/app/credit-pill";
 import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { StartRail, StartTopRow, type StartItem } from "@/components/workspace-v2/start-rail";
 import { HeroLenMark } from "./hero-len";
@@ -29,8 +30,18 @@ import { HomeFooter } from "./home-footer";
 
 /** Where «Mis páginas» lands after signing in. */
 const MINE = "/new?view=projects";
+/** Where «Herramientas» lands after signing in — the same view /new opens in place. */
+const TOOLS = "/new?view=tools";
+const afterSignIn = (next: string) => `/login?next=${encodeURIComponent(next)}`;
 
-export function HomeShell({ children }: { children: ReactNode }) {
+export function HomeShell({
+  children,
+  tools = false,
+}: {
+  children: ReactNode;
+  /** Tools are on here (`toolsEnabled()`, read by the server page): the rail offers Herramientas, as /new does. */
+  tools?: boolean;
+}) {
   const t = useTranslations("marketing");
   const tw = useTranslations("wsChrome");
   const { status } = useSession();
@@ -42,11 +53,14 @@ export function HomeShell({ children }: { children: ReactNode }) {
     // The home IS where you create: Crear brings you back to the box (`#ask` focuses it, `home-hash.ts`).
     { key: "crear", label: tw("startTabs.crear"), href: "/#ask" },
     { key: "plantillas", label: tw("startTabs.plantillas"), href: signedIn ? "/new?mode=template" : "/templates" },
-    { key: "mispaginas", label: tw("startTabs.mispaginas"), href: signedIn ? MINE : `/login?next=${encodeURIComponent(MINE)}` },
+    { key: "mispaginas", label: tw("startTabs.mispaginas"), href: signedIn ? MINE : afterSignIn(MINE) },
     { key: "comunidad", label: tw("startTabs.comunidad"), href: signedIn ? "/new?view=explore" : "/explore" },
+    ...(tools
+      ? [{ key: "herramientas" as const, label: tw("startTabs.herramientas"), href: signedIn ? TOOLS : afterSignIn(TOOLS) }]
+      : []),
   ];
 
-  // With an account the corner is empty: the credits live in the open rail (Jesús, 06/11).
+  // With an account the corner is empty: the credits live in the account's menu (Jesús, 06/11).
   const corner =
     status === "loading" || signedIn ? null : (
       <>
@@ -83,12 +97,14 @@ export function HomeShell({ children }: { children: ReactNode }) {
             <HeroLenMark className="h-8 w-8 shrink-0" />
           </Link>
         }
-        {...(signedIn ? { account: <AccountMenu dark={dark} onToggleDark={toggleDark} />, credits: <CreditPill /> } : {})}
+        homeHref="/"
+        {...(signedIn ? { account: <AccountMenu dark={dark} onToggleDark={toggleDark} credits /> } : {})}
         drawerOpen={menuOpen}
         onCloseDrawer={() => setMenuOpen(false)}
       />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <StartTopRow homeHref="/" onOpenMenu={() => setMenuOpen(true)} right={corner} />
+      {/* `relative`: on a computer the corner floats over this column's top right (`StartTopRow`). */}
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        <StartTopRow onOpenMenu={() => setMenuOpen(true)} right={corner} />
         <main className="flex flex-1 flex-col">{children}</main>
         <HomeFooter />
       </div>

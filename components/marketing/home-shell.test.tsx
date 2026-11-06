@@ -1,7 +1,8 @@
 // The home in the start frame (Jesús, 06/11, on Gemini's sidebar: «/new y / quiero que sea compartido»): the same rail
-// and top row as /new without a project. Without an account its places go to their public pages or to sign in, and
-// the corner says Precios, Iniciar sesión and Pruébalo gratis; with one, they open in the workspace, the corner shows
-// your credits and the account sits at the rail's foot. Same manual react-dom + act() harness as the other tests here.
+// as /new without a project —the same places, Herramientas too when tools are on, under the same face—. Without an
+// account its places go to their public pages or to sign in, and the corner says Precios, Iniciar sesión and Pruébalo
+// gratis; with one, they open in the workspace and the account sits at the rail's foot, the credits inside its menu.
+// Same manual react-dom + act() harness as the other tests here.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -19,7 +20,9 @@ vi.mock("@/i18n/navigation", () => ({
 vi.mock("next-auth/react", () => ({ useSession: () => ({ status }) }));
 vi.mock("@/lib/use-dark-mode", () => ({ useDarkMode: () => [true, () => {}] }));
 vi.mock("@/components/app/credit-pill", () => ({ CreditPill: () => <span data-credit-pill /> }));
-vi.mock("@/components/workspace-v2/account-menu", () => ({ AccountMenu: () => <span data-account-menu /> }));
+vi.mock("@/components/workspace-v2/account-menu", () => ({
+  AccountMenu: ({ credits }: { credits?: boolean }) => <span data-account-menu data-with-credits={String(credits === true)} />,
+}));
 vi.mock("@/components/locale-switcher", () => ({ LocaleSwitcher: () => <span data-locale-switcher /> }));
 vi.mock("./hero-len", () => ({ HeroLenMark: () => <span data-len-mark /> }));
 
@@ -35,14 +38,14 @@ afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
   document.body.innerHTML = "";
 });
-function mount() {
+function mount({ tools = false }: { tools?: boolean } = {}) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
   act(() =>
     root.render(
-      <HomeShell>
+      <HomeShell tools={tools}>
         <p data-hero />
       </HomeShell>,
     ),
@@ -81,18 +84,30 @@ describe("the home in the start frame", () => {
     expect(host.querySelector("[data-account-menu]")).toBeNull();
   });
 
-  it("🔴 with an account: the places open in the workspace, the credits live in the open rail, the account at its foot", () => {
+  it("🔴 with an account: the places open in the workspace, the account at its foot with the credits in its menu", () => {
     status = "authenticated";
     const host = mount();
     expect(railHref(host, "startTabs.plantillas")).toBe("/new?mode=template");
     expect(railHref(host, "startTabs.mispaginas")).toBe("/new?view=projects");
     expect(railHref(host, "startTabs.comunidad")).toBe("/new?view=explore");
-    // Jesús, 06/11: «el crédito tiene que estar en el sidebar cuando lo abren» — not in the corner.
+    // Jesús, 06/11: «donde se ve los créditos mételo al dropdown del icono del user» — neither the corner nor the rail.
     expect(host.querySelector("[data-start-top] [data-credit-pill]")).toBeNull();
     expect(host.querySelector('[data-start-top] a[href="/login"]')).toBeNull();
     act(() => host.querySelector<HTMLButtonElement>('[data-start-rail] button[aria-label="nav.menu"]')!.click());
-    expect(host.querySelector("[data-start-rail] [data-credit-pill]")).not.toBeNull();
-    expect(host.querySelector("[data-start-rail] [data-account-menu]")).not.toBeNull();
+    expect(host.querySelector("[data-credit-pill]")).toBeNull();
+    const account = host.querySelector<HTMLElement>("[data-start-rail] [data-account-menu]")!;
+    expect(account.dataset.withCredits).toBe("true");
+  });
+
+  // Jesús, 06/11: «le doy a My pages, me lleva a /new y se cambia el sidebar, se agrega otro que es Tools».
+  it("🔴 with tools on, the rail offers Herramientas as /new does — signing in first without an account", () => {
+    const off = mount();
+    expect(railHref(off, "startTabs.herramientas")).toBeUndefined();
+    const out = mount({ tools: true });
+    expect(railHref(out, "startTabs.herramientas")).toBe(`/login?next=${encodeURIComponent("/new?view=tools")}`);
+    status = "authenticated";
+    const signedIn = mount({ tools: true });
+    expect(railHref(signedIn, "startTabs.herramientas")).toBe("/new?view=tools");
   });
 
   it("🔴 the footer row keeps what isn't for using OpenLen: Features, Pricing, Docs, GitHub and the legal pages", () => {
