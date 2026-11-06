@@ -85,6 +85,13 @@ describe("the kind choice on the /new start screen", () => {
     expect(pill(c)!.textContent).toContain("start.kind.game");
   });
 
+  it("🔴 is the same box as the home's: the shared PromptBox, in the workspace's colours (Jesús, 06/11)", () => {
+    const c = mount(<Landing />);
+    const box = c.querySelector('[data-prompt-box="taller"]');
+    expect(box).not.toBeNull();
+    expect(box!.contains(pill(c))).toBe(true);
+  });
+
   it("without a kind choice, the composer has no pill (as everywhere else it is used)", () => {
     const c = mount(<HeroComposer state={state} onGenerate={() => {}} generating={false} effort="low" onEffortChange={() => {}} />);
     expect(pill(c)).toBeNull();

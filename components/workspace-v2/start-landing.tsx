@@ -8,13 +8,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
-import { useLocale } from "next-intl";
 import { useTranslations } from "next-intl";
 import type { BriefFormState } from "@/components/workspace/types";
-import {
-  GenerationBriefLimitFeedback,
-  useGenerationBriefLimit,
-} from "@/components/generation-brief-limit";
 import { type PageEffort } from "./panels/ai-brief-panel";
 import { TemplatePreviewFrame } from "./template-preview-frame";
 import { useTemplates } from "./use-templates";
@@ -23,23 +18,13 @@ import {
   type TemplateFamily,
   type TemplateSpec,
 } from "./templates-data";
-import { Loader, Search } from "./icons";
-import { ArrowUp, FileText, Film, ImageIcon, Mic, Plus, Square } from "lucide-react";
+import { Search } from "./icons";
 import "./chat/new-chat.css";
-import { ComposerChip, ComposerPlusOption } from "./composer-pieces";
-import { useMandoDesplegable } from "./use-mando-desplegable";
-import { useDictado } from "@/components/marketing/use-dictado";
-import { reducirImagen } from "@/components/marketing/reducir-imagen";
-import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
-import { MAX_FILES_PER_MESSAGE, videoKindFromMime, videoKindFromName } from "@/lib/projects/chat-files";
-import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
-import { classifyDroppedFiles, pastedFiles } from "@/lib/workspace-v2/classify-dropped-files";
 import { useFileDrop } from "./chat/use-file-drop";
 import { DropOverlay } from "./chat/drop-overlay";
-import { useToast } from "./toast";
 import { registrarUso } from "@/lib/uso/cliente";
 import type { NaceComo } from "./tarjetas-nace-como";
-import { HeroKindPicker } from "@/components/marketing/hero-kind-picker";
+import { PromptBox, type KindChoice, type PromptBoxTextArea } from "@/components/prompt-box";
 import { CajaConMenciones } from "./hilos-del-codigo";
 import { hasLink } from "@/lib/chat/links";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
@@ -70,15 +55,6 @@ export interface StartLandingProps {
   /** THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): Juego in the pill, when games are on. */
   conJuego?: boolean;
 }
-
-/** The kind choice the start screen hands its composer. */
-type KindChoice = {
-  value: NaceComo;
-  onChange: (v: NaceComo) => void;
-  conJuego: boolean;
-  conHerramienta: boolean;
-  herramientaBloqueada?: string;
-};
 
 /** What the empty state says for each kind: its headline, its subtitle and the composer's placeholder. */
 const TEXTS: Record<NaceComo, { headline: string; subtitle: string; placeholder?: string }> = {
@@ -353,14 +329,14 @@ function FamilyChip({
   );
 }
 
-// The centered AI composer. Mirrors the sidebar AiBriefPanel composer (auto-grow
-// textarea + Enter-to-send + the shared EffortSelect) at a larger, hero size.
+// THE /new BOX IS THE HOME'S BOX (`components/prompt-box.tsx`, Jesús, 06/11: «dos inputs así es duplicación»), in the
+// workspace's tokens. What stays here is /new's: the text and attachments live in the page (it sends the first message
+// to Len), PDFs and videos go too, a drop zone around can lend them in, URLs paint blue as you type, and the usage
+// funnel counts «wrote» and «sent» — never with the text.
 export function HeroComposer({
   state,
   onGenerate,
   generating,
-  effort,
-  onEffortChange,
   placeholder,
   addFilesRef,
   kind,
@@ -378,353 +354,55 @@ export function HeroComposer({
   kind?: KindChoice;
 }) {
   const t = useTranslations("panelsA");
-  const tm = useTranslations("marketing");
-  const locale = useLocale();
-  const taRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  /** A PDF for Len (26/10): picked here, uploaded by the page with the first message. */
-  const pdfRef = useRef<HTMLInputElement>(null);
-  const pdfs = state.pdfs ?? [];
-  const [leyendoFoto, setLeyendoFoto] = useState(false);
-  const briefLimit = useGenerationBriefLimit({
-    value: state.prompt,
-    onValueChange: state.setPrompt,
-    externallyTruncatedValue: state.truncatedPrompt,
-    onTruncatedValueChange: state.setTruncatedPrompt,
-    externalAnnouncementToken: state.truncationAnnouncementToken,
-    onExternalAnnouncementTokenChange: state.setTruncationAnnouncementToken,
-  });
-
-  useEffect(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  }, [state.prompt]);
-
-  // «ESCRIBIÓ» ES EL PASO QUE SEPARA MIRAR DE INTENTAR, así que se registra la
-  // primera vez que entra texto por cualquiera de las tres puertas —teclado,
-  // pegar o dictado— y nunca más en esta visita. Nunca lleva el texto.
-  const escrito = useRef(false);
-  const marcarEscrito = () => {
-    if (escrito.current) return;
-    escrito.current = true;
+  // «WROTE» IS THE STEP BETWEEN LOOKING AND TRYING: logged the first time text comes in by any of the three doors —
+  // keyboard, paste or dictation — and never again in this visit. It never carries the text.
+  const wrote = useRef(false);
+  const markWrote = () => {
+    if (wrote.current) return;
+    wrote.current = true;
     registrarUso("crear_escribio", {});
   };
 
-  // ⚰️ Aquí vivía EL ESCRITOR FIJADO (`/api/crear/escritor`), el selector de
-  // qué modelo escribía Crear. Se retiró con Crear el 2026-10-06
-  // (plans/crear-es-len, tarea 12): lo que se envía es el primer mensaje a Len.
-  // El menú del `+`, con el mismo gancho que el chat: Esc, clic fuera, flechas.
-  const [plusOpen, setPlusOpen] = useState(false);
-  const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
-  const tc = useTranslations("panelsChat");
-  // MISMO DICTADO QUE EL HEROE, mismo gancho. No se copia el codigo: si algun
-  // dia Chrome cambia cuando cierra la sesion, se arregla en un sitio.
-  const dictado = useDictado({
-    idioma: locale,
-    onTexto: (fragmento) => {
-      marcarEscrito();
-      const previo = state.prompt;
-      const junto = previo ? `${previo.replace(/\s+$/, "")} ${fragmento.trim()}` : fragmento.trim();
-      state.setPrompt(junto.slice(0, briefLimit.maxLength));
-    },
-  });
-
-  // Hasta `MAX_REFERENCIAS`, igual que en el heroe y por los mismos motivos —
-  // ver el comentario largo del estado en `hero-prompt-input.tsx`.
-  const elegirFotos = async (files: FileList | readonly File[] | null) => {
-    if (!files || files.length === 0) return;
-    const hueco = MAX_REFERENCIAS - state.fotos.length;
-    if (hueco <= 0) return;
-    setLeyendoFoto(true);
-    try {
-      const reducidas = await Promise.all(
-        Array.from(files)
-          .slice(0, hueco)
-          .map(async (file) => {
-            const r = await reducirImagen(file);
-            return r ? { dataUrl: r.dataUrl, nombre: file.name } : null;
-          }),
-      );
-      const buenas = reducidas.filter((r): r is NonNullable<typeof r> => r !== null);
-      if (buenas.length) {
-        state.setFotos([...state.fotos, ...buenas].slice(0, MAX_REFERENCIAS));
-      }
-    } finally {
-      setLeyendoFoto(false);
-      // Vaciar SIEMPRE: sin esto, elegir el mismo fichero dos veces seguidas no
-      // dispara `change` y parece que el boton se rompio.
-      if (fileRef.current) fileRef.current.value = "";
-    }
-  };
-
-  const canGenerate = briefLimit.isValid && !generating;
-
-  // DROP OR PASTE (spec local 2026-10-27-chat-drop-and-images): photos to the photos, files (and
-  // videos) to the files, uploaded with the first message as before; what doesn't go is said.
-  const toast = useToast();
-  const sumarFicheros = (files: readonly File[]) => {
-    if (generating || files.length === 0) return;
-    const c = classifyDroppedFiles(files, {
-      photos: Math.max(0, MAX_REFERENCIAS - state.fotos.length),
-      files: state.setPdfs ? Math.max(0, MAX_FILES_PER_MESSAGE - pdfs.length) : 0,
-    });
-    const nombres = (reason: string) => c.rejected.filter((r) => r.reason === reason).map((r) => r.name);
-    if (nombres("not_supported").length) toast.error(tc("composer.dropNotSupported", { names: nombres("not_supported").join(", ") }));
-    if (nombres("too_big").length) toast.error(tc("composer.dropTooBig", { names: nombres("too_big").join(", ") }));
-    if (nombres("limit").length) toast.error(tc("composer.dropLimit", { count: nombres("limit").length }));
-    if (c.files.length > 0) state.setPdfs?.([...pdfs, ...c.files].slice(0, MAX_FILES_PER_MESSAGE));
-    if (c.photos.length > 0) void elegirFotos(c.photos);
-  };
-  if (addFilesRef) addFilesRef.current = sumarFicheros;
-
-  // Enviar es UN evento aunque haya dos caminos, Enter y el botón. Lleva sólo
-  // la forma del encargo —cuántas imágenes—, nunca el brief.
-  const enviar = () => {
-    registrarUso("crear_envio", { imagenes: state.fotos.length });
-    // El motor sigue vivo tras navegar si no se corta aqui.
-    dictado.parar();
-    onGenerate();
-  };
-
   return (
-    // LA PIEL DEL CHAT NUEVO (Jesús, 03/10: «que sean como el chat nuevo»): la
-    // misma caja, las fichas encima del texto, el `+` con su menú, las opciones
-    // como pastillas al final y el botón cuadrado. Bajo `.nc` por los tokens y
-    // las animaciones de chat/new-chat.css. Lo que HACE no cambia: fotos,
-    // dictado, límite del brief y eventos de uso.
-    <div className="nc">
-      <div className="nc-composer relative rounded-[16px] border bd-strong bg-elev px-3 pb-[7px] pt-2 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition">
-        {/* Lo que va con el encargo, como fichas ARRIBA y dentro: las fotos.
-            Una URL escrita es texto y Len decide si la mira (`view_page` con
-            `url`, 26/10); antes una ficha la abría sola y le decía a Len que era
-            una referencia de estilo. `empty:hidden`: sin fotos no pinta nada. */}
-        <div className="mb-1 flex flex-wrap gap-1.5 empty:hidden">
-          {state.fotos.map((foto, i) => (
-            <ComposerChip
-              key={`${foto.nombre}-${i}`}
-              title={foto.nombre}
-              {...(generating ? {} : { onRemove: () => state.setFotos(state.fotos.filter((_, j) => j !== i)) })}
-              removeLabel={tm("heroPrompt.removeImage")}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={foto.dataUrl} alt="" className="h-[18px] w-[18px] shrink-0 rounded object-cover" />
-              <span className="min-w-0 max-w-[180px] truncate">{foto.nombre || tm("heroPrompt.attachedAlt")}</span>
-            </ComposerChip>
-          ))}
-          {state.setPdfs &&
-            pdfs.map((pdf, i) => (
-              <ComposerChip
-                key={`${pdf.name}-${i}`}
-                title={pdf.name}
-                {...(generating ? {} : { onRemove: () => state.setPdfs!(pdfs.filter((_, j) => j !== i)) })}
-                removeLabel={tc("composer.removeFile")}
-              >
-                {videoKindFromMime(pdf.type) ?? videoKindFromName(pdf.name) ? (
-                  <Film size={14} className="shrink-0 text-[var(--nc-accent-text)]" />
-                ) : (
-                  <FileText size={14} className="shrink-0 text-[var(--nc-accent-text)]" />
-                )}
-                <span className="min-w-0 max-w-[180px] truncate">{pdf.name}</span>
-              </ComposerChip>
-            ))}
-        </div>
-
-        {/* La caja que pinta: una URL se ve azul mientras se escribe, como en el chat. */}
-        <div className="mt-0.5">
-          <CajaConMenciones
-            cajaRef={taRef}
-            pintar={hasLink(state.prompt)}
-            gente={NO_PEOPLE}
-            colorDe={NO_COLOR}
-            medida="text-[14px] leading-normal"
-            value={state.prompt}
-            onChange={(e) => {
-              marcarEscrito();
-              briefLimit.onChange(e);
-            }}
-            onPaste={(e) => {
-              // A screenshot or a copied file is attached; the text, if any, still pastes.
-              const { files, text } = pastedFiles(e.clipboardData);
-              if (files.length > 0) {
-                sumarFicheros(files);
-                if (!text) return void e.preventDefault();
-              }
-              marcarEscrito();
-              briefLimit.onPaste(e);
-            }}
-            onKeyDown={(e) => {
-              // Mientras un IME compone (japonés, coreano, chino), Enter confirma
-              // la palabra: no puede mandar el encargo a medias.
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                if (canGenerate) enviar();
-              }
-            }}
-            rows={1}
-            disabled={generating}
-            placeholder={placeholder ?? t("aiBrief.placeholder")}
-            maxLength={briefLimit.maxLength}
-            aria-describedby={briefLimit.warningVisible ? briefLimit.feedbackId : undefined}
-            className="outline-none placeholder:fg-faint nice-scroll disabled:opacity-60"
-            style={{ minHeight: 44 }}
-          />
-        </div>
-        {/* Lo que el motor va oyendo. Fuera del textarea a proposito: es texto
-            que todavia puede CORREGIRSE, y verlo reescribirse dentro de lo ya
-            escrito da la sensacion de que te lo borra. */}
-        {dictado.escuchando && (
-          <p className="pb-1 text-[12px] italic fg-faint" aria-live="polite">
-            {dictado.parcial || tm("heroPrompt.listening")}
-          </p>
-        )}
-        {dictado.mudo && (
-          <p className="pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
-            {tm("heroPrompt.micSilent")}
-          </p>
-        )}
-        {dictado.denegado && (
-          <p className="pb-1 text-[11.5px] text-amber-600 dark:text-amber-400" role="status">
-            {tm("heroPrompt.micDenied")}
-          </p>
-        )}
-        <GenerationBriefLimitFeedback
-          valueLength={state.prompt.length}
-          state={briefLimit}
-          warningText={t("aiBrief.trimmed", { max: briefLimit.maxLength })}
-          className="pb-1 text-[11px]"
-          warningClassName="text-amber-600 dark:text-amber-400"
-          counterClassName="fg-faint"
-        />
-
-        <div className="mt-0.5 flex items-center gap-[3px]">
-          <input
-            ref={fileRef}
-            type="file"
-            multiple
-            accept="image/png,image/jpeg,image/webp,image/avif"
-            className="sr-only"
-            tabIndex={-1}
-            onChange={(e) => void elegirFotos(e.target.files)}
-          />
-          {state.setPdfs && (
-            <input
-              ref={pdfRef}
-              type="file"
-              accept={ATTACHMENT_ACCEPT}
-              className="sr-only"
-              tabIndex={-1}
-              onChange={(e) => {
-                const picked = [...(e.target.files ?? [])];
-                e.target.value = "";
-                sumarFicheros(picked);
-              }}
-            />
-          )}
-          {/* EL `+` ABRE SU MENÚ, como en el chat: hoy una opción, adjuntar
-              imágenes, con lo que hace dicho debajo. */}
-          <div className="relative" ref={plus.refContenedor} onKeyDown={plus.alPulsarTecla}>
-            <button
-              type="button"
-              ref={plus.refDisparador}
-              aria-label={tc("newChat.composer.plus")}
-              title={tc("newChat.composer.plus")}
-              aria-haspopup="menu"
-              aria-expanded={plusOpen}
-              onClick={() => setPlusOpen((x) => !x)}
-              disabled={generating}
-              className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition disabled:opacity-40 ${
-                state.fotos.length > 0 ? "text-[var(--nc-accent-text)]" : "fg-muted"
-              } hover:bg-side hover:fg`}
-            >
-              {leyendoFoto ? (
-                <Loader size={14} className="animate-spin" />
-              ) : (
-                <Plus size={16} className={`transition-transform duration-200 ${plusOpen ? "rotate-45" : ""}`} />
-              )}
-            </button>
-            {plusOpen && (
-              <div
-                role="menu"
-                aria-label={tc("newChat.composer.plus")}
-                className="nc-card-in absolute bottom-[calc(100%+8px)] left-0 z-20 w-[290px] rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_40px_-12px_rgb(20_10_5/0.35)]"
-              >
-                <ComposerPlusOption
-                  icon={<ImageIcon size={15} />}
-                  title={tm("heroPrompt.attachImages")}
-                  hint={
-                    state.fotos.length >= MAX_REFERENCIAS
-                      ? tm("heroPrompt.maxImages", { max: MAX_REFERENCIAS })
-                      : tm("heroPrompt.attachImagesHint", { max: MAX_REFERENCIAS })
-                  }
-                  on={state.fotos.length > 0}
-                  onLabel={String(state.fotos.length)}
-                  disabled={leyendoFoto || state.fotos.length >= MAX_REFERENCIAS}
-                  onClick={() => {
-                    setPlusOpen(false);
-                    fileRef.current?.click();
-                  }}
-                />
-                {state.setPdfs && (
-                  <ComposerPlusOption
-                    icon={<FileText size={15} />}
-                    title={tc("composer.attachFile")}
-                    hint={tc("composer.attachFileHint")}
-                    on={pdfs.length > 0}
-                    onLabel={String(pdfs.length)}
-                    disabled={pdfs.length >= MAX_FILES_PER_MESSAGE}
-                    onClick={() => {
-                      setPlusOpen(false);
-                      pdfRef.current?.click();
-                    }}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-          {dictado.soportado && (
-            <button
-              type="button"
-              onClick={dictado.alternar}
-              aria-pressed={dictado.escuchando}
-              aria-label={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
-              title={dictado.escuchando ? tm("heroPrompt.stopDictating") : tm("heroPrompt.dictate")}
-              disabled={generating}
-              className={`grid h-[30px] w-[30px] place-items-center rounded-[9px] transition hover:bg-side disabled:opacity-40 ${
-                dictado.escuchando ? "bg-side text-[var(--nc-accent-text)]" : "fg-muted hover:fg"
-              }`}
-            >
-              {dictado.escuchando ? <Square size={11} className="fill-current" /> : <Mic size={15} />}
-            </button>
-          )}
-          {kind && (
-            <HeroKindPicker
-              piel="taller"
-              value={kind.value}
-              onChange={kind.onChange}
-              disabled={generating}
-              conJuego={kind.conJuego}
-              conHerramienta={kind.conHerramienta}
-              {...(kind.herramientaBloqueada ? { herramientaBloqueada: kind.herramientaBloqueada } : {})}
-            />
-          )}
-          {/* ⚰️ Aquí iba el selector de QUÉ MOTOR ESCRIBE; se fue con Crear
-              (2026-10-06). El botón se queda al final de la fila. */}
-          <button
-            type="button"
-            onClick={enviar}
-            disabled={!canGenerate}
-            aria-label={t("aiBrief.generate")}
-            title={t("aiBrief.generate")}
-            className={`ml-auto flex h-8 min-w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default ${
-              generating || canGenerate ? "bg-[var(--accent-strong)]" : "bg-[var(--border-strong)]"
-            }`}
-          >
-            {generating ? <Loader size={14} className="animate-spin" /> : <ArrowUp size={16} />}
-          </button>
-        </div>
-      </div>
-    </div>
+    <PromptBox
+      piel="taller"
+      value={state.prompt}
+      onValueChange={state.setPrompt}
+      truncation={{
+        value: state.truncatedPrompt,
+        onValueChange: state.setTruncatedPrompt,
+        token: state.truncationAnnouncementToken,
+        onTokenChange: state.setTruncationAnnouncementToken,
+      }}
+      photos={state.fotos}
+      onPhotosChange={state.setFotos}
+      {...(state.setPdfs ? { files: state.pdfs ?? [], onFilesChange: state.setPdfs } : {})}
+      {...(kind ? { kind } : {})}
+      placeholder={placeholder ?? t("aiBrief.placeholder")}
+      onSend={() => {
+        // Sending is ONE event though there are two ways, Enter and the button. Only the shape of the brief — how
+        // many images —, never the brief.
+        registrarUso("crear_envio", { imagenes: state.fotos.length });
+        onGenerate();
+      }}
+      sending={generating}
+      locked={generating}
+      onTyped={markWrote}
+      {...(addFilesRef ? { addFilesRef } : {})}
+      textArea={PAINTED_TEXT_AREA}
+    />
   );
 }
+
+/** /new's text area: a URL turns blue while it's written, as in the chat. */
+const PAINTED_TEXT_AREA: PromptBoxTextArea = ({ cajaRef, value, medida, props }) => (
+  <CajaConMenciones
+    cajaRef={cajaRef}
+    pintar={hasLink(value)}
+    gente={NO_PEOPLE}
+    colorDe={NO_COLOR}
+    medida={medida}
+    value={value}
+    {...props}
+  />
+);
