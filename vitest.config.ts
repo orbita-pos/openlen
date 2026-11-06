@@ -616,6 +616,7 @@ export default defineConfig({
       // Len's tool posture and install (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/agent/tool-mode.test.ts",
       "lib/agent/game-mode.test.ts",
+      "lib/agent/clone-policy.test.ts",
       "lib/agent/tool-install.test.ts",
       "lib/agent/compila-la-app.test.ts",
       // Plan 03 de las apps: tipos y lint tras cada edición, como el LSP de Claude Code.
