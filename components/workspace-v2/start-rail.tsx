@@ -73,7 +73,9 @@ export function StartRail({
   }, [drawerOpen, onCloseDrawer]);
   return (
     <>
-      <aside data-start-rail className="hidden h-full w-14 shrink-0 flex-col items-center gap-1 pb-1 pt-3 md:flex">
+      {/* `self-stretch`, not `h-full`: on the home the frame only has a min-height, so 100% was the icons' height and
+          the account sat right under them instead of at the foot. */}
+      <aside data-start-rail className="hidden w-14 shrink-0 flex-col items-center gap-1 self-stretch pb-1 pt-3 md:flex">
         <div className="mb-3 flex h-8 w-8 items-center justify-center">{mark}</div>
         {items.map((item) => {
           const Icon = ICONS[item.key];
@@ -92,8 +94,9 @@ export function StartRail({
         <div data-start-drawer className="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
           <div aria-hidden className="absolute inset-0 bg-black/45" onClick={onCloseDrawer} />
           <nav className="relative flex h-full w-64 max-w-[80vw] flex-col gap-1 border-r bd bg-elev p-3 shadow-elev">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex h-8 w-8 items-center justify-center">{mark}</div>
+            {/* No mark here: the top row already says OpenLen, and a second copy of the logo's SVG points at the
+                gradient `id` of the first —inside the hidden rail—, so it painted nothing (measured 06/11). */}
+            <div className="mb-3 flex items-center justify-end">
               <button
                 type="button"
                 onClick={onCloseDrawer}
