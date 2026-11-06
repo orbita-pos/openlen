@@ -62,11 +62,13 @@ export async function generateMetadata({
 // aplica `dark:` a todo lo que cuelga de un `.dark`, sin tocar la preferencia
 // guardada; por eso el menú de aquí no lleva el botón de tema.
 //
-// `overflow-x-clip` (2026-09-02): recorta sin crear un contenedor de scroll,
-// que rompería el `position: sticky` de la nav.
+// `overflow-clip` EN LOS DOS EJES: la luz sangra por todos lados (pasa por
+// detrás del pie, y su caja baja más allá de la pantalla) y es aquí donde se
+// recorta, sin barra de scroll. `clip` y no `hidden` (2026-09-02): recorta
+// sin crear un contenedor de scroll, que rompería el `sticky` de la nav.
 export default function HomePage() {
   return (
-    <div className="dark relative flex min-h-[100svh] flex-col overflow-x-clip bg-[#100d0c] text-zinc-50">
+    <div className="dark relative flex min-h-[100svh] flex-col overflow-clip bg-[#100d0c] text-zinc-50">
       <MarketingChrome variant="home">
         <Hero />
         <HomeHashRouter />

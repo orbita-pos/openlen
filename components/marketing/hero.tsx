@@ -51,8 +51,9 @@ export async function Hero() {
   // y devuelve esos 56px como relleno, así que el fondo es uno solo.
     // `isolate`: the light (`HomeGlow`, z-index -1) paints above the page's background only inside a stacking context
     // of its own. `flex-1` + centred: the hero fills what the menu and the one-row footer leave of the screen (the
-    // home's `<main>` is a flex column, see `MarketingChrome`), so the footer stays inside the first screen.
-    <section className="relative isolate -mt-14 flex flex-1 flex-col justify-center overflow-hidden pt-14">
+    // home's `<main>` is a flex column, see `MarketingChrome`), so the footer stays inside the first screen. No
+    // `overflow-hidden` here: it cut the light right above the footer, a hard band; the home's wrapper clips instead.
+    <section className="relative isolate -mt-14 flex flex-1 flex-col justify-center pt-14">
       {/* EL PRIMER PANTALLAZO A LO GROK BOT (09/10, Jesús, con su portada de
           referencia): un aviso en píldora, UN titular con Len dentro haciendo
           de «o» y, donde Grok pone dos botones, la caja
