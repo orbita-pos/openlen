@@ -813,7 +813,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
       let w: AgentWorktree | null | undefined;
       try {
-        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode });
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode || ctx.readOnly === true });
         w = isolates(id, type, ctx.planMode || ctx.readOnly === true, o.isolation) ? await makeCopy(id) : undefined;
         if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
@@ -860,7 +860,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       const type: ChildType = { kind: "builtin", preset: "general-purpose" };
       let w: AgentWorktree | null | undefined;
       try {
-        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode });
+        await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode || ctx.readOnly === true });
         w = isolates(id, type, ctx.planMode || ctx.readOnly === true, o.isolation) ? await makeCopy(id) : undefined;
         if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
