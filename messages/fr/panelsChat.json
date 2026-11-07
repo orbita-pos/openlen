@@ -25,7 +25,8 @@
     "scheduled": "Tâche planifiée «{title}» · {when}",
     "lenWatch": "Len Watch · votre site publié ne se chargeait pas",
     "fromSubagents": "Résultats des sous-agents",
-    "toolCreation": "Créer un outil"
+    "toolCreation": "Créer un outil",
+    "fromAssistant": "De la part de {name}"
   },
   "proceso": {
     "completadoEn": "Terminé en <d>{duracion}</d>",

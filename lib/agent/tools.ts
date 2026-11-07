@@ -149,6 +149,7 @@ import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
 import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
 import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
+import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -3174,6 +3175,9 @@ async function ejecutarHerramienta(
         return await toolPresent(session, deps, args);
       case SHOW_WIDGET:
         return toolShowWidget(args);
+      // The person's own assistant passes what builds to Len (lib/assistants/ask-len.ts); for Len it isn't there.
+      case ASK_LEN:
+        return await runAskLen(session, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.

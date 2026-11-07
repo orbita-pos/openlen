@@ -25,7 +25,8 @@
     "scheduled": "定时任务「{title}」 · {when}",
     "lenWatch": "Len Watch · 你发布的网站无法加载",
     "fromSubagents": "子代理的结果",
-    "toolCreation": "创建工具"
+    "toolCreation": "创建工具",
+    "fromAssistant": "来自 {name}"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",

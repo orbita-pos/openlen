@@ -25,7 +25,8 @@
     "scheduled": "예약 작업 «{title}» · {when}",
     "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요",
     "fromSubagents": "서브에이전트 결과",
-    "toolCreation": "도구 만들기"
+    "toolCreation": "도구 만들기",
+    "fromAssistant": "{name}에게서"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",

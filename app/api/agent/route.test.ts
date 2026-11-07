@@ -4494,7 +4494,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     const system = String(loopArgs().messages[0]!.content);
     expect(system.startsWith("LEN SYSTEM PROMPT")).toBe(true);
     expect(system).toContain("Your name is Lucía");
-    expect(toolNames()).toEqual(["Read", "Glob", "bash", "show_widget", "schedule_create"]);
+    expect(toolNames()).toEqual(["Read", "Glob", "bash", "show_widget", "schedule_create", "ask_len"]);
   });
 
   it("its session is read-only, and in phase 1 it launches no subagents (their notices would wake Len)", async () => {
@@ -4572,6 +4572,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(mocks.abrirFilaDelTurno.mock.calls.at(-1)!.length).toBe(2);
     expect(String(loopArgs().messages[0]!.content)).toBe("LEN SYSTEM PROMPT");
     expect(toolNames()).toContain("Write");
+    expect(toolNames()).not.toContain("ask_len");
     expect((mocks.createSubagentLauncher.mock.calls.at(-1)![0] as { readOnly?: true }).readOnly).toBeUndefined();
   });
 });
