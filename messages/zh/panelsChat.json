@@ -706,5 +706,18 @@
     "planRequired": "工具属于付费方案。",
     "sourceMissing": "该版本已不存在:请让 Len 重新提议",
     "refused": "无法完成:{reason}"
+  },
+  "mcpApproval": {
+    "title": "将 {server} 连接到 {host}",
+    "sends": "将把你的密钥 {name} 发送到 {host}",
+    "usedElsewhere": "{name} 目前用于 {hosts}",
+    "paste": "粘贴 {name}",
+    "connect": "连接",
+    "no": "不",
+    "connected": "已连接 · {tools} 个工具",
+    "failed": "无法连接：{error}",
+    "changed": "期间已有变化：请在“工具”中重新查看",
+    "dismissed": "未连接。你可以稍后在“工具”中批准。",
+    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
   }
 }

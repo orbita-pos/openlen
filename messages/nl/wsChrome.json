@@ -808,6 +808,35 @@
       "failed": "Dat lukte niet. Probeer het opnieuw.",
       "suggestions": "Toolsuggesties",
       "suggestionsHint": "Len stelt een tool voor als hij ziet dat die je helpt; er wordt niets gemaakt tot je op «Maken» drukt."
+    },
+    "connectors": {
+      "title": "Connectoren",
+      "hint": "MCP-servers die Len in al je projecten kan gebruiken.",
+      "status": {
+        "connected": "verbonden · {tools} tools",
+        "pending": "wacht op je goedkeuring",
+        "waiting": "{names} ontbreekt",
+        "failed": "mislukt: {error}",
+        "neverListed": "nog niet opgehaald"
+      },
+      "probe": "Testen",
+      "probeOk": "Antwoordt: {tools}",
+      "probeFailed": "Antwoordt niet: {error}",
+      "edit": "Bewerken",
+      "on": "Aan",
+      "off": "Uit",
+      "remove": "Verwijderen",
+      "add": "Connector toevoegen",
+      "name": "Naam",
+      "url": "URL",
+      "headers": "Headers",
+      "isKey": "Het is een sleutel",
+      "addHeader": "+ Header",
+      "save": "Opslaan",
+      "cancel": "Annuleren",
+      "keys": "Sleutels",
+      "keySet": "ingesteld op {date}",
+      "changeKey": "Wijzigen"
     }
   }
 }

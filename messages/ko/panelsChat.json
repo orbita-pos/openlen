@@ -706,5 +706,18 @@
     "planRequired": "도구는 유료 요금제에서 쓸 수 있습니다.",
     "sourceMissing": "그 버전은 더 이상 없습니다: Len에게 새 제안을 요청하세요",
     "refused": "할 수 없었습니다: {reason}"
+  },
+  "mcpApproval": {
+    "title": "{server}을(를) {host}에 연결",
+    "sends": "내 키 {name}을(를) {host}(으)로 보냅니다",
+    "usedElsewhere": "{name}은(는) 현재 {hosts}에서 사용 중입니다",
+    "paste": "{name} 붙여넣기",
+    "connect": "연결",
+    "no": "아니요",
+    "connected": "연결됨 · 도구 {tools}개",
+    "failed": "연결할 수 없습니다: {error}",
+    "changed": "그사이에 바뀌었습니다. 도구에서 다시 확인하세요",
+    "dismissed": "연결하지 않았습니다. 나중에 도구에서 승인할 수 있습니다.",
+    "firstTime": "키 {name}은(는) 아직 {host}(으)로 보낸 적이 없습니다. 그 서버를 신뢰할 때만 승인하세요"
   }
 }

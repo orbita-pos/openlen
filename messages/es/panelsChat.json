@@ -706,5 +706,18 @@
     "planRequired": "Las herramientas son de los planes de pago.",
     "sourceMissing": "Esa versión ya no está: pídele a Len una propuesta nueva",
     "refused": "No se pudo: {reason}"
+  },
+  "mcpApproval": {
+    "title": "Conectar {server} a {host}",
+    "sends": "Enviará tu clave {name} a {host}",
+    "usedElsewhere": "{name} se usa hoy con {hosts}",
+    "paste": "Pega {name}",
+    "connect": "Conectar",
+    "no": "No",
+    "connected": "Conectado · {tools} herramientas",
+    "failed": "No se pudo conectar: {error}",
+    "changed": "Cambió mientras tanto: vuelve a mirarlo en Herramientas",
+    "dismissed": "No se conecta. Puedes aprobarlo luego en Herramientas.",
+    "firstTime": "Tu clave {name} nunca se ha enviado a {host}: apruébalo solo si confías en ese servidor"
   }
 }

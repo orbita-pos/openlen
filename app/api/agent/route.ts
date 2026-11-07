@@ -158,6 +158,8 @@ import { bornAsGame } from "@/lib/projects/born-as-game";
 import { bornAsTool } from "@/lib/projects/born-as-tool";
 import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
+import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
+import { mergeMcpDeclarations } from "@/lib/mcp-connectors/turn";
 import { gamesEnabled } from "@/lib/games/enabled";
 import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
 import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
@@ -733,10 +735,32 @@ async function correrTurno(
   // AN INSTALLED TOOL'S OPERATIONS (spec local 2026-11-04-herramientas-hechas-por-len, §4.7): the speaker's, as
   // `mcp__<server>__<operation>`, LAST and sorted — the same installations give the same bytes, so only installing moves
   // the cache prefix. None with the functions off, on a free plan, or when the lookup fails (the turn goes on).
+  // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.4–5.6): the SPEAKER's ~/.len/mcp.json servers, from
+  // the lists their last mount stored — a turn never waits on a server. Their names are taken in the namespace the
+  // operations share; servers whose list is missing, changed or old are mounted outside this turn.
+  let conexionesDelTurno: import("@/lib/mcp-connectors/turn").TurnConnections | null = null;
+  const conectores = connectorsEnabled()
+    ? await (async () => {
+        const [{ connectorsForTurn }, { realTurnDeps }] = await Promise.all([import("@/lib/mcp-connectors/turn"), import("@/lib/mcp-connectors/real")]);
+        return connectorsForTurn(quien, realTurnDeps());
+      })().catch((err: unknown) => {
+        console.warn("[mcp-connectors] the speaker's connectors couldn't be read:", err);
+        return null;
+      })
+    : null;
+  if (conectores && conectores.declarations.length > 0) {
+    const [{ TurnConnections }, { realCallDeps }] = await Promise.all([import("@/lib/mcp-connectors/turn"), import("@/lib/mcp-connectors/real")]);
+    const conexiones = new TurnConnections(quien, conectores, realCallDeps());
+    conexionesDelTurno = conexiones;
+    deps.connectors = { routes: conexiones.routes, call: (name, args) => conexiones.call(name, args, deps.turnSignal), resource: (name, args) => conexiones.resource(name, args, deps.turnSignal) };
+  }
+  if (conectores && conectores.toMount.length > 0) {
+    void import("@/lib/mcp-connectors/real").then(({ mountInBackground }) => mountInBackground(quien, conectores.toMount)).catch(() => {});
+  }
   const operaciones = functionsEnabled() && toolsEnabled()
     ? await (async () => {
         const { operationsFor, realOperationsDeps } = await import("@/lib/tools/mcp/operations");
-        return operationsFor(quien, await realOperationsDeps());
+        return operationsFor(quien, await realOperationsDeps(), new Set(conectores?.serverNames ?? []));
       })().catch((err: unknown) => {
         console.warn("[tools] the speaker's operations couldn't be read:", err);
         return null;
@@ -755,7 +779,9 @@ async function correrTurno(
   const conPostura = (d: Record<string, unknown>[]) => {
     const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
-    return operaciones && operaciones.declarations.length > 0 ? [...conLaTarjeta, ...operaciones.declarations] : conLaTarjeta;
+    // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
+    const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
+    return mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
@@ -1281,6 +1307,7 @@ async function correrTurno(
     memoryMessage: memoriaDelTurno?.text ?? null,
     skillCatalogMessage: catalogoDelTurno?.text ?? null,
     personalSkills: skillsPropias,
+    connectors: conectores?.contextText || null,
     // Lo que el Agente sabe de ESTA PERSONA. Se lee por turno, no se cachea:
     // el usuario puede haber guardado algo en OTRA pestaña, en otro proyecto,
     // hace un minuto — que es justo el caso que esto existe para servir.
@@ -2776,6 +2803,8 @@ async function correrTurno(
         closingTerminal ??= cerrarTerminalDeLaSesion(agentSession, deps).catch(() => undefined);
         // Y LA PESTAÑA DEL TURNO (`use_page`, 14/10): su Chromium muere con él.
         void closeBrowserTab(agentSession.browserTab).catch(() => undefined);
+        // And the turn's MCP connections (spec local 2026-11-06-conectores-mcp, §5.4): they live one turn.
+        void conexionesDelTurno?.closeAll().catch(() => undefined);
         // 🔴 LA FILA DEL TURNO, TAMBIÉN AQUÍ, por si ningún final llegó a
         // cerrarla (`cerrarFila` es idempotente). ANTES de sacar el turno del
         // mapa: mientras el mapa lo tiene, una fila `en_curso` se lee como viva

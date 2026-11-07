@@ -808,6 +808,35 @@
       "failed": "잘 안 됐어요. 다시 시도해 주세요.",
       "suggestions": "도구 제안",
       "suggestionsHint": "도움이 될 것 같으면 Len이 도구를 제안합니다. «만들기»를 누르기 전에는 아무것도 만들어지지 않습니다."
+    },
+    "connectors": {
+      "title": "커넥터",
+      "hint": "Len이 모든 프로젝트에서 사용할 수 있는 MCP 서버입니다.",
+      "status": {
+        "connected": "연결됨 · 도구 {tools}개",
+        "pending": "승인 대기 중",
+        "waiting": "{names} 없음",
+        "failed": "실패: {error}",
+        "neverListed": "아직 목록 없음"
+      },
+      "probe": "테스트",
+      "probeOk": "응답함: {tools}",
+      "probeFailed": "응답 없음: {error}",
+      "edit": "편집",
+      "on": "켜짐",
+      "off": "꺼짐",
+      "remove": "삭제",
+      "add": "커넥터 추가",
+      "name": "이름",
+      "url": "URL",
+      "headers": "헤더",
+      "isKey": "키입니다",
+      "addHeader": "+ 헤더",
+      "save": "저장",
+      "cancel": "취소",
+      "keys": "키",
+      "keySet": "{date}에 설정",
+      "changeKey": "변경"
     }
   }
 }

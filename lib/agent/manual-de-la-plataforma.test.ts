@@ -538,3 +538,17 @@ describe("the guides as skills", () => {
     expect(documentosDeLaPlataforma(APP, OFF)[RUTA_GUIA]).toBe(GUIA_DE_LA_APP);
   });
 });
+
+// LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): the manual says where the file is and how keys go.
+describe("the manual and ~/.len/mcp.json", () => {
+  it("names the file, the credential references and the approval", () => {
+    const manual = buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "1" });
+    expect(manual).toContain("~/.len/mcp.json");
+    expect(manual).toContain("${credential:NAME}");
+    expect(manual).toMatch(/approv/);
+  });
+
+  it("says nothing of it with OPENLEN_MCP=0", () => {
+    expect(buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "0" })).not.toContain("~/.len/mcp.json");
+  });
+});

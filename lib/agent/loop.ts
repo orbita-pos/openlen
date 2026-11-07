@@ -211,6 +211,7 @@ export type AgentStreamEvent =
   // real publish endpoint — the user's tap is the only thing that publishes.
   /** A «Crear» card `propose_action` accepted (spec local 2026-11-04-herramientas-hechas-por-len, §4.10). */
   | { type: "tool_card"; card: import("@/lib/tools/cards/types").ToolCardView }
+  | { type: "mcp_approval"; card: import("@/lib/mcp-connectors/approval").McpApprovalCard }
   | { type: "confirm"; action: "publish"; subdominio: string; idiomas: string[]; republicar: boolean }
   // El borrador de respuesta (plans/len-resultados/): la tarjeta lo manda sólo si el usuario toca.
   | ({ type: "confirm" } & RespuestaPreparada)
@@ -2106,6 +2107,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
 
         // A «Crear» card: the chat draws it under this answer; the model reads the tool's own result.
         if (outcome.toolCard) args.emit({ type: "tool_card", card: outcome.toolCard });
+        // The «Conectar» card (spec local 2026-11-06-conectores-mcp, §5.3): drawn by OpenLen; Len's response is untouched.
+        if (outcome.mcpApproval) args.emit({ type: "mcp_approval", card: outcome.mcpApproval });
 
         // A confirm outcome (publish) NEVER carries out its action. Surface the
         // confirm card to the user and hand the model a fixed "waiting" state so

@@ -706,5 +706,18 @@
     "planRequired": "Tools gibt es in den bezahlten Plänen.",
     "sourceMissing": "Diese Version gibt es nicht mehr: Bitte Len um einen neuen Vorschlag",
     "refused": "Ging nicht: {reason}"
+  },
+  "mcpApproval": {
+    "title": "{server} mit {host} verbinden",
+    "sends": "Dein Schlüssel {name} wird an {host} gesendet",
+    "usedElsewhere": "{name} wird heute mit {hosts} verwendet",
+    "paste": "{name} einfügen",
+    "connect": "Verbinden",
+    "no": "Nein",
+    "connected": "Verbunden · {tools} Werkzeuge",
+    "failed": "Verbindung fehlgeschlagen: {error}",
+    "changed": "Es hat sich inzwischen geändert: sieh es dir unter Tools noch einmal an",
+    "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben.",
+    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust"
   }
 }
