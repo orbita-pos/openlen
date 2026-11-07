@@ -80,6 +80,18 @@ describe("POST /api/mcp-connectors/[name]/approve", () => {
     expect(fake.approved).toEqual([]);
   });
 
+  it("🔴 with OPENLEN_MCP=0 nothing is approved, stored or mounted", async () => {
+    vi.stubEnv("OPENLEN_MCP", "0");
+    try {
+      expect((await post({ fingerprint: FP, version: 3, credentials: { NOTION_TOKEN: "x" } })).status).toBe(404);
+      expect(fake.credentials.size).toBe(0);
+      expect(fake.approved).toEqual([]);
+      expect(fake.mounted).toEqual([]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("401 without a session", async () => {
     vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
     expect((await post({ fingerprint: FP, version: 3 })).status).toBe(401);

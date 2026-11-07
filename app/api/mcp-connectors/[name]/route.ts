@@ -41,6 +41,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ name: st
 export async function DELETE(req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> {
   const personId = (await auth())?.user?.id;
   if (!personId) return json({ error: "unauthorized" }, 401);
+  if (!connectorsEnabled()) return json({ error: "off" }, 404);
   const { name } = await params;
   const version = Number(new URL(req.url).searchParams.get("version"));
   if (!Number.isInteger(version)) return json({ error: "invalid" }, 400);

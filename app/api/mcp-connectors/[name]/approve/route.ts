@@ -3,6 +3,7 @@
 // the person themself, never Len, never another member.
 import { auth } from "@/auth";
 import { approveServer } from "@/lib/mcp-connectors/approval";
+import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
 import { setCredential } from "@/lib/mcp-connectors/credentials";
 import { mountServer } from "@/lib/mcp-connectors/mount";
 import { realMountDeps } from "@/lib/mcp-connectors/real";
@@ -17,6 +18,8 @@ const json = (body: unknown, status = 200) =>
 export async function POST(req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> {
   const personId = (await auth())?.user?.id;
   if (!personId) return json({ error: "unauthorized" }, 401);
+  // Off means off: approving mounts, and mounting connects (the review's kill-switch finding).
+  if (!connectorsEnabled()) return json({ error: "off" }, 404);
   const { name } = await params;
   const body = (await req.json().catch(() => null)) as { fingerprint?: unknown; version?: unknown; credentials?: unknown } | null;
   if (typeof body?.fingerprint !== "string" || typeof body.version !== "number") return json({ error: "invalid" }, 400);

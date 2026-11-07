@@ -57,6 +57,7 @@ import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { parseAgentFile } from "@/lib/agent/subagents/agent-file";
 import { BUILT_IN_AGENT_TYPES, ONLY_AGENT_MD, OPENLEN_AGENT_TYPES, agentPath, agentPathOf, isUnderAgentsDir } from "@/lib/agent/subagents/agent-paths";
 import { EMPTY_MCP_CONFIG } from "@/lib/mcp-connectors/config";
+import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
 import { MCP_CONFIG_PATH } from "@/lib/mcp-connectors/len-file";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
@@ -929,12 +930,15 @@ async function guardarMcpConfig(
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
   const cambio = normalizarFinales(saved.before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
-  const texto = plan.respuesta({ guardadoIgual: true }) + (saved.note ? ` ${saved.note}` : "");
+  // Switched off (OPENLEN_MCP=0): the file is saved and read, never used — no card, so no tap can connect anything.
+  const on = connectorsEnabled();
+  const note = on ? saved.note : "MCP connectors are switched off on this server right now: the file is saved and nothing connects.";
+  const texto = plan.respuesta({ guardadoIgual: true }) + (note ? ` ${note}` : "");
   return {
     response: respuesta({ ok: true, texto }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
     ...(cambio === "cambio" ? { mutoDurable: true } : {}),
-    ...(saved.pending[0] ? { mcpApproval: saved.pending[0] } : {}),
+    ...(on && saved.pending[0] ? { mcpApproval: saved.pending[0] } : {}),
   };
 }
 
