@@ -19,6 +19,7 @@ import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
+import { McpApprovalCardView } from "./mcp-approval-card";
 import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
@@ -436,6 +437,8 @@ export function LenTurn({
           onCancelled={() => onConfirmSettled(turn.id)}
         />
       )}
+      {/* «CONECTAR» (spec local 2026-11-06-conectores-mcp, §5.3): a server Len added to ~/.len/mcp.json waits for you. */}
+      {turn.mcpApproval && <McpApprovalCardView card={turn.mcpApproval} />}
       {/* «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the card Len proposed in this answer. */}
       <ToolSuggestionCards projectId={projectId} rowId={turn.id} />
       {turn.respuesta && <AgentReplyCard respuesta={turn.respuesta} labels={labels} />}

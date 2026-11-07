@@ -2,18 +2,40 @@
 // before a server Len added or changed connects. DeepSeek asks approval for every change to the profile's plugins; here
 // the tap approves one entry's fingerprint. A credential is a name of the person any entry may cite, as in DeepSeek, so
 // the card names each key the server would receive and, in red, any other host that already gets it.
-import { entryFingerprint, type McpConfig, type McpServerEntry } from "./config";
+import { entryFingerprint, parseMcpConfig, type McpConfig, type McpServerEntry } from "./config";
+import type { ServerState, StoredConfig } from "./store";
 import { credentialRefsOf } from "./templates";
 
-export interface McpApprovalCard {
-  readonly server: string;
-  readonly host: string;
-  readonly headerNames: readonly string[];
-  readonly credentials: readonly { readonly name: string; readonly set: boolean; readonly otherHosts: readonly string[] }[];
-  readonly fingerprint: string;
-  /** The config version the card was drawn from: the tap approves only if the file is still there. */
-  readonly version: number;
+export interface ApproveDeps {
+  read(personId: string): Promise<StoredConfig>;
+  approve(personId: string, name: string, fingerprint: string, expectedVersion: number): Promise<boolean>;
+  setCredential(personId: string, name: string, value: string): Promise<void>;
+  mount(personId: string, name: string): Promise<ServerState | null>;
 }
+
+/** The person's tap: approve the entry exactly as the card showed it, store the keys typed in the card (only ones the
+ *  entry cites), then mount it. Anything that moved in between refuses the whole tap. */
+export async function approveServer(
+  personId: string,
+  name: string,
+  fingerprint: string,
+  version: number,
+  credentials: Readonly<Record<string, string>>,
+  d: ApproveDeps,
+): Promise<{ ok: true; state: ServerState | null } | { ok: false; reason: "changed" | "unknown_credential" }> {
+  const stored = await d.read(personId);
+  const parsed = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
+  const entry = parsed.ok ? parsed.config.servers[name] : undefined;
+  if (!entry || stored.version !== version || entryFingerprint(entry) !== fingerprint) return { ok: false, reason: "changed" };
+  const refs = new Set(credentialRefsOf(entry));
+  if (Object.keys(credentials).some((k) => !refs.has(k))) return { ok: false, reason: "unknown_credential" };
+  for (const [k, v] of Object.entries(credentials)) if (v) await d.setCredential(personId, k, v);
+  if (!(await d.approve(personId, name, fingerprint, version))) return { ok: false, reason: "changed" };
+  return { ok: true, state: await d.mount(personId, name) };
+}
+
+export type { McpApprovalCard } from "./approval-card";
+import type { McpApprovalCard } from "./approval-card";
 
 export function hostOf(url: string): string {
   try {

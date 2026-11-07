@@ -706,5 +706,17 @@
     "planRequired": "Tools horen bij de betaalde abonnementen.",
     "sourceMissing": "Die versie bestaat niet meer: vraag Len om een nieuw voorstel",
     "refused": "Lukte niet: {reason}"
+  },
+  "mcpApproval": {
+    "title": "{server} verbinden met {host}",
+    "sends": "Je sleutel {name} wordt naar {host} gestuurd",
+    "usedElsewhere": "{name} wordt nu gebruikt met {hosts}",
+    "paste": "Plak {name}",
+    "connect": "Verbinden",
+    "no": "Nee",
+    "connected": "Verbonden · {tools} tools",
+    "failed": "Kon niet verbinden: {error}",
+    "changed": "Het is intussen veranderd: bekijk het opnieuw in Tools",
+    "dismissed": "Niet verbonden. Je kunt het later goedkeuren in Tools."
   }
 }

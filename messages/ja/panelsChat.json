@@ -706,5 +706,17 @@
     "planRequired": "ツールは有料プランの機能です。",
     "sourceMissing": "そのバージョンはもうありません。Len に新しい提案を頼んでください",
     "refused": "できませんでした:{reason}"
+  },
+  "mcpApproval": {
+    "title": "{server} を {host} に接続",
+    "sends": "あなたのキー {name} を {host} に送信します",
+    "usedElsewhere": "{name} は現在 {hosts} で使われています",
+    "paste": "{name} を貼り付け",
+    "connect": "接続",
+    "no": "いいえ",
+    "connected": "接続済み · ツール {tools} 個",
+    "failed": "接続できませんでした: {error}",
+    "changed": "その間に変更されました。ツールでもう一度確認してください",
+    "dismissed": "接続しません。あとでツールから承認できます。"
   }
 }

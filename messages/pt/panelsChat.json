@@ -706,5 +706,17 @@
     "planRequired": "As ferramentas são dos planos pagos.",
     "sourceMissing": "Essa versão não existe mais: peça ao Len uma nova proposta",
     "refused": "Não foi possível: {reason}"
+  },
+  "mcpApproval": {
+    "title": "Conectar {server} a {host}",
+    "sends": "Enviará sua chave {name} para {host}",
+    "usedElsewhere": "{name} é usada hoje com {hosts}",
+    "paste": "Cole {name}",
+    "connect": "Conectar",
+    "no": "Não",
+    "connected": "Conectado · {tools} ferramentas",
+    "failed": "Não foi possível conectar: {error}",
+    "changed": "Mudou nesse meio-tempo: veja de novo em Ferramentas",
+    "dismissed": "Não conectado. Você pode aprovar depois em Ferramentas."
   }
 }

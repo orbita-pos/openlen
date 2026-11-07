@@ -34,6 +34,7 @@ import { lastPlanMode, planAnswersForMessage, planModeAfterAnswer, togglePlanSel
 import { canCreateGoal, goalOrder, goalViewOf, lastGoal, roundAfterDone, roundOfTurn, roundTextFor, type GoalView } from "./goal-state";
 import type { AgentConfirm } from "../agent-confirm-card";
 import type { ToolInstallConfirm } from "@/lib/agent/tool-install";
+import { mcpApprovalFrom, type McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 import { tarjetaDeConfirmacion } from "@/components/llamada/puente-a-len";
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import type { DesignRequest } from "@/lib/apps/design/types";
@@ -225,6 +226,9 @@ export interface DesignTurn {
   confirm?: AgentConfirm;
   /** «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): Len's `publish` in a tool project. */
   install?: ToolInstallConfirm;
+  /** «Conectar» (spec local 2026-11-06-conectores-mcp, §5.3): a server Len added to ~/.len/mcp.json waits for the person.
+   *  Local, like `confirm`: after a reload it is approved on the Herramientas page. */
+  mcpApproval?: McpApprovalCard;
   /** El borrador de `draft_reply` (plans/len-resultados/): una tarjeta
    *  que sólo manda si el usuario toca. Local, como `confirm`: no se guarda. */
   respuesta?: RespuestaPreparada;
@@ -1828,6 +1832,10 @@ export function useAgentChat({
               } else if (evName === "subagent") {
                 // LEN'S SUBAGENTS: a child started, took a step or ended; its card reads it.
                 subagentsLive.event(projectId, payload);
+              } else if (evName === "mcp_approval") {
+                // «CONECTAR» (spec local 2026-11-06-conectores-mcp, §5.3): sanitized field by field, it comes from the stream.
+                const card = mcpApprovalFrom((payload as { card?: unknown } | null)?.card);
+                if (card) updateTurn(turnId, { mcpApproval: card });
               } else if (evName === "tool_card") {
                 // «CREAR» (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): Len's `propose_action`; the
                 // card shows under this answer at once, sanitized by the store.
