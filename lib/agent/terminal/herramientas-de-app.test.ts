@@ -7,6 +7,7 @@ import { serializeEsmLock } from "@/lib/apps/npm/lock";
 import type { NodeModulesView } from "@/lib/apps/npm/node-modules";
 import { ESM_LOCK_PATH, PACKAGE_JSON_PATH } from "@/lib/apps/npm/paths";
 import { appToolsFor, parseInstallArg } from "./herramientas-de-app";
+import { READ_ONLY_REFUSAL } from "./read-only-commands";
 
 const d = (ruta: string, fuente: "typescript" | "eslint", gravedad: "Error" | "Warning" = "Error") => ({
   ruta,
@@ -220,6 +221,19 @@ describe("npm in an app's terminal (open npm)", () => {
     const t = appToolsFor({ app: APP, projectId: "p1", autor: "len" } as never, { checkApp: vi.fn(), installPackages, saveProjectFile, projectFiles } as never)!;
     return { t, installPackages, saveProjectFile };
   }
+
+  it("🔴 a read-only session (Explore, Plan, the person's own assistant) installs and uninstalls nothing: no lock saved", async () => {
+    const installPackages = vi.fn(async () => outcome);
+    const saveProjectFile = vi.fn(async () => ({ versionPrevia: null }));
+    const projectFiles = vi.fn(async () => ({ [ESM_LOCK_PATH]: '{"lockfileVersion":1,"packages":{}}\n' }));
+    const t = appToolsFor({ app: APP, projectId: "p1", autor: "len", readOnly: true } as never, { checkApp: vi.fn(), installPackages, saveProjectFile, projectFiles } as never)!;
+    for (const program of ["npm-install", "npm-uninstall"] as const) {
+      expect(await t.run(program, ["three"], {})).toEqual({ stdout: "", stderr: `${READ_ONLY_REFUSAL}\n`, exitCode: 1 });
+    }
+    expect(installPackages).not.toHaveBeenCalled();
+    expect(saveProjectFile).not.toHaveBeenCalled();
+    expect((await t.run("npm-ls", [], {})).exitCode).toBe(0);
+  });
 
   it("parses name@range like npm", () => {
     expect(parseInstallArg("three")).toEqual({ name: "three", range: null });

@@ -25,36 +25,46 @@ function gitRest(argv: readonly string[]): readonly string[] {
   return argv.slice(i);
 }
 
+// Every check reads FIXED positions: the subcommand is where the CLI looks for it. Skipping flags to find «the words»
+// would take a flag's value for a subcommand (`stripe customers --expand list create`), and a help flag counts only as
+// the whole command — OpenLen's parsers take `--help` or `-h` as a value (`git commit -am --help` commits).
+
 function gitReads(argv: readonly string[]): boolean {
   const [sub, ...rest] = gitRest(argv);
+  // Only git's own options (`git --version`, `git --help`).
   if (sub === undefined) return true;
   if (GIT_READS.has(sub)) return true;
   if (sub === "branch") return rest.every((a) => GIT_BRANCH_LIST.has(a));
   if (sub === "remote") return rest.length === 0 || (rest.length === 1 && (rest[0] === "-v" || rest[0] === "--verbose")) || rest[0] === "get-url" || rest[0] === "show";
-  if (sub === "config") return rest.some((a) => a === "--get" || a === "--get-all" || a === "--list" || a === "-l");
+  if (sub === "config") {
+    return ((rest[0] === "--list" || rest[0] === "-l") && rest.length === 1) || ((rest[0] === "--get" || rest[0] === "--get-all") && rest.length === 2);
+  }
   return false;
 }
 
 function ghReads(argv: readonly string[]): boolean {
-  const words = argv.filter((a) => !a.startsWith("-"));
-  return GH_READS.has(words.slice(0, 2).join(" "));
+  return GH_READS.has(`${argv[0]} ${argv[1]}`);
 }
 
 function supabaseReads(argv: readonly string[]): boolean {
-  const words = argv.filter((a) => !a.startsWith("-"));
-  if (words[0] === "db" && words[1] === "query") return argv.includes("--linked");
-  return SUPABASE_READS.has(words.slice(0, 2).join(" ")) || SUPABASE_READS.has(words[0] ?? "");
+  if (argv[0] === "db" && argv[1] === "query") {
+    // Production, which only reads — and `--linked` as a flag of its own, not the value of the one before it.
+    const i = argv.indexOf("--linked");
+    return i >= 2 && !argv[i - 1]!.startsWith("-");
+  }
+  return (argv[0] === "status" && argv.length === 1) || SUPABASE_READS.has(`${argv[0]} ${argv[1]}`);
 }
 
 function stripeReads(argv: readonly string[]): boolean {
-  if (argv.includes("--live")) return true;
-  const words = argv.filter((a) => !a.startsWith("-"));
-  return words[0] === "get" || words[1] === "list" || words[1] === "retrieve";
+  const args = argv[0] === "--live" ? argv.slice(1) : argv;
+  return args[0] === "get" || args[1] === "list" || args[1] === "retrieve";
 }
+
+const HELP = new Set(["--help", "-h", "--version"]);
 
 /** `null` when the command only reads; otherwise the read-only refusal. */
 export function readOnlyRefusal(program: AnsweredProgram, argv: readonly string[]): string | null {
-  if (argv.some((a) => a === "--help" || a === "-h" || a === "--version")) return null;
+  if (argv.length === 1 && HELP.has(argv[0]!)) return null;
   const reads =
     program === "git" ? gitReads(argv) : program === "gh" ? ghReads(argv) : program === "supabase" ? supabaseReads(argv) : stripeReads(argv);
   return reads ? null : READ_ONLY_REFUSAL;
