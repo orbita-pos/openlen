@@ -4488,6 +4488,22 @@ describe("POST /api/agent — the person's own assistant", () => {
     mocks.buildFunctionDeclarations.mockReturnValue([]);
   });
 
+  it("🔴 when its turn ends with nobody watching, the push names it and not Len", async () => {
+    let soltar: (() => void) | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "Ayer vinieron 12 personas." });
+      await new Promise<void>((r) => (soltar = r));
+      return cierre();
+    });
+    const lector = (await pedir({ assistantId: "a1" })).body!.getReader();
+    await lector.read();
+    await lector.cancel();
+    for (let i = 0; i < 200 && !soltar; i++) await new Promise((r) => setTimeout(r, 0));
+    soltar!();
+    await vi.waitFor(() => expect(mocks.scheduleNotification).toHaveBeenCalled());
+    expect(mocks.scheduleNotification.mock.calls[0]![0]).toMatchObject({ type: "len_turno", recipientUserId: "u1", asistente: { name: "Lucía", slug: "lucia" } });
+  });
+
   it("runs in its own conversation, with Len's prompt plus its own and Len's tools minus what builds", async () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const chat = await import("@/lib/projects/chat");

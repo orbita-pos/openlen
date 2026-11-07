@@ -50,6 +50,12 @@ describe("el aviso de que Len terminó sin nadie mirando", () => {
     expect(e.pregunta).toBe(false);
   });
 
+  it("🔴 a turn of the person's own assistant says who spoke; Len's turns stay byte for byte", () => {
+    const base = { projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Read" }] };
+    expect(avisoDelTurno({ ...base, asistente: { name: "Lucía", slug: "lucía" } }).asistente).toEqual({ name: "Lucía", slug: "lucía" });
+    expect("asistente" in avisoDelTurno(base)).toBe(false);
+  });
+
   // spec local 2026-10-31-len-movil, §5.4: tapping the push opens what Len delivered.
   it("a turn that delivered files opens the first one", () => {
     const url = "/api/projects/p1/deliveries/t1/ab12cd34-informe.pdf";

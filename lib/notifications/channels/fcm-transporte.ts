@@ -20,7 +20,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
   let title = "Len";
   let body: string;
   switch (evento.type) {
-    case "len_turno": body = `${evento.pregunta ? "❓ " : ""}${evento.preview}`; break;
+    case "len_turno": title = evento.asistente?.name ?? "Len"; body = `${evento.pregunta ? "❓ " : ""}${evento.preview}`; break;
     case "mencion": title = `@ ${evento.quien}`; body = evento.preview; break;
     case "chat_message": title = evento.senderName; body = evento.preview; break;
     case "functions_quota": title = "Edge Functions"; body = `${evento.percent}% · ${evento.calls} / ${evento.limit}`; break;
@@ -31,7 +31,9 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "len_aviso": title = evento.title; body = evento.push; break;
   }
   const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {};
-  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
+  // The person's own assistant's notification sits beside Len's for the same project, never replaces it.
+  const tag = evento.type === "len_turno" && evento.asistente ? `assistant-${evento.projectId}` : `len-${evento.projectId}`;
+  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag } } } };
 }
 
 /** FCM HTTP v1: JWT firmado localmente. Nunca se imprimen respuestas ni claves. */
