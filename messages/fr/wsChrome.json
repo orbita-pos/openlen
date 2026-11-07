@@ -808,6 +808,35 @@
       "failed": "Ça n'a pas marché. Réessayez.",
       "suggestions": "Suggestions d'outils",
       "suggestionsHint": "Len vous propose un outil quand il voit qu'il vous aiderait ; rien n'est créé avant que vous appuyiez sur «Créer»."
+    },
+    "connectors": {
+      "title": "Connecteurs",
+      "hint": "Serveurs MCP que Len peut utiliser dans tous vos projets.",
+      "status": {
+        "connected": "connecté · {tools} outils",
+        "pending": "en attente de votre approbation",
+        "waiting": "il manque {names}",
+        "failed": "échec : {error}",
+        "neverListed": "pas encore listé"
+      },
+      "probe": "Tester",
+      "probeOk": "Répond : {tools}",
+      "probeFailed": "Ne répond pas : {error}",
+      "edit": "Modifier",
+      "on": "Activé",
+      "off": "Désactivé",
+      "remove": "Supprimer",
+      "add": "Ajouter un connecteur",
+      "name": "Nom",
+      "url": "URL",
+      "headers": "En-têtes",
+      "isKey": "C'est une clé",
+      "addHeader": "+ En-tête",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "keys": "Clés",
+      "keySet": "définie le {date}",
+      "changeKey": "Changer"
     }
   }
 }

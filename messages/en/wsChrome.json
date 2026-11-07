@@ -808,6 +808,35 @@
       "failed": "That didn't work. Try again.",
       "suggestions": "Tool suggestions",
       "suggestionsHint": "Len proposes a tool when he sees it would help you; nothing is built until you press «Create»."
+    },
+    "connectors": {
+      "title": "Connectors",
+      "hint": "MCP servers Len can use in all your projects.",
+      "status": {
+        "connected": "connected · {tools} tools",
+        "pending": "waiting for your approval",
+        "waiting": "missing {names}",
+        "failed": "failed: {error}",
+        "neverListed": "not listed yet"
+      },
+      "probe": "Test",
+      "probeOk": "Answers: {tools}",
+      "probeFailed": "Doesn't answer: {error}",
+      "edit": "Edit",
+      "on": "On",
+      "off": "Off",
+      "remove": "Delete",
+      "add": "Add connector",
+      "name": "Name",
+      "url": "URL",
+      "headers": "Headers",
+      "isKey": "It's a key",
+      "addHeader": "+ Header",
+      "save": "Save",
+      "cancel": "Cancel",
+      "keys": "Keys",
+      "keySet": "set on {date}",
+      "changeKey": "Change"
     }
   }
 }

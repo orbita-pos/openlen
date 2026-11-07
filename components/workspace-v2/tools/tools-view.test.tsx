@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key, useLocale: () => "es" }));
 const nav = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => nav }));
+// «Conectores» fetches on its own and has its own tests (connectors-section.test.tsx): here the page's fetches alone.
+vi.mock("./connectors-section", () => ({ ConnectorsSection: () => null }));
 
 import type { InstalledToolView } from "@/lib/tools/types";
 

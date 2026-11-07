@@ -808,6 +808,35 @@
       "failed": "うまくいきませんでした。もう一度お試しください。",
       "suggestions": "ツールの提案",
       "suggestionsHint": "役に立ちそうなときに Len がツールを提案します。«作成» を押すまで何も作られません。"
+    },
+    "connectors": {
+      "title": "コネクタ",
+      "hint": "Len がすべてのプロジェクトで使える MCP サーバー。",
+      "status": {
+        "connected": "接続済み · ツール {tools} 個",
+        "pending": "あなたの承認待ち",
+        "waiting": "{names} がありません",
+        "failed": "失敗: {error}",
+        "neverListed": "まだ一覧化されていません"
+      },
+      "probe": "テスト",
+      "probeOk": "応答あり: {tools}",
+      "probeFailed": "応答なし: {error}",
+      "edit": "編集",
+      "on": "オン",
+      "off": "オフ",
+      "remove": "削除",
+      "add": "コネクタを追加",
+      "name": "名前",
+      "url": "URL",
+      "headers": "ヘッダー",
+      "isKey": "キーです",
+      "addHeader": "+ ヘッダー",
+      "save": "保存",
+      "cancel": "キャンセル",
+      "keys": "キー",
+      "keySet": "{date} に設定",
+      "changeKey": "変更"
     }
   }
 }
