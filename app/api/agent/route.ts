@@ -1705,6 +1705,8 @@ async function correrTurno(
       const textoDelUsuario = () => [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n");
       let filaAbierta = false;
       let filaCerrada = false;
+      /** The person's own assistant was deleted while it answered: no row, no push (see `closeRowOnce`). */
+      let asistenteBorrado = false;
       /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
        *  historial del turno siguiente. Lo usan el cierre y, a mitad de turno, el
        *  avance (con `partial`). */
@@ -1804,6 +1806,12 @@ async function correrTurno(
         filaCerrada = true;
         clearInterval(liveTranscriptWatch);
         await avance.parar();
+        // THE PERSON'S OWN ASSISTANT, deleted while it answered (DELETE /api/assistants/[id] took its conversation and
+        // this open row with it): writing now would insert a row nobody can see. Fail-soft: unchecked, it's written.
+        if (asistente && (await assistantById(asistente.id).catch(() => asistente)) === null) {
+          asistenteBorrado = true;
+          return;
+        }
         // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
         // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
         // A11 · y siempre que resumió: sin la fila se perdería la marca (un
@@ -2903,7 +2911,7 @@ async function correrTurno(
         // correo lo salta), con la clave de la fila para no repetir. El módulo
         // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
         // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
-        if (clienteSeFue && !canceladoAProposito && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
+        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(
