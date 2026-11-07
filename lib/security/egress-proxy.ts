@@ -53,6 +53,14 @@ const systemLookup: Lookup = (host) => dns.lookup(host, { all: true });
 export async function decideEgress(hostRaw: string, port: number, lookup: Lookup = systemLookup): Promise<EgressDecision> {
   const host = hostRaw.toLowerCase().replace(/^\[|\]$/g, "");
   if (allowed.has(`${host}:${port}`)) return { ok: true, address: host };
+  return decidePublicEgress(host, port, lookup);
+}
+
+/** The same decision WITHOUT the allowlist of local origins: only a public IPv4 passes, ever. For callers that must
+ *  never reach this machine, whatever another part of the process opened (Len's MCP connectors, spec local
+ *  2026-11-06-conectores-mcp). */
+export async function decidePublicEgress(hostRaw: string, _port: number, lookup: Lookup = systemLookup): Promise<EgressDecision> {
+  const host = hostRaw.toLowerCase().replace(/^\[|\]$/g, "");
   if (
     !host ||
     host === "localhost" ||
