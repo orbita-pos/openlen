@@ -124,6 +124,7 @@
       "installed": "Instalé «{title}» en tu OpenLen."
     },
     "errors": {
+      "agent_off": "Ahora mismo no está disponible. Inténtalo en unos minutos.",
       "turn_limit": "El agente alcanzó su límite de pasos por turno.",
       "tool_limit": "El agente alcanzó su límite de acciones por turno.",
       "budget_limit": "Len paró porque tu cuenta se quedó sin créditos. Lo hecho quedó guardado; cuando vuelvas a tener créditos, pídele que siga.",

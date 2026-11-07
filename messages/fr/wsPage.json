@@ -124,6 +124,7 @@
       "installed": "« {title} » est installé dans votre OpenLen."
     },
     "errors": {
+      "agent_off": "Ce n'est pas disponible pour le moment. Réessayez dans quelques minutes.",
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
       "tool_limit": "L'agent a atteint sa limite d'actions par tour.",
       "budget_limit": "Len s'est arrêté car votre compte n'a plus de crédits. Ce qu'il a fait est enregistré ; quand vous aurez de nouveau des crédits, demandez-lui de continuer.",
