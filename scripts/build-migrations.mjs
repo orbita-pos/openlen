@@ -189,6 +189,9 @@ const targets = [
   // El servidor MCP (plans/mcp-de-openlen): la tabla mcpTokens. Aditiva e
   // idempotente; ninguna consulta existente la lee.
   "mcp-migrate",
+  // Len's MCP connectors (spec local 2026-11-06-conectores-mcp): personMcpConfigs, personCredentials and
+  // personMcpServerState. Additive and idempotent. 🔴 MANDATORY before the code: without them ~/.len/mcp.json can't be saved.
+  "mcp-connectors-migrate",
   // Las Edge Functions: functionDeployments, functionUsage, functionPools,
   // functionInvocations y projectBackendEnvironments.publicRef (relleno para los
   // borradores de antes). Aditiva e idempotente; va después de
