@@ -29,6 +29,7 @@ import { FolderOpen, LayoutTemplate, Menu, PanelLeftClose, PanelLeftOpen, Square
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/cn";
 import { Tooltip } from "./ui";
+import { AssistantRailLinks } from "./assistant/rail-links";
 import "./start-rail.css";
 
 export type StartItemKey = "crear" | "plantillas" | "mispaginas" | "comunidad" | "herramientas";
@@ -186,6 +187,8 @@ export function StartRail({
             </Tooltip>
           );
         })}
+        {/* The person's own assistants (spec local 2026-11-06-asistente-propio): each leads to its place. */}
+        <AssistantRailLinks open={open} />
         <div className={cn("mt-auto flex flex-col", open ? "items-start pl-1" : "items-center")}>{account ?? null}</div>
       </aside>
 
@@ -228,6 +231,7 @@ export function StartRail({
                 </ItemControl>
               );
             })}
+            <AssistantRailLinks open {...(onCloseDrawer ? { onDone: onCloseDrawer } : {})} />
             <div className="mt-auto flex flex-col items-start">{account ?? null}</div>
           </nav>
         </div>

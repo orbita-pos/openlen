@@ -19,6 +19,9 @@ vi.mock("@/lib/projects/chat", () => ({
   getChatMessages: vi.fn(),
   CHAT_LIMIT: 50,
 }));
+// The person's own assistant (spec local 2026-11-06-asistente-propio): «load earlier» in its place.
+const asistentes = vi.hoisted(() => ({ assistantById: vi.fn(async (_id: string): Promise<unknown> => null) }));
+vi.mock("@/lib/assistants/store", () => asistentes);
 
 import { GET, POST } from "./route";
 import { appendChatMessage, getChatMessages } from "@/lib/projects/chat";
@@ -291,6 +294,20 @@ describe("GET /api/projects/[id]/chat?before= — lo de antes, por páginas", ()
     expect((await pedir(`?before=${"x".repeat(101)}`)).status).toBe(400);
     vi.mocked(auth).mockResolvedValue(null as never);
     expect((await pedir("?before=t3")).status).toBe(401);
+    expect(getChatMessages).not.toHaveBeenCalled();
+  });
+
+  it("the person's own assistant: its conversation, only for its person and its project", async () => {
+    vi.mocked(getChatMessages).mockResolvedValue([turnoEn(1)]);
+    asistentes.assistantById.mockImplementation(async (id: string) =>
+      id === "a1" ? { id: "a1", personId: "u1", homeProjectId: "p1" } : id === "a2" ? { id: "a2", personId: "u2", homeProjectId: "p1" } : { id, personId: "u1", homeProjectId: "p9" },
+    );
+    expect((await pedir("?before=t3&conversation=assistant%3Aa1")).status).toBe(200);
+    expect(vi.mocked(getChatMessages).mock.calls.at(-1)).toEqual(["p1", { before: "t3", limit: 51, charla: "assistant:a1" }]);
+    vi.mocked(getChatMessages).mockClear();
+    expect((await pedir("?before=t3&conversation=assistant%3Aa2")).status).toBe(404);
+    expect((await pedir("?before=t3&conversation=assistant%3Aa3")).status).toBe(404);
+    expect((await pedir("?before=t3&conversation=c_archivada")).status).toBe(400);
     expect(getChatMessages).not.toHaveBeenCalled();
   });
 });

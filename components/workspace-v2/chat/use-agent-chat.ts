@@ -312,6 +312,9 @@ export interface AgentChatOptions {
   pendingAttachments?: PendingAttachments | null;
   /** El turno de un «Aplicar» del modo Diseño acabó: `true` si terminó entero (ni error ni cortado). */
   onDesignSettled?: (ok: boolean) => void;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): every turn runs as it, in its conversation.
+   *  It never falls back to ai-design (which edits the page), and the server alone writes its rows. */
+  assistantId?: string;
 }
 
 /** Las fotos (ya subidas) que acompañan a un borrador. */
@@ -342,6 +345,7 @@ export function useAgentChat({
   onPendingDraftConsumed,
   pendingAttachments = null,
   onDesignSettled,
+  assistantId,
 }: AgentChatOptions) {
   const t = useTranslations("panelsChat");
   // Agent-mode messages live under the wsPage namespace (shared with the
@@ -756,7 +760,8 @@ export function useAgentChat({
     olderRef.current = "loading";
     try {
       // El cursor es la fila (su id), no su hora: ver `getChatMessages`.
-      const res = await fetch(`/api/projects/${projectId}/chat?before=${encodeURIComponent(first.id)}`);
+      const conversation = assistantId ? `&conversation=${encodeURIComponent(`assistant:${assistantId}`)}` : "";
+      const res = await fetch(`/api/projects/${projectId}/chat?before=${encodeURIComponent(first.id)}${conversation}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const body = (await res.json()) as { turns?: StoredChatTurn[]; hasMore?: boolean };
       const older = (body.turns ?? []).map(restoreTurn);
@@ -769,7 +774,7 @@ export function useAgentChat({
     } catch {
       olderRef.current = "idle";
     }
-  }, [projectId]);
+  }, [projectId, assistantId]);
 
   const updateTurn = useCallback((id: string, patch: Partial<DesignTurn>) => {
     setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
@@ -931,6 +936,9 @@ export function useAgentChat({
   // signal the parent — it refetches + BroadcastChannels other tabs into sync.
   const persistTurn = useCallback(
     async (turn: StoredChatTurn) => {
+      // The person's own assistant: the server writes its rows, in its conversation; a browser append would put a row
+      // it never opened into Len's.
+      if (assistantId) return;
       try {
         await fetch(`/api/projects/${projectId}/chat`, {
           method: "POST",
@@ -942,7 +950,7 @@ export function useAgentChat({
         /* soft — a missed append only costs this turn from the transcript */
       }
     },
-    [projectId],
+    [projectId, assistantId],
   );
 
   // Classic ai-design network+SSE leg — extracted out of `send()` so it has
@@ -1394,6 +1402,8 @@ export function useAgentChat({
       } catch {
         /* storage blocked — default stays agent; must not wedge the composer */
       }
+      // The person's own assistant is Len's engine or nothing: ai-design would edit the page.
+      if (assistantId) agentMode = true;
       if (agentMode) {
         // F4: the agent is multi-page now (route validates `page` against
         // data.pages, tools write the active slot with W1 pins) — the
@@ -1521,6 +1531,8 @@ export function useAgentChat({
               // PIEZA 3: este chat SABE contestar las preguntas de Len dentro del
               // turno (la tarjeta con opciones y `POST /api/agent/responder`).
               answersQuestions: true,
+              // THE PERSON'S OWN ASSISTANT: the turn runs as it, in its conversation.
+              ...(assistantId ? { assistantId } : {}),
               // PIEZA 7: la elección del dueño, si tocó la ficha (como el `/plan`
               // de DeepSeek: un evento). Sin elección no viaja nada y el servidor
               // sigue con lo que ya estaba.
@@ -2023,7 +2035,8 @@ export function useAgentChat({
                 break agentOuter;
               } else if (evName === "error") {
                 const code = (payload as { code?: unknown } | null)?.code;
-                if (code === "agent_off") {
+                // The person's own assistant never falls back: Len off is an error it says.
+                if (code === "agent_off" && !assistantId) {
                   // F4 Task 7 — kill-switch: the route refused before doing
                   // any work and this is its only event (no `done` follows).
                   // Never show this to the user — flag it and stop reading;
@@ -2283,6 +2296,7 @@ export function useAgentChat({
       onLocalUpdate,
       persistTurn,
       projectId,
+      assistantId,
       reenganche,
       requestStop,
       runAiDesignTurn,
