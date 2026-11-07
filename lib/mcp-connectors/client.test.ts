@@ -29,6 +29,17 @@ function server(opts: { resources?: boolean; instructions?: string } = {}) {
 
 const target = { url: "https://mcp.test/mcp", headers: { authorization: "Bearer t" } };
 
+describe("openMcp and a stopped turn", () => {
+  it("🔴 a hung connect ends as soon as the turn's signal aborts, not at its timeout", async () => {
+    const hung = (() => new Promise<Response>(() => {})) as typeof globalThis.fetch;
+    const stop = new AbortController();
+    const started = Date.now();
+    setTimeout(() => stop.abort(), 20);
+    await expect(openMcp(target, { fetch: hung, timeoutMs: 30_000, signal: stop.signal })).rejects.toThrow(/stopped/);
+    expect(Date.now() - started).toBeLessThan(2_000);
+  });
+});
+
 describe("openMcp", () => {
   it("reads instructions, identity and capabilities from initialize", async () => {
     const s = server({ instructions: "Use search for everything." });

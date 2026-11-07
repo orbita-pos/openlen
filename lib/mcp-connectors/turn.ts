@@ -180,7 +180,7 @@ export class TurnConnections {
     return this.turn.routes;
   }
 
-  private open(server: string): Promise<Opened | string> {
+  private open(server: string, signal?: AbortSignal): Promise<Opened | string> {
     let p = this.opened.get(server);
     if (!p) {
       p = (async () => {
@@ -189,7 +189,7 @@ export class TurnConnections {
         if (!resolved.ok) return `${server}: waiting for ${resolved.missing.join(", ")}, which the person sets in OpenLen`;
         const redact = makeRedactor(resolved.resolved);
         try {
-          return { conn: await this.d.open({ url: resolved.url, headers: resolved.headers }, { fetch: this.d.fetch, timeoutMs: entry.startupTimeoutMs }), redact };
+          return { conn: await this.d.open({ url: resolved.url, headers: resolved.headers }, { fetch: this.d.fetch, timeoutMs: entry.startupTimeoutMs, signal }), redact };
         } catch (err) {
           return `${server}: couldn't connect: ${redact(messageOf(err))}`;
         }
@@ -202,7 +202,7 @@ export class TurnConnections {
   async call(publicName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<ToolOutcome> {
     const route = this.turn.routes.get(publicName);
     if (!route) return failure(`${publicName} isn't one of your MCP servers' tools in this turn.`);
-    const opened = await this.open(route.server);
+    const opened = await this.open(route.server, signal);
     if (typeof opened === "string") return failure(opened);
     const entry = this.turn.active.get(route.server)!;
     try {
@@ -213,15 +213,15 @@ export class TurnConnections {
       const message = opened.redact(messageOf(err));
       // A tool the server no longer has: re-list it outside the next turn (DeepSeek re-syncs on a changed list).
       if (/not found|unknown tool/i.test(message)) await this.d.markStale(this.personId, route.server).catch(() => {});
-      const mayHaveRun = /took longer than|timed? ?out|abort/i.test(message);
+      const mayHaveRun = /took longer than|timed? ?out|abort|stopped/i.test(message);
       return failure(`${route.server}: ${message}${mayHaveRun ? ` ${MAY_HAVE_RUN}` : ""}`);
     }
   }
 
-  async resource(toolName: string, args: Record<string, unknown>): Promise<ToolOutcome> {
+  async resource(toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<ToolOutcome> {
     const server = typeof args.server === "string" ? args.server : "";
     if (!this.turn.active.has(server)) return failure(`${server || "(no server)"} isn't one of your MCP servers: ${JSON.stringify([...this.turn.active.keys()].sort())}`);
-    const opened = await this.open(server);
+    const opened = await this.open(server, signal);
     if (typeof opened === "string") return failure(opened);
     const cursor = typeof args.cursor === "string" ? args.cursor : undefined;
     try {

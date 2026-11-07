@@ -187,6 +187,15 @@ describe("TurnConnections", () => {
     expect(text).toContain("It may have completed: check before calling it again.");
   });
 
+  it("a call stopped with the turn also says it may have completed", async () => {
+    const { tc } = await turnWith({
+      callTool: async () => {
+        throw new Error("the call was stopped with the turn");
+      },
+    });
+    expect(JSON.stringify((await tc.call("mcp__ok__search", {})).response)).toContain("It may have completed: check before calling it again.");
+  });
+
   it("unknown tool marks the server stale", async () => {
     const { tc, stale } = await turnWith({
       callTool: async () => {
@@ -219,6 +228,27 @@ describe("TurnConnections", () => {
     const text = JSON.stringify(r.response);
     expect(text).toContain("MCP server: ok");
     expect(text).not.toContain("QUJD");
+  });
+
+  it("🔴 the turn's signal reaches the connection, for a call and for a resource", async () => {
+    const { d } = setup({ ok: entry("https://ok.example.com/mcp") }, ["ok"], [{ serverName: "ok", tools: [tool("ok", "search")], hasResources: true }]);
+    const turn = await connectorsForTurn("p1", d);
+    const signals: (AbortSignal | undefined)[] = [];
+    const conn = connection();
+    const cd: CallDeps = {
+      resolveCredentials: async () => new Map([["TOK", "t"]]),
+      open: async (_t, o) => {
+        signals.push(o.signal);
+        return conn.c;
+      },
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      modelTakesImages: true,
+    };
+    const stop = new AbortController();
+    await new TurnConnections("p1", turn, cd).call("mcp__ok__search", {}, stop.signal);
+    await new TurnConnections("p1", turn, cd).resource("list_mcp_resources", { server: "ok" }, stop.signal);
+    expect(signals).toEqual([stop.signal, stop.signal]);
   });
 
   it("closeAll closes every opened connection", async () => {
