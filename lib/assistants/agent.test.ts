@@ -7,6 +7,7 @@ import { ENTER_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
+import { SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { HIDDEN_AGENT_TYPES, RESERVED_AGENT_TYPES } from "@/lib/agent/subagents/agent-paths";
 import { NO_AGENT_TYPES } from "@/lib/agent/subagents/agent-registry";
 import { ASSISTANT_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
@@ -57,6 +58,12 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("~/.assistant/MEMORY.md");
     expect(p).not.toContain("delegated subagent");
   });
+  it("drops Len's subagent guidance: it has no subagent tools to follow it with", () => {
+    const p = assistantSystemPrompt(`LEN PROMPT\n- ${SUBAGENT_GUIDANCE}\n- another rule`, { name: "Lucía", tone: "friendly" });
+    expect(p).not.toContain(SUBAGENT_GUIDANCE);
+    expect(p).toContain("- another rule");
+  });
+
   it("says each tone", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("formal and polite");
     expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("playful and light");

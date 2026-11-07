@@ -2861,12 +2861,10 @@ function strField(payload: unknown, key: string): string {
 // Spanish `message` verbatim. This Record<AgentErrorCode, true> is the
 // type-level exhaustiveness check — if the union in lib/agent/loop.ts gains
 // a member without a matching entry here, this literal fails to typecheck.
-// F4 Task 7: `agent_off` is a member of the union purely for this
-// exhaustiveness check — the SSE loop above intercepts it BEFORE calling
-// isAgentErrorCode (it triggers the silent ai-design fallback instead), so
-// `tAgent("errors.agent_off")` is never actually called and no matching key
-// exists in wsPage.json.
-const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
+// F4 Task 7: for Len, the SSE loop above intercepts `agent_off` BEFORE calling isAgentErrorCode (the silent ai-design
+// fallback). The person's own assistant never falls back (ai-design edits the page), so for it the code IS shown:
+// every code here has its text in every locale (agent-error-texts.test.ts).
+export const AGENT_ERROR_CODE_KEYS: Record<AgentErrorCode, true> = {
   turn_limit: true,
   tool_limit: true,
   budget_limit: true,

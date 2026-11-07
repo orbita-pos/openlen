@@ -124,6 +124,7 @@
       "installed": "Ho installato «{title}» nel tuo OpenLen."
     },
     "errors": {
+      "agent_off": "Al momento non è disponibile. Riprova tra qualche minuto.",
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",
       "tool_limit": "L'agente ha raggiunto il limite di azioni per turno.",
       "budget_limit": "Len si è fermato perché il tuo account ha finito i crediti. Quello che ha fatto è salvato; quando avrai di nuovo crediti, chiedigli di continuare.",

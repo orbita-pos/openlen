@@ -7,8 +7,9 @@
 // child: it keeps what every subagent loses (asking the owner, visuals, scheduled tasks, `present` and the person's MCP
 // operations). Subagents are the one exception, for now (`SUBAGENTS_NOT_YET`).
 //
-// Cache effect: its system prompt is Len's byte for byte plus its section at the end, and its tools are Len's in
-// Len's order with some taken out.
+// Cache effect: its own prefix is stable from turn to turn (Len's system prompt without the subagent line, plus its
+// section; Len's tools in Len's order with some taken out). It never shares a cached prefix with Len's turns: the tool
+// lists differ.
 //
 // Pure.
 
@@ -20,6 +21,7 @@ import { ENTER_PLAN_MODE, EXIT_PLAN_MODE } from "@/lib/agent/plan-mode";
 import { ASSISTANT_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "@/lib/agent/subagents/enabled";
 import { OUT_FOR_READ_ONLY } from "@/lib/agent/subagents/presets";
+import { SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
 import { CREATE_ASSISTANT } from "./create-tool";
@@ -69,7 +71,8 @@ const TONES: Readonly<Record<AssistantTone, string>> = {
 export function assistantSystemPrompt(lenSystemPrompt: string, a: { name: string; tone: string }): string {
   const tone = TONES[a.tone as AssistantTone] ?? TONES.friendly;
   return [
-    lenSystemPrompt,
+    // Without Len's subagent line, as a child's prompt drops it (`childSystemPromptFor`): it has no subagent tools.
+    lenSystemPrompt.replace(`\n- ${SUBAGENT_GUIDANCE}`, ""),
     `ASSISTANT — ${a.name.toUpperCase()}:\n${ASSISTANT_AGENT_TYPE.body}`,
     `Your name is ${a.name}. Your owner gave you that name and chose how you look; you are theirs. Talk with them in a ${tone} way, in their language. Your memory is ${ASSISTANT_MEMORY_PATH}.`,
   ].join("\n\n");

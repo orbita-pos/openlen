@@ -124,6 +124,7 @@
       "installed": "„{title}“ ist in deinem OpenLen installiert."
     },
     "errors": {
+      "agent_off": "Gerade nicht verfügbar. Versuch es in ein paar Minuten noch einmal.",
       "turn_limit": "Der Agent hat sein Schritte-Limit pro Zug erreicht.",
       "tool_limit": "Der Agent hat sein Aktionslimit pro Zug erreicht.",
       "budget_limit": "Len hat angehalten, weil dein Konto keine Credits mehr hat. Was erledigt ist, ist gespeichert; sobald du wieder Credits hast, bitte ihn weiterzumachen.",
