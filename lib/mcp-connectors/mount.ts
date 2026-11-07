@@ -93,8 +93,11 @@ export async function probeServer(
   name: string,
   d: MountDeps,
 ): Promise<{ ok: true; serverInfo: { name: string; version: string }; tools: string[]; problems: string[] } | { ok: false; stage: "credentials" | "connect" | "list"; error: string }> {
-  const entry = entryIn(await d.readConfig(personId), name);
+  const stored = await d.readConfig(personId);
+  const entry = entryIn(stored, name);
   if (!entry) return { ok: false, stage: "connect", error: `there is no server named ${name}` };
+  // Nothing connects without the person's tap; a disabled entry can still be probed (DeepSeek's probe).
+  if (stored.approved[name] !== entryFingerprint(entry)) return { ok: false, stage: "connect", error: `${name} isn't approved yet: approve it first` };
   const opened = await openEntry(personId, entry, d);
   if (!opened.ok) return { ok: false, stage: opened.stage, error: opened.error };
   try {

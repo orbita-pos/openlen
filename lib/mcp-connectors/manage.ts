@@ -104,6 +104,8 @@ export interface EntryInput {
   /** Header → its whole value, typed by the person, stored as a key; the file gets `${credential:<SERVER>_<HEADER>}`. */
   readonly secretHeaders?: Readonly<Record<string, string>>;
   readonly enabled?: boolean;
+  /** Edit: `headers` are added over the stored ones instead of replacing them (the page never had their values). */
+  readonly mergeHeaders?: boolean;
   readonly version: number;
 }
 
@@ -115,7 +117,7 @@ export async function saveEntry(personId: string, name: string, input: EntryInpu
   const config = configOf(stored);
   const before = config.servers[name];
   const secret = Object.fromEntries(Object.entries(input.secretHeaders ?? {}).filter(([, v]) => v !== ""));
-  const headers: Record<string, string> = { ...(input.headers ?? before?.headers ?? {}) };
+  const headers: Record<string, string> = input.mergeHeaders ? { ...(before?.headers ?? {}), ...(input.headers ?? {}) } : { ...(input.headers ?? before?.headers ?? {}) };
   for (const h of Object.keys(secret)) headers[h] = `\${credential:${secretCredentialName(name, h)}}`;
   const raw = {
     servers: {

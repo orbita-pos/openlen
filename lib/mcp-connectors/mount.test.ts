@@ -125,10 +125,21 @@ describe("mountServer", () => {
 
 describe("probeServer", () => {
   it("probe never saves", async () => {
-    const { d, saved } = deps({ approved: {} });
+    const { d, saved } = deps();
     const r = await probeServer("p1", "notion", d);
     expect(r).toEqual({ ok: true, serverInfo: { name: "notion", version: "1" }, tools: ["search"], problems: [] });
     expect(saved).toEqual([]);
+  });
+
+  it("🔴 probe refuses an entry the person hasn't approved: nothing connects without the tap", async () => {
+    const { d, opened } = deps({ approved: {} });
+    expect(await probeServer("p1", "notion", d)).toEqual({ ok: false, stage: "connect", error: "notion isn't approved yet: approve it first" });
+    expect(opened).toEqual([]);
+  });
+
+  it("a disabled but approved entry can be probed, as in DeepSeek", async () => {
+    const { d } = deps({ text: JSON.stringify({ servers: { notion: { ...ENTRY, enabled: false } } }) });
+    expect((await probeServer("p1", "notion", d)).ok).toBe(true);
   });
 
   it("probe names the stage that failed, redacted", async () => {

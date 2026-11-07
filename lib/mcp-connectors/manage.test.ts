@@ -70,6 +70,14 @@ describe("saveEntry", () => {
     expect(s.row().text).toContain("other.example.com");
   });
 
+  it("🔴 editing with a new header keeps the stored ones (mergeHeaders)", async () => {
+    const s = deps();
+    await saveEntry("p1", "notion", { url: URL1, headers: {}, secretHeaders: { Authorization: "Bearer t" }, version: 0 }, s.d);
+    await saveEntry("p1", "notion", { url: URL1, headers: { "X-Workspace": "acme" }, mergeHeaders: true, version: 1 }, s.d);
+    expect(s.row().text).toContain("${credential:NOTION_AUTHORIZATION}");
+    expect(s.row().text).toContain('"X-Workspace": "acme"');
+  });
+
   it("the credential name is the server and header, uppercased", () => {
     expect(secretCredentialName("my-notion", "X-Api-Key")).toBe("MY_NOTION_X_API_KEY");
   });
