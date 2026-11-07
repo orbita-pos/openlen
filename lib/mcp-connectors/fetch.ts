@@ -5,7 +5,7 @@
 // cap. It returns a streaming Response: MCP's Streamable HTTP answers with SSE.
 import http from "node:http";
 import https from "node:https";
-import type { LookupFunction } from "node:net";
+import { isIP, type LookupFunction } from "node:net";
 import { Readable } from "node:stream";
 
 import { decidePublicEgress } from "@/lib/security/egress-proxy";
@@ -31,8 +31,9 @@ export interface PinnedRequest {
 
 type Lookup = (host: string) => Promise<readonly { address: string; family: number }[]>;
 
-/** The real network: node's https to the pinned address, the host name kept for SNI and Host. */
-async function sendPinned(r: PinnedRequest): Promise<Response> {
+/** The real network: node's https to the pinned address, the host name kept for SNI, Host and the certificate check.
+ *  Exported for its test against a real TLS server (fetch.tls.test.ts). */
+export async function sendPinned(r: PinnedRequest): Promise<Response> {
   const lookup: LookupFunction = (_host, options, callback) => {
     if (options.all) (callback as unknown as (e: null, a: { address: string; family: number }[]) => void)(null, [{ address: r.address, family: 4 }]);
     else callback(null, r.address, 4);
@@ -49,7 +50,8 @@ async function sendPinned(r: PinnedRequest): Promise<Response> {
         path: `${r.url.pathname}${r.url.search}`,
         headers,
         lookup,
-        servername: r.url.hostname,
+        // SNI is a host name: for an IP literal node warns (DEP0123), and the certificate is checked against the IP.
+        ...(isIP(r.url.hostname) ? {} : { servername: r.url.hostname }),
         signal: r.init.signal ?? undefined,
       },
       (res: http.IncomingMessage) => {
