@@ -548,6 +548,8 @@ export async function registrarTurnoDelServidor(
     centicredits?: number | null;
     durationMs?: number | null;
   },
+  /** La charla de la fila si hay que crearla aquí (no se abrió): NULL, la de Len; `assistant:<id>`, la del asistente. */
+  charla: string | null = null,
 ): Promise<void> {
   const toolResults = turn.toolResults ?? null;
   const endReason = turn.endReason ?? null;
@@ -590,6 +592,7 @@ export async function registrarTurnoDelServidor(
     .values({
       id: turn.id,
       projectId,
+      conversation: charla,
       userText: turn.userText.slice(0, 4000),
       attachedImage: fotosDelTurno(turn),
       assistantReasoning: turn.assistantReasoning.slice(0, 20_000),

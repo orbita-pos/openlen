@@ -1343,9 +1343,11 @@ export interface AgentSession {
   /** The skills already in this conversation (loaded with `skill` or invoked with /name): `skill`
    *  answers Claude Code's «already loaded» line instead of sending them again. */
   loadedSkills?: Set<string>;
-  /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Write, Edit and what a
-   *  command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
+  /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2) or the person's own assistant: Write, Edit
+   *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): this turn runs as it. Absent for Len. */
+  assistant?: { readonly id: string; readonly name: string };
   /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
    *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
   terminalHolderId?: string;

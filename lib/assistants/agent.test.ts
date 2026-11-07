@@ -29,9 +29,13 @@ describe("assistantTools", () => {
     for (const out of ["Write", "Edit", "edit_image", "toggle_module", "draft_reply", CONVERTIR_EN_APP, "publish", "undo_last_change", REQUEST_SECRETS, CREATE_GOAL, ENTER_PLAN_MODE, PROPOSE_ACTION]) {
       expect(got, out).not.toContain(out);
     }
-    for (const kept of ["Read", "Glob", "Grep", "bash", "view_page", "use_page", READ_ME, SHOW_WIDGET, PRESENT_TOOL, ASK_USER_QUESTION, SUBAGENT_TOOL, ...SCHEDULE_TOOL_NAMES, "mcp__drive__search"]) {
+    for (const kept of ["Read", "Glob", "Grep", "bash", "view_page", "use_page", READ_ME, SHOW_WIDGET, PRESENT_TOOL, ASK_USER_QUESTION, ...SCHEDULE_TOOL_NAMES, "mcp__drive__search"]) {
       expect(got, kept).toContain(kept);
     }
+  });
+
+  it("launches no subagents in phase 1: their notices would wake Len in the project chat", () => {
+    expect(names(assistantTools(LEN))).not.toContain(SUBAGENT_TOOL);
   });
 
   it("gets a tool Len gains tomorrow without touching its definition", () => {
