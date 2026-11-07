@@ -107,6 +107,8 @@ export function parseMcpConfig(text: string, opts: { reservedServerNames: Readon
   const servers: Record<string, McpServerEntry> = {};
   for (const name of names) {
     if (!SERVER_NAME.test(name)) return refuse(`servers.${name}: a server name is 1 to 32 letters, digits, _ or -`);
+    // `__` separates the parts of mcp__<server>__<tool>: in a server name, two different tools could get one name.
+    if (name.includes("__")) return refuse(`servers.${name}: a server name can't contain __ (it separates the parts of mcp__<server>__<tool>)`);
     if (opts.reservedServerNames.has(name)) return refuse(`servers.${name}: an installed tool already uses this name`);
     const entry = entryOf(name, (serversRaw as Record<string, unknown>)[name]);
     if (typeof entry === "string") return refuse(entry);

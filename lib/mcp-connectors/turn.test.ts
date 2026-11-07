@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { McpConnection } from "./client";
 import { entryFingerprint, parseMcpConfig } from "./config";
 import type { ServerState } from "./store";
-import { connectorsForTurn, RESOURCE_TOOL_NAMES, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
+import { connectorsForTurn, mergeMcpDeclarations, RESOURCE_TOOL_NAMES, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
 
 const NOW = new Date("2026-11-06T12:00:00Z");
 const obj = { type: "object", properties: {} };
@@ -93,6 +93,23 @@ describe("connectorsForTurn", () => {
     const t = await connectorsForTurn("p1", d);
     expect(t.routes.size).toBe(0);
     expect(t.toMount).toEqual(["ok"]);
+  });
+});
+
+describe("mergeMcpDeclarations", () => {
+  const d = (name: string, by = "") => ({ name, description: by, parameters: obj });
+  it("one mcp__ namespace, sorted, the resource tools last", () => {
+    const merged = mergeMcpDeclarations([d("mcp__calc__add")], [d("mcp__notion__search"), d("mcp__alpha__q"), d("read_mcp_resource")]);
+    expect(merged.map((x) => x.name)).toEqual(["mcp__alpha__q", "mcp__calc__add", "mcp__notion__search", "read_mcp_resource"]);
+  });
+
+  it("🔴 a name twice is declared once, the operation's: the provider rejects a list with duplicates", () => {
+    const merged = mergeMcpDeclarations([d("mcp__a__b__x", "op")], [d("mcp__a__b__x", "connector")]);
+    expect(merged).toEqual([d("mcp__a__b__x", "op")]);
+  });
+
+  it("nothing in, nothing out", () => {
+    expect(mergeMcpDeclarations([], [])).toEqual([]);
   });
 });
 
