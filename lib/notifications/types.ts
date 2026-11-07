@@ -26,6 +26,9 @@ export interface LenTurnoEvent {
   /** A file Len delivered in the turn (its delivery URL): tapping the push opens it (spec local
    *  2026-10-31-len-movil, §5.4). Absent when nothing was delivered. */
   abrir?: string;
+  /** The turn was the person's own assistant's, not Len's (lib/assistants/): the push names it and opens its place.
+   *  Absent on Len's turns. */
+  asistente?: { name: string; slug: string };
 }
 
 /** HILOS EN EL CÓDIGO: alguien te mencionó en una línea de un fichero de un

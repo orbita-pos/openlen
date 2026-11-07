@@ -22,6 +22,12 @@ describe("FCM sin servicios externos", () => {
     expect(mensajeFcm({ ...evento, abrir }, "t").message.data).toEqual({ type: "len_turno", projectId: "proyecto-1", recipientUserId: "ana", abrir });
     expect(Object.keys(mensajeFcm(evento, "t").message.data)).toEqual(["type", "projectId", "recipientUserId"]);
   });
+  it("🔴 the person's own assistant's turn is titled with its name and never replaces Len's notification", () => {
+    const m = mensajeFcm({ ...evento, asistente: { name: "Lucía", slug: "lucía" } }, "t").message;
+    expect(m.notification.title).toBe("Lucía");
+    expect(m.android.notification.tag).not.toBe(mensajeFcm(evento, "t").message.android.notification.tag);
+    expect(Object.keys(m.data)).toEqual(["type", "projectId", "recipientUserId"]);
+  });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
     expect(mensajeFcm({ ...base, type: "email_domain", domain: "pan.mx", status: "ready" }, "t").message.notification.body).toContain("pan.mx");
