@@ -720,5 +720,39 @@
     "changed": "È cambiato nel frattempo: ricontrollalo in Strumenti",
     "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti.",
     "firstTime": "La tua chiave {name} non è mai stata inviata a {host}: approva solo se ti fidi di quel server"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Crea il tuo assistente: scegli tu il nome e l'aspetto.",
+      "create": "Crea il mio assistente",
+      "ready": "{name} può già aiutarti",
+      "talk": "Parla con {name}"
+    },
+    "creator": {
+      "title": "Il tuo assistente",
+      "name": "Nome",
+      "namePlaceholder": "Lucía",
+      "shape": "Forma",
+      "color": "Colore",
+      "tone": "Come parla",
+      "done": "Fatto",
+      "cancel": "Annulla"
+    },
+    "tones": {
+      "friendly": "Gentile",
+      "formal": "Formale",
+      "playful": "Divertente"
+    },
+    "errors": {
+      "name": "Dagli un nome con lettere o numeri.",
+      "nameTaken": "Hai già un assistente con quel nome.",
+      "projectHas": "Questo progetto ha già il suo assistente.",
+      "generic": "Non è stato possibile crearlo. Riprova."
+    },
+    "place": {
+      "yours": "Il tuo assistente",
+      "inProject": "In {project}",
+      "placeholder": "Scrivi a {name}…"
+    }
   }
 }

@@ -720,5 +720,39 @@
     "changed": "期间已有变化：请在“工具”中重新查看",
     "dismissed": "未连接。你可以稍后在“工具”中批准。",
     "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "创建你自己的助手：名字和样子由你来选。",
+      "create": "创建我的助手",
+      "ready": "{name} 已就绪",
+      "talk": "和 {name} 聊天"
+    },
+    "creator": {
+      "title": "你的助手",
+      "name": "名字",
+      "namePlaceholder": "Lucía",
+      "shape": "形状",
+      "color": "颜色",
+      "tone": "说话方式",
+      "done": "完成",
+      "cancel": "取消"
+    },
+    "tones": {
+      "friendly": "亲切",
+      "formal": "正式",
+      "playful": "活泼"
+    },
+    "errors": {
+      "name": "请用字母或数字给它起个名字。",
+      "nameTaken": "你已经有同名的助手了。",
+      "projectHas": "这个项目已经有助手了。",
+      "generic": "未能创建，请重试。"
+    },
+    "place": {
+      "yours": "你的助手",
+      "inProject": "在 {project}",
+      "placeholder": "给 {name} 发消息…"
+    }
   }
 }

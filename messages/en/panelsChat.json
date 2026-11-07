@@ -720,5 +720,39 @@
     "changed": "It changed in the meantime: look at it again in Tools",
     "dismissed": "Not connected. You can approve it later in Tools.",
     "firstTime": "Your key {name} has never been sent to {host}: approve only if you trust that server"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Create your own assistant: you pick its name and its look.",
+      "create": "Create my assistant",
+      "ready": "{name} is ready",
+      "talk": "Talk with {name}"
+    },
+    "creator": {
+      "title": "Your assistant",
+      "name": "Name",
+      "namePlaceholder": "Lucía",
+      "shape": "Shape",
+      "color": "Color",
+      "tone": "How it talks",
+      "done": "Done",
+      "cancel": "Cancel"
+    },
+    "tones": {
+      "friendly": "Friendly",
+      "formal": "Formal",
+      "playful": "Playful"
+    },
+    "errors": {
+      "name": "Give it a name with letters or numbers.",
+      "nameTaken": "You already have an assistant with that name.",
+      "projectHas": "This project already has its assistant.",
+      "generic": "It couldn't be created. Try again."
+    },
+    "place": {
+      "yours": "Your assistant",
+      "inProject": "In {project}",
+      "placeholder": "Write to {name}…"
+    }
   }
 }

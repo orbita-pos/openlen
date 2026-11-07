@@ -19,6 +19,7 @@ import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
+import { AssistantCreateCard } from "../assistant/create-card";
 import { McpApprovalCardView } from "./mcp-approval-card";
 import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
@@ -387,6 +388,8 @@ export function LenTurn({
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
       <ArtifactTurnCards actions={turn.actions} />
       <DeliveredFiles actions={turn.actions} />
+      {/* «QUIERO UN ASISTENTE» (spec local 2026-11-06-asistente-propio, §4.4): the card Len's create_assistant left. */}
+      <AssistantCreateCard actions={turn.actions} projectId={projectId} />
       {/* LEN'S SUBAGENTS: a live card per child this turn launched. */}
       <SubagentCards actions={turn.actions} projectId={projectId} rowId={turn.id} />
       {todos && todos.length > 0 && (

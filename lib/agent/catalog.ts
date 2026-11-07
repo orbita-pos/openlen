@@ -73,6 +73,8 @@ import {
 } from "@/lib/agent/subagents/tool";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
+import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION } from "@/lib/assistants/create-tool";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
 import { DECLARACION_PRESENT, PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
@@ -222,6 +224,8 @@ function declaracionesDelModo(
   if (!subagentsEnabled(_env)) {
     for (const n of [SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL, INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL]) fuera.add(n);
   }
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): on unless OPENLEN_ASSISTANT=0, per server.
+  if (!assistantsEnabled(_env)) fuera.add(CREATE_ASSISTANT);
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
@@ -567,6 +571,8 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     SEND_MESSAGE_DECLARATION,
     INTERRUPT_AGENT_DECLARATION,
     LIST_AGENTS_DECLARATION,
+    // The card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
+    CREATE_ASSISTANT_DECLARATION,
     {
       name: "undo_last_change",
       // F4: RV1–RV7 de plans/len-agente-2026/notas/f4-tabla-de-reglas.md. El

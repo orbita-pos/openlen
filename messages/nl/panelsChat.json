@@ -720,5 +720,39 @@
     "changed": "Het is intussen veranderd: bekijk het opnieuw in Tools",
     "dismissed": "Niet verbonden. Je kunt het later goedkeuren in Tools.",
     "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Maak je eigen assistent: jij kiest de naam en hoe hij eruitziet.",
+      "create": "Mijn assistent maken",
+      "ready": "{name} is klaar",
+      "talk": "Praat met {name}"
+    },
+    "creator": {
+      "title": "Jouw assistent",
+      "name": "Naam",
+      "namePlaceholder": "Lucía",
+      "shape": "Vorm",
+      "color": "Kleur",
+      "tone": "Hoe hij praat",
+      "done": "Klaar",
+      "cancel": "Annuleren"
+    },
+    "tones": {
+      "friendly": "Vriendelijk",
+      "formal": "Formeel",
+      "playful": "Speels"
+    },
+    "errors": {
+      "name": "Geef hem een naam met letters of cijfers.",
+      "nameTaken": "Je hebt al een assistent met die naam.",
+      "projectHas": "Dit project heeft al een assistent.",
+      "generic": "Hij kon niet worden gemaakt. Probeer het opnieuw."
+    },
+    "place": {
+      "yours": "Jouw assistent",
+      "inProject": "In {project}",
+      "placeholder": "Schrijf {name}…"
+    }
   }
 }
