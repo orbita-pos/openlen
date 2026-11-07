@@ -253,7 +253,7 @@ vi.mock("@/lib/mcp-connectors/real", async () => {
     realTurnDeps: () => ({
       readConfig: async (p: string) => ({ ...(await connectorDeps.readConfig(p)), approved: { notion: fp } }),
       readStates: async () => [
-        { serverName: "notion", fingerprint: fp, tools: [{ publicName: "mcp__notion__search", rawName: "search", description: "Search", inputSchema: { type: "object", properties: {} } }], instructions: "", hasResources: false, listedAt: new Date(0), status: "connected", error: null, stale: false, failures: 0, attemptedAt: null },
+        { serverName: "notion", fingerprint: fp, tools: [{ publicName: "mcp__notion__search", rawName: "search", description: "Search", inputSchema: { type: "object", properties: {} } }], instructions: "", hasResources: true, listedAt: new Date(0), status: "connected", error: null, stale: false, failures: 0, attemptedAt: null },
       ],
       now: () => new Date(0),
     }),
