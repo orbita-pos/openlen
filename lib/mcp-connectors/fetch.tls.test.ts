@@ -31,7 +31,7 @@ const OPENSSL = haveOpenssl();
 let server: https.Server;
 let port = 0;
 let cert = "";
-const seen: { host?: string; servername?: string | false; body?: string }[] = [];
+const seen: { host?: string; servername?: string | false | null; body?: string }[] = [];
 
 async function toWebRequest(req: import("node:http").IncomingMessage): Promise<Request> {
   const chunks: Buffer[] = [];
