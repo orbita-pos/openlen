@@ -808,6 +808,35 @@
       "failed": "没有成功。请再试一次。",
       "suggestions": "工具建议",
       "suggestionsHint": "Len 发现某个工具对你有帮助时会提议;在你点「创建」之前不会创建任何东西。"
+    },
+    "connectors": {
+      "title": "连接器",
+      "hint": "Len 可以在你所有项目中使用的 MCP 服务器。",
+      "status": {
+        "connected": "已连接 · {tools} 个工具",
+        "pending": "等待你的批准",
+        "waiting": "缺少 {names}",
+        "failed": "失败：{error}",
+        "neverListed": "尚未列出"
+      },
+      "probe": "测试",
+      "probeOk": "有响应：{tools}",
+      "probeFailed": "无响应：{error}",
+      "edit": "编辑",
+      "on": "开",
+      "off": "关",
+      "remove": "删除",
+      "add": "添加连接器",
+      "name": "名称",
+      "url": "URL",
+      "headers": "请求头",
+      "isKey": "这是密钥",
+      "addHeader": "+ 请求头",
+      "save": "保存",
+      "cancel": "取消",
+      "keys": "密钥",
+      "keySet": "设置于 {date}",
+      "changeKey": "更改"
     }
   }
 }

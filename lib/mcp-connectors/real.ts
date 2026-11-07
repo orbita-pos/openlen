@@ -4,11 +4,12 @@
 import "server-only";
 
 import { openMcp } from "./client";
-import { credentialNames, resolveCredentials } from "./credentials";
+import { credentialNames, resolveCredentials, setCredential } from "./credentials";
 import { createGuardedFetch } from "./fetch";
 import type { LenFileDeps } from "./len-file";
+import type { ManageDeps } from "./manage";
 import { mountServer, type MountDeps } from "./mount";
-import { markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
+import { deleteServerState, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
 import type { CallDeps, TurnDeps } from "./turn";
 
 /** What OpenLen reads of one MCP answer before it stops: generous (a list of tools, an SSE stream), never unbounded. */
@@ -51,6 +52,19 @@ export function realLenFileDeps(): LenFileDeps {
     write: writeMcpConfig,
     installedServerNames,
     credentialNames: async (p) => (await credentialNames(p)).map((c) => c.name),
+  };
+}
+
+export function realManageDeps(): ManageDeps {
+  return {
+    read: readMcpConfig,
+    write: writeMcpConfig,
+    readStates: readServerStates,
+    deleteState: deleteServerState,
+    credentialNames,
+    setCredential,
+    installedServerNames,
+    mount: (p, n) => mountServer(p, n, realMountDeps()),
   };
 }
 
