@@ -68,12 +68,14 @@ export interface TurnConnectors {
   readonly serverNames: readonly string[];
   /** Servers whose tools are declared or whose resources can be read this turn, with their entries. */
   readonly active: ReadonlyMap<string, McpServerEntry>;
+  /** The active servers that advertise resources: the only ones the resource tools take. */
+  readonly resourceServers: readonly string[];
   readonly contextText: string;
   /** Approved servers to mount outside this turn (never listed, changed, stale or old). */
   readonly toMount: readonly string[];
 }
 
-const EMPTY: TurnConnectors = { declarations: [], routes: new Map(), serverNames: [], active: new Map(), contextText: "", toMount: [] };
+const EMPTY: TurnConnectors = { declarations: [], routes: new Map(), serverNames: [], active: new Map(), resourceServers: [], contextText: "", toMount: [] };
 const bytesOf = (s: string) => new TextEncoder().encode(s).byteLength;
 
 export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<TurnConnectors> {
@@ -125,7 +127,8 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
     if (left > 0) lines.push(`- ${name}: ${left} tools didn't fit (at most ${CONNECTOR_TOOLS_MAX} across your servers)`);
   }
   declarations.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-  const activeNames = ready.map((r) => r.name).sort();
+  // Only servers that advertise resources are named for the resource tools (Jesús, 06/11; DeepSeek names them all).
+  const resourceNames = ready.filter((r) => r.state.hasResources).map((r) => r.name).sort();
   const sections: string[] = [];
   let instructionBytes = 0;
   for (const { name, state } of ready) {
@@ -139,12 +142,13 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
     sections.push(section);
   }
   const text = [
-    ...(activeNames.length > 0 ? [`Use list_mcp_resources, list_mcp_resource_templates, or read_mcp_resource with one of these names as the server argument: ${JSON.stringify(activeNames)}.`] : []),
+    ...(resourceNames.length > 0 ? [`Use list_mcp_resources, list_mcp_resource_templates, or read_mcp_resource with one of these names as the server argument: ${JSON.stringify(resourceNames)}.`] : []),
     ...sections,
     ...(lines.length > 0 ? ["MCP servers in ~/.len/mcp.json that you can't use yet:", ...lines] : []),
   ];
   return {
-    declarations: activeNames.length > 0 ? [...declarations, ...RESOURCE_TOOL_DECLARATIONS] : declarations,
+    declarations: resourceNames.length > 0 ? [...declarations, ...RESOURCE_TOOL_DECLARATIONS] : declarations,
+    resourceServers: resourceNames,
     routes,
     serverNames: names,
     active: new Map(ready.map((r) => [r.name, r.entry])),
@@ -220,7 +224,7 @@ export class TurnConnections {
 
   async resource(toolName: string, args: Record<string, unknown>, signal?: AbortSignal): Promise<ToolOutcome> {
     const server = typeof args.server === "string" ? args.server : "";
-    if (!this.turn.active.has(server)) return failure(`${server || "(no server)"} isn't one of your MCP servers: ${JSON.stringify([...this.turn.active.keys()].sort())}`);
+    if (!this.turn.resourceServers.includes(server)) return failure(`${server || "(no server)"} isn't one of your MCP servers with resources: ${JSON.stringify(this.turn.resourceServers)}`);
     const opened = await this.open(server, signal);
     if (typeof opened === "string") return failure(opened);
     const cursor = typeof args.cursor === "string" ? args.cursor : undefined;
