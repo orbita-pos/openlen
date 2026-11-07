@@ -8,6 +8,7 @@ import { AssistantHome } from "@/components/workspace-v2/assistant/assistant-hom
 import { redirect } from "@/i18n/navigation";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { slugFromParam } from "@/lib/assistants/names";
 import { assistantBySlug } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
 import { getProject } from "@/lib/projects";
@@ -21,7 +22,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   const { locale, name } = await params;
   const personId = (await auth())?.user?.id;
   if (!personId) return redirect({ href: "/login", locale });
-  const assistant = await assistantBySlug(personId, name);
+  const assistant = await assistantBySlug(personId, slugFromParam(name));
   if (!assistant) notFound();
   const project = await getProject(assistant.homeProjectId, personId);
   if (!project) notFound();
