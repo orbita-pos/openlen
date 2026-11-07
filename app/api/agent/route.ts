@@ -59,7 +59,7 @@ import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memor
 import { gitEnabled } from "@/lib/git/enabled";
 import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
-import { MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { MEMORY_INDEX_MAX, buildMemoryIndex } from "@/lib/agent/memory/note";
 import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { bundledSkills } from "@/lib/agent/skills/bundled";
@@ -1223,9 +1223,16 @@ async function correrTurno(
   // notas— como mensaje duradero, como DeepSeek: línea base la primera vez, y
   // después sólo lo que cambió desde lo que el modelo ya ve en el historial.
   // Así lo de delante sigue en caché.
-  // The person's own assistant doesn't read Len's notes on the project (spec local 2026-11-06-asistente-propio, §6.1).
+  // The person's own assistant doesn't read Len's notes on the project (spec local 2026-11-06-asistente-propio, §6.1):
+  // its own memory is loaded instead, the same durable way.
   const memoryIndex = asistente ? null : buildMemoryIndex(notasDeMemoria, MEMORY_INDEX_MAX) || null;
-  const memoriaDelTurno = asistente ? null : memoryMessageForTurn(
+  const memoriaDelTurno = asistente
+    ? memoryMessageForTurn(
+        [{ path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory }],
+        historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
+        PROJECT_MEMORY_MAX,
+      )
+    : memoryMessageForTurn(
     [
       { path: PROJECT_LEN_MD, label: "project instructions, shared with everyone who edits this project", text: project.userBrief },
       { path: MEMORY_INDEX, label: "your notes on this project — Read a note when it is relevant", text: memoryIndex },
@@ -1507,7 +1514,12 @@ async function correrTurno(
             },
           )
         : []),
-      ...memoriaSembrada({ personal: userMemory, project: asistente ? null : (project.userBrief ?? null), index: memoryIndex }),
+      ...memoriaSembrada({
+        personal: userMemory,
+        project: asistente ? null : (project.userBrief ?? null),
+        index: memoryIndex,
+        ...(asistente ? { assistant: asistente.memory } : {}),
+      }),
     ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
     // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.

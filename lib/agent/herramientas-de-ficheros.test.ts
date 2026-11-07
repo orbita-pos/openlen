@@ -745,6 +745,69 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     assert.equal(estado.brief, "Taquería.");
   });
 
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §6.1): its memory is a file, like LEN.md, and
+  // the one thing its read-only session may write.
+  function depsConAsistente(memory = "") {
+    const { deps } = depsConLenMd({ brief: "Pastelería." });
+    const estado = { memory: { a1: memory } as Record<string, string> };
+    (deps as unknown as Record<string, unknown>).assistantMemory = {
+      async read(id: string) {
+        return estado.memory[id] ?? null;
+      },
+      async save(id: string, text: string) {
+        estado.memory[id] = text;
+        return true;
+      },
+    };
+    return { deps, estado };
+  }
+  /** As the route opens it: its memory is in its context, so it counts as read (like LEN.md). */
+  const sesionDelAsistente = (memory = "") => ({
+    ...makeSession(),
+    readOnly: true as const,
+    assistant: { id: "a1", name: "Lucía" },
+    leidos: memoriaSembrada({ personal: null, project: null, index: null, assistant: memory }),
+  });
+
+  it("🔴 the assistant writes its memory even though its session is read-only", async () => {
+    const { deps, estado } = depsConAsistente();
+    const out = await runAgentTool(sesionDelAsistente(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "Jueves: pasteles sin gluten." });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.memory.a1, "Jueves: pasteles sin gluten.");
+    assert.equal(out.mutoDurable, true);
+  });
+
+  it("🔴 but nothing else: /index.html and /LEN.md stay refused", async () => {
+    const { deps } = depsConAsistente();
+    const s = sesionDelAsistente();
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "/index.html", content: "x" })), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "x" })), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  });
+
+  it("the assistant reads and edits its memory", async () => {
+    const { deps, estado } = depsConAsistente("Jueves: pasteles sin gluten.");
+    const s = sesionDelAsistente("Jueves: pasteles sin gluten.");
+    assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "~/.assistant/MEMORY.md" })), /sin gluten/);
+    const out = await runAgentTool(s, deps, "Edit", { file_path: "~/.assistant/MEMORY.md", old_string: "Jueves", new_string: "Viernes" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.memory.a1, "Viernes: pasteles sin gluten.");
+  });
+
+  it("🔴 credentials never go in the assistant's memory", async () => {
+    const { deps, estado } = depsConAsistente("Hola.");
+    const out = await runAgentTool(sesionDelAsistente("Hola."), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "La clave es sk-proj-abcdefghijklmnopqrstuv123" });
+    assert.equal(out.response.ok, false);
+    assert.equal(estado.memory.a1, "Hola.");
+  });
+
+  it("Len has no such file", async () => {
+    const { deps, estado } = depsConAsistente("Jueves: pasteles sin gluten.");
+    assert.equal((await runAgentTool(makeSession(), deps, "Read", { file_path: "~/.assistant/MEMORY.md" })).response.ok, false);
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "x" });
+    assert.equal(out.response.ok, false);
+    assert.equal(estado.memory.a1, "Jueves: pasteles sin gluten.");
+  });
+
   it("una nota nueva con Write, y aparece en MEMORY.md", async () => {
     const { deps, estado } = depsConLenMd();
     const s = makeSession();

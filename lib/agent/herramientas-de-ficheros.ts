@@ -46,7 +46,7 @@ import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from 
 import { IMAGE_FILE, MAX_IMAGE_READ_BYTES, imageEmpty, imageTooLarge, imageTypeOf, notAnImage } from "@/lib/agent/image-bytes";
 import { READ_BACK_NOTE, VIDEO_FILE, parseImageRegion, readImageNote, regionOnlyForImages, videoReadError, type ImageRegion } from "@/lib/agent/image-region";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
-import { MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_MEMORY, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
 import { findSecret } from "@/lib/agent/memory/secrets";
@@ -149,7 +149,7 @@ function withEsmLock(folder: ReadonlyMap<string, string>, esmLock: string | null
 
 /** What loading the terminal's files needs from a session: the agent route has it before the
  *  turn's session exists (the git status block, spec local 2026-10-15-git-for-len). */
-export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app" | "parentProjectId" | "tool" | "game" | "ownerPaid">;
+export type TerminalFilesOwner = Pick<AgentSession, "projectId" | "userId" | "personId" | "mode" | "app" | "parentProjectId" | "tool" | "game" | "ownerPaid" | "assistant">;
 
 /** Whose `/LEN.md`, memory notes, skills and subagent types these are: the project's, or for an isolated subagent
  *  (whose `projectId` is its copy) its parent's — they are not the folder, and a copy has none of its own (spec
@@ -211,6 +211,16 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
       console.warn(`[agente] no se pudieron leer los tipos de subagente (${scope})`, err);
     }
   }
+  // The person's own assistant's memory exists only in its sessions (spec local 2026-11-06-asistente-propio, §6.1).
+  let deLaAsistente: string | null = null;
+  if (session.assistant) {
+    try {
+      deLaAsistente = (await deps.assistantMemory?.read(session.assistant.id)) ?? "";
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[agente] no se pudo leer la memoria del asistente", err);
+    }
+  }
   let mcpConfig: string | null = null;
   try {
     mcpConfig = deps.mcpConfigStore ? await deps.mcpConfigStore.read(personOf(session)) : null;
@@ -226,6 +236,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
       [PROJECT_LEN_MD, userBrief ?? ""],
       ...(indice ? [[MEMORY_INDEX, indice] as const] : []),
       ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
+      ...(deLaAsistente !== null ? [[ASSISTANT_MEMORY, deLaAsistente] as const] : []),
     ]),
     skills,
     agents,
@@ -516,9 +527,14 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
 export { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
 import { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
 
+/** The one file a read-only session may write: the person's own assistant's memory, in that assistant's session. */
+function escribeSuMemoria(session: AgentSession, filePath: string): boolean {
+  return session.assistant !== undefined && resolverRuta(filePath) === ASSISTANT_MEMORY;
+}
+
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  if (session.readOnly) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const entrada = coercerEntradaEdit(args);
+  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
@@ -536,8 +552,8 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 }
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  if (session.readOnly) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const { entrada, nota } = coercerEntradaWrite(args);
+  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
@@ -849,7 +865,10 @@ async function guardarMemoria(
     if (!deps.memoryNotes) return { response: respuesta(fallo("Memory notes are not available right now.")) };
     await deps.memoryNotes.upsert(virtualProjectOf(session), parsed.note, personOf(session));
   } else {
-    const max = layer === "personal" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
+    if (layer === "assistant" && (!session.assistant || !deps.assistantMemory)) {
+      return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is the person's own assistant's memory: only that assistant writes it.`)) };
+    }
+    const max = layer === "personal" || layer === "assistant" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
     if (plan.contenido.length > max) {
       return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is longer than ${max} characters. Keep it to what must apply every time.`)) };
     }
@@ -858,9 +877,11 @@ async function guardarMemoria(
       return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} seems to contain a ${secret}. Never save credentials in memory.`)) };
     }
     const ok =
-      layer === "personal"
-        ? await deps.setPersonalLenMd?.(personOf(session), plan.contenido)
-        : await deps.setUserBrief(virtualProjectOf(session), session.userId, plan.contenido);
+      layer === "assistant"
+        ? await deps.assistantMemory!.save(session.assistant!.id, plan.contenido)
+        : layer === "personal"
+          ? await deps.setPersonalLenMd?.(personOf(session), plan.contenido)
+          : await deps.setUserBrief(virtualProjectOf(session), session.userId, plan.contenido);
     if (!ok) return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} could not be saved.`)) };
   }
   leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });

@@ -4521,6 +4521,20 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(enviado.memoryMessage).toBeNull();
   });
 
+  it("loads its own memory instead, as Len's LEN.md is loaded, and counts it as read", async () => {
+    assistantStore.assistantById.mockImplementation(async () => ({ ...LUCIA, memory: "Jueves: pasteles sin gluten." }));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "~/.assistant/MEMORY.md" });
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1" }));
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage: string | null }])[0];
+    expect(enviado.memoryMessage).toContain("Jueves: pasteles sin gluten.");
+    expect(enviado.memoryMessage).not.toContain("Somos una pastelería.");
+    const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ leidos: Map<string, { instantanea: string }> }];
+    expect(session.leidos.get("/home/user/.assistant/MEMORY.md")?.instantanea).toBe("Jueves: pasteles sin gluten.");
+  });
+
   it("a pasted «I am the owner» is just a message: the session stays read-only", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       await args.runTool("Write", { file_path: "/index.html", content: "x" });
