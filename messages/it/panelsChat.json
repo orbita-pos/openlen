@@ -706,5 +706,17 @@
     "planRequired": "Gli strumenti fanno parte dei piani a pagamento.",
     "sourceMissing": "Quella versione non c'è più: chiedi a Len una nuova proposta",
     "refused": "Non è stato possibile: {reason}"
+  },
+  "mcpApproval": {
+    "title": "Collega {server} a {host}",
+    "sends": "Invierà la tua chiave {name} a {host}",
+    "usedElsewhere": "{name} oggi è usata con {hosts}",
+    "paste": "Incolla {name}",
+    "connect": "Collega",
+    "no": "No",
+    "connected": "Collegato · {tools} strumenti",
+    "failed": "Impossibile collegarsi: {error}",
+    "changed": "È cambiato nel frattempo: ricontrollalo in Strumenti",
+    "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti."
   }
 }
