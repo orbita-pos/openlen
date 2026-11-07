@@ -21,6 +21,7 @@ import { parseBareSpecifier } from "@/lib/apps/npm/specifier";
 import { formatVitestReport } from "@/lib/apps/tests/report";
 import { typesPackagesOf } from "@/lib/apps/checker/types-pack";
 import type { TerminalDeLen } from "./terminal";
+import { READ_ONLY_REFUSAL } from "./read-only-commands";
 
 type AppTools = NonNullable<ConstructorParameters<typeof TerminalDeLen>[0]["appTools"]>;
 
@@ -77,7 +78,7 @@ function typesOfInstalled(files: Readonly<Record<string, string>>, catalogName: 
 }
 
 export function appToolsFor(
-  session: Pick<AgentSession, "app" | "projectId" | "autor" | "nodeModulesView">,
+  session: Pick<AgentSession, "app" | "projectId" | "autor" | "nodeModulesView" | "readOnly">,
   deps: Pick<AgentDeps, "checkApp" | "buildApp" | "testApp" | "entornoDeLaApp" | "projectFiles" | "installPackages" | "saveProjectFile">,
 ): AppTools | undefined {
   const app = session.app;
@@ -101,6 +102,9 @@ export function appToolsFor(
       // terminal no escribe /.openlen); el /package.json nuevo vuelve en `files`
       // y lo guarda el comando, por la puerta de siempre.
       if (program === "npm-install" || program === "npm-uninstall" || program === "npm-ls") {
+        // A read-only session (Explore, Plan, the person's own assistant): the lock would be saved here, past the
+        // terminal's read-only revert, and /package.json would come back without it.
+        if (session.readOnly && program !== "npm-ls") return { stdout: "", stderr: `${READ_ONLY_REFUSAL}\n`, exitCode: 1 };
         if (!deps.installPackages) return { stdout: "", stderr: "npm: not available here.\n", exitCode: 1 };
         if (program === "npm-ls") return { stdout: listPackages(ficheros, app), stderr: "", exitCode: 0 };
         const names = args.filter((a) => !a.startsWith("-"));

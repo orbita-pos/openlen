@@ -36,11 +36,23 @@ describe("readOnlyRefusal", () => {
     expect(readOnlyRefusal("stripe", ["--live", "products", "list"])).toBeNull();
   });
 
-  it("help and version always read", () => {
+  it("help and version read only as the command itself, never as a value somewhere in it", () => {
     for (const program of ["git", "gh", "supabase", "stripe"] as const) {
       expect(readOnlyRefusal(program, ["--version"])).toBeNull();
-      expect(readOnlyRefusal(program, ["commit", "--help"])).toBeNull();
+      expect(readOnlyRefusal(program, ["--help"])).toBeNull();
     }
+    // OpenLen's own parsers take these as values: a real commit, a pull request, a repository.
+    expect(readOnlyRefusal("git", ["commit", "-am", "--help"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("git", ["commit", "-m", "-h"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("gh", ["pr", "create", "--title", "--help", "--body", "b"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("gh", ["repo", "create", "acme/x", "--private", "-h", "https://y"])).toBe(READ_ONLY_REFUSAL);
+  });
+
+  it("a flag's value never stands in for the subcommand", () => {
+    expect(readOnlyRefusal("stripe", ["customers", "--expand", "list", "create"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("git", ["config", "user.name", "x", "--list"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("gh", ["--repo", "pr", "view", "create"])).toBe(READ_ONLY_REFUSAL);
+    expect(readOnlyRefusal("supabase", ["--workdir", "db", "query", "--linked", "x"])).toBe(READ_ONLY_REFUSAL);
   });
 });
 
