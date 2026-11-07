@@ -84,9 +84,10 @@ export function ConnectorsSection() {
     const rows = form.rows.filter((r) => r.name.trim() !== "");
     const headers = Object.fromEntries(rows.filter((r) => !r.secret).map((r) => [r.name.trim(), r.value]));
     const secretHeaders = Object.fromEntries(rows.filter((r) => r.secret).map((r) => [r.name.trim(), r.value]));
+    // Editing adds headers over the stored ones (the page never had their values, so it can't send them back).
     const payload =
       form.mode === "add" || rows.length > 0
-        ? { url: form.url, headers, ...(Object.keys(secretHeaders).length > 0 ? { secretHeaders } : {}), version: view.version }
+        ? { url: form.url, headers, ...(Object.keys(secretHeaders).length > 0 ? { secretHeaders } : {}), ...(form.mode === "edit" ? { mergeHeaders: true } : {}), version: view.version }
         : { url: form.url, version: view.version };
     const { res, body } = await send(`/api/mcp-connectors/${encodeURIComponent(form.name.trim())}`, "PUT", payload);
     if (!res.ok) return setError(String(body.error ?? res.status));

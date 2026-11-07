@@ -32,6 +32,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ name: st
       ...(b.headers ? { headers: b.headers as Record<string, string> } : {}),
       ...(b.secretHeaders ? { secretHeaders: b.secretHeaders as Record<string, string> } : {}),
       ...(typeof b.enabled === "boolean" ? { enabled: b.enabled } : {}),
+      ...(b.mergeHeaders === true ? { mergeHeaders: true } : {}),
     },
     realManageDeps(),
   );
