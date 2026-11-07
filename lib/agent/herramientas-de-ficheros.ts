@@ -56,6 +56,8 @@ import { bundledSkillNames, bundledSkills } from "@/lib/agent/skills/bundled";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { parseAgentFile } from "@/lib/agent/subagents/agent-file";
 import { BUILT_IN_AGENT_TYPES, ONLY_AGENT_MD, OPENLEN_AGENT_TYPES, agentPath, agentPathOf, isUnderAgentsDir } from "@/lib/agent/subagents/agent-paths";
+import { EMPTY_MCP_CONFIG } from "@/lib/mcp-connectors/config";
+import { MCP_CONFIG_PATH } from "@/lib/mcp-connectors/len-file";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
@@ -128,6 +130,9 @@ interface Virtuales {
   /** Subagent types (spec local 2026-11-01-subagentes-de-len, §6): the project's `/.len/agents/<name>.md` and the
    *  speaker's `~/.len/agents/<name>.md`, like the skills. */
   readonly agents: ReadonlyMap<string, string>;
+  /** LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.1): the speaker's `~/.len/mcp.json`, or null when
+   *  the connectors are off or it couldn't be read. Always there otherwise (empty `servers` until written). */
+  readonly mcpConfig: string | null;
   /** Ruta → contenido, sólo las que `lib/agent/ficheros/folder.ts` acepta. */
   readonly folder: ReadonlyMap<string, string>;
   /** NPM ABIERTO (spec 2026-10-13): el lock de esm.sh, que vive en /.openlen
@@ -205,7 +210,15 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
       console.warn(`[agente] no se pudieron leer los tipos de subagente (${scope})`, err);
     }
   }
+  let mcpConfig: string | null = null;
+  try {
+    mcpConfig = deps.mcpConfigStore ? await deps.mcpConfigStore.read(personOf(session)) : null;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[agente] no se pudo leer ~/.len/mcp.json", err);
+  }
   return {
+    mcpConfig,
     artifacts: new Map(Object.entries(await deps.artifacts?.files() ?? {})),
     memoria: new Map([
       [PERSONAL_LEN_MD, dueno],
@@ -220,7 +233,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
   };
 }
 
-const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), skills: new Map(), agents: new Map(), folder: new Map(), esmLock: null };
+const SIN_VIRTUALES: Virtuales = { artifacts: new Map(), memoria: new Map(), skills: new Map(), agents: new Map(), mcpConfig: null, folder: new Map(), esmLock: null };
 
 /** Todas las páginas y la memoria del sitio, en un solo texto. */
 function textoDelSitio(data: ProjectData, v: Virtuales): string {
@@ -243,6 +256,7 @@ function sitioDe(data: ProjectData, session: AgentSession, v: Virtuales = SIN_VI
       if (skill !== undefined) return skill;
       const agent = v.agents.get(ruta);
       if (agent !== undefined) return agent;
+      if (ruta === MCP_CONFIG_PATH && v.mcpConfig !== null) return v.mcpConfig;
       const fichero = v.folder.get(ruta);
       if (fichero !== undefined) return fichero;
       const html = leerFichero(data, ruta);
@@ -585,6 +599,7 @@ async function aplicarPlan(
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   if (isUnderSkillsDir(plan.ruta)) return await guardarSkill(session, deps, v.skills, plan, herramienta, detalle);
   if (isUnderAgentsDir(plan.ruta)) return await guardarAgent(session, deps, v.agents, plan, herramienta, detalle);
+  if (plan.ruta === MCP_CONFIG_PATH && deps.mcpConfigStore) return await guardarMcpConfig(session, deps, plan, herramienta, detalle);
   if (memoryLayerOf(plan.ruta) !== null) {
     return await guardarMemoria(session, deps, v.memoria, plan, herramienta, detalle);
   }
@@ -897,6 +912,32 @@ async function guardarSkill(
   };
 }
 
+/**
+ * ~/.len/mcp.json IS SAVED (spec local 2026-11-06-conectores-mcp, §5.1, §5.3): validated as DeepSeek validates a settings
+ * write, as the speaker's, and every server whose url or headers are new waits for the person's tap on a card OpenLen
+ * draws. Len reads which ones wait; nothing connects from here.
+ */
+async function guardarMcpConfig(
+  session: AgentSession,
+  deps: AgentDeps,
+  plan: Extract<PlanDeEdit, { ok: true }>,
+  herramienta: "Edit" | "Write" | "bash",
+  detalle: string,
+): Promise<ToolOutcome> {
+  const saved = await deps.mcpConfigStore!.save(personOf(session), plan.contenido);
+  if (!saved.ok) return { response: respuesta(fallo(saved.error)) };
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
+  session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
+  const cambio = normalizarFinales(saved.before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
+  const texto = plan.respuesta({ guardadoIgual: true }) + (saved.note ? ` ${saved.note}` : "");
+  return {
+    response: respuesta({ ok: true, texto }, { cambio }),
+    action: { tool: herramienta, ok: true, summary: detalle, cambio },
+    ...(cambio === "cambio" ? { mutoDurable: true } : {}),
+    ...(saved.pending[0] ? { mcpApproval: saved.pending[0] } : {}),
+  };
+}
+
 /** Subagent types per scope, as many as skills. */
 export const MAX_AGENTS_PER_SCOPE = 100;
 
@@ -964,6 +1005,7 @@ export async function cargarFicherosDeLaTerminal(session: TerminalFilesOwner, de
   for (const [ruta, texto] of v.memoria) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.skills) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.agents) ficheros[ruta] = texto;
+  if (v.mcpConfig !== null) ficheros[MCP_CONFIG_PATH] = v.mcpConfig;
   for (const [ruta, texto] of v.folder) ficheros[ruta] = texto;
   for (const [ruta, texto] of v.artifacts) ficheros[ruta] = texto;
   // En Len Dynamis, el que no nombra Read, Edit ni Write (`lib/agent/dynamis.ts`).
@@ -1064,6 +1106,22 @@ export async function guardarLoDeLaTerminal(
         await deps.agentStore.remove(agentAt.scope, agentAt.scope === "project" ? virtualProjectOf(session) : personOf(session), agentAt.name);
         enLaTerminal[c.ruta] = null;
         notas.push(`${rutaRelativa(c.ruta)}: removed.`);
+        escrituras.push({
+          response: { ok: true, cambio: "cambio" },
+          action: { tool: "bash", ok: true, summary: `rm ${rutaRelativa(c.ruta)}`, cambio: "cambio" },
+          mutoDurable: true,
+        });
+        continue;
+      }
+      // ~/.len/mcp.json (spec local 2026-11-06-conectores-mcp): like ~/.len/LEN.md, `rm` empties it.
+      if (c.ruta === MCP_CONFIG_PATH && deps.mcpConfigStore) {
+        const saved = await deps.mcpConfigStore.save(personOf(session), EMPTY_MCP_CONFIG);
+        if (!saved.ok) {
+          deshacer(c.ruta, saved.error);
+          continue;
+        }
+        enLaTerminal[c.ruta] = EMPTY_MCP_CONFIG;
+        notas.push(`${rutaRelativa(c.ruta)}: emptied (it has no servers now).`);
         escrituras.push({
           response: { ok: true, cambio: "cambio" },
           action: { tool: "bash", ok: true, summary: `rm ${rutaRelativa(c.ruta)}`, cambio: "cambio" },

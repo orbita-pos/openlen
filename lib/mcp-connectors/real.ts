@@ -4,10 +4,11 @@
 import "server-only";
 
 import { openMcp } from "./client";
-import { resolveCredentials } from "./credentials";
+import { credentialNames, resolveCredentials } from "./credentials";
 import { createGuardedFetch } from "./fetch";
+import type { LenFileDeps } from "./len-file";
 import { mountServer, type MountDeps } from "./mount";
-import { markStale, readMcpConfig, readServerStates, saveServerState } from "./store";
+import { markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
 import type { CallDeps, TurnDeps } from "./turn";
 
 /** What OpenLen reads of one MCP answer before it stops: generous (a list of tools, an SSE stream), never unbounded. */
@@ -33,6 +34,23 @@ export function realMountDeps(): MountDeps {
     open: openMcp,
     fetch: guardedFetch,
     now: () => new Date(),
+  };
+}
+
+/** The server names the person's installed tools use for their operations: taken in the one `mcp__` namespace. */
+async function installedServerNames(personId: string): Promise<ReadonlySet<string>> {
+  const { listInstallations, readReleaseMcp } = await import("@/lib/tools/store");
+  const rows = (await listInstallations(personId)).filter((r) => r.enabled && !r.removedAt);
+  const mcp = await Promise.all(rows.map((r) => readReleaseMcp(r.releaseSha).catch(() => null)));
+  return new Set(mcp.filter((m): m is NonNullable<typeof m> => m !== null).map((m) => m.serverName));
+}
+
+export function realLenFileDeps(): LenFileDeps {
+  return {
+    read: readMcpConfig,
+    write: writeMcpConfig,
+    installedServerNames,
+    credentialNames: async (p) => (await credentialNames(p)).map((c) => c.name),
   };
 }
 

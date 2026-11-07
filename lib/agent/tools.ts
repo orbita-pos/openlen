@@ -394,6 +394,12 @@ export interface AgentDeps {
     call(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
     resource(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
   };
+  /** The speaker's ~/.len/mcp.json (spec local 2026-11-06-conectores-mcp, §5.1): read as text, saved through
+   *  `saveLenMcpConfig` (validation, approvals, the card). Absent with the connectors off. */
+  mcpConfigStore?: {
+    read(personId: string): Promise<string>;
+    save(personId: string, text: string): Promise<import("@/lib/mcp-connectors/len-file").LenFileSaved>;
+  };
   /** What `propose_action` writes and reads (lib/tools/cards/propose.ts); present only when the card is offered. */
   toolCards?: import("@/lib/tools/cards/propose").ProposeDeps;
   skillStore?: {
@@ -946,6 +952,17 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         return deleteAgent(scope, ownerId, name);
       },
     },
+    // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.1): ~/.len/mcp.json, readable even with them off.
+    mcpConfigStore: {
+      async read(personId) {
+        const { readMcpConfig } = await import("@/lib/mcp-connectors/store");
+        return (await readMcpConfig(personId)).text;
+      },
+      async save(personId, text) {
+        const [{ saveLenMcpConfig }, { realLenFileDeps }] = await Promise.all([import("@/lib/mcp-connectors/len-file"), import("@/lib/mcp-connectors/real")]);
+        return saveLenMcpConfig(personId, text, realLenFileDeps());
+      },
+    },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
     // base y del chat, server-only.
     resultados: {
@@ -1352,6 +1369,9 @@ export interface ToolOutcome {
   /** A «Crear» card `propose_action` accepted: the chat draws it under this answer (spec local
    *  2026-11-04-herramientas-hechas-por-len, §4.10). */
   toolCard?: import("@/lib/tools/cards/types").ToolCardView;
+  /** A server Len added or changed in ~/.len/mcp.json waits for the person (spec local 2026-11-06-conectores-mcp, §5.3):
+   *  the chat draws OpenLen's «Conectar» card under this answer. The response is the save's own. */
+  mcpApproval?: import("@/lib/mcp-connectors/approval").McpApprovalCard;
   /** Ends the run after this step, with no further model call (a child's `structured_output`, DeepSeek's
    *  activation output). */
   final?: true;

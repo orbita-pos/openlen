@@ -1078,6 +1078,78 @@ describe("subagent types as files (spec local 2026-11-01-subagentes-de-len, §6)
   });
 });
 
+// LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.1, §5.3): ~/.len/mcp.json is the speaker's file; a
+// new or changed server is saved but waits for the person's tap on a card OpenLen draws.
+describe("~/.len/mcp.json as a file (spec local 2026-11-06-conectores-mcp)", () => {
+  const NOTION = { transport: "streamable-http", url: "https://mcp.notion.example.com/mcp", headers: { Authorization: "Bearer ${credential:NOTION_TOKEN}" } };
+  const FILE = `${JSON.stringify({ servers: { notion: NOTION } }, null, 2)}\n`;
+
+  async function depsConMcp(initial = "") {
+    const { saveLenMcpConfig } = await import("@/lib/mcp-connectors/len-file");
+    const { EMPTY_MCP_CONFIG } = await import("@/lib/mcp-connectors/config");
+    const base = makeDepsCompletos({ html: HOME });
+    const rows = new Map<string, { text: string; approved: Record<string, string>; version: number }>();
+    const of = (p: string) => rows.get(p) ?? { text: initial || EMPTY_MCP_CONFIG, approved: {}, version: 0 };
+    const fileDeps = {
+      read: async (p: string) => of(p),
+      write: async (p: string, text: string, expected: number, approve: Record<string, string>, present: readonly string[]) => {
+        const row = of(p);
+        if (row.version !== expected) return { ok: false as const, reason: "conflict" as const };
+        const keep = new Set(present);
+        rows.set(p, { text, approved: Object.fromEntries(Object.entries({ ...row.approved, ...approve }).filter(([k]) => keep.has(k))), version: expected + 1 });
+        return { ok: true as const, version: expected + 1 };
+      },
+      installedServerNames: async () => new Set<string>(),
+      credentialNames: async () => [],
+    };
+    const deps = {
+      ...base.deps,
+      mcpConfigStore: { read: async (p: string) => (await fileDeps.read(p)).text, save: (p: string, text: string) => saveLenMcpConfig(p, text, fileDeps) },
+    } as unknown as AgentDeps;
+    return { deps, rows };
+  }
+
+  it("Len writes a new server: saved, pending, card emitted", async () => {
+    const { deps, rows } = await depsConMcp();
+    const s = { ...makeSession(), userId: "dueno", personId: "editor" } as AgentSession;
+    await runAgentTool(s, deps, "Read", { file_path: "~/.len/mcp.json" });
+    const out = await runAgentTool(s, deps, "Write", { file_path: "~/.len/mcp.json", content: FILE });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(rows.get("editor")?.text, FILE);
+    assert.equal(rows.has("dueno"), false);
+    assert.equal(out.mcpApproval?.server, "notion");
+    assert.equal(out.mcpApproval?.host, "mcp.notion.example.com");
+    assert.match(texto(out), /notion waits for the person's approval in a card/);
+  });
+
+  it("a key in clear is refused naming the header", async () => {
+    const { deps, rows } = await depsConMcp();
+    const bad = FILE.replace("Bearer ${credential:NOTION_TOKEN}", "Bearer ntn_abc");
+    const s = makeSession();
+    await runAgentTool(s, deps, "Read", { file_path: "~/.len/mcp.json" });
+    const out = await runAgentTool(s, deps, "Write", { file_path: "~/.len/mcp.json", content: bad });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /servers\.notion\.headers\.Authorization/);
+    assert.equal(rows.size, 0);
+  });
+
+  it("Read of ~/.len/mcp.json returns the stored text", async () => {
+    const { deps } = await depsConMcp(FILE);
+    const read = await runAgentTool(makeSession(), deps, "Read", { file_path: "~/.len/mcp.json" });
+    assert.match(texto(read), /mcp\.notion\.example\.com/);
+  });
+
+  it("rm empties it", async () => {
+    const { deps, rows } = await depsConMcp(FILE);
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    assert.equal(antes["/home/user/.len/mcp.json"], FILE);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/home/user/.len/mcp.json" }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.equal(rows.get(s.userId)?.text, `${JSON.stringify({ servers: {} }, null, 2)}\n`);
+  });
+});
+
 // LEN DYNAMIS (`lib/agent/dynamis.ts`): el /AGENTS.md que lee la terminal es el
 // de su modo. Con `cat /AGENTS.md` en un turno Dynamis, mandarle a usar Edit
 // sería mandarle a una herramienta que no tiene.
