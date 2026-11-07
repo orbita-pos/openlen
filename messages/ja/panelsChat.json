@@ -25,7 +25,8 @@
     "scheduled": "予定タスク「{title}」 · {when}",
     "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした",
     "fromSubagents": "サブエージェントの結果",
-    "toolCreation": "ツールを作成"
+    "toolCreation": "ツールを作成",
+    "fromAssistant": "{name} から"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",

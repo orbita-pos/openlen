@@ -25,7 +25,8 @@
     "scheduled": "Attività programmata «{title}» · {when}",
     "lenWatch": "Len Watch · il tuo sito pubblicato non si caricava",
     "fromSubagents": "Risultati dei subagenti",
-    "toolCreation": "Crea strumento"
+    "toolCreation": "Crea strumento",
+    "fromAssistant": "Da {name}"
   },
   "proceso": {
     "completadoEn": "Completato in <d>{duracion}</d>",

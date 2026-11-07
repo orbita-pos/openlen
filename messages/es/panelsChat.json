@@ -25,7 +25,8 @@
     "scheduled": "Tarea programada «{title}» · {when}",
     "lenWatch": "Len Watch · tu sitio publicado no cargaba",
     "fromSubagents": "Resultados de los subagentes",
-    "toolCreation": "Crear herramienta"
+    "toolCreation": "Crear herramienta",
+    "fromAssistant": "De {name}"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",

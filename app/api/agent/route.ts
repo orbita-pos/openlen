@@ -11,6 +11,7 @@ import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
+import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { assistantById, type AssistantRow } from "@/lib/assistants/store";
@@ -803,8 +804,9 @@ async function correrTurno(
     // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
     const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
     const todas = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
-    // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts).
-    return asistente ? assistantTools(todas) : todas;
+    // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
+    // what builds it passes to Len.
+    return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }] : todas;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();

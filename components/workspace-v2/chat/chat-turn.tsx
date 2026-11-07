@@ -11,8 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert, Wrench } from "lucide-react";
-import { isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, MessageCircleHeart, ShieldAlert, Wrench } from "lucide-react";
+import { isAssistantRequestOrigin, isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -206,6 +206,13 @@ export function UserMessage({
             <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-tool-creation-turn="">
               <Wrench size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.toolCreation")}</span>
+            </div>
+          ) : turn.origen && isAssistantRequestOrigin(turn.origen) ? (
+            // «LUCÍA, DILE A LEN…» (spec local 2026-11-06-asistente-propio, §4.2): the owner's words, passed on by their
+            // own assistant with `ask_len`.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-assistant-request-turn="">
+              <MessageCircleHeart size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.fromAssistant", { name: turn.origen.assistantName })}</span>
             </div>
           ) : turn.origen && (
             <button

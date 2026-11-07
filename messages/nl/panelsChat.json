@@ -25,7 +25,8 @@
     "scheduled": "Geplande taak «{title}» · {when}",
     "lenWatch": "Len Watch · je gepubliceerde site laadde niet",
     "fromSubagents": "Resultaten van de subagents",
-    "toolCreation": "Tool maken"
+    "toolCreation": "Tool maken",
+    "fromAssistant": "Van {name}"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",

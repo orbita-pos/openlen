@@ -25,7 +25,8 @@
     "scheduled": "Scheduled task «{title}» · {when}",
     "lenWatch": "Len Watch · your published site wasn't loading",
     "fromSubagents": "Results from the subagents",
-    "toolCreation": "Create tool"
+    "toolCreation": "Create tool",
+    "fromAssistant": "From {name}"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
