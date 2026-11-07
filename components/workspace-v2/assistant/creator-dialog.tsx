@@ -13,7 +13,9 @@ import { AssistantFigure } from "./figure";
 
 export const ASSISTANT_COLORS = ["#F4A48B", "#5FB8A6", "#A99BE0", "#F2C35B", "#7DB3F0"] as const;
 
-type Failure = "name" | "nameTaken" | "projectHas" | "generic";
+type Failure = "name" | "nameTaken" | "projectHas" | "ownerOnly" | "generic";
+
+const FAILURE_OF_CODE: Readonly<Record<string, Failure>> = { name_taken: "nameTaken", project_has_assistant: "projectHas", solo_dueno: "ownerOnly" };
 
 export function AssistantCreatorDialog({
   open,
@@ -48,7 +50,7 @@ export function AssistantCreatorDialog({
         onCreated({ id: body.id, slug: body.slug, name: name.trim().replace(/\s+/g, " ") });
         return;
       }
-      setFailure(body.field === "name" ? "name" : body.error === "name_taken" ? "nameTaken" : body.error === "project_has_assistant" ? "projectHas" : "generic");
+      setFailure(body.field === "name" ? "name" : (body.error && FAILURE_OF_CODE[body.error]) || "generic");
     } catch {
       setFailure("generic");
     } finally {

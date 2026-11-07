@@ -747,6 +747,7 @@
       "name": "Geef hem een naam met letters of cijfers.",
       "nameTaken": "Je hebt al een assistent met die naam.",
       "projectHas": "Dit project heeft al een assistent.",
+      "ownerOnly": "Alleen de eigenaar van het project kan de assistent ervan maken.",
       "generic": "Hij kon niet worden gemaakt. Probeer het opnieuw."
     },
     "place": {

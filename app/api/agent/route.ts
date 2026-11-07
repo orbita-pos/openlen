@@ -13,6 +13,7 @@ import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
+import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { assistantById, readyAssistantNotices, removeAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
@@ -806,7 +807,10 @@ async function correrTurno(
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
     // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
     const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
-    const todas = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
+    const conMcp = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
+    // Only the owner creates the project's assistant (POST /api/assistants, 403 solo_dueno): a member's turn isn't
+    // offered the tool at all, as Claude Code leaves a denied tool out of the list.
+    const todas = miembro ? conMcp.filter((d) => d.name !== CREATE_ASSISTANT) : conMcp;
     // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
     // what builds it passes to Len.
     return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }] : todas;
