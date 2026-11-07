@@ -24,7 +24,7 @@ export function operationToolName(serverName: string, name: string): string {
   return `mcp__${serverName}__${name}`;
 }
 
-function hasRef(v: unknown): boolean {
+export function hasRef(v: unknown): boolean {
   if (Array.isArray(v)) return v.some(hasRef);
   if (!v || typeof v !== "object") return false;
   return Object.entries(v as Record<string, unknown>).some(([k, x]) => k === "$ref" || hasRef(x));
@@ -32,7 +32,7 @@ function hasRef(v: unknown): boolean {
 
 /** The first structural problem of a JSON Schema node the provider would choke on, or null: `type` a name or a list of
  *  names, `properties` an object of schemas, `required` a list of names, `items` a schema — all the way down. */
-function structureProblem(node: unknown, depth = 0): string | null {
+export function structureProblem(node: unknown, depth = 0): string | null {
   if (depth > 32) return "is nested too deep";
   if (!node || typeof node !== "object" || Array.isArray(node)) return "has a part that isn't a schema object";
   const n = node as Record<string, unknown>;

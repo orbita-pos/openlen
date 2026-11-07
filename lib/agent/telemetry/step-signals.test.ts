@@ -30,6 +30,12 @@ describe("an installed tool's operation (phase 4)", () => {
 });
 
 describe("summarizeBatch", () => {
+  it("a connector's step stores no argument text (spec local 2026-11-06-conectores-mcp §5.8)", () => {
+    const [s] = summarizeBatch([{ name: "mcp__notion__search", args: { query: "salaries of Ana", token: "ntn_secret" } }], [{ name: "mcp__notion__search", response: { content: [] } }]);
+    expect(JSON.stringify(s)).not.toMatch(/salaries|ntn_secret/);
+    expect(s!.name).toBe("mcp__notion__search");
+  });
+
   it("argument key order does not change argsHash", () => {
     const [a] = summarizeBatch([{ name: "Read", args: { file_path: "/a", limit: 5 } }], [{ name: "Read", response: { ok: true } }]);
     const [b] = summarizeBatch([{ name: "Read", args: { limit: 5, file_path: "/a" } }], [{ name: "Read", response: { ok: true } }]);

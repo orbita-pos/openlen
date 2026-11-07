@@ -45,6 +45,7 @@ import { CATALOGO_ACTUAL } from "@/lib/apps/dependencias";
 import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/catalog";
 import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
+import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
 import { stripeEnabledIn } from "@/lib/stripe/enabled";
 import { emailEnabledIn } from "@/lib/project-email/enabled";
 import { shopifyEnabledIn } from "@/lib/shopify/enabled";
@@ -387,8 +388,16 @@ export function buildManualDeLaPlataforma(
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
   const withTool = tool && app ? manualOfTool(withArtifacts) : withArtifacts;
-  return terminalOnly(mode, env) ? paraSoloLaTerminal(withTool) : withTool;
+  const withMcp = connectorsEnabled(env) ? `${withTool}\n\n${MCP_CONNECTORS_MANUAL}` : withTool;
+  return terminalOnly(mode, env) ? paraSoloLaTerminal(withMcp) : withMcp;
 }
+
+/** LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): the person's MCP servers, as a file. */
+const MCP_CONNECTORS_MANUAL = `THE PERSON'S MCP SERVERS (~/.len/mcp.json)
+- ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
+- You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
+- A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.`;
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas

@@ -6,7 +6,7 @@
 // `egress-proxy.browser.test.ts`.
 import { describe, expect, it } from "vitest";
 
-import { allowEgressOrigin, decideEgress } from "./egress-proxy";
+import { allowEgressOrigin, decideEgress, decidePublicEgress } from "./egress-proxy";
 
 const dnsDe = (map: Record<string, { address: string; family: 4 | 6 }[]>) => async (host: string) => {
   const r = map[host];
@@ -72,5 +72,19 @@ describe("decideEgress — a dónde puede salir el Chromium del servidor", () =>
     expect(await decideEgress("127.0.0.1", 3000, nunca)).toEqual({ ok: false });
     soltar();
     expect(await decideEgress("127.0.0.1", 45678, nunca)).toEqual({ ok: false });
+  });
+
+  it("🔴 decidePublicEgress ignores the allowlist (Len's MCP connectors never reach a local origin)", async () => {
+    const nunca = async () => {
+      throw new Error("no debería resolver");
+    };
+    const soltar = allowEgressOrigin("127.0.0.1:45679");
+    try {
+      expect(await decideEgress("127.0.0.1", 45679, nunca)).toEqual({ ok: true, address: "127.0.0.1" });
+      expect(await decidePublicEgress("127.0.0.1", 45679, nunca)).toEqual({ ok: false });
+      expect(await decidePublicEgress("8.8.8.8", 443, nunca)).toEqual({ ok: true, address: "8.8.8.8" });
+    } finally {
+      soltar();
+    }
   });
 });

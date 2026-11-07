@@ -13,6 +13,7 @@ import { useState } from "react";
 import type { InstalledToolView } from "@/lib/tools/types";
 
 import { KIND_PARAM } from "../chat/nace-como";
+import { ConnectorsSection } from "./connectors-section";
 import { ToolIcon } from "./tool-icon";
 
 export const NEW_TOOL_HREF = `/new?${KIND_PARAM}=tool`;
@@ -144,6 +145,9 @@ export function ToolsView({
             })}
           </ul>
         )}
+
+        {/* «CONECTORES» (spec local 2026-11-06-conectores-mcp, §5.7): the person's MCP servers; hidden with OPENLEN_MCP=0. */}
+        <ConnectorsSection />
       </div>
     </section>
   );

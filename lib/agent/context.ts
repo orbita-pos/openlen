@@ -340,6 +340,9 @@ export function buildAgentContext(args: {
   /** SKILLS (spec local 2026-10-26-len-skills, §4.3): the speaker's own skills (`personalSkillsReminder`),
    *  never in the shared durable catalog. Absent/empty ⇒ byte-identical output. */
   personalSkills?: string | null;
+  /** LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): the speaker's servers — DeepSeek's resource
+   *  sentence, their instructions, what isn't connected. After the personal skills. Absent/empty ⇒ byte-identical output. */
+  connectors?: string | null;
   /** Lo que la ingestión registró como perdido (`data.degradations`).
    *  Ausente/vacío ⇒ salida byte-idéntica. */
   degradaciones?: readonly DegradacionConocida[];
@@ -430,7 +433,7 @@ export function buildAgentContext(args: {
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
 }
 
 
@@ -501,6 +504,8 @@ export interface BuildAgentMessagesArgs {
   /** SKILLS (spec local 2026-10-26-len-skills, §4.3): the speaker's own skills (`personalSkillsReminder`),
    *  never in the shared durable catalog. Absent/empty ⇒ byte-identical output. */
   personalSkills?: string | null;
+  /** Ver buildAgentContext.connectors. */
+  connectors?: string | null;
   /** Ver buildAgentContext.degradaciones. */
   degradaciones?: readonly DegradacionConocida[];
   /**
@@ -594,6 +599,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     gitStatus: args.gitStatus,
     artifactIndex: args.artifactIndex,
     personalSkills: args.personalSkills,
+    connectors: args.connectors,
     degradaciones: args.degradaciones,
     attachedImages: args.attachedImages,
     seleccion: args.seleccion,

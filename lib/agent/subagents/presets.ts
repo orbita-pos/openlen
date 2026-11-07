@@ -91,7 +91,9 @@ export function omitsLenMd(preset: SubagentPreset): boolean {
 }
 
 /** An installed tool's operation (`mcp__<server>__<operation>`, spec local 2026-11-04-herramientas-hechas-por-len, §4.7):
- *  it writes the person's production, so only the main turn has it — never a child, read-only or not. */
+ *  it writes the person's production, so only the main turn has it — never a child, read-only or not. The same holds
+ *  for the person's MCP connectors (spec local 2026-11-06-conectores-mcp, §5.6), which share the prefix and can write
+ *  outside OpenLen: a read-only child (Explore, Plan) must stay read-only. */
 function isToolOperation(name: string): boolean {
   return name.startsWith("mcp__");
 }

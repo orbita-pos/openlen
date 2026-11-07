@@ -706,5 +706,18 @@
     "planRequired": "Les outils font partie des offres payantes.",
     "sourceMissing": "Cette version n'existe plus : demandez à Len une nouvelle proposition",
     "refused": "Impossible : {reason}"
+  },
+  "mcpApproval": {
+    "title": "Connecter {server} à {host}",
+    "sends": "Votre clé {name} sera envoyée à {host}",
+    "usedElsewhere": "{name} est utilisée aujourd'hui avec {hosts}",
+    "paste": "Collez {name}",
+    "connect": "Connecter",
+    "no": "Non",
+    "connected": "Connecté · {tools} outils",
+    "failed": "Connexion impossible : {error}",
+    "changed": "Cela a changé entre-temps : revoyez-le dans Outils",
+    "dismissed": "Non connecté. Vous pourrez l'approuver plus tard dans Outils.",
+    "firstTime": "Votre clé {name} n'a jamais été envoyée à {host} : n'approuvez que si vous faites confiance à ce serveur"
   }
 }

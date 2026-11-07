@@ -387,6 +387,19 @@ export interface AgentDeps {
   /** The speaker's installed tools' operations (`mcp__<server>__<operation>`, lib/tools/mcp/operations.ts, spec local
    *  2026-11-04-herramientas-hechas-por-len §4.7); present only on a turn that declared some. */
   toolOperations?: { call(name: string, args: Record<string, unknown>): Promise<ToolOutcome> };
+  /** The speaker's MCP connectors (spec local 2026-11-06-conectores-mcp, §5.5): their tools (`routes`, the same
+   *  `mcp__` namespace as the operations above) and DeepSeek's three resource tools; present only when declared. */
+  connectors?: {
+    readonly routes: ReadonlyMap<string, unknown>;
+    call(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
+    resource(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
+  };
+  /** The speaker's ~/.len/mcp.json (spec local 2026-11-06-conectores-mcp, §5.1): read as text, saved through
+   *  `saveLenMcpConfig` (validation, approvals, the card). Absent with the connectors off. */
+  mcpConfigStore?: {
+    read(personId: string): Promise<string>;
+    save(personId: string, text: string): Promise<import("@/lib/mcp-connectors/len-file").LenFileSaved>;
+  };
   /** What `propose_action` writes and reads (lib/tools/cards/propose.ts); present only when the card is offered. */
   toolCards?: import("@/lib/tools/cards/propose").ProposeDeps;
   skillStore?: {
@@ -939,6 +952,17 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         return deleteAgent(scope, ownerId, name);
       },
     },
+    // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.1): ~/.len/mcp.json, readable even with them off.
+    mcpConfigStore: {
+      async read(personId) {
+        const { readMcpConfig } = await import("@/lib/mcp-connectors/store");
+        return (await readMcpConfig(personId)).text;
+      },
+      async save(personId, text) {
+        const [{ saveLenMcpConfig }, { realLenFileDeps }] = await Promise.all([import("@/lib/mcp-connectors/len-file"), import("@/lib/mcp-connectors/real")]);
+        return saveLenMcpConfig(personId, text, realLenFileDeps());
+      },
+    },
     // Len sabe de tus resultados. Import perezoso: las consultas tiran de la
     // base y del chat, server-only.
     resultados: {
@@ -1345,6 +1369,9 @@ export interface ToolOutcome {
   /** A «Crear» card `propose_action` accepted: the chat draws it under this answer (spec local
    *  2026-11-04-herramientas-hechas-por-len, §4.10). */
   toolCard?: import("@/lib/tools/cards/types").ToolCardView;
+  /** A server Len added or changed in ~/.len/mcp.json waits for the person (spec local 2026-11-06-conectores-mcp, §5.3):
+   *  the chat draws OpenLen's «Conectar» card under this answer. The response is the save's own. */
+  mcpApproval?: import("@/lib/mcp-connectors/approval").McpApprovalCard;
   /** Ends the run after this step, with no further model call (a child's `structured_output`, DeepSeek's
    *  activation output). */
   final?: true;
@@ -3073,8 +3100,15 @@ async function ejecutarHerramienta(
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
-  // An installed tool's operation (phase 4): MCP's result, or an error result saying why it isn't available.
+  // A connector's resource tool (DeepSeek's dsh-mcp-resources, spec local 2026-11-06-conectores-mcp §5.5).
+  if (name === "list_mcp_resources" || name === "list_mcp_resource_templates" || name === "read_mcp_resource") {
+    return deps.connectors
+      ? await deps.connectors.resource(name, args)
+      : { response: { isError: true, content: [{ type: "text", text: "You have no MCP servers in this turn." }] } };
+  }
+  // A connector's tool, or an installed tool's operation (phase 4): MCP's result, or an error result saying why not.
   if (name.startsWith("mcp__")) {
+    if (deps.connectors?.routes.has(name)) return await deps.connectors.call(name, args);
     return deps.toolOperations
       ? await deps.toolOperations.call(name, args)
       : { response: { isError: true, content: [{ type: "text", text: "This operation isn't available in this turn." }] } };
