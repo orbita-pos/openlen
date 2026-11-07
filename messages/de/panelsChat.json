@@ -717,6 +717,7 @@
     "connected": "Verbunden · {tools} Werkzeuge",
     "failed": "Verbindung fehlgeschlagen: {error}",
     "changed": "Es hat sich inzwischen geändert: sieh es dir unter Tools noch einmal an",
-    "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben."
+    "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben.",
+    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust"
   }
 }

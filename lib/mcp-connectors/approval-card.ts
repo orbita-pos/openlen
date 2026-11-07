@@ -5,7 +5,8 @@ export interface McpApprovalCard {
   readonly server: string;
   readonly host: string;
   readonly headerNames: readonly string[];
-  readonly credentials: readonly { readonly name: string; readonly set: boolean; readonly otherHosts: readonly string[] }[];
+  /** `otherHosts`: where the key goes today. `firstTime`: a stored key no approved entry sends to this host yet. */
+  readonly credentials: readonly { readonly name: string; readonly set: boolean; readonly otherHosts: readonly string[]; readonly firstTime: boolean }[];
   readonly fingerprint: string;
   /** The config version the card was drawn from: the tap approves only if the file is still there. */
   readonly version: number;
@@ -21,7 +22,7 @@ export function mcpApprovalFrom(raw: unknown): McpApprovalCard | null {
   if (!strs(c.headerNames) || !Array.isArray(c.credentials)) return null;
   const credentials = c.credentials.flatMap((k) => {
     const x = (k ?? {}) as Record<string, unknown>;
-    return str(x.name) && typeof x.set === "boolean" && strs(x.otherHosts) ? [{ name: x.name, set: x.set, otherHosts: x.otherHosts }] : [];
+    return str(x.name) && typeof x.set === "boolean" && strs(x.otherHosts) ? [{ name: x.name, set: x.set, otherHosts: x.otherHosts, firstTime: x.firstTime === true }] : [];
   });
   return { server: c.server, host: c.host, headerNames: c.headerNames, credentials, fingerprint: c.fingerprint, version: c.version };
 }

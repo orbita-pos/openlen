@@ -717,6 +717,7 @@
     "connected": "Collegato · {tools} strumenti",
     "failed": "Impossibile collegarsi: {error}",
     "changed": "È cambiato nel frattempo: ricontrollalo in Strumenti",
-    "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti."
+    "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti.",
+    "firstTime": "La tua chiave {name} non è mai stata inviata a {host}: approva solo se ti fidi di quel server"
   }
 }

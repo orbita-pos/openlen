@@ -717,6 +717,7 @@
     "connected": "Conectado · {tools} ferramentas",
     "failed": "Não foi possível conectar: {error}",
     "changed": "Mudou nesse meio-tempo: veja de novo em Ferramentas",
-    "dismissed": "Não conectado. Você pode aprovar depois em Ferramentas."
+    "dismissed": "Não conectado. Você pode aprovar depois em Ferramentas.",
+    "firstTime": "Sua chave {name} nunca foi enviada para {host}: aprove só se confiar nesse servidor"
   }
 }
