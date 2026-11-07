@@ -21,6 +21,7 @@ import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { AgentErrorCode } from "@/lib/agent/loop";
+import { ASSISTANT_CONVERSATION_PREFIX, isAssistantConversation } from "@/lib/assistants/conversation";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -53,30 +54,34 @@ export { ESTADO_EN_CURSO };
  *  `before` (its id); the chat asks for the earlier ones when it reaches the top. */
 export async function getChatMessages(
   projectId: string,
-  page: { before?: string; limit?: number } = {},
+  page: { before?: string; limit?: number; charla?: string | null } = {},
 ): Promise<StoredChatTurn[]> {
   const t = schema.projectChatMessages;
+  const charla = page.charla ?? null;
   // El cursor es la FILA, como el `uuid` de cada mensaje de Claude Code: su hora
   // y, a igual hora, su id. Una hora del navegador (milisegundos) no distingue
   // filas que la base guarda con microsegundos. Una fila que no es de esta
   // charla no trae nada (la comparación con NULL no es cierta).
   const antesDe = page.before
-    ? sql`(${t.createdAt}, ${t.id}) < (select c."createdAt", c."id" from "projectChatMessages" c where c."id" = ${page.before} and c."projectId" = ${projectId} and c."conversation" is null)`
+    ? sql`(${t.createdAt}, ${t.id}) < (select c."createdAt", c."id" from "projectChatMessages" c where c."id" = ${page.before} and c."projectId" = ${projectId} and c."conversation" is not distinct from ${charla})`
     : undefined;
   const [rows, estado] = await Promise.all([
     db
       .select(columnasDelPanel())
       .from(t)
-      .where(and(enCurso(projectId), antesDe))
+      .where(and(enCurso(projectId, charla), antesDe))
       // Las MÁS RECIENTES (antes la poda dejaba 50 y daba igual por dónde se
       // empezara); se ponen de la más vieja a la más reciente abajo.
       .orderBy(desc(t.createdAt), desc(t.id))
       .limit(page.limit ?? CHAT_LIMIT)
       .then((filas) => filas.reverse()),
-    // El modo plan y el encargo van en el último turno: una página de antes no lo trae.
-    page.before ? Promise.resolve({ planMode: false, goal: null }) : conversationStateOf(projectId),
+    // El modo plan y el encargo van en el último turno: una página de antes no lo trae. Son de Len: la charla
+    // del asistente no los tiene.
+    page.before || charla !== null ? Promise.resolve({ planMode: false, goal: null }) : conversationStateOf(projectId),
   ]);
-  const turns = await conDeshacibles(projectId, await conAutores(projectId, rows));
+  // Lo que se deshace es lo que cambió un turno de Len; el asistente no cambia nada.
+  const conAutor = await conAutores(projectId, rows);
+  const turns = charla === null ? await conDeshacibles(projectId, conAutor) : conAutor;
   // Piezas 7 y 8: la foto va en el último turno cerrado, que es donde la busca
   // el chat (`lastPlanMode`, el encargo).
   if (estado.planMode || estado.goal) {
@@ -247,28 +252,28 @@ export async function quitarEncargo(projectId: string, userId: string): Promise<
  *  que sigue trabajando no lo es: otra pestaña leería su texto a medias como lo
  *  que Len contestó) y no un mensaje entre personas (lib/projects/chat-equipo.ts:
  *  si los miembros se fueron, siguen en la base y no deben volver a Len). */
-function turnoDeLaHistoria(projectId: string) {
-  return and(enCurso(projectId), ne(schema.projectChatMessages.status, ESTADO_EN_CURSO), isNull(schema.projectChatMessages.tipo));
+function turnoDeLaHistoria(projectId: string, charla: string | null = null) {
+  return and(enCurso(projectId, charla), ne(schema.projectChatMessages.status, ESTADO_EN_CURSO), isNull(schema.projectChatMessages.tipo));
 }
 
 /** A11 · desde cuándo cuenta el historial: la fila de la ÚLTIMA marca de resumen
  *  (el `compact_boundary` de Claude Code), o `null` = desde el principio. */
-async function desdeLaUltimaMarca(projectId: string): Promise<Date | null> {
+async function desdeLaUltimaMarca(projectId: string, charla: string | null = null): Promise<Date | null> {
   const [fila] = await db
     .select({ at: schema.projectChatMessages.createdAt })
     .from(schema.projectChatMessages)
-    .where(and(turnoDeLaHistoria(projectId), isNotNull(schema.projectChatMessages.compaction)))
+    .where(and(turnoDeLaHistoria(projectId, charla), isNotNull(schema.projectChatMessages.compaction)))
     .orderBy(desc(schema.projectChatMessages.createdAt))
     .limit(1);
   return fila?.at ?? null;
 }
 
 /** The last finished turn of the current conversation, for Len's time context (lib/agent/time-context.ts). */
-export async function lastTurnOfTheConversation(projectId: string): Promise<{ createdAt: Date; durationMs: number | null } | null> {
+export async function lastTurnOfTheConversation(projectId: string, charla: string | null = null): Promise<{ createdAt: Date; durationMs: number | null } | null> {
   const [fila] = await db
     .select({ createdAt: schema.projectChatMessages.createdAt, durationMs: schema.projectChatMessages.durationMs })
     .from(schema.projectChatMessages)
-    .where(turnoDeLaHistoria(projectId))
+    .where(turnoDeLaHistoria(projectId, charla))
     .orderBy(desc(schema.projectChatMessages.createdAt))
     .limit(1);
   return fila ?? null;
@@ -281,8 +286,8 @@ export async function lastTurnOfTheConversation(projectId: string): Promise<{ cr
  * la base y lo escribió el servidor: nada de aquí lo pone el navegador.
  * Ownership, como arriba, del llamador.
  */
-export async function turnosParaElHistorial(projectId: string): Promise<FilaDelHistorial[]> {
-  const desde = await desdeLaUltimaMarca(projectId);
+export async function turnosParaElHistorial(projectId: string, charla: string | null = null): Promise<FilaDelHistorial[]> {
+  const desde = await desdeLaUltimaMarca(projectId, charla);
   const rows = await db
     .select({
       userText: schema.projectChatMessages.userText,
@@ -297,7 +302,7 @@ export async function turnosParaElHistorial(projectId: string): Promise<FilaDelH
       status: schema.projectChatMessages.status,
     })
     .from(schema.projectChatMessages)
-    .where(and(turnoDeLaHistoria(projectId), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
+    .where(and(turnoDeLaHistoria(projectId, charla), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
     .orderBy(asc(schema.projectChatMessages.createdAt));
   return rows.map((r) => ({
     userText: r.userText,
@@ -321,14 +326,14 @@ function cutOffOf(status: string): { cutOff?: true } {
  * del historial si hace falta. Ni de un turno en curso ni de uno DESHECHO: su
  * trabajo ya no está, y su lista tampoco vale.
  */
-export async function latestTodoListForChat(projectId: string): Promise<TodoItem[] | null> {
+export async function latestTodoListForChat(projectId: string, charla: string | null = null): Promise<TodoItem[] | null> {
   const t = schema.projectChatMessages;
   const rows = await db
     .select({ actions: t.actions })
     .from(t)
     .where(
       and(
-        enCurso(projectId),
+        enCurso(projectId, charla),
         ne(t.status, ESTADO_EN_CURSO),
         ne(t.status, "reverted"),
         isNull(t.tipo),
@@ -351,7 +356,7 @@ export interface FilaCruda {
 
 /** Como `turnosParaElHistorial`, con las filas de persona incluidas (el chat del
  *  equipo): desde la última marca de resumen, de la más vieja a la más reciente. */
-export async function filasParaElHistorialConEquipo(projectId: string): Promise<FilaCruda[]> {
+export async function filasParaElHistorialConEquipo(projectId: string, charla: string | null = null): Promise<FilaCruda[]> {
   const t = schema.projectChatMessages;
   const columnas = {
     tipo: t.tipo,
@@ -369,18 +374,18 @@ export async function filasParaElHistorialConEquipo(projectId: string): Promise<
   // Los turnos de Len, como siempre (`turnosParaElHistorial`): los mensajes del
   // equipo NO cuentan para la marca —si contaran, una charla larga entre
   // personas le quitaría a Len su historial, su modo plan y su encargo—.
-  const desdeLaMarca = await desdeLaUltimaMarca(projectId);
+  const desdeLaMarca = await desdeLaUltimaMarca(projectId, charla);
   const turnos = await db
     .select(columnas)
     .from(t)
-    .where(and(turnoDeLaHistoria(projectId), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
+    .where(and(turnoDeLaHistoria(projectId, charla), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
     .orderBy(asc(t.createdAt));
   // Y aparte, los mensajes del equipo desde la marca (los de antes ya van
   // resumidos; sin marca, los de toda la charla), con el tope del sobre.
   const personas = await db
     .select(columnas)
     .from(t)
-    .where(and(enCurso(projectId), eq(t.tipo, "persona"), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
+    .where(and(enCurso(projectId, charla), eq(t.tipo, "persona"), desdeLaMarca ? gte(t.createdAt, desdeLaMarca) : undefined))
     .orderBy(desc(t.createdAt))
     .limit(MAX_MENSAJES_DEL_EQUIPO);
   return [...turnos, ...personas]
@@ -632,12 +637,15 @@ export async function abrirFilaDelTurno(
     /** Pedido con `@Len` desde un hilo del código: de dónde (el chat lo enseña). */
     readonly origen?: TurnOrigin | null;
   },
+  /** La charla de la fila: NULL, la de Len; `assistant:<id>`, la del asistente propio. */
+  charla: string | null = null,
 ): Promise<void> {
   await db
     .insert(schema.projectChatMessages)
     .values({
       id: turn.id,
       projectId,
+      conversation: charla,
       userText: turn.userText.slice(0, 4000),
       attachedImage: turn.attachedImage ?? null,
       attachedFiles: turn.attachedFiles?.length ? [...turn.attachedFiles] : null,
@@ -818,9 +826,11 @@ function enteroONulo(n: number | null | undefined): number | null {
   return typeof n === "number" && Number.isFinite(n) && n >= 0 ? Math.round(n) : null;
 }
 
-/** Las filas de la charla EN CURSO del proyecto: `conversation` NULL. */
-function enCurso(projectId: string) {
-  return and(eq(schema.projectChatMessages.projectId, projectId), isNull(schema.projectChatMessages.conversation));
+/** Las filas de la charla EN CURSO del proyecto: `conversation` NULL. Con `charla`, las de esa otra charla: la del
+ *  asistente propio del dueño (`assistant:<id>`, spec local 2026-11-06-asistente-propio), que Len nunca lee. */
+function enCurso(projectId: string, charla: string | null = null) {
+  const c = schema.projectChatMessages.conversation;
+  return and(eq(schema.projectChatMessages.projectId, projectId), charla === null ? isNull(c) : eq(c, charla));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -868,6 +878,8 @@ export async function startNewConversation(projectId: string): Promise<Conversat
 
 /** Volver a una charla archivada: la pone en curso y archiva la que hubiera. */
 export async function reopenConversation(projectId: string, conversation: string): Promise<ConversationChange> {
+  // La charla del asistente propio no es una charla archivada de Len: nunca pasa a ser la suya.
+  if (isAssistantConversation(conversation)) return { ok: false, reason: "not_found" };
   if (await hayTurnoEnCurso(projectId)) return { ok: false, reason: "busy" };
   // A11 · la que pasó los 30 días ya no está (como en Claude Code), antes de
   // archivar la de ahora por ella.
@@ -919,7 +931,8 @@ export async function listArchivedConversations(projectId: string): Promise<Arch
       endedAt: sql<string>`max(${t.createdAt})`,
     })
     .from(t)
-    .where(and(eq(t.projectId, projectId), sql`${t.conversation} IS NOT NULL`))
+    // Ni la del asistente propio: es suya, no una charla de Len.
+    .where(and(eq(t.projectId, projectId), sql`${t.conversation} IS NOT NULL`, sql`${t.conversation} NOT LIKE ${`${ASSISTANT_CONVERSATION_PREFIX}%`}`))
     .groupBy(t.conversation)
     .having(sql`max(${t.createdAt}) >= ${corte}`)
     .orderBy(sql`max(${t.createdAt}) DESC`);
