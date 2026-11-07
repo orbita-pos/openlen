@@ -71,6 +71,11 @@ describe("operationsFor", () => {
     const names = (await operationsFor("u1", d)).declarations.map((x) => x.name);
     expect(names).toEqual(["mcp__empleados__add_employee", "mcp__empleados__list_employees", "mcp__empleados_2__other"]);
   });
+
+  it("a tool named like a connector becomes _2 (one namespace, spec local 2026-11-06-conectores-mcp §5.6)", async () => {
+    const names = (await operationsFor("u1", deps(), new Set(["empleados"]))).declarations.map((x) => x.name);
+    expect(names).toEqual(["mcp__calc__add", "mcp__empleados_2__add_employee", "mcp__empleados_2__list_employees"]);
+  });
 });
 
 describe("callOperation", () => {

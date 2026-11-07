@@ -65,12 +65,15 @@ const active = (r: InstallationLike) => r.enabled && !r.removedAt;
 export async function operationsFor(
   personId: string,
   d: OperationsDeps,
+  /** Server names the person's MCP connectors already use (spec local 2026-11-06-conectores-mcp, §5.6): one namespace,
+   *  so a tool with one of them starts at `_2`. */
+  takenServers: ReadonlySet<string> = new Set(),
 ): Promise<{ declarations: Record<string, unknown>[]; routes: Map<string, OperationRoute> }> {
   const routes = new Map<string, OperationRoute>();
   if (!d.functionsOn() || (await d.plan(personId)) === "free") return { declarations: [], routes };
   const rows = [...(await d.installations(personId))].filter(active).sort((a, b) => a.installedAt.getTime() - b.installedAt.getTime() || a.id.localeCompare(b.id));
   const declarations: Record<string, unknown>[] = [];
-  const servers = new Map<string, number>();
+  const servers = new Map<string, number>([...takenServers].map((name) => [name, 1]));
   // Oldest installs first, until the person's caps: the same installations always keep the same operations.
   let bytes = 2;
   for (const row of rows) {
