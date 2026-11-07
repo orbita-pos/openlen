@@ -432,6 +432,28 @@ describe("mcp__ operations", () => {
     const out = await runAgentTool(makeSession(), deps, "mcp__empleados__add_employee", {});
     assert.equal(out.response.isError, true);
   });
+
+  // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): one mcp__ namespace, two owners.
+  it("a connector call is routed to connectors, an operation to operations", async () => {
+    const { deps } = makeDeps();
+    const seen: string[] = [];
+    deps.toolOperations = { call: async (name) => (seen.push(`op:${name}`), { response: { content: [] } }) };
+    deps.connectors = {
+      routes: new Map([["mcp__notion__search", {}]]),
+      call: async (name) => (seen.push(`conn:${name}`), { response: { content: [] } }),
+      resource: async (name) => (seen.push(`res:${name}`), { response: { content: [] } }),
+    };
+    await runAgentTool(makeSession(), deps, "mcp__notion__search", {});
+    await runAgentTool(makeSession(), deps, "mcp__empleados__add_employee", {});
+    await runAgentTool(makeSession(), deps, "read_mcp_resource", { server: "notion", uri: "x://y" });
+    assert.deepEqual(seen, ["conn:mcp__notion__search", "op:mcp__empleados__add_employee", "res:read_mcp_resource"]);
+  });
+
+  it("a resource tool without connectors is an error result", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps, "list_mcp_resources", { server: "x" });
+    assert.equal(out.response.isError, true);
+  });
 });
 
 describe("toggle_module", () => {

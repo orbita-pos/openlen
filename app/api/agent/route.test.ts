@@ -234,6 +234,34 @@ vi.mock("@/lib/projects/nacer-como-app", () => ({ nacerComoApp: mocks.nacerComoA
 vi.mock("@/lib/projects/born-as-tool", () => ({ bornAsTool: mocks.bornAsTool }));
 vi.mock("@/lib/projects/born-as-game", () => ({ bornAsGame: mocks.bornAsGame }));
 vi.mock("@/lib/limits", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/limits")>()), getUserPlan: mocks.getUserPlan }));
+// LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp): one approved, listed server for whoever speaks.
+const connectorDeps = vi.hoisted(() => {
+  const entry = { transport: "streamable-http", url: "https://mcp.example.com/mcp", headers: {} };
+  const none = JSON.stringify({ servers: {} });
+  return {
+    entry,
+    none,
+    /** No servers unless a test says so: the other tests keep their tool lists byte for byte. */
+    readConfig: vi.fn(async (_personId: string): Promise<{ text: string; approved: Record<string, string>; version: number }> => ({ text: none, approved: {}, version: 0 })),
+  };
+});
+vi.mock("@/lib/mcp-connectors/real", async () => {
+  const { entryFingerprint, parseMcpConfig } = await import("@/lib/mcp-connectors/config");
+  const parsed = parseMcpConfig(JSON.stringify({ servers: { notion: connectorDeps.entry } }), { reservedServerNames: new Set() });
+  const fp = parsed.ok ? entryFingerprint(parsed.config.servers.notion!) : "";
+  return {
+    realTurnDeps: () => ({
+      readConfig: async (p: string) => ({ ...(await connectorDeps.readConfig(p)), approved: { notion: fp } }),
+      readStates: async () => [
+        { serverName: "notion", fingerprint: fp, tools: [{ publicName: "mcp__notion__search", rawName: "search", description: "Search", inputSchema: { type: "object", properties: {} } }], instructions: "", hasResources: false, listedAt: new Date(0), status: "connected", error: null, stale: false },
+      ],
+      now: () => new Date(0),
+    }),
+    realCallDeps: () => ({ resolveCredentials: async () => new Map(), open: async () => { throw new Error("no network in tests"); }, fetch, markStale: async () => {}, modelTakesImages: true }),
+    realMountDeps: () => ({}),
+    mountInBackground: () => {},
+  };
+});
 // «Crear» cards (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): whether whoever speaks gets them.
 const suggestionsTo = vi.hoisted(() => vi.fn(async (_personId: string, _toolProject: boolean) => false));
 vi.mock("@/lib/tools/suggestions", async (orig) => ({ ...(await orig<typeof import("@/lib/tools/suggestions")>()), suggestionsOfferedTo: suggestionsTo }));
@@ -3457,6 +3485,39 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(args.personalSkills).toMatch(/- `de-ana`: /);
     expect(args.skillCatalogMessage).not.toMatch(/de-ana|del-dueno/);
     mocks.skillStore.list.mockImplementation(async () => []);
+  });
+
+  // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.6): the speaker's, never the owner's.
+  it("🔴 connectors are the speaker's", async () => {
+    connectorDeps.readConfig.mockImplementation(async () => ({ text: JSON.stringify({ servers: { notion: connectorDeps.entry } }), approved: {}, version: 1 }));
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    await readEvents(await pedir());
+    expect(connectorDeps.readConfig).toHaveBeenCalledWith("ana");
+    expect(connectorDeps.readConfig).not.toHaveBeenCalledWith("dueno-1");
+    const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ connectors?: string | null }])[0];
+    expect(args.connectors).toContain('["notion"]');
+    connectorDeps.readConfig.mockImplementation(async () => ({ text: connectorDeps.none, approved: {}, version: 0 }));
+  });
+
+  it("with OPENLEN_MCP=0 nothing is declared", async () => {
+    vi.stubEnv("OPENLEN_MCP", "0");
+    try {
+      mocks.runAgentLoop.mockResolvedValue({
+        finalText: "Hecho.", turns: 1, toolCalls: 0,
+        usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+        terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+      });
+      await readEvents(await pedir());
+      expect(connectorDeps.readConfig).not.toHaveBeenCalled();
+      const args = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ connectors?: string | null }])[0];
+      expect(args.connectors ?? null).toBeNull();
+    } finally {
+      vi.stubEnv("OPENLEN_MCP", "");
+    }
   });
 
   it("a member sees their own agent types, never the owner's", async () => {

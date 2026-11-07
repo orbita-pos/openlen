@@ -14,8 +14,8 @@ function server(opts: { resources?: boolean; instructions?: string } = {}) {
     const body = req.method === "POST" ? await req.clone().text() : "";
     for (const m of body.matchAll(/"method":"([^"]+)"/g)) methods.push(m[1]!);
     const mcp = new McpServer({ name: "fake", version: "1.2.3" }, { instructions: opts.instructions });
-    mcp.registerTool("search", { description: "Search", inputSchema: { q: z.string() } }, async ({ q }) => ({ content: [{ type: "text", text: `found ${q}` }] }));
-    mcp.registerTool("fail", { description: "Fails", inputSchema: {} }, async () => ({ isError: true, content: [{ type: "text", text: "nope" }] }));
+    mcp.registerTool("search", { description: "Search", inputSchema: { q: z.string() } }, async ({ q }) => ({ content: [{ type: "text" as const, text: `found ${q}` }] }));
+    mcp.registerTool("fail", { description: "Fails", inputSchema: {} }, async () => ({ isError: true, content: [{ type: "text" as const, text: "nope" }] }));
     if (opts.resources) {
       mcp.registerResource("menu", "menu://today", { mimeType: "text/plain" }, async () => ({ contents: [{ uri: "menu://today", text: "soup" }] }));
     }
