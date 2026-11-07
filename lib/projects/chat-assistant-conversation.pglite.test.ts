@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { abrirFilaDelTurno, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, listArchivedConversations, reopenConversation, startNewConversation, turnosParaElHistorial } =
+const { abrirFilaDelTurno, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, listArchivedConversations, registrarTurnoDelServidor, reopenConversation, startNewConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const KEY = "assistant:a1";
@@ -75,6 +75,13 @@ describe("the assistant's conversation, apart from Len's", () => {
     await abrirFilaDelTurno("p1", { id: "len2", userText: "cambia el título", page: null });
     const r = await pg.query<{ id: string; conversation: string | null }>(`select "id", "conversation" from "projectChatMessages" where "id" in ('luc3', 'len2') order by "id"`);
     expect(r.rows).toEqual([{ id: "len2", conversation: null }, { id: "luc3", conversation: KEY }]);
+  });
+
+  it("a closing row the server writes without an opened one lands in the conversation it is given", async () => {
+    await registrarTurnoDelServidor("p1", { id: "luc9", userText: "hola", assistantReasoning: "Hola.", status: "applied" }, KEY);
+    await registrarTurnoDelServidor("p1", { id: "len9", userText: "hola", assistantReasoning: "Hola.", status: "applied" });
+    const r = await pg.query<{ id: string; conversation: string | null }>(`select "id", "conversation" from "projectChatMessages" where "id" in ('luc9', 'len9') order by "id"`);
+    expect(r.rows).toEqual([{ id: "len9", conversation: null }, { id: "luc9", conversation: KEY }]);
   });
 
   it("the time context and the progress list read their own conversation", async () => {
