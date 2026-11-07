@@ -47,6 +47,20 @@ describe("the assistant's place", () => {
     expect(host.querySelector("[data-assistant-empty]")!.textContent).toContain('"name":"Lucía"');
   });
 
+  it("🔴 in a shared project, its composer still talks only to it: no team, no «@person» message into Len's chat", async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      String(url).endsWith("/miembros")
+        ? new Response(JSON.stringify({ rol: "dueno", yo: "u1", dueno: { userId: "u1", nombre: "Ana", email: "a@x" }, miembros: [{ userId: "u2", nombre: "Eli", email: "e@x", rol: "editor" }] }))
+        : new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    expect(fetchMock.mock.calls.some(([u]) => String(u).endsWith("/miembros"))).toBe(false);
+    const box = host.querySelector("textarea")!;
+    expect(box.getAttribute("placeholder")).toBe('ownAssistant.place.placeholder {"name":"Lucía"}');
+  });
+
   it("an answer says who answered: its name and figure, not Len's", () => {
     const turn = restoreTurn({ id: "r1", userText: "hola", assistantReasoning: "¡Hola! Soy Lucía.", status: "applied", appliedAt: 1 });
     const host = mount(

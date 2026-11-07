@@ -53,10 +53,14 @@ export function genteDesdeMiembros(r: {
 
 const NADIE: GenteDelChat = { gente: [], yo: null, puedeLen: true, compartido: false, esperando: false };
 
-export function useGenteDelChat(projectId: string): GenteDelChat {
+/** `off`: the person's own assistant's place (spec local 2026-11-06-asistente-propio) has no team — everything sent
+ *  there goes to the assistant, never as a team message into Len's chat. */
+export function useGenteDelChat(projectId: string, o: { readonly off?: boolean } = {}): GenteDelChat {
   const [gente, setGente] = useState<GenteDelChat>(NADIE);
   const [vuelta, setVuelta] = useState(0);
+  const off = o.off === true;
   useEffect(() => {
+    if (off) return;
     let vivo = true;
     void fetch(`/api/projects/${encodeURIComponent(projectId)}/miembros`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -67,7 +71,7 @@ export function useGenteDelChat(projectId: string): GenteDelChat {
     return () => {
       vivo = false;
     };
-  }, [projectId, vuelta]);
+  }, [projectId, vuelta, off]);
   useEffect(() => {
     const otraVez = () => setVuelta((n) => n + 1);
     window.addEventListener(MIEMBROS_CAMBIARON, otraVez);
@@ -78,5 +82,5 @@ export function useGenteDelChat(projectId: string): GenteDelChat {
     const reloj = window.setInterval(() => setVuelta((n) => n + 1), ESPERA_MS);
     return () => window.clearInterval(reloj);
   }, [gente.esperando]);
-  return gente;
+  return off ? NADIE : gente;
 }
