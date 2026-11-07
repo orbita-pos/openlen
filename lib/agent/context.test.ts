@@ -816,6 +816,15 @@ describe("assembleTurnMessages", () => {
     expect(r.contextBlock.endsWith("<system-reminder>\nMIAS\n</system-reminder>\n")).toBe(true);
   });
 
+  it("context carries the connectors block after personal skills (spec local 2026-11-06-conectores-mcp §5.5)", () => {
+    const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", personalSkills: "SKILLS\n", connectors: "<system-reminder>\nSERVERS\n</system-reminder>\n", maxPromptTokens: 60_000 });
+    if (!r.ok) throw new Error("no cupo");
+    expect(r.contextBlock.endsWith("SKILLS\n<system-reminder>\nSERVERS\n</system-reminder>\n")).toBe(true);
+    const without = buildAgentMessages({ state: {}, history: [], prompt: "hola", personalSkills: "SKILLS\n", maxPromptTokens: 60_000 });
+    if (!without.ok) throw new Error("no cupo");
+    expect(without.contextBlock.endsWith("SKILLS\n")).toBe(true);
+  });
+
   it("🔴 the next turn rebuilds the catalog in its place, byte for byte", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", memoryMessage: "MEMORIA", skillCatalogMessage: "CATALOGO", maxPromptTokens: 60_000 });
     if (!r.ok) throw new Error("no cupo");

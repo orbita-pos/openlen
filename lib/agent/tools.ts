@@ -387,6 +387,13 @@ export interface AgentDeps {
   /** The speaker's installed tools' operations (`mcp__<server>__<operation>`, lib/tools/mcp/operations.ts, spec local
    *  2026-11-04-herramientas-hechas-por-len §4.7); present only on a turn that declared some. */
   toolOperations?: { call(name: string, args: Record<string, unknown>): Promise<ToolOutcome> };
+  /** The speaker's MCP connectors (spec local 2026-11-06-conectores-mcp, §5.5): their tools (`routes`, the same
+   *  `mcp__` namespace as the operations above) and DeepSeek's three resource tools; present only when declared. */
+  connectors?: {
+    readonly routes: ReadonlyMap<string, unknown>;
+    call(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
+    resource(name: string, args: Record<string, unknown>): Promise<ToolOutcome>;
+  };
   /** What `propose_action` writes and reads (lib/tools/cards/propose.ts); present only when the card is offered. */
   toolCards?: import("@/lib/tools/cards/propose").ProposeDeps;
   skillStore?: {
@@ -3073,8 +3080,15 @@ async function ejecutarHerramienta(
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }
   if (name === NOMBRE_BASH) return await toolBash(session, deps, args);
-  // An installed tool's operation (phase 4): MCP's result, or an error result saying why it isn't available.
+  // A connector's resource tool (DeepSeek's dsh-mcp-resources, spec local 2026-11-06-conectores-mcp §5.5).
+  if (name === "list_mcp_resources" || name === "list_mcp_resource_templates" || name === "read_mcp_resource") {
+    return deps.connectors
+      ? await deps.connectors.resource(name, args)
+      : { response: { isError: true, content: [{ type: "text", text: "You have no MCP servers in this turn." }] } };
+  }
+  // A connector's tool, or an installed tool's operation (phase 4): MCP's result, or an error result saying why not.
   if (name.startsWith("mcp__")) {
+    if (deps.connectors?.routes.has(name)) return await deps.connectors.call(name, args);
     return deps.toolOperations
       ? await deps.toolOperations.call(name, args)
       : { response: { isError: true, content: [{ type: "text", text: "This operation isn't available in this turn." }] } };
