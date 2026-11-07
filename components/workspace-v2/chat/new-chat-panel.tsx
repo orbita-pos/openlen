@@ -64,6 +64,8 @@ import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 import { LenWatchBanner } from "../len-watch/len-watch-banner";
 import { EventCards } from "./event-cards";
 import { useToolCards } from "../tools/use-tool-cards";
+import type { AssistantView } from "@/lib/assistants/view";
+import { AssistantFigure } from "../assistant/figure";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -102,6 +104,9 @@ export interface NewChatPanelProps {
   centered?: boolean;
   /** Opens the Publish modal: Len Watch's Approve sends there when a publish gate needs a review. */
   onOpenPublish?: () => void;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.6): the panel is its place — its name and
+   *  figure instead of Len's, its conversation, and none of Len's project chrome (team, Len Watch, event cards). */
+  assistant?: AssistantView;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -175,6 +180,7 @@ function AgentChatView({
   onClose,
   soloLectura = false,
   onOpenPublish,
+  assistant,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -220,6 +226,7 @@ function AgentChatView({
     pendingDraftAutoSend,
     onPendingDraftConsumed,
     pendingAttachments,
+    ...(assistant ? { assistantId: assistant.id } : {}),
   });
   const { seguirTurnoDelHilo } = chat;
   // DROP, PASTE OR PICK (spec local 2026-10-27-chat-drop-and-images): every way in uploads the same way.
@@ -470,19 +477,30 @@ function AgentChatView({
   const body = (
     <div className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`} {...drop.handlers}>
       {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
-      <ChatHeader
-        layout={layout}
-        onLayout={setChatLayout}
-        conversations={conversations}
-        busy={chat.busy}
-        onClose={onClose}
-        closeLabel={tSidebar("sidebar.collapsePanel")}
-        relativeTime={relativeTime}
-        esApp={esApp}
-        noFloat={centered}
-        scheduled={scheduled}
-      />
-      {equipo.compartido && !plegado && (
+      {assistant ? (
+        // Its place: its figure and its name; no conversations, no scheduled clock, no floating (they are Len's).
+        <div className="flex h-14 shrink-0 items-center gap-2.5 border-b bd px-4" data-assistant-header="">
+          <AssistantFigure shape={assistant.shape} color={assistant.color} size={30} />
+          <div className="min-w-0">
+            <p className="truncate text-[14px] font-semibold fg">{assistant.name}</p>
+            <p className="truncate text-[11.5px] fg-faint">{t("ownAssistant.place.yours")}</p>
+          </div>
+        </div>
+      ) : (
+        <ChatHeader
+          layout={layout}
+          onLayout={setChatLayout}
+          conversations={conversations}
+          busy={chat.busy}
+          onClose={onClose}
+          closeLabel={tSidebar("sidebar.collapsePanel")}
+          relativeTime={relativeTime}
+          esApp={esApp}
+          noFloat={centered}
+          scheduled={scheduled}
+        />
+      )}
+      {equipo.compartido && !plegado && !assistant && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
           <GenteDelChat
             gente={equipo.gente}
@@ -497,10 +515,10 @@ function AgentChatView({
         </div>
       )}
       {/* Len Watch (spec local 2026-10-30-len-watch): the published site isn't loading. */}
-      {!plegado && <LenWatchBanner projectId={projectId} soloLectura={soloLectura} onOpenPublish={onOpenPublish} />}
+      {!plegado && !assistant && <LenWatchBanner projectId={projectId} soloLectura={soloLectura} onOpenPublish={onOpenPublish} />}
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa): what a task's judge decided the owner should hear.
           «Hazlo» starts its turn on the server; here it is painted running and followed, like a code thread's. */}
-      {!plegado && <EventCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
+      {!plegado && !assistant && <EventCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
       <div
@@ -510,7 +528,13 @@ function AgentChatView({
           if (e.currentTarget.scrollTop < 200) void chat.loadOlder();
         }}
         className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
-        {chat.turns.length === 0 ? (
+        {chat.turns.length === 0 && assistant ? (
+          // Len's suggestions are about building; its place starts with its figure and an invitation to write.
+          <div className="m-auto flex flex-col items-center gap-3 py-10 text-center" data-assistant-empty="">
+            <AssistantFigure shape={assistant.shape} color={assistant.color} size={72} />
+            <p className="text-[13.5px] fg-muted">{t("ownAssistant.place.placeholder", { name: assistant.name })}</p>
+          </div>
+        ) : chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
             sinSugerencias={soloLectura}
@@ -543,7 +567,7 @@ function AgentChatView({
                 }
                 vote={feedback.votes[turn.id]}
                 labels={replyLabels}
-                {...(soloLectura ? {} : { onUndo: chat.handleUndo })}
+                {...(soloLectura || assistant ? {} : { onUndo: chat.handleUndo })}
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onInstalled={chat.handleInstalled}
@@ -555,6 +579,7 @@ function AgentChatView({
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
                 {...(soloLectura ? {} : { onContinue: chat.continueWith })}
                 esApp={esApp}
+                {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure shape={assistant.shape} color={assistant.color} size={18} /> } } : {})}
               />
             </div>
             ),

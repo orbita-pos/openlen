@@ -9,7 +9,7 @@
 // publicar y de responder, y el cierre. Todo con las piezas y reglas de siempre.
 
 import { DeliveredFiles } from "./delivered-files";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, MessageCircleHeart, ShieldAlert, Wrench } from "lucide-react";
 import { isAssistantRequestOrigin, isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
@@ -294,7 +294,11 @@ export function LenTurn({
   esApp = false,
   goalRunsOn = false,
   onContinue,
+  speaker,
 }: {
+  /** Who answers when it isn't Len: the person's own assistant, its name and its figure (spec local
+   *  2026-11-06-asistente-propio). Absent = Len. */
+  speaker?: { readonly name: string; readonly face: ReactNode };
   turn: DesignTurn;
   /** El turno siguiente, si lo hay: su mensaje es la respuesta a una pregunta. */
   next: DesignTurn | undefined;
@@ -373,8 +377,8 @@ export function LenTurn({
     // `data-chat-row`: an event-task card's «Hecho» goes to the turn it started.
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast} data-chat-row={turn.id}>
       <div className="flex items-center gap-1.5 text-[12.5px]">
-        <LenFace size={18} className="shrink-0" />
-        <b className="font-semibold">Len</b>
+        {speaker ? <span className="shrink-0" data-reply-speaker="">{speaker.face}</span> : <LenFace size={18} className="shrink-0" />}
+        <b className="font-semibold">{speaker ? speaker.name : "Len"}</b>
         <span className="text-[11.5px] fg-faint">{when}</span>
         {!samePage && (
           <span className="ml-auto rounded-full border bd px-2 py-px text-[10.5px] fg-faint">
