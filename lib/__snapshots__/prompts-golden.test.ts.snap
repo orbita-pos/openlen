@@ -1477,6 +1477,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "create_assistant",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
     "name": "undo_last_change",
     "description": "Undoes YOUR last saved change to a page and keeps what the user edited by hand after it; if their edit touches the same thing as yours, it undoes nothing and tells you so. \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the page before editing it again.",
     "parameters": {
@@ -2943,6 +2951,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "create_assistant",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
+    }
+  },
+  {
     "name": "undo_last_change",
     "description": "Undoes your PREVIOUS turn whole: every file it changed goes back to how it was before it. If the user changed one of those files afterwards, it undoes nothing and tells you which, so their work is never lost; the database is not undone (a migration that was pushed stays: undoing it is a new migration). \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the files before editing them again.",
     "parameters": {
@@ -4395,6 +4411,14 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
           "description": "children (default) lists direct children, which accept send_message in any status. descendants lists the whole tree below you with each entry's parent session id and depth; entries deeper than 1 accept only interrupt_agent."
         }
       }
+    }
+  },
+  {
+    "name": "create_assistant",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {}
     }
   },
   {

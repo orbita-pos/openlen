@@ -22,6 +22,7 @@ import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FOR
 import { OUT_FOR_READ_ONLY } from "@/lib/agent/subagents/presets";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
+import { CREATE_ASSISTANT } from "./create-tool";
 import type { AssistantTone } from "./names";
 
 export const ASSISTANT_MEMORY_PATH = "~/.assistant/MEMORY.md";
@@ -41,6 +42,8 @@ const BUILDS: ReadonlySet<string> = new Set([
   ENTER_PLAN_MODE,
   EXIT_PLAN_MODE,
   PROPOSE_ACTION,
+  // An assistant doesn't make assistants: that card is Len's.
+  CREATE_ASSISTANT,
 ]);
 
 /** Not in phase 1, and not by choice: a subagent's settlement notice is kept per PROJECT and, once the launching turn

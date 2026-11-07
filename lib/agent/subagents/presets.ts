@@ -22,6 +22,7 @@ import { PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
+import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";
@@ -64,6 +65,8 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   LIST_AGENTS_TOOL,
   // A «Crear» card is the main conversation's (spec local 2026-11-04-herramientas-hechas-por-len, §4.10).
   PROPOSE_ACTION,
+  // So is the card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
+  CREATE_ASSISTANT,
 ]);
 
 /** The artifact tools that only read. */

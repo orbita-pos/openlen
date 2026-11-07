@@ -720,5 +720,39 @@
     "changed": "その間に変更されました。ツールでもう一度確認してください",
     "dismissed": "接続しません。あとでツールから承認できます。",
     "firstTime": "キー {name} はまだ {host} に送信されたことがありません。そのサーバーを信頼できる場合のみ承認してください"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "自分だけのアシスタントを作れます。名前と見た目を選んでください。",
+      "create": "アシスタントを作る",
+      "ready": "{name} の準備ができました",
+      "talk": "{name} と話す"
+    },
+    "creator": {
+      "title": "あなたのアシスタント",
+      "name": "名前",
+      "namePlaceholder": "Lucía",
+      "shape": "形",
+      "color": "色",
+      "tone": "話し方",
+      "done": "完了",
+      "cancel": "キャンセル"
+    },
+    "tones": {
+      "friendly": "親しみやすい",
+      "formal": "丁寧",
+      "playful": "楽しい"
+    },
+    "errors": {
+      "name": "文字か数字で名前をつけてください。",
+      "nameTaken": "その名前のアシスタントはすでにあります。",
+      "projectHas": "このプロジェクトにはすでにアシスタントがいます。",
+      "generic": "作成できませんでした。もう一度お試しください。"
+    },
+    "place": {
+      "yours": "あなたのアシスタント",
+      "inProject": "{project} 内",
+      "placeholder": "{name} にメッセージ…"
+    }
   }
 }

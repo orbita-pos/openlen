@@ -99,6 +99,8 @@ export default defineConfig({
       // El servidor MCP (plans/mcp-de-openlen).
       "lib/mcp/**/*.test.ts",
       "app/api/mcp/**/*.test.ts",
+      // The person's own assistant (spec local 2026-11-06-asistente-propio).
+      "app/api/assistants/**/*.test.ts",
       "app/api/oauth/**/*.test.ts",
       "components/mcp/**/*.test.tsx",
       "lib/agent/version-labels.test.ts",

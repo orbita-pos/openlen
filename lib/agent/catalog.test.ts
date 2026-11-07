@@ -163,6 +163,8 @@ describe("buildFunctionDeclarations", () => {
       "send_message",
       "interrupt_agent",
       "list_agents",
+      // The card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
+      "create_assistant",
       "undo_last_change",
       // F4 de las apps: convertir una página en app (sólo en una página).
       "convert_to_app",
@@ -180,6 +182,10 @@ describe("buildFunctionDeclarations", () => {
       // La terminal (F1), encendida por defecto (N45).
       "bash",
     ]);
+  });
+
+  it("create_assistant goes with OPENLEN_ASSISTANT=0", () => {
+    expect(buildFunctionDeclarations({ OPENLEN_ASSISTANT: "0" }).map((d) => d.name)).not.toContain("create_assistant");
   });
 
   it("LOS VISUALES: en una app también se declaran read_me y show_widget", () => {

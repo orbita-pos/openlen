@@ -720,5 +720,39 @@
     "changed": "Es hat sich inzwischen geändert: sieh es dir unter Tools noch einmal an",
     "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben.",
     "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Erstelle deinen eigenen Assistenten: Du wählst Namen und Aussehen.",
+      "create": "Meinen Assistenten erstellen",
+      "ready": "{name} ist bereit",
+      "talk": "Mit {name} sprechen"
+    },
+    "creator": {
+      "title": "Dein Assistent",
+      "name": "Name",
+      "namePlaceholder": "Lucía",
+      "shape": "Form",
+      "color": "Farbe",
+      "tone": "Wie er spricht",
+      "done": "Fertig",
+      "cancel": "Abbrechen"
+    },
+    "tones": {
+      "friendly": "Freundlich",
+      "formal": "Förmlich",
+      "playful": "Verspielt"
+    },
+    "errors": {
+      "name": "Gib ihm einen Namen mit Buchstaben oder Ziffern.",
+      "nameTaken": "Du hast schon einen Assistenten mit diesem Namen.",
+      "projectHas": "Dieses Projekt hat schon seinen Assistenten.",
+      "generic": "Er konnte nicht erstellt werden. Versuch es noch einmal."
+    },
+    "place": {
+      "yours": "Dein Assistent",
+      "inProject": "In {project}",
+      "placeholder": "Schreib {name}…"
+    }
   }
 }
