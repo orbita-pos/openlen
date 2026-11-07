@@ -46,8 +46,8 @@ describe("connectorsForTurn", () => {
 
   it("declarations are sorted and come from stored lists only", async () => {
     const { d } = setup({ zeta: entry("https://z.example.com/mcp"), alpha: entry("https://a.example.com/mcp") }, ["zeta", "alpha"], [
-      { serverName: "zeta", tools: [tool("zeta", "b"), tool("zeta", "a")] },
-      { serverName: "alpha", tools: [tool("alpha", "q")] },
+      { serverName: "zeta", tools: [tool("zeta", "b"), tool("zeta", "a")], hasResources: true },
+      { serverName: "alpha", tools: [tool("alpha", "q")], hasResources: true },
     ]);
     const t = await connectorsForTurn("p1", d);
     const names = t.declarations.map((x) => x.name);
@@ -56,6 +56,22 @@ describe("connectorsForTurn", () => {
     expect(t.routes.get("mcp__zeta__a")).toEqual({ server: "zeta", rawName: "a" });
     expect(t.contextText).toContain('Use list_mcp_resources, list_mcp_resource_templates, or read_mcp_resource with one of these names as the server argument: ["alpha","zeta"].');
     expect(t.serverNames).toEqual(["alpha", "zeta"]);
+  });
+
+  it("🔴 the resource sentence names only servers that have resources", async () => {
+    const { d } = setup({ docs: entry("https://d.example.com/mcp"), tools: entry("https://t.example.com/mcp") }, ["docs", "tools"], [
+      { serverName: "docs", tools: [tool("docs", "a")], hasResources: true },
+      { serverName: "tools", tools: [tool("tools", "b")], hasResources: false },
+    ]);
+    const t = await connectorsForTurn("p1", d);
+    expect(t.contextText).toContain('as the server argument: ["docs"].');
+  });
+
+  it("🔴 with no server that has resources, no resource tools and no sentence", async () => {
+    const { d } = setup({ tools: entry("https://t.example.com/mcp") }, ["tools"], [{ serverName: "tools", tools: [tool("tools", "b")], hasResources: false }]);
+    const t = await connectorsForTurn("p1", d);
+    expect(t.declarations.map((x) => x.name)).toEqual(["mcp__tools__b"]);
+    expect(t.contextText).not.toContain("list_mcp_resources");
   });
 
   it("pending and waiting servers appear only as context lines", async () => {
@@ -218,8 +234,30 @@ describe("TurnConnections", () => {
   it("resource tools refuse an unknown server before any request", async () => {
     const { tc, opens } = await turnWith();
     const r = await tc.resource("list_mcp_resources", { server: "nope" });
-    expect((r.response.content as { text: string }[])[0]!.text).toBe('nope isn\'t one of your MCP servers: ["ok"]');
+    expect((r.response.content as { text: string }[])[0]!.text).toBe('nope isn\'t one of your MCP servers with resources: ["ok"]');
     expect(opens()).toBe(0);
+  });
+
+  it("🔴 resource tools refuse a server without resources before any request", async () => {
+    const { d } = setup({ ok: entry("https://ok.example.com/mcp"), plain: entry("https://p.example.com/mcp") }, ["ok", "plain"], [
+      { serverName: "ok", tools: [tool("ok", "a")], hasResources: true },
+      { serverName: "plain", tools: [tool("plain", "b")], hasResources: false },
+    ]);
+    const turn = await connectorsForTurn("p1", d);
+    let opens = 0;
+    const tc = new TurnConnections("p1", turn, {
+      resolveCredentials: async () => new Map([["TOK", "t"]]),
+      open: async () => {
+        opens++;
+        return connection().c;
+      },
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      modelTakesImages: true,
+    });
+    const r = await tc.resource("list_mcp_resources", { server: "plain" });
+    expect((r.response.content as { text: string }[])[0]!.text).toBe('plain isn\'t one of your MCP servers with resources: ["ok"]');
+    expect(opens).toBe(0);
   });
 
   it("resource tools read with the server's name and no blob", async () => {
