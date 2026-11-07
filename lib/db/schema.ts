@@ -1531,6 +1531,37 @@ export const lenAgents = pgTable(
   (t) => [uniqueIndex("lenAgents_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
 );
 
+/** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): its name, figure, tone and memory. It is the
+ *  person's, born in a project (`homeProjectId`, where its conversation with its owner lives as
+ *  `projectChatMessages.conversation = "assistant:<id>"`). Phase 1: one project per assistant, so it goes with it.
+ *  Created by `npm run assistants:migrate`. */
+export const assistants = pgTable(
+  "assistants",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Its address: /<locale>/assistant/<slug>. Unique per person. */
+    slug: text("slug").notNull(),
+    shape: text("shape").notNull(),
+    color: text("color").notNull(),
+    tone: text("tone").notNull(),
+    /** ~/.assistant/MEMORY.md: what its owner taught it, replaced whole. */
+    memory: text("memory").notNull().default(""),
+    homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("assistants_personId_slug_idx").on(t.personId, t.slug)],
+);
+
+/** The projects an assistant serves: one assistant per project (the primary key). */
+export const assistantProjects = pgTable("assistantProjects", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+  connectedAt: timestamp("connectedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",

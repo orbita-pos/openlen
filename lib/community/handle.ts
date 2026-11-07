@@ -11,6 +11,8 @@ export const RESERVED_HANDLES = new Set([
   "about", "help", "pricing", "openlen", "me", "static", "assets", "public",
   // A page since 06/11 (spec local 2026-11-06-portada-solo-input): a profile with this name would sit behind it.
   "features",
+  // The person's own assistant lives at /<locale>/assistant/<name> (spec local 2026-11-06-asistente-propio).
+  "assistant",
 ]);
 
 export function normalizeHandle(raw: string): string {
