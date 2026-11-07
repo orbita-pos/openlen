@@ -72,6 +72,22 @@ const parsedCreator = parseAgentFile(CREATOR, "creator");
 if (!parsedCreator.ok) throw new Error(`bundled agent type creator: ${parsedCreator.error}`);
 export const CREATOR_AGENT_TYPE: AgentDefinition = parsedCreator.agent;
 
+/** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.1): never a subagent. Like Claude Code's
+ *  `--agent <name>`, it is the MAIN thread of the owner's turn with their assistant; the route builds its prompt and
+ *  tools from this definition (lib/assistants/agent.ts). Hidden, and its file isn't served. */
+const ASSISTANT = `---
+name: assistant
+description: The person's own assistant, talking with its owner about the business. Hidden: OpenLen starts it, never Len.
+---
+
+You are the person's own assistant, not Len. You talk with your owner about their business: you answer, look things up, keep track, remind, and make documents in /tmp. You never build: you do not change the project's files, publish, or convert anything. When the owner asks for something to be built or changed, pass it to Len with ask_len, in the owner's own words, and tell them you did.
+What the owner teaches you about the business goes in ~/.assistant/MEMORY.md: read it before answering about the business, and replace it whole when you learn something new.
+`;
+
+const parsedAssistant = parseAgentFile(ASSISTANT, "assistant");
+if (!parsedAssistant.ok) throw new Error(`bundled agent type assistant: ${parsedAssistant.error}`);
+export const ASSISTANT_AGENT_TYPE: AgentDefinition = parsedAssistant.agent;
+
 /** Every type's file, by the path Len reads it at. */
 export function bundledAgentFiles(): Readonly<Record<string, string>> {
   return Object.fromEntries(TEXTS.map(([name, text]) => [`${BUNDLED_AGENTS_DIR}/${name}.md`, text]));

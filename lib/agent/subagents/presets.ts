@@ -70,7 +70,8 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
 const ARTIFACT_READS: ReadonlySet<string> = new Set(["list_artifacts", "inspect_artifact", "list_artifact_audio"]);
 
 /** Out as well for a read-only child: everything that writes. What `bash` changes is refused apart (§4.2). */
-const OUT_FOR_READ_ONLY: ReadonlySet<string> = new Set([
+/** What a read-only session can't run; the person's own assistant drops these too (lib/assistants/agent.ts). */
+export const OUT_FOR_READ_ONLY: ReadonlySet<string> = new Set([
   "Write",
   "Edit",
   "edit_image",
