@@ -39,6 +39,20 @@ describe("ask_len", () => {
     expect(framing).toMatch(/only what the owner's own message asks/i);
   });
 
+  it("🔴 keeps the request as queued, then how Len's turn ended — finished with his closing words, or failed with why", async () => {
+    const launch = vi.fn();
+    const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };
+    await runAskLen(ASSISTANT_SESSION, { request: "botón más grande" }, launch, notes);
+    const [assistantId, queued] = notes.queued.mock.calls[0] as unknown as [string, { id: string; request: string; status: string }];
+    expect(assistantId).toBe("a1");
+    expect(queued).toMatchObject({ request: "botón más grande", status: "queued" });
+    const p = launch.mock.calls[0]![0];
+    await p.reply("todo el texto", [], "Listo: el botón es más grande.");
+    expect(notes.settle).toHaveBeenLastCalledWith("a1", queued.id, { status: "done", closing: "Listo: el botón es más grande." });
+    await p.fail({ code: "no_credits" }, false);
+    expect(notes.settle).toHaveBeenLastCalledWith("a1", queued.id, { status: "failed", reason: "no_credits" });
+  });
+
   it("is not Len's tool", async () => {
     const launch = vi.fn();
     expect((await runAskLen(LEN_SESSION, { request: "x" }, launch)).response).toMatchObject({ ok: false, error: "not_available" });

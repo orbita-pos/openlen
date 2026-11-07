@@ -14,7 +14,8 @@ import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { assistantById, type AssistantRow } from "@/lib/assistants/store";
+import { assistantById, readyAssistantNotices, removeAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
+import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
 import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
@@ -500,6 +501,8 @@ async function correrTurno(
   }
   /** Where this turn's rows live: Len's conversation (nothing) or the assistant's. Len's calls stay byte for byte. */
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
+  /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
+  const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
   // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
   // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
@@ -2284,6 +2287,19 @@ async function correrTurno(
           // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
           // Only this turn's jobs: the box may be shared with subagents (spec local 2026-11-01-subagentes-de-len).
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
+          // THE PERSON'S OWN ASSISTANT: how its ask_len requests ended, each as its own user message before its next
+          // call, as DeepSeek's settlement notices; removed once handed (DeepSeek's «marked delivered once»).
+          ...(asistente
+            ? {
+                takeAgentNotices: () => {
+                  const handed = avisosDelAsistente.splice(0);
+                  if (handed.length > 0) {
+                    void removeAssistantNotices(asistente.id, handed.map((n) => n.id)).catch((err: unknown) => console.warn("[assistants] heard notices weren't removed", err));
+                  }
+                  return handed.map(noticeText);
+                },
+              }
+            : {}),
           ...(subagentsOn
             ? {
                 // LEN'S SUBAGENTS: their notices, before each call and before closing; a settlement is marked

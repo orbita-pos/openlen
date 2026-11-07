@@ -11,10 +11,13 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "color" text NOT NULL,
     "tone" text NOT NULL,
     "memory" text NOT NULL DEFAULT '',
+    "notices" jsonb NOT NULL DEFAULT '[]'::jsonb,
     "homeProjectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
     "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
     "updatedAt" timestamp with time zone NOT NULL DEFAULT now()
   );`,
+  // How its ask_len requests ended (added after the first version of this table): additive.
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "notices" jsonb NOT NULL DEFAULT '[]'::jsonb;`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "assistants_personId_slug_idx" ON "assistants" ("personId", "slug");`,
   `CREATE TABLE IF NOT EXISTS "assistantProjects" (
     "projectId" text PRIMARY KEY REFERENCES "projects"("id") ON DELETE CASCADE,

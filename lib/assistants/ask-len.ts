@@ -8,6 +8,8 @@ import { randomUUID } from "node:crypto";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { AssistantRequestOrigin } from "@/lib/projects/types";
 
+import { CLOSING_MAX, type AskLenNotice } from "./notices";
+
 export const ASK_LEN = "ask_len";
 /** As long as a message to Len. */
 export const ASK_LEN_MAX = 2_000;
@@ -37,12 +39,25 @@ export interface AssistantRequestTurn {
   readonly timeZone: string;
   readonly locale: string;
   readonly filaId: string;
-  readonly reply: (text: string) => Promise<void>;
+  readonly reply: (text: string, cards?: unknown, finalText?: string) => Promise<void>;
   readonly fail: (fallo: { code?: string } | null, cut: boolean) => Promise<void>;
   readonly onStart: () => Promise<void>;
 }
 
 export type LaunchAssistantRequest = (p: AssistantRequestTurn) => void;
+
+/** Where how the request ends is kept for the assistant (lib/assistants/notices.ts, its store). */
+export interface AskLenNotes {
+  queued(assistantId: string, notice: AskLenNotice): Promise<void>;
+  settle(assistantId: string, noticeId: string, patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>): Promise<void>;
+}
+
+const NO_NOTES: AskLenNotes = { queued: async () => {}, settle: async () => {} };
+
+async function storeNotes(): Promise<AskLenNotes> {
+  const { addAssistantNotice, settleAssistantNotice } = await import("./store");
+  return { queued: addAssistantNotice, settle: settleAssistantNotice };
+}
 
 /** The owner's own message rides verbatim beside the assistant's request: the assistant reads text others wrote (a
  *  form, a message, a web page), and none of it may become an order with the owner's authority (spec §4.2, rule 2). */
@@ -54,7 +69,7 @@ function framingOf(name: string, request: string, ownerMessage: string | null): 
   ].join("\n\n");
 }
 
-export async function runAskLen(session: AgentSession, args: Record<string, unknown>, launch?: LaunchAssistantRequest): Promise<ToolOutcome> {
+export async function runAskLen(session: AgentSession, args: Record<string, unknown>, launch?: LaunchAssistantRequest, notes?: AskLenNotes): Promise<ToolOutcome> {
   const assistant = session.assistant;
   if (!assistant) return { response: { ok: false, error: "not_available", message: `${ASK_LEN} is the person's own assistant's tool.` } };
   const request = typeof args.request === "string" ? args.request.trim() : "";
@@ -62,6 +77,13 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
   const go = launch ?? (await import("@/lib/agent/turnos-desde-el-servidor")).launchAssistantRequestTurn;
+  // How it ends comes back to the assistant with its next request (lib/assistants/notices.ts). Kept softly: a note
+  // that can't be written never stops the request. An injected launch without notes keeps none (tests).
+  const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
+  const noticeId = randomUUID();
+  await keep.queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString() }).catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
+  const settle = (patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>) =>
+    keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
   go({
     userId: session.userId,
     projectId: session.projectId,
@@ -72,9 +94,11 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     locale: session.uiLocale ?? "en",
     filaId: randomUUID(),
     onStart: async () => {},
-    reply: async () => {},
+    reply: async (text, _cards, finalText) => {
+      await settle({ status: "done", closing: (finalText ?? text).slice(0, CLOSING_MAX) });
+    },
     fail: async (fallo) => {
-      console.warn(`[assistants] Len's turn for ${assistant.id} did not run`, fallo?.code ?? "");
+      await settle({ status: "failed", reason: fallo?.code ?? "the turn did not run" });
     },
   });
   return {
