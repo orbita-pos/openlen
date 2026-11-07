@@ -98,7 +98,7 @@ function failure(reason: string): ToolOutcome {
   return { response: { isError: true, content: [{ type: "text", text: reason }] } };
 }
 
-function capped(result: { content: unknown[]; isError?: boolean; structuredContent?: unknown }): Record<string, unknown> {
+export function capped(result: { content: unknown[]; isError?: boolean; structuredContent?: unknown }): Record<string, unknown> {
   const whole = { content: result.content, ...(result.isError ? { isError: true } : {}), ...(result.structuredContent !== undefined ? { structuredContent: result.structuredContent } : {}) };
   const size = new TextEncoder().encode(JSON.stringify(whole)).byteLength;
   if (size <= OPERATION_RESULT_MAX_BYTES) return whole;
