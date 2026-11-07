@@ -641,6 +641,8 @@ export default defineConfig({
       "lib/event-tasks/**/*.test.ts",
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
+      // The person's own assistant (spec local 2026-11-06-asistente-propio).
+      "lib/assistants/**/*.test.ts",
       "app/api/tools/**/*.test.ts",
       // Len's MCP connectors (spec local 2026-11-06-conectores-mcp). LISTA BLANCA.
       "lib/mcp-connectors/**/*.test.ts",
