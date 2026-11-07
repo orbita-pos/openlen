@@ -72,6 +72,15 @@ describe("the creator", () => {
     expect(onCreated).not.toHaveBeenCalled();
   });
 
+  it("🔴 a member is told only the project's owner can create its assistant", async () => {
+    fetchMock.mockReturnValueOnce(json({ error: "solo_dueno" }, 403));
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} />);
+    type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Lucía");
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    expect(document.querySelector("[data-assistant-error]")!.textContent).toContain("ownAssistant.errors.ownerOnly");
+  });
+
   it("won't send without a name", () => {
     mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} />);
     expect(document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.disabled).toBe(true);

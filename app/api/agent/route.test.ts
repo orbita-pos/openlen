@@ -4488,6 +4488,22 @@ describe("POST /api/agent — the person's own assistant", () => {
     mocks.buildFunctionDeclarations.mockReturnValue([]);
   });
 
+  it("🔴 a member's turn with Len has no create_assistant: only the owner creates the project's assistant", async () => {
+    mocks.buildFunctionDeclarations.mockReturnValue(["Read", "create_assistant", "Edit"].map((name) => ({ name })));
+    await readEvents(await pedir({}));
+    expect(toolNames()).toEqual(["Read", "create_assistant", "Edit"]);
+    mocks.cabeEnElTope.mockResolvedValue(true);
+    mocks.margenDeMiembros.mockResolvedValue(null);
+    mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+    fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
+    try {
+      await readEvents(await pedir({}));
+      expect(toolNames()).toEqual(["Read", "Edit"]);
+    } finally {
+      fijarAccesoDePrueba(null);
+    }
+  });
+
   it("🔴 when its turn ends with nobody watching, the push names it and not Len", async () => {
     let soltar: (() => void) | undefined;
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {

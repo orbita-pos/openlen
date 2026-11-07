@@ -747,6 +747,7 @@
       "name": "Dagli un nome con lettere o numeri.",
       "nameTaken": "Hai già un assistente con quel nome.",
       "projectHas": "Questo progetto ha già il suo assistente.",
+      "ownerOnly": "Solo chi possiede il progetto può crearne l'assistente.",
       "generic": "Non è stato possibile crearlo. Riprova."
     },
     "place": {
