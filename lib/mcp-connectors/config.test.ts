@@ -88,6 +88,11 @@ describe("parseMcpConfig", () => {
     expect(errorOf(one({ ...base, url: "https://x.com/mcp?key=sk-ant-abcdefghijklmnopqrstuvwxyz" }))).toMatch(/^servers\.a\.url: /);
   });
 
+  it("🔴 refuses __ in a server name: mcp__a__b__x could then name two different tools", () => {
+    expect(errorOf(one(base, "a__b"))).toMatch(/^servers\.a__b: .*__/);
+    expect(parseMcpConfig(one(base, "a_b"), none).ok).toBe(true);
+  });
+
   it("refuses the name of an installed tool", () => {
     expect(errorOf(one(base, "mytool"), { reservedServerNames: new Set(["mytool"]) })).toBe(
       "servers.mytool: an installed tool already uses this name",

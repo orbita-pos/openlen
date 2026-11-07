@@ -40,6 +40,21 @@ export const RESOURCE_TOOL_DECLARATIONS: readonly Record<string, unknown>[] = [
   },
 ];
 
+/** The turn's `mcp__` tools in ONE namespace — an installed tool's operations and the connectors', sorted by name —
+ *  then DeepSeek's resource tools. A name declared twice is kept once (the operation's, which came first): a list with
+ *  duplicates would be refused by the provider, breaking every turn of the person. */
+export function mergeMcpDeclarations(operations: readonly Record<string, unknown>[], connectors: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  const seen = new Set<string>();
+  const mcp = [...operations, ...connectors.filter((x) => String(x.name).startsWith("mcp__"))].filter((x) => {
+    const name = String(x.name);
+    if (seen.has(name)) return false;
+    seen.add(name);
+    return true;
+  });
+  mcp.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  return [...mcp, ...connectors.filter((x) => !String(x.name).startsWith("mcp__"))];
+}
+
 export interface TurnDeps {
   readConfig(personId: string): Promise<StoredConfig>;
   readStates(personId: string): Promise<ServerState[]>;

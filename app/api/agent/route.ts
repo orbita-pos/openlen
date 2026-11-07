@@ -159,6 +159,7 @@ import { bornAsTool } from "@/lib/projects/born-as-tool";
 import { toolCardStatusNotice } from "@/lib/tools/cards/notice";
 import { toolsEnabled } from "@/lib/tools/enabled";
 import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
+import { mergeMcpDeclarations } from "@/lib/mcp-connectors/turn";
 import { gamesEnabled } from "@/lib/games/enabled";
 import { suggestionsOfferedTo } from "@/lib/tools/suggestions";
 import { DECLARACION_PROPOSE_ACTION } from "@/lib/tools/cards/propose";
@@ -779,9 +780,8 @@ async function correrTurno(
     const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
     // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
-    const mcp = [...(operaciones?.declarations ?? []), ...(conectores?.declarations.filter((x) => String(x.name).startsWith("mcp__")) ?? [])].sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    const recursos = conectores?.declarations.filter((x) => !String(x.name).startsWith("mcp__")) ?? [];
-    return mcp.length > 0 || recursos.length > 0 ? [...conLaTarjeta, ...mcp, ...recursos] : conLaTarjeta;
+    const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
+    return mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
