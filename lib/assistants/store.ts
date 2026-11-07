@@ -9,6 +9,7 @@ import { db, schema } from "@/lib/db";
 
 import { assistantConversationKey } from "./conversation";
 import { assistantSlug, type AssistantInput } from "./names";
+import { readyNotices, type AskLenNotice, type ReadyNotice } from "./notices";
 
 export type AssistantRow = typeof schema.assistants.$inferSelect;
 
@@ -92,4 +93,34 @@ export async function deleteAssistant(personId: string, id: string): Promise<boo
 
 export async function saveAssistantMemory(id: string, text: string): Promise<void> {
   await db.update(a).set({ memory: text, updatedAt: new Date() }).where(eq(a.id, id));
+}
+
+// HOW ITS ask_len REQUESTS END (lib/assistants/notices.ts): appended when passed, settled when Len's turn ends, handed
+// to its next request and removed once heard — DeepSeek's «marked delivered once».
+
+/** Read-modify-write under the row's lock: two settlements never overwrite each other. */
+async function withNotices(id: string, change: (notices: AskLenNotice[]) => AskLenNotice[]): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [row] = await tx.select({ notices: a.notices }).from(a).where(eq(a.id, id)).limit(1).for("update");
+    if (!row) return;
+    await tx.update(a).set({ notices: change(row.notices ?? []) }).where(eq(a.id, id));
+  });
+}
+
+export async function addAssistantNotice(id: string, notice: AskLenNotice): Promise<void> {
+  await withNotices(id, (all) => [...all, notice]);
+}
+
+export async function settleAssistantNotice(id: string, noticeId: string, patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>): Promise<void> {
+  await withNotices(id, (all) => all.map((n) => (n.id === noticeId ? { ...n, ...patch } : n)));
+}
+
+export async function readyAssistantNotices(id: string, now: Date): Promise<ReadyNotice[]> {
+  const [row] = await db.select({ notices: a.notices }).from(a).where(eq(a.id, id)).limit(1);
+  return readyNotices(row?.notices ?? [], now);
+}
+
+export async function removeAssistantNotices(id: string, ids: readonly string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await withNotices(id, (all) => all.filter((n) => !ids.includes(n.id)));
 }

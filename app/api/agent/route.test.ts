@@ -282,7 +282,11 @@ vi.mock("@/lib/tools/cards/creation", async (orig) => ({
 vi.mock("@/lib/agent/design-screenshots", () => ({ captureDesignElements: mocks.captureDesignElements, storeDesignCaptures: mocks.storeDesignCaptures }));
 vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.storeStepScreenshots }));
 // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): none unless a test gives one.
-const assistantStore = vi.hoisted(() => ({ assistantById: vi.fn(async (_id: string): Promise<Record<string, unknown> | null> => null) }));
+const assistantStore = vi.hoisted(() => ({
+  assistantById: vi.fn(async (_id: string): Promise<Record<string, unknown> | null> => null),
+  readyAssistantNotices: vi.fn(async (_id: string, _now: Date): Promise<Record<string, unknown>[]> => []),
+  removeAssistantNotices: vi.fn(async (_id: string, _ids: readonly string[]) => {}),
+}));
 vi.mock("@/lib/assistants/store", () => assistantStore);
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
@@ -4507,6 +4511,21 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(session.readOnly).toBe(true);
     expect(session.assistant).toEqual({ id: "a1", name: "Lucía" });
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
+  });
+
+  it("🔴 hears how its ask_len requests ended with its next request, once, and they are removed once heard", async () => {
+    assistantStore.readyAssistantNotices.mockResolvedValueOnce([{ id: "n1", request: "botón más grande", status: "done", at: "2026-11-07T00:00:00.000Z", closing: "Listo." }]);
+    let first: readonly string[] = [];
+    let second: readonly string[] = ["x"];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      first = args.takeAgentNotices!();
+      second = args.takeAgentNotices!();
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(first).toEqual(["Len finished the request you passed him: «botón más grande».\n\nHis closing message:\nListo."]);
+    expect(second).toEqual([]);
+    expect(assistantStore.removeAssistantNotices).toHaveBeenCalledWith("a1", ["n1"]);
   });
 
   it("the server's closing row goes to the assistant's conversation too", async () => {

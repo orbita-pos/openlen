@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { assistantById, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, saveAssistantMemory } = await import("./store");
+const { addAssistantNotice, assistantById, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, saveAssistantMemory, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
 let pg: PGlite;
@@ -92,6 +92,21 @@ describe("assistants store", () => {
     expect(r.assistant.memory).toBe("");
     await saveAssistantMemory(r.assistant.id, "Jueves: pasteles sin gluten.");
     expect((await assistantById(r.assistant.id))?.memory).toBe("Jueves: pasteles sin gluten.");
+  });
+
+  it("keeps how its ask_len requests end, hands the ready ones, and forgets them once heard", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    const id = r.assistant.id;
+    const at = new Date().toISOString();
+    await addAssistantNotice(id, { id: "n1", request: "botón más grande", status: "queued", at });
+    await addAssistantNotice(id, { id: "n2", request: "título", status: "queued", at });
+    expect(await readyAssistantNotices(id, new Date())).toEqual([]);
+    await settleAssistantNotice(id, "n1", { status: "done", closing: "Listo." });
+    expect((await readyAssistantNotices(id, new Date())).map((n) => [n.id, n.status, n.closing])).toEqual([["n1", "done", "Listo."]]);
+    await removeAssistantNotices(id, ["n1"]);
+    expect(await readyAssistantNotices(id, new Date())).toEqual([]);
+    expect((await assistantById(id))?.notices.map((n) => n.id)).toEqual(["n2"]);
   });
 
   it("lists the newest first", async () => {

@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
+import type { AskLenNotice } from "@/lib/assistants/notices";
 import type { BringState, IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
@@ -1548,6 +1549,8 @@ export const assistants = pgTable(
     tone: text("tone").notNull(),
     /** ~/.assistant/MEMORY.md: what its owner taught it, replaced whole. */
     memory: text("memory").notNull().default(""),
+    /** How its `ask_len` requests ended, until it hears them (lib/assistants/notices.ts). */
+    notices: jsonb("notices").$type<AskLenNotice[]>().notNull().default([]),
     homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
