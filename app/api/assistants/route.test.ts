@@ -93,4 +93,17 @@ describe("/api/assistants/[id]", () => {
     m.deleteAssistant.mockResolvedValueOnce(false);
     expect((await one.DELETE(new Request("http://x", { method: "DELETE" }), params("a2"))).status).toBe(404);
   });
+
+  it("🔴 with assistants off, GET and DELETE answer assistants_off and touch nothing", async () => {
+    vi.stubEnv("OPENLEN_ASSISTANT", "0");
+    m.assistantById.mockResolvedValue(LUCIA);
+    const got = await one.GET(new Request("http://x"), params("a1"));
+    expect(got.status).toBe(404);
+    expect(await got.json()).toEqual({ error: "assistants_off" });
+    const gone = await one.DELETE(new Request("http://x", { method: "DELETE" }), params("a1"));
+    expect(gone.status).toBe(404);
+    expect(await gone.json()).toEqual({ error: "assistants_off" });
+    expect(m.assistantById).not.toHaveBeenCalled();
+    expect(m.deleteAssistant).not.toHaveBeenCalled();
+  });
 });
