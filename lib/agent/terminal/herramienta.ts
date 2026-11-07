@@ -29,6 +29,7 @@ import type { TerminalBackend } from "./backend";
 import { TerminalDeLen } from "./terminal";
 import { appToolsFor } from "./herramientas-de-app";
 import { ghForTerminal, gitForTerminal } from "./git-option";
+import { guardReadOnly } from "./read-only-commands";
 import { stripeEnabled } from "@/lib/stripe/enabled";
 import { CARPETA_BANDEJA, soloLecturaDeLaTerminal, type SoloLectura } from "./solo-lectura";
 import type { BridgeHandlers } from "@/lib/agent/sandbox/bridge";
@@ -249,8 +250,8 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
     // fichero cambiado y se guarda abajo, por el camino de Write.
     ...(deps.supabaseCli
       ? {
-          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
-            deps.supabaseCli!(session.projectId, args, ficheros, o),
+          supabase: guardReadOnly(session.readOnly === true, "supabase", (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o)),
         }
       : {}),
     // GIT (spec local 2026-10-15-git-for-len): `git …` over the project's repository; what it
@@ -426,7 +427,8 @@ function stripeForTerminal(
   deps: AgentDeps,
 ): ((args: readonly string[], o?: { readonly signal?: AbortSignal; readonly stdin?: string }) => Promise<{ stdout: string; stderr: string; exitCode: number }>) | null {
   if (!deps.stripeCli || !stripeEnabled()) return null;
-  return (args, o) => deps.stripeCli!(session.projectId, args, o);
+  return guardReadOnly(session.readOnly === true, "stripe", (args: readonly string[], o?: { readonly signal?: AbortSignal; readonly stdin?: string }) =>
+    deps.stripeCli!(session.projectId, args, o));
 }
 
 /** The terminal's one `curl`: to the project's Edge Functions and to the connected Shopify
@@ -452,8 +454,8 @@ async function bridgeHandlersFor(session: AgentSession, deps: AgentDeps): Promis
     ...(stripe ? { stripe } : {}),
     ...(deps.supabaseCli
       ? {
-          supabase: (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
-            deps.supabaseCli!(session.projectId, args, ficheros, o),
+          supabase: guardReadOnly(session.readOnly === true, "supabase", (args: readonly string[], ficheros: Readonly<Record<string, string>>, o?: { readonly signal?: AbortSignal }) =>
+            deps.supabaseCli!(session.projectId, args, ficheros, o)),
         }
       : {}),
     ...(appTools ? { appTools } : {}),
