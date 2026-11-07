@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ASK_USER_QUESTION, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { CONVERTIR_EN_APP } from "@/lib/agent/convertir-en-app";
 import { CREATE_GOAL } from "@/lib/agent/goal-tools";
 import { ENTER_PLAN_MODE } from "@/lib/agent/plan-mode";
@@ -46,6 +47,128 @@ describe("assistantTools", () => {
   it("keeps Len's order, so the cached prefix of the tools is Len's minus some", () => {
     const got = names(assistantTools(LEN));
     expect(got).toEqual(names(LEN).filter((n) => got.includes(n)));
+  });
+});
+
+// 🔴 PINNED against Len's REAL catalog, a page and an app (the route passes the same builder's output through
+// `assistantTools`): when Len gains, renames or loses a tool these lists change on purpose, and the review sees what the
+// assistant got or lost — and that what it never has stays out.
+describe("assistantTools over Len's real catalog", () => {
+  const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" } as const;
+  const CAPS = { functionSecrets: true, realTerminal: true, agentTypes: NO_AGENT_TYPES } as const;
+  const lenOf = (app: typeof APP | null) => buildFunctionDeclarations({}, CAPS, "len", app);
+  const keptOf = (app: typeof APP | null) => names(assistantTools(lenOf(app)));
+  const leftOutOf = (app: typeof APP | null) => names(lenOf(app)).filter((n) => !keptOf(app).includes(n));
+
+  it("a page", () => {
+    expect(keptOf(null)).toMatchInlineSnapshot(`
+      [
+        "Read",
+        "view_page",
+        "use_page",
+        "find_photo",
+        "web_search",
+        "web_fetch",
+        "image_search",
+        "todo_write",
+        "ask_user_question",
+        "read_me",
+        "show_widget",
+        "skill",
+        "present",
+        "schedule_create",
+        "schedule_list",
+        "schedule_delete",
+        "schedule_update",
+        "session_search",
+        "session_event_search",
+        "session_event_read",
+        "get_visits",
+        "list_form_submissions",
+        "list_messages",
+        "bash",
+      ]
+    `);
+    expect(leftOutOf(null)).toMatchInlineSnapshot(`
+      [
+        "Edit",
+        "Write",
+        "toggle_module",
+        "edit_image",
+        "publish",
+        "request_secrets",
+        "connect_shopify_store",
+        "enter_plan_mode",
+        "exit_plan_mode",
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent",
+        "subagent_fork",
+        "send_message",
+        "interrupt_agent",
+        "list_agents",
+        "create_assistant",
+        "undo_last_change",
+        "convert_to_app",
+        "draft_reply",
+      ]
+    `);
+  });
+
+  it("an app", () => {
+    expect(keptOf(APP)).toMatchInlineSnapshot(`
+      [
+        "Read",
+        "view_page",
+        "use_page",
+        "find_photo",
+        "web_search",
+        "web_fetch",
+        "image_search",
+        "todo_write",
+        "ask_user_question",
+        "read_me",
+        "show_widget",
+        "skill",
+        "present",
+        "schedule_create",
+        "schedule_list",
+        "schedule_delete",
+        "schedule_update",
+        "session_search",
+        "session_event_search",
+        "session_event_read",
+        "get_visits",
+        "list_form_submissions",
+        "list_messages",
+        "bash",
+      ]
+    `);
+    expect(leftOutOf(APP)).toMatchInlineSnapshot(`
+      [
+        "Edit",
+        "Write",
+        "toggle_module",
+        "edit_image",
+        "publish",
+        "request_secrets",
+        "connect_shopify_store",
+        "enter_plan_mode",
+        "exit_plan_mode",
+        "get_goal",
+        "create_goal",
+        "update_goal",
+        "subagent",
+        "subagent_fork",
+        "send_message",
+        "interrupt_agent",
+        "list_agents",
+        "create_assistant",
+        "undo_last_change",
+        "draft_reply",
+      ]
+    `);
   });
 });
 
