@@ -717,6 +717,7 @@
     "connected": "Connected · {tools} tools",
     "failed": "Couldn't connect: {error}",
     "changed": "It changed in the meantime: look at it again in Tools",
-    "dismissed": "Not connected. You can approve it later in Tools."
+    "dismissed": "Not connected. You can approve it later in Tools.",
+    "firstTime": "Your key {name} has never been sent to {host}: approve only if you trust that server"
   }
 }

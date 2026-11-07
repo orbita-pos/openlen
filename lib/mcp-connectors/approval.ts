@@ -45,6 +45,11 @@ export function hostOf(url: string): string {
   }
 }
 
+/** Entries the person approved as they are: their fingerprint is still the approved one. */
+function approvedEntries(config: McpConfig, approved: Readonly<Record<string, string>>): [string, McpServerEntry][] {
+  return Object.entries(config.servers).filter(([n, e]) => approved[n] === entryFingerprint(e));
+}
+
 export function buildApprovalCard(
   server: string,
   entry: McpServerEntry,
@@ -52,14 +57,24 @@ export function buildApprovalCard(
   approved: Readonly<Record<string, string>>,
   credentialsSet: ReadonlySet<string>,
   version: number,
+  /** The file as it was before this write, with its approvals: the host a key went to before an entry was moved or
+   *  replaced in the same write (the review's in-place-edit case). Absent where that is gone (the Herramientas page). */
+  previous?: { readonly config: McpConfig; readonly approved: Readonly<Record<string, string>> },
 ): McpApprovalCard {
   const host = hostOf(entry.url);
+  // Where each key goes today: the other approved entries now, and every approved entry before this write — the same
+  // name included, whose old url is exactly the host a moved entry took the key from.
+  const sources = [...approvedEntries(config, approved).filter(([n]) => n !== server), ...(previous ? approvedEntries(previous.config, previous.approved) : [])];
   const credentials = credentialRefsOf(entry).map((name) => {
-    const otherHosts = Object.entries(config.servers)
-      .filter(([other, e]) => other !== server && approved[other] === entryFingerprint(e) && credentialRefsOf(e).includes(name))
-      .map(([, e]) => hostOf(e.url))
-      .filter((h) => h !== host);
-    return { name, set: credentialsSet.has(name), otherHosts: [...new Set(otherHosts)].sort() };
+    const citing = sources.filter(([, e]) => credentialRefsOf(e).includes(name)).map(([, e]) => hostOf(e.url));
+    const set = credentialsSet.has(name);
+    return {
+      name,
+      set,
+      otherHosts: [...new Set(citing.filter((h) => h !== host))].sort(),
+      // A stored key that no approved entry sends to this host yet: approving sends it there for the first time.
+      firstTime: set && !citing.includes(host),
+    };
   });
   return { server, host, headerNames: Object.keys(entry.headers).sort(), credentials, fingerprint: entryFingerprint(entry), version };
 }

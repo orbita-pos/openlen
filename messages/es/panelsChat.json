@@ -717,6 +717,7 @@
     "connected": "Conectado · {tools} herramientas",
     "failed": "No se pudo conectar: {error}",
     "changed": "Cambió mientras tanto: vuelve a mirarlo en Herramientas",
-    "dismissed": "No se conecta. Puedes aprobarlo luego en Herramientas."
+    "dismissed": "No se conecta. Puedes aprobarlo luego en Herramientas.",
+    "firstTime": "Tu clave {name} nunca se ha enviado a {host}: apruébalo solo si confías en ese servidor"
   }
 }

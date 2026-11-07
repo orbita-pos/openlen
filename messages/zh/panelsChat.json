@@ -717,6 +717,7 @@
     "connected": "已连接 · {tools} 个工具",
     "failed": "无法连接：{error}",
     "changed": "期间已有变化：请在“工具”中重新查看",
-    "dismissed": "未连接。你可以稍后在“工具”中批准。"
+    "dismissed": "未连接。你可以稍后在“工具”中批准。",
+    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
   }
 }

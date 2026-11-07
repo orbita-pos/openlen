@@ -54,6 +54,10 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
             <p className="text-[12px] text-red-600" data-mcp-key-warning="">
               {t("mcpApproval.usedElsewhere", { name: c.name, hosts: c.otherHosts.join(", ") })}
             </p>
+          ) : c.firstTime ? (
+            <p className="text-[12px] text-red-600" data-mcp-key-warning="">
+              {t("mcpApproval.firstTime", { name: c.name, host: card.host })}
+            </p>
           ) : null}
         </div>
       ))}

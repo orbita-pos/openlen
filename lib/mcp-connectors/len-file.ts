@@ -34,9 +34,11 @@ export async function saveLenMcpConfig(personId: string, text: string, d: LenFil
   if (!written.ok) return { ok: false, error: "~/.len/mcp.json changed while you were writing it: read it again and redo your change." };
   const approved = Object.fromEntries(Object.entries(current.approved).filter(([n]) => names.includes(n)));
   const set = new Set(await d.credentialNames(personId));
+  const before = parseMcpConfig(current.text, { reservedServerNames: new Set() });
+  const previous = before.ok ? { config: before.config, approved: current.approved } : undefined;
   const pending = names
     .filter((n) => parsed.config.servers[n]!.enabled && approved[n] !== entryFingerprint(parsed.config.servers[n]!))
-    .map((n) => buildApprovalCard(n, parsed.config.servers[n]!, parsed.config, approved, set, written.version));
+    .map((n) => buildApprovalCard(n, parsed.config.servers[n]!, parsed.config, approved, set, written.version, previous));
   const waiting = pending.map((c) => c.server);
   const note =
     waiting.length === 0

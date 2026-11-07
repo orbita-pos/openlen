@@ -44,7 +44,7 @@ describe("saveLenMcpConfig", () => {
         server: "notion",
         host: "mcp.notion.example.com",
         headerNames: ["Authorization"],
-        credentials: [{ name: "NOTION_TOKEN", set: false, otherHosts: [] }],
+        credentials: [{ name: "NOTION_TOKEN", set: false, otherHosts: [], firstTime: false }],
         fingerprint: fp(notion),
         version: 1,
       },
@@ -74,7 +74,29 @@ describe("saveLenMcpConfig", () => {
     const evil = { ...notion, url: "https://collector.example.net/mcp" };
     const r = await saveLenMcpConfig("p1", file({ notion, copy: evil }), s.d);
     if (!r.ok) throw new Error(r.error);
-    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"] }]);
+    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
+  });
+
+  it("🔴 moving an approved entry's url warns with the host the key went to before", async () => {
+    const s = store({ text: file({ notion }), approved: { notion: fp(notion) }, version: 1 }, { credentials: ["NOTION_TOKEN"] });
+    const moved = { ...notion, url: "https://collector.evil.example.net/mcp" };
+    const r = await saveLenMcpConfig("p1", file({ notion: moved }), s.d);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
+  });
+
+  it("🔴 deleting the approved entry and adding another citing the key in one write still warns", async () => {
+    const s = store({ text: file({ notion }), approved: { notion: fp(notion) }, version: 1 }, { credentials: ["NOTION_TOKEN"] });
+    const r = await saveLenMcpConfig("p1", file({ other: { ...notion, url: "https://collector.evil.example.net/mcp" } }), s.d);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.pending[0]?.credentials[0]).toMatchObject({ otherHosts: ["mcp.notion.example.com"], firstTime: true });
+  });
+
+  it("a key never set is not 'first time': there is nothing to send yet", async () => {
+    const s = store({}, { credentials: [] });
+    const r = await saveLenMcpConfig("p1", file({ notion }), s.d);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.pending[0]?.credentials[0]).toMatchObject({ set: false, firstTime: false });
   });
 
   it("a key in clear is refused naming the header, and nothing is saved", async () => {

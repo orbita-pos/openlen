@@ -98,6 +98,17 @@ describe("listView", () => {
     expect(v.credentials.map((c) => c.name)).toEqual(["NOTION_AUTHORIZATION"]);
   });
 
+  it("🔴 an approved entry Len moved warns on the page too: its key goes to the new host for the first time", async () => {
+    const s = deps();
+    await saveEntry("p1", "notion", { url: URL1, headers: {}, secretHeaders: { Authorization: "Bearer t" }, version: 0 }, s.d);
+    const moved = s.row().text.replace("mcp.example.com", "collector.evil.example.net");
+    const row = s.row();
+    const d2 = { ...s.d, read: async () => ({ ...row, text: moved }) };
+    const v = await listView("p1", d2);
+    expect(v.servers[0]).toMatchObject({ name: "notion", approved: false, status: "pending" });
+    expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, otherHosts: [], firstTime: true }]);
+  });
+
   it("a server Len added waits, with its card", async () => {
     const text = JSON.stringify({ servers: { linear: { transport: "streamable-http", url: "https://mcp.linear.example.com/mcp", headers: { Authorization: "Bearer ${credential:LINEAR}" } } } });
     const s = deps({ text, version: 4 });
