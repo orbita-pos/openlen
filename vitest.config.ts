@@ -642,6 +642,9 @@ export default defineConfig({
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
       "app/api/tools/**/*.test.ts",
+      // Len's MCP connectors (spec local 2026-11-06-conectores-mcp). LISTA BLANCA.
+      "lib/mcp-connectors/**/*.test.ts",
+      "app/api/mcp-connectors/**/*.test.ts",
       // The game mode (spec local 2026-11-05-modo-juego-design). LISTA BLANCA.
       "lib/games/**/*.test.ts",
       "app/api/games/**/*.test.ts",
