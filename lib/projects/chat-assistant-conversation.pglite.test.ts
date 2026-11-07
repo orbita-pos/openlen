@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { abrirFilaDelTurno, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, listArchivedConversations, registrarTurnoDelServidor, reopenConversation, startNewConversation, turnosParaElHistorial } =
+const { abrirFilaDelTurno, filasParaBuscar, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, listArchivedConversations, registrarTurnoDelServidor, reopenConversation, startNewConversation, transcripcionDeLaFila, turnosParaElHistorial } =
   await import("./chat");
 
 const KEY = "assistant:a1";
@@ -38,6 +38,7 @@ beforeEach(async () => {
   pg = new PGlite();
   await pg.exec(`
     create table "projects" ("id" text primary key, "userId" text not null);
+    create table "users" ("id" text primary key, "name" text, "email" text);
     create table "projectChatMessages" (
       "id" text primary key,
       "projectId" text not null references "projects"("id") on delete cascade,
@@ -75,6 +76,11 @@ describe("the assistant's conversation, apart from Len's", () => {
     await abrirFilaDelTurno("p1", { id: "len2", userText: "cambia el título", page: null });
     const r = await pg.query<{ id: string; conversation: string | null }>(`select "id", "conversation" from "projectChatMessages" where "id" in ('luc3', 'len2') order by "id"`);
     expect(r.rows).toEqual([{ id: "len2", conversation: null }, { id: "luc3", conversation: KEY }]);
+  });
+
+  it("🔴 Len's session search never finds the assistant's conversation, nor reads one of its rows", async () => {
+    expect((await filasParaBuscar("p1")).map((r) => r.id)).toEqual(["len1"]);
+    expect(await transcripcionDeLaFila("p1", "luc1")).toBeNull();
   });
 
   it("a closing row the server writes without an opened one lands in the conversation it is given", async () => {
