@@ -373,6 +373,11 @@ export interface AgentDeps {
   leerMemoriaDelDueno?(userId: string): Promise<string | null>;
   /** plans/len-md — escribe ENTERO el `~/.len/LEN.md` de la persona. */
   setPersonalLenMd?(userId: string, text: string | null): Promise<boolean>;
+  /** THE PERSON'S OWN ASSISTANT's memory, `~/.assistant/MEMORY.md` (spec local 2026-11-06-asistente-propio, §6.1). */
+  assistantMemory?: {
+    read(assistantId: string): Promise<string | null>;
+    save(assistantId: string, text: string): Promise<boolean>;
+  };
   /** plans/len-md — las notas de `/.len/memory` (lib/agent/memory/store.ts). */
   memoryNotes?: {
     list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
@@ -883,6 +888,18 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     },
     async setPersonalLenMd(userId, text) {
       return setPersonalLenMd(userId, text);
+    },
+    // The person's own assistant's memory. Lazy import: it reads the database, server-only.
+    assistantMemory: {
+      async read(assistantId) {
+        const { assistantById } = await import("@/lib/assistants/store");
+        return (await assistantById(assistantId))?.memory ?? null;
+      },
+      async save(assistantId, text) {
+        const { saveAssistantMemory } = await import("@/lib/assistants/store");
+        await saveAssistantMemory(assistantId, text);
+        return true;
+      },
     },
     // Las notas de /.len/memory. Import perezoso: tiran de la base, server-only.
     memoryNotes: {
