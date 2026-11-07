@@ -1122,6 +1122,24 @@ describe("~/.len/mcp.json as a file (spec local 2026-11-06-conectores-mcp)", () 
     assert.match(texto(out), /notion waits for the person's approval in a card/);
   });
 
+  it("🔴 with OPENLEN_MCP=0 the file is saved but no card is drawn", async () => {
+    const { deps, rows } = await depsConMcp();
+    const before = process.env.OPENLEN_MCP;
+    process.env.OPENLEN_MCP = "0";
+    try {
+      const s = makeSession();
+      await runAgentTool(s, deps, "Read", { file_path: "~/.len/mcp.json" });
+      const out = await runAgentTool(s, deps, "Write", { file_path: "~/.len/mcp.json", content: FILE });
+      assert.equal(out.response.ok, true, texto(out));
+      assert.equal(rows.get(s.userId)?.text, FILE);
+      assert.equal(out.mcpApproval, undefined);
+      assert.match(texto(out), /switched off/);
+    } finally {
+      if (before === undefined) delete process.env.OPENLEN_MCP;
+      else process.env.OPENLEN_MCP = before;
+    }
+  });
+
   it("a key in clear is refused naming the header", async () => {
     const { deps, rows } = await depsConMcp();
     const bad = FILE.replace("Bearer ${credential:NOTION_TOKEN}", "Bearer ntn_abc");
