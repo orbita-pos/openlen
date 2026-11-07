@@ -8,7 +8,7 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 
 import type { McpConnection, openMcp } from "./client";
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "./config";
-import { serversToMount } from "./mount";
+import { MOUNT_MAX_ATTEMPTS, serversToMount } from "./mount";
 import { projectCallResult, renderResource } from "./project";
 import type { ServerState, StoredConfig } from "./store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "./templates";
@@ -94,6 +94,9 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
     const state = stateOf.get(name);
     if (stored.approved[name] !== fp) lines.push(`- ${name}: pending approval (the person approves it in a card or on the Herramientas page)`);
     else if (state?.status === "waiting-credentials" && (!state.listedAt || state.fingerprint !== fp)) lines.push(`- ${name}: waiting-credentials: ${credentialRefsOf(entry).join(", ")}`);
+    // DeepSeek: after its attempt budget the server's tools are removed until the configuration is reloaded.
+    else if (state?.status === "failed" && state.fingerprint === fp && state.failures >= MOUNT_MAX_ATTEMPTS)
+      lines.push(`- ${name}: failed ${state.failures} times in a row (${state.error ?? "unknown error"}); it stopped retrying until the person saves or approves it again on the Herramientas page`);
     else if (!state || state.fingerprint !== fp || !state.listedAt) lines.push(state?.status === "failed" && state.fingerprint === fp ? `- ${name}: failed: ${state.error ?? "unknown error"}` : `- ${name}: not listed yet`);
     else {
       ready.push({ name, entry, state });

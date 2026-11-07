@@ -3344,6 +3344,9 @@ export const personMcpServerState = pgTable(
     error: text("error"),
     /** The server said its list changed, or a call met a tool it no longer has: re-list outside the next turn. */
     stale: boolean("stale").notNull().default(false),
+    /** Consecutive failed mounts: DeepSeek's reconnect budget (delays doubling 500 ms → 30 s, 10 attempts). */
+    failures: integer("failures").notNull().default(0),
+    attemptedAt: timestamp("attemptedAt", { mode: "date", withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.personId, t.serverName] })],
 );

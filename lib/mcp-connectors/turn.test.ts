@@ -25,6 +25,8 @@ function setup(servers: Record<string, Record<string, unknown>>, approvedNames: 
     status: "connected",
     error: null,
     stale: false,
+    failures: 0,
+    attemptedAt: null,
     ...s,
   }));
   const d: TurnDeps = { readConfig: async () => ({ text, approved, version: 3 }), readStates: async () => full, now: () => NOW };
@@ -86,6 +88,13 @@ describe("connectorsForTurn", () => {
     expect(declared.filter((n) => n.startsWith("mcp__old__"))).toHaveLength(100);
     expect(declared.filter((n) => n.startsWith("mcp__young__"))).toHaveLength(28);
     expect(t.contextText).toContain("- young: 72 tools didn't fit");
+  });
+
+  it("🔴 a server that failed 10 times in a row is no longer declared (DeepSeek removes its tools)", async () => {
+    const { d } = setup({ ok: entry("https://ok.example.com/mcp") }, ["ok"], [{ serverName: "ok", tools: [tool("ok", "a")], status: "failed", error: "refused", failures: 10 }]);
+    const t = await connectorsForTurn("p1", d);
+    expect(t.routes.size).toBe(0);
+    expect(t.contextText).toContain("- ok: failed 10 times in a row (refused); it stopped retrying until the person saves or approves it again on the Herramientas page");
   });
 
   it("a changed entry not yet re-listed declares nothing", async () => {

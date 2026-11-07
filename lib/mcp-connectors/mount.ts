@@ -53,36 +53,39 @@ export async function mountServer(personId: string, name: string, d: MountDeps):
   if (stored.approved[name] !== fingerprint) return null;
   const prev = (await d.readStates(personId)).find((s) => s.serverName === name);
   const keep = { tools: prev?.tools ?? [], instructions: prev?.instructions ?? "", hasResources: prev?.hasResources ?? false, listedAt: prev?.listedAt ?? null };
+  const now = d.now();
   const save = async (s: ServerState) => {
     await d.saveState(personId, s);
     return s;
   };
+  // DeepSeek's attempt budget: a failed attempt counts, a success resets it; missing keys aren't an attempt.
+  const failed = (error: string): Promise<ServerState> =>
+    save({ serverName: name, fingerprint, ...keep, status: "failed", error, stale: false, failures: (prev?.failures ?? 0) + 1, attemptedAt: now });
   const opened = await openEntry(personId, entry, d);
   if (!opened.ok) {
-    return save({ serverName: name, fingerprint, ...keep, status: opened.stage === "credentials" ? "waiting-credentials" : "failed", error: opened.error, stale: false });
+    if (opened.stage !== "credentials") return failed(opened.error);
+    return save({ serverName: name, fingerprint, ...keep, status: "waiting-credentials", error: opened.error, stale: false, failures: prev?.failures ?? 0, attemptedAt: prev?.attemptedAt ?? null });
   }
   const { conn, redact } = opened;
   try {
-    if (new TextEncoder().encode(conn.instructions).byteLength > INSTRUCTIONS_MAX_BYTES) {
-      return save({ serverName: name, fingerprint, ...keep, status: "failed", error: "server instructions are over 32 KB", stale: false });
-    }
+    if (new TextEncoder().encode(conn.instructions).byteLength > INSTRUCTIONS_MAX_BYTES) return failed("server instructions are over 32 KB");
     const reviewed = reviewTools(name, await conn.listTools());
-    if (reviewed.tools.length === 0 && reviewed.problems.some((p) => p.startsWith("duplicate tool name"))) {
-      return save({ serverName: name, fingerprint, ...keep, status: "failed", error: reviewed.problems.join("; "), stale: false });
-    }
+    if (reviewed.tools.length === 0 && reviewed.problems.some((p) => p.startsWith("duplicate tool name"))) return failed(reviewed.problems.join("; "));
     return save({
       serverName: name,
       fingerprint,
       tools: reviewed.tools,
       instructions: conn.instructions.trim(),
       hasResources: conn.capabilities.resources,
-      listedAt: d.now(),
+      listedAt: now,
       status: "connected",
       error: reviewed.problems.length > 0 ? redact(reviewed.problems.join("; ")) : null,
       stale: false,
+      failures: 0,
+      attemptedAt: now,
     });
   } catch (err) {
-    return save({ serverName: name, fingerprint, ...keep, status: "failed", error: redact(messageOf(err)), stale: false });
+    return failed(redact(messageOf(err)));
   } finally {
     await conn.close();
   }
@@ -110,7 +113,19 @@ export async function probeServer(
   }
 }
 
-/** Which approved, enabled servers a turn should have mounted outside it: never listed, changed, stale or old. */
+/** DeepSeek's reconnect policy (dsh-mcp-client `reconnect`): delays double from 500 ms up to 30 s, and after 10
+ *  consecutive failed attempts it stops until the configuration is reloaded — here, until the person saves or
+ *  approves the entry again (those mount it directly, not through this). */
+export const MOUNT_INITIAL_DELAY_MS = 500;
+export const MOUNT_MAX_DELAY_MS = 30_000;
+export const MOUNT_MAX_ATTEMPTS = 10;
+
+export function retryDelayMs(failures: number): number {
+  return Math.min(MOUNT_INITIAL_DELAY_MS * 2 ** Math.max(0, failures - 1), MOUNT_MAX_DELAY_MS);
+}
+
+/** Which approved, enabled servers a turn should have mounted outside it: never listed, changed, stale or old — and a
+ *  failing one only once its retry delay has passed, never after its attempt budget is spent. */
 export function serversToMount(states: readonly ServerState[], config: McpConfig, approved: Readonly<Record<string, string>>, now: Date): string[] {
   const byName = new Map(states.map((s) => [s.serverName, s]));
   return Object.entries(config.servers)
@@ -119,7 +134,12 @@ export function serversToMount(states: readonly ServerState[], config: McpConfig
       const fp = entryFingerprint(e);
       if (approved[name] !== fp) return false;
       const s = byName.get(name);
-      if (!s || s.fingerprint !== fp || s.stale) return true;
+      if (!s || s.fingerprint !== fp) return true;
+      if (s.status === "failed") {
+        if (s.failures >= MOUNT_MAX_ATTEMPTS) return false;
+        return !s.attemptedAt || now.getTime() - s.attemptedAt.getTime() >= retryDelayMs(s.failures);
+      }
+      if (s.stale) return true;
       if (s.status === "waiting-credentials") return false;
       return !s.listedAt || now.getTime() - s.listedAt.getTime() > STALE_AFTER_MS;
     })
