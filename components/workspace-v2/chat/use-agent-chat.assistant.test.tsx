@@ -92,6 +92,15 @@ describe("the chat engine as the person's own assistant", () => {
     expect(calls.find((c) => c.url === "/api/agent")!.body).not.toHaveProperty("assistantId");
   });
 
+  it("🔴 offers none of Len's own controls: goal, plan mode, Dynamis (the goal answered 400 there)", async () => {
+    stub([]);
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render({ assistantId: "a1" }, (c) => (chat = c));
+    expect(chat!.goalOffered).toBe(false);
+    expect(chat!.planOffered).toBe(false);
+    expect(chat!.modeOffered).toBe(false);
+  });
+
   it("«load earlier» asks for the assistant's conversation", async () => {
     const calls = stub([]);
     let chat: ReturnType<typeof useAgentChat> | null = null;

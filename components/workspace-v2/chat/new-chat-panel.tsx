@@ -381,7 +381,8 @@ function AgentChatView({
   // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
   // en un proyecto con miembros, `@persona` sin `@Len` es un mensaje para ella
   // (Len no responde); con `@Len`, un turno como siempre. Sin miembros, nada cambia.
-  const equipo = useGenteDelChat(projectId);
+  // The person's own assistant's place has no team: all of it goes to the assistant (spec local 2026-11-06-asistente-propio).
+  const equipo = useGenteDelChat(projectId, { off: assistant !== undefined });
   const idsDelEquipo = useMemo(() => equipo.gente.map((p) => p.userId), [equipo.gente]);
   const colorDe = useCallback((id: string) => colorDePersona(id, idsDelEquipo), [idsDelEquipo]);
   const destino = destinoDe(chat.draft, equipo.gente, equipo.yo);
@@ -647,6 +648,7 @@ function AgentChatView({
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(secretGuard ? { secretGuard } : {})}
             compacta={flotante}
+            {...(assistant ? { placeholder: t("ownAssistant.place.placeholder", { name: assistant.name }) } : {})}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),

@@ -2751,7 +2751,8 @@ export function useAgentChat({
     setMode,
     /** El selector «Len / Len Dynamis» se ofrece: lo dice el servidor, y el
      *  chat clásico (`ai-design`, la vía de escape) no sabe de modos. */
-    modeOffered: dynamisOffered && agentModeUI,
+    // None of Len's own controls for the person's own assistant: Dynamis, plan mode and the goal are Len's.
+    modeOffered: dynamisOffered && agentModeUI && !assistantId,
     agentModeUI,
     send,
     submit,
@@ -2769,7 +2770,7 @@ export function useAgentChat({
     planMode: planWanted ?? planKnown,
     togglePlan,
     /** El chat clásico (`ai-design`, la vía de escape) no tiene modo plan. */
-    planOffered: agentModeUI,
+    planOffered: agentModeUI && !assistantId,
     /** Pieza 8: el encargo que se ve, la ficha «Encargo» y sus controles. El
      *  chat clásico (`ai-design`) no lo tiene. */
     goal: goalKnown,
@@ -2779,7 +2780,7 @@ export function useAgentChat({
     toggleGoalChip,
     resumeGoal,
     clearGoal,
-    goalOffered: agentModeUI,
+    goalOffered: agentModeUI && !assistantId,
     seguirTurnoDelHilo,
   };
 }
