@@ -3305,3 +3305,45 @@ export const artifactObjectGarbage = pgTable("artifactObjectGarbage", {
   fencingToken: text("fencingToken").notNull(),
   notBefore: timestamp("notBefore", { withTimezone: true }).notNull().default(sqlOp`now()+interval '1 hour'`),
 }, (t) => [index("artifactObjectGarbage_due_idx").on(t.notBefore)]);
+
+// LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp). Keep in step with scripts/mcp-connectors-migrate-sql.ts.
+/** ~/.len/mcp.json of a person (DeepSeek's `servers` map) and which entries they approved, by fingerprint. */
+export const personMcpConfigs = pgTable("personMcpConfigs", {
+  personId: text("personId").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  text: text("text").notNull(),
+  approved: jsonb("approved").$type<Record<string, string>>().notNull().default({}),
+  version: integer("version").notNull().default(0),
+  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A person's named keys (`${credential:NAME}`), encrypted with lib/integrations/crypto.ts. Never shown, never in a file. */
+export const personCredentials = pgTable(
+  "personCredentials",
+  {
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    value: text("value").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.name] })],
+);
+
+/** Each connector's last good list (what a turn declares), its instructions and status — DeepSeek's live generation. */
+export const personMcpServerState = pgTable(
+  "personMcpServerState",
+  {
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    serverName: text("serverName").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    tools: jsonb("tools").$type<import("@/lib/mcp-connectors/names").ReviewedTool[]>().notNull().default([]),
+    instructions: text("instructions").notNull().default(""),
+    hasResources: boolean("hasResources").notNull().default(false),
+    listedAt: timestamp("listedAt", { mode: "date", withTimezone: true }),
+    status: text("status").$type<"connected" | "failed" | "waiting-credentials">().notNull(),
+    /** Redacted: never a credential value. */
+    error: text("error"),
+    /** The server said its list changed, or a call met a tool it no longer has: re-list outside the next turn. */
+    stale: boolean("stale").notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.serverName] })],
+);
