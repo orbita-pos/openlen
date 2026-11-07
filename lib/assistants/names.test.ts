@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assistantSlug, checkAssistantInput } from "./names";
+import { assistantSlug, checkAssistantInput, slugFromParam } from "./names";
 
 const OK = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" };
 
@@ -11,6 +11,19 @@ describe("assistantSlug", () => {
     expect(assistantSlug("  Ana   María ")).toBe("ana-maria");
     expect(assistantSlug("ÑÚ--x")).toBe("nu-x");
     expect(assistantSlug("🙂🙂")).toBe("");
+  });
+  it("🔴 keeps the letters of every script: a name in Japanese, Korean, Chinese or Cyrillic has its address", () => {
+    expect(assistantSlug("さくら")).toBe("さくら");
+    expect(assistantSlug("小美")).toBe("小美");
+    expect(assistantSlug("민지")).toBe("민지");
+    expect(assistantSlug("Ольга Ли")).toBe("ольга-ли");
+    expect(checkAssistantInput({ ...OK, name: "さくら" })).toEqual({ ok: true, value: { ...OK, name: "さくら" } });
+  });
+  it("reads the address's name whether or not it arrives percent-encoded", () => {
+    expect(slugFromParam(encodeURIComponent("さくら"))).toBe("さくら");
+    expect(slugFromParam("さくら")).toBe("さくら");
+    expect(slugFromParam("lucia")).toBe("lucia");
+    expect(slugFromParam("%E3")).toBe("%E3");
   });
 });
 

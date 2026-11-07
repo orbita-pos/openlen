@@ -19,14 +19,27 @@ export interface AssistantInput {
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 
-/** «Lucía» → `lucia`, «Señor Pan» → `senor-pan`; `""` when nothing of it is a letter or a digit. */
+/** «Lucía» → `lucia`, «Señor Pan» → `senor-pan`, «さくら» → `さくら`, «Ольга Ли» → `ольга-ли`: Latin accents go, the
+ *  letters and digits of every script stay (the address is private, so they travel percent-encoded); `""` when
+ *  nothing of it is a letter or a digit. NFC after stripping, so Hangul isn't left in decomposed jamo. */
 export function assistantSlug(name: string): string {
   return name
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
+    .normalize("NFC")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/** The `[name]` of /<locale>/assistant/<name>, decoded once if it arrived percent-encoded. A slug has no `%`, so
+ *  decoding an already decoded one changes nothing; a malformed one stays as it came (and finds no assistant). */
+export function slugFromParam(param: string): string {
+  try {
+    return decodeURIComponent(param);
+  } catch {
+    return param;
+  }
 }
 
 function includes<T extends string>(list: readonly T[], value: unknown): value is T {
