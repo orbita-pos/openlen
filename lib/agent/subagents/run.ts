@@ -102,6 +102,9 @@ export interface LaunchContext {
   /** While the launching turn's stream is open. */
   readonly emit?: (ev: SubagentEvent) => void;
   readonly isMember: boolean;
+  /** The launching session is read-only (the person's own assistant, spec local 2026-11-06-asistente-propio): its
+   *  children are too, whatever their type — like plan mode, without plan mode's prompt. */
+  readonly readOnly?: true;
 }
 
 /** The brain a child talks to: Len's (`createAgentBrain`), with the child's tools. */
@@ -339,7 +342,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       leidos: new Map(),
       loadedSkills: new Set(spec.messages.flatMap((m: PreloadedMessage) => m.loadedSkill ? [m.loadedSkill] : [])),
       ...(running?.runningSkill ? { runningSkill: running.runningSkill } : {}),
-      ...(isReadOnlyFor(spec.type, spec.planMode) ? { readOnly: true as const } : {}),
+      ...(isReadOnlyFor(spec.type, spec.planMode || ctx.readOnly === true) ? { readOnly: true as const } : {}),
     } as AgentSession;
     const tools = spec.tools;
     // Depth 1: the child has no launcher of its own; its stop is its own.
@@ -692,13 +695,13 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     await ctx.refreshAgentTypes?.();
     const type = childTypeOf(preset, ctx.agentTypes);
     if (!type) return { ok: false, code: "unavailable", message: `subagent "${id}" has no agent preset projection for restoration` };
-    const childTools = childToolsFor(ctx.declarations, type, first.planMode || ctx.planMode);
+    const childTools = childToolsFor(ctx.declarations, type, first.planMode || ctx.planMode || ctx.readOnly === true);
     if (!childTools.length) return { ok: false, code: "unavailable", message: `agent type "${preset}" leaves the subagent no tools to work with` };
     if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
     const abort = new AbortController();
     if (!reserve(ctx.projectId, id, abort)) return { ok: false, code: "too_many_subagents", message: TOO_MANY_SUBAGENTS };
-    // Read-only if it started so, or if Len plans now: a scope never widens.
-    const scope = first.planMode || ctx.planMode;
+    // Read-only if it started so, if Len plans now, or if the waking session is read-only: a scope never widens.
+    const scope = first.planMode || ctx.planMode || ctx.readOnly === true;
     // An isolated child wakes in a new copy of the draft as it is now: what it did before already came back (phase 4).
     let reopened: boolean;
     try {
@@ -802,7 +805,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     async launch(o) {
       await ctx.refreshAgentTypes?.();
       const type = childTypeOf(o.preset, ctx.agentTypes);
-      const tools = type ? childToolsFor(ctx.declarations, type, ctx.planMode) : [];
+      const tools = type ? childToolsFor(ctx.declarations, type, ctx.planMode || ctx.readOnly === true) : [];
       if (!type || !tools.length) return { ok: false, code: "no_tools", message: `agent type "${o.preset}" leaves the subagent no tools to work with` };
       if (ctx.spend.over()) return { ok: false, code: "turn_budget_reached", message: TURN_BUDGET_REACHED };
       const id = io.newId();
@@ -811,7 +814,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       let w: AgentWorktree | null | undefined;
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: o.preset, description: o.description, prompt: o.prompt, forked: false, planMode: ctx.planMode });
-        w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+        w = isolates(id, type, ctx.planMode || ctx.readOnly === true, o.isolation) ? await makeCopy(id) : undefined;
         if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
@@ -858,7 +861,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       let w: AgentWorktree | null | undefined;
       try {
         await io.store.createRun({ id, projectId: ctx.projectId, chatRowId: ctx.chatRowId, turnId: ctx.turnId, personId: ctx.personId, preset: "general-purpose", description: o.description, prompt: o.prompt, forked: true, planMode: ctx.planMode });
-        w = isolates(id, type, ctx.planMode, o.isolation) ? await makeCopy(id) : undefined;
+        w = isolates(id, type, ctx.planMode || ctx.readOnly === true, o.isolation) ? await makeCopy(id) : undefined;
         if (w === null) { await failUnstarted(id); release(ctx.projectId, id); return { ok: false, code: "worktree_failed", message: WORKTREE_FAILED }; }
         if (w) await io.store.setWorktree?.(id, w);
       } catch (e) {
@@ -877,7 +880,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         planMode: ctx.planMode,
         messages: [...ctx.forkSeed, withLine({ role: "user", content: withContinuableReturnGuidance(`${o.prompt}\n\n${DELEGATION_SCOPE_STATEMENT}`) }, w ?? null)],
         tools: [...ctx.declarations],
-        allowed: generalPurposeNames(ctx.planMode),
+        allowed: generalPurposeNames(ctx.planMode || ctx.readOnly === true),
         prior: NOTHING_YET,
         ...(w ? { worktree: w } : {}),
       };

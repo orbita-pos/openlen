@@ -918,6 +918,22 @@ describe("launching custom types", () => {
     expect(s.ran).not.toContain("Write");
     expect(s.sessions[0].readOnly).toBe(true);
   });
+  it("a read-only launching session (the person's own assistant) makes even a custom writer read-only", async () => {
+    const s = setup({ agentTypes: customTypes(), scripts: [llama("Write"), llama("Read"), dice("ok")] });
+    const fromReadOnly = createSubagentLauncher({ ...s.ctx, readOnly: true }, s.io);
+    await fromReadOnly.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });
+    await s.settled("r1");
+    expect(s.ran).not.toContain("Write");
+    expect(s.sessions[0].readOnly).toBe(true);
+    expect(s.rows.get("r1")).toMatchObject({ planMode: false });
+  });
+  it("a read-only launching session makes a general-purpose child read-only too", async () => {
+    const s = setup({ scripts: [dice("ok")] });
+    const fromReadOnly = createSubagentLauncher({ ...s.ctx, readOnly: true }, s.io);
+    await fromReadOnly.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(s.sessions[0].readOnly).toBe(true);
+  });
   it("a deleted type cannot be restored as general-purpose", async () => {
     const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [dice("ok")] });
     await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });

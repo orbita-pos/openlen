@@ -513,7 +513,8 @@ export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Rec
 }
 
 /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Explore, Plan, or any child in plan mode. */
-export const READ_ONLY_REFUSAL = "This agent is read-only: it cannot change the project's files.";
+export { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
+import { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   if (session.readOnly) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
