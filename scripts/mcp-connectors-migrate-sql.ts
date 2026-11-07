@@ -27,6 +27,11 @@ export const CREATE_MCP_CONNECTORS: readonly string[] = [
     "status" text NOT NULL,
     "error" text,
     "stale" boolean NOT NULL DEFAULT false,
+    "failures" integer NOT NULL DEFAULT 0,
+    "attemptedAt" timestamp with time zone,
     PRIMARY KEY ("personId", "serverName")
   );`,
+  // DeepSeek's reconnect budget (06/11, after the first version of this table): additive.
+  `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "failures" integer NOT NULL DEFAULT 0;`,
+  `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "attemptedAt" timestamp with time zone;`,
 ];

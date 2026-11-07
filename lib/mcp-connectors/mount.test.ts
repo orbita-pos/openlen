@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { entryFingerprint, parseMcpConfig } from "./config";
 import type { McpConnection } from "./client";
-import { mountServer, probeServer, serversToMount, STALE_AFTER_MS, type MountDeps } from "./mount";
+import { MOUNT_MAX_ATTEMPTS, mountServer, probeServer, serversToMount, STALE_AFTER_MS, type MountDeps } from "./mount";
 import type { ServerState } from "./store";
 
 const NOW = new Date("2026-11-06T12:00:00Z");
@@ -65,9 +65,28 @@ const previous: ServerState = {
   status: "connected",
   error: null,
   stale: false,
+  failures: 0,
+  attemptedAt: null,
 };
 
 describe("mountServer", () => {
+  it("🔴 a failure counts and stamps the attempt; a success resets the count (DeepSeek's attempt budget)", async () => {
+    const failing = deps({
+      states: [{ ...previous, failures: 2 }],
+      open: async () => {
+        throw new Error("refused");
+      },
+    });
+    expect(await mountServer("p1", "notion", failing.d)).toMatchObject({ status: "failed", failures: 3, attemptedAt: NOW });
+    const ok = deps({ states: [{ ...previous, failures: 4 }] });
+    expect(await mountServer("p1", "notion", ok.d)).toMatchObject({ status: "connected", failures: 0, attemptedAt: NOW });
+  });
+
+  it("missing credentials don't count as a failed attempt", async () => {
+    const { d } = deps({ creds: {}, states: [{ ...previous, failures: 2 }] });
+    expect(await mountServer("p1", "notion", d)).toMatchObject({ status: "waiting-credentials", failures: 2 });
+  });
+
   it("success stores the reviewed list", async () => {
     const { d, saved, opened, last } = deps();
     const s = await mountServer("p1", "notion", d);
@@ -162,5 +181,21 @@ describe("serversToMount", () => {
     expect(serversToMount([{ ...previous, listedAt: NOW, fingerprint: "other" }], config, { notion: FP }, NOW)).toEqual(["notion"]);
     expect(serversToMount([{ ...previous, listedAt: new Date(NOW.getTime() - STALE_AFTER_MS - 1) }], config, { notion: FP }, NOW)).toEqual(["notion"]);
     expect(serversToMount([], config, {}, NOW)).toEqual([]);
+  });
+
+  it("🔴 a failing server waits DeepSeek's doubling delay (500 ms, up to 30 s) before it is retried", () => {
+    const failed = { ...previous, status: "failed" as const, listedAt: null, failures: 3 };
+    // 3 failures: 500 ms × 2² = 2 s.
+    expect(serversToMount([{ ...failed, attemptedAt: new Date(NOW.getTime() - 1_000) }], config, { notion: FP }, NOW)).toEqual([]);
+    expect(serversToMount([{ ...failed, attemptedAt: new Date(NOW.getTime() - 2_500) }], config, { notion: FP }, NOW)).toEqual(["notion"]);
+    // 9 failures: capped at 30 s.
+    expect(serversToMount([{ ...failed, failures: 9, attemptedAt: new Date(NOW.getTime() - 29_000) }], config, { notion: FP }, NOW)).toEqual([]);
+    expect(serversToMount([{ ...failed, failures: 9, attemptedAt: new Date(NOW.getTime() - 31_000) }], config, { notion: FP }, NOW)).toEqual(["notion"]);
+  });
+
+  it("🔴 after 10 failures in a row it stops retrying until the person acts", () => {
+    const spent = { ...previous, status: "failed" as const, failures: MOUNT_MAX_ATTEMPTS, attemptedAt: new Date(NOW.getTime() - 24 * 3600_000) };
+    expect(serversToMount([spent], config, { notion: FP }, NOW)).toEqual([]);
+    expect(serversToMount([{ ...spent, stale: true }], config, { notion: FP }, NOW)).toEqual([]);
   });
 });

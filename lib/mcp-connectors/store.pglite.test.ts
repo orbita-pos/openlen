@@ -43,6 +43,8 @@ const state = (serverName: string, over: Partial<Parameters<typeof saveServerSta
   status: "connected" as const,
   error: null,
   stale: false,
+  failures: 0,
+  attemptedAt: null,
   ...over,
 });
 
@@ -85,6 +87,12 @@ describe("server states", () => {
     const rows = await readServerStates("p1");
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ serverName: "a", error: "second", status: "failed" });
+  });
+
+  it("the attempt count and time are kept", async () => {
+    const at = new Date("2026-11-06T12:00:00Z");
+    await saveServerState("p1", state("a", { status: "failed", failures: 3, attemptedAt: at }));
+    expect((await readServerStates("p1"))[0]).toMatchObject({ failures: 3, attemptedAt: at });
   });
 
   it("markStale flags and delete removes", async () => {

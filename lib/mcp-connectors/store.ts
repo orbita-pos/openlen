@@ -23,6 +23,9 @@ export interface ServerState {
   readonly status: "connected" | "failed" | "waiting-credentials";
   readonly error: string | null;
   readonly stale: boolean;
+  /** Consecutive failed mounts (DeepSeek's attempt budget); a success resets it, missing keys don't count. */
+  readonly failures: number;
+  readonly attemptedAt: Date | null;
 }
 
 export interface StoredConfig {
