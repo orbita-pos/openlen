@@ -442,7 +442,8 @@ export async function filasParaBuscar(projectId: string): Promise<ChatRowForSear
     // EL CHAT DEL EQUIPO: sus mensajes también se buscan —es como Len lee
     // entero lo que el sobre recortó—, con quién los escribió.
     .leftJoin(schema.users, eq(schema.users.id, t.autorId))
-    .where(eq(t.projectId, projectId))
+    // Never the person's own assistant's conversation: it is theirs, and members talk to Len too.
+    .where(and(eq(t.projectId, projectId), noEsDelAsistente(t.conversation)))
     .orderBy(desc(t.createdAt))
     .limit(MAX_FILAS_PARA_BUSCAR);
   // Las más recientes si hubiera de más; el módulo las ordena por fecha.
@@ -459,9 +460,14 @@ export async function transcripcionDeLaFila(projectId: string, id: string): Prom
   const rows = await db
     .select({ transcript: t.transcript })
     .from(t)
-    .where(and(eq(t.projectId, projectId), eq(t.id, id)))
+    .where(and(eq(t.projectId, projectId), eq(t.id, id), noEsDelAsistente(t.conversation)))
     .limit(1);
   return rows[0]?.transcript ?? null;
+}
+
+/** A row outside every assistant's conversation (`assistant:<id>`); Len's current and archived chats pass. */
+function noEsDelAsistente(conversation: typeof schema.projectChatMessages.conversation) {
+  return sql`coalesce(${conversation}, '') NOT LIKE ${`${ASSISTANT_CONVERSATION_PREFIX}%`}`;
 }
 
 /** Las fotos de un turno del cliente, como se guardan (`photosForRow`). Con
