@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -309,7 +310,9 @@ async function herTurn(
 ): Promise<Response> {
   const b = (typeof body === "object" && body !== null ? body : {}) as { message?: unknown; vid?: unknown };
   const message = typeof b.message === "string" ? sanitizeUserMessage(b.message) : "";
-  const vid = typeof b.vid === "string" && VISITOR_ID.test(b.vid) ? b.vid : null;
+  // No vid at all = today's bubble, still open from before the publish that brought hers: it gets her answer, each
+  // message on its own (no continuity), instead of an error until the visitor reloads. A malformed one is refused.
+  const vid = b.vid === undefined ? randomBytes(16).toString("base64url") : typeof b.vid === "string" && VISITOR_ID.test(b.vid) ? b.vid : null;
   if (!message || !vid) return reply(400, { error: "bad_request" });
   // On the page, but the page was never published with her: she knows nothing yet.
   const knowledge = ella.knowledge?.trim();
