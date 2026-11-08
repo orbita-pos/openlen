@@ -753,7 +753,20 @@
     "place": {
       "yours": "Your assistant",
       "inProject": "In {project}",
-      "placeholder": "Write to {name}…"
+      "placeholder": "Write to {name}…",
+      "talk": "Talk",
+      "conversations": "Conversations",
+      "onPage": "On my page",
+      "onPageHint": "It will show on your page when you publish it.",
+      "empty": "No visitor has written to {name} yet.",
+      "visitor": "Visitor",
+      "handedOff": "Asked to talk to a person",
+      "messages": "{count, plural, one {# message} other {# messages}}",
+      "budget": "This month, visitors: {spent} of {cap} credits",
+      "budgetChange": "Change",
+      "budgetSave": "Save",
+      "budgetLabel": "Monthly cap, in credits",
+      "loadError": "The conversations couldn't be loaded."
     },
     "speaker": {
       "working": "{name} is working",

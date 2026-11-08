@@ -753,7 +753,20 @@
     "place": {
       "yours": "あなたのアシスタント",
       "inProject": "{project} 内",
-      "placeholder": "{name} にメッセージ…"
+      "placeholder": "{name} にメッセージ…",
+      "talk": "話す",
+      "conversations": "会話",
+      "onPage": "マイページに表示",
+      "onPageHint": "公開するとページに表示されます。",
+      "empty": "まだ {name} に書き込んだ訪問者はいません。",
+      "visitor": "訪問者",
+      "handedOff": "担当者との会話を希望",
+      "messages": "{count, plural, other {# 件のメッセージ}}",
+      "budget": "今月の訪問者：{cap} クレジット中 {spent}",
+      "budgetChange": "変更",
+      "budgetSave": "保存",
+      "budgetLabel": "月の上限（クレジット）",
+      "loadError": "会話を読み込めませんでした。"
     },
     "speaker": {
       "working": "{name} が作業中",

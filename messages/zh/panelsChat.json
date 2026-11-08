@@ -753,7 +753,20 @@
     "place": {
       "yours": "你的助手",
       "inProject": "在 {project}",
-      "placeholder": "给 {name} 发消息…"
+      "placeholder": "给 {name} 发消息…",
+      "talk": "对话",
+      "conversations": "访客对话",
+      "onPage": "放在我的页面上",
+      "onPageHint": "发布页面后就会显示。",
+      "empty": "还没有访客给 {name} 写过消息。",
+      "visitor": "访客",
+      "handedOff": "要求与真人沟通",
+      "messages": "{count, plural, other {# 条消息}}",
+      "budget": "本月访客：{spent} / {cap} 积分",
+      "budgetChange": "修改",
+      "budgetSave": "保存",
+      "budgetLabel": "每月上限（积分）",
+      "loadError": "无法加载对话。"
     },
     "speaker": {
       "working": "{name} 正在工作",
