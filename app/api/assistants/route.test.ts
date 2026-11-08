@@ -10,9 +10,10 @@ const m = vi.hoisted(() => ({
   assistantsOf: vi.fn(async (): Promise<unknown[]> => []),
   assistantById: vi.fn(async (): Promise<unknown> => null),
   deleteAssistant: vi.fn(async () => true),
+  oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 
 const { fijarAccesoDePrueba } = await import("@/lib/projects/acceso-de-prueba");
@@ -37,7 +38,15 @@ describe("POST /api/assistants", () => {
     const res = await post(BODY);
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: "a1", slug: "lucia" });
-    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } });
+    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" }, memory: "" });
+  });
+
+  it("🔴 creating her in a project whose old assistant had facts starts her memory with them", async () => {
+    m.oldAssistantSettings.mockResolvedValueOnce({ enabled: true, facts: "Envíos sólo en Guadalajara." });
+    expect((await post(BODY)).status).toBe(201);
+    const [arg] = m.createAssistant.mock.calls[0] as unknown as [{ memory: string }];
+    expect(arg.memory).toContain("Envíos sólo en Guadalajara.");
+    expect(m.oldAssistantSettings).toHaveBeenCalledWith("p1");
   });
 
   it("refuses an editor of the project", async () => {

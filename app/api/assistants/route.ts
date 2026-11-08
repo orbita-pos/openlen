@@ -4,7 +4,8 @@
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { checkAssistantInput } from "@/lib/assistants/names";
-import { assistantsOf, createAssistant } from "@/lib/assistants/store";
+import { memoryFromOldAssistant } from "@/lib/assistants/knowledge";
+import { assistantsOf, createAssistant, oldAssistantSettings } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
 
@@ -25,7 +26,9 @@ export async function POST(req: Request): Promise<Response> {
   if (acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
   const input = checkAssistantInput(body ?? {});
   if (!input.ok) return json({ field: input.field }, 400);
-  const created = await createAssistant({ personId, projectId, input: input.value });
+  // What today's assistant of this project was taught starts her memory (spec §6.4; phase 2A). Fail-soft.
+  const memory = memoryFromOldAssistant(await oldAssistantSettings(projectId).catch(() => undefined));
+  const created = await createAssistant({ personId, projectId, input: input.value, memory });
   if (!created.ok) return json({ error: created.code }, 409);
   return json({ id: created.assistant.id, slug: created.assistant.slug }, 201);
 }
