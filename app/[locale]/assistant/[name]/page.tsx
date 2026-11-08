@@ -40,7 +40,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
       initialChat={chat}
       onPage={state.onPage}
       needsPublish={state.needsPublish}
-      forApp={state.forApp}
+      nothingToKnow={state.nothingToKnow}
     />
   );
 }

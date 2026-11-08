@@ -1,14 +1,18 @@
 "use client";
 
 // HER CONVERSATIONS WITH VISITORS (spec local 2026-11-06-asistente-propio, §4.6.2 «Conversaciones», §6.2, §6.5; phase
-// 2A): what the page's visitors said and what she answered, newest first, and what they may spend this month.
+// 2A): what the page's visitors said and what she answered, newest first — with her visuals (phase 2B) —, and what they
+// may spend this month.
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+
+import { VisualFrame } from "../chat/visual-frame";
 
 interface Line {
   role: "visitor" | "assistant";
   text: string;
   at: string;
+  visuals?: { title: string | null; code: string }[];
 }
 interface Visit {
   id: string;
@@ -123,10 +127,18 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
           </header>
           <div className="flex flex-col gap-1.5">
             {v.lines.map((l, i) => (
-              <p key={i} className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-2.5 py-1.5 text-[13px] ${l.role === "visitor" ? "self-end bg-hover fg" : "self-start fg"}`}>
-                <span className="sr-only">{l.role === "visitor" ? t("ownAssistant.place.visitor") : name}: </span>
-                {l.text}
-              </p>
+              <div key={i} className={`flex max-w-[85%] flex-col ${l.role === "visitor" ? "self-end" : "self-start w-full"}`}>
+                {l.text && (
+                  <p className={`whitespace-pre-wrap rounded-lg px-2.5 py-1.5 text-[13px] ${l.role === "visitor" ? "bg-hover fg" : "fg"}`}>
+                    <span className="sr-only">{l.role === "visitor" ? t("ownAssistant.place.visitor") : name}: </span>
+                    {l.text}
+                  </p>
+                )}
+                {/* Her visuals, as the visitor saw them (phase 2B). The owner only looks: no sendPrompt from here. */}
+                {l.visuals?.map((vis, j) => (
+                  <VisualFrame key={j} widget={{ title: vis.title, loadingMessages: [], code: vis.code }} final />
+                ))}
+              </div>
             ))}
           </div>
         </article>

@@ -25,7 +25,7 @@ export function AssistantHome({
   initialChat,
   onPage,
   needsPublish,
-  forApp,
+  nothingToKnow,
 }: {
   assistant: AssistantView;
   projectHtml: string;
@@ -34,8 +34,8 @@ export function AssistantHome({
   onPage: boolean;
   /** On, but not yet published with her (lib/assistants/visitor/on-page.ts). */
   needsPublish: boolean;
-  /** An app or a game: her bubble isn't for them yet. */
-  forApp: boolean;
+  /** Published with her, and nothing for her to know: no text, no public data. */
+  nothingToKnow: boolean;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
@@ -61,7 +61,7 @@ export function AssistantHome({
             ))}
           </div>
           <div className="ml-auto min-w-0">
-            <OnPageSwitch assistantId={assistant.id} initial={onPage} initialNeedsPublish={needsPublish} forApp={forApp} />
+            <OnPageSwitch assistantId={assistant.id} initial={onPage} initialNeedsPublish={needsPublish} nothingToKnow={nothingToKnow} />
           </div>
         </div>
         {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}

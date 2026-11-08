@@ -767,9 +767,9 @@
       "budgetSave": "저장",
       "budgetLabel": "월 한도(크레딧)",
       "loadError": "대화를 불러오지 못했어요.",
-      "onPageApps": "앱과 게임에는 아직 안 돼요. 곧 지원할 예정이에요.",
       "budgetRange": "0~{max} 크레딧으로 정할 수 있어요.",
-      "budgetError": "한도를 저장하지 못했어요. 다시 시도해 주세요."
+      "budgetError": "한도를 저장하지 못했어요. 다시 시도해 주세요.",
+      "nothingToKnow": "게시했지만 페이지에 읽을 수 있는 텍스트나 공개 데이터가 없어요."
     },
     "speaker": {
       "working": "{name} · 작업 중",

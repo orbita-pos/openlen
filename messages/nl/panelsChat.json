@@ -767,9 +767,9 @@
       "budgetSave": "Opslaan",
       "budgetLabel": "Maandlimiet in credits",
       "loadError": "De gesprekken konden niet worden geladen.",
-      "onPageApps": "Nog niet in apps en games: dat komt nog.",
       "budgetRange": "Het kan van 0 tot {max} credits zijn.",
-      "budgetError": "De limiet kon niet worden opgeslagen. Probeer het opnieuw."
+      "budgetError": "De limiet kon niet worden opgeslagen. Probeer het opnieuw.",
+      "nothingToKnow": "Gepubliceerd, maar je pagina heeft geen tekst of openbare gegevens om te lezen."
     },
     "speaker": {
       "working": "{name} is bezig",

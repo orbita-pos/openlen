@@ -151,7 +151,7 @@ describe("her place's controls", () => {
 
   it("her place has Hablar and Conversaciones, and Conversaciones lists what visitors said", async () => {
     serve();
-    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} forApp={false} />);
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
     const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
     expect(tabs.map((t) => t.textContent)).toEqual(["ownAssistant.place.talk", "ownAssistant.place.conversations"]);
@@ -166,7 +166,7 @@ describe("her place's controls", () => {
 
   it("🔴 turning her on says it shows after publishing", async () => {
     const calls = serve();
-    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} forApp={false} />);
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
     const sw = host.querySelector<HTMLButtonElement>('[role="switch"]')!;
     expect(sw.getAttribute("aria-checked")).toBe("false");
@@ -199,27 +199,55 @@ describe("her place's controls, what they say", () => {
 
   it("🔴 after a reload, on but not yet published with her still says it shows after publishing", async () => {
     serve();
-    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish forApp={false} />);
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish nothingToKnow={false} />);
     await settle();
     expect(host.querySelector('[role="switch"]')!.getAttribute("aria-checked")).toBe("true");
     expect(host.textContent).toContain("ownAssistant.place.onPageHint");
   });
 
-  it("🔴 in an app or a game the switch says not yet, and can't be turned on", async () => {
+  // Phase 2B: apps and games can have her; published with nothing for her to know says so.
+  it("an app can turn her on now", async () => {
     const calls = serve();
-    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} forApp />);
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
     const sw = host.querySelector<HTMLButtonElement>('[role="switch"]')!;
-    expect(sw.disabled).toBe(true);
-    expect(host.textContent).toContain("ownAssistant.place.onPageApps");
+    expect(sw.disabled).toBe(false);
     act(() => sw.click());
     await settle();
-    expect(calls.some((c) => c.init?.method === "PATCH")).toBe(false);
+    expect(calls.some((c) => c.init?.method === "PATCH")).toBe(true);
+  });
+
+  it("published with nothing to know says so", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish={false} nothingToKnow />);
+    await settle();
+    expect(host.textContent).toContain("ownAssistant.place.nothingToKnow");
+    expect(host.textContent).not.toContain("ownAssistant.place.onPageHint");
+  });
+
+  it("her visual shows in the visit, as the visitor saw it", async () => {
+    const AT = "2026-11-08T18:00:00.000Z";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (String(url).endsWith("/api/assistants/a1/visits"))
+          return new Response(JSON.stringify({ visits: [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: false, lines: [{ role: "visitor", text: "¿Huecos?", at: AT }, { role: "assistant", text: "Estos:", at: AT, visuals: [{ title: "huecos", code: "<div>17:00</div>" }] }] }] }));
+        if (String(url).endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 0, cap: 12_500, explicit: null, max: 50_000 }));
+        return new Response("{}", { status: 200 });
+      }),
+    );
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    act(() => host.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!.click());
+    await settle();
+    const visit = host.querySelector("[data-visitor-conversations]")!;
+    expect(visit.textContent).toContain("Estos:");
+    expect(visit.querySelector('[data-testid="len-visual"]')).not.toBeNull();
   });
 
   it("🔴 a cap above the plan says what it can be, and isn't sent", async () => {
     const calls = serve();
-    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} forApp={false} />);
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
     act(() => host.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!.click());
     await settle();

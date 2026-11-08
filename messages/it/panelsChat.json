@@ -767,9 +767,9 @@
       "budgetSave": "Salva",
       "budgetLabel": "Limite del mese, in crediti",
       "loadError": "Impossibile caricare le conversazioni.",
-      "onPageApps": "Nelle app e nei giochi non ancora: arriverà.",
       "budgetRange": "Può essere da 0 a {max} crediti.",
-      "budgetError": "Impossibile salvare il limite. Riprova."
+      "budgetError": "Impossibile salvare il limite. Riprova.",
+      "nothingToKnow": "Pubblicata, ma la tua pagina non ha testo né dati pubblici da leggere."
     },
     "speaker": {
       "working": "{name} sta lavorando",
