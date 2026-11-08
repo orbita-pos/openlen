@@ -4,6 +4,8 @@
 // project + chat settings, and gates protected routes on a live ol_chat session.
 
 import { eq } from "drizzle-orm";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { db, schema } from "@/lib/db";
 import { readChatCookie } from "@/lib/chat/session";
 import {
@@ -44,11 +46,15 @@ export async function loadChatSite(sub: string): Promise<ChatSiteContext | null>
   if (!row) return null;
   const chat = row.data?.settings?.chat;
   const assistant = row.data?.settings?.assistant;
+  // The bubble's assistant: today's, or the person's own on the page and published with her (phase 2A, the same rule
+  // as the bubble's GET in app/api/assistant/[sub]).
+  const legacy = assistant?.enabled === true;
+  const ella = !legacy && assistantsEnabled() ? await assistantOnPage(row.id).catch(() => null) : null;
   return {
     projectId: row.id,
     userId: row.userId ?? "",
     chatEnabled: chat?.enabled === true,
-    assistantEnabled: assistant?.enabled === true,
+    assistantEnabled: legacy || Boolean(ella?.knowledge?.trim()),
     selfServeJoin: chat?.selfServeJoin !== false, // default open
     identityMode: chat?.identityMode === "account" ? "account" : "guest", // default guest
     locale: detectLang(row.data?.html ?? ""),
