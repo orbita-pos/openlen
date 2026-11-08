@@ -2952,7 +2952,8 @@ export const agentRequestSteps = pgTable(
     repeats: jsonb("repeats"),
     cacheBreak: jsonb("cacheBreak"),
     endReason: text("endReason"),
-    /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; null for Len's. */
+    /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; the person's own assistant with a
+     *  visitor: `assistant-visitor:<assistantId>`; null for Len's. Len's baseline reads only the nulls. */
     subagentId: text("subagentId"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },

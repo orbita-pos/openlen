@@ -75,8 +75,9 @@ export interface VisitorTurnDeps {
   /** Charges the owner; returns what the turn cost, in centicredits. */
   charge(c: { ownerId: string; projectId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly VisitorUse[] }): Promise<number>;
   notifyAsleep(o: { ownerId: string; projectId: string; assistantName: string; assistantSlug: string; reason: Sleep; month: string; spent: number; cap: number }): Promise<void>;
-  /** Layer 0 (lib/agent/telemetry/): one recorder per turn. */
-  recorder?(projectId: string, turnId: string, hasHistory: boolean): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
+  /** Layer 0 (lib/agent/telemetry/): one recorder per turn, its rows tagged with `tag` (the `subagentId` column, which
+   *  keeps them out of Len's baseline). */
+  recorder?(o: { projectId: string; turnId: string; tag: string }): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
   runLoop?: typeof runAgentLoop;
   /** For the tests: the turn's limit. `VISITOR_TURN_TIMEOUT_MS` by default. */
   timeoutMs?: number;
@@ -110,10 +111,13 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     release = sleep ? null : visitorReservations.tryReserve(input.ownerId, spent, VISITOR_TURN_RESERVE, cap);
     if (sleep || !release) {
       const reason: Sleep = sleep ?? "cap";
-      if (await d.store.claimAsleepAlert(input.ownerId, month, reason)) {
-        await d.notifyAsleep({ ownerId: input.ownerId, projectId: input.projectId, assistantName: input.assistant.name, assistantSlug: input.assistant.slug, reason, month, spent, cap }).catch((err: unknown) =>
-          console.warn("[assistant-visitor] the owner couldn't be told she fell asleep", err),
-        );
+      // Telling the owner never costs the visitor the asleep line and the form.
+      try {
+        if (await d.store.claimAsleepAlert(input.ownerId, month, reason)) {
+          await d.notifyAsleep({ ownerId: input.ownerId, projectId: input.projectId, assistantName: input.assistant.name, assistantSlug: input.assistant.slug, reason, month, spent, cap });
+        }
+      } catch (err) {
+        console.warn("[assistant-visitor] the owner couldn't be told she fell asleep", err);
       }
       return { kind: "asleep", reason };
     }
@@ -140,19 +144,25 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     if (input.signal?.aborted) onLeave();
     else input.signal?.addEventListener("abort", onLeave, { once: true });
     const signal = stop.signal;
-    const recorder = d.recorder?.(input.projectId, randomUUID(), prior.length > 0);
+    // Her rows are tagged as hers: Len's baseline never compares against a visitor's prefix, nor hers against Len's.
+    const recorder = d.recorder?.({ projectId: input.projectId, turnId: randomUUID(), tag: `assistant-visitor:${input.assistant.id}` });
     const brain = d.brain([...VISITOR_TOOLS], recorder ? (c) => recorder.onCall(c) : undefined, signal);
-    let handedOff = false;
+    /** She offered a way to reach the business (the reply's intent). */
+    let offered = false;
+    /** The visitor asked for a person (what «Conversaciones» says), not only that she offered the contact form. */
+    let askedForPerson = false;
     let steps = 0;
+    let endReason = "error";
     const result = await (d.runLoop ?? runAgentLoop)({
       messages: [system, ...prior, ask],
       tools: [...VISITOR_TOOLS],
       openStream: (messages) => (++steps <= VISITOR_MAX_STEPS ? brain.openStream(messages) : brain.closeOut(messages)),
       closeOut: brain.closeOut,
-      runTool: async (name) => {
+      runTool: async (name, args) => {
         // The loop refuses what wasn't declared; this is the second gate of a list that must not grow by accident.
         if (name !== OFFER_HANDOFF) return { response: { ok: false, error: NOT_GIVEN } };
-        handedOff = true;
+        offered = true;
+        if ((args as { why?: unknown } | undefined)?.why === "person") askedForPerson = true;
         return {
           response: {
             ok: true,
@@ -164,15 +174,28 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
       unattended: true,
       signal,
       ...(recorder ? { onStepTools: (b: readonly ToolOutcomeSummary[]) => recorder.onStepTools(b) } : {}),
-    }).finally(() => {
-      clearTimeout(timer);
-      input.signal?.removeEventListener("abort", onLeave);
-    });
-    recorder?.finish({ endReason: "done" });
+    })
+      .then((r) => ((endReason = "done"), r))
+      .finally(() => {
+        clearTimeout(timer);
+        input.signal?.removeEventListener("abort", onLeave);
+        // Closed whatever happened: a failed turn's rows say so.
+        try {
+          recorder?.finish({ endReason });
+        } catch {
+          // telemetry never touches the turn
+        }
+      });
     const text = replyText(result.finalText);
     const uses = brain.providersUsed().map((u) => ({ provider: u.provider, model: u.model, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, reasoningTokens: u.thinkingTokens }));
-    const centicredits = await d.charge({ ownerId: input.ownerId, projectId: input.projectId, refId: key, usage: result.usage, uses });
-    await d.store.addMonthSpend(input.ownerId, month, centicredits).catch((err: unknown) => console.warn("[assistant-visitor] the month's spend wasn't added", err));
+    // A billing failure never loses the answer the visitor is waiting for; what wasn't charged isn't counted either.
+    let centicredits = 0;
+    try {
+      centicredits = await d.charge({ ownerId: input.ownerId, projectId: input.projectId, refId: key, usage: result.usage, uses });
+    } catch (err) {
+      console.error("[assistant-visitor] the turn couldn't be charged", err);
+    }
+    if (centicredits > 0) await d.store.addMonthSpend(input.ownerId, month, centicredits).catch((err: unknown) => console.warn("[assistant-visitor] the month's spend wasn't added", err));
     const at = now.toISOString();
     try {
       await d.store.saveVisit({
@@ -185,14 +208,14 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
           ...(text ? [{ role: "assistant" as const, text, at }] : []),
         ],
         centicredits,
-        handedOff,
+        handedOff: askedForPerson,
         at: now,
       });
     } catch (err) {
       // Deleted while it answered (its visits went with it): the visitor still gets the reply.
       console.warn("[assistant-visitor] the visit wasn't saved", err);
     }
-    return { kind: "reply", text, intent: handedOff ? (input.handoffAvailable ? "handoff" : "lead") : "answer" };
+    return { kind: "reply", text, intent: offered ? (input.handoffAvailable ? "handoff" : "lead") : "answer" };
   } finally {
     release?.();
     running.delete(key);
@@ -256,6 +279,7 @@ async function defaultVisitorDeps(): Promise<VisitorTurnDeps> {
         `assistant-asleep:${n.ownerId}:${n.month}:${n.reason}`,
       );
     },
-    recorder: (projectId, turnId, hasHistory) => createStepRecorder({ projectId, turnId, hasHistory, store: stepStore, log: console.warn }),
+    // No baseline from earlier turns (the store's is Len's); within the turn her calls compare with each other.
+    recorder: ({ projectId, turnId, tag }) => createStepRecorder({ projectId, turnId, hasHistory: false, store: stepStore, log: console.warn, subagentId: tag }),
   };
 }
