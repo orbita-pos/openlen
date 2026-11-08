@@ -21,8 +21,10 @@ export async function rememberWhatWasPublished(
   deps: { save(projectId: string, text: string, at: Date): Promise<void>; switchOldOff(projectId: string): Promise<boolean> },
 ): Promise<void> {
   try {
-    await deps.save(projectId, knowledgeOf(data), at);
-    await deps.switchOldOff(projectId);
+    const text = knowledgeOf(data);
+    await deps.save(projectId, text, at);
+    // With nothing for her to know she won't answer, so today's assistant keeps its settings.
+    if (text.trim()) await deps.switchOldOff(projectId);
   } catch (err) {
     console.warn("[assistants] what was published wasn't saved for the page's own assistant", err);
   }

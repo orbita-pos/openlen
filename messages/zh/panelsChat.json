@@ -766,7 +766,10 @@
       "budgetChange": "修改",
       "budgetSave": "保存",
       "budgetLabel": "每月上限（积分）",
-      "loadError": "无法加载对话。"
+      "loadError": "无法加载对话。",
+      "onPageApps": "应用和游戏暂不支持，即将推出。",
+      "budgetRange": "可设为 0 到 {max} 积分。",
+      "budgetError": "无法保存上限，请重试。"
     },
     "speaker": {
       "working": "{name} 正在工作",

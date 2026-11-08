@@ -766,7 +766,10 @@
       "budgetChange": "Modifier",
       "budgetSave": "Enregistrer",
       "budgetLabel": "Plafond du mois, en crédits",
-      "loadError": "Impossible de charger les conversations."
+      "loadError": "Impossible de charger les conversations.",
+      "onPageApps": "Pas encore dans les apps et les jeux : bientôt.",
+      "budgetRange": "De 0 à {max} crédits.",
+      "budgetError": "Impossible d’enregistrer le plafond. Réessayez."
     },
     "speaker": {
       "working": "{name} travaille",

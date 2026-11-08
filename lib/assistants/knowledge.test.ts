@@ -36,6 +36,14 @@ describe("rememberWhatWasPublished", () => {
     expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
+  it("🔴 nothing published for her to know (an app's shell): today's assistant isn't switched off", async () => {
+    const save = vi.fn(async () => {});
+    const switchOldOff = vi.fn(async () => true);
+    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff });
+    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date));
+    expect(switchOldOff).not.toHaveBeenCalled();
+  });
+
   it("never fails the publish: a save that throws is only logged", async () => {
     const save = vi.fn(async () => {
       throw new Error("db down");

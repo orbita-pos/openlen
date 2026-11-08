@@ -766,7 +766,10 @@
       "budgetChange": "Change",
       "budgetSave": "Save",
       "budgetLabel": "Monthly cap, in credits",
-      "loadError": "The conversations couldn't be loaded."
+      "loadError": "The conversations couldn't be loaded.",
+      "onPageApps": "Not in apps or games yet: it's coming.",
+      "budgetRange": "It can be from 0 to {max} credits.",
+      "budgetError": "The cap couldn't be saved. Try again."
     },
     "speaker": {
       "working": "{name} is working",

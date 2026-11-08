@@ -68,6 +68,16 @@ export async function oldAssistantSettings(projectId: string): Promise<Assistant
   return row?.data?.settings?.assistant ?? undefined;
 }
 
+/** An app or a game (`data.app`): her bubble isn't for them yet (phase 2B). */
+export async function projectIsApp(projectId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ app: sql<boolean>`(${schema.projects.data}->'app') is not null and jsonb_typeof(${schema.projects.data}->'app') = 'object'` })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, projectId))
+    .limit(1);
+  return row?.app === true;
+}
+
 /** Today's assistant of a project goes off (spec §6.4): she takes its place in the same publish. One atomic write of
  *  one field, so no read-modify-write of the project's settings can lose it. `false` when it wasn't on. */
 export async function switchOldAssistantOff(projectId: string): Promise<boolean> {

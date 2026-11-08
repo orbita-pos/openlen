@@ -766,7 +766,10 @@
       "budgetChange": "Alterar",
       "budgetSave": "Salvar",
       "budgetLabel": "Limite do mês, em créditos",
-      "loadError": "Não foi possível carregar as conversas."
+      "loadError": "Não foi possível carregar as conversas.",
+      "onPageApps": "Em apps e jogos ainda não: chega em breve.",
+      "budgetRange": "Pode ser de 0 a {max} créditos.",
+      "budgetError": "Não foi possível salvar o limite. Tente de novo."
     },
     "speaker": {
       "working": "{name} está trabalhando",

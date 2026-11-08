@@ -766,7 +766,10 @@
       "budgetChange": "Cambiar",
       "budgetSave": "Guardar",
       "budgetLabel": "Tope del mes, en créditos",
-      "loadError": "No se pudieron cargar las conversaciones."
+      "loadError": "No se pudieron cargar las conversaciones.",
+      "onPageApps": "En apps y juegos todavía no: llega más adelante.",
+      "budgetRange": "Puede ser de 0 a {max} créditos.",
+      "budgetError": "No se pudo guardar el tope. Inténtalo otra vez."
     },
     "speaker": {
       "working": "{name} está trabajando",

@@ -11,6 +11,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { slugFromParam } from "@/lib/assistants/names";
 import { assistantBySlug } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
+import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { getProject } from "@/lib/projects";
 import { getChatMessages } from "@/lib/projects/chat";
@@ -27,9 +28,19 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   if (!assistant) notFound();
   const project = await getProject(assistant.homeProjectId, personId);
   if (!project) notFound();
-  const [chat, onPage] = await Promise.all([
+  const [chat, found] = await Promise.all([
     getChatMessages(assistant.homeProjectId, { charla: assistantConversationKey(assistant.id) }),
-    assistantOnPage(assistant.homeProjectId).then((x) => x !== null).catch(() => false),
+    assistantOnPage(assistant.homeProjectId).catch(() => null),
   ]);
-  return <AssistantHome assistant={assistantView(assistant)} projectHtml={project.data?.html ?? ""} initialChat={chat} onPage={onPage} />;
+  const state = onPageState(found, Boolean(project.data?.app));
+  return (
+    <AssistantHome
+      assistant={assistantView(assistant)}
+      projectHtml={project.data?.html ?? ""}
+      initialChat={chat}
+      onPage={state.onPage}
+      needsPublish={state.needsPublish}
+      forApp={state.forApp}
+    />
+  );
 }

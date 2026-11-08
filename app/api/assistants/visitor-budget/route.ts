@@ -18,7 +18,7 @@ export async function GET(): Promise<Response> {
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
   const [credit, spent, explicit] = await Promise.all([getCreditState(personId), monthSpent(personId, visitorMonth(new Date())), explicitVisitorCap(personId)]);
-  return json({ spent, cap: visitorCap(explicit, credit.allotment), explicit });
+  return json({ spent, cap: visitorCap(explicit, credit.allotment), explicit, max: credit.allotment });
 }
 
 export async function PUT(req: Request): Promise<Response> {

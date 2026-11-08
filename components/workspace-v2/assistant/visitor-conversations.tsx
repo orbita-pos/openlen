@@ -21,6 +21,8 @@ interface Budget {
   spent: number;
   cap: number;
   explicit: number | null;
+  /** The plan's allotment: the highest cap, in centicredits. */
+  max: number;
 }
 
 export function VisitorConversations({ assistantId, name }: { assistantId: string; name: string }) {
@@ -31,6 +33,7 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
   const [budget, setBudget] = useState<Budget | null>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  const [budgetError, setBudgetError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -51,10 +54,20 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
   const credits = (centis: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(centis / 100);
 
   const save = async () => {
+    if (!budget) return;
     const value = draft.trim() === "" ? null : Math.round(Number(draft) * 100);
-    if (value !== null && (!Number.isFinite(value) || value < 0)) return;
-    const res = await fetch("/api/assistants/visitor-budget", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ cap: value }) });
-    if (!res.ok) return;
+    // Out of range says what it can be, instead of doing nothing.
+    const range = t("ownAssistant.place.budgetRange", { max: credits(budget.max) });
+    if (value !== null && (!Number.isFinite(value) || value < 0 || value > budget.max)) {
+      setBudgetError(range);
+      return;
+    }
+    const res = await fetch("/api/assistants/visitor-budget", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ cap: value }) }).catch(() => null);
+    if (!res?.ok) {
+      setBudgetError(res?.status === 400 ? range : t("ownAssistant.place.budgetError"));
+      return;
+    }
+    setBudgetError(null);
     setEditing(false);
     const fresh = await fetch("/api/assistants/visitor-budget").then((r) => (r.ok ? (r.json() as Promise<Budget>) : null)).catch(() => null);
     if (fresh) setBudget(fresh);
@@ -74,7 +87,10 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
                 id="visitor-cap"
                 type="number"
                 min={0}
+                max={budget.max / 100}
                 step="1"
+                aria-invalid={budgetError !== null}
+                aria-describedby={budgetError ? "visitor-cap-error" : undefined}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 className="w-24 rounded-md border bd bg-elev px-2 py-1 text-[12.5px] fg"
@@ -88,6 +104,11 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
             <button type="button" onClick={() => (setDraft(budget.explicit === null ? "" : String(budget.explicit / 100)), setEditing(true))} className="underline">
               {t("ownAssistant.place.budgetChange")}
             </button>
+          )}
+          {editing && budgetError && (
+            <span id="visitor-cap-error" role="alert" className="basis-full text-[12px] text-[var(--nc-danger,#c2410c)]">
+              {budgetError}
+            </span>
           )}
         </div>
       )}
