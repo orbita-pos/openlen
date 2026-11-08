@@ -753,7 +753,20 @@
     "place": {
       "yours": "내 어시스턴트",
       "inProject": "{project}에서",
-      "placeholder": "{name}에게 메시지…"
+      "placeholder": "{name}에게 메시지…",
+      "talk": "대화",
+      "conversations": "대화 기록",
+      "onPage": "내 페이지에 표시",
+      "onPageHint": "페이지를 게시하면 표시돼요.",
+      "empty": "아직 {name}에게 메시지를 보낸 방문자가 없어요.",
+      "visitor": "방문자",
+      "handedOff": "담당자와 대화를 요청함",
+      "messages": "{count, plural, other {메시지 #개}}",
+      "budget": "이번 달 방문자: {cap} 크레딧 중 {spent}",
+      "budgetChange": "변경",
+      "budgetSave": "저장",
+      "budgetLabel": "월 한도(크레딧)",
+      "loadError": "대화를 불러오지 못했어요."
     },
     "speaker": {
       "working": "{name} · 작업 중",

@@ -11,6 +11,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { slugFromParam } from "@/lib/assistants/names";
 import { assistantBySlug } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
+import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { getProject } from "@/lib/projects";
 import { getChatMessages } from "@/lib/projects/chat";
 import "@/app/[locale]/new/tokens.css";
@@ -26,6 +27,9 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   if (!assistant) notFound();
   const project = await getProject(assistant.homeProjectId, personId);
   if (!project) notFound();
-  const chat = await getChatMessages(assistant.homeProjectId, { charla: assistantConversationKey(assistant.id) });
-  return <AssistantHome assistant={assistantView(assistant)} projectHtml={project.data?.html ?? ""} initialChat={chat} />;
+  const [chat, onPage] = await Promise.all([
+    getChatMessages(assistant.homeProjectId, { charla: assistantConversationKey(assistant.id) }),
+    assistantOnPage(assistant.homeProjectId).then((x) => x !== null).catch(() => false),
+  ]);
+  return <AssistantHome assistant={assistantView(assistant)} projectHtml={project.data?.html ?? ""} initialChat={chat} onPage={onPage} />;
 }

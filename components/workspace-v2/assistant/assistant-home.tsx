@@ -1,24 +1,72 @@
 "use client";
 
-// THE ASSISTANT'S PLACE (spec local 2026-11-06-asistente-propio, §4.6.2): /<locale>/assistant/<name>, a clean page with
-// only its conversation — Len's chat panel as the assistant, without the workshop around it. It never writes the
-// project: the canvas update is a no-op, and the turn's session is read-only on the server.
+// THE ASSISTANT'S PLACE (spec local 2026-11-06-asistente-propio, §4.6.2): /<locale>/assistant/<name>, a clean page —
+// Len's chat panel as the assistant, without the workshop around it. It never writes the project: the canvas update is
+// a no-op, and the turn's session is read-only on the server. Phase 2A adds «Conversaciones» (what the page's visitors
+// said to her) and «En mi página»; «Pedidos» comes with phase 3.
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import type { AssistantView } from "@/lib/assistants/view";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
+import { OnPageSwitch } from "./on-page-switch";
+import { VisitorConversations } from "./visitor-conversations";
 
 const noCanvas = () => {};
 
-export function AssistantHome({ assistant, projectHtml, initialChat }: { assistant: AssistantView; projectHtml: string; initialChat: StoredChatTurn[] }) {
-  const t = useTranslations("common");
+type Tab = "talk" | "conversations";
+
+export function AssistantHome({
+  assistant,
+  projectHtml,
+  initialChat,
+  onPage,
+}: {
+  assistant: AssistantView;
+  projectHtml: string;
+  initialChat: StoredChatTurn[];
+  /** Whether her bubble is on the page (`assistantProjects.onPage`). */
+  onPage: boolean;
+}) {
+  const tc = useTranslations("common");
+  const t = useTranslations("panelsChat");
+  const [tab, setTab] = useState<Tab>("talk");
+  const [seen, setSeen] = useState(false);
+  const tabs: readonly Tab[] = ["talk", "conversations"];
   return (
-    <ToastProvider dismissLabel={t("close")}>
+    <ToastProvider dismissLabel={tc("close")}>
       <div className="workspace-v2 flex h-dvh flex-col bg-side">
-        <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={assistant} centered />
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b bd px-4 py-2" data-assistant-controls="">
+          <div role="tablist" className="flex items-center gap-1">
+            {tabs.map((k) => (
+              <button
+                key={k}
+                type="button"
+                role="tab"
+                aria-selected={tab === k}
+                onClick={() => (setTab(k), k === "conversations" && setSeen(true))}
+                className={`rounded-full px-3 py-1 text-[12.5px] ${tab === k ? "seg-active fg" : "fg-muted hover:fg"}`}
+              >
+                {t(k === "talk" ? "ownAssistant.place.talk" : "ownAssistant.place.conversations")}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto min-w-0">
+            <OnPageSwitch assistantId={assistant.id} initial={onPage} />
+          </div>
+        </div>
+        {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
+        <div className={tab === "talk" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+          <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={assistant} centered />
+        </div>
+        {seen && (
+          <div className={tab === "conversations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+            <VisitorConversations assistantId={assistant.id} name={assistant.name} />
+          </div>
+        )}
       </div>
     </ToastProvider>
   );

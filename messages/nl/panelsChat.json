@@ -753,7 +753,20 @@
     "place": {
       "yours": "Jouw assistent",
       "inProject": "In {project}",
-      "placeholder": "Schrijf {name}…"
+      "placeholder": "Schrijf {name}…",
+      "talk": "Praten",
+      "conversations": "Gesprekken",
+      "onPage": "Op mijn pagina",
+      "onPageHint": "Verschijnt op je pagina zodra je die publiceert.",
+      "empty": "Nog geen bezoeker heeft {name} geschreven.",
+      "visitor": "Bezoeker",
+      "handedOff": "Wilde met een persoon praten",
+      "messages": "{count, plural, one {# bericht} other {# berichten}}",
+      "budget": "Deze maand, bezoekers: {spent} van {cap} credits",
+      "budgetChange": "Wijzigen",
+      "budgetSave": "Opslaan",
+      "budgetLabel": "Maandlimiet in credits",
+      "loadError": "De gesprekken konden niet worden geladen."
     },
     "speaker": {
       "working": "{name} is bezig",

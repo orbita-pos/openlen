@@ -753,7 +753,20 @@
     "place": {
       "yours": "Dein Assistent",
       "inProject": "In {project}",
-      "placeholder": "Schreib {name}…"
+      "placeholder": "Schreib {name}…",
+      "talk": "Sprechen",
+      "conversations": "Unterhaltungen",
+      "onPage": "Auf meiner Seite",
+      "onPageHint": "Erscheint auf deiner Seite, sobald du sie veröffentlichst.",
+      "empty": "Noch hat niemand {name} geschrieben.",
+      "visitor": "Besucher",
+      "handedOff": "Wollte mit einer Person sprechen",
+      "messages": "{count, plural, one {# Nachricht} other {# Nachrichten}}",
+      "budget": "Diesen Monat, Besucher: {spent} von {cap} Credits",
+      "budgetChange": "Ändern",
+      "budgetSave": "Speichern",
+      "budgetLabel": "Monatslimit in Credits",
+      "loadError": "Die Unterhaltungen konnten nicht geladen werden."
     },
     "speaker": {
       "working": "{name} arbeitet",

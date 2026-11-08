@@ -753,7 +753,20 @@
     "place": {
       "yours": "Votre assistant",
       "inProject": "Dans {project}",
-      "placeholder": "Écrivez à {name}…"
+      "placeholder": "Écrivez à {name}…",
+      "talk": "Discuter",
+      "conversations": "Conversations",
+      "onPage": "Sur ma page",
+      "onPageHint": "Visible sur votre page quand vous la publierez.",
+      "empty": "Aucun visiteur n’a encore écrit à {name}.",
+      "visitor": "Visiteur",
+      "handedOff": "A demandé à parler à une personne",
+      "messages": "{count, plural, one {# message} other {# messages}}",
+      "budget": "Ce mois-ci, visiteurs : {spent} sur {cap} crédits",
+      "budgetChange": "Modifier",
+      "budgetSave": "Enregistrer",
+      "budgetLabel": "Plafond du mois, en crédits",
+      "loadError": "Impossible de charger les conversations."
     },
     "speaker": {
       "working": "{name} travaille",

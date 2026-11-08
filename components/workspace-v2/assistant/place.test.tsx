@@ -9,9 +9,10 @@ vi.mock("next-intl", () => ({
   useLocale: () => "es",
 }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "u1", name: "Ana" } }, status: "authenticated" }) }));
-vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {}, error: () => {} }) }));
+vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {}, error: () => {} }), ToastProvider: ({ children }: { children: React.ReactNode }) => children }));
 
 import { NewChatPanel } from "../chat/new-chat-panel";
+import { AssistantHome } from "./assistant-home";
 import { LenTurn } from "../chat/chat-turn";
 import { restoreTurn } from "../chat/use-agent-chat";
 
@@ -124,5 +125,57 @@ describe("the assistant's place", () => {
     await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
     expect(host.textContent).toContain('ownAssistant.speaker.disclaimer {"name":"Lucía"}');
     expect(host.textContent).not.toContain("newChat.composer.disclaimer");
+  });
+});
+
+// HER PLACE'S CONTROLS (spec local 2026-11-06-asistente-propio, §4.4.5, §4.6.2, §6.2; phase 2A).
+describe("her place's controls", () => {
+  const AT = "2026-11-07T18:00:00.000Z";
+  function serve(o: { patch?: unknown } = {}) {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        calls.push({ url: String(url), ...(init ? { init } : {}) });
+        const u = String(url);
+        if (u.endsWith("/api/assistants/a1/visits"))
+          return new Response(JSON.stringify({ visits: [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: true, lines: [{ role: "visitor", text: "¿Hacen envíos?", at: AT }, { role: "assistant", text: "Sólo en Guadalajara.", at: AT }] }] }));
+        if (u.endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 1_200, cap: 12_500, explicit: null }));
+        if (u.endsWith("/api/assistants/a1") && init?.method === "PATCH") return new Response(JSON.stringify(o.patch ?? { onPage: true, needsPublish: true }));
+        return new Response("{}", { status: 200 });
+      }),
+    );
+    return calls;
+  }
+  const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+
+  it("her place has Hablar and Conversaciones, and Conversaciones lists what visitors said", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} />);
+    await settle();
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    expect(tabs.map((t) => t.textContent)).toEqual(["ownAssistant.place.talk", "ownAssistant.place.conversations"]);
+    act(() => tabs[1]!.click());
+    await settle();
+    const list = host.querySelector("[data-visitor-conversations]")!;
+    expect(list.textContent).toContain("¿Hacen envíos?");
+    expect(list.textContent).toContain("Sólo en Guadalajara.");
+    expect(list.textContent).toContain("ownAssistant.place.handedOff");
+    expect(list.textContent).toContain('ownAssistant.place.budget {"spent":"12","cap":"125"}');
+  });
+
+  it("🔴 turning her on says it shows after publishing", async () => {
+    const calls = serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} />);
+    await settle();
+    const sw = host.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    expect(sw.getAttribute("aria-checked")).toBe("false");
+    act(() => sw.click());
+    await settle();
+    const patch = calls.find((c) => c.init?.method === "PATCH")!;
+    expect(patch.url).toBe("/api/assistants/a1");
+    expect(JSON.parse(String(patch.init!.body))).toEqual({ onPage: true });
+    expect(sw.getAttribute("aria-checked")).toBe("true");
+    expect(host.textContent).toContain("ownAssistant.place.onPageHint");
   });
 });
