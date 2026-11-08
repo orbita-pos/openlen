@@ -17,6 +17,7 @@
 // freeze the root language onto all of them.
 
 import { figureSvg } from "@/lib/assistants/figure-svg";
+import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
 import type { AssistantShape } from "@/lib/assistants/names";
 
 interface AssistantStrings {
@@ -111,6 +112,26 @@ const PERSONA_GREET =
   'VID=btoa(s).split("+").join("-").split("/").join("_").split("=").join("");try{localStorage.setItem("openlen-assistant-vid",VID)}catch(e){}}return VID}';
 const LEGACY_GREET = 'var GREET=C.greeting||T.greeting.split("{name}").join(C.name||"");';
 const PERSONA_HEADER = 'R.querySelector(".hd span").textContent=C.persona.name+" AI";\nR.querySelector(".hd .ava").innerHTML=C.persona.svg;';
+/** HER VISUALS (phase 2B): each in an iframe with sandbox="allow-scripts" (a null origin: nothing of the page is
+ *  reachable) whose srcdoc is the closed frame document (`C.F`: no fetch, images only as data:). Messages count only
+ *  from that frame; a link is followed only to this page's own origin; sendPrompt only right after a click in it.
+ *  No backticks here: this lives inside a template string. */
+const PERSONA_VISUALS =
+  'var FR=[];\n' +
+  'function piece(t){t=String(t||"").trim();if(t)bubble("bot",t)}\n' +
+  'function frame(v){var r=document.createElement("div");r.className="row b vis";var f=document.createElement("iframe");\n' +
+  'f.setAttribute("sandbox","allow-scripts");f.setAttribute("title",String(v.title||""));f.setAttribute("srcdoc",C.F);\n' +
+  'FR.push({f:f,code:String(v.code||""),clicked:0});r.appendChild(f);log.appendChild(r);scroll()}\n' +
+  'function answer(text,vs){if(!vs||!vs.length){bubble("bot",text);return}var from=0;\n' +
+  'for(var i=0;i<vs.length&&i<2;i++){var at=Math.max(from,Math.min(text.length,Number(vs[i].at)||0));piece(text.slice(from,at));from=at;frame(vs[i])}\n' +
+  'piece(text.slice(from))}\n' +
+  'window.addEventListener("message",function(e){for(var i=0;i<FR.length;i++){var it=FR[i];if(!e.source||e.source!==it.f.contentWindow)continue;var d=e.data||{};\n' +
+  'if(d.kind==="ol-visual:ready"){var w=it.f.contentWindow;w.postMessage({kind:"ol-visual:theme",theme:"light",tokens:{"--accent":ACC,"--accent-strong":ACC,"--series-1":ACC}},"*");w.postMessage({kind:"ol-visual:render",code:it.code,final:true},"*")}\n' +
+  'else if(d.kind==="ol-visual:height"&&typeof d.height==="number"){it.f.style.height=Math.max(0,Math.min(480,Math.round(d.height)))+"px";scroll()}\n' +
+  'else if(d.kind==="ol-visual:link"&&typeof d.href==="string"){try{var u=new URL(d.href,location.href);if(u.origin===location.origin)location.assign(u.href)}catch(x){}}\n' +
+  'else if(d.kind==="ol-visual:prompt"&&typeof d.text==="string"&&Date.now()-it.clicked<5000){it.clicked=0;ask(String(d.text).slice(0,500))}\n' +
+  'return}});\n' +
+  'window.addEventListener("blur",function(){setTimeout(function(){for(var i=0;i<FR.length;i++){if(R.activeElement===FR[i].f)FR[i].clicked=Date.now()}},0)});\n';
 const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
 
 function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | null = null): string {
@@ -128,7 +149,9 @@ function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | nu
     branding: cfg.branding ?? true,
     handoff: cfg.chatHandoff ?? false,
     S: STRINGS,
-    ...(persona ? { persona: { name: persona.name, svg: figureSvg(persona.shape, persona.color, 30) }, P: PERSONA_STRINGS } : {}),
+    ...(persona
+      ? { persona: { name: persona.name, svg: figureSvg(persona.shape, persona.color, 30) }, P: PERSONA_STRINGS, F: buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true }) }
+      : {}),
   }).replace(/</g, "\\u003c");
 
   return `<script>(function(){try{
@@ -197,7 +220,7 @@ R.innerHTML=
 +'.bub{max-width:80%;padding:8px 11px;border-radius:10px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}'
 +'.row.b .bub{background:#fff;color:#1a1a1a;border-top-left-radius:2px}'
 +'.row.u .bub{background:#ffe9e2;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#221b17;border-top-right-radius:2px}'
-+'.dots .bub{color:#888}'
++'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'" : ""}
 +'.ft{padding:8px 10px;background:#f4ede8}'
 +'.ip{display:flex;gap:8px;align-items:center}'
 +'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'
@@ -294,7 +317,7 @@ fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"appl
 body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
 .then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||T.noAnswer;
-history.push({role:"assistant",content:a});bubble("bot",a);
+history.push({role:"assistant",content:a});${persona ? "answer(a,j&&j.visuals);" : 'bubble("bot",a);'}
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
 // de un error que el visitante no puede resolver, se vuelve a preguntar el
@@ -352,7 +375,7 @@ if(j.asistente===false){retirar(j.chat===true);return}
 // invitado y de entrada libre; con «chat» a secas, un chat en modo cuenta
 // dejaba el boton puesto dando 403 <not_allowed>.
 if(C.handoff&&j.traspaso===false&&talk){try{talk.remove()}catch(e){}}})}
-comprobarEstado();
+${persona ? PERSONA_VISUALS : ""}comprobarEstado();
 }catch(e){}})();</script>`;
 }
 

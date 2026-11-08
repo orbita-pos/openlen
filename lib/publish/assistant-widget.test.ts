@@ -372,6 +372,24 @@ describe("her bubble", () => {
   });
 
   // Deferred minor: a visitor who had already sent the contact form on this page load got the asleep line with no form.
+  // PHASE 2B: her visuals, in a sandboxed frame that can't send anything and only links to the business.
+  const CON_VISUAL = { respuesta: "Estos son los huecos:\n\n¿Reservas?", intent: "answer", visuals: [{ title: "huecos", code: "<div>17:00</div>", at: 21 }] };
+  const marco = (root: ShadowRoot) => root.querySelector("iframe") as HTMLIFrameElement;
+
+  // What the frame says back (links, height, from whom) needs a real browser: in jsdom an iframe inside a shadow root
+  // has no window (measured 08/11: contentWindow is null). → assistant-widget.browser.test.ts
+  it("her answer with a visual: text, a sandboxed frame, text — in order", async () => {
+    const root = await pintar(CON_VISUAL);
+    await pregunta(root, "¿huecos el sábado?");
+    const f = marco(root);
+    expect(f).not.toBeNull();
+    expect(f.getAttribute("sandbox")).toBe("allow-scripts");
+    expect(f.getAttribute("srcdoc")).toContain("connect-src 'none'");
+    expect(f.getAttribute("title")).toBe("huecos");
+    const order = [...root.querySelectorAll(".log .row.b")].map((r) => (r.querySelector("iframe") ? "[visual]" : r.textContent));
+    expect(order.slice(-3)).toEqual(["Estos son los huecos:", "[visual]", "¿Reservas?"]);
+  });
+
   it("🔴 asleep after a form was already sent: the form comes back; one still on screen isn't doubled", async () => {
     const root = await pintar([{ respuesta: "Déjame tus datos.", intent: "lead" }, { asleep: true, intent: "lead" }, { asleep: true, intent: "lead" }]);
     await pregunta(root, "¿hacen envíos?");
