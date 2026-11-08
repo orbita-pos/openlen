@@ -754,6 +754,14 @@
       "yours": "あなたのアシスタント",
       "inProject": "{project} 内",
       "placeholder": "{name} にメッセージ…"
+    },
+    "speaker": {
+      "working": "{name} が作業中",
+      "steps": "{name} が {count, plural, other {# ステップ実行}}",
+      "saw": "{name} が見たもの",
+      "sawCaption": "{total, plural, =1 {{name} が見たもの} other {{name} が見たもの · {number}/{total}}}",
+      "yourTurnLive": "あなたの番です · 答えるとすぐに{name}が続けます",
+      "disclaimer": "{name} は間違えることがあります。回答を確認してください。"
     }
   }
 }

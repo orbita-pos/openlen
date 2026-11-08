@@ -754,6 +754,14 @@
       "yours": "내 어시스턴트",
       "inProject": "{project}에서",
       "placeholder": "{name}에게 메시지…"
+    },
+    "speaker": {
+      "working": "{name} · 작업 중",
+      "steps": "{name} · {count, plural, other {#단계 진행}}",
+      "saw": "{name}이(가) 본 화면",
+      "sawCaption": "{total, plural, =1 {{name}이(가) 본 화면} other {{name}이(가) 본 화면 · {number}/{total}}}",
+      "yourTurnLive": "당신 차례예요 · 답하면 {name}이(가) 바로 이어서 해요",
+      "disclaimer": "{name}은(는) 실수할 수 있어요. 답변을 확인해 주세요."
     }
   }
 }

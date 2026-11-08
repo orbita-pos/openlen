@@ -77,6 +77,7 @@ export function ChatComposer({
   debajo,
   etiquetaEnviar,
   placeholder,
+  disclaimer,
   esApp = false,
   esJuego = false,
   mencionables,
@@ -140,6 +141,8 @@ export function ChatComposer({
   etiquetaEnviar?: string;
   /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
   placeholder?: string;
+  /** The line under the box, when it isn't Len's (the person's own assistant: it never publishes). */
+  disclaimer?: string;
   /** El proyecto es una app: la caja vacía habla de la app, no de «tu página». */
   esApp?: boolean;
   /** The app is a game: the empty box and the line below talk about the game. */
@@ -552,7 +555,7 @@ export function ChatComposer({
         </div>
       </div>
       {debajo}
-      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esJuego ? "newChat.composer.disclaimerGame" : esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
+      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{disclaimer ?? t(esJuego ? "newChat.composer.disclaimerGame" : esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
     </div>
   );
 }

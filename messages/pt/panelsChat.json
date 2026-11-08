@@ -754,6 +754,14 @@
       "yours": "Seu assistente",
       "inProject": "Em {project}",
       "placeholder": "Escreva para {name}…"
+    },
+    "speaker": {
+      "working": "{name} está trabalhando",
+      "steps": "{name} fez {count, plural, one {# passo} other {# passos}}",
+      "saw": "O que {name} viu",
+      "sawCaption": "{total, plural, one {O que {name} viu} other {O que {name} viu · {number} de {total}}}",
+      "yourTurnLive": "Sua vez · {name} continua assim que você responder",
+      "disclaimer": "{name} pode errar. Confira as respostas."
     }
   }
 }

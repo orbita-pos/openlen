@@ -87,4 +87,42 @@ describe("the assistant's place", () => {
     expect(host.textContent).toContain("Lucía");
     expect(host.textContent).not.toMatch(/\bLen\b/);
   });
+
+  // Real turns of 07/11: her steps said «Len hizo 2 pasos».
+  it("🔴 her steps say she took them, not Len", () => {
+    const turn = restoreTurn({
+      id: "r2", userText: "¿horario?", assistantReasoning: "Martes a domingo.", status: "applied", appliedAt: 1,
+      actions: [{ tool: "Read", status: "done", summary: "/index.html" }, { tool: "bash", status: "done", summary: "grep -i horario /index.html" }],
+    });
+    const host = mount(
+      <LenTurn
+        turn={turn}
+        next={undefined}
+        isLast
+        currentPage={null}
+        projectId="p1"
+        when="ahora"
+        vote={undefined}
+        labels={{} as never}
+        onRetry={() => {}}
+        onPublished={() => {}}
+        onConfirmSettled={() => {}}
+        onAnswerQuestion={() => {}}
+        onDismissQuestion={() => {}}
+        onRate={async () => true}
+        onClearRate={async () => true}
+        speaker={{ name: "Lucía", face: <span data-face="">L</span> }}
+      />,
+    );
+    expect(host.textContent).toContain('ownAssistant.speaker.steps {"count":2,"name":"Lucía"}');
+    expect(host.textContent).not.toContain("newChat.steps.done");
+  });
+
+  // Real turns of 07/11: the line under her box said «Len puede equivocarse. Revisa tu página antes de publicarla.».
+  it("🔴 the line under her box is hers: she can make mistakes; nothing about publishing", async () => {
+    const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    expect(host.textContent).toContain('ownAssistant.speaker.disclaimer {"name":"Lucía"}');
+    expect(host.textContent).not.toContain("newChat.composer.disclaimer");
+  });
 });
