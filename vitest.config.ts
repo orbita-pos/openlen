@@ -511,6 +511,8 @@ export default defineConfig({
       // `include` es LISTA BLANCA.
       "app/api/lienzo/route.test.ts",
       "app/api/assistant/[sub]/route.test.ts",
+      // The chat handoff accepts the person's own assistant as its caller (phase 2A).
+      "app/api/chat/[sub]/_shared.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
       // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
       "app/api/lienzo/site/**/*.test.ts",
