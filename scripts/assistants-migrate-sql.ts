@@ -24,4 +24,32 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
     "connectedAt" timestamp with time zone NOT NULL DEFAULT now()
   );`,
+  // Phase 2A — visitors (spec §4.4.5, §4.7, §6.5): on the page, what it knows, visits, the month's spend, the cap.
+  `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "onPage" boolean NOT NULL DEFAULT false;`,
+  `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledge" text;`,
+  `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledgeAt" timestamp with time zone;`,
+  `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "assistantVisitorCap" integer;`,
+  `CREATE TABLE IF NOT EXISTS "assistantVisits" (
+    "id" text PRIMARY KEY,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "visitorId" text NOT NULL,
+    "startedAt" timestamp with time zone NOT NULL,
+    "lastAt" timestamp with time zone NOT NULL,
+    "messageCount" integer NOT NULL DEFAULT 0,
+    "centicredits" integer NOT NULL DEFAULT 0,
+    "handedOff" boolean NOT NULL DEFAULT false,
+    "transcript" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    "lines" jsonb NOT NULL DEFAULT '[]'::jsonb
+  );`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "assistantVisits_who_idx" ON "assistantVisits" ("assistantId", "projectId", "visitorId");`,
+  `CREATE INDEX IF NOT EXISTS "assistantVisits_assistant_last_idx" ON "assistantVisits" ("assistantId", "lastAt");`,
+  `CREATE TABLE IF NOT EXISTS "assistantVisitorMonths" (
+    "userId" text NOT NULL,
+    "month" text NOT NULL,
+    "centicredits" integer NOT NULL DEFAULT 0,
+    "messages" integer NOT NULL DEFAULT 0,
+    "asleepAlerts" jsonb NOT NULL DEFAULT '[]'::jsonb,
+    PRIMARY KEY ("userId", "month")
+  );`,
 ];
