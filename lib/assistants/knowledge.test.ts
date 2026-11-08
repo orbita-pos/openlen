@@ -27,18 +27,20 @@ describe("knowledgeOf", () => {
 });
 
 describe("rememberWhatWasPublished", () => {
-  it("🔴 saves the text of what was just published — the draft never reaches her", async () => {
+  it("🔴 saves the text of what was just published — the draft never reaches her — and today's assistant goes off in the same publish", async () => {
     const save = vi.fn(async () => {});
+    const switchOldOff = vi.fn(async () => true);
     const at = new Date("2026-11-07T20:00:00Z");
-    await rememberWhatWasPublished("p1", DATA, at, save);
+    await rememberWhatWasPublished("p1", DATA, at, { save, switchOldOff });
     expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), at);
+    expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
   it("never fails the publish: a save that throws is only logged", async () => {
     const save = vi.fn(async () => {
       throw new Error("db down");
     });
-    await expect(rememberWhatWasPublished("p1", DATA, new Date(), save)).resolves.toBeUndefined();
+    await expect(rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff: async () => true })).resolves.toBeUndefined();
   });
 });
 

@@ -182,10 +182,11 @@ export async function POST(
     return reply(400, { error: "bad_request" });
   }
 
-  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.2, §4.7): with her on the page, the message
-  // wakes her turn on Len's engine. Every other page goes on below exactly as before.
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.2, §4.7): with her on the page AND published
+  // with her (what she knows is saved by that publish), the message wakes her turn on Len's engine. Until that publish
+  // the page's bubble is still today's, and goes on below exactly as before.
   const ella = await herOnThePage(owner.projectId);
-  if (ella) return herTurn(req, sub, owner, body, ella);
+  if (ella?.knowledge?.trim()) return herTurn(req, sub, owner, body, ella);
 
   const parsed = parseBody(body);
   if (!parsed) return reply(400, { error: "bad_request" });

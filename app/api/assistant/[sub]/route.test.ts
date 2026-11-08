@@ -156,6 +156,16 @@ describe("POST /api/assistant/[sub] — her bubble", () => {
     expect(await (await pide()).json()).toMatchObject({ asistente: false });
   });
 
+  it("🔴 on the page but not yet published with her: today's bubble keeps answering", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    onPage(null);
+    const res = await escribe({ message: "¿Qué días abren?", history: [] });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ respuesta: "Abrimos de lunes a viernes.", intent: "answer" });
+    expect(mocks.visitorTurn).not.toHaveBeenCalled();
+    expect(await (await pide()).json()).toMatchObject({ asistente: true });
+  });
+
   it("her handoff is the page's: a guest self-serve chat can take the visitor", async () => {
     mocks.limit.mockResolvedValue(fila({ chat: { enabled: true } }));
     onPage();
