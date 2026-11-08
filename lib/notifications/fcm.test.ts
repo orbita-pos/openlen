@@ -28,6 +28,11 @@ describe("FCM sin servicios externos", () => {
     expect(m.android.notification.tag).not.toBe(mensajeFcm(evento, "t").message.android.notification.tag);
     expect(Object.keys(m.data)).toEqual(["type", "projectId", "recipientUserId"]);
   });
+  it("🔴 the owner hears she fell asleep on the phone too: her name, 💤 and the numbers", () => {
+    const m = mensajeFcm({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana", assistantName: "Lucía", assistantSlug: "lucia", reason: "cap", spent: 12_480, cap: 12_500 }, "t").message;
+    expect(m.notification).toEqual({ title: "Lucía 💤", body: "124.80 / 125" });
+    expect(m.data).toEqual({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana" });
+  });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
     expect(mensajeFcm({ ...base, type: "email_domain", domain: "pan.mx", status: "ready" }, "t").message.notification.body).toContain("pan.mx");
