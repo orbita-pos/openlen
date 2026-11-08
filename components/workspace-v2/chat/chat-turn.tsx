@@ -386,7 +386,7 @@ export function LenTurn({
           </span>
         )}
       </div>
-      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} />}
+      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} {...(speaker ? { speakerName: speaker.name } : {})} />}
       {/* LOS VISUALES (spec local 2026-10-16): el texto con sus visuales donde los puso Len. */}
       <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}

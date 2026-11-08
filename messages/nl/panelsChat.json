@@ -754,6 +754,14 @@
       "yours": "Jouw assistent",
       "inProject": "In {project}",
       "placeholder": "Schrijf {name}…"
+    },
+    "speaker": {
+      "working": "{name} is bezig",
+      "steps": "{name} deed {count, plural, one {# stap} other {# stappen}}",
+      "saw": "Wat {name} zag",
+      "sawCaption": "{total, plural, one {Wat {name} zag} other {Wat {name} zag · {number} van {total}}}",
+      "yourTurnLive": "Jij bent aan de beurt · {name} gaat verder zodra je antwoordt",
+      "disclaimer": "{name} kan fouten maken. Controleer de antwoorden."
     }
   }
 }

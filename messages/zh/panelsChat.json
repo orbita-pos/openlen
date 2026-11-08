@@ -754,6 +754,14 @@
       "yours": "你的助手",
       "inProject": "在 {project}",
       "placeholder": "给 {name} 发消息…"
+    },
+    "speaker": {
+      "working": "{name} 正在工作",
+      "steps": "{name} 完成了 {count, plural, other {# 个步骤}}",
+      "saw": "{name} 看到的画面",
+      "sawCaption": "{total, plural, =1 {{name} 看到的画面} other {{name} 看到的画面 · {number}/{total}}}",
+      "yourTurnLive": "轮到你了 · 你一回答，{name} 就继续",
+      "disclaimer": "{name} 可能会出错。请核对回答。"
     }
   }
 }

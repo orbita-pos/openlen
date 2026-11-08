@@ -589,7 +589,13 @@ function AgentChatView({
       </div>
       <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : centered ? `${CENTERED_PADDING} pb-4 pt-1` : "px-3 pb-3 pt-1"}`}>
         {(!plegado || avisoPendiente) && (
-          <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} subagentsRunning={subagentsRunning} />
+          <LiveBar
+            status={status}
+            onStop={chat.handleCancel}
+            esApp={esApp}
+            subagentsRunning={subagentsRunning}
+            {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure shape={assistant.shape} color={assistant.color} size={34} /> } } : {})}
+          />
         )}
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
         {chat.goalOffered && (
@@ -648,7 +654,12 @@ function AgentChatView({
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(secretGuard ? { secretGuard } : {})}
             compacta={flotante}
-            {...(assistant ? { placeholder: t("ownAssistant.place.placeholder", { name: assistant.name }) } : {})}
+            {...(assistant
+              ? {
+                  placeholder: t("ownAssistant.place.placeholder", { name: assistant.name }),
+                  disclaimer: t("ownAssistant.speaker.disclaimer", { name: assistant.name }),
+                }
+              : {})}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),

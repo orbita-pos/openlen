@@ -754,6 +754,14 @@
       "yours": "Your assistant",
       "inProject": "In {project}",
       "placeholder": "Write to {name}…"
+    },
+    "speaker": {
+      "working": "{name} is working",
+      "steps": "{name} took {count, plural, one {# step} other {# steps}}",
+      "saw": "What {name} saw",
+      "sawCaption": "{total, plural, one {What {name} saw} other {What {name} saw · {number} of {total}}}",
+      "yourTurnLive": "Your turn · {name} goes on as soon as you answer",
+      "disclaimer": "{name} can make mistakes. Please double-check responses."
     }
   }
 }
