@@ -61,7 +61,7 @@ export function assistantTools(declarations: readonly Record<string, unknown>[])
   });
 }
 
-const TONES: Readonly<Record<AssistantTone, string>> = {
+export const TONES: Readonly<Record<AssistantTone, string>> = {
   friendly: "warm and friendly",
   formal: "formal and polite",
   playful: "playful and light",

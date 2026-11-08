@@ -15,7 +15,7 @@ export const BUILT_IN_AGENT_TYPES: ReadonlySet<string> = new Set(["general-purpo
 /** OpenLen's own types (`bundled-types.ts`, kept equal by bundled-types.test), reserved like its skills. */
 export const OPENLEN_AGENT_TYPES: ReadonlySet<string> = new Set(["len-design", "len-office"]);
 /** OpenLen's types that only OpenLen starts (the «Crear» card's `creator`): never listed for Len. */
-export const HIDDEN_AGENT_TYPES: ReadonlySet<string> = new Set(["creator", "assistant"]);
+export const HIDDEN_AGENT_TYPES: ReadonlySet<string> = new Set(["creator", "assistant", "assistant-visitor"]);
 export const RESERVED_AGENT_TYPES: ReadonlySet<string> = new Set([...BUILT_IN_AGENT_TYPES, ...OPENLEN_AGENT_TYPES, ...HIDDEN_AGENT_TYPES]);
 
 export const PROJECT_AGENTS_DIR = "/.len/agents/";
