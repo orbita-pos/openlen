@@ -24,7 +24,7 @@ describe("custom agent type paths", () => {
   });
 
   it("the reserved names are Claude Code's three, OpenLen's two, the «Crear» card's creator and the person's assistant", () => {
-    expect([...RESERVED_AGENT_TYPES].sort()).toEqual(["Explore", "Plan", "assistant", "creator", "general-purpose", "len-design", "len-office"]);
+    expect([...RESERVED_AGENT_TYPES].sort()).toEqual(["Explore", "Plan", "assistant", "assistant-visitor", "creator", "general-purpose", "len-design", "len-office"]);
   });
 
   it("builds the path back", () => {
