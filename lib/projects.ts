@@ -38,6 +38,9 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
+import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
@@ -1081,6 +1084,13 @@ export async function publishProject(
     // The sources and the published hashes keep the test ids: the canvas stays in test mode.
     const twins = stripe ? await stripe.apply() : null;
     const toLive = twins && twins.size > 0 ? (t: string) => swapTwins(t, twins) : null;
+    // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble.
+    const ella = assistantsEnabled()
+      ? await assistantOnPage(params.projectId).catch((err: unknown) => {
+          console.warn("[publish] couldn't tell whether the page's own assistant is on", err);
+          return null;
+        })
+      : null;
     publishResult = await publishToDir({
       subdomain: v.value,
       html: toLive ? toLive(html) : html,
@@ -1088,9 +1098,12 @@ export async function publishProject(
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
-      assistant: project.data?.settings?.assistant?.enabled
-        ? { enabled: true, businessName: project.title || v.value }
-        : undefined,
+      // The page's bubble: the person's own assistant when she is on it (phase 2A), today's assistant otherwise.
+      assistant: assistantBakeOf({
+        legacyEnabled: Boolean(project.data?.settings?.assistant?.enabled),
+        businessName: project.title || v.value,
+        onPage: ella ? { name: ella.assistant.name, color: ella.assistant.color, shape: ella.assistant.shape } : null,
+      }),
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,

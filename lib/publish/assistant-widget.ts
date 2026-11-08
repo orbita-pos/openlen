@@ -16,6 +16,9 @@
 // verbatim into the translated locale variants, so a build-time pick would
 // freeze the root language onto all of them.
 
+import { figureSvg } from "@/lib/assistants/figure-svg";
+import type { AssistantShape } from "@/lib/assistants/names";
+
 interface AssistantStrings {
   open: string;
   dialog: string;
@@ -53,6 +56,29 @@ const STRINGS: Record<string, AssistantStrings> = {
   nl: { open: "Helpchat openen", dialog: "Helpchat", close: "Chat sluiten", ask: "Stel je vraag…", yourMessage: "Je bericht", send: "Versturen", talk: "Met een persoon praten", disclaimer: "De assistent kan fouten maken. Controleer belangrijke gegevens.", poweredBy: "met", greeting: "Hoi! 👋 Ik ben de assistent van {name}. Waarmee kan ik helpen?", yourName: "Je naam", yourEmail: "Je e-mail", yourEmailOpt: "Je e-mail (optioneel)", sendData: "Mijn gegevens versturen", thanks: "Bedankt! We nemen snel contact op. 🙌", connect: "Verbinden met een persoon", handoffOk: "Klaar! Iemand van het team schrijft je hier binnenkort. 🙌", handoffErr: "Ik kon nu niemand bereiken. Probeer het opnieuw.", noAnswer: "Sorry, ik kon nu geen antwoord geven.", error: "Er ging iets mis. Probeer het zo opnieuw." },
 };
 
+/** THE PERSON'S OWN ASSISTANT IN THE BUBBLE (spec local 2026-11-06-asistente-propio, §6.10; phase 2A): her texts,
+ *  apart from `STRINGS` so today's bubble keeps its bytes. {assistant} = her name, {name} = the business. */
+export const PERSONA_STRINGS: Record<string, { greetingPersona: string; asleep: string }> = {
+  en: { greetingPersona: "Hi! 👋 I’m {assistant}, from {name}. How can I help?", asleep: "I’m not here right now. Leave me your message and they’ll get back to you." },
+  es: { greetingPersona: "¡Hola! 👋 Soy {assistant}, de {name}. ¿En qué te ayudo?", asleep: "Ahora no estoy. Déjame tu mensaje y te contestan." },
+  pt: { greetingPersona: "Olá! 👋 Sou {assistant}, de {name}. Como posso ajudar?", asleep: "Agora não estou. Deixe sua mensagem e vão te responder." },
+  fr: { greetingPersona: "Bonjour ! 👋 Je suis {assistant}, de {name}. Comment puis-je vous aider ?", asleep: "Je ne suis pas là pour le moment. Laissez votre message et on vous répondra." },
+  de: { greetingPersona: "Hallo! 👋 Ich bin {assistant} von {name}. Wie kann ich helfen?", asleep: "Ich bin gerade nicht da. Hinterlass deine Nachricht, dann meldet sich jemand." },
+  it: { greetingPersona: "Ciao! 👋 Sono {assistant}, di {name}. Come posso aiutarti?", asleep: "Ora non ci sono. Lasciami il tuo messaggio e ti risponderanno." },
+  ja: { greetingPersona: "こんにちは！👋 {name} の {assistant} です。ご用件をどうぞ。", asleep: "ただいま対応できません。メッセージを残していただければ、折り返しご連絡します。" },
+  ko: { greetingPersona: "안녕하세요! 👋 {name}의 {assistant}입니다. 무엇을 도와드릴까요?", asleep: "지금은 자리에 없어요. 메시지를 남겨 주시면 연락드릴게요." },
+  zh: { greetingPersona: "你好！👋 我是 {name} 的 {assistant}，有什么可以帮你？", asleep: "我现在不在。请留下你的消息，我们会回复你。" },
+  nl: { greetingPersona: "Hoi! 👋 Ik ben {assistant} van {name}. Waarmee kan ik helpen?", asleep: "Ik ben er nu niet. Laat je bericht achter, dan nemen ze contact op." },
+};
+
+/** Her name, color and figure: what the published bubble wears instead of the business's initial. */
+export interface AssistantPersona {
+  name: string;
+  /** A checked #RRGGBB. */
+  color: string;
+  shape: AssistantShape;
+}
+
 export interface AssistantWidgetConfig {
   sub: string;
   apiBase: string;
@@ -74,7 +100,20 @@ export interface AssistantWidgetConfig {
 // interpolar al CSS; review e56321c).
 const DEFAULT_ACCENT = "#FF5A36";
 
-function widgetScript(cfg: AssistantWidgetConfig): string {
+/** Her bubble's own runtime (phase 2A): her greeting, a visitor id kept in the browser (spec §6.6), and her header.
+ *  Only in her bubble: today's keeps its exact bytes. No backticks here: this lives inside a template string. */
+const PERSONA_GREET =
+  'var P=C.P[(document.documentElement.lang||"en").slice(0,2).toLowerCase()]||C.P.en;\n' +
+  'var GREET=P.greetingPersona.split("{assistant}").join(C.persona.name).split("{name}").join(C.name||"");\n' +
+  'var VID=null;function vid(){if(VID)return VID;try{VID=localStorage.getItem("openlen-assistant-vid")}catch(e){}\n' +
+  'if(!VID||!/^[A-Za-z0-9_-]{16,64}$/.test(VID)){var b=[],i;try{var u=new Uint8Array(16);crypto.getRandomValues(u);for(i=0;i<16;i++)b.push(u[i])}catch(e){for(i=0;i<16;i++)b.push(Math.floor(Math.random()*256))}\n' +
+  'var s="";for(i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);\n' +
+  'VID=btoa(s).split("+").join("-").split("/").join("_").split("=").join("");try{localStorage.setItem("openlen-assistant-vid",VID)}catch(e){}}return VID}';
+const LEGACY_GREET = 'var GREET=C.greeting||T.greeting.split("{name}").join(C.name||"");';
+const PERSONA_HEADER = 'R.querySelector(".hd span").textContent=C.persona.name+" AI";\nR.querySelector(".hd .ava").innerHTML=C.persona.svg;';
+const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
+
+function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | null = null): string {
   // Config is JSON-injected; everything else is static runtime JS. Kept terse
   // (single IIFE) so the gzipped payload stays small. Escaping "<" keeps
   // anything inside the JSON (a business name, a locale string) from closing
@@ -83,17 +122,19 @@ function widgetScript(cfg: AssistantWidgetConfig): string {
     sub: cfg.sub,
     api: cfg.apiBase,
     name: cfg.businessName,
-    accent: /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
+    // Her bubble wears her color (§6.10).
+    accent: persona ? persona.color : /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
     greeting: cfg.greeting || null,
     branding: cfg.branding ?? true,
     handoff: cfg.chatHandoff ?? false,
     S: STRINGS,
+    ...(persona ? { persona: { name: persona.name, svg: figureSvg(persona.shape, persona.color, 30) }, P: PERSONA_STRINGS } : {}),
   }).replace(/</g, "\\u003c");
 
   return `<script>(function(){try{
 var C=${C};
 var T=C.S[(document.documentElement.lang||"en").slice(0,2).toLowerCase()]||C.S.en;
-var GREET=C.greeting||T.greeting.split("{name}").join(C.name||"");
+${persona ? PERSONA_GREET : LEGACY_GREET}
 var host=document.createElement("div");host.setAttribute("aria-live","polite");
 document.body.appendChild(host);
 var R=host.attachShadow({mode:"open"});
@@ -182,8 +223,7 @@ R.innerHTML=
 +'<div class="log" role="log" aria-live="polite"></div>'
 +'<div class="ft"><form class="ip"><input type="text" autocomplete="off" maxlength="500"/><button type="submit">→</button></form>'
 +(C.handoff?'<button type="button" class="talk"></button>':'')
-+'<div class="dis"></div>'
-+(C.branding?'<div class="pb"><span></span> <a href="https://openlen.com" target="_blank" rel="noopener">OpenLen</a></div>':'')
+${persona ? "" : `+'<div class="dis"></div>'\n`}+(C.branding?'<div class="pb"><span></span> <a href="https://openlen.com" target="_blank" rel="noopener">OpenLen</a></div>':'')
 +'</div></div>';
 
 var btn=R.querySelector(".btn"),panel=R.querySelector(".panel"),log=R.querySelector(".log"),
@@ -197,11 +237,9 @@ panel.setAttribute("aria-label",T.dialog);
 xb.setAttribute("aria-label",T.close);
 input.placeholder=T.ask;input.setAttribute("aria-label",T.yourMessage);
 send.setAttribute("aria-label",T.send);
-R.querySelector(".dis").textContent=T.disclaimer;
-if(talk)talk.textContent=T.talk;
+${persona ? "" : 'R.querySelector(".dis").textContent=T.disclaimer;\n'}if(talk)talk.textContent=T.talk;
 var pbs=R.querySelector(".pb span");if(pbs)pbs.textContent=T.poweredBy;
-R.querySelector(".hd span").textContent=C.name;
-R.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();
+${persona ? PERSONA_HEADER : LEGACY_HEADER}
 var history=[],busy=false,opened=false,leadShown=false;
 
 function scroll(){log.scrollTop=log.scrollHeight}
@@ -253,9 +291,9 @@ function ask(text){if(busy)return;busy=true;send.disabled=true;
 history.push({role:"user",content:text});bubble("user",text);
 var d=dots();
 fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},
-body:JSON.stringify({message:text,history:history.slice(0,-1)})})
+body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-.then(function(j){d.remove();var a=(j&&j.respuesta)||T.noAnswer;
+.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);leadForm();return}' : ""}var a=(j&&j.respuesta)||T.noAnswer;
 history.push({role:"assistant",content:a});bubble("bot",a);
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
@@ -327,8 +365,19 @@ export function bakeAssistantWidget(
   html: string,
   cfg: AssistantWidgetConfig,
 ): string {
+  return bake(html, widgetScript(cfg));
+}
+
+/** HER BUBBLE (phase 2A): the same widget wearing the person's own assistant — «{name} AI», her figure and color, no
+ *  disclaimer line, a visitor id instead of the client's history, and «I'm not here now» when she sleeps. Only the
+ *  published page bakes it (declared in bake-surfaces.ts). */
+export function bakeAssistantPersona(html: string, cfg: AssistantWidgetConfig & { persona: AssistantPersona }): string {
+  return bake(html, widgetScript(cfg, cfg.persona));
+}
+
+function bake(html: string, script: string): string {
   if (html.includes(MARKER)) return html;
-  const tag = widgetScript(cfg).replace("<script>", `<script ${MARKER}>`);
+  const tag = script.replace("<script>", `<script ${MARKER}>`);
   const idx = html.lastIndexOf("</body>");
   return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
 }
