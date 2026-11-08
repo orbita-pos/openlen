@@ -3,7 +3,7 @@
 // visitors spent this month. Visits are visitors' data: only its person reads them, and they never reach the box.
 import "server-only";
 
-import { and, desc, eq, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -29,12 +29,17 @@ export async function assistantOnPage(projectId: string): Promise<{ assistant: A
   return row ? { assistant: row.assistant, knowledge: row.knowledge } : null;
 }
 
-/** `false` when that assistant isn't the one of that project. Either way she forgets what she knew: she answers visitors
- *  only after a publish with her (which bakes her bubble), never through a bubble that isn't hers yet. */
+/** `false` when that assistant isn't the one of that project. When it CHANGES she forgets what she knew: she answers
+ *  visitors only after a publish with her (which bakes her bubble), never through a bubble that isn't hers yet. The same
+ *  value again (a stale second tab) changes nothing, so her live bubble stays. */
 export async function setOnPage(projectId: string, assistantId: string, onPage: boolean): Promise<boolean> {
   const done = await db
     .update(ap)
-    .set({ onPage, knowledge: null, knowledgeAt: null })
+    .set({
+      onPage,
+      knowledge: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledge} else null end`,
+      knowledgeAt: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledgeAt} else null end`,
+    })
     .where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId)))
     .returning({ projectId: ap.projectId });
   return done.length > 0;
@@ -97,9 +102,12 @@ export async function saveVisit(o: {
   });
 }
 
-/** The newest first. */
-export async function visitsOf(assistantId: string, limit: number): Promise<VisitRow[]> {
-  return db.select().from(v).where(eq(v.assistantId, assistantId)).orderBy(desc(v.lastAt)).limit(limit);
+/** The newest first, never one quiet for 90 days: reading forgets those too, so the promise holds for an assistant
+ *  whose page went quiet (no new message runs the prune in `saveVisit`). */
+export async function visitsOf(assistantId: string, limit: number, now: Date = new Date()): Promise<VisitRow[]> {
+  const cutoff = new Date(now.getTime() - VISIT_RETENTION_DAYS * 86_400_000);
+  await db.delete(v).where(and(eq(v.assistantId, assistantId), lt(v.lastAt, cutoff)));
+  return db.select().from(v).where(and(eq(v.assistantId, assistantId), gte(v.lastAt, cutoff))).orderBy(desc(v.lastAt)).limit(limit);
 }
 
 export async function monthSpent(userId: string, month: string): Promise<number> {
