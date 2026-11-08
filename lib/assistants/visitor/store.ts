@@ -10,6 +10,7 @@ import { db, schema } from "@/lib/db";
 import type { AssistantRow } from "../store";
 
 export type VisitLine = schema.AssistantVisitLine;
+export type PublicTable = schema.PublicTable;
 export type VisitRow = typeof schema.assistantVisits.$inferSelect;
 
 /** A visit is forgotten 90 days after its last message (spec §6.5, like the step rows). */
@@ -21,14 +22,24 @@ const ap = schema.assistantProjects;
 const v = schema.assistantVisits;
 const m = schema.assistantVisitorMonths;
 
-export async function assistantOnPage(projectId: string): Promise<{ assistant: AssistantRow; knowledge: string | null } | null> {
+export interface OnPage {
+  readonly assistant: AssistantRow;
+  /** The published site's text; null until a publish with her. */
+  readonly knowledge: string | null;
+  /** When that publish saved it; null = never published with her. */
+  readonly knowledgeAt: Date | null;
+  /** What the page's data shows anyone (phase 2B); [] when none or before 2B. */
+  readonly publicData: PublicTable[];
+}
+
+export async function assistantOnPage(projectId: string): Promise<OnPage | null> {
   const [row] = await db
-    .select({ assistant: schema.assistants, knowledge: ap.knowledge })
+    .select({ assistant: schema.assistants, knowledge: ap.knowledge, knowledgeAt: ap.knowledgeAt, publicData: ap.publicData })
     .from(ap)
     .innerJoin(schema.assistants, eq(schema.assistants.id, ap.assistantId))
     .where(and(eq(ap.projectId, projectId), eq(ap.onPage, true)))
     .limit(1);
-  return row ? { assistant: row.assistant, knowledge: row.knowledge } : null;
+  return row ? { assistant: row.assistant, knowledge: row.knowledge, knowledgeAt: row.knowledgeAt, publicData: row.publicData ?? [] } : null;
 }
 
 /** `false` when that assistant isn't the one of that project. When it CHANGES she forgets what she knew: she answers
@@ -41,14 +52,16 @@ export async function setOnPage(projectId: string, assistantId: string, onPage: 
       onPage,
       knowledge: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledge} else null end`,
       knowledgeAt: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledgeAt} else null end`,
+      publicData: sql`case when ${ap.onPage} = ${onPage} then ${ap.publicData} else null end`,
     })
     .where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId)))
     .returning({ projectId: ap.projectId });
   return done.length > 0;
 }
 
-export async function saveKnowledge(projectId: string, text: string, at: Date): Promise<void> {
-  await db.update(ap).set({ knowledge: text, knowledgeAt: at }).where(eq(ap.projectId, projectId));
+/** What a publish with her saves: the site's text and what its data shows anyone. */
+export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] = []): Promise<void> {
+  await db.update(ap).set({ knowledge: text, knowledgeAt: at, publicData }).where(eq(ap.projectId, projectId));
 }
 
 export async function visitOf(assistantId: string, projectId: string, visitorId: string): Promise<VisitRow | null> {

@@ -130,6 +130,23 @@ describe("on the page", () => {
     expect((await visitor.assistantOnPage("p1"))?.knowledge).toBeNull();
   });
 
+  // Phase 2B: what the page's data shows anyone, kept at publish next to what she knows.
+  it("publicData is kept with what she knows, and goes with it when she is turned off and on", async () => {
+    const tables = [{ name: "huecos", columns: [{ name: "dia", type: "date" }, { name: "hora", type: "time without time zone" }] }];
+    await visitor.setOnPage("p1", lucia, true);
+    expect((await visitor.assistantOnPage("p1"))?.publicData).toEqual([]);
+    const at = new Date("2026-11-08T10:00:00Z");
+    await visitor.saveKnowledge("p1", "", at, tables);
+    const on = await visitor.assistantOnPage("p1");
+    expect(on?.publicData).toEqual(tables);
+    expect(on?.knowledgeAt?.toISOString()).toBe(at.toISOString());
+    await visitor.setOnPage("p1", lucia, false);
+    await visitor.setOnPage("p1", lucia, true);
+    const again = await visitor.assistantOnPage("p1");
+    expect(again?.publicData).toEqual([]);
+    expect(again?.knowledgeAt).toBeNull();
+  });
+
   // Final review (Minor 2, re-graded Important): a stale second tab re-sending «on» hid her live bubble.
   it("🔴 «on» again while she is on keeps what she knows: her live bubble stays", async () => {
     await visitor.setOnPage("p1", lucia, true);
