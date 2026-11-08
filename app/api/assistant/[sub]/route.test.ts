@@ -124,13 +124,30 @@ describe("POST /api/assistant/[sub] — her bubble", () => {
     expect(await res.json()).toEqual({ error: "busy" });
   });
 
-  it("a missing or malformed vid is a 400", async () => {
+  it("a malformed vid is a 400", async () => {
     mocks.limit.mockResolvedValue(fila({}));
     onPage();
-    expect((await escribe({ message: "hola" })).status).toBe(400);
     expect((await escribe({ message: "hola", vid: "corto" })).status).toBe(400);
     expect((await escribe({ message: "hola", vid: "con espacios y <b>" + "x".repeat(20) })).status).toBe(400);
+    expect((await escribe({ vid: VID })).status).toBe(400);
     expect(mocks.visitorTurn).not.toHaveBeenCalled();
+  });
+
+  // Deferred minor: a page left open from before the publish has today's bubble, which sends {message, history} and
+  // no vid; it got «Something went wrong» until the visitor reloaded.
+  it("🔴 the old bubble still open (no vid) gets her answer, each message on its own", async () => {
+    mocks.limit.mockResolvedValue(fila({}));
+    onPage();
+    mocks.visitorTurn.mockResolvedValue({ kind: "reply", text: "Abrimos a las 9.", intent: "answer" });
+    const a = await escribe({ message: "¿A qué hora abren?", history: [] });
+    const b = await escribe({ message: "¿Y el domingo?", history: [] });
+    expect(a.status).toBe(200);
+    expect(await a.json()).toEqual({ respuesta: "Abrimos a las 9.", intent: "answer" });
+    expect(b.status).toBe(200);
+    const ids = (mocks.visitorTurn.mock.calls as unknown as [{ visitorId: string }][]).map(([x]) => x.visitorId);
+    expect(ids).toHaveLength(2);
+    for (const id of ids) expect(id).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
+    expect(ids[0]).not.toBe(ids[1]);
   });
 
   it("🔴 she is off the page (onPage false): GET says asistente false and a late POST is 403 disabled", async () => {
