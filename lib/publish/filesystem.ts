@@ -18,7 +18,7 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { bakeAssistantPersona, bakeAssistantWidget, type AssistantPersona } from "@/lib/publish/assistant-widget";
 import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -494,6 +494,8 @@ interface AssistantBake {
   businessName: string;
   accent?: string;
   greeting?: string;
+  /** The person's own assistant on the page (lib/assistants/visitor/bake.ts): her bubble instead of today's. */
+  persona?: AssistantPersona;
 }
 
 interface ChatBake {
@@ -706,7 +708,7 @@ async function bakeDocument(
   // just before </body> after every other rewrite.
   if (assistantFab) {
     try {
-      migratedHtml = bakeAssistantWidget(migratedHtml, {
+      const widget = {
         sub: ctx.sub,
         apiBase: widgetApiBase(),
         businessName: assistantFab.businessName,
@@ -716,7 +718,11 @@ async function bakeDocument(
         // hands off to the human chat (window.__openlenChat) instead of a
         // dead-end lead form.
         chatHandoff: handoffMerged,
-      });
+      };
+      // THE PERSON'S OWN ASSISTANT on the page (phase 2A): her bubble — published pages only (bake-surfaces.ts).
+      migratedHtml = assistantFab.persona
+        ? bakeAssistantPersona(migratedHtml, { ...widget, persona: assistantFab.persona })
+        : bakeAssistantWidget(migratedHtml, widget);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] assistant widget inject failed; publishing without it", err);

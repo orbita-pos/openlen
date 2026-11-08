@@ -81,6 +81,16 @@ export const SOLO_AL_PUBLICAR: Readonly<Record<string, string>> = {
     "quita los data-op-id del editor. 🔴 Al medir son lo contrario de un " +
     "estorbo: son la DIRECCIÓN de cada defecto que se le entrega al modelo.",
 
+  injectWatchSnippet:
+    "el aviso de Len Watch: le dice a OpenLen que la página publicada se quedó " +
+    "en blanco para un visitante. En el lienzo o /p/ avisaría de lo que el dueño " +
+    "está editando como si fuera una caída de su página.",
+  bakeAssistantPersona:
+    "la burbuja del asistente propio del dueño (fase 2A). Ponerla pide publicar " +
+    "(spec 2026-11-06-asistente-propio, §4.4.5), y una burbuja viva en el lienzo " +
+    "haría turnos de visitante de verdad, pagados por el dueño, mientras edita. " +
+    "El lienzo y /p/ siguen enseñando la burbuja de hoy.",
+
   // ── Las hace el lienzo, pero no /p/ ──────────────────────────────────────
   injectLogoIntoHtml:
     "la vista previa no lo hornea: sólo toca el <head> (icono y og:image) y " +
