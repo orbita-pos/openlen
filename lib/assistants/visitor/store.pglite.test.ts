@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings, projectIsApp, switchOldAssistantOff } = await import("../store");
+const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings, switchOldAssistantOff } = await import("../store");
 const visitor = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
@@ -190,14 +190,6 @@ describe("today's assistant, for her memory (§6.4)", () => {
     const r = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Pan" }, memory: "# Lo que me enseñaron antes" });
     if (!r.ok) throw new Error("not created");
     expect((await assistantById(r.assistant.id))?.memory).toBe("# Lo que me enseñaron antes");
-  });
-
-  it("tells an app or a game from a page", async () => {
-    await pg.query(`update "projects" set "data" = $1 where "id" = 'p2'`, [{ html: "<div id=root></div>", app: { catalogo: "2026-11", entrada: "/src/main.jsx" } }]);
-    expect(await projectIsApp("p2")).toBe(true);
-    await pg.query(`update "projects" set "data" = $1 where "id" = 'p1'`, [{ html: "<h1>Pan</h1>" }]);
-    expect(await projectIsApp("p1")).toBe(false);
-    expect(await projectIsApp("nope")).toBe(false);
   });
 
   it("🔴 switching today's assistant off touches only its switch, once", async () => {
