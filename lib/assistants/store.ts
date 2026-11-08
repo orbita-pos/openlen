@@ -6,6 +6,7 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import type { AssistantSettings } from "@/lib/projects/types";
 
 import { assistantConversationKey } from "./conversation";
 import { assistantSlug, type AssistantInput } from "./names";
@@ -31,6 +32,8 @@ export async function createAssistant(o: {
   personId: string;
   projectId: string;
   input: AssistantInput;
+  /** Its memory to start with: what today's assistant of the project was taught (lib/assistants/knowledge.ts). */
+  memory?: string;
 }): Promise<{ ok: true; assistant: AssistantRow } | { ok: false; code: "name_taken" | "project_has_assistant" }> {
   try {
     const assistant = await db.transaction(async (tx) => {
@@ -38,7 +41,7 @@ export async function createAssistant(o: {
       try {
         [row] = await tx
           .insert(a)
-          .values({ personId: o.personId, homeProjectId: o.projectId, slug: assistantSlug(o.input.name), ...o.input })
+          .values({ personId: o.personId, homeProjectId: o.projectId, slug: assistantSlug(o.input.name), ...o.input, ...(o.memory ? { memory: o.memory } : {}) })
           .returning();
       } catch (err) {
         if (isUniqueViolation(err)) throw new Refused("name_taken");
@@ -57,6 +60,12 @@ export async function createAssistant(o: {
     if (err instanceof Refused) return { ok: false, code: err.code };
     throw err;
   }
+}
+
+/** Today's assistant of a project (`settings.assistant`): what it was taught becomes her memory (spec §6.4). */
+export async function oldAssistantSettings(projectId: string): Promise<AssistantSettings | undefined> {
+  const [row] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+  return row?.data?.settings?.assistant ?? undefined;
 }
 
 export async function assistantBySlug(personId: string, slug: string): Promise<AssistantRow | null> {

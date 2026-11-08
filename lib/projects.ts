@@ -39,8 +39,9 @@ import {
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
-import { assistantOnPage } from "@/lib/assistants/visitor/store";
+import { assistantOnPage, saveKnowledge } from "@/lib/assistants/visitor/store";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
@@ -1078,19 +1079,20 @@ export async function publishProject(
     written: boolean;
     locales: string[];
   };
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble, and what
+  // she knows is what this publish writes (below, after it succeeds).
+  const ella = assistantsEnabled()
+    ? await assistantOnPage(params.projectId).catch((err: unknown) => {
+        console.warn("[publish] couldn't tell whether the page's own assistant is on", err);
+        return null;
+      })
+    : null;
   try {
     // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): copy to live mode now —the release is
     // content-addressed, so the live ids must exist before it is written— and write it with them.
     // The sources and the published hashes keep the test ids: the canvas stays in test mode.
     const twins = stripe ? await stripe.apply() : null;
     const toLive = twins && twins.size > 0 ? (t: string) => swapTwins(t, twins) : null;
-    // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble.
-    const ella = assistantsEnabled()
-      ? await assistantOnPage(params.projectId).catch((err: unknown) => {
-          console.warn("[publish] couldn't tell whether the page's own assistant is on", err);
-          return null;
-        })
-      : null;
     publishResult = await publishToDir({
       subdomain: v.value,
       html: toLive ? toLive(html) : html,
@@ -1258,6 +1260,9 @@ export async function publishProject(
     const { recordPublishedSources } = await import("@/lib/len-watch/published-sources");
     void recordPublishedSources({ projectId: params.projectId, ownerId: params.userId, data: project.data, folder: projectFiles });
   }
+
+  // 5b'. THE PERSON'S OWN ASSISTANT: what she tells visitors is what was just published, never the draft (phase 2A).
+  if (ella && project.data) await rememberWhatWasPublished(params.projectId, project.data, new Date(), saveKnowledge);
 
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
   // sync is the durability backstop; this gives us a lower-RPO copy that

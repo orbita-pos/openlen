@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { createAssistant, deleteAssistant } = await import("../store");
+const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings } = await import("../store");
 const visitor = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
@@ -33,7 +33,7 @@ const line = (role: "visitor" | "assistant", text: string, at: Date) => ({ role,
 beforeEach(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
-  await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
+  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "data" jsonb)`);
   await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
   await pg.query(`insert into "projects" values ('p1', 'u1'), ('p2', 'u1')`);
@@ -121,5 +121,16 @@ describe("the visitors' month", () => {
     expect(await visitor.explicitVisitorCap("u1")).toBe(1500);
     await visitor.setExplicitVisitorCap("u1", null);
     expect(await visitor.explicitVisitorCap("u1")).toBeNull();
+  });
+});
+
+describe("today's assistant, for her memory (§6.4)", () => {
+  it("reads the old assistant's settings of a project, and creates her with the memory it is given", async () => {
+    await pg.query(`update "projects" set "data" = $1 where "id" = 'p2'`, [{ settings: { assistant: { enabled: true, facts: "Envíos sólo en Guadalajara.", tone: "formal" } } }]);
+    expect(await oldAssistantSettings("p2")).toEqual({ enabled: true, facts: "Envíos sólo en Guadalajara.", tone: "formal" });
+    expect(await oldAssistantSettings("p1")).toBeUndefined();
+    const r = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Pan" }, memory: "# Lo que me enseñaron antes" });
+    if (!r.ok) throw new Error("not created");
+    expect((await assistantById(r.assistant.id))?.memory).toBe("# Lo que me enseñaron antes");
   });
 });
