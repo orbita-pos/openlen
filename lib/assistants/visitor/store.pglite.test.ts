@@ -85,6 +85,19 @@ describe("visits", () => {
     expect(r.rows[0]!.n).toBe(1);
   });
 
+  // Deferred minor: a chatty visitor's row grew forever, and «Conversaciones» read it whole.
+  it("🔴 a visit keeps its last 200 lines, in order", async () => {
+    const at = new Date("2026-11-07T10:00:00Z");
+    const many = (from: number, n: number) => Array.from({ length: n }, (_, i) => line(i % 2 ? "assistant" : "visitor", `l${from + i}`, at));
+    await visitor.saveVisit({ assistantId: lucia, projectId: "p1", visitorId: "vid-aaaaaaaaaaaaaaaa", transcript: [], newLines: many(0, 150), centicredits: 1, handedOff: false, at });
+    await visitor.saveVisit({ assistantId: lucia, projectId: "p1", visitorId: "vid-aaaaaaaaaaaaaaaa", transcript: [], newLines: many(150, 60), centicredits: 1, handedOff: false, at });
+    const lines = (await visitor.visitOf(lucia, "p1", "vid-aaaaaaaaaaaaaaaa"))!.lines as { text: string }[];
+    expect(lines).toHaveLength(visitor.VISIT_MAX_LINES);
+    expect(visitor.VISIT_MAX_LINES).toBe(200);
+    expect(lines[0]!.text).toBe("l10");
+    expect(lines.at(-1)!.text).toBe("l209");
+  });
+
   it("deleting the assistant deletes its visits", async () => {
     const at = new Date();
     await visitor.saveVisit({ assistantId: lucia, projectId: "p1", visitorId: "vid-aaaaaaaaaaaaaaaa", transcript: [], newLines: [line("visitor", "hola", at)], centicredits: 1, handedOff: false, at });

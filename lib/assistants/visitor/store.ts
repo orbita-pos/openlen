@@ -14,6 +14,8 @@ export type VisitRow = typeof schema.assistantVisits.$inferSelect;
 
 /** A visit is forgotten 90 days after its last message (spec §6.5, like the step rows). */
 export const VISIT_RETENTION_DAYS = 90;
+/** What a visit keeps of what was said, the newest: a chatty visitor's row doesn't grow forever. */
+export const VISIT_MAX_LINES = 200;
 
 const ap = schema.assistantProjects;
 const v = schema.assistantVisits;
@@ -97,6 +99,13 @@ export async function saveVisit(o: {
           lines: sql`${v.lines} || excluded."lines"`,
         },
       });
+    // Only the newest lines stay.
+    await tx
+      .update(v)
+      .set({
+        lines: sql`(select coalesce(jsonb_agg(e order by i), '[]'::jsonb) from jsonb_array_elements(${v.lines}) with ordinality as t(e, i) where i > jsonb_array_length(${v.lines}) - ${VISIT_MAX_LINES})`,
+      })
+      .where(and(eq(v.assistantId, o.assistantId), eq(v.projectId, o.projectId), eq(v.visitorId, o.visitorId), sql`jsonb_array_length(${v.lines}) > ${VISIT_MAX_LINES}`));
     const cutoff = new Date(o.at.getTime() - VISIT_RETENTION_DAYS * 86_400_000);
     await tx.delete(v).where(and(eq(v.assistantId, o.assistantId), lt(v.lastAt, cutoff)));
   });
