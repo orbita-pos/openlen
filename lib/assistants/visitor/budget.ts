@@ -8,7 +8,12 @@
 import { CapReservations } from "@/lib/app-ai/cap";
 import { monthlyCap } from "@/lib/app-ai/limits";
 
-/** What a visitor's turn holds while it runs, in centicredits: the most one may cost (Task 10 measures it). */
+/** What a visitor's turn holds while it runs, in centicredits: the most one may cost.
+ *
+ *  MEASURED on 08/11 (phase 2A, task 10: 10 real messages through POST /api/assistant/<sub>, DeepSeek V4.1 Flash on
+ *  DeepInfra): 1–5 centicredits each, 2.4 on average, 24 in all ($0.00056 of real cost); 1 or 2 calls per turn; the
+ *  system prefix is shared by every visitor (896 of ~960 input tokens cached from the second visitor on); median
+ *  1.2 s, slowest 8.2 s. The worst (5) is a tenth of this, so it stays: it only holds back the cap's last 50. */
 export const VISITOR_TURN_RESERVE = 50;
 
 export type Sleep = "cap" | "credits";
