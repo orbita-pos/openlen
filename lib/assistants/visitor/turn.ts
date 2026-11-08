@@ -72,7 +72,7 @@ export interface VisitorTurnDeps {
   };
   /** Charges the owner; returns what the turn cost, in centicredits. */
   charge(c: { ownerId: string; projectId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly VisitorUse[] }): Promise<number>;
-  notifyAsleep(o: { ownerId: string; projectId: string; assistantName: string; assistantSlug: string; reason: Sleep; month: string }): Promise<void>;
+  notifyAsleep(o: { ownerId: string; projectId: string; assistantName: string; assistantSlug: string; reason: Sleep; month: string; spent: number; cap: number }): Promise<void>;
   /** Layer 0 (lib/agent/telemetry/): one recorder per turn. */
   recorder?(projectId: string, turnId: string, hasHistory: boolean): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
   runLoop?: typeof runAgentLoop;
@@ -107,7 +107,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     if (sleep || !release) {
       const reason: Sleep = sleep ?? "cap";
       if (await d.store.claimAsleepAlert(input.ownerId, month, reason)) {
-        await d.notifyAsleep({ ownerId: input.ownerId, projectId: input.projectId, assistantName: input.assistant.name, assistantSlug: input.assistant.slug, reason, month }).catch((err: unknown) =>
+        await d.notifyAsleep({ ownerId: input.ownerId, projectId: input.projectId, assistantName: input.assistant.name, assistantSlug: input.assistant.slug, reason, month, spent, cap }).catch((err: unknown) =>
           console.warn("[assistant-visitor] the owner couldn't be told she fell asleep", err),
         );
       }
@@ -241,8 +241,14 @@ async function defaultVisitorDeps(): Promise<VisitorTurnDeps> {
       });
       return centicredits;
     },
-    // Task 9 tells the owner (lib/assistants/visitor/asleep-messages.ts).
-    notifyAsleep: async () => {},
+    // The owner hears it once per month and reason (the store's claim decides; the key makes a retry harmless).
+    notifyAsleep: async (n) => {
+      const { scheduleNotification } = await import("@/lib/notifications/dispatch");
+      await scheduleNotification(
+        { type: "assistant_asleep", projectId: n.projectId, recipientUserId: n.ownerId, assistantName: n.assistantName, assistantSlug: n.assistantSlug, reason: n.reason, spent: n.spent, cap: n.cap },
+        `assistant-asleep:${n.ownerId}:${n.month}:${n.reason}`,
+      );
+    },
     recorder: (projectId, turnId, hasHistory) => createStepRecorder({ projectId, turnId, hasHistory, store: stepStore, log: console.warn }),
   };
 }

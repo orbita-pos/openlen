@@ -901,6 +901,19 @@ export async function sendAppAiCapEmail(input: { to: string; subject: string; te
   await enviar(live, "app AI cap email", { from, to: input.to, subject: input.subject, text: input.text });
 }
 
+/** THE PERSON'S OWN ASSISTANT FELL ASLEEP (phase 2A): the month's visitor cap, or no credits. To the owner. */
+export async function sendAssistantAsleepEmail(input: { to: string; subject: string; text: string }): Promise<void> {
+  const live = liveClientOrWarn("assistant asleep email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] Assistant asleep to ${input.to}\n     ${input.subject}\n`);
+    }
+    return;
+  }
+  await enviar(live, "assistant asleep email", { from, to: input.to, subject: input.subject, text: input.text });
+}
+
 /** PROJECT EMAIL (spec local 2026-10-22-email-integration): the owner's alerts about their sending domain and
  *  their month's allowance, from OpenLen's own account (never the customers' one). */
 export async function sendProjectEmailNotice(input: { to: string; subject: string; text: string }): Promise<void> {

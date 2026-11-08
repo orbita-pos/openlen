@@ -1,6 +1,7 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import type { NotificationEvent } from "../types";
 import { breaksQuietHours } from "../urgency";
+import { asleepPush } from "@/lib/assistants/visitor/asleep-messages";
 
 interface CuentaFcm { project_id: string; client_email: string; private_key: string }
 export function configuracionFcm(valor: string | undefined): CuentaFcm | null {
@@ -29,6 +30,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "email_quota": title = "Email"; body = `${evento.percent}% · ${evento.sent} / ${evento.included}`; break;
     case "len_watch": title = evento.title; body = evento.body; break;
     case "len_aviso": title = evento.title; body = evento.push; break;
+    case "assistant_asleep": ({ title, body } = asleepPush(evento)); break;
   }
   const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {};
   // The person's own assistant's notification sits beside Len's for the same project, never replaces it.

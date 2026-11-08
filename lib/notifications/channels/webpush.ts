@@ -5,6 +5,7 @@ import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
 import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
 import { lenTurnPush } from "../len-turn-push";
+import { asleepPush } from "@/lib/assistants/visitor/asleep-messages";
 import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
@@ -162,6 +163,8 @@ export const webPushChannel: NotificationChannel = {
                   ? lenWatchPush(event)
                   : event.type === "len_aviso"
                     ? lenAvisoPush(event)
+                  : event.type === "assistant_asleep"
+                    ? asleepPush(event)
                   : {
                   title: event.senderName,
                   body: event.preview,

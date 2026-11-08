@@ -136,7 +136,7 @@ describe("runVisitorTurn", () => {
     expect(await runVisitorTurn(input(), s.deps)).toEqual({ kind: "asleep", reason: "cap" });
     expect(await runVisitorTurn(input({ visitorId: "vid-bbbbbbbbbbbbbbbb" }), s.deps)).toEqual({ kind: "asleep", reason: "cap" });
     expect(s.sent).toHaveLength(0);
-    expect(s.asleep).toEqual([{ ownerId: "owner", projectId: "p1", assistantName: "Lucía", assistantSlug: "lucia", reason: "cap", month: "2026-11" }]);
+    expect(s.asleep).toEqual([{ ownerId: "owner", projectId: "p1", assistantName: "Lucía", assistantSlug: "lucia", reason: "cap", month: "2026-11", spent: 12_500 - VISITOR_TURN_RESERVE + 1, cap: 12_500 }]);
   });
 
   it("with no credits it sleeps for credits", async () => {

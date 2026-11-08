@@ -72,6 +72,21 @@ export interface AppAiCapEvent {
   cap: number;
 }
 
+/** THE PERSON'S OWN ASSISTANT FELL ASLEEP (spec local 2026-11-06-asistente-propio, §4.7; phase 2A): the account's
+ *  visitors used the month's cap, or the account ran out of credits; the bubble now offers a contact form. Once per
+ *  month and reason. Push and email, to the owner only. */
+export interface AssistantAsleepEvent {
+  type: "assistant_asleep";
+  projectId: string;
+  recipientUserId: string;
+  assistantName: string;
+  assistantSlug: string;
+  reason: "cap" | "credits";
+  /** The month's visitor spend and cap, in centicredits. */
+  spent: number;
+  cap: number;
+}
+
 /** PROJECT EMAIL: a project's sending domain became ready, or stopped verifying
  *  (spec local 2026-10-22-email-integration, 6.1). Push and email. */
 export interface EmailDomainEvent {
@@ -127,7 +142,7 @@ export interface LenAvisoEvent {
   emailText: string;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent;
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;
