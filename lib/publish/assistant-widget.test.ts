@@ -313,16 +313,18 @@ describe("her bubble", () => {
   // reads them. The page gets them back, for this test only.
   const NAMED_CONTROLS =
     `["nombre","email"].forEach(function(n){Object.defineProperty(HTMLFormElement.prototype,n,{configurable:true,get:function(){return this.elements.namedItem(n)}})});`;
-  const pagina = (respuesta: Record<string, unknown>) =>
+  // One answer for every question, or one per question in order; the contact form's POST (/api/f/) answers ok.
+  const pagina = (respuesta: Record<string, unknown> | Record<string, unknown>[]) =>
     sonda(
       NAMED_CONTROLS +
-        `window.__r=${JSON.stringify(respuesta)};` +
+        `window.__rs=${JSON.stringify(Array.isArray(respuesta) ? respuesta : [respuesta])};` +
         `window.fetch=function(u,o){if(o&&o.method==="POST"){var n=Number(document.body.getAttribute("data-posts")||"0")+1;` +
         `document.body.setAttribute("data-posts",String(n));document.body.setAttribute("data-post-"+n,o.body);` +
-        `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(window.__r)}})}` +
+        `var r=String(u).indexOf("/api/f/")>=0?{ok:true}:(window.__rs.length>1?window.__rs.shift():window.__rs[0]);` +
+        `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(r)}})}` +
         `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({asistente:true,chat:false,traspaso:false})}})};`,
     ).replace("<html>", '<html lang="es">');
-  const pintar = async (respuesta: Record<string, unknown>) => {
+  const pintar = async (respuesta: Record<string, unknown> | Record<string, unknown>[]) => {
     document.open();
     document.write(bakeAssistantPersona(pagina(respuesta), { ...CFG, persona: PERSONA }));
     document.close();
@@ -367,6 +369,21 @@ describe("her bubble", () => {
     await pregunta(root, "hola");
     expect(root.querySelector(".log")!.textContent).toContain(PERSONA_STRINGS.es.asleep);
     expect(root.querySelector("form.lead"), root.querySelector(".log")!.textContent!).not.toBeNull();
+  });
+
+  // Deferred minor: a visitor who had already sent the contact form on this page load got the asleep line with no form.
+  it("🔴 asleep after a form was already sent: the form comes back; one still on screen isn't doubled", async () => {
+    const root = await pintar([{ respuesta: "Déjame tus datos.", intent: "lead" }, { asleep: true, intent: "lead" }, { asleep: true, intent: "lead" }]);
+    await pregunta(root, "¿hacen envíos?");
+    const first = root.querySelector<HTMLFormElement>("form.lead")!;
+    (first.querySelector("input[name=email]") as HTMLInputElement).value = "ana@example.com";
+    first.dispatchEvent(new Event("submit", { cancelable: true }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(root.querySelector("form.lead")).toBeNull();
+    await pregunta(root, "¿y mañana?");
+    expect(root.querySelectorAll("form.lead")).toHaveLength(1);
+    await pregunta(root, "¿hola?");
+    expect(root.querySelectorAll("form.lead")).toHaveLength(1);
   });
 
   it("the 10 languages have her greeting with {assistant} and {name}, and the asleep line", () => {

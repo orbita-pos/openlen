@@ -293,7 +293,7 @@ var d=dots();
 fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},
 body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);leadForm();return}' : ""}var a=(j&&j.respuesta)||T.noAnswer;
+.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||T.noAnswer;
 history.push({role:"assistant",content:a});bubble("bot",a);
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
