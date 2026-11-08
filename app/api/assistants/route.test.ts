@@ -11,14 +11,26 @@ const m = vi.hoisted(() => ({
   assistantById: vi.fn(async (): Promise<unknown> => null),
   deleteAssistant: vi.fn(async () => true),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
+  switchOldAssistantOff: vi.fn(async () => true),
+  // Her visitors (phase 2A).
+  setOnPage: vi.fn(async () => true),
+  visitsOf: vi.fn(async (): Promise<unknown[]> => []),
+  monthSpent: vi.fn(async () => 0),
+  explicitVisitorCap: vi.fn(async (): Promise<number | null> => null),
+  setExplicitVisitorCap: vi.fn(async () => {}),
+  creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff }));
+vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
+vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 
 const { fijarAccesoDePrueba } = await import("@/lib/projects/acceso-de-prueba");
 const { GET, POST } = await import("./route");
 const one = await import("./[id]/route");
+const visits = await import("./[id]/visits/route");
+const budget = await import("./visitor-budget/route");
 
 const LUCIA = { id: "a1", personId: "u1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", memory: "secreto", homeProjectId: "p1", createdAt: new Date(0), updatedAt: new Date(0) };
 const BODY = { projectId: "p1", name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" };
@@ -114,5 +126,71 @@ describe("/api/assistants/[id]", () => {
     expect(await gone.json()).toEqual({ error: "assistants_off" });
     expect(m.assistantById).not.toHaveBeenCalled();
     expect(m.deleteAssistant).not.toHaveBeenCalled();
+  });
+});
+
+// HER PLACE'S CONTROLS (spec local 2026-11-06-asistente-propio, §4.4.5, §4.7, §6.2, §6.5; phase 2A).
+describe("her place's controls", () => {
+  const patch = (id: string, body: unknown) => one.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify(body) }), params(id));
+
+  it("🔴 only its person turns her on the page; the old assistant stays until the publish that brings her", async () => {
+    m.assistantById.mockResolvedValue(LUCIA);
+    const res = await patch("a1", { onPage: true });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ onPage: true, needsPublish: true });
+    expect(m.setOnPage).toHaveBeenCalledWith("p1", "a1", true);
+    expect(m.switchOldAssistantOff).not.toHaveBeenCalled();
+
+    vi.clearAllMocks();
+    m.assistantById.mockResolvedValue(LUCIA);
+    expect(await (await patch("a1", { onPage: false })).json()).toEqual({ onPage: false, needsPublish: false });
+    expect(m.switchOldAssistantOff).not.toHaveBeenCalled();
+
+    m.assistantById.mockResolvedValue({ ...LUCIA, personId: "u2" });
+    expect((await patch("a1", { onPage: true })).status).toBe(404);
+    expect((await patch("a1", { onPage: "sí" })).status).toBe(400);
+  });
+
+  it("visits are only its person's — a project member gets a 404", async () => {
+    const at = new Date("2026-11-07T18:00:00Z");
+    m.assistantById.mockResolvedValue(LUCIA);
+    m.visitsOf.mockResolvedValue([
+      { id: "v1", assistantId: "a1", projectId: "p1", visitorId: "vid-aaaaaaaaaaaaaaaa", startedAt: at, lastAt: at, messageCount: 2, centicredits: 9, handedOff: true, transcript: [{ role: "user", content: "secreto" }], lines: Array.from({ length: 50 }, (_, i) => ({ role: i % 2 ? "assistant" : "visitor", text: `l${i}`, at: at.toISOString() })) },
+    ]);
+    const res = await visits.GET(new Request("http://x"), params("a1"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { visits: { id: string; lines: { text: string }[]; transcript?: unknown; visitorId?: unknown }[] };
+    expect(body.visits[0]).toMatchObject({ id: "v1", messageCount: 2, handedOff: true });
+    expect(body.visits[0]!.lines).toHaveLength(40);
+    expect(body.visits[0]!.lines.at(-1)!.text).toBe("l49");
+    expect(body.visits[0]!.transcript).toBeUndefined();
+    expect(body.visits[0]!.visitorId).toBeUndefined();
+    expect(m.visitsOf).toHaveBeenCalledWith("a1", 50);
+
+    m.auth.mockResolvedValue({ user: { id: "u2" } });
+    expect((await visits.GET(new Request("http://x"), params("a1"))).status).toBe(404);
+  });
+
+  it("the budget can't go above the plan; null goes back to the default", async () => {
+    m.monthSpent.mockResolvedValue(1_200);
+    const got = await budget.GET();
+    expect(await got.json()).toEqual({ spent: 1_200, cap: 12_500, explicit: null });
+    const put = (b: unknown) => budget.PUT(new Request("http://x", { method: "PUT", body: JSON.stringify(b) }));
+    expect((await put({ cap: 2_000 })).status).toBe(200);
+    expect(m.setExplicitVisitorCap).toHaveBeenLastCalledWith("u1", 2_000);
+    expect((await put({ cap: 60_000 })).status).toBe(400);
+    expect((await put({ cap: -1 })).status).toBe(400);
+    expect((await put({ cap: null })).status).toBe(200);
+    expect(m.setExplicitVisitorCap).toHaveBeenLastCalledWith("u1", null);
+  });
+
+  it("with OPENLEN_ASSISTANT=0 every new route is 404 assistants_off", async () => {
+    vi.stubEnv("OPENLEN_ASSISTANT", "0");
+    m.assistantById.mockResolvedValue(LUCIA);
+    for (const res of [await patch("a1", { onPage: true }), await visits.GET(new Request("http://x"), params("a1")), await budget.GET()]) {
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "assistants_off" });
+    }
+    expect(m.setOnPage).not.toHaveBeenCalled();
   });
 });

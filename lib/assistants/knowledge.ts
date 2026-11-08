@@ -11,15 +11,18 @@ export function knowledgeOf(data: ProjectData): string {
   return siteToText(data).slice(0, KNOWLEDGE_MAX);
 }
 
-/** Called by publishing, after the release is written: what was just published is what she knows. Never fails it. */
+/** Called by publishing with her on the page, after the release is written: what was just published is what she knows,
+ *  and today's assistant goes off in this same publish — the one that baked her bubble in its place (§6.4). Never fails
+ *  the publish. */
 export async function rememberWhatWasPublished(
   projectId: string,
   data: ProjectData,
   at: Date,
-  save: (projectId: string, text: string, at: Date) => Promise<void>,
+  deps: { save(projectId: string, text: string, at: Date): Promise<void>; switchOldOff(projectId: string): Promise<boolean> },
 ): Promise<void> {
   try {
-    await save(projectId, knowledgeOf(data), at);
+    await deps.save(projectId, knowledgeOf(data), at);
+    await deps.switchOldOff(projectId);
   } catch (err) {
     console.warn("[assistants] what was published wasn't saved for the page's own assistant", err);
   }

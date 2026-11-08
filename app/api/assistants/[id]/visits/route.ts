@@ -1,0 +1,37 @@
+// HER CONVERSATIONS WITH VISITORS (spec local 2026-11-06-asistente-propio, §4.6.2 «Conversaciones», §6.5; phase 2A):
+// what the page's visitors said and what she answered, for her person only — visitors' data, never a member's. Without
+// what the model saw (`transcript`) or the visitor's browser id.
+import { auth } from "@/auth";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { assistantById } from "@/lib/assistants/store";
+import { visitsOf } from "@/lib/assistants/visitor/store";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+/** The newest visits, and of each its last lines. */
+const VISITS = 50;
+const LINES = 40;
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
+
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
+  const personId = (await auth())?.user?.id;
+  if (!personId) return json({ error: "unauthorized" }, 401);
+  if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
+  const { id } = await params;
+  const a = await assistantById(id);
+  if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
+  const rows = await visitsOf(a.id, VISITS);
+  return json({
+    visits: rows.map((v) => ({
+      id: v.id,
+      startedAt: v.startedAt,
+      lastAt: v.lastAt,
+      messageCount: v.messageCount,
+      handedOff: v.handedOff,
+      lines: v.lines.slice(-LINES),
+    })),
+  });
+}

@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings } = await import("../store");
+const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings, switchOldAssistantOff } = await import("../store");
 const visitor = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
@@ -33,7 +33,7 @@ const line = (role: "visitor" | "assistant", text: string, at: Date) => ({ role,
 beforeEach(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
-  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "data" jsonb)`);
+  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "data" jsonb, "updatedAt" timestamp)`);
   await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
   await pg.query(`insert into "projects" values ('p1', 'u1'), ('p2', 'u1')`);
@@ -96,6 +96,14 @@ describe("on the page", () => {
     expect(await visitor.setOnPage("p1", lucia, false)).toBe(true);
     expect(await visitor.assistantOnPage("p1")).toBeNull();
   });
+
+  it("🔴 turning her on or off forgets what she knew: she answers only after a publish with her", async () => {
+    await visitor.setOnPage("p1", lucia, true);
+    await visitor.saveKnowledge("p1", "Lo publicado.", new Date());
+    await visitor.setOnPage("p1", lucia, false);
+    await visitor.setOnPage("p1", lucia, true);
+    expect((await visitor.assistantOnPage("p1"))?.knowledge).toBeNull();
+  });
 });
 
 describe("the visitors' month", () => {
@@ -132,5 +140,14 @@ describe("today's assistant, for her memory (§6.4)", () => {
     const r = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Pan" }, memory: "# Lo que me enseñaron antes" });
     if (!r.ok) throw new Error("not created");
     expect((await assistantById(r.assistant.id))?.memory).toBe("# Lo que me enseñaron antes");
+  });
+
+  it("🔴 switching today's assistant off touches only its switch, once", async () => {
+    await pg.query(`update "projects" set "data" = $1 where "id" = 'p2'`, [{ html: "<h1>x</h1>", settings: { assistant: { enabled: true, facts: "Jueves sin gluten." }, chat: { enabled: true } } }]);
+    expect(await switchOldAssistantOff("p2")).toBe(true);
+    const r = await pg.query<{ data: { html: string; settings: { assistant: { enabled: boolean; facts: string }; chat: { enabled: boolean } } } }>(`select "data" from "projects" where "id" = 'p2'`);
+    expect(r.rows[0]!.data).toEqual({ html: "<h1>x</h1>", settings: { assistant: { enabled: false, facts: "Jueves sin gluten." }, chat: { enabled: true } } });
+    expect(await switchOldAssistantOff("p2")).toBe(false);
+    expect(await switchOldAssistantOff("p1")).toBe(false);
   });
 });

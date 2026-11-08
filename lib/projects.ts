@@ -40,6 +40,7 @@ import {
 } from "@/lib/projects/site-pages";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
+import { switchOldAssistantOff } from "@/lib/assistants/store";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
 import { assistantOnPage, saveKnowledge } from "@/lib/assistants/visitor/store";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
@@ -1262,7 +1263,7 @@ export async function publishProject(
   }
 
   // 5b'. THE PERSON'S OWN ASSISTANT: what she tells visitors is what was just published, never the draft (phase 2A).
-  if (ella && project.data) await rememberWhatWasPublished(params.projectId, project.data, new Date(), saveKnowledge);
+  if (ella && project.data) await rememberWhatWasPublished(params.projectId, project.data, new Date(), { save: saveKnowledge, switchOldOff: switchOldAssistantOff });
 
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
   // sync is the durability backstop; this gives us a lower-RPO copy that

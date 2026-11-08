@@ -29,9 +29,14 @@ export async function assistantOnPage(projectId: string): Promise<{ assistant: A
   return row ? { assistant: row.assistant, knowledge: row.knowledge } : null;
 }
 
-/** `false` when that assistant isn't the one of that project. */
+/** `false` when that assistant isn't the one of that project. Either way she forgets what she knew: she answers visitors
+ *  only after a publish with her (which bakes her bubble), never through a bubble that isn't hers yet. */
 export async function setOnPage(projectId: string, assistantId: string, onPage: boolean): Promise<boolean> {
-  const done = await db.update(ap).set({ onPage }).where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId))).returning({ projectId: ap.projectId });
+  const done = await db
+    .update(ap)
+    .set({ onPage, knowledge: null, knowledgeAt: null })
+    .where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId)))
+    .returning({ projectId: ap.projectId });
   return done.length > 0;
 }
 

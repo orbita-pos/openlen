@@ -3,7 +3,7 @@
 // under its own key, deleted with it.
 import "server-only";
 
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { AssistantSettings } from "@/lib/projects/types";
@@ -66,6 +66,18 @@ export async function createAssistant(o: {
 export async function oldAssistantSettings(projectId: string): Promise<AssistantSettings | undefined> {
   const [row] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
   return row?.data?.settings?.assistant ?? undefined;
+}
+
+/** Today's assistant of a project goes off (spec §6.4): she takes its place in the same publish. One atomic write of
+ *  one field, so no read-modify-write of the project's settings can lose it. `false` when it wasn't on. */
+export async function switchOldAssistantOff(projectId: string): Promise<boolean> {
+  const p = schema.projects;
+  const done = await db
+    .update(p)
+    .set({ data: sql`jsonb_set(${p.data}, '{settings,assistant,enabled}', 'false'::jsonb)`, updatedAt: new Date() })
+    .where(and(eq(p.id, projectId), sql`${p.data}->'settings'->'assistant'->>'enabled' = 'true'`))
+    .returning({ id: p.id });
+  return done.length > 0;
 }
 
 export async function assistantBySlug(personId: string, slug: string): Promise<AssistantRow | null> {
