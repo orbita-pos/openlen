@@ -37,6 +37,12 @@ describe("loadChatSite — the bubble's assistant", () => {
     expect((await loadChatSite("taller"))?.assistantEnabled).toBe(true);
   });
 
+  it("🔴 her with public data only (an app): the handoff accepts her too", async () => {
+    mocks.limit.mockResolvedValue(row({ chat: { enabled: true } }));
+    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "", publicData: [{ name: "huecos", columns: [] }] });
+    expect((await loadChatSite("taller"))?.assistantEnabled).toBe(true);
+  });
+
   it("neither of them: no assistant", async () => {
     mocks.limit.mockResolvedValue(row({ chat: { enabled: true } }));
     expect((await loadChatSite("taller"))?.assistantEnabled).toBe(false);
