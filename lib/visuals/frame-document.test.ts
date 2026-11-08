@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { VISUAL_TOKENS } from "@/lib/agent/visuals/manual";
 import { LUCIDE_FONT_VERSION, VISUALS_CDN_ORIGINS, buildVisualFrameDocument, visualFrameCsp } from "./frame-document";
@@ -59,5 +60,30 @@ describe("buildVisualFrameDocument", () => {
 
   it("embeds the parent origins it accepts", () => {
     expect(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false })).toContain('["https://openlen.com"]');
+  });
+});
+
+// THE PERSON'S OWN ASSISTANT'S BUBBLE (spec local 2026-11-06-asistente-propio, §5; phase 2B): her visuals run in a
+// sandboxed srcdoc frame on someone's published page, «sin poder mandar datos a ningún sitio».
+describe("the closed frame", () => {
+  const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+  const directive = (csp: string, name: string) => csp.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `));
+
+  it("🔴 the closed frame can't send anything anywhere", () => {
+    const csp = visualFrameCsp(null, { closed: true });
+    expect(directive(csp, "connect-src")).toBe("connect-src 'none'");
+    expect(directive(csp, "img-src")).toBe("img-src data: blob:");
+    expect(directive(csp, "form-action")).toBe("form-action 'none'");
+    expect(directive(csp, "frame-src")).toBe("frame-src 'none'");
+    const doc = buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true });
+    expect(doc).toContain("connect-src 'none'");
+    expect(doc).toContain("img-src data: blob:");
+  });
+
+  it("Len's frame is byte for byte today's", () => {
+    // Pinned from the unchanged file on 08/11, before the closed frame existed.
+    expect(sha(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }))).toBe("18143c42aa467f31536af410830ce3926785d9682391a2c1a3c937e68f942fd1");
+    expect(sha(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false }))).toBe("9334ba46caa82a60ff8bfd6e62138d50348abd3b050bd774c379a6302ca5f95a");
+    expect(sha(visualFrameCsp("https://openlen.com"))).toBe("0c404282b62471a5771b6b057f9588dd52c61783438a93e226829a0fe1984e60");
   });
 });
