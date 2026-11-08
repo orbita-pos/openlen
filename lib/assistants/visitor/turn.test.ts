@@ -88,11 +88,11 @@ function setup(script: StreamEvent[][], o: { balance?: number; spent?: number; c
 }
 
 describe("runVisitorTurn", () => {
-  it("offers the model exactly [offer_handoff], with the system prompt first", async () => {
+  it("offers the model exactly the visitor list, with the system prompt first", async () => {
     const s = setup([say("Abrimos a las 9.")]);
     const r = await runVisitorTurn(input(), s.deps);
-    expect(r).toEqual({ kind: "reply", text: "Abrimos a las 9.", intent: "answer" });
-    expect(s.offered[0]).toEqual(["offer_handoff"]);
+    expect(r).toMatchObject({ kind: "reply", text: "Abrimos a las 9.", intent: "answer" });
+    expect(s.offered[0]).toEqual(["offer_handoff", "read_me", "show_widget"]);
     expect(s.sent[0]![0]!.role).toBe("system");
     expect(String(s.sent[0]![0]!.content)).toContain("Pastelería Canela");
   });

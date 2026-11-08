@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { VISUAL_TOKENS, buildVisualsManual } from "./manual";
+import { VISUAL_TOKENS, bubbleEditsMissing, buildVisualsManual } from "./manual";
 import { VISUAL_MODULES } from "./widget";
 
 const CDN_HOSTS = [
@@ -61,5 +62,35 @@ describe("buildVisualsManual — modules and platform", () => {
     expect(buildVisualsManual([], "mobile")).toContain("360px");
     expect(buildVisualsManual([], "desktop")).toContain("420px");
     expect(buildVisualsManual([], "unknown")).toContain("420px");
+  });
+});
+
+// THE PERSON'S OWN ASSISTANT IN THE PUBLISHED PAGE'S BUBBLE (spec local 2026-11-06-asistente-propio, §4.2, §5; phase 2B):
+// the same manual, speaking of the business's bubble; Len's chat gets exactly today's.
+describe("buildVisualsManual — the surface", () => {
+  const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+
+  it("the chat's manual is byte for byte today's", () => {
+    // Pinned from the unchanged file on 08/11, before the bubble's surface existed.
+    expect(sha(buildVisualsManual([...VISUAL_MODULES], "desktop"))).toBe("e8ac9d18b7322fa94814315ffc2f6011fc37fd12558294f43ec3853d33751e49");
+    expect(sha(buildVisualsManual([], "unknown"))).toBe("2bed2eab7afd2c2e45598746b8e17c3a2bc07a0a948ce795e7d1916e057aa95f");
+    expect(sha(buildVisualsManual(["chart"], "mobile"))).toBe("07091accb79842db703951ce5ead6aab9840cd8832ccf8656de51ea31ca32d75");
+    expect(buildVisualsManual(["chart"], "mobile", "chat")).toBe(buildVisualsManual(["chart"], "mobile"));
+  });
+
+  it("the bubble's manual speaks of the business's bubble and its color", () => {
+    const m = buildVisualsManual(["chart", "mockup"], "mobile", "bubble");
+    expect(m).toContain("# Visuals in the business's chat bubble");
+    expect(m).toContain("--accent: the business's color");
+    expect(m).toMatch(/sendPrompt\(text\) sends text to you as a message from the visitor/);
+    expect(m).toMatch(/fetch\(\) reaches nothing/);
+    expect(m).toMatch(/only to this business's own site/);
+    expect(m).not.toContain("OpenLen's chat");
+    expect(m).not.toContain("the inbox");
+    expect(m).toContain("## chart");
+  });
+
+  it("🔴 every bubble edit still finds its text: the chat's manual can't change under the bubble unnoticed", () => {
+    expect(bubbleEditsMissing()).toEqual([]);
   });
 });

@@ -15,7 +15,7 @@ import type { ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
 
 import type { AssistantTone } from "../names";
 import { sleepReason, VISITOR_TURN_RESERVE, visitorCap, visitorMonth, visitorReservations, type Sleep } from "./budget";
-import { OFFER_HANDOFF, replyText, VISITOR_TOOLS, visitorMessage, visitorSystemPrompt } from "./definition";
+import { OFFER_HANDOFF, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
 import type * as VisitorStore from "./store";
 
 /** Calls with tools before it must answer (the definition's `maxTurns`). */
@@ -146,7 +146,9 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     const signal = stop.signal;
     // Her rows are tagged as hers: Len's baseline never compares against a visitor's prefix, nor hers against Len's.
     const recorder = d.recorder?.({ projectId: input.projectId, turnId: randomUUID(), tag: `assistant-visitor:${input.assistant.id}` });
-    const brain = d.brain([...VISITOR_TOOLS], recorder ? (c) => recorder.onCall(c) : undefined, signal);
+    // Task 5 passes the business's public data here.
+    const tools = [...visitorTools([])];
+    const brain = d.brain(tools, recorder ? (c) => recorder.onCall(c) : undefined, signal);
     /** She offered a way to reach the business (the reply's intent). */
     let offered = false;
     /** The visitor asked for a person (what «Conversaciones» says), not only that she offered the contact form. */
@@ -155,7 +157,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     let endReason = "error";
     const result = await (d.runLoop ?? runAgentLoop)({
       messages: [system, ...prior, ask],
-      tools: [...VISITOR_TOOLS],
+      tools,
       openStream: (messages) => (++steps <= VISITOR_MAX_STEPS ? brain.openStream(messages) : brain.closeOut(messages)),
       closeOut: brain.closeOut,
       runTool: async (name, args) => {

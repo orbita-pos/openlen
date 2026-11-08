@@ -109,7 +109,61 @@ For a card, a screen, a list, a comparison of options. Cards: background var(--b
 For a small tool the person can play with: a slider that recalculates, buttons that switch a view, a calculator. Do the work in the visual's own JavaScript: it runs on every change without calling you. Show the result next to the control that changed it, rounded. Check what the person typed before using it and show a short message next to the field if it's empty or wrong. Use sendPrompt only for what needs you to think, and make it clear on the button (end its label with ↗).`,
 };
 
-export function buildVisualsManual(modules: readonly VisualModule[], platform: VisualPlatform): string {
+/** Where the visual is shown: Len's chat, or the person's own assistant's bubble on a published page (phase 2B of the
+ *  spec local 2026-11-06-asistente-propio). */
+export type VisualSurface = "chat" | "bubble";
+
+/** THE BUBBLE'S MANUAL: the chat's, with what is different there — a stranger reading, the business's color, a closed
+ *  frame (no fetch, images only as data:), links only to the business's own site, figures from what she knows. Each
+ *  piece MUST be found in the chat's text: if the chat's manual changes under it, this throws in the tests instead of
+ *  leaving a line that speaks of OpenLen's chat to a visitor. */
+const BUBBLE_EDITS: readonly (readonly [string, string])[] = [
+  ["# Visuals in OpenLen's chat", "# Visuals in the business's chat bubble"],
+  [
+    "The person should feel it is part of OpenLen's chat, not a page pasted into it: transparent background (the chat shows through)",
+    "The visitor should feel it is part of the business's chat bubble, not a page pasted into it: transparent background (the bubble shows through)",
+  ],
+  ["Where the chat can't draw (a thread, an email, a voice call) your reply is all the person gets", "Where the bubble can't draw, your reply is all the visitor gets"],
+  ["The person is on a phone: you have about 360px of width.", "The bubble is narrow: about 300px of width, on a phone and on a computer alike."],
+  ["so the visual follows the person's light or dark theme without you doing anything", "so the visual matches the bubble without you doing anything"],
+  ["- --bg: the chat behind the visual", "- --bg: the bubble behind the visual"],
+  ["- --accent: OpenLen's accent:", "- --accent: the business's color:"],
+  ["- --font-sans: the chat's typeface", "- --font-sans: the bubble's typeface"],
+  [
+    `Scripts, styles and fetch() reach only ${CDNS.join(", ")}; fonts only https://fonts.googleapis.com (stylesheets) and https://fonts.gstatic.com (font files). Anything else is blocked and fails without a message.`,
+    `Scripts and styles load only from ${CDNS.join(", ")}; fonts only from https://fonts.googleapis.com (stylesheets) and https://fonts.gstatic.com (font files). fetch() reaches nothing, and images are only data: URLs. Anything else is blocked and fails without a message.`,
+  ],
+  ["Images: data: URLs or files on those CDNs.", "Images: data: URLs."],
+  [
+    "Every figure comes from your tools (results, files, the inbox) — never estimate one or make one up",
+    "Every figure comes from what you know of the business (<business>, <memory>) or what read_public_data returned — never estimate one or make one up",
+  ],
+  ["## Talking to the chat", "## Talking to the bubble"],
+  ["sendPrompt(text) sends text to you as a message from the person.", "sendPrompt(text) sends text to you as a message from the visitor."],
+  [
+    "- Links (<a href=\"https://…\">) and openLink(url) ask the person to confirm, then open in a new tab. The visual never navigates.",
+    "- Links (<a href>) and openLink(url) go only to this business's own site — a path like /reservas or an anchor like #pedir — and open in the same page. A link to another site does nothing.",
+  ],
+  ["already have the chat's style", "already have the bubble's style"],
+];
+
+function forTheBubble(text: string): string {
+  let out = text;
+  for (const [from, to] of BUBBLE_EDITS) {
+    if (!out.includes(from)) continue;
+    out = out.split(from).join(to);
+  }
+  return out;
+}
+
+export function buildVisualsManual(modules: readonly VisualModule[], platform: VisualPlatform, surface: VisualSurface = "chat"): string {
   const asked = VISUAL_MODULES.filter((m) => modules.includes(m));
-  return [common(platform), ...asked.map((m) => MODULE_GUIDES[m])].join("\n\n");
+  const text = [common(platform), ...asked.map((m) => MODULE_GUIDES[m])].join("\n\n");
+  return surface === "bubble" ? forTheBubble(text) : text;
+}
+
+/** For the tests: every bubble edit still finds its text in the chat's manual (all modules, a phone). */
+export function bubbleEditsMissing(): string[] {
+  const text = [common("mobile"), ...VISUAL_MODULES.map((m) => MODULE_GUIDES[m])].join("\n\n");
+  return BUBBLE_EDITS.filter(([from]) => !text.includes(from)).map(([from]) => from);
 }

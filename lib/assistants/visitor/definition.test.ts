@@ -6,24 +6,28 @@ import { HIDDEN_AGENT_TYPES, RESERVED_AGENT_TYPES } from "@/lib/agent/subagents/
 import { NO_AGENT_TYPES } from "@/lib/agent/subagents/agent-registry";
 import { ASSISTANT_VISITOR_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
 
-import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, replyText, VISITOR_TOOLS, visitorMessage, visitorSystemPrompt } from "./definition";
+import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
 
 const BUSINESS = {
   name: "Lucía",
   tone: "friendly" as const,
   businessName: "Pastelería Canela",
-  knowledge: "Martes a domingo, de 9:00 a 19:00. Los jueves, pasteles sin gluten.",
+  knowledge: "Pages: /, /pedidos (Pedidos)\n\nMartes a domingo, de 9:00 a 19:00. Los jueves, pasteles sin gluten.",
   memory: "Si preguntan por envíos: sólo en Guadalajara.",
   siteLocale: "es",
+  publicData: [] as { name: string; columns: { name: string; type: string }[] }[],
 };
+const TABLES = [{ name: "huecos", columns: [{ name: "dia", type: "date" }, { name: "hora", type: "time without time zone" }, { name: "cliente", type: "text" }] }];
 
 describe("the visitor definition", () => {
-  it("offers exactly one tool: offer_handoff", () => {
-    expect(VISITOR_TOOLS.map((d) => d.name)).toEqual([OFFER_HANDOFF]);
+  // Phase 2B: the list grows on purpose — Len's visuals, and public data only when there is some.
+  it("offers offer_handoff, read_me and show_widget; read_public_data only with public data, last", () => {
+    expect(visitorTools([]).map((d) => d.name)).toEqual(["offer_handoff", "read_me", "show_widget"]);
+    expect(visitorTools(TABLES).map((d) => d.name)).toEqual(["offer_handoff", "read_me", "show_widget", "read_public_data"]);
     expect(OFFER_HANDOFF).toBe("offer_handoff");
-    expect(ASSISTANT_VISITOR_AGENT_TYPE.tools).toEqual(["offer_handoff"]);
+    expect(ASSISTANT_VISITOR_AGENT_TYPE.tools).toEqual(["offer_handoff", "read_me", "show_widget", "read_public_data"]);
     expect(ASSISTANT_VISITOR_AGENT_TYPE.effort).toBe("low");
-    expect(ASSISTANT_VISITOR_AGENT_TYPE.maxTurns).toBe(4);
+    expect(ASSISTANT_VISITOR_AGENT_TYPE.maxTurns).toBe(5);
     const params = OFFER_HANDOFF_DECLARATION.parameters as unknown as { properties: { why: { enum: string[] } }; required: string[] };
     expect(params.properties.why.enum).toEqual(["person", "contact"]);
     expect(params.required).toEqual(["why"]);
@@ -61,8 +65,29 @@ describe("the visitor definition", () => {
     expect(p).toContain("warm and friendly");
   });
 
-  it("is the same string for the same business: one cached prefix for every visitor", () => {
+  it("🔴 the same business sends the same prefix, with or without visuals in the conversation", () => {
     expect(visitorSystemPrompt(BUSINESS)).toBe(visitorSystemPrompt({ ...BUSINESS }));
+    expect(visitorSystemPrompt({ ...BUSINESS, publicData: TABLES })).toBe(visitorSystemPrompt({ ...BUSINESS, publicData: [...TABLES] }));
+  });
+
+  it("🔴 never shows people's data, even when it can read it", () => {
+    const p = visitorSystemPrompt({ ...BUSINESS, publicData: TABLES });
+    expect(p).toMatch(/names, emails or phone numbers/);
+    expect(p).toContain("<public_data>");
+    expect(p).toContain("huecos(dia date, hora time without time zone, cliente text)");
+  });
+
+  it("links only to the site's pages", () => {
+    const p = visitorSystemPrompt(BUSINESS);
+    expect(p).toMatch(/only to this business's own site/);
+    expect(p).toMatch(/show_widget/);
+    expect(p).toMatch(/you don't book, buy or change anything/i);
+  });
+
+  it("a business without public data: no <public_data> and no read_public_data", () => {
+    const p = visitorSystemPrompt(BUSINESS);
+    expect(p).not.toContain("<public_data>");
+    expect(p).not.toContain("read_public_data");
   });
 
   it("the reply is trimmed and capped", () => {
