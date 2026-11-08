@@ -1571,13 +1571,24 @@ export const assistantProjects = pgTable("assistantProjects", {
   /** What it knows of the business: the PUBLISHED site's text, saved at publish (lib/assistants/knowledge.ts). */
   knowledge: text("knowledge"),
   knowledgeAt: timestamp("knowledgeAt", { mode: "date", withTimezone: true }),
+  /** What the page's data shows ANYONE (the tables `anon` can read), saved at publish (phase 2B,
+   *  lib/assistants/visitor/public-data.ts): what `read_public_data` may read. */
+  publicData: jsonb("publicData").$type<PublicTable[]>(),
 });
+
+/** A table or view of a project's production base that `anon` can read, with its columns. */
+export interface PublicTable {
+  name: string;
+  columns: { name: string; type: string }[];
+}
 
 /** One line of a visitor's conversation, as its owner reads it. */
 export interface AssistantVisitLine {
   role: "visitor" | "assistant";
   text: string;
   at: string;
+  /** Her visuals in that answer, as the visitor saw them (phase 2B). */
+  visuals?: { title: string | null; code: string }[];
 }
 
 /** A visitor's conversation with the person's own assistant (spec §6.5, §6.6): one per (assistant, project, visitor's

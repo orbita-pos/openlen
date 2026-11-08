@@ -29,6 +29,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledge" text;`,
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledgeAt" timestamp with time zone;`,
   `ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "assistantVisitorCap" integer;`,
+  // Phase 2B — what the page's data shows anyone, saved at publish.
+  `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "publicData" jsonb;`,
   `CREATE TABLE IF NOT EXISTS "assistantVisits" (
     "id" text PRIMARY KEY,
     "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
