@@ -20,6 +20,12 @@ describe("knowledgeOf", () => {
     expect(k).not.toContain("<p>");
   });
 
+  // Phase 2B: links in her visuals go only to the business's own pages.
+  it("what she knows starts with the site's pages", () => {
+    expect(knowledgeOf(DATA).split("\n")[0]).toBe("Pages: /, /pedidos (Pedidos)");
+    expect(knowledgeOf({ html: '<div id="root"></div>' } as unknown as ProjectData)).toBe("");
+  });
+
   it("is capped", () => {
     const big = { html: `<body><p>${"pan ".repeat(20_000)}</p></body>` } as unknown as ProjectData;
     expect(knowledgeOf(big).length).toBeLessThanOrEqual(KNOWLEDGE_MAX);
@@ -31,24 +37,33 @@ describe("rememberWhatWasPublished", () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
     const at = new Date("2026-11-07T20:00:00Z");
-    await rememberWhatWasPublished("p1", DATA, at, { save, switchOldOff });
-    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), at);
+    await rememberWhatWasPublished("p1", DATA, at, { save, switchOldOff, publicData: async () => [] });
+    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), at, []);
     expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
   it("🔴 nothing published for her to know (an app's shell): today's assistant isn't switched off", async () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
-    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff });
-    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date));
+    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => [] });
+    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), []);
     expect(switchOldOff).not.toHaveBeenCalled();
+  });
+
+  it("🔴 an app with public data but no text: saved, and today's assistant switched off", async () => {
+    const save = vi.fn(async () => {});
+    const switchOldOff = vi.fn(async () => true);
+    const tables = [{ name: "huecos", columns: [{ name: "dia", type: "date" }] }];
+    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => tables });
+    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), tables);
+    expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
   it("never fails the publish: a save that throws is only logged", async () => {
     const save = vi.fn(async () => {
       throw new Error("db down");
     });
-    await expect(rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff: async () => true })).resolves.toBeUndefined();
+    await expect(rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff: async () => true, publicData: async () => [] })).resolves.toBeUndefined();
   });
 });
 
