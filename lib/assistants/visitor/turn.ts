@@ -1,7 +1,7 @@
 // A VISITOR'S TURN WITH THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.2, §4.7, §5): Len's loop
 // on Len's brain with the `assistant-visitor` definition, started by a message in the published page's bubble — no
-// `/api/agent`, like the event tasks' judge (lib/event-tasks/judge.ts). A closed list (`offer_handoff`), low effort and
-// four calls, then `closeOut`. Its system prompt is the same for every visitor of the business (one cached prefix);
+// `/api/agent`, like the event tasks' judge (lib/event-tasks/judge.ts). A closed list (`offer_handoff`, Len's visuals and,
+// when the business has some, its public data), low effort and five calls, then `closeOut`. Its system prompt is the same for every visitor of the business (one cached prefix);
 // what the visit kept and the visitor's words go after it. Paid by the owner within the month's cap; with no room or no
 // credits it sleeps before calling the model.
 import "server-only";
@@ -12,14 +12,23 @@ import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import type { BrainCall, ProviderUse } from "@/lib/agent/brain";
 import { runAgentLoop, type AgentLoopResult } from "@/lib/agent/loop";
 import type { ToolOutcomeSummary } from "@/lib/agent/telemetry/step-signals";
+import type { ToolOutcome } from "@/lib/agent/tools";
+import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
+import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
+import { CLAVE_TOOL_RESULT, fallo } from "@/lib/agent/ficheros/resultado";
+import type { PublicTable } from "@/lib/db/schema";
 
 import type { AssistantTone } from "../names";
 import { sleepReason, VISITOR_TURN_RESERVE, visitorCap, visitorMonth, visitorReservations, type Sleep } from "./budget";
-import { OFFER_HANDOFF, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
+import { OFFER_HANDOFF, REPLY_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
+import { READ_PUBLIC_DATA, readPublicData } from "./read-public-data";
 import type * as VisitorStore from "./store";
 
 /** Calls with tools before it must answer (the definition's `maxTurns`). */
-export const VISITOR_MAX_STEPS = 4;
+export const VISITOR_MAX_STEPS = 5;
+/** Her visuals in one answer, and how long each may be (phase 2B). */
+export const VISITOR_MAX_VISUALS = 2;
+export const VISITOR_VISUAL_MAX_CHARS = 30_000;
 /** A visitor doesn't wait a minute (spec §5). */
 export const VISITOR_TURN_TIMEOUT_MS = 45_000;
 /** What a visit keeps of what the model saw. */
@@ -40,11 +49,20 @@ export interface VisitorTurnInput {
   readonly message: string;
   /** The page's chat can take the visitor (the bubble's «talk to a person»). */
   readonly handoffAvailable: boolean;
+  /** What the page's data shows anyone (phase 2B); [] = no read_public_data. */
+  readonly publicData: readonly PublicTable[];
   readonly signal?: AbortSignal;
 }
 
+/** A visual of hers in the answer; `at` = where it goes in `text`. */
+export interface VisitorVisual {
+  readonly title: string | null;
+  readonly code: string;
+  readonly at: number;
+}
+
 export type VisitorTurnResult =
-  | { readonly kind: "reply"; readonly text: string; readonly intent: "answer" | "handoff" | "lead" }
+  | { readonly kind: "reply"; readonly text: string; readonly intent: "answer" | "handoff" | "lead"; readonly visuals: readonly VisitorVisual[] }
   | { readonly kind: "asleep"; readonly reason: Sleep }
   | { readonly kind: "busy" };
 
@@ -78,6 +96,8 @@ export interface VisitorTurnDeps {
   /** Layer 0 (lib/agent/telemetry/): one recorder per turn, its rows tagged with `tag` (the `subagentId` column, which
    *  keeps them out of Len's baseline). */
   recorder?(o: { projectId: string; turnId: string; tag: string }): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
+  /** `read_public_data` (./read-public-data.ts by default). */
+  readPublicData?(projectId: string, query: string, tables: readonly PublicTable[]): Promise<ToolOutcome>;
   runLoop?: typeof runAgentLoop;
   /** For the tests: the turn's limit. `VISITOR_TURN_TIMEOUT_MS` by default. */
   timeoutMs?: number;
@@ -85,6 +105,32 @@ export interface VisitorTurnDeps {
 
 /** The visits in flight in this process: one turn at a time per visitor. */
 const running = new Set<string>();
+
+function refused(message: string): ToolOutcome {
+  const r = fallo(message);
+  return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
+}
+
+/** Her words tidied piece by piece around the visuals, and where each visual goes in the result. A visual never gets
+ *  lost: one past the end of what is kept goes at the end. */
+function placeVisuals(raw: string, placed: readonly { widget: VisualWidget; offset: number }[]): { text: string; visuals: VisitorVisual[] } {
+  let text = "";
+  let from = 0;
+  const visuals: VisitorVisual[] = [];
+  const add = (piece: string) => {
+    const tidy = replyText(piece);
+    if (tidy) text = text ? `${text}\n\n${tidy}` : tidy;
+  };
+  for (const p of [...placed].sort((a, b) => a.offset - b.offset)) {
+    const at = Math.min(Math.max(0, p.offset), raw.length);
+    add(raw.slice(from, at));
+    from = Math.max(from, at);
+    visuals.push({ title: p.widget.title, code: p.widget.code, at: text.length });
+  }
+  add(raw.slice(from));
+  const capped = text.slice(0, REPLY_MAX);
+  return { text: capped, visuals: visuals.map((v) => ({ ...v, at: Math.min(v.at, capped.length) })) };
+}
 
 /** The kept conversation: its last messages, starting at a visitor's message so no tool result is left without its call. */
 function kept(transcript: readonly Message[]): Message[] {
@@ -134,6 +180,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         knowledge: input.knowledge,
         memory: input.assistant.memory,
         siteLocale: input.siteLocale,
+        publicData: input.publicData,
       }),
     };
     // The turn's limit and the visitor leaving stop the provider call itself (through the brain), not only the loop.
@@ -146,8 +193,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     const signal = stop.signal;
     // Her rows are tagged as hers: Len's baseline never compares against a visitor's prefix, nor hers against Len's.
     const recorder = d.recorder?.({ projectId: input.projectId, turnId: randomUUID(), tag: `assistant-visitor:${input.assistant.id}` });
-    // Task 5 passes the business's public data here.
-    const tools = [...visitorTools([])];
+    const tools = [...visitorTools(input.publicData)];
     const brain = d.brain(tools, recorder ? (c) => recorder.onCall(c) : undefined, signal);
     /** She offered a way to reach the business (the reply's intent). */
     let offered = false;
@@ -155,24 +201,48 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     let askedForPerson = false;
     let steps = 0;
     let endReason = "error";
-    const result = await (d.runLoop ?? runAgentLoop)({
-      messages: [system, ...prior, ask],
-      tools,
-      openStream: (messages) => (++steps <= VISITOR_MAX_STEPS ? brain.openStream(messages) : brain.closeOut(messages)),
-      closeOut: brain.closeOut,
-      runTool: async (name, args) => {
-        // The loop refuses what wasn't declared; this is the second gate of a list that must not grow by accident.
-        if (name !== OFFER_HANDOFF) return { response: { ok: false, error: NOT_GIVEN } };
+    /** What she wrote in the whole turn, and where each visual went in it — as Len's chat records it
+     *  (lib/agent/registro-del-turno.ts): a retry or a compaction takes back what it discarded. */
+    let written = "";
+    const placed: { widget: VisualWidget; offset: number }[] = [];
+    let shownVisuals = 0;
+    const runTool = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
+      // The loop refuses what wasn't declared; this is the second gate of a list that must not grow by accident.
+      if (name === OFFER_HANDOFF) {
         offered = true;
-        if ((args as { why?: unknown } | undefined)?.why === "person") askedForPerson = true;
+        if (args.why === "person") askedForPerson = true;
         return {
           response: {
             ok: true,
             tool_result: input.handoffAvailable ? "The visitor now sees a button to talk to a person here." : "The visitor now sees a form to leave their name and email.",
           },
         };
+      }
+      if (name === READ_ME) return toolReadMe(args, "bubble");
+      if (name === SHOW_WIDGET) {
+        if (shownVisuals >= VISITOR_MAX_VISUALS) return refused(`At most ${VISITOR_MAX_VISUALS} visuals in one answer: say the rest in words.`);
+        const code = typeof args.widget_code === "string" ? args.widget_code : "";
+        if (code.length > VISITOR_VISUAL_MAX_CHARS) return refused(`A visual in the bubble can be at most ${VISITOR_VISUAL_MAX_CHARS} characters: make it smaller.`);
+        const out = toolShowWidget(args);
+        if (out.widget) shownVisuals++;
+        return out;
+      }
+      if (name === READ_PUBLIC_DATA && input.publicData.length > 0) {
+        return (d.readPublicData ?? readPublicData)(input.projectId, typeof args.query === "string" ? args.query : "", input.publicData);
+      }
+      return { response: { ok: false, error: NOT_GIVEN } };
+    };
+    const result = await (d.runLoop ?? runAgentLoop)({
+      messages: [system, ...prior, ask],
+      tools,
+      openStream: (messages) => (++steps <= VISITOR_MAX_STEPS ? brain.openStream(messages) : brain.closeOut(messages)),
+      closeOut: brain.closeOut,
+      runTool: (name, args) => runTool(name, (args ?? {}) as Record<string, unknown>),
+      emit: (ev) => {
+        if (ev.type === "text") written += ev.text;
+        else if ((ev.type === "retry" || ev.type === "compaction") && ev.discardChars > 0) written = written.slice(0, Math.max(0, written.length - ev.discardChars));
+        else if (ev.type === "action" && ev.widget) placed.push({ widget: ev.widget, offset: written.length });
       },
-      emit: () => {},
       unattended: true,
       signal,
       ...(recorder ? { onStepTools: (b: readonly ToolOutcomeSummary[]) => recorder.onStepTools(b) } : {}),
@@ -188,7 +258,8 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
           // telemetry never touches the turn
         }
       });
-    const text = replyText(result.finalText);
+    // Everything she wrote this turn (the visual sits between her words), or the final text if nothing was streamed.
+    const { text, visuals } = placeVisuals(written.trim() ? written : (result.finalText ?? ""), placed);
     const uses = brain.providersUsed().map((u) => ({ provider: u.provider, model: u.model, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, reasoningTokens: u.thinkingTokens }));
     // A billing failure never loses the answer the visitor is waiting for; what wasn't charged isn't counted either.
     let centicredits = 0;
@@ -207,7 +278,9 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         transcript: kept([...prior, ask, ...(result.transcripcion ?? [])]),
         newLines: [
           { role: "visitor", text: input.message, at },
-          ...(text ? [{ role: "assistant" as const, text, at }] : []),
+          ...(text || visuals.length
+            ? [{ role: "assistant" as const, text, at, ...(visuals.length ? { visuals: visuals.map((v) => ({ title: v.title, code: v.code })) } : {}) }]
+            : []),
         ],
         centicredits,
         handedOff: askedForPerson,
@@ -217,7 +290,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
       // Deleted while it answered (its visits went with it): the visitor still gets the reply.
       console.warn("[assistant-visitor] the visit wasn't saved", err);
     }
-    return { kind: "reply", text, intent: offered ? (input.handoffAvailable ? "handoff" : "lead") : "answer" };
+    return { kind: "reply", text, intent: offered ? (input.handoffAvailable ? "handoff" : "lead") : "answer", visuals };
   } finally {
     release?.();
     running.delete(key);

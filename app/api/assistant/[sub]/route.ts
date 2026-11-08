@@ -337,6 +337,7 @@ async function herTurn(
       visitorId: vid,
       message,
       handoffAvailable: handoffOf(project.data),
+      publicData: ella.publicData ?? [],
       signal: req.signal,
     });
     if (r.kind === "busy") return reply(429, { error: "busy" });
