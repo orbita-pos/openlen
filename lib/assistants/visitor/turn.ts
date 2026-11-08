@@ -62,9 +62,11 @@ export interface VisitorTurnDeps {
   now(): Date;
   creditState(ownerId: string): Promise<{ readonly balance: number; readonly allotment: number }>;
   store: Pick<typeof VisitorStore, "visitOf" | "saveVisit" | "monthSpent" | "addMonthSpend" | "claimAsleepAlert" | "explicitVisitorCap">;
+  /** `signal` stops the call in flight: the loop doesn't race its stream against one, only the brain does. */
   brain(
     tools: Record<string, unknown>[],
     onCall?: (call: BrainCall) => void,
+    signal?: AbortSignal,
   ): {
     openStream(m: Message[]): AsyncIterable<StreamEvent>;
     closeOut(m: Message[]): AsyncIterable<StreamEvent>;
@@ -76,6 +78,8 @@ export interface VisitorTurnDeps {
   /** Layer 0 (lib/agent/telemetry/): one recorder per turn. */
   recorder?(projectId: string, turnId: string, hasHistory: boolean): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
   runLoop?: typeof runAgentLoop;
+  /** For the tests: the turn's limit. `VISITOR_TURN_TIMEOUT_MS` by default. */
+  timeoutMs?: number;
 }
 
 /** The visits in flight in this process: one turn at a time per visitor. */
@@ -128,16 +132,18 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         siteLocale: input.siteLocale,
       }),
     };
-    const recorder = d.recorder?.(input.projectId, randomUUID(), prior.length > 0);
-    const brain = d.brain([...VISITOR_TOOLS], recorder ? (c) => recorder.onCall(c) : undefined);
-    let handedOff = false;
-    let steps = 0;
+    // The turn's limit and the visitor leaving stop the provider call itself (through the brain), not only the loop.
     const stop = new AbortController();
-    const timer = setTimeout(() => stop.abort(new Error("the visitor's turn took too long")), VISITOR_TURN_TIMEOUT_MS);
+    const timer = setTimeout(() => stop.abort(new Error("the visitor's turn took too long")), d.timeoutMs ?? VISITOR_TURN_TIMEOUT_MS);
     (timer as { unref?: () => void }).unref?.();
     const onLeave = () => stop.abort(input.signal?.reason);
-    input.signal?.addEventListener("abort", onLeave, { once: true });
+    if (input.signal?.aborted) onLeave();
+    else input.signal?.addEventListener("abort", onLeave, { once: true });
     const signal = stop.signal;
+    const recorder = d.recorder?.(input.projectId, randomUUID(), prior.length > 0);
+    const brain = d.brain([...VISITOR_TOOLS], recorder ? (c) => recorder.onCall(c) : undefined, signal);
+    let handedOff = false;
+    let steps = 0;
     const result = await (d.runLoop ?? runAgentLoop)({
       messages: [system, ...prior, ask],
       tools: [...VISITOR_TOOLS],
@@ -214,16 +220,17 @@ async function defaultVisitorDeps(): Promise<VisitorTurnDeps> {
       return { balance: s.balance, allotment: s.allotment };
     },
     store,
-    brain: (tools, onCall) => {
+    brain: (tools, onCall, signal) => {
       const brain = createAgentBrain({
         tools,
         requestId: "assistant-visitor",
         esfuerzoDelTurno: ASSISTANT_VISITOR_AGENT_TYPE.effort ?? "low",
         ...(onCall ? { onCall } : {}),
+        ...(signal ? { signal } : {}),
       });
       return {
-        openStream: (m) => streamWithRetry(() => brain.openStream(m), {}),
-        closeOut: (m) => streamWithRetry(() => brain.closeOut(m), {}),
+        openStream: (m) => streamWithRetry(() => brain.openStream(m), signal ? { signal } : {}),
+        closeOut: (m) => streamWithRetry(() => brain.closeOut(m), signal ? { signal } : {}),
         providersUsed: () => brain.providersUsed(),
       };
     },

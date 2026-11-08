@@ -28,7 +28,7 @@ export function asleepEmail(e: AssistantAsleepEvent & { readonly siteUrl: string
       : {
           subject: `${e.assistantName} is asleep: you're out of credits`,
           line: `Your account has no credits left, so ${e.assistantName} can't answer your page's visitors.`,
-          wake: "Add credits or move to a bigger plan to wake her up.",
+          wake: `Add credits or move to a bigger plan to wake ${e.assistantName} up.`,
         };
   return {
     subject: why.subject,

@@ -191,3 +191,49 @@ describe("runVisitorTurn", () => {
     expect(await runVisitorTurn(input(), s.deps)).toMatchObject({ kind: "reply" });
   });
 });
+
+// Final review, Important 1: the 45 s limit and a visitor leaving must stop the provider call itself — the loop doesn't
+// race its stream against a signal; only the brain's own does.
+describe("a turn that hangs", () => {
+  function hanging() {
+    const signals: AbortSignal[] = [];
+    const s = setup([]);
+    const deps: VisitorTurnDeps = {
+      ...s.deps,
+      timeoutMs: 40,
+      brain: (_tools, _onCall, signal) => {
+        if (signal) signals.push(signal);
+        const never = () =>
+          (async function* (): AsyncIterable<StreamEvent> {
+            await new Promise<void>((_, reject) => {
+              if (!signal) return;
+              if (signal.aborted) reject(new Error("aborted"));
+              signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+            });
+          })();
+        return { providersUsed: () => [], openStream: never, closeOut: never };
+      },
+    };
+    return { deps, signals };
+  }
+  const settles = (p: Promise<unknown>) =>
+    Promise.race([p.then(() => "settled", () => "settled"), new Promise((r) => setTimeout(() => r("hung"), 1500))]);
+
+  it("🔴 the time limit cuts the provider call: the turn settles and frees the visitor and the cap", async () => {
+    const h = hanging();
+    expect(await settles(runVisitorTurn(input({ visitorId: "vid-hang-aaaaaaaaaaaa" }), h.deps))).toBe("settled");
+    expect(h.signals[0]?.aborted).toBe(true);
+    expect(visitorReservations.reserved("owner")).toBe(0);
+    expect(await runVisitorTurn(input({ visitorId: "vid-hang-aaaaaaaaaaaa" }), setup([say("Hola.")]).deps)).toMatchObject({ kind: "reply" });
+  });
+
+  it("🔴 a visitor who leaves stops the provider call", async () => {
+    const h = hanging();
+    const leave = new AbortController();
+    const turn = runVisitorTurn(input({ visitorId: "vid-gone-aaaaaaaaaaaa", signal: leave.signal }), { ...h.deps, timeoutMs: 60_000 });
+    await new Promise((r) => setTimeout(r, 10));
+    leave.abort();
+    expect(await settles(turn)).toBe("settled");
+    expect(h.signals[0]?.aborted).toBe(true);
+  });
+});

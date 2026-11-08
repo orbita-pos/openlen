@@ -21,6 +21,13 @@ describe("asleep messages", () => {
     for (const e of [cap, credits]) expect(e.text).toMatch(/contact form/i);
   });
 
+  // Final review, Minor 9: the owner names the assistant; the email doesn't give it a gender.
+  it("🔴 never calls the assistant «her» or «him»", () => {
+    for (const e of [asleepEmail({ ...CAP, siteUrl: "https://openlen.com" }), asleepEmail({ ...CREDITS, siteUrl: "https://openlen.com" })]) {
+      expect(`${e.subject}\n${e.text}`).not.toMatch(/\b(her|him|his|she|he)\b/i);
+    }
+  });
+
   it("opens her place", () => {
     expect(asleepPush(CAP).url).toBe(`/assistant/${encodeURIComponent("lucía")}`);
     expect(asleepEmail({ ...CAP, siteUrl: "https://openlen.com" }).text).toContain(`https://openlen.com/assistant/${encodeURIComponent("lucía")}`);

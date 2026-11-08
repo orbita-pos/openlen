@@ -59,7 +59,7 @@ describe("visits", () => {
     expect(v!.transcript).toEqual([{ role: "user", content: "b" }]);
     expect(v!.lastAt.toISOString()).toBe(t2.toISOString());
     expect(v!.startedAt.toISOString()).toBe(t1.toISOString());
-    expect((await visitor.visitsOf(lucia, 50)).length).toBe(1);
+    expect((await visitor.visitsOf(lucia, 50, t2)).length).toBe(1);
   });
 
   it("🔴 a visit 90 days quiet is gone at the next save; one 89 days quiet stays", async () => {
@@ -69,8 +69,20 @@ describe("visits", () => {
     await save("old-aaaaaaaaaaaaaaaa", new Date(now.getTime() - 90 * DAY - 1000));
     await save("kept-aaaaaaaaaaaaaaa", new Date(now.getTime() - 89 * DAY));
     await save("new-aaaaaaaaaaaaaaaa", now);
-    const ids = (await visitor.visitsOf(lucia, 50)).map((v) => v.visitorId);
+    const ids = (await visitor.visitsOf(lucia, 50, now)).map((v) => v.visitorId);
     expect(ids).toEqual(["new-aaaaaaaaaaaaaaaa", "kept-aaaaaaaaaaaaaaa"]);
+  });
+
+  // Final review, Important 3: with no new visitor message the write-time prune never runs.
+  it("🔴 the owner never reads a visit 90 days quiet, and reading forgets it — even with no new message", async () => {
+    const now = new Date("2026-11-07T10:00:00Z");
+    const save = (vid: string, at: Date) =>
+      visitor.saveVisit({ assistantId: lucia, projectId: "p1", visitorId: vid, transcript: [], newLines: [line("visitor", "hola", at)], centicredits: 1, handedOff: false, at });
+    await save("kept-aaaaaaaaaaaaaaa", new Date(now.getTime() - 89 * DAY));
+    await save("old-aaaaaaaaaaaaaaaa", new Date(now.getTime() - 90 * DAY - 1000));
+    expect((await visitor.visitsOf(lucia, 50, now)).map((v) => v.visitorId)).toEqual(["kept-aaaaaaaaaaaaaaa"]);
+    const r = await pg.query<{ n: number }>(`select count(*)::int as n from "assistantVisits"`);
+    expect(r.rows[0]!.n).toBe(1);
   });
 
   it("deleting the assistant deletes its visits", async () => {
@@ -103,6 +115,14 @@ describe("on the page", () => {
     await visitor.setOnPage("p1", lucia, false);
     await visitor.setOnPage("p1", lucia, true);
     expect((await visitor.assistantOnPage("p1"))?.knowledge).toBeNull();
+  });
+
+  // Final review (Minor 2, re-graded Important): a stale second tab re-sending «on» hid her live bubble.
+  it("🔴 «on» again while she is on keeps what she knows: her live bubble stays", async () => {
+    await visitor.setOnPage("p1", lucia, true);
+    await visitor.saveKnowledge("p1", "Lo publicado.", new Date());
+    expect(await visitor.setOnPage("p1", lucia, true)).toBe(true);
+    expect((await visitor.assistantOnPage("p1"))?.knowledge).toBe("Lo publicado.");
   });
 });
 

@@ -71,10 +71,10 @@ export function visitorSystemPrompt(p: {
   ].join("\n\n");
 }
 
-/** The visitor's words, marked as theirs. A `<channel` or `</channel` inside them is neutralized: they can't close
- *  their channel or open one in someone else's name. */
+/** The visitor's words, marked as theirs. Every `<` inside them is escaped, so no spacing of a tag (`< /channel>`,
+ *  `</ channel>`) can close their channel or open one in someone else's name. */
 export function visitorMessage(text: string): string {
-  return `<channel source="visitor">${text.replace(/<(\/?)channel/gi, "&lt;$1channel")}</channel>`;
+  return `<channel source="visitor">${text.replace(/</g, "&lt;")}</channel>`;
 }
 
 /** What the visitor reads: the turn's final text, tidy and capped. */

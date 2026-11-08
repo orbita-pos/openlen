@@ -181,6 +181,16 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("~/.assistant/MEMORY.md");
     expect(p).not.toContain("delegated subagent");
   });
+  // Final review, Important 2: her memory is in every visitor's prompt (lib/assistants/visitor/definition.ts), and she
+  // wasn't told.
+  it("🔴 tells her that her memory is also what she knows with the page's visitors, and what to keep out of it", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" });
+    expect(p).toMatch(/MEMORY\.md[^\n]*\n?[^\n]*visitors/);
+    expect(p).toMatch(/contact/i);
+    expect(p).toMatch(/money/i);
+    expect(p).toMatch(/private/i);
+  });
+
   it("drops Len's subagent guidance: it has no subagent tools to follow it with", () => {
     const p = assistantSystemPrompt(`LEN PROMPT\n- ${SUBAGENT_GUIDANCE}\n- another rule`, { name: "Lucía", tone: "friendly" });
     expect(p).not.toContain(SUBAGENT_GUIDANCE);
