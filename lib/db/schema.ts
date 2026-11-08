@@ -107,6 +107,9 @@ export const users = pgTable("users", {
   // el dueño pone a lo que gastan sus apps, en centicréditos. Nulo = el 25 %
   // de su plan. `npm run app-ai:migrate`.
   appAiCap: integer("appAiCap"),
+  // THE PERSON'S OWN ASSISTANT WITH VISITORS (spec local 2026-11-06-asistente-propio, §4.7): the month's cap on what
+  // the account's visitors spend, in centicredits. Null = a quarter of the plan. `npm run assistants:migrate`.
+  assistantVisitorCap: integer("assistantVisitorCap"),
   // Polar (Merchant-of-Record) billing linkage. Set by the billing webhook
   // from the subscription it receives; userId is passed to Polar as the
   // checkout's customer_external_id + metadata so the webhook maps back here.
@@ -1563,7 +1566,59 @@ export const assistantProjects = pgTable("assistantProjects", {
   projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
   assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
   connectedAt: timestamp("connectedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  /** «En mi página» (spec §4.4.5): the published page's bubble is the assistant. Baked at publish; read on every visit. */
+  onPage: boolean("onPage").notNull().default(false),
+  /** What it knows of the business: the PUBLISHED site's text, saved at publish (lib/assistants/knowledge.ts). */
+  knowledge: text("knowledge"),
+  knowledgeAt: timestamp("knowledgeAt", { mode: "date", withTimezone: true }),
 });
+
+/** One line of a visitor's conversation, as its owner reads it. */
+export interface AssistantVisitLine {
+  role: "visitor" | "assistant";
+  text: string;
+  at: string;
+}
+
+/** A visitor's conversation with the person's own assistant (spec §6.5, §6.6): one per (assistant, project, visitor's
+ *  anonymous id). Visitors' data: never in the box (invariant 5), only its person reads it. Kept 90 days from its last
+ *  message (lib/assistants/visitor/store.ts). */
+export const assistantVisits = pgTable(
+  "assistantVisits",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    visitorId: text("visitorId").notNull(),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }).notNull(),
+    lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull(),
+    messageCount: integer("messageCount").notNull().default(0),
+    centicredits: integer("centicredits").notNull().default(0),
+    handedOff: boolean("handedOff").notNull().default(false),
+    /** What the model saw, trimmed to its last messages (lib/assistants/visitor/turn.ts). */
+    transcript: jsonb("transcript").$type<unknown[]>().notNull().default([]),
+    lines: jsonb("lines").$type<AssistantVisitLine[]>().notNull().default([]),
+  },
+  (t) => [
+    uniqueIndex("assistantVisits_who_idx").on(t.assistantId, t.projectId, t.visitorId),
+    index("assistantVisits_assistant_last_idx").on(t.assistantId, t.lastAt),
+  ],
+);
+
+/** What an account's visitors spent with its assistants in a month (spec §4.7), like `appAiSpend`. */
+export const assistantVisitorMonths = pgTable(
+  "assistantVisitorMonths",
+  {
+    userId: text("userId").notNull(),
+    /** "YYYY-MM", UTC. */
+    month: text("month").notNull(),
+    centicredits: integer("centicredits").notNull().default(0),
+    messages: integer("messages").notNull().default(0),
+    /** The «she fell asleep» notices already given this month: "cap", "credits". */
+    asleepAlerts: jsonb("asleepAlerts").$type<string[]>().notNull().default([]),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.month] })],
+);
 
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
