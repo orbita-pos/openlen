@@ -24,7 +24,7 @@ describe("the visitor definition", () => {
     expect(ASSISTANT_VISITOR_AGENT_TYPE.tools).toEqual(["offer_handoff"]);
     expect(ASSISTANT_VISITOR_AGENT_TYPE.effort).toBe("low");
     expect(ASSISTANT_VISITOR_AGENT_TYPE.maxTurns).toBe(4);
-    const params = OFFER_HANDOFF_DECLARATION.parameters as { properties: { why: { enum: string[] } }; required: string[] };
+    const params = OFFER_HANDOFF_DECLARATION.parameters as unknown as { properties: { why: { enum: string[] } }; required: string[] };
     expect(params.properties.why.enum).toEqual(["person", "contact"]);
     expect(params.required).toEqual(["why"]);
   });
