@@ -766,7 +766,10 @@
       "budgetChange": "Ändern",
       "budgetSave": "Speichern",
       "budgetLabel": "Monatslimit in Credits",
-      "loadError": "Die Unterhaltungen konnten nicht geladen werden."
+      "loadError": "Die Unterhaltungen konnten nicht geladen werden.",
+      "onPageApps": "In Apps und Spielen noch nicht: kommt bald.",
+      "budgetRange": "Möglich sind 0 bis {max} Credits.",
+      "budgetError": "Das Limit konnte nicht gespeichert werden. Versuch es noch einmal."
     },
     "speaker": {
       "working": "{name} arbeitet",

@@ -3,7 +3,7 @@
 // surface answers `assistants_off`, like POST /api/assistants.
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { assistantById, deleteAssistant } from "@/lib/assistants/store";
+import { assistantById, deleteAssistant, projectIsApp } from "@/lib/assistants/store";
 import { setOnPage } from "@/lib/assistants/visitor/store";
 import { assistantView } from "@/lib/assistants/view";
 
@@ -44,6 +44,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (typeof body?.onPage !== "boolean") return json({ error: "bad_request" }, 400);
   const a = await assistantById(id);
   if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
+  // An app or a game: its shell has nothing for her to know, so her bubble would never show (phase 2B).
+  if (body.onPage && (await projectIsApp(a.homeProjectId))) return json({ error: "not_for_apps" }, 409);
   if (!(await setOnPage(a.homeProjectId, a.id, body.onPage))) return json({ error: "not_found" }, 404);
   return json({ onPage: body.onPage, needsPublish: body.onPage });
 }

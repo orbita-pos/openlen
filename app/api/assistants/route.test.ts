@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   deleteAssistant: vi.fn(async () => true),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
   switchOldAssistantOff: vi.fn(async () => true),
+  projectIsApp: vi.fn(async () => false),
   // Her visitors (phase 2A).
   setOnPage: vi.fn(async () => true),
   visitsOf: vi.fn(async (): Promise<unknown[]> => []),
@@ -21,7 +22,7 @@ const m = vi.hoisted(() => ({
   creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, projectIsApp: m.projectIsApp }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
@@ -41,6 +42,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.auth.mockResolvedValue({ user: { id: "u1" } });
   m.createAssistant.mockResolvedValue({ ok: true, assistant: LUCIA });
+  m.projectIsApp.mockResolvedValue(false);
   fijarAccesoDePrueba(null);
 });
 afterEach(() => vi.unstubAllEnvs());
@@ -133,6 +135,16 @@ describe("/api/assistants/[id]", () => {
 describe("her place's controls", () => {
   const patch = (id: string, body: unknown) => one.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify(body) }), params(id));
 
+  it("🔴 an app or a game can't have her bubble yet: turning her on there is refused", async () => {
+    m.assistantById.mockResolvedValue(LUCIA);
+    m.projectIsApp.mockResolvedValue(true);
+    const res = await patch("a1", { onPage: true });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "not_for_apps" });
+    expect(m.setOnPage).not.toHaveBeenCalled();
+    expect((await patch("a1", { onPage: false })).status).toBe(200);
+  });
+
   it("🔴 only its person turns her on the page; the old assistant stays until the publish that brings her", async () => {
     m.assistantById.mockResolvedValue(LUCIA);
     const res = await patch("a1", { onPage: true });
@@ -174,7 +186,7 @@ describe("her place's controls", () => {
   it("the budget can't go above the plan; null goes back to the default", async () => {
     m.monthSpent.mockResolvedValue(1_200);
     const got = await budget.GET();
-    expect(await got.json()).toEqual({ spent: 1_200, cap: 12_500, explicit: null });
+    expect(await got.json()).toEqual({ spent: 1_200, cap: 12_500, explicit: null, max: 50_000 });
     const put = (b: unknown) => budget.PUT(new Request("http://x", { method: "PUT", body: JSON.stringify(b) }));
     expect((await put({ cap: 2_000 })).status).toBe(200);
     expect(m.setExplicitVisitorCap).toHaveBeenLastCalledWith("u1", 2_000);
