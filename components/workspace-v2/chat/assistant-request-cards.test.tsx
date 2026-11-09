@@ -19,13 +19,15 @@ import { AssistantRequestCards, type ChatRequestCard } from "./assistant-request
 import { NewChatPanel } from "./new-chat-panel";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+// Once for the whole file, never un-stubbed: Len's face (brand/len-cara/cara.js), which the chat panel loads lazily,
+// reads matchMedia when its module runs — after a per-test stub is gone (final review I5).
+window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false })) as unknown as typeof window.matchMedia;
 const roots: Root[] = [];
 const fetchMock = vi.fn();
 beforeEach(() => {
   search.card = null;
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
-  vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
   Element.prototype.scrollIntoView = vi.fn();
 });
 afterEach(() => {
