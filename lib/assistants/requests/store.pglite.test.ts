@@ -38,10 +38,10 @@ const pendingIds = async () => (await requests.pendingRequests(lucia, "p1", 100)
 beforeEach(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
-  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "data" jsonb, "updatedAt" timestamp)`);
+  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "title" text, "data" jsonb, "updatedAt" timestamp)`);
   await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('p1', 'u1'), ('p2', 'u1')`);
+  await pg.query(`insert into "projects" ("id", "userId", "title") values ('p1', 'u1', 'Pastelería'), ('p2', 'u1', 'Tienda')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   base.db = drizzle(pg, { schema });
   const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
@@ -196,5 +196,67 @@ describe("forgetting", () => {
     await requests.pruneRequests(NOW);
     expect((await requests.pendingRequests(lucia, "p1", 10)).map((r) => r.text)).toEqual(["¿regalos?"]);
     expect((await pg.query(`select 1 from "assistantRequestCards"`)).rows).toHaveLength(0);
+  });
+});
+
+// Task 6: the owner's press decides a card once; a turn that couldn't start puts it back.
+describe("deciding", () => {
+  async function aCard(projectId = "p1", title = "Envíos") {
+    await note(`vid-${title}`, `¿${title}?`, NOW, projectId);
+    const ids = (await requests.pendingRequests(lucia, projectId, 10)).map((r) => r.id);
+    const [saved] = await requests.saveGrouping({ assistantId: lucia, projectId, locale: "es", at: NOW, newCards: [{ title, requestIds: ids }], joins: [], discard: [], retry: [] });
+    return saved!.card;
+  }
+
+  it("🔴 a card is decided once, whoever presses first, and only by its assistant", async () => {
+    const card = await aCard();
+    const [a, b] = await Promise.all([
+      requests.decideCard(card.id, lucia, "accept", "u1", NOW),
+      requests.decideCard(card.id, lucia, "dismiss", "u1", NOW),
+    ]);
+    expect([a, b].filter(Boolean)).toHaveLength(1);
+    expect(await requests.decideCard(card.id, lucia, "accept", "u1", NOW)).toBeNull();
+    const other = await aCard("p1", "Reservas");
+    expect(await requests.decideCard(other.id, "another-assistant", "accept", "u1", NOW)).toBeNull();
+    const decided = await requests.decideCard(other.id, lucia, "accept", "u1", NOW);
+    expect(decided).toMatchObject({ status: "accepted", decidedBy: "u1", failure: null });
+    expect(decided!.decidedAt!.toISOString()).toBe(NOW.toISOString());
+  });
+
+  it("🔴 a turn that couldn't start puts an accepted card back, with why; only an accepted one", async () => {
+    const card = await aCard();
+    await requests.decideCard(card.id, lucia, "accept", "u1", NOW);
+    await requests.setAcceptedRow(card.id, "row-1");
+    await requests.reopenCard(card.id, "no_credits");
+    const [back] = await requests.requestCardsOfAssistant(lucia, NOW);
+    expect(back).toMatchObject({ id: card.id, status: "pending", failure: "no_credits", acceptedRowId: null, decidedAt: null, decidedBy: null });
+    // Pressed again: the failure is cleared.
+    expect(await requests.decideCard(card.id, lucia, "accept", "u1", NOW)).toMatchObject({ status: "accepted", failure: null });
+    // A dismissed card is never put back.
+    const dismissed = await aCard("p1", "Regalos");
+    await requests.decideCard(dismissed.id, lucia, "dismiss", "u1", NOW);
+    await requests.reopenCard(dismissed.id, "no_credits");
+    expect((await requests.requestCardsOfAssistant(lucia, NOW)).find((c) => c.id === dismissed.id)).toMatchObject({ status: "dismissed", failure: null });
+  });
+
+  it("her cards: the waiting ones, and what was decided in the last 30 days, with each project's name", async () => {
+    const waiting = await aCard("p1", "Envíos");
+    const old = await aCard("p2", "Regalos");
+    await requests.decideCard(old.id, lucia, "dismiss", "u1", new Date(NOW.getTime() - 31 * DAY));
+    const recent = await aCard("p2", "Reservas");
+    await requests.decideCard(recent.id, lucia, "accept", "u1", NOW);
+    const cards = await requests.requestCardsOfAssistant(lucia, NOW);
+    expect(cards.map((c) => [c.title, c.projectTitle]).sort()).toEqual([["Envíos", "Pastelería"], ["Reservas", "Tienda"]]);
+    expect(cards.find((c) => c.id === waiting.id)!.status).toBe("pending");
+  });
+
+  it("a project's cards for the chat: the waiting ones and what was decided in 7 days, with her name and person", async () => {
+    await aCard("p1", "Envíos");
+    const decided = await aCard("p1", "Reservas");
+    await requests.decideCard(decided.id, lucia, "dismiss", "u1", new Date(NOW.getTime() - 8 * DAY));
+    await aCard("p2", "Regalos");
+    const cards = await requests.requestCardsOfProject("p1", NOW);
+    expect(cards.map((c) => c.title)).toEqual(["Envíos"]);
+    expect(cards[0]).toMatchObject({ assistantName: "Lucía", personId: "u1" });
   });
 });
