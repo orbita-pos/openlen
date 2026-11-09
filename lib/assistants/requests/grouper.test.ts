@@ -229,8 +229,8 @@ describe("the texts", () => {
     expect(requestEmail("xx", { name: "Lucía", title: "t", visitors: 1, url: "u" }).text).toBeTruthy();
   });
 
-  it("the chat row of the turn says who it's from and what", () => {
-    expect(requestTurnPrompt("es", "Lucía", "Envíos a domicilio")).toContain("Lucía");
-    expect(requestTurnPrompt("es", "Lucía", "Envíos a domicilio")).toContain("Envíos a domicilio");
+  it("the chat row of the turn says who it's from, and nothing visitors wrote", () => {
+    expect(requestTurnPrompt("es", "Lucía")).toContain("Lucía");
+    expect(requestTurnPrompt("en", "Lucía")).not.toBe(requestTurnPrompt("es", "Lucía"));
   });
 });

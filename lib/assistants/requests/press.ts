@@ -51,7 +51,7 @@ export async function pressRequestCard(
   if (!card) return { ok: false, reason: "not_pending" };
   if (o.action === "dismiss") return { ok: true, status: "dismissed" };
   const rowId = d.newRowId();
-  const text = requestTurnPrompt(card.locale, o.assistant.name, card.title);
+  const text = requestTurnPrompt(card.locale, o.assistant.name);
   const origin: AssistantRequestOrigin = { kind: "assistant", assistantId: o.assistant.id, assistantName: o.assistant.name };
   d.launch({
     userId: o.actorId,
