@@ -794,7 +794,8 @@
       "tab": "Pedidos",
       "empty": "Lo que pidan tus clientes y {name} no pueda hacer aparecerá aquí.",
       "openChat": "Ver a Len en el chat",
-      "earlier": "Pedidos anteriores"
+      "earlier": "Pedidos anteriores",
+      "loadError": "No se pudieron cargar los pedidos."
     }
   }
 }

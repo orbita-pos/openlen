@@ -794,7 +794,8 @@
       "tab": "Verzoeken",
       "empty": "Wat je klanten vragen en {name} niet kan doen, verschijnt hier.",
       "openChat": "Bekijk Len in de chat",
-      "earlier": "Eerdere verzoeken"
+      "earlier": "Eerdere verzoeken",
+      "loadError": "De verzoeken konden niet worden geladen."
     }
   }
 }

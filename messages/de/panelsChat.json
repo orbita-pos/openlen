@@ -794,7 +794,8 @@
       "tab": "Anfragen",
       "empty": "Was deine Kunden wollen und {name} nicht erledigen kann, erscheint hier.",
       "openChat": "Len im Chat ansehen",
-      "earlier": "Frühere Anfragen"
+      "earlier": "Frühere Anfragen",
+      "loadError": "Die Anfragen konnten nicht geladen werden."
     }
   }
 }
