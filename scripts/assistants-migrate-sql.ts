@@ -54,4 +54,36 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "asleepAlerts" jsonb NOT NULL DEFAULT '[]'::jsonb,
     PRIMARY KEY ("userId", "month")
   );`,
+  // Phase 3 — what visitors ask for and she can't do, joined into cards for her person (spec §4.3).
+  `CREATE TABLE IF NOT EXISTS "assistantRequestCards" (
+    "id" text PRIMARY KEY,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "title" text NOT NULL,
+    "locale" text NOT NULL,
+    "status" text NOT NULL DEFAULT 'pending',
+    "visitors" integer NOT NULL DEFAULT 0,
+    "createdAt" timestamp with time zone NOT NULL,
+    "lastAt" timestamp with time zone NOT NULL,
+    "decidedAt" timestamp with time zone,
+    "decidedBy" text,
+    "acceptedRowId" text,
+    "failure" text
+  );`,
+  `CREATE INDEX IF NOT EXISTS "assistantRequestCards_assistant_project_status_idx" ON "assistantRequestCards" ("assistantId", "projectId", "status");`,
+  `CREATE TABLE IF NOT EXISTS "assistantRequests" (
+    "id" text PRIMARY KEY,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "visitorId" text NOT NULL,
+    "text" text NOT NULL,
+    "locale" text NOT NULL,
+    "at" timestamp with time zone NOT NULL,
+    "cardId" text REFERENCES "assistantRequestCards"("id") ON DELETE SET NULL,
+    "attempts" integer NOT NULL DEFAULT 0,
+    "discardedAt" timestamp with time zone
+  );`,
+  `CREATE INDEX IF NOT EXISTS "assistantRequests_waiting_idx" ON "assistantRequests" ("assistantId", "projectId") WHERE "cardId" IS NULL AND "discardedAt" IS NULL;`,
+  `CREATE INDEX IF NOT EXISTS "assistantRequests_card_idx" ON "assistantRequests" ("cardId");`,
+  `CREATE INDEX IF NOT EXISTS "assistantRequests_assistant_at_idx" ON "assistantRequests" ("assistantId", "at");`,
 ];

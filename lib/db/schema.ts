@@ -1631,6 +1631,57 @@ export const assistantVisitorMonths = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.month] })],
 );
 
+/** What visitors asked for, joined (spec local 2026-11-06-asistente-propio, §4.3): «5 clientes preguntaron por envíos».
+ *  Only its person sees it, and only their press turns it into a Len turn (lib/assistants/requests/). */
+export const assistantRequestCards = pgTable(
+  "assistantRequestCards",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** What they wanted, without names, in the page's language. Written by the grouping turn: visitors' data. */
+    title: text("title").notNull(),
+    locale: text("locale").notNull(),
+    status: text("status").$type<"pending" | "accepted" | "dismissed">().notNull().default("pending"),
+    /** How many different visitors asked. */
+    visitors: integer("visitors").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull(),
+    /** The last time a request joined it. */
+    lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull(),
+    decidedAt: timestamp("decidedAt", { mode: "date", withTimezone: true }),
+    decidedBy: text("decidedBy"),
+    /** The chat row of the Len turn «Que Len lo haga» launched. */
+    acceptedRowId: text("acceptedRowId"),
+    /** Why that turn couldn't start; the card waits again. */
+    failure: text("failure"),
+  },
+  (t) => [index("assistantRequestCards_assistant_project_status_idx").on(t.assistantId, t.projectId, t.status)],
+);
+
+/** One thing a visitor wanted and she couldn't do (`note_request`), until a grouping puts it on a card or discards it.
+ *  Visitors' data: never in the box (invariant 5), kept 90 days (spec §6.5). */
+export const assistantRequests = pgTable(
+  "assistantRequests",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    visitorId: text("visitorId").notNull(),
+    text: text("text").notNull(),
+    locale: text("locale").notNull(),
+    at: timestamp("at", { mode: "date", withTimezone: true }).notNull(),
+    cardId: text("cardId").references(() => assistantRequestCards.id, { onDelete: "set null" }),
+    /** Groupings that didn't place it. */
+    attempts: integer("attempts").notNull().default(0),
+    discardedAt: timestamp("discardedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    index("assistantRequests_waiting_idx").on(t.assistantId, t.projectId).where(sqlOp`"cardId" is null and "discardedAt" is null`),
+    index("assistantRequests_card_idx").on(t.cardId),
+    index("assistantRequests_assistant_at_idx").on(t.assistantId, t.at),
+  ],
+);
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",
