@@ -51,16 +51,27 @@ export async function noteRequest(o: {
 }
 
 /** The (assistant, project) pairs with requests waiting, whose oldest waiting one is older than `quietBefore`: a burst
- *  of visitors ends on one card. The longest waiting first. */
-export async function pendingGroups(quietBefore: Date, limit: number): Promise<{ assistantId: string; projectId: string }[]> {
+ *  of visitors ends on one card. The longest waiting first — but never a pair set aside until after `now`
+ *  (`deferGroup`): an asleep owner's oldest pairs would fill every pass. */
+export async function pendingGroups(quietBefore: Date, limit: number, now: Date = new Date()): Promise<{ assistantId: string; projectId: string }[]> {
   return db
     .select({ assistantId: r.assistantId, projectId: r.projectId })
     .from(r)
     .where(waiting())
     .groupBy(r.assistantId, r.projectId)
-    .having(sql`min(${r.at}) < ${quietBefore.toISOString()}::timestamptz`)
+    .having(
+      sql`min(${r.at}) < ${quietBefore.toISOString()}::timestamptz and coalesce(max(${r.groupAfter}), '-infinity'::timestamptz) <= ${now.toISOString()}::timestamptz`,
+    )
     .orderBy(sql`min(${r.at})`)
     .limit(limit);
+}
+
+/** The pair steps aside until `until`: its waiting requests carry it, and one noted meanwhile waits with them. */
+export async function deferGroup(pair: { readonly assistantId: string; readonly projectId: string }, until: Date): Promise<void> {
+  await db
+    .update(r)
+    .set({ groupAfter: until })
+    .where(and(eq(r.assistantId, pair.assistantId), eq(r.projectId, pair.projectId), waiting()));
 }
 
 /** A pair's waiting requests, the oldest first. */

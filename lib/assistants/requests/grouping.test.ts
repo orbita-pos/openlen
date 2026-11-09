@@ -18,6 +18,7 @@ const req = (id: string, text: string, attempts = 0): RequestRow => ({
   at: AT,
   cardId: null,
   attempts,
+  groupAfter: null,
   discardedAt: null,
 });
 const card = (id: string, title: string, status: "pending" | "dismissed" = "pending"): RequestCardRow => ({

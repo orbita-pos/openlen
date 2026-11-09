@@ -75,7 +75,7 @@ async function store_assistant(id: string) {
 
 async function aCardFromAPass(): Promise<string> {
   for (const [i, text] of HOSTILE.entries()) await store.noteRequest({ assistantId: lucia, projectId: "p1", visitorId: `vid-${i}`, text, locale: "es", at: NOW });
-  await groupingPass({ now: () => LATER, pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair, grouper()), pruneRequests: store.pruneRequests }, newPassState());
+  await groupingPass({ now: () => LATER, pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair, grouper()), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup }, newPassState());
   const [card] = await store.requestCardsOfAssistant(lucia, LATER);
   return card!.id;
 }

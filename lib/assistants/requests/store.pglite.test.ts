@@ -93,6 +93,20 @@ describe("grouping", () => {
     expect(await requests.pendingGroups(quietBefore, 20)).toEqual([]);
   });
 
+  // Final review I2: an asleep owner's pairs were the oldest, and filled every pass.
+  it("🔴 a pair set aside waits until its time, even with new requests", async () => {
+    await note("vid-a", "¿envíos?", new Date(NOW.getTime() - GROUP_QUIET_MS - 1000));
+    await note("vid-b", "¿reservas?", new Date(NOW.getTime() - GROUP_QUIET_MS - 1000), "p2");
+    const quietBefore = new Date(NOW.getTime() - GROUP_QUIET_MS);
+    await requests.deferGroup({ assistantId: lucia, projectId: "p1" }, new Date(NOW.getTime() + 3_600_000));
+    await note("vid-c", "¿regalos?", new Date(NOW.getTime() + 1000));
+    expect(await requests.pendingGroups(quietBefore, 20, NOW)).toEqual([{ assistantId: lucia, projectId: "p2" }]);
+    expect(await requests.pendingGroups(quietBefore, 20, new Date(NOW.getTime() + 3_600_000))).toEqual([
+      { assistantId: lucia, projectId: "p1" },
+      { assistantId: lucia, projectId: "p2" },
+    ]);
+  });
+
   it("a dismissed card can still be joined for 30 days, an accepted one can't", async () => {
     await note("vid-a", "¿envíos?");
     await note("vid-b", "¿reservas?");

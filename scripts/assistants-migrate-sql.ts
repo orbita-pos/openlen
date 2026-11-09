@@ -81,8 +81,10 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "at" timestamp with time zone NOT NULL,
     "cardId" text REFERENCES "assistantRequestCards"("id") ON DELETE SET NULL,
     "attempts" integer NOT NULL DEFAULT 0,
+    "groupAfter" timestamp with time zone,
     "discardedAt" timestamp with time zone
   );`,
+  `ALTER TABLE "assistantRequests" ADD COLUMN IF NOT EXISTS "groupAfter" timestamp with time zone;`,
   `CREATE INDEX IF NOT EXISTS "assistantRequests_waiting_idx" ON "assistantRequests" ("assistantId", "projectId") WHERE "cardId" IS NULL AND "discardedAt" IS NULL;`,
   `CREATE INDEX IF NOT EXISTS "assistantRequests_card_idx" ON "assistantRequests" ("cardId");`,
   `CREATE INDEX IF NOT EXISTS "assistantRequests_assistant_at_idx" ON "assistantRequests" ("assistantId", "at");`,

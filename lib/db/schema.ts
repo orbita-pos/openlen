@@ -1673,6 +1673,8 @@ export const assistantRequests = pgTable(
     cardId: text("cardId").references(() => assistantRequestCards.id, { onDelete: "set null" }),
     /** Groupings that didn't place it. */
     attempts: integer("attempts").notNull().default(0),
+    /** Its pair steps aside until then (an asleep owner, a failed grouping): the pass takes others meanwhile. */
+    groupAfter: timestamp("groupAfter", { mode: "date", withTimezone: true }),
     discardedAt: timestamp("discardedAt", { mode: "date", withTimezone: true }),
   },
   (t) => [

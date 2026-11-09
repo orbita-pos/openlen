@@ -3,15 +3,17 @@
 // their grouping turn (./grouper.ts) — twenty at most, one after another, one failing never stopping the others — and
 // once a day what is 90 days quiet is forgotten. A pass never overlaps the one before. OPENLEN_ASSISTANT=0 starts none.
 import { assistantsEnabled } from "../enabled";
-import { GROUP_PASS_MS, GROUP_QUIET_MS, GROUPS_PER_PASS } from "./limits";
+import { GROUP_ASLEEP_RETRY_MS, GROUP_FAILED_RETRY_MS, GROUP_PASS_MS, GROUP_QUIET_MS, GROUPS_PER_PASS } from "./limits";
 
 const DAY_MS = 86_400_000;
 
 export interface PassDeps {
   now(): Date;
-  pendingGroups(quietBefore: Date, limit: number): Promise<{ assistantId: string; projectId: string }[]>;
+  pendingGroups(quietBefore: Date, limit: number, now: Date): Promise<{ assistantId: string; projectId: string }[]>;
   groupOne(pair: { assistantId: string; projectId: string }): Promise<"grouped" | "asleep" | "failed" | "nothing">;
   pruneRequests(now: Date): Promise<void>;
+  /** An asleep or failing pair steps aside, so the oldest pairs can't fill every pass (final review I2). */
+  deferGroup(pair: { assistantId: string; projectId: string }, until: Date): Promise<void>;
 }
 
 export interface PassState {
@@ -31,13 +33,19 @@ export async function groupingPass(deps: PassDeps, state: PassState): Promise<nu
   try {
     const now = deps.now();
     let grouped = 0;
-    const pairs = await deps.pendingGroups(new Date(now.getTime() - GROUP_QUIET_MS), GROUPS_PER_PASS);
+    const pairs = await deps.pendingGroups(new Date(now.getTime() - GROUP_QUIET_MS), GROUPS_PER_PASS, now);
+    const stepAside = (pair: { assistantId: string; projectId: string }, ms: number) =>
+      deps.deferGroup(pair, new Date(now.getTime() + ms)).catch((err: unknown) => console.error("[assistant-requests] a pair couldn't step aside", err));
     for (const pair of pairs) {
       try {
-        if ((await deps.groupOne(pair)) === "grouped") grouped++;
+        const outcome = await deps.groupOne(pair);
+        if (outcome === "grouped") grouped++;
+        else if (outcome === "asleep") await stepAside(pair, GROUP_ASLEEP_RETRY_MS);
+        else if (outcome === "failed") await stepAside(pair, GROUP_FAILED_RETRY_MS);
       } catch (err) {
-        // Its requests wait for the next pass, with no attempt added.
+        // Its requests wait, with no attempt added; meanwhile the others get their turn.
         console.error(`[assistant-requests] grouping ${pair.assistantId}/${pair.projectId} failed`, err);
+        await stepAside(pair, GROUP_FAILED_RETRY_MS);
       }
     }
     if (now.getTime() - state.lastPrune >= DAY_MS) {
@@ -52,7 +60,7 @@ export async function groupingPass(deps: PassDeps, state: PassState): Promise<nu
 
 async function defaultPassDeps(): Promise<PassDeps> {
   const [store, { groupOne }] = await Promise.all([import("./store"), import("./grouper")]);
-  return { now: () => new Date(), pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair), pruneRequests: store.pruneRequests };
+  return { now: () => new Date(), pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup };
 }
 
 let started: { stop(): void } | null = null;
