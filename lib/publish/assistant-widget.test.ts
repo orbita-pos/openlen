@@ -390,6 +390,14 @@ describe("her bubble", () => {
     expect(order.slice(-3)).toEqual(["Estos son los huecos:", "[visual]", "¿Reservas?"]);
   });
 
+  // Final review I2: an answer that is only a visual showed «no pude responder» under it.
+  it("🔴 an answer that is only a visual shows the visual, not «I couldn't answer»", async () => {
+    const root = await pintar({ respuesta: "", intent: "answer", visuals: [{ title: "huecos", code: "<div>17:00</div>", at: 0 }] });
+    await pregunta(root, "¿huecos?");
+    expect(marco(root)).not.toBeNull();
+    expect(root.querySelector(".log")!.textContent).not.toContain("Lo siento, no pude responder ahora.");
+  });
+
   it("🔴 asleep after a form was already sent: the form comes back; one still on screen isn't doubled", async () => {
     const root = await pintar([{ respuesta: "Déjame tus datos.", intent: "lead" }, { asleep: true, intent: "lead" }, { asleep: true, intent: "lead" }]);
     await pregunta(root, "¿hacen envíos?");

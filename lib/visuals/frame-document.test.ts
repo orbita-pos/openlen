@@ -78,6 +78,18 @@ describe("the closed frame", () => {
     const doc = buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true });
     expect(doc).toContain("connect-src 'none'");
     expect(doc).toContain("img-src data: blob:");
+    // Final review I5: past the bubble's 480px the closed frame scrolls instead of cutting the visual off.
+    expect(doc).toContain("body { overflow-y: auto; }");
+    expect(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true })).not.toContain("overflow-y: auto");
+  });
+
+  // A visual can only be caught navigating if the first load has already happened, and a slow CDN must not hold it up.
+  it("🔴 the closed frame asks for its stylesheets after loading, never before", () => {
+    const doc = buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true });
+    expect(doc).not.toContain('<link rel="stylesheet"');
+    expect(doc).toContain('addEventListener("load"');
+    expect(doc).toContain(`lucide-static@${LUCIDE_FONT_VERSION}/font/lucide.css`);
+    expect(doc).toContain("fonts.googleapis.com/css2?family=Inter");
   });
 
   it("Len's frame is byte for byte today's", () => {

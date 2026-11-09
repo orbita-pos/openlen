@@ -117,15 +117,20 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }`;
 export function buildVisualFrameDocument(opts: { readonly parentOrigins: readonly string[]; readonly cspInMeta: boolean; readonly closed?: boolean }): string {
   const origins = JSON.stringify(opts.parentOrigins).replace(/</g, "\\u003c");
   const meta = opts.cspInMeta ? `<meta http-equiv="Content-Security-Policy" content="${visualFrameCsp(null, opts.closed ? { closed: true } : {})}">` : "";
+  const sheets = [`https://cdn.jsdelivr.net/npm/lucide-static@${LUCIDE_FONT_VERSION}/font/lucide.css`, "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"];
+  // Closed: asked for after the load event, so a slow CDN can't delay it — the visual's code only arrives after that
+  // first load, which is what lets the parent catch a visual navigating its own frame (a second load).
+  const stylesheets = opts.closed
+    ? `<script>addEventListener("load",function(){${JSON.stringify(sheets)}.forEach(function(h){var l=document.createElement("link");l.rel="stylesheet";l.href=h;document.head.insertBefore(l,document.head.querySelector("style"))})})</script>`
+    : sheets.map((h) => `<link rel="stylesheet" href="${h}">`).join("\n");
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 ${meta}
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@${LUCIDE_FONT_VERSION}/font/lucide.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
-<style>${STYLE}
+${stylesheets}
+<style>${STYLE}${opts.closed ? "\nbody { overflow-y: auto; }" : ""}
 </style>
 </head>
 <body>

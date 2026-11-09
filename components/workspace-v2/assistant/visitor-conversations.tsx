@@ -134,9 +134,10 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
                     {l.text}
                   </p>
                 )}
-                {/* Her visuals, as the visitor saw them (phase 2B). The owner only looks: no sendPrompt from here. */}
+                {/* Her visuals, as the visitor saw them (phase 2B): isolated — a visitor could steer this code, so it
+                    never runs on the visuals origin next to the owner's own. The owner only looks: no sendPrompt. */}
                 {l.visuals?.map((vis, j) => (
-                  <VisualFrame key={j} widget={{ title: vis.title, loadingMessages: [], code: vis.code }} final />
+                  <VisualFrame key={j} widget={{ title: vis.title, loadingMessages: [], code: vis.code }} final isolated />
                 ))}
               </div>
             ))}
