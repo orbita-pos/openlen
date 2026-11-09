@@ -769,7 +769,7 @@
       "loadError": "No se pudieron cargar las conversaciones.",
       "budgetRange": "Puede ser de 0 a {max} créditos.",
       "budgetError": "No se pudo guardar el tope. Inténtalo otra vez.",
-      "nothingToKnow": "Publicada, pero tu página no tiene texto ni datos públicos que ella pueda leer."
+      "nothingToKnow": "Publicada, pero tu página no tiene texto ni datos públicos que leer."
     },
     "speaker": {
       "working": "{name} está trabajando",

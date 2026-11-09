@@ -65,6 +65,8 @@
       "get_goal": "목표 확인",
       "create_goal": "목표 만들기",
       "update_goal": "목표 업데이트",
+      "create_assistant": "어시스턴트 만들기",
+      "ask_len": "Len에게 전달",
       "schedule_create": "예약 작업 만들기",
       "schedule_list": "예약 작업 확인",
       "schedule_delete": "예약 작업 삭제",

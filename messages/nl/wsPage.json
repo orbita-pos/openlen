@@ -65,6 +65,8 @@
       "get_goal": "Doel bekijken",
       "create_goal": "Doel aanmaken",
       "update_goal": "Doel bijwerken",
+      "create_assistant": "Je assistent maken",
+      "ask_len": "Doorgeven aan Len",
       "schedule_create": "Taak plannen",
       "schedule_list": "Geplande taken bekijken",
       "schedule_delete": "Geplande taak verwijderen",

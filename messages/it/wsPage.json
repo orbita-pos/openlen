@@ -65,6 +65,8 @@
       "get_goal": "Controllo l'obiettivo",
       "create_goal": "Creo l'obiettivo",
       "update_goal": "Aggiorno l'obiettivo",
+      "create_assistant": "Creo il tuo assistente",
+      "ask_len": "Lo passo a Len",
       "schedule_create": "Programmo un'attività",
       "schedule_list": "Controllo le attività programmate",
       "schedule_delete": "Elimino un'attività programmata",
