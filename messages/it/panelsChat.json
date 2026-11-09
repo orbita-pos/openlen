@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} ha annotato una richiesta dei tuoi clienti che non si è potuta soddisfare:\n\n{title} — {visitors}\n\nAprila perché Len se ne occupi, o lasciala per dopo: {url}",
       "turnPrompt": "💬 Da {name}: {title}",
-      "visitors": "{count, plural, one {# cliente l’ha chiesto} other {# clienti l’hanno chiesto}}"
+      "visitors": "{count, plural, one {# cliente l’ha chiesto} other {# clienti l’hanno chiesto}}",
+      "from": "Da {name}",
+      "doIt": "Fallo fare a Len",
+      "notNow": "Non ora",
+      "done": "Passato a Len",
+      "dismissed": "Messo da parte",
+      "failed": "Non è stato possibile. Riprova.",
+      "noCredits": "Non ci sono crediti perché Len lo faccia. Ricarica e riprova.",
+      "tab": "Richieste",
+      "empty": "Quello che i tuoi clienti chiedono e {name} non può fare apparirà qui.",
+      "openChat": "Vedi Len nella chat",
+      "earlier": "Richieste precedenti"
     }
   }
 }

@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} heeft iets genoteerd wat je klanten vroegen en wat niet lukte:\n\n{title} — {visitors}\n\nOpen het zodat Len het doet, of bewaar het voor later: {url}",
       "turnPrompt": "💬 Van {name}: {title}",
-      "visitors": "{count, plural, one {# klant vroeg erom} other {# klanten vroegen erom}}"
+      "visitors": "{count, plural, one {# klant vroeg erom} other {# klanten vroegen erom}}",
+      "from": "Van {name}",
+      "doIt": "Laat Len het doen",
+      "notNow": "Nu niet",
+      "done": "Doorgegeven aan Len",
+      "dismissed": "Opzijgelegd",
+      "failed": "Dat lukte niet. Probeer het opnieuw.",
+      "noCredits": "Niet genoeg credits om Len het te laten doen. Waardeer op en probeer het opnieuw.",
+      "tab": "Verzoeken",
+      "empty": "Wat je klanten vragen en {name} niet kan doen, verschijnt hier.",
+      "openChat": "Bekijk Len in de chat",
+      "earlier": "Eerdere verzoeken"
     }
   }
 }

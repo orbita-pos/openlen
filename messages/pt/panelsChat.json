@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} anotou algo que seus clientes pediram e não deu para fazer:\n\n{title} — {visitors}\n\nAbra para o Len fazer, ou deixe para depois: {url}",
       "turnPrompt": "💬 De {name}: {title}",
-      "visitors": "{count, plural, one {# cliente pediu} other {# clientes pediram}}"
+      "visitors": "{count, plural, one {# cliente pediu} other {# clientes pediram}}",
+      "from": "De {name}",
+      "doIt": "Pedir ao Len",
+      "notNow": "Agora não",
+      "done": "Passado ao Len",
+      "dismissed": "Deixado para depois",
+      "failed": "Não deu certo. Tente de novo.",
+      "noCredits": "Não há créditos para o Len fazer isso. Recarregue e tente de novo.",
+      "tab": "Pedidos",
+      "empty": "O que seus clientes pedirem e {name} não puder fazer aparecerá aqui.",
+      "openChat": "Ver o Len no chat",
+      "earlier": "Pedidos anteriores"
     }
   }
 }

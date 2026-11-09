@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "고객이 요청했지만 할 수 없었던 일을 {name}가 메모해 두었어요:\n\n{title} — {visitors}\n\n열어서 Len에게 맡기거나 나중에 확인하세요: {url}",
       "turnPrompt": "💬 {name}의 요청: {title}",
-      "visitors": "{count, plural, other {고객 #명이 요청}}"
+      "visitors": "{count, plural, other {고객 #명이 요청}}",
+      "from": "{name}의 요청",
+      "doIt": "Len에게 맡기기",
+      "notNow": "나중에",
+      "done": "Len에게 전달됨",
+      "dismissed": "보류함",
+      "failed": "할 수 없었어요. 다시 시도하세요.",
+      "noCredits": "Len이 처리할 크레딧이 부족해요. 충전한 뒤 다시 시도하세요.",
+      "tab": "요청",
+      "empty": "고객이 요청했지만 {name}가 할 수 없는 일이 여기에 표시돼요.",
+      "openChat": "채팅에서 Len 보기",
+      "earlier": "이전 요청"
     }
   }
 }

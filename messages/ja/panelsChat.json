@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "お客様から頼まれてできなかったことを {name} がメモしました:\n\n{title} — {visitors}\n\n開いて Len に任せるか、あとで確認してください: {url}",
       "turnPrompt": "💬 {name} から: {title}",
-      "visitors": "{count, plural, other {# 人が希望}}"
+      "visitors": "{count, plural, other {# 人が希望}}",
+      "from": "{name} から",
+      "doIt": "Len に任せる",
+      "notNow": "今はしない",
+      "done": "Len に渡しました",
+      "dismissed": "保留中",
+      "failed": "できませんでした。もう一度お試しください。",
+      "noCredits": "Len が対応するためのクレジットが足りません。チャージしてもう一度お試しください。",
+      "tab": "リクエスト",
+      "empty": "お客様から頼まれて {name} ができなかったことがここに表示されます。",
+      "openChat": "チャットで Len を見る",
+      "earlier": "以前のリクエスト"
     }
   }
 }

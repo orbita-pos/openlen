@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} hat etwas notiert, das deine Kunden wollten und das nicht ging:\n\n{title} — {visitors}\n\nÖffne es, damit Len es umsetzt, oder heb es für später auf: {url}",
       "turnPrompt": "💬 Von {name}: {title}",
-      "visitors": "{count, plural, one {# Kunde hat gefragt} other {# Kunden haben gefragt}}"
+      "visitors": "{count, plural, one {# Kunde hat gefragt} other {# Kunden haben gefragt}}",
+      "from": "Von {name}",
+      "doIt": "Len machen lassen",
+      "notNow": "Jetzt nicht",
+      "done": "An Len übergeben",
+      "dismissed": "Zurückgestellt",
+      "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+      "noCredits": "Nicht genug Credits, damit Len es macht. Lade auf und versuch es noch einmal.",
+      "tab": "Anfragen",
+      "empty": "Was deine Kunden wollen und {name} nicht erledigen kann, erscheint hier.",
+      "openChat": "Len im Chat ansehen",
+      "earlier": "Frühere Anfragen"
     }
   }
 }

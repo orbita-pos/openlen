@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name} : {title}",
       "emailText": "{name} a noté une demande de vos clients qui n’a pas pu être satisfaite :\n\n{title} — {visitors}\n\nOuvrez-la pour que Len s’en occupe, ou gardez-la pour plus tard : {url}",
       "turnPrompt": "💬 De {name} : {title}",
-      "visitors": "{count, plural, one {# client l’a demandé} other {# clients l’ont demandé}}"
+      "visitors": "{count, plural, one {# client l’a demandé} other {# clients l’ont demandé}}",
+      "from": "De {name}",
+      "doIt": "Confier à Len",
+      "notNow": "Pas maintenant",
+      "done": "Confié à Len",
+      "dismissed": "Mis de côté",
+      "failed": "Impossible pour l’instant. Réessayez.",
+      "noCredits": "Pas assez de crédits pour que Len s’en occupe. Rechargez et réessayez.",
+      "tab": "Demandes",
+      "empty": "Ce que vos clients demandent et que {name} ne peut pas faire apparaîtra ici.",
+      "openChat": "Voir Len dans le chat",
+      "earlier": "Demandes précédentes"
     }
   }
 }
