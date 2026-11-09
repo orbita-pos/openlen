@@ -114,22 +114,29 @@ const LEGACY_GREET = 'var GREET=C.greeting||T.greeting.split("{name}").join(C.na
 const PERSONA_HEADER = 'R.querySelector(".hd span").textContent=C.persona.name+" AI";\nR.querySelector(".hd .ava").innerHTML=C.persona.svg;';
 /** HER VISUALS (phase 2B): each in an iframe with sandbox="allow-scripts" (a null origin: nothing of the page is
  *  reachable) whose srcdoc is the closed frame document (`C.F`: no fetch, images only as data:). Messages count only
- *  from that frame; a link is followed only to this page's own origin; sendPrompt only right after a click in it.
+ *  from that frame; a link is followed only to this page's own origin and, like sendPrompt, only right after a click
+ *  in it.
  *  No backticks here: this lives inside a template string. */
 const PERSONA_VISUALS =
   'var FR=[];\n' +
   'function piece(t){t=String(t||"").trim();if(t)bubble("bot",t)}\n' +
+  'function draw(it){if(!it.ready||it.loads!==1||it.sent)return;it.sent=true;var w=it.f.contentWindow;w.postMessage({kind:"ol-visual:theme",theme:"light",tokens:{"--accent":ACC,"--accent-strong":ACC,"--series-1":ACC}},"*");w.postMessage({kind:"ol-visual:render",code:it.code,final:true},"*")}\n' +
+  // Focus already in the frame means no window blur: the visitor's fresh activation there counts as the click.
+  'function tapped(it){return Date.now()-it.clicked<5000||(R.activeElement===it.f&&navigator.userActivation&&navigator.userActivation.isActive)}\n' +
   'function frame(v){var r=document.createElement("div");r.className="row b vis";var f=document.createElement("iframe");\n' +
   'f.setAttribute("sandbox","allow-scripts");f.setAttribute("title",String(v.title||""));f.setAttribute("srcdoc",C.F);\n' +
-  'FR.push({f:f,code:String(v.code||""),clicked:0});r.appendChild(f);log.appendChild(r);scroll()}\n' +
+  // A visual loads once: a second load is it navigating its own frame somewhere else, and it comes down. Its code
+  // arrives only after the first load, or a visual that navigated earlier would leave a single load in all.
+  'var it={f:f,code:String(v.code||""),clicked:0,loads:0,ready:false,sent:false};f.addEventListener("load",function(){if(++it.loads>1){r.remove();FR.splice(FR.indexOf(it),1)}else draw(it)});\n' +
+  'FR.push(it);r.appendChild(f);log.appendChild(r);scroll()}\n' +
   'function answer(text,vs){if(!vs||!vs.length){bubble("bot",text);return}var from=0;\n' +
   'for(var i=0;i<vs.length&&i<2;i++){var at=Math.max(from,Math.min(text.length,Number(vs[i].at)||0));piece(text.slice(from,at));from=at;frame(vs[i])}\n' +
   'piece(text.slice(from))}\n' +
   'window.addEventListener("message",function(e){for(var i=0;i<FR.length;i++){var it=FR[i];if(!e.source||e.source!==it.f.contentWindow)continue;var d=e.data||{};\n' +
-  'if(d.kind==="ol-visual:ready"){var w=it.f.contentWindow;w.postMessage({kind:"ol-visual:theme",theme:"light",tokens:{"--accent":ACC,"--accent-strong":ACC,"--series-1":ACC}},"*");w.postMessage({kind:"ol-visual:render",code:it.code,final:true},"*")}\n' +
+  'if(d.kind==="ol-visual:ready"){it.ready=true;draw(it)}\n' +
   'else if(d.kind==="ol-visual:height"&&typeof d.height==="number"){it.f.style.height=Math.max(0,Math.min(480,Math.round(d.height)))+"px";scroll()}\n' +
-  'else if(d.kind==="ol-visual:link"&&typeof d.href==="string"){try{var u=new URL(d.href,location.href);if(u.origin===location.origin)location.assign(u.href)}catch(x){}}\n' +
-  'else if(d.kind==="ol-visual:prompt"&&typeof d.text==="string"&&Date.now()-it.clicked<5000){it.clicked=0;ask(String(d.text).slice(0,500))}\n' +
+  'else if(d.kind==="ol-visual:link"&&typeof d.href==="string"&&tapped(it)){try{var u=new URL(d.href,location.href);if(u.origin===location.origin)location.assign(u.href)}catch(x){}}\n' +
+  'else if(d.kind==="ol-visual:prompt"&&typeof d.text==="string"&&tapped(it)){it.clicked=0;ask(String(d.text).slice(0,500))}\n' +
   'return}});\n' +
   'window.addEventListener("blur",function(){setTimeout(function(){for(var i=0;i<FR.length;i++){if(R.activeElement===FR[i].f)FR[i].clicked=Date.now()}},0)});\n';
 const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
@@ -316,7 +323,7 @@ var d=dots();
 fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},
 body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||T.noAnswer;
+.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||${persona ? '(j&&j.visuals&&j.visuals.length?"":T.noAnswer)' : "T.noAnswer"};
 history.push({role:"assistant",content:a});${persona ? "answer(a,j&&j.visuals);" : 'bubble("bot",a);'}
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez

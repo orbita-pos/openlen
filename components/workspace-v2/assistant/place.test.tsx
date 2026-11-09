@@ -233,6 +233,8 @@ describe("her place's controls, what they say", () => {
         if (String(url).endsWith("/api/assistants/a1/visits"))
           return new Response(JSON.stringify({ visits: [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: false, lines: [{ role: "visitor", text: "¿Huecos?", at: AT }, { role: "assistant", text: "Estos:", at: AT, visuals: [{ title: "huecos", code: "<div>17:00</div>" }] }] }] }));
         if (String(url).endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 0, cap: 12_500, explicit: null, max: 50_000 }));
+        // As in production: the visuals host exists. Her visitors' visuals must not use it.
+        if (String(url).endsWith("/api/visual-frame-url")) return new Response(JSON.stringify({ url: "https://lienzo-visuals.openlen.app/" }));
         return new Response("{}", { status: 200 });
       }),
     );
@@ -243,6 +245,20 @@ describe("her place's controls, what they say", () => {
     const visit = host.querySelector("[data-visitor-conversations]")!;
     expect(visit.textContent).toContain("Estos:");
     expect(visit.querySelector('[data-testid="len-visual"]')).not.toBeNull();
+
+    // Final review C1: a visitor could steer this code — it never runs on the visuals origin next to the owner's own
+    // visuals, only as the visitor saw it: a closed srcdoc with a null origin.
+    const frame = visit.querySelector("iframe")!;
+    expect(frame.getAttribute("src")).toBeNull();
+    expect(frame.getAttribute("sandbox")).toBe("allow-scripts");
+    expect(frame.getAttribute("srcdoc")).toContain("connect-src 'none'");
+
+    // Final review I1: a visual that navigates its own frame (a second load) is taken down.
+    act(() => {
+      frame.dispatchEvent(new Event("load"));
+      frame.dispatchEvent(new Event("load"));
+    });
+    expect(visit.querySelector("iframe")).toBeNull();
   });
 
   it("🔴 a cap above the plan says what it can be, and isn't sent", async () => {

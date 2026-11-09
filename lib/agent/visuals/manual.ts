@@ -125,6 +125,10 @@ const BUBBLE_EDITS: readonly (readonly [string, string])[] = [
   ],
   ["Where the chat can't draw (a thread, an email, a voice call) your reply is all the person gets", "Where the bubble can't draw, your reply is all the visitor gets"],
   ["The person is on a phone: you have about 360px of width.", "The bubble is narrow: about 300px of width, on a phone and on a computer alike."],
+  [
+    "The frame measures your content and grows to fit it,",
+    "The frame grows with your content up to about 450px and scrolls past that — put what matters, like a link to book, near the top —",
+  ],
   ["so the visual follows the person's light or dark theme without you doing anything", "so the visual matches the bubble without you doing anything"],
   ["- --bg: the chat behind the visual", "- --bg: the bubble behind the visual"],
   ["- --accent: OpenLen's accent:", "- --accent: the business's color:"],

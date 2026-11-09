@@ -88,6 +88,9 @@ describe("buildVisualsManual — the surface", () => {
     expect(m).not.toContain("OpenLen's chat");
     expect(m).not.toContain("the inbox");
     expect(m).toContain("## chart");
+    // Final review I5: the bubble holds a visual to about 450px and scrolls past it.
+    expect(m).toContain("up to about 450px");
+    expect(m).not.toContain("grows to fit it");
   });
 
   it("🔴 every bubble edit still finds its text: the chat's manual can't change under the bubble unnoticed", () => {
