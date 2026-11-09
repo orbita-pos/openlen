@@ -778,6 +778,12 @@
       "sawCaption": "{total, plural, =1 {{name}이(가) 본 화면} other {{name}이(가) 본 화면 · {number}/{total}}}",
       "yourTurnLive": "당신 차례예요 · 답하면 {name}이(가) 바로 이어서 해요",
       "disclaimer": "{name}은(는) 실수할 수 있어요. 답변을 확인해 주세요."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "고객이 요청했지만 할 수 없었던 일을 {name}가 메모해 두었어요:\n\n{title} — {visitors}\n\n열어서 Len에게 맡기거나 나중에 확인하세요: {url}",
+      "turnPrompt": "💬 {name}의 요청: {title}",
+      "visitors": "{count, plural, other {고객 #명이 요청}}"
     }
   }
 }

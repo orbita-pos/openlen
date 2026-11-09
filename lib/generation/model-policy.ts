@@ -244,7 +244,11 @@ export type ModelOperation =
   | "event_task_judge"
   /** EL ASISTENTE PROPIO CON UN VISITANTE (`lib/assistants/visitor/turn.ts`, spec local 2026-11-06-asistente-propio):
    *  el turno de un visitante de la página publicada, en el cerebro de Len. Lo paga el dueño, dentro de su tope. */
-  | "assistant_visitor";
+  | "assistant_visitor"
+  /** LOS PEDIDOS DEL ASISTENTE PROPIO (`lib/assistants/requests/grouper.ts`, spec local 2026-11-06-asistente-propio,
+   *  §4.3): el turno corto que junta lo que pidieron los visitantes, en el cerebro de Len. Lo paga el dueño, dentro del
+   *  tope de los visitantes. */
+  | "assistant_requests";
 // (`len_bench_cliente`, el dueño simulado de Len-Bench, se fue el 2026-09-27: el
 // dueño es ahora un doble FIJO sin modelo, `lib/len-bench/cliente-simulado.ts`.)
 
@@ -324,6 +328,9 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // El asistente con un visitante corre en el cerebro de Len con su esfuerzo en la capa de POSTURA (`low`, su
   // definición `assistant-visitor`): un cliente no espera un minuto.
   assistant_visitor: { role: "agent", effort: null },
+  // Juntar los pedidos corre en el cerebro de Len con esfuerzo `low` en la capa de POSTURA: una sola llamada que
+  // ordena frases cortas.
+  assistant_requests: { role: "agent", effort: null },
 };
 
 export function reasoningEffortFor(role: ModelRole, operation: ModelOperation): FireworksReasoningEffort {

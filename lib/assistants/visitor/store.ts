@@ -138,13 +138,15 @@ export async function monthSpent(userId: string, month: string): Promise<number>
   return row?.c ?? 0;
 }
 
-/** One visitor message's cost, and +1 message. */
-export async function addMonthSpend(userId: string, month: string, centicredits: number): Promise<void> {
+/** One visitor message's cost, and +1 message. Grouping what visitors asked for (lib/assistants/requests/grouper.ts)
+ *  spends inside the same cap with `messages` 0: it is no visitor's message. */
+export async function addMonthSpend(userId: string, month: string, centicredits: number, messages = 1): Promise<void> {
   const c = Math.max(0, Math.round(centicredits));
+  const n = Math.max(0, Math.round(messages));
   await db
     .insert(m)
-    .values({ userId, month, centicredits: c, messages: 1 })
-    .onConflictDoUpdate({ target: [m.userId, m.month], set: { centicredits: sql`${m.centicredits} + ${c}`, messages: sql`${m.messages} + 1` } });
+    .values({ userId, month, centicredits: c, messages: n })
+    .onConflictDoUpdate({ target: [m.userId, m.month], set: { centicredits: sql`${m.centicredits} + ${c}`, messages: sql`${m.messages} + ${n}` } });
 }
 
 /** True ONCE per month and reason: the owner hears «she fell asleep» once (Task 9). */

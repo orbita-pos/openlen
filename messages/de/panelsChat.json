@@ -778,6 +778,12 @@
       "sawCaption": "{total, plural, one {Was {name} gesehen hat} other {Was {name} gesehen hat · {number} von {total}}}",
       "yourTurnLive": "Du bist dran · {name} macht weiter, sobald du antwortest",
       "disclaimer": "{name} kann sich irren. Prüfe die Antworten."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} hat etwas notiert, das deine Kunden wollten und das nicht ging:\n\n{title} — {visitors}\n\nÖffne es, damit Len es umsetzt, oder heb es für später auf: {url}",
+      "turnPrompt": "💬 Von {name}: {title}",
+      "visitors": "{count, plural, one {# Kunde hat gefragt} other {# Kunden haben gefragt}}"
     }
   }
 }

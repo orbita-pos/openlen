@@ -176,6 +176,15 @@ describe("the visitors' month", () => {
     expect(await visitor.monthSpent("u2", "2026-11")).toBe(0);
   });
 
+  // Phase 3: grouping what visitors asked for spends inside the cap, but it is no visitor's message.
+  it("a spend can count no message", async () => {
+    await visitor.addMonthSpend("u1", "2026-11", 30);
+    await visitor.addMonthSpend("u1", "2026-11", 4, 0);
+    expect(await visitor.monthSpent("u1", "2026-11")).toBe(34);
+    const { rows } = await pg.query<{ messages: number }>(`select "messages" from "assistantVisitorMonths" where "userId" = 'u1'`);
+    expect(rows[0]!.messages).toBe(1);
+  });
+
   it("claimAsleepAlert is true once per month and reason", async () => {
     expect(await visitor.claimAsleepAlert("u1", "2026-11", "cap")).toBe(true);
     expect(await visitor.claimAsleepAlert("u1", "2026-11", "cap")).toBe(false);

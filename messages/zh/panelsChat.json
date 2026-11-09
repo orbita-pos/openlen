@@ -778,6 +778,12 @@
       "sawCaption": "{total, plural, =1 {{name} 看到的画面} other {{name} 看到的画面 · {number}/{total}}}",
       "yourTurnLive": "轮到你了 · 你一回答，{name} 就继续",
       "disclaimer": "{name} 可能会出错。请核对回答。"
+    },
+    "requests": {
+      "emailSubject": "💬 {name}：{title}",
+      "emailText": "{name} 记下了客户提出但无法完成的请求：\n\n{title} — {visitors}\n\n打开它让 Len 来处理，或稍后再看：{url}",
+      "turnPrompt": "💬 来自 {name}：{title}",
+      "visitors": "{count, plural, other {# 位客户提出}}"
     }
   }
 }

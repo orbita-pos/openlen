@@ -778,6 +778,12 @@
       "sawCaption": "{total, plural, one {What {name} saw} other {What {name} saw · {number} of {total}}}",
       "yourTurnLive": "Your turn · {name} goes on as soon as you answer",
       "disclaimer": "{name} can make mistakes. Please double-check responses."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} noted something your visitors asked for that couldn't be done:\n\n{title} — {visitors}\n\nOpen it to have Len do it, or leave it for later: {url}",
+      "turnPrompt": "💬 From {name}: {title}",
+      "visitors": "{count, plural, one {# visitor asked} other {# visitors asked}}"
     }
   }
 }
