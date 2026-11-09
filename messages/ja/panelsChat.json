@@ -778,6 +778,12 @@
       "sawCaption": "{total, plural, =1 {{name} が見たもの} other {{name} が見たもの · {number}/{total}}}",
       "yourTurnLive": "あなたの番です · 答えるとすぐに{name}が続けます",
       "disclaimer": "{name} は間違えることがあります。回答を確認してください。"
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "お客様から頼まれてできなかったことを {name} がメモしました:\n\n{title} — {visitors}\n\n開いて Len に任せるか、あとで確認してください: {url}",
+      "turnPrompt": "💬 {name} から: {title}",
+      "visitors": "{count, plural, other {# 人が希望}}"
     }
   }
 }
