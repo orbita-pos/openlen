@@ -782,7 +782,7 @@
     "requests": {
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} heeft iets genoteerd wat je klanten vroegen en wat niet lukte:\n\n{title} — {visitors}\n\nOpen het zodat Len het doet, of bewaar het voor later: {url}",
-      "turnPrompt": "💬 Van {name}: {title}",
+      "turnPrompt": "💬 Van {name}: wat je klanten vroegen",
       "visitors": "{count, plural, one {# klant vroeg erom} other {# klanten vroegen erom}}",
       "from": "Van {name}",
       "doIt": "Laat Len het doen",

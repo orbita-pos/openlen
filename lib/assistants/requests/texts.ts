@@ -32,7 +32,10 @@ export function requestEmail(locale: string, o: { readonly name: string; readonl
   };
 }
 
-/** What the chat row of an accepted card's turn shows as its message (the model reads the framing instead). */
-export function requestTurnPrompt(locale: string, name: string, title: string): string {
-  return translator(locale)("turnPrompt", { name, title });
+/** What the chat row of an accepted card's turn shows as its message (the model reads the framing instead). Only her
+ *  name, which her owner chose: the agent route reads this text as the owner's own words — a "/name" in it invokes a
+ *  skill, an "@name" notifies a member, a subdomain in it lets publish claim it — so nothing visitors wrote goes here
+ *  (final review I4). The card's title rides in the framing, as data. */
+export function requestTurnPrompt(locale: string, name: string): string {
+  return translator(locale)("turnPrompt", { name });
 }

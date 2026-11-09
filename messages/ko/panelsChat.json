@@ -782,7 +782,7 @@
     "requests": {
       "emailSubject": "💬 {name}: {title}",
       "emailText": "고객이 요청했지만 할 수 없었던 일을 {name}가 메모해 두었어요:\n\n{title} — {visitors}\n\n열어서 Len에게 맡기거나 나중에 확인하세요: {url}",
-      "turnPrompt": "💬 {name}의 요청: {title}",
+      "turnPrompt": "💬 {name}의 요청: 고객이 요청한 일",
       "visitors": "{count, plural, other {고객 #명이 요청}}",
       "from": "{name}의 요청",
       "doIt": "Len에게 맡기기",

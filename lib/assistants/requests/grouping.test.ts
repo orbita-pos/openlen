@@ -125,6 +125,12 @@ describe("applyGrouping", () => {
     expect(out.newCards[2]!.title).toBe("Llamar al [contact]");
   });
 
+  // Final review: titles reach OpenLen's own emails and pushes — no links or handles a visitor put there.
+  it("🔴 a title carries no link or handle", () => {
+    const out = apply({ groups: [{ title: "Ver https://evil.example/pagar y www.evil.example, avisa a @eli_99", requests: [1] }] });
+    expect(out.newCards[0]!.title).toBe("Ver [link] y [link] avisa a [contact]");
+  });
+
   it("no tool call: everything retries", () => {
     for (const args of [undefined, null, "envíos", { groups: "x" }, { discard: [1] }]) {
       const out = apply(args);

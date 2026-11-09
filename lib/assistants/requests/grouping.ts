@@ -80,10 +80,16 @@ export function groupingMessages(o: { readonly assistantName: string; readonly l
   ];
 }
 
-/** A title as a card shows it: plain, one line, no contact details, at most 120 characters. */
+const LINK = /\b(?:https?:\/\/|www\.)\S+/gi;
+const HANDLE = /(^|[\s(])@[\w.-]+/g;
+
+/** A title as a card shows it — and as OpenLen's own email and push carry it: plain, one line, no contact details, no
+ *  link or handle a visitor put there, at most 120 characters. */
 function tidyTitle(raw: unknown): string {
   if (typeof raw !== "string") return "";
-  const line = scrubContact(raw.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim());
+  const line = scrubContact(raw.replace(/[*_`#>~]+/g, "").replace(/\s+/g, " ").trim())
+    .replace(LINK, "[link]")
+    .replace(HANDLE, "$1[contact]");
   return line.length <= CARD_TITLE_MAX ? line : `${line.slice(0, CARD_TITLE_MAX - 1).trimEnd()}…`;
 }
 

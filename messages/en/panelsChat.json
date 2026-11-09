@@ -782,7 +782,7 @@
     "requests": {
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} noted something your visitors asked for that couldn't be done:\n\n{title} — {visitors}\n\nOpen it to have Len do it, or leave it for later: {url}",
-      "turnPrompt": "💬 From {name}: {title}",
+      "turnPrompt": "💬 From {name}: what your visitors asked for",
       "visitors": "{count, plural, one {# visitor asked} other {# visitors asked}}",
       "from": "From {name}",
       "doIt": "Have Len do it",

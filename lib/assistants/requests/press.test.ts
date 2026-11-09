@@ -144,6 +144,20 @@ describe("pressRequestCard", () => {
     expect((await store.requestCardsOfAssistant(lucia, LATER))[0]!.acceptedRowId).toBe(r.rowId);
   });
 
+  // Final review I4: the route reads the turn's text as the owner's own words — a /name invokes a skill, an @name
+  // notifies a member, a subdomain in it lets publish claim it. Only the framing may carry what visitors wrote.
+  it("🔴 the turn's text, which the route reads as the owner's words, carries nothing visitors wrote", async () => {
+    await store.noteRequest({ assistantId: lucia, projectId: "p1", visitorId: "vid-x", text: "x", locale: "es", at: NOW });
+    await groupingPass({ now: () => LATER, pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair, grouper("Quiero /schedule de entregas en canela-falsa")), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup, reopenInterrupted: store.reopenInterruptedCards }, newPassState());
+    const [card] = await store.requestCardsOfAssistant(lucia, LATER);
+    const r = await pressRequestCard({ assistant: { id: lucia, name: "Lucía" }, cardId: card!.id, action: "accept", actorId: "u1" }, pressDeps());
+    if (!r.ok || r.status !== "accepted") throw new Error(JSON.stringify(r));
+    const turn = base.launched[0] as AssistantRequestTurn;
+    expect(turn.framing).toContain("Quiero /schedule de entregas en canela-falsa");
+    for (const visitorWords of ["/schedule", "canela-falsa", "entregas"]) expect(turn.texto).not.toContain(visitorWords);
+    expect(turn.texto).toContain("Lucía");
+  });
+
   it("🔴 a turn that can't start puts the card back and says why", async () => {
     const cardId = String(await aCardFromAPass());
     const r = await pressRequestCard({ assistant: { id: lucia, name: "Lucía" }, cardId, action: "accept", actorId: "u1" }, pressDeps((p) => void p.fail({ code: "no_credits" }, false)));

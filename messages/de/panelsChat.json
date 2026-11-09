@@ -782,7 +782,7 @@
     "requests": {
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} hat etwas notiert, das deine Kunden wollten und das nicht ging:\n\n{title} — {visitors}\n\nÖffne es, damit Len es umsetzt, oder heb es für später auf: {url}",
-      "turnPrompt": "💬 Von {name}: {title}",
+      "turnPrompt": "💬 Von {name}: was deine Kunden wollten",
       "visitors": "{count, plural, one {# Kunde hat gefragt} other {# Kunden haben gefragt}}",
       "from": "Von {name}",
       "doIt": "Len machen lassen",

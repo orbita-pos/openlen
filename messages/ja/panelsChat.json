@@ -782,7 +782,7 @@
     "requests": {
       "emailSubject": "💬 {name}: {title}",
       "emailText": "お客様から頼まれてできなかったことを {name} がメモしました:\n\n{title} — {visitors}\n\n開いて Len に任せるか、あとで確認してください: {url}",
-      "turnPrompt": "💬 {name} から: {title}",
+      "turnPrompt": "💬 {name} から: お客様からのリクエスト",
       "visitors": "{count, plural, other {# 人が希望}}",
       "from": "{name} から",
       "doIt": "Len に任せる",
