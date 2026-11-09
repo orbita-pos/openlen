@@ -769,7 +769,7 @@
       "loadError": "The conversations couldn't be loaded.",
       "budgetRange": "It can be from 0 to {max} credits.",
       "budgetError": "The cap couldn't be saved. Try again.",
-      "nothingToKnow": "Published, but your page has no text or public data she can read."
+      "nothingToKnow": "Published, but your page has no text or public data to read."
     },
     "speaker": {
       "working": "{name} is working",

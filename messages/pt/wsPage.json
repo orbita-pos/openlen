@@ -65,6 +65,8 @@
       "get_goal": "Vendo o objetivo",
       "create_goal": "Criando o objetivo",
       "update_goal": "Atualizando o objetivo",
+      "create_assistant": "Criando seu assistente",
+      "ask_len": "Passando para o Len",
       "schedule_create": "Agendando uma tarefa",
       "schedule_list": "Vendo as tarefas agendadas",
       "schedule_delete": "Apagando uma tarefa agendada",
