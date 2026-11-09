@@ -252,6 +252,20 @@ describe("a visitor's turn with visuals and public data", () => {
     expect(s.offered[0]).not.toContain(READ_PUBLIC_DATA);
   });
 
+  // Final review I3: words written around a tool call were glued («Déjame revisar.El sábado…») and preambles reached
+  // the visitor.
+  it("🔴 a preamble before a tool that isn't a visual doesn't reach the visitor, and words never glue", async () => {
+    const data = setup([sayThenCall("Déjame revisar.", call(READ_PUBLIC_DATA, { query: "huecos" })), say("El sábado hay a las 5.")]);
+    const deps: VisitorTurnDeps = { ...data.deps, readPublicData: async () => ({ response: { ok: true, tool_result: "[]" } }) };
+    const r = await runVisitorTurn(input({ publicData: SLOTS }), deps);
+    expect(r).toMatchObject({ kind: "reply", text: "El sábado hay a las 5." });
+    const handoff = setup([sayThenCall("Un momento.", call("offer_handoff", { why: "contact" })), say("Déjame tus datos.")]);
+    expect(await runVisitorTurn(input(), handoff.deps)).toMatchObject({ text: "Déjame tus datos." });
+    // Nothing but the preamble: it is what she said, not «no answer».
+    const only = setup([sayThenCall("Te paso con alguien.", call("offer_handoff", { why: "person" })), say("")]);
+    expect(await runVisitorTurn(input(), only.deps)).toMatchObject({ text: "Te paso con alguien." });
+  });
+
   it("the visit keeps the visuals with her line, for the owner", async () => {
     const s = setup([sayThenCall("Mira:", widget()), say("¿Algo más?")]);
     await runVisitorTurn(input(), s.deps);

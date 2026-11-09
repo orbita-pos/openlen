@@ -111,23 +111,36 @@ function refused(message: string): ToolOutcome {
   return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
 }
 
-/** Her words tidied piece by piece around the visuals, and where each visual goes in the result. A visual never gets
- *  lost: one past the end of what is kept goes at the end. */
-function placeVisuals(raw: string, placed: readonly { widget: VisualWidget; offset: number }[]): { text: string; visuals: VisitorVisual[] } {
+/** A finished tool call in her turn: where her words stood when it ended, and its visual if it drew one. */
+interface Boundary {
+  readonly offset: number;
+  readonly widget: VisualWidget | null;
+}
+
+/** What the visitor reads, from what she wrote in the whole turn cut at each finished tool call (final review I3):
+ *  the words before a visual introduce it and stay; the words before any other tool are a preamble («Déjame
+ *  revisar.») and go; the last words always stay. Pieces are tidied one by one and joined with a blank line — never
+ *  glued. If nothing is left and there is no visual, what she said is all she said. A visual never gets lost. */
+function placeVisuals(raw: string, boundaries: readonly Boundary[]): { text: string; visuals: VisitorVisual[] } {
   let text = "";
   let from = 0;
   const visuals: VisitorVisual[] = [];
+  const dropped: string[] = [];
   const add = (piece: string) => {
     const tidy = replyText(piece);
     if (tidy) text = text ? `${text}\n\n${tidy}` : tidy;
   };
-  for (const p of [...placed].sort((a, b) => a.offset - b.offset)) {
-    const at = Math.min(Math.max(0, p.offset), raw.length);
-    add(raw.slice(from, at));
-    from = Math.max(from, at);
-    visuals.push({ title: p.widget.title, code: p.widget.code, at: text.length });
+  for (const b of boundaries) {
+    const at = Math.min(Math.max(from, b.offset), raw.length);
+    const piece = raw.slice(from, at);
+    from = at;
+    if (b.widget) {
+      add(piece);
+      visuals.push({ title: b.widget.title, code: b.widget.code, at: text.length });
+    } else dropped.push(piece);
   }
   add(raw.slice(from));
+  if (!text && visuals.length === 0) for (const piece of dropped) add(piece);
   const capped = text.slice(0, REPLY_MAX);
   return { text: capped, visuals: visuals.map((v) => ({ ...v, at: Math.min(v.at, capped.length) })) };
 }
@@ -204,7 +217,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     /** What she wrote in the whole turn, and where each visual went in it — as Len's chat records it
      *  (lib/agent/registro-del-turno.ts): a retry or a compaction takes back what it discarded. */
     let written = "";
-    const placed: { widget: VisualWidget; offset: number }[] = [];
+    const boundaries: Boundary[] = [];
     let shownVisuals = 0;
     const runTool = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
       // The loop refuses what wasn't declared; this is the second gate of a list that must not grow by accident.
@@ -241,7 +254,8 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
       emit: (ev) => {
         if (ev.type === "text") written += ev.text;
         else if ((ev.type === "retry" || ev.type === "compaction") && ev.discardChars > 0) written = written.slice(0, Math.max(0, written.length - ev.discardChars));
-        else if (ev.type === "action" && ev.widget) placed.push({ widget: ev.widget, offset: written.length });
+        // Every finished call cuts her words; a visual is kept with the words that introduce it.
+        else if (ev.type === "action" && ev.status !== "running") boundaries.push({ offset: written.length, widget: ev.widget ?? null });
       },
       unattended: true,
       signal,
@@ -259,7 +273,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         }
       });
     // Everything she wrote this turn (the visual sits between her words), or the final text if nothing was streamed.
-    const { text, visuals } = placeVisuals(written.trim() ? written : (result.finalText ?? ""), placed);
+    const { text, visuals } = placeVisuals(written.trim() ? written : (result.finalText ?? ""), written.trim() ? boundaries : []);
     const uses = brain.providersUsed().map((u) => ({ provider: u.provider, model: u.model, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, reasoningTokens: u.thinkingTokens }));
     // A billing failure never loses the answer the visitor is waiting for; what wasn't charged isn't counted either.
     let centicredits = 0;
