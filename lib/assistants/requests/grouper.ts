@@ -65,7 +65,12 @@ function worthTelling(saved: readonly { card: RequestCardRow; isNew: boolean; be
   return told[0]?.card ?? null;
 }
 
-export async function groupOne(pair: { readonly assistantId: string; readonly projectId: string }, deps?: GrouperDeps): Promise<"grouped" | "asleep" | "nothing"> {
+/** grouped: the turn answered and what it decided was saved. asleep: no credits or no room in the cap — no model call.
+ *  failed: the provider failed (the real brain doesn't throw: the loop returns its errorCode) — nothing saved or charged,
+ *  no attempt added. nothing: no assistant or nothing waiting. */
+export type GroupOutcome = "grouped" | "asleep" | "failed" | "nothing";
+
+export async function groupOne(pair: { readonly assistantId: string; readonly projectId: string }, deps?: GrouperDeps): Promise<GroupOutcome> {
   const d = deps ?? (await defaultGrouperDeps());
   const assistant = await d.assistantOf(pair.assistantId);
   if (!assistant) return "nothing";
@@ -109,7 +114,7 @@ export async function groupOne(pair: { readonly assistantId: string; readonly pr
         unattended: true,
         ...(recorder ? { onStepTools: (b: readonly ToolOutcomeSummary[]) => recorder.onStepTools(b) } : {}),
       });
-      endReason = "done";
+      endReason = result.errorCode ? "error" : "done";
     } finally {
       try {
         recorder?.finish({ endReason });
@@ -118,7 +123,10 @@ export async function groupOne(pair: { readonly assistantId: string; readonly pr
       }
     }
 
-    // A provider error throws above: nothing saved, nothing charged, no attempt added. From here the turn happened.
+    // The provider failed before answering — it ends the stream with an error, it doesn't throw (final review C1):
+    // nothing saved, nothing charged, no attempt added; the requests wait. A throw above ends the same way.
+    if (args === undefined && result.errorCode) return "failed";
+    // From here the turn happened.
     const saved = await d.store.saveGrouping({ assistantId: pair.assistantId, projectId: pair.projectId, locale, at: now, ...applyGrouping({ requests, cards, args }) });
     const uses = brain.providersUsed().map((u) => ({ provider: u.provider, model: u.model, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, reasoningTokens: u.thinkingTokens }));
     let centicredits = 0;

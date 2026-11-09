@@ -121,6 +121,20 @@ describe("groupOne", () => {
     expect(s.spends).toHaveLength(0);
   });
 
+  // Final review C1: the real brain never throws on a provider failure — it ends the stream with an error stop reason
+  // and the loop returns errorCode. Three such passes discarded every waiting request, and each was charged.
+  it("🔴 a provider that fails the way providers fail costs nothing, adds no attempt and says it failed", async () => {
+    const failing: StreamEvent[] = [usage, { type: "done", stopReason: { kind: "error", error: "upstream unavailable" } }];
+    const s = setup({ script: [failing, failing, failing] });
+    const finished: string[] = [];
+    expect(await groupOne(PAIR, { ...s.deps, recorder: () => ({ onCall: () => {}, onStepTools: () => {}, finish: (e) => void finished.push(e.endReason) }) })).toBe("failed");
+    expect(s.saves).toHaveLength(0);
+    expect(s.charges).toHaveLength(0);
+    expect(s.spends).toHaveLength(0);
+    expect(s.notices).toHaveLength(0);
+    expect(finished).toEqual(["error"]);
+  });
+
   it("🔴 any other tool is refused: nothing runs but group_requests", async () => {
     const s = setup({ script: [call("Write", { file_path: "/index.html", content: "x" }), call("group_requests", { groups: [], discard: [1, 2] })] });
     await groupOne(PAIR, s.deps);
