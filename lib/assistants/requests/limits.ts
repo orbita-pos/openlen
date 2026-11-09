@@ -15,6 +15,10 @@ export const GROUP_BATCH = 40;
 export const GROUPS_PER_PASS = 20;
 /** A pair is grouped once its oldest waiting request is this old: a burst of visitors ends on one card. */
 export const GROUP_QUIET_MS = 600_000;
+/** An asleep owner's pair (no credits, no room in the cap) steps aside this long, so it can't fill every pass. */
+export const GROUP_ASLEEP_RETRY_MS = 3_600_000;
+/** A pair whose grouping failed steps aside this long. */
+export const GROUP_FAILED_RETRY_MS = 1_800_000;
 /** How often the pass runs. */
 export const GROUP_PASS_MS = 300_000;
 /** A request no grouping placed this many times is discarded. */

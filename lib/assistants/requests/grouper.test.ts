@@ -20,7 +20,7 @@ const done: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
 const usage: StreamEvent = { type: "usage", inputTokens: 900, outputTokens: 40, cachedTokens: 0, thinkingTokens: 0 };
 const call = (name: string, args: Record<string, unknown>): StreamEvent[] => [{ type: "function_call", name, args }, usage, done];
 
-const req = (id: string, text: string, locale = "es"): RequestRow => ({ id, assistantId: "a1", projectId: "p1", visitorId: `vid-${id}`, text, locale, at: NOW, cardId: null, attempts: 0, discardedAt: null });
+const req = (id: string, text: string, locale = "es"): RequestRow => ({ id, assistantId: "a1", projectId: "p1", visitorId: `vid-${id}`, text, locale, at: NOW, cardId: null, attempts: 0, groupAfter: null, discardedAt: null });
 const card = (id: string, o: Partial<RequestCardRow> = {}): RequestCardRow => ({
   id,
   assistantId: "a1",
