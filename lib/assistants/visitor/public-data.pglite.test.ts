@@ -39,8 +39,8 @@ describe("PUBLIC_TABLES_SQL", () => {
       rows: res.rows as unknown as unknown[][],
       truncated: false,
     }));
-    expect(out.map((t) => t.name)).toEqual(["huecos", "menu", "precios"]);
-    expect(out.find((t) => t.name === "huecos")!.columns).toEqual([
+    expect(out!.map((t) => t.name)).toEqual(["huecos", "menu", "precios"]);
+    expect(out!.find((t) => t.name === "huecos")!.columns).toEqual([
       { name: "dia", type: "date" },
       { name: "hora", type: "time without time zone" },
       { name: "libre", type: "boolean" },

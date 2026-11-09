@@ -29,15 +29,18 @@ describe("publicDataOf", () => {
     const query = async () => rows(Array.from({ length: 40 }, (_, i) => [`t${i}`, many]));
     const out = await publicDataOf("p1", query);
     expect(out).toHaveLength(PUBLIC_DATA_MAX_TABLES);
-    expect(out[0]!.columns).toHaveLength(PUBLIC_DATA_MAX_COLUMNS);
+    expect(out![0]!.columns).toHaveLength(PUBLIC_DATA_MAX_COLUMNS);
     expect(PUBLIC_DATA_MAX_TABLES).toBe(30);
     expect(PUBLIC_DATA_MAX_COLUMNS).toBe(40);
   });
 
-  it("no backend, no production or a failing query: nothing public", async () => {
+  it("no backend or no production: nothing public", async () => {
     expect(await publicDataOf("p1", async () => null)).toEqual([]);
     expect(await publicDataOf("p1", async () => ({ kind: "no_live" as const }))).toEqual([]);
-    expect(await publicDataOf("p1", async () => ({ kind: "error" as const, message: "boom" }))).toEqual([]);
-    expect(await publicDataOf("p1", async () => { throw new Error("cluster down"); })).toEqual([]);
+  });
+
+  it("🔴 a failing query is «don't know» (null), not «nothing public»: what she had stays", async () => {
+    expect(await publicDataOf("p1", async () => ({ kind: "error" as const, message: "boom" }))).toBeNull();
+    expect(await publicDataOf("p1", async () => { throw new Error("cluster down"); })).toBeNull();
   });
 });
