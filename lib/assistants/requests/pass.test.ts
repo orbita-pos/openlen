@@ -13,6 +13,7 @@ function setup(o: { pairs?: number; fail?: Set<string>; hold?: Promise<void>; ou
   let clock = NOW.getTime();
   const asked: { quietBefore: Date; limit: number; now: Date }[] = [];
   const deferred: [string, Date][] = [];
+  const reopened: Date[] = [];
   const grouped: string[] = [];
   const pruned: Date[] = [];
   const pairs = Array.from({ length: o.pairs ?? 3 }, (_, i) => ({ assistantId: `a${i}`, projectId: `p${i}` }));
@@ -32,8 +33,9 @@ function setup(o: { pairs?: number; fail?: Set<string>; hold?: Promise<void>; ou
     },
     pruneRequests: async (now) => void pruned.push(now),
     deferGroup: async (pair, until) => void deferred.push([pair.assistantId, until]),
+    reopenInterrupted: async (before) => (reopened.push(before), 0),
   };
-  return { deps, asked, grouped, pruned, deferred, advance: (ms: number) => (clock += ms) };
+  return { deps, asked, grouped, pruned, deferred, reopened, advance: (ms: number) => (clock += ms) };
 }
 
 describe("groupingPass", () => {
@@ -58,6 +60,15 @@ describe("groupingPass", () => {
       ["a1", new Date(NOW.getTime() + GROUP_FAILED_RETRY_MS)],
       ["a2", new Date(NOW.getTime() + GROUP_FAILED_RETRY_MS)],
     ]);
+  });
+
+  it("🔴 the first pass puts back what a restart cut, once", async () => {
+    const s = setup();
+    const boot = new Date(NOW.getTime() - 30_000);
+    const state = newPassState(boot);
+    await groupingPass(s.deps, state);
+    await groupingPass(s.deps, state);
+    expect(s.reopened).toEqual([boot]);
   });
 
   it("prunes at most once a day", async () => {

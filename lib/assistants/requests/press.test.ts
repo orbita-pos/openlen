@@ -75,7 +75,7 @@ async function store_assistant(id: string) {
 
 async function aCardFromAPass(): Promise<string> {
   for (const [i, text] of HOSTILE.entries()) await store.noteRequest({ assistantId: lucia, projectId: "p1", visitorId: `vid-${i}`, text, locale: "es", at: NOW });
-  await groupingPass({ now: () => LATER, pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair, grouper()), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup }, newPassState());
+  await groupingPass({ now: () => LATER, pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair, grouper()), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup, reopenInterrupted: store.reopenInterruptedCards }, newPassState());
   const [card] = await store.requestCardsOfAssistant(lucia, LATER);
   return card!.id;
 }
@@ -153,6 +153,14 @@ describe("pressRequestCard", () => {
     expect(card).toMatchObject({ status: "pending", failure: "no_credits" });
     // And it can be pressed again.
     expect(await pressRequestCard({ assistant: { id: lucia, name: "Lucía" }, cardId, action: "accept", actorId: "u1" }, pressDeps())).toMatchObject({ ok: true, status: "accepted" });
+  });
+
+  it("🔴 the owner's name is read before deciding: a failure there never strands the card", async () => {
+    const cardId = await aCardFromAPass();
+    const deps = { ...pressDeps(), nameOf: async () => Promise.reject(new Error("db hiccup")) };
+    const r = await pressRequestCard({ assistant: { id: lucia, name: "Lucía" }, cardId, action: "accept", actorId: "u1" }, deps);
+    expect(r).toMatchObject({ ok: true, status: "accepted" });
+    expect(base.launched).toHaveLength(1);
   });
 
   it("dismiss launches nothing", async () => {

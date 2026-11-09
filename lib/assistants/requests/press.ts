@@ -45,6 +45,8 @@ export async function pressRequestCard(
 ): Promise<PressResult> {
   const d = deps ?? (await defaultPressDeps());
   const now = d.now();
+  // Before deciding: once the card is accepted nothing may fail before its turn is queued (final review I3).
+  const actorName = o.action === "accept" ? await d.nameOf(o.actorId).catch(() => "The owner") : "";
   const card = await d.decide(o.cardId, o.assistant.id, o.action, o.actorId, now);
   if (!card) return { ok: false, reason: "not_pending" };
   if (o.action === "dismiss") return { ok: true, status: "dismissed" };
@@ -55,7 +57,7 @@ export async function pressRequestCard(
     userId: o.actorId,
     projectId: card.projectId,
     texto: text,
-    framing: requestFraming({ assistantName: o.assistant.name, actorName: await d.nameOf(o.actorId), at: now.toISOString(), title: card.title, visitors: card.visitors }),
+    framing: requestFraming({ assistantName: o.assistant.name, actorName, at: now.toISOString(), title: card.title, visitors: card.visitors }),
     origin,
     timeZone: o.timeZone ?? "UTC",
     locale: card.locale,
