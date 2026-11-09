@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}: {title}",
       "emailText": "{name} noted something your visitors asked for that couldn't be done:\n\n{title} — {visitors}\n\nOpen it to have Len do it, or leave it for later: {url}",
       "turnPrompt": "💬 From {name}: {title}",
-      "visitors": "{count, plural, one {# visitor asked} other {# visitors asked}}"
+      "visitors": "{count, plural, one {# visitor asked} other {# visitors asked}}",
+      "from": "From {name}",
+      "doIt": "Have Len do it",
+      "notNow": "Not now",
+      "done": "Passed to Len",
+      "dismissed": "Set aside",
+      "failed": "It couldn't be done. Try again.",
+      "noCredits": "Not enough credits for Len to do it. Top up and try again.",
+      "tab": "Requests",
+      "empty": "What your visitors ask for and {name} can't do will show up here.",
+      "openChat": "See Len in the chat",
+      "earlier": "Earlier requests"
     }
   }
 }

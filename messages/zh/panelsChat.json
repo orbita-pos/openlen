@@ -783,7 +783,18 @@
       "emailSubject": "💬 {name}：{title}",
       "emailText": "{name} 记下了客户提出但无法完成的请求：\n\n{title} — {visitors}\n\n打开它让 Len 来处理，或稍后再看：{url}",
       "turnPrompt": "💬 来自 {name}：{title}",
-      "visitors": "{count, plural, other {# 位客户提出}}"
+      "visitors": "{count, plural, other {# 位客户提出}}",
+      "from": "来自 {name}",
+      "doIt": "让 Len 来做",
+      "notNow": "暂不处理",
+      "done": "已交给 Len",
+      "dismissed": "已搁置",
+      "failed": "没能完成，请重试。",
+      "noCredits": "积分不足，Len 无法处理。请充值后重试。",
+      "tab": "请求",
+      "empty": "客户提出而 {name} 无法完成的请求会显示在这里。",
+      "openChat": "在聊天中查看 Len",
+      "earlier": "之前的请求"
     }
   }
 }
