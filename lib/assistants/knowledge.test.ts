@@ -26,6 +26,15 @@ describe("knowledgeOf", () => {
     expect(knowledgeOf({ html: '<div id="root"></div>' } as unknown as ProjectData)).toBe("");
   });
 
+  // Final review I6: a members-only page reached anonymous visitors through her.
+  it("🔴 a members-only page is neither in what she knows nor in her pages", () => {
+    const data = { ...DATA, pages: { ...DATA.pages, socios: { title: "Socios", membersOnly: true, html: "<body><p>Descuento secreto: 40%.</p></body>" } } } as unknown as ProjectData;
+    const k = knowledgeOf(data);
+    expect(k).not.toContain("Descuento secreto");
+    expect(k).not.toContain("/socios");
+    expect(k).toContain("/pedidos (Pedidos)");
+  });
+
   it("is capped", () => {
     const big = { html: `<body><p>${"pan ".repeat(20_000)}</p></body>` } as unknown as ProjectData;
     expect(knowledgeOf(big).length).toBeLessThanOrEqual(KNOWLEDGE_MAX);
@@ -57,6 +66,14 @@ describe("rememberWhatWasPublished", () => {
     await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => tables });
     expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), tables);
     expect(switchOldOff).toHaveBeenCalledWith("p1");
+  });
+
+  // Final review (Minor 1, re-graded): a failed catalog read at publish wiped what she could read.
+  it("🔴 a failed read of the public data keeps what she had: null is passed, not []", async () => {
+    const save = vi.fn(async () => {});
+    const switchOldOff = vi.fn(async () => true);
+    await rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff, publicData: async () => null });
+    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), expect.any(Date), null);
   });
 
   it("never fails the publish: a save that throws is only logged", async () => {

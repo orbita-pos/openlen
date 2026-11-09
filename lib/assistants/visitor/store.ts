@@ -59,9 +59,10 @@ export async function setOnPage(projectId: string, assistantId: string, onPage: 
   return done.length > 0;
 }
 
-/** What a publish with her saves: the site's text and what its data shows anyone. */
-export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] = []): Promise<void> {
-  await db.update(ap).set({ knowledge: text, knowledgeAt: at, publicData }).where(eq(ap.projectId, projectId));
+/** What a publish with her saves: the site's text and what its data shows anyone; publicData null = it couldn't be
+ *  read this time, so what she had stays. */
+export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] | null = []): Promise<void> {
+  await db.update(ap).set({ knowledge: text, knowledgeAt: at, ...(publicData ? { publicData } : {}) }).where(eq(ap.projectId, projectId));
 }
 
 export async function visitOf(assistantId: string, projectId: string, visitorId: string): Promise<VisitRow | null> {

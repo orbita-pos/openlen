@@ -147,6 +147,16 @@ describe("on the page", () => {
     expect(again?.knowledgeAt).toBeNull();
   });
 
+  it("🔴 saving with publicData null keeps the public data she had", async () => {
+    const tables = [{ name: "huecos", columns: [{ name: "dia", type: "date" }] }];
+    await visitor.setOnPage("p1", lucia, true);
+    await visitor.saveKnowledge("p1", "Texto.", new Date(), tables);
+    await visitor.saveKnowledge("p1", "Texto nuevo.", new Date(), null);
+    const on = await visitor.assistantOnPage("p1");
+    expect(on?.knowledge).toBe("Texto nuevo.");
+    expect(on?.publicData).toEqual(tables);
+  });
+
   // Final review (Minor 2, re-graded Important): a stale second tab re-sending «on» hid her live bubble.
   it("🔴 «on» again while she is on keeps what she knows: her live bubble stays", async () => {
     await visitor.setOnPage("p1", lucia, true);

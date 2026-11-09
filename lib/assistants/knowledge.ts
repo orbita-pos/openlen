@@ -10,6 +10,13 @@ import { canAnswer } from "./visitor/on-page";
 /** As much as a visitor's turn carries of the business, in characters. */
 export const KNOWLEDGE_MAX = 24_000;
 
+/** The site as a stranger sees it: without its members-only pages (final review I6) — never in what she knows, never
+ *  in her links. */
+function publicSite(data: ProjectData): ProjectData {
+  const pages = Object.fromEntries(Object.entries(data.pages ?? {}).filter(([, p]) => !p.membersOnly));
+  return { ...data, pages };
+}
+
 /** The site's pages, as her visuals may link to them (phase 2B): `/` and each `/<slug>`, with its title. */
 function pagesLine(data: ProjectData): string {
   const pages = Object.entries(data.pages ?? {}).map(([slug, p]) => (p.title?.trim() ? `/${slug} (${p.title.trim()})` : `/${slug}`));
@@ -18,7 +25,8 @@ function pagesLine(data: ProjectData): string {
 
 /** The published site's text, after a line with its pages — only when there is text: an app's shell with none stays
  *  "" (she can't answer about nothing). */
-export function knowledgeOf(data: ProjectData): string {
+export function knowledgeOf(site: ProjectData): string {
+  const data = publicSite(site);
   const text = siteToText(data);
   if (!text.trim()) return "";
   return `${pagesLine(data)}\n\n${text}`.slice(0, KNOWLEDGE_MAX);
@@ -32,9 +40,10 @@ export async function rememberWhatWasPublished(
   data: ProjectData,
   at: Date,
   deps: {
-    save(projectId: string, text: string, at: Date, publicData: PublicTable[]): Promise<void>;
+    save(projectId: string, text: string, at: Date, publicData: PublicTable[] | null): Promise<void>;
     switchOldOff(projectId: string): Promise<boolean>;
-    publicData(projectId: string): Promise<PublicTable[]>;
+    /** null = couldn't be read this time: what she had stays. */
+    publicData(projectId: string): Promise<PublicTable[] | null>;
   },
 ): Promise<void> {
   try {
@@ -42,7 +51,7 @@ export async function rememberWhatWasPublished(
     const publicData = await deps.publicData(projectId);
     await deps.save(projectId, text, at, publicData);
     // With nothing for her to know she won't answer, so today's assistant keeps its settings.
-    if (canAnswer({ knowledge: text, publicData })) await deps.switchOldOff(projectId);
+    if (canAnswer({ knowledge: text, publicData: publicData ?? [] })) await deps.switchOldOff(projectId);
   } catch (err) {
     console.warn("[assistants] what was published wasn't saved for the page's own assistant", err);
   }

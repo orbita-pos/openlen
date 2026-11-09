@@ -43,12 +43,14 @@ function columnsOf(raw: unknown): { name: string; type: string }[] {
     .map((c) => ({ name: c.name, type: c.type }));
 }
 
-/** [] without a backend, without production (never published), or when the read fails: she just has no data. */
-export async function publicDataOf(projectId: string, query?: Query): Promise<PublicTable[]> {
+/** [] without a backend or without production (never published): she has no data. null when the read FAILS: «don't
+ *  know», so the publish keeps what she had instead of wiping it (final review). */
+export async function publicDataOf(projectId: string, query?: Query): Promise<PublicTable[] | null> {
   try {
     const run = query ?? (await import("@/lib/backend/live-read")).queryBackendReadOnly;
     const out = await run(projectId, "live", PUBLIC_TABLES_SQL);
-    if (!out || out.kind !== "rows") return [];
+    if (!out || out.kind === "no_live") return [];
+    if (out.kind !== "rows") return null;
     const name = out.columns.indexOf("table_name");
     const cols = out.columns.indexOf("columns");
     return out.rows
@@ -57,6 +59,6 @@ export async function publicDataOf(projectId: string, query?: Query): Promise<Pu
       .filter((t) => t.name && t.columns.length > 0);
   } catch (err) {
     console.warn("[assistants] what the page's data shows anyone couldn't be read", err);
-    return [];
+    return null;
   }
 }
