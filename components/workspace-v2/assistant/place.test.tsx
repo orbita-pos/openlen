@@ -131,7 +131,7 @@ describe("the assistant's place", () => {
 // HER PLACE'S CONTROLS (spec local 2026-11-06-asistente-propio, §4.4.5, §4.6.2, §6.2; phase 2A).
 describe("her place's controls", () => {
   const AT = "2026-11-07T18:00:00.000Z";
-  function serve(o: { patch?: unknown } = {}) {
+  function serve(o: { patch?: unknown; requests?: unknown[] } = {}) {
     const calls: { url: string; init?: RequestInit }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -142,6 +142,9 @@ describe("her place's controls", () => {
           return new Response(JSON.stringify({ visits: [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: true, lines: [{ role: "visitor", text: "¿Hacen envíos?", at: AT }, { role: "assistant", text: "Sólo en Guadalajara.", at: AT }] }] }));
         if (u.endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 1_200, cap: 12_500, explicit: null, max: 50_000 }));
         if (u.endsWith("/api/assistants/a1") && init?.method === "PATCH") return new Response(JSON.stringify(o.patch ?? { onPage: true, needsPublish: true }));
+        if (u.endsWith("/api/assistants/a1/requests")) return new Response(JSON.stringify({ cards: o.requests ?? [] }));
+        if (u.includes("/api/assistants/a1/requests/") && init?.method === "POST")
+          return new Response(JSON.stringify({ status: "accepted", rowId: "row-1", text: "💬 De Lucía: Envíos", origin: { kind: "assistant", assistantId: "a1", assistantName: "Lucía" }, projectId: "p1" }), { status: 202 });
         return new Response("{}", { status: 200 });
       }),
     );
@@ -154,7 +157,7 @@ describe("her place's controls", () => {
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
     const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
-    expect(tabs.map((t) => t.textContent)).toEqual(["ownAssistant.place.talk", "ownAssistant.place.conversations"]);
+    expect(tabs.map((t) => t.textContent)).toEqual(["ownAssistant.place.talk", "ownAssistant.place.conversations", "ownAssistant.requests.tab"]);
     act(() => tabs[1]!.click());
     await settle();
     const list = host.querySelector("[data-visitor-conversations]")!;
@@ -162,6 +165,61 @@ describe("her place's controls", () => {
     expect(list.textContent).toContain("Sólo en Guadalajara.");
     expect(list.textContent).toContain("ownAssistant.place.handedOff");
     expect(list.textContent).toContain('ownAssistant.place.budget {"spent":"12","cap":"125"}');
+  });
+
+  // Phase 3: what visitors asked for and couldn't be done (spec §4.6.2 «Pedidos»).
+  const request = (over: Record<string, unknown> = {}) => ({ id: "c1", projectId: "p1", projectTitle: "Pastelería", title: "Envíos a domicilio", visitors: 5, status: "pending", failure: null, acceptedRowId: null, createdAt: AT, lastAt: AT, decidedAt: null, ...over });
+  const openRequests = async (host: HTMLElement) => {
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    act(() => tabs[2]!.click());
+    await settle();
+    return host.querySelector("[data-visitor-requests]")!;
+  };
+
+  it("her place has a third tab, Pedidos", async () => {
+    const calls = serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect([...host.querySelectorAll('[role="tab"]')].map((t) => t.textContent)).toEqual(["ownAssistant.place.talk", "ownAssistant.place.conversations", "ownAssistant.requests.tab"]);
+    // Mounted only the first time it opens.
+    expect(calls.some((c) => c.url.endsWith("/api/assistants/a1/requests"))).toBe(false);
+    expect(await openRequests(host)).not.toBeNull();
+    expect(calls.some((c) => c.url.endsWith("/api/assistants/a1/requests"))).toBe(true);
+  });
+
+  it("waiting ones first, then what was decided", async () => {
+    serve({ requests: [request({ id: "c1", title: "Regalos", status: "dismissed", decidedAt: AT }), request({ id: "c2", title: "Envíos a domicilio" }), request({ id: "c3", title: "Reservas", status: "accepted", decidedAt: AT, acceptedRowId: "row-9" })] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const list = await openRequests(host);
+    const ids = [...list.querySelectorAll("[data-assistant-request-card]")].map((el) => el.getAttribute("data-assistant-request-card"));
+    expect(ids[0]).toBe("c2");
+    expect(ids.slice(1).sort()).toEqual(["c1", "c3"]);
+    expect(list.querySelector('[data-assistant-request-card="c2"] [data-request-do-it]')).not.toBeNull();
+    expect(list.querySelector('[data-assistant-request-card="c3"] [data-request-do-it]')).toBeNull();
+    expect(list.textContent).toContain('ownAssistant.place.inProject {"project":"Pastelería"}');
+  });
+
+  it("with none it says so", async () => {
+    serve({ requests: [] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect((await openRequests(host)).textContent).toContain('ownAssistant.requests.empty {"name":"Lucía"}');
+  });
+
+  it("🔴 the press from here reports where Len is working", async () => {
+    const calls = serve({ requests: [request()] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const list = await openRequests(host);
+    act(() => list.querySelector<HTMLButtonElement>("[data-request-do-it]")!.click());
+    await settle();
+    const post = calls.find((c) => c.init?.method === "POST")!;
+    expect(post.url).toBe("/api/assistants/a1/requests/c1");
+    expect(JSON.parse(String(post.init!.body))).toMatchObject({ action: "accept" });
+    const link = host.querySelector<HTMLAnchorElement>("[data-request-where]")!;
+    expect(link.getAttribute("href")).toBe("/es/new?project=p1&chat=1");
+    expect(link.textContent).toBe("ownAssistant.requests.openChat");
   });
 
   it("🔴 turning her on says it shows after publishing", async () => {

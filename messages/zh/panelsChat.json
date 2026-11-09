@@ -794,7 +794,8 @@
       "tab": "请求",
       "empty": "客户提出而 {name} 无法完成的请求会显示在这里。",
       "openChat": "在聊天中查看 Len",
-      "earlier": "之前的请求"
+      "earlier": "之前的请求",
+      "loadError": "无法加载请求。"
     }
   }
 }

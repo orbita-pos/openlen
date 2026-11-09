@@ -794,7 +794,8 @@
       "tab": "Requests",
       "empty": "What your visitors ask for and {name} can't do will show up here.",
       "openChat": "See Len in the chat",
-      "earlier": "Earlier requests"
+      "earlier": "Earlier requests",
+      "loadError": "Requests couldn't be loaded."
     }
   }
 }

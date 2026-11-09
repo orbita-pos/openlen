@@ -794,7 +794,8 @@
       "tab": "Demandes",
       "empty": "Ce que vos clients demandent et que {name} ne peut pas faire apparaîtra ici.",
       "openChat": "Voir Len dans le chat",
-      "earlier": "Demandes précédentes"
+      "earlier": "Demandes précédentes",
+      "loadError": "Les demandes n’ont pas pu être chargées."
     }
   }
 }
