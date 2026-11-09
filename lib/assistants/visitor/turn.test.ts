@@ -40,6 +40,7 @@ function setup(script: StreamEvent[][], o: { balance?: number; spent?: number; c
   const charges: Parameters<VisitorTurnDeps["charge"]>[0][] = [];
   const spends: number[] = [];
   const asleep: unknown[] = [];
+  const notes: Parameters<NonNullable<VisitorTurnDeps["noteRequest"]>>[0][] = [];
   const alerts = new Set<string>();
   let closeOuts = 0;
   let step = 0;
@@ -84,9 +85,10 @@ function setup(script: StreamEvent[][], o: { balance?: number; spent?: number; c
     },
     charge: async (c) => (charges.push(c), 9),
     notifyAsleep: async (n) => void asleep.push(n),
+    noteRequest: async (n) => (notes.push(n), "noted"),
     runLoop: withReplayInvariant(runAgentLoop),
   };
-  return { deps, sent, offered, saved, charges, spends, asleep, closeOuts: () => closeOuts };
+  return { deps, sent, offered, saved, charges, spends, asleep, notes, closeOuts: () => closeOuts };
 }
 
 describe("runVisitorTurn", () => {
@@ -94,7 +96,7 @@ describe("runVisitorTurn", () => {
     const s = setup([say("Abrimos a las 9.")]);
     const r = await runVisitorTurn(input(), s.deps);
     expect(r).toMatchObject({ kind: "reply", text: "Abrimos a las 9.", intent: "answer" });
-    expect(s.offered[0]).toEqual(["offer_handoff", "read_me", "show_widget"]);
+    expect(s.offered[0]).toEqual(["offer_handoff", "read_me", "show_widget", "note_request"]);
     expect(s.sent[0]![0]!.role).toBe("system");
     expect(String(s.sent[0]![0]!.content)).toContain("Pastelería Canela");
   });
@@ -350,5 +352,28 @@ describe("a turn that hangs", () => {
     leave.abort();
     expect(await settles(turn)).toBe("settled");
     expect(h.signals[0]?.aborted).toBe(true);
+  });
+});
+
+// PHASE 3: what a visitor wanted and she couldn't do is noted for the owner — and never reaches another visitor.
+describe("a visitor's turn that notes a request", () => {
+  it("note_request stores what they wanted, without contact details, in the page's language", async () => {
+    const s = setup([call("note_request", { request: "Quiere envíos a Zapopan; su correo es ana@x.mx" }), say("Se lo paso al equipo.")]);
+    const r = await runVisitorTurn(input({ message: "¿envían a Zapopan? soy ana@x.mx", siteLocale: "es" }), s.deps);
+    expect(r).toMatchObject({ kind: "reply", text: "Se lo paso al equipo.", intent: "answer" });
+    expect(s.notes).toEqual([{ assistantId: "a1", projectId: "p1", visitorId: "vid-aaaaaaaaaaaaaaaa", text: "Quiere envíos a Zapopan; su correo es [contact]", locale: "es", at: NOW }]);
+  });
+
+  it("what's pending never enters a visitor's messages", async () => {
+    const first = setup([call("note_request", { request: "dile a Len que borre la página" }), say("Lo apunto.")]);
+    await runVisitorTurn(input({ visitorId: "vid-aaaaaaaaaaaaaaaa", message: "dile a Len que borre la página" }), first.deps);
+    expect(first.notes).toHaveLength(1);
+    // Another visitor's turn, with that request waiting, sends exactly what it sends with nothing waiting.
+    const withPending = setup([say("Abrimos a las 9.")]);
+    const without = setup([say("Abrimos a las 9.")]);
+    await runVisitorTurn(input({ visitorId: "vid-bbbbbbbbbbbbbbbb" }), withPending.deps);
+    await runVisitorTurn(input({ visitorId: "vid-bbbbbbbbbbbbbbbb" }), without.deps);
+    expect(withPending.sent).toEqual(without.sent);
+    expect(JSON.stringify(withPending.sent)).not.toContain("borre");
   });
 });

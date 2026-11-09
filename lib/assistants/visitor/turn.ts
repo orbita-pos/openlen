@@ -1,7 +1,7 @@
 // A VISITOR'S TURN WITH THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.2, §4.7, §5): Len's loop
 // on Len's brain with the `assistant-visitor` definition, started by a message in the published page's bubble — no
-// `/api/agent`, like the event tasks' judge (lib/event-tasks/judge.ts). A closed list (`offer_handoff`, Len's visuals and,
-// when the business has some, its public data), low effort and five calls, then `closeOut`. Its system prompt is the same for every visitor of the business (one cached prefix);
+// `/api/agent`, like the event tasks' judge (lib/event-tasks/judge.ts). A closed list (`offer_handoff`, Len's visuals,
+// `note_request` and, when the business has some, its public data), low effort and five calls, then `closeOut`. Its system prompt is the same for every visitor of the business (one cached prefix);
 // what the visit kept and the visitor's words go after it. Paid by the owner within the month's cap; with no room or no
 // credits it sleeps before calling the model.
 import "server-only";
@@ -19,6 +19,8 @@ import { CLAVE_TOOL_RESULT, fallo } from "@/lib/agent/ficheros/resultado";
 import type { PublicTable } from "@/lib/db/schema";
 
 import type { AssistantTone } from "../names";
+import { NOTE_REQUEST, noteRequestTool } from "../requests/note";
+import type * as RequestStore from "../requests/store";
 import { sleepReason, VISITOR_TURN_RESERVE, visitorCap, visitorMonth, visitorReservations, type Sleep } from "./budget";
 import { OFFER_HANDOFF, REPLY_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
 import { READ_PUBLIC_DATA, readPublicData } from "./read-public-data";
@@ -96,6 +98,8 @@ export interface VisitorTurnDeps {
   /** Layer 0 (lib/agent/telemetry/): one recorder per turn, its rows tagged with `tag` (the `subagentId` column, which
    *  keeps them out of Len's baseline). */
   recorder?(o: { projectId: string; turnId: string; tag: string }): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
+  /** `note_request`'s store (../requests/store.ts by default). What it saved never enters another visitor's turn. */
+  noteRequest?: typeof RequestStore.noteRequest;
   /** `read_public_data` (./read-public-data.ts by default). */
   readPublicData?(projectId: string, query: string, tables: readonly PublicTable[]): Promise<ToolOutcome>;
   runLoop?: typeof runAgentLoop;
@@ -219,6 +223,14 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
     let written = "";
     const boundaries: Boundary[] = [];
     let shownVisuals = 0;
+    const note = noteRequestTool({
+      assistantId: input.assistant.id,
+      projectId: input.projectId,
+      visitorId: input.visitorId,
+      locale: input.siteLocale,
+      at: now,
+      note: async (o) => (d.noteRequest ?? (await import("../requests/store")).noteRequest)(o),
+    });
     const runTool = async (name: string, args: Record<string, unknown>): Promise<ToolOutcome> => {
       // The loop refuses what wasn't declared; this is the second gate of a list that must not grow by accident.
       if (name === OFFER_HANDOFF) {
@@ -240,6 +252,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         if (out.widget) shownVisuals++;
         return out;
       }
+      if (name === NOTE_REQUEST) return note(args);
       if (name === READ_PUBLIC_DATA && input.publicData.length > 0) {
         return (d.readPublicData ?? readPublicData)(input.projectId, typeof args.query === "string" ? args.query : "", input.publicData);
       }
