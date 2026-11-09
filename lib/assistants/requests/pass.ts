@@ -10,7 +10,7 @@ const DAY_MS = 86_400_000;
 export interface PassDeps {
   now(): Date;
   pendingGroups(quietBefore: Date, limit: number): Promise<{ assistantId: string; projectId: string }[]>;
-  groupOne(pair: { assistantId: string; projectId: string }): Promise<"grouped" | "asleep" | "nothing">;
+  groupOne(pair: { assistantId: string; projectId: string }): Promise<"grouped" | "asleep" | "failed" | "nothing">;
   pruneRequests(now: Date): Promise<void>;
 }
 
