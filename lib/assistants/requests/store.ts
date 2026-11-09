@@ -169,3 +169,61 @@ export async function pruneRequests(now: Date): Promise<void> {
     await tx.delete(c).where(stale);
   });
 }
+
+// THE OWNER'S PRESS (./press.ts): «Que Len lo haga» or «Ahora no», once, whoever presses first.
+
+/** How long a decided card stays in the project's chat, like an event task's (lib/event-tasks/actions/types.ts). */
+const CHAT_WINDOW_DAYS = 7;
+/** How long a decided card stays in her «Pedidos». */
+const PLACE_WINDOW_DAYS = 30;
+
+/** Compare-and-swap on `pending`, for that assistant's card only: null when it was already decided or isn't hers. A
+ *  card that comes back to waiting after a failed start loses its failure when pressed again. */
+export async function decideCard(cardId: string, assistantId: string, action: "accept" | "dismiss", actorId: string, now: Date): Promise<RequestCardRow | null> {
+  const [card] = await db
+    .update(c)
+    .set({ status: action === "accept" ? "accepted" : "dismissed", decidedBy: actorId, decidedAt: now, failure: null })
+    .where(and(eq(c.id, cardId), eq(c.assistantId, assistantId), eq(c.status, "pending")))
+    .returning();
+  return card ?? null;
+}
+
+export async function setAcceptedRow(cardId: string, rowId: string): Promise<void> {
+  await db.update(c).set({ acceptedRowId: rowId }).where(eq(c.id, cardId));
+}
+
+/** The Len turn an accepted card launched couldn't start (no credits, the queue, an error): it waits again, saying why.
+ *  Only from `accepted`: a card set aside stays set aside. */
+export async function reopenCard(cardId: string, failure: string): Promise<void> {
+  await db
+    .update(c)
+    .set({ status: "pending", failure: failure.slice(0, 200), decidedAt: null, decidedBy: null, acceptedRowId: null })
+    .where(and(eq(c.id, cardId), eq(c.status, "accepted")));
+}
+
+const shown = (now: Date, days: number) => or(eq(c.status, "pending"), gte(c.decidedAt, new Date(now.getTime() - days * DAY)));
+
+/** Her «Pedidos»: the waiting cards, and those decided in the last 30 days, with each project's name; newest first. */
+export async function requestCardsOfAssistant(assistantId: string, now: Date): Promise<(RequestCardRow & { projectTitle: string | null })[]> {
+  const rows = await db
+    .select({ card: c, projectTitle: schema.projects.title })
+    .from(c)
+    .leftJoin(schema.projects, eq(schema.projects.id, c.projectId))
+    .where(and(eq(c.assistantId, assistantId), shown(now, PLACE_WINDOW_DAYS)))
+    .orderBy(desc(c.lastAt), desc(c.createdAt))
+    .limit(100);
+  return rows.map((r) => ({ ...r.card, projectTitle: r.projectTitle ?? null }));
+}
+
+/** A project's cards for Len's chat: the waiting ones, and those decided in the last 7 days, with whose assistant they
+ *  are (her name and her person: only that person sees them); newest first. */
+export async function requestCardsOfProject(projectId: string, now: Date): Promise<(RequestCardRow & { assistantName: string; personId: string })[]> {
+  const rows = await db
+    .select({ card: c, assistantName: schema.assistants.name, personId: schema.assistants.personId })
+    .from(c)
+    .innerJoin(schema.assistants, eq(schema.assistants.id, c.assistantId))
+    .where(and(eq(c.projectId, projectId), shown(now, CHAT_WINDOW_DAYS)))
+    .orderBy(desc(c.lastAt), desc(c.createdAt))
+    .limit(50);
+  return rows.map((r) => ({ ...r.card, assistantName: r.assistantName, personId: r.personId }));
+}
