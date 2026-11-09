@@ -212,6 +212,19 @@ export async function reopenCard(cardId: string, failure: string): Promise<void>
     .where(and(eq(c.id, cardId), eq(c.status, "accepted")));
 }
 
+/** What a restart cut (final review I3): «Que Len lo haga» queues Len's turn in this process's memory, so a card
+ *  accepted before `before` (the process's start) whose turn never started (`acceptedRowId` null) lost it. It waits
+ *  again, saying it was interrupted, and can be pressed again — as an event task's card is resumed
+ *  (lib/event-tasks/actions/resume.ts). */
+export async function reopenInterruptedCards(before: Date): Promise<number> {
+  const back = await db
+    .update(c)
+    .set({ status: "pending", failure: "interrupted", decidedAt: null, decidedBy: null })
+    .where(and(eq(c.status, "accepted"), isNull(c.acceptedRowId), lt(c.decidedAt, before)))
+    .returning({ id: c.id });
+  return back.length;
+}
+
 const shown = (now: Date, days: number) => or(eq(c.status, "pending"), gte(c.decidedAt, new Date(now.getTime() - days * DAY)));
 
 /** Her «Pedidos»: the waiting cards, and those decided in the last 30 days, with each project's name; newest first. */

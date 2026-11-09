@@ -14,16 +14,25 @@ export interface PassDeps {
   pruneRequests(now: Date): Promise<void>;
   /** An asleep or failing pair steps aside, so the oldest pairs can't fill every pass (final review I2). */
   deferGroup(pair: { assistantId: string; projectId: string }, until: Date): Promise<void>;
+  /** Cards a restart cut before their turn started wait again (final review I3); how many. */
+  reopenInterrupted(before: Date): Promise<number>;
 }
 
 export interface PassState {
   running: boolean;
   /** When this process last pruned, in ms; 0 = never. */
   lastPrune: number;
+  /** When this process started: what was accepted before it and never started was cut by the restart. */
+  readonly bootAt: Date;
+  /** The first pass put those back. */
+  reopened: boolean;
 }
 
-export function newPassState(): PassState {
-  return { running: false, lastPrune: 0 };
+/** This process's start, not this module's load: a card accepted in the seconds before the pass loads is this process's. */
+const processStart = () => new Date(Date.now() - process.uptime() * 1000);
+
+export function newPassState(bootAt: Date = processStart()): PassState {
+  return { running: false, lastPrune: 0, bootAt, reopened: false };
 }
 
 /** One pass: how many pairs were grouped. A pass while another runs does nothing. */
@@ -32,6 +41,11 @@ export async function groupingPass(deps: PassDeps, state: PassState): Promise<nu
   state.running = true;
   try {
     const now = deps.now();
+    if (!state.reopened) {
+      state.reopened = true;
+      const n = await deps.reopenInterrupted(state.bootAt).catch((err: unknown) => (console.error("[assistant-requests] cut presses couldn't be put back", err), 0));
+      if (n > 0) console.log(`[assistant-requests] ${n} card(s) a restart cut wait for their owner again`);
+    }
     let grouped = 0;
     const pairs = await deps.pendingGroups(new Date(now.getTime() - GROUP_QUIET_MS), GROUPS_PER_PASS, now);
     const stepAside = (pair: { assistantId: string; projectId: string }, ms: number) =>
@@ -60,7 +74,7 @@ export async function groupingPass(deps: PassDeps, state: PassState): Promise<nu
 
 async function defaultPassDeps(): Promise<PassDeps> {
   const [store, { groupOne }] = await Promise.all([import("./store"), import("./grouper")]);
-  return { now: () => new Date(), pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup };
+  return { now: () => new Date(), pendingGroups: store.pendingGroups, groupOne: (pair) => groupOne(pair), pruneRequests: store.pruneRequests, deferGroup: store.deferGroup, reopenInterrupted: store.reopenInterruptedCards };
 }
 
 let started: { stop(): void } | null = null;

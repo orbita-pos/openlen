@@ -253,6 +253,24 @@ describe("deciding", () => {
     expect((await requests.requestCardsOfAssistant(lucia, NOW)).find((c) => c.id === dismissed.id)).toMatchObject({ status: "dismissed", failure: null });
   });
 
+  // Final review I3: «Que Len lo haga» queues the turn in memory; a restart before it starts lost it, and the card stayed
+  // «Pasado a Len» with no turn and no way to press it again.
+  it("🔴 a card accepted before a restart whose turn never started waits again; one whose turn started, or accepted since, stays", async () => {
+    const cut = await aCard("p1", "Envíos");
+    const started = await aCard("p1", "Reservas");
+    const since = await aCard("p1", "Regalos");
+    const before = new Date(NOW.getTime() - 60_000);
+    await requests.decideCard(cut.id, lucia, "accept", "u1", before);
+    await requests.decideCard(started.id, lucia, "accept", "u1", before);
+    await requests.setAcceptedRow(started.id, "row-1");
+    await requests.decideCard(since.id, lucia, "accept", "u1", NOW);
+    expect(await requests.reopenInterruptedCards(new Date(NOW.getTime() - 1000))).toBe(1);
+    const byId = new Map((await requests.requestCardsOfAssistant(lucia, NOW)).map((c) => [c.id, c]));
+    expect(byId.get(cut.id)).toMatchObject({ status: "pending", failure: "interrupted" });
+    expect(byId.get(started.id)).toMatchObject({ status: "accepted", acceptedRowId: "row-1" });
+    expect(byId.get(since.id)).toMatchObject({ status: "accepted", failure: null });
+  });
+
   it("her cards: the waiting ones, and what was decided in the last 30 days, with each project's name", async () => {
     const waiting = await aCard("p1", "Envíos");
     const old = await aCard("p2", "Regalos");
