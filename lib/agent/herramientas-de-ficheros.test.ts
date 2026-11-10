@@ -17,7 +17,7 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
 import { READ_ONLY_REFUSAL, cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
-import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
+import { cerrarTerminalDeLaSesion, readOnlyBytesForBox, readOnlyForBox } from "./terminal/herramienta";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
@@ -3517,5 +3517,17 @@ describe("her other projects' folders (phase 4B)", () => {
     } finally {
       await cerrarTerminalDeLaSesion(s);
     }
+  });
+
+  // Phase 4C, the box: another project's text goes up as read-only text; a binary as its bytes, never its pointer's text.
+  it("🔴 in her box, another project's pages go up as text and its binaries as bytes", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-box-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const text = await readOnlyForBox(hers(), deps);
+    assert.match(text[`${P2}/index.html`] ?? "", /Canela Tienda/);
+    assert.equal(`${P2}/img/portada.png` in text, false);
+    const bytes = await readOnlyBytesForBox(hers(), deps);
+    assert.equal(bytes[`${P2}/img/portada.png`]?.byteLength, PNG.byteLength);
   });
 });

@@ -18,8 +18,10 @@ import {
   diagnosticosDeFuncionesTrasEscribir,
   diagnosticosDeLaAppTrasEscribir,
   guardarLoDeLaTerminal,
+  servedFilesForTerminal,
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
+import { parsePointer } from "@/lib/files/blob-pointer";
 import { MAX_SALIDA, cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
@@ -271,7 +273,7 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
     local,
     projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
     readOnly: () => readOnlyForBox(session, deps),
-    readOnlyBytes: () => attachmentsForBox(session, deps),
+    readOnlyBytes: () => readOnlyBytesForBox(session, deps),
     bridge: () => bridgeHandlersFor(session, deps),
     network: () => boxNetworkOf(session),
     baseEnv: () => boxBaseEnvOf(session),
@@ -363,7 +365,33 @@ export async function attachmentsForBox(session: AgentSession, deps: AgentDeps):
 /** What each turn already downloaded of its attachments, by path. */
 const BYTES_OF_THE_TURN = new WeakMap<AgentSession, Map<string, Uint8Array>>();
 
-async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+/** What the box gets as bytes, read-only: the attachments, and (phase 4C) the binaries of the other projects the
+ *  person's own assistant serves — a blob never changes (its pointer carries its hash), so each turn fetches one once —
+ *  within the read-only cap. */
+export async function readOnlyBytesForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, Uint8Array>> {
+  const out = await attachmentsForBox(session, deps);
+  let got = BLOBS_OF_THE_TURN.get(session);
+  if (!got) BLOBS_OF_THE_TURN.set(session, (got = new Map()));
+  const cache = got;
+  let total = 0;
+  for (const [ruta, contenido] of Object.entries(await servedFilesForTerminal(session, deps).catch(() => ({}) as Record<string, string>))) {
+    const ref = parsePointer(contenido);
+    if (!ref || total + ref.size > MAX_SOLO_LECTURA_EN_LA_CAJA) continue;
+    const bytes = cache.get(contenido) ?? (await (await import("@/lib/files/blob")).getBlob(contenido).catch(() => null));
+    if (!bytes) continue;
+    cache.set(contenido, bytes);
+    total += bytes.byteLength;
+    out[ruta] = bytes;
+  }
+  return out;
+}
+
+/** The other projects' blobs each turn already fetched, by pointer. */
+const BLOBS_OF_THE_TURN = new WeakMap<AgentSession, Map<string, Uint8Array>>();
+
+/** What the box gets as text, read-only. A binary among it (another project's, phase 4C) goes as bytes instead,
+ *  by `readOnlyBytesForBox`: never its pointer's text. */
+export async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
   const sl = await soloLecturaDeLaTerminal(session, deps);
   const rutas = sl.rutas.filter((r) => !NEVER_IN_BOX.test(r));
   const esVersion = (r: string) => r.startsWith("/.openlen/versiones/");
@@ -376,6 +404,8 @@ async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<R
     } catch {
       continue;
     }
+    // A binary goes as bytes (`readOnlyBytesForBox`), never as its pointer's text.
+    if (parsePointer(texto)) continue;
     const peso = Buffer.byteLength(texto, "utf8");
     if (total + peso > MAX_SOLO_LECTURA_EN_LA_CAJA) continue;
     total += peso;
