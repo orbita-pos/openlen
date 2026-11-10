@@ -182,6 +182,25 @@ describe("her place's controls", () => {
     return document.querySelector<HTMLElement>("[data-her-projects]")!;
   };
 
+  // Phase 4E: seeing them marks them read, as the page's inbox does, so `list_messages` in her chat counts what's new.
+  it("🔴 seeing her conversations marks the shown ids read, once — not before they are shown", async () => {
+    const calls = serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const reads = () => calls.filter((c) => c.url.endsWith("/api/assistants/a1/visits/read"));
+    expect(reads()).toHaveLength(0);
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    act(() => tabs[1]!.click());
+    await settle();
+    expect(reads()).toHaveLength(1);
+    expect(reads()[0]!.init?.method).toBe("POST");
+    expect(JSON.parse(String(reads()[0]!.init?.body))).toEqual({ ids: ["v1"] });
+    act(() => tabs[0]!.click());
+    act(() => tabs[1]!.click());
+    await settle();
+    expect(reads()).toHaveLength(1);
+  });
+
   it("with one project her place looks as before", async () => {
     serve({ projects: [HOME] });
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);

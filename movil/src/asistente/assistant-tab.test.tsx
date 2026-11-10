@@ -6,9 +6,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, unknown>) => (v ? `${k} ${JSON.stringify(v)}` : k) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
-vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn() }));
+vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn(), marcarSusVisitasLeidas: vi.fn() }));
 
-import { leerSusPedidos, leerSusVisitas, tocarPedido } from "../api/asistente";
+import { leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
 import { AssistantTab } from "./assistant-tab";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -29,6 +29,7 @@ async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarje
   vi.mocked(leerSusVisitas).mockResolvedValue([VISIT] as never);
   vi.mocked(leerSusPedidos).mockResolvedValue((o.cards ?? [CARD]) as never);
   vi.mocked(tocarPedido).mockResolvedValue({ ok: true });
+  vi.mocked(marcarSusVisitasLeidas).mockResolvedValue(true);
   Element.prototype.scrollIntoView = vi.fn();
   const host = document.createElement("div");
   document.body.appendChild(host);
@@ -41,6 +42,26 @@ async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarje
   return host;
 }
 const click = (el: Element | null) => act(async () => (el as HTMLElement).click());
+
+describe("AssistantTab marks what it shows as read (phase 4E)", () => {
+  it("🔴 marks them read when «Conversaciones» is on screen, once", async () => {
+    await paint();
+    expect(marcarSusVisitasLeidas).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(marcarSusVisitasLeidas).mock.calls[0]!.slice(1)).toEqual(["a1", ["v1"]]);
+  });
+
+  it("🔴 not when the tab opens on «Pedidos» or under her chat; tapping «Conversaciones» marks them", async () => {
+    const host = await paint({ parte: "pedidos" });
+    expect(marcarSusVisitasLeidas).not.toHaveBeenCalled();
+    await click(host.querySelector('[data-asistente-parte="conversaciones"]'));
+    expect(marcarSusVisitasLeidas).toHaveBeenCalledTimes(1);
+    vi.mocked(marcarSusVisitasLeidas).mockClear();
+    const under = await paint({ parte: "hablar" });
+    expect(marcarSusVisitasLeidas).not.toHaveBeenCalled();
+    await click(under.querySelector('[data-asistente-parte="conversaciones"]'));
+    expect(marcarSusVisitasLeidas).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe("AssistantTab", () => {
   it("🔴 «Hablar con» asks the main screen to open her chat; the tab holds no chat of its own", async () => {

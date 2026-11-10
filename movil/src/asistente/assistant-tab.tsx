@@ -4,14 +4,14 @@
 // said, read-only) and «Pedidos» (what they asked for and she couldn't do, with the web's «Que Len lo haga» / «Ahora no»,
 // why Len couldn't start one, and «Ver a Len en el chat» for one passed to him). The phone uses her and never manages
 // her: renaming her or her morning summary stay on the web, as with Herramientas. Her notices open it on their part.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { AssistantListItem } from "@/lib/assistants/view";
 
 import { useAtras } from "../atras";
-import { leerSusPedidos, leerSusVisitas, tocarPedido } from "../api/asistente";
+import { leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import "../gestion/gestion.css";
 import "../overview/overview.css";
@@ -81,6 +81,16 @@ export function AssistantTab({
     void recargarPedidos();
   }, [cliente, asistente.id, intento, recargarPedidos, fallo]);
 
+  // Phase 4E: her conversations on screen are read, as on the web — so `list_messages` in her chat counts what's new.
+  // Opened on «Pedidos», or under her chat (a notice of her turn), they aren't on screen until «Conversaciones» is tapped.
+  const [aLaVista, setALaVista] = useState(parte !== "pedidos" && parte !== "hablar");
+  const marcadas = useRef(false);
+  useEffect(() => {
+    if (!aLaVista || vista !== "conversaciones" || !visitas?.length || marcadas.current) return;
+    marcadas.current = true;
+    void marcarSusVisitasLeidas(cliente, asistente.id, visitas.slice(0, 50).map((v) => v.id));
+  }, [aLaVista, vista, visitas, cliente, asistente.id]);
+
   const tocar = async (cardId: string, accion: "accept" | "dismiss") => {
     setOcupado(true);
     setRechazado(null);
@@ -120,7 +130,17 @@ export function AssistantTab({
             </button>
             <div role="tablist" className="asist-partes">
               {(["conversaciones", "pedidos"] as const).map((k) => (
-                <button key={k} type="button" role="tab" aria-selected={vista === k} data-asistente-parte={k} onClick={() => setVista(k)}>
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={vista === k}
+                  data-asistente-parte={k}
+                  onClick={() => {
+                    setVista(k);
+                    if (k === "conversaciones") setALaVista(true);
+                  }}
+                >
                   {k === "conversaciones" ? t("own.place.conversations") : t("own.requests.tab")}
                 </button>
               ))}
