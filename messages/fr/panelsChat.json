@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Résumé du matin",
-      "hint": "À 8 h, seulement s'il s'est passé quelque chose hier."
+      "hint": "À 8 h, seulement s'il s'est passé quelque chose hier.",
+      "talkedWith": "{count, plural, one {j’ai parlé avec # personne} other {j’ai parlé avec # personnes}}",
+      "contacts": "{count, plural, one {# vous a laissé son contact} other {# vous ont laissé leur contact}}",
+      "requests": "{count, plural, one {# a demandé quelque chose que je n’ai pas pu faire} other {# ont demandé quelque chose que je n’ai pas pu faire}}",
+      "push": "Hier, {list}.",
+      "emailSubject": "{name} : ce qui s’est passé hier",
+      "emailText": "{push}\n\nÀ voir dans l’espace de {name} : {url}"
     }
   }
 }

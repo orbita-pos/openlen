@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "朝のまとめ",
-      "hint": "前日に何かあったときだけ、朝8時にお知らせします。"
+      "hint": "前日に何かあったときだけ、朝8時にお知らせします。",
+      "talkedWith": "{count, plural, other {会話 #人}}",
+      "contacts": "{count, plural, other {連絡先 #件}}",
+      "requests": "{count, plural, other {対応できなかった依頼 #件}}",
+      "push": "昨日：{list}",
+      "emailSubject": "{name}：昨日のまとめ",
+      "emailText": "{push}\n\n{name}のページで確認：{url}"
     }
   }
 }

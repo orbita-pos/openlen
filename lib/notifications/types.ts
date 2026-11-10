@@ -87,6 +87,25 @@ export interface AssistantAsleepEvent {
   cap: number;
 }
 
+/** THE PERSON'S OWN ASSISTANT'S MORNING SUMMARY (spec local 2026-11-06-asistente-propio, §6.9; phase 4D): at 8 in the
+ *  owner's zone, what happened yesterday, only when something did. Counts, no model. Its texts come written, in the
+ *  language it was turned on in; push and, if no push went, email. `assistantId` rides to the phone (phase 5). */
+export interface AssistantSummaryEvent {
+  type: "assistant_summary";
+  /** Her home. */
+  projectId: string;
+  recipientUserId: string;
+  assistantId: string;
+  assistantName: string;
+  assistantSlug: string;
+  locale: string;
+  title: string;
+  /** One line under 200 characters. */
+  push: string;
+  emailSubject: string;
+  emailText: string;
+}
+
 /** PROJECT EMAIL: a project's sending domain became ready, or stopped verifying
  *  (spec local 2026-10-22-email-integration, 6.1). Push and email. */
 export interface EmailDomainEvent {
@@ -142,7 +161,7 @@ export interface LenAvisoEvent {
   emailText: string;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent;
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent | AssistantSummaryEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

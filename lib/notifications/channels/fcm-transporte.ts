@@ -31,8 +31,16 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "len_watch": title = evento.title; body = evento.body; break;
     case "len_aviso": title = evento.title; body = evento.push; break;
     case "assistant_asleep": ({ title, body } = asleepPush(evento)); break;
+    case "assistant_summary": title = evento.title; body = evento.push; break;
   }
-  const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {};
+  const abrir =
+    evento.type === "len_turno" && evento.abrir
+      ? { abrir: evento.abrir }
+      : evento.type === "len_aviso"
+        ? { tarjeta: evento.cardId }
+        : evento.type === "assistant_summary"
+          ? { asistente: evento.assistantId }
+          : {};
   // The person's own assistant's notification sits beside Len's for the same project, never replaces it.
   const tag = evento.type === "len_turno" && evento.asistente ? `assistant-${evento.projectId}` : `len-${evento.projectId}`;
   return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag } } } };

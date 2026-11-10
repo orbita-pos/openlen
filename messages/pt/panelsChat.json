@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Resumo da manhã",
-      "hint": "Às 8h, só se algo aconteceu ontem."
+      "hint": "Às 8h, só se algo aconteceu ontem.",
+      "talkedWith": "{count, plural, one {conversei com # pessoa} other {conversei com # pessoas}}",
+      "contacts": "{count, plural, one {# deixou o contato} other {# deixaram o contato}}",
+      "requests": "{count, plural, one {# pediu algo que eu não pude fazer} other {# pediram algo que eu não pude fazer}}",
+      "push": "Ontem {list}.",
+      "emailSubject": "{name}: o que aconteceu ontem",
+      "emailText": "{push}\n\nVeja no espaço de {name}: {url}"
     }
   }
 }

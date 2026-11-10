@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Ochtendoverzicht",
-      "hint": "Om 8 uur, alleen als er gisteren iets gebeurd is."
+      "hint": "Om 8 uur, alleen als er gisteren iets gebeurd is.",
+      "talkedWith": "{count, plural, one {ik heb met # persoon gepraat} other {ik heb met # mensen gepraat}}",
+      "contacts": "{count, plural, one {# heeft contactgegevens achtergelaten} other {# hebben contactgegevens achtergelaten}}",
+      "requests": "{count, plural, one {# vroeg iets wat ik niet kon doen} other {# vroegen iets wat ik niet kon doen}}",
+      "push": "Gisteren: {list}.",
+      "emailSubject": "{name}: wat er gisteren gebeurde",
+      "emailText": "{push}\n\nBekijk het bij {name}: {url}"
     }
   }
 }

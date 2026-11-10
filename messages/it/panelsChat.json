@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Riepilogo del mattino",
-      "hint": "Alle 8, solo se ieri è successo qualcosa."
+      "hint": "Alle 8, solo se ieri è successo qualcosa.",
+      "talkedWith": "{count, plural, one {ho parlato con # persona} other {ho parlato con # persone}}",
+      "contacts": "{count, plural, one {# ti ha lasciato il contatto} other {# ti hanno lasciato il contatto}}",
+      "requests": "{count, plural, one {# ha chiesto qualcosa che non ho potuto fare} other {# hanno chiesto qualcosa che non ho potuto fare}}",
+      "push": "Ieri {list}.",
+      "emailSubject": "{name}: cosa è successo ieri",
+      "emailText": "{push}\n\nGuardalo nello spazio di {name}: {url}"
     }
   }
 }

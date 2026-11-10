@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Morning summary",
-      "hint": "At 8 a.m., only if something happened yesterday."
+      "hint": "At 8 a.m., only if something happened yesterday.",
+      "talkedWith": "{count, plural, one {I talked with # person} other {I talked with # people}}",
+      "contacts": "{count, plural, one {# left you their contact} other {# left you their contact}}",
+      "requests": "{count, plural, one {# asked for something I couldn't do} other {# asked for something I couldn't do}}",
+      "push": "Yesterday {list}.",
+      "emailSubject": "{name}: what happened yesterday",
+      "emailText": "{push}\n\nSee it in {name}'s place: {url}"
     }
   }
 }
