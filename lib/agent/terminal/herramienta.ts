@@ -22,6 +22,7 @@ import {
   type GuardadoDeLaTerminal,
 } from "@/lib/agent/herramientas-de-ficheros";
 import { parsePointer } from "@/lib/files/blob-pointer";
+import { ASSISTANT_MEMORY } from "@/lib/agent/ficheros/len-md";
 import { MAX_SALIDA, cambiosDeLaTerminal, salidaDeLaTerminal } from "./ficheros";
 import { CLAVE_CAMBIOS_DEL_COMANDO, cambiosDelComando, type CambiosDelComando } from "./cambios-del-comando";
 import { NOMBRE_BASH, terminalEncendida } from "./declaracion";
@@ -271,7 +272,7 @@ export async function terminalOfTheTurn(session: AgentSession, deps: AgentDeps):
   });
   return (session.terminal ??= await terminalForTurn(session, {
     local,
-    projectFiles: () => cargarFicherosDeLaTerminal(session, deps),
+    projectFiles: () => boxProjectFiles(session, deps),
     readOnly: () => readOnlyForBox(session, deps),
     readOnlyBytes: () => readOnlyBytesForBox(session, deps),
     bridge: () => bridgeHandlersFor(session, deps),
@@ -389,6 +390,15 @@ export async function readOnlyBytesForBox(session: AgentSession, deps: AgentDeps
 /** The other projects' blobs each turn already fetched, by pointer. */
 const BLOBS_OF_THE_TURN = new WeakMap<AgentSession, Map<string, Uint8Array>>();
 
+/** The project's files as the box syncs them: the terminal's, but for the person's own assistant's memory. The box's
+ *  manifest (baked in its E2B template) walks only ~/.len, so ~/.assistant/MEMORY.md among them made every turn of hers
+ *  fall back to the plain terminal as a «conflict» (phase 4C, final review I1). It goes up read-only instead
+ *  (`readOnlyForBox`); in the plain terminal it stays writable, saved by Write's guards. */
+export async function boxProjectFiles(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+  const { [ASSISTANT_MEMORY]: _memory, ...files } = await cargarFicherosDeLaTerminal(session, deps);
+  return files;
+}
+
 /** What the box gets as text, read-only. A binary among it (another project's, phase 4C) goes as bytes instead,
  *  by `readOnlyBytesForBox`: never its pointer's text. */
 export async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
@@ -396,6 +406,11 @@ export async function readOnlyForBox(session: AgentSession, deps: AgentDeps): Pr
   const rutas = sl.rutas.filter((r) => !NEVER_IN_BOX.test(r));
   const esVersion = (r: string) => r.startsWith("/.openlen/versiones/");
   const out: Record<string, string> = {};
+  // The person's own assistant's memory: read-only in the box (`boxProjectFiles`); she writes it with Edit or Write.
+  if (session.assistant) {
+    const memory = await deps.assistantMemory?.read(session.assistant.id).catch(() => null);
+    if (typeof memory === "string") out[ASSISTANT_MEMORY] = memory;
+  }
   let total = 0;
   for (const ruta of [...rutas.filter((r) => !esVersion(r)), ...rutas.filter(esVersion)]) {
     let texto: string;

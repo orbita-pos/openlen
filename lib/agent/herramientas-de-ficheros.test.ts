@@ -17,7 +17,8 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
 import { READ_ONLY_REFUSAL, cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
-import { cerrarTerminalDeLaSesion, readOnlyBytesForBox, readOnlyForBox } from "./terminal/herramienta";
+import { boxProjectFiles, cerrarTerminalDeLaSesion, readOnlyBytesForBox, readOnlyForBox } from "./terminal/herramienta";
+import { conflictingTopLevel } from "./sandbox/paths";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
@@ -3529,5 +3530,18 @@ describe("her other projects' folders (phase 4B)", () => {
     assert.equal(`${P2}/img/portada.png` in text, false);
     const bytes = await readOnlyBytesForBox(hers(), deps);
     assert.equal(bytes[`${P2}/img/portada.png`]?.byteLength, PNG.byteLength);
+  });
+
+  // Final review I1: her memory, ~/.assistant/MEMORY.md, isn't a path the box syncs (its manifest, baked in the E2B
+  // template, walks only ~/.len), so it made every turn of hers fall back to the plain terminal as a «conflict». It goes
+  // up read-only instead, with her other projects' folder, and she writes it with Edit or Write, as her prompt says.
+  it("🔴 her box gets her project files without her memory, so it doesn't fall back; her memory goes up read-only", async () => {
+    const { deps } = depsOfTwo();
+    // Why: with her memory among the project's files, the box refused them.
+    assert.deepEqual(conflictingTopLevel(Object.keys(await cargarFicherosDeLaTerminal(hers(), deps))), ["/home/user/.assistant/MEMORY.md"]);
+    const files = await boxProjectFiles(hers(), deps);
+    assert.equal("/home/user/.assistant/MEMORY.md" in files, false);
+    assert.deepEqual(conflictingTopLevel(Object.keys(files)), []);
+    assert.equal((await readOnlyForBox(hers(), deps))["/home/user/.assistant/MEMORY.md"], "Lo que Lucía sabe.");
   });
 });
