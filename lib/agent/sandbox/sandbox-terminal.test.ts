@@ -418,6 +418,21 @@ describe("SandboxTerminal", () => {
     expect(box().get(readOnlySource(`${root}/MEMORY.md`))).toBe("Jueves sin gluten.");
   });
 
+  // Measured 10/11 in a real E2B box, her first real turns there: every command she ran failed with «chown
+  // /home/user/.assistant/MEMORY.md: read-only file system». Before each command the terminal puts what changed since its
+  // last look (`ponerAlDia`), her memory among it, and it went to the MOUNTED path, which E2B can't write.
+  it("🔴 a file put under a read-only mount goes where the mount comes from, never to the mounted path", async () => {
+    const root = "/home/user/.assistant";
+    const { terminal, box } = await open({
+      projectFiles: { "/index.html": "a" },
+      readOnly: { [`${root}/MEMORY.md`]: "Jueves sin gluten." },
+    });
+    await terminal.ejecutar("true");
+    await terminal.poner({ [`${root}/MEMORY.md`]: "Viernes también." });
+    expect(box().has(`${root}/MEMORY.md`)).toBe(false);
+    expect(box().get(readOnlySource(`${root}/MEMORY.md`))).toBe("Viernes también.");
+  });
+
   it("in an app, /node_modules (its types, read-only today) is mounted the same way", async () => {
     const { terminal, d, handle } = await open({
       projectFiles: { "/index.html": "a" },

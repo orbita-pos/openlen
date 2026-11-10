@@ -606,6 +606,20 @@ export class SandboxTerminal implements TerminalBackend {
     const writes: Record<string, string> = {};
     const removes: string[] = [];
     for (const [path, text] of Object.entries(ficheros)) {
+      // Under a read-only mount (her ~/.assistant/MEMORY.md after she edits it): where the mount comes from, as
+      // `uploadReadOnly` puts it. The mounted path can't be written (measured 10/11 in a real box: every command failed).
+      if (this.mounted.get(readOnlyRoot(path))) {
+        const at = readOnlySource(path);
+        if (text === null) {
+          removes.push(at);
+          delete this.uploaded[at];
+        } else {
+          const hash = parsePointer(text)?.sha256 ?? sha256(text);
+          if (this.uploaded[at] !== hash) writes[at] = text;
+          this.uploaded[at] = hash;
+        }
+        continue;
+      }
       if (text === null) {
         removes.push(path);
         delete this.tree[path];
