@@ -31,7 +31,7 @@ window.__t = 0; window.__raf = 0; window.__first = 0; window.__lost = 0;
 window.make = (look, opts, id) => {
   window.__first = 0; window.__lost = 0;
   window.fig = figure.createFigure(document.getElementById(id || "c"), look, Object.assign({
-    clock: () => window.__t, onFirstFrame: () => { window.__first++; }, onLost: () => { window.__lost++; },
+    clock: () => window.__t, seed: 1, onFirstFrame: () => { window.__first++; }, onLost: () => { window.__lost++; },
   }, opts || {}));
   return !!window.fig;
 };
