@@ -533,14 +533,18 @@ export async function toolGrep(session: AgentSession, deps: AgentDeps, args: Rec
 }
 
 export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  // Another project she serves (phase 4B), by its folder in `path`; with no path, her home, as Claude Code's cwd.
-  const servida = typeof args.path === "string" ? await servedSiteOf(session, deps, args.path) : null;
+  // Another project she serves (phase 4B), by its folder in `path` or, with no path, in an absolute pattern — as Claude
+  // Code's Glob, where an absolute pattern carries its folder (final review I1); otherwise her home, as Claude Code's cwd.
+  const asked = typeof args.pattern === "string" ? args.pattern : "";
+  const pattern = asked.startsWith("~/") ? `${HOME_DIR}${asked.slice(1)}` : asked;
+  const where = typeof args.path === "string" ? args.path : pattern.startsWith(`${HOME_DIR}/`) ? pattern : null;
+  const servida = where === null ? null : await servedSiteOf(session, deps, where);
   if (servida && !("site" in servida)) return { response: respuesta(servida) };
   const row = servida ? null : await deps.loadProject(session.projectId, session.userId);
   if (!servida && !row) return { response: respuesta(fallo("project not found")) };
   const r = ejecutarGlob(
     {
-      pattern: typeof args.pattern === "string" ? args.pattern : "",
+      pattern: servida ? pattern : asked,
       ...(typeof args.path === "string" ? { path: args.path } : {}),
     },
     servida ? servida.site : sitioDe(row!.data, session, await virtualesDe(session, deps, row!.userBrief)),

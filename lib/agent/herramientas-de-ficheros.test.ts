@@ -3453,4 +3453,15 @@ describe("her other projects' folders (phase 4B)", () => {
     assert.equal(out.images?.length, 1, texto(out));
     assert.deepEqual(seen, [PNG.byteLength]);
   });
+
+  // Final review I1: as Claude Code's Glob («an absolute pattern carries its folder»), the folder in the pattern is
+  // where it searches — with no path it used to search her home and answer «No file matches» as a success.
+  it("🔴 a Glob whose pattern names her project's folder searches that folder", async () => {
+    const { deps } = depsOfTwo();
+    for (const pattern of ["/home/user/.assistant/projects/p2/**/*.html", "~/.assistant/projects/p2/ofertas/*"]) {
+      const out = await runAgentTool(hers(), deps, "Glob", { pattern });
+      assert.equal(out.response.ok, true, `${pattern}: ${texto(out)}`);
+      assert.ok(texto(out).split("\n").includes(`${P2}/ofertas/index.html`), `${pattern}: ${texto(out)}`);
+    }
+  });
 });
