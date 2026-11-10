@@ -2931,7 +2931,7 @@ async function correrTurno(
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(
-              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas, ...(asistente ? { asistente: { name: asistente.name, slug: asistente.slug } } : {}) }),
+              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas, ...(asistente ? { asistente: { id: asistente.id, name: asistente.name, slug: asistente.slug } } : {}) }),
               `len-turno:${filaId}`,
             );
           } catch (err) {

@@ -150,6 +150,8 @@ export async function groupOne(pair: { readonly assistantId: string; readonly pr
             projectId: pair.projectId,
             recipientUserId: owner,
             cardId: card.id,
+            // Phase 5: her tab on the phone opens it.
+            assistantId: pair.assistantId,
             title: assistant.name,
             push: pushText(card.visitors > 1 ? `${card.title} (${card.visitors})` : card.title),
             emailSubject: email.subject,
