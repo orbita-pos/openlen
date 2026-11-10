@@ -23,6 +23,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
+import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 import ignore from "ignore";
 import { getBlob, parsePointer, putBlob, makePointer } from "@/lib/files/blob";
 import { MAX_FILE_BYTES, REGENERABLE_DEFAULTS } from "@/lib/files/limits";
@@ -58,8 +59,12 @@ export function readOnlySource(path: string): string {
   return `${BRIDGE_DIR}/ro${path}`;
 }
 
-/** "/.openlen/docs/a.md" → "/.openlen". */
-const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
+/** The other projects the person's own assistant serves (phase 4C), read-only under her HOME: /home is the box's HOME,
+ *  where her ~/.len syncs from, so this folder is mounted on its own. */
+const SERVED_ROOT = `${HOME_DIR}/.assistant/projects`;
+
+/** "/.openlen/docs/a.md" → "/.openlen"; "/home/user/.assistant/projects/p2/a.html" → its own folder. */
+const readOnlyRoot = (path: string) => (path === SERVED_ROOT || path.startsWith(`${SERVED_ROOT}/`) ? SERVED_ROOT : `/${path.split("/")[1] ?? ""}`);
 
 const parentOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
 

@@ -400,6 +400,18 @@ describe("SandboxTerminal", () => {
     expect([...box().keys()].some((p) => p.startsWith("/.openlen/"))).toBe(false);
   });
 
+  // Phase 4C of the person's own assistant: the other projects she serves, read-only in her box. /home is the box's HOME
+  // (her ~/.len syncs from there): only that folder is mounted, never the whole of /home.
+  it("🔴 her other projects' folder is mounted read-only on its own, never the whole of /home", async () => {
+    const { terminal, d, handle, box } = await open({ projectFiles: { "/index.html": "a" }, readOnly: { "/home/user/.assistant/projects/p2/index.html": "x" } });
+    await terminal.ejecutar("true");
+    const mounts = d.commands(handle.id).filter((c) => c.includes("mount --bind"));
+    const root = "/home/user/.assistant/projects";
+    expect(mounts.some((c) => c.includes(`mount --bind ${readOnlySource(root)} ${root}`) && c.includes(`remount,bind,ro ${root}`))).toBe(true);
+    expect(mounts.some((c) => c.includes("remount,bind,ro /home)"))).toBe(false);
+    expect(box().get(readOnlySource(`${root}/p2/index.html`))).toBe("x");
+  });
+
   it("in an app, /node_modules (its types, read-only today) is mounted the same way", async () => {
     const { terminal, d, handle } = await open({
       projectFiles: { "/index.html": "a" },
