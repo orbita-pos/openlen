@@ -15,6 +15,8 @@ import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { projectsOfAssistant, type ServedProject } from "@/lib/assistants/projects";
+import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
 import { assistantById, readyAssistantNotices, removeAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
@@ -502,6 +504,8 @@ async function correrTurno(
   }
   /** Where this turn's rows live: Len's conversation (nothing) or the assistant's. Len's calls stay byte for byte. */
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
+  /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
+  const proyectosDelAsistente: ServedProject[] = asistente ? await projectsOfAssistant(asistente.id).catch(() => []) : [];
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
   const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
@@ -1237,9 +1241,16 @@ async function correrTurno(
   const memoryIndex = asistente ? null : buildMemoryIndex(notasDeMemoria, MEMORY_INDEX_MAX) || null;
   const memoriaDelTurno = asistente
     ? memoryMessageForTurn(
-        [{ path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory }],
+        [
+          { path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory },
+          {
+            path: ASSISTANT_PROJECTS_PATH,
+            label: "the projects you serve and what each one published — read-only; it changes when your owner publishes",
+            text: projectsText(proyectosDelAsistente),
+          },
+        ],
         historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
-        PROJECT_MEMORY_MAX,
+        PROJECT_MEMORY_MAX + PROJECTS_TEXT_MAX,
       )
     : memoryMessageForTurn(
     [
@@ -1547,7 +1558,12 @@ async function correrTurno(
     mensajeDelUsuario: prompt,
     zonaHoraria: zonaDelTurno,
     // The person's own assistant never changes the project: the session refuses writes, whatever the model was told.
-    ...(asistente ? { readOnly: true as const, assistant: { id: asistente.id, name: asistente.name } } : {}),
+    ...(asistente
+      ? {
+          readOnly: true as const,
+          assistant: { id: asistente.id, name: asistente.name, projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })) },
+        }
+      : {}),
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).

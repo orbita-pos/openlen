@@ -24,6 +24,10 @@ export const ASK_LEN_DECLARATION = {
     type: "OBJECT",
     properties: {
       request: { type: "STRING", description: "What your owner asked for, in their own words." },
+      project: {
+        type: "STRING",
+        description: "The id of the project, from ~/.assistant/PROJECTS.md, when you serve more than one; if it isn't clear which, ask your owner first.",
+      },
     },
     required: ["request"],
   },
@@ -76,6 +80,21 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   if (!request || request.length > ASK_LEN_MAX) {
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
+  // Which project (phase 4): hers only, and the one the request names when she serves more than one.
+  const served = assistant.projects?.length ? assistant.projects : [{ id: session.projectId, title: "" }];
+  const named = typeof args.project === "string" ? args.project.trim() : "";
+  const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : undefined;
+  if (named && !target) return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve: see ~/.assistant/PROJECTS.md." } };
+  if (!target) {
+    return {
+      response: {
+        ok: false,
+        error: "which_project",
+        projects: served.map((p) => ({ id: p.id, title: p.title })),
+        message: "You serve more than one project: pass the id of the one this is about in project. If it isn't clear which, ask your owner.",
+      },
+    };
+  }
   const go = launch ?? (await import("@/lib/agent/turnos-desde-el-servidor")).launchAssistantRequestTurn;
   // How it ends comes back to the assistant with its next request (lib/assistants/notices.ts). Kept softly: a note
   // that can't be written never stops the request. An injected launch without notes keeps none (tests).
@@ -86,7 +105,7 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
   go({
     userId: session.userId,
-    projectId: session.projectId,
+    projectId: target.id,
     texto: request,
     framing: framingOf(assistant.name, request, session.mensajeDelUsuario ?? null),
     origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name },

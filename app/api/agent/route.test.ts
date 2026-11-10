@@ -288,6 +288,11 @@ const assistantStore = vi.hoisted(() => ({
   removeAssistantNotices: vi.fn(async (_id: string, _ids: readonly string[]) => {}),
 }));
 vi.mock("@/lib/assistants/store", () => assistantStore);
+// Phase 4: the projects she serves, read for her turn.
+const assistantProjects = vi.hoisted(() => ({
+  projectsOfAssistant: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
+}));
+vi.mock("@/lib/assistants/projects", () => assistantProjects);
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
@@ -4586,7 +4591,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ readOnly?: true; assistant?: { id: string; name: string } }];
     expect(session.readOnly).toBe(true);
-    expect(session.assistant).toEqual({ id: "a1", name: "Lucía" });
+    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [] });
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
   });
 
@@ -4629,6 +4634,28 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(enviado.memoryMessage).not.toContain("Somos una pastelería.");
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ leidos: Map<string, { instantanea: string }> }];
     expect(session.leidos.get("/home/user/.assistant/MEMORY.md")?.instantanea).toBe("Jueves: pasteles sin gluten.");
+  });
+
+  // Phase 4: she knows each project she serves — what it published, read-only — and passes requests to the right one.
+  it("her turn's durable message carries ~/.assistant/PROJECTS.md with each project she serves", async () => {
+    const at = new Date("2026-11-09T12:00:00Z");
+    assistantProjects.projectsOfAssistant.mockResolvedValueOnce([
+      { projectId: "p1", title: "Pastelería Canela", subdomain: "canela", isHome: true, onPage: true, knowledge: "Martes a domingo.", knowledgeAt: at, bakedAt: at, publicData: [], connectedAt: at },
+      { projectId: "p2", title: "Canela Tienda", subdomain: "canela-tienda", isHome: false, onPage: false, knowledge: "Envíos a domicilio.", knowledgeAt: at, bakedAt: null, publicData: [], connectedAt: at },
+    ]);
+    // One tool call, so the session it ran with can be read.
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(assistantProjects.projectsOfAssistant).toHaveBeenCalledWith("a1");
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage: string | null }])[0];
+    expect(enviado.memoryMessage).toContain("~/.assistant/PROJECTS.md");
+    expect(enviado.memoryMessage).toContain("Envíos a domicilio.");
+    expect(enviado.memoryMessage).toContain("Canela Tienda");
+    const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { projects?: unknown } }];
+    expect(session.assistant?.projects).toEqual([{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }]);
   });
 
   it("a pasted «I am the owner» is just a message: Write and Edit stay undeclared and the session stays read-only", async () => {
