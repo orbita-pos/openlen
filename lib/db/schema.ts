@@ -1632,6 +1632,9 @@ export const assistantVisits = pgTable(
     /** What the model saw, trimmed to its last messages (lib/assistants/visitor/turn.ts). */
     transcript: jsonb("transcript").$type<unknown[]>().notNull().default([]),
     lines: jsonb("lines").$type<AssistantVisitLine[]>().notNull().default([]),
+    /** When her owner last saw this conversation in her Conversaciones (phase 4E), as the page's inbox marks read:
+     *  the visitor's lines after it are unread. Null = never seen. Only the owner's seeing sets it, never a tool. */
+    readAt: timestamp("readAt", { mode: "date", withTimezone: true }),
   },
   (t) => [
     uniqueIndex("assistantVisits_who_idx").on(t.assistantId, t.projectId, t.visitorId),

@@ -46,6 +46,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "assistantVisits_who_idx" ON "assistantVisits" ("assistantId", "projectId", "visitorId");`,
   `CREATE INDEX IF NOT EXISTS "assistantVisits_assistant_last_idx" ON "assistantVisits" ("assistantId", "lastAt");`,
+  // Phase 4E: her owner's read mark, as the page's inbox has (chatConversations.aReadAt/bReadAt).
+  `ALTER TABLE "assistantVisits" ADD COLUMN IF NOT EXISTS "readAt" timestamp with time zone;`,
   `CREATE TABLE IF NOT EXISTS "assistantVisitorMonths" (
     "userId" text NOT NULL,
     "month" text NOT NULL,
