@@ -24,10 +24,11 @@ export const leerSuChat = (c: ClienteDeOpenLen, id: string) => leer<StoredChatTu
 /** Her visitors' conversations, as «Conversaciones» on the web shows them. */
 export const leerSusVisitas = <V = Record<string, unknown>>(c: ClienteDeOpenLen, id: string) => leer<V>(c, suya(id, "/visits"), "visits");
 
-/** Phase 4E: «Conversaciones» on screen marks what it shows as read, as on the web; false when the server refused. */
-export async function marcarSusVisitasLeidas(c: ClienteDeOpenLen, id: string, ids: readonly string[]): Promise<boolean> {
+/** Phase 4E: «Conversaciones» on screen marks what it shows as read, as on the web — each up to the `lastAt` it showed
+ *  (final review I1: what came after stays unread); false when the server refused. */
+export async function marcarSusVisitasLeidas(c: ClienteDeOpenLen, id: string, vistas: readonly { id: string; lastAt: string }[]): Promise<boolean> {
   const res = await c
-    .pedir(suya(id, "/visits/read"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids }) })
+    .pedir(suya(id, "/visits/read"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seen: vistas }) })
     .catch(() => null);
   return Boolean(res?.ok);
 }

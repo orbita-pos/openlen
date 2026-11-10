@@ -88,7 +88,7 @@ export function AssistantTab({
   useEffect(() => {
     if (!aLaVista || vista !== "conversaciones" || !visitas?.length || marcadas.current) return;
     marcadas.current = true;
-    void marcarSusVisitasLeidas(cliente, asistente.id, visitas.slice(0, 50).map((v) => v.id));
+    void marcarSusVisitasLeidas(cliente, asistente.id, visitas.slice(0, 50).map((v) => ({ id: v.id, lastAt: v.lastAt })));
   }, [aLaVista, vista, visitas, cliente, asistente.id]);
 
   const tocar = async (cardId: string, accion: "accept" | "dismiss") => {

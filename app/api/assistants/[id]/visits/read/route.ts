@@ -17,23 +17,30 @@ const MAX_IDS = 50;
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
-function idsOf(body: unknown): string[] | null {
-  const ids = (body as { ids?: unknown } | null)?.ids;
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > MAX_IDS) return null;
-  if (!ids.every((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 100)) return null;
-  return ids;
+/** What it showed: each conversation's id and the `lastAt` it had on screen (final review I1: the mark goes up to that). */
+function seenOf(body: unknown): { id: string; lastAt: Date }[] | null {
+  const seen = (body as { seen?: unknown } | null)?.seen;
+  if (!Array.isArray(seen) || seen.length === 0 || seen.length > MAX_IDS) return null;
+  const out: { id: string; lastAt: Date }[] = [];
+  for (const s of seen as { id?: unknown; lastAt?: unknown }[]) {
+    if (typeof s?.id !== "string" || s.id.length === 0 || s.id.length > 100 || typeof s.lastAt !== "string") return null;
+    const lastAt = new Date(s.lastAt);
+    if (Number.isNaN(lastAt.getTime())) return null;
+    out.push({ id: s.id, lastAt });
+  }
+  return out;
 }
 
 export const POST = paraLaApp(async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
   const personId = await usuarioDeLaPeticion(req);
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
-  const ids = idsOf(await req.json().catch(() => null));
-  if (!ids) return json({ error: "bad_request" }, 400);
+  const seen = seenOf(await req.json().catch(() => null));
+  if (!seen) return json({ error: "bad_request" }, 400);
   const { id } = await params;
   const a = await assistantById(id);
   if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
-  return json({ marked: await markHerVisitsRead(a.id, ids, new Date()) });
+  return json({ marked: await markHerVisitsRead(a.id, seen, new Date()) });
 });
 
 export const OPTIONS = respuestaPrevia;

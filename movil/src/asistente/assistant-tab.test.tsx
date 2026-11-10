@@ -47,7 +47,7 @@ describe("AssistantTab marks what it shows as read (phase 4E)", () => {
   it("🔴 marks them read when «Conversaciones» is on screen, once", async () => {
     await paint();
     expect(marcarSusVisitasLeidas).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(marcarSusVisitasLeidas).mock.calls[0]!.slice(1)).toEqual(["a1", ["v1"]]);
+    expect(vi.mocked(marcarSusVisitasLeidas).mock.calls[0]!.slice(1)).toEqual(["a1", [{ id: "v1", lastAt: "2026-11-09T10:05:00Z" }]]);
   });
 
   it("🔴 not when the tab opens on «Pedidos» or under her chat; tapping «Conversaciones» marks them", async () => {

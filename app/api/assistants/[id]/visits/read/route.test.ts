@@ -31,29 +31,30 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("POST /api/assistants/[id]/visits/read", () => {
   it("marks her visits read for her person, with the session or the phone key", async () => {
-    const res = await post({ ids: ["v1", "v2"] });
+    const res = await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }, { id: "v2", lastAt: "2026-11-09T18:34:10.000Z" }] });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ marked: 2 });
-    expect(m.markHerVisitsRead).toHaveBeenCalledWith("a1", ["v1", "v2"], expect.any(Date));
+    expect(m.markHerVisitsRead).toHaveBeenCalledWith("a1", [{ id: "v1", lastAt: new Date("2026-11-09T18:34:10.000Z") }, { id: "v2", lastAt: new Date("2026-11-09T18:34:10.000Z") }], expect.any(Date));
     m.auth.mockResolvedValue(null);
-    const byKey = await post({ ids: ["v1"] }, { authorization: "Bearer llave-de-u1-aaaaaaaaaaaaaaaaaaaa" });
+    const byKey = await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }] }, { authorization: "Bearer llave-de-u1-aaaaaaaaaaaaaaaaaaaa" });
     expect(byKey.status).toBe(200);
     expect(await byKey.json()).toEqual({ marked: 1 });
   });
 
   it("🔴 404 for someone else's assistant, nothing marked", async () => {
     m.assistantById.mockResolvedValue({ id: "a1", personId: "u2", name: "Bruno", slug: "bruno" });
-    expect((await post({ ids: ["v1"] })).status).toBe(404);
+    expect((await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }] })).status).toBe(404);
     m.assistantById.mockResolvedValue(null);
-    expect((await post({ ids: ["v1"] })).status).toBe(404);
+    expect((await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }] })).status).toBe(404);
     vi.stubEnv("OPENLEN_ASSISTANT", "0");
     m.assistantById.mockResolvedValue({ id: "a1", personId: "u1", name: "Lucía", slug: "lucia" });
-    expect((await post({ ids: ["v1"] })).status).toBe(404);
+    expect((await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }] })).status).toBe(404);
     expect(m.markHerVisitsRead).not.toHaveBeenCalled();
   });
 
-  it("400 for a body without ids", async () => {
-    for (const body of [{}, { ids: [] }, { ids: [1] }, { ids: "v1" }, { ids: Array.from({ length: 51 }, (_, i) => `v${i}`) }, "no es json"]) {
+  it("400 for a body without what it showed", async () => {
+    const one = (o: Record<string, unknown>) => ({ seen: [o] });
+    for (const body of [{}, { ids: ["v1"] }, { seen: [] }, one({ id: 1, lastAt: "2026-11-09T18:34:10.000Z" }), one({ id: "v1" }), one({ id: "v1", lastAt: "ayer" }), { seen: Array.from({ length: 51 }, (_, i) => ({ id: `v${i}`, lastAt: "2026-11-09T18:34:10.000Z" })) }, "no es json"]) {
       expect((await post(body)).status, JSON.stringify(body)).toBe(400);
     }
     expect(m.markHerVisitsRead).not.toHaveBeenCalled();
@@ -61,6 +62,6 @@ describe("POST /api/assistants/[id]/visits/read", () => {
 
   it("401 without a person", async () => {
     m.auth.mockResolvedValue(null);
-    expect((await post({ ids: ["v1"] })).status).toBe(401);
+    expect((await post({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }] })).status).toBe(401);
   });
 });

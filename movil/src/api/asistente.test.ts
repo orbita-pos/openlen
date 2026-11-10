@@ -36,12 +36,12 @@ describe("her calls", () => {
   // Phase 4E: «Conversaciones» on screen marks what it shows as read, as on the web.
   it("marcarSusVisitasLeidas posts the ids with the key", async () => {
     const c = cliente(() => Response.json({ marked: 2 }));
-    expect(await marcarSusVisitasLeidas(c, "a1", ["v1", "v2"])).toBe(true);
+    expect(await marcarSusVisitasLeidas(c, "a1", [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }, { id: "v2", lastAt: "2026-11-09T18:34:10.000Z" }])).toBe(true);
     const [ruta, init] = c.pedir.mock.calls.at(-1)!;
     expect(ruta).toBe("/api/assistants/a1/visits/read");
     expect(init?.method).toBe("POST");
-    expect(JSON.parse(String(init!.body))).toEqual({ ids: ["v1", "v2"] });
-    expect(await marcarSusVisitasLeidas(cliente(() => Response.json({ error: "not_found" }, { status: 404 })), "a1", ["v1"])).toBe(false);
+    expect(JSON.parse(String(init!.body))).toEqual({ seen: [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }, { id: "v2", lastAt: "2026-11-09T18:34:10.000Z" }] });
+    expect(await marcarSusVisitasLeidas(cliente(() => Response.json({ error: "not_found" }, { status: 404 })), "a1", [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }])).toBe(false);
   });
 
   it("a press the server refuses says why", async () => {
