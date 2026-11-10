@@ -51,6 +51,17 @@ describe("projectsText", () => {
     expect(many).toContain("# Pastelería Canela");
   });
 
+  // Phase 4B: as Claude Code lists its additional working directories, each of her other projects says where its files
+  // are; her home's are the project's own, at /.
+  it("🔴 each project she serves besides her home says where its files are", () => {
+    const text = projectsText([served(), served({ projectId: "p2", title: "Canela Tienda", subdomain: "canela-tienda", isHome: false, onPage: false })]);
+    const [home, shop] = text.split(/\n(?=# )/);
+    expect(shop).toContain("(id: p2 · canela-tienda.openlen.app · files: ~/.assistant/projects/p2)");
+    expect(home).not.toContain("files:");
+    // One with no address yet still has its files.
+    expect(projectsText([served({ projectId: "p3", subdomain: null, isHome: false, onPage: false })])).toContain("(id: p3 · files: ~/.assistant/projects/p3)");
+  });
+
   // Final review I2: «not published yet» was said of a shop live for months, connected after it was published.
   it("🔴 a project published before she served it says so, and that she'll know it after its next publish", () => {
     const text = projectsText([served({ knowledge: null, knowledgeAt: null, subdomain: "canela-tienda" })]);
