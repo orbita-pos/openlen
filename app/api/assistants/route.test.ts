@@ -107,7 +107,7 @@ describe("POST /api/assistants", () => {
 describe("GET /api/assistants", () => {
   it("lists the person's own, without their memory", async () => {
     m.assistantsOf.mockResolvedValueOnce([LUCIA]);
-    const res = await GET();
+    const res = await GET(new Request("http://localhost/api/assistants"));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
     expect(m.projectIdsOf).toHaveBeenCalledWith(["a1"]);

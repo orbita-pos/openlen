@@ -18,6 +18,16 @@ describe("las rutas de la app", () => {
     });
   }
 
+  // Her tab in Len móvil (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5).
+  it("🔴 her routes are on the list", () => {
+    const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
+    expect(listed.get("app/api/assistants/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/assistants/[id]/chat/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/assistants/[id]/visits/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/assistants/[id]/requests/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/assistants/[id]/requests/[cardId]/route.ts")).toEqual(["POST"]);
+  });
+
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {
     const src = leer("app/api/projects/[id]/versions/route.ts");
     expect(src).not.toContain("usuarioDeLaPeticion");
