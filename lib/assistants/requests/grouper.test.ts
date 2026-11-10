@@ -10,7 +10,7 @@ import { withReplayInvariant } from "@/lib/agent/testing/replay-invariant";
 import type { LenAvisoEvent } from "@/lib/notifications/types";
 
 import { groupOne, type GrouperDeps } from "./grouper";
-import { NOTIFY_AGAIN_AT } from "./limits";
+import { NOTICES_PER_PAIR_DAY, NOTIFY_AGAIN_AT } from "./limits";
 import type { RequestCardRow, RequestRow } from "./store";
 import { requestEmail, requestTurnPrompt } from "./texts";
 
@@ -35,12 +35,15 @@ const card = (id: string, o: Partial<RequestCardRow> = {}): RequestCardRow => ({
   decidedBy: null,
   acceptedRowId: null,
   failure: null,
+  notifiedAt: null,
   ...o,
 });
 
 type Saved = Awaited<ReturnType<GrouperDeps["store"]["saveGrouping"]>>;
 
-function setup(o: { requests?: RequestRow[]; cards?: RequestCardRow[]; script?: StreamEvent[][]; saved?: Saved; balance?: number; spent?: number; brainThrows?: boolean } = {}) {
+function setup(o: { requests?: RequestRow[]; cards?: RequestCardRow[]; script?: StreamEvent[][]; saved?: Saved; balance?: number; spent?: number; brainThrows?: boolean; noticesToday?: number } = {}) {
+  const marked: [string, Date][] = [];
+  const noticeWindows: Date[] = [];
   const requests = o.requests ?? [req("r1", "¿hacen envíos?"), req("r2", "do you deliver?")];
   const sent: Message[][] = [];
   const offered: string[][] = [];
@@ -80,11 +83,13 @@ function setup(o: { requests?: RequestRow[]; cards?: RequestCardRow[]; script?: 
       pendingRequests: async () => requests,
       joinableCards: async () => o.cards ?? [],
       saveGrouping: async (g) => (saves.push(g), o.saved ?? [{ card: card("c-new", { visitors: 2 }), isNew: true, before: 0 }]),
+      noticesSince: async (_pair, since) => (noticeWindows.push(since), o.noticesToday ?? 0),
+      markNotified: async (cardId, at) => void marked.push([cardId, at]),
     },
     siteUrl: "https://openlen.com",
     runLoop: withReplayInvariant(runAgentLoop),
   };
-  return { deps, sent, offered, saves, notices, charges, spends };
+  return { deps, sent, offered, saves, notices, charges, spends, marked, noticeWindows };
 }
 
 describe("groupOne", () => {
@@ -176,6 +181,19 @@ describe("groupOne", () => {
     const s = setup({ saved: [{ card: card("c1", { status: "dismissed", visitors: 9 }), isNew: false, before: 1 }] });
     await groupOne(PAIR, s.deps);
     expect(s.notices).toHaveLength(0);
+  });
+
+  // Final review I6: a script spacing its requests, with wording that never joins, made a card — and an email — every pass.
+  it(`🔴 a slow drip notifies at most ${NOTICES_PER_PAIR_DAY} times a day per pair`, async () => {
+    const under = setup({ noticesToday: NOTICES_PER_PAIR_DAY - 1 });
+    await groupOne(PAIR, under.deps);
+    expect(under.notices).toHaveLength(1);
+    expect(under.marked).toEqual([["c-new", NOW]]);
+    expect(under.noticeWindows).toEqual([new Date(NOW.getTime() - 86_400_000)]);
+    const full = setup({ noticesToday: NOTICES_PER_PAIR_DAY });
+    expect(await groupOne(PAIR, full.deps)).toBe("grouped");
+    expect(full.notices).toHaveLength(0);
+    expect(full.marked).toHaveLength(0);
   });
 
   it("a flood in one pass is one notice per pair", async () => {

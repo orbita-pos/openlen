@@ -27,5 +27,8 @@ export const GROUP_MAX_ATTEMPTS = 3;
 export const GROUP_MAX_STEPS = 2;
 /** A waiting card notifies again once, when this many visitors have asked. */
 export const NOTIFY_AGAIN_AT = 5;
+/** At most this many notices a day per assistant and project: a script spacing its requests can't fill the owner's
+ *  inbox; the cards still reach the chat and «Pedidos». */
+export const NOTICES_PER_PAIR_DAY = 3;
 /** «Ahora no» silences a card for this long: what visitors ask for the same thing joins it without a notice. */
 export const DISMISSED_JOIN_DAYS = 30;

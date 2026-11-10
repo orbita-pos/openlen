@@ -22,7 +22,7 @@ import type { LenAvisoEvent } from "@/lib/notifications/types";
 import { sleepReason, VISITOR_TURN_RESERVE, visitorCap, visitorMonth, visitorReservations } from "../visitor/budget";
 import type { VisitorUse } from "../visitor/turn";
 import { applyGrouping, GROUP_REQUESTS, GROUP_REQUESTS_DECLARATION, groupingMessages } from "./grouping";
-import { GROUP_BATCH, GROUP_MAX_STEPS, NOTIFY_AGAIN_AT } from "./limits";
+import { GROUP_BATCH, GROUP_MAX_STEPS, NOTICES_PER_PAIR_DAY, NOTIFY_AGAIN_AT } from "./limits";
 import type * as RequestStore from "./store";
 import type { RequestCardRow } from "./store";
 import { requestEmail } from "./texts";
@@ -48,7 +48,7 @@ export interface GrouperDeps {
   /** Charges the owner; returns what the turn cost, in centicredits. */
   charge(c: { ownerId: string; projectId: string; refId: string; usage: AgentLoopResult["usage"]; uses: readonly VisitorUse[] }): Promise<number>;
   notify(event: LenAvisoEvent, dedupeKey: string): Promise<void>;
-  store: Pick<typeof RequestStore, "pendingRequests" | "joinableCards" | "saveGrouping">;
+  store: Pick<typeof RequestStore, "pendingRequests" | "joinableCards" | "saveGrouping" | "noticesSince" | "markNotified">;
   siteUrl: string;
   /** Layer 0 (lib/agent/telemetry/): its rows tagged `assistant-requests:<id>`, out of Len's baseline. */
   recorder?(o: { projectId: string; turnId: string; tag: string }): { onCall(c: BrainCall): void; onStepTools(b: readonly ToolOutcomeSummary[]): void; finish(end: { endReason: string }): void };
@@ -137,8 +137,10 @@ export async function groupOne(pair: { readonly assistantId: string; readonly pr
     }
     if (centicredits > 0) await d.addMonthSpend(owner, month, centicredits, 0).catch((err: unknown) => console.warn("[assistant-requests] the month's spend wasn't added", err));
 
+    // At most three notices a day per pair (final review I6): past that, the cards still reach the chat and «Pedidos».
     const card = worthTelling(saved);
-    if (card) {
+    const roomToTell = card ? (await d.store.noticesSince(pair, new Date(now.getTime() - 86_400_000)).catch(() => 0)) < NOTICES_PER_PAIR_DAY : false;
+    if (card && roomToTell) {
       const url = `${d.siteUrl}/new?project=${encodeURIComponent(pair.projectId)}&chat=1&card=${encodeURIComponent(card.id)}`;
       const email = requestEmail(card.locale, { name: assistant.name, title: card.title, visitors: card.visitors, url });
       try {
@@ -156,6 +158,7 @@ export async function groupOne(pair: { readonly assistantId: string; readonly pr
           // Keyed by the pair: a notice still waiting (quiet hours) is replaced by the newest.
           `assistant_requests:${pair.assistantId}:${pair.projectId}`,
         );
+        await d.store.markNotified(card.id, now).catch((err: unknown) => console.warn("[assistant-requests] the notice wasn't counted", err));
       } catch (err) {
         console.warn("[assistant-requests] the owner couldn't be told", err);
       }

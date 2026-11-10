@@ -68,8 +68,10 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "decidedAt" timestamp with time zone,
     "decidedBy" text,
     "acceptedRowId" text,
-    "failure" text
+    "failure" text,
+    "notifiedAt" timestamp with time zone
   );`,
+  `ALTER TABLE "assistantRequestCards" ADD COLUMN IF NOT EXISTS "notifiedAt" timestamp with time zone;`,
   `CREATE INDEX IF NOT EXISTS "assistantRequestCards_assistant_project_status_idx" ON "assistantRequestCards" ("assistantId", "projectId", "status");`,
   `CREATE TABLE IF NOT EXISTS "assistantRequests" (
     "id" text PRIMARY KEY,

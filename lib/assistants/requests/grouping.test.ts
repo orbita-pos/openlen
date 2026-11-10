@@ -35,6 +35,7 @@ const card = (id: string, title: string, status: "pending" | "dismissed" = "pend
   decidedBy: status === "dismissed" ? "u1" : null,
   acceptedRowId: null,
   failure: null,
+  notifiedAt: null,
 });
 
 const REQUESTS = [req("r1", "¿hacen envíos a Zapopan?"), req("r2", "do you deliver?"), req("r3", "¿puedo reservar para 12?"), req("r4", "hola")];

@@ -1654,6 +1654,8 @@ export const assistantRequestCards = pgTable(
     acceptedRowId: text("acceptedRowId"),
     /** Why that turn couldn't start; the card waits again. */
     failure: text("failure"),
+    /** When its owner was last told about it (push and email): a pair's notices are capped per day. */
+    notifiedAt: timestamp("notifiedAt", { mode: "date", withTimezone: true }),
   },
   (t) => [index("assistantRequestCards_assistant_project_status_idx").on(t.assistantId, t.projectId, t.status)],
 );
