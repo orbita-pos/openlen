@@ -827,6 +827,9 @@
       "push": "Ontem {list}.",
       "emailSubject": "{name}: o que aconteceu ontem",
       "emailText": "{push}\n\nVeja no espaço de {name}: {url}"
+    },
+    "composer": {
+      "effort": "Esforço de {name}"
     }
   }
 }

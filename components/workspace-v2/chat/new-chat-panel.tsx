@@ -661,6 +661,7 @@ function AgentChatView({
               ? {
                   placeholder: t("ownAssistant.place.placeholder", { name: assistant.name }),
                   disclaimer: t("ownAssistant.speaker.disclaimer", { name: assistant.name }),
+                  effortLabel: t("ownAssistant.composer.effort", { name: assistant.name }),
                 }
               : {})}
             {...(equipo.compartido

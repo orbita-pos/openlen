@@ -120,6 +120,15 @@ describe("the assistant's place", () => {
     expect(host.textContent).not.toContain("newChat.steps.done");
   });
 
+  // Real turns of 10/11: her effort button was still named «Esfuerzo de Len».
+  it("🔴 in her place the effort button is named with her name", async () => {
+    const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    const named = [...host.querySelectorAll("[aria-label]")].map((e) => e.getAttribute("aria-label"));
+    expect(named).toContain('ownAssistant.composer.effort {"name":"Lucía"}');
+    expect(named).not.toContain("composer.effort");
+  });
+
   // Real turns of 07/11: the line under her box said «Len puede equivocarse. Revisa tu página antes de publicarla.».
   it("🔴 the line under her box is hers: she can make mistakes; nothing about publishing", async () => {
     const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);

@@ -827,6 +827,9 @@
       "push": "Ieri {list}.",
       "emailSubject": "{name}: cosa è successo ieri",
       "emailText": "{push}\n\nGuardalo nello spazio di {name}: {url}"
+    },
+    "composer": {
+      "effort": "Impegno di {name}"
     }
   }
 }

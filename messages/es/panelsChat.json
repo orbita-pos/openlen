@@ -827,6 +827,9 @@
       "push": "Ayer {list}.",
       "emailSubject": "{name}: lo de ayer",
       "emailText": "{push}\n\nMíralo en el lugar de {name}: {url}"
+    },
+    "composer": {
+      "effort": "Esfuerzo de {name}"
     }
   }
 }
