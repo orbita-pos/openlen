@@ -726,7 +726,10 @@
       "offer": "Create your own assistant: you pick its name and its look.",
       "create": "Create my assistant",
       "ready": "{name} is ready",
-      "talk": "Talk with {name}"
+      "talk": "Talk with {name}",
+      "useHere": "Use {name} here",
+      "createAnother": "Create another",
+      "useFailed": "That didn't work. Try again."
     },
     "creator": {
       "title": "Your assistant",

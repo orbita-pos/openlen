@@ -726,7 +726,10 @@
       "offer": "Crie seu próprio assistente: você escolhe o nome e a aparência.",
       "create": "Criar meu assistente",
       "ready": "{name} já pode ajudar você",
-      "talk": "Falar com {name}"
+      "talk": "Falar com {name}",
+      "useHere": "Usar {name} aqui",
+      "createAnother": "Criar outro",
+      "useFailed": "Não deu certo. Tente de novo."
     },
     "creator": {
       "title": "Seu assistente",

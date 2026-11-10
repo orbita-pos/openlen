@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { checkAssistantInput } from "@/lib/assistants/names";
 import { memoryFromOldAssistant } from "@/lib/assistants/knowledge";
+import { projectIdsOf } from "@/lib/assistants/projects";
 import { assistantsOf, createAssistant, oldAssistantSettings } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
@@ -37,5 +38,8 @@ export async function GET(): Promise<Response> {
   const personId = (await auth())?.user?.id;
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ assistants: [] });
-  return json({ assistants: (await assistantsOf(personId)).map(assistantView) });
+  const mine = await assistantsOf(personId);
+  // Each with the projects she serves (phase 4): a card in a project knows whether that project has her.
+  const served = await projectIdsOf(mine.map((a) => a.id));
+  return json({ assistants: mine.map((a) => ({ ...assistantView(a), projectIds: served.get(a.id) ?? [a.homeProjectId] })) });
 }

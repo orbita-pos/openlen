@@ -105,6 +105,49 @@ describe("the card Len leaves", () => {
     expect(host.querySelector<HTMLAnchorElement>("[data-assistant-talk]")!.getAttribute("href")).toBe("/es/assistant/lucia");
   });
 
+  // Phase 4: she can serve this project without it being her home.
+  it("says it is ready when this project is one she serves, not only her home", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9", "p1"] }] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    expect(host.querySelector("[data-assistant-talk]")).not.toBeNull();
+  });
+
+  it("the card offers to use Lucía here; pressing it connects her and shows her ready", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    const use = host.querySelector<HTMLButtonElement>('[data-assistant-use="a1"]')!;
+    expect(use.textContent).toBe('ownAssistant.card.useHere {"name":"Lucía"}');
+    expect(host.querySelector("[data-assistant-create]")!.textContent).toBe("ownAssistant.card.createAnother");
+    fetchMock.mockReturnValueOnce(json({ projectId: "p1" }, 201));
+    act(() => use.click());
+    await flush();
+    const [url, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
+    expect(url).toBe("/api/assistants/a1/projects");
+    expect(JSON.parse(String(init.body))).toEqual({ projectId: "p1" });
+    expect(host.querySelector<HTMLAnchorElement>("[data-assistant-talk]")!.getAttribute("href")).toBe("/es/assistant/lucia");
+  });
+
+  it("using her here when the project got another meanwhile says so", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    fetchMock.mockReturnValueOnce(json({ error: "project_has_assistant" }, 409));
+    act(() => host.querySelector<HTMLButtonElement>('[data-assistant-use="a1"]')!.click());
+    await flush();
+    expect(host.querySelector("[role=alert]")!.textContent).toBe("ownAssistant.errors.projectHas");
+  });
+
+  it("«create another» still opens the creator", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());
+    await flush();
+    expect(document.querySelector("[role=dialog]")).not.toBeNull();
+  });
+
   it("is not there without Len's card", () => {
     const host = mount(<AssistantCreateCard actions={[{ tool: "Read", status: "done", summary: "x" }]} projectId="p1" />);
     expect(host.innerHTML).toBe("");
