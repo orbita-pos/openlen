@@ -51,9 +51,10 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
         setVisits(b.visits);
         // Phase 4E: this list mounts the first time Conversaciones is shown, so what it got is what her owner saw — read,
         // as the page's inbox marks it. Best effort: a failed mark only leaves them unread for `list_messages`.
-        const ids = b.visits.slice(0, 50).map((v) => v.id);
-        if (ids.length)
-          void fetch(`/api/assistants/${assistantId}/visits/read`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids }) }).catch(() => {});
+        // Each up to the last line it showed (final review I1).
+        const seen = b.visits.slice(0, 50).map((v) => ({ id: v.id, lastAt: v.lastAt }));
+        if (seen.length)
+          void fetch(`/api/assistants/${assistantId}/visits/read`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ seen }) }).catch(() => {});
       })
       .catch(() => live && setFailed(true));
     fetch("/api/assistants/visitor-budget")

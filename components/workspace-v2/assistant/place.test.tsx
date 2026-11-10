@@ -203,7 +203,7 @@ describe("her place's controls", () => {
     await settle();
     expect(reads()).toHaveLength(1);
     expect(reads()[0]!.init?.method).toBe("POST");
-    expect(JSON.parse(String(reads()[0]!.init?.body))).toEqual({ ids: ["v1"] });
+    expect(JSON.parse(String(reads()[0]!.init?.body))).toEqual({ seen: [{ id: "v1", lastAt: AT }] });
     act(() => tabs[0]!.click());
     act(() => tabs[1]!.click());
     await settle();

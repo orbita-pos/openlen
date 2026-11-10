@@ -9,7 +9,7 @@
 // what she noted (80 centicredits; 108 in all with two visitors and a memory note).
 import "server-only";
 
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -55,6 +55,12 @@ const SCAN = 500;
 /** Without a range, the last 7 days, like `list_form_submissions`. */
 const DEFAULT_DAYS = 7;
 const DAY_MS = 86_400_000;
+/** Bounded as the page's inbox (lib/resultados/mensajes.ts: `recortar`, `ULTIMOS`), so a result never reaches the spill
+ *  threshold: a spilled result is a FILE, written in her box on a paid plan, and visitors' data never enters it
+ *  (invariant 5; final review I3). */
+const LAST_MAX = 120;
+const LINES_MAX = 30;
+const cut = (s: string) => (s.length > LAST_MAX ? `${s.slice(0, LAST_MAX)}…` : s);
 
 const v = schema.assistantVisits;
 const r = schema.assistantRequests;
@@ -82,7 +88,7 @@ async function notedOf(assistantId: string, visits: readonly VisitRow[]): Promis
   const rows = await db
     .select({ projectId: r.projectId, visitorId: r.visitorId, text: r.text, cardId: r.cardId, at: r.at })
     .from(r)
-    .where(and(eq(r.assistantId, assistantId), inArray(r.projectId, [...new Set(visits.map((x) => x.projectId))]), inArray(r.visitorId, [...new Set(visits.map((x) => x.visitorId))])));
+    .where(and(eq(r.assistantId, assistantId), isNull(r.discardedAt), inArray(r.projectId, [...new Set(visits.map((x) => x.projectId))]), inArray(r.visitorId, [...new Set(visits.map((x) => x.visitorId))])));
   const cardIds = [...new Set(rows.map((x) => x.cardId).filter((id): id is string => Boolean(id)))];
   const cards = cardIds.length ? await db.select({ id: c.id, status: c.status }).from(c).where(inArray(c.id, cardIds)) : [];
   const statusOf = new Map(cards.map((x) => [x.id, x.status]));
@@ -122,7 +128,7 @@ export async function herConversations(assistantId: string, zone: string, filter
       return {
         id: x.id,
         project: titles.get(x.projectId) ?? null,
-        last: last.text,
+        last: cut(last.text),
         date: dayIn(zone, new Date(last.at)),
         unread: unread.get(x.id) ?? 0,
         noted: noted.get(x.id) ?? [],
@@ -144,18 +150,33 @@ export async function herConversation(assistantId: string, zone: string, id: str
   return {
     id: visit.id,
     project: titles.get(visit.projectId) ?? null,
-    messages: visit.lines.map((l) => ({ from: l.role === "visitor" ? "visitor" : "you", text: l.text, date: dayIn(zone, new Date(l.at)) })),
+    messages: visit.lines.slice(-LINES_MAX).map((l) => ({ from: l.role === "visitor" ? "visitor" : "you", text: l.text, date: dayIn(zone, new Date(l.at)) })),
     noted: noted.get(visit.id) ?? [],
   };
 }
 
-/** Her owner saw these in her Conversaciones: her visits among `ids` are read up to `at`. Another's are left alone. */
-export async function markHerVisitsRead(assistantId: string, ids: readonly string[], at: Date): Promise<number> {
-  if (ids.length === 0) return 0;
-  const marked = await db
-    .update(v)
-    .set({ readAt: at })
-    .where(and(eq(v.assistantId, assistantId), inArray(v.id, [...new Set(ids)])))
-    .returning({ id: v.id });
-  return marked.length;
+export interface SeenVisit {
+  readonly id: string;
+  /** The `lastAt` of the conversation as it was shown. */
+  readonly lastAt: Date;
+}
+
+/** Her owner saw these in her Conversaciones: each of HER visits among `seen` is read up to the last line it showed —
+ *  never past `now`, never back. Not «up to now» (final review I1): a visitor line's `at` is its turn's start, saved
+ *  after the answer, and the phone marks when «Conversaciones» is tapped, maybe minutes after loading; what came after
+ *  what was shown stays unread. Another's ids are left alone. */
+export async function markHerVisitsRead(assistantId: string, seen: readonly SeenVisit[], now: Date): Promise<number> {
+  const upTo = new Map<string, number>();
+  for (const s of seen) upTo.set(s.id, Math.max(upTo.get(s.id) ?? -Infinity, Math.min(now.getTime(), s.lastAt.getTime())));
+  let marked = 0;
+  for (const [id, ms] of upTo) {
+    const rows = await db
+      .update(v)
+      // Postgres's greatest() skips a null: the first mark is the shown time.
+      .set({ readAt: sql`greatest(${v.readAt}, ${new Date(ms).toISOString()}::timestamptz)` })
+      .where(and(eq(v.assistantId, assistantId), eq(v.id, id)))
+      .returning({ id: v.id });
+    marked += rows.length;
+  }
+  return marked;
 }
