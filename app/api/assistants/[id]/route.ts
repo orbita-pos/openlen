@@ -3,7 +3,8 @@
 // surface answers `assistants_off`, like POST /api/assistants.
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { assistantById, deleteAssistant, renameAssistant } from "@/lib/assistants/store";
+import { siteLocaleOf } from "@/lib/assistants/names";
+import { assistantById, deleteAssistant, renameAssistant, setMorningSummary } from "@/lib/assistants/store";
 import { setOnPage } from "@/lib/assistants/visitor/store";
 import { assistantView } from "@/lib/assistants/view";
 
@@ -40,10 +41,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
   const { id } = await params;
-  const body = (await req.json().catch(() => null)) as { onPage?: unknown; name?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { onPage?: unknown; name?: unknown; morningSummary?: unknown; locale?: unknown } | null;
   const onPage = typeof body?.onPage === "boolean" ? body.onPage : undefined;
   const name = typeof body?.name === "string" ? body.name : undefined;
-  if (onPage === undefined && name === undefined) return json({ error: "bad_request" }, 400);
+  const morningSummary = typeof body?.morningSummary === "boolean" ? body.morningSummary : undefined;
+  if (onPage === undefined && name === undefined && morningSummary === undefined) return json({ error: "bad_request" }, 400);
   const a = await assistantById(id);
   if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
   const out: Record<string, unknown> = {};
@@ -56,6 +58,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (onPage !== undefined) {
     if (!(await setOnPage(a.homeProjectId, a.id, onPage))) return json({ error: "not_found" }, 404);
     Object.assign(out, { onPage, needsPublish: onPage });
+  }
+  // The morning summary (phase 4D, spec §6.9), in the language of the page that turned it on.
+  if (morningSummary !== undefined) {
+    if (!(await setMorningSummary(a.id, personId, morningSummary, siteLocaleOf(body?.locale)))) return json({ error: "not_found" }, 404);
+    Object.assign(out, { morningSummary });
   }
   return json(out);
 }

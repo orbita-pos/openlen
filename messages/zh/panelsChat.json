@@ -739,7 +739,8 @@
       "color": "颜色",
       "tone": "说话方式",
       "done": "完成",
-      "cancel": "取消"
+      "cancel": "取消",
+      "morningSummary": "每天早上告诉我发生了什么"
     },
     "tones": {
       "friendly": "亲切",
@@ -816,6 +817,10 @@
       "close": "关闭",
       "publishToKnow": "下次发布后 {name} 才会了解它。",
       "busy": "{name} 正在回答：等回答完成后再试。"
+    },
+    "summary": {
+      "switch": "早间摘要",
+      "hint": "仅在昨天有事发生时，于早上 8 点告诉你。"
     }
   }
 }

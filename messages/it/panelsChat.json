@@ -739,7 +739,8 @@
       "color": "Colore",
       "tone": "Come parla",
       "done": "Fatto",
-      "cancel": "Annulla"
+      "cancel": "Annulla",
+      "morningSummary": "Raccontami ogni mattina cosa è successo"
     },
     "tones": {
       "friendly": "Gentile",
@@ -816,6 +817,10 @@
       "close": "Chiudi",
       "publishToKnow": "{name} lo conoscerà alla prossima pubblicazione.",
       "busy": "{name} sta rispondendo: riprova quando ha finito."
+    },
+    "summary": {
+      "switch": "Riepilogo del mattino",
+      "hint": "Alle 8, solo se ieri è successo qualcosa."
     }
   }
 }

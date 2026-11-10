@@ -739,7 +739,8 @@
       "color": "Color",
       "tone": "How it talks",
       "done": "Done",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "morningSummary": "Tell me each morning what happened"
     },
     "tones": {
       "friendly": "Friendly",
@@ -816,6 +817,10 @@
       "close": "Close",
       "publishToKnow": "{name} will know it after its next publish.",
       "busy": "{name} is answering: try again when the answer is done."
+    },
+    "summary": {
+      "switch": "Morning summary",
+      "hint": "At 8 a.m., only if something happened yesterday."
     }
   }
 }

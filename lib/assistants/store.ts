@@ -34,6 +34,9 @@ export async function createAssistant(o: {
   input: AssistantInput;
   /** Its memory to start with: what today's assistant of the project was taught (lib/assistants/knowledge.ts). */
   memory?: string;
+  /** The morning summary, ticked in the creator (phase 4D, spec §6.9), and the language it was ticked in. */
+  morningSummary?: boolean;
+  locale?: string;
 }): Promise<{ ok: true; assistant: AssistantRow } | { ok: false; code: "name_taken" | "project_has_assistant" }> {
   try {
     const assistant = await db.transaction(async (tx) => {
@@ -41,7 +44,14 @@ export async function createAssistant(o: {
       try {
         [row] = await tx
           .insert(a)
-          .values({ personId: o.personId, homeProjectId: o.projectId, slug: assistantSlug(o.input.name), ...o.input, ...(o.memory ? { memory: o.memory } : {}) })
+          .values({
+            personId: o.personId,
+            homeProjectId: o.projectId,
+            slug: assistantSlug(o.input.name),
+            ...o.input,
+            ...(o.memory ? { memory: o.memory } : {}),
+            ...(o.morningSummary ? { morningSummary: true, summaryLocale: o.locale ?? null } : {}),
+          })
           .returning();
       } catch (err) {
         if (isUniqueViolation(err)) throw new Refused("name_taken");
@@ -115,6 +125,17 @@ export async function renameAssistant(
     if (isUniqueViolation(err)) return { ok: false, error: "name_taken" };
     throw err;
   }
+}
+
+/** The morning summary's switch (phase 4D, spec §6.9): turning it on keeps the language it was turned on in; off keeps
+ *  it. `false` when she isn't this person's. */
+export async function setMorningSummary(id: string, personId: string, on: boolean, locale: string): Promise<boolean> {
+  const done = await db
+    .update(a)
+    .set({ morningSummary: on, ...(on ? { summaryLocale: locale } : {}), updatedAt: new Date() })
+    .where(and(eq(a.id, id), eq(a.personId, personId)))
+    .returning({ id: a.id });
+  return done.length > 0;
 }
 
 /** Where an old address of hers goes now: her live slug, or `null`. The page asks only when no live slug matches. */

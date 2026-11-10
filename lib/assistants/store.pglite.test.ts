@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, setMorningSummary, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
 let pg: PGlite;
@@ -177,5 +177,30 @@ describe("renaming her (phase 4D)", () => {
     expect(await renameAssistant(id, "u1", "  ")).toEqual({ ok: false, error: "invalid" });
     expect(await renameAssistant(id, "u2", "Marta")).toEqual({ ok: false, error: "not_found" });
     expect((await assistantById(id))?.slug).toBe("lucia");
+  });
+});
+
+// PHASE 4D (spec §6.9): the morning summary, off unless the owner turns it on, in the language it was turned on in.
+describe("the morning summary's switch (phase 4D)", () => {
+  async function row(id: string) {
+    return (await pg.query<{ morningSummary: boolean; summaryLocale: string | null }>(`select "morningSummary", "summaryLocale" from "assistants" where "id" = $1`, [id])).rows[0];
+  }
+
+  it("🔴 the morning summary is off unless the owner turns it on", async () => {
+    const off = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    const on = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Ana" }, morningSummary: true, locale: "es" });
+    if (!off.ok || !on.ok) throw new Error("not created");
+    expect(await row(off.assistant.id)).toEqual({ morningSummary: false, summaryLocale: null });
+    expect(await row(on.assistant.id)).toEqual({ morningSummary: true, summaryLocale: "es" });
+  });
+
+  it("turning it on keeps the language it was turned on in; off keeps it; only her person", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error(r.code);
+    expect(await setMorningSummary(r.assistant.id, "u1", true, "pt")).toBe(true);
+    expect(await row(r.assistant.id)).toEqual({ morningSummary: true, summaryLocale: "pt" });
+    expect(await setMorningSummary(r.assistant.id, "u1", false, "en")).toBe(true);
+    expect(await row(r.assistant.id)).toEqual({ morningSummary: false, summaryLocale: "pt" });
+    expect(await setMorningSummary(r.assistant.id, "u2", true, "es")).toBe(false);
   });
 });

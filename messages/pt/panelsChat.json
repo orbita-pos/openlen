@@ -739,7 +739,8 @@
       "color": "Cor",
       "tone": "Como fala",
       "done": "Pronto",
-      "cancel": "Cancelar"
+      "cancel": "Cancelar",
+      "morningSummary": "Me conte toda manhã o que aconteceu"
     },
     "tones": {
       "friendly": "Gentil",
@@ -816,6 +817,10 @@
       "close": "Fechar",
       "publishToKnow": "{name} vai conhecê-lo na próxima publicação.",
       "busy": "{name} está respondendo: tente de novo quando terminar."
+    },
+    "summary": {
+      "switch": "Resumo da manhã",
+      "hint": "Às 8h, só se algo aconteceu ontem."
     }
   }
 }
