@@ -8,6 +8,15 @@
 // Pure.
 import { resolverRuta } from "@/lib/agent/ficheros/sitio";
 
+/** MEASURED on 09/11 (phase 4B, task 4: real turns on a throwaway base through Len's route with a phone key, DeepSeek
+ *  V4.1 Flash, the terminal without the box; Lucía serving «Pastelería Canela» — her home — and «Canela Tienda», whose
+ *  DRAFT has a /LEN.md and an unpublished /ofertas/): 107 centicredits in all ($0.0033), 7 over the 100 cap (the script
+ *  checked the spend only before each turn). «¿Qué le dejé dicho a Len en la tienda?» — 82 (the first call of her
+ *  prefix, ~19.5k tokens, uncached), 14.8 s: she read this folder's line in PROJECTS.md and went to it with the TERMINAL
+ *  (`ls ~/.assistant/projects/`, `find …/<shop>`), which answered «No such file or directory»; she told the owner she
+ *  has no access. «¿La tienda ya tiene la página de ofertas?» — 25, 21.7 s: `find /` in the terminal and `view_page` of
+ *  the published address; «no la veo». Read, Glob and Grep were never tried: the terminal must see these folders too,
+ *  as Claude Code's shell sees its additional working directories. */
 export const SERVED_FOLDERS = "~/.assistant/projects";
 
 export function servedFolderOf(projectId: string): string {
