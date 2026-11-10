@@ -799,6 +799,16 @@
       "openChat": "Bekijk Len in de chat",
       "earlier": "Eerdere verzoeken",
       "loadError": "De verzoeken konden niet worden geladen."
+    },
+    "projects": {
+      "count": "{count, plural, one {# project} other {# projecten}}",
+      "home": "Thuis",
+      "remove": "Uit dit project halen",
+      "removeConfirm": "Ja, eruit halen",
+      "delete": "{name} verwijderen",
+      "deleteConfirm": "Ja, {name} definitief verwijderen",
+      "failed": "Dat lukte niet. Probeer het opnieuw.",
+      "close": "Sluiten"
     }
   }
 }

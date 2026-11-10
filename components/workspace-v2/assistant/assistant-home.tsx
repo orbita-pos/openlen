@@ -4,7 +4,8 @@
 // Len's chat panel as the assistant, without the workshop around it. It never writes the project: the canvas update is
 // a no-op, and the turn's session is read-only on the server. Phase 2A adds «Conversaciones» (what the page's visitors
 // said to her) and «En mi página»; phase 3, «Pedidos» (what visitors asked for and couldn't be done, joined into cards
-// only the owner's press turns into Len's work). Each tab after the first mounts the first time it opens.
+// only the owner's press turns into Len's work). Each tab after the first mounts the first time it opens. Phase 4: the
+// projects she serves, beside her home's «En mi página», where she is taken off one or deleted.
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -13,7 +14,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
-import { OnPageSwitch } from "./on-page-switch";
+import { HerProjects } from "./her-projects";
 import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
 
@@ -69,7 +70,7 @@ export function AssistantHome({
             ))}
           </div>
           <div className="ml-auto min-w-0">
-            <OnPageSwitch assistantId={assistant.id} initial={onPage} initialNeedsPublish={needsPublish} nothingToKnow={nothingToKnow} />
+            <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
           </div>
         </div>
         {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}

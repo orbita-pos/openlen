@@ -13,6 +13,7 @@ vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { AssistantHome } from "./assistant-home";
+import { HerProjects } from "./her-projects";
 import { LenTurn } from "../chat/chat-turn";
 import { restoreTurn } from "../chat/use-agent-chat";
 
@@ -131,7 +132,7 @@ describe("the assistant's place", () => {
 // HER PLACE'S CONTROLS (spec local 2026-11-06-asistente-propio, §4.4.5, §4.6.2, §6.2; phase 2A).
 describe("her place's controls", () => {
   const AT = "2026-11-07T18:00:00.000Z";
-  function serve(o: { patch?: unknown; requests?: unknown[] } = {}) {
+  function serve(o: { patch?: unknown; requests?: unknown[]; projects?: unknown[]; visits?: unknown[] } = {}) {
     const calls: { url: string; init?: RequestInit }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -139,7 +140,12 @@ describe("her place's controls", () => {
         calls.push({ url: String(url), ...(init ? { init } : {}) });
         const u = String(url);
         if (u.endsWith("/api/assistants/a1/visits"))
-          return new Response(JSON.stringify({ visits: [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: true, lines: [{ role: "visitor", text: "¿Hacen envíos?", at: AT }, { role: "assistant", text: "Sólo en Guadalajara.", at: AT }] }] }));
+          return new Response(JSON.stringify({ visits: o.visits ?? [{ id: "v1", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: true, lines: [{ role: "visitor", text: "¿Hacen envíos?", at: AT }, { role: "assistant", text: "Sólo en Guadalajara.", at: AT }] }] }));
+        // Phase 4: her projects.
+        if (u.endsWith("/api/assistants/a1/projects") && !init?.method) return new Response(JSON.stringify({ projects: o.projects ?? [] }));
+        if (u.includes("/api/assistants/a1/projects/") && init?.method === "DELETE") return new Response(null, { status: 204 });
+        if (u.includes("/api/assistants/a1/projects/") && init?.method === "PATCH") return new Response(JSON.stringify({ onPage: true, needsPublish: true }));
+        if (u.endsWith("/api/assistants/a1") && init?.method === "DELETE") return new Response(null, { status: 204 });
         if (u.endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 1_200, cap: 12_500, explicit: null, max: 50_000 }));
         if (u.endsWith("/api/assistants/a1") && init?.method === "PATCH") return new Response(JSON.stringify(o.patch ?? { onPage: true, needsPublish: true }));
         if (u.endsWith("/api/assistants/a1/requests")) return new Response(JSON.stringify({ cards: o.requests ?? [] }));
@@ -165,6 +171,107 @@ describe("her place's controls", () => {
     expect(list.textContent).toContain("Sólo en Guadalajara.");
     expect(list.textContent).toContain("ownAssistant.place.handedOff");
     expect(list.textContent).toContain('ownAssistant.place.budget {"spent":"12","cap":"125"}');
+  });
+
+  // Phase 4: she serves one or more of her person's projects (spec §4.5).
+  const HOME = { projectId: "p1", title: "Pastelería Canela", address: "canela.openlen.app", isHome: true, onPage: true, needsPublish: false, nothingToKnow: false };
+  const SHOP = { projectId: "p2", title: "Canela Tienda", address: "canela-tienda.openlen.app", isHome: false, onPage: false, needsPublish: false, nothingToKnow: false };
+  const openProjects = async (host: HTMLElement) => {
+    act(() => host.querySelector<HTMLButtonElement>("[data-her-projects-open]")!.click());
+    await settle();
+    return document.querySelector<HTMLElement>("[data-her-projects]")!;
+  };
+
+  it("with one project her place looks as before", async () => {
+    serve({ projects: [HOME] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(host.querySelectorAll('[data-assistant-controls] [role="switch"]')).toHaveLength(1);
+    expect(host.querySelector("[data-her-projects-open]")!.textContent).toBe('ownAssistant.projects.count {"count":1}');
+    const panel = await openProjects(host);
+    expect(panel.getAttribute("role")).toBe("dialog");
+    expect(panel.querySelector("[data-her-project-remove]")).toBeNull();
+    expect(panel.textContent).toContain("ownAssistant.projects.home");
+  });
+
+  it("with several, each has its own «En mi página»", async () => {
+    const calls = serve({ projects: [HOME, SHOP] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(host.querySelector("[data-her-projects-open]")!.textContent).toBe('ownAssistant.projects.count {"count":2}');
+    const panel = await openProjects(host);
+    const rows = [...panel.querySelectorAll<HTMLElement>("[data-her-project]")];
+    expect(rows.map((r) => r.getAttribute("data-her-project"))).toEqual(["p1", "p2"]);
+    expect(rows[1]!.textContent).toContain("Canela Tienda");
+    expect(rows[1]!.textContent).toContain("canela-tienda.openlen.app");
+    const shopSwitch = rows[1]!.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    expect(shopSwitch.getAttribute("aria-checked")).toBe("false");
+    act(() => shopSwitch.click());
+    await settle();
+    const patch = calls.find((c) => c.init?.method === "PATCH")!;
+    expect(patch.url).toBe("/api/assistants/a1/projects/p2");
+    expect(JSON.parse(String(patch.init!.body))).toEqual({ onPage: true });
+  });
+
+  it("taking her off a project asks first and refreshes the list", async () => {
+    const calls = serve({ projects: [HOME, SHOP] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const panel = await openProjects(host);
+    const remove = panel.querySelector<HTMLButtonElement>('[data-her-project="p2"] [data-her-project-remove]')!;
+    expect(remove.textContent).toBe("ownAssistant.projects.remove");
+    act(() => remove.click());
+    await settle();
+    expect(calls.some((c) => c.init?.method === "DELETE")).toBe(false);
+    const confirm = panel.querySelector<HTMLButtonElement>('[data-her-project="p2"] [data-her-project-remove-confirm]')!;
+    expect(confirm.textContent).toBe("ownAssistant.projects.removeConfirm");
+    const before = calls.filter((c) => c.url.endsWith("/api/assistants/a1/projects")).length;
+    act(() => confirm.click());
+    await settle();
+    expect(calls.find((c) => c.init?.method === "DELETE")!.url).toBe("/api/assistants/a1/projects/p2");
+    expect(calls.filter((c) => c.url.endsWith("/api/assistants/a1/projects")).length).toBe(before + 1);
+  });
+
+  it("her only project has no «Quitar»", async () => {
+    serve({ projects: [HOME] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect((await openProjects(host)).querySelector("[data-her-project-remove]")).toBeNull();
+  });
+
+  it("🔴 deleting her asks first, then leaves her place", async () => {
+    const calls = serve({ projects: [HOME] });
+    const left: string[] = [];
+    const host = mount(<HerProjects assistantId="a1" name="Lucía" homeOnPage={true} homeNeedsPublish={false} homeNothingToKnow={false} leave={(href) => void left.push(href)} />);
+    await settle();
+    const panel = await openProjects(host);
+    const del = panel.querySelector<HTMLButtonElement>("[data-her-delete]")!;
+    expect(del.textContent).toBe('ownAssistant.projects.delete {"name":"Lucía"}');
+    act(() => del.click());
+    await settle();
+    expect(calls.some((c) => c.init?.method === "DELETE")).toBe(false);
+    act(() => panel.querySelector<HTMLButtonElement>("[data-her-delete-confirm]")!.click());
+    await settle();
+    expect(calls.find((c) => c.init?.method === "DELETE")!.url).toBe("/api/assistants/a1");
+    expect(left).toEqual(["/es/projects"]);
+  });
+
+  it("each conversation says which project it came from", async () => {
+    const line = (text: string) => [{ role: "visitor", text, at: AT }];
+    serve({
+      projects: [HOME, SHOP],
+      visits: [
+        { id: "v1", projectId: "p1", projectTitle: "Pastelería Canela", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: false, lines: line("¿horario?") },
+        { id: "v2", projectId: "p2", projectTitle: "Canela Tienda", startedAt: AT, lastAt: AT, messageCount: 1, handedOff: false, lines: line("¿envíos?") },
+      ],
+    });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    act(() => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][1]!.click());
+    await settle();
+    const visits = [...host.querySelectorAll<HTMLElement>("[data-visit]")];
+    expect(visits[0]!.textContent).toContain('ownAssistant.place.inProject {"project":"Pastelería Canela"}');
+    expect(visits[1]!.textContent).toContain('ownAssistant.place.inProject {"project":"Canela Tienda"}');
   });
 
   // Phase 3: what visitors asked for and couldn't be done (spec §4.6.2 «Pedidos»).

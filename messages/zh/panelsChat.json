@@ -799,6 +799,16 @@
       "openChat": "在聊天中查看 Len",
       "earlier": "之前的请求",
       "loadError": "无法加载请求。"
+    },
+    "projects": {
+      "count": "{count, plural, other {# 个项目}}",
+      "home": "主项目",
+      "remove": "从此项目移除",
+      "removeConfirm": "是的，移除",
+      "delete": "删除 {name}",
+      "deleteConfirm": "是的，永久删除 {name}",
+      "failed": "没能完成，请重试。",
+      "close": "关闭"
     }
   }
 }
