@@ -46,16 +46,16 @@ describe("rememberWhatWasPublished", () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
     const at = new Date("2026-11-07T20:00:00Z");
-    await rememberWhatWasPublished("p1", DATA, at, { save, switchOldOff, publicData: async () => [] });
-    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), at, []);
+    await rememberWhatWasPublished("p1", DATA, at, { save, switchOldOff, publicData: async () => [] }, { onPage: true });
+    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), at, [], { baked: true });
     expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
   it("🔴 nothing published for her to know (an app's shell): today's assistant isn't switched off", async () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
-    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => [] });
-    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), []);
+    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => [] }, { onPage: true });
+    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), [], { baked: true });
     expect(switchOldOff).not.toHaveBeenCalled();
   });
 
@@ -63,8 +63,8 @@ describe("rememberWhatWasPublished", () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
     const tables = [{ name: "huecos", columns: [{ name: "dia", type: "date" }] }];
-    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => tables });
-    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), tables);
+    await rememberWhatWasPublished("p1", { html: '<div id="root"></div>' } as unknown as ProjectData, new Date(), { save, switchOldOff, publicData: async () => tables }, { onPage: true });
+    expect(save).toHaveBeenCalledWith("p1", "", expect.any(Date), tables, { baked: true });
     expect(switchOldOff).toHaveBeenCalledWith("p1");
   });
 
@@ -72,15 +72,25 @@ describe("rememberWhatWasPublished", () => {
   it("🔴 a failed read of the public data keeps what she had: null is passed, not []", async () => {
     const save = vi.fn(async () => {});
     const switchOldOff = vi.fn(async () => true);
-    await rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff, publicData: async () => null });
-    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), expect.any(Date), null);
+    await rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff, publicData: async () => null }, { onPage: true });
+    expect(save).toHaveBeenCalledWith("p1", knowledgeOf(DATA), expect.any(Date), null, { baked: true });
   });
 
   it("never fails the publish: a save that throws is only logged", async () => {
     const save = vi.fn(async () => {
       throw new Error("db down");
     });
-    await expect(rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff: async () => true, publicData: async () => [] })).resolves.toBeUndefined();
+    await expect(rememberWhatWasPublished("p1", DATA, new Date(), { save, switchOldOff: async () => true, publicData: async () => [] }, { onPage: true })).resolves.toBeUndefined();
+  });
+
+  // Phase 4: she knows what each project she serves published, not only the one whose bubble is hers.
+  it("🔴 a project she serves but isn't on keeps what it published, and today's assistant stays on", async () => {
+    const save = vi.fn(async () => {});
+    const switchOldOff = vi.fn(async () => true);
+    const at = new Date("2026-11-09T20:00:00Z");
+    await rememberWhatWasPublished("p2", DATA, at, { save, switchOldOff, publicData: async () => [] }, { onPage: false });
+    expect(save).toHaveBeenCalledWith("p2", knowledgeOf(DATA), at, [], { baked: false });
+    expect(switchOldOff).not.toHaveBeenCalled();
   });
 });
 

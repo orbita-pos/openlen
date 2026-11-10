@@ -55,6 +55,15 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     PRIMARY KEY ("userId", "month")
   );`,
   // Phase 4 — one assistant serves several of her person's projects (spec §4.5).
+  // «Her bubble is baked» apart from «what the project published». Until phase 4 the published text was saved only with
+  // her on the page, so it meant the same: backfilled ONCE, when the column is added — never again, since from now on
+  // turning her off and on keeps knowledgeAt and forgets bakedAt.
+  `DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'assistantProjects' AND column_name = 'bakedAt') THEN
+      ALTER TABLE "assistantProjects" ADD COLUMN "bakedAt" timestamp with time zone;
+      UPDATE "assistantProjects" SET "bakedAt" = "knowledgeAt" WHERE "onPage" AND "knowledgeAt" IS NOT NULL;
+    END IF;
+  END $$;`,
   `CREATE INDEX IF NOT EXISTS "assistantProjects_assistant_idx" ON "assistantProjects" ("assistantId");`,
   // Phase 3 — what visitors ask for and she can't do, joined into cards for her person (spec §4.3).
   `CREATE TABLE IF NOT EXISTS "assistantRequestCards" (

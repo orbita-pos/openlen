@@ -17,7 +17,7 @@ import { creditsForUsage, recordUncharged } from "@/lib/credits";
 import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import type { AssistantTone } from "@/lib/assistants/names";
-import { canAnswer } from "@/lib/assistants/visitor/on-page";
+import { answersVisitors } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { runVisitorTurn } from "@/lib/assistants/visitor/turn";
 import type { ProjectData } from "@/lib/projects/types";
@@ -134,7 +134,7 @@ export async function GET(
       // o falso a secas) y `loadChatSite` usa `=== true`. Copiar cada uno como
       // es evita el peor resultado —retirar una burbuja que sí atiende— si un
       // día alguien escribe un 1 o un "true" en el JSONB.
-      asistente: canAnswer(ella) || (Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== ""),
+      asistente: answersVisitors(ella) || (Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== ""),
       chat: chat?.enabled === true,
       // EL TRASPASO NO ES EL CHAT. El botón «Hablar con una persona» llama a
       // /api/chat/<sub>/handoff, que además de un chat encendido exige que sea
@@ -188,7 +188,7 @@ export async function POST(
   // with her (what she knows is saved by that publish), the message wakes her turn on Len's engine. Until that publish
   // the page's bubble is still today's, and goes on below exactly as before.
   const ella = await herOnThePage(owner.projectId);
-  if (canAnswer(ella)) return herTurn(req, sub, owner, body, ella!);
+  if (answersVisitors(ella)) return herTurn(req, sub, owner, body, ella!);
 
   const parsed = parseBody(body);
   if (!parsed) return reply(400, { error: "bad_request" });
@@ -317,7 +317,7 @@ async function herTurn(
   if (!message || !vid) return reply(400, { error: "bad_request" });
   // On the page, but the page was never published with her: she knows nothing yet.
   // On the page, but nothing for her to know yet (never published with her, or no text and no public data).
-  if (!canAnswer(ella)) return reply(403, { error: "disabled" });
+  if (!answersVisitors(ella)) return reply(403, { error: "disabled" });
   const knowledge = ella.knowledge?.trim() ?? "";
 
   const rows = await db

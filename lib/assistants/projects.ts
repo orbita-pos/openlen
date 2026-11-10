@@ -24,6 +24,8 @@ export interface ServedProject {
   /** What the project last published, as she knows it; null until a publish since she serves it. */
   readonly knowledge: string | null;
   readonly knowledgeAt: Date | null;
+  /** The last publish that baked her bubble on this project's page. */
+  readonly bakedAt: Date | null;
   readonly publicData: PublicTable[];
   readonly connectedAt: Date;
 }
@@ -45,6 +47,7 @@ export async function projectsOfAssistant(assistantId: string): Promise<ServedPr
       onPage: ap.onPage,
       knowledge: ap.knowledge,
       knowledgeAt: ap.knowledgeAt,
+      bakedAt: ap.bakedAt,
       publicData: ap.publicData,
       connectedAt: ap.connectedAt,
     })

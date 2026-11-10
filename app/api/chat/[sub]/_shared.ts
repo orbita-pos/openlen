@@ -5,7 +5,7 @@
 
 import { eq } from "drizzle-orm";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { canAnswer } from "@/lib/assistants/visitor/on-page";
+import { answersVisitors } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { db, schema } from "@/lib/db";
 import { readChatCookie } from "@/lib/chat/session";
@@ -55,7 +55,7 @@ export async function loadChatSite(sub: string): Promise<ChatSiteContext | null>
     projectId: row.id,
     userId: row.userId ?? "",
     chatEnabled: chat?.enabled === true,
-    assistantEnabled: legacy || canAnswer(ella),
+    assistantEnabled: legacy || answersVisitors(ella),
     selfServeJoin: chat?.selfServeJoin !== false, // default open
     identityMode: chat?.identityMode === "account" ? "account" : "guest", // default guest
     locale: detectLang(row.data?.html ?? ""),
