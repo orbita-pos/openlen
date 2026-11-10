@@ -8,6 +8,8 @@ import { memoryFromOldAssistant } from "@/lib/assistants/knowledge";
 import { projectIdsOf } from "@/lib/assistants/projects";
 import { assistantsOf, createAssistant, oldAssistantSettings } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
@@ -36,12 +38,15 @@ export async function POST(req: Request): Promise<Response> {
   return json({ id: created.assistant.id, slug: created.assistant.slug }, 201);
 }
 
-export async function GET(): Promise<Response> {
-  const personId = (await auth())?.user?.id;
+/** Hers, with the session or the phone's key (phase 5: her tab in Len móvil lists them). */
+export const GET = paraLaApp(async (req: Request): Promise<Response> => {
+  const personId = await usuarioDeLaPeticion(req);
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ assistants: [] });
   const mine = await assistantsOf(personId);
   // Each with the projects she serves (phase 4): a card in a project knows whether that project has her.
   const served = await projectIdsOf(mine.map((a) => a.id));
   return json({ assistants: mine.map((a) => ({ ...assistantView(a), projectIds: served.get(a.id) ?? [a.homeProjectId] })) });
-}
+});
+
+export const OPTIONS = respuestaPrevia;
