@@ -74,7 +74,10 @@ export const CREATOR_AGENT_TYPE: AgentDefinition = parsedCreator.agent;
 
 /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.1): never a subagent. Like Claude Code's
  *  `--agent <name>`, it is the MAIN thread of the owner's turn with their assistant; the route builds its prompt and
- *  tools from this definition (lib/assistants/agent.ts). Hidden, and its file isn't served. */
+ *  tools from this definition (lib/assistants/agent.ts). Hidden, and its file isn't served.
+ *  «What NOT to save in memory» is Claude Code's agent-memory section (binary 2.1.321): with a one-sentence rule she still
+ *  copied the page into it; with the section, «Apúntate en tu memoria que los jueves hacemos pan de muerto» saved that
+ *  line alone (measured 10/11, 59 centicredits, a first turn). */
 const ASSISTANT = `---
 name: assistant
 description: The person's own assistant, talking with its owner about the business. Hidden: OpenLen starts it, never Len.
