@@ -25,4 +25,13 @@ describe("the outcome of an ask_len request, back to the assistant", () => {
     expect(noticeText({ ...stale, lost: true })).toContain("Len never confirmed the request you passed him: «añade una galería»");
     expect(noticeText({ ...done, closing: "" })).toContain("He left no closing message.");
   });
+
+  // Phase 4: serving several projects, she tells her owner WHERE it was done or failed.
+  it("🔴 a request passed to one of several projects names it, however it ended", () => {
+    expect(noticeText({ ...done, project: "Canela Tienda" })).toBe(
+      "Len finished the request you passed him in «Canela Tienda»: «botón más grande».\n\nHis closing message:\nListo: el botón de pedir ahora es más grande.",
+    );
+    expect(noticeText({ ...failed, project: "Canela Tienda" })).toContain("Len could not do the request you passed him in «Canela Tienda»: «sección de envíos» (no_credits).");
+    expect(noticeText({ ...stale, project: "Canela Tienda", lost: true })).toContain("Len never confirmed the request you passed him in «Canela Tienda»: «añade una galería»");
+  });
 });

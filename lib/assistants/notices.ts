@@ -17,6 +17,8 @@ export interface AskLenNotice {
   readonly closing?: string;
   /** Why the turn didn't run (its code), when it failed. */
   readonly reason?: string;
+  /** The project it went to, by name, when she serves more than one (phase 4). */
+  readonly project?: string;
 }
 
 export type ReadyNotice = AskLenNotice & { readonly lost?: true };
@@ -35,15 +37,16 @@ export function readyNotices(all: readonly AskLenNotice[], now: Date): ReadyNoti
 }
 
 export function noticeText(n: ReadyNotice): string {
+  const passed = n.project ? `the request you passed him in «${n.project}»` : "the request you passed him";
   if (n.lost) {
-    return `Len never confirmed the request you passed him: «${n.request}». It may have been lost when the server restarted. Tell your owner to look at Len's chat in the project, and pass it again if it isn't there.`;
+    return `Len never confirmed ${passed}: «${n.request}». It may have been lost when the server restarted. Tell your owner to look at Len's chat in the project, and pass it again if it isn't there.`;
   }
   if (n.status === "failed") {
-    return `Len could not do the request you passed him: «${n.request}» (${n.reason ?? "the turn did not run"}). Tell your owner, and pass it again if they still want it.`;
+    return `Len could not do ${passed}: «${n.request}» (${n.reason ?? "the turn did not run"}). Tell your owner, and pass it again if they still want it.`;
   }
   const closing = (n.closing ?? "").trim();
   return [
-    `Len finished the request you passed him: «${n.request}».`,
+    `Len finished ${passed}: «${n.request}».`,
     closing === "" ? "He left no closing message." : `His closing message:\n${closing.length > CLOSING_MAX ? `${closing.slice(0, CLOSING_MAX - 1)}…` : closing}`,
   ].join("\n\n");
 }
