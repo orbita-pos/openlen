@@ -9,7 +9,15 @@ export const CARD_TITLE_MAX = 120;
 export const REQUESTS_PER_VISIT_DAY = 3;
 /** One assistant notes at most this many in a day, across her projects: a script with many visitor ids can't either. */
 export const REQUESTS_PER_ASSISTANT_DAY = 200;
-/** One grouping turn reads at most this many waiting requests (the oldest). */
+/** One grouping turn reads at most this many waiting requests (the oldest).
+ *
+ *  MEASURED on 09/11 (phase 3, task 9: the real groupOne on a throwaway base, DeepSeek V4.1 Flash on DeepInfra):
+ *  12 requests (5 about delivery in Spanish and English, 3 bookings, 2 loose, 2 hostile) → ONE call, 3.5 s, 8
+ *  centicredits ($0.00021): 5 cards, the 5 delivery ones on one card, both hostile ones discarded (no title carried
+ *  them), one notice. Two more delivery requests → one call, 0.6 s, 2 centicredits, 768 of 932 input tokens cached:
+ *  they joined that card (7 people) with no new notice. A batch of 40 is ~1.5k input tokens — about a dozen
+ *  centicredits at worst, under a visitor's turn reserve (VISITOR_TURN_RESERVE, 50). One real visitor message asking
+ *  for what the page doesn't say called note_request without the email it carried (9 centicredits, 2 calls). */
 export const GROUP_BATCH = 40;
 /** One pass groups at most this many (assistant, project) pairs. */
 export const GROUPS_PER_PASS = 20;
