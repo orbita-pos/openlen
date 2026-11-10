@@ -43,7 +43,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     ...(suya ? { asistente: suya } : {}),
   };
   // The person's own assistant's notification sits beside Len's for the same project, never replaces it.
-  const herOwn = (evento.type === "len_turno" && evento.asistente) || evento.type === "assistant_summary";
+  const herOwn = (evento.type === "len_turno" && Boolean(evento.asistente)) || Boolean(suya) || evento.type === "assistant_summary";
   const tag = herOwn ? `assistant-${evento.projectId}` : `len-${evento.projectId}`;
   return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag } } } };
 }

@@ -1,63 +1,68 @@
-// HER TAB IN LEN MÓVIL (spec local 2026-11-06-asistente-propio, §4.6.3, §4.6.2, phase 5): the three parts of her place
-// on the web — Hablar (the phone's own chat, talking to her), Conversaciones and Pedidos —, and where her notices land.
+// HER TAB IN LEN MÓVIL (spec local 2026-11-06-asistente-propio, §4.6.3, §4.6.2, phase 5): «Hablar con {name}» (her chat
+// itself is the main screen's, over the tab — final review I1), «Conversaciones» and «Pedidos» as her place on the web.
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, unknown>) => (v ? `${k} ${JSON.stringify(v)}` : k) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
-vi.mock("../api/asistente", () => ({ leerSuChat: vi.fn(), leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn() }));
-const chat = vi.hoisted(() => ({ opciones: null as Record<string, unknown> | null, props: null as Record<string, unknown> | null }));
-vi.mock("../chat/use-chat", () => ({ useChat: (o: Record<string, unknown>) => ((chat.opciones = o), { trabajando: false }) }));
-vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => ((chat.props = p), <div data-chat-abierto={String(p.abierto)} />) }));
+vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn() }));
 
-import { leerSuChat, leerSusPedidos, leerSusVisitas, tocarPedido } from "../api/asistente";
+import { leerSusPedidos, leerSusVisitas, tocarPedido } from "../api/asistente";
 import { AssistantTab } from "./assistant-tab";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob" as const, color: "#F4A48B", tone: "friendly" as const, projectId: "p1", projectIds: ["p1"] };
-const VISIT = { id: "v1", projectId: "p1", projectTitle: "Panadería", startedAt: "2026-11-09T10:00:00Z", lastAt: "2026-11-09T10:01:00Z", messageCount: 2, handedOff: false, lines: [{ role: "visitor", text: "¿Tienen pan sin gluten?", at: "2026-11-09T10:00:00Z" }] };
-const CARD = { id: "c1", title: "Envíos a domicilio", visitors: 3, status: "pending", projectTitle: "Panadería" };
+const line = (role: string, text: string, i: number) => ({ role, text, at: `2026-11-09T10:0${i}:00Z` });
+const VISIT = { id: "v1", projectId: "p1", projectTitle: "Panadería", startedAt: "2026-11-09T10:00:00Z", lastAt: "2026-11-09T10:05:00Z", messageCount: 6, handedOff: false, lines: [line("visitor", "Hola", 0), line("visitor", "Mi teléfono es 55 1234 5678", 1), line("assistant", "Gracias", 2), line("visitor", "¿Abren hoy?", 3), line("assistant", "Sí, hasta las 7", 4), line("visitor", "¿Tienen pan sin gluten?", 5)] };
+const CARD = { id: "c1", projectId: "p2", title: "Envíos a domicilio", visitors: 3, status: "pending", failure: null, projectTitle: "Tienda" };
 
 const roots: Root[] = [];
 afterEach(() => {
   for (const r of roots.splice(0)) act(() => r.unmount());
   document.body.innerHTML = "";
   vi.clearAllMocks();
-  chat.opciones = chat.props = null;
 });
 
-async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarjeta?: string | null } = {}) {
-  vi.mocked(leerSuChat).mockResolvedValue([{ id: "t1" }] as never);
+async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarjeta?: string | null; cards?: unknown[]; onHablar?: () => void; onVerLen?: (projectId: string) => void } = {}) {
   vi.mocked(leerSusVisitas).mockResolvedValue([VISIT] as never);
-  vi.mocked(leerSusPedidos).mockResolvedValue([CARD] as never);
+  vi.mocked(leerSusPedidos).mockResolvedValue((o.cards ?? [CARD]) as never);
   vi.mocked(tocarPedido).mockResolvedValue({ ok: true });
+  Element.prototype.scrollIntoView = vi.fn();
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
-  await act(async () => root.render(<AssistantTab cliente={{} as never} base="https://openlen.com" asistente={LUCIA} idioma="es" onCerrar={() => {}} {...o} />));
+  await act(async () =>
+    root.render(<AssistantTab cliente={{} as never} asistente={LUCIA} idioma="es" onCerrar={() => {}} onHablar={o.onHablar ?? (() => {})} onVerLen={o.onVerLen ?? (() => {})} parte={o.parte} tarjeta={o.tarjeta} />),
+  );
   await act(async () => {});
   return host;
 }
 const click = (el: Element | null) => act(async () => (el as HTMLElement).click());
 
 describe("AssistantTab", () => {
-  it("🔴 talks to her: her chat loads first and every message carries her id", async () => {
-    const host = await paint();
-    expect(chat.opciones).toMatchObject({ projectId: "p1", assistantId: "a1", historial: [{ id: "t1" }] });
-    expect(host.querySelector("[data-chat-abierto]")?.getAttribute("data-chat-abierto")).toBe("false");
+  it("🔴 «Hablar con» asks the main screen to open her chat; the tab holds no chat of its own", async () => {
+    const onHablar = vi.fn();
+    const host = await paint({ onHablar });
     await click(host.querySelector("[data-asistente-hablar]"));
-    expect(host.querySelector("[data-chat-abierto]")?.getAttribute("data-chat-abierto")).toBe("true");
-    expect(chat.props).toMatchObject({ projectId: "p1", asistente: { name: "Lucía", color: "#F4A48B" } });
+    expect(onHablar).toHaveBeenCalledTimes(1);
+    expect(host.querySelector(".lm-chat")).toBeNull();
   });
 
-  it("her conversations and her requests, as on the web", async () => {
+  it("🔴 every line of a conversation, with who said it and when, as on the web", async () => {
     const host = await paint();
-    expect(host.textContent).toContain("¿Tienen pan sin gluten?");
-    await click(host.querySelector('[data-asistente-parte="pedidos"]'));
-    expect(host.textContent).toContain("Envíos a domicilio");
+    expect(host.textContent).toContain("Mi teléfono es 55 1234 5678");
+    expect(host.querySelectorAll("[data-visita-linea]")).toHaveLength(6);
+    expect(host.querySelector("[data-visita-linea] .asist-sr")?.textContent).toContain("own.place.visitor");
+    expect(host.querySelector("time")?.getAttribute("dateTime")).toBe("2026-11-09T10:05:00Z");
+  });
+
+  it("her requests, pending first, as on the web", async () => {
+    const done = { ...CARD, id: "c0", title: "Galletas", status: "accepted" };
+    const host = await paint({ parte: "pedidos", cards: [done, CARD] });
+    expect([...host.querySelectorAll("[data-pedido]")].map((x) => x.getAttribute("data-pedido"))).toEqual(["c1", "c0"]);
     expect(host.textContent).toContain('own.requests.visitors {"count":3}');
   });
 
@@ -68,39 +73,52 @@ describe("AssistantTab", () => {
     expect(leerSusPedidos).toHaveBeenCalledTimes(2);
   });
 
-  it("🔴 a request notice's card is highlighted", async () => {
-    const host = await paint({ parte: "pedidos", tarjeta: "c1" });
-    expect(host.querySelector('[data-pedido="c1"]')?.getAttribute("data-resaltado")).toBe("true");
+  it("🔴 a press the server refuses says so", async () => {
+    const host = await paint({ parte: "pedidos" });
+    vi.mocked(tocarPedido).mockResolvedValueOnce({ ok: false, error: "not_pending" });
+    await click(host.querySelector("[data-pedido-hazlo]"));
+    expect(host.querySelector('[data-pedido="c1"] [role="alert"]')?.textContent).toBe("own.requests.failed");
   });
 
-  it("her turn's notice opens her chat", async () => {
-    const host = await paint({ parte: "hablar" });
-    expect(host.querySelector("[data-chat-abierto]")?.getAttribute("data-chat-abierto")).toBe("true");
+  it("🔴 a request Len couldn't start says why, as on the web", async () => {
+    const host = await paint({ parte: "pedidos", cards: [{ ...CARD, failure: "no_credits" }] });
+    expect(host.querySelector('[data-pedido="c1"] [role="alert"]')?.textContent).toBe("own.requests.noCredits");
+  });
+
+  it("🔴 a request passed to Len offers to see Len in the chat of its project", async () => {
+    const onVerLen = vi.fn();
+    const host = await paint({ parte: "pedidos", cards: [{ ...CARD, status: "accepted" }], onVerLen });
+    await click(host.querySelector("[data-pedido-ver-len]"));
+    expect(onVerLen).toHaveBeenCalledWith("p2");
+  });
+
+  it("🔴 a request notice's card is highlighted and brought into view", async () => {
+    const host = await paint({ parte: "pedidos", tarjeta: "c1" });
+    expect(host.querySelector('[data-pedido="c1"]')?.getAttribute("data-resaltado")).toBe("true");
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 
   it("an assistant that no longer exists says so", async () => {
-    vi.mocked(leerSuChat).mockRejectedValueOnce(new Error("404"));
+    vi.mocked(leerSusVisitas).mockRejectedValue(new Error("404"));
+    vi.mocked(leerSusPedidos).mockRejectedValue(new Error("404"));
     const host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
     roots.push(root);
-    vi.mocked(leerSusVisitas).mockRejectedValue(new Error("404"));
-    vi.mocked(leerSusPedidos).mockRejectedValue(new Error("404"));
-    await act(async () => root.render(<AssistantTab cliente={{} as never} base="b" asistente={LUCIA} idioma="es" onCerrar={() => {}} />));
+    await act(async () => root.render(<AssistantTab cliente={{} as never} asistente={LUCIA} idioma="es" onCerrar={() => {}} onHablar={() => {}} onVerLen={() => {}} />));
     await act(async () => {});
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("noEsta");
   });
 
   // Opened by a notice of one deleted since, there is no name to say (principal.tsx's stub): «Tu asistente ya no está».
   it("🔴 one deleted since, with no name to say, is «your assistant»", async () => {
-    vi.mocked(leerSuChat).mockRejectedValue(new Error("404"));
     vi.mocked(leerSusVisitas).mockRejectedValue(new Error("404"));
     vi.mocked(leerSusPedidos).mockRejectedValue(new Error("404"));
     const host = document.createElement("div");
     document.body.appendChild(host);
     const root = createRoot(host);
     roots.push(root);
-    await act(async () => root.render(<AssistantTab cliente={{} as never} base="b" asistente={{ ...LUCIA, name: "" }} idioma="es" onCerrar={() => {}} />));
+    await act(async () => root.render(<AssistantTab cliente={{} as never} asistente={{ ...LUCIA, name: "" }} idioma="es" onCerrar={() => {}} onHablar={() => {}} onVerLen={() => {}} />));
     await act(async () => {});
     expect(host.querySelector('[role="alert"]')?.textContent).toBe('noEsta {"name":"own.place.yours"}');
   });

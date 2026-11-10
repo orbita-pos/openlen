@@ -14,3 +14,6 @@
 .app-asistente .asist-pedido[data-resaltado="true"] { border-color: var(--lm-accent, #e8603c); box-shadow: 0 0 0 2px var(--lm-accent, #e8603c); }
 .app-asistente .asist-acciones { display: flex; gap: 8px; margin-top: 8px; }
 .ch-face-asistente { display: inline-block; border-radius: 50%; }
+.app-asistente .asist-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.app-asistente .asist-aviso { color: var(--lm-bad, #c2410c); }
+.app-asistente .asist-de-visitante { text-align: right; }
