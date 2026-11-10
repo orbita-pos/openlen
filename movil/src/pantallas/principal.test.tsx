@@ -8,7 +8,8 @@ vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
 const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void), entregado: null as null | ((id: string, url: string) => void), asistente: null as null | ((id: string, donde: { parte: string; tarjeta: string | null }) => void) }));
 vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void; onAbrirEntregado?: (id: string, url: string) => void; onAbrirAsistente?: (id: string, donde: { parte: string; tarjeta: string | null }) => void }) => { aviso.abrir = o.onAbrirProyecto; aviso.entregado = o.onAbrirEntregado ?? null; aviso.asistente = o.onAbrirAsistente ?? null; return { estado:"noDisponible" }; } }));
 // Her tab (phase 5) is tested on its own (../asistente/assistant-tab.test.tsx): here, only that it opens, and on what.
-vi.mock("../asistente/assistant-tab", () => ({ AssistantTab: (p: { asistente: { id: string }; parte?: string; tarjeta?: string | null }) => <div data-assistant-tab={p.asistente.id} data-parte={p.parte ?? ""} data-tarjeta={p.tarjeta ?? ""} /> }));
+const montajes = vi.hoisted(() => ({ n: 0 }));
+vi.mock("../asistente/assistant-tab", async () => { const { useEffect } = await import("react"); return { AssistantTab: (p: { asistente: { id: string }; parte?: string; tarjeta?: string | null; onHablar: () => void; onVerLen: (projectId: string) => void }) => <div data-assistant-tab={p.asistente.id} data-parte={p.parte ?? ""} data-tarjeta={p.tarjeta ?? ""}><button data-tab-hablar="" onClick={p.onHablar} /><button data-tab-ver-len="" onClick={() => p.onVerLen("p1")} /><Montado /></div> }; function Montado() { useEffect(() => { montajes.n++; }, []); return null; } });
 vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
 const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: number) => void) }));
@@ -364,5 +365,73 @@ describe("her tab in the selector", () => {
     await act(async () => aviso.asistente!("a-borrada", { parte: "pedidos", tarjeta: "c1" }));
     await act(async () => {});
     expect(host.querySelector('[data-assistant-tab="a-borrada"]')).not.toBeNull();
+  });
+});
+
+// Final review (phase 5): her chat is the main screen's, over her tab and outside it (I1); a notice reopens her tab on
+// its part (I3); a deleted one's turn notice never opens an empty chat (M2); «Ver a Len» goes to Len's chat (I2).
+describe("her chat and her notices", () => {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
+  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+  async function paint() {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta === "/api/assistants"
+            ? Response.json({ assistants: [LUCIA] })
+            : ruta === "/api/assistants/a1/chat"
+              ? Response.json({ chatHistory: [] })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    return { pedir };
+  }
+  const suChat = () => (chatProps.ultimo?.asistente ? chatProps.ultimo : null);
+
+  it("🔴 «Hablar» opens her chat over her tab, outside the panel, and reads her conversation", async () => {
+    const { pedir } = await paint();
+    await act(async () => aviso.asistente!("a1", { parte: "conversaciones", tarjeta: null }));
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-tab-hablar]")!.click());
+    await act(async () => {});
+    expect(suChat()).toMatchObject({ abierto: true, projectId: "p1", asistente: { name: "Lucía", color: "#F4A48B" } });
+    expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
+    expect(host.querySelector(".app-panel-motion .app-su-chat")).toBeNull();
+    expect(host.querySelector(".app-su-chat")).not.toBeNull();
+    expect(pedir).toHaveBeenCalledWith("/api/assistants/a1/chat");
+  });
+
+  it("🔴 a turn notice of hers opens her chat", async () => {
+    await paint();
+    await act(async () => aviso.asistente!("a1", { parte: "hablar", tarjeta: null }));
+    await act(async () => {});
+    expect(suChat()).toMatchObject({ abierto: true });
+  });
+
+  it("🔴 a second notice for her open tab opens it afresh on its part", async () => {
+    await paint();
+    montajes.n = 0;
+    await act(async () => aviso.asistente!("a1", { parte: "conversaciones", tarjeta: null }));
+    await act(async () => aviso.asistente!("a1", { parte: "pedidos", tarjeta: "c9" }));
+    await act(async () => {});
+    const tab = host.querySelector('[data-assistant-tab="a1"]');
+    expect(tab?.getAttribute("data-parte")).toBe("pedidos");
+    expect(tab?.getAttribute("data-tarjeta")).toBe("c9");
+    // Mounted afresh: its views and lists are the notice's, never the ones it had.
+    expect(montajes.n).toBe(2);
+  });
+
+  it("🔴 a turn notice of one deleted since opens her tab, never an empty chat", async () => {
+    await paint();
+    await act(async () => aviso.asistente!("a-borrada", { parte: "hablar", tarjeta: null }));
+    await act(async () => {});
+    expect(host.querySelector('[data-assistant-tab="a-borrada"]')).not.toBeNull();
+    expect(suChat()).toBeNull();
   });
 });

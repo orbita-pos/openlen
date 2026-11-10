@@ -33,6 +33,9 @@ describe("FCM sin servicios externos", () => {
     const aviso = { type: "len_aviso", projectId: "p1", recipientUserId: "ana", cardId: "c1", title: "Lucía", push: "Envíos", emailSubject: "s", emailText: "t" } as const;
     expect(mensajeFcm({ ...aviso, assistantId: "a1" }, "t").message.data).toEqual({ type: "len_aviso", projectId: "p1", recipientUserId: "ana", tarjeta: "c1", asistente: "a1" });
     expect(mensajeFcm(aviso, "t").message.data).toEqual({ type: "len_aviso", projectId: "p1", recipientUserId: "ana", tarjeta: "c1" });
+    // Final review (phase 5, M7): hers sits beside Len's notice for the project, never replacing it (nor replaced).
+    expect(mensajeFcm({ ...aviso, assistantId: "a1" }, "t").message.android.notification.tag).toBe("assistant-p1");
+    expect(mensajeFcm(aviso, "t").message.android.notification.tag).toBe("len-p1");
   });
   it("🔴 the owner hears she fell asleep on the phone too: her name, 💤 and the numbers", () => {
     const m = mensajeFcm({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana", assistantName: "Lucía", assistantSlug: "lucia", reason: "cap", spent: 12_480, cap: 12_500 }, "t").message;
