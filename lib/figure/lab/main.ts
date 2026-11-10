@@ -106,6 +106,34 @@ addEventListener("pointermove", (event) => {
 buildStage();
 refresh();
 
+// The contact sheet: every shape as the engine captures it, bare and dressed. What gets sent to Jesús.
+const DRESSED: Partial<FigureLook>[] = [
+  { accessory: "beret" }, { accessory: "headphones", eyes: "smile" }, { accessory: "crown", eyewear: "shades" }, { accessory: "hat", eyewear: "round" },
+  { accessory: "bow", eyes: "round" }, { accessory: "beanie", eyes: "sleepy" }, { accessory: "none", eyes: "dot", eyewear: "round" }, { accessory: "beret", eyes: "smile" },
+];
+function sheet(): void {
+  const canvas = document.createElement("canvas");
+  canvas.style.cssText = "position:absolute;left:-999px;width:160px;height:160px";
+  document.body.append(canvas);
+  const figure = createFigure(canvas, look);
+  const out = $("sheet") as HTMLCanvasElement;
+  const SIZE = 160;
+  out.width = SIZE * 8;
+  out.height = SIZE * 2;
+  const pen = out.getContext("2d")!;
+  pen.clearRect(0, 0, out.width, out.height);
+  FIGURE_SHAPES.forEach((shape, i) => {
+    for (const [row, extra] of [[0, {}], [1, DRESSED[i]!]] as const) {
+      figure?.setLook({ ...look, eyewear: "none", accessory: "none", eyes: "oval", shape, color: FIGURE_COLORS[i % FIGURE_COLORS.length]!, ...extra });
+      const image = figure?.capture(SIZE);
+      if (image) pen.putImageData(image, i * SIZE, row * SIZE);
+    }
+  });
+  figure?.destroy();
+  canvas.remove();
+}
+$("sheetButton").onclick = sheet;
+
 let frames = 0;
 let since = performance.now();
 (function count() {

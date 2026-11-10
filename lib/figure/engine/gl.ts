@@ -1,7 +1,7 @@
 // THE FIGURE'S WEBGL (spec local 2026-11-10-figuras-del-asistente, §5.2): one program, the meshes, and the one
 // function that draws a list of pieces. It knows nothing of looks, activities or time — index.ts hands it a frame.
 import { FRAGMENT, VERTEX } from "./shaders";
-import { ROUND, type Part, type Vec3 } from "./parts";
+import { ROUND, type Part, type PartMesh, type Vec3 } from "./parts";
 
 export interface Frame {
   /** The whole figure's rotation, column-major 3×3. */
@@ -23,7 +23,7 @@ export interface Renderer {
   render(parts: readonly Part[], frame: Frame, width: number, height: number): void;
 }
 
-const UNIFORMS = ["uRot", "uPartRot", "uPos", "uScale", "uOffset", "uLag", "uStretch", "uSilA", "uSilB", "uWiden", "uFurLen", "uLayers", "uTime", "uView", "uColor", "uDensity", "uKind"] as const;
+const UNIFORMS = ["uRot", "uPartRot", "uPos", "uScale", "uOffset", "uLag", "uStretch", "uSilA", "uSilB", "uWiden", "uFurLen", "uLayers", "uTime", "uView", "uColor", "uDensity", "uKind", "uRigid", "uTube"] as const;
 
 /** yaw (y), pitch (x), roll (z) → a column-major 3×3. */
 export function rotation(yaw: number, pitch: number, roll: number): Float32Array {
@@ -43,31 +43,91 @@ function compile(gl: WebGL2RenderingContext, type: number, source: string): WebG
   return shader;
 }
 
-function sphere(gl: WebGL2RenderingContext): number {
+interface Mesh {
+  vao: WebGLVertexArrayObject;
+  count: number;
+}
+
+/** Positions (or, for a ring, its center line) at location 0 and normals at 1. */
+function upload(gl: WebGL2RenderingContext, positions: number[], normals: number[], indices: number[]): Mesh {
+  const vao = gl.createVertexArray()!;
+  gl.bindVertexArray(vao);
+  for (const [location, data] of [[0, positions], [1, normals]] as const) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(location);
+    gl.vertexAttribPointer(location, 3, gl.FLOAT, false, 0, 0);
+  }
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
+  return { vao, count: indices.length };
+}
+
+/** A grid of (rows+1)×(columns+1) vertices, two triangles per cell. */
+function grid(rows: number, columns: number, indices: number[], base = 0): void {
+  for (let y = 0; y < rows; y++)
+    for (let x = 0; x < columns; x++) {
+      const a = base + y * (columns + 1) + x, b = a + columns + 1;
+      indices.push(a, a + 1, b, b, a + 1, b + 1);
+    }
+}
+
+function sphere(gl: WebGL2RenderingContext): Mesh {
   const SEG = 72, RING = 48;
-  const vertices: number[] = [], indices: number[] = [];
+  const positions: number[] = [], indices: number[] = [];
   for (let y = 0; y <= RING; y++)
     for (let x = 0; x <= SEG; x++) {
       const th = (y / RING) * Math.PI, ph = (x / SEG) * Math.PI * 2;
-      vertices.push(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
+      positions.push(Math.sin(th) * Math.cos(ph), Math.cos(th), Math.sin(th) * Math.sin(ph));
     }
-  for (let y = 0; y < RING; y++)
-    for (let x = 0; x < SEG; x++) {
-      const a = y * (SEG + 1) + x, b = a + SEG + 1;
-      indices.push(a, a + 1, b, b, a + 1, b + 1);
+  grid(RING, SEG, indices);
+  return upload(gl, positions, positions, indices);
+}
+
+/** A ring of radius 1 in the xy plane, swept over `sweep` radians from +x: its center line, and the tube's normals. */
+function ring(gl: WebGL2RenderingContext, sweep: number): Mesh {
+  const SEG = 48, TUBE = 12;
+  const positions: number[] = [], normals: number[] = [], indices: number[] = [];
+  for (let i = 0; i <= SEG; i++)
+    for (let j = 0; j <= TUBE; j++) {
+      const ph = (i / SEG) * sweep, ps = (j / TUBE) * Math.PI * 2;
+      positions.push(Math.cos(ph), Math.sin(ph), 0);
+      normals.push(Math.cos(ps) * Math.cos(ph), Math.cos(ps) * Math.sin(ph), Math.sin(ps));
     }
-  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-  gl.enableVertexAttribArray(0);
-  gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer());
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
-  return indices.length;
+  grid(SEG, TUBE, indices);
+  return upload(gl, positions, normals, indices);
+}
+
+/** Radius 1 at y = 0 up to `top` (0 for a cone, 1 for a cylinder) at y = 1, closed at both ends. */
+function lathe(gl: WebGL2RenderingContext, top: number): Mesh {
+  const SEG = 32;
+  const positions: number[] = [], normals: number[] = [], indices: number[] = [];
+  const slope = 1 - top; // how much the side leans in
+  for (const y of [0, 1])
+    for (let i = 0; i <= SEG; i++) {
+      const ph = (i / SEG) * Math.PI * 2, r = y ? top : 1;
+      positions.push(r * Math.cos(ph), y, r * Math.sin(ph));
+      const length = Math.hypot(1, slope);
+      normals.push(Math.cos(ph) / length, slope / length, Math.sin(ph) / length);
+    }
+  grid(1, SEG, indices);
+  for (const y of [0, 1]) {
+    const center = positions.length / 3;
+    positions.push(0, y, 0);
+    normals.push(0, y ? 1 : -1, 0);
+    for (let i = 0; i <= SEG; i++) {
+      const ph = (i / SEG) * Math.PI * 2, r = y ? top : 1;
+      positions.push(r * Math.cos(ph), y, r * Math.sin(ph));
+      normals.push(0, y ? 1 : -1, 0);
+      if (i < SEG) indices.push(center, center + 1 + i, center + 2 + i);
+    }
+  }
+  return upload(gl, positions, normals, indices);
 }
 
 const KIND = { fur: 0, solid: 1, gloss: 2 } as const;
 /** How far the camera sees from the center, in body units: the figure, its fur, a hat and its shadow fit. */
-const REACH = 1.6;
+const REACH = 1.5;
 
 export function createRenderer(gl: WebGL2RenderingContext): Renderer {
   const program = gl.createProgram()!;
@@ -78,10 +138,9 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
   gl.useProgram(program);
   const u = {} as Record<(typeof UNIFORMS)[number], WebGLUniformLocation | null>;
   for (const name of UNIFORMS) u[name] = gl.getUniformLocation(program, name);
-  const count = sphere(gl);
+  const meshes: Record<PartMesh, Mesh> = { sphere: sphere(gl), torus: ring(gl, Math.PI * 2), arc: ring(gl, Math.PI), cone: lathe(gl, 0), cylinder: lathe(gl, 1) };
 
   gl.enable(gl.DEPTH_TEST);
-  gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.BACK);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -90,10 +149,12 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
     const s = part.silhouette ?? ROUND;
     let [px, py, pz] = part.position;
     let [sx, sy, sz] = part.scale;
+    const mesh = meshes[part.mesh];
+    const rigid = part.mesh !== "sphere";
     if (part.role === "eye" || part.role === "eyeHighlight") {
       px += frame.gaze[0] * 0.05;
       py += frame.gaze[1] * 0.04;
-      if (part.role === "eye") sy = Math.max(0.008, sy * frame.eyeOpen);
+      if (part.role === "eye" && !rigid) sy = Math.max(0.008, sy * frame.eyeOpen);
     }
     gl.uniform3f(u.uPos, px, py, pz);
     gl.uniform3f(u.uScale, sx, sy, sz);
@@ -105,7 +166,13 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
     gl.uniform1f(u.uFurLen, part.furLength);
     gl.uniform1f(u.uLayers, layers);
     gl.uniform1f(u.uKind, KIND[part.kind]);
-    gl.drawElementsInstanced(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0, layers);
+    gl.uniform1f(u.uRigid, rigid ? 1 : 0);
+    gl.uniform1f(u.uTube, part.tube ?? 0);
+    // The rigid meshes are closed and opaque: the depth test hides their far side, whatever their winding.
+    if (rigid) gl.disable(gl.CULL_FACE);
+    else gl.enable(gl.CULL_FACE);
+    gl.bindVertexArray(mesh.vao);
+    gl.drawElementsInstanced(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0, layers);
   }
 
   return {

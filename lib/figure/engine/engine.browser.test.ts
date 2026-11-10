@@ -3,7 +3,7 @@
 // THE LIVE FIGURE, LOOKED AT (spec local 2026-11-10-figuras-del-asistente, §7): the engine in the eyes' Chromium,
 // judged by what is on screen. The page's clock is fixed by the test (see test-page.ts), so a frame is a fact.
 import { afterAll, describe, expect, it } from "vitest";
-import { DEFAULT_LOOK } from "../look";
+import { DEFAULT_LOOK, FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES } from "../look";
 import { BACKGROUND, closeFigureBrowser, frames, isBackground, openFigurePage, shot, show, type FigurePage, type Shot } from "./test-page";
 
 const PINK = { ...DEFAULT_LOOK, shape: "round", color: "#ff5fa8" };
@@ -199,6 +199,60 @@ describe("the live figure", () => {
         const white = await shot(p);
         for (const c of darkest(white, 0.4, 0.6)) expect(c, "dark eyes on white").toBeLessThan(60);
         expect(white.at(0.5, 0.7)[0]).toBeGreaterThan(BACKGROUND[0] + 60);
+      }),
+    T,
+  );
+});
+
+describe("the catalog, live", () => {
+  it(
+    "draws every entry of a category differently from the others",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        await show(p, DEFAULT_LOOK);
+        const captures = await p.page.evaluate(
+          (catalog: Record<string, string[]>, base: Record<string, unknown>) => {
+            const w = window as never as { fig: { setLook(l: unknown): void; capture(n: number): ImageData | null } };
+            const out: Record<string, number[][]> = {};
+            for (const [category, ids] of Object.entries(catalog)) {
+              out[category] = ids.map((id) => {
+                w.fig.setLook({ ...base, [category]: id });
+                return Array.from(w.fig.capture(96)!.data);
+              });
+            }
+            return out;
+          },
+          { shape: [...FIGURE_SHAPES], eyes: [...FIGURE_EYES], eyewear: [...FIGURE_EYEWEAR], accessory: [...FIGURE_ACCESSORIES] },
+          { ...DEFAULT_LOOK },
+        );
+        for (const [category, images] of Object.entries(captures))
+          for (let i = 0; i < images.length; i++)
+            for (let j = i + 1; j < images.length; j++) {
+              const a = images[i]!, b = images[j]!;
+              let differing = 0;
+              for (let k = 0; k < a.length; k += 4) if (Math.abs(a[k]! - b[k]!) + Math.abs(a[k + 1]! - b[k + 1]!) + Math.abs(a[k + 2]! - b[k + 2]!) + Math.abs(a[k + 3]! - b[k + 3]!) > 40) differing++;
+              // An eye is small at 96 px: a different pair of eyes is still a few dozen pixels.
+              expect(differing / (a.length / 4), `${category} ${i} vs ${j}`).toBeGreaterThan(category === "eyes" ? 0.002 : 0.01);
+            }
+      }),
+    180_000,
+  );
+
+  it(
+    "draws the default figure for a look that does not check, without throwing",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        await show(p, { shape: "sparrow" });
+        const same = await p.page.evaluate((fallback) => {
+          const w = window as never as { fig: { setLook(l: unknown): void; capture(n: number): ImageData | null } };
+          const first = Array.from(w.fig.capture(64)!.data);
+          w.fig.setLook(fallback);
+          const second = Array.from(w.fig.capture(64)!.data);
+          w.fig.setLook(42);
+          const third = Array.from(w.fig.capture(64)!.data);
+          return first.every((v, i) => v === second[i]) && first.every((v, i) => v === third[i]);
+        }, DEFAULT_LOOK as never);
+        expect(same).toBe(true);
       }),
     T,
   );

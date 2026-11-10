@@ -12,6 +12,8 @@
 export const VERTEX = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 aDir;
+layout(location=1) in vec3 aNormal;
+uniform float uRigid, uTube; // rigid: a ready-made mesh (ring, cone, cylinder) instead of the silhouette
 uniform mat3 uRot, uPartRot;
 uniform vec3 uPos, uScale, uOffset, uLag, uStretch;
 uniform vec4 uSilA; // superellipse power, lobes, lobe depth, notch at the top
@@ -41,12 +43,19 @@ vec3 shape(vec3 d) {
 
 void main() {
   vec3 d = aDir;
-  vec3 p = shape(d);
-  // The normal of whatever shape() made, by finite differences: the fur must leave the SILHOUETTE square, not a sphere.
-  vec3 t1 = normalize(cross(d, abs(d.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
-  vec3 t2 = cross(d, t1);
-  vec3 n = normalize(cross(shape(normalize(d + 0.02 * t1)) - p, shape(normalize(d + 0.02 * t2)) - p));
-  if (dot(n, p) < 0.0) n = -n;
+  vec3 p, n;
+  if (uRigid > 0.5) {
+    // A ring's vertex is its center line plus the tube: the tube's thickness is the piece's, not the mesh's.
+    p = (aDir + aNormal * uTube) * uScale;
+    n = normalize(aNormal / uScale);
+  } else {
+    p = shape(d);
+    // The normal of whatever shape() made, by finite differences: the fur must leave the SILHOUETTE square, not a sphere.
+    vec3 t1 = normalize(cross(d, abs(d.y) < 0.95 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+    vec3 t2 = cross(d, t1);
+    n = normalize(cross(shape(normalize(d + 0.02 * t1)) - p, shape(normalize(d + 0.02 * t2)) - p));
+    if (dot(n, p) < 0.0) n = -n;
+  }
 
   float h = uLayers > 1.0 ? float(gl_InstanceID) / (uLayers - 1.0) : 0.0;
   float h2 = h * h;
