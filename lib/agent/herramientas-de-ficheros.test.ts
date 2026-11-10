@@ -3464,4 +3464,58 @@ describe("her other projects' folders (phase 4B)", () => {
       assert.ok(texto(out).split("\n").includes(`${P2}/ofertas/index.html`), `${pattern}: ${texto(out)}`);
     }
   });
+
+  // PHASE 4C (measured in 4B's task 4: with no folder in the terminal she said «no tengo acceso» and never tried Read): as
+  // Claude Code's shell sees its additional working directories, her terminal sees the other projects she serves,
+  // read-only, as /.openlen.
+  const bash = (s: AgentSession, deps: AgentDeps, command: string) => conTerminal(() => runAgentTool(s, deps, "bash", { command }));
+
+  it("🔴 her terminal lists another project's folder and reads its files", async () => {
+    const { deps } = depsOfTwo();
+    const s = hers();
+    try {
+      // Only the projects besides her home: hers is / already.
+      assert.equal(texto(await bash(s, deps, "ls ~/.assistant/projects")).trim(), "p2");
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/index.html")), /Canela Tienda/);
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/LEN.md")), /Envíos de martes a sábado\./);
+      assert.equal(texto(await bash(s, deps, "ls ~/.assistant/projects/p2/ofertas")).trim(), "index.html");
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 writing there from the terminal fails and saves nothing", async () => {
+    const { deps, store } = depsOfTwo();
+    const s = hers();
+    try {
+      const out = await bash(s, deps, "echo x > ~/.assistant/projects/p2/index.html");
+      assert.match(texto(out), /read-only|EROFS/i, texto(out));
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/index.html")), /Canela Tienda/);
+      assert.equal(store.saved, 0);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 Len's terminal has no such folder", async () => {
+    const { deps } = depsOfTwo();
+    const s = makeSession();
+    try {
+      assert.match(texto(await bash(s, deps, "ls ~/.assistant/projects")), /No such file or directory/);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("a binary of another project is its bytes in the terminal", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-term-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const s = hers();
+    try {
+      assert.equal(texto(await bash(s, deps, "wc -c < ~/.assistant/projects/p2/img/portada.png")).trim(), String(PNG.byteLength));
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
 });
