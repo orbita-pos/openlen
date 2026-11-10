@@ -181,6 +181,19 @@ export async function pruneRequests(now: Date): Promise<void> {
   });
 }
 
+/** How many of a pair's cards its owner was told about since `since`. */
+export async function noticesSince(pair: { readonly assistantId: string; readonly projectId: string }, since: Date): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(c)
+    .where(and(eq(c.assistantId, pair.assistantId), eq(c.projectId, pair.projectId), gte(c.notifiedAt, since)));
+  return row?.n ?? 0;
+}
+
+export async function markNotified(cardId: string, at: Date): Promise<void> {
+  await db.update(c).set({ notifiedAt: at }).where(eq(c.id, cardId));
+}
+
 // THE OWNER'S PRESS (./press.ts): «Que Len lo haga» or «Ahora no», once, whoever presses first.
 
 /** How long a decided card stays in the project's chat, like an event task's (lib/event-tasks/actions/types.ts). */

@@ -271,6 +271,16 @@ describe("deciding", () => {
     expect(byId.get(since.id)).toMatchObject({ status: "accepted", failure: null });
   });
 
+  it("a pair's notices of the last day are counted", async () => {
+    const a = await aCard("p1", "Envíos");
+    const b = await aCard("p1", "Reservas");
+    const other = await aCard("p2", "Regalos");
+    await requests.markNotified(a.id, new Date(NOW.getTime() - 2 * DAY));
+    await requests.markNotified(b.id, new Date(NOW.getTime() - 60_000));
+    await requests.markNotified(other.id, NOW);
+    expect(await requests.noticesSince({ assistantId: lucia, projectId: "p1" }, new Date(NOW.getTime() - DAY))).toBe(1);
+  });
+
   it("her cards: the waiting ones, and what was decided in the last 30 days, with each project's name", async () => {
     const waiting = await aCard("p1", "Envíos");
     const old = await aCard("p2", "Regalos");
