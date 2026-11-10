@@ -3309,3 +3309,148 @@ describe("a read-only session (a subagent that only reads)", () => {
     assert.match(store.data.html ?? "", /Gorra/);
   });
 });
+
+// PHASE 4B (spec local 2026-11-06-asistente-propio, §8): the person's own assistant reads, with Read, Glob and Grep,
+// the files of every project she serves under ~/.assistant/projects/<id>/, as Claude Code reads its additional
+// working directories. Read-only, only hers, and nothing of the person under a project's folder.
+describe("her other projects' folders (phase 4B)", () => {
+  const SHOP = `<!doctype html>
+<html lang="es">
+<head><title>Canela Tienda</title></head>
+<body><h1>Canela Tienda</h1><a class="btn" href="#comprar">Comprar</a></body>
+</html>`;
+  const OFERTAS = `<!doctype html>
+<html lang="es">
+<head><title>Ofertas</title></head>
+<body><h1>Ofertas de la semana</h1></body>
+</html>`;
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 4, 0, 0, 0, 3]);
+  const P2 = "/home/user/.assistant/projects/p2";
+
+  function depsOfTwo(files: Record<string, Record<string, string>> = {}) {
+    const base = makeDeps({ html: HOME });
+    const projects: Record<string, { data: ProjectData; userBrief: string | null }> = {
+      p1: { data: { html: HOME }, userBrief: "Pastelería." },
+      p2: { data: { html: SHOP, pages: { ofertas: { html: OFERTAS } } } as ProjectData, userBrief: "Envíos de martes a sábado." },
+      // Somebody else's: she doesn't serve it.
+      p9: { data: { html: "<!doctype html><html><body>Ajeno</body></html>" }, userBrief: null },
+    };
+    const loads: [string, string][] = [];
+    const deps = {
+      ...base.deps,
+      async loadProject(projectId: string, userId: string) {
+        loads.push([projectId, userId]);
+        const p = projects[projectId];
+        return p ? { data: p.data, title: projectId, subdomain: null, publishedAt: null, userBrief: p.userBrief } : null;
+      },
+      async projectFiles(projectId: string) {
+        return { ...(files[projectId] ?? {}) };
+      },
+      async leerMemoriaDelDueno() {
+        return "Lo personal de la persona.";
+      },
+      assistantMemory: {
+        async read() {
+          return "Lo que Lucía sabe.";
+        },
+        async save() {
+          return true;
+        },
+      },
+    } as unknown as AgentDeps;
+    return { deps, loads, store: base.store };
+  }
+  const hers = (): AgentSession =>
+    ({
+      ...makeSession(),
+      readOnly: true,
+      assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] },
+      leidos: memoriaSembrada({ personal: null, project: null, index: null, assistant: "Lo que Lucía sabe." }),
+    }) as AgentSession;
+  const loaded = (loads: [string, string][], id: string) => loads.some(([p]) => p === id);
+
+  it("🔴 she reads a page of another project she serves, by its folder", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.match(texto(out), /Canela Tienda/);
+    assert.ok(loads.some(([p, u]) => p === "p2" && u === "u1"), JSON.stringify(loads));
+  });
+
+  it("Glob in another project's folder lists its files by their absolute paths", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*.html", path: "~/.assistant/projects/p2" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.ok(texto(out).split("\n").includes(`${P2}/ofertas/index.html`), texto(out));
+  });
+
+  it("Grep in another project's folder searches its pages", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Grep", { pattern: "Canela Tienda", path: "~/.assistant/projects/p2", output_mode: "files_with_matches" });
+    assert.ok(texto(out).includes(`${P2}/index.html`), texto(out));
+  });
+
+  it("Glob and Grep with no path stay in her home", async () => {
+    const { deps } = depsOfTwo();
+    const glob = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*.html" });
+    const grep = await runAgentTool(hers(), deps, "Grep", { pattern: "html", output_mode: "files_with_matches" });
+    assert.ok(!texto(glob).includes("/home/user/"), texto(glob));
+    assert.ok(!texto(grep).includes("/home/user/"), texto(grep));
+  });
+
+  it("🔴 a project she doesn't serve is refused and never loaded", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p9/index.html" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /~\/\.assistant\/PROJECTS\.md/);
+    assert.ok(!loaded(loads, "p9"), JSON.stringify(loads));
+  });
+
+  it("🔴 Len has no such folder", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /There is no file at \/home\/user\/\.assistant\/projects\/p2\/index\.html/);
+    assert.ok(!loaded(loads, "p2"), JSON.stringify(loads));
+  });
+
+  it("🔴 she can't write into another project's folder", async () => {
+    const { deps, store } = depsOfTwo();
+    const s = hers();
+    const refusal = new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    await runAgentTool(s, deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "~/.assistant/projects/p2/index.html", content: "x" })), refusal);
+    assert.match(texto(await runAgentTool(s, deps, "Edit", { file_path: "~/.assistant/projects/p2/index.html", old_string: "Comprar", new_string: "Pagar" })), refusal);
+    assert.equal(store.saved, 0);
+  });
+
+  it("🔴 nothing personal is under a project's folder; its own LEN.md is", async () => {
+    const { deps } = depsOfTwo();
+    for (const path of [`${P2}/home/user/.len/LEN.md`, `${P2}/home/user/.assistant/MEMORY.md`]) {
+      const out = await runAgentTool(hers(), deps, "Read", { file_path: path });
+      assert.equal(out.response.ok, false, `${path}: ${texto(out)}`);
+    }
+    const own = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p2/LEN.md" });
+    assert.equal(own.response.ok, true, texto(own));
+    assert.match(texto(own), /Envíos de martes a sábado\./);
+  });
+
+  it("Glob on the folder of all her projects names each one", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*", path: "~/.assistant/projects" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /~\/\.assistant\/projects\/p1/);
+    assert.match(texto(out), /~\/\.assistant\/projects\/p2/);
+  });
+
+  it("an image in another project's folder is shown as an image", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const seen: number[] = [];
+    const withEyes = { ...deps, imageForModel: async (b: Uint8Array) => (seen.push(b.byteLength), { image: { type: "image", source: { type: "base64", media_type: "image/png", data: "x" } }, width: 4, height: 3 }) } as unknown as AgentDeps;
+    const out = await runAgentTool(hers(), withEyes, "Read", { file_path: "~/.assistant/projects/p2/img/portada.png" });
+    assert.equal(out.images?.length, 1, texto(out));
+    assert.deepEqual(seen, [PNG.byteLength]);
+  });
+});
