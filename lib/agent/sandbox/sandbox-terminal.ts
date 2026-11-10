@@ -59,12 +59,14 @@ export function readOnlySource(path: string): string {
   return `${BRIDGE_DIR}/ro${path}`;
 }
 
-/** The other projects the person's own assistant serves (phase 4C), read-only under her HOME: /home is the box's HOME,
- *  where her ~/.len syncs from, so this folder is mounted on its own. */
-const SERVED_ROOT = `${HOME_DIR}/.assistant/projects`;
+/** The person's own assistant's files, read-only under her HOME (phase 4C): her memory, ~/.assistant/MEMORY.md (the
+ *  box's manifest, baked in its template, syncs only ~/.len; she writes it with Edit or Write), and the other projects
+ *  she serves, ~/.assistant/projects/<id>. /home is the box's HOME, where ~/.len syncs from: this folder is mounted on
+ *  its own. */
+const ASSISTANT_ROOT = `${HOME_DIR}/.assistant`;
 
-/** "/.openlen/docs/a.md" → "/.openlen"; "/home/user/.assistant/projects/p2/a.html" → its own folder. */
-const readOnlyRoot = (path: string) => (path === SERVED_ROOT || path.startsWith(`${SERVED_ROOT}/`) ? SERVED_ROOT : `/${path.split("/")[1] ?? ""}`);
+/** "/.openlen/docs/a.md" → "/.openlen"; "/home/user/.assistant/projects/p2/a.html" → "/home/user/.assistant". */
+const readOnlyRoot = (path: string) => (path === ASSISTANT_ROOT || path.startsWith(`${ASSISTANT_ROOT}/`) ? ASSISTANT_ROOT : `/${path.split("/")[1] ?? ""}`);
 
 const parentOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
 
