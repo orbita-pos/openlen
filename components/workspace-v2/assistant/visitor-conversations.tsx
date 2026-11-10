@@ -16,6 +16,9 @@ interface Line {
 }
 interface Visit {
   id: string;
+  /** Which of her projects it came from (phase 4). */
+  projectId?: string;
+  projectTitle?: string | null;
   lastAt: string;
   messageCount: number;
   handedOff: boolean;
@@ -53,6 +56,9 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
       live = false;
     };
   }, [assistantId]);
+
+  // Several projects among them: each says which one it came from (phase 4).
+  const several = new Set((visits ?? []).map((v) => v.projectId).filter(Boolean)).size > 1;
 
   /** Centicredits as credits, in the reader's language. */
   const credits = (centis: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(centis / 100);
@@ -123,6 +129,7 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
           <header className="mb-2 flex flex-wrap items-center gap-2 text-[11.5px] fg-faint">
             <time dateTime={v.lastAt}>{new Date(v.lastAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}</time>
             <span>· {t("ownAssistant.place.messages", { count: v.messageCount })}</span>
+            {several && v.projectTitle && <span>· {t("ownAssistant.place.inProject", { project: v.projectTitle })}</span>}
             {v.handedOff && <span className="rounded-full bg-hover px-2 py-0.5 fg-muted">{t("ownAssistant.place.handedOff")}</span>}
           </header>
           <div className="flex flex-col gap-1.5">

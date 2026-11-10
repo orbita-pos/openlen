@@ -799,6 +799,16 @@
       "openChat": "Vedi Len nella chat",
       "earlier": "Richieste precedenti",
       "loadError": "Non è stato possibile caricare le richieste."
+    },
+    "projects": {
+      "count": "{count, plural, one {# progetto} other {# progetti}}",
+      "home": "Casa",
+      "remove": "Togli da questo progetto",
+      "removeConfirm": "Sì, togli",
+      "delete": "Elimina {name}",
+      "deleteConfirm": "Sì, elimina {name} per sempre",
+      "failed": "Non è stato possibile. Riprova.",
+      "close": "Chiudi"
     }
   }
 }

@@ -799,6 +799,16 @@
       "openChat": "Ver a Len en el chat",
       "earlier": "Pedidos anteriores",
       "loadError": "No se pudieron cargar los pedidos."
+    },
+    "projects": {
+      "count": "{count, plural, one {# proyecto} other {# proyectos}}",
+      "home": "Su casa",
+      "remove": "Quitar de este proyecto",
+      "removeConfirm": "Sí, quitar",
+      "delete": "Borrar a {name}",
+      "deleteConfirm": "Sí, borrar a {name} para siempre",
+      "failed": "No se pudo. Inténtalo otra vez.",
+      "close": "Cerrar"
     }
   }
 }

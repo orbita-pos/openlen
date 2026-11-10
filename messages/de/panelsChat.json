@@ -799,6 +799,16 @@
       "openChat": "Len im Chat ansehen",
       "earlier": "Frühere Anfragen",
       "loadError": "Die Anfragen konnten nicht geladen werden."
+    },
+    "projects": {
+      "count": "{count, plural, one {# Projekt} other {# Projekte}}",
+      "home": "Zuhause",
+      "remove": "Aus diesem Projekt entfernen",
+      "removeConfirm": "Ja, entfernen",
+      "delete": "{name} löschen",
+      "deleteConfirm": "Ja, {name} endgültig löschen",
+      "failed": "Das hat nicht geklappt. Versuch es noch einmal.",
+      "close": "Schließen"
     }
   }
 }

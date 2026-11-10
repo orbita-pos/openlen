@@ -799,6 +799,16 @@
       "openChat": "See Len in the chat",
       "earlier": "Earlier requests",
       "loadError": "Requests couldn't be loaded."
+    },
+    "projects": {
+      "count": "{count, plural, one {# project} other {# projects}}",
+      "home": "Home",
+      "remove": "Take off this project",
+      "removeConfirm": "Yes, take off",
+      "delete": "Delete {name}",
+      "deleteConfirm": "Yes, delete {name} for good",
+      "failed": "That didn't work. Try again.",
+      "close": "Close"
     }
   }
 }

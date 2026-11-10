@@ -799,6 +799,16 @@
       "openChat": "チャットで Len を見る",
       "earlier": "以前のリクエスト",
       "loadError": "リクエストを読み込めませんでした。"
+    },
+    "projects": {
+      "count": "{count, plural, other {# 件のプロジェクト}}",
+      "home": "ホーム",
+      "remove": "このプロジェクトから外す",
+      "removeConfirm": "はい、外す",
+      "delete": "{name} を削除",
+      "deleteConfirm": "はい、{name} を完全に削除",
+      "failed": "できませんでした。もう一度お試しください。",
+      "close": "閉じる"
     }
   }
 }

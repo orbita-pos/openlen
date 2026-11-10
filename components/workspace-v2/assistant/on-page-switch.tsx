@@ -9,11 +9,14 @@ import { useState } from "react";
 
 export function OnPageSwitch({
   assistantId,
+  projectId,
   initial,
   initialNeedsPublish = false,
   nothingToKnow = false,
 }: {
   assistantId: string;
+  /** One of the projects she serves (phase 4); without it, her home. */
+  projectId?: string;
   initial: boolean;
   initialNeedsPublish?: boolean;
   /** Published with her, and nothing for her to know. */
@@ -30,7 +33,7 @@ export function OnPageSwitch({
     setBusy(true);
     setOn(next);
     try {
-      const res = await fetch(`/api/assistants/${assistantId}`, {
+      const res = await fetch(projectId ? `/api/assistants/${assistantId}/projects/${encodeURIComponent(projectId)}` : `/api/assistants/${assistantId}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ onPage: next }),
@@ -39,7 +42,7 @@ export function OnPageSwitch({
       if (!res.ok || typeof body.onPage !== "boolean") throw new Error(String(res.status));
       setOn(body.onPage);
       setNeedsPublish(body.needsPublish === true);
-      // A change forgets what she knew (lib/assistants/visitor/store.ts): the next publish says again.
+      // A change forgets that her bubble was baked (lib/assistants/visitor/store.ts): the next publish says again.
       setNothing(false);
     } catch {
       setOn(!next);
