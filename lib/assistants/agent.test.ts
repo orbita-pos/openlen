@@ -26,12 +26,15 @@ const LEN = [
 const names = (decls: readonly Record<string, unknown>[]) => decls.map((d) => String(d.name));
 
 describe("assistantTools", () => {
-  it("inherits Len's tools except what builds", () => {
+  // 🔴 Write and Edit stay (measured 10/11 in a real box: she had neither, and there her memory is read-only to bash, so
+  // she could save nothing). Spec §8: «la escribe con Edit o Write»; Claude Code gives a subagent with memory Read, Write
+  // and Edit for it. Her session is read-only: both refuse every file but her memory (`escribeSuMemoria`).
+  it("inherits Len's tools except what builds; Write and Edit stay, for her memory", () => {
     const got = names(assistantTools(LEN));
-    for (const out of ["Write", "Edit", "edit_image", "toggle_module", "draft_reply", CONVERTIR_EN_APP, "publish", "undo_last_change", REQUEST_SECRETS, CREATE_GOAL, ENTER_PLAN_MODE, PROPOSE_ACTION]) {
+    for (const out of ["edit_image", "toggle_module", "draft_reply", CONVERTIR_EN_APP, "publish", "undo_last_change", REQUEST_SECRETS, CREATE_GOAL, ENTER_PLAN_MODE, PROPOSE_ACTION]) {
       expect(got, out).not.toContain(out);
     }
-    for (const kept of ["Read", "Glob", "Grep", "bash", "view_page", "use_page", READ_ME, SHOW_WIDGET, PRESENT_TOOL, ASK_USER_QUESTION, ...SCHEDULE_TOOL_NAMES, "mcp__drive__search"]) {
+    for (const kept of ["Read", "Glob", "Grep", "bash", "Write", "Edit", "view_page", "use_page", READ_ME, SHOW_WIDGET, PRESENT_TOOL, ASK_USER_QUESTION, ...SCHEDULE_TOOL_NAMES, "mcp__drive__search"]) {
       expect(got, kept).toContain(kept);
     }
   });
@@ -64,6 +67,8 @@ describe("assistantTools over Len's real catalog", () => {
     expect(keptOf(null)).toMatchInlineSnapshot(`
       [
         "Read",
+        "Edit",
+        "Write",
         "view_page",
         "use_page",
         "find_photo",
@@ -91,8 +96,6 @@ describe("assistantTools over Len's real catalog", () => {
     `);
     expect(leftOutOf(null)).toMatchInlineSnapshot(`
       [
-        "Edit",
-        "Write",
         "toggle_module",
         "edit_image",
         "publish",
@@ -120,6 +123,8 @@ describe("assistantTools over Len's real catalog", () => {
     expect(keptOf(APP)).toMatchInlineSnapshot(`
       [
         "Read",
+        "Edit",
+        "Write",
         "view_page",
         "use_page",
         "find_photo",
@@ -147,8 +152,6 @@ describe("assistantTools over Len's real catalog", () => {
     `);
     expect(leftOutOf(APP)).toMatchInlineSnapshot(`
       [
-        "Edit",
-        "Write",
         "toggle_module",
         "edit_image",
         "publish",

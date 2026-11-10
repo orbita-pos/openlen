@@ -53,11 +53,15 @@ const BUILDS: ReadonlySet<string> = new Set([
  *  assistant's work would land in Len's chat. They come back when notices are routed by conversation. */
 const SUBAGENTS_NOT_YET: ReadonlySet<string> = new Set([SUBAGENT_TOOL, SUBAGENT_FORK_TOOL, SEND_MESSAGE_TOOL, INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL]);
 
+/** Her memory's tools: Claude Code gives a subagent with memory Read, Write and Edit for it, and spec §8 says she writes
+ *  ~/.assistant/MEMORY.md with them. Her session is read-only, so both refuse every other file (`escribeSuMemoria`). */
+const FOR_HER_MEMORY: ReadonlySet<string> = new Set(["Write", "Edit"]);
+
 export function assistantTools(declarations: readonly Record<string, unknown>[]): Record<string, unknown>[] {
   const disallowed = new Set(ASSISTANT_AGENT_TYPE.disallowedTools);
   return declarations.filter((d) => {
     const name = String(d.name);
-    return !OUT_FOR_READ_ONLY.has(name) && !BUILDS.has(name) && !SUBAGENTS_NOT_YET.has(name) && !disallowed.has(name);
+    return (FOR_HER_MEMORY.has(name) || !OUT_FOR_READ_ONLY.has(name)) && !BUILDS.has(name) && !SUBAGENTS_NOT_YET.has(name) && !disallowed.has(name);
   });
 }
 

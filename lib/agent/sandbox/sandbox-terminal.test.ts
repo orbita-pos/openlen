@@ -433,6 +433,22 @@ describe("SandboxTerminal", () => {
     expect(box().get(readOnlySource(`${root}/MEMORY.md`))).toBe("Viernes también.");
   });
 
+  // The same real box, after that fix: the command ran, and then its file view had no MEMORY.md (the box only lists what
+  // it syncs), so the terminal read it as deleted, tried to save that, and every command ended «Exit code 1 … not saved».
+  it("🔴 her memory, put read-only, stays in what the box says it has after a command — mounted or not", async () => {
+    const memory = "/home/user/.assistant/MEMORY.md";
+    for (const refuse of [false, true]) {
+      const { terminal } = await open({
+        projectFiles: { "/index.html": "a" },
+        readOnly: { [memory]: "Jueves sin gluten." },
+        ...(refuse ? { onRun: (cmd: string) => (cmd.includes("mount --bind") ? { exitCode: 32, stderr: "mount: permission denied" } : undefined) } : {}),
+      });
+      await terminal.ejecutar("true");
+      await terminal.poner({ [memory]: "Viernes también." });
+      expect((await terminal.ejecutar("true")).ficheros?.[memory], refuse ? "mount refused" : "mounted").toBe("Viernes también.");
+    }
+  });
+
   it("in an app, /node_modules (its types, read-only today) is mounted the same way", async () => {
     const { terminal, d, handle } = await open({
       projectFiles: { "/index.html": "a" },
