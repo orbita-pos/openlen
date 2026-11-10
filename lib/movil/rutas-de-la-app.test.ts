@@ -24,6 +24,8 @@ describe("las rutas de la app", () => {
     expect(listed.get("app/api/assistants/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/assistants/[id]/chat/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/assistants/[id]/visits/route.ts")).toEqual(["GET"]);
+    // Phase 4E: seeing her conversations marks them read.
+    expect(listed.get("app/api/assistants/[id]/visits/read/route.ts")).toEqual(["POST"]);
     expect(listed.get("app/api/assistants/[id]/requests/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/assistants/[id]/requests/[cardId]/route.ts")).toEqual(["POST"]);
   });

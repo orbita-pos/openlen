@@ -46,7 +46,15 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
     let live = true;
     fetch(`/api/assistants/${assistantId}/visits`)
       .then((r) => (r.ok ? (r.json() as Promise<{ visits: Visit[] }>) : Promise.reject(r.status)))
-      .then((b) => live && setVisits(b.visits))
+      .then((b) => {
+        if (!live) return;
+        setVisits(b.visits);
+        // Phase 4E: this list mounts the first time Conversaciones is shown, so what it got is what her owner saw — read,
+        // as the page's inbox marks it. Best effort: a failed mark only leaves them unread for `list_messages`.
+        const ids = b.visits.slice(0, 50).map((v) => v.id);
+        if (ids.length)
+          void fetch(`/api/assistants/${assistantId}/visits/read`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ids }) }).catch(() => {});
+      })
       .catch(() => live && setFailed(true));
     fetch("/api/assistants/visitor-budget")
       .then((r) => (r.ok ? (r.json() as Promise<Budget>) : null))

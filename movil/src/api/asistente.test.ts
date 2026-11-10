@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { clienteDeMuestra } from "../muestra";
-import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, tocarPedido } from "./asistente";
+import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, tocarPedido } from "./asistente";
 import { mandarALen } from "./chat";
 
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
@@ -31,6 +31,17 @@ describe("her calls", () => {
     const [ruta, init] = c.pedir.mock.calls.at(-1)!;
     expect(ruta).toBe("/api/assistants/a1/requests/c1");
     expect(JSON.parse(String(init!.body))).toMatchObject({ action: "dismiss" });
+  });
+
+  // Phase 4E: «Conversaciones» on screen marks what it shows as read, as on the web.
+  it("marcarSusVisitasLeidas posts the ids with the key", async () => {
+    const c = cliente(() => Response.json({ marked: 2 }));
+    expect(await marcarSusVisitasLeidas(c, "a1", ["v1", "v2"])).toBe(true);
+    const [ruta, init] = c.pedir.mock.calls.at(-1)!;
+    expect(ruta).toBe("/api/assistants/a1/visits/read");
+    expect(init?.method).toBe("POST");
+    expect(JSON.parse(String(init!.body))).toEqual({ ids: ["v1", "v2"] });
+    expect(await marcarSusVisitasLeidas(cliente(() => Response.json({ error: "not_found" }, { status: 404 })), "a1", ["v1"])).toBe(false);
   });
 
   it("a press the server refuses says why", async () => {
