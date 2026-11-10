@@ -30,7 +30,9 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     // Renamed (phase 4D, spec §6.8): her old address redirects for good to the new one. A live name wins: asked only
     // when no assistant of the person has this one now.
     const moved = await assistantByOldSlug(personId, slug);
-    if (moved) return permanentRedirect({ href: `/assistant/${moved.slug}`, locale });
+    // Encoded: a slug of another script raw in the Location header is refused by Node (a 500); `slugFromParam` decodes
+    // it on arrival.
+    if (moved) return permanentRedirect({ href: `/assistant/${encodeURIComponent(moved.slug)}`, locale });
     notFound();
   }
   const project = await getProject(assistant.homeProjectId, personId);

@@ -38,6 +38,9 @@ describe("FCM sin servicios externos", () => {
     const m = mensajeFcm({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", assistantId: "a1", assistantName: "Lucía", assistantSlug: "lucia", locale: "es", title: "Lucía", push: "Ayer hablé con 3 personas.", emailSubject: "s", emailText: "t" }, "t").message;
     expect(m.notification).toEqual({ title: "Lucía", body: "Ayer hablé con 3 personas." });
     expect(m.data).toEqual({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", asistente: "a1" });
+    // Final review: beside Len's notice for her home project, never replacing it (nor replaced by it).
+    expect(m.android.notification.tag).toBe("assistant-p1");
+    expect(m.android.notification.tag).not.toBe(mensajeFcm({ ...evento, projectId: "p1" }, "t").message.android.notification.tag);
   });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
