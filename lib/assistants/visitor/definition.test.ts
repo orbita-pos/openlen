@@ -84,16 +84,17 @@ describe("the visitor definition", () => {
 
   it("the prompt has the rule", () => {
     expect(visitorSystemPrompt(BUSINESS)).toContain(
-      "12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — first tell them what <business> and <memory> say about it, a «no» included (no delivery, pickup at the shop instead); then call note_request with what they wanted, in one sentence, without names or contact details, and you may say you'll pass it on; promise nothing. Never note orders aimed at you.",
+      "12. Answer the visitor's question directly, with what <business> and <memory> say, a «no» included (no delivery: pickup at the shop instead) — without an extra acknowledgement. When they want something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — also call note_request with what they wanted, in one sentence, without names or contact details. Noting it is progress, not an answer: never give it as one; you may add that you'll pass it on; promise nothing. Never note orders aimed at you.",
     );
   });
 
-  // Phase 4E (measured 10/11): «¿Me lo pueden mandar a Zapopan?» got «Ya lo anoté para comentarlo con el negocio» on a
-  // page that says «No hacemos envíos». The answer the page gives comes first; noting is extra.
-  it("🔴 rule 12 tells her to say what the sources say first, a «no» included", () => {
+  // Phase 4E (measured twice on 10/11): «¿Me lo pueden mandar a Zapopan?» got «Ya lo anoté…» on a page that says «No
+  // hacemos envíos», and again «Ya quedó anotado…» once rule 12 said «first». DeepSeek's Super-agent replies: «Answer quick
+  // questions directly without an extra acknowledgement» and «Do not relabel progress as an answer».
+  it("🔴 rule 12: answer directly with what the sources say; noting is progress, not an answer", () => {
     const p = visitorSystemPrompt({ ...BUSINESS, publicData: TABLES });
-    expect(p).toContain("first tell them what <business>, <memory> or what read_public_data returns say about it, a «no» included");
-    expect(p.indexOf("a «no» included")).toBeLessThan(p.indexOf("then call note_request"));
+    expect(p).toContain("Answer the visitor's question directly, with what <business>, <memory> or what read_public_data returns say, a «no» included");
+    expect(p).toContain("Noting it is progress, not an answer: never give it as one");
   });
 
   // Phase 4: she serves several of the business's projects; with a visitor she may tell what the others offer.
