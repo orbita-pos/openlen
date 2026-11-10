@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ProjectData } from "@/lib/projects/types";
 
-import { KNOWLEDGE_MAX, knowledgeOf, memoryFromOldAssistant, rememberWhatWasPublished } from "./knowledge";
+import { KNOWLEDGE_MAX, knowledgeOf, memoryFromOldAssistant, mergeOldAssistantMemory, rememberWhatWasPublished } from "./knowledge";
 
 const DATA = {
   html: "<html lang=es><body><h1>Pastelería Canela</h1><p>Martes a domingo, de 9:00 a 19:00.</p></body></html>",
@@ -91,6 +91,24 @@ describe("rememberWhatWasPublished", () => {
     await rememberWhatWasPublished("p2", DATA, at, { save, switchOldOff, publicData: async () => [] }, { onPage: false });
     expect(save).toHaveBeenCalledWith("p2", knowledgeOf(DATA), at, [], { baked: false });
     expect(switchOldOff).not.toHaveBeenCalled();
+  });
+});
+
+describe("mergeOldAssistantMemory", () => {
+  const OLD = { enabled: true, facts: "En la tienda, envíos los viernes." } as never;
+  it("adds the project's old assistant under its name, once", () => {
+    const once = mergeOldAssistantMemory("Envíos sólo en Guadalajara.", OLD, "Canela Tienda", 4_000);
+    expect(once).toBe("Envíos sólo en Guadalajara.\n\n# Lo que me enseñaron antes en Canela Tienda\n\nEn la tienda, envíos los viernes.");
+    expect(mergeOldAssistantMemory(once, OLD, "Canela Tienda", 4_000)).toBe(once);
+    expect(mergeOldAssistantMemory("x", undefined, "Canela Tienda", 4_000)).toBe("x");
+  });
+
+  it("🔴 within its cap: her own lines stay whole, the added block is cut, a full memory is left alone", () => {
+    const mine = "a".repeat(60);
+    const merged = mergeOldAssistantMemory(mine, OLD, "Canela Tienda", 100);
+    expect(merged.length).toBe(100);
+    expect(merged.startsWith(mine + "\n\n")).toBe(true);
+    expect(mergeOldAssistantMemory("a".repeat(100), OLD, "Canela Tienda", 100)).toBe("a".repeat(100));
   });
 });
 
