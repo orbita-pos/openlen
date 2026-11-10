@@ -40,6 +40,7 @@ import {
 } from "@/lib/projects/site-pages";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
+import { rehomeAssistantsOf } from "@/lib/assistants/projects";
 import { switchOldAssistantOff } from "@/lib/assistants/store";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
 import { publicDataOf } from "@/lib/assistants/visitor/public-data";
@@ -579,6 +580,9 @@ export async function deleteProject(
   const pageDbs = existing[0] ? await pageDatabaseScopes(projectId) : null;
   // Y la caja de la terminal real: su fila también se va en cascada.
   const sandboxId = existing[0] ? await sandboxOfProject(projectId) : null;
+  // The person's own assistant whose home this is and who serves another project moves there with her conversation
+  // (spec local 2026-11-06-asistente-propio, §4.5): she is the person's, not this project's. Fail-soft: deleting goes on.
+  if (existing[0]) await rehomeAssistantsOf(projectId).catch((err: unknown) => console.warn("[assistants] couldn't move an assistant's home before deleting its project", err));
 
   const result = await db
     .delete(schema.projects)

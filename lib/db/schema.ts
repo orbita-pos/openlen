@@ -1574,7 +1574,7 @@ export const assistantProjects = pgTable("assistantProjects", {
   /** What the page's data shows ANYONE (the tables `anon` can read), saved at publish (phase 2B,
    *  lib/assistants/visitor/public-data.ts): what `read_public_data` may read. */
   publicData: jsonb("publicData").$type<PublicTable[]>(),
-});
+}, (t) => [index("assistantProjects_assistant_idx").on(t.assistantId)]);
 
 /** A table or view of a project's production base that `anon` can read, with its columns. */
 export interface PublicTable {
