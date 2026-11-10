@@ -40,6 +40,14 @@ describe("her place's address", () => {
     expect(m.permanentRedirect).toHaveBeenCalledWith({ href: "/assistant/marta", locale: "es" });
   });
 
+  // Final review I1: a slug of another script (names.ts keeps them) goes into the Location header encoded — raw, Node
+  // refuses the header and the redirect is a 500.
+  it("🔴 an old address redirects to a new name in another script, encoded", async () => {
+    m.assistantByOldSlug.mockResolvedValueOnce({ slug: "さくら" });
+    await expect(open("lucia")).rejects.toThrow("NEXT_REDIRECT");
+    expect(m.permanentRedirect).toHaveBeenCalledWith({ href: "/assistant/%E3%81%95%E3%81%8F%E3%82%89", locale: "es" });
+  });
+
   it("an address that was never hers is 404", async () => {
     await expect(open("nadie")).rejects.toThrow("NEXT_NOT_FOUND");
     expect(m.permanentRedirect).not.toHaveBeenCalled();
