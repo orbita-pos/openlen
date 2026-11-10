@@ -21,6 +21,7 @@ import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { CuentaDeVisitas, ResumenDeVisitas } from "@/lib/resultados/visitas";
 import type { FiltroDeFormularios, FormularioAbierto, FormularioEnLista, ResumenDeFormularios } from "@/lib/resultados/formularios";
 import type { ConversacionAbierta, ConversacionEnLista, FiltroDeMensajes, ResumenDeMensajes } from "@/lib/resultados/mensajes";
+import type { HerConversation, HerConversationInList, HerConversationsSummary, HerFilter } from "@/lib/assistants/visitor/inbox";
 import { fechaValida, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 import { numeroDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 
@@ -30,6 +31,12 @@ export interface ResultadosDeps {
   formulario(projectId: string, zona: string, id: string, opciones: { marcarVisto: boolean }): Promise<FormularioAbierto | null>;
   mensajes(projectId: string, zona: string, filtro: FiltroDeMensajes): Promise<ResumenDeMensajes>;
   conversacion(projectId: string, zona: string, id: string): Promise<ConversacionAbierta | null>;
+  /** Phase 4E: the person's own assistant's conversations with the visitors (lib/assistants/visitor/inbox.ts), listed
+   *  in HER session only. Optional: Len's doubles and Len's session never touch them. */
+  herConversations?(assistantId: string, zone: string, filter: HerFilter): Promise<HerConversationsSummary>;
+  herConversation?(assistantId: string, zone: string, id: string): Promise<HerConversation | null>;
+  /** Whether she answers the visitors on any of these projects (her bubble on and published with her). */
+  answersOn?(projectIds: readonly string[]): Promise<boolean>;
 }
 
 /** La misma regla que `web_search` y `web_fetch`: lo que escribe un visitante es
@@ -67,6 +74,8 @@ const openForm = (f: FormularioAbierto) => ({
   contact: { name: f.contacto.nombre, email: f.contacto.correo, phone: f.contacto.telefono },
 });
 const conversationInList = (c: ConversacionEnLista) => ({ id: c.id, with: c.con, last: c.ultimo, date: c.fecha, unread: c.sinLeer });
+/** Her conversation, in the inbox's own shape plus the project and what she noted from it (phase 4E). */
+const herConversationInList = (c: HerConversationInList) => ({ id: c.id, with: "visitor", project: c.project, last: c.last, date: c.date, unread: c.unread, noted: c.noted });
 const openConversation = (c: ConversacionAbierta) => ({
   id: c.id,
   with: c.con,
@@ -161,9 +170,17 @@ export async function toolVerMensajes(session: AgentSession, deps: AgentDeps, ar
     const id = typeof args.id === "string" ? args.id.trim() : "";
     if (!id) return error('With which="one" the conversation\'s "id" is needed (it comes from the list).');
     const c = await deps.resultados.conversacion(session.projectId, zona, id);
-    if (!c) return error(`There is no conversation «${id}» on this page.`);
+    if (c) {
+      return {
+        response: { ok: true, ...openConversation(c), note: NOTA_DE_VISITANTES },
+        action: { tool: "list_messages", ok: true, summary: "" },
+      };
+    }
+    // In HER session, one of her own conversations with the visitors (phase 4E).
+    const h = session.assistant && deps.resultados.herConversation ? await deps.resultados.herConversation(session.assistant.id, zona, id) : null;
+    if (!h) return error(`There is no conversation «${id}» on this page.`);
     return {
-      response: { ok: true, ...openConversation(c), note: NOTA_DE_VISITANTES },
+      response: { ok: true, id: h.id, with: "visitor", project: h.project, messages: h.messages, noted: h.noted, note: NOTA_DE_VISITANTES },
       action: { tool: "list_messages", ok: true, summary: "" },
     };
   }
@@ -171,16 +188,25 @@ export async function toolVerMensajes(session: AgentSession, deps: AgentDeps, ar
   const rango = rangoDe(args);
   if (typeof rango === "string") return error(rango);
   const filtro: FiltroDeMensajes = which === "unread" ? { cuales: "sin_leer" } : { cuales: "fecha", ...rango };
-  const r = await deps.resultados.mensajes(session.projectId, zona, filtro);
+  const her = session.assistant;
+  const herFilter: HerFilter =
+    which === "unread" ? { which: "unread" } : { which: "by_date", ...(rango.desde ? { from: rango.desde } : {}), ...(rango.hasta ? { to: rango.hasta } : {}) };
+  // PHASE 4E: on the pages she serves her bubble IS the page's chat, so in HER session her conversations come after the
+  // inbox's, and the chat counts as on where she answers. Len's session reads exactly what it read before.
+  const [r, hers, answers] = await Promise.all([
+    deps.resultados.mensajes(session.projectId, zona, filtro),
+    her && deps.resultados.herConversations ? deps.resultados.herConversations(her.id, zona, herFilter) : Promise.resolve(null),
+    her && deps.resultados.answersOn ? deps.resultados.answersOn(her.projects?.map((p) => p.id) ?? [session.projectId]) : Promise.resolve(false),
+  ]);
   return {
     response: {
       ok: true,
       time_zone: r.zona,
-      chat_enabled: r.hayChat,
-      unread_conversations: r.conversacionesSinLeer,
-      unread_messages: r.mensajesSinLeer,
-      conversations: r.conversaciones,
-      items: r.lista.map(conversationInList),
+      chat_enabled: r.hayChat || answers,
+      unread_conversations: r.conversacionesSinLeer + (hers?.unreadConversations ?? 0),
+      unread_messages: r.mensajesSinLeer + (hers?.unreadMessages ?? 0),
+      conversations: r.conversaciones + (hers?.conversations ?? 0),
+      items: [...r.lista.map(conversationInList), ...(hers?.list.map(herConversationInList) ?? [])],
       note: NOTA_DE_VISITANTES,
     },
     action: { tool: "list_messages", ok: true, summary: "" },

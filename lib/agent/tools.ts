@@ -1005,6 +1005,20 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         const { leerConversacion } = await import("@/lib/resultados/mensajes");
         return leerConversacion(projectId, zona, id);
       },
+      // Phase 4E: the person's own assistant's conversations with the visitors, read only in HER session.
+      async herConversations(assistantId, zone, filter) {
+        const { herConversations } = await import("@/lib/assistants/visitor/inbox");
+        return herConversations(assistantId, zone, filter);
+      },
+      async herConversation(assistantId, zone, id) {
+        const { herConversation } = await import("@/lib/assistants/visitor/inbox");
+        return herConversation(assistantId, zone, id);
+      },
+      async answersOn(projectIds) {
+        const [{ assistantOnPage }, { answersVisitors }] = await Promise.all([import("@/lib/assistants/visitor/store"), import("@/lib/assistants/visitor/on-page")]);
+        const found = await Promise.all(projectIds.map((id) => assistantOnPage(id).catch(() => null)));
+        return found.some((f) => answersVisitors(f));
+      },
     },
     async loadProject(projectId, userId) {
       const rows = await db

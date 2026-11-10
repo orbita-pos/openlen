@@ -118,6 +118,100 @@ describe("list_messages", () => {
   });
 });
 
+// PHASE 4E (plan …-fase-4e, task 2; measured 10/11): on the pages she serves her bubble IS the page's chat, so in HER
+// session `list_messages` also lists her conversations with the visitors, with what she noted from each.
+describe("list_messages in her session", () => {
+  const MX = "America/Mexico_City";
+  const inbox = { zona: MX, hayChat: false, conversacionesSinLeer: 1, mensajesSinLeer: 1, conversaciones: 3, lista: [{ id: "c1", con: "Juan", ultimo: "Hola", fecha: "2026-11-09", sinLeer: 1 }] };
+  const hers = {
+    conversations: 1,
+    unreadConversations: 1,
+    unreadMessages: 2,
+    list: [{ id: "v1", project: "Pastelería Canela", last: "¿Me lo mandan a Zapopan?", date: "2026-11-09", unread: 2, noted: [{ request: "Envío a Zapopan", status: "pending" as const }] }],
+  };
+  function suya(resultados: Partial<ResultadosDeps>) {
+    const m = montar(resultados);
+    m.session.assistant = { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] };
+    return m;
+  }
+
+  it("🔴 in her session, list_messages lists her conversations after the inbox's, with what she noted", async () => {
+    const herConversations = vi.fn().mockResolvedValue(hers);
+    const { session, deps } = suya({ mensajes: vi.fn().mockResolvedValue(inbox), herConversations, answersOn: vi.fn().mockResolvedValue(true) });
+    const out = await toolVerMensajes(session, deps, {});
+    expect(herConversations).toHaveBeenCalledWith("a1", MX, { which: "unread" });
+    expect(out.response).toMatchObject({ ok: true, unread_conversations: 2, unread_messages: 3, conversations: 4, note: NOTA_DE_VISITANTES });
+    expect(out.response.items).toEqual([
+      { id: "c1", with: "Juan", last: "Hola", date: "2026-11-09", unread: 1 },
+      { id: "v1", with: "visitor", project: "Pastelería Canela", last: "¿Me lo mandan a Zapopan?", date: "2026-11-09", unread: 2, noted: [{ request: "Envío a Zapopan", status: "pending" }] },
+    ]);
+  });
+
+  it("🔴 chat_enabled is true on a page she answers, even with the page's own chat off", async () => {
+    const answersOn = vi.fn().mockResolvedValue(true);
+    const { session, deps } = suya({ mensajes: vi.fn().mockResolvedValue({ ...inbox, lista: [] }), herConversations: vi.fn().mockResolvedValue({ ...hers, list: [] }), answersOn });
+    const out = await toolVerMensajes(session, deps, {});
+    expect(answersOn).toHaveBeenCalledWith(["p1", "p2"]);
+    expect(out.response.chat_enabled).toBe(true);
+  });
+
+  it("which=\"one\" opens her conversation with visitor/you lines and the visitors' note", async () => {
+    const herConversation = vi.fn().mockResolvedValue({
+      id: "v1",
+      project: "Pastelería Canela",
+      messages: [
+        { from: "visitor", text: "¿Me lo mandan a Zapopan?", date: "2026-11-09" },
+        { from: "you", text: "No hacemos envíos.", date: "2026-11-09" },
+      ],
+      noted: [{ request: "Envío a Zapopan", status: "pending" }],
+    });
+    const { session, deps } = suya({ conversacion: vi.fn().mockResolvedValue(null), herConversation });
+    const out = await toolVerMensajes(session, deps, { which: "one", id: "v1" });
+    expect(herConversation).toHaveBeenCalledWith("a1", MX, "v1");
+    expect(out.response).toEqual({
+      ok: true,
+      id: "v1",
+      with: "visitor",
+      project: "Pastelería Canela",
+      messages: [
+        { from: "visitor", text: "¿Me lo mandan a Zapopan?", date: "2026-11-09" },
+        { from: "you", text: "No hacemos envíos.", date: "2026-11-09" },
+      ],
+      noted: [{ request: "Envío a Zapopan", status: "pending" }],
+      note: NOTA_DE_VISITANTES,
+    });
+  });
+
+  it("by_date passes the range and the session's zone to herConversations", async () => {
+    const herConversations = vi.fn().mockResolvedValue(hers);
+    const mensajes = vi.fn().mockResolvedValue(inbox);
+    const { session, deps } = suya({ mensajes, herConversations, answersOn: vi.fn().mockResolvedValue(true) });
+    await toolVerMensajes(session, deps, { which: "by_date", from: "2026-11-09", to: "2026-11-09" });
+    expect(mensajes).toHaveBeenCalledWith("p1", MX, { cuales: "fecha", desde: "2026-11-09", hasta: "2026-11-09" });
+    expect(herConversations).toHaveBeenCalledWith("a1", MX, { which: "by_date", from: "2026-11-09", to: "2026-11-09" });
+  });
+
+  it("Len's session is unchanged: no herConversations call, today's exact output", async () => {
+    const herConversations = vi.fn();
+    const herConversation = vi.fn();
+    const { session, deps } = montar({ mensajes: vi.fn().mockResolvedValue(inbox), conversacion: vi.fn().mockResolvedValue(null), herConversations, herConversation, answersOn: vi.fn() });
+    const out = await toolVerMensajes(session, deps, {});
+    expect(out.response).toEqual({
+      ok: true,
+      time_zone: MX,
+      chat_enabled: false,
+      unread_conversations: 1,
+      unread_messages: 1,
+      conversations: 3,
+      items: [{ id: "c1", with: "Juan", last: "Hola", date: "2026-11-09", unread: 1 }],
+      note: NOTA_DE_VISITANTES,
+    });
+    expect((await toolVerMensajes(session, deps, { which: "one", id: "v1" })).response.ok).toBe(false);
+    expect(herConversations).not.toHaveBeenCalled();
+    expect(herConversation).not.toHaveBeenCalled();
+  });
+});
+
 describe("draft_reply", () => {
   it("chat: deja una tarjeta con «Enviar» y NO manda nada", async () => {
     const conversacion = vi.fn().mockResolvedValue({ id: "c1", con: "Juan", mensajes: [] });
