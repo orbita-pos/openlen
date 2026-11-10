@@ -572,13 +572,40 @@ async function servedSiteOf(
   const notHers = fallo(`${path} isn't in the folder of a project you serve. The projects you serve, each with its folder, are in ${ASSISTANT_PROJECTS_PATH}.`);
   // Only hers, and only her person's: an id she doesn't serve is never loaded.
   if (hit.kind === "unknown") return notHers;
-  const row = await deps.loadProject(hit.projectId, session.userId);
-  if (!row) return notHers;
-  const own = await virtualesDe({ ...session, projectId: hit.projectId, parentProjectId: undefined, assistant: undefined, app: row.data.app ?? null }, deps, row.userBrief);
+  const view = await servedViewOf(session, deps, hit.projectId);
+  if (!view) return notHers;
+  const site = sitioDe(view.row.data, { ...session, projectId: hit.projectId, app: view.row.data.app ?? null, escritos: [] }, view.v);
+  return { site: mountedSite(hit.prefix, site), folder: view.v.folder, prefix: hit.prefix };
+}
+
+/** One project she serves, as her person: its data and its own virtual files — nothing of the person (no path in
+ *  /home/user), no artifacts, no connectors' file. `null` if it isn't her person's. */
+async function servedViewOf(session: AgentSession, deps: AgentDeps, projectId: string): Promise<{ readonly row: NonNullable<Awaited<ReturnType<AgentDeps["loadProject"]>>>; readonly v: Virtuales } | null> {
+  const row = await deps.loadProject(projectId, session.userId);
+  if (!row) return null;
+  const own = await virtualesDe({ ...session, projectId, parentProjectId: undefined, assistant: undefined, app: row.data.app ?? null }, deps, row.userBrief);
   const notPersonal = (m: ReadonlyMap<string, string>) => new Map([...m].filter(([ruta]) => !ruta.startsWith(`${HOME_DIR}/`)));
-  const v: Virtuales = { ...own, memoria: notPersonal(own.memoria), skills: notPersonal(own.skills), agents: notPersonal(own.agents), mcpConfig: null, artifacts: new Map() };
-  const site = sitioDe(row.data, { ...session, projectId: hit.projectId, app: row.data.app ?? null, escritos: [] }, v);
-  return { site: mountedSite(hit.prefix, site), folder: v.folder, prefix: hit.prefix };
+  return { row, v: { ...own, memoria: notPersonal(own.memoria), skills: notPersonal(own.skills), agents: notPersonal(own.agents), mcpConfig: null, artifacts: new Map() } };
+}
+
+/** PHASE 4C: what her TERMINAL sees, read-only, of the projects she serves besides her home (the ones PROJECTS.md gives
+ *  a `files:` folder) — as Claude Code's shell sees its additional working directories. Measured in 4B: with the folder
+ *  only in Read, a failed `ls` made her tell the owner she had no access. Mounted path → text, or a binary's pointer.
+ *  The same view Read mounts (pages, folder, /LEN.md, its notes, skills and types); a project that doesn't load is
+ *  skipped. Empty for Len. */
+export async function servedFilesForTerminal(session: AgentSession, deps: AgentDeps): Promise<Record<string, string>> {
+  const home = session.projectId;
+  const out: Record<string, string> = {};
+  for (const p of session.assistant?.projects ?? []) {
+    if (p.id === home) continue;
+    const view = await servedViewOf(session, deps, p.id).catch(() => null);
+    if (!view) continue;
+    const prefix = resolverRuta(servedFolderOf(p.id));
+    const { row, v } = view;
+    for (const ruta of ficherosDelSitio(row.data)) out[prefix + ruta] = sinOpIds(leerFichero(row.data, ruta) ?? "");
+    for (const m of [v.memoria, v.skills, v.agents, v.folder]) for (const [ruta, texto] of m) out[prefix + ruta] = texto;
+  }
+  return out;
 }
 
 /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Explore, Plan, or any child in plan mode. */

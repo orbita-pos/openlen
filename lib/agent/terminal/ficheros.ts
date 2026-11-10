@@ -26,8 +26,9 @@ const DEL_SISTEMA = /^\/(?:tmp|bin|usr|dev|proc)(?:\/|$)/;
  *  escribe: el hilo contesta EROFS (`trabajador.mjs`, con la misma expresión).
  *  Oculta, como el `.git` de DeepSeek: una búsqueda del sitio no entra en ella.
  *  Y el `/node_modules` de una app (npm abierto): los package.json y .d.ts de
- *  sus paquetes (`lib/apps/npm/node-modules.ts`), que tampoco son del proyecto. */
-export const DE_SOLO_LECTURA = /^\/(?:\.openlen|node_modules)(?:\/|$)/;
+ *  sus paquetes (`lib/apps/npm/node-modules.ts`), que tampoco son del proyecto. Y (fase 4C del asistente propio)
+ *  ~/.assistant/projects: los otros proyectos que atiende, que tampoco son de éste. */
+export const DE_SOLO_LECTURA = /^\/(?:\.openlen|node_modules|home\/user\/\.assistant\/projects)(?:\/|$)/;
 
 export function esDeSoloLectura(ruta: string): boolean {
   return DE_SOLO_LECTURA.test(ruta);
