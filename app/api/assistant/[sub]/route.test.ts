@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ assistantOnPage: mocks.onPage }));
 vi.mock("@/lib/assistants/visitor/turn", () => ({ runVisitorTurn: mocks.visitorTurn }));
+// Phase 4: the other projects she serves, for what she may tell visitors about them.
+const servedProjects = vi.hoisted(() => ({ projectsOfAssistant: vi.fn(async (_id: string): Promise<unknown[]> => []) }));
+vi.mock("@/lib/assistants/projects", () => servedProjects);
 
 // EL LIBRO DE GASTO del POST: el modelo contesta con su uso, y lo paga OpenLen.
 vi.mock("@/lib/ai/fireworks-as-stream-provider", () => ({
@@ -198,6 +201,23 @@ describe("POST /api/assistant/[sub] — her bubble", () => {
     expect((await escribe({ message: "hola", vid: VID })).status).toBe(403);
     expect(await (await pide()).json()).toMatchObject({ asistente: false });
     expect(mocks.visitorTurn).not.toHaveBeenCalled();
+  });
+
+  it("a visitor of the page hears what the shop published, never its draft", async () => {
+    mocks.limit.mockResolvedValue(fila({}));
+    onPage();
+    const at = new Date("2026-11-09T10:00:00Z");
+    servedProjects.projectsOfAssistant.mockResolvedValueOnce([
+      { projectId: "p1", title: "Taller Sauco", subdomain: "taller", isHome: true, onPage: true, knowledge: "Martes a domingo.", knowledgeAt: at, bakedAt: at, publicData: [], connectedAt: at },
+      { projectId: "p2", title: "Sauco Tienda", subdomain: "sauco-tienda", isHome: false, onPage: false, knowledge: "Envíos a domicilio.", knowledgeAt: at, bakedAt: null, publicData: [], connectedAt: at },
+      { projectId: "p3", title: "Sauco Reservas", subdomain: null, isHome: false, onPage: false, knowledge: null, knowledgeAt: null, bakedAt: null, publicData: [], connectedAt: at },
+    ]);
+    mocks.visitorTurn.mockResolvedValue({ kind: "reply", text: "Sí, desde la tienda.", intent: "answer", visuals: [] });
+    expect((await escribe({ message: "¿hacen envíos?", vid: VID })).status).toBe(200);
+    expect(servedProjects.projectsOfAssistant).toHaveBeenCalledWith("a1");
+    const [input] = mocks.visitorTurn.mock.calls.at(-1) as [{ otherSites?: unknown }];
+    // Only what another project PUBLISHED, never this one, never one not yet published.
+    expect(input.otherSites).toEqual([{ name: "Sauco Tienda", knowledge: "Envíos a domicilio." }]);
   });
 
   it("her handoff is the page's: a guest self-serve chat can take the visitor", async () => {

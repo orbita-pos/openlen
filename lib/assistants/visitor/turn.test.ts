@@ -101,6 +101,12 @@ describe("runVisitorTurn", () => {
     expect(String(s.sent[0]![0]!.content)).toContain("Pastelería Canela");
   });
 
+  it("the business's other sites reach her system prompt", async () => {
+    const s = setup([say("Sí, desde la tienda.")]);
+    await runVisitorTurn(input({ otherSites: [{ name: "Canela Tienda", knowledge: "Envíos a domicilio." }] }), s.deps);
+    expect(String(s.sent[0]![0]!.content)).toContain('<other_site name="Canela Tienda">');
+  });
+
   it("🔴 two visitors of the same business send the same system message: one cached prefix", async () => {
     const a = setup([say("Hola.")]);
     const b = setup([say("Hola.")]);
