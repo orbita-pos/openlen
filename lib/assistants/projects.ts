@@ -5,7 +5,7 @@
 // project deleted — her home and that conversation move to her oldest other project, so she is never lost with it.
 import "server-only";
 
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import type { PublicTable } from "@/lib/db/schema";
@@ -57,6 +57,14 @@ export async function projectsOfAssistant(assistantId: string): Promise<ServedPr
     .where(eq(ap.assistantId, assistantId))
     .orderBy(desc(sql`${a.homeProjectId} = ${ap.projectId}`), asc(ap.connectedAt), asc(ap.projectId));
   return rows.map((r) => ({ ...r, isHome: Boolean(r.isHome), publicData: r.publicData ?? [] }));
+}
+
+/** Projects' titles by id (her visits name the project they came from, even one she no longer serves). */
+export async function titlesOf(projectIds: readonly string[]): Promise<Map<string, string | null>> {
+  const ids = [...new Set(projectIds)];
+  if (ids.length === 0) return new Map();
+  const rows = await db.select({ id: p.id, title: p.title }).from(p).where(inArray(p.id, ids));
+  return new Map(rows.map((r) => [r.id, r.title]));
 }
 
 /** The route checked that the project is her person's own. A project with an assistant keeps it. */

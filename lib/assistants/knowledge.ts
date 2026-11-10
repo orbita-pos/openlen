@@ -58,6 +58,22 @@ export async function rememberWhatWasPublished(
   }
 }
 
+/** Connecting her to a project (phase 4, §6.4 applied to connecting): what today's assistant of that project was taught
+ *  is added to her memory, under the project's name, never past `max` (her memory's cap) — her own lines are kept whole,
+ *  the added block is cut. Unchanged when there is nothing to add, or it is already there. */
+export function mergeOldAssistantMemory(memory: string, old: AssistantSettings | undefined, projectTitle: string, max: number): string {
+  const added = memoryFromOldAssistant(old);
+  if (!added) return memory;
+  const block = added.replace(/^# Lo que me enseñaron antes/, `# Lo que me enseñaron antes en ${projectTitle}`);
+  if (memory.includes(block)) return memory;
+  const base = memory.trimEnd();
+  const room = max - base.length - (base ? 2 : 0);
+  if (room <= 0) return memory;
+  return base ? `${base}
+
+${block.slice(0, room)}` : block.slice(0, room);
+}
+
 /** Today's assistant's facts and tone, as the first lines of her memory; "" when it was taught nothing. */
 export function memoryFromOldAssistant(a: AssistantSettings | undefined): string {
   const facts = a?.facts?.trim();

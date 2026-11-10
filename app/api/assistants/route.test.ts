@@ -15,6 +15,8 @@ const m = vi.hoisted(() => ({
   // Her visitors (phase 2A).
   setOnPage: vi.fn(async () => true),
   visitsOf: vi.fn(async (): Promise<unknown[]> => []),
+  // Phase 4: which of her projects each visit came from.
+  titlesOf: vi.fn(async (): Promise<Map<string, string | null>> => new Map([["p1", "Pastelería Canela"]])),
   monthSpent: vi.fn(async () => 0),
   explicitVisitorCap: vi.fn(async (): Promise<number | null> => null),
   setExplicitVisitorCap: vi.fn(async () => {}),
@@ -22,6 +24,7 @@ const m = vi.hoisted(() => ({
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
 vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff }));
+vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
@@ -169,7 +172,7 @@ describe("her place's controls", () => {
     const res = await visits.GET(new Request("http://x"), params("a1"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { visits: { id: string; lines: { text: string }[]; transcript?: unknown; visitorId?: unknown }[] };
-    expect(body.visits[0]).toMatchObject({ id: "v1", messageCount: 2, handedOff: true });
+    expect(body.visits[0]).toMatchObject({ id: "v1", messageCount: 2, handedOff: true, projectId: "p1", projectTitle: "Pastelería Canela" });
     expect(body.visits[0]!.lines).toHaveLength(40);
     expect(body.visits[0]!.lines.at(-1)!.text).toBe("l49");
     expect(body.visits[0]!.transcript).toBeUndefined();

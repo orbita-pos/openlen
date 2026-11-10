@@ -3,6 +3,7 @@
 // what the model saw (`transcript`) or the visitor's browser id.
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { titlesOf } from "@/lib/assistants/projects";
 import { assistantById } from "@/lib/assistants/store";
 import { visitsOf } from "@/lib/assistants/visitor/store";
 
@@ -24,9 +25,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const a = await assistantById(id);
   if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
   const rows = await visitsOf(a.id, VISITS);
+  // Which of her projects each came from (phase 4), even one she no longer serves.
+  const titles = await titlesOf(rows.map((v) => v.projectId));
   return json({
     visits: rows.map((v) => ({
       id: v.id,
+      projectId: v.projectId,
+      projectTitle: titles.get(v.projectId) ?? null,
       startedAt: v.startedAt,
       lastAt: v.lastAt,
       messageCount: v.messageCount,
