@@ -5,7 +5,7 @@ import { sendAppAiCapEmail, sendAssistantAsleepEmail, sendChatNotificationEmail,
 import { asleepEmail } from "@/lib/assistants/visitor/asleep-messages";
 import { domainNoticeEmail, quotaNoticeEmail } from "@/lib/project-email/notices";
 import { quotaEmail } from "@/lib/functions/quota-messages";
-import type { AppAiCapEvent, AssistantAsleepEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenWatchEvent, MencionEvent } from "../types";
+import type { AppAiCapEvent, AssistantAsleepEvent, AssistantSummaryEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenWatchEvent, MencionEvent } from "../types";
 import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
@@ -25,6 +25,7 @@ export const emailChannel: NotificationChannel = {
     if (event.type === "len_watch") return sendLenWatchAlert(event);
     if (event.type === "len_aviso") return sendLenAvisoAlert(event);
     if (event.type === "assistant_asleep") return sendAssistantAsleepAlert(event);
+    if (event.type === "assistant_summary") return sendAssistantSummaryAlert(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -97,6 +98,14 @@ async function enviarCuota(event: FunctionsQuotaEvent): Promise<DeliveryResult> 
 /** LEN WATCH (spec local 2026-10-30-len-watch): the owner's site stopped loading, or its fix moved on. */
 /** An event task's card (spec local 2026-11-03-len-que-avisa, §7.6): its texts come written. */
 async function sendLenAvisoAlert(event: LenAvisoEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  await sendLenAvisoEmail({ to: u.email, subject: event.emailSubject, text: event.emailText });
+  return "sent";
+}
+
+/** Her morning summary (phase 4D): its texts come written, like an event task's notice. */
+async function sendAssistantSummaryAlert(event: AssistantSummaryEvent): Promise<DeliveryResult> {
   const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
   if (!u?.email) return "skipped";
   await sendLenAvisoEmail({ to: u.email, subject: event.emailSubject, text: event.emailText });

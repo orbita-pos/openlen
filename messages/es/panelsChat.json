@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "Resumen de la mañana",
-      "hint": "A las 8, sólo si ayer pasó algo."
+      "hint": "A las 8, sólo si ayer pasó algo.",
+      "talkedWith": "{count, plural, one {hablé con # persona} other {hablé con # personas}}",
+      "contacts": "{count, plural, one {# te dejó su contacto} other {# te dejaron su contacto}}",
+      "requests": "{count, plural, one {# pidió algo que no pude hacer} other {# pidieron algo que no pude hacer}}",
+      "push": "Ayer {list}.",
+      "emailSubject": "{name}: lo de ayer",
+      "emailText": "{push}\n\nMíralo en el lugar de {name}: {url}"
     }
   }
 }

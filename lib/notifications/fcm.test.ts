@@ -33,6 +33,12 @@ describe("FCM sin servicios externos", () => {
     expect(m.notification).toEqual({ title: "Lucía 💤", body: "124.80 / 125" });
     expect(m.data).toEqual({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana" });
   });
+  // Phase 4D (spec local 2026-11-06-asistente-propio, §6.9): her morning summary, with her id for the phone's tab.
+  it("🔴 her morning summary reaches the phone with her name, its line and her id", () => {
+    const m = mensajeFcm({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", assistantId: "a1", assistantName: "Lucía", assistantSlug: "lucia", locale: "es", title: "Lucía", push: "Ayer hablé con 3 personas.", emailSubject: "s", emailText: "t" }, "t").message;
+    expect(m.notification).toEqual({ title: "Lucía", body: "Ayer hablé con 3 personas." });
+    expect(m.data).toEqual({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", asistente: "a1" });
+  });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
     expect(mensajeFcm({ ...base, type: "email_domain", domain: "pan.mx", status: "ready" }, "t").message.notification.body).toContain("pan.mx");

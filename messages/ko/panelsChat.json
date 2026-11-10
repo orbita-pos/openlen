@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "아침 요약",
-      "hint": "어제 무슨 일이 있었을 때만 오전 8시에 알려 드려요."
+      "hint": "어제 무슨 일이 있었을 때만 오전 8시에 알려 드려요.",
+      "talkedWith": "{count, plural, other {대화 #명}}",
+      "contacts": "{count, plural, other {연락처 #건}}",
+      "requests": "{count, plural, other {못 한 요청 #건}}",
+      "push": "어제: {list}",
+      "emailSubject": "{name}: 어제 있었던 일",
+      "emailText": "{push}\n\n{name}의 공간에서 보기: {url}"
     }
   }
 }

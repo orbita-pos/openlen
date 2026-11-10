@@ -820,7 +820,13 @@
     },
     "summary": {
       "switch": "早间摘要",
-      "hint": "仅在昨天有事发生时，于早上 8 点告诉你。"
+      "hint": "仅在昨天有事发生时，于早上 8 点告诉你。",
+      "talkedWith": "{count, plural, other {交谈 # 人}}",
+      "contacts": "{count, plural, other {留下联系方式 # 人}}",
+      "requests": "{count, plural, other {我没能处理的请求 # 个}}",
+      "push": "昨天：{list}",
+      "emailSubject": "{name}：昨天发生了什么",
+      "emailText": "{push}\n\n在{name}的页面查看：{url}"
     }
   }
 }
