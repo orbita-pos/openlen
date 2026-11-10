@@ -16,7 +16,13 @@ import { resolverRuta } from "@/lib/agent/ficheros/sitio";
  *  (`ls ~/.assistant/projects/`, `find …/<shop>`), which answered «No such file or directory»; she told the owner she
  *  has no access. «¿La tienda ya tiene la página de ofertas?» — 25, 21.7 s: `find /` in the terminal and `view_page` of
  *  the published address; «no la veo». Read, Glob and Grep were never tried: the terminal must see these folders too,
- *  as Claude Code's shell sees its additional working directories. */
+ *  as Claude Code's shell sees its additional working directories.
+ *
+ *  MEASURED AGAIN on 09/11 after phase 4C (her terminal sees them, read-only), the same base and turns, cap 150: 83
+ *  centicredits ($0.0027). The first — 73, 14.4 s: `ls ~/.assistant/projects/`, Read of the shop's LEN.md, a `find` in
+ *  its folder → the exact instruction («Envíos de martes a sábado; nunca prometas entrega el mismo día.»). The second —
+ *  10, 7.8 s: `cat` of the shop's ofertas/index.html → «sí, existe», with its title and line, and that it isn't linked
+ *  from the shop nor published (PROJECTS.md lists only the home page). */
 export const SERVED_FOLDERS = "~/.assistant/projects";
 
 export function servedFolderOf(projectId: string): string {
