@@ -808,7 +808,9 @@
       "delete": "{name} を削除",
       "deleteConfirm": "はい、{name} を完全に削除",
       "failed": "できませんでした。もう一度お試しください。",
-      "close": "閉じる"
+      "close": "閉じる",
+      "publishToKnow": "次に公開すると {name} が内容を把握します。",
+      "busy": "{name} が回答中です。終わってからもう一度お試しください。"
     }
   }
 }

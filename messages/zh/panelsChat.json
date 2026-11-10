@@ -808,7 +808,9 @@
       "delete": "删除 {name}",
       "deleteConfirm": "是的，永久删除 {name}",
       "failed": "没能完成，请重试。",
-      "close": "关闭"
+      "close": "关闭",
+      "publishToKnow": "下次发布后 {name} 才会了解它。",
+      "busy": "{name} 正在回答：等回答完成后再试。"
     }
   }
 }

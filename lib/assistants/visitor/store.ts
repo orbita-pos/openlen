@@ -69,6 +69,12 @@ export async function saveKnowledge(projectId: string, text: string, at: Date, p
     .where(eq(ap.projectId, projectId));
 }
 
+/** A project she serves was unpublished (final review I1): what it published is gone, and so is her bubble there. She
+ *  stays connected and «En mi página» keeps its value: the next publish teaches her again and bakes her bubble. */
+export async function forgetWhatWasPublished(projectId: string): Promise<void> {
+  await db.update(ap).set({ knowledge: null, knowledgeAt: null, publicData: null, bakedAt: null }).where(eq(ap.projectId, projectId));
+}
+
 export async function visitOf(assistantId: string, projectId: string, visitorId: string): Promise<VisitRow | null> {
   const [row] = await db
     .select()

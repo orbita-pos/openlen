@@ -808,7 +808,9 @@
       "delete": "{name} verwijderen",
       "deleteConfirm": "Ja, {name} definitief verwijderen",
       "failed": "Dat lukte niet. Probeer het opnieuw.",
-      "close": "Sluiten"
+      "close": "Sluiten",
+      "publishToKnow": "{name} kent het na de volgende publicatie.",
+      "busy": "{name} is aan het antwoorden: probeer het opnieuw als dat klaar is."
     }
   }
 }

@@ -31,7 +31,7 @@ export const DELETE = conAutorDeLaPeticion(quienDeLaSesion, async (_req: Request
   if (found instanceof Response) return found;
   const done = await disconnectProject(found.assistantId, found.projectId);
   if (done === "not_connected") return json({ error: "not_found" }, 404);
-  if (done === "only_project") return json({ error: "only_project" }, 409);
+  if (done === "only_project" || done === "busy") return json({ error: done }, 409);
   return new Response(null, { status: 204 });
 });
 

@@ -808,7 +808,9 @@
       "delete": "Elimina {name}",
       "deleteConfirm": "Sì, elimina {name} per sempre",
       "failed": "Non è stato possibile. Riprova.",
-      "close": "Chiudi"
+      "close": "Chiudi",
+      "publishToKnow": "{name} lo conoscerà alla prossima pubblicazione.",
+      "busy": "{name} sta rispondendo: riprova quando ha finito."
     }
   }
 }

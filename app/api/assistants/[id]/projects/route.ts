@@ -44,6 +44,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
         onPage: state.onPage,
         needsPublish: state.needsPublish,
         nothingToKnow: state.nothingToKnow,
+        // Published since she serves it: she knows what it published (final review I2).
+        knowsIt: Boolean(p.knowledgeAt),
       };
     }),
   });

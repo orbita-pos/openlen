@@ -61,8 +61,8 @@ describe("GET /api/assistants/[id]/projects", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       projects: [
-        { projectId: "p1", title: "Pastelería Canela", address: "canela.openlen.app", isHome: true, onPage: true, needsPublish: false, nothingToKnow: false },
-        { projectId: "p2", title: "Canela Tienda", address: null, isHome: false, onPage: true, needsPublish: true, nothingToKnow: false },
+        { projectId: "p1", title: "Pastelería Canela", address: "canela.openlen.app", isHome: true, onPage: true, needsPublish: false, nothingToKnow: false, knowsIt: true },
+        { projectId: "p2", title: "Canela Tienda", address: null, isHome: false, onPage: true, needsPublish: true, nothingToKnow: false, knowsIt: true },
       ],
     });
   });
@@ -113,6 +113,19 @@ describe("DELETE /api/assistants/[id]/projects/[projectId]", () => {
   it("takes her off a project", async () => {
     expect((await del("p2")).status).toBe(204);
     expect(m.disconnectProject).toHaveBeenCalledWith("a1", "p2");
+  });
+
+  it("🔴 published before she served it: the row says she doesn't know it yet", async () => {
+    m.projectsOfAssistant.mockResolvedValueOnce([served({ projectId: "p2", isHome: false, knowledge: null, knowledgeAt: null, bakedAt: null, onPage: false })]);
+    const { projects } = (await (await list.GET(new Request("http://x"), params({ id: "a1" }))).json()) as { projects: { knowsIt: boolean }[] };
+    expect(projects[0]!.knowsIt).toBe(false);
+  });
+
+  it("🔴 while she is answering, her home can't be removed: 409 busy", async () => {
+    m.disconnectProject.mockResolvedValueOnce("busy");
+    const res = await del("p1");
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "busy" });
   });
 
   it("her only project can't be removed: 409 only_project; one she doesn't serve is 404", async () => {

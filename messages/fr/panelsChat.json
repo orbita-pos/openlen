@@ -808,7 +808,9 @@
       "delete": "Supprimer {name}",
       "deleteConfirm": "Oui, supprimer {name} définitivement",
       "failed": "Ça n’a pas marché. Réessayez.",
-      "close": "Fermer"
+      "close": "Fermer",
+      "publishToKnow": "{name} le connaîtra à sa prochaine publication.",
+      "busy": "{name} est en train de répondre : réessayez quand ce sera fini."
     }
   }
 }

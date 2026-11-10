@@ -808,7 +808,9 @@
       "delete": "Borrar a {name}",
       "deleteConfirm": "Sí, borrar a {name} para siempre",
       "failed": "No se pudo. Inténtalo otra vez.",
-      "close": "Cerrar"
+      "close": "Cerrar",
+      "publishToKnow": "{name} lo conocerá en su próxima publicación.",
+      "busy": "{name} está contestando: inténtalo cuando acabe."
     }
   }
 }
