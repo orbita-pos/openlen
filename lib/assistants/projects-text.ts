@@ -13,7 +13,16 @@ import type { ServedProject } from "./projects";
 export const ASSISTANT_PROJECTS_PATH = "~/.assistant/PROJECTS.md";
 /** What one project's published text takes, in characters. */
 export const PROJECT_TEXT_MAX = 4_000;
-/** The whole file. */
+/** The whole file.
+ *
+ *  MEASURED on 10/11 (phase 4, task 8: real turns on a throwaway base through Len's route with a phone key, DeepSeek
+ *  V4.1 Flash; Lucía serving «Pastelería Canela» — her home, her bubble on — and «Canela Tienda»): 95 centicredits in
+ *  all ($0.0029). «¿Qué vendemos en la tienda?» — 66 (the first call of her prefix, ~19.5k tokens, uncached), 7.7 s: the
+ *  three products and the delivery terms, read from this file. «Dile a Len que en la tienda ponga el horario» — 7, 3.5 s:
+ *  ask_len with the shop's id, and she told the owner it is in Canela Tienda's chat. «Dile a Len que cambie el botón» —
+ *  15: ask_len to the shop WITHOUT asking which (both pages have a button; the turn before was about the shop). A
+ *  visitor of the pastry shop's bubble asking «¿hacen envíos?» — 7, 1.6 s: the shop's delivery, by name, no link, plus
+ *  pickup at the pastry shop. The queued Len turns were recorded, not run. */
 export const PROJECTS_TEXT_MAX = 16_000;
 
 function header(p: ServedProject): string {
