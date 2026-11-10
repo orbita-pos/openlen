@@ -9,8 +9,9 @@
 //   · the canvas is transparent. Its background is the host's.
 import { createRenderer, rotation, type Frame, type Renderer } from "./gl";
 import { partsFor, type Part } from "./parts";
+import { NEUTRAL_POSE, blinkAt, stepPose, targetPose, type FigureActivity, type Pose } from "./pose";
 
-export type FigureActivity = "ready" | "listening" | "thinking" | "working" | "talking" | "asleep" | "error";
+export type { FigureActivity } from "./pose";
 
 export interface FigureOptions {
   activity?: FigureActivity;
@@ -20,6 +21,8 @@ export interface FigureOptions {
   maxPixelRatio?: number;
   /** Seconds. The engine reads time ONLY here, so a test can fix it. Defaults to performance.now() / 1000. */
   clock?: () => number;
+  /** Sets when this figure blinks, so two on a page do not blink together. Defaults to a random one. */
+  seed?: number;
   /** Once, after the first painted frame: the moment to swap the flat figure for the live one. */
   onFirstFrame?: () => void;
   /** Once, if the context is lost or the engine fails: the host goes back to the flat figure. */
@@ -44,14 +47,22 @@ export interface Figure {
 const MAX_PIXELS = 1024;
 const LAYERS = 40;
 
-const NEUTRAL: Omit<Frame, "layers" | "density" | "time"> = {
-  rotation: rotation(0, 0, 0),
-  offset: [0, 0, 0],
-  lag: [0, 0, 0],
-  stretch: [1, 1, 1],
-  eyeOpen: 1,
-  gaze: [0, 0],
-};
+const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+
+/** A pose as the renderer wants it. `lag` is which way the fur trails. */
+function frameOf(pose: Pose, lag: readonly [number, number, number]): Omit<Frame, "layers" | "density" | "time"> {
+  const wide = 1 / Math.sqrt(pose.stretch); // taller means thinner: the volume stays
+  return {
+    rotation: rotation(pose.yaw + pose.gaze[0] * 0.28, pose.pitch - pose.gaze[1] * 0.12, pose.roll),
+    offset: [0, pose.lift, 0],
+    lag,
+    stretch: [wide, pose.stretch, wide],
+    eyeOpen: pose.eyeOpen,
+    gaze: pose.gaze,
+  };
+}
+
+const NEUTRAL = frameOf(NEUTRAL_POSE, [0, 0, 0]);
 
 /** Strands per unit, from how many pixels the figure really gets: fine detail in a small figure is only noise. */
 const densityFor = (pixels: number): number => Math.min(95, Math.max(26, pixels * 0.42));
@@ -70,7 +81,15 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   const clock = options.clock ?? (() => performance.now() / 1000);
   const maxRatio = options.maxPixelRatio ?? 2;
 
+  const seed = options.seed ?? Math.random() * 1000;
+
   let parts: Part[] = partsFor(look);
+  let activity: FigureActivity = options.activity ?? "ready";
+  let since = clock();
+  let gaze: readonly [number, number] | null = null;
+  let pose: Pose = NEUTRAL_POSE;
+  let last = since;
+  let lag: [number, number, number] = [0, 0, 0];
   let active = true;
   let reduced = options.reducedMotion ?? (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let dead = false;
@@ -98,8 +117,28 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
 
   function paint(): void {
     if (!measure()) return;
-    const time = reduced ? 0 : clock();
-    renderer.render(parts, { ...NEUTRAL, time, layers: LAYERS, density: densityFor(Math.min(width, height)) }, width, height);
+    const now = clock();
+    const dt = clamp(now - last, 0, 0.1);
+    last = now;
+    const target = targetPose(activity, now - since, gaze);
+    let frame: Omit<Frame, "layers" | "density" | "time">;
+    if (reduced) {
+      // One still pose: the body does not move, but the eyes still say what it is doing (closed when asleep).
+      pose = { ...NEUTRAL_POSE, eyeOpen: target.eyeOpen, gaze: target.gaze };
+      lag = [0, 0, 0];
+      frame = frameOf(pose, lag);
+    } else {
+      const next = stepPose(pose, target, dt);
+      if (dt > 0) {
+        // The fur stays behind when the body moves: against the lift's and the turn's speed.
+        const k = 1 - Math.exp(-dt * 7);
+        lag[1] += (clamp(((pose.lift - next.lift) / dt) * 0.25, -1.5, 1.5) - lag[1]) * k;
+        lag[0] += (clamp(((pose.yaw - next.yaw) / dt) * 0.35, -1.5, 1.5) - lag[0]) * k;
+      }
+      pose = next;
+      frame = frameOf({ ...pose, eyeOpen: pose.eyeOpen * (1 - 0.95 * blinkAt(now, seed)) }, lag);
+    }
+    renderer.render(parts, { ...frame, time: reduced ? 0 : now, layers: LAYERS, density: densityFor(Math.min(width, height)) }, width, height);
     dirty = false;
     if (!painted) {
       painted = true;
@@ -179,12 +218,29 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         parts = partsFor(next);
         invalidate();
       }, undefined),
-    setActivity: () => guarded(invalidate, undefined),
-    lookAt: () => guarded(invalidate, undefined),
-    clearLookAt: () => guarded(invalidate, undefined),
+    setActivity: (next) =>
+      guarded(() => {
+        if (next !== activity) {
+          activity = next;
+          since = clock();
+        }
+        invalidate();
+      }, undefined),
+    lookAt: (x, y) =>
+      guarded(() => {
+        if (Number.isFinite(x) && Number.isFinite(y)) gaze = [clamp(x * 2 - 1, -1, 1), clamp(1 - y * 2, -1, 1)];
+        invalidate();
+      }, undefined),
+    clearLookAt: () =>
+      guarded(() => {
+        gaze = null;
+        invalidate();
+      }, undefined),
     setActive: (next) =>
       guarded(() => {
         active = next;
+        // Coming back from a pause is not a jump in time.
+        last = clock();
         if (!active && raf) {
           cancelAnimationFrame(raf);
           raf = 0;

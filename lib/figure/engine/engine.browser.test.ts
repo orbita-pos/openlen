@@ -4,7 +4,7 @@
 // judged by what is on screen. The page's clock is fixed by the test (see test-page.ts), so a frame is a fact.
 import { afterAll, describe, expect, it } from "vitest";
 import { DEFAULT_LOOK, FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES } from "../look";
-import { BACKGROUND, closeFigureBrowser, frames, isBackground, openFigurePage, shot, show, type FigurePage, type Shot } from "./test-page";
+import { BACKGROUND, advance, closeFigureBrowser, difference, frames, isBackground, openFigurePage, shot, show, type FigurePage, type Shot } from "./test-page";
 
 const PINK = { ...DEFAULT_LOOK, shape: "round", color: "#ff5fa8" };
 const T = 60_000;
@@ -253,6 +253,130 @@ describe("the catalog, live", () => {
           return first.every((v, i) => v === second[i]) && first.every((v, i) => v === third[i]);
         }, DEFAULT_LOOK as never);
         expect(same).toBe(true);
+      }),
+    T,
+  );
+});
+
+describe("what it is doing, live", () => {
+  /** How many pixels of the eyes' band are dark, and where their center of mass is (0..1). */
+  function darkArea(s: Shot): { count: number; x: number } {
+    let count = 0, sum = 0;
+    s.each((p, x, y) => {
+      if (y > s.height * 0.3 && y < s.height * 0.7 && p[0] < 60 && p[1] < 60 && p[2] < 60) {
+        count++;
+        sum += x;
+      }
+    });
+    return { count, x: count ? sum / count / s.width : 0.5 };
+  }
+  const run = (p: FigurePage, code: string) => p.page.evaluate(code);
+
+  it(
+    "closes its eyes when asleep",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        await advance(p, 1);
+        const open = darkArea(await shot(p)).count;
+        await run(p, `window.fig.setActivity("asleep")`);
+        await advance(p, 2);
+        expect(open).toBeGreaterThan(40);
+        expect(darkArea(await shot(p)).count).toBeLessThan(open * 0.3);
+      }),
+    T,
+  );
+
+  it(
+    "moves its eyes toward where it looks",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        await run(p, `window.fig.lookAt(0, 0.5)`);
+        await advance(p, 1.5);
+        const left = darkArea(await shot(p)).x;
+        await run(p, `window.fig.lookAt(1, 0.5)`);
+        await advance(p, 1.5);
+        expect(darkArea(await shot(p)).x).toBeGreaterThan(left + 0.01);
+      }),
+    T,
+  );
+
+  it(
+    "holds one still pose under reduced motion, and moves without it",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK, { reducedMotion: true });
+        await run(p, `window.__t = 1`);
+        await frames(p, 3);
+        const first = await shot(p);
+        await run(p, `window.__t = 7.3; window.fig.setActivity("talking")`);
+        await frames(p, 3);
+        expect(difference(first, await shot(p), 0)).toBe(0);
+        await run(p, `window.fig.setReducedMotion(false)`);
+        await advance(p, 1.3);
+        expect(difference(first, await shot(p))).toBeGreaterThan(0.01);
+      }),
+    T,
+  );
+
+  it(
+    "looks different from one activity to another",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        await advance(p, 2);
+        const ready = await shot(p);
+        await run(p, `window.fig.setActivity("listening")`);
+        await advance(p, 2);
+        expect(difference(ready, await shot(p))).toBeGreaterThan(0.01);
+      }),
+    T,
+  );
+
+  it(
+    "asks for no frames while paused, and resumes",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        const asked = await p.page.evaluate(async () => {
+          const w = window as never as { fig: { setActive(a: boolean): void }; __raf: number };
+          w.fig.setActive(false);
+          await new Promise((r) => setTimeout(r, 100));
+          const before = w.__raf;
+          await new Promise((r) => setTimeout(r, 300));
+          const paused = w.__raf - before;
+          w.fig.setActive(true);
+          await new Promise((r) => setTimeout(r, 300));
+          return { paused, resumed: w.__raf - before - paused };
+        });
+        expect(asked.paused).toBe(0);
+        expect(asked.resumed).toBeGreaterThan(0);
+      }),
+    T,
+  );
+
+  it(
+    "captures the neutral pose whatever it is doing, without disturbing the canvas",
+    () =>
+      withPage({ css: 120 }, async (p) => {
+        await show(p, PINK);
+        await advance(p, 1);
+        const same = await p.page.evaluate(async () => {
+          const w = window as never as { fig: { setActivity(a: string): void; capture(n: number): ImageData }; __t: number; frames: (n: number) => Promise<boolean> };
+          const ready = Array.from(w.fig.capture(64).data);
+          w.fig.setActivity("talking");
+          for (let i = 0; i < 20; i++) {
+            w.__t += 1 / 30;
+            await w.frames(1);
+          }
+          const talking = Array.from(w.fig.capture(64).data);
+          return ready.every((v, i) => v === talking[i]);
+        });
+        expect(same).toBe(true);
+        await frames(p, 2);
+        const [r, g] = (await shot(p)).at(0.5, 0.7);
+        expect(r).toBeGreaterThan(g + 40);
       }),
     T,
   );
