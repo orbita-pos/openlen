@@ -772,7 +772,12 @@
       "loadError": "Impossibile caricare le conversazioni.",
       "budgetRange": "Può essere da 0 a {max} crediti.",
       "budgetError": "Impossibile salvare il limite. Riprova.",
-      "nothingToKnow": "Pubblicata, ma la tua pagina non ha testo né dati pubblici da leggere."
+      "nothingToKnow": "Pubblicata, ma la tua pagina non ha testo né dati pubblici da leggere.",
+      "rename": "Rinomina",
+      "renameSave": "Salva",
+      "renameCancel": "Annulla",
+      "renamePublish": "La tua pagina mostrerà il nuovo nome quando la pubblichi.",
+      "renameFailed": "Non è stato possibile cambiare il nome. Riprova."
     },
     "speaker": {
       "working": "{name} sta lavorando",

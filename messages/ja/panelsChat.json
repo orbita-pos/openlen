@@ -772,7 +772,12 @@
       "loadError": "会話を読み込めませんでした。",
       "budgetRange": "0〜{max} クレジットで指定できます。",
       "budgetError": "上限を保存できませんでした。もう一度お試しください。",
-      "nothingToKnow": "公開済みですが、ページに読み取れるテキストや公開データがありません。"
+      "nothingToKnow": "公開済みですが、ページに読み取れるテキストや公開データがありません。",
+      "rename": "名前を変更",
+      "renameSave": "保存",
+      "renameCancel": "キャンセル",
+      "renamePublish": "公開するとページに新しい名前が表示されます。",
+      "renameFailed": "名前を変更できませんでした。もう一度お試しください。"
     },
     "speaker": {
       "working": "{name} が作業中",

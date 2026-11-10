@@ -772,7 +772,12 @@
       "loadError": "Die Unterhaltungen konnten nicht geladen werden.",
       "budgetRange": "Möglich sind 0 bis {max} Credits.",
       "budgetError": "Das Limit konnte nicht gespeichert werden. Versuch es noch einmal.",
-      "nothingToKnow": "Veröffentlicht, aber deine Seite hat weder Text noch öffentliche Daten zum Lesen."
+      "nothingToKnow": "Veröffentlicht, aber deine Seite hat weder Text noch öffentliche Daten zum Lesen.",
+      "rename": "Umbenennen",
+      "renameSave": "Speichern",
+      "renameCancel": "Abbrechen",
+      "renamePublish": "Deine Seite zeigt den neuen Namen, sobald du sie veröffentlichst.",
+      "renameFailed": "Der Name konnte nicht geändert werden. Versuch es noch einmal."
     },
     "speaker": {
       "working": "{name} arbeitet",

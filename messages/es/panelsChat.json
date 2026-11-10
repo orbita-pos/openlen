@@ -772,7 +772,12 @@
       "loadError": "No se pudieron cargar las conversaciones.",
       "budgetRange": "Puede ser de 0 a {max} créditos.",
       "budgetError": "No se pudo guardar el tope. Inténtalo otra vez.",
-      "nothingToKnow": "Publicada, pero tu página no tiene texto ni datos públicos que leer."
+      "nothingToKnow": "Publicada, pero tu página no tiene texto ni datos públicos que leer.",
+      "rename": "Cambiar nombre",
+      "renameSave": "Guardar",
+      "renameCancel": "Cancelar",
+      "renamePublish": "Tu página mostrará el nombre nuevo cuando la publiques.",
+      "renameFailed": "No se pudo cambiar el nombre. Inténtalo otra vez."
     },
     "speaker": {
       "working": "{name} está trabajando",

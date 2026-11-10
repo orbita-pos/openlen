@@ -5,11 +5,11 @@ import { notFound } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AssistantHome } from "@/components/workspace-v2/assistant/assistant-home";
-import { redirect } from "@/i18n/navigation";
+import { permanentRedirect, redirect } from "@/i18n/navigation";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { slugFromParam } from "@/lib/assistants/names";
-import { assistantBySlug } from "@/lib/assistants/store";
+import { assistantByOldSlug, assistantBySlug } from "@/lib/assistants/store";
 import { assistantView } from "@/lib/assistants/view";
 import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
@@ -24,8 +24,15 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   const { locale, name } = await params;
   const personId = (await auth())?.user?.id;
   if (!personId) return redirect({ href: "/login", locale });
-  const assistant = await assistantBySlug(personId, slugFromParam(name));
-  if (!assistant) notFound();
+  const slug = slugFromParam(name);
+  const assistant = await assistantBySlug(personId, slug);
+  if (!assistant) {
+    // Renamed (phase 4D, spec §6.8): her old address redirects for good to the new one. A live name wins: asked only
+    // when no assistant of the person has this one now.
+    const moved = await assistantByOldSlug(personId, slug);
+    if (moved) return permanentRedirect({ href: `/assistant/${moved.slug}`, locale });
+    notFound();
+  }
   const project = await getProject(assistant.homeProjectId, personId);
   if (!project) notFound();
   const [chat, found] = await Promise.all([

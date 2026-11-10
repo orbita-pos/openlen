@@ -772,7 +772,12 @@
       "loadError": "Impossible de charger les conversations.",
       "budgetRange": "De 0 à {max} crédits.",
       "budgetError": "Impossible d’enregistrer le plafond. Réessayez.",
-      "nothingToKnow": "Publiée, mais votre page n’a ni texte ni données publiques à lire."
+      "nothingToKnow": "Publiée, mais votre page n’a ni texte ni données publiques à lire.",
+      "rename": "Renommer",
+      "renameSave": "Enregistrer",
+      "renameCancel": "Annuler",
+      "renamePublish": "Votre page affichera le nouveau nom quand vous la publierez.",
+      "renameFailed": "Impossible de changer le nom. Réessayez."
     },
     "speaker": {
       "working": "{name} travaille",
