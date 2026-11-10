@@ -4,6 +4,9 @@
 // newest first, unread as the visitor's lines after the owner's read mark (`assistantVisits.readAt`, which only the
 // owner's seeing them in her Conversaciones sets), and of each, what she noted for the owner from it and how that went.
 // Measured 10/11: without this she told her owner «ayer no pasó nada» right after her summary said she talked with two.
+// Re-measured 10/11 with it (plan …-fase-4e, task 6, Jesús's OK, cap 1.5 credits): «¿Qué pasó ayer con los clientes?» →
+// list_messages by_date for yesterday, both conversations opened with which="one", both told with what each wanted and
+// what she noted (80 centicredits; 108 in all with two visitors and a memory note).
 import "server-only";
 
 import { and, eq, gte, inArray } from "drizzle-orm";
