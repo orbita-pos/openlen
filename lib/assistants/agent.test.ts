@@ -202,9 +202,15 @@ describe("assistantSystemPrompt", () => {
 
   // Phase 4E (measured 10/11): «apúntate que los jueves hacemos pan de muerto» → she also copied the page's hours,
   // flavors and pickup rules into her memory. Claude Code's memory doesn't keep what the repo already records.
-  it("🔴 her body says the pages aren't memory", () => {
+  // Measured again after a one-sentence rule: she copied the page under «no hace falta apuntarlo aquí». Claude Code's
+  // agent memory has its own section, «## What NOT to save in memory», ending «These exclusions apply even when the user
+  // explicitly asks you to save» (binary 2.1.321).
+  it("🔴 her body has Claude Code's «What NOT to save in memory», with the pages first", () => {
     const p = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" });
-    expect(p).toContain("What your owner's pages already say isn't memory: you read it in ~/.assistant/PROJECTS.md. Keep what only your owner can tell you.");
+    expect(p).toContain("## What NOT to save in memory");
+    expect(p).toContain("- What your owner's pages say — products, prices, hours, address, how to order: you read it in ~/.assistant/PROJECTS.md, and it changes when the pages do.");
+    expect(p).toContain("- What visitors said or asked: it is in list_messages.");
+    expect(p).toContain("These exclusions apply even when your owner asks you to save. If they ask you to save something their pages already say, keep only what the pages don't say.");
     expect(p).toContain("Your conversations with the visitors of your owner's pages, and what you noted for them from each, are in list_messages.");
   });
 

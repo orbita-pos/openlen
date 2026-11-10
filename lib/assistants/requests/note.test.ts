@@ -37,11 +37,12 @@ describe("note_request", () => {
 
   // Phase 4E (measured 10/11): noting replaced answering. Both what she reads before calling it and what it tells her
   // after say the business's answer comes first.
-  it("🔴 noting never replaces answering: the declaration and the reply say the business's answer comes first", async () => {
-    expect(NOTE_REQUEST_DECLARATION.description).toContain("It never replaces answering: what the business's information says comes first. At most once per answer.");
+  // Measured again after that: she still led with «Ya quedó anotado». DeepSeek: «Do not relabel progress as an answer».
+  it("🔴 noting is progress, not an answer: the declaration and the reply say to answer directly", async () => {
+    expect(NOTE_REQUEST_DECLARATION.description).toContain("Noting is progress, not an answer: answer the visitor directly with what the business's information says. At most once per answer.");
     const t = tool();
     expect(answer(await t.run({ request: "Envío a Zapopan" })).tool_result).toBe(
-      "Noted for the owner. If the business's information already answers it, a «no» included, that answer comes first; you may add that you'll pass it on; promise nothing.",
+      "Noted for the owner. That is progress, not an answer: answer the visitor directly with what the business's information says, a «no» included; you may add that you'll pass it on; promise nothing.",
     );
   });
 
