@@ -38,7 +38,9 @@ export function scrubContact(text: string): string {
 }
 
 /** Phase 4E (measured twice on 10/11): after noting she answered «ya lo anoté» / «ya quedó anotado», though the page said
- *  «No hacemos envíos». DeepSeek's Super-agent replies: «Do not relabel progress as an answer». */
+ *  «No hacemos envíos». DeepSeek's Super-agent replies: «Do not relabel progress as an answer». Re-measured 10/11 with this
+ *  wording and rule 12's: «No, no hacemos envíos: los pedidos son sólo para recoger en la tienda, en calle Hidalgo 120.
+ *  Si quieres, se lo comento al negocio…», the request noted too (9 centicredits). */
 const NOTED = "Noted for the owner. That is progress, not an answer: answer the visitor directly with what the business's information says, a «no» included; you may add that you'll pass it on; promise nothing.";
 
 function refused(message: string): ToolOutcome {
