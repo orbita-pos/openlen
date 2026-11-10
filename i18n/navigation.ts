@@ -5,5 +5,5 @@ import { routing } from "./routing";
 // link/redirect/router call in the app routes through these so the active
 // locale prefix is preserved automatically. Import from "@/i18n/navigation"
 // instead of "next/link" / "next/navigation".
-export const { Link, redirect, usePathname, useRouter, getPathname } =
+export const { Link, redirect, permanentRedirect, usePathname, useRouter, getPathname } =
   createNavigation(routing);

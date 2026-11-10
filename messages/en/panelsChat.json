@@ -772,7 +772,12 @@
       "loadError": "The conversations couldn't be loaded.",
       "budgetRange": "It can be from 0 to {max} credits.",
       "budgetError": "The cap couldn't be saved. Try again.",
-      "nothingToKnow": "Published, but your page has no text or public data to read."
+      "nothingToKnow": "Published, but your page has no text or public data to read.",
+      "rename": "Rename",
+      "renameSave": "Save",
+      "renameCancel": "Cancel",
+      "renamePublish": "Your page will show the new name when you publish it.",
+      "renameFailed": "Couldn't change the name. Try again."
     },
     "speaker": {
       "working": "{name} is working",

@@ -772,7 +772,12 @@
       "loadError": "无法加载对话。",
       "budgetRange": "可设为 0 到 {max} 积分。",
       "budgetError": "无法保存上限，请重试。",
-      "nothingToKnow": "已发布，但你的页面没有可读取的文字或公开数据。"
+      "nothingToKnow": "已发布，但你的页面没有可读取的文字或公开数据。",
+      "rename": "重命名",
+      "renameSave": "保存",
+      "renameCancel": "取消",
+      "renamePublish": "发布页面后就会显示新名字。",
+      "renameFailed": "无法更改名字，请重试。"
     },
     "speaker": {
       "working": "{name} 正在工作",

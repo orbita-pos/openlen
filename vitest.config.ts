@@ -448,6 +448,8 @@ export default defineConfig({
       // La vuelta del cobro: /projects lleva ?billing_error / ?upgraded a la lista.
       "app/[locale]/projects/page.test.ts",
       "app/[locale]/projects/projects-view.test.tsx",
+      // Her place's old address redirects (spec local 2026-11-06-asistente-propio, §6.8, phase 4D).
+      "app/[locale]/assistant/[name]/page.test.ts",
       "lib/auth/**/*.test.ts",
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list
