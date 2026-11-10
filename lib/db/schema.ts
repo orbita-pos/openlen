@@ -1568,9 +1568,13 @@ export const assistantProjects = pgTable("assistantProjects", {
   connectedAt: timestamp("connectedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   /** «En mi página» (spec §4.4.5): the published page's bubble is the assistant. Baked at publish; read on every visit. */
   onPage: boolean("onPage").notNull().default(false),
-  /** What it knows of the business: the PUBLISHED site's text, saved at publish (lib/assistants/knowledge.ts). */
+  /** What it knows of the business: the PUBLISHED site's text, saved at every publish of a project she serves
+   *  (lib/assistants/knowledge.ts; phase 4: not only the one whose bubble is hers). */
   knowledge: text("knowledge"),
   knowledgeAt: timestamp("knowledgeAt", { mode: "date", withTimezone: true }),
+  /** The last publish that baked HER bubble on the page (phase 4): she answers visitors only through one. Forgotten when
+   *  «En mi página» changes; what the project published stays. */
+  bakedAt: timestamp("bakedAt", { mode: "date", withTimezone: true }),
   /** What the page's data shows ANYONE (the tables `anon` can read), saved at publish (phase 2B,
    *  lib/assistants/visitor/public-data.ts): what `read_public_data` may read. */
   publicData: jsonb("publicData").$type<PublicTable[]>(),

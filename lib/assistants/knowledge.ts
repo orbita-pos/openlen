@@ -32,26 +32,27 @@ export function knowledgeOf(site: ProjectData): string {
   return `${pagesLine(data)}\n\n${text}`.slice(0, KNOWLEDGE_MAX);
 }
 
-/** Called by publishing with her on the page, after the release is written: what was just published is what she knows
- *  — its text and what its data shows anyone (phase 2B) —, and today's assistant goes off in this same publish, the one
- *  that baked her bubble in its place (§6.4). Never fails the publish. */
+/** Called by publishing a project she serves, after the release is written: what was just published is what she knows
+ *  of it — its text and what its data shows anyone (phase 2B). With her on the page (`onPage`) that publish baked her
+ *  bubble, and today's assistant goes off in it, the one hers replaced (§6.4). Never fails the publish. */
 export async function rememberWhatWasPublished(
   projectId: string,
   data: ProjectData,
   at: Date,
   deps: {
-    save(projectId: string, text: string, at: Date, publicData: PublicTable[] | null): Promise<void>;
+    save(projectId: string, text: string, at: Date, publicData: PublicTable[] | null, o: { readonly baked: boolean }): Promise<void>;
     switchOldOff(projectId: string): Promise<boolean>;
     /** null = couldn't be read this time: what she had stays. */
     publicData(projectId: string): Promise<PublicTable[] | null>;
   },
+  o: { readonly onPage: boolean },
 ): Promise<void> {
   try {
     const text = knowledgeOf(data);
     const publicData = await deps.publicData(projectId);
-    await deps.save(projectId, text, at, publicData);
-    // With nothing for her to know she won't answer, so today's assistant keeps its settings.
-    if (canAnswer({ knowledge: text, publicData: publicData ?? [] })) await deps.switchOldOff(projectId);
+    await deps.save(projectId, text, at, publicData, { baked: o.onPage });
+    // Not her bubble, or nothing for her to know: today's assistant keeps its settings.
+    if (o.onPage && canAnswer({ knowledge: text, publicData: publicData ?? [] })) await deps.switchOldOff(projectId);
   } catch (err) {
     console.warn("[assistants] what was published wasn't saved for the page's own assistant", err);
   }

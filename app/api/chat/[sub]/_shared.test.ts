@@ -33,13 +33,20 @@ describe("loadChatSite — the bubble's assistant", () => {
 
   it("🔴 the chat handoff accepts her as the caller", async () => {
     mocks.limit.mockResolvedValue(row({ chat: { enabled: true } }));
-    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "Martes a domingo." });
+    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "Martes a domingo.", bakedAt: new Date() });
     expect((await loadChatSite("taller"))?.assistantEnabled).toBe(true);
+  });
+
+  // Phase 4: she knows what the project published before her bubble is baked on it.
+  it("🔴 knowing the project before her bubble is baked: no assistant yet", async () => {
+    mocks.limit.mockResolvedValue(row({ chat: { enabled: true } }));
+    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "Martes a domingo.", bakedAt: null });
+    expect((await loadChatSite("taller"))?.assistantEnabled).toBe(false);
   });
 
   it("🔴 her with public data only (an app): the handoff accepts her too", async () => {
     mocks.limit.mockResolvedValue(row({ chat: { enabled: true } }));
-    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "", publicData: [{ name: "huecos", columns: [] }] });
+    mocks.onPage.mockResolvedValue({ assistant: { id: "a1" }, knowledge: "", bakedAt: new Date(), publicData: [{ name: "huecos", columns: [] }] });
     expect((await loadChatSite("taller"))?.assistantEnabled).toBe(true);
   });
 

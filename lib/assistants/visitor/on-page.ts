@@ -19,6 +19,8 @@ export interface OnPageState {
 interface Found {
   readonly knowledge: string | null;
   readonly knowledgeAt?: Date | null;
+  /** The last publish that baked HER bubble (phase 4). */
+  readonly bakedAt?: Date | null;
   readonly publicData?: readonly PublicTable[];
 }
 
@@ -27,8 +29,14 @@ export function canAnswer(found: Found | null): boolean {
   return Boolean(found.knowledge?.trim()) || (found.publicData?.length ?? 0) > 0;
 }
 
+/** She answers visitors: on the page, through a bubble a publish with her baked, with something to know. Knowing what
+ *  the project published is not enough — since phase 4 she knows that before her bubble is there. */
+export function answersVisitors(found: Found | null): boolean {
+  return Boolean(found?.bakedAt) && canAnswer(found);
+}
+
 export function onPageState(found: Found | null, isApp: boolean): OnPageState {
   const onPage = found !== null;
-  const published = Boolean(found?.knowledgeAt);
+  const published = Boolean(found?.bakedAt);
   return { onPage, needsPublish: onPage && !published, nothingToKnow: onPage && published && !canAnswer(found), forApp: isApp };
 }

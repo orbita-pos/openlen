@@ -41,7 +41,7 @@ import {
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { rehomeAssistantsOf } from "@/lib/assistants/projects";
-import { switchOldAssistantOff } from "@/lib/assistants/store";
+import { assistantOfProject, switchOldAssistantOff } from "@/lib/assistants/store";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
 import { publicDataOf } from "@/lib/assistants/visitor/public-data";
 import { assistantOnPage, saveKnowledge } from "@/lib/assistants/visitor/store";
@@ -1267,9 +1267,12 @@ export async function publishProject(
     void recordPublishedSources({ projectId: params.projectId, ownerId: params.userId, data: project.data, folder: projectFiles });
   }
 
-  // 5b'. THE PERSON'S OWN ASSISTANT: what she tells visitors is what was just published, never the draft (phase 2A).
-  if (ella && project.data) {
-    await rememberWhatWasPublished(params.projectId, project.data, new Date(), { save: saveKnowledge, switchOldOff: switchOldAssistantOff, publicData: publicDataOf });
+  // 5b'. THE PERSON'S OWN ASSISTANT: what she knows of a project she serves is what it just published, never the draft
+  // (phase 2A) — whether or not her bubble is on it (phase 4: she talks about each of her person's projects). With her on
+  // the page, this publish baked her bubble.
+  const suya = ella ?? (assistantsEnabled() ? await assistantOfProject(params.projectId).catch(() => null) : null);
+  if (suya && project.data) {
+    await rememberWhatWasPublished(params.projectId, project.data, new Date(), { save: saveKnowledge, switchOldOff: switchOldAssistantOff, publicData: publicDataOf }, { onPage: Boolean(ella) });
   }
 
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone

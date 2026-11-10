@@ -76,7 +76,9 @@ beforeEach(() => {
 // the page, a visitor's message wakes her turn on Len's engine; every other page answers exactly as today.
 describe("POST /api/assistant/[sub] — her bubble", () => {
   const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", tone: "friendly", memory: "Envíos sólo en Guadalajara.", shape: "blob", color: "#F4A48B" };
-  const onPage = (knowledge: string | null = "Martes a domingo, de 9:00 a 19:00.", publicData: unknown[] = []) => mocks.onPage.mockResolvedValue({ assistant: LUCIA, knowledge, publicData });
+  const BAKED = new Date("2026-11-09T10:00:00Z");
+  const onPage = (knowledge: string | null = "Martes a domingo, de 9:00 a 19:00.", publicData: unknown[] = [], bakedAt: Date | null = BAKED) =>
+    mocks.onPage.mockResolvedValue({ assistant: LUCIA, knowledge, knowledgeAt: knowledge === null ? null : BAKED, bakedAt, publicData });
   const SLOTS = [{ name: "huecos", columns: [{ name: "dia", type: "date" }] }];
   const escribe = (body: Record<string, unknown>) =>
     POST(new Request("https://openlen.com/api/assistant/taller", { method: "POST", body: JSON.stringify(body) }), { params: Promise.resolve({ sub: "taller" }) });
@@ -182,6 +184,20 @@ describe("POST /api/assistant/[sub] — her bubble", () => {
     expect(await res.json()).toEqual({ respuesta: "Abrimos de lunes a viernes.", intent: "answer" });
     expect(mocks.visitorTurn).not.toHaveBeenCalled();
     expect(await (await pide()).json()).toMatchObject({ asistente: true });
+  });
+
+  // Phase 4: she knows what each project she serves published, so knowing is no longer «her bubble is baked».
+  it("🔴 a page whose bubble isn't hers yet gets no answer from her, even when she knows the project: today's bubble keeps answering", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    onPage("Martes a domingo, de 9:00 a 19:00.", [], null);
+    const res = await escribe({ message: "¿Qué días abren?", history: [] });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ respuesta: "Abrimos de lunes a viernes.", intent: "answer" });
+    expect(mocks.visitorTurn).not.toHaveBeenCalled();
+    mocks.limit.mockResolvedValue(fila({}));
+    expect((await escribe({ message: "hola", vid: VID })).status).toBe(403);
+    expect(await (await pide()).json()).toMatchObject({ asistente: false });
+    expect(mocks.visitorTurn).not.toHaveBeenCalled();
   });
 
   it("her handoff is the page's: a guest self-serve chat can take the visitor", async () => {

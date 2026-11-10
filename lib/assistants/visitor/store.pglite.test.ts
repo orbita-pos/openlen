@@ -122,16 +122,30 @@ describe("on the page", () => {
     expect(await visitor.assistantOnPage("p1")).toBeNull();
   });
 
-  it("🔴 turning her on or off forgets what she knew: she answers only after a publish with her", async () => {
+  // Phase 4: what the project published stays (she serves it either way); only her baked bubble is forgotten.
+  it("🔴 turning her on or off forgets only that her bubble was baked: what the project published stays", async () => {
+    const at = new Date("2026-11-09T10:00:00Z");
     await visitor.setOnPage("p1", lucia, true);
-    await visitor.saveKnowledge("p1", "Lo publicado.", new Date());
+    await visitor.saveKnowledge("p1", "Lo publicado.", at, [], { baked: true });
+    expect((await visitor.assistantOnPage("p1"))?.bakedAt?.toISOString()).toBe(at.toISOString());
     await visitor.setOnPage("p1", lucia, false);
     await visitor.setOnPage("p1", lucia, true);
-    expect((await visitor.assistantOnPage("p1"))?.knowledge).toBeNull();
+    const again = await visitor.assistantOnPage("p1");
+    expect(again?.knowledge).toBe("Lo publicado.");
+    expect(again?.knowledgeAt?.toISOString()).toBe(at.toISOString());
+    expect(again?.bakedAt).toBeNull();
+  });
+
+  it("a publish without her bubble saves what was published and bakes nothing", async () => {
+    await visitor.saveKnowledge("p1", "Lo publicado.", new Date(), [], { baked: false });
+    await visitor.setOnPage("p1", lucia, true);
+    const on = await visitor.assistantOnPage("p1");
+    expect(on?.knowledge).toBe("Lo publicado.");
+    expect(on?.bakedAt).toBeNull();
   });
 
   // Phase 2B: what the page's data shows anyone, kept at publish next to what she knows.
-  it("publicData is kept with what she knows, and goes with it when she is turned off and on", async () => {
+  it("publicData is kept with what she knows, and stays when she is turned off and on", async () => {
     const tables = [{ name: "huecos", columns: [{ name: "dia", type: "date" }, { name: "hora", type: "time without time zone" }] }];
     await visitor.setOnPage("p1", lucia, true);
     expect((await visitor.assistantOnPage("p1"))?.publicData).toEqual([]);
@@ -143,8 +157,8 @@ describe("on the page", () => {
     await visitor.setOnPage("p1", lucia, false);
     await visitor.setOnPage("p1", lucia, true);
     const again = await visitor.assistantOnPage("p1");
-    expect(again?.publicData).toEqual([]);
-    expect(again?.knowledgeAt).toBeNull();
+    expect(again?.publicData).toEqual(tables);
+    expect(again?.bakedAt).toBeNull();
   });
 
   it("🔴 saving with publicData null keeps the public data she had", async () => {
@@ -163,6 +177,22 @@ describe("on the page", () => {
     await visitor.saveKnowledge("p1", "Lo publicado.", new Date());
     expect(await visitor.setOnPage("p1", lucia, true)).toBe(true);
     expect((await visitor.assistantOnPage("p1"))?.knowledge).toBe("Lo publicado.");
+  });
+});
+
+// Phase 4: «her bubble is baked» apart from «what the project published», added by assistants:migrate.
+describe("the migration of bakedAt", () => {
+  it("🔴 fills bakedAt once, from what was published with her on the page; a later run never bakes a bubble again", async () => {
+    const at = "2026-11-08T10:00:00.000Z";
+    await pg.query(`alter table "assistantProjects" drop column "bakedAt"`);
+    await pg.query(`update "assistantProjects" set "onPage" = true, "knowledge" = 'x', "knowledgeAt" = $1 where "projectId" = 'p1'`, [at]);
+    for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+    expect((await visitor.assistantOnPage("p1"))?.bakedAt?.toISOString()).toBe(at);
+    // Turned off and on since: the next deploy's migrate must not bake it back.
+    await visitor.setOnPage("p1", lucia, false);
+    await visitor.setOnPage("p1", lucia, true);
+    for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+    expect((await visitor.assistantOnPage("p1"))?.bakedAt).toBeNull();
   });
 });
 

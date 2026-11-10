@@ -26,43 +26,47 @@ export interface OnPage {
   readonly assistant: AssistantRow;
   /** The published site's text; null until a publish with her. */
   readonly knowledge: string | null;
-  /** When that publish saved it; null = never published with her. */
+  /** When a publish saved it; null = not published since she serves it. */
   readonly knowledgeAt: Date | null;
+  /** The last publish that baked HER bubble; null = the page's bubble isn't hers yet (phase 4). */
+  readonly bakedAt: Date | null;
   /** What the page's data shows anyone (phase 2B); [] when none or before 2B. */
   readonly publicData: PublicTable[];
 }
 
 export async function assistantOnPage(projectId: string): Promise<OnPage | null> {
   const [row] = await db
-    .select({ assistant: schema.assistants, knowledge: ap.knowledge, knowledgeAt: ap.knowledgeAt, publicData: ap.publicData })
+    .select({ assistant: schema.assistants, knowledge: ap.knowledge, knowledgeAt: ap.knowledgeAt, bakedAt: ap.bakedAt, publicData: ap.publicData })
     .from(ap)
     .innerJoin(schema.assistants, eq(schema.assistants.id, ap.assistantId))
     .where(and(eq(ap.projectId, projectId), eq(ap.onPage, true)))
     .limit(1);
-  return row ? { assistant: row.assistant, knowledge: row.knowledge, knowledgeAt: row.knowledgeAt, publicData: row.publicData ?? [] } : null;
+  return row ? { assistant: row.assistant, knowledge: row.knowledge, knowledgeAt: row.knowledgeAt, bakedAt: row.bakedAt, publicData: row.publicData ?? [] } : null;
 }
 
-/** `false` when that assistant isn't the one of that project. When it CHANGES she forgets what she knew: she answers
- *  visitors only after a publish with her (which bakes her bubble), never through a bubble that isn't hers yet. The same
- *  value again (a stale second tab) changes nothing, so her live bubble stays. */
+/** `false` when that assistant isn't the one of that project. When it CHANGES she forgets that her bubble was baked:
+ *  she answers visitors only after a publish with her (which bakes it), never through a bubble that isn't hers yet. What
+ *  the project published stays — she serves it either way (phase 4). The same value again (a stale second tab) changes
+ *  nothing, so her live bubble stays. */
 export async function setOnPage(projectId: string, assistantId: string, onPage: boolean): Promise<boolean> {
   const done = await db
     .update(ap)
     .set({
       onPage,
-      knowledge: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledge} else null end`,
-      knowledgeAt: sql`case when ${ap.onPage} = ${onPage} then ${ap.knowledgeAt} else null end`,
-      publicData: sql`case when ${ap.onPage} = ${onPage} then ${ap.publicData} else null end`,
+      bakedAt: sql`case when ${ap.onPage} = ${onPage} then ${ap.bakedAt} else null end`,
     })
     .where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId)))
     .returning({ projectId: ap.projectId });
   return done.length > 0;
 }
 
-/** What a publish with her saves: the site's text and what its data shows anyone; publicData null = it couldn't be
- *  read this time, so what she had stays. */
-export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] | null = []): Promise<void> {
-  await db.update(ap).set({ knowledge: text, knowledgeAt: at, ...(publicData ? { publicData } : {}) }).where(eq(ap.projectId, projectId));
+/** What a publish of a project she serves saves: the site's text and what its data shows anyone; publicData null = it
+ *  couldn't be read this time, so what she had stays. `baked`: that publish baked her bubble on the page. */
+export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] | null = [], o: { readonly baked: boolean } = { baked: false }): Promise<void> {
+  await db
+    .update(ap)
+    .set({ knowledge: text, knowledgeAt: at, ...(publicData ? { publicData } : {}), ...(o.baked ? { bakedAt: at } : {}) })
+    .where(eq(ap.projectId, projectId));
 }
 
 export async function visitOf(assistantId: string, projectId: string, visitorId: string): Promise<VisitRow | null> {
