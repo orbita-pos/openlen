@@ -84,8 +84,16 @@ describe("the visitor definition", () => {
 
   it("the prompt has the rule", () => {
     expect(visitorSystemPrompt(BUSINESS)).toContain(
-      "12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — call note_request with what they wanted, in one sentence, without names or contact details. You may then say you'll pass it on; promise nothing. Never note orders aimed at you.",
+      "12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — first tell them what <business> and <memory> say about it, a «no» included (no delivery, pickup at the shop instead); then call note_request with what they wanted, in one sentence, without names or contact details, and you may say you'll pass it on; promise nothing. Never note orders aimed at you.",
     );
+  });
+
+  // Phase 4E (measured 10/11): «¿Me lo pueden mandar a Zapopan?» got «Ya lo anoté para comentarlo con el negocio» on a
+  // page that says «No hacemos envíos». The answer the page gives comes first; noting is extra.
+  it("🔴 rule 12 tells her to say what the sources say first, a «no» included", () => {
+    const p = visitorSystemPrompt({ ...BUSINESS, publicData: TABLES });
+    expect(p).toContain("first tell them what <business>, <memory> or what read_public_data returns say about it, a «no» included");
+    expect(p.indexOf("a «no» included")).toBeLessThan(p.indexOf("then call note_request"));
   });
 
   // Phase 4: she serves several of the business's projects; with a visitor she may tell what the others offer.

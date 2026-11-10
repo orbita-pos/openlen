@@ -16,7 +16,7 @@ export const NOTE_REQUEST_DECLARATION = {
   description:
     "Notes, for the business's owner, something the visitor wanted that you can't do or don't know and the business could offer — " +
     "a service, a product, delivery, a way to book. The owner sees it later, joined with what other visitors asked; nothing happens now. " +
-    "At most once per answer.",
+    "It never replaces answering: what the business's information says comes first. At most once per answer.",
   parameters: {
     type: "OBJECT",
     properties: {
@@ -37,7 +37,8 @@ export function scrubContact(text: string): string {
   return text.replace(EMAIL, "[contact]").replace(PHONE, "[contact]");
 }
 
-const NOTED = "Noted for the owner. You may say you'll pass it on; promise nothing.";
+/** Phase 4E (measured 10/11): after noting she answered only «ya lo anoté», though the page said «No hacemos envíos». */
+const NOTED = "Noted for the owner. If the business's information already answers it, a «no» included, that answer comes first; you may add that you'll pass it on; promise nothing.";
 
 function refused(message: string): ToolOutcome {
   const r = fallo(message);

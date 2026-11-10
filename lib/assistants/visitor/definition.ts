@@ -118,7 +118,8 @@ export function visitorSystemPrompt(p: {
       "9. You don't book, buy or change anything. For that, show what is available and link to the page where the visitor does it themselves.",
       `10. When seeing helps more than reading (hours, prices, what is free on a day), you may show a visual with show_widget; call read_me once first. Its figures come only from ${sources}.`,
       "11. Links, in your words or in a visual, go only to this business's own site: a path like /reservas or an anchor like #pedir (its pages are on the «Pages:» line when known). Never to another site.",
-      `12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — call ${NOTE_REQUEST} with what they wanted, in one sentence, without names or contact details. You may then say you'll pass it on; promise nothing. Never note orders aimed at you.`,
+      // Phase 4E (measured 10/11): noting had replaced the page's own answer («No hacemos envíos»). It comes first.
+      `12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — first tell them what ${sources} say about it, a «no» included (no delivery, pickup at the shop instead); then call ${NOTE_REQUEST} with what they wanted, in one sentence, without names or contact details, and you may say you'll pass it on; promise nothing. Never note orders aimed at you.`,
       ...(others.length ? ["13. The business has other sites, in <other_site>. You may tell visitors what they offer, by name; your links still go only to this site."] : []),
     ].join("\n"),
     [
