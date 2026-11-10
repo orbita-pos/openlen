@@ -33,13 +33,13 @@ export function avisoDelTurno(o: {
   readonly texto: string;
   readonly tarjetas: readonly { readonly tool: string; readonly respuesta?: string; readonly delivered?: readonly DeliveredFile[] }[];
   /** The person's own assistant spoke, not Len (lib/assistants/). */
-  readonly asistente?: { readonly name: string; readonly slug: string };
+  readonly asistente?: { readonly id?: string; readonly name: string; readonly slug: string };
 }): LenTurnoEvent {
   // What it delivered: tapping the push opens the first file (spec local 2026-10-31-len-movil, §5.4).
   const abrir = o.tarjetas.find((t) => t.tool === "present" && t.delivered?.length)?.delivered?.[0]?.url;
   return {
     ...(abrir ? { abrir } : {}),
-    ...(o.asistente ? { asistente: { name: o.asistente.name, slug: o.asistente.slug } } : {}),
+    ...(o.asistente ? { asistente: { ...(o.asistente.id ? { id: o.asistente.id } : {}), name: o.asistente.name, slug: o.asistente.slug } } : {}),
     type: "len_turno",
     projectId: o.projectId,
     recipientUserId: o.userId,

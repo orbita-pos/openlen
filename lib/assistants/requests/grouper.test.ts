@@ -156,6 +156,8 @@ describe("groupOne", () => {
     const { event, key } = s.notices[0]!;
     expect(key).toBe("assistant_requests:a1:p1");
     expect(event).toMatchObject({ type: "len_aviso", projectId: "p1", recipientUserId: "owner", cardId: "c-new", title: "Lucía", push: "Envíos a domicilio (2)" });
+    // Phase 5: the notice names the assistant, so her tab on the phone opens it.
+    expect(event).toMatchObject({ assistantId: "a1" });
     expect(event.emailSubject).toContain("Envíos a domicilio");
     expect(event.emailText).toContain("https://openlen.com/new?project=p1&chat=1&card=c-new");
     // One visitor: no count.

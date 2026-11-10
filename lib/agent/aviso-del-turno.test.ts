@@ -52,7 +52,7 @@ describe("el aviso de que Len terminó sin nadie mirando", () => {
 
   it("🔴 a turn of the person's own assistant says who spoke; Len's turns stay byte for byte", () => {
     const base = { projectId: "p1", userId: "u1", texto: "Listo.", tarjetas: [{ tool: "Read" }] };
-    expect(avisoDelTurno({ ...base, asistente: { name: "Lucía", slug: "lucía" } }).asistente).toEqual({ name: "Lucía", slug: "lucía" });
+    expect(avisoDelTurno({ ...base, asistente: { id: "a1", name: "Lucía", slug: "lucía" } }).asistente).toEqual({ id: "a1", name: "Lucía", slug: "lucía" });
     expect("asistente" in avisoDelTurno(base)).toBe(false);
   });
 

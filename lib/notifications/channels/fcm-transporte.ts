@@ -33,14 +33,15 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "assistant_asleep": ({ title, body } = asleepPush(evento)); break;
     case "assistant_summary": title = evento.title; body = evento.push; break;
   }
-  const abrir =
-    evento.type === "len_turno" && evento.abrir
-      ? { abrir: evento.abrir }
-      : evento.type === "len_aviso"
-        ? { tarjeta: evento.cardId }
-        : evento.type === "assistant_summary"
-          ? { asistente: evento.assistantId }
-          : {};
+  // Phase 5: the person's own assistant's id rides to the phone, which opens her tab — her turn (delivered file or not),
+  // her request notice and her summary. Len's data stays exactly as before.
+  const suya =
+    evento.type === "len_turno" ? evento.asistente?.id : evento.type === "len_aviso" || evento.type === "assistant_summary" ? evento.assistantId : undefined;
+  const abrir = {
+    ...(evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : {}),
+    ...(evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {}),
+    ...(suya ? { asistente: suya } : {}),
+  };
   // The person's own assistant's notification sits beside Len's for the same project, never replaces it.
   const herOwn = (evento.type === "len_turno" && evento.asistente) || evento.type === "assistant_summary";
   const tag = herOwn ? `assistant-${evento.projectId}` : `len-${evento.projectId}`;

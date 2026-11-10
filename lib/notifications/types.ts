@@ -28,7 +28,8 @@ export interface LenTurnoEvent {
   abrir?: string;
   /** The turn was the person's own assistant's, not Len's (lib/assistants/): the push names it and opens its place.
    *  Absent on Len's turns. */
-  asistente?: { name: string; slug: string };
+  /** Phase 5: `id` rides to the phone, which opens her tab. */
+  asistente?: { id?: string; name: string; slug: string };
 }
 
 /** HILOS EN EL CÓDIGO: alguien te mencionó en una línea de un fichero de un
@@ -153,6 +154,8 @@ export interface LenAvisoEvent {
   projectId: string;
   recipientUserId: string;
   cardId: string;
+  /** The person's own assistant's request notice (phase 5): her id, for her tab on the phone. */
+  assistantId?: string;
   /** The task's name: the push's title. */
   title: string;
   /** One line under 200 characters, without markdown (Claude Code's PushNotification rules). */
