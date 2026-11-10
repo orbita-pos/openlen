@@ -95,12 +95,15 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
       },
     };
   }
+  // Serving more than one, the result and the note name where it went, as Claude Code's Write names the path it wrote:
+  // she can tell her owner which project she took it to, and they can correct her (phase 4, task 8).
+  const where = served.length > 1 ? target.title?.trim() || target.id : null;
   const go = launch ?? (await import("@/lib/agent/turnos-desde-el-servidor")).launchAssistantRequestTurn;
   // How it ends comes back to the assistant with its next request (lib/assistants/notices.ts). Kept softly: a note
   // that can't be written never stops the request. An injected launch without notes keeps none (tests).
   const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
   const noticeId = randomUUID();
-  await keep.queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString() }).catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
+  await keep.queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString(), ...(where ? { project: where } : {}) }).catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
   const settle = (patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>) =>
     keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
   go({
@@ -121,7 +124,13 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     },
   });
   return {
-    response: { ok: true, queued: true, tool_result: "Len has the request and will do it in the project's chat, where your owner sees it." },
+    response: {
+      ok: true,
+      queued: true,
+      tool_result: where
+        ? `Len has the request in «${where}» and will do it in that project's chat, where your owner sees it.`
+        : "Len has the request and will do it in the project's chat, where your owner sees it.",
+    },
     action: { tool: ASK_LEN, ok: true, summary: request.length > 80 ? `${request.slice(0, 79)}…` : request },
   };
 }

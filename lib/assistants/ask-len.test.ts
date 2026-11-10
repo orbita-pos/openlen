@@ -87,8 +87,28 @@ describe("ask_len", () => {
     it("serving one, it goes there without saying", async () => {
       const launch = vi.fn();
       const ONE = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }] } } as unknown as AgentSession;
-      await runAskLen(ONE, { request: "botón más grande" }, launch);
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };
+      const out = await runAskLen(ONE, { request: "botón más grande" }, launch, notes);
       expect(launch.mock.calls[0]![0]).toMatchObject({ projectId: "p1" });
+      expect(out.response).toMatchObject({ tool_result: "Len has the request and will do it in the project's chat, where your owner sees it." });
+      expect((notes.queued.mock.calls[0] as unknown as [string, object])[1]).not.toHaveProperty("project");
+    });
+
+    // As Claude Code's Write names the path it wrote and DeepSeek's team tools name a task's owner: she can say which
+    // reading she took («say in your final message which reading you took»), and the owner can correct her (task 8, t3).
+    it("🔴 serving two, the result and the request's note name the project it went to", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };
+      const out = await runAskLen(TWO, { request: "cambia el botón", project: "p2" }, launch, notes);
+      expect(out.response).toMatchObject({ ok: true, tool_result: "Len has the request in «Canela Tienda» and will do it in that project's chat, where your owner sees it." });
+      expect((notes.queued.mock.calls[0] as unknown as [string, object])[1]).toMatchObject({ request: "cambia el botón", project: "Canela Tienda" });
+    });
+
+    it("a project with no title is named by its id", async () => {
+      const launch = vi.fn();
+      const UNTITLED = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "" }] } } as unknown as AgentSession;
+      const out = await runAskLen(UNTITLED, { request: "cambia el botón", project: "p2" }, launch);
+      expect(out.response).toMatchObject({ tool_result: "Len has the request in «p2» and will do it in that project's chat, where your owner sees it." });
     });
   });
 
