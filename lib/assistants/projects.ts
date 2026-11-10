@@ -59,6 +59,15 @@ export async function projectsOfAssistant(assistantId: string): Promise<ServedPr
   return rows.map((r) => ({ ...r, isHome: Boolean(r.isHome), publicData: r.publicData ?? [] }));
 }
 
+/** The projects each of these assistants serves (the person's list: a card knows whether this project has her). */
+export async function projectIdsOf(assistantIds: readonly string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>(assistantIds.map((id) => [id, []]));
+  if (assistantIds.length === 0) return out;
+  const rows = await db.select({ assistantId: ap.assistantId, projectId: ap.projectId }).from(ap).where(inArray(ap.assistantId, [...assistantIds])).orderBy(asc(ap.connectedAt));
+  for (const r of rows) out.get(r.assistantId)?.push(r.projectId);
+  return out;
+}
+
 /** Projects' titles by id (her visits name the project they came from, even one she no longer serves). */
 export async function titlesOf(projectIds: readonly string[]): Promise<Map<string, string | null>> {
   const ids = [...new Set(projectIds)];

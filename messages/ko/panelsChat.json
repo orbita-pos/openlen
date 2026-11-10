@@ -726,7 +726,10 @@
       "offer": "나만의 어시스턴트를 만들어 보세요. 이름과 모습은 직접 고릅니다.",
       "create": "내 어시스턴트 만들기",
       "ready": "{name} 준비 완료",
-      "talk": "{name}와 대화하기"
+      "talk": "{name}와 대화하기",
+      "useHere": "여기서도 {name} 사용하기",
+      "createAnother": "새로 만들기",
+      "useFailed": "할 수 없었어요. 다시 시도하세요."
     },
     "creator": {
       "title": "내 어시스턴트",

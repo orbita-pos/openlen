@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
   visitsOf: vi.fn(async (): Promise<unknown[]> => []),
   // Phase 4: which of her projects each visit came from.
   titlesOf: vi.fn(async (): Promise<Map<string, string | null>> => new Map([["p1", "Pastelería Canela"]])),
+  projectIdsOf: vi.fn(async (): Promise<Map<string, string[]>> => new Map([["a1", ["p1", "p2"]]])),
   monthSpent: vi.fn(async () => 0),
   explicitVisitorCap: vi.fn(async (): Promise<number | null> => null),
   setExplicitVisitorCap: vi.fn(async () => {}),
@@ -24,7 +25,7 @@ const m = vi.hoisted(() => ({
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
 vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff }));
-vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf }));
+vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf, projectIdsOf: m.projectIdsOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
@@ -98,7 +99,8 @@ describe("GET /api/assistants", () => {
     m.assistantsOf.mockResolvedValueOnce([LUCIA]);
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1" }] });
+    expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
+    expect(m.projectIdsOf).toHaveBeenCalledWith(["a1"]);
     expect(m.assistantsOf).toHaveBeenCalledWith("u1");
   });
 });

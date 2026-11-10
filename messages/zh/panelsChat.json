@@ -726,7 +726,10 @@
       "offer": "创建你自己的助手：名字和样子由你来选。",
       "create": "创建我的助手",
       "ready": "{name} 已就绪",
-      "talk": "和 {name} 聊天"
+      "talk": "和 {name} 聊天",
+      "useHere": "在这里使用 {name}",
+      "createAnother": "再创建一个",
+      "useFailed": "没能完成，请重试。"
     },
     "creator": {
       "title": "你的助手",

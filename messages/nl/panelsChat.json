@@ -726,7 +726,10 @@
       "offer": "Maak je eigen assistent: jij kiest de naam en hoe hij eruitziet.",
       "create": "Mijn assistent maken",
       "ready": "{name} is klaar",
-      "talk": "Praat met {name}"
+      "talk": "Praat met {name}",
+      "useHere": "{name} hier gebruiken",
+      "createAnother": "Een andere maken",
+      "useFailed": "Dat lukte niet. Probeer het opnieuw."
     },
     "creator": {
       "title": "Jouw assistent",
