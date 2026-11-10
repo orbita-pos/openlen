@@ -35,6 +35,16 @@ describe("note_request", () => {
     expect(params.required).toEqual(["request"]);
   });
 
+  // Phase 4E (measured 10/11): noting replaced answering. Both what she reads before calling it and what it tells her
+  // after say the business's answer comes first.
+  it("🔴 noting never replaces answering: the declaration and the reply say the business's answer comes first", async () => {
+    expect(NOTE_REQUEST_DECLARATION.description).toContain("It never replaces answering: what the business's information says comes first. At most once per answer.");
+    const t = tool();
+    expect(answer(await t.run({ request: "Envío a Zapopan" })).tool_result).toBe(
+      "Noted for the owner. If the business's information already answers it, a «no» included, that answer comes first; you may add that you'll pass it on; promise nothing.",
+    );
+  });
+
   it("🔴 emails and phones never reach the row", async () => {
     expect(scrubContact("escríbanme a ana.perez+1@gmail.com o al +52 (33) 1234-5678")).toBe("escríbanme a [contact] o al [contact]");
     expect(scrubContact("¿hacen envíos a Zapopan?")).toBe("¿hacen envíos a Zapopan?");
