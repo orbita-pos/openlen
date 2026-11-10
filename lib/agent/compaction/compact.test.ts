@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Message } from "@/lib/ai-gateway";
 
+import { NOTA_DE_VISITANTES } from "@/lib/agent/resultados";
+import { AVISO_DE_VISITANTES_EN_LA_TERMINAL } from "@/lib/agent/herramientas-de-ficheros";
+
 import { compactIfNeeded } from "./compact";
 import { COMPACTION_INSTRUCTION, SUMMARY_OPEN_TAG } from "./summary-prompt";
 
@@ -60,6 +63,34 @@ describe("compactIfNeeded", () => {
     });
     expect(guardados).toHaveLength(1);
     expect(out.messages[3]!.functionResponses![0]!.response.tool_result as string).toContain(guardados[0]!);
+  });
+
+  // Invariant 5 (found by the review of the assistant's phase 4E, 10/11): the recovery file is written in the terminal —
+  // the E2B box on a paid plan — and what visitors wrote never enters it: such a result is pruned with no file.
+  it("🔴 what visitors wrote is pruned without a file: list_messages, or any result carrying the visitors' notice", async () => {
+    const ms: Message[] = [
+      { role: "system", content: "s" }, { role: "user", content: "manual" },
+      {
+        role: "user",
+        content: "",
+        functionResponses: [
+          { name: "list_messages", response: { ok: true, tool_result: "a".repeat(20_000) } },
+          { name: "bash", response: { ok: true, tool_result: "b".repeat(20_000) + AVISO_DE_VISITANTES_EN_LA_TERMINAL } },
+          { name: "session_event_read", response: { ok: true, tool_result: "c".repeat(20_000) + JSON.stringify({ note: NOTA_DE_VISITANTES }) } },
+          { name: "Read", response: { ok: true, tool_result: "d".repeat(20_000) } },
+        ],
+      },
+      { role: "user", content: "sigue" },
+    ];
+    const guardados: string[] = [];
+    const out = await compactIfNeeded({
+      messages: ms, firstIndex: 2, pressureTokens: 6_000, policy: { thresholdTokens: 5_000, retainTokens: 10 }, trigger: "pressure",
+      summarize: vi.fn(), saveRecovery: async (path) => { guardados.push(path); return true; },
+    });
+    expect(guardados).toEqual([expect.stringMatching(/^\/tmp\/pruned\/\d+-2-3\.txt$/)]);
+    expect(out.pruned).toBe(4);
+    const pruned = out.messages[2]!.functionResponses!.map((fr) => String(fr.response.tool_result));
+    expect(pruned.slice(0, 3).every((t) => !t.includes("/tmp/pruned"))).toBe(true);
   });
 
   it("si el fichero no se pudo guardar, el aviso no nombra ninguno", async () => {

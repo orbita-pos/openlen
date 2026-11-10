@@ -51,7 +51,7 @@ describe("podar resultados grandes (la de DeepSeek)", () => {
 
   it("lista lo que podaría con su clave, para guardar el fichero ANTES de podar", () => {
     const ms = [resultado(grande), { role: "user", content: "x" } as Message];
-    expect(oversizedResults(ms, 1)).toEqual([{ key: "0:0", text: grande }]);
+    expect(oversizedResults(ms, 1)).toEqual([{ key: "0:0", text: grande, name: "Read" }]);
   });
 
   it("cuenta y corta por puntos de código, como DeepSeek: un emoji no se parte ni cuenta doble", () => {
@@ -67,7 +67,7 @@ describe("podar resultados grandes (la de DeepSeek)", () => {
     const respuesta = { ok: true, envios: Array.from({ length: 400 }, (_, i) => ({ id: i, mensaje: "hola ".repeat(10) })) };
     const json = JSON.stringify(respuesta);
     const ms: Message[] = [{ role: "user", content: "", functionResponses: [{ name: "list_form_submissions", response: respuesta }] }, { role: "user", content: "x" }];
-    expect(oversizedResults(ms, 1)).toEqual([{ key: "0:0", text: json }]);
+    expect(oversizedResults(ms, 1)).toEqual([{ key: "0:0", text: json, name: "list_form_submissions" }]);
     const { messages, count } = pruneToolResults(ms, 1, new Map());
     expect(count).toBe(1);
     expect(messages[0]!.functionResponses![0]!.response).toEqual({ tool_result: json.slice(0, 4_096) + PRUNE_MARKER + json.slice(-1_024) });
