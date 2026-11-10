@@ -54,6 +54,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "asleepAlerts" jsonb NOT NULL DEFAULT '[]'::jsonb,
     PRIMARY KEY ("userId", "month")
   );`,
+  // Phase 4 — one assistant serves several of her person's projects (spec §4.5).
+  `CREATE INDEX IF NOT EXISTS "assistantProjects_assistant_idx" ON "assistantProjects" ("assistantId");`,
   // Phase 3 — what visitors ask for and she can't do, joined into cards for her person (spec §4.3).
   `CREATE TABLE IF NOT EXISTS "assistantRequestCards" (
     "id" text PRIMARY KEY,

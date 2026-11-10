@@ -22,7 +22,7 @@ class Refused extends Error {
   }
 }
 
-function isUniqueViolation(err: unknown): boolean {
+export function isUniqueViolation(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { code?: unknown; cause?: { code?: unknown } };
   return e.code === "23505" || e.cause?.code === "23505";
