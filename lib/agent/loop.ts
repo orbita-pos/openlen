@@ -37,6 +37,7 @@ import { MAX_PROVIDER_RETRIES, isRetryable, providerWait, retryDelayMs, sleepAbo
 import { compactIfNeeded } from "./compaction/compact";
 import type { CompactionMark, CompactionTrigger } from "./compaction/mark";
 import { retainOversized } from "./compaction/spill";
+import { carriesVisitorData } from "./visitor-data";
 import { contenidoDeRespuesta } from "./fireworks-bridge";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
@@ -2182,11 +2183,14 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // en `maxInlineTokens` se queda con su principio y su final, y el entero
         // en /tmp/spill. `Read` no (tampoco el `read` de DeepSeek): ya trae sus
         // propios topes y una ruta que releer.
-        const retenido = args.spill && call.name !== "Read"
+        // Invariant 5: what visitors wrote never goes into that file (the E2B box on a paid plan): whole inline instead,
+        // as with no terminal (./visitor-data.ts).
+        const spill = args.spill;
+        const retenido = spill && call.name !== "Read"
           ? await retainOversized(contenidoDeRespuesta(respuesta), {
-              maxTokens: args.spill.maxInlineTokens,
+              maxTokens: spill.maxInlineTokens,
               path: `/tmp/spill/${turns}-${indice}-${call.name}.txt`,
-              save: args.spill.save,
+              save: (path, text) => (carriesVisitorData(call.name, text) ? Promise.resolve(false) : spill.save(path, text)),
             })
           : null;
         functionResponses.push({
