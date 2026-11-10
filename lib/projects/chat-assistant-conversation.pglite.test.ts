@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { abrirFilaDelTurno, filasParaBuscar, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, listArchivedConversations, registrarTurnoDelServidor, reopenConversation, startNewConversation, transcripcionDeLaFila, turnosParaElHistorial } =
+const { abrirFilaDelTurno, filasParaBuscar, filasParaElHistorialConEquipo, getChatMessages, lastTurnOfTheConversation, latestTodoListForChat, leerTurnoDelUsuario, listArchivedConversations, registrarTurnoDelServidor, reopenConversation, startNewConversation, transcripcionDeLaFila, turnosParaElHistorial } =
   await import("./chat");
 
 const KEY = "assistant:a1";
@@ -107,5 +107,17 @@ describe("the assistant's conversation, apart from Len's", () => {
     expect(await turnosParaElHistorial("p1")).toEqual([]);
     expect((await turnosParaElHistorial("p1", KEY)).map((f) => f.userText)).toEqual(["hola Lucía"]);
     expect((await listArchivedConversations("p1")).map((c) => c.title)).toEqual(["hola Len"]);
+  });
+});
+
+// SPEC §6.12 (checked after phase 5's final review): her conversation with her owner is only her person's. A member of
+// her home project follows Len's turns by row id (GET /api/agent/turno/[fila], the reattach) but never hers.
+describe("a row read by its id (the reattach)", () => {
+  it("🔴 a member reads Len's rows by id, never the assistant's; her owner reads both", async () => {
+    await pg.query(`insert into "projectMembers" ("id", "projectId", "userId", "rol") values ('m1', 'p1', 'u2', 'editor')`);
+    expect((await leerTurnoDelUsuario("len1", "u2"))?.userText).toBe("hola Len");
+    expect(await leerTurnoDelUsuario("luc1", "u2")).toBeNull();
+    expect((await leerTurnoDelUsuario("luc1", "u1"))?.userText).toBe("hola Lucía");
+    expect(await leerTurnoDelUsuario("luc1", "u3")).toBeNull();
   });
 });
