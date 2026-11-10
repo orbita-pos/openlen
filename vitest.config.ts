@@ -72,6 +72,8 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       // El «@» del chat (spec local 2026-10-27-at-mentions). LISTA BLANCA.
       "lib/mentions/**/*.test.ts",
+      // Las figuras del asistente (spec local 2026-11-10). LISTA BLANCA.
+      "lib/figure/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       // Len sabe de tus resultados (plans/len-resultados/).
