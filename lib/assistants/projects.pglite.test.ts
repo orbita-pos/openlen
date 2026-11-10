@@ -24,11 +24,13 @@ vi.mock("@/lib/db", async () => {
 vi.mock("@/lib/backend/teardown", () => ({ pageDatabaseScopes: async () => null, dropPageDatabases: async () => {} }));
 vi.mock("@/lib/agent/sandbox/reaper", () => ({ sandboxOfProject: async () => null, killSandboxOfDeletedProject: async () => {} }));
 vi.mock("@/lib/publish/filesystem", async (orig) => ({ ...(await orig<object>()), unpublishDir: async () => {} }));
+vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => {} }));
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { createAssistant, assistantById } = await import("./store");
 const projects = await import("./projects");
-const { deleteProject } = await import("@/lib/projects");
+const { deleteProject, unpublishProject } = await import("@/lib/projects");
+const { saveKnowledge, setOnPage } = await import("./visitor/store");
 const { saveVisit } = await import("./visitor/store");
 const { noteRequest } = await import("./requests/store");
 
@@ -42,8 +44,10 @@ const herRows = async (projectId: string) =>
 beforeEach(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
-  await pg.query(`create table "projects" ("id" text primary key, "userId" text, "title" text, "subdomain" text, "data" jsonb, "updatedAt" timestamp)`);
-  await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text)`);
+  await pg.query(
+    `create table "projects" ("id" text primary key, "userId" text, "title" text, "subdomain" text, "data" jsonb, "updatedAt" timestamp, "status" text, "publishedAt" timestamp, "publishedHtml" text, "publishedPagesHash" text, "publishedFilesHash" text, "publishedEnvHash" text, "publishedReleaseSha" text, "deployUrl" text)`,
+  );
+  await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text, "status" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
   await pg.query(
     `insert into "projects" ("id", "userId", "title", "subdomain") values ('p1', 'u1', 'Pastelería Canela', 'canela'), ('p2', 'u1', 'Canela Tienda', 'canela-tienda'), ('p3', 'u1', 'Canela Reservas', null), ('p4', 'u1', 'Otra', 'otra')`,
@@ -90,6 +94,19 @@ describe("her projects", () => {
     expect((await projects.projectsOfAssistant(lucia)).map((p) => [p.projectId, p.isHome])).toEqual([["p3", true], ["p2", false]]);
   });
 
+  // Final review M1 (re-graded): the turn closes its row by the project it started in; moved mid-turn, it stayed
+  // «en curso» for good in her new home.
+  it("🔴 while she is answering, her home can't be taken from her; once she is done, it can", async () => {
+    await projects.connectProject({ assistantId: lucia, projectId: "p2" });
+    await pg.query(`update "projectChatMessages" set "status" = 'en_curso' where "id" = 'm2'`);
+    expect(await projects.disconnectProject(lucia, "p1")).toBe("busy");
+    expect((await assistantById(lucia))!.homeProjectId).toBe("p1");
+    // Len's own turn running in the project is not hers: it doesn't hold her.
+    await pg.query(`update "projectChatMessages" set "status" = 'done' where "id" = 'm2'`);
+    await pg.query(`update "projectChatMessages" set "status" = 'en_curso' where "id" = 'len1'`);
+    expect(await projects.disconnectProject(lucia, "p1")).toBe("disconnected");
+  });
+
   it("her only project can't be disconnected", async () => {
     expect(await projects.disconnectProject(lucia, "p1")).toBe("only_project");
     expect(await projects.disconnectProject(lucia, "p2")).toBe("not_connected");
@@ -103,6 +120,20 @@ describe("her projects", () => {
     expect(await projects.disconnectProject(lucia, "p2")).toBe("disconnected");
     expect((await pg.query(`select 1 from "assistantVisits" where "projectId" = 'p2'`)).rows).toHaveLength(1);
     expect((await pg.query(`select 1 from "assistantRequests" where "projectId" = 'p2'`)).rows).toHaveLength(1);
+  });
+});
+
+// Final review I1: an unpublished project kept feeding her — to other pages' visitors and to her owner.
+describe("when a project she serves is unpublished", () => {
+  it("🔴 she forgets what it published, and her bubble there", async () => {
+    await projects.connectProject({ assistantId: lucia, projectId: "p2" });
+    await setOnPage("p2", lucia, true);
+    await saveKnowledge("p2", "Envíos a domicilio.", NOW, [{ name: "huecos", columns: [] }], { baked: true });
+    await unpublishProject({ projectId: "p2", userId: "u1" });
+    const shop = (await projects.projectsOfAssistant(lucia)).find((p) => p.projectId === "p2")!;
+    expect(shop).toMatchObject({ knowledge: null, knowledgeAt: null, bakedAt: null, publicData: [] });
+    // Still hers, still on: the next publish bakes her bubble again.
+    expect(shop.onPage).toBe(true);
   });
 });
 

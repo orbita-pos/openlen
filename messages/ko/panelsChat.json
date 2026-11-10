@@ -808,7 +808,9 @@
       "delete": "{name} 삭제",
       "deleteConfirm": "네, {name} 영구 삭제",
       "failed": "할 수 없었어요. 다시 시도하세요.",
-      "close": "닫기"
+      "close": "닫기",
+      "publishToKnow": "다음에 게시하면 {name}가 내용을 알게 돼요.",
+      "busy": "{name}가 답하는 중이에요. 끝난 뒤 다시 시도하세요."
     }
   }
 }

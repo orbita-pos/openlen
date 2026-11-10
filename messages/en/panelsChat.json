@@ -808,7 +808,9 @@
       "delete": "Delete {name}",
       "deleteConfirm": "Yes, delete {name} for good",
       "failed": "That didn't work. Try again.",
-      "close": "Close"
+      "close": "Close",
+      "publishToKnow": "{name} will know it after its next publish.",
+      "busy": "{name} is answering: try again when the answer is done."
     }
   }
 }

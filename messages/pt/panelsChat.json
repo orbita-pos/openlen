@@ -808,7 +808,9 @@
       "delete": "Apagar {name}",
       "deleteConfirm": "Sim, apagar {name} para sempre",
       "failed": "Não deu certo. Tente de novo.",
-      "close": "Fechar"
+      "close": "Fechar",
+      "publishToKnow": "{name} vai conhecê-lo na próxima publicação.",
+      "busy": "{name} está respondendo: tente de novo quando terminar."
     }
   }
 }

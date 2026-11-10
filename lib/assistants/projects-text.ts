@@ -21,10 +21,17 @@ function header(p: ServedProject): string {
   return `# ${p.title?.trim() || p.projectId}\n(${facts.join(" · ")})`;
 }
 
+/** Why there is nothing of a project to read (final review I2): «not published» only when it isn't. */
+function nothingToReadOf(p: ServedProject): string {
+  if (p.knowledgeAt) return "(published, with no text to read)";
+  if (p.subdomain) return "(published before you served it: you'll know it after its next publish)";
+  return "(not published yet)";
+}
+
 export function projectsText(projects: readonly ServedProject[]): string {
   let out = "";
   for (const p of projects) {
-    const body = p.knowledge?.trim() ? p.knowledge.trim().slice(0, PROJECT_TEXT_MAX) : "(not published yet)";
+    const body = p.knowledge?.trim() ? p.knowledge.trim().slice(0, PROJECT_TEXT_MAX) : nothingToReadOf(p);
     const block = `${header(p)}\n\n${body}`;
     const next = out ? `${out}\n\n${block}` : block;
     if (next.length > PROJECTS_TEXT_MAX) {

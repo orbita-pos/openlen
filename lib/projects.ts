@@ -44,7 +44,7 @@ import { rehomeAssistantsOf } from "@/lib/assistants/projects";
 import { assistantOfProject, switchOldAssistantOff } from "@/lib/assistants/store";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
 import { publicDataOf } from "@/lib/assistants/visitor/public-data";
-import { assistantOnPage, saveKnowledge } from "@/lib/assistants/visitor/store";
+import { assistantOnPage, forgetWhatWasPublished, saveKnowledge } from "@/lib/assistants/visitor/store";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
@@ -1426,6 +1426,10 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(schema.projects.id, params.projectId));
+
+  // The person's own assistant forgets what it published (final review I1): never told to other pages' visitors or to
+  // her owner as live. Fail-soft: unpublishing goes on.
+  await forgetWhatWasPublished(params.projectId).catch((err: unknown) => console.warn("[assistants] what an unpublished project published wasn't forgotten", err));
 
   // Filesystem cleanup is best-effort. The subdomain is already freed by
   // the DB update above; a stranded dir is harmless because nginx will

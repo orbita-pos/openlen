@@ -51,6 +51,17 @@ describe("projectsText", () => {
     expect(many).toContain("# Pastelería Canela");
   });
 
+  // Final review I2: «not published yet» was said of a shop live for months, connected after it was published.
+  it("🔴 a project published before she served it says so, and that she'll know it after its next publish", () => {
+    const text = projectsText([served({ knowledge: null, knowledgeAt: null, subdomain: "canela-tienda" })]);
+    expect(text).not.toContain("(not published yet)");
+    expect(text).toContain("(published before you served it: you'll know it after its next publish)");
+  });
+
+  it("a project published with nothing to read says so", () => {
+    expect(projectsText([served({ knowledge: "", knowledgeAt: AT })])).toContain("(published, with no text to read)");
+  });
+
   it("a project not yet published with her says so", () => {
     const text = projectsText([served({ knowledge: null, knowledgeAt: null, subdomain: null })]);
     expect(text).toContain("(not published yet)");

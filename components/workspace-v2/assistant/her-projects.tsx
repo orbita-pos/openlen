@@ -17,6 +17,8 @@ interface Row {
   readonly onPage: boolean;
   readonly needsPublish: boolean;
   readonly nothingToKnow: boolean;
+  /** She knows what it published (a publish since she serves it). */
+  readonly knowsIt?: boolean;
 }
 
 export function HerProjects({
@@ -42,7 +44,7 @@ export function HerProjects({
   const [removing, setRemoving] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"failed" | "busy" | null>(null);
   const base = `/api/assistants/${encodeURIComponent(assistantId)}`;
 
   const load = useCallback(async () => {
@@ -60,11 +62,14 @@ export function HerProjects({
 
   const remove = async (row: Row) => {
     setBusy(true);
-    setFailed(false);
+    setFailed(null);
     const res = await fetch(`${base}/projects/${encodeURIComponent(row.projectId)}`, { method: "DELETE" }).catch(() => null);
     setBusy(false);
     setRemoving(null);
-    if (!res?.ok) return setFailed(true);
+    if (!res?.ok) {
+      const body = ((await res?.json().catch(() => null)) ?? {}) as { error?: string };
+      return setFailed(body.error === "busy" ? "busy" : "failed");
+    }
     // Off her home, her home and her conversation moved: this page shows another project's now.
     if (row.isHome) return leave(window.location.href);
     await load();
@@ -72,10 +77,10 @@ export function HerProjects({
 
   const deleteHer = async () => {
     setBusy(true);
-    setFailed(false);
+    setFailed(null);
     const res = await fetch(base, { method: "DELETE" }).catch(() => null);
     setBusy(false);
-    if (!res?.ok) return setFailed(true);
+    if (!res?.ok) return setFailed("failed");
     leave(`/${locale}/projects`);
   };
 
@@ -105,6 +110,8 @@ export function HerProjects({
                 </div>
                 {row.isHome && <span className="shrink-0 rounded-full bg-hover px-2 py-0.5 text-[11px] fg-muted">{t("ownAssistant.projects.home")}</span>}
               </div>
+              {/* Published before she served it: she learns it at its next publish (final review I2). */}
+              {row.knowsIt === false && row.address && <p className="text-[11.5px] fg-faint">{t("ownAssistant.projects.publishToKnow", { name })}</p>}
               {/* Her home's switch is the one in the header. */}
               {!row.isHome && (
                 <OnPageSwitch assistantId={assistantId} projectId={row.projectId} initial={row.onPage} initialNeedsPublish={row.needsPublish} nothingToKnow={row.nothingToKnow} />
@@ -137,7 +144,7 @@ export function HerProjects({
           </div>
           {failed && (
             <p role="alert" className="text-[12px] nc-bad">
-              {t("ownAssistant.projects.failed")}
+              {failed === "busy" ? t("ownAssistant.projects.busy", { name }) : t("ownAssistant.projects.failed")}
             </p>
           )}
         </div>

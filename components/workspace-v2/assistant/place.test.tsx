@@ -175,7 +175,7 @@ describe("her place's controls", () => {
 
   // Phase 4: she serves one or more of her person's projects (spec §4.5).
   const HOME = { projectId: "p1", title: "Pastelería Canela", address: "canela.openlen.app", isHome: true, onPage: true, needsPublish: false, nothingToKnow: false };
-  const SHOP = { projectId: "p2", title: "Canela Tienda", address: "canela-tienda.openlen.app", isHome: false, onPage: false, needsPublish: false, nothingToKnow: false };
+  const SHOP = { projectId: "p2", title: "Canela Tienda", address: "canela-tienda.openlen.app", isHome: false, onPage: false, needsPublish: false, nothingToKnow: false, knowsIt: true };
   const openProjects = async (host: HTMLElement) => {
     act(() => host.querySelector<HTMLButtonElement>("[data-her-projects-open]")!.click());
     await settle();
@@ -230,6 +230,35 @@ describe("her place's controls", () => {
     await settle();
     expect(calls.find((c) => c.init?.method === "DELETE")!.url).toBe("/api/assistants/a1/projects/p2");
     expect(calls.filter((c) => c.url.endsWith("/api/assistants/a1/projects")).length).toBe(before + 1);
+  });
+
+  // Final review I2: a project published before she served it is unknown to her until its next publish — say so.
+  it("🔴 a project she doesn't know yet asks for a publish", async () => {
+    serve({ projects: [HOME, { ...SHOP, knowsIt: false }] });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const panel = await openProjects(host);
+    expect(panel.querySelector('[data-her-project="p2"]')!.textContent).toContain('ownAssistant.projects.publishToKnow {"name":"Lucía"}');
+    expect(panel.querySelector('[data-her-project="p1"]')!.textContent).not.toContain("ownAssistant.projects.publishToKnow");
+  });
+
+  it("🔴 taking her home while she answers says she is busy", async () => {
+    const calls = serve({ projects: [HOME, SHOP] });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: RequestInit) => {
+        if (init?.method === "DELETE") return new Response(JSON.stringify({ error: "busy" }), { status: 409 });
+        return (calls.length, new Response(JSON.stringify({ projects: [{ ...HOME }, SHOP] })));
+      }),
+    );
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const panel = await openProjects(host);
+    act(() => panel.querySelector<HTMLButtonElement>('[data-her-project="p1"] [data-her-project-remove]')!.click());
+    await settle();
+    act(() => panel.querySelector<HTMLButtonElement>('[data-her-project="p1"] [data-her-project-remove-confirm]')!.click());
+    await settle();
+    expect(panel.querySelector("[role=alert]")!.textContent).toBe('ownAssistant.projects.busy {"name":"Lucía"}');
   });
 
   it("her only project has no «Quitar»", async () => {
