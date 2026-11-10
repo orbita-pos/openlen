@@ -194,6 +194,12 @@ describe("assistantSystemPrompt", () => {
     expect(p).toMatch(/private/i);
   });
 
+  // Phase 4E (measured 10/11): asked what happened with her customers she called the site's tools and said nothing did.
+  it("🔴 her body says her conversations with the visitors, and what she noted, are in list_messages", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" });
+    expect(p).toContain("Your conversations with the visitors of your owner's pages, and what you noted for them from each, are in list_messages.");
+  });
+
   it("drops Len's subagent guidance: it has no subagent tools to follow it with", () => {
     const p = assistantSystemPrompt(`LEN PROMPT\n- ${SUBAGENT_GUIDANCE}\n- another rule`, { name: "Lucía", tone: "friendly" });
     expect(p).not.toContain(SUBAGENT_GUIDANCE);
