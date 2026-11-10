@@ -827,6 +827,9 @@
       "push": "어제: {list}",
       "emailSubject": "{name}: 어제 있었던 일",
       "emailText": "{push}\n\n{name}의 공간에서 보기: {url}"
+    },
+    "composer": {
+      "effort": "{name}의 노력"
     }
   }
 }

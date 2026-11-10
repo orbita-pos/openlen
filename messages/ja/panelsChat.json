@@ -827,6 +827,9 @@
       "push": "昨日：{list}",
       "emailSubject": "{name}：昨日のまとめ",
       "emailText": "{push}\n\n{name}のページで確認：{url}"
+    },
+    "composer": {
+      "effort": "{name} の思考量"
     }
   }
 }

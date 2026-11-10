@@ -827,6 +827,9 @@
       "push": "Gisteren: {list}.",
       "emailSubject": "{name}: wat er gisteren gebeurde",
       "emailText": "{push}\n\nBekijk het bij {name}: {url}"
+    },
+    "composer": {
+      "effort": "Inspanning van {name}"
     }
   }
 }

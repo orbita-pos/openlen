@@ -827,6 +827,9 @@
       "push": "昨天：{list}",
       "emailSubject": "{name}：昨天发生了什么",
       "emailText": "{push}\n\n在{name}的页面查看：{url}"
+    },
+    "composer": {
+      "effort": "{name} 的思考强度"
     }
   }
 }

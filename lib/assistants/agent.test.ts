@@ -200,6 +200,14 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("Your conversations with the visitors of your owner's pages, and what you noted for them from each, are in list_messages.");
   });
 
+  // Phase 4E (measured 10/11): «apúntate que los jueves hacemos pan de muerto» → she also copied the page's hours,
+  // flavors and pickup rules into her memory. Claude Code's memory doesn't keep what the repo already records.
+  it("🔴 her body says the pages aren't memory", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" });
+    expect(p).toContain("What your owner's pages already say isn't memory: you read it in ~/.assistant/PROJECTS.md. Keep what only your owner can tell you.");
+    expect(p).toContain("Your conversations with the visitors of your owner's pages, and what you noted for them from each, are in list_messages.");
+  });
+
   it("drops Len's subagent guidance: it has no subagent tools to follow it with", () => {
     const p = assistantSystemPrompt(`LEN PROMPT\n- ${SUBAGENT_GUIDANCE}\n- another rule`, { name: "Lucía", tone: "friendly" });
     expect(p).not.toContain(SUBAGENT_GUIDANCE);

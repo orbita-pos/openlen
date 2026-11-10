@@ -78,6 +78,7 @@ export function ChatComposer({
   etiquetaEnviar,
   placeholder,
   disclaimer,
+  effortLabel,
   esApp = false,
   esJuego = false,
   mencionables,
@@ -143,6 +144,8 @@ export function ChatComposer({
   placeholder?: string;
   /** The line under the box, when it isn't Len's (the person's own assistant: it never publishes). */
   disclaimer?: string;
+  /** The effort button's name, when it isn't Len's (the person's own assistant, phase 4E). */
+  effortLabel?: string;
   /** El proyecto es una app: la caja vacía habla de la app, no de «tu página». */
   esApp?: boolean;
   /** The app is a game: the empty box and the line below talk about the game. */
@@ -519,6 +522,7 @@ export function ChatComposer({
                 if (v) setModeOpen(false);
               }}
               locked={onModeChange !== undefined && mode === "dynamis"}
+              {...(effortLabel ? { label: effortLabel } : {})}
               variant="pill"
               t={tr}
             />
