@@ -53,6 +53,45 @@ describe("ask_len", () => {
     expect(notes.settle).toHaveBeenLastCalledWith("a1", queued.id, { status: "failed", reason: "no_credits" });
   });
 
+  // Phase 4: she serves several projects; a request goes to the one it is about.
+  describe("serving several projects", () => {
+    const TWO = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] } } as unknown as AgentSession;
+
+    it("declares an optional project", () => {
+      const params = ASK_LEN_DECLARATION.parameters as unknown as { properties: Record<string, { type: string }>; required: string[] };
+      expect(params.properties.project?.type).toBe("STRING");
+      expect(params.required).toEqual(["request"]);
+    });
+
+    it("🔴 serving two projects, a request that doesn't say which is refused and lists them", async () => {
+      const launch = vi.fn();
+      const out = await runAskLen(TWO, { request: "cambia el botón" }, launch);
+      expect(out.response).toMatchObject({ ok: false, error: "which_project", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] });
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("🔴 a project that isn't hers is refused and nothing launches", async () => {
+      const launch = vi.fn();
+      const out = await runAskLen(TWO, { request: "cambia el botón", project: "p9" }, launch);
+      expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("the request goes to the project she named", async () => {
+      const launch = vi.fn();
+      const out = await runAskLen(TWO, { request: "pon el horario", project: "p2" }, launch);
+      expect(out.response).toMatchObject({ ok: true, queued: true });
+      expect(launch.mock.calls[0]![0]).toMatchObject({ projectId: "p2", userId: "u1", texto: "pon el horario" });
+    });
+
+    it("serving one, it goes there without saying", async () => {
+      const launch = vi.fn();
+      const ONE = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }] } } as unknown as AgentSession;
+      await runAskLen(ONE, { request: "botón más grande" }, launch);
+      expect(launch.mock.calls[0]![0]).toMatchObject({ projectId: "p1" });
+    });
+  });
+
   it("is not Len's tool", async () => {
     const launch = vi.fn();
     expect((await runAskLen(LEN_SESSION, { request: "x" }, launch)).response).toMatchObject({ ok: false, error: "not_available" });

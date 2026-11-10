@@ -1366,7 +1366,12 @@ export interface AgentSession {
    *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): this turn runs as it. Absent for Len. */
-  assistant?: { readonly id: string; readonly name: string };
+  assistant?: {
+    readonly id: string;
+    readonly name: string;
+    /** The projects she serves, her home first (phase 4): `ask_len` passes a request to one of them. */
+    readonly projects?: readonly { readonly id: string; readonly title: string }[];
+  };
   /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
    *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
   terminalHolderId?: string;
