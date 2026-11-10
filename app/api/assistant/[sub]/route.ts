@@ -19,6 +19,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import type { AssistantTone } from "@/lib/assistants/names";
 import { answersVisitors } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
+import { projectsOfAssistant } from "@/lib/assistants/projects";
 import { runVisitorTurn } from "@/lib/assistants/visitor/turn";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -328,6 +329,11 @@ async function herTurn(
   const project = rows[0];
   if (!project?.data) return reply(404, { error: "not_found" });
 
+  // The business's other sites she serves (phase 4): only what each PUBLISHED, never this one. Fail-soft.
+  const otherSites = (await projectsOfAssistant(ella.assistant.id).catch(() => []))
+    .filter((p) => p.projectId !== owner.projectId && p.knowledge?.trim())
+    .map((p) => ({ name: p.title?.trim() || p.subdomain || p.projectId, knowledge: p.knowledge!.trim() }));
+
   try {
     const r = await runVisitorTurn({
       projectId: owner.projectId,
@@ -340,6 +346,7 @@ async function herTurn(
       message,
       handoffAvailable: handoffOf(project.data),
       publicData: ella.publicData ?? [],
+      ...(otherSites.length ? { otherSites } : {}),
       signal: req.signal,
     });
     if (r.kind === "busy") return reply(429, { error: "busy" });

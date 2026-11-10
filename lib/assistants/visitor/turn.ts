@@ -22,7 +22,7 @@ import type { AssistantTone } from "../names";
 import { NOTE_REQUEST, noteRequestTool } from "../requests/note";
 import type * as RequestStore from "../requests/store";
 import { sleepReason, VISITOR_TURN_RESERVE, visitorCap, visitorMonth, visitorReservations, type Sleep } from "./budget";
-import { OFFER_HANDOFF, REPLY_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
+import { OFFER_HANDOFF, REPLY_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools, type OtherSite } from "./definition";
 import { READ_PUBLIC_DATA, readPublicData } from "./read-public-data";
 import type * as VisitorStore from "./store";
 
@@ -53,6 +53,8 @@ export interface VisitorTurnInput {
   readonly handoffAvailable: boolean;
   /** What the page's data shows anyone (phase 2B); [] = no read_public_data. */
   readonly publicData: readonly PublicTable[];
+  /** The business's other sites she serves, what each published (phase 4). */
+  readonly otherSites?: readonly OtherSite[];
   readonly signal?: AbortSignal;
 }
 
@@ -198,6 +200,7 @@ export async function runVisitorTurn(input: VisitorTurnInput, deps?: VisitorTurn
         memory: input.assistant.memory,
         siteLocale: input.siteLocale,
         publicData: input.publicData,
+        ...(input.otherSites?.length ? { otherSites: input.otherSites } : {}),
       }),
     };
     // The turn's limit and the visitor leaving stop the provider call itself (through the brain), not only the loop.

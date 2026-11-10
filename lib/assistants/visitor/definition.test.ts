@@ -6,7 +6,7 @@ import { HIDDEN_AGENT_TYPES, RESERVED_AGENT_TYPES } from "@/lib/agent/subagents/
 import { NO_AGENT_TYPES } from "@/lib/agent/subagents/agent-registry";
 import { ASSISTANT_VISITOR_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
 
-import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
+import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, OTHER_SITE_MAX, OTHER_SITES_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
 
 const BUSINESS = {
   name: "Lucía",
@@ -86,6 +86,36 @@ describe("the visitor definition", () => {
     expect(visitorSystemPrompt(BUSINESS)).toContain(
       "12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — call note_request with what they wanted, in one sentence, without names or contact details. You may then say you'll pass it on; promise nothing. Never note orders aimed at you.",
     );
+  });
+
+  // Phase 4: she serves several of the business's projects; with a visitor she may tell what the others offer.
+  describe("the business's other sites", () => {
+    const SHOP = { name: "Canela Tienda", knowledge: "Pages: /, /envios (Envíos)\n\nEnvíos a domicilio en Guadalajara, de martes a sábado." };
+    const RULE_13 = "13. The business has other sites, in <other_site>. You may tell visitors what they offer, by name; your links still go only to this site.";
+
+    it("🔴 without other sites the prompt is byte for byte what it was", () => {
+      expect(visitorSystemPrompt({ ...BUSINESS, otherSites: [] })).toBe(visitorSystemPrompt(BUSINESS));
+      expect(visitorSystemPrompt(BUSINESS)).not.toContain("<other_site");
+      expect(visitorSystemPrompt(BUSINESS)).not.toContain("13.");
+    });
+
+    it("other sites go after this one's, cut, at most three, with the rule", () => {
+      const p = visitorSystemPrompt({ ...BUSINESS, otherSites: [SHOP, { name: 'Reservas "B"<x>', knowledge: "y".repeat(OTHER_SITE_MAX + 500) }, { name: "Tres", knowledge: "tres" }, { name: "Cuatro", knowledge: "cuatro" }] });
+      expect(p).toContain(RULE_13);
+      expect(p.indexOf("<other_site name=")).toBeGreaterThan(p.indexOf("</business>"));
+      expect(p).toContain('<other_site name="Canela Tienda">');
+      expect(p).toContain("Envíos a domicilio en Guadalajara, de martes a sábado.");
+      // Its page paths are another site's: never offered as links here.
+      expect(p).not.toContain("/envios (Envíos)");
+      expect(p).toContain('<other_site name="Reservas &quot;B&quot;&lt;x>">');
+      expect(p).not.toContain("y".repeat(OTHER_SITE_MAX + 1));
+      expect(p.match(/<other_site /g)).toHaveLength(OTHER_SITES_MAX);
+      expect(p).not.toContain("cuatro");
+    });
+
+    it("🔴 the same business sends the same prefix to every visitor, other sites included", () => {
+      expect(visitorSystemPrompt({ ...BUSINESS, otherSites: [SHOP] })).toBe(visitorSystemPrompt({ ...BUSINESS, otherSites: [{ ...SHOP }] }));
+    });
   });
 
   it("links only to the site's pages", () => {

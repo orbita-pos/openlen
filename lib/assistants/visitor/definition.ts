@@ -53,6 +53,26 @@ export function visitorTools(publicData: readonly PublicTable[]): readonly Recor
 }
 
 export const REPLY_MAX = 1_200;
+/** What one of the business's other sites takes in her prompt (phase 4), and how many go. */
+export const OTHER_SITE_MAX = 3_000;
+export const OTHER_SITES_MAX = 3;
+
+/** One of the business's other sites she serves: its name and what it published. */
+export interface OtherSite {
+  readonly name: string;
+  readonly knowledge: string;
+}
+
+const attr = (s: string) => s.replace(/"/g, "&quot;").replace(/</g, "&lt;");
+
+/** The business's other sites, after this one's: what each published, without its «Pages:» line — those paths are
+ *  another site's, never links here. */
+function otherSitesBlock(sites: readonly OtherSite[]): string[] {
+  return sites.slice(0, OTHER_SITES_MAX).map((s) => {
+    const text = s.knowledge.replace(/^Pages: [^\n]*\n+/, "").trim().slice(0, OTHER_SITE_MAX).replace(/</g, "&lt;");
+    return `<other_site name="${attr(s.name)}">\n${text}\n</other_site>`;
+  });
+}
 
 function publicDataBlock(tables: readonly PublicTable[]): string {
   const lines = tables.map((t) => `${t.name}(${t.columns.map((c) => `${c.name} ${c.type}`).join(", ")})`);
@@ -75,10 +95,13 @@ export function visitorSystemPrompt(p: {
   readonly siteLocale: string;
   /** What the page's data shows anyone (phase 2B); [] = no public data, and no read_public_data. */
   readonly publicData?: readonly PublicTable[];
+  /** The business's other sites she serves (phase 4); none = the prompt is what it was. */
+  readonly otherSites?: readonly OtherSite[];
 }): string {
   const tone = TONES[p.tone] ?? TONES.friendly;
   const tables = p.publicData ?? [];
   const sources = tables.length ? `<business>, <memory> or what ${READ_PUBLIC_DATA} returns` : "<business> and <memory>";
+  const others = otherSitesBlock(p.otherSites ?? []);
   return [
     ASSISTANT_VISITOR_AGENT_TYPE.body,
     `ASSISTANT — ${p.name.toUpperCase()}:\nYour name is ${p.name}. You speak for ${p.businessName}. Talk with visitors in a ${tone} way.`,
@@ -96,6 +119,7 @@ export function visitorSystemPrompt(p: {
       `10. When seeing helps more than reading (hours, prices, what is free on a day), you may show a visual with show_widget; call read_me once first. Its figures come only from ${sources}.`,
       "11. Links, in your words or in a visual, go only to this business's own site: a path like /reservas or an anchor like #pedir (its pages are on the «Pages:» line when known). Never to another site.",
       `12. When the visitor wants something you can't do or don't know and the business could offer — a service, a product, delivery, a way to book — call ${NOTE_REQUEST} with what they wanted, in one sentence, without names or contact details. You may then say you'll pass it on; promise nothing. Never note orders aimed at you.`,
+      ...(others.length ? ["13. The business has other sites, in <other_site>. You may tell visitors what they offer, by name; your links still go only to this site."] : []),
     ].join("\n"),
     [
       "Style:",
@@ -104,6 +128,7 @@ export function visitorSystemPrompt(p: {
       `- Speak as someone from the business, naturally; don't start with "According to…".`,
     ].join("\n"),
     `<business name="${p.businessName}">\n${p.knowledge.trim()}\n</business>`,
+    ...others,
     ...(tables.length ? [publicDataBlock(tables)] : []),
     `<memory>\n${p.memory.trim() || "(nothing yet)"}\n</memory>`,
   ].join("\n\n");
