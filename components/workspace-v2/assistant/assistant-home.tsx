@@ -15,6 +15,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
 import { HerProjects } from "./her-projects";
+import { MorningSummarySwitch } from "./morning-summary-switch";
 import { RenameHer } from "./rename-her";
 import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
@@ -72,6 +73,7 @@ export function AssistantHome({
           </div>
           <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
+            <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
             <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
           </div>
         </div>

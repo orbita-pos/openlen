@@ -1555,6 +1555,12 @@ export const assistants = pgTable(
     /** How its `ask_len` requests ended, until it hears them (lib/assistants/notices.ts). */
     notices: jsonb("notices").$type<AskLenNotice[]>().notNull().default([]),
     homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The morning summary (phase 4D, spec §6.9): off unless the owner turns it on. */
+    morningSummary: boolean("morningSummary").notNull().default(false),
+    /** The language it was turned on in: the summary's. */
+    summaryLocale: text("summaryLocale"),
+    /** The owner's local day (YYYY-MM-DD) of the last summary pass that claimed it: one a day. */
+    lastSummaryOn: text("lastSummaryOn"),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },

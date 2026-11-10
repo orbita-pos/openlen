@@ -739,7 +739,8 @@
       "color": "Couleur",
       "tone": "Sa façon de parler",
       "done": "Terminé",
-      "cancel": "Annuler"
+      "cancel": "Annuler",
+      "morningSummary": "Racontez-moi chaque matin ce qui s'est passé"
     },
     "tones": {
       "friendly": "Chaleureux",
@@ -816,6 +817,10 @@
       "close": "Fermer",
       "publishToKnow": "{name} le connaîtra à sa prochaine publication.",
       "busy": "{name} est en train de répondre : réessayez quand ce sera fini."
+    },
+    "summary": {
+      "switch": "Résumé du matin",
+      "hint": "À 8 h, seulement s'il s'est passé quelque chose hier."
     }
   }
 }

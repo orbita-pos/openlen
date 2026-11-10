@@ -186,7 +186,7 @@ describe("her place's controls", () => {
     serve({ projects: [HOME] });
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={true} needsPublish={false} nothingToKnow={false} />);
     await settle();
-    expect(host.querySelectorAll('[data-assistant-controls] [role="switch"]')).toHaveLength(1);
+    expect(host.querySelectorAll('[data-assistant-controls] [data-on-page] [role="switch"]')).toHaveLength(1);
     expect(host.querySelector("[data-her-projects-open]")!.textContent).toBe('ownAssistant.projects.count {"count":1}');
     const panel = await openProjects(host);
     expect(panel.getAttribute("role")).toBe("dialog");
@@ -362,7 +362,7 @@ describe("her place's controls", () => {
     const calls = serve();
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
-    const sw = host.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    const sw = host.querySelector<HTMLButtonElement>('[data-on-page] [role="switch"]')!;
     expect(sw.getAttribute("aria-checked")).toBe("false");
     act(() => sw.click());
     await settle();
@@ -395,7 +395,7 @@ describe("her place's controls, what they say", () => {
     serve();
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish nothingToKnow={false} />);
     await settle();
-    expect(host.querySelector('[role="switch"]')!.getAttribute("aria-checked")).toBe("true");
+    expect(host.querySelector('[data-on-page] [role="switch"]')!.getAttribute("aria-checked")).toBe("true");
     expect(host.textContent).toContain("ownAssistant.place.onPageHint");
   });
 
@@ -404,7 +404,7 @@ describe("her place's controls, what they say", () => {
     const calls = serve();
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await settle();
-    const sw = host.querySelector<HTMLButtonElement>('[role="switch"]')!;
+    const sw = host.querySelector<HTMLButtonElement>('[data-on-page] [role="switch"]')!;
     expect(sw.disabled).toBe(false);
     act(() => sw.click());
     await settle();

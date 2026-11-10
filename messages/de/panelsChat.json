@@ -739,7 +739,8 @@
       "color": "Farbe",
       "tone": "Wie er spricht",
       "done": "Fertig",
-      "cancel": "Abbrechen"
+      "cancel": "Abbrechen",
+      "morningSummary": "Erzähl mir jeden Morgen, was passiert ist"
     },
     "tones": {
       "friendly": "Freundlich",
@@ -816,6 +817,10 @@
       "close": "Schließen",
       "publishToKnow": "{name} kennt es nach der nächsten Veröffentlichung.",
       "busy": "{name} antwortet gerade: versuch es, wenn die Antwort fertig ist."
+    },
+    "summary": {
+      "switch": "Morgenzusammenfassung",
+      "hint": "Um 8 Uhr, nur wenn gestern etwas passiert ist."
     }
   }
 }

@@ -3,7 +3,7 @@
 // THE CREATOR, LIKE MUSE (spec local 2026-11-06-asistente-propio, §4.4; option B, Jesús's pick): the figure in big, its
 // name, its shape, its color and how it talks. «Listo» creates it (`POST /api/assistants`). The shapes and colors are
 // placeholders until the figures' design pass (phase 6).
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ASSISTANT_NAME_MAX, ASSISTANT_SHAPES, ASSISTANT_TONES, type AssistantShape, type AssistantTone } from "@/lib/assistants/names";
@@ -33,6 +33,9 @@ export function AssistantCreatorDialog({
   const [shape, setShape] = useState<AssistantShape>("blob");
   const [color, setColor] = useState<string>(ASSISTANT_COLORS[0]);
   const [tone, setTone] = useState<AssistantTone>("friendly");
+  // The morning summary (phase 4D, spec §6.9): offered, unticked.
+  const [morningSummary, setMorningSummary] = useState(false);
+  const locale = useLocale();
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
 
@@ -43,7 +46,7 @@ export function AssistantCreatorDialog({
       const res = await fetch("/api/assistants", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ projectId, name, shape, color, tone }),
+        body: JSON.stringify({ projectId, name, shape, color, tone, morningSummary, locale }),
       });
       const body = (await res.json().catch(() => ({}))) as { id?: string; slug?: string; field?: string; error?: string };
       if (res.ok && body.id && body.slug) {
@@ -129,6 +132,10 @@ export function AssistantCreatorDialog({
             ))}
           </div>
         </fieldset>
+        <label className="flex w-full items-center gap-2 text-[12.5px] fg">
+          <input type="checkbox" data-assistant-morning="" checked={morningSummary} onChange={(e) => setMorningSummary(e.target.checked)} />
+          {t("ownAssistant.creator.morningSummary")}
+        </label>
         <button
           type="button"
           data-assistant-done=""

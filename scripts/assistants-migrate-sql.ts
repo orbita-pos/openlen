@@ -109,4 +109,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
     PRIMARY KEY ("personId", "slug")
   );`,
+  // Phase 4D (spec §6.9) — the morning summary: off unless turned on, its language, the last day it was claimed.
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "morningSummary" boolean NOT NULL DEFAULT false;`,
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "summaryLocale" text;`,
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "lastSummaryOn" text;`,
 ];

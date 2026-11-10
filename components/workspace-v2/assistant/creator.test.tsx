@@ -61,6 +61,22 @@ describe("the creator", () => {
     expect(onCreated).toHaveBeenCalledWith({ id: "a1", slug: "lucia", name: "Lucía" });
   });
 
+  // Phase 4D (spec §6.9): the creator offers the morning summary, unticked.
+  it("🔴 the creator offers the morning summary, unticked, and sends what was chosen with the page's language", async () => {
+    fetchMock.mockReturnValue(json({ id: "a1", slug: "lucia" }, 201));
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} />);
+    const box = document.querySelector<HTMLInputElement>("[data-assistant-morning]")!;
+    expect(box.checked).toBe(false);
+    type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Lucía");
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1].body))).toMatchObject({ morningSummary: false, locale: "es" });
+    act(() => box.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    expect(JSON.parse(String(fetchMock.mock.calls[1]![1].body))).toMatchObject({ morningSummary: true, locale: "es" });
+  });
+
   it("shows a taken name next to the name and creates nothing", async () => {
     fetchMock.mockReturnValueOnce(json({ error: "name_taken" }, 409));
     const onCreated = vi.fn();

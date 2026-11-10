@@ -3,7 +3,7 @@
 // it is the person's, so their session decides, never a body field.
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { checkAssistantInput } from "@/lib/assistants/names";
+import { checkAssistantInput, siteLocaleOf } from "@/lib/assistants/names";
 import { memoryFromOldAssistant } from "@/lib/assistants/knowledge";
 import { projectIdsOf } from "@/lib/assistants/projects";
 import { assistantsOf, createAssistant, oldAssistantSettings } from "@/lib/assistants/store";
@@ -29,7 +29,9 @@ export async function POST(req: Request): Promise<Response> {
   if (!input.ok) return json({ field: input.field }, 400);
   // What today's assistant of this project was taught starts her memory (spec §6.4; phase 2A). Fail-soft.
   const memory = memoryFromOldAssistant(await oldAssistantSettings(projectId).catch(() => undefined));
-  const created = await createAssistant({ personId, projectId, input: input.value, memory });
+  // The morning summary, only when the creator ticked it, in the page's language (phase 4D, spec §6.9).
+  const summary = body?.morningSummary === true ? { morningSummary: true, locale: siteLocaleOf(body.locale) } : {};
+  const created = await createAssistant({ personId, projectId, input: input.value, memory, ...summary });
   if (!created.ok) return json({ error: created.code }, 409);
   return json({ id: created.assistant.id, slug: created.assistant.slug }, 201);
 }

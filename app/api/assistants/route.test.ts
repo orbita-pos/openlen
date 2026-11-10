@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   deleteAssistant: vi.fn(async () => true),
   // Phase 4D: renaming her.
   renameAssistant: vi.fn(async (): Promise<unknown> => ({ ok: true, name: "Marta", slug: "marta" })),
+  setMorningSummary: vi.fn(async () => true),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
   switchOldAssistantOff: vi.fn(async () => true),
   // Her visitors (phase 2A).
@@ -26,7 +27,7 @@ const m = vi.hoisted(() => ({
   creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant, setMorningSummary: m.setMorningSummary }));
 vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf, projectIdsOf: m.projectIdsOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
@@ -57,6 +58,13 @@ describe("POST /api/assistants", () => {
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: "a1", slug: "lucia" });
     expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" }, memory: "" });
+  });
+
+  it("🔴 the morning summary is created on only when the creator ticked it, in the page's language", async () => {
+    await post({ ...BODY, morningSummary: true, locale: "es" });
+    expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ morningSummary: true, locale: "es" }));
+    await post({ ...BODY, morningSummary: "sí" });
+    expect(m.createAssistant.mock.lastCall?.[0]).not.toHaveProperty("morningSummary");
   });
 
   it("🔴 creating her in a project whose old assistant had facts starts her memory with them", async () => {
@@ -180,6 +188,17 @@ describe("her place's controls", () => {
     expect((await patch("a1", { name: " " })).status).toBe(400);
     m.assistantById.mockResolvedValue({ ...LUCIA, personId: "u2" });
     expect((await patch("a1", { name: "Marta" })).status).toBe(404);
+  });
+
+  // Phase 4D (spec §6.9).
+  it("🔴 PATCH turns her morning summary on in the page's language, or off", async () => {
+    m.assistantById.mockResolvedValue(LUCIA);
+    const res = await patch("a1", { morningSummary: true, locale: "pt" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ morningSummary: true });
+    expect(m.setMorningSummary).toHaveBeenCalledWith("a1", "u1", true, "pt");
+    await patch("a1", { morningSummary: false, locale: "xx" });
+    expect(m.setMorningSummary).toHaveBeenLastCalledWith("a1", "u1", false, "en");
   });
 
   it("PATCH with neither a name nor onPage is 400", async () => {

@@ -739,7 +739,8 @@
       "color": "Kleur",
       "tone": "Hoe hij praat",
       "done": "Klaar",
-      "cancel": "Annuleren"
+      "cancel": "Annuleren",
+      "morningSummary": "Vertel me elke ochtend wat er gebeurd is"
     },
     "tones": {
       "friendly": "Vriendelijk",
@@ -816,6 +817,10 @@
       "close": "Sluiten",
       "publishToKnow": "{name} kent het na de volgende publicatie.",
       "busy": "{name} is aan het antwoorden: probeer het opnieuw als dat klaar is."
+    },
+    "summary": {
+      "switch": "Ochtendoverzicht",
+      "hint": "Om 8 uur, alleen als er gisteren iets gebeurd is."
     }
   }
 }

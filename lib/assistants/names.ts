@@ -3,6 +3,7 @@
 // design pass (phase 6), and the creator must not depend on how many there are.
 //
 // Pure.
+import { routing } from "@/i18n/routing";
 
 export const ASSISTANT_NAME_MAX = 40;
 export const ASSISTANT_SHAPES = ["blob", "ring", "drop", "square"] as const;
@@ -18,6 +19,12 @@ export interface AssistantInput {
 }
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
+
+/** One of the site's languages (`i18n/routing.ts`), as the page that sent it: the morning summary's (phase 4D). Anything
+ *  else is the site's default. */
+export function siteLocaleOf(raw: unknown): string {
+  return typeof raw === "string" && (routing.locales as readonly string[]).includes(raw) ? raw : routing.defaultLocale;
+}
 
 /** «Lucía» → `lucia`, «Señor Pan» → `senor-pan`, «さくら» → `さくら`, «Ольга Ли» → `ольга-ли`: Latin accents go, the
  *  letters and digits of every script stay (the address is private, so they travel percent-encoded); `""` when
