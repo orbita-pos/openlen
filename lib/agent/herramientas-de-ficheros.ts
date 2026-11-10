@@ -46,7 +46,10 @@ import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from 
 import { IMAGE_FILE, MAX_IMAGE_READ_BYTES, imageEmpty, imageTooLarge, imageTypeOf, notAnImage } from "@/lib/agent/image-bytes";
 import { READ_BACK_NOTE, VIDEO_FILE, parseImageRegion, readImageNote, regionOnlyForImages, videoReadError, type ImageRegion } from "@/lib/agent/image-region";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
-import { ASSISTANT_MEMORY, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_MEMORY, HOME_DIR, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
+import { mountedSite } from "@/lib/agent/ficheros/mounted";
+import { ASSISTANT_PROJECTS_PATH } from "@/lib/assistants/projects-text";
+import { SERVED_FOLDERS, servedFolderAt, servedFolderOf } from "@/lib/assistants/served-folders";
 import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, serializeNote } from "@/lib/agent/memory/note";
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
 import { findSecret } from "@/lib/agent/memory/secrets";
@@ -401,6 +404,22 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   if (!pedido.ok) return { response: respuesta(fallo(pedido.error)) };
   const region = pedido.region;
   if (region && !IMAGE_FILE.test(enLaCaja)) return { response: respuesta(fallo(regionOnlyForImages(enLaCaja))) };
+  // ANOTHER PROJECT SHE SERVES (phase 4B): its own view, under its folder — never her home's box or attachments.
+  const servida = await servedSiteOf(session, deps, enLaCaja);
+  if (servida && !("site" in servida)) return { response: respuesta(servida) };
+  if (servida) {
+    const binarioServido = punteroEn(servida.folder, enLaCaja.slice(servida.prefix.length));
+    if (binarioServido) return await leerBinarioDeLaCarpeta(session, deps, enLaCaja, binarioServido, args, servida.site, region);
+    return {
+      response: respuesta(
+        ejecutarRead(
+          { file_path: asked, ...(numero(args.offset) !== undefined ? { offset: numero(args.offset) } : {}), ...(numero(args.limit) !== undefined ? { limit: numero(args.limit) } : {}) },
+          servida.site,
+          leidosDe(session),
+        ),
+      ),
+    };
+  }
   // UNA IMAGEN O UN PDF DE LA CARPETA (spec local 2026-10-28): de sus bytes, antes de mirar la caja.
   if (deLaCaja && (IMAGE_FILE.test(enLaCaja) || /\.pdf$/i.test(enLaCaja)) && deps.projectFiles) {
     const enCarpeta = (await deps.projectFiles(session.projectId).catch(() => null))?.[enLaCaja];
@@ -485,8 +504,11 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
 }
 
 export async function toolGrep(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("project not found")) };
+  // Another project she serves (phase 4B), by its folder in `path`; with no path, her home, as Claude Code's cwd.
+  const servida = typeof args.path === "string" ? await servedSiteOf(session, deps, args.path) : null;
+  if (servida && !("site" in servida)) return { response: respuesta(servida) };
+  const row = servida ? null : await deps.loadProject(session.projectId, session.userId);
+  if (!servida && !row) return { response: respuesta(fallo("project not found")) };
   const texto = (k: string) => (typeof args[k] === "string" ? (args[k] as string) : undefined);
   const entrada: EntradaGrep = {
     pattern: texto("pattern") ?? "",
@@ -505,22 +527,54 @@ export async function toolGrep(session: AgentSession, deps: AgentDeps, args: Rec
         .filter(([, v]) => v !== undefined),
     ),
   };
-  const v = await virtualesDe(session, deps, row.userBrief);
-  const r = ejecutarGrep(entrada, sitioDe(row.data, session, v));
+  const sitio = servida ? servida.site : sitioDe(row!.data, session, await virtualesDe(session, deps, row!.userBrief));
+  const r = ejecutarGrep(entrada, sitio);
   return { response: respuesta(r) };
 }
 
 export async function toolGlob(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
-  const row = await deps.loadProject(session.projectId, session.userId);
-  if (!row) return { response: respuesta(fallo("project not found")) };
+  // Another project she serves (phase 4B), by its folder in `path`; with no path, her home, as Claude Code's cwd.
+  const servida = typeof args.path === "string" ? await servedSiteOf(session, deps, args.path) : null;
+  if (servida && !("site" in servida)) return { response: respuesta(servida) };
+  const row = servida ? null : await deps.loadProject(session.projectId, session.userId);
+  if (!servida && !row) return { response: respuesta(fallo("project not found")) };
   const r = ejecutarGlob(
     {
       pattern: typeof args.pattern === "string" ? args.pattern : "",
       ...(typeof args.path === "string" ? { path: args.path } : {}),
     },
-    sitioDe(row.data, session, await virtualesDe(session, deps, row.userBrief)),
+    servida ? servida.site : sitioDe(row!.data, session, await virtualesDe(session, deps, row!.userBrief)),
   );
   return { response: respuesta(r) };
+}
+
+/** PHASE 4B (spec local 2026-11-06-asistente-propio, §8): a path in one of the folders of the projects the person's own
+ *  assistant serves is answered with THAT project's view — what Read sees there: pages, folder, /LEN.md, its notes, its
+ *  skills and types — mounted under the folder, as Claude Code's file tools read an additional working directory.
+ *  Nothing of the person is under it (no path in /home/user), and nothing writes it: her session is read-only but for
+ *  her memory. `null` when the path isn't hers to route (Len, or outside the folders). */
+async function servedSiteOf(
+  session: AgentSession,
+  deps: AgentDeps,
+  path: string,
+): Promise<{ readonly site: SitioBuscable; readonly folder: ReadonlyMap<string, string>; readonly prefix: string } | Resultado | null> {
+  const projects = session.assistant?.projects;
+  if (!projects?.length) return null;
+  const hit = servedFolderAt(path, projects);
+  if (!hit) return null;
+  if (hit.kind === "parent") {
+    return fallo(`${SERVED_FOLDERS} holds one folder per project you serve: ${projects.map((p) => servedFolderOf(p.id)).join(", ")}. Pass one of them.`);
+  }
+  const notHers = fallo(`${path} isn't in the folder of a project you serve. The projects you serve, each with its folder, are in ${ASSISTANT_PROJECTS_PATH}.`);
+  // Only hers, and only her person's: an id she doesn't serve is never loaded.
+  if (hit.kind === "unknown") return notHers;
+  const row = await deps.loadProject(hit.projectId, session.userId);
+  if (!row) return notHers;
+  const own = await virtualesDe({ ...session, projectId: hit.projectId, parentProjectId: undefined, assistant: undefined, app: row.data.app ?? null }, deps, row.userBrief);
+  const notPersonal = (m: ReadonlyMap<string, string>) => new Map([...m].filter(([ruta]) => !ruta.startsWith(`${HOME_DIR}/`)));
+  const v: Virtuales = { ...own, memoria: notPersonal(own.memoria), skills: notPersonal(own.skills), agents: notPersonal(own.agents), mcpConfig: null, artifacts: new Map() };
+  const site = sitioDe(row.data, { ...session, projectId: hit.projectId, app: row.data.app ?? null, escritos: [] }, v);
+  return { site: mountedSite(hit.prefix, site), folder: v.folder, prefix: hit.prefix };
 }
 
 /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Explore, Plan, or any child in plan mode. */
