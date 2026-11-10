@@ -5,8 +5,10 @@ import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
-const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void), entregado: null as null | ((id: string, url: string) => void) }));
-vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void; onAbrirEntregado?: (id: string, url: string) => void }) => { aviso.abrir = o.onAbrirProyecto; aviso.entregado = o.onAbrirEntregado ?? null; return { estado:"noDisponible" }; } }));
+const aviso = vi.hoisted(() => ({ abrir: null as null | ((id: string) => void), entregado: null as null | ((id: string, url: string) => void), asistente: null as null | ((id: string, donde: { parte: string; tarjeta: string | null }) => void) }));
+vi.mock("../avisos/use-avisos", () => ({ useAvisos: (o: { onAbrirProyecto: (id: string) => void; onAbrirEntregado?: (id: string, url: string) => void; onAbrirAsistente?: (id: string, donde: { parte: string; tarjeta: string | null }) => void }) => { aviso.abrir = o.onAbrirProyecto; aviso.entregado = o.onAbrirEntregado ?? null; aviso.asistente = o.onAbrirAsistente ?? null; return { estado:"noDisponible" }; } }));
+// Her tab (phase 5) is tested on its own (../asistente/assistant-tab.test.tsx): here, only that it opens, and on what.
+vi.mock("../asistente/assistant-tab", () => ({ AssistantTab: (p: { asistente: { id: string }; parte?: string; tarjeta?: string | null }) => <div data-assistant-tab={p.asistente.id} data-parte={p.parte ?? ""} data-tarjeta={p.tarjeta ?? ""} /> }));
 vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
 const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: number) => void) }));
@@ -119,7 +121,7 @@ it("cambiar de página no arrastra una llamada ni la reinicia en el proyecto nue
 it.each([200, 503])("releer la lista por un aviso de la misma página conserva la llamada montada (%s)", async (status) => {
  const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
  let lectura = 0, completar!: (r: Response) => void;
- const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta.startsWith("/api/tools?") ? Response.json({tools:[],paid:true,person:{name:""}}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
+ const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta.startsWith("/api/tools?") ? Response.json({tools:[],paid:true,person:{name:""}}) : ruta === "/api/assistants" ? Response.json({assistants:[]}) : (++lectura === 1 ? Response.json({project:proyecto}) : new Promise<Response>(r => { completar = r; })));
  host = document.createElement('div'); document.body.append(host); root = createRoot(host);
  await act(async () => root.render(<PantallaPrincipal cliente={{pedir,avisarAlCerrar:vi.fn()}} idioma="es" onSalir={vi.fn()}/>));
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'llamar')!.click());
@@ -306,4 +308,61 @@ it("the push of a finished task opens the delivered file in the viewer, with its
  const visor = document.body.querySelector("[data-viewer]");
  expect(visor?.getAttribute("data-viewer")).toBe("deck.pptx");
  expect(visor?.getAttribute("data-preview")).toBe("/api/projects/p1/deliveries/t1/ef56ab78-deck.pptx.preview.pdf");
+});
+
+// The person's own assistant (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): a button with her name beside
+// «Entregado» and «Tareas», only when she exists; her notices open her tab.
+describe("her tab in the selector", () => {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
+  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+  async function paint(asistentes: unknown[]) {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta === "/api/assistants"
+            ? Response.json({ assistants: asistentes })
+            : ruta.startsWith("/api/tools?")
+              ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+              : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    return { pedir, botones: () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")] };
+  }
+
+  it("🔴 her button is in the sheet only when she exists, and opens her tab", async () => {
+    const { botones } = await paint([LUCIA]);
+    const b = botones().find((x) => x.textContent === "Lucía");
+    expect(b).toBeDefined();
+    await act(async () => b!.click());
+    expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
+  });
+
+  it("no assistant (or assistants off): no button", async () => {
+    const { botones } = await paint([]);
+    expect(botones().some((x) => x.textContent === "Lucía")).toBe(false);
+    expect(botones().some((x) => x.textContent === "entregado")).toBe(true);
+  });
+
+  it("🔴 a notice of hers opens her tab on its part and card", async () => {
+    await paint([LUCIA]);
+    await act(async () => aviso.asistente!("a1", { parte: "pedidos", tarjeta: "c1" }));
+    await act(async () => {});
+    const tab = host.querySelector('[data-assistant-tab="a1"]');
+    expect(tab?.getAttribute("data-parte")).toBe("pedidos");
+    expect(tab?.getAttribute("data-tarjeta")).toBe("c1");
+  });
+
+  // Review Focus 2: deleted after the notice, she still opens — her tab says she isn't there — never a blank screen.
+  it("🔴 a notice of an assistant deleted since still opens her tab, which says so", async () => {
+    await paint([LUCIA]);
+    await act(async () => aviso.asistente!("a-borrada", { parte: "pedidos", tarjeta: "c1" }));
+    await act(async () => {});
+    expect(host.querySelector('[data-assistant-tab="a-borrada"]')).not.toBeNull();
+  });
 });
