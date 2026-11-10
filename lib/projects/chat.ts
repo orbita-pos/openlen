@@ -732,12 +732,17 @@ export async function leerTurnoDelUsuario(
     .where(
       and(
         eq(schema.projectChatMessages.id, id),
-        // El dueño, o un miembro del proyecto (compartir el proyecto, lib/projects/acceso.ts).
+        // El dueño, o un miembro del proyecto (compartir el proyecto, lib/projects/acceso.ts) — nunca en la charla del
+        // asistente propio del dueño (`assistant:<id>`, spec local 2026-11-06-asistente-propio, §6.12): ésa es sólo
+        // de su persona, que siempre es la dueña de su casa.
         or(
           eq(schema.projects.userId, userId),
-          inArray(
-            schema.projects.id,
-            db.select({ id: schema.projectMembers.projectId }).from(schema.projectMembers).where(eq(schema.projectMembers.userId, userId)),
+          and(
+            inArray(
+              schema.projects.id,
+              db.select({ id: schema.projectMembers.projectId }).from(schema.projectMembers).where(eq(schema.projectMembers.userId, userId)),
+            ),
+            noEsDelAsistente(schema.projectChatMessages.conversation),
           ),
         ),
       ),
