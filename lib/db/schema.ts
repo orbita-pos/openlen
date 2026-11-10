@@ -1561,6 +1561,19 @@ export const assistants = pgTable(
   (t) => [uniqueIndex("assistants_personId_slug_idx").on(t.personId, t.slug)],
 );
 
+/** Her old addresses (phase 4D, spec §6.8): renaming her moves /<locale>/assistant/<slug>, and the old slug redirects to
+ *  the new one, as a renamed GitHub repository does — until a live slug of the same person takes it (the live one wins). */
+export const assistantSlugAliases = pgTable(
+  "assistantSlugAliases",
+  {
+    personId: text("personId").notNull(),
+    slug: text("slug").notNull(),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.slug] })],
+);
+
 /** The projects an assistant serves: one assistant per project (the primary key). */
 export const assistantProjects = pgTable("assistantProjects", {
   projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),

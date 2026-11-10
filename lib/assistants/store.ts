@@ -9,7 +9,7 @@ import { db, schema } from "@/lib/db";
 import type { AssistantSettings } from "@/lib/projects/types";
 
 import { assistantConversationKey } from "./conversation";
-import { assistantSlug, type AssistantInput } from "./names";
+import { assistantSlug, cleanAssistantName, type AssistantInput } from "./names";
 import { readyNotices, type AskLenNotice, type ReadyNotice } from "./notices";
 
 export type AssistantRow = typeof schema.assistants.$inferSelect;
@@ -82,6 +82,50 @@ export async function switchOldAssistantOff(projectId: string): Promise<boolean>
 
 export async function assistantBySlug(personId: string, slug: string): Promise<AssistantRow | null> {
   const [row] = await db.select().from(a).where(and(eq(a.personId, personId), eq(a.slug, slug))).limit(1);
+  return row ?? null;
+}
+
+/** RENAMING HER (phase 4D, spec §6.8), as Claude Code's /rename: the name changes and the id doesn't. Her address follows
+ *  her name; the old slug is kept as an alias the page redirects from (`assistantByOldSlug`), and one she takes back
+ *  stops being an alias. Only the case or the accents changed → the name changes, the address doesn't. */
+export async function renameAssistant(
+  id: string,
+  personId: string,
+  rawName: string,
+): Promise<{ ok: true; name: string; slug: string } | { ok: false; error: "invalid" | "name_taken" | "not_found" }> {
+  const name = cleanAssistantName(rawName);
+  if (!name) return { ok: false, error: "invalid" };
+  const slug = assistantSlug(name);
+  const aliases = schema.assistantSlugAliases;
+  try {
+    return await db.transaction(async (tx) => {
+      const [her] = await tx.select({ slug: a.slug }).from(a).where(and(eq(a.id, id), eq(a.personId, personId))).limit(1).for("update");
+      if (!her) return { ok: false as const, error: "not_found" as const };
+      if (her.slug !== slug) {
+        await tx
+          .insert(aliases)
+          .values({ personId, slug: her.slug, assistantId: id })
+          .onConflictDoUpdate({ target: [aliases.personId, aliases.slug], set: { assistantId: id, createdAt: new Date() } });
+        await tx.delete(aliases).where(and(eq(aliases.personId, personId), eq(aliases.slug, slug)));
+      }
+      await tx.update(a).set({ name, slug, updatedAt: new Date() }).where(eq(a.id, id));
+      return { ok: true as const, name, slug };
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) return { ok: false, error: "name_taken" };
+    throw err;
+  }
+}
+
+/** Where an old address of hers goes now: her live slug, or `null`. The page asks only when no live slug matches. */
+export async function assistantByOldSlug(personId: string, slug: string): Promise<{ slug: string } | null> {
+  const aliases = schema.assistantSlugAliases;
+  const [row] = await db
+    .select({ slug: a.slug })
+    .from(aliases)
+    .innerJoin(a, eq(a.id, aliases.assistantId))
+    .where(and(eq(aliases.personId, personId), eq(aliases.slug, slug)))
+    .limit(1);
   return row ?? null;
 }
 

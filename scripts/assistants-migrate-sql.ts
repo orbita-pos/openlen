@@ -101,4 +101,12 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS "assistantRequests_waiting_idx" ON "assistantRequests" ("assistantId", "projectId") WHERE "cardId" IS NULL AND "discardedAt" IS NULL;`,
   `CREATE INDEX IF NOT EXISTS "assistantRequests_card_idx" ON "assistantRequests" ("cardId");`,
   `CREATE INDEX IF NOT EXISTS "assistantRequests_assistant_at_idx" ON "assistantRequests" ("assistantId", "at");`,
+  // Phase 4D (spec §6.8) — her old addresses: renaming her moves her slug, and the old one redirects.
+  `CREATE TABLE IF NOT EXISTS "assistantSlugAliases" (
+    "personId" text NOT NULL,
+    "slug" text NOT NULL,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
+    PRIMARY KEY ("personId", "slug")
+  );`,
 ];
