@@ -46,11 +46,18 @@ function includes<T extends string>(list: readonly T[], value: unknown): value i
   return typeof value === "string" && (list as readonly string[]).includes(value);
 }
 
+/** Her name as it is kept (trimmed, one space between words), or `null` when it can't be one: empty, too long, or with
+ *  nothing an address can be made from. Creating and renaming her share it. */
+export function cleanAssistantName(raw: unknown): string | null {
+  const name = typeof raw === "string" ? raw.trim().replace(/\s+/g, " ") : "";
+  return name && name.length <= ASSISTANT_NAME_MAX && assistantSlug(name) ? name : null;
+}
+
 export function checkAssistantInput(
   raw: Record<string, unknown>,
 ): { ok: true; value: AssistantInput } | { ok: false; field: "name" | "shape" | "color" | "tone" } {
-  const name = typeof raw.name === "string" ? raw.name.trim().replace(/\s+/g, " ") : "";
-  if (!name || name.length > ASSISTANT_NAME_MAX || !assistantSlug(name)) return { ok: false, field: "name" };
+  const name = cleanAssistantName(raw.name);
+  if (!name) return { ok: false, field: "name" };
   if (!includes(ASSISTANT_SHAPES, raw.shape)) return { ok: false, field: "shape" };
   if (typeof raw.color !== "string" || !COLOR.test(raw.color)) return { ok: false, field: "color" };
   if (!includes(ASSISTANT_TONES, raw.tone)) return { ok: false, field: "tone" };

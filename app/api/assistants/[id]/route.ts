@@ -3,7 +3,7 @@
 // surface answers `assistants_off`, like POST /api/assistants.
 import { auth } from "@/auth";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { assistantById, deleteAssistant } from "@/lib/assistants/store";
+import { assistantById, deleteAssistant, renameAssistant } from "@/lib/assistants/store";
 import { setOnPage } from "@/lib/assistants/visitor/store";
 import { assistantView } from "@/lib/assistants/view";
 
@@ -40,10 +40,22 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
   const { id } = await params;
-  const body = (await req.json().catch(() => null)) as { onPage?: unknown } | null;
-  if (typeof body?.onPage !== "boolean") return json({ error: "bad_request" }, 400);
+  const body = (await req.json().catch(() => null)) as { onPage?: unknown; name?: unknown } | null;
+  const onPage = typeof body?.onPage === "boolean" ? body.onPage : undefined;
+  const name = typeof body?.name === "string" ? body.name : undefined;
+  if (onPage === undefined && name === undefined) return json({ error: "bad_request" }, 400);
   const a = await assistantById(id);
   if (!a || a.personId !== personId) return json({ error: "not_found" }, 404);
-  if (!(await setOnPage(a.homeProjectId, a.id, body.onPage))) return json({ error: "not_found" }, 404);
-  return json({ onPage: body.onPage, needsPublish: body.onPage });
+  const out: Record<string, unknown> = {};
+  // Phase 4D (spec §6.8): renaming her moves her address; the old one redirects.
+  if (name !== undefined) {
+    const renamed = await renameAssistant(a.id, personId, name);
+    if (!renamed.ok) return json({ error: renamed.error }, renamed.error === "name_taken" ? 409 : renamed.error === "invalid" ? 400 : 404);
+    Object.assign(out, { name: renamed.name, slug: renamed.slug });
+  }
+  if (onPage !== undefined) {
+    if (!(await setOnPage(a.homeProjectId, a.id, onPage))) return json({ error: "not_found" }, 404);
+    Object.assign(out, { onPage, needsPublish: onPage });
+  }
+  return json(out);
 }

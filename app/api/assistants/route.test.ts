@@ -10,6 +10,8 @@ const m = vi.hoisted(() => ({
   assistantsOf: vi.fn(async (): Promise<unknown[]> => []),
   assistantById: vi.fn(async (): Promise<unknown> => null),
   deleteAssistant: vi.fn(async () => true),
+  // Phase 4D: renaming her.
+  renameAssistant: vi.fn(async (): Promise<unknown> => ({ ok: true, name: "Marta", slug: "marta" })),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
   switchOldAssistantOff: vi.fn(async () => true),
   // Her visitors (phase 2A).
@@ -24,7 +26,7 @@ const m = vi.hoisted(() => ({
   creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant }));
 vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf, projectIdsOf: m.projectIdsOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
@@ -163,6 +165,28 @@ describe("her place's controls", () => {
     m.assistantById.mockResolvedValue({ ...LUCIA, personId: "u2" });
     expect((await patch("a1", { onPage: true })).status).toBe(404);
     expect((await patch("a1", { onPage: "sí" })).status).toBe(400);
+  });
+
+  // Phase 4D (spec §6.8).
+  it("PATCH with a name renames her; a taken name is 409, an empty one 400", async () => {
+    m.assistantById.mockResolvedValue(LUCIA);
+    const res = await patch("a1", { name: "Marta" });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ name: "Marta", slug: "marta" });
+    expect(m.renameAssistant).toHaveBeenCalledWith("a1", "u1", "Marta");
+    m.renameAssistant.mockResolvedValueOnce({ ok: false, error: "name_taken" });
+    expect((await patch("a1", { name: "Ana" })).status).toBe(409);
+    m.renameAssistant.mockResolvedValueOnce({ ok: false, error: "invalid" });
+    expect((await patch("a1", { name: " " })).status).toBe(400);
+    m.assistantById.mockResolvedValue({ ...LUCIA, personId: "u2" });
+    expect((await patch("a1", { name: "Marta" })).status).toBe(404);
+  });
+
+  it("PATCH with neither a name nor onPage is 400", async () => {
+    m.assistantById.mockResolvedValue(LUCIA);
+    expect((await patch("a1", {})).status).toBe(400);
+    expect(m.renameAssistant).not.toHaveBeenCalled();
+    expect(m.setOnPage).not.toHaveBeenCalled();
   });
 
   it("visits are only its person's — a project member gets a 404", async () => {

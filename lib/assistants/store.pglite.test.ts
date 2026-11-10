@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, saveAssistantMemory, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
 let pg: PGlite;
@@ -114,5 +114,68 @@ describe("assistants store", () => {
     await new Promise((r) => setTimeout(r, 5));
     await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Ana" } });
     expect((await assistantsOf("u1")).map((a) => a.slug)).toEqual(["ana", "lucia"]);
+  });
+});
+
+// PHASE 4D (spec §6.8): as Claude Code's /rename, the name changes and the id doesn't; her address follows her name,
+// and the old one stays as an alias the page redirects from.
+describe("renaming her (phase 4D)", () => {
+  async function lucia(projectId = "p1", name = "Lucía"): Promise<string> {
+    const r = await createAssistant({ personId: "u1", projectId, input: { ...LUCIA, name } });
+    if (!r.ok) throw new Error(r.code);
+    return r.assistant.id;
+  }
+
+  it("🔴 renaming her moves her address and keeps the old one as an alias", async () => {
+    const id = await lucia();
+    expect(await renameAssistant(id, "u1", "Marta  Sofía ")).toEqual({ ok: true, name: "Marta Sofía", slug: "marta-sofia" });
+    expect((await assistantBySlug("u1", "marta-sofia"))?.id).toBe(id);
+    expect(await assistantBySlug("u1", "lucia")).toBeNull();
+    expect(await assistantByOldSlug("u1", "lucia")).toEqual({ slug: "marta-sofia" });
+    expect(await assistantByOldSlug("u2", "lucia")).toBeNull();
+  });
+
+  it("🔴 a name another of hers has is refused and nothing changes", async () => {
+    await lucia();
+    const ana = await lucia("p2", "Ana");
+    expect(await renameAssistant(ana, "u1", "Lucía")).toEqual({ ok: false, error: "name_taken" });
+    expect((await assistantById(ana))?.slug).toBe("ana");
+    expect(await assistantByOldSlug("u1", "ana")).toBeNull();
+  });
+
+  it("going back to an old name takes it back and drops that alias", async () => {
+    const id = await lucia();
+    await renameAssistant(id, "u1", "Marta");
+    expect(await renameAssistant(id, "u1", "Lucía")).toEqual({ ok: true, name: "Lucía", slug: "lucia" });
+    expect(await assistantByOldSlug("u1", "lucia")).toBeNull();
+    expect(await assistantByOldSlug("u1", "marta")).toEqual({ slug: "lucia" });
+  });
+
+  it("🔴 a live slug wins over an alias: an old address that is now another's name opens that one", async () => {
+    const first = await lucia();
+    await renameAssistant(first, "u1", "Marta");
+    const second = await lucia("p2", "Lucía");
+    expect((await assistantBySlug("u1", "lucia"))?.id).toBe(second);
+  });
+
+  it("🔴 deleting her deletes her aliases", async () => {
+    const id = await lucia();
+    await renameAssistant(id, "u1", "Marta");
+    expect(await deleteAssistant("u1", id)).toBe(true);
+    expect(await assistantByOldSlug("u1", "lucia")).toBeNull();
+  });
+
+  it("only the case or the accents changed: the name changes, the address doesn't", async () => {
+    const id = await lucia();
+    expect(await renameAssistant(id, "u1", "LUCIA")).toEqual({ ok: true, name: "LUCIA", slug: "lucia" });
+    expect((await assistantById(id))?.name).toBe("LUCIA");
+    expect(await assistantByOldSlug("u1", "lucia")).toBeNull();
+  });
+
+  it("an empty name, or somebody else's assistant, is refused", async () => {
+    const id = await lucia();
+    expect(await renameAssistant(id, "u1", "  ")).toEqual({ ok: false, error: "invalid" });
+    expect(await renameAssistant(id, "u2", "Marta")).toEqual({ ok: false, error: "not_found" });
+    expect((await assistantById(id))?.slug).toBe("lucia");
   });
 });
