@@ -90,4 +90,18 @@ describe("AssistantTab", () => {
     await act(async () => {});
     expect(host.querySelector('[role="alert"]')?.textContent).toContain("noEsta");
   });
+
+  // Opened by a notice of one deleted since, there is no name to say (principal.tsx's stub): «Tu asistente ya no está».
+  it("🔴 one deleted since, with no name to say, is «your assistant»", async () => {
+    vi.mocked(leerSuChat).mockRejectedValue(new Error("404"));
+    vi.mocked(leerSusVisitas).mockRejectedValue(new Error("404"));
+    vi.mocked(leerSusPedidos).mockRejectedValue(new Error("404"));
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    await act(async () => root.render(<AssistantTab cliente={{} as never} base="b" asistente={{ ...LUCIA, name: "" }} idioma="es" onCerrar={() => {}} />));
+    await act(async () => {});
+    expect(host.querySelector('[role="alert"]')?.textContent).toBe('noEsta {"name":"own.place.yours"}');
+  });
 });

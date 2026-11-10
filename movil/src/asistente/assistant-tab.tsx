@@ -62,7 +62,8 @@ export function AssistantTab({
   const t = useTranslations("movil.asistente");
   const tc = useTranslations("movil.chat");
   const ta = useTranslations("movil.adjuntos");
-  const name = asistente.name;
+  // Opened by a notice of one deleted since (principal.tsx), there is no name: «your assistant» (no gender, as the web's).
+  const name = asistente.name || t("own.place.yours");
   const [vista, setVista] = useState<"conversaciones" | "pedidos">(parte === "pedidos" ? "pedidos" : "conversaciones");
   const [chatAbierto, setChatAbierto] = useState(parte === "hablar");
   const [historial, setHistorial] = useState<StoredChatTurn[]>(SIN_HISTORIAL);
