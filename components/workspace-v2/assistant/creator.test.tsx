@@ -258,6 +258,31 @@ describe("the card Len leaves", () => {
     expect(url).toBe("/api/assistants/a1/projects");
     expect(JSON.parse(String(init.body))).toEqual({ projectId: "p1" });
     expect(host.querySelector<HTMLAnchorElement>("[data-assistant-talk]")!.getAttribute("href")).toBe("/es/assistant/lucia");
+    // Used here, she is on the page at once (11/11): the card says when the visitors will see her.
+    expect(host.querySelector("[data-assistant-card-hint]")!.textContent).toBe("ownAssistant.place.onPageHint");
+  });
+
+  // 11/11/2026, Jesús («encendido de una»): created from the card she is born on the page, and shows after a publish.
+  it("🔴 created from the card, it says she will be on the page once it is published", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());
+    type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Lucía");
+    fetchMock.mockReturnValueOnce(json({ id: "a1", slug: "lucia" }, 201));
+    fetchMock.mockReturnValueOnce(json({ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1" }));
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    expect(host.querySelector("[data-assistant-talk]")).not.toBeNull();
+    expect(host.querySelector("[data-assistant-card-hint]")!.textContent).toBe("ownAssistant.place.onPageHint");
+  });
+
+  it("a card that finds her already there doesn't repeat it: her place says how her page stands", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1" }] }));
+    const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
+    await flush();
+    expect(host.querySelector("[data-assistant-talk]")).not.toBeNull();
+    expect(host.querySelector("[data-assistant-card-hint]")).toBeNull();
   });
 
   it("using her here when the project got another meanwhile says so", async () => {

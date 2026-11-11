@@ -34,6 +34,8 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
   const [creating, setCreating] = useState(false);
   const [using, setUsing] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  // Created or used here from this card: she is on the page at once (11/11), and visitors see her after a publish.
+  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -59,7 +61,10 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
       body: JSON.stringify({ projectId }),
     }).catch(() => null);
     setUsing(null);
-    if (res?.ok) return setMine(a);
+    if (res?.ok) {
+      setAdded(true);
+      return setMine(a);
+    }
     setFailed(res?.status === 409 ? t("ownAssistant.errors.projectHas") : res?.status === 403 ? t("ownAssistant.errors.ownerOnly") : t("ownAssistant.card.useFailed"));
   };
 
@@ -71,6 +76,11 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
           <AssistantFigure look={mine.look} size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium fg">{t("ownAssistant.card.ready", { name: mine.name })}</p>
+            {added && (
+              <p className="text-[11.5px] leading-snug fg-faint" data-assistant-card-hint="">
+                {t("ownAssistant.place.onPageHint")}
+              </p>
+            )}
           </div>
           <a data-assistant-talk="" href={`/${locale}/assistant/${mine.slug}`} className="rounded-full bg-[var(--nc-accent-text)] px-3 py-1.5 text-[12px] font-medium text-white">
             {t("ownAssistant.card.talk", { name: mine.name })}
@@ -116,6 +126,7 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
             onClose={() => setCreating(false)}
             onCreated={(c) => {
               setCreating(false);
+              setAdded(true);
               void fetch(`/api/assistants/${c.id}`)
                 .then((r) => (r.ok ? (r.json() as Promise<AssistantView>) : null))
                 .then((a) => setMine(a ?? { id: c.id, slug: c.slug, name: c.name, look: DEFAULT_LOOK, color: DEFAULT_LOOK.color, tone: "friendly", projectId }))

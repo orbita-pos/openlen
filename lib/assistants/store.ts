@@ -64,7 +64,9 @@ export async function createAssistant(o: {
         throw err;
       }
       try {
-        await tx.insert(schema.assistantProjects).values({ projectId: o.projectId, assistantId: row!.id });
+        // Born on the page (11/11, Jesús: «encendido de una»): she is created from Len's card, where the owner asked for
+        // an assistant for this page. The next publish bakes her bubble; until then her place says so.
+        await tx.insert(schema.assistantProjects).values({ projectId: o.projectId, assistantId: row!.id, onPage: true });
       } catch (err) {
         if (isUniqueViolation(err)) throw new Refused("project_has_assistant");
         throw err;

@@ -62,6 +62,18 @@ beforeEach(async () => {
 });
 
 describe("her projects", () => {
+  // 11/11/2026, Jesús («encendido de una»): she comes from Len's card, where the owner asked for an assistant for that
+  // page — so she is born on it, and the next publish shows her. Creating her and «Usar a Lucía aquí» are the card's two
+  // buttons, and its only ones. On is not baked: her bubble is there only after a publish with her.
+  it("🔴 from Len's card she is on the page at once: created there, or used there", async () => {
+    expect(await projects.connectProject({ assistantId: lucia, projectId: "p3" })).toBe("connected");
+    const mine = await projects.projectsOfAssistant(lucia);
+    expect(mine.map((p) => [p.projectId, p.onPage, p.bakedAt])).toEqual([
+      ["p1", true, null],
+      ["p3", true, null],
+    ]);
+  });
+
   it("🔴 a project has one assistant: connecting another is refused, also two at once", async () => {
     const bruno = await createAssistant({ personId: "u1", projectId: "p4", input: { name: "Bruno", look: { v: 1, shape: "drop", color: "#88aaff", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "formal" } });
     if (!bruno.ok) throw new Error("setup");
@@ -75,9 +87,9 @@ describe("her projects", () => {
     expect(await projects.connectProject({ assistantId: lucia, projectId: "p2" })).toBe("connected");
     const served = await projects.projectsOfAssistant(lucia);
     expect(served.map((p) => [p.projectId, p.title, p.subdomain, p.isHome, p.onPage])).toEqual([
-      ["p1", "Pastelería Canela", "canela", true, false],
-      ["p3", "Canela Reservas", null, false, false],
-      ["p2", "Canela Tienda", "canela-tienda", false, false],
+      ["p1", "Pastelería Canela", "canela", true, true],
+      ["p3", "Canela Reservas", null, false, true],
+      ["p2", "Canela Tienda", "canela-tienda", false, true],
     ]);
     expect(served[0]).toMatchObject({ knowledge: null, knowledgeAt: null, publicData: [] });
   });
