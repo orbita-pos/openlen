@@ -54,7 +54,9 @@ export function ChangeFigure({
             onChanged(look);
             show(false);
             // The creator closing alone does not say it was kept.
-            toast.success(t("ownAssistant.place.figureSaved"));
+            // With her bubble on a published page it also says that page shows it after the next publish: the line
+            // below says so too, but it is in her settings menu, which has closed.
+            toast.success(t("ownAssistant.place.figureSaved"), onPage ? { description: t("ownAssistant.place.figurePublish") } : undefined);
           }}
         />
       )}

@@ -620,9 +620,10 @@ describe("what it costs", () => {
     "steps down when it draws slower than the screen refreshes, hands over to the flat figure, and gives its context back",
     () =>
       withPage({ css: 96 }, async (p) => {
-        // The screen is seen to refresh every 16 ms; then every frame takes 40.
-        const fast = Array.from({ length: 12 }, () => 16);
-        expect(await paced(p, "slow", [...fast, 40])).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
+        // The screen is seen to refresh every 16 ms for a whole window (its pace is a window's, not a few frames');
+        // then every frame takes 40.
+        const fast = Array.from({ length: 40 }, () => 16);
+        expect(await paced(p, "slow", [...fast, 40], 260)).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
       }),
     120_000,
   );
@@ -658,6 +659,33 @@ describe("what it costs", () => {
       withPage({ css: 96 }, async (p) => {
         const pace = [...Array.from({ length: 10 }, () => 16.7), 240, 5, 16.7];
         expect(await paced(p, "early", pace, 230)).toEqual({ seen: [2], lost: 0, released: false });
+      }),
+    120_000,
+  );
+
+  // Final review of the visual pass (11/11): dropping every frame of 250 ms or more took away the floor of a device
+  // that really draws that slowly (software WebGL, a weak phone on the creator's big figure). Only the browser's
+  // own holding back — about a frame a second — is left out.
+  it(
+    "🔴 a device that draws each frame in 300 ms still steps down to the flat figure",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const fast = Array.from({ length: 40 }, () => 16);
+        expect(await paced(p, "crawl", [...fast, 300], 260)).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
+      }),
+    120_000,
+  );
+
+  // Final review of the visual pass (11/11): a page busy re-rendering (her answer arriving) delays a frame and the next
+  // one catches up; four such pairs in one window used to set the screen's pace at the catch-up frames' ~7 ms, and
+  // every normal frame after that looked slow.
+  it(
+    "🔴 a busy window of late and catching-up frames does not set the screen's pace",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const steady = Array.from({ length: 40 }, () => 16.7);
+        const busy = Array.from({ length: 10 }, (_, i) => (i % 2 === 0 ? 26.7 : 6.7));
+        expect(await paced(p, "busy", [...steady, ...busy, 16.7], 230)).toEqual({ seen: [2], lost: 0, released: false });
       }),
     120_000,
   );

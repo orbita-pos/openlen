@@ -54,8 +54,9 @@ const WINDOW = 30;
 const WARM_UP = 5;
 /** A frame counts as this long at most: slower than four a second is just "too slow". */
 const LONGEST_MS = 250;
-/** Which of a window's frames, shortest first, tells the screen's pace: the fourth, so three early ones are not it. */
-const PACE_RANK = 3;
+/** A frame this long is the browser holding the page back (a hidden pane, a window behind another: about one a
+ *  second), not this device drawing: it is not measured. Shorter than this, however slow, it is the device. */
+const HELD_BACK_MS = 900;
 
 /** Canvases whose figure was destroyed and whose context is about to be given back (see `destroy`). */
 const releasing = new WeakMap<HTMLCanvasElement, ReturnType<typeof setTimeout>>();
@@ -172,20 +173,22 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   function paint(): void {
     if (!measure()) return;
     const now = clock();
-    const elapsed = Math.min((now - last) * 1000, LONGEST_MS);
+    const raw = (now - last) * 1000;
+    const elapsed = Math.min(raw, LONGEST_MS);
     const dt = clamp(now - last, 0, 0.1);
     last = now;
-    // A frame as long as the cap is not this device drawing slowly: it is the browser holding the page back (a window
-    // behind another, a tab it is not painting: about a frame a second). Counting those would step a healthy figure
-    // down to the flat one, for good, because someone looked away.
-    if (!reduced && elapsed > 0 && elapsed < LONGEST_MS && ++warm > WARM_UP) {
+    // A frame the browser held back is not this device drawing slowly: counting those would step a healthy figure
+    // down to the flat one, for good, because someone looked away. A device that really takes 300 ms a frame is still
+    // measured (as the cap), and still steps down.
+    if (!reduced && raw > 0 && raw < HELD_BACK_MS && ++warm > WARM_UP) {
       intervals.push(elapsed);
       if (intervals.length === WINDOW) {
-        // The screen's pace is what a window of frames shows several times, never one frame: after a hiccup of the
-        // page the next frame comes early (a few ms, catching up), and taken as the pace it makes every normal frame
-        // after it look slow.
-        period = Math.min(period, Math.max(4, [...intervals].sort((x, y) => x - y)[PACE_RANK]!));
-        slowInARow = isSlow(median(intervals), period) ? slowInARow + 1 : 0;
+        // The screen's pace is the middle frame of its fastest window, never a few frames: a page busy re-rendering
+        // makes a frame late and the next one early (catching up), and taking those as the pace makes every normal
+        // frame after them look slow. Half a window would have to be that early to move the middle.
+        const middle = median(intervals);
+        period = Math.min(period, Math.max(4, middle));
+        slowInARow = isSlow(middle, period) ? slowInARow + 1 : 0;
         intervals.length = 0;
         const next = nextTier(tier, slowInARow);
         if (next === "flat") throw new Error("too slow to be live");

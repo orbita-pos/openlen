@@ -177,7 +177,7 @@ describe("the assistant's place", () => {
 // HER PLACE'S CONTROLS (spec local 2026-11-06-asistente-propio, §4.4.5, §4.6.2, §6.2; phase 2A).
 describe("her place's controls", () => {
   const AT = "2026-11-07T18:00:00.000Z";
-  function serve(o: { patch?: unknown; requests?: unknown[]; projects?: unknown[]; visits?: unknown[] } = {}) {
+  function serve(o: { patch?: unknown; requests?: unknown[]; projects?: unknown[]; visits?: unknown[]; raw?: string } = {}) {
     const calls: { url: string; init?: RequestInit }[] = [];
     vi.stubGlobal(
       "fetch",
@@ -194,6 +194,8 @@ describe("her place's controls", () => {
         if (u.endsWith("/api/assistants/visitor-budget")) return new Response(JSON.stringify({ spent: 1_200, cap: 12_500, explicit: null, max: 50_000 }));
         if (u.endsWith("/api/assistants/a1") && init?.method === "PATCH") return new Response(JSON.stringify(o.patch ?? { onPage: true, needsPublish: true }));
         if (u.endsWith("/api/assistants/a1/requests")) return new Response(JSON.stringify({ cards: o.requests ?? [] }));
+        // Her page: what is saved now, as text.
+        if (u.endsWith("/api/projects/p1/raw") && o.raw !== undefined) return new Response(o.raw, { headers: { "content-type": "text/html" } });
         if (u.includes("/api/assistants/a1/requests/") && init?.method === "POST")
           return new Response(JSON.stringify({ status: "accepted", rowId: "row-1", text: "💬 De Lucía: Envíos", origin: { kind: "assistant", assistantId: "a1", assistantName: "Lucía" }, projectId: "p1" }), { status: 202 });
         return new Response("{}", { status: 200 });
@@ -218,7 +220,7 @@ describe("her place's controls", () => {
     expect(pane.querySelector<HTMLAnchorElement>("[data-her-page-open]")!.href).toBe("https://tienda.openlen.app/");
     const frame = pane.querySelector("iframe")!;
     // Without a canvas host (here, and on a machine without one) it is the document itself, with no way out of its frame.
-    expect(frame.getAttribute("srcdoc")).toBe("<h1>Hola</h1>");
+    expect(frame.getAttribute("srcdoc")).toContain("<h1>Hola</h1>");
     expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-modals allow-pointer-lock");
     expect(frame.getAttribute("title")).toBe("ownAssistant.page.title");
     // Put away, the frame is gone (a page left running under a hidden pane is work for nobody); the button brings it back.
@@ -233,6 +235,30 @@ describe("her place's controls", () => {
     act(() => host.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!.click());
     await settle();
     expect(host.querySelector("[data-her-page-toggle]")).toBeNull();
+  });
+
+  // Final review of the visual pass (11/11): only the workshop's editor runtime says «alive», so her raw page never did,
+  // and on the canvas host it reloaded twice and fell back to the document itself.
+  it("🔴 what her page sends to the canvas says «alive» as soon as it runs, before anything of the page", async () => {
+    const calls = serve();
+    mount(<AssistantHome assistant={LUCIA} projectHtml="<!doctype html><html><head><title>T</title></head><body><h1>Hola</h1></body></html>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const upload = calls.find((c) => c.url.endsWith("/api/lienzo") && c.init?.method === "POST")!;
+    const sent = (JSON.parse(String(upload.init!.body)) as { html: string }).html;
+    expect(sent).toMatch(/^<!doctype html><html><head><script>[^<]*openlen:lienzo-vivo[^<]*<\/script><title>T<\/title>/);
+    expect(sent).toContain("<h1>Hola</h1>");
+  });
+
+  // Final review of the visual pass (11/11): «Recargar» framed the page captured when her place loaded.
+  it("🔴 «Recargar» shows the page as it is saved now", async () => {
+    serve({ raw: "<h1>Nueva</h1>" });
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Vieja</h1>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(host.querySelector("[data-her-page] iframe")!.getAttribute("srcdoc")).toContain("Vieja");
+    act(() => host.querySelector<HTMLButtonElement>("[data-her-page-reload]")!.click());
+    await settle();
+    await settle();
+    expect(host.querySelector("[data-her-page] iframe")!.getAttribute("srcdoc")).toContain("Nueva");
   });
 
   it("🔴 a page not published yet says its name instead of an address, and an empty one says so instead of a blank frame", async () => {
@@ -514,8 +540,10 @@ describe("her place's controls, what they say", () => {
     expect(JSON.parse(String(patch.init!.body))).toEqual({ look: { ...LUCIA.look, shape: "heart" } });
     expect(document.querySelector("[data-assistant-done]")).toBeNull();
     expect(host.querySelector("[data-figure-publish]")).not.toBeNull();
-    // 🔴 «Listo» answers: the creator closing alone does not say the figure was kept.
-    expect(toast.success).toHaveBeenCalledWith("ownAssistant.place.figureSaved");
+    // 🔴 «Listo» answers: the creator closing alone does not say the figure was kept. With her bubble on a published
+    // page the answer also says that page shows it after the next publish (final review: the menu's own line about it
+    // is behind the menu, closed).
+    expect(toast.success).toHaveBeenCalledWith("ownAssistant.place.figureSaved", { description: "ownAssistant.place.figurePublish" });
     // The heart's own outline is in her place now.
     expect(host.querySelector('[data-assistant-header] [data-part="body"] path[d^="M30 54"]')).not.toBeNull();
   });
