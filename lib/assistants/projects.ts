@@ -78,6 +78,13 @@ export async function titlesOf(projectIds: readonly string[]): Promise<Map<strin
   return new Map(rows.map((r) => [r.id, r.title]));
 }
 
+/** The project's home document, for reading its accent (lib/assistants/create-tool.ts). */
+export async function pageHtmlOf(projectId: string): Promise<string | null> {
+  const [row] = await db.select({ data: p.data }).from(p).where(eq(p.id, projectId)).limit(1);
+  const html = (row?.data as { html?: unknown } | null | undefined)?.html;
+  return typeof html === "string" ? html : null;
+}
+
 /** The route checked that the project is her person's own. A project with an assistant keeps it. */
 export async function connectProject(o: { readonly assistantId: string; readonly projectId: string }): Promise<"connected" | "project_has_assistant"> {
   try {

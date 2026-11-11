@@ -3200,7 +3200,7 @@ async function ejecutarHerramienta(
         return await runAskLen(session, args);
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
-        return await runCreateAssistant(session);
+        return await runCreateAssistant(session, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
