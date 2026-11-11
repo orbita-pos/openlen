@@ -69,7 +69,7 @@ import type { AssistantView } from "@/lib/assistants/view";
 import { activityOf } from "../assistant/activity";
 import { AssistantFigure } from "../assistant/figure";
 import { LiveFigure } from "../assistant/live-figure";
-import { tintStyle } from "../assistant/tint";
+import { tintStyle } from "@/lib/figure/tint";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;

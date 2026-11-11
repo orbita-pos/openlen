@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import type { FigureLook } from "@/lib/figure/look";
+import { contrast, tintOf } from "@/lib/figure/tint";
+
 import { bakeAssistantPersona, bakeAssistantWidget, PERSONA_STRINGS } from "./assistant-widget";
 
 const DOC = "<!doctype html><html><body><h1>Hi</h1></body></html>";
@@ -324,9 +327,9 @@ describe("her bubble", () => {
         `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(r)}})}` +
         `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({asistente:true,chat:false,traspaso:false})}})};`,
     ).replace("<html>", '<html lang="es">');
-  const pintar = async (respuesta: Record<string, unknown> | Record<string, unknown>[]) => {
+  const pintar = async (respuesta: Record<string, unknown> | Record<string, unknown>[], persona: typeof PERSONA | { name: string; look: FigureLook } = PERSONA) => {
     document.open();
-    document.write(bakeAssistantPersona(pagina(respuesta), { ...CFG, persona: PERSONA }));
+    document.write(bakeAssistantPersona(pagina(respuesta), { ...CFG, persona }));
     document.close();
     await new Promise((r) => setTimeout(r, 5));
     return (document.querySelector("body > div[aria-live]") as HTMLElement).shadowRoot!;
@@ -347,6 +350,24 @@ describe("her bubble", () => {
     (root.querySelector(".btn") as HTMLButtonElement).click();
     expect(root.querySelector(".log")!.textContent).toContain("Lucía");
     expect(root.querySelector(".log")!.textContent).toContain(CFG.businessName);
+  });
+
+  // 11/11/2026, real turns: the visitor's own message was 14 % of her color over white, on a beige log — with Miga's
+  // crust color, beige on beige. In her place the person's messages wear her color with the ink computed over it, as
+  // the figures' chats of OpenAI do (lib/figure/tint.ts); her bubble on the page does the same.
+  it("🔴 the visitor's message wears her color with an ink that reads over it, as in her place", async () => {
+    for (const color of ["#ce8a4f", "#5fb8a6", "#ffc21a", "#7a7a7a", "#1d1d1f"]) {
+      const t = tintOf(color)!;
+      const root = await pintar({ respuesta: "Hola", intent: "answer" }, { ...PERSONA, look: { ...PERSONA.look, color } });
+      await pregunta(root, "¿A qué hora abren?");
+      const css = root.querySelector("style")!.textContent!;
+      const rule = `.row.u .bub{background:${t.tint};color:${t.ink};box-shadow:inset 0 0 0 1px ${t.edge}}`;
+      expect(css, color).toContain(rule);
+      // And it is the one that holds: after today's rule for the same bubble.
+      expect(css.lastIndexOf(".row.u .bub{"), color).toBe(css.indexOf(rule));
+      expect(contrast(t.tint, t.ink), color).toBeGreaterThanOrEqual(4.5);
+      expect(root.querySelector(".row.u .bub")!.textContent).toBe("¿A qué hora abren?");
+    }
   });
 
   it("her bubble sends {message, vid} with a vid kept in localStorage, and no history", async () => {
