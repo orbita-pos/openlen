@@ -557,10 +557,9 @@ function AgentChatView({
         }}
         className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
         {chat.turns.length === 0 && assistant ? (
-          // Len's suggestions are about building; its place starts with its figure and an invitation to write.
-          <div className="m-auto flex flex-col items-center gap-3 py-10 text-center" data-assistant-empty="">
-            <p className="text-[13.5px] fg-muted">{t("ownAssistant.place.placeholder", { name: assistant.name })}</p>
-          </div>
+          // Len's suggestions are about building; her place starts empty: her figure heads it and the box below
+          // already says «write to her».
+          <div className="m-auto" data-assistant-empty="" />
         ) : chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
