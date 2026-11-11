@@ -26,6 +26,10 @@ export interface LenTurnoEvent {
   /** A file Len delivered in the turn (its delivery URL): tapping the push opens it (spec local
    *  2026-10-31-len-movil, §5.4). Absent when nothing was delivered. */
   abrir?: string;
+  /** The turn was the person's own assistant's, not Len's (lib/assistants/): the push names it and opens its place.
+   *  Absent on Len's turns. */
+  /** Phase 5: `id` rides to the phone, which opens her tab. */
+  asistente?: { id?: string; name: string; slug: string };
 }
 
 /** HILOS EN EL CÓDIGO: alguien te mencionó en una línea de un fichero de un
@@ -67,6 +71,40 @@ export interface AppAiCapEvent {
   percent: 80 | 100;
   spent: number;
   cap: number;
+}
+
+/** THE PERSON'S OWN ASSISTANT FELL ASLEEP (spec local 2026-11-06-asistente-propio, §4.7; phase 2A): the account's
+ *  visitors used the month's cap, or the account ran out of credits; the bubble now offers a contact form. Once per
+ *  month and reason. Push and email, to the owner only. */
+export interface AssistantAsleepEvent {
+  type: "assistant_asleep";
+  projectId: string;
+  recipientUserId: string;
+  assistantName: string;
+  assistantSlug: string;
+  reason: "cap" | "credits";
+  /** The month's visitor spend and cap, in centicredits. */
+  spent: number;
+  cap: number;
+}
+
+/** THE PERSON'S OWN ASSISTANT'S MORNING SUMMARY (spec local 2026-11-06-asistente-propio, §6.9; phase 4D): at 8 in the
+ *  owner's zone, what happened yesterday, only when something did. Counts, no model. Its texts come written, in the
+ *  language it was turned on in; push and, if no push went, email. `assistantId` rides to the phone (phase 5). */
+export interface AssistantSummaryEvent {
+  type: "assistant_summary";
+  /** Her home. */
+  projectId: string;
+  recipientUserId: string;
+  assistantId: string;
+  assistantName: string;
+  assistantSlug: string;
+  locale: string;
+  title: string;
+  /** One line under 200 characters. */
+  push: string;
+  emailSubject: string;
+  emailText: string;
 }
 
 /** PROJECT EMAIL: a project's sending domain became ready, or stopped verifying
@@ -116,6 +154,8 @@ export interface LenAvisoEvent {
   projectId: string;
   recipientUserId: string;
   cardId: string;
+  /** The person's own assistant's request notice (phase 5): her id, for her tab on the phone. */
+  assistantId?: string;
   /** The task's name: the push's title. */
   title: string;
   /** One line under 200 characters, without markdown (Claude Code's PushNotification rules). */
@@ -124,7 +164,7 @@ export interface LenAvisoEvent {
   emailText: string;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent;
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent | AssistantSummaryEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

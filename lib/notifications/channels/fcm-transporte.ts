@@ -1,6 +1,7 @@
 import { createPrivateKey, createSign } from "node:crypto";
 import type { NotificationEvent } from "../types";
 import { breaksQuietHours } from "../urgency";
+import { asleepPush } from "@/lib/assistants/visitor/asleep-messages";
 
 interface CuentaFcm { project_id: string; client_email: string; private_key: string }
 export function configuracionFcm(valor: string | undefined): CuentaFcm | null {
@@ -20,7 +21,7 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
   let title = "Len";
   let body: string;
   switch (evento.type) {
-    case "len_turno": body = `${evento.pregunta ? "❓ " : ""}${evento.preview}`; break;
+    case "len_turno": title = evento.asistente?.name ?? "Len"; body = `${evento.pregunta ? "❓ " : ""}${evento.preview}`; break;
     case "mencion": title = `@ ${evento.quien}`; body = evento.preview; break;
     case "chat_message": title = evento.senderName; body = evento.preview; break;
     case "functions_quota": title = "Edge Functions"; body = `${evento.percent}% · ${evento.calls} / ${evento.limit}`; break;
@@ -29,9 +30,22 @@ export function mensajeFcm(evento: NotificationEvent, token: string) {
     case "email_quota": title = "Email"; body = `${evento.percent}% · ${evento.sent} / ${evento.included}`; break;
     case "len_watch": title = evento.title; body = evento.body; break;
     case "len_aviso": title = evento.title; body = evento.push; break;
+    case "assistant_asleep": ({ title, body } = asleepPush(evento)); break;
+    case "assistant_summary": title = evento.title; body = evento.push; break;
   }
-  const abrir = evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {};
-  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag: `len-${evento.projectId}` } } } };
+  // Phase 5: the person's own assistant's id rides to the phone, which opens her tab — her turn (delivered file or not),
+  // her request notice and her summary. Len's data stays exactly as before.
+  const suya =
+    evento.type === "len_turno" ? evento.asistente?.id : evento.type === "len_aviso" || evento.type === "assistant_summary" ? evento.assistantId : undefined;
+  const abrir = {
+    ...(evento.type === "len_turno" && evento.abrir ? { abrir: evento.abrir } : {}),
+    ...(evento.type === "len_aviso" ? { tarjeta: evento.cardId } : {}),
+    ...(suya ? { asistente: suya } : {}),
+  };
+  // The person's own assistant's notification sits beside Len's for the same project, never replaces it.
+  const herOwn = (evento.type === "len_turno" && Boolean(evento.asistente)) || Boolean(suya) || evento.type === "assistant_summary";
+  const tag = herOwn ? `assistant-${evento.projectId}` : `len-${evento.projectId}`;
+  return { message: { token, notification: { title: title.slice(0, 100), body: body.slice(0, 500) }, data: { type: evento.type, projectId: evento.projectId, recipientUserId: evento.recipientUserId, ...abrir }, android: { priority: breaksQuietHours(evento) ? "high" : "normal", ttl: "3600s", notification: { channel_id: "len-avisos", tag } } } };
 }
 
 /** FCM HTTP v1: JWT firmado localmente. Nunca se imprimen respuestas ni claves. */

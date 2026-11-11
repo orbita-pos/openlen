@@ -22,6 +22,35 @@ describe("FCM sin servicios externos", () => {
     expect(mensajeFcm({ ...evento, abrir }, "t").message.data).toEqual({ type: "len_turno", projectId: "proyecto-1", recipientUserId: "ana", abrir });
     expect(Object.keys(mensajeFcm(evento, "t").message.data)).toEqual(["type", "projectId", "recipientUserId"]);
   });
+  it("🔴 the person's own assistant's turn is titled with its name and never replaces Len's notification", () => {
+    const m = mensajeFcm({ ...evento, asistente: { id: "a1", name: "Lucía", slug: "lucía" } }, "t").message;
+    expect(m.notification.title).toBe("Lucía");
+    expect(m.android.notification.tag).not.toBe(mensajeFcm(evento, "t").message.android.notification.tag);
+    // Phase 5: her id rides to the phone, which opens her tab.
+    expect(m.data).toEqual({ type: "len_turno", projectId: "proyecto-1", recipientUserId: "ana", asistente: "a1" });
+  });
+  it("🔴 a request notice of hers carries her id beside its card; Len's notices are exactly as before", () => {
+    const aviso = { type: "len_aviso", projectId: "p1", recipientUserId: "ana", cardId: "c1", title: "Lucía", push: "Envíos", emailSubject: "s", emailText: "t" } as const;
+    expect(mensajeFcm({ ...aviso, assistantId: "a1" }, "t").message.data).toEqual({ type: "len_aviso", projectId: "p1", recipientUserId: "ana", tarjeta: "c1", asistente: "a1" });
+    expect(mensajeFcm(aviso, "t").message.data).toEqual({ type: "len_aviso", projectId: "p1", recipientUserId: "ana", tarjeta: "c1" });
+    // Final review (phase 5, M7): hers sits beside Len's notice for the project, never replacing it (nor replaced).
+    expect(mensajeFcm({ ...aviso, assistantId: "a1" }, "t").message.android.notification.tag).toBe("assistant-p1");
+    expect(mensajeFcm(aviso, "t").message.android.notification.tag).toBe("len-p1");
+  });
+  it("🔴 the owner hears she fell asleep on the phone too: her name, 💤 and the numbers", () => {
+    const m = mensajeFcm({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana", assistantName: "Lucía", assistantSlug: "lucia", reason: "cap", spent: 12_480, cap: 12_500 }, "t").message;
+    expect(m.notification).toEqual({ title: "Lucía 💤", body: "124.80 / 125" });
+    expect(m.data).toEqual({ type: "assistant_asleep", projectId: "proyecto-1", recipientUserId: "ana" });
+  });
+  // Phase 4D (spec local 2026-11-06-asistente-propio, §6.9): her morning summary, with her id for the phone's tab.
+  it("🔴 her morning summary reaches the phone with her name, its line and her id", () => {
+    const m = mensajeFcm({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", assistantId: "a1", assistantName: "Lucía", assistantSlug: "lucia", locale: "es", title: "Lucía", push: "Ayer hablé con 3 personas.", emailSubject: "s", emailText: "t" }, "t").message;
+    expect(m.notification).toEqual({ title: "Lucía", body: "Ayer hablé con 3 personas." });
+    expect(m.data).toEqual({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", asistente: "a1" });
+    // Final review: beside Len's notice for her home project, never replacing it (nor replaced by it).
+    expect(m.android.notification.tag).toBe("assistant-p1");
+    expect(m.android.notification.tag).not.toBe(mensajeFcm({ ...evento, projectId: "p1" }, "t").message.android.notification.tag);
+  });
   it("los avisos del correo del proyecto también llegan con texto", () => {
     const base = { projectId: "proyecto-1", recipientUserId: "ana" };
     expect(mensajeFcm({ ...base, type: "email_domain", domain: "pan.mx", status: "ready" }, "t").message.notification.body).toContain("pan.mx");

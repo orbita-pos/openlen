@@ -42,6 +42,7 @@ import { fechaLocal, restarDias, ZONA_SIN_DATO } from "@/lib/resultados/zona";
 import { documentosDeLaPlataforma, textoDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import { realTerminalFor } from "@/lib/agent/sandbox/config";
 import { NODE_MODULES, nodeModulesOf, type NodeModulesView } from "@/lib/apps/npm/node-modules";
+import { servedFilesForTerminal } from "@/lib/agent/herramientas-de-ficheros";
 
 /** La carpeta oculta de lo que no es el sitio (la regla, en `ficheros.ts`). */
 export const CARPETA_DE_SOLO_LECTURA = "/.openlen";
@@ -100,7 +101,12 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
     if (files) nodeModules = session.nodeModulesView = nodeModulesOf(files, session.app.catalogo);
   }
 
+  // PHASE 4C: the other projects the person's own assistant serves, read-only under ~/.assistant/projects/<id>, as
+  // Claude Code's shell sees its additional working directories. Empty for Len.
+  const servidos = await servedFilesForTerminal(session, deps).catch(() => ({}) as Record<string, string>);
+
   const rutas = [
+    ...Object.keys(servidos),
     ...(nodeModules?.paths ?? []),
     ...(deps.resultados ? [RUTA_VISITAS, RUTA_FORMULARIOS, RUTA_MENSAJES] : []),
     RUTA_FOTOS,
@@ -119,6 +125,8 @@ export async function soloLecturaDeLaTerminal(session: AgentSession, deps: Agent
   return {
     rutas,
     async leer(ruta) {
+      const servido = servidos[ruta];
+      if (servido !== undefined) return servido;
       const r = deps.resultados;
       if (ruta === RUTA_VISITAS) {
         const out = await toolVerVisitas(session, deps, {});

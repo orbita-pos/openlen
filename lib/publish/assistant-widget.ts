@@ -16,6 +16,11 @@
 // verbatim into the translated locale variants, so a build-time pick would
 // freeze the root language onto all of them.
 
+import { FIGURE_ENGINE } from "@/lib/figure/engine/published";
+import { flatFigureSvg } from "@/lib/figure/flat";
+import type { FigureLook } from "@/lib/figure/look";
+import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
+
 interface AssistantStrings {
   open: string;
   dialog: string;
@@ -53,6 +58,35 @@ const STRINGS: Record<string, AssistantStrings> = {
   nl: { open: "Helpchat openen", dialog: "Helpchat", close: "Chat sluiten", ask: "Stel je vraag…", yourMessage: "Je bericht", send: "Versturen", talk: "Met een persoon praten", disclaimer: "De assistent kan fouten maken. Controleer belangrijke gegevens.", poweredBy: "met", greeting: "Hoi! 👋 Ik ben de assistent van {name}. Waarmee kan ik helpen?", yourName: "Je naam", yourEmail: "Je e-mail", yourEmailOpt: "Je e-mail (optioneel)", sendData: "Mijn gegevens versturen", thanks: "Bedankt! We nemen snel contact op. 🙌", connect: "Verbinden met een persoon", handoffOk: "Klaar! Iemand van het team schrijft je hier binnenkort. 🙌", handoffErr: "Ik kon nu niemand bereiken. Probeer het opnieuw.", noAnswer: "Sorry, ik kon nu geen antwoord geven.", error: "Er ging iets mis. Probeer het zo opnieuw." },
 };
 
+/** THE PERSON'S OWN ASSISTANT IN THE BUBBLE (spec local 2026-11-06-asistente-propio, §6.10; phase 2A): her texts,
+ *  apart from `STRINGS` so today's bubble keeps its bytes. {assistant} = her name, {name} = the business. */
+export const PERSONA_STRINGS: Record<string, { greetingPersona: string; asleep: string }> = {
+  en: { greetingPersona: "Hi! 👋 I’m {assistant}, from {name}. How can I help?", asleep: "I’m not here right now. Leave me your message and they’ll get back to you." },
+  es: { greetingPersona: "¡Hola! 👋 Soy {assistant}, de {name}. ¿En qué te ayudo?", asleep: "Ahora no estoy. Déjame tu mensaje y te contestan." },
+  pt: { greetingPersona: "Olá! 👋 Sou {assistant}, de {name}. Como posso ajudar?", asleep: "Agora não estou. Deixe sua mensagem e vão te responder." },
+  fr: { greetingPersona: "Bonjour ! 👋 Je suis {assistant}, de {name}. Comment puis-je vous aider ?", asleep: "Je ne suis pas là pour le moment. Laissez votre message et on vous répondra." },
+  de: { greetingPersona: "Hallo! 👋 Ich bin {assistant} von {name}. Wie kann ich helfen?", asleep: "Ich bin gerade nicht da. Hinterlass deine Nachricht, dann meldet sich jemand." },
+  it: { greetingPersona: "Ciao! 👋 Sono {assistant}, di {name}. Come posso aiutarti?", asleep: "Ora non ci sono. Lasciami il tuo messaggio e ti risponderanno." },
+  ja: { greetingPersona: "こんにちは！👋 {name} の {assistant} です。ご用件をどうぞ。", asleep: "ただいま対応できません。メッセージを残していただければ、折り返しご連絡します。" },
+  ko: { greetingPersona: "안녕하세요! 👋 {name}의 {assistant}입니다. 무엇을 도와드릴까요?", asleep: "지금은 자리에 없어요. 메시지를 남겨 주시면 연락드릴게요." },
+  zh: { greetingPersona: "你好！👋 我是 {name} 的 {assistant}，有什么可以帮你？", asleep: "我现在不在。请留下你的消息，我们会回复你。" },
+  nl: { greetingPersona: "Hoi! 👋 Ik ben {assistant} van {name}. Waarmee kan ik helpen?", asleep: "Ik ben er nu niet. Laat je bericht achter, dan nemen ze contact op." },
+};
+
+/** Her name and her figure: what the published bubble wears instead of the business's initial. Her color is the
+ *  figure's. */
+export interface AssistantPersona {
+  name: string;
+  /** A checked look (lib/figure/look.ts). */
+  look: FigureLook;
+}
+
+/** Where the release keeps the figure engine: a file of the site itself, named by its content (spec local
+ *  2026-11-10-figuras-del-asistente, §5.7). `publishToDir` writes it whenever the bubble is hers. */
+export const FIGURE_ENGINE_PATH = `openlen/${FIGURE_ENGINE.file}`;
+/** The side of her figure in the open bubble's header, in CSS pixels. */
+const FIGURE_PX = 76;
+
 export interface AssistantWidgetConfig {
   sub: string;
   apiBase: string;
@@ -74,7 +108,70 @@ export interface AssistantWidgetConfig {
 // interpolar al CSS; review e56321c).
 const DEFAULT_ACCENT = "#FF5A36";
 
-function widgetScript(cfg: AssistantWidgetConfig): string {
+/** Her bubble's own runtime (phase 2A): her greeting, a visitor id kept in the browser (spec §6.6), and her header.
+ *  Only in her bubble: today's keeps its exact bytes. No backticks here: this lives inside a template string. */
+const PERSONA_GREET =
+  'var P=C.P[(document.documentElement.lang||"en").slice(0,2).toLowerCase()]||C.P.en;\n' +
+  'var GREET=P.greetingPersona.split("{assistant}").join(C.persona.name).split("{name}").join(C.name||"");\n' +
+  'var VID=null;function vid(){if(VID)return VID;try{VID=localStorage.getItem("openlen-assistant-vid")}catch(e){}\n' +
+  'if(!VID||!/^[A-Za-z0-9_-]{16,64}$/.test(VID)){var b=[],i;try{var u=new Uint8Array(16);crypto.getRandomValues(u);for(i=0;i<16;i++)b.push(u[i])}catch(e){for(i=0;i<16;i++)b.push(Math.floor(Math.random()*256))}\n' +
+  'var s="";for(i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);\n' +
+  'VID=btoa(s).split("+").join("-").split("/").join("_").split("=").join("");try{localStorage.setItem("openlen-assistant-vid",VID)}catch(e){}}return VID}';
+const LEGACY_GREET = 'var GREET=C.greeting||T.greeting.split("{name}").join(C.name||"");';
+const PERSONA_HEADER = 'R.querySelector(".hd span").textContent=C.persona.name+" AI";\nR.querySelector(".hd .ava").innerHTML=C.persona.svg;';
+/** HER VISUALS (phase 2B): each in an iframe with sandbox="allow-scripts" (a null origin: nothing of the page is
+ *  reachable) whose srcdoc is the closed frame document (`C.F`: no fetch, images only as data:). Messages count only
+ *  from that frame; a link is followed only to this page's own origin and, like sendPrompt, only right after a click
+ *  in it.
+ *  No backticks here: this lives inside a template string. */
+const PERSONA_VISUALS =
+  'var FR=[];\n' +
+  'function piece(t){t=String(t||"").trim();if(t)bubble("bot",t)}\n' +
+  'function draw(it){if(!it.ready||it.loads!==1||it.sent)return;it.sent=true;var w=it.f.contentWindow;w.postMessage({kind:"ol-visual:theme",theme:"light",tokens:{"--accent":ACC,"--accent-strong":ACC,"--series-1":ACC}},"*");w.postMessage({kind:"ol-visual:render",code:it.code,final:true},"*")}\n' +
+  // Focus already in the frame means no window blur: the visitor's fresh activation there counts as the click.
+  'function tapped(it){return Date.now()-it.clicked<5000||(R.activeElement===it.f&&navigator.userActivation&&navigator.userActivation.isActive)}\n' +
+  'function frame(v){var r=document.createElement("div");r.className="row b vis";var f=document.createElement("iframe");\n' +
+  'f.setAttribute("sandbox","allow-scripts");f.setAttribute("title",String(v.title||""));f.setAttribute("srcdoc",C.F);\n' +
+  // A visual loads once: a second load is it navigating its own frame somewhere else, and it comes down. Its code
+  // arrives only after the first load, or a visual that navigated earlier would leave a single load in all.
+  'var it={f:f,code:String(v.code||""),clicked:0,loads:0,ready:false,sent:false};f.addEventListener("load",function(){if(++it.loads>1){r.remove();FR.splice(FR.indexOf(it),1)}else draw(it)});\n' +
+  'FR.push(it);r.appendChild(f);log.appendChild(r);scroll()}\n' +
+  'function answer(text,vs){if(!vs||!vs.length){bubble("bot",text);return}var from=0;\n' +
+  'for(var i=0;i<vs.length&&i<2;i++){var at=Math.max(from,Math.min(text.length,Number(vs[i].at)||0));piece(text.slice(from,at));from=at;frame(vs[i])}\n' +
+  'piece(text.slice(from))}\n' +
+  'window.addEventListener("message",function(e){for(var i=0;i<FR.length;i++){var it=FR[i];if(!e.source||e.source!==it.f.contentWindow)continue;var d=e.data||{};\n' +
+  'if(d.kind==="ol-visual:ready"){it.ready=true;draw(it)}\n' +
+  'else if(d.kind==="ol-visual:height"&&typeof d.height==="number"){it.f.style.height=Math.max(0,Math.min(480,Math.round(d.height)))+"px";scroll()}\n' +
+  'else if(d.kind==="ol-visual:link"&&typeof d.href==="string"&&tapped(it)){try{var u=new URL(d.href,location.href);if(u.origin===location.origin)location.assign(u.href)}catch(x){}}\n' +
+  'else if(d.kind==="ol-visual:prompt"&&typeof d.text==="string"&&tapped(it)){it.clicked=0;ask(String(d.text).slice(0,500))}\n' +
+  'return}});\n' +
+  'window.addEventListener("blur",function(){setTimeout(function(){for(var i=0;i<FR.length;i++){if(R.activeElement===FR[i].f)FR[i].clicked=Date.now()}},0)});\n';
+/** HER FIGURE, ALIVE ONCE THE BUBBLE IS OPEN (phase 6, spec local 2026-11-10-figuras-del-asistente, §5.7). The page
+ *  loads with her flat figure, already in this script. The engine is asked for only when the visitor opens the bubble,
+ *  only once, and only if the status answer said the figures are on (FIG) — so OPENLEN_FIGURES=0 reaches a page that
+ *  is already published. If it does not arrive, cannot draw or loses its context, the flat figure stays or comes
+ *  back. A visitor who asked for reduced motion keeps the flat one: it is the still pose. A browser without WebGL2 is
+ *  not asked either: it could not draw her, and one that old may not even parse the file. What she was last told to do
+ *  (LAST) is what she is born doing: asleep, if the visitor asked before the engine arrived.
+ *  No backticks here: this lives inside a template string. */
+const PERSONA_FIGURE =
+  'var FIG,LIVE=null,ASKED=false,LAST="ready";\n' +
+  'function act(a){LAST=a;try{if(LIVE)LIVE.setActivity(a)}catch(e){}}\n' +
+  'function settle(){setTimeout(function(){if(!busy)act(input.value.trim()?"listening":"ready")},1500)}\n' +
+  'function alive(on){try{if(LIVE)LIVE.setActive(on)}catch(e){}}\n' +
+  'function figure(){if(ASKED||FIG!==true||!window.WebGL2RenderingContext)return;\n' +
+  'try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return}catch(e){}\n' +
+  'ASKED=true;var s=document.createElement("script");s.src=C.persona.engine;s.async=true;\n' +
+  's.onload=function(){try{var slot=R.querySelector(".hd .ava"),flat=slot.querySelector("svg"),cv=document.createElement("canvas");\n' +
+  'cv.width=' + FIGURE_PX + ';cv.height=' + FIGURE_PX + ';cv.setAttribute("aria-hidden","true");cv.style.visibility="hidden";slot.appendChild(cv);\n' +
+  'LIVE=window.__openlenFigure.createFigure(cv,C.persona.look,{activity:LAST,onFirstFrame:function(){cv.style.visibility="visible";if(flat)flat.style.visibility="hidden"},\n' +
+  'onLost:function(){LIVE=null;try{cv.remove()}catch(e){}if(flat)flat.style.visibility="visible"}});\n' +
+  'if(!LIVE){cv.remove();return}alive(panel.classList.contains("open"))}catch(e){}};\n' +
+  '(document.head||document.documentElement).appendChild(s)}\n' +
+  'input.addEventListener("input",function(){if(!busy)act(input.value.trim()?"listening":"ready")});\n';
+const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
+
+function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | null = null): string {
   // Config is JSON-injected; everything else is static runtime JS. Kept terse
   // (single IIFE) so the gzipped payload stays small. Escaping "<" keeps
   // anything inside the JSON (a business name, a locale string) from closing
@@ -83,17 +180,21 @@ function widgetScript(cfg: AssistantWidgetConfig): string {
     sub: cfg.sub,
     api: cfg.apiBase,
     name: cfg.businessName,
-    accent: /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
+    // Her bubble wears her color (§6.10).
+    accent: persona ? persona.look.color : /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
     greeting: cfg.greeting || null,
     branding: cfg.branding ?? true,
     handoff: cfg.chatHandoff ?? false,
     S: STRINGS,
+    ...(persona
+      ? { persona: { name: persona.name, svg: flatFigureSvg(persona.look, FIGURE_PX), look: persona.look, engine: "/" + FIGURE_ENGINE_PATH }, P: PERSONA_STRINGS, F: buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true }) }
+      : {}),
   }).replace(/</g, "\\u003c");
 
   return `<script>(function(){try{
 var C=${C};
 var T=C.S[(document.documentElement.lang||"en").slice(0,2).toLowerCase()]||C.S.en;
-var GREET=C.greeting||T.greeting.split("{name}").join(C.name||"");
+${persona ? PERSONA_GREET : LEGACY_GREET}
 var host=document.createElement("div");host.setAttribute("aria-live","polite");
 document.body.appendChild(host);
 var R=host.attachShadow({mode:"open"});
@@ -156,7 +257,7 @@ R.innerHTML=
 +'.bub{max-width:80%;padding:8px 11px;border-radius:10px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}'
 +'.row.b .bub{background:#fff;color:#1a1a1a;border-top-left-radius:2px}'
 +'.row.u .bub{background:#ffe9e2;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#221b17;border-top-right-radius:2px}'
-+'.dots .bub{color:#888}'
++'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'\n+'.hd{background:#f6f1ee;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#1a1a1a;padding:10px 12px 10px 14px;gap:12px}.hd .ava{position:relative;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px;border-radius:0;background:transparent}.hd .ava svg,.hd .ava canvas{position:absolute;left:0;top:0;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px}.hd span{font-size:16px}.hd button{color:#1a1a1a}'" : ""}
 +'.ft{padding:8px 10px;background:#f4ede8}'
 +'.ip{display:flex;gap:8px;align-items:center}'
 +'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'
@@ -182,8 +283,7 @@ R.innerHTML=
 +'<div class="log" role="log" aria-live="polite"></div>'
 +'<div class="ft"><form class="ip"><input type="text" autocomplete="off" maxlength="500"/><button type="submit">→</button></form>'
 +(C.handoff?'<button type="button" class="talk"></button>':'')
-+'<div class="dis"></div>'
-+(C.branding?'<div class="pb"><span></span> <a href="https://openlen.com" target="_blank" rel="noopener">OpenLen</a></div>':'')
+${persona ? "" : `+'<div class="dis"></div>'\n`}+(C.branding?'<div class="pb"><span></span> <a href="https://openlen.com" target="_blank" rel="noopener">OpenLen</a></div>':'')
 +'</div></div>';
 
 var btn=R.querySelector(".btn"),panel=R.querySelector(".panel"),log=R.querySelector(".log"),
@@ -197,11 +297,9 @@ panel.setAttribute("aria-label",T.dialog);
 xb.setAttribute("aria-label",T.close);
 input.placeholder=T.ask;input.setAttribute("aria-label",T.yourMessage);
 send.setAttribute("aria-label",T.send);
-R.querySelector(".dis").textContent=T.disclaimer;
-if(talk)talk.textContent=T.talk;
+${persona ? "" : 'R.querySelector(".dis").textContent=T.disclaimer;\n'}if(talk)talk.textContent=T.talk;
 var pbs=R.querySelector(".pb span");if(pbs)pbs.textContent=T.poweredBy;
-R.querySelector(".hd span").textContent=C.name;
-R.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();
+${persona ? PERSONA_HEADER : LEGACY_HEADER}
 var history=[],busy=false,opened=false,leadShown=false;
 
 function scroll(){log.scrollTop=log.scrollHeight}
@@ -250,13 +348,13 @@ else{bubble("bot",T.handoffOk)}})
 log.appendChild(wrap);scroll();wrap.querySelector('input[name=nombre]').focus()}
 
 function ask(text){if(busy)return;busy=true;send.disabled=true;
-history.push({role:"user",content:text});bubble("user",text);
+history.push({role:"user",content:text});bubble("user",text);${persona ? 'act("thinking");' : ""}
 var d=dots();
 fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},
-body:JSON.stringify({message:text,history:history.slice(0,-1)})})
+body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-.then(function(j){d.remove();var a=(j&&j.respuesta)||T.noAnswer;
-history.push({role:"assistant",content:a});bubble("bot",a);
+.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){act("asleep");bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||${persona ? '(j&&j.visuals&&j.visuals.length?"":T.noAnswer)' : "T.noAnswer"};
+history.push({role:"assistant",content:a});${persona ? 'act("talking");settle();answer(a,j&&j.visuals);' : 'bubble("bot",a);'}
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
 // de un error que el visitante no puede resolver, se vuelve a preguntar el
@@ -266,12 +364,12 @@ if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // error que el visitante no puede resolver. El estado se pregunta SIN cache y
 // solo para lo que el 403 no dice: si el chat sigue vivo, para devolverle su
 // lanzador. Si no se puede saber, se retira igual y sin lanzador.
-.catch(function(s){d.remove();if(s===403){pedirEstado(true).then(function(j){retirar(!!(j&&j.chat===true))});return}bubble("bot",T.error)})
+.catch(function(s){d.remove();if(s===403){pedirEstado(true).then(function(j){retirar(!!(j&&j.chat===true))});return}${persona ? 'act("error");settle();' : ""}bubble("bot",T.error)})
 .then(function(){busy=false;send.disabled=false;input.focus()})}
 
 function open(){panel.classList.add("open");btn.setAttribute("aria-expanded","true");
-if(!opened){opened=true;bubble("bot",GREET)}input.focus()}
-function close(){panel.classList.remove("open");btn.setAttribute("aria-expanded","false");btn.focus()}
+if(!opened){opened=true;bubble("bot",GREET)}${persona ? "figure();alive(true);" : ""}input.focus()}
+function close(){panel.classList.remove("open");btn.setAttribute("aria-expanded","false");${persona ? "alive(false);" : ""}btn.focus()}
 btn.addEventListener("click",function(){panel.classList.contains("open")?close():open()});
 xb.addEventListener("click",close);
 form.addEventListener("submit",function(e){e.preventDefault();var v=input.value.trim();if(!v)return;input.value="";ask(v)});
@@ -308,13 +406,13 @@ return fetch(C.api+"/api/assistant/"+C.sub,o)
 function comprobarEstado(){
 pedirEstado(false).then(function(j){
 if(!j)return;
-if(j.asistente===false){retirar(j.chat===true);return}
+if(j.asistente===false){retirar(j.chat===true);return}${persona ? 'FIG=j.figuras===true;if(panel.classList.contains("open"))figure();' : ""}
 // El asistente sigue, pero el traspaso no: lo unico muerto es su boton. Se
 // mira «traspaso» y no «chat» porque el handoff pide ademas un chat de
 // invitado y de entrada libre; con «chat» a secas, un chat en modo cuenta
 // dejaba el boton puesto dando 403 <not_allowed>.
 if(C.handoff&&j.traspaso===false&&talk){try{talk.remove()}catch(e){}}})}
-comprobarEstado();
+${persona ? PERSONA_VISUALS + PERSONA_FIGURE : ""}comprobarEstado();
 }catch(e){}})();</script>`;
 }
 
@@ -327,8 +425,19 @@ export function bakeAssistantWidget(
   html: string,
   cfg: AssistantWidgetConfig,
 ): string {
+  return bake(html, widgetScript(cfg));
+}
+
+/** HER BUBBLE (phase 2A): the same widget wearing the person's own assistant — «{name} AI», her figure and color, no
+ *  disclaimer line, a visitor id instead of the client's history, and «I'm not here now» when she sleeps. Only the
+ *  published page bakes it (declared in bake-surfaces.ts). */
+export function bakeAssistantPersona(html: string, cfg: AssistantWidgetConfig & { persona: AssistantPersona }): string {
+  return bake(html, widgetScript(cfg, cfg.persona));
+}
+
+function bake(html: string, script: string): string {
   if (html.includes(MARKER)) return html;
-  const tag = widgetScript(cfg).replace("<script>", `<script ${MARKER}>`);
+  const tag = script.replace("<script>", `<script ${MARKER}>`);
   const idx = html.lastIndexOf("</body>");
   return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
 }

@@ -65,6 +65,8 @@
       "get_goal": "ゴールを確認",
       "create_goal": "ゴールを作成",
       "update_goal": "ゴールを更新",
+      "create_assistant": "アシスタントを作成",
+      "ask_len": "Len に引き継ぎ",
       "schedule_create": "予定タスクを作成",
       "schedule_list": "予定タスクを確認",
       "schedule_delete": "予定タスクを削除",
@@ -124,6 +126,7 @@
       "installed": "「{title}」をあなたの OpenLen にインストールしました。"
     },
     "errors": {
+      "agent_off": "現在ご利用いただけません。数分後にもう一度お試しください。",
       "turn_limit": "エージェントがターンごとのステップ上限に達しました。",
       "tool_limit": "エージェントがターンごとのアクション上限に達しました。",
       "budget_limit": "アカウントのクレジットがなくなったため、Len は停止しました。ここまでの作業は保存されています。クレジットが補充されたら、続けるよう依頼してください。",

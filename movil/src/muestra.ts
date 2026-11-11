@@ -58,6 +58,7 @@ const tareasDeMuestra = () => ({
 });
 
 const PROYECTOS = [{ id: "m1", title: "Panadería Luna", subdomain: "panaderia-luna", publishedAt: "2026-09-29T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" }];
+const ASISTENTE_DE_MUESTRA = { id: "am1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "m1", projectIds: ["m1"] };
 const HISTORIAL: StoredChatTurn[] = [
   { id: "t1", userText: "Hazme una página para mi panadería", assistantReasoning: "¡Ya quedó tu página!\n\nLe puse tus panes, un formulario para encargar pasteles y cómo llegar.", status: "applied", appliedAt: Date.now() - 26 * HORA,
     actions: [{ tool: "present", status: "done", summary: "menu-otono.pdf", delivered: [ENTREGA] }] },
@@ -160,6 +161,15 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
       if (b.accion === "vistas") equipoMuestra.hilos.forEach(h => { if (b.hilos?.includes(h.id)) h.sinVer = 0; });
       return Response.json({ ok: true });
     }
+    // The person's own assistant's tab (phase 5): one assistant, Lucía, at home in the bakery.
+    if (ruta === "/api/assistants") return Response.json({ assistants: [ASISTENTE_DE_MUESTRA] });
+    if (ruta === "/api/assistants/am1/chat") return Response.json({ chatHistory: [] });
+    if (ruta === "/api/assistants/am1/visits") {
+      const at = new Date(Date.now() - 3 * HORA).toISOString();
+      return Response.json({ visits: [{ id: "vm1", projectId: "m1", projectTitle: "Panadería Luna", startedAt: at, lastAt: at, messageCount: 2, handedOff: false, lines: [{ role: "visitor", text: "¿Tienen pan sin gluten?", at }, { role: "assistant", text: "Sí, los jueves.", at }] }] });
+    }
+    if (ruta === "/api/assistants/am1/requests") return Response.json({ cards: [] });
+    if (ruta.startsWith("/api/assistants/am1/requests/")) return Response.json({ status: "dismissed" });
     if (ruta === "/api/projects") return Response.json({ projects: PROYECTOS });
     if (ruta.startsWith("/api/projects/m1/preview")) return Response.json({ enabled: true, token: "muestra", __muestraHtml: pagina(false) });
     if (ruta === "/api/projects/m1") {

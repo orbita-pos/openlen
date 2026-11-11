@@ -26,8 +26,9 @@ function prueba(o: { configurado?: boolean; activa?: boolean; permiso?: "granted
   }) };
   const entregados: [string, string][] = [];
   const avisosDeLen: [string, string | null][] = [];
-  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); }, onAbrirEntregado: (p, url) => { entregados.push([p, url]); }, onAbrirAviso: (p, tarjeta) => { avisosDeLen.push([p, tarjeta]); } });
-  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, entregados, avisosDeLen, eventos: () => eventos! };
+  const asistentes: [string, { parte: string; tarjeta: string | null }][] = [];
+  const control = crearControlDeAvisos({ cliente, nativo, configurado: o.configurado ?? true, onEstado: e => estados.push(e), onAbrirProyecto: (p, destino) => { abiertos.push(p); destinos.push(destino); }, onAbrirEntregado: (p, url) => { entregados.push([p, url]); }, onAbrirAviso: (p, tarjeta) => { avisosDeLen.push([p, tarjeta]); }, onAbrirAsistente: (a, donde) => { asistentes.push([a, donde]); } });
+  return { control, cliente, nativo, llamadas, tokens, abiertos, destinos, estados, entregados, avisosDeLen, asistentes, eventos: () => eventos! };
 }
 // A finished task's push opens what Len delivered (spec local 2026-10-31-len-movil, §5.4).
 describe("the push of a finished task", () => {
@@ -143,5 +144,32 @@ describe("avisos del teléfono", () => {
     p.eventos().recibir({ projectId: "p1", recipientUserId: "ana" }, "Len", "Listo");
     expect(p.abiertos).toEqual([]); expect(p.estados.at(-1)?.recibido?.cuerpo).toBe("Listo");
     await p.control.abrirRecibido(); expect(p.abiertos).toEqual(["p1"]);
+  });
+});
+
+// The person's own assistant's pushes (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): her id opens her tab.
+describe("her pushes", () => {
+  it("🔴 her turn opens Hablar, her request opens Pedidos with the card, her summary opens Conversaciones", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_turno", asistente: "a1" });
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "c1", asistente: "a1" });
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "assistant_summary", asistente: "a1" });
+    expect(p.asistentes).toEqual([["a1", { parte: "hablar", tarjeta: null }], ["a1", { parte: "pedidos", tarjeta: "c1" }], ["a1", { parte: "conversaciones", tarjeta: null }]]);
+    expect(p.avisosDeLen).toEqual([]);
+    expect(p.abiertos).toEqual([]);
+  });
+
+  it("🔴 a push without her id is exactly as before; an id that isn't one is ignored", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "c1" });
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "len_aviso", tarjeta: "c2", asistente: "../x" });
+    expect(p.avisosDeLen).toEqual([["p1", "c1"], ["p1", "c2"]]);
+    expect(p.asistentes).toEqual([]);
+  });
+
+  it("another person's push of hers opens nothing", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "otra", type: "assistant_summary", asistente: "a1" });
+    expect(p.asistentes).toEqual([]);
   });
 });

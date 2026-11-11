@@ -65,6 +65,8 @@
       "get_goal": "Vendo o objetivo",
       "create_goal": "Criando o objetivo",
       "update_goal": "Atualizando o objetivo",
+      "create_assistant": "Criando seu assistente",
+      "ask_len": "Passando para o Len",
       "schedule_create": "Agendando uma tarefa",
       "schedule_list": "Vendo as tarefas agendadas",
       "schedule_delete": "Apagando uma tarefa agendada",
@@ -124,6 +126,7 @@
       "installed": "Instalei «{title}» no seu OpenLen."
     },
     "errors": {
+      "agent_off": "Não está disponível agora. Tente de novo em alguns minutos.",
       "turn_limit": "O agente atingiu o limite de passos por turno.",
       "tool_limit": "O agente atingiu o limite de ações por turno.",
       "budget_limit": "O Len parou porque sua conta ficou sem créditos. O que ele fez ficou salvo; quando tiver créditos de novo, peça para ele continuar.",

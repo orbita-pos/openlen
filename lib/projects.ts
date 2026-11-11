@@ -38,6 +38,13 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
+import { rehomeAssistantsOf } from "@/lib/assistants/projects";
+import { assistantOfProject, switchOldAssistantOff } from "@/lib/assistants/store";
+import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
+import { publicDataOf } from "@/lib/assistants/visitor/public-data";
+import { assistantOnPage, forgetWhatWasPublished, saveKnowledge } from "@/lib/assistants/visitor/store";
 import { ensurePageMeta } from "@/lib/publish/ensure-page-meta";
 import { ensureSocialOgImage } from "@/lib/branding/social-image";
 import { resolveProjectLogo } from "@/lib/branding/resolve-project-logo";
@@ -573,6 +580,9 @@ export async function deleteProject(
   const pageDbs = existing[0] ? await pageDatabaseScopes(projectId) : null;
   // Y la caja de la terminal real: su fila también se va en cascada.
   const sandboxId = existing[0] ? await sandboxOfProject(projectId) : null;
+  // The person's own assistant whose home this is and who serves another project moves there with her conversation
+  // (spec local 2026-11-06-asistente-propio, §4.5): she is the person's, not this project's. Fail-soft: deleting goes on.
+  if (existing[0]) await rehomeAssistantsOf(projectId).catch((err: unknown) => console.warn("[assistants] couldn't move an assistant's home before deleting its project", err));
 
   const result = await db
     .delete(schema.projects)
@@ -1075,6 +1085,14 @@ export async function publishProject(
     written: boolean;
     locales: string[];
   };
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble, and what
+  // she knows is what this publish writes (below, after it succeeds).
+  const ella = assistantsEnabled()
+    ? await assistantOnPage(params.projectId).catch((err: unknown) => {
+        console.warn("[publish] couldn't tell whether the page's own assistant is on", err);
+        return null;
+      })
+    : null;
   try {
     // STRIPE (spec local 2026-10-21-stripe-integration, §6.4): copy to live mode now —the release is
     // content-addressed, so the live ids must exist before it is written— and write it with them.
@@ -1088,9 +1106,12 @@ export async function publishProject(
       formConfigs: project.data?.settings?.forms,
       analyticsEnabled: !project.data?.settings?.analyticsDisabled,
       logoUrl: effectiveLogoUrl,
-      assistant: project.data?.settings?.assistant?.enabled
-        ? { enabled: true, businessName: project.title || v.value }
-        : undefined,
+      // The page's bubble: the person's own assistant when she is on it (phase 2A), today's assistant otherwise.
+      assistant: assistantBakeOf({
+        legacyEnabled: Boolean(project.data?.settings?.assistant?.enabled),
+        businessName: project.title || v.value,
+        onPage: ella ? { name: ella.assistant.name, color: ella.assistant.color, look: ella.assistant.look } : null,
+      }),
       chat: project.data?.settings?.chat?.enabled
         ? {
             enabled: true,
@@ -1246,6 +1267,14 @@ export async function publishProject(
     void recordPublishedSources({ projectId: params.projectId, ownerId: params.userId, data: project.data, folder: projectFiles });
   }
 
+  // 5b'. THE PERSON'S OWN ASSISTANT: what she knows of a project she serves is what it just published, never the draft
+  // (phase 2A) — whether or not her bubble is on it (phase 4: she talks about each of her person's projects). With her on
+  // the page, this publish baked her bubble.
+  const suya = ella ?? (assistantsEnabled() ? await assistantOfProject(params.projectId).catch(() => null) : null);
+  if (suya && project.data) {
+    await rememberWhatWasPublished(params.projectId, project.data, new Date(), { save: saveKnowledge, switchOldOff: switchOldAssistantOff, publicData: publicDataOf }, { onPage: Boolean(ella) });
+  }
+
   // 5c. Fire-and-forget R2 backup of the release HTML. The nightly rclone
   // sync is the durability backstop; this gives us a lower-RPO copy that
   // lands in cloud storage seconds after the publish. Soft-fails if R2
@@ -1397,6 +1426,10 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
       updatedAt: new Date(),
     })
     .where(eq(schema.projects.id, params.projectId));
+
+  // The person's own assistant forgets what it published (final review I1): never told to other pages' visitors or to
+  // her owner as live. Fail-soft: unpublishing goes on.
+  await forgetWhatWasPublished(params.projectId).catch((err: unknown) => console.warn("[assistants] what an unpublished project published wasn't forgotten", err));
 
   // Filesystem cleanup is best-effort. The subdomain is already freed by
   // the DB update above; a stranded dir is harmless because nginx will

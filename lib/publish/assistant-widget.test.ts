@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { bakeAssistantWidget } from "./assistant-widget";
+import { createHash } from "node:crypto";
+import { bakeAssistantPersona, bakeAssistantWidget, PERSONA_STRINGS } from "./assistant-widget";
 
 const DOC = "<!doctype html><html><body><h1>Hi</h1></body></html>";
 const CFG = {
@@ -300,5 +301,128 @@ describe("un 403 al preguntar retira la burbuja", () => {
     await pintarConPost403(true);
     expect(anfitrion()).toBeNull();
     expect(document.body.getAttribute("data-lanzador")).toBe("si");
+  });
+});
+
+// ─── HER BUBBLE (spec local 2026-11-06-asistente-propio, §4.4.5, §6.6, §6.10; phase 2A) ───────────────────────────
+// The person's own assistant in the published page's bubble: «{name} AI», her figure and color, no disclaimer line, a
+// visitor id kept in the browser, and «I'm not here now» when she sleeps. Run for real in the page, like the tests above.
+describe("her bubble", () => {
+  const PERSONA = { name: "Lucía", look: { v: 1, shape: "heart", color: "#5fb8a6", eyes: "round", eyewear: "none", accessory: "crown" } as const };
+  // jsdom has no named controls on a form (`form.nombre`, measured 07/11); every browser does, and the contact form
+  // reads them. The page gets them back, for this test only.
+  const NAMED_CONTROLS =
+    `["nombre","email"].forEach(function(n){Object.defineProperty(HTMLFormElement.prototype,n,{configurable:true,get:function(){return this.elements.namedItem(n)}})});`;
+  // One answer for every question, or one per question in order; the contact form's POST (/api/f/) answers ok.
+  const pagina = (respuesta: Record<string, unknown> | Record<string, unknown>[]) =>
+    sonda(
+      NAMED_CONTROLS +
+        `window.__rs=${JSON.stringify(Array.isArray(respuesta) ? respuesta : [respuesta])};` +
+        `window.fetch=function(u,o){if(o&&o.method==="POST"){var n=Number(document.body.getAttribute("data-posts")||"0")+1;` +
+        `document.body.setAttribute("data-posts",String(n));document.body.setAttribute("data-post-"+n,o.body);` +
+        `var r=String(u).indexOf("/api/f/")>=0?{ok:true}:(window.__rs.length>1?window.__rs.shift():window.__rs[0]);` +
+        `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(r)}})}` +
+        `return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve({asistente:true,chat:false,traspaso:false})}})};`,
+    ).replace("<html>", '<html lang="es">');
+  const pintar = async (respuesta: Record<string, unknown> | Record<string, unknown>[]) => {
+    document.open();
+    document.write(bakeAssistantPersona(pagina(respuesta), { ...CFG, persona: PERSONA }));
+    document.close();
+    await new Promise((r) => setTimeout(r, 5));
+    return (document.querySelector("body > div[aria-live]") as HTMLElement).shadowRoot!;
+  };
+  const pregunta = async (root: ShadowRoot, texto: string) => {
+    (root.querySelector(".btn") as HTMLButtonElement).click();
+    (root.querySelector(".ip input") as HTMLInputElement).value = texto;
+    (root.querySelector(".ip") as HTMLFormElement).dispatchEvent(new Event("submit", { cancelable: true }));
+    await new Promise((r) => setTimeout(r, 10));
+  };
+
+  it("🔴 her bubble says «Lucía AI», wears her figure and color, and has no disclaimer line", async () => {
+    const root = await pintar({ respuesta: "Hola", intent: "answer" });
+    expect(root.querySelector(".hd span")!.textContent).toBe("Lucía AI");
+    expect(root.querySelector(".hd .ava svg")).not.toBeNull();
+    expect(root.querySelector(".dis")).toBeNull();
+    expect(root.innerHTML).toContain("#5fb8a6");
+    (root.querySelector(".btn") as HTMLButtonElement).click();
+    expect(root.querySelector(".log")!.textContent).toContain("Lucía");
+    expect(root.querySelector(".log")!.textContent).toContain(CFG.businessName);
+  });
+
+  it("her bubble sends {message, vid} with a vid kept in localStorage, and no history", async () => {
+    localStorage.removeItem("openlen-assistant-vid");
+    const root = await pintar({ respuesta: "Abrimos a las 9.", intent: "answer" });
+    await pregunta(root, "¿A qué hora abren?");
+    await pregunta(root, "¿Y el domingo?");
+    const first = JSON.parse(document.body.getAttribute("data-post-1")!);
+    const second = JSON.parse(document.body.getAttribute("data-post-2")!);
+    expect(first.message).toBe("¿A qué hora abren?");
+    expect(first.vid).toMatch(/^[A-Za-z0-9_-]{16,64}$/);
+    expect(second.vid).toBe(first.vid);
+    expect(first.history).toBeUndefined();
+    expect(second.history).toBeUndefined();
+    expect(localStorage.getItem("openlen-assistant-vid")).toBe(first.vid);
+  });
+
+  it("asleep shows the asleep line and the contact form", async () => {
+    const root = await pintar({ asleep: true, intent: "lead" });
+    await pregunta(root, "hola");
+    expect(root.querySelector(".log")!.textContent).toContain(PERSONA_STRINGS.es.asleep);
+    expect(root.querySelector("form.lead"), root.querySelector(".log")!.textContent!).not.toBeNull();
+  });
+
+  // Deferred minor: a visitor who had already sent the contact form on this page load got the asleep line with no form.
+  // PHASE 2B: her visuals, in a sandboxed frame that can't send anything and only links to the business.
+  const CON_VISUAL = { respuesta: "Estos son los huecos:\n\n¿Reservas?", intent: "answer", visuals: [{ title: "huecos", code: "<div>17:00</div>", at: 21 }] };
+  const marco = (root: ShadowRoot) => root.querySelector("iframe") as HTMLIFrameElement;
+
+  // What the frame says back (links, height, from whom) needs a real browser: in jsdom an iframe inside a shadow root
+  // has no window (measured 08/11: contentWindow is null). → assistant-widget.browser.test.ts
+  it("her answer with a visual: text, a sandboxed frame, text — in order", async () => {
+    const root = await pintar(CON_VISUAL);
+    await pregunta(root, "¿huecos el sábado?");
+    const f = marco(root);
+    expect(f).not.toBeNull();
+    expect(f.getAttribute("sandbox")).toBe("allow-scripts");
+    expect(f.getAttribute("srcdoc")).toContain("connect-src 'none'");
+    expect(f.getAttribute("title")).toBe("huecos");
+    const order = [...root.querySelectorAll(".log .row.b")].map((r) => (r.querySelector("iframe") ? "[visual]" : r.textContent));
+    expect(order.slice(-3)).toEqual(["Estos son los huecos:", "[visual]", "¿Reservas?"]);
+  });
+
+  // Final review I2: an answer that is only a visual showed «no pude responder» under it.
+  it("🔴 an answer that is only a visual shows the visual, not «I couldn't answer»", async () => {
+    const root = await pintar({ respuesta: "", intent: "answer", visuals: [{ title: "huecos", code: "<div>17:00</div>", at: 0 }] });
+    await pregunta(root, "¿huecos?");
+    expect(marco(root)).not.toBeNull();
+    expect(root.querySelector(".log")!.textContent).not.toContain("Lo siento, no pude responder ahora.");
+  });
+
+  it("🔴 asleep after a form was already sent: the form comes back; one still on screen isn't doubled", async () => {
+    const root = await pintar([{ respuesta: "Déjame tus datos.", intent: "lead" }, { asleep: true, intent: "lead" }, { asleep: true, intent: "lead" }]);
+    await pregunta(root, "¿hacen envíos?");
+    const first = root.querySelector<HTMLFormElement>("form.lead")!;
+    (first.querySelector("input[name=email]") as HTMLInputElement).value = "ana@example.com";
+    first.dispatchEvent(new Event("submit", { cancelable: true }));
+    await new Promise((r) => setTimeout(r, 10));
+    expect(root.querySelector("form.lead")).toBeNull();
+    await pregunta(root, "¿y mañana?");
+    expect(root.querySelectorAll("form.lead")).toHaveLength(1);
+    await pregunta(root, "¿hola?");
+    expect(root.querySelectorAll("form.lead")).toHaveLength(1);
+  });
+
+  it("the 10 languages have her greeting with {assistant} and {name}, and the asleep line", () => {
+    for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+      const s = PERSONA_STRINGS[l]!;
+      expect(s.greetingPersona, l).toContain("{assistant}");
+      expect(s.greetingPersona, l).toContain("{name}");
+      expect(s.asleep.length, l).toBeGreaterThan(10);
+    }
+  });
+
+  it("CONTROL ARM: without persona the bubble is byte for byte today's", () => {
+    // Pinned from today's bubble BEFORE her persona existed (the unchanged file, 07/11).
+    expect(createHash("sha256").update(bakeAssistantWidget(DOC, CFG)).digest("hex")).toBe("6704f720ae0b62577b1bfa9274d5173ed98e96cc66812751406eed56ae862c2e");
   });
 });

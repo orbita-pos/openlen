@@ -10,7 +10,7 @@
  */
 import { CLAVE_TOOL_RESULT, fallo } from "@/lib/agent/ficheros/resultado";
 import type { ToolOutcome } from "@/lib/agent/tools";
-import { buildVisualsManual, type VisualPlatform } from "./manual";
+import { buildVisualsManual, type VisualPlatform, type VisualSurface } from "./manual";
 import { READ_ME, SHOW_WIDGET, VISUAL_MODULES, WidgetArgsError, parseWidgetArgs, type VisualModule } from "./widget";
 
 const PLATFORMS: readonly VisualPlatform[] = ["mobile", "desktop", "unknown"];
@@ -75,7 +75,9 @@ function toolError(message: string): ToolOutcome {
   return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
 }
 
-export function toolReadMe(args: Record<string, unknown>): ToolOutcome {
+/** `surface` "bubble" = the person's own assistant on a published page (phase 2B): the bubble's manual, always as on a
+ *  phone (the bubble is narrow everywhere). Len's chat calls it without one. */
+export function toolReadMe(args: Record<string, unknown>, surface: VisualSurface = "chat"): ToolOutcome {
   const asked = Array.isArray(args.modules) ? args.modules : [];
   const modules: VisualModule[] = [];
   for (const m of asked) {
@@ -84,6 +86,7 @@ export function toolReadMe(args: Record<string, unknown>): ToolOutcome {
     }
     modules.push(m as VisualModule);
   }
+  if (surface === "bubble") return { response: { ok: true, [CLAVE_TOOL_RESULT]: buildVisualsManual(modules, "mobile", "bubble") } };
   const platform = PLATFORMS.includes(args.platform as VisualPlatform) ? (args.platform as VisualPlatform) : "unknown";
   return { response: { ok: true, [CLAVE_TOOL_RESULT]: buildVisualsManual(modules, platform) } };
 }

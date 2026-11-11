@@ -77,6 +77,8 @@ export function ChatComposer({
   debajo,
   etiquetaEnviar,
   placeholder,
+  disclaimer,
+  effortLabel,
   esApp = false,
   esJuego = false,
   mencionables,
@@ -140,6 +142,10 @@ export function ChatComposer({
   etiquetaEnviar?: string;
   /** El texto de la caja vacía, si no es el de siempre (sin turno corriendo). */
   placeholder?: string;
+  /** The line under the box, when it isn't Len's (the person's own assistant: it never publishes). */
+  disclaimer?: string;
+  /** The effort button's name, when it isn't Len's (the person's own assistant, phase 4E). */
+  effortLabel?: string;
   /** El proyecto es una app: la caja vacía habla de la app, no de «tu página». */
   esApp?: boolean;
   /** The app is a game: the empty box and the line below talk about the game. */
@@ -516,6 +522,7 @@ export function ChatComposer({
                 if (v) setModeOpen(false);
               }}
               locked={onModeChange !== undefined && mode === "dynamis"}
+              {...(effortLabel ? { label: effortLabel } : {})}
               variant="pill"
               t={tr}
             />
@@ -525,6 +532,8 @@ export function ChatComposer({
           <button
             type="button"
             onClick={busy && !typed ? onStop : () => void enviar()}
+            // Sending, as opposed to stopping or waiting: what her place tints with her color (tokens.css).
+            data-send={hasContent && !(bloqueado && typed) && !(busy && !typed) ? "send" : "other"}
             disabled={(!busy && !hasContent) || (bloqueado && typed) || (uploading && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
@@ -552,7 +561,7 @@ export function ChatComposer({
         </div>
       </div>
       {debajo}
-      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{t(esJuego ? "newChat.composer.disclaimerGame" : esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
+      {!compacta && <p className="mb-[-4px] mt-[7px] text-center text-[11px] fg-faint">{disclaimer ?? t(esJuego ? "newChat.composer.disclaimerGame" : esApp ? "newChat.composer.disclaimerApp" : "newChat.composer.disclaimer")}</p>}
     </div>
   );
 }

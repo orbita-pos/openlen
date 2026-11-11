@@ -1,10 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { capEmail } from "@/lib/app-ai/cap-messages";
-import { sendAppAiCapEmail, sendChatNotificationEmail, sendFunctionsQuotaEmail, sendLenAvisoEmail, sendLenWatchEmail, sendMentionEmail, sendProjectEmailNotice } from "@/lib/email";
+import { sendAppAiCapEmail, sendAssistantAsleepEmail, sendChatNotificationEmail, sendFunctionsQuotaEmail, sendLenAvisoEmail, sendLenWatchEmail, sendMentionEmail, sendProjectEmailNotice } from "@/lib/email";
+import { asleepEmail } from "@/lib/assistants/visitor/asleep-messages";
 import { domainNoticeEmail, quotaNoticeEmail } from "@/lib/project-email/notices";
 import { quotaEmail } from "@/lib/functions/quota-messages";
-import type { AppAiCapEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenWatchEvent, MencionEvent } from "../types";
+import type { AppAiCapEvent, AssistantAsleepEvent, AssistantSummaryEvent, NotificationChannel, NotificationEvent, DeliveryResult, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenWatchEvent, MencionEvent } from "../types";
 import { urlDelChat, urlDelHilo } from "./webpush";
 
 export const emailChannel: NotificationChannel = {
@@ -23,6 +24,8 @@ export const emailChannel: NotificationChannel = {
     if (event.type === "email_domain" || event.type === "email_quota") return sendProjectEmailAlert(event);
     if (event.type === "len_watch") return sendLenWatchAlert(event);
     if (event.type === "len_aviso") return sendLenAvisoAlert(event);
+    if (event.type === "assistant_asleep") return sendAssistantAsleepAlert(event);
+    if (event.type === "assistant_summary") return sendAssistantSummaryAlert(event);
     // Resolve recipient's platform email + display name
     const userRows = await db
       .select({ email: schema.users.email, name: schema.users.name })
@@ -101,6 +104,14 @@ async function sendLenAvisoAlert(event: LenAvisoEvent): Promise<DeliveryResult> 
   return "sent";
 }
 
+/** Her morning summary (phase 4D): its texts come written, like an event task's notice. */
+async function sendAssistantSummaryAlert(event: AssistantSummaryEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  await sendLenAvisoEmail({ to: u.email, subject: event.emailSubject, text: event.emailText });
+  return "sent";
+}
+
 async function sendLenWatchAlert(event: LenWatchEvent): Promise<DeliveryResult> {
   const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
   if (!u?.email) return "skipped";
@@ -120,6 +131,15 @@ async function sendProjectEmailAlert(event: EmailDomainEvent | EmailQuotaEvent):
   }
   const [p] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, event.projectId)).limit(1);
   await sendProjectEmailNotice({ to: u.email, ...domainNoticeEmail({ projectId: event.projectId, projectTitle: p?.title ?? null, domain: event.domain, status: event.status, siteUrl }) });
+  return "sent";
+}
+
+/** The person's own assistant fell asleep (phase 2A): to the owner, in English like the AI cap's. */
+async function sendAssistantAsleepAlert(event: AssistantAsleepEvent): Promise<DeliveryResult> {
+  const [u] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, event.recipientUserId)).limit(1);
+  if (!u?.email) return "skipped";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
+  await sendAssistantAsleepEmail({ to: u.email, ...asleepEmail({ ...event, siteUrl }) });
   return "sent";
 }
 

@@ -19,8 +19,10 @@ export const PERSONAL_LEN_MD = `${HOME_DIR}/.len/LEN.md`;
 export const PROJECT_LEN_MD = "/LEN.md";
 export const MEMORY_DIR = "/.len/memory/";
 export const MEMORY_INDEX = `${MEMORY_DIR}MEMORY.md`;
+/** THE PERSON'S OWN ASSISTANT's memory (spec local 2026-11-06-asistente-propio, §6.1): only in its sessions. */
+export const ASSISTANT_MEMORY = `${HOME_DIR}/.assistant/MEMORY.md`;
 
-export type MemoryLayer = "personal" | "project" | "index" | "note";
+export type MemoryLayer = "personal" | "project" | "index" | "note" | "assistant";
 
 /** Nombre de nota: minúsculas, dígitos y guiones, como el `name:` de Claude Code. */
 export const NOTE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -40,6 +42,7 @@ export function memoryLayerOf(path: string): MemoryLayer | null {
   if (path === PERSONAL_LEN_MD) return "personal";
   if (path === PROJECT_LEN_MD) return "project";
   if (path === MEMORY_INDEX) return "index";
+  if (path === ASSISTANT_MEMORY) return "assistant";
   return noteNameOf(path) !== null ? "note" : null;
 }
 

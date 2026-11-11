@@ -24,15 +24,18 @@ export const LUCIDE_FONT_VERSION = "1.16.0";
 const GOOGLE_FONT_STYLES = "https://fonts.googleapis.com";
 const GOOGLE_FONT_FILES = "https://fonts.gstatic.com";
 
-export function visualFrameCsp(frameAncestors: string | null): string {
+/** `closed`: the person's own assistant's visuals in a published page's bubble (phase 2B of the spec local
+ *  2026-11-06-asistente-propio, §5): «sin poder mandar datos a ningún sitio» — no fetch at all, images only as data:.
+ *  Scripts and styles still load from the CDNs (a chart needs its library). */
+export function visualFrameCsp(frameAncestors: string | null, o: { readonly closed?: boolean } = {}): string {
   const cdns = VISUALS_CDN_ORIGINS.join(" ");
   const directives = [
     "default-src 'none'",
     `script-src 'unsafe-inline' ${cdns}`,
     `style-src 'unsafe-inline' ${cdns} ${GOOGLE_FONT_STYLES}`,
     `font-src ${cdns} ${GOOGLE_FONT_FILES} data:`,
-    `img-src data: blob: ${cdns}`,
-    `connect-src ${cdns}`,
+    o.closed ? "img-src data: blob:" : `img-src data: blob: ${cdns}`,
+    o.closed ? "connect-src 'none'" : `connect-src ${cdns}`,
     "form-action 'none'",
     "base-uri 'none'",
     "frame-src 'none'",
@@ -111,18 +114,23 @@ input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px s
 input[type="range"] { padding: 0; border: 0; background: transparent; accent-color: var(--accent); }
 input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }`;
 
-export function buildVisualFrameDocument(opts: { readonly parentOrigins: readonly string[]; readonly cspInMeta: boolean }): string {
+export function buildVisualFrameDocument(opts: { readonly parentOrigins: readonly string[]; readonly cspInMeta: boolean; readonly closed?: boolean }): string {
   const origins = JSON.stringify(opts.parentOrigins).replace(/</g, "\\u003c");
-  const meta = opts.cspInMeta ? `<meta http-equiv="Content-Security-Policy" content="${visualFrameCsp(null)}">` : "";
+  const meta = opts.cspInMeta ? `<meta http-equiv="Content-Security-Policy" content="${visualFrameCsp(null, opts.closed ? { closed: true } : {})}">` : "";
+  const sheets = [`https://cdn.jsdelivr.net/npm/lucide-static@${LUCIDE_FONT_VERSION}/font/lucide.css`, "https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap"];
+  // Closed: asked for after the load event, so a slow CDN can't delay it — the visual's code only arrives after that
+  // first load, which is what lets the parent catch a visual navigating its own frame (a second load).
+  const stylesheets = opts.closed
+    ? `<script>addEventListener("load",function(){${JSON.stringify(sheets)}.forEach(function(h){var l=document.createElement("link");l.rel="stylesheet";l.href=h;document.head.insertBefore(l,document.head.querySelector("style"))})})</script>`
+    : sheets.map((h) => `<link rel="stylesheet" href="${h}">`).join("\n");
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 ${meta}
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@${LUCIDE_FONT_VERSION}/font/lucide.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap">
-<style>${STYLE}
+${stylesheets}
+<style>${STYLE}${opts.closed ? "\nbody { overflow-y: auto; }" : ""}
 </style>
 </head>
 <body>

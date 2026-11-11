@@ -7,6 +7,7 @@
 import type { Message } from "@/lib/ai-gateway";
 import { estimateMessageTokens, estimateTokens } from "./estimate";
 import type { CompactionPolicy } from "./policy";
+import { carriesVisitorData } from "../visitor-data";
 import { oversizedResults, pruneToolResults } from "./prune";
 import { selectSpan } from "./select";
 import { applySummary, buildSummaryRequest, buildTruncatedSummaryRequest } from "./summary-prompt";
@@ -69,7 +70,10 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
   const paths = new Map<string, string>();
   if (o.saveRecovery) {
     const stamp = Date.now();
-    for (const { key, text } of oversizedResults(o.messages, protectFrom)) {
+    for (const { key, text, name } of oversizedResults(o.messages, protectFrom)) {
+      // Invariant 5: what visitors wrote never goes into a file of the terminal (the E2B box on a paid plan): pruned with
+      // no file, the model asks the tool again (../visitor-data.ts).
+      if (carriesVisitorData(name, text)) continue;
       const path = `/tmp/pruned/${stamp}-${key.replace(":", "-")}.txt`;
       // Un fichero que no se pudo dejar —la terminal se reinició a medias— no
       // se nombra y ya está: el aviso de la poda sale sin ruta, y el turno sigue.

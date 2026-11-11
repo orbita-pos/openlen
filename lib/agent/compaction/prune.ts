@@ -27,13 +27,13 @@ function codePointsIfOversized(text: string): string[] | null {
   return points.length > PRUNE_DEFAULTS.thresholdChars ? points : null;
 }
 
-export function oversizedResults(messages: readonly Message[], protectFrom: number): { key: string; text: string }[] {
-  const out: { key: string; text: string }[] = [];
+export function oversizedResults(messages: readonly Message[], protectFrom: number): { key: string; text: string; name: string }[] {
+  const out: { key: string; text: string; name: string }[] = [];
   messages.forEach((m, i) => {
     if (i >= protectFrom) return;
     m.functionResponses?.forEach((fr, j) => {
       const text = contenidoDeRespuesta(fr.response);
-      if (codePointsIfOversized(text)) out.push({ key: `${i}:${j}`, text });
+      if (codePointsIfOversized(text)) out.push({ key: `${i}:${j}`, text, name: fr.name });
     });
   });
   return out;

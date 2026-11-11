@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+import { figuresEnabled } from "@/lib/figure/enabled";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -14,6 +16,31 @@ import { siteToText, detectPageLang } from "@/lib/site-assistant/extract-text";
 import { consumeAssistantMessage } from "@/lib/site-assistant/quota";
 import { creditsForUsage, recordUncharged } from "@/lib/credits";
 import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import type { AssistantTone } from "@/lib/assistants/names";
+import { answersVisitors } from "@/lib/assistants/visitor/on-page";
+import { assistantOnPage } from "@/lib/assistants/visitor/store";
+import { projectsOfAssistant } from "@/lib/assistants/projects";
+import { runVisitorTurn } from "@/lib/assistants/visitor/turn";
+import type { ProjectData } from "@/lib/projects/types";
+
+/** The visitor's anonymous id, from their browser (spec local 2026-11-06-asistente-propio, §6.6). */
+const VISITOR_ID = /^[A-Za-z0-9_-]{16,64}$/;
+
+/** THE PERSON'S OWN ASSISTANT on this page (phase 2A), or null: with the switch off, never looked up. */
+async function herOnThePage(projectId: string): Promise<Awaited<ReturnType<typeof assistantOnPage>>> {
+  if (!assistantsEnabled()) return null;
+  return assistantOnPage(projectId).catch((err: unknown) => {
+    console.warn("[assistant] couldn't tell whether the page's own assistant is on", err);
+    return null;
+  });
+}
+
+/** The page's chat can take the visitor: the same rule as the GET's `traspaso`. */
+function handoffOf(data: ProjectData): boolean {
+  const chat = data.settings?.chat;
+  return chat?.enabled === true && chat.selfServeJoin !== false && chat.identityMode !== "account";
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Public site-assistant endpoint. The chat widget on a published page POSTs
@@ -100,6 +127,8 @@ export async function GET(
 
   const settings = project.data.settings;
   const chat = settings?.chat;
+  // Her too (phase 2A): on the page and published with her — the same rule as her POST.
+  const ella = await herOnThePage(owner.projectId);
   return new Response(
     JSON.stringify({
       // ESPEJO EXACTO, y las dos formas distintas de mirar `enabled` son parte
@@ -107,8 +136,11 @@ export async function GET(
       // o falso a secas) y `loadChatSite` usa `=== true`. Copiar cada uno como
       // es evita el peor resultado —retirar una burbuja que sí atiende— si un
       // día alguien escribe un 1 o un "true" en el JSONB.
-      asistente: Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== "",
+      asistente: answersVisitors(ella) || (Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== ""),
       chat: chat?.enabled === true,
+      // The live figures' switch (lib/figure/enabled.ts): her bubble asks the engine only when this says so, which is
+      // how OPENLEN_FIGURES=0 reaches a page that is already published.
+      figuras: figuresEnabled(),
       // EL TRASPASO NO ES EL CHAT. El botón «Hablar con una persona» llama a
       // /api/chat/<sub>/handoff, que además de un chat encendido exige que sea
       // un espacio de invitado y de entrada libre (ahí se acuña un invitado).
@@ -156,6 +188,13 @@ export async function POST(
   } catch {
     return reply(400, { error: "bad_request" });
   }
+
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.2, §4.7): with her on the page AND published
+  // with her (what she knows is saved by that publish), the message wakes her turn on Len's engine. Until that publish
+  // the page's bubble is still today's, and goes on below exactly as before.
+  const ella = await herOnThePage(owner.projectId);
+  if (answersVisitors(ella)) return herTurn(req, sub, owner, body, ella!);
+
   const parsed = parseBody(body);
   if (!parsed) return reply(400, { error: "bad_request" });
 
@@ -262,6 +301,64 @@ export async function POST(
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[assistant] gateway failed", err);
+    return reply(502, { error: "model_error" });
+  }
+}
+
+/** Her turn: `{message, vid}` in; the reply, `asleep` (never a word about billing) or `busy` out. The client's history
+ *  is never read: the visit keeps what she saw (lib/assistants/visitor/turn.ts). */
+async function herTurn(
+  req: Request,
+  sub: string,
+  owner: { userId: string; projectId: string },
+  body: unknown,
+  ella: NonNullable<Awaited<ReturnType<typeof assistantOnPage>>>,
+): Promise<Response> {
+  const b = (typeof body === "object" && body !== null ? body : {}) as { message?: unknown; vid?: unknown };
+  const message = typeof b.message === "string" ? sanitizeUserMessage(b.message) : "";
+  // No vid at all = today's bubble, still open from before the publish that brought hers: it gets her answer, each
+  // message on its own (no continuity), instead of an error until the visitor reloads. A malformed one is refused.
+  const vid = b.vid === undefined ? randomBytes(16).toString("base64url") : typeof b.vid === "string" && VISITOR_ID.test(b.vid) ? b.vid : null;
+  if (!message || !vid) return reply(400, { error: "bad_request" });
+  // On the page, but the page was never published with her: she knows nothing yet.
+  // On the page, but nothing for her to know yet (never published with her, or no text and no public data).
+  if (!answersVisitors(ella)) return reply(403, { error: "disabled" });
+  const knowledge = ella.knowledge?.trim() ?? "";
+
+  const rows = await db
+    .select({ title: schema.projects.title, data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, owner.projectId))
+    .limit(1);
+  const project = rows[0];
+  if (!project?.data) return reply(404, { error: "not_found" });
+
+  // The business's other sites she serves (phase 4): only what each PUBLISHED, never this one. Fail-soft.
+  const otherSites = (await projectsOfAssistant(ella.assistant.id).catch(() => []))
+    .filter((p) => p.projectId !== owner.projectId && p.knowledge?.trim())
+    .map((p) => ({ name: p.title?.trim() || p.subdomain || p.projectId, knowledge: p.knowledge!.trim() }));
+
+  try {
+    const r = await runVisitorTurn({
+      projectId: owner.projectId,
+      ownerId: owner.userId,
+      assistant: { id: ella.assistant.id, name: ella.assistant.name, slug: ella.assistant.slug, tone: ella.assistant.tone as AssistantTone, memory: ella.assistant.memory },
+      businessName: project.title || sub,
+      knowledge,
+      siteLocale: detectPageLang(project.data.html) ?? "es",
+      visitorId: vid,
+      message,
+      handoffAvailable: handoffOf(project.data),
+      publicData: ella.publicData ?? [],
+      ...(otherSites.length ? { otherSites } : {}),
+      signal: req.signal,
+    });
+    if (r.kind === "busy") return reply(429, { error: "busy" });
+    if (r.kind === "asleep") return reply(200, { asleep: true, intent: "lead" });
+    return reply(200, { respuesta: r.text, intent: r.intent, ...(r.visuals.length ? { visuals: r.visuals } : {}) });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[assistant] her turn failed", err);
     return reply(502, { error: "model_error" });
   }
 }

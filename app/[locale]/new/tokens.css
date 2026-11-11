@@ -269,3 +269,29 @@
 .workspace-v2 .sx-pro { color: var(--sx-pro); }
 .workspace-v2 .sx-pun { color: var(--fg-faint); }
 .workspace-v2 .sx-tit { color: var(--sx-tit); font-weight: 600; }
+
+/* HER COLOR TINTS HER CHAT (spec local 2026-11-10-figuras-del-asistente, §2.4): in the person's own assistant's
+   place, her owner's bubbles, the send button and her header's background take her color. The variables come from
+   components/workspace-v2/assistant/tint.ts, which also picks the ink that reads over it. Links, focus rings and
+   every other button keep the workspace's accent. */
+.workspace-v2 .assistant-tint [data-assistant-header] { background: linear-gradient(to bottom, var(--assistant-soft), transparent); }
+.dark .workspace-v2 .assistant-tint [data-assistant-header] { background: linear-gradient(to bottom, var(--assistant-soft-dark), transparent); }
+.workspace-v2 .assistant-tint [data-user-bubble] { background: var(--assistant-tint); color: var(--assistant-ink); border-color: var(--assistant-edge); }
+/* What the bubble holds in the workspace's muted ink or accent (a photo's caption, a file's name, their icons) would
+   vanish on her color: it takes the bubble's own ink. */
+.workspace-v2 .assistant-tint [data-user-bubble] :is(.fg-muted, .fg-faint, [class*="nc-accent-text"]) { color: inherit; opacity: 0.8; }
+/* The same color in the rest of her place (its rail, its menu, its sheets, her visitors' views): a button that does
+   it, a switch that is on, and a wash for what is selected. Without her variables (a dialog that is not hers) they
+   fall back to the workspace's accent. */
+.workspace-v2 .her-fill { background: var(--assistant-tint, var(--nc-accent-text)); color: var(--assistant-ink, #fff); box-shadow: inset 0 0 0 1px var(--assistant-edge, transparent); }
+.workspace-v2 .her-on { background: var(--assistant-tint, var(--nc-accent-text)); box-shadow: inset 0 0 0 1px var(--assistant-edge, transparent); }
+.workspace-v2 .her-wash { background: color-mix(in srgb, var(--assistant-tint, var(--nc-accent-text)) 16%, transparent); }
+.workspace-v2 .her-ring:focus-visible { outline: 2px solid var(--assistant-tint, var(--nc-accent-text)); outline-offset: 2px; }
+/* HER PLACE IS ONE WINDOW (assistant-home.tsx): her color washes down from the top over the bar, her rail and her chat
+   alike, and her page is a card on that ground. Her chat panel and its header stop painting a ground of their own. */
+.workspace-v2.her-shell { background: linear-gradient(180deg, var(--assistant-soft, transparent) 0, transparent 280px) no-repeat, var(--bg-sidebar); }
+.dark .workspace-v2.her-shell { background: linear-gradient(180deg, var(--assistant-soft-dark, transparent) 0, transparent 280px) no-repeat, var(--bg-sidebar); }
+.workspace-v2.her-shell .assistant-tint,
+.workspace-v2.her-shell .assistant-tint [data-assistant-header],
+.dark .workspace-v2.her-shell .assistant-tint [data-assistant-header] { background: transparent; }
+.workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); box-shadow: inset 0 0 0 1px var(--assistant-edge); }

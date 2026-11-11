@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { AVISO_DE_VISITANTES_EN_LA_TERMINAL } from "./herramientas-de-ficheros";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { runAgentLoop as realRunAgentLoop, sobreQue, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN, type AgentLoopResult, type AgentStreamEvent } from "./loop";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
@@ -4248,7 +4249,7 @@ describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
 });
 
 describe("la retención de resultados grandes (spill-policy de DeepSeek)", () => {
-  async function correr(tool: string, conSpill: boolean) {
+  async function correr(tool: string, conSpill: boolean, texto = "Z".repeat(5000)) {
     const ficheros: Record<string, string> = {};
     let vista: Record<string, unknown> | undefined;
     const guion = scripted(
@@ -4264,7 +4265,7 @@ describe("la retención de resultados grandes (spill-policy de DeepSeek)", () =>
         if (ultima?.functionResponses) vista = ultima.functionResponses[0]!.response;
         return guion(m);
       },
-      runTool: async () => ({ response: { ok: true, tool_result: "Z".repeat(5000) } }),
+      runTool: async () => ({ response: { ok: true, tool_result: texto } }),
       emit: () => undefined,
     });
     return { ficheros, vista: vista! };
@@ -4278,6 +4279,23 @@ describe("la retención de resultados grandes (spill-policy de DeepSeek)", () =>
     expect(String(vista.tool_result)).toContain(`Full formatted result stored at: ${ruta}`);
     expect(String(vista.tool_result).length).toBeLessThan(5000);
     expect(vista.ok).toBe(true);
+  });
+
+  // Invariant 5 (found by the review of the assistant's phase 4E, 10/11): a spilled result is a FILE in the terminal —
+  // the E2B box on a paid plan — and what visitors wrote never enters the box. It stays whole inline, as with no terminal.
+  it("🔴 what visitors wrote never goes to /tmp/spill: list_messages and list_form_submissions stay whole inline", async () => {
+    for (const tool of ["list_messages", "list_form_submissions"]) {
+      const { ficheros, vista } = await correr(tool, true);
+      expect(Object.keys(ficheros), tool).toEqual([]);
+      expect(String(vista.tool_result), tool).toHaveLength(5000);
+    }
+  });
+
+  it("🔴 nor any result that carries the visitors' notice (Grep or bash over the inbox)", async () => {
+    const texto = "Z".repeat(5000) + AVISO_DE_VISITANTES_EN_LA_TERMINAL;
+    const { ficheros, vista } = await correr("Grep", true, texto);
+    expect(Object.keys(ficheros)).toEqual([]);
+    expect(String(vista.tool_result)).toBe(texto);
   });
 
   it("Read no se recorta (como el `read` de DeepSeek), ni nada sin dónde guardar", async () => {

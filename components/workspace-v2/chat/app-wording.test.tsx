@@ -52,6 +52,18 @@ describe("la barra viva", () => {
   const trabajando = (activity: "reading" | "editing" | "photos") =>
     ({ kind: "working", face: "escribiendo", activity, startedAt: null, onServer: false }) as const;
 
+  // Real turns of 07/11: in the person's own assistant's place, «Listo» came with Len's face.
+  it("🔴 in the person's own assistant's place: its figure, and «it goes on» names it; Len's bar stays Len's", () => {
+    const waiting = { kind: "waiting", face: "preguntando", reason: "question", question: "¿?", live: true } as const;
+    const hers = montar(<LiveBar status={waiting} onStop={() => {}} speaker={{ name: "Lucía", face: <span data-speaker-face="" /> }} />);
+    expect(hers.querySelector("[data-speaker-face]")).not.toBeNull();
+    expect(hers.querySelector("[data-len-face]")).toBeNull();
+    expect(hers.textContent).toContain("ownAssistant.speaker.yourTurnLive");
+    const lens = montar(<LiveBar status={waiting} onStop={() => {}} />);
+    expect(lens.querySelector("[data-len-face]")).not.toBeNull();
+    expect(lens.textContent).toContain("newChat.live.yourTurnLive");
+  });
+
   it("🔴 en una app: «leyendo tu app», «cambiando la app»", () => {
     expect(montar(<LiveBar status={trabajando("reading")} onStop={() => {}} esApp />).textContent).toContain("newChat.activity.readingApp");
     expect(montar(<LiveBar status={trabajando("editing")} onStop={() => {}} esApp />).textContent).toContain("newChat.activity.editingApp");

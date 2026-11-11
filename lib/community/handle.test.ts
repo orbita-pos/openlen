@@ -16,6 +16,9 @@ describe("validateHandle", () => {
     expect(validateHandle("ab").ok).toBe(false);
     expect(validateHandle("a".repeat(21)).ok).toBe(false);
   });
+  it("reserves «assistant»: the person's own assistant lives at /<locale>/assistant/<name>", () => {
+    expect(validateHandle("assistant")).toEqual({ ok: false, reason: "reserved" });
+  });
   it("rejects illegal characters", () => {
     expect(validateHandle("hey.there").ok).toBe(false);
     expect(validateHandle("con espacio").ok).toBe(false);

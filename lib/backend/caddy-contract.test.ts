@@ -79,6 +79,14 @@ describe("el middleware de idiomas no toca el backend", () => {
     expect(matches("/storage/v1/object/sign/fotos/u1/avatar")).toBe(false);
   });
 
+  // The figure engine of a published bubble (lib/publish/assistant-widget.ts) is named by its content.
+  it("🔴 /openlen/figure-<sha>.js is immutable, and not one of the folder's files that revalidate on every visit", () => {
+    const i = paginas.indexOf("@assets");
+    expect(paginas.slice(i, paginas.indexOf("\n\theader @assets", i))).toContain("/openlen/figure-*");
+    const j = paginas.indexOf("@carpeta {");
+    expect(paginas.slice(j, paginas.indexOf("\n\theader @carpeta", j))).toMatch(/not path [^\n]*\/openlen\/figure-\*/);
+  });
+
   /* ── carril D: realtime ── En producción no llega a Next; en local sí. */
   it("ni /realtime/v1", () => {
     expect(matches("/realtime/v1/websocket")).toBe(false);

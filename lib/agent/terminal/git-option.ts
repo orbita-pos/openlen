@@ -6,6 +6,7 @@ import { personOf } from "@/lib/agent/person";
 import type { AgentDeps, AgentSession } from "@/lib/agent/tools";
 import { gitEnabled } from "@/lib/git/enabled";
 import { deletionRefusal } from "./deletion-rule";
+import { guardReadOnly } from "./read-only-commands";
 
 export type TerminalGit = (
   args: readonly string[],
@@ -14,14 +15,15 @@ export type TerminalGit = (
 ) => Promise<{ stdout: string; stderr: string; exitCode: number; write?: Readonly<Record<string, string | null>> }>;
 
 export function gitForTerminal(
-  session: Pick<AgentSession, "projectId" | "userId" | "personId">,
+  session: Pick<AgentSession, "projectId" | "userId" | "personId" | "readOnly">,
   deps: Pick<AgentDeps, "gitCli">,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): TerminalGit | undefined {
   const gitCli = deps.gitCli;
   if (!gitEnabled(env) || !gitCli) return undefined;
-  return (args, cwd, files) =>
-    gitCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), args, cwd, files, undeletable: deletionRefusal });
+  // A read-only session (Explore, Plan, the person's own assistant) only reads git's history.
+  return guardReadOnly<TerminalGit>(session.readOnly === true, "git", (args, cwd, files) =>
+    gitCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), args, cwd, files, undeletable: deletionRefusal }));
 }
 
 export type TerminalGh = (
@@ -34,11 +36,12 @@ export type TerminalGh = (
  *  run by whoever speaks — always someone who can edit: neither Len's route nor the Code lens terminal's
  *  (app/api/projects/[id]/terminal, POST asks "editar") lets a viewer run a command. */
 export function ghForTerminal(
-  session: Pick<AgentSession, "projectId" | "userId" | "personId">,
+  session: Pick<AgentSession, "projectId" | "userId" | "personId" | "readOnly">,
   deps: Pick<AgentDeps, "ghCli">,
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): TerminalGh | undefined {
   const ghCli = deps.ghCli;
   if (!gitEnabled(env) || !ghCli) return undefined;
-  return (args, cwd, files) => ghCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), canEdit: true, args, cwd, files });
+  return guardReadOnly<TerminalGh>(session.readOnly === true, "gh", (args, cwd, files) =>
+    ghCli({ projectId: session.projectId, ownerId: session.userId, personId: personOf(session), canEdit: true, args, cwd, files }));
 }

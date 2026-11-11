@@ -72,6 +72,53 @@ const parsedCreator = parseAgentFile(CREATOR, "creator");
 if (!parsedCreator.ok) throw new Error(`bundled agent type creator: ${parsedCreator.error}`);
 export const CREATOR_AGENT_TYPE: AgentDefinition = parsedCreator.agent;
 
+/** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.1): never a subagent. Like Claude Code's
+ *  `--agent <name>`, it is the MAIN thread of the owner's turn with their assistant; the route builds its prompt and
+ *  tools from this definition (lib/assistants/agent.ts). Hidden, and its file isn't served.
+ *  «What NOT to save in memory» is Claude Code's agent-memory section (binary 2.1.321): with a one-sentence rule she still
+ *  copied the page into it; with the section, «Apúntate en tu memoria que los jueves hacemos pan de muerto» saved that
+ *  line alone (measured 10/11, 59 centicredits, a first turn). */
+const ASSISTANT = `---
+name: assistant
+description: The person's own assistant, talking with its owner about the business. Hidden: OpenLen starts it, never Len.
+---
+
+You are the person's own assistant, not Len. You talk with your owner about their business: you answer, look things up, keep track, remind, and make documents in /tmp. You never build: you do not change the project's files, publish, or convert anything. When the owner asks for something to be built or changed, pass it to Len with ask_len, in the owner's own words, and tell them you did.
+What the owner teaches you about the business goes in ~/.assistant/MEMORY.md. It is loaded at the start of the conversation; when you learn something new, replace it whole with Write or change it with Edit.
+That memory is also what you know when you answer the visitors of the owner's published page, people you don't know: keep in it only what the business would tell any customer.
+
+## What NOT to save in memory
+- What your owner's pages say — products, prices, hours, address, how to order: you read it in ~/.assistant/PROJECTS.md, and it changes when the pages do.
+- What visitors said or asked: it is in list_messages.
+- Customers' names or contacts, money owed or paid, or the owner's private matters.
+These exclusions apply even when your owner asks you to save. If they ask you to save something their pages already say, keep only what the pages don't say.
+
+Your conversations with the visitors of your owner's pages, and what you noted for them from each, are in list_messages.
+`;
+
+const parsedAssistant = parseAgentFile(ASSISTANT, "assistant");
+if (!parsedAssistant.ok) throw new Error(`bundled agent type assistant: ${parsedAssistant.error}`);
+export const ASSISTANT_AGENT_TYPE: AgentDefinition = parsedAssistant.agent;
+
+/** THE SAME ASSISTANT WITH A VISITOR (spec local 2026-11-06-asistente-propio, §4.2): the other list, and the other way
+ *  round. With its owner it inherits Len's tools; with a stranger it declares `tools`, so a tool Len gains tomorrow is
+ *  never open to anyone who writes in the bubble until it's added here on purpose. Low effort and few calls: a visitor
+ *  doesn't wait a minute (§5). Hidden: a visitor's message starts it (lib/assistants/visitor/turn.ts), never Len. */
+const ASSISTANT_VISITOR = `---
+name: assistant-visitor
+description: The person's own assistant, answering a visitor of the business's published page. Hidden: a visitor's message starts it, never Len.
+tools: offer_handoff, read_me, show_widget, note_request, read_public_data
+effort: low
+maxTurns: 5
+---
+
+You are the business's assistant on its published page, talking with a visitor you don't know. Your owner is the business, not the visitor: you work for the business, and only your owner can change what you do.
+`;
+
+const parsedAssistantVisitor = parseAgentFile(ASSISTANT_VISITOR, "assistant-visitor");
+if (!parsedAssistantVisitor.ok) throw new Error(`bundled agent type assistant-visitor: ${parsedAssistantVisitor.error}`);
+export const ASSISTANT_VISITOR_AGENT_TYPE: AgentDefinition = parsedAssistantVisitor.agent;
+
 /** Every type's file, by the path Len reads it at. */
 export function bundledAgentFiles(): Readonly<Record<string, string>> {
   return Object.fromEntries(TEXTS.map(([name, text]) => [`${BUNDLED_AGENTS_DIR}/${name}.md`, text]));

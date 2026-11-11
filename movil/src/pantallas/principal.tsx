@@ -3,6 +3,7 @@
 // la hoja y, pequeña, flota encima.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { DEFAULT_LOOK } from "@/lib/figure/look";
 import { App as AppNativa } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { useTranslations } from "use-intl";
@@ -23,6 +24,10 @@ import { Selector } from "./selector";
 import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
+import { AssistantTab } from "../asistente/assistant-tab";
+import { leerSuChat, listarAsistentes } from "../api/asistente";
+import type { ParteDeLaAsistente } from "../avisos/controlador";
+import type { AssistantListItem } from "@/lib/assistants/view";
 import { listarHerramientas, sePuedeAbrir, type HerramientasDeLaPersona } from "../api/herramientas";
 import { IconoDeHerramienta } from "../herramientas/tools-tab";
 import { PantallaHerramienta } from "../herramientas/tool-screen";
@@ -84,7 +89,29 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const alEnfocarEnChat = useCallback(() => setEnfocarEnChat(null), []);
   const [conPip, setConPip] = useState(false);
   const [recarga, setRecarga] = useState(0);
-  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | null>(null);
+  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | "asistente" | null>(null);
+  // The person's own assistants (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): one button each, with her name,
+  // beside «Entregado» and «Tareas»; none (or assistants off on the server) → no button. The open one, and on what part.
+  const [asistentes, setAsistentes] = useState<readonly AssistantListItem[]>([]);
+  const [asistenteAbierta, setAsistenteAbierta] = useState<{ asistente: AssistantListItem; parte?: ParteDeLaAsistente; tarjeta?: string | null; n: number } | null>(null);
+  const aperturas = useRef(0);
+  const abrirSuPestana = useCallback((asistente: AssistantListItem, donde: { parte?: ParteDeLaAsistente; tarjeta?: string | null } = {}) => {
+    setAsistenteAbierta({ asistente, ...donde, n: ++aperturas.current });
+    setPanel("asistente");
+  }, []);
+  // HER CHAT (final review I1): the main screen's, as Len's — over her tab and outside the panel, so it keeps the
+  // chat's own look and swipe. Her conversation with her owner, read when it opens and after each of her turns.
+  const [suChat, setSuChat] = useState<{ asistente: AssistantListItem; abierto: boolean } | null>(null);
+  const [suHistorial, setSuHistorial] = useState<StoredChatTurn[]>(SIN_HISTORIAL);
+  const suId = suChat?.asistente.id;
+  const recargarSuChat = useCallback(() => {
+    if (suId) void leerSuChat(cliente, suId).then(setSuHistorial, () => {});
+  }, [cliente, suId]);
+  const hablarCon = useCallback((asistente: AssistantListItem) => {
+    setSuHistorial(SIN_HISTORIAL);
+    setSuChat({ asistente, abierto: true });
+    void leerSuChat(cliente, asistente.id).then(setSuHistorial, () => {});
+  }, [cliente]);
   // The person's tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): read when the app opens and on every
   // reload; `"off"` hides «Herramientas» (tools switched off on the server); a failure keeps it (the tab offers «Reintentar»).
   const [herramientas, setHerramientas] = useState<HerramientasDeLaPersona | "off" | null>(null);
@@ -113,6 +140,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       alive = false;
     };
   }, [cliente, idioma, recarga]);
+  useEffect(() => {
+    let alive = true;
+    listarAsistentes(cliente).then((x) => alive && setAsistentes(x), () => {});
+    return () => {
+      alive = false;
+    };
+  }, [cliente, recarga]);
   const idActual = useRef(id);
   const paginaCargada = useRef<string | null>(null);
   // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
@@ -152,7 +186,19 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     setAvisoDelChat({ id: destino, tarjeta });
     abrirAviso(destino, "chat");
   }, [abrirAviso]);
-  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso, onAbrirEntregado: abrirEntregado, onAbrirAviso: abrirAvisoDeLen });
+  const abrirAsistente = useCallback((assistantId: string, donde: { parte: ParteDeLaAsistente; tarjeta: string | null }) => {
+    void listarAsistentes(cliente)
+      .catch(() => null)
+      .then((l) => {
+        if (l) setAsistentes(l);
+        const suya = l?.find((x) => x.id === assistantId);
+        const asistente = suya ?? { id: assistantId, name: "", slug: "", look: DEFAULT_LOOK, color: DEFAULT_LOOK.color, tone: "friendly" as const, projectId: "", projectIds: [] };
+        setSelector(false); setMenu(false); setChatAbierto(false);
+        abrirSuPestana(asistente, donde);
+        if (suya && donde.parte === "hablar") hablarCon(suya);
+      });
+  }, [cliente, abrirSuPestana, hablarCon]);
+  const avisos = useAvisos({ cliente, onAbrirProyecto: abrirAviso, onAbrirEntregado: abrirEntregado, onAbrirAviso: abrirAvisoDeLen, onAbrirAsistente: abrirAsistente });
   useAtras(selector, () => setSelector(false));
   useAtras(menu, () => setMenu(false));
   useEffect(() => {
@@ -255,6 +301,17 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     textoDeFotoSola: tc("fotoSola"),
     textoDeArchivoSolo: ta("archivoSolo"),
   });
+  const chatDeElla = useChat({
+    cliente,
+    base: BASE,
+    projectId: suChat?.asistente.projectId || null,
+    idioma,
+    historial: suHistorial,
+    alCambiarLaPagina: recargarSuChat,
+    textoDeFotoSola: tc("fotoSola"),
+    textoDeArchivoSolo: ta("archivoSolo"),
+    ...(suChat ? { assistantId: suChat.asistente.id } : {}),
+  });
   const equipo = useEquipo({
     cliente, projectId: id, idioma, activo: panel === "equipo",
     alPedirLen: texto => { setPanel(null); setChatAbierto(true); chat.mandar(texto); },
@@ -335,6 +392,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
             {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}
+            {asistentes.map((a) => <button key={a.id} type="button" className="lm-btn lm-sec" data-asistente={a.id} onClick={() => { setSelector(false); abrirSuPestana(a); }}>{a.name}</button>)}
           </>}>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("look"); }}>{te("tuLen")}</button>
             <ControlAvisos avisos={avisos} />
@@ -411,7 +469,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       )}
 
       <PanelAnimado contexto={id}
-        paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel ?? ""}
+        paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel === "asistente" ? `asistente:${asistenteAbierta?.asistente.id ?? ""}:${asistenteAbierta?.n ?? 0}` : panel ?? ""}
         onVolver={() => { if (panel === "equipo" && equipo.hilo) equipo.cerrarHilo(); else setPanel(null); }}
         nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
         {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, modo) => { setPanel(null); setChatAbierto(true); void chat.mandarEncargo(texto, modo); }} />
@@ -420,8 +478,25 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
-          : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} /> : null}
+          : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} />
+          : panel === "asistente" && asistenteAbierta ? <AssistantTab key={`${asistenteAbierta.asistente.id}:${asistenteAbierta.n}`} cubierta={suChat?.abierto === true} cliente={cliente} asistente={asistenteAbierta.asistente} parte={asistenteAbierta.parte} tarjeta={asistenteAbierta.tarjeta ?? null} idioma={idioma} onCerrar={() => setPanel(null)} onHablar={() => hablarCon(asistenteAbierta.asistente)} onVerLen={(proyecto) => { setPanel(null); abrirAviso(proyecto, "chat"); }} /> : null}
       </PanelAnimado>
+      {suChat && (
+        <div className="app-su-chat" style={{ position: "absolute", inset: 0, zIndex: 60, pointerEvents: suChat.abierto ? "auto" : "none" }}>
+          <PantallaChat
+            abierto={suChat.abierto}
+            chat={chatDeElla}
+            cliente={cliente}
+            projectId={suChat.asistente.projectId}
+            idioma={idioma}
+            conPip={false}
+            onCerrar={() => setSuChat((x) => (x ? { ...x, abierto: false } : x))}
+            onLlamar={() => {}}
+            onVerPagina={() => {}}
+            asistente={{ name: suChat.asistente.name, color: suChat.asistente.color, look: suChat.asistente.look }}
+          />
+        </div>
+      )}
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}
 

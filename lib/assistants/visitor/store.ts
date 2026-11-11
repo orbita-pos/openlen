@@ -1,0 +1,180 @@
+// THE VISITORS' SIDE OF THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5, §4.7, §6.5, §6.6):
+// whether it is on a project's page and what it knows of it, each visitor's conversation, and what the account's
+// visitors spent this month. Visits are visitors' data: only its person reads them, and they never reach the box.
+import "server-only";
+
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
+
+import type { AssistantRow } from "../store";
+
+export type VisitLine = schema.AssistantVisitLine;
+export type PublicTable = schema.PublicTable;
+export type VisitRow = typeof schema.assistantVisits.$inferSelect;
+
+/** A visit is forgotten 90 days after its last message (spec §6.5, like the step rows). */
+export const VISIT_RETENTION_DAYS = 90;
+/** What a visit keeps of what was said, the newest: a chatty visitor's row doesn't grow forever. */
+export const VISIT_MAX_LINES = 200;
+
+const ap = schema.assistantProjects;
+const v = schema.assistantVisits;
+const m = schema.assistantVisitorMonths;
+
+export interface OnPage {
+  readonly assistant: AssistantRow;
+  /** The published site's text; null until a publish with her. */
+  readonly knowledge: string | null;
+  /** When a publish saved it; null = not published since she serves it. */
+  readonly knowledgeAt: Date | null;
+  /** The last publish that baked HER bubble; null = the page's bubble isn't hers yet (phase 4). */
+  readonly bakedAt: Date | null;
+  /** What the page's data shows anyone (phase 2B); [] when none or before 2B. */
+  readonly publicData: PublicTable[];
+}
+
+export async function assistantOnPage(projectId: string): Promise<OnPage | null> {
+  const [row] = await db
+    .select({ assistant: schema.assistants, knowledge: ap.knowledge, knowledgeAt: ap.knowledgeAt, bakedAt: ap.bakedAt, publicData: ap.publicData })
+    .from(ap)
+    .innerJoin(schema.assistants, eq(schema.assistants.id, ap.assistantId))
+    .where(and(eq(ap.projectId, projectId), eq(ap.onPage, true)))
+    .limit(1);
+  return row ? { assistant: row.assistant, knowledge: row.knowledge, knowledgeAt: row.knowledgeAt, bakedAt: row.bakedAt, publicData: row.publicData ?? [] } : null;
+}
+
+/** `false` when that assistant isn't the one of that project. When it CHANGES she forgets that her bubble was baked:
+ *  she answers visitors only after a publish with her (which bakes it), never through a bubble that isn't hers yet. What
+ *  the project published stays — she serves it either way (phase 4). The same value again (a stale second tab) changes
+ *  nothing, so her live bubble stays. */
+export async function setOnPage(projectId: string, assistantId: string, onPage: boolean): Promise<boolean> {
+  const done = await db
+    .update(ap)
+    .set({
+      onPage,
+      bakedAt: sql`case when ${ap.onPage} = ${onPage} then ${ap.bakedAt} else null end`,
+    })
+    .where(and(eq(ap.projectId, projectId), eq(ap.assistantId, assistantId)))
+    .returning({ projectId: ap.projectId });
+  return done.length > 0;
+}
+
+/** What a publish of a project she serves saves: the site's text and what its data shows anyone; publicData null = it
+ *  couldn't be read this time, so what she had stays. `baked`: that publish baked her bubble on the page. */
+export async function saveKnowledge(projectId: string, text: string, at: Date, publicData: PublicTable[] | null = [], o: { readonly baked: boolean } = { baked: false }): Promise<void> {
+  await db
+    .update(ap)
+    .set({ knowledge: text, knowledgeAt: at, ...(publicData ? { publicData } : {}), ...(o.baked ? { bakedAt: at } : {}) })
+    .where(eq(ap.projectId, projectId));
+}
+
+/** A project she serves was unpublished (final review I1): what it published is gone, and so is her bubble there. She
+ *  stays connected and «En mi página» keeps its value: the next publish teaches her again and bakes her bubble. */
+export async function forgetWhatWasPublished(projectId: string): Promise<void> {
+  await db.update(ap).set({ knowledge: null, knowledgeAt: null, publicData: null, bakedAt: null }).where(eq(ap.projectId, projectId));
+}
+
+export async function visitOf(assistantId: string, projectId: string, visitorId: string): Promise<VisitRow | null> {
+  const [row] = await db
+    .select()
+    .from(v)
+    .where(and(eq(v.assistantId, assistantId), eq(v.projectId, projectId), eq(v.visitorId, visitorId)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** One more message of a visitor: its new lines appended, the model's trimmed transcript replaced, count and spend
+ *  added; and, in the same transaction, the assistant's visits quiet for 90 days are forgotten. */
+export async function saveVisit(o: {
+  assistantId: string;
+  projectId: string;
+  visitorId: string;
+  transcript: unknown[];
+  newLines: VisitLine[];
+  centicredits: number;
+  handedOff: boolean;
+  at: Date;
+}): Promise<void> {
+  const centicredits = Math.max(0, Math.round(o.centicredits));
+  await db.transaction(async (tx) => {
+    await tx
+      .insert(v)
+      .values({
+        assistantId: o.assistantId,
+        projectId: o.projectId,
+        visitorId: o.visitorId,
+        startedAt: o.at,
+        lastAt: o.at,
+        messageCount: 1,
+        centicredits,
+        handedOff: o.handedOff,
+        transcript: o.transcript,
+        lines: o.newLines,
+      })
+      .onConflictDoUpdate({
+        target: [v.assistantId, v.projectId, v.visitorId],
+        set: {
+          lastAt: o.at,
+          messageCount: sql`${v.messageCount} + 1`,
+          centicredits: sql`${v.centicredits} + ${centicredits}`,
+          handedOff: sql`${v.handedOff} or ${o.handedOff}`,
+          transcript: sql`excluded."transcript"`,
+          lines: sql`${v.lines} || excluded."lines"`,
+        },
+      });
+    // Only the newest lines stay.
+    await tx
+      .update(v)
+      .set({
+        lines: sql`(select coalesce(jsonb_agg(e order by i), '[]'::jsonb) from jsonb_array_elements(${v.lines}) with ordinality as t(e, i) where i > jsonb_array_length(${v.lines}) - ${VISIT_MAX_LINES})`,
+      })
+      .where(and(eq(v.assistantId, o.assistantId), eq(v.projectId, o.projectId), eq(v.visitorId, o.visitorId), sql`jsonb_array_length(${v.lines}) > ${VISIT_MAX_LINES}`));
+    const cutoff = new Date(o.at.getTime() - VISIT_RETENTION_DAYS * 86_400_000);
+    await tx.delete(v).where(and(eq(v.assistantId, o.assistantId), lt(v.lastAt, cutoff)));
+  });
+}
+
+/** The newest first, never one quiet for 90 days: reading forgets those too, so the promise holds for an assistant
+ *  whose page went quiet (no new message runs the prune in `saveVisit`). */
+export async function visitsOf(assistantId: string, limit: number, now: Date = new Date()): Promise<VisitRow[]> {
+  const cutoff = new Date(now.getTime() - VISIT_RETENTION_DAYS * 86_400_000);
+  await db.delete(v).where(and(eq(v.assistantId, assistantId), lt(v.lastAt, cutoff)));
+  return db.select().from(v).where(and(eq(v.assistantId, assistantId), gte(v.lastAt, cutoff))).orderBy(desc(v.lastAt)).limit(limit);
+}
+
+export async function monthSpent(userId: string, month: string): Promise<number> {
+  const [row] = await db.select({ c: m.centicredits }).from(m).where(and(eq(m.userId, userId), eq(m.month, month))).limit(1);
+  return row?.c ?? 0;
+}
+
+/** One visitor message's cost, and +1 message. Grouping what visitors asked for (lib/assistants/requests/grouper.ts)
+ *  spends inside the same cap with `messages` 0: it is no visitor's message. */
+export async function addMonthSpend(userId: string, month: string, centicredits: number, messages = 1): Promise<void> {
+  const c = Math.max(0, Math.round(centicredits));
+  const n = Math.max(0, Math.round(messages));
+  await db
+    .insert(m)
+    .values({ userId, month, centicredits: c, messages: n })
+    .onConflictDoUpdate({ target: [m.userId, m.month], set: { centicredits: sql`${m.centicredits} + ${c}`, messages: sql`${m.messages} + ${n}` } });
+}
+
+/** True ONCE per month and reason: the owner hears «she fell asleep» once (Task 9). */
+export async function claimAsleepAlert(userId: string, month: string, reason: "cap" | "credits"): Promise<boolean> {
+  await db.insert(m).values({ userId, month }).onConflictDoNothing();
+  const won = await db
+    .update(m)
+    .set({ asleepAlerts: sql`${m.asleepAlerts} || ${JSON.stringify([reason])}::jsonb` })
+    .where(and(eq(m.userId, userId), eq(m.month, month), sql`not (${m.asleepAlerts} @> ${JSON.stringify([reason])}::jsonb)`))
+    .returning({ userId: m.userId });
+  return won.length > 0;
+}
+
+export async function explicitVisitorCap(userId: string): Promise<number | null> {
+  const [row] = await db.select({ cap: schema.users.assistantVisitorCap }).from(schema.users).where(eq(schema.users.id, userId)).limit(1);
+  return row?.cap ?? null;
+}
+
+export async function setExplicitVisitorCap(userId: string, cap: number | null): Promise<void> {
+  await db.update(schema.users).set({ assistantVisitorCap: cap }).where(eq(schema.users.id, userId));
+}

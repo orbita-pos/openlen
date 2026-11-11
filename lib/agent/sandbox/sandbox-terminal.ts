@@ -23,6 +23,7 @@ import { answerBridgeRequest, type BridgeHandlers, type BridgeRequest } from "./
 import type { RunResult, SandboxHandle } from "./driver";
 import { diffManifests, type Manifest } from "./manifest";
 import { NEVER_IN_BOX, isSyncedPath } from "./paths";
+import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 import ignore from "ignore";
 import { getBlob, parsePointer, putBlob, makePointer } from "@/lib/files/blob";
 import { MAX_FILE_BYTES, REGENERABLE_DEFAULTS } from "@/lib/files/limits";
@@ -58,8 +59,14 @@ export function readOnlySource(path: string): string {
   return `${BRIDGE_DIR}/ro${path}`;
 }
 
-/** "/.openlen/docs/a.md" → "/.openlen". */
-const readOnlyRoot = (path: string) => `/${path.split("/")[1] ?? ""}`;
+/** The person's own assistant's files, read-only under her HOME (phase 4C): her memory, ~/.assistant/MEMORY.md (the
+ *  box's manifest, baked in its template, syncs only ~/.len; she writes it with Edit or Write), and the other projects
+ *  she serves, ~/.assistant/projects/<id>. /home is the box's HOME, where ~/.len syncs from: this folder is mounted on
+ *  its own. */
+const ASSISTANT_ROOT = `${HOME_DIR}/.assistant`;
+
+/** "/.openlen/docs/a.md" → "/.openlen"; "/home/user/.assistant/projects/p2/a.html" → "/home/user/.assistant". */
+const readOnlyRoot = (path: string) => (path === ASSISTANT_ROOT || path.startsWith(`${ASSISTANT_ROOT}/`) ? ASSISTANT_ROOT : `/${path.split("/")[1] ?? ""}`);
 
 const parentOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
 
@@ -599,6 +606,25 @@ export class SandboxTerminal implements TerminalBackend {
     const writes: Record<string, string> = {};
     const removes: string[] = [];
     for (const [path, text] of Object.entries(ficheros)) {
+      // Read-only in the box (her ~/.assistant/MEMORY.md after she edits it): where the mount comes from, as
+      // `uploadReadOnly` puts it —the mounted path can't be written—, and kept in what the box says it has: it never
+      // syncs back, and a command must not read as having deleted it. Both measured 10/11 in a real box (every command
+      // failed, then every one ended «Exit code 1 … not saved»).
+      const root = readOnlyRoot(path);
+      if (root === ASSISTANT_ROOT || this.mounted.get(root)) {
+        const at = this.mounted.get(root) ? readOnlySource(path) : path;
+        if (text === null) {
+          removes.push(at);
+          delete this.uploaded[at];
+          delete this.tree[path];
+        } else {
+          const hash = parsePointer(text)?.sha256 ?? sha256(text);
+          if (this.uploaded[at] !== hash) writes[at] = text;
+          this.uploaded[at] = hash;
+          this.tree[path] = text;
+        }
+        continue;
+      }
       if (text === null) {
         removes.push(path);
         delete this.tree[path];

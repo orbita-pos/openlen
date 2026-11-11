@@ -15,6 +15,7 @@ import { textosLenWatch } from "./textos-len-watch";
 import { deliveredTexts } from "./delivered-texts";
 import { overviewTexts } from "./overview-texts";
 import { textosHerramientas } from "./textos-herramientas";
+import { textosAsistente } from "./textos-asistente";
 
 // The tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14) read the web's own texts for what the web
 // already says — OpenLen's confirmations and the «Instalar» and «Crear» cards —, so both say the same thing.
@@ -29,7 +30,9 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/wsChrome.json`]!(),
   ]);
   const herramientas = { ...textosHerramientas[idioma], tools: sub(wsChrome.default, "tools"), installCard: sub(panelsChat.default, "installCard"), toolCard: sub(panelsChat.default, "toolCard") };
-  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas }, llamada: llamada.default };
+  // The person's own assistant's tab (phase 5): her place's texts are the web's own (`own`).
+  const asistente = { ...textosAsistente[idioma], own: sub(panelsChat.default, "ownAssistant") };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {

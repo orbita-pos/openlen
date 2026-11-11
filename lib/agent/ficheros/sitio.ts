@@ -113,6 +113,9 @@ export function alcanceDeBusqueda(
 /** La ruta como la enseña Claude Code en los resultados de búsqueda: relativa
  *  a la carpeta de trabajo (`index.html`, `menu/index.html`). */
 export function rutaRelativa(ruta: string): string {
+  // The person's home isn't the project's folder: what is there (another project her assistant reads, phase 4B) is
+  // outside the working directory, and Claude Code shows that by its absolute path.
+  if (ruta.startsWith(`${HOME_DIR}/`)) return ruta;
   return ruta.startsWith(CWD) ? ruta.slice(CWD.length) : ruta;
 }
 

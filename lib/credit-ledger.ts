@@ -38,6 +38,8 @@ export type LedgerSurface =
   | "event_task"
   | "sandbox"
   | "page_assistant"
+  /** The person's own assistant answering a visitor (spec local 2026-11-06-asistente-propio, §4.7): the owner pays. */
+  | "assistant_visitor"
   | "publish_translation"
   /** Emails past the month's allowance (spec local 2026-10-22-email-integration, 6.6). */
   | "project_email";

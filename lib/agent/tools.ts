@@ -149,6 +149,8 @@ import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
 import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
 import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
+import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
+import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -373,6 +375,11 @@ export interface AgentDeps {
   leerMemoriaDelDueno?(userId: string): Promise<string | null>;
   /** plans/len-md — escribe ENTERO el `~/.len/LEN.md` de la persona. */
   setPersonalLenMd?(userId: string, text: string | null): Promise<boolean>;
+  /** THE PERSON'S OWN ASSISTANT's memory, `~/.assistant/MEMORY.md` (spec local 2026-11-06-asistente-propio, §6.1). */
+  assistantMemory?: {
+    read(assistantId: string): Promise<string | null>;
+    save(assistantId: string, text: string): Promise<boolean>;
+  };
   /** plans/len-md — las notas de `/.len/memory` (lib/agent/memory/store.ts). */
   memoryNotes?: {
     list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
@@ -884,6 +891,18 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
     async setPersonalLenMd(userId, text) {
       return setPersonalLenMd(userId, text);
     },
+    // The person's own assistant's memory. Lazy import: it reads the database, server-only.
+    assistantMemory: {
+      async read(assistantId) {
+        const { assistantById } = await import("@/lib/assistants/store");
+        return (await assistantById(assistantId))?.memory ?? null;
+      },
+      async save(assistantId, text) {
+        const { saveAssistantMemory } = await import("@/lib/assistants/store");
+        await saveAssistantMemory(assistantId, text);
+        return true;
+      },
+    },
     // Las notas de /.len/memory. Import perezoso: tiran de la base, server-only.
     memoryNotes: {
       async list(projectId) {
@@ -985,6 +1004,20 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
       async conversacion(projectId, zona, id) {
         const { leerConversacion } = await import("@/lib/resultados/mensajes");
         return leerConversacion(projectId, zona, id);
+      },
+      // Phase 4E: the person's own assistant's conversations with the visitors, read only in HER session.
+      async herConversations(assistantId, zone, filter) {
+        const { herConversations } = await import("@/lib/assistants/visitor/inbox");
+        return herConversations(assistantId, zone, filter);
+      },
+      async herConversation(assistantId, zone, id) {
+        const { herConversation } = await import("@/lib/assistants/visitor/inbox");
+        return herConversation(assistantId, zone, id);
+      },
+      async answersOn(projectIds) {
+        const [{ assistantOnPage }, { answersVisitors }] = await Promise.all([import("@/lib/assistants/visitor/store"), import("@/lib/assistants/visitor/on-page")]);
+        const found = await Promise.all(projectIds.map((id) => assistantOnPage(id).catch(() => null)));
+        return found.some((f) => answersVisitors(f));
       },
     },
     async loadProject(projectId, userId) {
@@ -1343,9 +1376,16 @@ export interface AgentSession {
   /** The skills already in this conversation (loaded with `skill` or invoked with /name): `skill`
    *  answers Claude Code's «already loaded» line instead of sending them again. */
   loadedSkills?: Set<string>;
-  /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2): Write, Edit and what a
-   *  command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
+  /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2) or the person's own assistant: Write, Edit
+   *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): this turn runs as it. Absent for Len. */
+  assistant?: {
+    readonly id: string;
+    readonly name: string;
+    /** The projects she serves, her home first (phase 4): `ask_len` passes a request to one of them. */
+    readonly projects?: readonly { readonly id: string; readonly title: string }[];
+  };
   /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
    *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
   terminalHolderId?: string;
@@ -3155,6 +3195,12 @@ async function ejecutarHerramienta(
         return await toolPresent(session, deps, args);
       case SHOW_WIDGET:
         return toolShowWidget(args);
+      // The person's own assistant passes what builds to Len (lib/assistants/ask-len.ts); for Len it isn't there.
+      case ASK_LEN:
+        return await runAskLen(session, args);
+      // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
+      case CREATE_ASSISTANT:
+        return await runCreateAssistant(session, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.

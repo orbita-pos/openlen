@@ -5,6 +5,8 @@
 // sigue trabajando aunque lo cierres.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import { AssistantFigure } from "@/components/workspace-v2/assistant/figure";
+import { lookOfRow } from "@/lib/assistants/look";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { Cara } from "../cara";
 import { Icono } from "../iconos";
@@ -53,9 +55,12 @@ interface Props {
   onAbrirHerramienta?: (installationId: string) => void;
   onAbrirProyecto?: (projectId: string) => void;
   onHerramientasCambiaron?: () => void;
+  /** Talking with the person's own assistant, not Len (phase 5): her name and colour in the header, and none of Len's
+   *  own (the call, Equipo, his event and tool cards). */
+  asistente?: { readonly name: string; readonly color: string; readonly look?: unknown };
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente }: Props) {
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -216,7 +221,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   });
 
   return (
-    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto} inert={!abierto} role="dialog" aria-label="Len" aria-modal={abierto || undefined} onKeyDown={e => {
+    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto} inert={!abierto} role="dialog" aria-label={asistente?.name ?? "Len"} aria-modal={abierto || undefined} onKeyDown={e => {
       if (e.nativeEvent.isComposing) return;
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onCerrar(); }
       if (e.key === "Tab") {
@@ -230,20 +235,22 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
           <Icono nombre="back" />
         </button>
         <div className="ch-who">
-          <Cara estado={cara} className="ch-face" />
-          <b className="ch-name">Len</b>
+          {asistente ? <span className="ch-face ch-face-asistente"><AssistantFigure look={lookOfRow(asistente)} size={44} /></span> : <Cara estado={cara} className="ch-face" />}
+          <b className="ch-name">{asistente?.name ?? "Len"}</b>
           <span className={`ch-st${linea ? " is-on" : ""}${chat.trabajando ? " ch-live" : ""}`}>{linea}</span>
         </div>
-        <button type="button" className="ch-btn" aria-label={tp("llamar")} onClick={onLlamar}>
-          <Icono nombre="phone" />
-        </button>
-        {onEquipo && <button type="button" className="ch-equipo" onClick={onEquipo}>@ {tq("titulo")}</button>}
+        {!asistente && (
+          <button type="button" className="ch-btn" aria-label={tp("llamar")} onClick={onLlamar}>
+            <Icono nombre="phone" />
+          </button>
+        )}
+        {onEquipo && !asistente && <button type="button" className="ch-equipo" onClick={onEquipo}>@ {tq("titulo")}</button>}
       </header>
 
       <div className="ch-historial">
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): an event task's cards, over the conversation. */}
-      <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />
-      <TarjetasDeHerramientas
+      {!asistente && <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />}
+      {!asistente && <TarjetasDeHerramientas
         cliente={cliente}
         projectId={projectId}
         abierto={abierto}
@@ -251,7 +258,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
         onAbrirHerramienta={(id) => onAbrirHerramienta?.(id)}
         onAbrirProyecto={(id) => onAbrirProyecto?.(id)}
         onHerramientasCambiaron={() => onHerramientasCambiaron?.()}
-      />
+      />}
       <div className="ch-log" ref={log} role="log" aria-live="polite" aria-relevant="additions text">
         <div className="ch-contenido" ref={contenido}>
         {filas}
