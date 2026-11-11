@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import type { AssistantListItem, AssistantView } from "@/lib/assistants/view";
+import { DEFAULT_LOOK } from "@/lib/figure/look";
 
 import type { AgentAction } from "../agent-action-card";
 import { AssistantCreatorDialog } from "./creator-dialog";
@@ -65,7 +66,7 @@ function Card({ projectId }: { projectId: string }) {
     <div className="mt-2 flex flex-wrap items-center gap-3 rounded-xl border bd bg-elev p-3" data-assistant-card="">
       {mine ? (
         <>
-          <AssistantFigure shape={mine.shape} color={mine.color} size={40} />
+          <AssistantFigure look={mine.look} size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium fg">{t("ownAssistant.card.ready", { name: mine.name })}</p>
           </div>
@@ -85,7 +86,7 @@ function Card({ projectId }: { projectId: string }) {
               onClick={() => void connectHere(a)}
               className="inline-flex items-center gap-2 rounded-full bg-[var(--nc-accent-text)] py-1 pl-1 pr-3 text-[12px] font-medium text-white disabled:opacity-50"
             >
-              <AssistantFigure shape={a.shape} color={a.color} size={22} />
+              <AssistantFigure look={a.look} size={22} />
               {t("ownAssistant.card.useHere", { name: a.name })}
             </button>
           ))}
@@ -114,8 +115,8 @@ function Card({ projectId }: { projectId: string }) {
               setCreating(false);
               void fetch(`/api/assistants/${c.id}`)
                 .then((r) => (r.ok ? (r.json() as Promise<AssistantView>) : null))
-                .then((a) => setMine(a ?? { id: c.id, slug: c.slug, name: c.name, shape: "blob", color: "#F4A48B", tone: "friendly", projectId }))
-                .catch(() => setMine({ id: c.id, slug: c.slug, name: c.name, shape: "blob", color: "#F4A48B", tone: "friendly", projectId }));
+                .then((a) => setMine(a ?? { id: c.id, slug: c.slug, name: c.name, look: DEFAULT_LOOK, color: DEFAULT_LOOK.color, tone: "friendly", projectId }))
+                .catch(() => setMine({ id: c.id, slug: c.slug, name: c.name, look: DEFAULT_LOOK, color: DEFAULT_LOOK.color, tone: "friendly", projectId }));
             }}
           />
         </>

@@ -135,7 +135,7 @@ export function UserMessage({
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="nc-up flex items-end justify-end gap-2">
-        <div className="max-w-[84%] whitespace-pre-wrap break-words rounded-[16px_16px_4px_16px] border bd bg-elev px-3 py-2 text-[14px] leading-relaxed fg">
+        <div data-user-bubble="" className="max-w-[84%] whitespace-pre-wrap break-words rounded-[16px_16px_4px_16px] border bd bg-elev px-3 py-2 text-[14px] leading-relaxed fg">
           {fotos.length > 0 && (
             <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] fg-muted">
               {fotos.map((f) => (

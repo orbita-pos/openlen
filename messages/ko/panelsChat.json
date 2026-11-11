@@ -740,7 +740,12 @@
       "tone": "말투",
       "done": "완료",
       "cancel": "취소",
-      "morningSummary": "매일 아침 무슨 일이 있었는지 알려 줘"
+      "morningSummary": "매일 아침 무슨 일이 있었는지 알려 줘",
+      "eyes": "눈",
+      "eyewear": "안경",
+      "accessory": "액세서리",
+      "surprise": "랜덤으로",
+      "freeColor": "다른 색"
     },
     "tones": {
       "friendly": "친근하게",
@@ -778,7 +783,10 @@
       "renameSave": "저장",
       "renameCancel": "취소",
       "renamePublish": "페이지를 게시하면 새 이름이 표시돼요.",
-      "renameFailed": "이름을 바꾸지 못했어요. 다시 시도해 주세요."
+      "renameFailed": "이름을 바꾸지 못했어요. 다시 시도해 주세요.",
+      "changeFigure": "모습 바꾸기",
+      "figurePublish": "게시된 페이지에는 다시 게시하면 새 모습이 표시됩니다.",
+      "figureFailed": "모습을 저장하지 못했습니다. 다시 시도해 주세요."
     },
     "speaker": {
       "working": "{name} · 작업 중",

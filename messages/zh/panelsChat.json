@@ -740,7 +740,12 @@
       "tone": "说话方式",
       "done": "完成",
       "cancel": "取消",
-      "morningSummary": "每天早上告诉我发生了什么"
+      "morningSummary": "每天早上告诉我发生了什么",
+      "eyes": "眼睛",
+      "eyewear": "眼镜",
+      "accessory": "配饰",
+      "surprise": "随机一个",
+      "freeColor": "其他颜色"
     },
     "tones": {
       "friendly": "亲切",
@@ -778,7 +783,10 @@
       "renameSave": "保存",
       "renameCancel": "取消",
       "renamePublish": "发布页面后就会显示新名字。",
-      "renameFailed": "无法更改名字，请重试。"
+      "renameFailed": "无法更改名字，请重试。",
+      "changeFigure": "更换形象",
+      "figurePublish": "重新发布后，已发布的页面才会显示新形象。",
+      "figureFailed": "形象未能保存，请重试。"
     },
     "speaker": {
       "working": "{name} 正在工作",

@@ -1,38 +1,19 @@
-// THE ASSISTANT'S FIGURE (spec local 2026-11-06-asistente-propio, §4.4): placeholders until the figures' design pass
-// with Jesús (phase 6). Four shapes, the color the person picked, two eyes. Nothing depends on how many there are.
-import type { AssistantShape } from "@/lib/assistants/names";
+// THE ASSISTANT'S FIGURE, FLAT (spec local 2026-11-10-figuras-del-asistente, §5.3): her look from the catalog as a
+// plain SVG — what shows small (the rail, a card, the face beside a message) and under the live one until it paints
+// (./live-figure.tsx). One drawing for every surface: lib/figure/flat.ts, which the published bubble bakes too.
+import { flatFigureSvg } from "@/lib/figure/flat";
+import type { FigureLook } from "@/lib/figure/look";
 
-const EYES = (cy: number) => (
-  <>
-    <ellipse cx="23" cy={cy} rx="3.4" ry="4.8" fill="#1d1d1f" />
-    <ellipse cx="37" cy={cy} rx="3.4" ry="4.8" fill="#1d1d1f" />
-  </>
-);
-
-export function AssistantFigure({ shape, color, size = 32, label }: { shape: AssistantShape; color: string; size?: number; label?: string }) {
+export function AssistantFigure({ look, size = 32, label }: { look: FigureLook; size?: number; label?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 60 60" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      {shape === "ring" ? (
-        <>
-          <circle cx="30" cy="30" r="19" fill="none" stroke={color} strokeWidth="9" />
-          {EYES(30)}
-        </>
-      ) : shape === "drop" ? (
-        <>
-          <path d="M30 5C30 5 50 26 50 38a20 20 0 0 1-40 0C10 26 30 5 30 5z" fill={color} />
-          {EYES(38)}
-        </>
-      ) : shape === "square" ? (
-        <>
-          <rect x="8" y="10" width="44" height="40" rx="14" fill={color} />
-          {EYES(30)}
-        </>
-      ) : (
-        <>
-          <path d="M30 6c14 0 24 9 24 24s-10 24-24 24S6 45 6 30 16 6 30 6z" fill={color} />
-          {EYES(29)}
-        </>
-      )}
-    </svg>
+    <span
+      data-assistant-figure=""
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      style={{ display: "inline-flex", width: size, height: size, flex: "none", lineHeight: 0 }}
+      // Built from a checked look: nothing of it reaches the markup unvalidated (flat.ts).
+      dangerouslySetInnerHTML={{ __html: flatFigureSvg(look, size) }}
+    />
   );
 }

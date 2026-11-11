@@ -14,6 +14,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
+import { ChangeFigure } from "./change-figure";
 import { HerProjects } from "./her-projects";
 import { MorningSummarySwitch } from "./morning-summary-switch";
 import { RenameHer } from "./rename-her";
@@ -51,6 +52,10 @@ export function AssistantHome({
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
   const [tab, setTab] = useState<Tab>("talk");
+  // Her figure can be changed here (phase 6): her place wears the new one at once.
+  const [look, setLook] = useState(assistant.look);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const her = { ...assistant, look, color: look.color };
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
   return (
@@ -73,13 +78,14 @@ export function AssistantHome({
           </div>
           <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
+            <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
             <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
             <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
           </div>
         </div>
         {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
         <div className={tab === "talk" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-          <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={assistant} centered />
+          <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
         </div>
         {seen.has("conversations") && (
           <div className={tab === "conversations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>

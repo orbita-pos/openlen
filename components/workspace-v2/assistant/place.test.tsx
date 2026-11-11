@@ -49,6 +49,34 @@ describe("the assistant's place", () => {
     expect(host.querySelector("[data-assistant-empty]")!.textContent).toContain('"name":"Lucía"');
   });
 
+  // Phase 6 (spec local 2026-11-10-figuras-del-asistente, §2.4, §5.3).
+  it("🔴 her place wears her color, with an ink that reads over it", async () => {
+    const yellow = { ...LUCIA, look: { ...LUCIA.look, color: "#ffc21a" }, color: "#ffc21a" };
+    const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={yellow} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    const root = host.querySelector<HTMLElement>(".assistant-tint")!;
+    expect(root.style.getPropertyValue("--assistant-tint")).toBe("#ffc21a");
+    expect(root.style.getPropertyValue("--assistant-ink")).toBe("#1d1d1f");
+    expect(root.style.getPropertyValue("--assistant-soft")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(root.querySelector("[data-assistant-header]")).not.toBeNull();
+  });
+
+  it("🔴 one figure of hers is the live one: the big one before anything was said, her header's after", async () => {
+    const empty = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    expect(empty.querySelectorAll("[data-figure]")).toHaveLength(1);
+    expect(empty.querySelector("[data-assistant-empty] [data-figure]")).not.toBeNull();
+    expect(empty.querySelector("[data-assistant-header] [data-figure]")).toBeNull();
+    const talked = mount(
+      <NewChatPanel flatProjectId="p2" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[{ id: "r1", userText: "hola", assistantReasoning: "¡Hola!", status: "applied", appliedAt: 1 }]} assistant={{ ...LUCIA, projectId: "p2" }} centered />,
+    );
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    expect(talked.querySelectorAll("[data-figure]")).toHaveLength(1);
+    expect(talked.querySelector("[data-assistant-header] [data-figure]")).not.toBeNull();
+    // Her owner's bubble is the one her color paints (tokens.css).
+    expect(talked.querySelector("[data-user-bubble]")!.textContent).toContain("hola");
+  });
+
   it("🔴 in a shared project, its composer still talks only to it: no team, no «@person» message into Len's chat", async () => {
     const fetchMock = vi.fn(async (url: string) =>
       String(url).endsWith("/miembros")
@@ -418,6 +446,25 @@ describe("her place's controls, what they say", () => {
     );
     return calls;
   }
+
+  // Phase 6: her figure is changed from her place, with the creator that made her.
+  it("🔴 «Cambiar figura» saves her new look, her place wears it at once, and a published page is told to publish", async () => {
+    const calls = serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(host.querySelector("[data-figure-publish]")).toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>("[data-change-figure]")!.click());
+    expect(document.querySelector("[data-assistant-name]")).toBeNull();
+    act(() => document.querySelector<HTMLButtonElement>('[data-figure-category="shape"] [data-figure-option="heart"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await settle();
+    const patch = calls.find((c) => c.url.endsWith("/api/assistants/a1") && c.init?.method === "PATCH")!;
+    expect(JSON.parse(String(patch.init!.body))).toEqual({ look: { ...LUCIA.look, shape: "heart" } });
+    expect(document.querySelector("[data-assistant-done]")).toBeNull();
+    expect(host.querySelector("[data-figure-publish]")).not.toBeNull();
+    // The heart's own outline is in her place now.
+    expect(host.querySelector('[data-assistant-empty] [data-part="body"] path')).not.toBeNull();
+  });
 
   it("🔴 after a reload, on but not yet published with her still says it shows after publishing", async () => {
     serve();
