@@ -21,7 +21,8 @@ export function activityOf(s: TurnSignals): FigureActivity {
   if (s.toolRunning) return "working";
   if (s.streaming) return "talking";
   if (s.waiting) return "thinking";
-  if (s.failed) return "error";
+  // Her owner writing again is the end of the failed turn's gesture.
   if (s.typing) return "listening";
+  if (s.failed) return "error";
   return "ready";
 }

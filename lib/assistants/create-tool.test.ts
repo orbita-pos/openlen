@@ -4,10 +4,10 @@ import type { AgentSession } from "@/lib/agent/tools";
 import { childToolDeclarations } from "@/lib/agent/subagents/presets";
 
 import { assistantTools } from "./agent";
-import { checkLook, offered } from "@/lib/figure/look";
+import { DEFAULT_LOOK, checkLook } from "@/lib/figure/look";
 import { curatedLook } from "@/lib/figure/random";
 
-import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION, runCreateAssistant, suggestedLookOf } from "./create-tool";
+import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION, SUGGESTABLE, runCreateAssistant, suggestedLookOf } from "./create-tool";
 
 const LEN = { projectId: "p1", userId: "u1" } as unknown as AgentSession;
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia" };
@@ -76,10 +76,16 @@ describe("create_assistant", () => {
     expect(suggestedLookOf(undefined)).toBeUndefined();
   });
 
-  it("declares the catalog as it is today, whatever its size", () => {
+  // His tools are a cached prefix of every turn: the catalog growing must not move it.
+  it("🔴 what Len may name is a list kept here, not the live catalog: adding an entry to the catalog changes no byte of his tools", () => {
     const p = CREATE_ASSISTANT_DECLARATION.parameters.properties as Record<string, { enum?: readonly string[] }>;
-    for (const category of ["shape", "eyes", "eyewear", "accessory"] as const) expect(p[category]!.enum).toEqual([...offered(category)]);
-    expect(p.color).toBeDefined();
+    for (const category of ["shape", "eyes", "eyewear", "accessory"] as const) {
+      expect(p[category]!.enum).toEqual([...SUGGESTABLE[category]]);
+      expect(Object.isFrozen(SUGGESTABLE[category])).toBe(true);
+      // And every one of them is still a figure that draws.
+      for (const id of SUGGESTABLE[category]) expect(checkLook({ ...DEFAULT_LOOK, [category]: id }).ok, `${category}: ${id}`).toBe(true);
+    }
+    expect(JSON.stringify(CREATE_ASSISTANT_DECLARATION)).toMatchInlineSnapshot(`"{"name":"create_assistant","description":"Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like.","parameters":{"type":"OBJECT","properties":{"shape":{"type":"STRING","enum":["drop","round","capsule","cube","ears","heart","flower","triangle"],"description":"Optional. The figure's body."},"eyes":{"type":"STRING","enum":["oval","round","dot","smile","sleepy"],"description":"Optional."},"eyewear":{"type":"STRING","enum":["none","round","shades"],"description":"Optional."},"accessory":{"type":"STRING","enum":["none","beret","beanie","bow","crown","hat","headphones"],"description":"Optional. What it wears on its head."},"color":{"type":"STRING","description":"Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."}}}}"`);
   });
 
   it("is not the assistant's: an assistant doesn't make assistants", async () => {

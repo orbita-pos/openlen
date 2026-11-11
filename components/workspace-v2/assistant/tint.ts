@@ -28,6 +28,9 @@ export interface Tint {
   tint: string;
   /** The text over it: whichever of the two inks reads better. */
   ink: typeof DARK | typeof LIGHT;
+  /** The bubble's and the send button's outline: her color a step toward its ink, so a white one keeps its edge on a
+   *  light panel and a black one on a dark panel. */
+  edge: string;
   /** Her header's background on a light theme, and on a dark one: her color, mostly paper. */
   soft: string;
   softDark: string;
@@ -41,11 +44,13 @@ export function tintOf(color: string): Tint | null {
   // A middle tone (a gray, a mid blue) reads with neither ink: it moves away from its ink, only as far as it has to.
   let tint = hers;
   for (let step = 1; contrast(tint, ink) < 4.5 && step <= 20; step++) tint = mix(hers, ink === DARK ? "#ffffff" : "#000000", step * 0.05);
-  return { tint, ink, soft: mix(hers, "#ffffff", 0.86), softDark: mix(hers, "#000000", 0.78) };
+  let edge = tint;
+  for (let step = 1; contrast(tint, edge) < 1.3 && step <= 20; step++) edge = mix(tint, ink, step * 0.04);
+  return { tint, ink, edge, soft: mix(hers, "#ffffff", 0.86), softDark: mix(hers, "#000000", 0.78) };
 }
 
 /** The CSS variables her place sets on its root (app/[locale]/new/tokens.css reads them under `.assistant-tint`). */
 export function tintStyle(color: string): Record<string, string> {
   const t = tintOf(color);
-  return t ? { "--assistant-tint": t.tint, "--assistant-ink": t.ink, "--assistant-soft": t.soft, "--assistant-soft-dark": t.softDark } : {};
+  return t ? { "--assistant-tint": t.tint, "--assistant-ink": t.ink, "--assistant-edge": t.edge, "--assistant-soft": t.soft, "--assistant-soft-dark": t.softDark } : {};
 }
