@@ -3,6 +3,7 @@
 // la hoja y, pequeña, flota encima.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { DEFAULT_LOOK } from "@/lib/figure/look";
 import { App as AppNativa } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
 import { useTranslations } from "use-intl";
@@ -191,7 +192,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       .then((l) => {
         if (l) setAsistentes(l);
         const suya = l?.find((x) => x.id === assistantId);
-        const asistente = suya ?? { id: assistantId, name: "", slug: "", shape: "blob" as const, color: "transparent", tone: "friendly" as const, projectId: "", projectIds: [] };
+        const asistente = suya ?? { id: assistantId, name: "", slug: "", look: DEFAULT_LOOK, color: DEFAULT_LOOK.color, tone: "friendly" as const, projectId: "", projectIds: [] };
         setSelector(false); setMenu(false); setChatAbierto(false);
         abrirSuPestana(asistente, donde);
         if (suya && donde.parte === "hablar") hablarCon(suya);

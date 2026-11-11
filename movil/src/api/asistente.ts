@@ -18,6 +18,14 @@ const suya = (id: string, tras = "") => `/api/assistants/${encodeURIComponent(id
 /** Her person's assistants, newest first; none (or assistants off on the server) is an empty list. Throws otherwise. */
 export const listarAsistentes = (c: ClienteDeOpenLen) => leer<AssistantListItem>(c, "/api/assistants", "assistants");
 
+/** Whether the live figures are on (GET /api/figures, spec local 2026-11-10-figuras-del-asistente, §6): not knowing is
+ *  off, and her figure stays flat. */
+export async function figurasEncendidas(c: ClienteDeOpenLen): Promise<boolean> {
+  const res = await c.pedir("/api/figures").catch(() => null);
+  const body = res?.ok ? ((await res.json().catch(() => null)) as { enabled?: unknown } | null) : null;
+  return body?.enabled === true;
+}
+
 /** The first page of her conversation with her owner, in the shape of a project's `chatHistory`. */
 export const leerSuChat = (c: ClienteDeOpenLen, id: string) => leer<StoredChatTurn>(c, suya(id, "/chat"), "chatHistory");
 

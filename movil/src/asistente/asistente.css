@@ -1,6 +1,11 @@
-/* Her tab (phase 5): Gestión's look, like «Entregado» and «Herramientas»; her figure is a dot of her colour until the
-   figures' design pass (phase 6). */
-.app-asistente .asist-figura { display: inline-block; width: 0.8em; height: 0.8em; margin-right: 0.4em; border-radius: 50%; vertical-align: middle; }
+/* Her tab (phase 5): Gestión's look, like «Entregado» and «Herramientas». Her figure (phase 6) is alive in the
+   header, on a light tint of her colour; everywhere else on the phone it is the flat one. */
+.app-asistente .asist-cabecera { justify-content: flex-start; gap: 14px; margin: -4px -4px 12px; padding: 10px 12px; border-radius: 18px; background: var(--asist-suave, transparent); color: #1d1d1f; }
+.app-asistente .asist-cabecera .asist-quien { flex: 1; min-width: 0; }
+.app-asistente .asist-cabecera .gestion-cerrar { color: inherit; }
+@media (prefers-color-scheme: dark) {
+  .app-asistente .asist-cabecera { background: var(--asist-suave-oscuro, transparent); color: #f4f4f5; }
+}
 .app-asistente .asist-hablar { width: 100%; margin-bottom: 12px; }
 .app-asistente .asist-partes { display: flex; gap: 6px; margin-bottom: 10px; }
 .app-asistente .asist-partes button { flex: 1; padding: 8px; border-radius: 999px; border: 1px solid var(--lm-line, rgba(0, 0, 0, 0.12)); background: transparent; color: inherit; }
@@ -13,7 +18,7 @@
 .app-asistente .asist-vacio { opacity: 0.7; border-style: dashed; }
 .app-asistente .asist-pedido[data-resaltado="true"] { border-color: var(--lm-accent, #e8603c); box-shadow: 0 0 0 2px var(--lm-accent, #e8603c); }
 .app-asistente .asist-acciones { display: flex; gap: 8px; margin-top: 8px; }
-.ch-face-asistente { display: inline-block; border-radius: 50%; }
+.ch-face-asistente { display: inline-flex; }
 .app-asistente .asist-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app-asistente .asist-aviso { color: var(--lm-bad, #c2410c); }
 .app-asistente .asist-de-visitante { text-align: right; }
