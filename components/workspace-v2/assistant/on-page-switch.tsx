@@ -7,6 +7,8 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { herKnob, herSwitch } from "./her-sheet";
+
 export function OnPageSwitch({
   assistantId,
   projectId,
@@ -54,22 +56,24 @@ export function OnPageSwitch({
   const hint = !on ? null : needsPublish ? t("ownAssistant.place.onPageHint") : nothing ? t("ownAssistant.place.nothingToKnow") : null;
 
   return (
-    <div className="flex min-w-0 items-center gap-2" data-on-page="">
+    <div className="flex min-w-0 flex-1 items-center gap-3" data-on-page="">
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] fg" aria-hidden>
+          {t("ownAssistant.place.onPage")}
+        </p>
+        {hint && <p className="text-[11.5px] leading-snug fg-faint">{hint}</p>}
+      </div>
       <button
         type="button"
         role="switch"
         aria-checked={on}
         disabled={busy}
         onClick={() => void flip()}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-[var(--nc-accent-text)]" : "bg-hover"}`}
+        className={herSwitch(on)}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left] ${on ? "left-[18px]" : "left-0.5"}`} />
+        <span className={herKnob(on)} />
         <span className="sr-only">{t("ownAssistant.place.onPage")}</span>
       </button>
-      <span className="text-[12.5px] fg" aria-hidden>
-        {t("ownAssistant.place.onPage")}
-      </span>
-      {hint && <span className="truncate text-[11.5px] fg-faint">{hint}</span>}
     </div>
   );
 }

@@ -6,6 +6,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { herKnob, herSwitch } from "./her-sheet";
+
 export function MorningSummarySwitch({ assistantId, initial }: { assistantId: string; initial: boolean }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -33,22 +35,24 @@ export function MorningSummarySwitch({ assistantId, initial }: { assistantId: st
   };
 
   return (
-    <div className="flex min-w-0 items-center gap-2" data-morning-summary="">
+    <div className="flex min-w-0 items-center gap-3 px-2.5 py-[7px]" data-morning-summary="">
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] fg" aria-hidden>
+          {t("ownAssistant.summary.switch")}
+        </p>
+        {on && <p className="text-[11.5px] leading-snug fg-faint">{t("ownAssistant.summary.hint")}</p>}
+      </div>
       <button
         type="button"
         role="switch"
         aria-checked={on}
         disabled={busy}
         onClick={() => void flip()}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${on ? "bg-[var(--nc-accent-text)]" : "bg-hover"}`}
+        className={herSwitch(on)}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-[left] ${on ? "left-[18px]" : "left-0.5"}`} />
+        <span className={herKnob(on)} />
         <span className="sr-only">{t("ownAssistant.summary.switch")}</span>
       </button>
-      <span className="text-[12.5px] fg" aria-hidden>
-        {t("ownAssistant.summary.switch")}
-      </span>
-      {on && <span className="text-[11.5px] fg-faint">{t("ownAssistant.summary.hint")}</span>}
     </div>
   );
 }

@@ -280,4 +280,11 @@
 /* What the bubble holds in the workspace's muted ink or accent (a photo's caption, a file's name, their icons) would
    vanish on her color: it takes the bubble's own ink. */
 .workspace-v2 .assistant-tint [data-user-bubble] :is(.fg-muted, .fg-faint, [class*="nc-accent-text"]) { color: inherit; opacity: 0.8; }
+/* The same color in the rest of her place (its rail, its menu, its sheets, her visitors' views): a button that does
+   it, a switch that is on, and a wash for what is selected. Without her variables (a dialog that is not hers) they
+   fall back to the workspace's accent. */
+.workspace-v2 .her-fill { background: var(--assistant-tint, var(--nc-accent-text)); color: var(--assistant-ink, #fff); box-shadow: inset 0 0 0 1px var(--assistant-edge, transparent); }
+.workspace-v2 .her-on { background: var(--assistant-tint, var(--nc-accent-text)); box-shadow: inset 0 0 0 1px var(--assistant-edge, transparent); }
+.workspace-v2 .her-wash { background: color-mix(in srgb, var(--assistant-tint, var(--nc-accent-text)) 16%, transparent); }
+.workspace-v2 .her-ring:focus-visible { outline: 2px solid var(--assistant-tint, var(--nc-accent-text)); outline-offset: 2px; }
 .workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); box-shadow: inset 0 0 0 1px var(--assistant-edge); }

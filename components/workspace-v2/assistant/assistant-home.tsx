@@ -12,7 +12,7 @@
 // pages) waits in a menu behind one button, so her place is her and the conversation.
 import { Inbox, MessageCircle, MoreHorizontal, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import type { AssistantView } from "@/lib/assistants/view";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -21,8 +21,10 @@ import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
 import { ChangeFigure } from "./change-figure";
 import { HerProjects } from "./her-projects";
+import { HerTint } from "./her-sheet";
 import { MorningSummarySwitch } from "./morning-summary-switch";
 import { RenameHer } from "./rename-her";
+import { tintStyle } from "./tint";
 import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
 
@@ -62,6 +64,8 @@ export function AssistantHome({
   const [look, setLook] = useState(assistant.look);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const her = { ...assistant, look, color: look.color };
+  // Her color for the whole place, and for what it draws outside its root (its sheets).
+  const tint = useMemo(() => tintStyle(look.color) as CSSProperties, [look.color]);
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
   const [menuOpen, setMenuOpen] = useState(false);
@@ -80,8 +84,9 @@ export function AssistantHome({
   }, [menuOpen]);
   return (
     <ToastProvider dismissLabel={tc("close")}>
-      <div className="workspace-v2 flex h-dvh bg-side">
-        <div role="tablist" aria-orientation="vertical" className="flex w-12 shrink-0 flex-col items-center gap-1 py-3" data-assistant-rail="">
+      <HerTint.Provider value={tint}>
+      <div className="workspace-v2 flex h-dvh bg-side" style={tint}>
+        <div role="tablist" aria-orientation="vertical" className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 border-r bd py-3.5" data-assistant-rail="">
           {tabs.map((k) => {
             const Icon = TAB_ICON[k];
             return (
@@ -91,10 +96,10 @@ export function AssistantHome({
                 role="tab"
                 aria-selected={tab === k}
                 title={t(TAB_LABEL[k])}
-                onClick={() => (setTab(k), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
-                className={`flex h-9 w-9 items-center justify-center rounded-xl ${tab === k ? "seg-active fg" : "fg-faint hover:fg"}`}
+                onClick={() => (setTab(k), setMenuOpen(false), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
+                className={`her-ring flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${tab === k ? "her-wash fg" : "fg-faint hover:bg-hover hover:fg"}`}
               >
-                <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                <Icon size={18} strokeWidth={tab === k ? 2 : 1.7} aria-hidden="true" />
                 <span className="sr-only">{t(TAB_LABEL[k])}</span>
               </button>
             );
@@ -109,14 +114,19 @@ export function AssistantHome({
             aria-label={t("ownAssistant.place.settings")}
             title={t("ownAssistant.place.settings")}
             onClick={() => setMenuOpen((o) => !o)}
-            className={`flex h-8 w-8 items-center justify-center rounded-full ${menuOpen ? "seg-active fg" : "fg-muted hover:fg"}`}
+            className={`her-ring flex h-8 w-8 items-center justify-center rounded-full transition-colors ${menuOpen ? "bg-hover fg" : "fg-muted hover:bg-hover hover:fg"}`}
           >
             <MoreHorizontal size={17} aria-hidden="true" />
           </button>
           {/* Closed it is hidden, not unmounted: a rename half written or a switch in flight is not lost. */}
-          <div className={menuOpen ? "flex w-[min(20rem,calc(100vw-5rem))] flex-col items-stretch gap-3 rounded-2xl border bd bg-elev p-3 shadow-xl" : "hidden"} data-assistant-controls="">
+          <div className={menuOpen ? "slide-down flex w-[min(17.5rem,calc(100vw-5rem))] flex-col rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
+            data-assistant-controls=""
+            // A row that opens its own sheet or dialog is the menu's answer: the menu steps aside.
+            onClick={(e) => (e.target as Element).closest("[data-rename-open], [data-change-figure]") && setMenuOpen(false)}
+          >
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
             <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
+            <div className="my-1 h-px bg-[var(--border)]" />
             <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
             <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
           </div>
@@ -137,6 +147,7 @@ export function AssistantHome({
         )}
         </div>
       </div>
+      </HerTint.Provider>
     </ToastProvider>
   );
 }

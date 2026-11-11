@@ -4,6 +4,7 @@
 // joined into cards — the waiting ones first, then what was decided in the last 30 days — in every project she serves.
 // «Que Len lo haga» from here starts Len's turn in that project's chat (only the owner's press does), and the card says
 // where to see him working.
+import { Inbox } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -72,9 +73,15 @@ export function VisitorRequests({ assistantId, name }: { assistantId: string; na
   const ordered = [...cards.filter((c) => c.status === "pending"), ...cards.filter((c) => c.status !== "pending")];
   return (
     <div className="nice-scroll min-h-0 flex-1 overflow-y-auto" data-visitor-requests="">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-2 px-4 py-5">
+      <div className="mx-auto flex w-full max-w-[680px] flex-col gap-3 px-5 pb-10 pt-9">
+        <h1 className="mb-1 text-[22px] font-semibold tracking-tight fg">{t("ownAssistant.requests.tab")}</h1>
         {ordered.length === 0 ? (
-          <p className="py-10 text-center text-[13px] fg-muted">{t("ownAssistant.requests.empty", { name })}</p>
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <span className="her-wash flex h-12 w-12 items-center justify-center rounded-full fg-muted" aria-hidden="true">
+              <Inbox size={20} strokeWidth={1.7} />
+            </span>
+            <p className="max-w-[320px] text-[13.5px] leading-relaxed fg-muted">{t("ownAssistant.requests.empty", { name })}</p>
+          </div>
         ) : (
           ordered.map((card) => {
             const where = working[card.id] ?? (card.status === "accepted" ? card.projectId : null);

@@ -43,8 +43,8 @@ function type(input: HTMLInputElement, value: string) {
 
 async function rename(host: HTMLElement, to: string) {
   act(() => host.querySelector<HTMLButtonElement>("[data-rename-open]")!.click());
-  type(host.querySelector<HTMLInputElement>("[data-rename-input]")!, to);
-  act(() => host.querySelector<HTMLButtonElement>("[data-rename-save]")!.click());
+  type(document.querySelector<HTMLInputElement>("[data-rename-input]")!, to);
+  act(() => document.querySelector<HTMLButtonElement>("[data-rename-save]")!.click());
   await flush();
 }
 
@@ -62,16 +62,18 @@ describe("RenameHer", () => {
     const leave = vi.fn();
     const host = mount(<RenameHer assistantId="a1" name="Lucía" onPage={false} leave={leave} />);
     await rename(host, "Ana");
-    expect(host.querySelector('[role="alert"]')?.textContent).toBe("ownAssistant.errors.nameTaken");
+    expect(document.querySelector('[data-her-sheet] [role="alert"]')?.textContent).toBe("ownAssistant.errors.nameTaken");
     expect(leave).not.toHaveBeenCalled();
   });
 
   it("with her bubble on her page, it says the page shows the new name after publishing", () => {
     const on = mount(<RenameHer assistantId="a1" name="Lucía" onPage leave={vi.fn()} />);
     act(() => on.querySelector<HTMLButtonElement>("[data-rename-open]")!.click());
-    expect(on.textContent).toContain("ownAssistant.place.renamePublish");
+    // The sheet is on <body>, not inside the menu.
+    expect(document.querySelector("[data-her-sheet]")!.textContent).toContain("ownAssistant.place.renamePublish");
+    act(() => roots.splice(0).forEach((r) => r.unmount()));
     const off = mount(<RenameHer assistantId="a1" name="Lucía" onPage={false} leave={vi.fn()} />);
     act(() => off.querySelector<HTMLButtonElement>("[data-rename-open]")!.click());
-    expect(off.textContent).not.toContain("ownAssistant.place.renamePublish");
+    expect(document.querySelector("[data-her-sheet]")!.textContent).not.toContain("ownAssistant.place.renamePublish");
   });
 });
