@@ -819,7 +819,12 @@
       "renameFailed": "이름을 바꾸지 못했어요. 다시 시도해 주세요.",
       "changeFigure": "모습 바꾸기",
       "figurePublish": "게시된 페이지에는 다시 게시하면 새 모습이 표시됩니다.",
-      "figureFailed": "모습을 저장하지 못했습니다. 다시 시도해 주세요."
+      "figureFailed": "모습을 저장하지 못했습니다. 다시 시도해 주세요.",
+      "status": {
+        "thinking": "생각 중…",
+        "working": "작업 중…",
+        "talking": "작성 중…"
+      }
     },
     "speaker": {
       "working": "{name} · 작업 중",

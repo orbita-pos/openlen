@@ -61,18 +61,22 @@ describe("the assistant's place", () => {
     expect(root.querySelector("[data-assistant-header]")).not.toBeNull();
   });
 
-  it("🔴 one figure of hers is the live one: the big one before anything was said, her header's after", async () => {
+  it("🔴 her figure heads her place, alive and alone, with her name and what she is doing under it", async () => {
     const empty = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
     await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
     expect(empty.querySelectorAll("[data-figure]")).toHaveLength(1);
-    expect(empty.querySelector("[data-assistant-empty] [data-figure]")).not.toBeNull();
-    expect(empty.querySelector("[data-assistant-header] [data-figure]")).toBeNull();
+    expect(empty.querySelector("[data-assistant-header] [data-figure]")).not.toBeNull();
+    expect(empty.querySelector("[data-assistant-empty] [data-figure]")).toBeNull();
+    expect(empty.querySelector("[data-assistant-header] [data-her-status]")!.textContent).toBe("ownAssistant.place.yours");
     const talked = mount(
       <NewChatPanel flatProjectId="p2" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[{ id: "r1", userText: "hola", assistantReasoning: "¡Hola!", status: "applied", appliedAt: 1 }]} assistant={{ ...LUCIA, projectId: "p2" }} centered />,
     );
     await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
     expect(talked.querySelectorAll("[data-figure]")).toHaveLength(1);
     expect(talked.querySelector("[data-assistant-header] [data-figure]")).not.toBeNull();
+    // What she said is a bubble of its own, without a row repeating her face and name: they head her place.
+    expect(talked.querySelector("[data-her-bubble]")!.textContent).toContain("¡Hola!");
+    expect(talked.querySelector("[data-reply-speaker]")).toBeNull();
     // Her owner's bubble is the one her color paints (tokens.css).
     expect(talked.querySelector("[data-user-bubble]")!.textContent).toContain("hola");
   });
@@ -113,7 +117,8 @@ describe("the assistant's place", () => {
         speaker={{ name: "Lucía", face: <span data-face="">L</span> }}
       />,
     );
-    expect(host.querySelector("[data-reply-speaker] [data-face]")).not.toBeNull();
+    expect(host.querySelector("[data-her-bubble]")).not.toBeNull();
+    expect(host.querySelector("[data-reply-speaker]")).toBeNull();
     expect(host.textContent).toContain("Lucía");
     expect(host.textContent).not.toMatch(/\bLen\b/);
   });
@@ -463,7 +468,7 @@ describe("her place's controls, what they say", () => {
     expect(document.querySelector("[data-assistant-done]")).toBeNull();
     expect(host.querySelector("[data-figure-publish]")).not.toBeNull();
     // The heart's own outline is in her place now.
-    expect(host.querySelector('[data-assistant-empty] [data-part="body"] path[d^="M30 54"]')).not.toBeNull();
+    expect(host.querySelector('[data-assistant-header] [data-part="body"] path[d^="M30 54"]')).not.toBeNull();
   });
 
   it("🔴 after a reload, on but not yet published with her still says it shows after publishing", async () => {

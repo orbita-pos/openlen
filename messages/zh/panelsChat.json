@@ -819,7 +819,12 @@
       "renameFailed": "无法更改名字，请重试。",
       "changeFigure": "更换形象",
       "figurePublish": "重新发布后，已发布的页面才会显示新形象。",
-      "figureFailed": "形象未能保存，请重试。"
+      "figureFailed": "形象未能保存，请重试。",
+      "status": {
+        "thinking": "思考中…",
+        "working": "处理中…",
+        "talking": "输入中…"
+      }
     },
     "speaker": {
       "working": "{name} 正在工作",

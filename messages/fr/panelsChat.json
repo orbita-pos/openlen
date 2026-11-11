@@ -819,7 +819,12 @@
       "renameFailed": "Impossible de changer le nom. Réessayez.",
       "changeFigure": "Changer la figure",
       "figurePublish": "Votre page publiée affichera la nouvelle figure après une nouvelle publication.",
-      "figureFailed": "La figure n’a pas pu être enregistrée. Réessayez."
+      "figureFailed": "La figure n’a pas pu être enregistrée. Réessayez.",
+      "status": {
+        "thinking": "Réfléchit…",
+        "working": "Travaille…",
+        "talking": "Écrit…"
+      }
     },
     "speaker": {
       "working": "{name} travaille",

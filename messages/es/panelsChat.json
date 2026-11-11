@@ -819,7 +819,12 @@
       "renameFailed": "No se pudo cambiar el nombre. Inténtalo otra vez.",
       "changeFigure": "Cambiar figura",
       "figurePublish": "Tu página publicada mostrará la nueva figura cuando la vuelvas a publicar.",
-      "figureFailed": "No se pudo guardar la figura. Intenta de nuevo."
+      "figureFailed": "No se pudo guardar la figura. Intenta de nuevo.",
+      "status": {
+        "thinking": "Pensando…",
+        "working": "Trabajando…",
+        "talking": "Escribiendo…"
+      }
     },
     "speaker": {
       "working": "{name} está trabajando",

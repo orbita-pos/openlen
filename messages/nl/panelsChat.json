@@ -819,7 +819,12 @@
       "renameFailed": "De naam kon niet worden gewijzigd. Probeer het opnieuw.",
       "changeFigure": "Figuur wijzigen",
       "figurePublish": "Je gepubliceerde pagina toont de nieuwe figuur nadat je opnieuw publiceert.",
-      "figureFailed": "De figuur kon niet worden opgeslagen. Probeer het opnieuw."
+      "figureFailed": "De figuur kon niet worden opgeslagen. Probeer het opnieuw.",
+      "status": {
+        "thinking": "Denkt na…",
+        "working": "Werkt…",
+        "talking": "Schrijft…"
+      }
     },
     "speaker": {
       "working": "{name} is bezig",
