@@ -745,7 +745,40 @@
       "eyewear": "Gafas",
       "accessory": "Accesorio",
       "surprise": "Sorpréndeme",
-      "freeColor": "Otro color"
+      "freeColor": "Otro color",
+      "option": {
+        "shape": {
+          "drop": "Gota",
+          "round": "Redonda",
+          "capsule": "Cápsula",
+          "cube": "Cubo",
+          "ears": "Con orejas",
+          "heart": "Corazón",
+          "flower": "Flor",
+          "triangle": "Triángulo"
+        },
+        "eyes": {
+          "oval": "Ovalados",
+          "round": "Redondos",
+          "dot": "Puntitos",
+          "smile": "Sonrientes",
+          "sleepy": "Soñolientos"
+        },
+        "eyewear": {
+          "none": "Sin gafas",
+          "round": "Gafas redondas",
+          "shades": "Gafas de sol"
+        },
+        "accessory": {
+          "none": "Sin accesorio",
+          "beret": "Boina",
+          "beanie": "Gorro",
+          "bow": "Moño",
+          "crown": "Corona",
+          "hat": "Sombrero",
+          "headphones": "Audífonos"
+        }
+      }
     },
     "tones": {
       "friendly": "Amable",

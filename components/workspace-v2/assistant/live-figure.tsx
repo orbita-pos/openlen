@@ -96,9 +96,10 @@ export function LiveFigure({
   useEffect(() => figure.current?.setActive(active), [active]);
 
   return (
-    <span data-figure={alive ? "live" : "flat"} data-figure-active={String(active)} style={{ position: "relative", display: "inline-flex", width: size, height: size, flex: "none" }}>
+    // Her name is on the wrapper: the flat figure is hidden once she is alive, and a hidden element says nothing.
+    <span data-figure={alive ? "live" : "flat"} data-figure-active={String(active)} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} style={{ position: "relative", display: "inline-flex", width: size, height: size, flex: "none" }}>
       <span style={{ visibility: alive ? "hidden" : "visible", display: "inline-flex" }}>
-        <AssistantFigure look={look} size={size} label={label} />
+        <AssistantFigure look={look} size={size} />
       </span>
       <canvas ref={canvas} width={size} height={size} aria-hidden="true" style={{ position: "absolute", inset: 0, width: size, height: size, visibility: alive ? "visible" : "hidden", pointerEvents: "none" }} />
     </span>

@@ -745,7 +745,40 @@
       "eyewear": "眼镜",
       "accessory": "配饰",
       "surprise": "随机一个",
-      "freeColor": "其他颜色"
+      "freeColor": "其他颜色",
+      "option": {
+        "shape": {
+          "drop": "水滴",
+          "round": "圆形",
+          "capsule": "胶囊",
+          "cube": "方块",
+          "ears": "带耳朵",
+          "heart": "爱心",
+          "flower": "花朵",
+          "triangle": "三角形"
+        },
+        "eyes": {
+          "oval": "椭圆",
+          "round": "圆形",
+          "dot": "圆点",
+          "smile": "微笑",
+          "sleepy": "困倦"
+        },
+        "eyewear": {
+          "none": "不戴眼镜",
+          "round": "圆框眼镜",
+          "shades": "墨镜"
+        },
+        "accessory": {
+          "none": "无配饰",
+          "beret": "贝雷帽",
+          "beanie": "毛线帽",
+          "bow": "蝴蝶结",
+          "crown": "皇冠",
+          "hat": "帽子",
+          "headphones": "耳机"
+        }
+      }
     },
     "tones": {
       "friendly": "亲切",
