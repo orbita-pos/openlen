@@ -6,8 +6,13 @@
 // said to her) and «En mi página»; phase 3, «Pedidos» (what visitors asked for and couldn't be done, joined into cards
 // only the owner's press turns into Len's work). Each tab after the first mounts the first time it opens. Phase 4: the
 // projects she serves, beside her home's «En mi página», where she is taken off one or deleted.
+//
+// Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
+// three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
+// pages) waits in a menu behind one button, so her place is her and the conversation.
+import { Inbox, MessageCircle, MoreHorizontal, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { AssistantView } from "@/lib/assistants/view";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -30,6 +35,7 @@ const TAB_LABEL: Record<Tab, string> = {
   conversations: "ownAssistant.place.conversations",
   requests: "ownAssistant.requests.tab",
 };
+const TAB_ICON: Record<Tab, LucideIcon> = { talk: MessageCircle, conversations: Users, requests: Inbox };
 
 export function AssistantHome({
   assistant,
@@ -58,25 +64,57 @@ export function AssistantHome({
   const her = { ...assistant, look, color: look.color };
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menu = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    // A dialog one of its rows opened (the creator, a confirmation) is outside the menu: pressing in it is not leaving.
+    const away = (e: PointerEvent) => {
+      const at = e.target as Element | null;
+      if (menu.current && at && !menu.current.contains(at) && !at.closest('[role="dialog"]')) setMenuOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector('[role="dialog"]') && setMenuOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => (document.removeEventListener("pointerdown", away), document.removeEventListener("keydown", esc));
+  }, [menuOpen]);
   return (
     <ToastProvider dismissLabel={tc("close")}>
-      <div className="workspace-v2 flex h-dvh flex-col bg-side">
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b bd px-4 py-2" data-assistant-controls="">
-          <div role="tablist" className="flex items-center gap-1">
-            {tabs.map((k) => (
+      <div className="workspace-v2 flex h-dvh bg-side">
+        <div role="tablist" aria-orientation="vertical" className="flex w-12 shrink-0 flex-col items-center gap-1 py-3" data-assistant-rail="">
+          {tabs.map((k) => {
+            const Icon = TAB_ICON[k];
+            return (
               <button
                 key={k}
                 type="button"
                 role="tab"
                 aria-selected={tab === k}
+                title={t(TAB_LABEL[k])}
                 onClick={() => (setTab(k), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
-                className={`rounded-full px-3 py-1 text-[12.5px] ${tab === k ? "seg-active fg" : "fg-muted hover:fg"}`}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl ${tab === k ? "seg-active fg" : "fg-faint hover:fg"}`}
               >
-                {t(TAB_LABEL[k])}
+                <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+                <span className="sr-only">{t(TAB_LABEL[k])}</span>
               </button>
-            ))}
-          </div>
-          <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
+            );
+          })}
+        </div>
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
+          <button
+            type="button"
+            data-assistant-menu=""
+            aria-expanded={menuOpen}
+            aria-label={t("ownAssistant.place.settings")}
+            title={t("ownAssistant.place.settings")}
+            onClick={() => setMenuOpen((o) => !o)}
+            className={`flex h-8 w-8 items-center justify-center rounded-full ${menuOpen ? "seg-active fg" : "fg-muted hover:fg"}`}
+          >
+            <MoreHorizontal size={17} aria-hidden="true" />
+          </button>
+          {/* Closed it is hidden, not unmounted: a rename half written or a switch in flight is not lost. */}
+          <div className={menuOpen ? "flex w-[min(20rem,calc(100vw-5rem))] flex-col items-stretch gap-3 rounded-2xl border bd bg-elev p-3 shadow-xl" : "hidden"} data-assistant-controls="">
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
             <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
             <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
@@ -97,6 +135,7 @@ export function AssistantHome({
             <VisitorRequests assistantId={assistant.id} name={assistant.name} />
           </div>
         )}
+        </div>
       </div>
     </ToastProvider>
   );

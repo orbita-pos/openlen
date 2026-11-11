@@ -824,7 +824,8 @@
         "thinking": "Denkt na…",
         "working": "Werkt…",
         "talking": "Schrijft…"
-      }
+      },
+      "settings": "Instellingen"
     },
     "speaker": {
       "working": "{name} is bezig",
