@@ -10,7 +10,7 @@
 // Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
 // three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
 // pages) waits in a menu behind one button, so her place is her and the conversation.
-import { Globe, Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
+import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
@@ -112,23 +112,10 @@ export function AssistantHome({
       <HerTint.Provider value={tint}>
       {/* ONE WINDOW (11/11, Jesús, on the reference he sent: «el mío se ve como si fueran dos apps»): one bar across the
           top, one ground under her rail and her chat and around her page — her color washing down from the top —, and
-          her page as a card that hangs from its tab in that bar, as a browser's does. */}
+          her page as a card on that ground. */}
       <div className="workspace-v2 her-shell relative flex h-dvh flex-col" style={tint}>
-        <div className="flex h-11 shrink-0 items-end" data-her-bar="">
-          <div className="w-[54px] shrink-0" />
-          <div className="min-w-0 flex-1" />
-          {pageOpen && tab === "talk" && (
-            <div className="hidden min-w-0 flex-1 items-end pr-2 min-[860px]:flex">
-              <div
-                data-her-page-tab=""
-                className="relative z-10 -mb-px flex h-8 min-w-0 max-w-[260px] items-center gap-2 rounded-t-[10px] border border-b-0 bd bg-elev pl-3 pr-4 text-[12.5px] font-medium fg"
-              >
-                <Globe size={13} strokeWidth={1.8} className="shrink-0 fg-muted" aria-hidden="true" />
-                <span className="truncate">{projectTitle ?? address ?? t("ownAssistant.page.title")}</span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* The bar holds only her place's two buttons, at its right end: the page's name is in its own address bar. */}
+        <div className="h-11 shrink-0" data-her-bar="" />
         <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1">
             {tab === "talk" && (
