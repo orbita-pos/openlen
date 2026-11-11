@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LOOK, FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, type FigureLook } from "../look";
-import { anchorsFor, partsFor, surfaceZ, type Part } from "./parts";
+import { anchorsFor, partsFor, shadowOf, surfaceZ, type Part } from "./parts";
 
 const look = (over: Partial<FigureLook> = {}): FigureLook => ({ ...DEFAULT_LOOK, ...over });
 const of = (parts: Part[], role: Part["role"]) => parts.filter((p) => p.role === role);
@@ -115,5 +115,18 @@ describe("partsFor", () => {
   it("gives a black body light eyes", () => {
     for (const eye of of(partsFor(look({ color: "#000000" })), "eye")) expect(Math.min(...eye.color)).toBeGreaterThan(0.9);
     for (const eye of of(partsFor(look({ color: "#ff5fa8" })), "eye")) expect(Math.max(...eye.color)).toBeLessThan(0.2);
+  });
+});
+
+describe("shadowOf", () => {
+  it("is where a hat-like accessory sits, and nothing for what casts none", () => {
+    for (const accessory of ["beret", "beanie", "crown", "hat"] as const) {
+      const shadow = shadowOf(look({ accessory }));
+      expect(shadow, accessory).not.toBeNull();
+      expect(shadow!.center[1]).toBeGreaterThan(anchorsFor(look({ accessory })).top[1] - 0.35);
+      expect(Math.min(...shadow!.size)).toBeGreaterThan(0);
+    }
+    for (const accessory of ["none", "bow", "headphones"] as const) expect(shadowOf(look({ accessory }))).toBeNull();
+    expect(shadowOf(undefined)).toBeNull();
   });
 });

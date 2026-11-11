@@ -8,7 +8,7 @@
 //     to the flat figure (../flat.ts).
 //   · the canvas is transparent. Its background is the host's.
 import { createRenderer, rotation, type Frame, type Renderer } from "./gl";
-import { partsFor, type Part } from "./parts";
+import { partsFor, shadowOf, type Part } from "./parts";
 import { NEUTRAL_POSE, blinkAt, stepPose, targetPose, type FigureActivity, type Pose } from "./pose";
 
 export type { FigureActivity } from "./pose";
@@ -50,7 +50,7 @@ const LAYERS = 40;
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 /** A pose as the renderer wants it. `lag` is which way the fur trails. */
-function frameOf(pose: Pose, lag: readonly [number, number, number]): Omit<Frame, "layers" | "density" | "time"> {
+function frameOf(pose: Pose, lag: readonly [number, number, number]): Omit<Frame, "layers" | "density" | "time" | "occluder"> {
   const wide = 1 / Math.sqrt(pose.stretch); // taller means thinner: the volume stays
   return {
     rotation: rotation(pose.yaw + pose.gaze[0] * 0.28, pose.pitch - pose.gaze[1] * 0.12, pose.roll),
@@ -67,6 +67,10 @@ const NEUTRAL = frameOf(NEUTRAL_POSE, [0, 0, 0]);
 /** Strands per unit, from how many pixels the figure really gets: fine detail in a small figure is only noise. */
 const densityFor = (pixels: number): number => Math.min(95, Math.max(26, pixels * 0.42));
 
+/**
+ * null where there is no WebGL2 — and on a canvas whose figure was destroyed: destroying gives the context back to
+ * the browser, so that canvas is spent. One figure, one <canvas> element.
+ */
 export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: FigureOptions = {}): Figure | null {
   let gl: WebGL2RenderingContext | null = null;
   let renderer: Renderer;
@@ -84,6 +88,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   const seed = options.seed ?? Math.random() * 1000;
 
   let parts: Part[] = partsFor(look);
+  let occluder = shadowOf(look);
   let activity: FigureActivity = options.activity ?? "ready";
   let since = clock();
   let gaze: readonly [number, number] | null = null;
@@ -121,7 +126,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     const dt = clamp(now - last, 0, 0.1);
     last = now;
     const target = targetPose(activity, now - since, gaze);
-    let frame: Omit<Frame, "layers" | "density" | "time">;
+    let frame: Omit<Frame, "layers" | "density" | "time" | "occluder">;
     if (reduced) {
       // One still pose: the body does not move, but the eyes still say what it is doing (closed when asleep).
       pose = { ...NEUTRAL_POSE, eyeOpen: target.eyeOpen, gaze: target.gaze };
@@ -138,7 +143,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
       pose = next;
       frame = frameOf({ ...pose, eyeOpen: pose.eyeOpen * (1 - 0.95 * blinkAt(now, seed)) }, lag);
     }
-    renderer.render(parts, { ...frame, time: reduced ? 0 : now, layers: LAYERS, density: densityFor(Math.min(width, height)) }, width, height);
+    renderer.render(parts, { ...frame, time: reduced ? 0 : now, occluder, layers: LAYERS, density: densityFor(Math.min(width, height)) }, width, height);
     dirty = false;
     if (!painted) {
       painted = true;
@@ -216,6 +221,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     setLook: (next) =>
       guarded(() => {
         parts = partsFor(next);
+        occluder = shadowOf(next);
         invalidate();
       }, undefined),
     setActivity: (next) =>
@@ -265,7 +271,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         context.bindRenderbuffer(context.RENDERBUFFER, depth);
         context.renderbufferStorage(context.RENDERBUFFER, context.DEPTH_COMPONENT16, side, side);
         context.framebufferRenderbuffer(context.FRAMEBUFFER, context.DEPTH_ATTACHMENT, context.RENDERBUFFER, depth);
-        renderer.render(parts, { ...NEUTRAL, time: 0, layers: LAYERS, density: densityFor(side) }, side, side);
+        renderer.render(parts, { ...NEUTRAL, time: 0, occluder, layers: LAYERS, density: densityFor(side) }, side, side);
         const raw = new Uint8Array(side * side * 4);
         context.readPixels(0, 0, side, side, context.RGBA, context.UNSIGNED_BYTE, raw);
         context.bindFramebuffer(context.FRAMEBUFFER, null);
