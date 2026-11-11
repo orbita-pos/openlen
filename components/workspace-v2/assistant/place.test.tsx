@@ -46,7 +46,9 @@ describe("the assistant's place", () => {
     const header = host.querySelector("[data-assistant-header]")!;
     expect(header).not.toBeNull();
     expect(header.textContent).toContain("Lucía");
-    expect(host.querySelector("[data-assistant-empty]")!.textContent).toContain('"name":"Lucía"');
+    // Nothing said yet: no line in the middle repeating what the box below already invites to.
+    expect(host.querySelector("[data-assistant-empty]")!.textContent).toBe("");
+    expect(host.querySelector("textarea")!.getAttribute("placeholder")).toBe('ownAssistant.place.placeholder {"name":"Lucía"}');
   });
 
   // Phase 6 (spec local 2026-11-10-figuras-del-asistente, §2.4, §5.3).
