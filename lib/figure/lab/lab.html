@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laboratorio de figuras</title>
+<style>
+  html, body { margin: 0; min-height: 100%; font: 14px/1.4 system-ui, sans-serif; color: #1d1d1f; background: #f4f4f5; }
+  main { display: grid; grid-template-columns: 1fr 300px; min-height: 100vh; }
+  #stage { padding: 24px; display: flex; flex-direction: column; gap: 20px; align-items: center; }
+  #hero { width: 240px; height: 240px; }
+  .rows { display: grid; gap: 12px; width: 100%; max-width: 560px; }
+  .row { display: flex; align-items: center; gap: 18px; padding: 12px 16px; border-radius: 14px; }
+  .row.light { background: #ffffff; }
+  .row.dark { background: #17171a; color: #f4f4f5; }
+  .row.tint { background: var(--tint, #fde8f1); }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; opacity: .8; }
+  .pair { display: flex; align-items: center; gap: 8px; }
+  aside { background: #fff; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  h1 { font-size: 15px; margin: 0; }
+  .label { font-size: 12px; color: #666; margin-bottom: 4px; }
+  .options { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; padding: 5px 9px; border-radius: 8px; border: 1px solid #ddd; background: #fafafa; cursor: pointer; }
+  button[aria-pressed="true"] { background: #1d1d1f; color: #fff; border-color: #1d1d1f; }
+  .swatch { width: 24px; height: 24px; padding: 0; border-radius: 50%; }
+  #stats { font: 12px/1.5 ui-monospace, monospace; color: #555; white-space: pre; }
+  #grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 560px; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div id="stage">
+    <canvas id="hero"></canvas>
+    <div class="rows" id="rows"></div>
+    <div class="label">Las ocho formas, planas</div>
+    <div id="grid"></div>
+    <button id="sheetButton">Hoja de las ocho formas, vivas</button>
+    <canvas id="sheet" style="max-width:100%;background:#fff;border-radius:14px"></canvas>
+  </div>
+  <aside>
+    <h1>Laboratorio de figuras</h1>
+    <div id="controls"></div>
+    <label class="label">Color libre <input type="color" id="color"></label>
+    <div class="options">
+      <button id="surprise">Sorpréndeme</button>
+      <button id="reduced" aria-pressed="false">Movimiento reducido</button>
+    </div>
+    <div id="stats"></div>
+  </aside>
+</main>
+<script src="/main.js"></script>
+</body>
+</html>
