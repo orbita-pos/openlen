@@ -50,9 +50,9 @@ export function HerPage({
   const source = remote ? { src: remote } : canvas.estado.modo === "esperando" ? { src: "about:blank" } : { srcDoc: html };
   const quiet = "her-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] fg-muted transition-colors hover:bg-hover hover:fg";
   return (
-    // A card under its tab in her place's top bar (assistant-home.tsx): the tab sits on its top-left corner.
+    // A card on her place's ground, under its top bar (assistant-home.tsx).
     <section
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] rounded-tl-none border bd bg-elev shadow-[0_12px_32px_-20px_rgba(0,0,0,0.55)]"
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] border bd bg-elev shadow-[0_12px_32px_-20px_rgba(0,0,0,0.55)]"
       data-her-page=""
       aria-label={t("ownAssistant.page.title")}
     >
