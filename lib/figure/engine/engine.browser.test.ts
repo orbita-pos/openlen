@@ -430,6 +430,30 @@ describe("the look", () => {
   );
 
   it(
+    "lets no strand of fur cross an eye",
+    () =>
+      withPage({ css: 240 }, async (p) => {
+        for (const [eyes, rx, ry] of [["oval", 0.1, 0.145], ["round", 0.13, 0.13]] as const) {
+          await show(p, { ...PINK, eyes });
+          const s = await shot(p);
+          let furry = 0, seen = 0;
+          for (const side of [-1, 1])
+            for (let dy = -1; dy <= 1; dy += 0.1)
+              for (let dx = -1; dx <= 1; dx += 0.1) {
+                // Well inside the eye's own outline: its edge is antialiased against the fur.
+                if (dx * dx + dy * dy > 0.72 * 0.72) continue;
+                const [r, g] = s.at(...at(side * 0.32 + dx * rx, 0.1 + dy * ry));
+                seen++;
+                // The eye is ink and a white glint; anything this pink is the body showing through or over it.
+                if (r - g > 50) furry++;
+              }
+          expect(furry, `${eyes}: ${furry} of ${seen} points inside the eyes are fur`).toBe(0);
+        }
+      }),
+    T,
+  );
+
+  it(
     "keeps its shadows in the body's own hue, and stays luminous",
     () =>
       withPage({ css: 240 }, async (p) => {

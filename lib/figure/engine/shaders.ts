@@ -20,6 +20,8 @@ uniform vec4 uSilA; // superellipse power, lobes, lobe depth, notch at the top
 uniform vec4 uSilB; // point at the bottom, taper to the bottom, taper to the top, squash of the lower half
 uniform float uWiden, uFurLen, uLayers, uTime;
 uniform vec2 uView; // world → clip, per axis
+uniform float uBody;
+uniform vec3 uEyeL, uEyeR;
 out vec3 vDir, vN, vW;
 out float vH;
 
@@ -64,6 +66,11 @@ void main() {
   // Under the body the fur is shorter, and it only droops ALONG the skin: hanging straight down is what made the
   // lower edge look like a fringe.
   float len = uFurLen * mix(1.0, 0.7, smoothstep(0.3, 1.0, -wn.y));
+  // Around an eye the fur lies flat, as on a plush toy: a strand standing there would cross the eye.
+  if (uBody > 0.5) {
+    vec3 skin = w + uOffset;
+    len *= mix(0.12, 1.0, smoothstep(0.14, 0.34, min(distance(skin, uEyeL), distance(skin, uEyeR))));
+  }
   vec3 down = vec3(0.0, -1.0, 0.0);
   down -= wn * dot(down, wn);
   w += wn * h * len;
