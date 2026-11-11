@@ -72,6 +72,8 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       // El «@» del chat (spec local 2026-10-27-at-mentions). LISTA BLANCA.
       "lib/mentions/**/*.test.ts",
+      // Las figuras del asistente (spec local 2026-11-10). LISTA BLANCA.
+      "lib/figure/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       // Len sabe de tus resultados (plans/len-resultados/).
@@ -279,6 +281,8 @@ export default defineConfig({
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // Len's eyes see WebGL (three.js, maps, games) in the screenshot. WHITELIST.
       "lib/ai/eyes-see-webgl.browser.test.ts",
+      // El motor de las figuras, mirado en el Chromium de los ojos (spec local 2026-11-10). LISTA BLANCA.
+      "lib/figure/engine/engine.browser.test.ts",
       // The eyes' Chromium inherits no server secret (2026-10-20). WHITELIST.
       "lib/ai/eyes-inherit-no-secrets.browser.test.ts",
       // And it runs with Chrome's sandbox (2026-10-20, measured on the box). WHITELIST.
