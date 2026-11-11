@@ -16,8 +16,18 @@ const flats: { element: HTMLElement; size: number }[] = [];
 const $ = (id: string) => document.getElementById(id)!;
 
 function live(canvas: HTMLCanvasElement): void {
-  const figure = createFigure(canvas, look, { activity, reducedMotion: reduced, onLost: () => canvas.replaceWith(Object.assign(document.createElement("span"), { textContent: "sin WebGL2" })) });
+  // What a host does when the engine gives up (no WebGL2, context lost, device too slow): the flat figure takes over.
+  const size = canvas.clientWidth || 96;
+  const fallBack = (): void => {
+    const flat = Object.assign(document.createElement("span"), { title: "plana: el motor se rindió en este dispositivo" });
+    flat.style.outline = "1px dashed #c00";
+    flats.push({ element: flat, size });
+    flat.innerHTML = flatFigureSvg(look, size);
+    canvas.replaceWith(flat);
+  };
+  const figure = createFigure(canvas, look, { activity, reducedMotion: reduced, onLost: fallBack });
   if (figure) figures.push(figure);
+  else fallBack();
 }
 
 function buildStage(): void {
@@ -140,7 +150,8 @@ let since = performance.now();
   frames++;
   const now = performance.now();
   if (now - since > 500) {
-    $("stats").textContent = `${Math.round((frames * 1000) / (now - since))} cuadros por segundo\n${figures.length} figuras vivas a la vez\npantalla ×${devicePixelRatio}`;
+    $("stats").textContent = `${Math.round((frames * 1000) / (now - since))} cuadros por segundo\n${figures.length} figuras vivas a la vez\npantalla ×${devicePixelRatio}
+calidad ${figures[0]?.quality ?? "-"} de 2`;
     frames = 0;
     since = now;
   }

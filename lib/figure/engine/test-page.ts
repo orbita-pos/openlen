@@ -72,11 +72,11 @@ export async function frames(p: FigurePage, n: number): Promise<void> {
   await p.page.evaluate((k) => (window as never as { frames: (n: number) => Promise<boolean> }).frames(k), n);
 }
 
-/** Moves the page's clock forward in 1/30 s steps, one painted frame per step. */
+/** Moves the page's clock forward in 20 ms steps, one painted frame per step: fast enough that the engine keeps its full quality, few enough frames for a software GPU. */
 export async function advance(p: FigurePage, seconds: number): Promise<void> {
   await p.page.evaluate(async (s) => {
     const w = window as never as { __t: number; frames: (n: number) => Promise<boolean> };
-    const steps = Math.max(1, Math.round(s * 30));
+    const steps = Math.max(1, Math.round(s * 50));
     for (let i = 0; i < steps; i++) {
       w.__t += s / steps;
       await w.frames(1);
