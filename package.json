@@ -40,6 +40,7 @@
     "apps:vendor": "tsx --tsconfig tsconfig.eval.json scripts/apps-vendor.ts",
     "figure:lab": "node scripts/figure-lab.mjs",
     "figure:engine": "node scripts/figure-engine-build.mjs",
+    "figure:bubble": "tsx --require ./scripts/test-node-server-only-shim.cjs scripts/figure-bubble-demo.ts",
     "apps:missing-packages": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/missing-packages.ts",
     "functions:vendor": "tsx --tsconfig tsconfig.eval.json scripts/functions-vendor.ts",
     "functions:cloudflare-setup": "tsx --tsconfig tsconfig.eval.json scripts/functions-cloudflare-setup.ts",
