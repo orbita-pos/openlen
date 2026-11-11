@@ -35,6 +35,20 @@ window.make = (look, opts, id) => {
   }, opts || {}));
   return !!window.fig;
 };
+// What the canvas REALLY holds, read right after the engine painted: premultiplied pixels whose color exceeds
+// their alpha are light added to whatever is behind — a bright fringe on a dark host.
+window.overflow = () => new Promise((done) => requestAnimationFrame(() => {
+  const c = window.__canvas || document.getElementById("c");
+  const gl = c.getContext("webgl2");
+  const px = new Uint8Array(c.width * c.height * 4);
+  gl.readPixels(0, 0, c.width, c.height, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  let over = 0, drawn = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    if (px[i + 3] > 0) drawn++;
+    if (Math.max(px[i], px[i + 1], px[i + 2]) > px[i + 3] + 2) over++;
+  }
+  done({ over, drawn });
+}));
 window.frames = (n) => new Promise((done) => { const step = () => (n-- > 0 ? requestAnimationFrame(step) : done(true)); step(); });
 `;
 

@@ -41,6 +41,22 @@ describe("flatFigureSvg", () => {
     expect(layer(flatFigureSvg(DEFAULT_LOOK, 30), "eyes")).toContain("#1d1d1f");
   });
 
+  it("outlines the body, so a white figure shows on white and a black one on black", () => {
+    for (const color of ["#ffffff", "#000000", "#fff9c4"]) {
+      const body = layer(flatFigureSvg({ ...DEFAULT_LOOK, color }, 30), "body");
+      const strokes = [...body.matchAll(/ stroke="(#[0-9a-f]{6})"/g)].map((m) => m[1]);
+      expect(strokes.length, color).toBeGreaterThan(0);
+      for (const stroke of strokes) expect(stroke, color).not.toBe(color);
+    }
+    // One outline around the whole body: a shape made of several pieces shows no line where they meet.
+    for (const shape of ["ears", "flower"] as const) {
+      const body = layer(flatFigureSvg({ ...DEFAULT_LOOK, shape }, 30), "body");
+      const lastStroke = body.lastIndexOf(" stroke=");
+      const firstPlain = body.search(/<(circle|path|rect)(?![^>]* stroke=)/);
+      expect(firstPlain, shape).toBeGreaterThan(lastStroke);
+    }
+  });
+
   it("draws the default figure for anything that is not a look, without throwing", () => {
     const fallback = flatFigureSvg(DEFAULT_LOOK, 30);
     for (const raw of [undefined, {}, { shape: "sparrow" }, null, 7]) expect(flatFigureSvg(raw, 30)).toBe(fallback);

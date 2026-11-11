@@ -18,6 +18,8 @@ export interface Frame {
   gaze: readonly [number, number];
   /** What the accessory shades (parts.ts `shadowOf`), in the body's own space; null when nothing does. */
   occluder: { center: Vec3; size: Vec3 } | null;
+  /** How far the camera sees from its center (parts.ts `reachFor`). */
+  reach: number;
 }
 
 export interface Renderer {
@@ -130,8 +132,6 @@ function lathe(gl: WebGL2RenderingContext, top: number): Mesh {
 const KIND = { fur: 0, solid: 1, gloss: 2 } as const;
 const SHADOW = 3;
 const IDENTITY = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-/** How far the camera sees from the center, in body units: the figure, its fur, a hat and its shadow fit. */
-const REACH = 1.5;
 
 export function createRenderer(gl: WebGL2RenderingContext): Renderer {
   const program = gl.createProgram()!;
@@ -186,7 +186,7 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       const side = Math.min(width, height);
-      gl.uniform2f(u.uView, side / width / REACH, side / height / REACH);
+      gl.uniform2f(u.uView, side / width / frame.reach, side / height / frame.reach);
       gl.uniform1f(u.uTime, frame.time);
       gl.uniform1f(u.uDensity, frame.density);
 

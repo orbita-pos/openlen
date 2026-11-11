@@ -84,8 +84,23 @@ export function rgb(color: string): [number, number, number] {
   return [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16) / 255) as [number, number, number];
 }
 
-/** The eyes' ink on that body: dark, or light when the body is so dark they would not show. WCAG relative luminance. */
-export function eyeInk(color: string): "#1d1d1f" | "#f4f4f5" {
+/** WCAG relative luminance of a checked #rrggbb. */
+function luminance(color: string): number {
   const [r, g, b] = rgb(color).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)) as [number, number, number];
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.06 ? "#f4f4f5" : "#1d1d1f";
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const DARK_INK = "#1d1d1f";
+const LIGHT_INK = "#f4f4f5";
+
+/** The eyes' ink on that body: whichever of the two contrasts more with it (WCAG contrast ratio). */
+export function eyeInk(color: string): "#1d1d1f" | "#f4f4f5" {
+  const body = luminance(color) + 0.05;
+  return (luminance(LIGHT_INK) + 0.05) / body > body / (luminance(DARK_INK) + 0.05) ? LIGHT_INK : DARK_INK;
+}
+
+/** Two checked colors mixed, `amount` of the second: 0..1. */
+export function mix(a: string, b: string, amount: number): string {
+  const x = rgb(a), y = rgb(b);
+  return "#" + x.map((c, i) => Math.round((c + (y[i]! - c) * amount) * 255).toString(16).padStart(2, "0")).join("");
 }

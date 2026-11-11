@@ -564,33 +564,142 @@ describe("what it costs", () => {
     T,
   );
 
+  /** A figure on its own canvas whose clock says each frame took what `steps` says (ms), the last one repeating. */
+  const paced = (p: FigurePage, name: string, steps: number[], frames = 200) =>
+    p.page.evaluate(
+      async (id, pace, count) => {
+        const w = window as never as { make: (l: unknown, o: unknown, id: string) => boolean; fig: { quality: number; destroy(): void }; __lost: number };
+        const c = document.createElement("canvas");
+        c.id = id;
+        c.style.cssText = "display:block;width:96px;height:96px;position:absolute;left:0;top:0";
+        document.body.append(c);
+        let t = 0, read = 0;
+        w.make({ v: 1, shape: "round", color: "#ff5fa8", eyes: "oval", eyewear: "none", accessory: "none" }, { clock: () => (t += pace[Math.min(read++, pace.length - 1)]! / 1000) }, id);
+        const seen = [w.fig.quality];
+        for (let i = 0; i < count && w.__lost === 0; i++) {
+          await new Promise((r) => requestAnimationFrame(r));
+          if (seen[seen.length - 1] !== w.fig.quality) seen.push(w.fig.quality);
+        }
+        const lost = w.__lost;
+        await new Promise((r) => setTimeout(r, 50));
+        const released = c.getContext("webgl2")!.isContextLost();
+        w.fig.destroy();
+        c.remove();
+        return { seen, lost, released };
+      },
+      name,
+      steps,
+      frames,
+    );
+
   it(
-    "lowers its quality when frames are slow, then hands over to the flat figure; stays at full when they are fast",
+    "steps down when it draws slower than the screen refreshes, hands over to the flat figure, and gives its context back",
     () =>
       withPage({ css: 96 }, async (p) => {
-        const run = (ms: number) =>
-          p.page.evaluate(async (step) => {
-            const w = window as never as { make: (l: unknown, o: unknown, id: string) => boolean; fig: { quality: number; destroy(): void }; __lost: number; __t: number };
-            const c = document.createElement("canvas");
-            c.id = "q" + step;
-            c.style.cssText = "display:block;width:96px;height:96px;position:absolute;left:0;top:0";
-            document.body.append(c);
-            // Every time the engine reads the clock, `step` milliseconds have passed: that is how long a frame "took".
-            let t = 0;
-            w.make({ v: 1, shape: "round", color: "#ff5fa8", eyes: "oval", eyewear: "none", accessory: "none" }, { clock: () => (t += step / 1000) }, c.id);
-            const seen = [w.fig.quality];
-            for (let i = 0; i < 400 && w.__lost === 0; i++) {
-              await new Promise((r) => requestAnimationFrame(r));
-              if (seen[seen.length - 1] !== w.fig.quality) seen.push(w.fig.quality);
-            }
-            const lost = w.__lost;
-            w.fig.destroy();
-            c.remove();
-            return { seen, lost };
-          }, ms);
-        expect(await run(40)).toEqual({ seen: [2, 1, 0], lost: 1 });
-        expect(await run(8)).toEqual({ seen: [2], lost: 0 });
+        // The screen is seen to refresh every 16 ms; then every frame takes 40.
+        const fast = Array.from({ length: 12 }, () => 16);
+        expect(await paced(p, "slow", [...fast, 40])).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
       }),
     120_000,
+  );
+
+  it(
+    "keeps its full quality on a screen that refreshes 30 times a second, and on a fast one",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        expect(await paced(p, "thirty", [33.3], 100)).toEqual({ seen: [2], lost: 0, released: false });
+        expect(await paced(p, "fast", [8], 100)).toEqual({ seen: [2], lost: 0, released: false });
+      }),
+    120_000,
+  );
+
+  it(
+    "survives one long hiccup without lowering its quality",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const pace = Array.from({ length: 200 }, (_, i) => (i % 30 === 20 ? 240 : 16));
+        expect(await paced(p, "hiccup", pace, 130)).toEqual({ seen: [2], lost: 0, released: false });
+      }),
+    120_000,
+  );
+});
+
+
+describe("what its host can count on", () => {
+  it(
+    "never writes a color brighter than its alpha: no bright fringe on a dark host",
+    () =>
+      withPage({ css: 160 }, async (p) => {
+        for (const color of ["#ffffff", "#ffc21a", "#ff5fa8"]) {
+          await show(p, { ...PINK, color });
+          const { over, drawn } = (await p.page.evaluate("window.overflow()")) as { over: number; drawn: number };
+          expect(drawn, color).toBeGreaterThan(2000);
+          expect(over, color).toBe(0);
+          await p.page.evaluate(`window.fig.destroy(); { const c = document.getElementById("c"); c.replaceWith(c.cloneNode()); }`);
+        }
+      }),
+    T,
+  );
+
+  it(
+    "can be destroyed and created again at once on the same canvas, as React's strict mode does",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        // In the same turn of the event loop, as an effect that is torn down and run again.
+        const again = await p.page.evaluate((look) => {
+          const w = window as never as { fig: { destroy(): void }; make: (l: unknown, o: unknown) => boolean };
+          w.fig.destroy();
+          return w.make(look, {});
+        }, PINK as never);
+        expect(again).toBe(true);
+        await p.page.waitForFunction("window.__first > 0", { timeout: 30_000 });
+        await frames(p, 2);
+        const [r, g] = (await shot(p)).at(0.5, 0.7);
+        expect(r).toBeGreaterThan(g + 40);
+        // And a figure destroyed for good does give its context back.
+        const lost = await p.page.evaluate(async () => {
+          (window as never as { fig: { destroy(): void } }).fig.destroy();
+          await new Promise((r) => setTimeout(r, 300));
+          return (document.getElementById("c") as HTMLCanvasElement).getContext("webgl2")!.isContextLost();
+        });
+        expect(lost).toBe(true);
+      }),
+    T,
+  );
+
+  it(
+    "does not grow a canvas that was sized by its attributes alone",
+    () =>
+      withPage({ dpr: 2 }, async (p) => {
+        const size = await p.page.evaluate(async () => {
+          const w = window as never as { make: (l: unknown, o: unknown, id: string) => boolean; frames: (n: number) => Promise<boolean> };
+          const c = document.createElement("canvas");
+          c.id = "attr";
+          c.width = 96;
+          c.height = 96;
+          document.body.prepend(c);
+          w.make({ v: 1, shape: "round", color: "#ff5fa8", eyes: "oval", eyewear: "none", accessory: "none" }, {}, "attr");
+          await w.frames(8);
+          return [c.clientWidth, c.clientHeight, c.width];
+        });
+        expect(size).toEqual([96, 96, 192]);
+      }),
+    T,
+  );
+
+  it(
+    "keeps a tall hat inside the canvas while it talks",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        await show(p, { ...PINK, shape: "capsule", accessory: "beanie", color: "#2f8bff" });
+        await p.page.evaluate(`window.fig.setActivity("talking")`);
+        for (let i = 0; i < 6; i++) {
+          await advance(p, 0.12);
+          const s = await shot(p);
+          for (let x = 0; x < s.width; x++) expect(isBackground(s.at((x + 0.5) / s.width, 0.001), 6), `clipped at the top, frame ${i}`).toBe(true);
+        }
+      }),
+    T,
   );
 });

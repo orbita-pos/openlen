@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TIERS, nextTier } from "./quality";
+import { TIERS, isSlow, median, nextTier } from "./quality";
 
 describe("the quality tiers", () => {
   it("grow in layers and resolution, up to twice the CSS size", () => {
@@ -12,28 +12,56 @@ describe("the quality tiers", () => {
   });
 });
 
-describe("nextTier", () => {
-  it("steps down when frames are slow, and gives up below the lowest", () => {
-    expect(nextTier(2, 30, 1)).toBe(1);
-    expect(nextTier(1, 30, 1)).toBe(0);
-    expect(nextTier(0, 40, 1)).toBe("flat");
+describe("median", () => {
+  it("is the middle value, whatever the order", () => {
+    expect(median([5, 1, 3])).toBe(3);
+    expect(median([16.7, 16.7, 240, 16.7, 16.7])).toBe(16.7);
+    expect(median([])).toBeNaN();
+  });
+});
+
+describe("isSlow", () => {
+  it("is not slow on a screen that simply refreshes 30 times a second (a phone saving battery)", () => {
+    expect(isSlow(33.3, 33.3)).toBe(false);
   });
 
-  it("only steps up after staying comfortably fast for a while", () => {
-    expect(nextTier(1, 8, 1)).toBe(1);
-    expect(nextTier(1, 8, 4)).toBe(1);
-    expect(nextTier(1, 8, 5)).toBe(2);
-    expect(nextTier(0, 8, 5)).toBe(1);
-    expect(nextTier(2, 8, 50)).toBe(2);
+  it("is slow when it draws at half of what the screen can show", () => {
+    expect(isSlow(33.3, 16.7)).toBe(true);
+    expect(isSlow(16.7, 8.3)).toBe(true);
   });
 
-  it("has a dead zone, so it does not swing back and forth", () => {
-    expect(nextTier(2, 17, 9)).toBe(2);
-    expect(nextTier(1, 14, 9)).toBe(1);
-    expect(nextTier(0, 20, 9)).toBe(0);
+  it("is not slow at the screen's own pace, with some jitter", () => {
+    expect(isSlow(16.7, 16.7)).toBe(false);
+    expect(isSlow(18.5, 16.7)).toBe(false);
+    expect(isSlow(8.3, 8.3)).toBe(false);
+  });
+
+  it("is slow under twenty frames a second, whatever the screen", () => {
+    expect(isSlow(60, 60)).toBe(true);
+    expect(isSlow(250, 250)).toBe(true);
   });
 
   it("lets a nonsense measurement decide nothing", () => {
-    for (const ms of [Number.NaN, Number.POSITIVE_INFINITY, -1, 0]) expect(nextTier(2, ms, 9)).toBe(2);
+    for (const ms of [Number.NaN, Number.POSITIVE_INFINITY, -1, 0]) {
+      expect(isSlow(ms, 16.7)).toBe(false);
+      expect(isSlow(30, ms)).toBe(false);
+    }
+  });
+});
+
+describe("nextTier", () => {
+  it("needs two slow windows in a row to step down: one hiccup is not the device", () => {
+    expect(nextTier(2, 1)).toBe(2);
+    expect(nextTier(2, 2)).toBe(1);
+    expect(nextTier(1, 2)).toBe(0);
+  });
+
+  it("gives up below the lowest tier", () => {
+    expect(nextTier(0, 1)).toBe(0);
+    expect(nextTier(0, 2)).toBe("flat");
+  });
+
+  it("stays where it is while nothing is slow, and never steps back up", () => {
+    for (const tier of [0, 1, 2] as const) expect(nextTier(tier, 0)).toBe(tier);
   });
 });
