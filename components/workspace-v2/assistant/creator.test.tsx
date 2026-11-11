@@ -122,6 +122,13 @@ describe("the creator", () => {
     expect(document.querySelector("[data-live-figure]")!.getAttribute("data-live-figure")).toBe("heart");
   });
 
+  it("🔴 «Sorpréndeme» wears the figure's own color, with an ink that reads over it: it is the button to be seen", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={{ ...HEART, color: "#ffc21a" }} />);
+    const surprise = document.querySelector<HTMLButtonElement>("[data-figure-surprise]")!;
+    expect(surprise.style.background).toBe("rgb(255, 194, 26)");
+    expect(surprise.style.color).toBe("rgb(29, 29, 31)");
+  });
+
   it("🔴 every option is named in the person's language, not by its id in the catalog", () => {
     mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
     const name = (category: string, id: string) => document.querySelector(`[data-figure-category="${category}"] [data-figure-option="${id}"]`)!.getAttribute("aria-label");

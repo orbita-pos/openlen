@@ -825,7 +825,8 @@
         "working": "Sta lavorando…",
         "talking": "Sta scrivendo…"
       },
-      "settings": "Impostazioni"
+      "settings": "Impostazioni",
+      "figureSaved": "Figura salvata"
     },
     "speaker": {
       "working": "{name} sta lavorando",

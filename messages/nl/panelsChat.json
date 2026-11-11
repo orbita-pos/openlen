@@ -825,7 +825,8 @@
         "working": "Werkt…",
         "talking": "Schrijft…"
       },
-      "settings": "Instellingen"
+      "settings": "Instellingen",
+      "figureSaved": "Figuur opgeslagen"
     },
     "speaker": {
       "working": "{name} is bezig",

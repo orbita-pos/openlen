@@ -825,7 +825,8 @@
         "working": "处理中…",
         "talking": "输入中…"
       },
-      "settings": "设置"
+      "settings": "设置",
+      "figureSaved": "形象已保存"
     },
     "speaker": {
       "working": "{name} 正在工作",

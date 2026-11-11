@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import type { FigureLook } from "@/lib/figure/look";
 
+import { useToast } from "../toast";
 import { AssistantCreatorDialog } from "./creator-dialog";
 
 export function ChangeFigure({
@@ -26,6 +27,7 @@ export function ChangeFigure({
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
   const [changed, setChanged] = useState(false);
+  const toast = useToast();
   const show = (next: boolean) => (setOpen(next), onOpenChange?.(next));
   return (
     <>
@@ -48,6 +50,8 @@ export function ChangeFigure({
             setChanged(true);
             onChanged(look);
             show(false);
+            // The creator closing alone does not say it was kept.
+            toast.success(t("ownAssistant.place.figureSaved"));
           }}
         />
       )}

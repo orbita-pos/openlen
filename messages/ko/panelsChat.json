@@ -825,7 +825,8 @@
         "working": "작업 중…",
         "talking": "작성 중…"
       },
-      "settings": "설정"
+      "settings": "설정",
+      "figureSaved": "피규어를 저장했어요"
     },
     "speaker": {
       "working": "{name} · 작업 중",
