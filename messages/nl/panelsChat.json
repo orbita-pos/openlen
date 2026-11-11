@@ -778,6 +778,16 @@
           "hat": "Hoed",
           "headphones": "Koptelefoon"
         }
+      },
+      "colors": {
+        "ff5fa8": "Roze",
+        "7ed321": "Groen",
+        "ffc21a": "Geel",
+        "2f8bff": "Blauw",
+        "ff7a45": "Oranje",
+        "9b6cff": "Paars",
+        "19c3b1": "Turquoise",
+        "ff4d5e": "Rood"
       }
     },
     "tones": {

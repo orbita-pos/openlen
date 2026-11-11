@@ -14,7 +14,7 @@ vi.mock("./live-figure", () => ({
   LiveFigure: ({ look, activity }: { look: { shape: string }; activity?: string }) => <i data-live-figure={look.shape} data-activity={activity ?? "ready"} />,
 }));
 
-import { FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, checkLook } from "@/lib/figure/look";
+import { FIGURE_ACCESSORIES, FIGURE_COLORS, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, checkLook } from "@/lib/figure/look";
 
 import panelsChatEn from "@/messages/en/panelsChat.json";
 
@@ -127,6 +127,14 @@ describe("the creator", () => {
     const surprise = document.querySelector<HTMLButtonElement>("[data-figure-surprise]")!;
     expect(surprise.style.background).toBe("rgb(255, 194, 26)");
     expect(surprise.style.color).toBe("rgb(29, 29, 31)");
+  });
+
+  it("🔴 the eight colors are named in the person's language, not read as a code", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
+    const names = [...document.querySelectorAll("[data-assistant-color]")].map((b) => b.getAttribute("aria-label"));
+    expect(names).toEqual(FIGURE_COLORS.map((c) => `ownAssistant.creator.colors.${c.slice(1)}`));
+    const texts = (panelsChatEn as unknown as { ownAssistant: { creator: { colors?: Record<string, string> } } }).ownAssistant.creator.colors ?? {};
+    expect(Object.keys(texts).sort()).toEqual(FIGURE_COLORS.map((c) => c.slice(1)).sort());
   });
 
   it("🔴 every option is named in the person's language, not by its id in the catalog", () => {

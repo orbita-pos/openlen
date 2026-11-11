@@ -42,18 +42,28 @@ export function LiveFigure({
   /** Whether the live figures are on. The phone asks through its own client. */
   ask?: () => Promise<boolean>;
 }) {
-  const canvas = useRef<HTMLCanvasElement | null>(null);
+  /** Where her canvas goes. The canvas itself is made by each run of the effect, below. */
+  const stage = useRef<HTMLSpanElement | null>(null);
   const figure = useRef<Figure | null>(null);
   const [alive, setAlive] = useState(false);
   // What the figure is born with; later changes go through its setters, below.
-  const born = useRef({ look, activity, active });
-  born.current = { look, activity, active };
+  const born = useRef({ look, activity, active, size });
+  born.current = { look, activity, active, size };
 
   useEffect(() => {
     let gone = false;
     const reduced = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+    // A canvas of its own for this run. The engine gives a destroyed figure's context back to the browser, and this
+    // figure is born after an await: on the last run's canvas it would find no context and stay flat for good (seen
+    // on 11/11 after a refresh of the code; a host that changes `ask` would see the same).
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("aria-hidden", "true");
+    canvas.width = born.current.size;
+    canvas.height = born.current.size;
+    canvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;pointer-events:none";
+    stage.current?.append(canvas);
     const follow = (event: PointerEvent) => {
-      const box = canvas.current?.getBoundingClientRect();
+      const box = canvas.getBoundingClientRect();
       if (box && box.width > 0) figure.current?.lookAt((event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height);
     };
     const motion = () => figure.current?.setReducedMotion(reduced?.matches === true);
@@ -62,8 +72,8 @@ export function LiveFigure({
       .then(ask)
       .then((on) => (on === true && !gone ? import("@/lib/figure/engine") : null))
       .then((engine) => {
-        if (!engine || gone || !canvas.current) return;
-        const made = engine.createFigure(canvas.current, born.current.look, {
+        if (!engine || gone || !canvas.isConnected) return;
+        const made = engine.createFigure(canvas, born.current.look, {
           activity: born.current.activity,
           reducedMotion: reduced?.matches === true,
           onFirstFrame: () => !gone && setAlive(true),
@@ -82,8 +92,9 @@ export function LiveFigure({
       .catch(() => {});
     return () => {
       gone = true;
-      // The next figure on this canvas starts from the flat one: its context may not survive the hand-over.
+      // The next run starts from the flat figure, on its own canvas.
       setAlive(false);
+      canvas.remove();
       removeEventListener("pointermove", follow);
       reduced?.removeEventListener?.("change", motion);
       figure.current?.destroy();
@@ -101,7 +112,7 @@ export function LiveFigure({
       <span style={{ visibility: alive ? "hidden" : "visible", display: "inline-flex" }}>
         <AssistantFigure look={look} size={size} />
       </span>
-      <canvas ref={canvas} width={size} height={size} aria-hidden="true" style={{ position: "absolute", inset: 0, width: size, height: size, visibility: alive ? "visible" : "hidden", pointerEvents: "none" }} />
+      <span ref={stage} style={{ position: "absolute", inset: 0, visibility: alive ? "visible" : "hidden", pointerEvents: "none" }} />
     </span>
   );
 }

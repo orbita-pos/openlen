@@ -778,6 +778,16 @@
           "hat": "Sombrero",
           "headphones": "Audífonos"
         }
+      },
+      "colors": {
+        "ff5fa8": "Rosa",
+        "7ed321": "Verde",
+        "ffc21a": "Amarillo",
+        "2f8bff": "Azul",
+        "ff7a45": "Naranja",
+        "9b6cff": "Morado",
+        "19c3b1": "Turquesa",
+        "ff4d5e": "Rojo"
       }
     },
     "tones": {

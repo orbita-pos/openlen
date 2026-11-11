@@ -73,6 +73,26 @@ describe("LiveFigure", () => {
     expect(bare.querySelector("[data-figure]")!.getAttribute("aria-hidden")).toBe("true");
   });
 
+  // Seen on 11/11: after her effect ran again (a refresh of the code, a new `ask`), she stayed flat. The engine gives
+  // a destroyed figure's context back; the next figure, born after an await, found the same canvas without one.
+  it("🔴 every run of her effect draws on a canvas of its own, never on the one the last figure gave back", async () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 30))));
+    await act(async () => root.render(<LiveFigure look={DEFAULT_LOOK} size={96} ask={async () => false} />));
+    await settle();
+    const first = host.querySelector("[data-figure] canvas");
+    expect(first).not.toBeNull();
+    await act(async () => root.render(<LiveFigure look={DEFAULT_LOOK} size={96} ask={async () => false} />));
+    await settle();
+    const canvases = host.querySelectorAll("[data-figure] canvas");
+    expect(canvases).toHaveLength(1);
+    expect(canvases[0]).not.toBe(first);
+    expect(canvases[0]!.getAttribute("aria-hidden")).toBe("true");
+  });
+
   it("asks the switch once per page, and not knowing is off", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ enabled: true })));
     vi.stubGlobal("fetch", fetchMock);

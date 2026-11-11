@@ -170,7 +170,8 @@ export function AssistantCreatorDialog({
                   type="button"
                   data-assistant-color={c}
                   aria-pressed={look.color === c}
-                  aria-label={c}
+                  aria-label={t(`ownAssistant.creator.colors.${c.slice(1)}`)}
+                  title={t(`ownAssistant.creator.colors.${c.slice(1)}`)}
                   onClick={() => pick({ color: c })}
                   className="h-7 w-7 rounded-full transition-transform hover:scale-110"
                   style={{ background: c, boxShadow: look.color === c ? `0 0 0 2px var(--bg-elev), 0 0 0 4px ${c}` : "inset 0 0 0 1px rgba(0,0,0,0.12)" }}
