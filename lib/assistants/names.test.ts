@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { assistantSlug, checkAssistantInput, slugFromParam } from "./names";
 
-const OK = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" };
+const LOOK = { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" };
+const OK = { name: "Lucía", look: LOOK, tone: "friendly" };
 
 describe("assistantSlug", () => {
   it("slugs a name", () => {
@@ -32,16 +33,20 @@ describe("checkAssistantInput", () => {
     expect(checkAssistantInput(OK)).toEqual({ ok: true, value: OK });
     expect(checkAssistantInput({ ...OK, name: "  Señor   Pan " })).toEqual({ ok: true, value: { ...OK, name: "Señor Pan" } });
   });
+  it("keeps the look as the catalog writes it: the color in lower case", () => {
+    const r = checkAssistantInput({ ...OK, look: { ...LOOK, color: "#F4A48B" } });
+    expect(r.ok && r.value.look.color).toBe("#f4a48b");
+  });
   it("refuses an empty, slugless or too long name", () => {
     expect(checkAssistantInput({ ...OK, name: "  " })).toEqual({ ok: false, field: "name" });
     expect(checkAssistantInput({ ...OK, name: "🙂" })).toEqual({ ok: false, field: "name" });
     expect(checkAssistantInput({ ...OK, name: "x".repeat(41) })).toEqual({ ok: false, field: "name" });
     expect(checkAssistantInput({ ...OK, name: 7 })).toEqual({ ok: false, field: "name" });
   });
-  it("refuses a shape, color or tone it does not know", () => {
-    expect(checkAssistantInput({ ...OK, shape: "star" })).toEqual({ ok: false, field: "shape" });
-    expect(checkAssistantInput({ ...OK, color: "red" })).toEqual({ ok: false, field: "color" });
-    expect(checkAssistantInput({ ...OK, color: "#F4A48" })).toEqual({ ok: false, field: "color" });
+  it("refuses a look that is not of the catalog, or a tone it does not know", () => {
+    expect(checkAssistantInput({ ...OK, look: { ...LOOK, shape: "blob" } })).toEqual({ ok: false, field: "look" });
+    expect(checkAssistantInput({ ...OK, look: { ...LOOK, color: "red" } })).toEqual({ ok: false, field: "look" });
+    expect(checkAssistantInput({ name: "Lucía", shape: "drop", color: "#F4A48B", tone: "friendly" })).toEqual({ ok: false, field: "look" });
     expect(checkAssistantInput({ ...OK, tone: "rude" })).toEqual({ ok: false, field: "tone" });
   });
 });

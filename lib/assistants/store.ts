@@ -9,6 +9,7 @@ import { db, schema } from "@/lib/db";
 import type { AssistantSettings } from "@/lib/projects/types";
 
 import { assistantConversationKey } from "./conversation";
+import type { FigureLook } from "@/lib/figure/look";
 import { assistantSlug, cleanAssistantName, type AssistantInput } from "./names";
 import { readyNotices, type AskLenNotice, type ReadyNotice } from "./notices";
 
@@ -48,7 +49,12 @@ export async function createAssistant(o: {
             personId: o.personId,
             homeProjectId: o.projectId,
             slug: assistantSlug(o.input.name),
-            ...o.input,
+            name: o.input.name,
+            tone: o.input.tone,
+            // The look is the figure; `color` is her accent, always the look's, and `shape` is kept in step.
+            look: o.input.look,
+            color: o.input.look.color,
+            shape: o.input.look.shape,
             ...(o.memory ? { memory: o.memory } : {}),
             ...(o.morningSummary ? { morningSummary: true, summaryLocale: o.locale ?? null } : {}),
           })
@@ -125,6 +131,17 @@ export async function renameAssistant(
     if (isUniqueViolation(err)) return { ok: false, error: "name_taken" };
     throw err;
   }
+}
+
+/** Her figure, changed after she was created (phase 6): the look whole, and her accent with it. `false` when she isn't
+ *  this person's. */
+export async function setAssistantLook(id: string, personId: string, look: FigureLook): Promise<boolean> {
+  const done = await db
+    .update(a)
+    .set({ look, color: look.color, shape: look.shape, updatedAt: new Date() })
+    .where(and(eq(a.id, id), eq(a.personId, personId)))
+    .returning({ id: a.id });
+  return done.length > 0;
 }
 
 /** The morning summary's switch (phase 4D, spec §6.9): turning it on keeps the language it was turned on in; off keeps

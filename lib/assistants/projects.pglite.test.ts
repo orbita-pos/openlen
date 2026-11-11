@@ -54,7 +54,7 @@ beforeEach(async () => {
   );
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   base.db = drizzle(pg, { schema });
-  const r = await createAssistant({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } });
+  const r = await createAssistant({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } });
   if (!r.ok) throw new Error("setup");
   lucia = r.assistant.id;
   // Her conversation with her owner, and one of Len's rows in the same project.
@@ -63,7 +63,7 @@ beforeEach(async () => {
 
 describe("her projects", () => {
   it("🔴 a project has one assistant: connecting another is refused, also two at once", async () => {
-    const bruno = await createAssistant({ personId: "u1", projectId: "p4", input: { name: "Bruno", shape: "blob", color: "#88AAFF", tone: "formal" } });
+    const bruno = await createAssistant({ personId: "u1", projectId: "p4", input: { name: "Bruno", look: { v: 1, shape: "drop", color: "#88aaff", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "formal" } });
     if (!bruno.ok) throw new Error("setup");
     const both = await Promise.all([projects.connectProject({ assistantId: lucia, projectId: "p3" }), projects.connectProject({ assistantId: bruno.assistant.id, projectId: "p3" })]);
     expect([...both].sort()).toEqual(["connected", "project_has_assistant"]);

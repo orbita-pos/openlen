@@ -113,6 +113,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   );`,
   // Phase 4D (spec §6.9) — the morning summary: off unless turned on, its language, the last day it was claimed.
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "morningSummary" boolean NOT NULL DEFAULT false;`,
+  // Phase 6 — her figure, whole (lib/figure/look.ts). NULL in a row from before: it wears the default look in its color.
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "look" jsonb;`,
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "summaryLocale" text;`,
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "lastSummaryOn" text;`,
 ];

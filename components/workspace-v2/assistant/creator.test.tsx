@@ -114,7 +114,7 @@ describe("the card Len leaves", () => {
   });
 
   it("says it is ready, with the way to its place, when it exists", async () => {
-    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1" }] }));
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1" }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
     await flush();
     expect(host.querySelector("[data-assistant-create]")).toBeNull();
@@ -123,14 +123,14 @@ describe("the card Len leaves", () => {
 
   // Phase 4: she can serve this project without it being her home.
   it("says it is ready when this project is one she serves, not only her home", async () => {
-    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9", "p1"] }] }));
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p9", projectIds: ["p9", "p1"] }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
     await flush();
     expect(host.querySelector("[data-assistant-talk]")).not.toBeNull();
   });
 
   it("the card offers to use Lucía here; pressing it connects her and shows her ready", async () => {
-    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
     await flush();
     const use = host.querySelector<HTMLButtonElement>('[data-assistant-use="a1"]')!;
@@ -146,7 +146,7 @@ describe("the card Len leaves", () => {
   });
 
   it("using her here when the project got another meanwhile says so", async () => {
-    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
     await flush();
     fetchMock.mockReturnValueOnce(json({ error: "project_has_assistant" }, 409));
@@ -156,7 +156,7 @@ describe("the card Len leaves", () => {
   });
 
   it("«create another» still opens the creator", async () => {
-    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
+    fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p9", projectIds: ["p9"] }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);
     await flush();
     act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());

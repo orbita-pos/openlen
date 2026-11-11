@@ -13,7 +13,7 @@ import { AssistantTab } from "./assistant-tab";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob" as const, color: "#F4A48B", tone: "friendly" as const, projectId: "p1", projectIds: ["p1"] };
+const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "p1", projectIds: ["p1"] };
 const line = (role: string, text: string, i: number) => ({ role, text, at: `2026-11-09T10:0${i}:00Z` });
 const VISIT = { id: "v1", projectId: "p1", projectTitle: "Panadería", startedAt: "2026-11-09T10:00:00Z", lastAt: "2026-11-09T10:05:00Z", messageCount: 6, handedOff: false, lines: [line("visitor", "Hola", 0), line("visitor", "Mi teléfono es 55 1234 5678", 1), line("assistant", "Gracias", 2), line("visitor", "¿Abren hoy?", 3), line("assistant", "Sí, hasta las 7", 4), line("visitor", "¿Tienen pan sin gluten?", 5)] };
 const CARD = { id: "c1", projectId: "p2", title: "Envíos a domicilio", visitors: 3, status: "pending", failure: null, projectTitle: "Tienda" };

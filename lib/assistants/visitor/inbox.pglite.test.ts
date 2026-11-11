@@ -52,8 +52,8 @@ beforeEach(async () => {
   await pg.query(`insert into "projects" ("id", "userId", "title") values ('p1', 'u1', 'Pastelería Canela'), ('p2', 'u1', 'Canela Tienda'), ('p3', 'u2', 'Otra')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   base.db = drizzle(pg, { schema });
-  const lucia = await createAssistant({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } });
-  const otra = await createAssistant({ personId: "u2", projectId: "p3", input: { name: "Bruno", shape: "blob", color: "#88AAFF", tone: "formal" } });
+  const lucia = await createAssistant({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } });
+  const otra = await createAssistant({ personId: "u2", projectId: "p3", input: { name: "Bruno", look: { v: 1, shape: "drop", color: "#88aaff", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "formal" } });
   if (!lucia.ok || !otra.ok) throw new Error("setup");
   a1 = lucia.assistant.id;
   a2 = otra.assistant.id;

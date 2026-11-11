@@ -24,7 +24,7 @@ const { createAssistant, deleteAssistant } = await import("../store");
 const requests = await import("./store");
 const { REQUESTS_PER_VISIT_DAY, REQUESTS_PER_ASSISTANT_DAY, GROUP_QUIET_MS, DISMISSED_JOIN_DAYS } = await import("./limits");
 
-const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
+const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 const DAY = 86_400_000;
 const NOW = new Date("2026-11-09T12:00:00Z");
 let pg: PGlite;

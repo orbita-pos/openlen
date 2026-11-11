@@ -315,7 +315,7 @@ it("the push of a finished task opens the delivered file in the viewer, with its
 // «Entregado» and «Tareas», only when she exists; her notices open her tab.
 describe("her tab in the selector", () => {
   const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
-  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
   async function paint(asistentes: unknown[]) {
     const pedir = vi.fn(async (ruta: string) =>
       ruta === "/api/projects"
@@ -372,7 +372,7 @@ describe("her tab in the selector", () => {
 // its part (I3); a deleted one's turn notice never opens an empty chat (M2); «Ver a Len» goes to Len's chat (I2).
 describe("her chat and her notices", () => {
   const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
-  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
   async function paint() {
     const pedir = vi.fn(async (ruta: string) =>
       ruta === "/api/projects"
