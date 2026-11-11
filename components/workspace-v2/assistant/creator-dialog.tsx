@@ -179,7 +179,7 @@ export function AssistantCreatorDialog({
               ))}
               {/* Any other color: the wheel is the swatch, the browser's picker is under it. */}
               <label
-                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full transition-transform hover:scale-110"
+                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full transition-transform hover:scale-110 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--nc-accent-text)]"
                 title={t("ownAssistant.creator.freeColor")}
                 style={{
                   background: "conic-gradient(#ff5f5f, #ffc21a, #7ed321, #19c3b1, #2f8bff, #9b6cff, #ff5fa8, #ff5f5f)",

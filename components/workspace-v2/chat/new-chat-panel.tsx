@@ -508,7 +508,7 @@ function AgentChatView({
         <div className="flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
           <LiveFigure look={assistant.look} size={76} activity={herActivity} active={herFigureOn} />
           <p className="mt-1 max-w-full truncate text-[14px] font-semibold fg">{assistant.name}</p>
-          <p className="max-w-full truncate text-[11.5px] fg-muted" data-her-status="" aria-live="polite">
+          <p className="max-w-full truncate text-[11.5px] fg-muted" data-her-status="">
             {herActivity === "thinking" || herActivity === "working" || herActivity === "talking" ? t(`ownAssistant.place.status.${herActivity}`) : t("ownAssistant.place.yours")}
           </p>
         </div>
