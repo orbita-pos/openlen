@@ -108,10 +108,14 @@ describe("visits", () => {
 });
 
 describe("on the page", () => {
-  it("onPage is off by default; setOnPage only for the assistant of that project", async () => {
+  // Born on the page since 11/11 (Jesús: «encendido de una»): she comes from Len's card, asked for for this page.
+  it("she is born on the page; setOnPage only for the assistant of that project", async () => {
+    expect((await visitor.assistantOnPage("p1"))?.assistant.id).toBe(lucia);
+    expect(await visitor.setOnPage("p1", lucia, false)).toBe(true);
     expect(await visitor.assistantOnPage("p1")).toBeNull();
     expect(await visitor.setOnPage("p2", lucia, true)).toBe(false);
     expect(await visitor.setOnPage("p1", "someone-else", true)).toBe(false);
+    expect(await visitor.assistantOnPage("p1")).toBeNull();
     expect(await visitor.setOnPage("p1", lucia, true)).toBe(true);
     const on = await visitor.assistantOnPage("p1");
     expect(on?.assistant.id).toBe(lucia);
