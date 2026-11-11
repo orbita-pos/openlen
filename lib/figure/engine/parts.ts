@@ -52,7 +52,7 @@ interface Body {
 }
 
 const BODIES: Record<FigureShape, Body> = {
-  drop: { scale: [1, 0.95, 0.9], silhouette: { ...ROUND, squashBottom: 0.28, widenBottom: 0.14, taperTop: 0.1 }, eyeY: 0.05 },
+  drop: { scale: [0.93, 0.95, 0.9], silhouette: { ...ROUND, squashBottom: 0.28, widenBottom: 0.14, taperTop: 0.1 }, eyeY: 0.05 },
   round: { scale: [1, 0.95, 0.9], silhouette: ROUND, eyeY: 0.1 },
   capsule: { scale: [0.74, 1.12, 0.74], silhouette: { ...ROUND, power: 2.6 }, eyeY: 0.3 },
   cube: { scale: [0.95, 0.92, 0.85], silhouette: { ...ROUND, power: 4.2 }, eyeY: 0.1 },
@@ -173,6 +173,17 @@ function accessory(kind: FigureAccessory, l: FigureLook, top: Vec3, eye: Vec3): 
       ];
     }
   }
+}
+
+/** What a hat-like accessory shades: where it sits and how far its shadow reaches. Null for what casts none. */
+export function shadowOf(look: unknown): { center: Vec3; size: Vec3 } | null {
+  const l = lookOrDefault(look);
+  const size: Partial<Record<FigureAccessory, Vec3>> = { beret: [0.62, 0.36, 1.6], beanie: [0.6, 0.6, 1.6], hat: [0.64, 0.3, 1.6], crown: [0.36, 0.26, 1.6] };
+  const reach = size[l.accessory];
+  if (!reach) return null;
+  const anchors = anchorsFor(l);
+  const first = accessory(l.accessory, l, anchors.top, anchors.eyes[0])[0]!;
+  return { center: first.position, size: reach };
 }
 
 /** The body's half width at a height. */

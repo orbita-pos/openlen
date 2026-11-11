@@ -61,13 +61,18 @@ void main() {
   float h2 = h * h;
   vec3 wn = uRot * (uPartRot * n);
   vec3 w = uRot * ((uPos + uPartRot * p) * uStretch);
-  w += wn * h * uFurLen;
-  w.y -= h2 * uFurLen * 0.35;
-  w += vec3(sin(uTime * 1.7 + w.y * 3.0), 0.0, cos(uTime * 1.3 + w.x * 3.0)) * h2 * uFurLen * 0.07;
-  w += uLag * h2 * uFurLen;
+  // Under the body the fur is shorter, and it only droops ALONG the skin: hanging straight down is what made the
+  // lower edge look like a fringe.
+  float len = uFurLen * mix(1.0, 0.7, smoothstep(0.3, 1.0, -wn.y));
+  vec3 down = vec3(0.0, -1.0, 0.0);
+  down -= wn * dot(down, wn);
+  w += wn * h * len;
+  w += down * h2 * len * 0.45;
+  w += vec3(sin(uTime * 1.7 + w.y * 3.0), 0.0, cos(uTime * 1.3 + w.x * 3.0)) * h2 * len * 0.07;
+  w += uLag * h2 * len;
   w += uOffset;
   vDir = d; vN = wn; vW = w; vH = h;
-  gl_Position = vec4(w.x * uView.x, (w.y - 0.25) * uView.y, -w.z * 0.25, 1.0);
+  gl_Position = vec4(w.x * uView.x, (w.y - 0.2) * uView.y, -w.z * 0.25, 1.0);
 }`;
 
 export const FRAGMENT = `#version 300 es
@@ -75,7 +80,9 @@ precision highp float;
 in vec3 vDir, vN, vW;
 in float vH;
 uniform vec3 uColor;
-uniform float uDensity, uLayers, uKind; // kind: 0 fur, 1 solid, 2 gloss
+uniform float uDensity, uLayers, uKind; // kind: 0 fur, 1 solid, 2 gloss, 3 the shadow on the ground
+uniform float uBody; // the body and its ears take the shadows of what sits on them
+uniform vec3 uOcc, uOccS, uEyeL, uEyeR;
 out vec4 o;
 
 vec2 hash22(vec2 p) {
@@ -89,6 +96,11 @@ void main() {
   const vec3 V = vec3(0.0, 0.0, 1.0);
   vec3 L = normalize(vec3(-0.45, 0.8, 0.6));
   float ndv = max(n.z, 0.0);
+  if (uKind > 2.5) {
+    float a = pow(max(1.0 - length(vDir.xy), 0.0), 1.5) * 0.24;
+    o = vec4(uColor * a, a);
+    return;
+  }
   if (uKind > 1.5) {
     float spec = pow(max(dot(reflect(-L, n), V), 0.0), 50.0);
     o = vec4(uColor + spec * 0.9 + pow(1.0 - ndv, 3.0) * 0.12, 1.0);
@@ -105,12 +117,21 @@ void main() {
     float t = vH / mix(0.7, 1.0, r.x);
     float rad = 0.5 * (1.0 - t * t * 0.8) * mix(1.7, 1.0, smoothstep(0.0, 0.55, ndv));
     alpha = t > 1.0 ? 0.0 : smoothstep(rad, rad - 0.3, length(fract(g) - 0.5 - (r - 0.5) * 0.25));
+    // Toward the outline the outer layers thin out: a feathered edge instead of a stack of discs.
+    alpha *= 1.0 - 0.92 * smoothstep(0.2, 1.0, vH) * (1.0 - smoothstep(0.0, 0.5, ndv));
     if (alpha < 0.02) discard;
   }
   vec3 base = max(uColor, vec3(0.06)) * (0.93 + 0.14 * r.y * fur);
   float root = mix(1.0, mix(0.7, 1.0, pow(vH, 0.6)), fur);
   float wrapped = dot(n, L) * 0.5 + 0.5;
-  float light = clamp(0.32 + 0.78 * wrapped * wrapped, 0.0, 1.0) * root * mix(0.76, 1.0, n.y * 0.5 + 0.5);
+  // Its own shadows, without a shadow map: under what it wears and around the eyes, so they sit IN the fur.
+  float shade = 1.0;
+  if (uBody > 0.5) {
+    if (uOccS.x > 0.0) shade *= mix(0.5, 1.0, smoothstep(0.95, 1.75, length((vW - uOcc) / uOccS)));
+    shade *= mix(0.74, 1.0, smoothstep(0.1, 0.3, distance(vW, uEyeL)));
+    shade *= mix(0.74, 1.0, smoothstep(0.1, 0.3, distance(vW, uEyeR)));
+  }
+  float light = clamp(0.32 + 0.78 * wrapped * wrapped, 0.0, 1.0) * root * shade * mix(0.76, 1.0, n.y * 0.5 + 0.5);
   vec3 col = mix(base * base * 0.5 + base * 0.22, base * 1.03 + 0.05, light);
   col += (base * 0.5 + 0.5) * 0.1 * pow(wrapped, 6.0) * vH * fur;
   col += (base * 0.6 + 0.4) * pow(1.0 - ndv, 2.5) * vH * 0.22 * fur;

@@ -16,6 +16,8 @@ export interface Frame {
   density: number;
   eyeOpen: number;
   gaze: readonly [number, number];
+  /** What the accessory shades (parts.ts `shadowOf`), in the body's own space; null when nothing does. */
+  occluder: { center: Vec3; size: Vec3 } | null;
 }
 
 export interface Renderer {
@@ -23,7 +25,7 @@ export interface Renderer {
   render(parts: readonly Part[], frame: Frame, width: number, height: number): void;
 }
 
-const UNIFORMS = ["uRot", "uPartRot", "uPos", "uScale", "uOffset", "uLag", "uStretch", "uSilA", "uSilB", "uWiden", "uFurLen", "uLayers", "uTime", "uView", "uColor", "uDensity", "uKind", "uRigid", "uTube"] as const;
+const UNIFORMS = ["uRot", "uPartRot", "uPos", "uScale", "uOffset", "uLag", "uStretch", "uSilA", "uSilB", "uWiden", "uFurLen", "uLayers", "uTime", "uView", "uColor", "uDensity", "uKind", "uRigid", "uTube", "uBody", "uOcc", "uOccS", "uEyeL", "uEyeR"] as const;
 
 /** yaw (y), pitch (x), roll (z) → a column-major 3×3. */
 export function rotation(yaw: number, pitch: number, roll: number): Float32Array {
@@ -126,6 +128,8 @@ function lathe(gl: WebGL2RenderingContext, top: number): Mesh {
 }
 
 const KIND = { fur: 0, solid: 1, gloss: 2 } as const;
+const SHADOW = 3;
+const IDENTITY = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 /** How far the camera sees from the center, in body units: the figure, its fur, a hat and its shadow fit. */
 const REACH = 1.5;
 
@@ -145,7 +149,7 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
 
-  function draw(part: Part, frame: Frame, layers: number): void {
+  function draw(part: Part, frame: Frame, layers: number, kind: number = KIND[part.kind]): void {
     const s = part.silhouette ?? ROUND;
     let [px, py, pz] = part.position;
     let [sx, sy, sz] = part.scale;
@@ -165,7 +169,8 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
     gl.uniform1f(u.uWiden, s.widenBottom);
     gl.uniform1f(u.uFurLen, part.furLength);
     gl.uniform1f(u.uLayers, layers);
-    gl.uniform1f(u.uKind, KIND[part.kind]);
+    gl.uniform1f(u.uKind, kind);
+    gl.uniform1f(u.uBody, part.role === "body" || part.role === "ear" ? 1 : 0);
     gl.uniform1f(u.uRigid, rigid ? 1 : 0);
     gl.uniform1f(u.uTube, part.tube ?? 0);
     // The rigid meshes are closed and opaque: the depth test hides their far side, whatever their winding.
@@ -182,12 +187,38 @@ export function createRenderer(gl: WebGL2RenderingContext): Renderer {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       const side = Math.min(width, height);
       gl.uniform2f(u.uView, side / width / REACH, side / height / REACH);
+      gl.uniform1f(u.uTime, frame.time);
+      gl.uniform1f(u.uDensity, frame.density);
+
+      // The shadow on the ground first: it stays put while the figure turns, and shrinks as the figure rises.
+      const body = parts.find((part) => part.role === "body");
+      if (body) {
+        const size = (body.scale[0] * (1 + (body.silhouette?.widenBottom ?? 0)) + 0.05) * Math.max(0.5, 1 - frame.offset[1] * 1.5);
+        gl.uniformMatrix3fv(u.uRot, false, IDENTITY);
+        gl.uniform3f(u.uOffset, 0, 0, 0);
+        gl.uniform3f(u.uLag, 0, 0, 0);
+        gl.uniform3f(u.uStretch, 1, 1, 1);
+        gl.depthMask(false);
+        draw({ role: "accessory", mesh: "sphere", kind: "solid", position: [0, -1.13, -0.6], scale: [size, 0.1, 0.01], rotation: [0, 0, 0], color: [body.color[0] * 0.22, body.color[1] * 0.22, body.color[2] * 0.22], furLength: 0 }, frame, 1, SHADOW);
+        gl.depthMask(true);
+      }
+
+      const R = frame.rotation;
+      /** A point of the body's own space, where it ends up on screen: turned, stretched and lifted. */
+      const placed = (v: Vec3): [number, number, number] => {
+        const x = v[0] * frame.stretch[0], y = v[1] * frame.stretch[1], z = v[2] * frame.stretch[2];
+        return [R[0]! * x + R[3]! * y + R[6]! * z + frame.offset[0], R[1]! * x + R[4]! * y + R[7]! * z + frame.offset[1], R[2]! * x + R[5]! * y + R[8]! * z + frame.offset[2]];
+      };
+      const eyes = parts.filter((part) => part.role === "eye").map((part) => placed([part.position[0] + frame.gaze[0] * 0.05, part.position[1] + frame.gaze[1] * 0.04, part.position[2] - 0.05]));
+      gl.uniform3fv(u.uEyeL, eyes[0] ?? [9, 9, 9]);
+      gl.uniform3fv(u.uEyeR, eyes[1] ?? [9, 9, 9]);
+      gl.uniform3fv(u.uOcc, frame.occluder ? placed(frame.occluder.center) : [0, 0, 0]);
+      gl.uniform3fv(u.uOccS, frame.occluder ? [...frame.occluder.size] : [0, 0, 0]);
+
       gl.uniformMatrix3fv(u.uRot, false, frame.rotation);
       gl.uniform3f(u.uOffset, frame.offset[0], frame.offset[1], frame.offset[2]);
       gl.uniform3f(u.uLag, frame.lag[0], frame.lag[1], frame.lag[2]);
       gl.uniform3f(u.uStretch, frame.stretch[0], frame.stretch[1], frame.stretch[2]);
-      gl.uniform1f(u.uTime, frame.time);
-      gl.uniform1f(u.uDensity, frame.density);
       // What is opaque first; the fur is blended over it, from the inside out.
       for (const part of parts) {
         if (part.kind === "fur") continue;
