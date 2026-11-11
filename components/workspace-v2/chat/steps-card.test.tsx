@@ -32,6 +32,33 @@ function pintar(actions: AgentAction[], esApp = false) {
   return host;
 }
 
+describe("the person's own assistant's steps (real turns of 07/11)", () => {
+  function paint(speakerName: string | undefined, status: DesignTurn["status"] = "applied") {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const actions = [
+      { tool: "Read", status: "done", summary: "/index.html" },
+      { tool: "view_page", status: "done", summary: "index.html", screenshots: ["/uploads/s.jpg"] },
+    ] as AgentAction[];
+    const turn = { id: "t", userText: "x", assistantReasoning: "", status, actions } as DesignTurn;
+    act(() => root.render(<StepsCard turn={turn} projectId="p" onOpenFile={() => {}} {...(speakerName ? { speakerName } : {})} />));
+    return host;
+  }
+
+  it("🔴 name it: what it did, what it saw and that it is working; Len's stay byte for byte", () => {
+    const hers = paint("Lucía");
+    expect(hers.textContent).toContain('ownAssistant.speaker.steps {"count":2,"name":"Lucía"}');
+    expect(hers.querySelector("[data-step-screenshots]")!.getAttribute("aria-label")).toBe('ownAssistant.speaker.saw {"name":"Lucía"}');
+    expect(hers.innerHTML).not.toContain("newChat.steps.screenshotCaption");
+    expect(paint("Lucía", "streaming").textContent).toContain('ownAssistant.speaker.working {"name":"Lucía"}');
+    const lens = paint(undefined);
+    expect(lens.textContent).toContain('newChat.steps.done {"count":2}');
+    expect(lens.querySelector("[data-step-screenshots]")!.getAttribute("aria-label")).toBe("newChat.steps.screenshots");
+  });
+});
+
 describe("la tarjeta de los pasos", () => {
   // Ensayo de caja del 09/10: en una app los pasos decían «Leyendo la página
   // src/App.jsx», «Probando la página»…

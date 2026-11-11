@@ -41,16 +41,25 @@ export function VisualFrame({
   widget,
   final,
   onPrompt,
+  isolated = false,
 }: {
   widget: ReplyWidget;
   final: boolean;
   /** Absent for whoever can't write in the chat: the visual can't send then. */
   onPrompt?: (text: string) => void;
+  /** Code someone else could steer (a visitor of the owner's assistant, phase 2B of the spec local
+   *  2026-11-06-asistente-propio): never on the visuals origin next to the owner's own visuals — a closed srcdoc with a
+   *  null origin, no links, and taken down if it navigates its own frame. */
+  isolated?: boolean;
 }) {
   const t = useTranslations("panelsChat");
-  const url = useVisualFrameUrl();
+  const hostedUrl = useVisualFrameUrl();
+  const url = isolated ? null : hostedUrl;
   const frameOrigin = useMemo(() => (url ? new URL(url).origin : null), [url]);
-  const srcdoc = useMemo(() => buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }), []);
+  const srcdoc = useMemo(() => buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, ...(isolated ? { closed: true } : {}) }), [isolated]);
+  const loads = useRef(0);
+  const [gone, setGone] = useState(false);
+  const [firstLoad, setFirstLoad] = useState(false);
   const ref = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
   const [height, setHeight] = useState(0);
@@ -76,7 +85,7 @@ export function VisualFrame({
       if (d.kind === "ol-visual:ready") setReady(true);
       else if (d.kind === "ol-visual:height") setHeight(Math.min(MAX_HEIGHT_PX, Math.max(0, Math.round(d.height))));
       else if (d.kind === "ol-visual:link") {
-        if (/^https?:\/\//i.test(d.href)) setLink(d.href);
+        if (!isolated && /^https?:\/\//i.test(d.href)) setLink(d.href);
       } else if (d.kind === "ol-visual:prompt") {
         const send = onPromptRef.current;
         if (send && Date.now() - clickedAt.current < CLICK_WINDOW_MS) {
@@ -87,7 +96,7 @@ export function VisualFrame({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [frameOrigin]);
+  }, [frameOrigin, isolated]);
 
   // A click into a cross-origin frame blurs this window and focuses the frame.
   useEffect(() => {
@@ -116,11 +125,13 @@ export function VisualFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `post` reads the ref and the origin of this render
   }, [ready, theme]);
 
+  // An isolated visual gets its code after the first load: one that navigated earlier would leave a single load in all.
+  const canDraw = ready && (!isolated || firstLoad);
   useEffect(() => {
-    if (!ready) return;
+    if (!canDraw) return;
     post({ kind: "ol-visual:render", code: widget.code, final });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `post` reads the ref and the origin of this render
-  }, [ready, widget.code, final]);
+  }, [canDraw, widget.code, final]);
 
   // While it is written, its loading messages take turns.
   useEffect(() => {
@@ -135,7 +146,7 @@ export function VisualFrame({
 
   return (
     <div className="my-2 flex flex-col gap-1.5" data-testid="len-visual">
-      {url !== undefined && (
+      {url !== undefined && !gone && (
         <iframe
           ref={ref}
           title={t("visualLabel", { title: widget.title || "" })}
@@ -144,6 +155,8 @@ export function VisualFrame({
           referrerPolicy="no-referrer"
           className="w-full border-0 bg-transparent block"
           style={{ height: `${height}px` }}
+          // An isolated visual loads once: a second load is it navigating its own frame somewhere else.
+          {...(isolated ? { onLoad: () => (++loads.current > 1 ? setGone(true) : setFirstLoad(true)) } : {})}
         />
       )}
       {!final && <p className="text-[12px] fg-faint m-0" aria-live="polite">{loading}</p>}

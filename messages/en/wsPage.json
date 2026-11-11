@@ -65,6 +65,8 @@
       "get_goal": "Checking the goal",
       "create_goal": "Creating the goal",
       "update_goal": "Updating the goal",
+      "create_assistant": "Creating your assistant",
+      "ask_len": "Passing it to Len",
       "schedule_create": "Scheduling a task",
       "schedule_list": "Checking the scheduled tasks",
       "schedule_delete": "Deleting a scheduled task",
@@ -124,6 +126,7 @@
       "installed": "Installed «{title}» in your OpenLen."
     },
     "errors": {
+      "agent_off": "It isn't available right now. Try again in a few minutes.",
       "turn_limit": "The agent hit its per-turn step limit.",
       "tool_limit": "The agent hit its per-turn action limit.",
       "budget_limit": "Len stopped because your account ran out of credits. What it did is saved; once you have credits again, ask it to keep going.",

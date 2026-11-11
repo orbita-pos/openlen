@@ -400,6 +400,55 @@ describe("SandboxTerminal", () => {
     expect([...box().keys()].some((p) => p.startsWith("/.openlen/"))).toBe(false);
   });
 
+  // Phase 4C of the person's own assistant: the other projects she serves, read-only in her box. /home is the box's HOME
+  // (her ~/.len syncs from there): only that folder is mounted, never the whole of /home.
+  // Final review I1: her memory goes up read-only too (the box's manifest syncs only ~/.len), so the mount is ~/.assistant,
+  // one for both.
+  it("🔴 her ~/.assistant (her memory and her other projects) is mounted read-only on its own, never the whole of /home", async () => {
+    const { terminal, d, handle, box } = await open({
+      projectFiles: { "/index.html": "a" },
+      readOnly: { "/home/user/.assistant/projects/p2/index.html": "x", "/home/user/.assistant/MEMORY.md": "Jueves sin gluten." },
+    });
+    await terminal.ejecutar("true");
+    const mounts = d.commands(handle.id).filter((c) => c.includes("mount --bind"));
+    const root = "/home/user/.assistant";
+    expect(mounts.filter((c) => c.includes(`mount --bind ${readOnlySource(root)} ${root}`) && c.includes(`remount,bind,ro ${root})`))).toHaveLength(1);
+    expect(mounts.some((c) => c.includes("remount,bind,ro /home)"))).toBe(false);
+    expect(box().get(readOnlySource(`${root}/projects/p2/index.html`))).toBe("x");
+    expect(box().get(readOnlySource(`${root}/MEMORY.md`))).toBe("Jueves sin gluten.");
+  });
+
+  // Measured 10/11 in a real E2B box, her first real turns there: every command she ran failed with «chown
+  // /home/user/.assistant/MEMORY.md: read-only file system». Before each command the terminal puts what changed since its
+  // last look (`ponerAlDia`), her memory among it, and it went to the MOUNTED path, which E2B can't write.
+  it("🔴 a file put under a read-only mount goes where the mount comes from, never to the mounted path", async () => {
+    const root = "/home/user/.assistant";
+    const { terminal, box } = await open({
+      projectFiles: { "/index.html": "a" },
+      readOnly: { [`${root}/MEMORY.md`]: "Jueves sin gluten." },
+    });
+    await terminal.ejecutar("true");
+    await terminal.poner({ [`${root}/MEMORY.md`]: "Viernes también." });
+    expect(box().has(`${root}/MEMORY.md`)).toBe(false);
+    expect(box().get(readOnlySource(`${root}/MEMORY.md`))).toBe("Viernes también.");
+  });
+
+  // The same real box, after that fix: the command ran, and then its file view had no MEMORY.md (the box only lists what
+  // it syncs), so the terminal read it as deleted, tried to save that, and every command ended «Exit code 1 … not saved».
+  it("🔴 her memory, put read-only, stays in what the box says it has after a command — mounted or not", async () => {
+    const memory = "/home/user/.assistant/MEMORY.md";
+    for (const refuse of [false, true]) {
+      const { terminal } = await open({
+        projectFiles: { "/index.html": "a" },
+        readOnly: { [memory]: "Jueves sin gluten." },
+        ...(refuse ? { onRun: (cmd: string) => (cmd.includes("mount --bind") ? { exitCode: 32, stderr: "mount: permission denied" } : undefined) } : {}),
+      });
+      await terminal.ejecutar("true");
+      await terminal.poner({ [memory]: "Viernes también." });
+      expect((await terminal.ejecutar("true")).ficheros?.[memory], refuse ? "mount refused" : "mounted").toBe("Viernes también.");
+    }
+  });
+
   it("in an app, /node_modules (its types, read-only today) is mounted the same way", async () => {
     const { terminal, d, handle } = await open({
       projectFiles: { "/index.html": "a" },

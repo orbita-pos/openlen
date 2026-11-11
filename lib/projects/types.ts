@@ -369,8 +369,20 @@ export interface ToolCreationOrigin {
   title: string;
 }
 
+/** «Lucía, dile a Len…» (spec local 2026-11-06-asistente-propio, §4.2): the owner's request, passed on by their
+ *  own assistant with `ask_len`. */
+export interface AssistantRequestOrigin {
+  kind: "assistant";
+  assistantId: string;
+  assistantName: string;
+}
+
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin;
+
+export function isAssistantRequestOrigin(o: TurnOrigin): o is AssistantRequestOrigin {
+  return (o as { kind?: string }).kind === "assistant";
+}
 
 export function isToolCreationOrigin(o: TurnOrigin): o is ToolCreationOrigin {
   return "kind" in o && o.kind === "tool_creation";

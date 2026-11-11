@@ -100,12 +100,15 @@ export function StepsCard({
   projectId,
   onOpenFile,
   esApp = false,
+  speakerName,
 }: {
   turn: DesignTurn;
   projectId: string;
   onOpenFile: (path: string) => void;
   /** El proyecto es una app: los pasos que nombran «la página» hablan del código y de la app. */
   esApp?: boolean;
+  /** Who took the steps when it isn't Len: the person's own assistant (spec local 2026-11-06-asistente-propio). */
+  speakerName?: string;
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -144,7 +147,13 @@ export function StepsCard({
   // La duración: la del servidor si la dijo (también al recargar); si no, la
   // que vio esta pestaña.
   const durationMs = turn.durationMs ?? (process.plegable ? process.duracionMs : null);
-  const title = running ? t("newChat.steps.running") : t("newChat.steps.done", { count: steps.length });
+  const title = speakerName
+    ? running
+      ? t("ownAssistant.speaker.working", { name: speakerName })
+      : t("ownAssistant.speaker.steps", { count: steps.length, name: speakerName })
+    : running
+      ? t("newChat.steps.running")
+      : t("newChat.steps.done", { count: steps.length });
 
   return (
     <div className="nc-card-in rounded-[14px] border bd bg-elev">
@@ -189,7 +198,7 @@ export function StepsCard({
           </div>
         </div>
       </div>
-      <StepScreenshots urls={steps.flatMap((a) => a.screenshots ?? [])} />
+      <StepScreenshots urls={steps.flatMap((a) => a.screenshots ?? [])} {...(speakerName ? { speakerName } : {})} />
     </div>
   );
 }
@@ -197,14 +206,23 @@ export function StepsCard({
 /** LO QUE VIO LEN: las capturas de sus pasos, fuera del pliegue (Jesús, 29/10:
  *  «que se vea siempre»). Como en Claude Code, son las mismas que recibió el
  *  modelo; una miniatura la abre en grande. */
-function StepScreenshots({ urls }: { urls: readonly string[] }) {
+function StepScreenshots({ urls, speakerName }: { urls: readonly string[]; speakerName?: string }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState<number | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   if (urls.length === 0) return null;
-  const photos: GalleryPhoto[] = urls.map((url, i) => ({ url, alt: t("newChat.steps.screenshotCaption", { number: i + 1, total: urls.length }) }));
+  const caption = (number: number, total: number) =>
+    speakerName
+      ? t("ownAssistant.speaker.sawCaption", { number, total, name: speakerName })
+      : t("newChat.steps.screenshotCaption", { number, total });
+  const photos: GalleryPhoto[] = urls.map((url, i) => ({ url, alt: caption(i + 1, urls.length) }));
   return (
-    <div data-step-screenshots="" role="group" aria-label={t("newChat.steps.screenshots")} className="flex flex-wrap gap-1.5 px-3 pb-3">
+    <div
+      data-step-screenshots=""
+      role="group"
+      aria-label={speakerName ? t("ownAssistant.speaker.saw", { name: speakerName }) : t("newChat.steps.screenshots")}
+      className="flex flex-wrap gap-1.5 px-3 pb-3"
+    >
       {photos.map((p, i) => (
         <button
           key={`${p.url}-${i}`}

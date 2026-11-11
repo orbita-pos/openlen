@@ -4,6 +4,9 @@ import { db, schema } from "@/lib/db";
 import { capPush } from "@/lib/app-ai/cap-messages";
 import { quotaPush } from "@/lib/functions/quota-messages";
 import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
+import { lenTurnPush } from "../len-turn-push";
+import { asleepPush } from "@/lib/assistants/visitor/asleep-messages";
+import { summaryPush } from "@/lib/assistants/summary/notice";
 import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
@@ -90,12 +93,7 @@ async function avisoDeLen(event: LenTurnoEvent): Promise<PushPayload> {
     .from(schema.projects)
     .where(eq(schema.projects.id, event.projectId))
     .limit(1);
-  const proyecto = filas[0]?.title?.trim();
-  return {
-    title: proyecto ? `Len · ${proyecto}` : "Len",
-    body: `${event.pregunta ? "❓ " : ""}${event.preview}`.trim(),
-    url: `/new?project=${event.projectId}`,
-  };
+  return lenTurnPush(event, filas[0]?.title ?? null);
 }
 
 // ── Edge Functions · la cuota del mes ─────────────────────────────────────────
@@ -166,6 +164,10 @@ export const webPushChannel: NotificationChannel = {
                   ? lenWatchPush(event)
                   : event.type === "len_aviso"
                     ? lenAvisoPush(event)
+                  : event.type === "assistant_asleep"
+                    ? asleepPush(event)
+                  : event.type === "assistant_summary"
+                    ? summaryPush(event)
                   : {
                   title: event.senderName,
                   body: event.preview,

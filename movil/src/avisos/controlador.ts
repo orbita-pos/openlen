@@ -2,11 +2,14 @@ import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 
 export type EstadoAvisos = {
   estado: "cargando" | "noDisponible" | "desactivados" | "activando" | "activos" | "denegados" | "error";
-  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: Tipo; tarjeta?: string | null } | null;
+  recibido: { titulo: string; cuerpo: string; projectId: string; recipientUserId: string; type?: Tipo; tarjeta?: string | null; asistente?: string } | null;
 };
 type Permiso = "granted" | "denied" | "prompt";
-/** `len_aviso`: an event task's card (spec local 2026-11-03-len-que-avisa, §8). */
-type Tipo = "mencion" | "len_watch" | "len_aviso";
+/** `len_aviso`: an event task's card (spec local 2026-11-03-len-que-avisa, §8). `len_turno` and `assistant_summary`
+ *  matter only with the person's own assistant's id (phase 5): her turn and her morning summary. */
+type Tipo = "mencion" | "len_watch" | "len_aviso" | "len_turno" | "assistant_summary";
+/** Which part of her tab a notice of hers opens (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5). */
+export type ParteDeLaAsistente = "hablar" | "conversaciones" | "pedidos";
 export interface EventosAvisos {
   token(token: string): Promise<void>;
   error(): void;
@@ -33,6 +36,9 @@ export function crearControlDeAvisos(d: {
   onAbrirEntregado?(id: string, url: string): void;
   /** An event task's push opens the project's chat on its card (null: a card id that isn't one). */
   onAbrirAviso?(id: string, tarjeta: string | null): void;
+  /** A push of the person's own assistant opens her tab (phase 5): her turn → Hablar, her request → Pedidos on its card,
+   *  her summary → Conversaciones. */
+  onAbrirAsistente?(assistantId: string, donde: { parte: ParteDeLaAsistente; tarjeta: string | null }): void;
 }) {
   let vivo = true;
   let permitido = false;
@@ -46,7 +52,7 @@ export function crearControlDeAvisos(d: {
   const emitir = (nuevo: Partial<EstadoAvisos>) => { estado = { ...estado, ...nuevo }; if (vivo) d.onEstado(estado); };
   const cancelarEspera = () => { if (temporizador) clearTimeout(temporizador); temporizador = undefined; };
   const pedir = (ruta: string, init?: RequestInit) => d.cliente.pedir(ruta, { ...init, signal: AbortSignal.timeout(12_000) });
-  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: Tipo; abrir?: string; tarjeta?: string | null } | null => {
+  const datosValidos = (datos: unknown): { projectId: string; recipientUserId: string; type?: Tipo; abrir?: string; tarjeta?: string | null; asistente?: string } | null => {
     if (!datos || typeof datos !== "object") return null;
     const b = datos as Record<string, unknown>;
     if (typeof b.projectId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(b.projectId) || typeof b.recipientUserId !== "string" || b.recipientUserId !== usuario) return null;
@@ -55,12 +61,15 @@ export function crearControlDeAvisos(d: {
     const abrir = typeof b.abrir === "string" && entrega.test(b.abrir) ? b.abrir : null;
     // A card's id only as an id: anything else opens the chat without one.
     const tarjeta = b.type === "len_aviso" ? (typeof b.tarjeta === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.tarjeta) ? b.tarjeta : null) : undefined;
+    // The person's own assistant's id, only as an id (phase 5): anything else is a push as before.
+    const asistente = typeof b.asistente === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.asistente) ? b.asistente : null;
     return {
       projectId: b.projectId,
       recipientUserId: b.recipientUserId,
-      ...(b.type === "mencion" || b.type === "len_watch" || b.type === "len_aviso" ? { type: b.type } : {}),
+      ...(b.type === "mencion" || b.type === "len_watch" || b.type === "len_aviso" || b.type === "len_turno" || b.type === "assistant_summary" ? { type: b.type } : {}),
       ...(abrir ? { abrir } : {}),
       ...(tarjeta !== undefined ? { tarjeta } : {}),
+      ...(asistente ? { asistente } : {}),
     };
   };
   async function abrir(datos: unknown) {
@@ -73,7 +82,11 @@ export function crearControlDeAvisos(d: {
       if (res.ok && vivo && b.recipientUserId === usuario) {
         emitir({ recibido: null });
         if (b.abrir && d.onAbrirEntregado) d.onAbrirEntregado(b.projectId, b.abrir);
-        else if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
+        // The person's own assistant's (phase 5): her tab, on the part the notice is about.
+        else if (b.asistente && d.onAbrirAsistente) {
+          const parte: ParteDeLaAsistente = b.type === "len_aviso" ? "pedidos" : b.type === "assistant_summary" ? "conversaciones" : "hablar";
+          d.onAbrirAsistente(b.asistente, { parte, tarjeta: b.type === "len_aviso" ? (b.tarjeta ?? null) : null });
+        } else if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
         // LEN WATCH: Gestión has where the fix stands, its button and the switches.
         else if (b.type === "len_watch") d.onAbrirProyecto(b.projectId, "gestion");
         // An event task's card: the project's chat, where its «Hazlo» is.

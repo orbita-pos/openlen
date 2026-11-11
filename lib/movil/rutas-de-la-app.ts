@@ -6,6 +6,14 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/route.ts", metodos: ["GET"] },
   { fichero: "app/api/projects/[id]/preview/route.ts", metodos: ["GET", "POST"] },
   { fichero: "app/api/agent/route.ts", metodos: ["POST"] },
+  // The person's own assistant's tab (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5).
+  { fichero: "app/api/assistants/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/assistants/[id]/chat/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/assistants/[id]/visits/route.ts", metodos: ["GET"] },
+  // Phase 4E: «Conversaciones» on the phone marks what it shows as read.
+  { fichero: "app/api/assistants/[id]/visits/read/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/assistants/[id]/requests/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/assistants/[id]/requests/[cardId]/route.ts", metodos: ["POST"] },
   { fichero: "app/api/agent/dirigir/route.ts", metodos: ["POST"] },
   { fichero: "app/api/agent/cancelar/route.ts", metodos: ["POST"] },
   { fichero: "app/api/agent/turno/[fila]/route.ts", metodos: ["GET"] },

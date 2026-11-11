@@ -44,6 +44,8 @@ export interface OpcionesDelChat {
   /** Lo que se le manda a Len con una foto sin texto: que diga dónde la pondría antes de ponerla. */
   textoDeFotoSola: string;
   textoDeArchivoSolo: string;
+  /** Talking with the person's own assistant instead of Len (phase 5): every message carries her id. */
+  assistantId?: string;
 }
 
 let contador = 0;
@@ -107,12 +109,12 @@ export function useChat(o: OpcionesDelChat) {
   }, [o.historial, limpiarAdjuntos]);
 
   const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume", documentos?: readonly ArchivoAdjunto[]): Promise<boolean> => {
-    const { cliente, projectId } = op.current;
+    const { cliente, projectId, assistantId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
     vivoRef.current = turnoNuevo(fila);
     setVivo(vivoRef.current);
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal }, (e) => {
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId } : {}) }, (e) => {
       if (actual !== epoca.current) return;
       setVivo((v) => (v ? conEvento(v, e) : v));
       if (e.nombre === "turno" && typeof (e.datos as { turnoId?: unknown } | null)?.turnoId === "string") {

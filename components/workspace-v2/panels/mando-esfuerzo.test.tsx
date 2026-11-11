@@ -44,6 +44,21 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+// Phase 4E (measured 10/11): in her place the button said «Esfuerzo de Len».
+describe("the effort control's name", () => {
+  it("🔴 with a label (her place), the button and its menu are named with it", () => {
+    const host = montar({ label: "ownAssistant.composer.effort(Lucía)" });
+    const named = [...host.querySelectorAll("[aria-label]")].map((e) => e.getAttribute("aria-label"));
+    expect(named).toContain("ownAssistant.composer.effort(Lucía)");
+    expect(named).not.toContain("composer.effort");
+  });
+
+  it("Len's keeps «composer.effort»", () => {
+    const host = montar();
+    expect([...host.querySelectorAll("[aria-label]")].map((e) => e.getAttribute("aria-label"))).toContain("composer.effort");
+  });
+});
+
 describe("el mando de esfuerzo tiene la forma de Claude Code", () => {
   it("ofrece los cinco niveles más `auto`", () => {
     expect(opciones(montar())).toHaveLength(NIVELES.length + 1);

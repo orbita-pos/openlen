@@ -59,6 +59,15 @@ export async function register() {
           if (eventTasksEnabled()) startWatcher((record, task) => judgeCandidate(record, task));
         })
         .catch((err) => console.error("[event-tasks] no se pudo arrancar el vigilante", err));
+      // The person's own assistant (spec local 2026-11-06-asistente-propio, §4.3): what visitors asked for and she
+      // couldn't do gets joined into cards for her person, a pass every five minutes. OPENLEN_ASSISTANT=0 leaves it off.
+      void import("@/lib/assistants/requests/pass")
+        .then((m) => m.startRequestGrouper())
+        .catch((err) => console.error("[assistant-requests] no se pudo arrancar la pasada", err));
+      // Her morning summary (spec §6.9, phase 4D): at 8 in the owner's zone, only when something happened yesterday.
+      void import("@/lib/assistants/summary/pass")
+        .then((m) => m.startMorningSummaries())
+        .catch((err) => console.error("[assistant-summary] no se pudo arrancar la pasada", err));
       // Len's subagents (spec local 2026-11-01-subagentes-de-len): the ones a restart cut close as stopped, and
       // every notice that never reached Len goes to him, one server turn per project. OPENLEN_SUBAGENTS=0 leaves it.
       if (process.env.OPENLEN_SUBAGENTS !== "0") {

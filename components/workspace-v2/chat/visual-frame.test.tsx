@@ -72,6 +72,16 @@ describe("VisualFrame", () => {
     expect(m.posted.at(-1)).toEqual({ kind: "ol-visual:render", code: "<p>hola mundo</p>", final: false });
   });
 
+  // A visual that navigates before the first load would leave one load in all, and never be caught.
+  it("🔴 an isolated visual gets its code only after the frame's first load", () => {
+    const m = mount({ isolated: true });
+    m.spy();
+    m.fromFrame({ kind: "ol-visual:ready" }, "null");
+    expect(m.posted.some((p) => (p as { kind: string }).kind === "ol-visual:render")).toBe(false);
+    act(() => m.iframe().dispatchEvent(new Event("load")));
+    expect(m.posted.at(-1)).toEqual({ kind: "ol-visual:render", code: "<p>hola</p>", final: true });
+  });
+
   it("switching the workspace to dark sends a new theme", async () => {
     const m = mount();
     m.spy();

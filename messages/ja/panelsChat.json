@@ -25,7 +25,8 @@
     "scheduled": "予定タスク「{title}」 · {when}",
     "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした",
     "fromSubagents": "サブエージェントの結果",
-    "toolCreation": "ツールを作成"
+    "toolCreation": "ツールを作成",
+    "fromAssistant": "{name} から"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",
@@ -719,5 +720,182 @@
     "changed": "その間に変更されました。ツールでもう一度確認してください",
     "dismissed": "接続しません。あとでツールから承認できます。",
     "firstTime": "キー {name} はまだ {host} に送信されたことがありません。そのサーバーを信頼できる場合のみ承認してください"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "自分だけのアシスタントを作れます。名前と見た目を選んでください。",
+      "create": "アシスタントを作る",
+      "ready": "{name} の準備ができました",
+      "talk": "{name} と話す",
+      "useHere": "{name} をここでも使う",
+      "createAnother": "別のアシスタントを作る",
+      "useFailed": "できませんでした。もう一度お試しください。"
+    },
+    "creator": {
+      "title": "あなたのアシスタント",
+      "name": "名前",
+      "namePlaceholder": "Lucía",
+      "shape": "形",
+      "color": "色",
+      "tone": "話し方",
+      "done": "完了",
+      "cancel": "キャンセル",
+      "morningSummary": "毎朝、何があったか教えて",
+      "eyes": "目",
+      "eyewear": "メガネ",
+      "accessory": "アクセサリー",
+      "surprise": "おまかせ",
+      "freeColor": "ほかの色",
+      "option": {
+        "shape": {
+          "drop": "しずく",
+          "round": "まる",
+          "capsule": "カプセル",
+          "cube": "キューブ",
+          "ears": "耳つき",
+          "heart": "ハート",
+          "flower": "花",
+          "triangle": "三角"
+        },
+        "eyes": {
+          "oval": "楕円",
+          "round": "まる",
+          "dot": "点",
+          "smile": "にっこり",
+          "sleepy": "ねむそう"
+        },
+        "eyewear": {
+          "none": "メガネなし",
+          "round": "丸メガネ",
+          "shades": "サングラス"
+        },
+        "accessory": {
+          "none": "アクセサリーなし",
+          "beret": "ベレー帽",
+          "beanie": "ニット帽",
+          "bow": "リボン",
+          "crown": "王冠",
+          "hat": "帽子",
+          "headphones": "ヘッドホン"
+        }
+      },
+      "colors": {
+        "ff5fa8": "ピンク",
+        "7ed321": "グリーン",
+        "ffc21a": "イエロー",
+        "2f8bff": "ブルー",
+        "ff7a45": "オレンジ",
+        "9b6cff": "パープル",
+        "19c3b1": "ターコイズ",
+        "ff4d5e": "レッド"
+      }
+    },
+    "tones": {
+      "friendly": "親しみやすい",
+      "formal": "丁寧",
+      "playful": "楽しい"
+    },
+    "errors": {
+      "name": "文字か数字で名前をつけてください。",
+      "nameTaken": "その名前のアシスタントはすでにあります。",
+      "projectHas": "このプロジェクトにはすでにアシスタントがいます。",
+      "ownerOnly": "このプロジェクトのアシスタントを作れるのはオーナーだけです。",
+      "generic": "作成できませんでした。もう一度お試しください。"
+    },
+    "place": {
+      "yours": "あなたのアシスタント",
+      "inProject": "{project} 内",
+      "placeholder": "{name} にメッセージ…",
+      "talk": "話す",
+      "conversations": "会話",
+      "onPage": "マイページに表示",
+      "onPageHint": "公開するとページに表示されます。",
+      "empty": "まだ {name} に書き込んだ訪問者はいません。",
+      "visitor": "訪問者",
+      "handedOff": "担当者との会話を希望",
+      "messages": "{count, plural, other {# 件のメッセージ}}",
+      "budget": "今月の訪問者：{cap} クレジット中 {spent}",
+      "budgetChange": "変更",
+      "budgetSave": "保存",
+      "budgetLabel": "月の上限（クレジット）",
+      "loadError": "会話を読み込めませんでした。",
+      "budgetRange": "0〜{max} クレジットで指定できます。",
+      "budgetError": "上限を保存できませんでした。もう一度お試しください。",
+      "nothingToKnow": "公開済みですが、ページに読み取れるテキストや公開データがありません。",
+      "rename": "名前を変更",
+      "renameSave": "保存",
+      "renameCancel": "キャンセル",
+      "renamePublish": "公開するとページに新しい名前が表示されます。",
+      "renameFailed": "名前を変更できませんでした。もう一度お試しください。",
+      "changeFigure": "見た目を変える",
+      "figurePublish": "公開中のページには、もう一度公開すると新しい見た目が表示されます。",
+      "figureFailed": "見た目を保存できませんでした。もう一度お試しください。",
+      "status": {
+        "thinking": "考え中…",
+        "working": "作業中…",
+        "talking": "入力中…"
+      },
+      "settings": "設定",
+      "figureSaved": "見た目を保存しました"
+    },
+    "speaker": {
+      "working": "{name} が作業中",
+      "steps": "{name} が {count, plural, other {# ステップ実行}}",
+      "saw": "{name} が見たもの",
+      "sawCaption": "{total, plural, =1 {{name} が見たもの} other {{name} が見たもの · {number}/{total}}}",
+      "yourTurnLive": "あなたの番です · 答えるとすぐに{name}が続けます",
+      "disclaimer": "{name} は間違えることがあります。回答を確認してください。"
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "お客様から頼まれてできなかったことを {name} がメモしました:\n\n{title} — {visitors}\n\n開いて Len に任せるか、あとで確認してください: {url}",
+      "turnPrompt": "💬 {name} から: お客様からのリクエスト",
+      "visitors": "{count, plural, other {# 人が希望}}",
+      "from": "{name} から",
+      "doIt": "Len に任せる",
+      "notNow": "今はしない",
+      "done": "Len に渡しました",
+      "dismissed": "保留中",
+      "failed": "できませんでした。もう一度お試しください。",
+      "noCredits": "Len が対応するためのクレジットが足りません。チャージしてもう一度お試しください。",
+      "tab": "リクエスト",
+      "empty": "お客様から頼まれて {name} ができなかったことがここに表示されます。",
+      "openChat": "チャットで Len を見る",
+      "earlier": "以前のリクエスト",
+      "loadError": "リクエストを読み込めませんでした。"
+    },
+    "projects": {
+      "count": "{count, plural, other {# 件のプロジェクト}}",
+      "home": "ホーム",
+      "remove": "このプロジェクトから外す",
+      "removeConfirm": "はい、外す",
+      "delete": "{name} を削除",
+      "deleteConfirm": "はい、{name} を完全に削除",
+      "failed": "できませんでした。もう一度お試しください。",
+      "close": "閉じる",
+      "publishToKnow": "次に公開すると {name} が内容を把握します。",
+      "busy": "{name} が回答中です。終わってからもう一度お試しください。"
+    },
+    "summary": {
+      "switch": "朝のまとめ",
+      "hint": "前日に何かあったときだけ、朝8時にお知らせします。",
+      "talkedWith": "{count, plural, other {会話 #人}}",
+      "contacts": "{count, plural, other {連絡先 #件}}",
+      "requests": "{count, plural, other {対応できなかった依頼 #件}}",
+      "push": "昨日：{list}",
+      "emailSubject": "{name}：昨日のまとめ",
+      "emailText": "{push}\n\n{name}のページで確認：{url}"
+    },
+    "composer": {
+      "effort": "{name} の思考量"
+    },
+    "page": {
+      "title": "あなたのページ",
+      "reload": "再読み込み",
+      "open": "新しいタブで開く",
+      "hide": "ページを隠す",
+      "show": "ページを表示",
+      "empty": "ページにはまだ何もありません。"
+    }
   }
 }

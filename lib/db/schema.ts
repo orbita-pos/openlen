@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { ProjectData, TurnOrigin } from "@/lib/projects/types";
+import type { AskLenNotice } from "@/lib/assistants/notices";
 import type { BringState, IncidentStatus, Resolution, WatchReport } from "@/lib/len-watch/types";
 import type { ChatPhoto } from "@/lib/projects/chat-photos";
 import type { AttachedFile } from "@/lib/projects/chat-files";
@@ -106,6 +107,9 @@ export const users = pgTable("users", {
   // el dueño pone a lo que gastan sus apps, en centicréditos. Nulo = el 25 %
   // de su plan. `npm run app-ai:migrate`.
   appAiCap: integer("appAiCap"),
+  // THE PERSON'S OWN ASSISTANT WITH VISITORS (spec local 2026-11-06-asistente-propio, §4.7): the month's cap on what
+  // the account's visitors spend, in centicredits. Null = a quarter of the plan. `npm run assistants:migrate`.
+  assistantVisitorCap: integer("assistantVisitorCap"),
   // Polar (Merchant-of-Record) billing linkage. Set by the billing webhook
   // from the subscription it receives; userId is passed to Polar as the
   // checkout's customer_external_id + metadata so the webhook maps back here.
@@ -1531,6 +1535,185 @@ export const lenAgents = pgTable(
   (t) => [uniqueIndex("lenAgents_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
 );
 
+/** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): its name, figure, tone and memory. It is the
+ *  person's, born in a project (`homeProjectId`, where its conversation with its owner lives as
+ *  `projectChatMessages.conversation = "assistant:<id>"`). Phase 1: one project per assistant, so it goes with it.
+ *  Created by `npm run assistants:migrate`. */
+export const assistants = pgTable(
+  "assistants",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Its address: /<locale>/assistant/<slug>. Unique per person. */
+    slug: text("slug").notNull(),
+    shape: text("shape").notNull(),
+    color: text("color").notNull(),
+    /** Her figure, whole (phase 6, lib/figure/look.ts). NULL in a row from before: lib/assistants/look.ts. */
+    look: jsonb("look").$type<import("@/lib/figure/look").FigureLook>(),
+    tone: text("tone").notNull(),
+    /** ~/.assistant/MEMORY.md: what its owner taught it, replaced whole. */
+    memory: text("memory").notNull().default(""),
+    /** How its `ask_len` requests ended, until it hears them (lib/assistants/notices.ts). */
+    notices: jsonb("notices").$type<AskLenNotice[]>().notNull().default([]),
+    homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The morning summary (phase 4D, spec §6.9): off unless the owner turns it on. */
+    morningSummary: boolean("morningSummary").notNull().default(false),
+    /** The language it was turned on in: the summary's. */
+    summaryLocale: text("summaryLocale"),
+    /** The owner's local day (YYYY-MM-DD) of the last summary pass that claimed it: one a day. */
+    lastSummaryOn: text("lastSummaryOn"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("assistants_personId_slug_idx").on(t.personId, t.slug)],
+);
+
+/** Her old addresses (phase 4D, spec §6.8): renaming her moves /<locale>/assistant/<slug>, and the old slug redirects to
+ *  the new one, as a renamed GitHub repository does — until a live slug of the same person takes it (the live one wins). */
+export const assistantSlugAliases = pgTable(
+  "assistantSlugAliases",
+  {
+    personId: text("personId").notNull(),
+    slug: text("slug").notNull(),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.slug] })],
+);
+
+/** The projects an assistant serves: one assistant per project (the primary key). */
+export const assistantProjects = pgTable("assistantProjects", {
+  projectId: text("projectId").primaryKey().references(() => projects.id, { onDelete: "cascade" }),
+  assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+  connectedAt: timestamp("connectedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  /** «En mi página» (spec §4.4.5): the published page's bubble is the assistant. Baked at publish; read on every visit. */
+  onPage: boolean("onPage").notNull().default(false),
+  /** What it knows of the business: the PUBLISHED site's text, saved at every publish of a project she serves
+   *  (lib/assistants/knowledge.ts; phase 4: not only the one whose bubble is hers). */
+  knowledge: text("knowledge"),
+  knowledgeAt: timestamp("knowledgeAt", { mode: "date", withTimezone: true }),
+  /** The last publish that baked HER bubble on the page (phase 4): she answers visitors only through one. Forgotten when
+   *  «En mi página» changes; what the project published stays. */
+  bakedAt: timestamp("bakedAt", { mode: "date", withTimezone: true }),
+  /** What the page's data shows ANYONE (the tables `anon` can read), saved at publish (phase 2B,
+   *  lib/assistants/visitor/public-data.ts): what `read_public_data` may read. */
+  publicData: jsonb("publicData").$type<PublicTable[]>(),
+}, (t) => [index("assistantProjects_assistant_idx").on(t.assistantId)]);
+
+/** A table or view of a project's production base that `anon` can read, with its columns. */
+export interface PublicTable {
+  name: string;
+  columns: { name: string; type: string }[];
+}
+
+/** One line of a visitor's conversation, as its owner reads it. */
+export interface AssistantVisitLine {
+  role: "visitor" | "assistant";
+  text: string;
+  at: string;
+  /** Her visuals in that answer, as the visitor saw them (phase 2B). */
+  visuals?: { title: string | null; code: string }[];
+}
+
+/** A visitor's conversation with the person's own assistant (spec §6.5, §6.6): one per (assistant, project, visitor's
+ *  anonymous id). Visitors' data: never in the box (invariant 5), only its person reads it. Kept 90 days from its last
+ *  message (lib/assistants/visitor/store.ts). */
+export const assistantVisits = pgTable(
+  "assistantVisits",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    visitorId: text("visitorId").notNull(),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }).notNull(),
+    lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull(),
+    messageCount: integer("messageCount").notNull().default(0),
+    centicredits: integer("centicredits").notNull().default(0),
+    handedOff: boolean("handedOff").notNull().default(false),
+    /** What the model saw, trimmed to its last messages (lib/assistants/visitor/turn.ts). */
+    transcript: jsonb("transcript").$type<unknown[]>().notNull().default([]),
+    lines: jsonb("lines").$type<AssistantVisitLine[]>().notNull().default([]),
+    /** When her owner last saw this conversation in her Conversaciones (phase 4E), as the page's inbox marks read:
+     *  the visitor's lines after it are unread. Null = never seen. Only the owner's seeing sets it, never a tool. */
+    readAt: timestamp("readAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("assistantVisits_who_idx").on(t.assistantId, t.projectId, t.visitorId),
+    index("assistantVisits_assistant_last_idx").on(t.assistantId, t.lastAt),
+  ],
+);
+
+/** What an account's visitors spent with its assistants in a month (spec §4.7), like `appAiSpend`. */
+export const assistantVisitorMonths = pgTable(
+  "assistantVisitorMonths",
+  {
+    userId: text("userId").notNull(),
+    /** "YYYY-MM", UTC. */
+    month: text("month").notNull(),
+    centicredits: integer("centicredits").notNull().default(0),
+    messages: integer("messages").notNull().default(0),
+    /** The «she fell asleep» notices already given this month: "cap", "credits". */
+    asleepAlerts: jsonb("asleepAlerts").$type<string[]>().notNull().default([]),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.month] })],
+);
+
+/** What visitors asked for, joined (spec local 2026-11-06-asistente-propio, §4.3): «5 clientes preguntaron por envíos».
+ *  Only its person sees it, and only their press turns it into a Len turn (lib/assistants/requests/). */
+export const assistantRequestCards = pgTable(
+  "assistantRequestCards",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** What they wanted, without names, in the page's language. Written by the grouping turn: visitors' data. */
+    title: text("title").notNull(),
+    locale: text("locale").notNull(),
+    status: text("status").$type<"pending" | "accepted" | "dismissed">().notNull().default("pending"),
+    /** How many different visitors asked. */
+    visitors: integer("visitors").notNull().default(0),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull(),
+    /** The last time a request joined it. */
+    lastAt: timestamp("lastAt", { mode: "date", withTimezone: true }).notNull(),
+    decidedAt: timestamp("decidedAt", { mode: "date", withTimezone: true }),
+    decidedBy: text("decidedBy"),
+    /** The chat row of the Len turn «Que Len lo haga» launched. */
+    acceptedRowId: text("acceptedRowId"),
+    /** Why that turn couldn't start; the card waits again. */
+    failure: text("failure"),
+    /** When its owner was last told about it (push and email): a pair's notices are capped per day. */
+    notifiedAt: timestamp("notifiedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [index("assistantRequestCards_assistant_project_status_idx").on(t.assistantId, t.projectId, t.status)],
+);
+
+/** One thing a visitor wanted and she couldn't do (`note_request`), until a grouping puts it on a card or discards it.
+ *  Visitors' data: never in the box (invariant 5), kept 90 days (spec §6.5). */
+export const assistantRequests = pgTable(
+  "assistantRequests",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    visitorId: text("visitorId").notNull(),
+    text: text("text").notNull(),
+    locale: text("locale").notNull(),
+    at: timestamp("at", { mode: "date", withTimezone: true }).notNull(),
+    cardId: text("cardId").references(() => assistantRequestCards.id, { onDelete: "set null" }),
+    /** Groupings that didn't place it. */
+    attempts: integer("attempts").notNull().default(0),
+    /** Its pair steps aside until then (an asleep owner, a failed grouping): the pass takes others meanwhile. */
+    groupAfter: timestamp("groupAfter", { mode: "date", withTimezone: true }),
+    discardedAt: timestamp("discardedAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    index("assistantRequests_waiting_idx").on(t.assistantId, t.projectId).where(sqlOp`"cardId" is null and "discardedAt" is null`),
+    index("assistantRequests_card_idx").on(t.cardId),
+    index("assistantRequests_assistant_at_idx").on(t.assistantId, t.at),
+  ],
+);
+
 /** Las menciones del CHAT sin ver (el punto del carril), con la forma de `codeMentions`. */
 export const projectChatMentions = pgTable(
   "projectChatMentions",
@@ -2863,7 +3046,8 @@ export const agentRequestSteps = pgTable(
     repeats: jsonb("repeats"),
     cacheBreak: jsonb("cacheBreak"),
     endReason: text("endReason"),
-    /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; null for Len's. */
+    /** A subagent's call (spec local 2026-11-01-subagentes-de-len): its run's id; the person's own assistant with a
+     *  visitor: `assistant-visitor:<assistantId>`; null for Len's. Len's baseline reads only the nulls. */
     subagentId: text("subagentId"),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },

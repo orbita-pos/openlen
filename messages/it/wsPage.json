@@ -65,6 +65,8 @@
       "get_goal": "Controllo l'obiettivo",
       "create_goal": "Creo l'obiettivo",
       "update_goal": "Aggiorno l'obiettivo",
+      "create_assistant": "Creo il tuo assistente",
+      "ask_len": "Lo passo a Len",
       "schedule_create": "Programmo un'attività",
       "schedule_list": "Controllo le attività programmate",
       "schedule_delete": "Elimino un'attività programmata",
@@ -124,6 +126,7 @@
       "installed": "Ho installato «{title}» nel tuo OpenLen."
     },
     "errors": {
+      "agent_off": "Al momento non è disponibile. Riprova tra qualche minuto.",
       "turn_limit": "L'agente ha raggiunto il limite di passaggi per turno.",
       "tool_limit": "L'agente ha raggiunto il limite di azioni per turno.",
       "budget_limit": "Len si è fermato perché il tuo account ha finito i crediti. Quello che ha fatto è salvato; quando avrai di nuovo crediti, chiedigli di continuare.",

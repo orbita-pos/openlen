@@ -25,7 +25,8 @@
     "scheduled": "Tarea programada «{title}» · {when}",
     "lenWatch": "Len Watch · tu sitio publicado no cargaba",
     "fromSubagents": "Resultados de los subagentes",
-    "toolCreation": "Crear herramienta"
+    "toolCreation": "Crear herramienta",
+    "fromAssistant": "De {name}"
   },
   "proceso": {
     "completadoEn": "Completado en <d>{duracion}</d>",
@@ -719,5 +720,182 @@
     "changed": "Cambió mientras tanto: vuelve a mirarlo en Herramientas",
     "dismissed": "No se conecta. Puedes aprobarlo luego en Herramientas.",
     "firstTime": "Tu clave {name} nunca se ha enviado a {host}: apruébalo solo si confías en ese servidor"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Crea tu propio asistente: tú eliges su nombre y cómo se ve.",
+      "create": "Crear a mi asistente",
+      "ready": "{name} ya puede ayudarte",
+      "talk": "Hablar con {name}",
+      "useHere": "Usar a {name} aquí",
+      "createAnother": "Crear otro",
+      "useFailed": "No se pudo. Inténtalo otra vez."
+    },
+    "creator": {
+      "title": "Tu asistente",
+      "name": "Nombre",
+      "namePlaceholder": "Lucía",
+      "shape": "Forma",
+      "color": "Color",
+      "tone": "Cómo habla",
+      "done": "Listo",
+      "cancel": "Cancelar",
+      "morningSummary": "Cuéntame cada mañana qué pasó",
+      "eyes": "Ojos",
+      "eyewear": "Gafas",
+      "accessory": "Accesorio",
+      "surprise": "Sorpréndeme",
+      "freeColor": "Otro color",
+      "option": {
+        "shape": {
+          "drop": "Gota",
+          "round": "Redonda",
+          "capsule": "Cápsula",
+          "cube": "Cubo",
+          "ears": "Con orejas",
+          "heart": "Corazón",
+          "flower": "Flor",
+          "triangle": "Triángulo"
+        },
+        "eyes": {
+          "oval": "Ovalados",
+          "round": "Redondos",
+          "dot": "Puntitos",
+          "smile": "Sonrientes",
+          "sleepy": "Soñolientos"
+        },
+        "eyewear": {
+          "none": "Sin gafas",
+          "round": "Gafas redondas",
+          "shades": "Gafas de sol"
+        },
+        "accessory": {
+          "none": "Sin accesorio",
+          "beret": "Boina",
+          "beanie": "Gorro",
+          "bow": "Moño",
+          "crown": "Corona",
+          "hat": "Sombrero",
+          "headphones": "Audífonos"
+        }
+      },
+      "colors": {
+        "ff5fa8": "Rosa",
+        "7ed321": "Verde",
+        "ffc21a": "Amarillo",
+        "2f8bff": "Azul",
+        "ff7a45": "Naranja",
+        "9b6cff": "Morado",
+        "19c3b1": "Turquesa",
+        "ff4d5e": "Rojo"
+      }
+    },
+    "tones": {
+      "friendly": "Amable",
+      "formal": "Formal",
+      "playful": "Con humor"
+    },
+    "errors": {
+      "name": "Ponle un nombre con letras o números.",
+      "nameTaken": "Ya tienes un asistente con ese nombre.",
+      "projectHas": "Este proyecto ya tiene su asistente.",
+      "ownerOnly": "Sólo la cuenta dueña del proyecto puede crear su asistente.",
+      "generic": "No se pudo crear. Inténtalo otra vez."
+    },
+    "place": {
+      "yours": "Tu asistente",
+      "inProject": "En {project}",
+      "placeholder": "Escríbele a {name}…",
+      "talk": "Hablar",
+      "conversations": "Conversaciones",
+      "onPage": "En mi página",
+      "onPageHint": "Se verá en tu página cuando la publiques.",
+      "empty": "Todavía no le ha escrito ningún visitante a {name}.",
+      "visitor": "Visitante",
+      "handedOff": "Pidió hablar con una persona",
+      "messages": "{count, plural, one {# mensaje} other {# mensajes}}",
+      "budget": "Este mes, los visitantes: {spent} de {cap} créditos",
+      "budgetChange": "Cambiar",
+      "budgetSave": "Guardar",
+      "budgetLabel": "Tope del mes, en créditos",
+      "loadError": "No se pudieron cargar las conversaciones.",
+      "budgetRange": "Puede ser de 0 a {max} créditos.",
+      "budgetError": "No se pudo guardar el tope. Inténtalo otra vez.",
+      "nothingToKnow": "Publicada, pero tu página no tiene texto ni datos públicos que leer.",
+      "rename": "Cambiar nombre",
+      "renameSave": "Guardar",
+      "renameCancel": "Cancelar",
+      "renamePublish": "Tu página mostrará el nombre nuevo cuando la publiques.",
+      "renameFailed": "No se pudo cambiar el nombre. Inténtalo otra vez.",
+      "changeFigure": "Cambiar figura",
+      "figurePublish": "Tu página publicada mostrará la nueva figura cuando la vuelvas a publicar.",
+      "figureFailed": "No se pudo guardar la figura. Intenta de nuevo.",
+      "status": {
+        "thinking": "Pensando…",
+        "working": "Trabajando…",
+        "talking": "Escribiendo…"
+      },
+      "settings": "Ajustes",
+      "figureSaved": "Figura guardada"
+    },
+    "speaker": {
+      "working": "{name} está trabajando",
+      "steps": "{name} hizo {count, plural, one {# paso} other {# pasos}}",
+      "saw": "Lo que vio {name}",
+      "sawCaption": "{total, plural, one {Lo que vio {name}} other {Lo que vio {name} · {number} de {total}}}",
+      "yourTurnLive": "Te toca · {name} sigue en cuanto contestes",
+      "disclaimer": "{name} puede equivocarse. Revisa sus respuestas."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} anotó algo que pidieron tus clientes y no se pudo hacer:\n\n{title} — {visitors}\n\nÁbrelo para que Len lo haga, o déjalo para después: {url}",
+      "turnPrompt": "💬 De {name}: lo que pidieron tus clientes",
+      "visitors": "{count, plural, one {# cliente lo pidió} other {# clientes lo pidieron}}",
+      "from": "De {name}",
+      "doIt": "Que Len lo haga",
+      "notNow": "Ahora no",
+      "done": "Pasado a Len",
+      "dismissed": "Dejado para después",
+      "failed": "No se pudo. Vuelve a intentarlo.",
+      "noCredits": "No hay créditos para que Len lo haga. Recarga y vuelve a intentarlo.",
+      "tab": "Pedidos",
+      "empty": "Lo que pidan tus clientes y {name} no pueda hacer aparecerá aquí.",
+      "openChat": "Ver a Len en el chat",
+      "earlier": "Pedidos anteriores",
+      "loadError": "No se pudieron cargar los pedidos."
+    },
+    "projects": {
+      "count": "{count, plural, one {# proyecto} other {# proyectos}}",
+      "home": "Su casa",
+      "remove": "Quitar de este proyecto",
+      "removeConfirm": "Sí, quitar",
+      "delete": "Borrar a {name}",
+      "deleteConfirm": "Sí, borrar a {name} para siempre",
+      "failed": "No se pudo. Inténtalo otra vez.",
+      "close": "Cerrar",
+      "publishToKnow": "{name} lo conocerá en su próxima publicación.",
+      "busy": "{name} está contestando: inténtalo cuando acabe."
+    },
+    "summary": {
+      "switch": "Resumen de la mañana",
+      "hint": "A las 8, sólo si ayer pasó algo.",
+      "talkedWith": "{count, plural, one {hablé con # persona} other {hablé con # personas}}",
+      "contacts": "{count, plural, one {# te dejó su contacto} other {# te dejaron su contacto}}",
+      "requests": "{count, plural, one {# pidió algo que no pude hacer} other {# pidieron algo que no pude hacer}}",
+      "push": "Ayer {list}.",
+      "emailSubject": "{name}: lo de ayer",
+      "emailText": "{push}\n\nMíralo en el lugar de {name}: {url}"
+    },
+    "composer": {
+      "effort": "Esfuerzo de {name}"
+    },
+    "page": {
+      "title": "Tu página",
+      "reload": "Recargar",
+      "open": "Abrir en otra pestaña",
+      "hide": "Ocultar la página",
+      "show": "Ver la página",
+      "empty": "Tu página todavía no tiene nada."
+    }
   }
 }

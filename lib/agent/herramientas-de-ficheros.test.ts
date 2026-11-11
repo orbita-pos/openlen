@@ -17,7 +17,8 @@ import { preparePage } from "@/lib/page-engine/prepare";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
 import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
 import { READ_ONLY_REFUSAL, cargarFicherosDeLaTerminal, guardarLoDeLaTerminal } from "./herramientas-de-ficheros";
-import { cerrarTerminalDeLaSesion } from "./terminal/herramienta";
+import { boxProjectFiles, cerrarTerminalDeLaSesion, readOnlyBytesForBox, readOnlyForBox } from "./terminal/herramienta";
+import { conflictingTopLevel } from "./sandbox/paths";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
 import { cerrarLasTerminalesDelUsuario, ejecutarEnLaTerminalDelUsuario } from "./terminal/terminal-del-usuario";
 import { guardarAMano } from "./terminal/editar-a-mano";
@@ -743,6 +744,69 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     const out = await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "x".repeat(12_001) });
     assert.equal(out.response.ok, false);
     assert.equal(estado.brief, "Taquería.");
+  });
+
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §6.1): its memory is a file, like LEN.md, and
+  // the one thing its read-only session may write.
+  function depsConAsistente(memory = "") {
+    const { deps } = depsConLenMd({ brief: "Pastelería." });
+    const estado = { memory: { a1: memory } as Record<string, string> };
+    (deps as unknown as Record<string, unknown>).assistantMemory = {
+      async read(id: string) {
+        return estado.memory[id] ?? null;
+      },
+      async save(id: string, text: string) {
+        estado.memory[id] = text;
+        return true;
+      },
+    };
+    return { deps, estado };
+  }
+  /** As the route opens it: its memory is in its context, so it counts as read (like LEN.md). */
+  const sesionDelAsistente = (memory = "") => ({
+    ...makeSession(),
+    readOnly: true as const,
+    assistant: { id: "a1", name: "Lucía" },
+    leidos: memoriaSembrada({ personal: null, project: null, index: null, assistant: memory }),
+  });
+
+  it("🔴 the assistant writes its memory even though its session is read-only", async () => {
+    const { deps, estado } = depsConAsistente();
+    const out = await runAgentTool(sesionDelAsistente(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "Jueves: pasteles sin gluten." });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.memory.a1, "Jueves: pasteles sin gluten.");
+    assert.equal(out.mutoDurable, true);
+  });
+
+  it("🔴 but nothing else: /index.html and /LEN.md stay refused", async () => {
+    const { deps } = depsConAsistente();
+    const s = sesionDelAsistente();
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "/index.html", content: "x" })), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "x" })), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  });
+
+  it("the assistant reads and edits its memory", async () => {
+    const { deps, estado } = depsConAsistente("Jueves: pasteles sin gluten.");
+    const s = sesionDelAsistente("Jueves: pasteles sin gluten.");
+    assert.match(texto(await runAgentTool(s, deps, "Read", { file_path: "~/.assistant/MEMORY.md" })), /sin gluten/);
+    const out = await runAgentTool(s, deps, "Edit", { file_path: "~/.assistant/MEMORY.md", old_string: "Jueves", new_string: "Viernes" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.memory.a1, "Viernes: pasteles sin gluten.");
+  });
+
+  it("🔴 credentials never go in the assistant's memory", async () => {
+    const { deps, estado } = depsConAsistente("Hola.");
+    const out = await runAgentTool(sesionDelAsistente("Hola."), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "La clave es sk-proj-abcdefghijklmnopqrstuv123" });
+    assert.equal(out.response.ok, false);
+    assert.equal(estado.memory.a1, "Hola.");
+  });
+
+  it("Len has no such file", async () => {
+    const { deps, estado } = depsConAsistente("Jueves: pasteles sin gluten.");
+    assert.equal((await runAgentTool(makeSession(), deps, "Read", { file_path: "~/.assistant/MEMORY.md" })).response.ok, false);
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "x" });
+    assert.equal(out.response.ok, false);
+    assert.equal(estado.memory.a1, "Jueves: pasteles sin gluten.");
   });
 
   it("una nota nueva con Write, y aparece en MEMORY.md", async () => {
@@ -3244,5 +3308,240 @@ describe("a read-only session (a subagent that only reads)", () => {
     assert.equal(r.escrituras.length, 0);
     assert.ok(r.notas.some((n) => n.includes(READ_ONLY_REFUSAL)), r.notas.join("\n"));
     assert.match(store.data.html ?? "", /Gorra/);
+  });
+});
+
+// PHASE 4B (spec local 2026-11-06-asistente-propio, §8): the person's own assistant reads, with Read, Glob and Grep,
+// the files of every project she serves under ~/.assistant/projects/<id>/, as Claude Code reads its additional
+// working directories. Read-only, only hers, and nothing of the person under a project's folder.
+describe("her other projects' folders (phase 4B)", () => {
+  const SHOP = `<!doctype html>
+<html lang="es">
+<head><title>Canela Tienda</title></head>
+<body><h1>Canela Tienda</h1><a class="btn" href="#comprar">Comprar</a></body>
+</html>`;
+  const OFERTAS = `<!doctype html>
+<html lang="es">
+<head><title>Ofertas</title></head>
+<body><h1>Ofertas de la semana</h1></body>
+</html>`;
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 4, 0, 0, 0, 3]);
+  const P2 = "/home/user/.assistant/projects/p2";
+
+  function depsOfTwo(files: Record<string, Record<string, string>> = {}) {
+    const base = makeDeps({ html: HOME });
+    const projects: Record<string, { data: ProjectData; userBrief: string | null }> = {
+      p1: { data: { html: HOME }, userBrief: "Pastelería." },
+      p2: { data: { html: SHOP, pages: { ofertas: { html: OFERTAS } } } as ProjectData, userBrief: "Envíos de martes a sábado." },
+      // Somebody else's: she doesn't serve it.
+      p9: { data: { html: "<!doctype html><html><body>Ajeno</body></html>" }, userBrief: null },
+    };
+    const loads: [string, string][] = [];
+    const deps = {
+      ...base.deps,
+      async loadProject(projectId: string, userId: string) {
+        loads.push([projectId, userId]);
+        const p = projects[projectId];
+        return p ? { data: p.data, title: projectId, subdomain: null, publishedAt: null, userBrief: p.userBrief } : null;
+      },
+      async projectFiles(projectId: string) {
+        return { ...(files[projectId] ?? {}) };
+      },
+      async leerMemoriaDelDueno() {
+        return "Lo personal de la persona.";
+      },
+      assistantMemory: {
+        async read() {
+          return "Lo que Lucía sabe.";
+        },
+        async save() {
+          return true;
+        },
+      },
+    } as unknown as AgentDeps;
+    return { deps, loads, store: base.store };
+  }
+  const hers = (): AgentSession =>
+    ({
+      ...makeSession(),
+      readOnly: true,
+      assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] },
+      leidos: memoriaSembrada({ personal: null, project: null, index: null, assistant: "Lo que Lucía sabe." }),
+    }) as AgentSession;
+  const loaded = (loads: [string, string][], id: string) => loads.some(([p]) => p === id);
+
+  it("🔴 she reads a page of another project she serves, by its folder", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.match(texto(out), /Canela Tienda/);
+    assert.ok(loads.some(([p, u]) => p === "p2" && u === "u1"), JSON.stringify(loads));
+  });
+
+  it("Glob in another project's folder lists its files by their absolute paths", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*.html", path: "~/.assistant/projects/p2" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.ok(texto(out).split("\n").includes(`${P2}/ofertas/index.html`), texto(out));
+  });
+
+  it("Grep in another project's folder searches its pages", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Grep", { pattern: "Canela Tienda", path: "~/.assistant/projects/p2", output_mode: "files_with_matches" });
+    assert.ok(texto(out).includes(`${P2}/index.html`), texto(out));
+  });
+
+  it("Glob and Grep with no path stay in her home", async () => {
+    const { deps } = depsOfTwo();
+    const glob = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*.html" });
+    const grep = await runAgentTool(hers(), deps, "Grep", { pattern: "html", output_mode: "files_with_matches" });
+    assert.ok(!texto(glob).includes("/home/user/"), texto(glob));
+    assert.ok(!texto(grep).includes("/home/user/"), texto(grep));
+  });
+
+  it("🔴 a project she doesn't serve is refused and never loaded", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p9/index.html" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /~\/\.assistant\/PROJECTS\.md/);
+    assert.ok(!loaded(loads, "p9"), JSON.stringify(loads));
+  });
+
+  it("🔴 Len has no such folder", async () => {
+    const { deps, loads } = depsOfTwo();
+    const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /There is no file at \/home\/user\/\.assistant\/projects\/p2\/index\.html/);
+    assert.ok(!loaded(loads, "p2"), JSON.stringify(loads));
+  });
+
+  it("🔴 she can't write into another project's folder", async () => {
+    const { deps, store } = depsOfTwo();
+    const s = hers();
+    const refusal = new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    await runAgentTool(s, deps, "Read", { file_path: "~/.assistant/projects/p2/index.html" });
+    assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "~/.assistant/projects/p2/index.html", content: "x" })), refusal);
+    assert.match(texto(await runAgentTool(s, deps, "Edit", { file_path: "~/.assistant/projects/p2/index.html", old_string: "Comprar", new_string: "Pagar" })), refusal);
+    assert.equal(store.saved, 0);
+  });
+
+  it("🔴 nothing personal is under a project's folder; its own LEN.md is", async () => {
+    const { deps } = depsOfTwo();
+    for (const path of [`${P2}/home/user/.len/LEN.md`, `${P2}/home/user/.assistant/MEMORY.md`]) {
+      const out = await runAgentTool(hers(), deps, "Read", { file_path: path });
+      assert.equal(out.response.ok, false, `${path}: ${texto(out)}`);
+    }
+    const own = await runAgentTool(hers(), deps, "Read", { file_path: "~/.assistant/projects/p2/LEN.md" });
+    assert.equal(own.response.ok, true, texto(own));
+    assert.match(texto(own), /Envíos de martes a sábado\./);
+  });
+
+  it("Glob on the folder of all her projects names each one", async () => {
+    const { deps } = depsOfTwo();
+    const out = await runAgentTool(hers(), deps, "Glob", { pattern: "**/*", path: "~/.assistant/projects" });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /~\/\.assistant\/projects\/p1/);
+    assert.match(texto(out), /~\/\.assistant\/projects\/p2/);
+  });
+
+  it("an image in another project's folder is shown as an image", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const seen: number[] = [];
+    const withEyes = { ...deps, imageForModel: async (b: Uint8Array) => (seen.push(b.byteLength), { image: { type: "image", source: { type: "base64", media_type: "image/png", data: "x" } }, width: 4, height: 3 }) } as unknown as AgentDeps;
+    const out = await runAgentTool(hers(), withEyes, "Read", { file_path: "~/.assistant/projects/p2/img/portada.png" });
+    assert.equal(out.images?.length, 1, texto(out));
+    assert.deepEqual(seen, [PNG.byteLength]);
+  });
+
+  // Final review I1: as Claude Code's Glob («an absolute pattern carries its folder»), the folder in the pattern is
+  // where it searches — with no path it used to search her home and answer «No file matches» as a success.
+  it("🔴 a Glob whose pattern names her project's folder searches that folder", async () => {
+    const { deps } = depsOfTwo();
+    for (const pattern of ["/home/user/.assistant/projects/p2/**/*.html", "~/.assistant/projects/p2/ofertas/*"]) {
+      const out = await runAgentTool(hers(), deps, "Glob", { pattern });
+      assert.equal(out.response.ok, true, `${pattern}: ${texto(out)}`);
+      assert.ok(texto(out).split("\n").includes(`${P2}/ofertas/index.html`), `${pattern}: ${texto(out)}`);
+    }
+  });
+
+  // PHASE 4C (measured in 4B's task 4: with no folder in the terminal she said «no tengo acceso» and never tried Read): as
+  // Claude Code's shell sees its additional working directories, her terminal sees the other projects she serves,
+  // read-only, as /.openlen.
+  const bash = (s: AgentSession, deps: AgentDeps, command: string) => conTerminal(() => runAgentTool(s, deps, "bash", { command }));
+
+  it("🔴 her terminal lists another project's folder and reads its files", async () => {
+    const { deps } = depsOfTwo();
+    const s = hers();
+    try {
+      // Only the projects besides her home: hers is / already.
+      assert.equal(texto(await bash(s, deps, "ls ~/.assistant/projects")).trim(), "p2");
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/index.html")), /Canela Tienda/);
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/LEN.md")), /Envíos de martes a sábado\./);
+      assert.equal(texto(await bash(s, deps, "ls ~/.assistant/projects/p2/ofertas")).trim(), "index.html");
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 writing there from the terminal fails and saves nothing", async () => {
+    const { deps, store } = depsOfTwo();
+    const s = hers();
+    try {
+      const out = await bash(s, deps, "echo x > ~/.assistant/projects/p2/index.html");
+      assert.match(texto(out), /read-only|EROFS/i, texto(out));
+      assert.match(texto(await bash(s, deps, "cat ~/.assistant/projects/p2/index.html")), /Canela Tienda/);
+      assert.equal(store.saved, 0);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("🔴 Len's terminal has no such folder", async () => {
+    const { deps } = depsOfTwo();
+    const s = makeSession();
+    try {
+      assert.match(texto(await bash(s, deps, "ls ~/.assistant/projects")), /No such file or directory/);
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  it("a binary of another project is its bytes in the terminal", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-term-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const s = hers();
+    try {
+      assert.equal(texto(await bash(s, deps, "wc -c < ~/.assistant/projects/p2/img/portada.png")).trim(), String(PNG.byteLength));
+    } finally {
+      await cerrarTerminalDeLaSesion(s);
+    }
+  });
+
+  // Phase 4C, the box: another project's text goes up as read-only text; a binary as its bytes, never its pointer's text.
+  it("🔴 in her box, another project's pages go up as text and its binaries as bytes", async () => {
+    __setStorageForTest(new FilesystemStorage({ rootDir: mkdtempSync(join(tmpdir(), "openlen-tools-served-box-")), publicUrlBase: "/uploads" }));
+    const pointer = makePointer(await putBlob(PNG));
+    const { deps } = depsOfTwo({ p2: { "/img/portada.png": pointer } });
+    const text = await readOnlyForBox(hers(), deps);
+    assert.match(text[`${P2}/index.html`] ?? "", /Canela Tienda/);
+    assert.equal(`${P2}/img/portada.png` in text, false);
+    const bytes = await readOnlyBytesForBox(hers(), deps);
+    assert.equal(bytes[`${P2}/img/portada.png`]?.byteLength, PNG.byteLength);
+  });
+
+  // Final review I1: her memory, ~/.assistant/MEMORY.md, isn't a path the box syncs (its manifest, baked in the E2B
+  // template, walks only ~/.len), so it made every turn of hers fall back to the plain terminal as a «conflict». It goes
+  // up read-only instead, with her other projects' folder, and she writes it with Edit or Write, as her prompt says.
+  it("🔴 her box gets her project files without her memory, so it doesn't fall back; her memory goes up read-only", async () => {
+    const { deps } = depsOfTwo();
+    // Why: with her memory among the project's files, the box refused them.
+    assert.deepEqual(conflictingTopLevel(Object.keys(await cargarFicherosDeLaTerminal(hers(), deps))), ["/home/user/.assistant/MEMORY.md"]);
+    const files = await boxProjectFiles(hers(), deps);
+    assert.equal("/home/user/.assistant/MEMORY.md" in files, false);
+    assert.deepEqual(conflictingTopLevel(Object.keys(files)), []);
+    assert.equal((await readOnlyForBox(hers(), deps))["/home/user/.assistant/MEMORY.md"], "Lo que Lucía sabe.");
   });
 });

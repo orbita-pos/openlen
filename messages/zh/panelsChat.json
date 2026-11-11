@@ -25,7 +25,8 @@
     "scheduled": "定时任务「{title}」 · {when}",
     "lenWatch": "Len Watch · 你发布的网站无法加载",
     "fromSubagents": "子代理的结果",
-    "toolCreation": "创建工具"
+    "toolCreation": "创建工具",
+    "fromAssistant": "来自 {name}"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",
@@ -719,5 +720,182 @@
     "changed": "期间已有变化：请在“工具”中重新查看",
     "dismissed": "未连接。你可以稍后在“工具”中批准。",
     "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "创建你自己的助手：名字和样子由你来选。",
+      "create": "创建我的助手",
+      "ready": "{name} 已就绪",
+      "talk": "和 {name} 聊天",
+      "useHere": "在这里使用 {name}",
+      "createAnother": "再创建一个",
+      "useFailed": "没能完成，请重试。"
+    },
+    "creator": {
+      "title": "你的助手",
+      "name": "名字",
+      "namePlaceholder": "Lucía",
+      "shape": "形状",
+      "color": "颜色",
+      "tone": "说话方式",
+      "done": "完成",
+      "cancel": "取消",
+      "morningSummary": "每天早上告诉我发生了什么",
+      "eyes": "眼睛",
+      "eyewear": "眼镜",
+      "accessory": "配饰",
+      "surprise": "随机一个",
+      "freeColor": "其他颜色",
+      "option": {
+        "shape": {
+          "drop": "水滴",
+          "round": "圆形",
+          "capsule": "胶囊",
+          "cube": "方块",
+          "ears": "带耳朵",
+          "heart": "爱心",
+          "flower": "花朵",
+          "triangle": "三角形"
+        },
+        "eyes": {
+          "oval": "椭圆",
+          "round": "圆形",
+          "dot": "圆点",
+          "smile": "微笑",
+          "sleepy": "困倦"
+        },
+        "eyewear": {
+          "none": "不戴眼镜",
+          "round": "圆框眼镜",
+          "shades": "墨镜"
+        },
+        "accessory": {
+          "none": "无配饰",
+          "beret": "贝雷帽",
+          "beanie": "毛线帽",
+          "bow": "蝴蝶结",
+          "crown": "皇冠",
+          "hat": "帽子",
+          "headphones": "耳机"
+        }
+      },
+      "colors": {
+        "ff5fa8": "粉色",
+        "7ed321": "绿色",
+        "ffc21a": "黄色",
+        "2f8bff": "蓝色",
+        "ff7a45": "橙色",
+        "9b6cff": "紫色",
+        "19c3b1": "青绿色",
+        "ff4d5e": "红色"
+      }
+    },
+    "tones": {
+      "friendly": "亲切",
+      "formal": "正式",
+      "playful": "活泼"
+    },
+    "errors": {
+      "name": "请用字母或数字给它起个名字。",
+      "nameTaken": "你已经有同名的助手了。",
+      "projectHas": "这个项目已经有助手了。",
+      "ownerOnly": "只有项目的所有者才能创建它的助手。",
+      "generic": "未能创建，请重试。"
+    },
+    "place": {
+      "yours": "你的助手",
+      "inProject": "在 {project}",
+      "placeholder": "给 {name} 发消息…",
+      "talk": "对话",
+      "conversations": "访客对话",
+      "onPage": "放在我的页面上",
+      "onPageHint": "发布页面后就会显示。",
+      "empty": "还没有访客给 {name} 写过消息。",
+      "visitor": "访客",
+      "handedOff": "要求与真人沟通",
+      "messages": "{count, plural, other {# 条消息}}",
+      "budget": "本月访客：{spent} / {cap} 积分",
+      "budgetChange": "修改",
+      "budgetSave": "保存",
+      "budgetLabel": "每月上限（积分）",
+      "loadError": "无法加载对话。",
+      "budgetRange": "可设为 0 到 {max} 积分。",
+      "budgetError": "无法保存上限，请重试。",
+      "nothingToKnow": "已发布，但你的页面没有可读取的文字或公开数据。",
+      "rename": "重命名",
+      "renameSave": "保存",
+      "renameCancel": "取消",
+      "renamePublish": "发布页面后就会显示新名字。",
+      "renameFailed": "无法更改名字，请重试。",
+      "changeFigure": "更换形象",
+      "figurePublish": "重新发布后，已发布的页面才会显示新形象。",
+      "figureFailed": "形象未能保存，请重试。",
+      "status": {
+        "thinking": "思考中…",
+        "working": "处理中…",
+        "talking": "输入中…"
+      },
+      "settings": "设置",
+      "figureSaved": "形象已保存"
+    },
+    "speaker": {
+      "working": "{name} 正在工作",
+      "steps": "{name} 完成了 {count, plural, other {# 个步骤}}",
+      "saw": "{name} 看到的画面",
+      "sawCaption": "{total, plural, =1 {{name} 看到的画面} other {{name} 看到的画面 · {number}/{total}}}",
+      "yourTurnLive": "轮到你了 · 你一回答，{name} 就继续",
+      "disclaimer": "{name} 可能会出错。请核对回答。"
+    },
+    "requests": {
+      "emailSubject": "💬 {name}：{title}",
+      "emailText": "{name} 记下了客户提出但无法完成的请求：\n\n{title} — {visitors}\n\n打开它让 Len 来处理，或稍后再看：{url}",
+      "turnPrompt": "💬 来自 {name}：客户提出的请求",
+      "visitors": "{count, plural, other {# 位客户提出}}",
+      "from": "来自 {name}",
+      "doIt": "让 Len 来做",
+      "notNow": "暂不处理",
+      "done": "已交给 Len",
+      "dismissed": "已搁置",
+      "failed": "没能完成，请重试。",
+      "noCredits": "积分不足，Len 无法处理。请充值后重试。",
+      "tab": "请求",
+      "empty": "客户提出而 {name} 无法完成的请求会显示在这里。",
+      "openChat": "在聊天中查看 Len",
+      "earlier": "之前的请求",
+      "loadError": "无法加载请求。"
+    },
+    "projects": {
+      "count": "{count, plural, other {# 个项目}}",
+      "home": "主项目",
+      "remove": "从此项目移除",
+      "removeConfirm": "是的，移除",
+      "delete": "删除 {name}",
+      "deleteConfirm": "是的，永久删除 {name}",
+      "failed": "没能完成，请重试。",
+      "close": "关闭",
+      "publishToKnow": "下次发布后 {name} 才会了解它。",
+      "busy": "{name} 正在回答：等回答完成后再试。"
+    },
+    "summary": {
+      "switch": "早间摘要",
+      "hint": "仅在昨天有事发生时，于早上 8 点告诉你。",
+      "talkedWith": "{count, plural, other {交谈 # 人}}",
+      "contacts": "{count, plural, other {留下联系方式 # 人}}",
+      "requests": "{count, plural, other {我没能处理的请求 # 个}}",
+      "push": "昨天：{list}",
+      "emailSubject": "{name}：昨天发生了什么",
+      "emailText": "{push}\n\n在{name}的页面查看：{url}"
+    },
+    "composer": {
+      "effort": "{name} 的思考强度"
+    },
+    "page": {
+      "title": "你的页面",
+      "reload": "重新加载",
+      "open": "在新标签页中打开",
+      "hide": "隐藏页面",
+      "show": "显示页面",
+      "empty": "你的页面还没有内容。"
+    }
   }
 }

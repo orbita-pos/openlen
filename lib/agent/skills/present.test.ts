@@ -106,6 +106,15 @@ describe("present: the index of delivered files", () => {
     expect(indexDeliveries).toHaveBeenCalledWith("p1", "t1", out.delivered);
   });
 
+  it("🔴 the person's own assistant delivers in its own conversation only: not into the project's «Entregado»", async () => {
+    const { session, deps } = setup({ "/tmp/office/inventario.xlsx": XLSX });
+    const indexDeliveries = vi.fn(async () => undefined);
+    (deps as { indexDeliveries?: unknown }).indexDeliveries = indexDeliveries;
+    const out = await toolPresent({ ...session, assistant: { id: "a1", name: "Lucía" } }, deps, { files: [{ path: "/tmp/office/inventario.xlsx" }] });
+    expect(out.response.ok).toBe(true);
+    expect(indexDeliveries).not.toHaveBeenCalled();
+  });
+
   it("a failing index still delivers", async () => {
     const { session, deps } = setup({ "/tmp/office/inventario.xlsx": XLSX });
     (deps as { indexDeliveries?: unknown }).indexDeliveries = vi.fn(async () => {

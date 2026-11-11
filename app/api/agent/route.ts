@@ -10,6 +10,15 @@ import { cabeEnElTope, margenDeMiembros, sumarGasto } from "@/lib/projects/miemb
 import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
+import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
+import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
+import { assistantConversationKey } from "@/lib/assistants/conversation";
+import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
+import { assistantsEnabled } from "@/lib/assistants/enabled";
+import { projectsOfAssistant, type ServedProject } from "@/lib/assistants/projects";
+import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
+import { assistantById, readyAssistantNotices, removeAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
+import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
 import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
@@ -55,7 +64,7 @@ import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memor
 import { gitEnabled } from "@/lib/git/enabled";
 import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
-import { MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { MEMORY_INDEX_MAX, buildMemoryIndex } from "@/lib/agent/memory/note";
 import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { bundledSkills } from "@/lib/agent/skills/bundled";
@@ -389,6 +398,8 @@ type CuerpoDelTurno = {
   idioma?: unknown;
   /** LOS VISUALES: si la persona lee en un teléfono (`mobile`) o no (`desktop`). */
   dispositivo?: unknown;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): the turn runs as it, in its conversation. */
+  assistantId?: unknown;
 };
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
@@ -479,6 +490,24 @@ async function correrTurno(
       if (!(await cabeEnElTope(projectId, 1))) return errorJson(402, "the project's monthly limit for members is used up", "tope_de_miembros");
     }
   }
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.1): like Claude Code's `--agent <name>`, the
+  // turn is Len's with the hidden `assistant` definition as its main thread — its own conversation, Len's prompt plus
+  // its section, Len's tools minus what builds, a read-only session. Only from the person's own request, only theirs,
+  // and only in the project it was born in (phase 1). A goal or a birth is Len's.
+  let asistente: AssistantRow | null = null;
+  if (typeof body?.assistantId === "string" && body.assistantId && !opts.round && !opts.hilo && !opts.email && !opts.scheduled) {
+    if (!assistantsEnabled()) return errorJson(404, "assistants are off", "assistants_off");
+    const encontrado = await assistantById(body.assistantId.slice(0, 100)).catch(() => null);
+    if (!encontrado || encontrado.personId !== quien || encontrado.homeProjectId !== projectId) return errorJson(404, "assistant not found", "not_found");
+    if (pedidoDelEncargo || body.naceComo !== undefined) return errorJson(400, "a goal or a birth is Len's, not the assistant's", "not_for_assistant");
+    asistente = encontrado;
+  }
+  /** Where this turn's rows live: Len's conversation (nothing) or the assistant's. Len's calls stay byte for byte. */
+  const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
+  /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
+  const proyectosDelAsistente: ServedProject[] = asistente ? await projectsOfAssistant(asistente.id).catch(() => []) : [];
+  /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
+  const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
   // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
   // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
@@ -720,7 +749,8 @@ async function correrTurno(
   // GITHUB (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): with a remote, bash carries Claude Code's push
   // and pull request protocol; without one it stays byte for byte as before.
   const gitRemote = gitEnabled() && deps.gitHasRemote ? await deps.gitHasRemote(projectId).catch(() => false) : false;
-  const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId;
+  // Not for the person's own assistant in phase 1: a child's notice wakes Len in the project chat (lib/assistants/agent.ts).
+  const subagentsOn = subagentsEnabled(process.env) && proyectoDelChat === projectId && !asistente;
   const loadAgentTypes = async () => {
     const [projectTypes, personalTypes] = subagentsOn ? await Promise.all([
       conPlazo(async () => (await deps.agentStore?.list("project", projectId)) ?? [], MEMORIA_TIMEOUT_MS, []).catch(() => []),
@@ -781,7 +811,13 @@ async function correrTurno(
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
     // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
     const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
-    return mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
+    const conMcp = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
+    // Only the owner creates the project's assistant (POST /api/assistants, 403 solo_dueno): a member's turn isn't
+    // offered the tool at all, as Claude Code leaves a denied tool out of the list.
+    const todas = miembro ? conMcp.filter((d) => d.name !== CREATE_ASSISTANT) : conMcp;
+    // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
+    // what builds it passes to Len.
+    return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }] : todas;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
@@ -819,7 +855,8 @@ async function correrTurno(
   const genteDelProyecto = (await proyectoCompartido(projectId).catch(() => false))
     ? await personasDelProyecto(projectId).catch(() => [])
     : [];
-  const compartido = genteDelProyecto.length > 1;
+  // The team's messages are Len's conversation: the assistant's has only its owner.
+  const compartido = genteDelProyecto.length > 1 && !asistente;
   let equipoAhora = "";
   let filasDelHistorial: FilaDelHistorial[];
   // A11 · LA CHARLA ENTERA desde la última marca de resumen, como Claude Code
@@ -837,7 +874,7 @@ async function correrTurno(
     filasDelHistorial = plegado.filas;
     equipoAhora = plegado.ahora;
   } else {
-    filasDelHistorial = await turnosParaElHistorial(projectId).catch(() => []);
+    filasDelHistorial = await turnosParaElHistorial(projectId, ...enLaCharla).catch(() => []);
   }
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
@@ -1066,7 +1103,7 @@ async function correrTurno(
   // LA LISTA DE PROGRESO (spec local 2026-10-15): la heredada, para que el bucle
   // sepa que «hay lista», y una línea con ella SÓLO si ya no está en el historial.
   // Fail-soft: sin la base, el turno sigue sin lista.
-  const listaDelTurno = todosForTurn(await latestTodoListForChat(projectId).catch(() => null), history);
+  const listaDelTurno = todosForTurn(await latestTodoListForChat(projectId, ...enLaCharla).catch(() => null), history);
   // «CREAR» CARDS (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): what the person or the background work
   // changed on this person's cards since Len last heard, read with this request (DeepSeek's action-card status; it
   // never wakes Len). Marked delivered as of this read once the turn starts. Fail-soft: without the table, nothing.
@@ -1199,8 +1236,23 @@ async function correrTurno(
   // notas— como mensaje duradero, como DeepSeek: línea base la primera vez, y
   // después sólo lo que cambió desde lo que el modelo ya ve en el historial.
   // Así lo de delante sigue en caché.
-  const memoryIndex = buildMemoryIndex(notasDeMemoria, MEMORY_INDEX_MAX) || null;
-  const memoriaDelTurno = memoryMessageForTurn(
+  // The person's own assistant doesn't read Len's notes on the project (spec local 2026-11-06-asistente-propio, §6.1):
+  // its own memory is loaded instead, the same durable way.
+  const memoryIndex = asistente ? null : buildMemoryIndex(notasDeMemoria, MEMORY_INDEX_MAX) || null;
+  const memoriaDelTurno = asistente
+    ? memoryMessageForTurn(
+        [
+          { path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory },
+          {
+            path: ASSISTANT_PROJECTS_PATH,
+            label: "the projects you serve and what each one published — read-only; it changes when your owner publishes",
+            text: projectsText(proyectosDelAsistente),
+          },
+        ],
+        historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
+        PROJECT_MEMORY_MAX + PROJECTS_TEXT_MAX,
+      )
+    : memoryMessageForTurn(
     [
       { path: PROJECT_LEN_MD, label: "project instructions, shared with everyone who edits this project", text: project.userBrief },
       { path: MEMORY_INDEX, label: "your notes on this project — Read a note when it is relevant", text: memoryIndex },
@@ -1281,7 +1333,7 @@ async function correrTurno(
     turn: filasDelHistorial.length + 1,
     now: ahoraDelTurno,
     zone: zonaConocida,
-    sinceLast: sinceLastTurn(await lastTurnOfTheConversation(projectId).catch(() => null), ahoraDelTurno),
+    sinceLast: sinceLastTurn(await lastTurnOfTheConversation(projectId, ...enLaCharla).catch(() => null), ahoraDelTurno),
   });
   const argsDelTurno = {
     mode,
@@ -1401,6 +1453,10 @@ async function correrTurno(
   }
 
   const messages = built.messages;
+  // The person's own assistant: Len's system prompt byte for byte, then its section and who it is.
+  if (asistente && messages[0]?.role === "system") {
+    messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, asistente) };
+  }
   // LA FOTO DE ESTE TURNO, PEGADA A TU MENSAJE (A): viaja en todas las vueltas
   // y en el cierre, como una imagen pegada en Claude Code. Antes se anclaba a
   // la primera vuelta y en la segunda Len ya no la tenía delante.
@@ -1413,7 +1469,8 @@ async function correrTurno(
   // `enter_plan_mode` y `exit_plan_mode` (`deps.planMode`, más abajo); la
   // sección entra o sale del prompt en CADA petición (`withPlanSection`).
   const planPlegado = planModeFromRows(filasDelHistorial);
-  const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: planElegido });
+  // Plan mode is Len's: the assistant's turn never enters it, whatever the composer sent.
+  const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: asistente ? null : planElegido });
   let planActivo = planDelTurno.active;
   /** ALINEAR CON DEEPSEEK · ¿cambió este turno el estado de la charla (modo plan o
    *  encargo)? Allí es un evento duradero en el momento, haya o no más en el
@@ -1477,7 +1534,12 @@ async function correrTurno(
             },
           )
         : []),
-      ...memoriaSembrada({ personal: userMemory, project: project.userBrief ?? null, index: memoryIndex }),
+      ...memoriaSembrada({
+        personal: userMemory,
+        project: asistente ? null : (project.userBrief ?? null),
+        index: memoryIndex,
+        ...(asistente ? { assistant: asistente.memory } : {}),
+      }),
     ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
     // contrastar lo que el modelo hace con lo que se le pidió — ver `userPrompt`.
@@ -1495,6 +1557,13 @@ async function correrTurno(
     // reclamar un subdominio que el dueño nunca dijo — ver su comentario.
     mensajeDelUsuario: prompt,
     zonaHoraria: zonaDelTurno,
+    // The person's own assistant never changes the project: the session refuses writes, whatever the model was told.
+    ...(asistente
+      ? {
+          readOnly: true as const,
+          assistant: { id: asistente.id, name: asistente.name, projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })) },
+        }
+      : {}),
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).
@@ -1652,6 +1721,8 @@ async function correrTurno(
       const textoDelUsuario = () => [prompt, ...correcciones.map((c) => `↳ ${c}`)].join("\n");
       let filaAbierta = false;
       let filaCerrada = false;
+      /** The person's own assistant was deleted while it answered: no row, no push (see `closeRowOnce`). */
+      let asistenteBorrado = false;
       /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
        *  historial del turno siguiente. Lo usan el cierre y, a mitad de turno, el
        *  avance (con `partial`). */
@@ -1751,6 +1822,12 @@ async function correrTurno(
         filaCerrada = true;
         clearInterval(liveTranscriptWatch);
         await avance.parar();
+        // THE PERSON'S OWN ASSISTANT, deleted while it answered (DELETE /api/assistants/[id] took its conversation and
+        // this open row with it): writing now would insert a row nobody can see. Fail-soft: unchecked, it's written.
+        if (asistente && (await assistantById(asistente.id).catch(() => asistente)) === null) {
+          asistenteBorrado = true;
+          return;
+        }
         // Alinear con DeepSeek: también si el turno EMPEZÓ (la fila se abrió, pasada
         // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
         // A11 · y siempre que resumió: sin la fila se perdería la marca (un
@@ -1795,7 +1872,7 @@ async function correrTurno(
                     folded: { planMode: planPlegado, goal: goalPlegado },
                     now: { planMode: planActivo, goal: goalActual },
                   }),
-            });
+            }, ...enLaCharla);
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
           }
@@ -1963,7 +2040,7 @@ async function correrTurno(
               : programadaDelTurno
                 ? { origen: programadaDelTurno.origin }
                 : {}),
-          });
+          }, ...enLaCharla);
           filaAbierta = true;
           // EL CHAT DEL EQUIPO: «@Len y @Eli …» es un turno que además avisa a
           // Eli y le deja la mención sin ver. Fail-soft: el turno sigue. Desde
@@ -2238,6 +2315,19 @@ async function correrTurno(
           // LA TERMINAL REAL: lo que terminó en el segundo plano de la caja, antes de cada llamada.
           // Only this turn's jobs: the box may be shared with subagents (spec local 2026-11-01-subagentes-de-len).
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
+          // THE PERSON'S OWN ASSISTANT: how its ask_len requests ended, each as its own user message before its next
+          // call, as DeepSeek's settlement notices; removed once handed (DeepSeek's «marked delivered once»).
+          ...(asistente
+            ? {
+                takeAgentNotices: () => {
+                  const handed = avisosDelAsistente.splice(0);
+                  if (handed.length > 0) {
+                    void removeAssistantNotices(asistente.id, handed.map((n) => n.id)).catch((err: unknown) => console.warn("[assistants] heard notices weren't removed", err));
+                  }
+                  return handed.map(noticeText);
+                },
+              }
+            : {}),
           ...(subagentsOn
             ? {
                 // LEN'S SUBAGENTS: their notices, before each call and before closing; a settlement is marked
@@ -2837,11 +2927,11 @@ async function correrTurno(
         // correo lo salta), con la clave de la fila para no repetir. El módulo
         // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
         // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
-        if (clienteSeFue && !canceladoAProposito && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
+        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(
-              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas }),
+              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas, ...(asistente ? { asistente: { id: asistente.id, name: asistente.name, slug: asistente.slug } } : {}) }),
               `len-turno:${filaId}`,
             );
           } catch (err) {

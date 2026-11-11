@@ -25,7 +25,8 @@
     "scheduled": "예약 작업 «{title}» · {when}",
     "lenWatch": "Len Watch · 게시된 사이트가 열리지 않았어요",
     "fromSubagents": "서브에이전트 결과",
-    "toolCreation": "도구 만들기"
+    "toolCreation": "도구 만들기",
+    "fromAssistant": "{name}에게서"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d> 만에 완료",
@@ -719,5 +720,182 @@
     "changed": "그사이에 바뀌었습니다. 도구에서 다시 확인하세요",
     "dismissed": "연결하지 않았습니다. 나중에 도구에서 승인할 수 있습니다.",
     "firstTime": "키 {name}은(는) 아직 {host}(으)로 보낸 적이 없습니다. 그 서버를 신뢰할 때만 승인하세요"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "나만의 어시스턴트를 만들어 보세요. 이름과 모습은 직접 고릅니다.",
+      "create": "내 어시스턴트 만들기",
+      "ready": "{name} 준비 완료",
+      "talk": "{name}와 대화하기",
+      "useHere": "여기서도 {name} 사용하기",
+      "createAnother": "새로 만들기",
+      "useFailed": "할 수 없었어요. 다시 시도하세요."
+    },
+    "creator": {
+      "title": "내 어시스턴트",
+      "name": "이름",
+      "namePlaceholder": "Lucía",
+      "shape": "모양",
+      "color": "색",
+      "tone": "말투",
+      "done": "완료",
+      "cancel": "취소",
+      "morningSummary": "매일 아침 무슨 일이 있었는지 알려 줘",
+      "eyes": "눈",
+      "eyewear": "안경",
+      "accessory": "액세서리",
+      "surprise": "랜덤으로",
+      "freeColor": "다른 색",
+      "option": {
+        "shape": {
+          "drop": "물방울",
+          "round": "동그라미",
+          "capsule": "캡슐",
+          "cube": "큐브",
+          "ears": "귀 달린 모양",
+          "heart": "하트",
+          "flower": "꽃",
+          "triangle": "삼각형"
+        },
+        "eyes": {
+          "oval": "타원형",
+          "round": "동그란 눈",
+          "dot": "점",
+          "smile": "웃는 눈",
+          "sleepy": "졸린 눈"
+        },
+        "eyewear": {
+          "none": "안경 없음",
+          "round": "동그란 안경",
+          "shades": "선글라스"
+        },
+        "accessory": {
+          "none": "액세서리 없음",
+          "beret": "베레모",
+          "beanie": "비니",
+          "bow": "리본",
+          "crown": "왕관",
+          "hat": "모자",
+          "headphones": "헤드폰"
+        }
+      },
+      "colors": {
+        "ff5fa8": "분홍",
+        "7ed321": "초록",
+        "ffc21a": "노랑",
+        "2f8bff": "파랑",
+        "ff7a45": "주황",
+        "9b6cff": "보라",
+        "19c3b1": "청록",
+        "ff4d5e": "빨강"
+      }
+    },
+    "tones": {
+      "friendly": "친근하게",
+      "formal": "격식 있게",
+      "playful": "재미있게"
+    },
+    "errors": {
+      "name": "글자나 숫자로 이름을 지어 주세요.",
+      "nameTaken": "그 이름의 어시스턴트가 이미 있습니다.",
+      "projectHas": "이 프로젝트에는 이미 어시스턴트가 있습니다.",
+      "ownerOnly": "프로젝트의 어시스턴트는 소유자만 만들 수 있어요.",
+      "generic": "만들지 못했습니다. 다시 시도해 주세요."
+    },
+    "place": {
+      "yours": "내 어시스턴트",
+      "inProject": "{project}에서",
+      "placeholder": "{name}에게 메시지…",
+      "talk": "대화",
+      "conversations": "대화 기록",
+      "onPage": "내 페이지에 표시",
+      "onPageHint": "페이지를 게시하면 표시돼요.",
+      "empty": "아직 {name}에게 메시지를 보낸 방문자가 없어요.",
+      "visitor": "방문자",
+      "handedOff": "담당자와 대화를 요청함",
+      "messages": "{count, plural, other {메시지 #개}}",
+      "budget": "이번 달 방문자: {cap} 크레딧 중 {spent}",
+      "budgetChange": "변경",
+      "budgetSave": "저장",
+      "budgetLabel": "월 한도(크레딧)",
+      "loadError": "대화를 불러오지 못했어요.",
+      "budgetRange": "0~{max} 크레딧으로 정할 수 있어요.",
+      "budgetError": "한도를 저장하지 못했어요. 다시 시도해 주세요.",
+      "nothingToKnow": "게시했지만 페이지에 읽을 수 있는 텍스트나 공개 데이터가 없어요.",
+      "rename": "이름 바꾸기",
+      "renameSave": "저장",
+      "renameCancel": "취소",
+      "renamePublish": "페이지를 게시하면 새 이름이 표시돼요.",
+      "renameFailed": "이름을 바꾸지 못했어요. 다시 시도해 주세요.",
+      "changeFigure": "모습 바꾸기",
+      "figurePublish": "게시된 페이지에는 다시 게시하면 새 모습이 표시됩니다.",
+      "figureFailed": "모습을 저장하지 못했습니다. 다시 시도해 주세요.",
+      "status": {
+        "thinking": "생각 중…",
+        "working": "작업 중…",
+        "talking": "작성 중…"
+      },
+      "settings": "설정",
+      "figureSaved": "모습을 저장했습니다"
+    },
+    "speaker": {
+      "working": "{name} · 작업 중",
+      "steps": "{name} · {count, plural, other {#단계 진행}}",
+      "saw": "{name}이(가) 본 화면",
+      "sawCaption": "{total, plural, =1 {{name}이(가) 본 화면} other {{name}이(가) 본 화면 · {number}/{total}}}",
+      "yourTurnLive": "당신 차례예요 · 답하면 {name}이(가) 바로 이어서 해요",
+      "disclaimer": "{name}은(는) 실수할 수 있어요. 답변을 확인해 주세요."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "고객이 요청했지만 할 수 없었던 일을 {name}가 메모해 두었어요:\n\n{title} — {visitors}\n\n열어서 Len에게 맡기거나 나중에 확인하세요: {url}",
+      "turnPrompt": "💬 {name}의 요청: 고객이 요청한 일",
+      "visitors": "{count, plural, other {고객 #명이 요청}}",
+      "from": "{name}의 요청",
+      "doIt": "Len에게 맡기기",
+      "notNow": "나중에",
+      "done": "Len에게 전달됨",
+      "dismissed": "보류함",
+      "failed": "할 수 없었어요. 다시 시도하세요.",
+      "noCredits": "Len이 처리할 크레딧이 부족해요. 충전한 뒤 다시 시도하세요.",
+      "tab": "요청",
+      "empty": "고객이 요청했지만 {name}가 할 수 없는 일이 여기에 표시돼요.",
+      "openChat": "채팅에서 Len 보기",
+      "earlier": "이전 요청",
+      "loadError": "요청을 불러오지 못했어요."
+    },
+    "projects": {
+      "count": "{count, plural, other {프로젝트 #개}}",
+      "home": "홈",
+      "remove": "이 프로젝트에서 빼기",
+      "removeConfirm": "네, 빼기",
+      "delete": "{name} 삭제",
+      "deleteConfirm": "네, {name} 영구 삭제",
+      "failed": "할 수 없었어요. 다시 시도하세요.",
+      "close": "닫기",
+      "publishToKnow": "다음에 게시하면 {name}가 내용을 알게 돼요.",
+      "busy": "{name}가 답하는 중이에요. 끝난 뒤 다시 시도하세요."
+    },
+    "summary": {
+      "switch": "아침 요약",
+      "hint": "어제 무슨 일이 있었을 때만 오전 8시에 알려 드려요.",
+      "talkedWith": "{count, plural, other {대화 #명}}",
+      "contacts": "{count, plural, other {연락처 #건}}",
+      "requests": "{count, plural, other {못 한 요청 #건}}",
+      "push": "어제: {list}",
+      "emailSubject": "{name}: 어제 있었던 일",
+      "emailText": "{push}\n\n{name}의 공간에서 보기: {url}"
+    },
+    "composer": {
+      "effort": "{name}의 노력"
+    },
+    "page": {
+      "title": "내 페이지",
+      "reload": "새로고침",
+      "open": "새 탭에서 열기",
+      "hide": "페이지 숨기기",
+      "show": "페이지 보기",
+      "empty": "페이지에 아직 아무것도 없습니다."
+    }
   }
 }

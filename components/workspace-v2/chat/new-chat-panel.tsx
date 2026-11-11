@@ -63,7 +63,13 @@ import { colorDePersona } from "@/lib/workspace-v2/menciones";
 import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 import { LenWatchBanner } from "../len-watch/len-watch-banner";
 import { EventCards } from "./event-cards";
+import { AssistantRequestCards } from "./assistant-request-cards";
 import { useToolCards } from "../tools/use-tool-cards";
+import type { AssistantView } from "@/lib/assistants/view";
+import { activityOf } from "../assistant/activity";
+import { AssistantFigure } from "../assistant/figure";
+import { LiveFigure } from "../assistant/live-figure";
+import { tintStyle } from "../assistant/tint";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -102,6 +108,11 @@ export interface NewChatPanelProps {
   centered?: boolean;
   /** Opens the Publish modal: Len Watch's Approve sends there when a publish gate needs a review. */
   onOpenPublish?: () => void;
+  /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.6): the panel is its place — its name and
+   *  figure instead of Len's, its conversation, and none of Len's project chrome (team, Len Watch, event cards). */
+  assistant?: AssistantView;
+  /** Something else is the screen's one live figure now (the creator, open over her place): hers waits. */
+  figurePaused?: boolean;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -175,6 +186,8 @@ function AgentChatView({
   onClose,
   soloLectura = false,
   onOpenPublish,
+  assistant,
+  figurePaused,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -220,6 +233,7 @@ function AgentChatView({
     pendingDraftAutoSend,
     onPendingDraftConsumed,
     pendingAttachments,
+    ...(assistant ? { assistantId: assistant.id } : {}),
   });
   const { seguirTurnoDelHilo } = chat;
   // DROP, PASTE OR PICK (spec local 2026-10-27-chat-drop-and-images): every way in uploads the same way.
@@ -374,7 +388,8 @@ function AgentChatView({
   // EL CHAT DEL EQUIPO (docs/superpowers/specs/2026-10-07-chat-del-equipo-design.md):
   // en un proyecto con miembros, `@persona` sin `@Len` es un mensaje para ella
   // (Len no responde); con `@Len`, un turno como siempre. Sin miembros, nada cambia.
-  const equipo = useGenteDelChat(projectId);
+  // The person's own assistant's place has no team: all of it goes to the assistant (spec local 2026-11-06-asistente-propio).
+  const equipo = useGenteDelChat(projectId, { off: assistant !== undefined });
   const idsDelEquipo = useMemo(() => equipo.gente.map((p) => p.userId), [equipo.gente]);
   const colorDe = useCallback((id: string) => colorDePersona(id, idsDelEquipo), [idsDelEquipo]);
   const destino = destinoDe(chat.draft, equipo.gente, equipo.yo);
@@ -467,22 +482,51 @@ function AgentChatView({
   // su turno siguiente, no lo que se digan dos personas en medio.
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
+  // Her figure does what her turn is doing (spec local 2026-11-10-figuras-del-asistente, §5.4), and there is one
+  // alive per screen: the one that heads her place.
+  const lastTurn = chat.turns[chat.turns.length - 1];
+  const herActivity = activityOf({
+    failed: lastTurn?.status === "error",
+    toolRunning: lastTurn?.status === "streaming" && (lastTurn.actions ?? []).some((a) => a.status === "running"),
+    streaming: lastTurn?.status === "streaming" && lastTurn.assistantReasoning.length > 0,
+    waiting: chat.busy,
+    typing: chat.draft.trim() !== "",
+  });
+  const herFigureOn = !figurePaused && !plegado;
+
   const body = (
-    <div className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`} {...drop.handlers}>
+    <div
+      className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""} ${assistant ? "assistant-tint" : ""}`}
+      // Her color tints her chat (§2.4): her owner's bubbles, the send button and this header (tokens.css).
+      {...(assistant ? { style: tintStyle(assistant.color) as React.CSSProperties } : {})}
+      {...drop.handlers}
+    >
       {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
-      <ChatHeader
-        layout={layout}
-        onLayout={setChatLayout}
-        conversations={conversations}
-        busy={chat.busy}
-        onClose={onClose}
-        closeLabel={tSidebar("sidebar.collapsePanel")}
-        relativeTime={relativeTime}
-        esApp={esApp}
-        noFloat={centered}
-        scheduled={scheduled}
-      />
-      {equipo.compartido && !plegado && (
+      {assistant ? (
+        // Its place: its figure and its name; no conversations, no scheduled clock, no floating (they are Len's).
+        // Her figure heads the chat, alive, the only live one of the screen; under it her name and what she is doing.
+        <div className="flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
+          <LiveFigure look={assistant.look} size={76} activity={herActivity} active={herFigureOn} />
+          <p className="mt-1 max-w-full truncate text-[14px] font-semibold fg">{assistant.name}</p>
+          <p className="max-w-full truncate text-[11.5px] fg-muted" data-her-status="">
+            {herActivity === "thinking" || herActivity === "working" || herActivity === "talking" ? t(`ownAssistant.place.status.${herActivity}`) : t("ownAssistant.place.yours")}
+          </p>
+        </div>
+      ) : (
+        <ChatHeader
+          layout={layout}
+          onLayout={setChatLayout}
+          conversations={conversations}
+          busy={chat.busy}
+          onClose={onClose}
+          closeLabel={tSidebar("sidebar.collapsePanel")}
+          relativeTime={relativeTime}
+          esApp={esApp}
+          noFloat={centered}
+          scheduled={scheduled}
+        />
+      )}
+      {equipo.compartido && !plegado && !assistant && (
         <div className="flex shrink-0 justify-end border-b bd px-4 py-1.5">
           <GenteDelChat
             gente={equipo.gente}
@@ -497,10 +541,12 @@ function AgentChatView({
         </div>
       )}
       {/* Len Watch (spec local 2026-10-30-len-watch): the published site isn't loading. */}
-      {!plegado && <LenWatchBanner projectId={projectId} soloLectura={soloLectura} onOpenPublish={onOpenPublish} />}
+      {!plegado && !assistant && <LenWatchBanner projectId={projectId} soloLectura={soloLectura} onOpenPublish={onOpenPublish} />}
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa): what a task's judge decided the owner should hear.
           «Hazlo» starts its turn on the server; here it is painted running and followed, like a code thread's. */}
-      {!plegado && <EventCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
+      {!plegado && !assistant && <EventCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
+      {/* What her visitors asked for and she couldn't do (spec local 2026-11-06-asistente-propio, §4.6.1): only in Len's chat. */}
+      {!plegado && !assistant && <AssistantRequestCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
       <div
@@ -510,7 +556,11 @@ function AgentChatView({
           if (e.currentTarget.scrollTop < 200) void chat.loadOlder();
         }}
         className={`nice-scroll min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-3 pt-5 ${centered ? CENTERED_PADDING : "px-4"} ${plegado ? "hidden" : "flex"}`}>
-        {chat.turns.length === 0 ? (
+        {chat.turns.length === 0 && assistant ? (
+          // Len's suggestions are about building; her place starts empty: her figure heads it and the box below
+          // already says «write to her».
+          <div className="m-auto" data-assistant-empty="" />
+        ) : chat.turns.length === 0 ? (
           <EmptyState
             disabled={chat.busy}
             sinSugerencias={soloLectura}
@@ -543,7 +593,7 @@ function AgentChatView({
                 }
                 vote={feedback.votes[turn.id]}
                 labels={replyLabels}
-                {...(soloLectura ? {} : { onUndo: chat.handleUndo })}
+                {...(soloLectura || assistant ? {} : { onUndo: chat.handleUndo })}
                 onRetry={chat.handleRetry}
                 onPublished={chat.handlePublished}
                 onInstalled={chat.handleInstalled}
@@ -555,6 +605,7 @@ function AgentChatView({
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
                 {...(soloLectura ? {} : { onContinue: chat.continueWith })}
                 esApp={esApp}
+                {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={18} /> } } : {})}
               />
             </div>
             ),
@@ -563,7 +614,13 @@ function AgentChatView({
       </div>
       <div className={`relative z-[2] shrink-0 ${flotante ? "px-2 pb-1 pt-0.5" : centered ? `${CENTERED_PADDING} pb-4 pt-1` : "px-3 pb-3 pt-1"}`}>
         {(!plegado || avisoPendiente) && (
-          <LiveBar status={status} onStop={chat.handleCancel} esApp={esApp} subagentsRunning={subagentsRunning} />
+          <LiveBar
+            status={status}
+            onStop={chat.handleCancel}
+            esApp={esApp}
+            subagentsRunning={subagentsRunning}
+            {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={34} /> } } : {})}
+          />
         )}
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}
         {chat.goalOffered && (
@@ -622,6 +679,13 @@ function AgentChatView({
             {...(chat.goalOffered ? { onToggleGoal: chat.toggleGoalChip } : {})}
             {...(secretGuard ? { secretGuard } : {})}
             compacta={flotante}
+            {...(assistant
+              ? {
+                  placeholder: t("ownAssistant.place.placeholder", { name: assistant.name }),
+                  disclaimer: t("ownAssistant.speaker.disclaimer", { name: assistant.name }),
+                  effortLabel: t("ownAssistant.composer.effort", { name: assistant.name }),
+                }
+              : {})}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),

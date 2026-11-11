@@ -11,7 +11,8 @@ export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number 
 export async function mandarALen(
   c: ClienteDeOpenLen,
   /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
-  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume" },
+  /** `assistantId`: a message to the person's own assistant, not Len (phase 5; the project is her home). */
+  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -23,6 +24,7 @@ export async function mandarALen(
         projectId: cuerpo.projectId,
         prompt: cuerpo.prompt,
         ...(cuerpo.goal ? { goal: cuerpo.goal } : {}),
+        ...(cuerpo.assistantId ? { assistantId: cuerpo.assistantId } : {}),
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),

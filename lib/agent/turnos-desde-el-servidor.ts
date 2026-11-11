@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin, ToolCreationOrigin } from "@/lib/projects/types";
+import type { AssistantRequestOrigin, EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin, ToolCreationOrigin } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -62,7 +62,7 @@ export interface ScheduledRequest {
   readonly framing: string;
   /** A scheduled task's run, a Len Watch turn (spec local 2026-10-30-len-watch) or the subagents' notices
    *  (spec local 2026-11-01-subagentes-de-len): all arrive framed. */
-  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin;
+  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
@@ -294,6 +294,15 @@ export function launchEventTaskTurn(p: FramedTurn<EventTaskOrigin>): void {
 }
 
 /**
+ * «LUCÍA, DILE A LEN…» (spec local 2026-11-06-asistente-propio, §4.2): the person's own assistant passes on what its
+ * owner asked to be built (`ask_len`, lib/assistants/ask-len.ts). The owner's words, so it runs at once like «Hazlo»:
+ * as the owner, in the project's chat, waiting its turn in the project's queue.
+ */
+export function launchAssistantRequestTurn(p: FramedTurn<AssistantRequestOrigin>): void {
+  launchFramedTurn(p, "assistant-request");
+}
+
+/**
  * «CREAR» ON A TOOL CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): the host turn in the person's tool
  * project. It calls no model: the route launches the `creator` child with DeepSeek's `delivery: "caller"` and closes,
  * charging nothing; the child spends within `ceilingCentis`. With no reply (no credits, subagents off, the queue)
@@ -377,7 +386,7 @@ export function launchSubagentNoticeTurn(p: {
   );
 }
 
-interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin> {
+interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin> {
   readonly userId: string;
   readonly projectId: string;
   /** What the chat row shows as the person's message. */
@@ -405,7 +414,7 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   readonly sentText?: string;
 }
 
-function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin>(
+function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin>(
   p: FramedTurn<O>,
   label: string,
   o: { readonly quietWhenNoReply?: boolean } = {},

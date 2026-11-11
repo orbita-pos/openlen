@@ -25,7 +25,8 @@
     "scheduled": "Geplande taak «{title}» · {when}",
     "lenWatch": "Len Watch · je gepubliceerde site laadde niet",
     "fromSubagents": "Resultaten van de subagents",
-    "toolCreation": "Tool maken"
+    "toolCreation": "Tool maken",
+    "fromAssistant": "Van {name}"
   },
   "proceso": {
     "completadoEn": "Voltooid in <d>{duracion}</d>",
@@ -719,5 +720,182 @@
     "changed": "Het is intussen veranderd: bekijk het opnieuw in Tools",
     "dismissed": "Niet verbonden. Je kunt het later goedkeuren in Tools.",
     "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Maak je eigen assistent: jij kiest de naam en hoe hij eruitziet.",
+      "create": "Mijn assistent maken",
+      "ready": "{name} is klaar",
+      "talk": "Praat met {name}",
+      "useHere": "{name} hier gebruiken",
+      "createAnother": "Een andere maken",
+      "useFailed": "Dat lukte niet. Probeer het opnieuw."
+    },
+    "creator": {
+      "title": "Jouw assistent",
+      "name": "Naam",
+      "namePlaceholder": "Lucía",
+      "shape": "Vorm",
+      "color": "Kleur",
+      "tone": "Hoe hij praat",
+      "done": "Klaar",
+      "cancel": "Annuleren",
+      "morningSummary": "Vertel me elke ochtend wat er gebeurd is",
+      "eyes": "Ogen",
+      "eyewear": "Bril",
+      "accessory": "Accessoire",
+      "surprise": "Verras me",
+      "freeColor": "Andere kleur",
+      "option": {
+        "shape": {
+          "drop": "Druppel",
+          "round": "Rond",
+          "capsule": "Capsule",
+          "cube": "Kubus",
+          "ears": "Met oren",
+          "heart": "Hart",
+          "flower": "Bloem",
+          "triangle": "Driehoek"
+        },
+        "eyes": {
+          "oval": "Ovaal",
+          "round": "Rond",
+          "dot": "Stipjes",
+          "smile": "Lachend",
+          "sleepy": "Slaperig"
+        },
+        "eyewear": {
+          "none": "Geen bril",
+          "round": "Ronde bril",
+          "shades": "Zonnebril"
+        },
+        "accessory": {
+          "none": "Geen accessoire",
+          "beret": "Baret",
+          "beanie": "Muts",
+          "bow": "Strik",
+          "crown": "Kroon",
+          "hat": "Hoed",
+          "headphones": "Koptelefoon"
+        }
+      },
+      "colors": {
+        "ff5fa8": "Roze",
+        "7ed321": "Groen",
+        "ffc21a": "Geel",
+        "2f8bff": "Blauw",
+        "ff7a45": "Oranje",
+        "9b6cff": "Paars",
+        "19c3b1": "Turquoise",
+        "ff4d5e": "Rood"
+      }
+    },
+    "tones": {
+      "friendly": "Vriendelijk",
+      "formal": "Formeel",
+      "playful": "Speels"
+    },
+    "errors": {
+      "name": "Geef hem een naam met letters of cijfers.",
+      "nameTaken": "Je hebt al een assistent met die naam.",
+      "projectHas": "Dit project heeft al een assistent.",
+      "ownerOnly": "Alleen de eigenaar van het project kan de assistent ervan maken.",
+      "generic": "Hij kon niet worden gemaakt. Probeer het opnieuw."
+    },
+    "place": {
+      "yours": "Jouw assistent",
+      "inProject": "In {project}",
+      "placeholder": "Schrijf {name}…",
+      "talk": "Praten",
+      "conversations": "Gesprekken",
+      "onPage": "Op mijn pagina",
+      "onPageHint": "Verschijnt op je pagina zodra je die publiceert.",
+      "empty": "Nog geen bezoeker heeft {name} geschreven.",
+      "visitor": "Bezoeker",
+      "handedOff": "Wilde met een persoon praten",
+      "messages": "{count, plural, one {# bericht} other {# berichten}}",
+      "budget": "Deze maand, bezoekers: {spent} van {cap} credits",
+      "budgetChange": "Wijzigen",
+      "budgetSave": "Opslaan",
+      "budgetLabel": "Maandlimiet in credits",
+      "loadError": "De gesprekken konden niet worden geladen.",
+      "budgetRange": "Het kan van 0 tot {max} credits zijn.",
+      "budgetError": "De limiet kon niet worden opgeslagen. Probeer het opnieuw.",
+      "nothingToKnow": "Gepubliceerd, maar je pagina heeft geen tekst of openbare gegevens om te lezen.",
+      "rename": "Naam wijzigen",
+      "renameSave": "Opslaan",
+      "renameCancel": "Annuleren",
+      "renamePublish": "Je pagina toont de nieuwe naam zodra je die publiceert.",
+      "renameFailed": "De naam kon niet worden gewijzigd. Probeer het opnieuw.",
+      "changeFigure": "Figuur wijzigen",
+      "figurePublish": "Je gepubliceerde pagina toont de nieuwe figuur nadat je opnieuw publiceert.",
+      "figureFailed": "De figuur kon niet worden opgeslagen. Probeer het opnieuw.",
+      "status": {
+        "thinking": "Denkt na…",
+        "working": "Werkt…",
+        "talking": "Schrijft…"
+      },
+      "settings": "Instellingen",
+      "figureSaved": "Figuur opgeslagen"
+    },
+    "speaker": {
+      "working": "{name} is bezig",
+      "steps": "{name} deed {count, plural, one {# stap} other {# stappen}}",
+      "saw": "Wat {name} zag",
+      "sawCaption": "{total, plural, one {Wat {name} zag} other {Wat {name} zag · {number} van {total}}}",
+      "yourTurnLive": "Jij bent aan de beurt · {name} gaat verder zodra je antwoordt",
+      "disclaimer": "{name} kan fouten maken. Controleer de antwoorden."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} heeft iets genoteerd wat je klanten vroegen en wat niet lukte:\n\n{title} — {visitors}\n\nOpen het zodat Len het doet, of bewaar het voor later: {url}",
+      "turnPrompt": "💬 Van {name}: wat je klanten vroegen",
+      "visitors": "{count, plural, one {# klant vroeg erom} other {# klanten vroegen erom}}",
+      "from": "Van {name}",
+      "doIt": "Laat Len het doen",
+      "notNow": "Nu niet",
+      "done": "Doorgegeven aan Len",
+      "dismissed": "Opzijgelegd",
+      "failed": "Dat lukte niet. Probeer het opnieuw.",
+      "noCredits": "Niet genoeg credits om Len het te laten doen. Waardeer op en probeer het opnieuw.",
+      "tab": "Verzoeken",
+      "empty": "Wat je klanten vragen en {name} niet kan doen, verschijnt hier.",
+      "openChat": "Bekijk Len in de chat",
+      "earlier": "Eerdere verzoeken",
+      "loadError": "De verzoeken konden niet worden geladen."
+    },
+    "projects": {
+      "count": "{count, plural, one {# project} other {# projecten}}",
+      "home": "Thuis",
+      "remove": "Uit dit project halen",
+      "removeConfirm": "Ja, eruit halen",
+      "delete": "{name} verwijderen",
+      "deleteConfirm": "Ja, {name} definitief verwijderen",
+      "failed": "Dat lukte niet. Probeer het opnieuw.",
+      "close": "Sluiten",
+      "publishToKnow": "{name} kent het na de volgende publicatie.",
+      "busy": "{name} is aan het antwoorden: probeer het opnieuw als dat klaar is."
+    },
+    "summary": {
+      "switch": "Ochtendoverzicht",
+      "hint": "Om 8 uur, alleen als er gisteren iets gebeurd is.",
+      "talkedWith": "{count, plural, one {ik heb met # persoon gepraat} other {ik heb met # mensen gepraat}}",
+      "contacts": "{count, plural, one {# heeft contactgegevens achtergelaten} other {# hebben contactgegevens achtergelaten}}",
+      "requests": "{count, plural, one {# vroeg iets wat ik niet kon doen} other {# vroegen iets wat ik niet kon doen}}",
+      "push": "Gisteren: {list}.",
+      "emailSubject": "{name}: wat er gisteren gebeurde",
+      "emailText": "{push}\n\nBekijk het bij {name}: {url}"
+    },
+    "composer": {
+      "effort": "Inspanning van {name}"
+    },
+    "page": {
+      "title": "Je pagina",
+      "reload": "Opnieuw laden",
+      "open": "Openen in nieuw tabblad",
+      "hide": "Pagina verbergen",
+      "show": "Pagina tonen",
+      "empty": "Je pagina is nog leeg."
+    }
   }
 }

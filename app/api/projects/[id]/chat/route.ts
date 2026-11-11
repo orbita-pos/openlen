@@ -2,6 +2,8 @@ import { z } from "zod";
 import { ownerReasonFrom } from "@/lib/agent/owner-reason";
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { ASSISTANT_CONVERSATION_PREFIX, isAssistantConversation } from "@/lib/assistants/conversation";
+import { assistantById } from "@/lib/assistants/store";
 import { db, schema } from "@/lib/db";
 import { MAX_PHOTOS_PER_MESSAGE } from "@/lib/projects/chat-photos";
 import { todosFrom } from "@/lib/agent/todo-list";
@@ -291,6 +293,16 @@ export async function GET(
   if (before === "" || before.length > 100) return json({ error: "before must be a turn id" }, 400);
   const pedido = Number(url.searchParams.get("limit") ?? CHAT_LIMIT);
   const limit = Number.isInteger(pedido) ? Math.min(Math.max(pedido, 1), CHAT_LIMIT) : CHAT_LIMIT;
+  // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): its place pages back through its own
+  // conversation — only its person's, in the project it was born in. No other conversation is asked for here.
+  const conversation = url.searchParams.get("conversation");
+  let charla: string | null = null;
+  if (conversation !== null) {
+    if (!isAssistantConversation(conversation)) return json({ error: "conversation must be an assistant's" }, 400);
+    const asistente = await assistantById(conversation.slice(ASSISTANT_CONVERSATION_PREFIX.length)).catch(() => null);
+    if (!asistente || asistente.personId !== session.user.id || asistente.homeProjectId !== id) return json({ error: "not_found" }, 404);
+    charla = conversation;
+  }
   const acceso = await exigirAcceso(id, session.user.id, "ver");
   if (acceso instanceof Response) return acceso;
   if (!(await ownsProject(id, acceso.duenoId))) {
@@ -298,7 +310,7 @@ export async function GET(
   }
   try {
     // Una de más: si llega, queda algo antes de esta página.
-    const turns = await getChatMessages(id, { before, limit: limit + 1 });
+    const turns = await getChatMessages(id, { before, limit: limit + 1, ...(charla ? { charla } : {}) });
     return json({ turns: turns.slice(-limit), hasMore: turns.length > limit }, 200);
   } catch (err) {
     // eslint-disable-next-line no-console

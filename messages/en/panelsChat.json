@@ -25,7 +25,8 @@
     "scheduled": "Scheduled task «{title}» · {when}",
     "lenWatch": "Len Watch · your published site wasn't loading",
     "fromSubagents": "Results from the subagents",
-    "toolCreation": "Create tool"
+    "toolCreation": "Create tool",
+    "fromAssistant": "From {name}"
   },
   "proceso": {
     "completadoEn": "Completed in <d>{duracion}</d>",
@@ -719,5 +720,182 @@
     "changed": "It changed in the meantime: look at it again in Tools",
     "dismissed": "Not connected. You can approve it later in Tools.",
     "firstTime": "Your key {name} has never been sent to {host}: approve only if you trust that server"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Create your own assistant: you pick its name and its look.",
+      "create": "Create my assistant",
+      "ready": "{name} is ready",
+      "talk": "Talk with {name}",
+      "useHere": "Use {name} here",
+      "createAnother": "Create another",
+      "useFailed": "That didn't work. Try again."
+    },
+    "creator": {
+      "title": "Your assistant",
+      "name": "Name",
+      "namePlaceholder": "Lucía",
+      "shape": "Shape",
+      "color": "Color",
+      "tone": "How it talks",
+      "done": "Done",
+      "cancel": "Cancel",
+      "morningSummary": "Tell me each morning what happened",
+      "eyes": "Eyes",
+      "eyewear": "Glasses",
+      "accessory": "Accessory",
+      "surprise": "Surprise me",
+      "freeColor": "Another color",
+      "option": {
+        "shape": {
+          "drop": "Drop",
+          "round": "Round",
+          "capsule": "Capsule",
+          "cube": "Cube",
+          "ears": "With ears",
+          "heart": "Heart",
+          "flower": "Flower",
+          "triangle": "Triangle"
+        },
+        "eyes": {
+          "oval": "Oval",
+          "round": "Round",
+          "dot": "Dots",
+          "smile": "Smiling",
+          "sleepy": "Sleepy"
+        },
+        "eyewear": {
+          "none": "No glasses",
+          "round": "Round glasses",
+          "shades": "Sunglasses"
+        },
+        "accessory": {
+          "none": "No accessory",
+          "beret": "Beret",
+          "beanie": "Beanie",
+          "bow": "Bow",
+          "crown": "Crown",
+          "hat": "Hat",
+          "headphones": "Headphones"
+        }
+      },
+      "colors": {
+        "ff5fa8": "Pink",
+        "7ed321": "Green",
+        "ffc21a": "Yellow",
+        "2f8bff": "Blue",
+        "ff7a45": "Orange",
+        "9b6cff": "Purple",
+        "19c3b1": "Turquoise",
+        "ff4d5e": "Red"
+      }
+    },
+    "tones": {
+      "friendly": "Friendly",
+      "formal": "Formal",
+      "playful": "Playful"
+    },
+    "errors": {
+      "name": "Give it a name with letters or numbers.",
+      "nameTaken": "You already have an assistant with that name.",
+      "projectHas": "This project already has its assistant.",
+      "ownerOnly": "Only the project's owner can create its assistant.",
+      "generic": "It couldn't be created. Try again."
+    },
+    "place": {
+      "yours": "Your assistant",
+      "inProject": "In {project}",
+      "placeholder": "Write to {name}…",
+      "talk": "Talk",
+      "conversations": "Conversations",
+      "onPage": "On my page",
+      "onPageHint": "It will show on your page when you publish it.",
+      "empty": "No visitor has written to {name} yet.",
+      "visitor": "Visitor",
+      "handedOff": "Asked to talk to a person",
+      "messages": "{count, plural, one {# message} other {# messages}}",
+      "budget": "This month, visitors: {spent} of {cap} credits",
+      "budgetChange": "Change",
+      "budgetSave": "Save",
+      "budgetLabel": "Monthly cap, in credits",
+      "loadError": "The conversations couldn't be loaded.",
+      "budgetRange": "It can be from 0 to {max} credits.",
+      "budgetError": "The cap couldn't be saved. Try again.",
+      "nothingToKnow": "Published, but your page has no text or public data to read.",
+      "rename": "Rename",
+      "renameSave": "Save",
+      "renameCancel": "Cancel",
+      "renamePublish": "Your page will show the new name when you publish it.",
+      "renameFailed": "Couldn't change the name. Try again.",
+      "changeFigure": "Change figure",
+      "figurePublish": "Your published page will show the new figure after you publish it again.",
+      "figureFailed": "The figure couldn't be saved. Try again.",
+      "status": {
+        "thinking": "Thinking…",
+        "working": "Working…",
+        "talking": "Writing…"
+      },
+      "settings": "Settings",
+      "figureSaved": "Figure saved"
+    },
+    "speaker": {
+      "working": "{name} is working",
+      "steps": "{name} took {count, plural, one {# step} other {# steps}}",
+      "saw": "What {name} saw",
+      "sawCaption": "{total, plural, one {What {name} saw} other {What {name} saw · {number} of {total}}}",
+      "yourTurnLive": "Your turn · {name} goes on as soon as you answer",
+      "disclaimer": "{name} can make mistakes. Please double-check responses."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} noted something your visitors asked for that couldn't be done:\n\n{title} — {visitors}\n\nOpen it to have Len do it, or leave it for later: {url}",
+      "turnPrompt": "💬 From {name}: what your visitors asked for",
+      "visitors": "{count, plural, one {# visitor asked} other {# visitors asked}}",
+      "from": "From {name}",
+      "doIt": "Have Len do it",
+      "notNow": "Not now",
+      "done": "Passed to Len",
+      "dismissed": "Set aside",
+      "failed": "It couldn't be done. Try again.",
+      "noCredits": "Not enough credits for Len to do it. Top up and try again.",
+      "tab": "Requests",
+      "empty": "What your visitors ask for and {name} can't do will show up here.",
+      "openChat": "See Len in the chat",
+      "earlier": "Earlier requests",
+      "loadError": "Requests couldn't be loaded."
+    },
+    "projects": {
+      "count": "{count, plural, one {# project} other {# projects}}",
+      "home": "Home",
+      "remove": "Take off this project",
+      "removeConfirm": "Yes, take off",
+      "delete": "Delete {name}",
+      "deleteConfirm": "Yes, delete {name} for good",
+      "failed": "That didn't work. Try again.",
+      "close": "Close",
+      "publishToKnow": "{name} will know it after its next publish.",
+      "busy": "{name} is answering: try again when the answer is done."
+    },
+    "summary": {
+      "switch": "Morning summary",
+      "hint": "At 8 a.m., only if something happened yesterday.",
+      "talkedWith": "{count, plural, one {I talked with # person} other {I talked with # people}}",
+      "contacts": "{count, plural, one {# left you their contact} other {# left you their contact}}",
+      "requests": "{count, plural, one {# asked for something I couldn't do} other {# asked for something I couldn't do}}",
+      "push": "Yesterday {list}.",
+      "emailSubject": "{name}: what happened yesterday",
+      "emailText": "{push}\n\nSee it in {name}'s place: {url}"
+    },
+    "composer": {
+      "effort": "{name}'s effort"
+    },
+    "page": {
+      "title": "Your page",
+      "reload": "Reload",
+      "open": "Open in a new tab",
+      "hide": "Hide the page",
+      "show": "Show the page",
+      "empty": "Your page has nothing yet."
+    }
   }
 }

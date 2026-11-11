@@ -192,6 +192,9 @@ const targets = [
   // Len's MCP connectors (spec local 2026-11-06-conectores-mcp): personMcpConfigs, personCredentials and
   // personMcpServerState. Additive and idempotent. 🔴 MANDATORY before the code: without them ~/.len/mcp.json can't be saved.
   "mcp-connectors-migrate",
+  // The person's own assistant (spec local 2026-11-06-asistente-propio): assistants and assistantProjects. New tables
+  // with IF NOT EXISTS. 🔴 MANDATORY before the code: creating an assistant and its place read them.
+  "assistants-migrate",
   // Las Edge Functions: functionDeployments, functionUsage, functionPools,
   // functionInvocations y projectBackendEnvironments.publicRef (relleno para los
   // borradores de antes). Aditiva e idempotente; va después de

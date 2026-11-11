@@ -18,7 +18,8 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeAssistantWidget } from "@/lib/publish/assistant-widget";
+import { FIGURE_ENGINE } from "@/lib/figure/engine/published";
+import { FIGURE_ENGINE_PATH, bakeAssistantPersona, bakeAssistantWidget, type AssistantPersona } from "@/lib/publish/assistant-widget";
 import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -494,6 +495,8 @@ interface AssistantBake {
   businessName: string;
   accent?: string;
   greeting?: string;
+  /** The person's own assistant on the page (lib/assistants/visitor/bake.ts): her bubble instead of today's. */
+  persona?: AssistantPersona;
 }
 
 interface ChatBake {
@@ -706,7 +709,7 @@ async function bakeDocument(
   // just before </body> after every other rewrite.
   if (assistantFab) {
     try {
-      migratedHtml = bakeAssistantWidget(migratedHtml, {
+      const widget = {
         sub: ctx.sub,
         apiBase: widgetApiBase(),
         businessName: assistantFab.businessName,
@@ -716,7 +719,11 @@ async function bakeDocument(
         // hands off to the human chat (window.__openlenChat) instead of a
         // dead-end lead form.
         chatHandoff: handoffMerged,
-      });
+      };
+      // THE PERSON'S OWN ASSISTANT on the page (phase 2A): her bubble — published pages only (bake-surfaces.ts).
+      migratedHtml = assistantFab.persona
+        ? bakeAssistantPersona(migratedHtml, { ...widget, persona: assistantFab.persona })
+        : bakeAssistantWidget(migratedHtml, widget);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[publishToDir] assistant widget inject failed; publishing without it", err);
@@ -1110,6 +1117,9 @@ export async function publishToDir(
       path: `${p.slug}/index.html`,
       content: optOutOfEmailObfuscation(p.html),
     })),
+    // Her bubble asks for the figure engine when a visitor opens it (lib/publish/assistant-widget.ts): a file of the
+    // site itself, named by its content. Only where the bubble is hers.
+    ...(process.env.OPENLEN_ASSISTANT !== "0" && params.assistant?.enabled === true && params.assistant.persona ? [{ path: FIGURE_ENGINE_PATH, content: FIGURE_ENGINE.code }] : []),
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
     {

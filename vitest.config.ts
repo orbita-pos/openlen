@@ -72,6 +72,8 @@ export default defineConfig({
       "lib/workspace-v2/**/*.test.ts",
       // El «@» del chat (spec local 2026-10-27-at-mentions). LISTA BLANCA.
       "lib/mentions/**/*.test.ts",
+      // Las figuras del asistente (spec local 2026-11-10). LISTA BLANCA.
+      "lib/figure/**/*.test.ts",
       "lib/sections/**/*.test.ts",
       "lib/analytics/**/*.test.ts",
       // Len sabe de tus resultados (plans/len-resultados/).
@@ -99,6 +101,9 @@ export default defineConfig({
       // El servidor MCP (plans/mcp-de-openlen).
       "lib/mcp/**/*.test.ts",
       "app/api/mcp/**/*.test.ts",
+      // The person's own assistant (spec local 2026-11-06-asistente-propio).
+      "app/api/assistants/**/*.test.ts",
+      "app/api/figures/**/*.test.ts",
       "app/api/oauth/**/*.test.ts",
       "components/mcp/**/*.test.tsx",
       "lib/agent/version-labels.test.ts",
@@ -277,6 +282,8 @@ export default defineConfig({
       "lib/ai/ojos-cargan-la-carpeta.browser.test.ts",
       // Len's eyes see WebGL (three.js, maps, games) in the screenshot. WHITELIST.
       "lib/ai/eyes-see-webgl.browser.test.ts",
+      // El motor de las figuras, mirado en el Chromium de los ojos (spec local 2026-11-10). LISTA BLANCA.
+      "lib/figure/engine/engine.browser.test.ts",
       // The eyes' Chromium inherits no server secret (2026-10-20). WHITELIST.
       "lib/ai/eyes-inherit-no-secrets.browser.test.ts",
       // And it runs with Chrome's sandbox (2026-10-20, measured on the box). WHITELIST.
@@ -446,6 +453,8 @@ export default defineConfig({
       // La vuelta del cobro: /projects lleva ?billing_error / ?upgraded a la lista.
       "app/[locale]/projects/page.test.ts",
       "app/[locale]/projects/projects-view.test.tsx",
+      // Her place's old address redirects (spec local 2026-11-06-asistente-propio, §6.8, phase 4D).
+      "app/[locale]/assistant/[name]/page.test.ts",
       "lib/auth/**/*.test.ts",
       // NB: lib/agent mixes runners — tools.test.ts exercises the native
       // html-engine binding and runs under node:test (`tsx --test`), so list
@@ -509,6 +518,8 @@ export default defineConfig({
       // `include` es LISTA BLANCA.
       "app/api/lienzo/route.test.ts",
       "app/api/assistant/[sub]/route.test.ts",
+      // The chat handoff accepts the person's own assistant as its caller (phase 2A).
+      "app/api/chat/[sub]/_shared.test.ts",
       "app/api/lienzo/[docId]/route.test.ts",
       // El lienzo sirve el sitio entero (pieza 9 de Len 2.5).
       "app/api/lienzo/site/**/*.test.ts",
@@ -596,6 +607,7 @@ export default defineConfig({
       "lib/projects/chat-row.test.ts",
       // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
       "lib/projects/chat-estado.pglite.test.ts",
+      "lib/projects/chat-assistant-conversation.pglite.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
       // editó a mano (H06, auditoría 2026-09-22). Núcleo puro — pero `include`
       // es LISTA BLANCA y sin esta línea la prueba existiría y no correría.
@@ -641,6 +653,8 @@ export default defineConfig({
       "lib/event-tasks/**/*.test.ts",
       // Tools made by Len (spec local 2026-11-04-herramientas-hechas-por-len). LISTA BLANCA.
       "lib/tools/**/*.test.ts",
+      // The person's own assistant (spec local 2026-11-06-asistente-propio).
+      "lib/assistants/**/*.test.ts",
       "app/api/tools/**/*.test.ts",
       // Len's MCP connectors (spec local 2026-11-06-conectores-mcp). LISTA BLANCA.
       "lib/mcp-connectors/**/*.test.ts",
@@ -703,6 +717,9 @@ export default defineConfig({
       // Servir una release como Caddy (14/10): lo usan el Flight Check y la miniatura. LISTA BLANCA.
       "lib/publish/serve-release.test.ts",
       "lib/publish/serve-release.browser.test.ts",
+      // Her visuals in the published bubble, in real Chromium (phase 2B: jsdom gives no window to a shadow root's iframe).
+      "lib/publish/assistant-widget.browser.test.ts",
+      "lib/publish/assistant-figure.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
       "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un

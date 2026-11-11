@@ -25,7 +25,8 @@
     "scheduled": "Attività programmata «{title}» · {when}",
     "lenWatch": "Len Watch · il tuo sito pubblicato non si caricava",
     "fromSubagents": "Risultati dei subagenti",
-    "toolCreation": "Crea strumento"
+    "toolCreation": "Crea strumento",
+    "fromAssistant": "Da {name}"
   },
   "proceso": {
     "completadoEn": "Completato in <d>{duracion}</d>",
@@ -719,5 +720,182 @@
     "changed": "È cambiato nel frattempo: ricontrollalo in Strumenti",
     "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti.",
     "firstTime": "La tua chiave {name} non è mai stata inviata a {host}: approva solo se ti fidi di quel server"
+  },
+  "ownAssistant": {
+    "card": {
+      "offer": "Crea il tuo assistente: scegli tu il nome e l'aspetto.",
+      "create": "Crea il mio assistente",
+      "ready": "{name} può già aiutarti",
+      "talk": "Parla con {name}",
+      "useHere": "Usa {name} qui",
+      "createAnother": "Creane un altro",
+      "useFailed": "Non è stato possibile. Riprova."
+    },
+    "creator": {
+      "title": "Il tuo assistente",
+      "name": "Nome",
+      "namePlaceholder": "Lucía",
+      "shape": "Forma",
+      "color": "Colore",
+      "tone": "Come parla",
+      "done": "Fatto",
+      "cancel": "Annulla",
+      "morningSummary": "Raccontami ogni mattina cosa è successo",
+      "eyes": "Occhi",
+      "eyewear": "Occhiali",
+      "accessory": "Accessorio",
+      "surprise": "Sorprendimi",
+      "freeColor": "Altro colore",
+      "option": {
+        "shape": {
+          "drop": "Goccia",
+          "round": "Rotonda",
+          "capsule": "Capsula",
+          "cube": "Cubo",
+          "ears": "Con orecchie",
+          "heart": "Cuore",
+          "flower": "Fiore",
+          "triangle": "Triangolo"
+        },
+        "eyes": {
+          "oval": "Ovali",
+          "round": "Rotondi",
+          "dot": "Puntini",
+          "smile": "Sorridenti",
+          "sleepy": "Assonnati"
+        },
+        "eyewear": {
+          "none": "Senza occhiali",
+          "round": "Occhiali rotondi",
+          "shades": "Occhiali da sole"
+        },
+        "accessory": {
+          "none": "Senza accessorio",
+          "beret": "Basco",
+          "beanie": "Berretto",
+          "bow": "Fiocco",
+          "crown": "Corona",
+          "hat": "Cappello",
+          "headphones": "Cuffie"
+        }
+      },
+      "colors": {
+        "ff5fa8": "Rosa",
+        "7ed321": "Verde",
+        "ffc21a": "Giallo",
+        "2f8bff": "Blu",
+        "ff7a45": "Arancione",
+        "9b6cff": "Viola",
+        "19c3b1": "Turchese",
+        "ff4d5e": "Rosso"
+      }
+    },
+    "tones": {
+      "friendly": "Gentile",
+      "formal": "Formale",
+      "playful": "Divertente"
+    },
+    "errors": {
+      "name": "Dagli un nome con lettere o numeri.",
+      "nameTaken": "Hai già un assistente con quel nome.",
+      "projectHas": "Questo progetto ha già il suo assistente.",
+      "ownerOnly": "Solo chi possiede il progetto può crearne l'assistente.",
+      "generic": "Non è stato possibile crearlo. Riprova."
+    },
+    "place": {
+      "yours": "Il tuo assistente",
+      "inProject": "In {project}",
+      "placeholder": "Scrivi a {name}…",
+      "talk": "Parla",
+      "conversations": "Conversazioni",
+      "onPage": "Sulla mia pagina",
+      "onPageHint": "Apparirà sulla tua pagina quando la pubblichi.",
+      "empty": "Nessun visitatore ha ancora scritto a {name}.",
+      "visitor": "Visitatore",
+      "handedOff": "Ha chiesto di parlare con una persona",
+      "messages": "{count, plural, one {# messaggio} other {# messaggi}}",
+      "budget": "Questo mese, visitatori: {spent} di {cap} crediti",
+      "budgetChange": "Cambia",
+      "budgetSave": "Salva",
+      "budgetLabel": "Limite del mese, in crediti",
+      "loadError": "Impossibile caricare le conversazioni.",
+      "budgetRange": "Può essere da 0 a {max} crediti.",
+      "budgetError": "Impossibile salvare il limite. Riprova.",
+      "nothingToKnow": "Pubblicata, ma la tua pagina non ha testo né dati pubblici da leggere.",
+      "rename": "Rinomina",
+      "renameSave": "Salva",
+      "renameCancel": "Annulla",
+      "renamePublish": "La tua pagina mostrerà il nuovo nome quando la pubblichi.",
+      "renameFailed": "Non è stato possibile cambiare il nome. Riprova.",
+      "changeFigure": "Cambia figura",
+      "figurePublish": "La tua pagina pubblicata mostrerà la nuova figura quando la pubblicherai di nuovo.",
+      "figureFailed": "Non è stato possibile salvare la figura. Riprova.",
+      "status": {
+        "thinking": "Sta pensando…",
+        "working": "Sta lavorando…",
+        "talking": "Sta scrivendo…"
+      },
+      "settings": "Impostazioni",
+      "figureSaved": "Figura salvata"
+    },
+    "speaker": {
+      "working": "{name} sta lavorando",
+      "steps": "{name} ha fatto {count, plural, one {# passo} other {# passi}}",
+      "saw": "Cosa ha visto {name}",
+      "sawCaption": "{total, plural, one {Cosa ha visto {name}} other {Cosa ha visto {name} · {number} di {total}}}",
+      "yourTurnLive": "Tocca a te · {name} continua appena rispondi",
+      "disclaimer": "{name} può sbagliare. Controlla le risposte."
+    },
+    "requests": {
+      "emailSubject": "💬 {name}: {title}",
+      "emailText": "{name} ha annotato una richiesta dei tuoi clienti che non si è potuta soddisfare:\n\n{title} — {visitors}\n\nAprila perché Len se ne occupi, o lasciala per dopo: {url}",
+      "turnPrompt": "💬 Da {name}: quello che hanno chiesto i tuoi clienti",
+      "visitors": "{count, plural, one {# cliente l’ha chiesto} other {# clienti l’hanno chiesto}}",
+      "from": "Da {name}",
+      "doIt": "Fallo fare a Len",
+      "notNow": "Non ora",
+      "done": "Passato a Len",
+      "dismissed": "Messo da parte",
+      "failed": "Non è stato possibile. Riprova.",
+      "noCredits": "Non ci sono crediti perché Len lo faccia. Ricarica e riprova.",
+      "tab": "Richieste",
+      "empty": "Quello che i tuoi clienti chiedono e {name} non può fare apparirà qui.",
+      "openChat": "Vedi Len nella chat",
+      "earlier": "Richieste precedenti",
+      "loadError": "Non è stato possibile caricare le richieste."
+    },
+    "projects": {
+      "count": "{count, plural, one {# progetto} other {# progetti}}",
+      "home": "Casa",
+      "remove": "Togli da questo progetto",
+      "removeConfirm": "Sì, togli",
+      "delete": "Elimina {name}",
+      "deleteConfirm": "Sì, elimina {name} per sempre",
+      "failed": "Non è stato possibile. Riprova.",
+      "close": "Chiudi",
+      "publishToKnow": "{name} lo conoscerà alla prossima pubblicazione.",
+      "busy": "{name} sta rispondendo: riprova quando ha finito."
+    },
+    "summary": {
+      "switch": "Riepilogo del mattino",
+      "hint": "Alle 8, solo se ieri è successo qualcosa.",
+      "talkedWith": "{count, plural, one {ho parlato con # persona} other {ho parlato con # persone}}",
+      "contacts": "{count, plural, one {# ti ha lasciato il contatto} other {# ti hanno lasciato il contatto}}",
+      "requests": "{count, plural, one {# ha chiesto qualcosa che non ho potuto fare} other {# hanno chiesto qualcosa che non ho potuto fare}}",
+      "push": "Ieri {list}.",
+      "emailSubject": "{name}: cosa è successo ieri",
+      "emailText": "{push}\n\nGuardalo nello spazio di {name}: {url}"
+    },
+    "composer": {
+      "effort": "Impegno di {name}"
+    },
+    "page": {
+      "title": "La tua pagina",
+      "reload": "Ricarica",
+      "open": "Apri in un'altra scheda",
+      "hide": "Nascondi la pagina",
+      "show": "Mostra la pagina",
+      "empty": "La tua pagina è ancora vuota."
+    }
   }
 }

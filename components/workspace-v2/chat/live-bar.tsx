@@ -7,7 +7,7 @@
 //
 // Lo que dice sale de `liveStatus` (puro, con prueba).
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Bot, Square } from "lucide-react";
 
@@ -19,7 +19,11 @@ export function LiveBar({
   onStop,
   esApp = false,
   subagentsRunning = 0,
+  speaker,
 }: {
+  /** The person's own assistant's place (spec local 2026-11-06-asistente-propio): its figure instead of Len's face, and
+   *  its name where the bar names Len. Absent = Len. */
+  speaker?: { readonly name: string; readonly face: ReactNode };
   status: LiveStatus;
   onStop: () => void;
   /** El proyecto es una app: lo que nombra la página («Leyendo tu página») nombra la app. */
@@ -110,7 +114,12 @@ export function LiveBar({
     case "waiting":
       verb = status.reason === "question" ? t("newChat.live.waitingAnswer") : t("newChat.live.waitingApproval");
       // Pieza 3: dentro del turno no está «en pausa»: Len sigue al contestar.
-      meta = status.reason === "question" && status.live ? t("newChat.live.yourTurnLive") : t("newChat.live.yourTurn");
+      meta =
+        status.reason === "question" && status.live
+          ? speaker
+            ? t("ownAssistant.speaker.yourTurnLive", { name: speaker.name })
+            : t("newChat.live.yourTurnLive")
+          : t("newChat.live.yourTurn");
       // Pieza 7: la del modo plan, en el idioma del dueño.
       why =
         status.reason === "question" && status.intent === "plan-review"
@@ -167,7 +176,15 @@ export function LiveBar({
         {announced}
       </span>
       <div className="nc-up flex min-h-[58px] items-center gap-3.5 py-2 pl-1.5 pr-2">
-        <CaraDeLen estado={status.face} props="compact" className="h-[38px] w-[38px] shrink-0" />
+        {speaker ? (
+          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center" data-live-speaker="">
+            {speaker.face}
+          </span>
+        ) : (
+          <span className="flex shrink-0" data-len-face="">
+            <CaraDeLen estado={status.face} props="compact" className="h-[38px] w-[38px] shrink-0" />
+          </span>
+        )}
         <div className="flex min-w-0 flex-1 flex-col leading-[1.32]">
           {/* Lo que ya dice la región de arriba, oculto para no leerlo dos
               veces; el contador no está allí, así que se deja leer. */}

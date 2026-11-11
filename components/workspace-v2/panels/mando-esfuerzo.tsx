@@ -35,6 +35,7 @@ export function MandoEsfuerzo({
   locked = false,
   variant = "icon",
   t,
+  label,
 }: {
   esfuerzo: EsfuerzoAgente;
   /**
@@ -74,6 +75,9 @@ export function MandoEsfuerzo({
    *  para que este componente no dependa del proveedor de next-intl y su prueba
    *  no tenga que montar uno. */
   t: (clave: string, valores?: Record<string, string>) => string;
+  /** Its name when it isn't Len's: in the person's own assistant's place, with her name (phase 4E, measured 10/11:
+   *  it said «Esfuerzo de Len» there). */
+  label?: string;
 }) {
   const elegir = (e: EsfuerzoAgente) => {
     onChange(e);
@@ -94,7 +98,7 @@ export function MandoEsfuerzo({
       <button
         type="button"
         ref={refDisparador}
-        aria-label={t("composer.effort")}
+        aria-label={label ?? t("composer.effort")}
         title={t(locked ? "composer.effortDynamis" : "composer.effortTitle")}
         aria-expanded={abierto && !locked}
         aria-haspopup="menu"
@@ -135,7 +139,7 @@ export function MandoEsfuerzo({
       {abierto && !locked && (
         <div
           role="menu"
-          aria-label={t("composer.effort")}
+          aria-label={label ?? t("composer.effort")}
           className={`absolute bottom-full ${variant === "pill" ? "right-0" : "left-0"} z-20 mb-1.5 w-60 overflow-hidden rounded-md bg-card ring-1 ring-[color:var(--border)] shadow-lg fade-in`}
         >
           {niveles.map((n) => (

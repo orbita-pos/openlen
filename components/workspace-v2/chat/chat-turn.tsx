@@ -9,16 +9,17 @@
 // publicar y de responder, y el cierre. Todo con las piezas y reglas de siempre.
 
 import { DeliveredFiles } from "./delivered-files";
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, ShieldAlert, Wrench } from "lucide-react";
-import { isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, MessageCircleHeart, ShieldAlert, Wrench } from "lucide-react";
+import { isAssistantRequestOrigin, isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
 import { LenReply } from "./len-reply";
 import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
+import { AssistantCreateCard } from "../assistant/create-card";
 import { McpApprovalCardView } from "./mcp-approval-card";
 import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
@@ -134,7 +135,7 @@ export function UserMessage({
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="nc-up flex items-end justify-end gap-2">
-        <div className="max-w-[84%] whitespace-pre-wrap break-words rounded-[16px_16px_4px_16px] border bd bg-elev px-3 py-2 text-[14px] leading-relaxed fg">
+        <div data-user-bubble="" className="max-w-[84%] whitespace-pre-wrap break-words rounded-[16px_16px_4px_16px] border bd bg-elev px-3 py-2 text-[14px] leading-relaxed fg">
           {fotos.length > 0 && (
             <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] fg-muted">
               {fotos.map((f) => (
@@ -206,6 +207,13 @@ export function UserMessage({
             <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-tool-creation-turn="">
               <Wrench size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.toolCreation")}</span>
+            </div>
+          ) : turn.origen && isAssistantRequestOrigin(turn.origen) ? (
+            // «LUCÍA, DILE A LEN…» (spec local 2026-11-06-asistente-propio, §4.2): the owner's words, passed on by their
+            // own assistant with `ask_len`.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-assistant-request-turn="">
+              <MessageCircleHeart size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.fromAssistant", { name: turn.origen.assistantName })}</span>
             </div>
           ) : turn.origen && (
             <button
@@ -286,7 +294,11 @@ export function LenTurn({
   esApp = false,
   goalRunsOn = false,
   onContinue,
+  speaker,
 }: {
+  /** Who answers when it isn't Len: the person's own assistant, its name and its figure (spec local
+   *  2026-11-06-asistente-propio). Absent = Len. */
+  speaker?: { readonly name: string; readonly face: ReactNode };
   turn: DesignTurn;
   /** El turno siguiente, si lo hay: su mensaje es la respuesta a una pregunta. */
   next: DesignTurn | undefined;
@@ -364,22 +376,43 @@ export function LenTurn({
   return (
     // `data-chat-row`: an event-task card's «Hecho» goes to the turn it started.
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast} data-chat-row={turn.id}>
-      <div className="flex items-center gap-1.5 text-[12.5px]">
-        <LenFace size={18} className="shrink-0" />
-        <b className="font-semibold">Len</b>
-        <span className="text-[11.5px] fg-faint">{when}</span>
-        {!samePage && (
-          <span className="ml-auto rounded-full border bd px-2 py-px text-[10.5px] fg-faint">
-            {turn.page ? `/${turn.page}` : t("turn.homePage")}
-          </span>
-        )}
-      </div>
-      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} />}
+      {/* In her place her figure and her name head the chat: a row repeating them over every answer is noise. Her
+          name stays for whoever does not see the page. */}
+      {speaker ? (
+        <b className="sr-only">{speaker.name}</b>
+      ) : (
+        <div className="flex items-center gap-1.5 text-[12.5px]">
+          <LenFace size={18} className="shrink-0" />
+          <b className="font-semibold">Len</b>
+          <span className="text-[11.5px] fg-faint">{when}</span>
+          {!samePage && (
+            <span className="ml-auto rounded-full border bd px-2 py-px text-[10.5px] fg-faint">
+              {turn.page ? `/${turn.page}` : t("turn.homePage")}
+            </span>
+          )}
+        </div>
+      )}
+      {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} {...(speaker ? { speakerName: speaker.name } : {})} />}
       {/* LOS VISUALES (spec local 2026-10-16): el texto con sus visuales donde los puso Len. */}
-      <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+      {speaker && text.length > 0 ? (
+        // What she says is a bubble, as what her owner says is (tokens.css tints the owner's); with an edge, because
+        // the light theme's bubble and ground are ~1.1:1. Its time goes under it.
+        <div className="flex max-w-[88%] flex-col items-start gap-1 self-start">
+          <div data-her-bubble="" className="rounded-[16px_16px_16px_4px] border bd bg-elev px-3 py-2">
+            <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+          </div>
+          <span data-her-time="" className="pl-1 text-[11px] fg-faint">
+            {when}
+          </span>
+        </div>
+      ) : (
+        <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+      )}
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
       <ArtifactTurnCards actions={turn.actions} />
       <DeliveredFiles actions={turn.actions} />
+      {/* «QUIERO UN ASISTENTE» (spec local 2026-11-06-asistente-propio, §4.4): the card Len's create_assistant left. */}
+      <AssistantCreateCard actions={turn.actions} projectId={projectId} />
       {/* LEN'S SUBAGENTS: a live card per child this turn launched. */}
       <SubagentCards actions={turn.actions} projectId={projectId} rowId={turn.id} />
       {todos && todos.length > 0 && (

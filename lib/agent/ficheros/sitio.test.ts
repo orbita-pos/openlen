@@ -6,8 +6,18 @@ import {
   paginaDeRuta,
   resolverRuta,
   rutaDePagina,
+  rutaRelativa,
   sugerirRuta,
 } from "./sitio";
+
+// Phase 4B: as Claude Code shows a file outside its working directory (Glob and Grep on another folder, measured
+// 09/11): by its absolute path. The person's home is not the project's folder.
+describe("rutaRelativa", () => {
+  it("a path outside the working directory stays absolute, as Claude Code shows it", () => {
+    expect(rutaRelativa("/home/user/.assistant/projects/p2/index.html")).toBe("/home/user/.assistant/projects/p2/index.html");
+    expect(rutaRelativa("/menu/index.html")).toBe("menu/index.html");
+  });
+});
 
 // El sitio, visto como ficheros: el MISMO árbol que escribe `publishToDir`
 // (`index.html` y `<slug>/index.html`). Los ficheros viven en Postgres; esto es

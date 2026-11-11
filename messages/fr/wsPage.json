@@ -65,6 +65,8 @@
       "get_goal": "Consultation de l'objectif",
       "create_goal": "Création de l'objectif",
       "update_goal": "Mise à jour de l'objectif",
+      "create_assistant": "Création de votre assistant",
+      "ask_len": "Transmission à Len",
       "schedule_create": "Planification d'une tâche",
       "schedule_list": "Consultation des tâches planifiées",
       "schedule_delete": "Suppression d'une tâche planifiée",
@@ -124,6 +126,7 @@
       "installed": "« {title} » est installé dans votre OpenLen."
     },
     "errors": {
+      "agent_off": "Ce n'est pas disponible pour le moment. Réessayez dans quelques minutes.",
       "turn_limit": "L'agent a atteint sa limite d'étapes par tour.",
       "tool_limit": "L'agent a atteint sa limite d'actions par tour.",
       "budget_limit": "Len s'est arrêté car votre compte n'a plus de crédits. Ce qu'il a fait est enregistré ; quand vous aurez de nouveau des crédits, demandez-lui de continuer.",
