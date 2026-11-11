@@ -824,7 +824,8 @@
         "thinking": "考え中…",
         "working": "作業中…",
         "talking": "入力中…"
-      }
+      },
+      "settings": "設定"
     },
     "speaker": {
       "working": "{name} が作業中",

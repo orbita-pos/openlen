@@ -824,7 +824,8 @@
         "thinking": "Sta pensando…",
         "working": "Sta lavorando…",
         "talking": "Sta scrivendo…"
-      }
+      },
+      "settings": "Impostazioni"
     },
     "speaker": {
       "working": "{name} sta lavorando",

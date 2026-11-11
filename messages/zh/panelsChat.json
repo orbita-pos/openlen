@@ -824,7 +824,8 @@
         "thinking": "思考中…",
         "working": "处理中…",
         "talking": "输入中…"
-      }
+      },
+      "settings": "设置"
     },
     "speaker": {
       "working": "{name} 正在工作",
