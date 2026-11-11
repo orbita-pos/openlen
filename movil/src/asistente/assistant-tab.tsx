@@ -8,10 +8,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import { LiveFigure } from "@/components/workspace-v2/assistant/live-figure";
+import { tintOf } from "@/components/workspace-v2/assistant/tint";
 import type { AssistantListItem } from "@/lib/assistants/view";
+import { lookOfRow } from "@/lib/assistants/look";
 
 import { useAtras } from "../atras";
-import { leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
+import { figurasEncendidas, leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import "../gestion/gestion.css";
 import "../overview/overview.css";
@@ -102,16 +105,19 @@ export function AssistantTab({
   // As the web's: the waiting ones first.
   const ordenados = pedidos ? [...pedidos].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending")) : null;
   const cuando = (iso: string) => new Date(iso).toLocaleString(idioma, { dateStyle: "medium", timeStyle: "short" });
+  // Her figure (spec local 2026-11-10-figuras-del-asistente, §5.8, §10.2): alive in this header, on a light tint of her
+  // color. One opened by a notice of an assistant deleted since has no look: the default one, flat or alive alike.
+  const look = lookOfRow(asistente);
+  const tinte = tintOf(look.color);
+  const preguntar = useCallback(() => figurasEncendidas(cliente), [cliente]);
 
   return (
     <section className="app-gestion app-resumen lm-m lm-marca app-asistente" role="dialog" aria-modal="true" aria-labelledby="asistente-titulo">
-      <header>
-        <div>
+      <header className="asist-cabecera" style={tinte ? ({ "--asist-suave": tinte.soft, "--asist-suave-oscuro": tinte.softDark } as React.CSSProperties) : undefined}>
+        <LiveFigure look={look} size={84} ask={preguntar} />
+        <div className="asist-quien">
           <p className="gestion-ceja">{t("own.place.yours")}</p>
-          <h1 id="asistente-titulo">
-            <span className="asist-figura" aria-hidden="true" style={{ background: asistente.color }} />
-            {name}
-          </h1>
+          <h1 id="asistente-titulo">{name}</h1>
         </div>
         <button className="gestion-cerrar" onClick={onCerrar} aria-label={t("cerrar")}>
           ×

@@ -58,7 +58,7 @@ const tareasDeMuestra = () => ({
 });
 
 const PROYECTOS = [{ id: "m1", title: "Panadería Luna", subdomain: "panaderia-luna", publishedAt: "2026-09-29T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" }];
-const ASISTENTE_DE_MUESTRA = { id: "am1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "m1", projectIds: ["m1"] };
+const ASISTENTE_DE_MUESTRA = { id: "am1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "m1", projectIds: ["m1"] };
 const HISTORIAL: StoredChatTurn[] = [
   { id: "t1", userText: "Hazme una página para mi panadería", assistantReasoning: "¡Ya quedó tu página!\n\nLe puse tus panes, un formulario para encargar pasteles y cómo llegar.", status: "applied", appliedAt: Date.now() - 26 * HORA,
     actions: [{ tool: "present", status: "done", summary: "menu-otono.pdf", delivered: [ENTREGA] }] },

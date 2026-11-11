@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, unknown>) => (v ? `${k} ${JSON.stringify(v)}` : k) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
-vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn(), marcarSusVisitasLeidas: vi.fn() }));
+vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn(), marcarSusVisitasLeidas: vi.fn(), figurasEncendidas: vi.fn(async () => false) }));
 
 import { leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
 import { AssistantTab } from "./assistant-tab";
@@ -42,6 +42,32 @@ async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarje
   return host;
 }
 const click = (el: Element | null) => act(async () => (el as HTMLElement).click());
+
+// Phase 6 (spec local 2026-11-10-figuras-del-asistente, §5.8): her figure in the header, from the catalog.
+describe("AssistantTab wears her figure", () => {
+  it("🔴 her header holds her figure — flat while the figures are off — on a tint of her color, and the dot is gone", async () => {
+    const host = await paint();
+    const header = host.querySelector<HTMLElement>(".asist-cabecera")!;
+    expect(header.querySelectorAll("[data-figure]")).toHaveLength(1);
+    expect(header.querySelector("[data-figure]")!.getAttribute("data-figure")).toBe("flat");
+    expect(header.querySelector('[data-part="body"]')).not.toBeNull();
+    expect(header.style.getPropertyValue("--asist-suave")).toMatch(/^#[0-9a-f]{6}$/);
+    expect(host.querySelector(".asist-figura")).toBeNull();
+    expect(header.textContent).toContain("Lucía");
+  });
+
+  it("one opened by a notice of an assistant deleted since still draws: the default figure", async () => {
+    vi.mocked(leerSusVisitas).mockResolvedValue([] as never);
+    vi.mocked(leerSusPedidos).mockResolvedValue([] as never);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const gone = { id: "x", name: "", slug: "", color: "transparent", tone: "friendly" as const, projectId: "", projectIds: [] } as never;
+    await act(async () => root.render(<AssistantTab cliente={{} as never} asistente={gone} idioma="es" onCerrar={() => {}} onHablar={() => {}} onVerLen={() => {}} />));
+    expect(host.querySelector('.asist-cabecera [data-part="body"]')).not.toBeNull();
+  });
+});
 
 describe("AssistantTab marks what it shows as read (phase 4E)", () => {
   it("🔴 marks them read when «Conversaciones» is on screen, once", async () => {

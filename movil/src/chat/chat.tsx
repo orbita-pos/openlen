@@ -5,6 +5,8 @@
 // sigue trabajando aunque lo cierres.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
+import { AssistantFigure } from "@/components/workspace-v2/assistant/figure";
+import { lookOfRow } from "@/lib/assistants/look";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { Cara } from "../cara";
 import { Icono } from "../iconos";
@@ -233,7 +235,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
           <Icono nombre="back" />
         </button>
         <div className="ch-who">
-          {asistente ? <span className="ch-face ch-face-asistente" aria-hidden="true" style={{ background: asistente.color }} /> : <Cara estado={cara} className="ch-face" />}
+          {asistente ? <span className="ch-face ch-face-asistente"><AssistantFigure look={lookOfRow(asistente)} size={44} /></span> : <Cara estado={cara} className="ch-face" />}
           <b className="ch-name">{asistente?.name ?? "Len"}</b>
           <span className={`ch-st${linea ? " is-on" : ""}${chat.trabajando ? " ch-live" : ""}`}>{linea}</span>
         </div>

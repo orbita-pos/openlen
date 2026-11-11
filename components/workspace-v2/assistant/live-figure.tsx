@@ -57,8 +57,10 @@ export function LiveFigure({
       if (box && box.width > 0) figure.current?.lookAt((event.clientX - box.left) / box.width, (event.clientY - box.top) / box.height);
     };
     const motion = () => figure.current?.setReducedMotion(reduced?.matches === true);
-    void ask()
-      .then((on) => (on && !gone ? import("@/lib/figure/engine") : null))
+    // `ask` is the host's: whatever it does — throw, answer nothing — the flat figure is already there.
+    void Promise.resolve()
+      .then(ask)
+      .then((on) => (on === true && !gone ? import("@/lib/figure/engine") : null))
       .then((engine) => {
         if (!engine || gone || !canvas.current) return;
         const made = engine.createFigure(canvas.current, born.current.look, {
