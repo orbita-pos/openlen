@@ -13,6 +13,7 @@ const m = vi.hoisted(() => ({
   // Phase 4D: renaming her.
   renameAssistant: vi.fn(async (): Promise<unknown> => ({ ok: true, name: "Marta", slug: "marta" })),
   setMorningSummary: vi.fn(async () => true),
+  setAssistantLook: vi.fn(async () => true),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
   switchOldAssistantOff: vi.fn(async () => true),
   // Her visitors (phase 2A).
@@ -27,7 +28,7 @@ const m = vi.hoisted(() => ({
   creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant, setMorningSummary: m.setMorningSummary }));
+vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant, setMorningSummary: m.setMorningSummary, setAssistantLook: m.setAssistantLook }));
 vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf, projectIdsOf: m.projectIdsOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
@@ -40,7 +41,8 @@ const visits = await import("./[id]/visits/route");
 const budget = await import("./visitor-budget/route");
 
 const LUCIA = { id: "a1", personId: "u1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", memory: "secreto", homeProjectId: "p1", createdAt: new Date(0), updatedAt: new Date(0) };
-const BODY = { projectId: "p1", name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" };
+const LOOK = { v: 1, shape: "heart", color: "#19c3b1", eyes: "round", eyewear: "none", accessory: "crown" };
+const BODY = { projectId: "p1", name: "Lucía", look: LOOK, tone: "friendly" };
 const post = (body: unknown) => POST(new Request("http://localhost/api/assistants", { method: "POST", body: JSON.stringify(body) }));
 const params = (id: string) => ({ params: Promise.resolve({ id }) });
 
@@ -57,7 +59,7 @@ describe("POST /api/assistants", () => {
     const res = await post(BODY);
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: "a1", slug: "lucia" });
-    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" }, memory: "" });
+    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: LOOK, tone: "friendly" }, memory: "" });
   });
 
   it("🔴 the morning summary is created on only when the creator ticked it, in the page's language", async () => {
@@ -87,6 +89,15 @@ describe("POST /api/assistants", () => {
     expect(await res.json()).toEqual({ field: "name" });
   });
 
+  it("🔴 a look that is not of the catalog is refused, and so is the old shape and color", async () => {
+    for (const body of [{ ...BODY, look: { ...LOOK, shape: "blob" } }, { projectId: "p1", name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" }]) {
+      const res = await post(body);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ field: "look" });
+    }
+    expect(m.createAssistant).not.toHaveBeenCalled();
+  });
+
   it("409 when the name is taken or the project has one", async () => {
     m.createAssistant.mockResolvedValueOnce({ ok: false, code: "name_taken" });
     const res = await post(BODY);
@@ -104,12 +115,30 @@ describe("POST /api/assistants", () => {
   });
 });
 
+describe("PATCH /api/assistants/[id] { look }", () => {
+  const patch = (body: unknown) => one.PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify(body) }), params("a1"));
+  it("changes her figure, whole", async () => {
+    m.assistantById.mockResolvedValueOnce(LUCIA);
+    const res = await patch({ look: { ...LOOK, color: "#19C3B1" } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ look: LOOK });
+    expect(m.setAssistantLook).toHaveBeenCalledWith("a1", "u1", LOOK);
+  });
+  it("refuses a look that is not of the catalog, before writing anything", async () => {
+    const res = await patch({ look: { ...LOOK, accessory: "sword" }, name: "Marta" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ field: "look" });
+    expect(m.setAssistantLook).not.toHaveBeenCalled();
+    expect(m.renameAssistant).not.toHaveBeenCalled();
+  });
+});
+
 describe("GET /api/assistants", () => {
   it("lists the person's own, without their memory", async () => {
     m.assistantsOf.mockResolvedValueOnce([LUCIA]);
     const res = await GET(new Request("http://localhost/api/assistants"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
+    expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
     expect(m.projectIdsOf).toHaveBeenCalledWith(["a1"]);
     expect(m.assistantsOf).toHaveBeenCalledWith("u1");
   });

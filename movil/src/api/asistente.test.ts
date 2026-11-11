@@ -7,7 +7,7 @@ import { clienteDeMuestra } from "../muestra";
 import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, tocarPedido } from "./asistente";
 import { mandarALen } from "./chat";
 
-const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
 const cliente = (respuesta: (ruta: string, init?: RequestInit) => Response) => {
   const pedir = vi.fn(async (ruta: string, init?: RequestInit) => respuesta(ruta, init));
   return { pedir, avisarAlCerrar: vi.fn() };

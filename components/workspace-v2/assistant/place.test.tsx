@@ -19,7 +19,7 @@ import { restoreTurn } from "../chat/use-agent-chat";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob" as const, color: "#F4A48B", tone: "friendly" as const, projectId: "p1" };
+const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "p1" };
 const roots: Root[] = [];
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));

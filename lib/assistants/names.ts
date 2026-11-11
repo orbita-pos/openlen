@@ -1,24 +1,20 @@
 // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): what its creator accepts. Its name becomes
-// its address, /<locale>/assistant/<slug>, so a name needs a slug. The shapes are placeholders until the figures'
-// design pass (phase 6), and the creator must not depend on how many there are.
+// its address, /<locale>/assistant/<slug>, so a name needs a slug. Its figure is a look from the catalog
+// (lib/figure/look.ts, phase 6): the creator must not depend on how many entries there are.
 //
 // Pure.
 import { routing } from "@/i18n/routing";
+import { checkLook, type FigureLook } from "@/lib/figure/look";
 
 export const ASSISTANT_NAME_MAX = 40;
-export const ASSISTANT_SHAPES = ["blob", "ring", "drop", "square"] as const;
-export type AssistantShape = (typeof ASSISTANT_SHAPES)[number];
 export const ASSISTANT_TONES = ["friendly", "formal", "playful"] as const;
 export type AssistantTone = (typeof ASSISTANT_TONES)[number];
 
 export interface AssistantInput {
   name: string;
-  shape: AssistantShape;
-  color: string;
+  look: FigureLook;
   tone: AssistantTone;
 }
-
-const COLOR = /^#[0-9a-fA-F]{6}$/;
 
 /** One of the site's languages (`i18n/routing.ts`), as the page that sent it: the morning summary's (phase 4D). Anything
  *  else is the site's default. */
@@ -62,11 +58,11 @@ export function cleanAssistantName(raw: unknown): string | null {
 
 export function checkAssistantInput(
   raw: Record<string, unknown>,
-): { ok: true; value: AssistantInput } | { ok: false; field: "name" | "shape" | "color" | "tone" } {
+): { ok: true; value: AssistantInput } | { ok: false; field: "name" | "look" | "tone" } {
   const name = cleanAssistantName(raw.name);
   if (!name) return { ok: false, field: "name" };
-  if (!includes(ASSISTANT_SHAPES, raw.shape)) return { ok: false, field: "shape" };
-  if (typeof raw.color !== "string" || !COLOR.test(raw.color)) return { ok: false, field: "color" };
+  const look = checkLook(raw.look);
+  if (!look.ok) return { ok: false, field: "look" };
   if (!includes(ASSISTANT_TONES, raw.tone)) return { ok: false, field: "tone" };
-  return { ok: true, value: { name, shape: raw.shape, color: raw.color, tone: raw.tone } };
+  return { ok: true, value: { name, look: look.value, tone: raw.tone } };
 }

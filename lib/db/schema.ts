@@ -1549,6 +1549,8 @@ export const assistants = pgTable(
     slug: text("slug").notNull(),
     shape: text("shape").notNull(),
     color: text("color").notNull(),
+    /** Her figure, whole (phase 6, lib/figure/look.ts). NULL in a row from before: lib/assistants/look.ts. */
+    look: jsonb("look").$type<import("@/lib/figure/look").FigureLook>(),
     tone: text("tone").notNull(),
     /** ~/.assistant/MEMORY.md: what its owner taught it, replaced whole. */
     memory: text("memory").notNull().default(""),

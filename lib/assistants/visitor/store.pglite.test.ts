@@ -23,7 +23,7 @@ const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { assistantById, createAssistant, deleteAssistant, oldAssistantSettings, switchOldAssistantOff } = await import("../store");
 const visitor = await import("./store");
 
-const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
+const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 const DAY = 86_400_000;
 let pg: PGlite;
 let lucia: string;

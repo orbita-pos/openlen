@@ -157,7 +157,7 @@ describe("AssistantRequestCards", () => {
 
   it("in her own place the chat shows none", async () => {
     serve([card()]);
-    const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", shape: "blob" as const, color: "#F4A48B", tone: "friendly" as const, projectId: "p1" };
+    const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "p1" };
     const inHerPlace = await mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
     expect(inHerPlace.querySelector("[data-assistant-request-card]")).toBeNull();
     expect(fetchMock.mock.calls.some(([u]) => String(u).includes("assistant-requests"))).toBe(false);

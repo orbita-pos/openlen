@@ -35,7 +35,7 @@ async function mount(node: React.ReactNode) {
 
 describe("the person's assistants in the start rail", () => {
   it("lists each one, leading to its place", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", shape: "blob", color: "#F4A48B", tone: "friendly", projectId: "p1" }] }))));
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1" }] }))));
     const host = await mount(<AssistantRailLinks open />);
     const link = host.querySelector<HTMLAnchorElement>("[data-assistant-rail-link]")!;
     expect(link.getAttribute("href")).toBe("/es/assistant/lucia");

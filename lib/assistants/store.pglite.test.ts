@@ -20,9 +20,9 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, setMorningSummary, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
 
-const LUCIA = { name: "Lucía", shape: "blob", color: "#F4A48B", tone: "friendly" } as const;
+const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 let pg: PGlite;
 
 async function conversationsOf(projectId: string): Promise<(string | null)[]> {
@@ -49,6 +49,20 @@ describe("assistants store", () => {
     expect((await assistantBySlug("u1", "lucia"))?.homeProjectId).toBe("p1");
     expect(await assistantBySlug("u2", "lucia")).toBeNull();
     expect((await assistantOfProject("p1"))?.slug).toBe("lucia");
+  });
+
+  it("saves her look whole, and her accent is the look's color", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    expect(r.assistant.look).toEqual(LUCIA.look);
+    expect(r.assistant.color).toBe(LUCIA.look.color);
+    const heart = { ...LUCIA.look, shape: "heart", color: "#19c3b1", accessory: "crown" } as const;
+    expect(await setAssistantLook(r.assistant.id, "u2", heart)).toBe(false);
+    expect((await assistantById(r.assistant.id))?.look).toEqual(LUCIA.look);
+    expect(await setAssistantLook(r.assistant.id, "u1", heart)).toBe(true);
+    const after = await assistantById(r.assistant.id);
+    expect(after?.look).toEqual(heart);
+    expect(after?.color).toBe("#19c3b1");
   });
 
   it("refuses the same name twice for one person", async () => {
