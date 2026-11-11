@@ -888,6 +888,14 @@
     },
     "composer": {
       "effort": "{name}'s effort"
+    },
+    "page": {
+      "title": "Your page",
+      "reload": "Reload",
+      "open": "Open in a new tab",
+      "hide": "Hide the page",
+      "show": "Show the page",
+      "empty": "Your page has nothing yet."
     }
   }
 }

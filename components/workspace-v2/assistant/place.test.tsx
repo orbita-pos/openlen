@@ -203,6 +203,46 @@ describe("her place's controls", () => {
   }
   const settle = () => act(async () => void (await new Promise((r) => setTimeout(r, 20))));
 
+  // 11/11, Jesús, on the reference he sent: the page beside the chat, «como ellos lo hacen a la derecha».
+  it("🔴 her page is beside her chat: its address, the page itself in a frame that cannot reach openlen, and a way to put it away", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" address="tienda.openlen.app" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const pane = host.querySelector<HTMLElement>("[data-her-page]")!;
+    expect(pane).not.toBeNull();
+    expect(pane.querySelector("[data-her-page-address]")!.textContent).toBe("tienda.openlen.app");
+    expect(pane.querySelector<HTMLAnchorElement>("[data-her-page-open]")!.href).toBe("https://tienda.openlen.app/");
+    const frame = pane.querySelector("iframe")!;
+    // Without a canvas host (here, and on a machine without one) it is the document itself, with no way out of its frame.
+    expect(frame.getAttribute("srcdoc")).toBe("<h1>Hola</h1>");
+    expect(frame.getAttribute("sandbox")).toBe("allow-scripts allow-modals allow-pointer-lock");
+    expect(frame.getAttribute("title")).toBe("ownAssistant.page.title");
+    // Put away, the frame is gone (a page left running under a hidden pane is work for nobody); the button brings it back.
+    const toggle = host.querySelector<HTMLButtonElement>("[data-her-page-toggle]")!;
+    expect(toggle.getAttribute("aria-pressed")).toBe("true");
+    act(() => toggle.click());
+    expect(host.querySelector("[data-her-page]")).toBeNull();
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    act(() => toggle.click());
+    expect(host.querySelector("[data-her-page] iframe")).not.toBeNull();
+    // Only beside her chat: her visitors' views take the whole place.
+    act(() => host.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!.click());
+    await settle();
+    expect(host.querySelector("[data-her-page-toggle]")).toBeNull();
+  });
+
+  it("🔴 a page not published yet says its name instead of an address, and an empty one says so instead of a blank frame", async () => {
+    serve();
+    const unpublished = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" projectTitle="Mi tienda" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(unpublished.querySelector("[data-her-page-address]")!.textContent).toBe("Mi tienda");
+    expect(unpublished.querySelector("[data-her-page-open]")).toBeNull();
+    const empty = mount(<AssistantHome assistant={{ ...LUCIA, projectId: "p9" }} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(empty.querySelector("[data-her-page] iframe")).toBeNull();
+    expect(empty.querySelector("[data-her-page-empty]")!.textContent).toBe("ownAssistant.page.empty");
+  });
+
   it("her place has Hablar and Conversaciones, and Conversaciones lists what visitors said", async () => {
     serve();
     const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);

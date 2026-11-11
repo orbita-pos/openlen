@@ -888,6 +888,14 @@
     },
     "composer": {
       "effort": "Inspanning van {name}"
+    },
+    "page": {
+      "title": "Je pagina",
+      "reload": "Opnieuw laden",
+      "open": "Openen in nieuw tabblad",
+      "hide": "Pagina verbergen",
+      "show": "Pagina tonen",
+      "empty": "Je pagina is nog leeg."
     }
   }
 }
