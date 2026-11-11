@@ -195,8 +195,12 @@ openlen.com, www.openlen.com {
 	#
 	# carril D: por lo mismo, tampoco en /storage/v1/*: un .png de Storage puede
 	# ser PRIVADO, y Next pone el Cache-Control y el Content-Type de cada objeto.
+	#
+	# /openlen/figure-<sha8>.js es el motor de la figura de la burbuja del asistente
+	# propio (lib/publish/assistant-widget.ts): lleva su contenido en el nombre, así
+	# que es inmutable como /assets/, y no uno de los .js de la carpeta.
 	@assets {
-		path *.jpg *.jpeg *.png *.gif *.webp *.ico *.woff *.woff2 *.avif /assets/* /uploads/*
+		path *.jpg *.jpeg *.png *.gif *.webp *.ico *.woff *.woff2 *.avif /assets/* /uploads/* /openlen/figure-*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*
 	}
@@ -209,7 +213,7 @@ openlen.com, www.openlen.com {
 	# cambiar con el mismo nombre (/models/nave.glb).
 	@carpeta {
 		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
-		not path /assets/* /uploads/*
+		not path /assets/* /uploads/* /openlen/figure-*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*
 	}

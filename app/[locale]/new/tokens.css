@@ -276,8 +276,8 @@
    every other button keep the workspace's accent. */
 .workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft); }
 .dark .workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft-dark); }
-.workspace-v2 .assistant-tint [data-user-bubble] { background: var(--assistant-tint); color: var(--assistant-ink); border-color: transparent; }
+.workspace-v2 .assistant-tint [data-user-bubble] { background: var(--assistant-tint); color: var(--assistant-ink); border-color: var(--assistant-edge); }
 /* What the bubble holds in the workspace's muted ink or accent (a photo's caption, a file's name, their icons) would
    vanish on her color: it takes the bubble's own ink. */
 .workspace-v2 .assistant-tint [data-user-bubble] :is(.fg-muted, .fg-faint, [class*="nc-accent-text"]) { color: inherit; opacity: 0.8; }
-.workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); }
+.workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); box-shadow: inset 0 0 0 1px var(--assistant-edge); }

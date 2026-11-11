@@ -16,7 +16,7 @@ import { ModalShell } from "../modal-shell";
 import { AssistantFigure } from "./figure";
 import { LiveFigure } from "./live-figure";
 
-type Failure = "name" | "nameTaken" | "projectHas" | "ownerOnly" | "generic";
+type Failure = "name" | "nameTaken" | "projectHas" | "ownerOnly" | "generic" | "figure";
 
 const FAILURE_OF_CODE: Readonly<Record<string, Failure>> = { name_taken: "nameTaken", project_has_assistant: "projectHas", solo_dueno: "ownerOnly" };
 const CATEGORIES: readonly { id: FigureCategory; label: string }[] = [
@@ -83,9 +83,9 @@ export function AssistantCreatorDialog({
         onCreated({ id: body.id, slug: body.slug, name: name.trim().replace(/\s+/g, " ") });
         return;
       }
-      setFailure(body.field === "name" ? "name" : (body.error && FAILURE_OF_CODE[body.error]) || "generic");
+      setFailure(editing ? "figure" : body.field === "name" ? "name" : (body.error && FAILURE_OF_CODE[body.error]) || "generic");
     } catch {
-      setFailure("generic");
+      setFailure(editing ? "figure" : "generic");
     } finally {
       setSaving(false);
     }
@@ -119,7 +119,7 @@ export function AssistantCreatorDialog({
         )}
         {failure && (
           <p data-assistant-error="" role="alert" className="w-full text-[12px] text-[var(--nc-danger,#d93636)]">
-            {t(`ownAssistant.errors.${failure}`)}
+            {failure === "figure" ? t("ownAssistant.place.figureFailed") : t(`ownAssistant.errors.${failure}`)}
           </p>
         )}
         {CATEGORIES.map((category) => (

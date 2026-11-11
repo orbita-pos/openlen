@@ -14,10 +14,14 @@ describe("activityOf", () => {
   it("says what she is doing, the turn's own work first", () => {
     expect(activityOf(QUIET)).toBe("ready");
     expect(activityOf({ ...QUIET, typing: true })).toBe("listening");
-    expect(activityOf({ ...QUIET, failed: true, typing: true })).toBe("error");
     expect(activityOf({ ...QUIET, waiting: true, typing: true })).toBe("thinking");
     expect(activityOf({ ...QUIET, waiting: true, streaming: true })).toBe("talking");
     expect(activityOf({ ...QUIET, waiting: true, streaming: true, toolRunning: true })).toBe("working");
+  });
+
+  it("🔴 after a failed turn, her owner writing again has her listening", () => {
+    expect(activityOf({ ...QUIET, failed: true, typing: true })).toBe("listening");
+    expect(activityOf({ ...QUIET, failed: true })).toBe("error");
   });
 
   it("a new turn after a failed one is thinking, not an error", () => {
@@ -43,10 +47,18 @@ describe("tintOf", () => {
     }
   });
 
+  it("🔴 her owner's bubble keeps an edge on any panel: a white one on a light theme, a black one on a dark theme", () => {
+    for (const color of ["#ffffff", "#fafafa", "#000000", "#1d1d1f", ...FIGURE_COLORS]) {
+      const t = tintOf(color)!;
+      expect(contrast(t.tint, t.edge), color).toBeGreaterThanOrEqual(1.25);
+    }
+    expect(tintStyle("#ffffff")["--assistant-edge"]).toBe(tintOf("#ffffff")!.edge);
+  });
+
   it("what is not a color tints nothing", () => {
     expect(tintOf("transparent")).toBeNull();
     expect(tintStyle("red")).toEqual({});
-    expect(Object.keys(tintStyle("#FFC21A"))).toEqual(["--assistant-tint", "--assistant-ink", "--assistant-soft", "--assistant-soft-dark"]);
+    expect(Object.keys(tintStyle("#FFC21A"))).toEqual(["--assistant-tint", "--assistant-ink", "--assistant-edge", "--assistant-soft", "--assistant-soft-dark"]);
     expect(tintStyle("#FFC21A")["--assistant-tint"]).toBe("#ffc21a");
   });
 });
@@ -55,5 +67,9 @@ describe("her tint in the workspace's CSS", () => {
   const css = readFileSync(path.join(process.cwd(), "app/[locale]/new/tokens.css"), "utf8");
   it("🔴 the muted lines and icons inside her owner's bubble take the bubble's ink: a photo's caption must read on her color", () => {
     expect(css).toMatch(/\.assistant-tint \[data-user-bubble\] :is\(\.fg-muted, \.fg-faint, \[class\*="nc-accent-text"\]\)\s*\{[^}]*color:\s*inherit/);
+  });
+  it("the bubble and the send button wear that edge", () => {
+    expect(css).toMatch(/\[data-user-bubble\]\s*\{[^}]*border-color:\s*var\(--assistant-edge\)/);
+    expect(css).toMatch(/\[data-send="send"\]:not\(:disabled\)\s*\{[^}]*var\(--assistant-edge\)/);
   });
 });

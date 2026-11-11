@@ -157,6 +157,16 @@ describe("the creator", () => {
     expect(onSaved).toHaveBeenCalledWith({ ...HEART, shape: "flower" });
   });
 
+  it("a figure that could not be saved says so, in the creator", async () => {
+    fetchMock.mockReturnValueOnce(json({ error: "not_found" }, 404));
+    const onSaved = vi.fn();
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} editing={{ id: "a1", name: "Lucía", look: HEART }} onSaved={onSaved} />);
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    expect(document.querySelector("[data-assistant-error]")!.textContent).toContain("ownAssistant.place.figureFailed");
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
   it("won't send without a name", () => {
     mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} />);
     expect(document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.disabled).toBe(true);

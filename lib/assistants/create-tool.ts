@@ -7,7 +7,7 @@
 // Len may suggest her figure (spec local 2026-11-10-figuras-del-asistente, §5.6): parts of the catalog and a color.
 // The creator opens with it; the owner changes anything there, and Len never changes it afterwards.
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { checkLook, offered, type FigureCategory, type FigureLook } from "@/lib/figure/look";
+import { checkLook, type FigureCategory, type FigureLook } from "@/lib/figure/look";
 import { curatedLook } from "@/lib/figure/random";
 
 import { assistantsEnabled } from "./enabled";
@@ -17,7 +17,18 @@ import { summaryWithLook } from "./suggested-look";
 export { suggestedLookOf } from "./suggested-look";
 
 const PARTS: readonly FigureCategory[] = ["shape", "eyes", "eyewear", "accessory"];
-const part = (category: FigureCategory, description: string) => ({ type: "STRING", enum: [...offered(category)], description });
+
+/** WHAT LEN MAY NAME, KEPT HERE ON PURPOSE. Not `offered()`: Len's tool declarations are a cached prefix of every turn
+ *  of every person, and a list read from the live catalog would move that prefix each time a shape or a hat is added.
+ *  The catalog can grow without Len knowing; teaching him a new entry is adding it here, once, knowingly. An id the
+ *  catalog later retires still draws (lib/figure/look.ts), and one it no longer knows is dropped when he names it. */
+export const SUGGESTABLE: Readonly<Record<FigureCategory, readonly string[]>> = Object.freeze({
+  shape: Object.freeze(["drop", "round", "capsule", "cube", "ears", "heart", "flower", "triangle"]),
+  eyes: Object.freeze(["oval", "round", "dot", "smile", "sleepy"]),
+  eyewear: Object.freeze(["none", "round", "shades"]),
+  accessory: Object.freeze(["none", "beret", "beanie", "bow", "crown", "hat", "headphones"]),
+});
+const part = (category: FigureCategory, description: string) => ({ type: "STRING", enum: [...SUGGESTABLE[category]], description });
 
 export const CREATE_ASSISTANT = "create_assistant";
 
