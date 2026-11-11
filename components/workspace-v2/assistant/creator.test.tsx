@@ -173,6 +173,16 @@ describe("the card Len leaves", () => {
     expect(host.querySelector("[data-assistant-create]")).not.toBeNull();
   });
 
+  it("🔴 the creator opens with the figure Len suggested", async () => {
+    fetchMock.mockReturnValueOnce(json({ assistants: [] }));
+    const suggested = [{ tool: "create_assistant", status: "done" as const, summary: 'create_assistant {"v":1,"shape":"flower","color":"#19c3b1","eyes":"smile","eyewear":"none","accessory":"bow"}' }];
+    const host = mount(<AssistantCreateCard actions={suggested} projectId="p1" />);
+    await flush();
+    act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());
+    const pressed = [...document.querySelectorAll('[data-figure-option][aria-pressed="true"]')].map((b) => b.getAttribute("data-figure-option"));
+    expect(pressed).toEqual(["flower", "smile", "none", "bow"]);
+  });
+
   it("says it is ready, with the way to its place, when it exists", async () => {
     fetchMock.mockReturnValueOnce(json({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1" }] }));
     const host = mount(<AssistantCreateCard actions={ACTIONS} projectId="p1" />);

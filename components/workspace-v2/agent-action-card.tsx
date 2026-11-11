@@ -276,6 +276,8 @@ export const KNOWN_TOOLS = new Set([
 export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTranslations<"wsPage">>): string {
   // Pieza 3: la pregunta que el dueño contestó dentro del turno dice qué contestó.
   if (asksTheOwner(action.tool) && action.respuesta) return action.respuesta;
+  // Its summary carries the figure Len suggested, for the card under his answer: nothing to read here.
+  if (action.tool === "create_assistant") return "";
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

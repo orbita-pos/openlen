@@ -8,7 +8,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import type { AssistantListItem, AssistantView } from "@/lib/assistants/view";
-import { DEFAULT_LOOK } from "@/lib/figure/look";
+import { suggestedLookOf } from "@/lib/assistants/suggested-look";
+import { DEFAULT_LOOK, type FigureLook } from "@/lib/figure/look";
 
 import type { AgentAction } from "../agent-action-card";
 import { AssistantCreatorDialog } from "./creator-dialog";
@@ -17,14 +18,15 @@ import { AssistantFigure } from "./figure";
 export const CREATE_ASSISTANT_TOOL = "create_assistant";
 
 export function AssistantCreateCard({ actions, projectId }: { actions: readonly AgentAction[] | undefined; projectId: string }) {
-  const offered = (actions ?? []).some((a) => a.tool === CREATE_ASSISTANT_TOOL && a.status === "done");
-  if (!offered) return null;
-  return <Card projectId={projectId} />;
+  const offers = (actions ?? []).filter((a) => a.tool === CREATE_ASSISTANT_TOOL && a.status === "done");
+  if (offers.length === 0) return null;
+  // The figure Len suggested (phase 6), from his last offer of the turn; a turn from before has none.
+  return <Card projectId={projectId} suggested={suggestedLookOf(offers[offers.length - 1]!.summary)} />;
 }
 
 const serves = (a: AssistantListItem, projectId: string) => a.projectId === projectId || (a.projectIds ?? []).includes(projectId);
 
-function Card({ projectId }: { projectId: string }) {
+function Card({ projectId, suggested }: { projectId: string; suggested: FigureLook | undefined }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [mine, setMine] = useState<AssistantView | null | undefined>(undefined);
@@ -110,6 +112,7 @@ function Card({ projectId }: { projectId: string }) {
           <AssistantCreatorDialog
             open={creating}
             projectId={projectId}
+            {...(suggested ? { initial: suggested } : {})}
             onClose={() => setCreating(false)}
             onCreated={(c) => {
               setCreating(false);
