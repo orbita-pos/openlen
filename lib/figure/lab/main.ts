@@ -30,7 +30,15 @@ function live(canvas: HTMLCanvasElement): void {
   else fallBack();
 }
 
+/** ?solo=96 → one live figure of that size and nothing else: what a phone will really run, to be measured. */
+const solo = Number(new URLSearchParams(location.search).get("solo")) || 0;
+
 function buildStage(): void {
+  if (solo) {
+    $("hero").style.cssText = `width:${solo}px;height:${solo}px`;
+    live($("hero") as HTMLCanvasElement);
+    return;
+  }
   live($("hero") as HTMLCanvasElement);
   for (const tone of ["light", "tint", "dark"]) {
     const row = document.createElement("div");

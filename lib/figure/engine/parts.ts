@@ -175,6 +175,14 @@ function accessory(kind: FigureAccessory, l: FigureLook, top: Vec3, eye: Vec3): 
   }
 }
 
+/** How far the camera sees from its center (y = 0.2), in body units. The usual frame, or more for a tall hat. */
+export const REACH = 1.5;
+export function reachFor(look: unknown): number {
+  const top = Math.max(...partsFor(look).map((part) => part.position[1] + part.scale[1] + part.furLength));
+  // Talking stretches the figure up to 9% and lifts it 0.04: what it wears must still be inside.
+  return Math.max(REACH, top * 1.09 + 0.04 + 0.03 - 0.2);
+}
+
 /** What a hat-like accessory shades: where it sits and how far its shadow reaches. Null for what casts none. */
 export function shadowOf(look: unknown): { center: Vec3; size: Vec3 } | null {
   const l = lookOrDefault(look);

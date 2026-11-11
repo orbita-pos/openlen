@@ -90,6 +90,11 @@ describe("eyeInk", () => {
     expect(eyeInk("#1a1a2e")).toBe("#f4f4f5");
   });
 
+  it("is the ink that contrasts more, also on bodies that are dark without being black", () => {
+    for (const c of ["#800080", "#4a4a4a", "#006400", "#8b4513", "#555555"]) expect(eyeInk(c), c).toBe("#f4f4f5");
+    for (const c of FIGURE_COLORS) expect(eyeInk(c), c).toBe("#1d1d1f");
+  });
+
   it("stays dark everywhere else", () => {
     for (const c of ["#ff5fa8", "#ffffff", "#f2c35b"]) expect(eyeInk(c)).toBe("#1d1d1f");
   });

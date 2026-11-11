@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_LOOK, FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, type FigureLook } from "../look";
-import { anchorsFor, partsFor, shadowOf, surfaceZ, type Part } from "./parts";
+import { anchorsFor, partsFor, reachFor, shadowOf, surfaceZ, type Part } from "./parts";
 
 const look = (over: Partial<FigureLook> = {}): FigureLook => ({ ...DEFAULT_LOOK, ...over });
 const of = (parts: Part[], role: Part["role"]) => parts.filter((p) => p.role === role);
@@ -115,6 +115,24 @@ describe("partsFor", () => {
   it("gives a black body light eyes", () => {
     for (const eye of of(partsFor(look({ color: "#000000" })), "eye")) expect(Math.min(...eye.color)).toBeGreaterThan(0.9);
     for (const eye of of(partsFor(look({ color: "#ff5fa8" })), "eye")) expect(Math.max(...eye.color)).toBeLessThan(0.2);
+  });
+});
+
+describe("reachFor", () => {
+  it("fits every shape with every accessory, stretched as tall as talking makes it", () => {
+    for (const shape of FIGURE_SHAPES)
+      for (const accessory of FIGURE_ACCESSORIES) {
+        const l = look({ shape, accessory });
+        // Talking stretches the figure up to 9% and lifts it 0.04; the camera looks at y = 0.2.
+        const top = Math.max(...partsFor(l).map((p) => p.position[1] + p.scale[1] + p.furLength)) * 1.09 + 0.04;
+        expect(0.2 + reachFor(l), `${shape}/${accessory}`).toBeGreaterThanOrEqual(top + 0.02);
+      }
+  });
+
+  it("is the usual frame for a figure that wears nothing tall", () => {
+    expect(reachFor(look({ shape: "round" }))).toBe(1.5);
+    expect(reachFor(undefined)).toBe(1.5);
+    expect(reachFor(look({ shape: "capsule", accessory: "beanie" }))).toBeGreaterThan(1.5);
   });
 });
 

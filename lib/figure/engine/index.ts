@@ -8,8 +8,8 @@
 //     to the flat figure (../flat.ts).
 //   · the canvas is transparent. Its background is the host's.
 import { createRenderer, rotation, type Frame, type Renderer } from "./gl";
-import { partsFor, shadowOf, type Part } from "./parts";
-import { TIERS, nextTier, type QualityTier } from "./quality";
+import { partsFor, reachFor, shadowOf, type Part } from "./parts";
+import { TIERS, isSlow, median, nextTier, type QualityTier } from "./quality";
 import { NEUTRAL_POSE, blinkAt, stepPose, targetPose, type FigureActivity, type Pose } from "./pose";
 
 export type { FigureActivity } from "./pose";
@@ -49,15 +49,29 @@ export interface Figure {
 
 /** The backing store never grows past this, whatever the screen says. */
 const MAX_PIXELS = 1024;
-/** Frames per quality decision, and the hiccups that are not the device's speed: a compile at birth, a pause. */
+/** Frames per quality decision; the first ones are not measured (shaders compile at birth). */
 const WINDOW = 30;
 const WARM_UP = 5;
-const PAUSE_MS = 250;
+/** A frame counts as this long at most: slower than four a second is just "too slow". */
+const LONGEST_MS = 250;
+
+/** Canvases whose figure was destroyed and whose context is about to be given back (see `destroy`). */
+const releasing = new WeakMap<HTMLCanvasElement, ReturnType<typeof setTimeout>>();
+/** Canvases this engine has given a size to: it must not mistake its own doing for "sized by its attributes". */
+const sized = new WeakSet<HTMLCanvasElement>();
+
+function release(gl: WebGL2RenderingContext): void {
+  try {
+    if (!gl.isContextLost()) gl.getExtension("WEBGL_lose_context")?.loseContext();
+  } catch {
+    // Nothing left to release.
+  }
+}
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
 /** A pose as the renderer wants it. `lag` is which way the fur trails. */
-function frameOf(pose: Pose, lag: readonly [number, number, number]): Omit<Frame, "layers" | "density" | "time" | "occluder"> {
+function frameOf(pose: Pose, lag: readonly [number, number, number]): Omit<Frame, "layers" | "density" | "time" | "occluder" | "reach"> {
   const wide = 1 / Math.sqrt(pose.stretch); // taller means thinner: the volume stays
   return {
     rotation: rotation(pose.yaw + pose.gaze[0] * 0.28, pose.pitch - pose.gaze[1] * 0.12, pose.roll),
@@ -75,10 +89,17 @@ const NEUTRAL = frameOf(NEUTRAL_POSE, [0, 0, 0]);
 const densityFor = (pixels: number): number => Math.min(95, Math.max(26, pixels * 0.42));
 
 /**
- * null where there is no WebGL2 — and on a canvas whose figure was destroyed: destroying gives the context back to
- * the browser, so that canvas is spent. One figure, one <canvas> element.
+ * null where there is no WebGL2. The canvas needs a size from CSS; one that only has its width/height attributes is
+ * pinned to the size it has now. A canvas can be reused right after `destroy()` (React's strict mode does exactly
+ * that); left alone, a destroyed figure's context goes back to the browser.
  */
 export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: FigureOptions = {}): Figure | null {
+  // Created again on a canvas just destroyed: keep its context instead of giving it back.
+  const pending = releasing.get(canvas);
+  if (pending !== undefined) {
+    clearTimeout(pending);
+    releasing.delete(canvas);
+  }
   let gl: WebGL2RenderingContext | null = null;
   let renderer: Renderer;
   try {
@@ -86,6 +107,8 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     if (!gl) return null;
     renderer = createRenderer(gl);
   } catch {
+    // A context that could not be set up (a driver that will not compile the shaders) is still a context held.
+    if (gl) release(gl);
     return null;
   }
   const context = gl;
@@ -102,10 +125,12 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   let pose: Pose = NEUTRAL_POSE;
   let last = since;
   let lag: [number, number, number] = [0, 0, 0];
+  let reach = reachFor(look);
   let tier: QualityTier = 2;
-  let windowsAtTier = 0;
-  let sampled = 0;
-  let sum = 0;
+  let slowInARow = 0;
+  /** The shortest frame this screen has shown: its own pace. */
+  let period = Number.POSITIVE_INFINITY;
+  const intervals: number[] = [];
   let warm = 0;
   let onScreen = true;
   let pageVisible = typeof document === "undefined" || !document.hidden;
@@ -118,6 +143,13 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   let width = 0;
   let height = 0;
 
+  // A canvas with only its width/height attributes takes its layout size FROM its backing store: resizing the
+  // store for the screen's density would make it grow, frame after frame. Pin what it measures now.
+  if (!sized.has(canvas) && !canvas.style.width && !canvas.style.height && canvas.clientWidth > 0 && canvas.clientWidth === canvas.width && canvas.clientHeight === canvas.height) {
+    canvas.style.width = `${canvas.clientWidth}px`;
+    canvas.style.height = `${canvas.clientHeight}px`;
+  }
+
   function measure(): boolean {
     const ratio = Math.min(typeof devicePixelRatio === "number" ? devicePixelRatio : 1, maxRatio, TIERS[tier]!.pixelRatio);
     const w = Math.min(MAX_PIXELS, Math.round(canvas.clientWidth * ratio));
@@ -128,6 +160,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
       if (w > 0 && h > 0) {
         canvas.width = w;
         canvas.height = h;
+        sized.add(canvas);
       }
       dirty = true;
     }
@@ -137,25 +170,26 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   function paint(): void {
     if (!measure()) return;
     const now = clock();
-    const elapsed = (now - last) * 1000;
+    const elapsed = Math.min((now - last) * 1000, LONGEST_MS);
     const dt = clamp(now - last, 0, 0.1);
     last = now;
-    if (!reduced && elapsed > 0 && elapsed < PAUSE_MS && ++warm > WARM_UP) {
-      sum += elapsed;
-      if (++sampled === WINDOW) {
-        const next = nextTier(tier, sum / WINDOW, ++windowsAtTier);
-        sampled = 0;
-        sum = 0;
+    if (!reduced && elapsed > 0 && ++warm > WARM_UP) {
+      period = Math.min(period, Math.max(4, elapsed));
+      intervals.push(elapsed);
+      if (intervals.length === WINDOW) {
+        slowInARow = isSlow(median(intervals), period) ? slowInARow + 1 : 0;
+        intervals.length = 0;
+        const next = nextTier(tier, slowInARow);
         if (next === "flat") throw new Error("too slow to be live");
         if (next !== tier) {
           tier = next;
-          windowsAtTier = 0;
+          slowInARow = 0;
           if (!measure()) return;
         }
       }
     }
     const target = targetPose(activity, now - since, gaze);
-    let frame: Omit<Frame, "layers" | "density" | "time" | "occluder">;
+    let frame: Omit<Frame, "layers" | "density" | "time" | "occluder" | "reach">;
     if (reduced) {
       // One still pose: the body does not move, but the eyes still say what it is doing (closed when asleep).
       pose = { ...NEUTRAL_POSE, eyeOpen: target.eyeOpen, gaze: target.gaze };
@@ -172,7 +206,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
       pose = next;
       frame = frameOf({ ...pose, eyeOpen: pose.eyeOpen * (1 - 0.95 * blinkAt(now, seed)) }, lag);
     }
-    renderer.render(parts, { ...frame, time: reduced ? 0 : now, occluder, layers: TIERS[tier]!.layers, density: densityFor(Math.min(width, height)) }, width, height);
+    renderer.render(parts, { ...frame, time: reduced ? 0 : now, occluder, reach, layers: TIERS[tier]!.layers, density: densityFor(Math.min(width, height)) }, width, height);
     dirty = false;
     if (!painted) {
       painted = true;
@@ -216,6 +250,8 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   function fail(): void {
     if (dead) return;
     stop();
+    // A figure that gave up must not keep its context: the devices that give up are the ones with the least to spare.
+    release(context);
     try {
       options.onLost?.();
     } catch {
@@ -275,6 +311,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
       guarded(() => {
         parts = partsFor(next);
         occluder = shadowOf(next);
+        reach = reachFor(next);
         invalidate();
       }, undefined),
     setActivity: (next) =>
@@ -325,7 +362,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         context.renderbufferStorage(context.RENDERBUFFER, context.DEPTH_COMPONENT16, side, side);
         context.framebufferRenderbuffer(context.FRAMEBUFFER, context.DEPTH_ATTACHMENT, context.RENDERBUFFER, depth);
         // Always at full quality: a capture is a picture to keep, whatever the device can animate.
-        renderer.render(parts, { ...NEUTRAL, time: 0, occluder, layers: TIERS[2]!.layers, density: densityFor(side) }, side, side);
+        renderer.render(parts, { ...NEUTRAL, time: 0, occluder, reach, layers: TIERS[2]!.layers, density: densityFor(side) }, side, side);
         const raw = new Uint8Array(side * side * 4);
         context.readPixels(0, 0, side, side, context.RGBA, context.UNSIGNED_BYTE, raw);
         context.bindFramebuffer(context.FRAMEBUFFER, null);
@@ -351,12 +388,15 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     destroy: () => {
       if (dead) return;
       stop();
-      // Give the browser its context back: it only lends a handful per page.
-      try {
-        context.getExtension("WEBGL_lose_context")?.loseContext();
-      } catch {
-        // Nothing left to release.
-      }
+      // Give the browser its context back (it only lends a handful per page) — a moment later, so a figure created
+      // again at once on this same canvas, as React's strict mode does with an effect, finds it alive.
+      releasing.set(
+        canvas,
+        setTimeout(() => {
+          releasing.delete(canvas);
+          release(context);
+        }, 0),
+      );
     },
   };
 }

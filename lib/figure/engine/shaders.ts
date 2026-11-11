@@ -1,5 +1,5 @@
-// THE FIGURE'S SHADERS (spec local 2026-11-10-figuras-del-asistente, §5.2). GLSL ES 3.00, ours, written for the
-// browser: one program draws every piece.
+// THE FIGURE'S SHADERS (spec local 2026-11-10-figuras-del-asistente, §5.2). GLSL ES 3.00, written here for the
+// browser (the one borrowed function, a hash, carries its author's name): one program draws every piece.
 //
 // A piece is the unit sphere pushed through `shape()` — a silhouette as a function of the angle, so a heart or a
 // flower is a set of numbers and not a mesh — and fur is that same surface drawn `uLayers` times, each layer a
@@ -34,10 +34,10 @@ vec3 shape(vec3 d) {
   r *= 1.0 - uSilA.w * exp(-up * up / 0.08);
   r *= 1.0 + uSilB.x * exp(-down * down / 0.12);
   vec3 p = vec3(d.xy * r, d.z);
-  p.x *= 1.0 - uSilB.y * smoothstep(0.1, -1.0, d.y);
+  p.x *= 1.0 - uSilB.y * (1.0 - smoothstep(-1.0, 0.1, d.y));
   p.x *= 1.0 - uSilB.z * smoothstep(-0.1, 1.0, d.y);
-  p.xz *= 1.0 + uWiden * smoothstep(0.2, -0.8, d.y);
-  p.y *= 1.0 - uSilB.w * smoothstep(0.0, -0.6, d.y);
+  p.xz *= 1.0 + uWiden * (1.0 - smoothstep(-0.8, 0.2, d.y));
+  p.y *= 1.0 - uSilB.w * (1.0 - smoothstep(-0.6, 0.0, d.y));
   return p * uScale;
 }
 
@@ -85,6 +85,7 @@ uniform float uBody; // the body and its ears take the shadows of what sits on t
 uniform vec3 uOcc, uOccS, uEyeL, uEyeR;
 out vec4 o;
 
+// "Hash without Sine" by Dave Hoskins (MIT License, https://www.shadertoy.com/view/4djSRW).
 vec2 hash22(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
   p3 += dot(p3, p3.yzx + 33.33);
@@ -116,9 +117,10 @@ void main() {
   if (fur > 0.5 && vH > 0.0) {
     float t = vH / mix(0.7, 1.0, r.x);
     float rad = 0.5 * (1.0 - t * t * 0.8) * mix(1.7, 1.0, smoothstep(0.0, 0.55, ndv));
-    alpha = t > 1.0 ? 0.0 : smoothstep(rad, rad - 0.3, length(fract(g) - 0.5 - (r - 0.5) * 0.25));
+    alpha = t > 1.0 ? 0.0 : 1.0 - smoothstep(rad - 0.3, rad, length(fract(g) - 0.5 - (r - 0.5) * 0.25));
     // Toward the outline the outer layers thin out: a feathered edge instead of a stack of discs.
-    alpha *= 1.0 - 0.92 * smoothstep(0.2, 1.0, vH) * (1.0 - smoothstep(0.0, 0.5, ndv));
+    // Seen edge-on a ray crosses many layers, so each has to be nearly clear for their sum to fade.
+    alpha *= mix(1.0, 0.35 * (1.0 - vH) * (1.0 - vH), 1.0 - smoothstep(0.0, 0.7, ndv));
     if (alpha < 0.02) discard;
   }
   vec3 base = max(uColor, vec3(0.06)) * (0.93 + 0.14 * r.y * fur);
@@ -135,5 +137,8 @@ void main() {
   vec3 col = mix(base * base * 0.5 + base * 0.22, base * 1.03 + 0.05, light);
   col += (base * 0.5 + 0.5) * 0.1 * pow(wrapped, 6.0) * vH * fur;
   col += (base * 0.6 + 0.4) * pow(1.0 - ndv, 2.5) * vH * 0.22 * fur;
+  // Premultiplied means no channel above the alpha: the light and the rim can push a bright color past 1, and on a
+  // thin strand that excess would be added to whatever is behind — a bright fringe on a dark host.
+  col = min(col, vec3(1.0));
   o = vec4(col * alpha, alpha);
 }`;

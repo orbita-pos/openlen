@@ -4,39 +4,39 @@
 //
 // Pure, a string in and a string out: it serves the server, the baked widget script and React alike. `look` may
 // arrive unchecked; what does not check is drawn as DEFAULT_LOOK, so nothing of it reaches the markup unvalidated.
-import { eyeInk, lookOrDefault, type FigureAccessory, type FigureEyes, type FigureEyewear, type FigureShape } from "./look";
+import { eyeInk, lookOrDefault, mix, type FigureAccessory, type FigureEyes, type FigureEyewear, type FigureShape } from "./look";
 
 interface Body {
-  /** The body's markup; `c` is the checked color. */
-  draw: (c: string) => string;
+  /** The body's markup; `c` is a checked color and `more` extra attributes for every piece of it. */
+  draw: (c: string, more: string) => string;
   /** Where the eyes sit, and where the head ends (an accessory rests there). */
   eyeY: number;
   top: number;
 }
 
 const BODIES: Record<FigureShape, Body> = {
-  drop: { draw: (c) => `<path d="M30 12c13 0 22 11 22 24 0 9-6 16-22 16S8 45 8 36c0-13 9-24 22-24z" fill="${c}"></path>`, eyeY: 33, top: 12 },
-  round: { draw: (c) => `<circle cx="30" cy="32" r="21" fill="${c}"></circle>`, eyeY: 31, top: 11 },
-  capsule: { draw: (c) => `<rect x="15" y="12" width="30" height="42" rx="15" fill="${c}"></rect>`, eyeY: 29, top: 12 },
-  cube: { draw: (c) => `<rect x="9" y="13" width="42" height="39" rx="13" fill="${c}"></rect>`, eyeY: 31, top: 13 },
+  drop: { draw: (c, more) => `<path d="M30 12c13 0 22 11 22 24 0 9-6 16-22 16S8 45 8 36c0-13 9-24 22-24z" fill="${c}"${more}></path>`, eyeY: 33, top: 12 },
+  round: { draw: (c, more) => `<circle cx="30" cy="32" r="21" fill="${c}"${more}></circle>`, eyeY: 31, top: 11 },
+  capsule: { draw: (c, more) => `<rect x="15" y="12" width="30" height="42" rx="15" fill="${c}"${more}></rect>`, eyeY: 29, top: 12 },
+  cube: { draw: (c, more) => `<rect x="9" y="13" width="42" height="39" rx="13" fill="${c}"${more}></rect>`, eyeY: 31, top: 13 },
   ears: {
-    draw: (c) => `<circle cx="15" cy="19" r="7.5" fill="${c}"></circle><circle cx="45" cy="19" r="7.5" fill="${c}"></circle><circle cx="30" cy="35" r="19" fill="${c}"></circle>`,
+    draw: (c, more) => `<circle cx="15" cy="19" r="7.5" fill="${c}"${more}></circle><circle cx="45" cy="19" r="7.5" fill="${c}"${more}></circle><circle cx="30" cy="35" r="19" fill="${c}"${more}></circle>`,
     eyeY: 34,
     top: 16,
   },
-  heart: { draw: (c) => `<path d="M30 54C12 42 7 32 7 25a12 12 0 0 1 23-5 12 12 0 0 1 23 5c0 7-5 17-23 29z" fill="${c}"></path>`, eyeY: 29, top: 15 },
+  heart: { draw: (c, more) => `<path d="M30 54C12 42 7 32 7 25a12 12 0 0 1 23-5 12 12 0 0 1 23 5c0 7-5 17-23 29z" fill="${c}"${more}></path>`, eyeY: 29, top: 15 },
   flower: {
-    draw: (c) =>
+    draw: (c, more) =>
       [0, 1, 2, 3, 4, 5]
         .map((i) => {
           const a = (i * Math.PI) / 3 - Math.PI / 2;
-          return `<circle cx="${(30 + 13 * Math.cos(a)).toFixed(1)}" cy="${(33 + 13 * Math.sin(a)).toFixed(1)}" r="9" fill="${c}"></circle>`;
+          return `<circle cx="${(30 + 13 * Math.cos(a)).toFixed(1)}" cy="${(33 + 13 * Math.sin(a)).toFixed(1)}" r="9" fill="${c}"${more}></circle>`;
         })
-        .join("") + `<circle cx="30" cy="33" r="14" fill="${c}"></circle>`,
+        .join("") + `<circle cx="30" cy="33" r="14" fill="${c}"${more}></circle>`,
     eyeY: 32,
     top: 12,
   },
-  triangle: { draw: (c) => `<path d="M30 11c3 0 5 2 7 5l15 26c3 6-1 11-7 11H15c-6 0-10-5-7-11l15-26c2-3 4-5 7-5z" fill="${c}"></path>`, eyeY: 38, top: 11 },
+  triangle: { draw: (c, more) => `<path d="M30 11c3 0 5 2 7 5l15 26c3 6-1 11-7 11H15c-6 0-10-5-7-11l15-26c2-3 4-5 7-5z" fill="${c}"${more}></path>`, eyeY: 38, top: 11 },
 };
 
 function eyes(kind: FigureEyes, y: number, ink: string): string {
@@ -95,9 +95,12 @@ export function flatFigureSvg(look: unknown, size: number): string {
   const px = typeof size === "number" && Number.isFinite(size) && size > 0 ? Math.round(size) : 32;
   const body = BODIES[l.shape] ?? BODIES.drop;
   const ink = eyeInk(l.color);
+  // A body with no edge disappears on a background of its own color: white on white, black on black.
+  const edge = mix(l.color, ink, 0.22);
   return (
     `<svg width="${px}" height="${px}" viewBox="0 0 60 60" aria-hidden="true">` +
-    group("body", body.draw(l.color)) +
+    // The outline first, around every piece at once, then the body over it: no line shows where two pieces meet.
+    group("body", body.draw(edge, ` stroke="${edge}" stroke-width="2.2" stroke-linejoin="round"`) + body.draw(l.color, "")) +
     group("eyes", eyes(l.eyes, body.eyeY, ink)) +
     group("eyewear", eyewear(l.eyewear, body.eyeY, ink)) +
     group("accessory", accessory(l.accessory, body.top, body.eyeY, l.accessoryColor)) +
