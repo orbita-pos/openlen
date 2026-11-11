@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { figuresEnabled } from "@/lib/figure/enabled";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { getSubdomainOwner } from "@/lib/projects";
@@ -137,6 +138,9 @@ export async function GET(
       // día alguien escribe un 1 o un "true" en el JSONB.
       asistente: answersVisitors(ella) || (Boolean(settings?.assistant?.enabled) && siteToText(project.data) !== ""),
       chat: chat?.enabled === true,
+      // The live figures' switch (lib/figure/enabled.ts): her bubble asks the engine only when this says so, which is
+      // how OPENLEN_FIGURES=0 reaches a page that is already published.
+      figuras: figuresEnabled(),
       // EL TRASPASO NO ES EL CHAT. El botón «Hablar con una persona» llama a
       // /api/chat/<sub>/handoff, que además de un chat encendido exige que sea
       // un espacio de invitado y de entrada libre (ahí se acuña un invitado).

@@ -1110,7 +1110,7 @@ export async function publishProject(
       assistant: assistantBakeOf({
         legacyEnabled: Boolean(project.data?.settings?.assistant?.enabled),
         businessName: project.title || v.value,
-        onPage: ella ? { name: ella.assistant.name, color: ella.assistant.color, shape: ella.assistant.shape } : null,
+        onPage: ella ? { name: ella.assistant.name, color: ella.assistant.color, look: ella.assistant.look } : null,
       }),
       chat: project.data?.settings?.chat?.enabled
         ? {

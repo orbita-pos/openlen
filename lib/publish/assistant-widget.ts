@@ -16,9 +16,10 @@
 // verbatim into the translated locale variants, so a build-time pick would
 // freeze the root language onto all of them.
 
-import { figureSvg } from "@/lib/assistants/figure-svg";
+import { FIGURE_ENGINE } from "@/lib/figure/engine/published";
+import { flatFigureSvg } from "@/lib/figure/flat";
+import type { FigureLook } from "@/lib/figure/look";
 import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
-import type { AssistantShape } from "@/lib/assistants/names";
 
 interface AssistantStrings {
   open: string;
@@ -72,13 +73,19 @@ export const PERSONA_STRINGS: Record<string, { greetingPersona: string; asleep: 
   nl: { greetingPersona: "Hoi! 👋 Ik ben {assistant} van {name}. Waarmee kan ik helpen?", asleep: "Ik ben er nu niet. Laat je bericht achter, dan nemen ze contact op." },
 };
 
-/** Her name, color and figure: what the published bubble wears instead of the business's initial. */
+/** Her name and her figure: what the published bubble wears instead of the business's initial. Her color is the
+ *  figure's. */
 export interface AssistantPersona {
   name: string;
-  /** A checked #RRGGBB. */
-  color: string;
-  shape: AssistantShape;
+  /** A checked look (lib/figure/look.ts). */
+  look: FigureLook;
 }
+
+/** Where the release keeps the figure engine: a file of the site itself, named by its content (spec local
+ *  2026-11-10-figuras-del-asistente, §5.7). `publishToDir` writes it whenever the bubble is hers. */
+export const FIGURE_ENGINE_PATH = `openlen/${FIGURE_ENGINE.file}`;
+/** The side of her figure in the open bubble's header, in CSS pixels. */
+const FIGURE_PX = 76;
 
 export interface AssistantWidgetConfig {
   sub: string;
@@ -139,6 +146,27 @@ const PERSONA_VISUALS =
   'else if(d.kind==="ol-visual:prompt"&&typeof d.text==="string"&&tapped(it)){it.clicked=0;ask(String(d.text).slice(0,500))}\n' +
   'return}});\n' +
   'window.addEventListener("blur",function(){setTimeout(function(){for(var i=0;i<FR.length;i++){if(R.activeElement===FR[i].f)FR[i].clicked=Date.now()}},0)});\n';
+/** HER FIGURE, ALIVE ONCE THE BUBBLE IS OPEN (phase 6, spec local 2026-11-10-figuras-del-asistente, §5.7). The page
+ *  loads with her flat figure, already in this script. The engine is asked for only when the visitor opens the bubble,
+ *  only once, and only if the status answer said the figures are on (FIG) — so OPENLEN_FIGURES=0 reaches a page that
+ *  is already published. If it does not arrive, cannot draw or loses its context, the flat figure stays or comes
+ *  back. A visitor who asked for reduced motion keeps the flat one: it is the still pose.
+ *  No backticks here: this lives inside a template string. */
+const PERSONA_FIGURE =
+  'var FIG,LIVE=null,ASKED=false;\n' +
+  'function act(a){try{if(LIVE)LIVE.setActivity(a)}catch(e){}}\n' +
+  'function settle(){setTimeout(function(){if(!busy)act(input.value.trim()?"listening":"ready")},1500)}\n' +
+  'function alive(on){try{if(LIVE)LIVE.setActive(on)}catch(e){}}\n' +
+  'function figure(){if(ASKED||FIG!==true)return;\n' +
+  'try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return}catch(e){}\n' +
+  'ASKED=true;var s=document.createElement("script");s.src=C.persona.engine;s.async=true;\n' +
+  's.onload=function(){try{var slot=R.querySelector(".hd .ava"),flat=slot.querySelector("svg"),cv=document.createElement("canvas");\n' +
+  'cv.width=' + FIGURE_PX + ';cv.height=' + FIGURE_PX + ';cv.setAttribute("aria-hidden","true");cv.style.visibility="hidden";slot.appendChild(cv);\n' +
+  'LIVE=window.__openlenFigure.createFigure(cv,C.persona.look,{onFirstFrame:function(){cv.style.visibility="visible";if(flat)flat.style.visibility="hidden"},\n' +
+  'onLost:function(){LIVE=null;try{cv.remove()}catch(e){}if(flat)flat.style.visibility="visible"}});\n' +
+  'if(!LIVE){cv.remove();return}alive(panel.classList.contains("open"))}catch(e){}};\n' +
+  '(document.head||document.documentElement).appendChild(s)}\n' +
+  'input.addEventListener("input",function(){if(!busy)act(input.value.trim()?"listening":"ready")});\n';
 const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
 
 function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | null = null): string {
@@ -151,13 +179,13 @@ function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | nu
     api: cfg.apiBase,
     name: cfg.businessName,
     // Her bubble wears her color (§6.10).
-    accent: persona ? persona.color : /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
+    accent: persona ? persona.look.color : /^#[0-9a-fA-F]{3,8}$/.test(cfg.accent ?? "") ? cfg.accent : DEFAULT_ACCENT,
     greeting: cfg.greeting || null,
     branding: cfg.branding ?? true,
     handoff: cfg.chatHandoff ?? false,
     S: STRINGS,
     ...(persona
-      ? { persona: { name: persona.name, svg: figureSvg(persona.shape, persona.color, 30) }, P: PERSONA_STRINGS, F: buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true }) }
+      ? { persona: { name: persona.name, svg: flatFigureSvg(persona.look, FIGURE_PX), look: persona.look, engine: "/" + FIGURE_ENGINE_PATH }, P: PERSONA_STRINGS, F: buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, closed: true }) }
       : {}),
   }).replace(/</g, "\\u003c");
 
@@ -227,7 +255,7 @@ R.innerHTML=
 +'.bub{max-width:80%;padding:8px 11px;border-radius:10px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}'
 +'.row.b .bub{background:#fff;color:#1a1a1a;border-top-left-radius:2px}'
 +'.row.u .bub{background:#ffe9e2;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#221b17;border-top-right-radius:2px}'
-+'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'" : ""}
++'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'\n+'.hd{background:#f6f1ee;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#1a1a1a;padding:10px 12px 10px 14px;gap:12px}.hd .ava{position:relative;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px;border-radius:0;background:transparent}.hd .ava svg,.hd .ava canvas{position:absolute;left:0;top:0;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px}.hd span{font-size:16px}.hd button{color:#1a1a1a}'" : ""}
 +'.ft{padding:8px 10px;background:#f4ede8}'
 +'.ip{display:flex;gap:8px;align-items:center}'
 +'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'
@@ -318,13 +346,13 @@ else{bubble("bot",T.handoffOk)}})
 log.appendChild(wrap);scroll();wrap.querySelector('input[name=nombre]').focus()}
 
 function ask(text){if(busy)return;busy=true;send.disabled=true;
-history.push({role:"user",content:text});bubble("user",text);
+history.push({role:"user",content:text});bubble("user",text);${persona ? 'act("thinking");' : ""}
 var d=dots();
 fetch(C.api+"/api/assistant/"+C.sub,{method:"POST",headers:{"content-type":"application/json",accept:"application/json"},
 body:JSON.stringify(${persona ? "{message:text,vid:vid()}" : "{message:text,history:history.slice(0,-1)}"})})
 .then(function(r){return r.ok?r.json():Promise.reject(r.status)})
-.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||${persona ? '(j&&j.visuals&&j.visuals.length?"":T.noAnswer)' : "T.noAnswer"};
-history.push({role:"assistant",content:a});${persona ? "answer(a,j&&j.visuals);" : 'bubble("bot",a);'}
+.then(function(j){d.remove();${persona ? 'if(j&&j.asleep){act("asleep");bubble("bot",P.asleep);if(!log.querySelector("form.lead"))leadShown=false;leadForm();return}' : ""}var a=(j&&j.respuesta)||${persona ? '(j&&j.visuals&&j.visuals.length?"":T.noAnswer)' : "T.noAnswer"};
+history.push({role:"assistant",content:a});${persona ? 'act("talking");settle();answer(a,j&&j.visuals);' : 'bubble("bot",a);'}
 if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // Un 403 es <disabled>: lo apagaron, quiza a mitad de esta misma visita. En vez
 // de un error que el visitante no puede resolver, se vuelve a preguntar el
@@ -334,12 +362,12 @@ if(j&&(j.intent==="lead"||j.intent==="handoff"))escalate();})
 // error que el visitante no puede resolver. El estado se pregunta SIN cache y
 // solo para lo que el 403 no dice: si el chat sigue vivo, para devolverle su
 // lanzador. Si no se puede saber, se retira igual y sin lanzador.
-.catch(function(s){d.remove();if(s===403){pedirEstado(true).then(function(j){retirar(!!(j&&j.chat===true))});return}bubble("bot",T.error)})
+.catch(function(s){d.remove();if(s===403){pedirEstado(true).then(function(j){retirar(!!(j&&j.chat===true))});return}${persona ? 'act("error");settle();' : ""}bubble("bot",T.error)})
 .then(function(){busy=false;send.disabled=false;input.focus()})}
 
 function open(){panel.classList.add("open");btn.setAttribute("aria-expanded","true");
-if(!opened){opened=true;bubble("bot",GREET)}input.focus()}
-function close(){panel.classList.remove("open");btn.setAttribute("aria-expanded","false");btn.focus()}
+if(!opened){opened=true;bubble("bot",GREET)}${persona ? "figure();alive(true);" : ""}input.focus()}
+function close(){panel.classList.remove("open");btn.setAttribute("aria-expanded","false");${persona ? "alive(false);" : ""}btn.focus()}
 btn.addEventListener("click",function(){panel.classList.contains("open")?close():open()});
 xb.addEventListener("click",close);
 form.addEventListener("submit",function(e){e.preventDefault();var v=input.value.trim();if(!v)return;input.value="";ask(v)});
@@ -376,13 +404,13 @@ return fetch(C.api+"/api/assistant/"+C.sub,o)
 function comprobarEstado(){
 pedirEstado(false).then(function(j){
 if(!j)return;
-if(j.asistente===false){retirar(j.chat===true);return}
+if(j.asistente===false){retirar(j.chat===true);return}${persona ? 'FIG=j.figuras===true;if(panel.classList.contains("open"))figure();' : ""}
 // El asistente sigue, pero el traspaso no: lo unico muerto es su boton. Se
 // mira «traspaso» y no «chat» porque el handoff pide ademas un chat de
 // invitado y de entrada libre; con «chat» a secas, un chat en modo cuenta
 // dejaba el boton puesto dando 403 <not_allowed>.
 if(C.handoff&&j.traspaso===false&&talk){try{talk.remove()}catch(e){}}})}
-${persona ? PERSONA_VISUALS : ""}comprobarEstado();
+${persona ? PERSONA_VISUALS + PERSONA_FIGURE : ""}comprobarEstado();
 }catch(e){}})();</script>`;
 }
 

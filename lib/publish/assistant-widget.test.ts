@@ -308,7 +308,7 @@ describe("un 403 al preguntar retira la burbuja", () => {
 // The person's own assistant in the published page's bubble: «{name} AI», her figure and color, no disclaimer line, a
 // visitor id kept in the browser, and «I'm not here now» when she sleeps. Run for real in the page, like the tests above.
 describe("her bubble", () => {
-  const PERSONA = { name: "Lucía", color: "#5FB8A6", shape: "drop" as const };
+  const PERSONA = { name: "Lucía", look: { v: 1, shape: "heart", color: "#5fb8a6", eyes: "round", eyewear: "none", accessory: "crown" } as const };
   // jsdom has no named controls on a form (`form.nombre`, measured 07/11); every browser does, and the contact form
   // reads them. The page gets them back, for this test only.
   const NAMED_CONTROLS =
@@ -343,7 +343,7 @@ describe("her bubble", () => {
     expect(root.querySelector(".hd span")!.textContent).toBe("Lucía AI");
     expect(root.querySelector(".hd .ava svg")).not.toBeNull();
     expect(root.querySelector(".dis")).toBeNull();
-    expect(root.innerHTML).toContain("#5FB8A6");
+    expect(root.innerHTML).toContain("#5fb8a6");
     (root.querySelector(".btn") as HTMLButtonElement).click();
     expect(root.querySelector(".log")!.textContent).toContain("Lucía");
     expect(root.querySelector(".log")!.textContent).toContain(CFG.businessName);
