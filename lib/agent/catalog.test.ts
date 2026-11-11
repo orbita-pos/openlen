@@ -758,17 +758,18 @@ describe("buildAgentSystemPrompt", () => {
   // backend de Supabase), sin nada que activar. Estas aserciones no son ceremonia — un prompt que sigue ofreciendo
   // lo retirado hace que el modelo lo intente, falle, y el usuario pague el
   // turno. Ya pasó con Pedidos y con Reservas.
-  it("🔴 `toggle_module` acepta el asistente, no sólo el chat", () => {
-    // Hasta el 2026-09-16 el asistente sólo se encendía desde un panel al que no
-    // se llegaba. Que Len pueda encenderlo es la vía que encaja con la decisión
-    // del 29/08: el dueño lo pide hablando, no yendo a un hub.
-    expect([...AGENT_MODULES].sort()).toEqual(["assistant", "chat"]);
+  // 11/11/2026, real turns: asked for «an assistant that answers my customers», Len turned on the old page assistant
+  // (toggle_module "assistant") AND offered create_assistant — two doors to one wish, and the old one won the page.
+  // As Claude Code does with a tool another replaces: the replaced one is not offered. Her own assistant
+  // (create_assistant) is the only door; pages that already have the old one keep it (the Inbox's switch).
+  it("🔴 Len has one door to an assistant: the old page assistant is not a module he can switch", () => {
+    expect([...AGENT_MODULES]).toEqual(["chat"]);
   });
 
   it("`collections` ya no es un módulo del Agente", () => {
     // `toggle_module` SE QUEDA: es como se enciende el Chat. Lo que muere es
     // que `collections` sea uno de sus valores posibles.
-    expect([...AGENT_MODULES]).toEqual(["chat", "assistant"]);
+    expect([...AGENT_MODULES]).toEqual(["chat"]);
   });
 
   // ⚰️ Aquí vivía «datos vivos conserva valores y pierde lista» (2026-08-29).

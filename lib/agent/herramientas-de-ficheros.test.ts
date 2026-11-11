@@ -1738,27 +1738,43 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       const session = makeSession();
       try {
         const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c . /ajustes/proyecto.json" }));
-        assert.match(texto(out), /^\{"titulo":"Brote","idiomas":\["en"\],"modulos":\{"chat":false,"assistant":false\}\}(?:\n|$)/);
+        assert.match(texto(out), /^\{"titulo":"Brote","idiomas":\["en"\],"modulos":\{"chat":false\}\}(?:\n|$)/);
       } finally {
         await cerrarTerminalDeLaSesion(session);
       }
     });
 
-    it("el título va por renameProject y el asistente por toggle_module, con su aviso", async () => {
+    it("el título va por renameProject", async () => {
       const { deps, store } = conAjustes();
       const session = makeSession();
       try {
         const out = await conTerminal(() =>
           runAgentTool(session, deps, "bash", {
-            command: escribir('{"titulo":"Brote Verde","idiomas":["en"],"modulos":{"chat":false,"assistant":true}}'),
+            command: escribir('{"titulo":"Brote Verde","idiomas":["en"],"modulos":{"chat":false}}'),
           }),
         );
         assert.equal(out.response.ok, true, texto(out));
         assert.equal(store.title, "Brote Verde");
-        assert.equal(store.data.settings?.assistant?.enabled, true);
-        assert.match(texto(out), /ajustes\/proyecto\.json: saved\.\n {2}title: "Brote Verde"\.\n {2}assistant: on\. Saved\. The page isn't published yet/);
-        const despues = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "jq -c .modulos /ajustes/proyecto.json" }));
-        assert.match(texto(despues), /^\{"chat":false,"assistant":true\}(?:\n|$)/);
+        assert.match(texto(out), /ajustes\/proyecto\.json: saved\.\n {2}title: "Brote Verde"\./);
+      } finally {
+        await cerrarTerminalDeLaSesion(session);
+      }
+    });
+
+    // 11/11/2026, real turns: Len turned the old page assistant on through this file too. create_assistant is the
+    // only door now; the file has no «assistant», and writing one is refused by its shape.
+    it("🔴 the old page assistant is not in the file: writing it is refused and nothing is switched", async () => {
+      const { deps, store } = conAjustes();
+      const session = makeSession();
+      try {
+        const out = await conTerminal(() =>
+          runAgentTool(session, deps, "bash", {
+            command: escribir('{"titulo":"Brote","idiomas":["en"],"modulos":{"chat":false,"assistant":true}}'),
+          }),
+        );
+        assert.equal(out.response.ok, false, texto(out));
+        assert.match(texto(out), /does not match its schema/);
+        assert.notEqual(store.data.settings?.assistant?.enabled, true);
       } finally {
         await cerrarTerminalDeLaSesion(session);
       }
@@ -1769,9 +1785,9 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
       const session = makeSession();
       try {
         for (const [json, motivo] of [
-          ['{"titulo":"X","idiomas":["en"],"modulos":{"chat":false,"assistant":false},"publicar":true}', /does not match its schema/],
-          ['{"titulo":"","idiomas":["en"],"modulos":{"chat":false,"assistant":false}}', /titulo/],
-          ['{"titulo":"Brote","idiomas":["en","fr"],"modulos":{"chat":false,"assistant":false}}', /languages are chosen when publishing/],
+          ['{"titulo":"X","idiomas":["en"],"modulos":{"chat":false},"publicar":true}', /does not match its schema/],
+          ['{"titulo":"","idiomas":["en"],"modulos":{"chat":false}}', /titulo/],
+          ['{"titulo":"Brote","idiomas":["en","fr"],"modulos":{"chat":false}}', /languages are chosen when publishing/],
           ["no es json", /not valid JSON/],
         ] as const) {
           const out = await conTerminal(() => runAgentTool(session, deps, "bash", { command: escribir(json) }));

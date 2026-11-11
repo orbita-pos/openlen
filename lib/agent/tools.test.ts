@@ -487,10 +487,19 @@ describe("toggle_module", () => {
   // la IA cuando publiques». La franja tenía razón: las burbujas se hornean al
   // publicar y guardar un ajuste no republica. La herramienta devolvía
   // `{ok, modulo, encendido}` y nada más, así que Len no tenía de dónde saberlo.
+  // 11/11/2026, real turns: the old page assistant is no longer Len's to switch; create_assistant is the only door.
+  it("🔴 the old page assistant is refused, and nothing is written", async () => {
+    const { deps, store } = makeDeps({ subdomain: "tacos", publishedAt: new Date() });
+    const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "unknown module");
+    assert.notEqual(store.data.settings?.assistant?.enabled, true);
+  });
+
   describe("dice si los visitantes ya lo ven", () => {
     it("🔴 publicada con cambios sin publicar: no lo verán hasta volver a publicar", async () => {
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: true });
-      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
       assert.equal(out.response.ok, true);
       assert.equal(out.response.already_live_for_visitors, false);
       assert.match(String(out.response.note), /publish(es)? again/);
@@ -525,7 +534,7 @@ describe("toggle_module", () => {
       // fecha es la release, así que lo dice como condición, no como hecho.
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
       const out = await runAgentTool(makeSession(), deps, "toggle_module", {
-        module: "assistant",
+        module: "chat",
         on: false,
       });
       // A la frase que lo DISTINGUE, no a «vuelva a publicar» a secas: eso
@@ -536,7 +545,7 @@ describe("toggle_module", () => {
 
     it("🔴 nunca publicada: aparecerá cuando la publique", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
-      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
       assert.equal(out.response.already_live_for_visitors, false);
       assert.match(String(out.response.note), /when they publish it/);
     });
@@ -544,7 +553,7 @@ describe("toggle_module", () => {
     it("nunca publicada y APAGANDO: nadie lo ve ni lo veía, no hay nada que avisar", async () => {
       const { deps } = makeDeps({ subdomain: null, publishedAt: null });
       const out = await runAgentTool(makeSession(), deps, "toggle_module", {
-        module: "assistant",
+        module: "chat",
         on: false,
       });
       assert.equal(out.response.already_live_for_visitors, false);
@@ -555,7 +564,7 @@ describe("toggle_module", () => {
       // Pasa, por ejemplo, al volver a encender lo que ya estaba encendido en
       // lo publicado. Sin este caso, «avisar siempre» pasaría las de arriba.
       const { deps } = makeDeps({ subdomain: "tacos", publishedAt: new Date(), cambiosSinPublicar: false });
-      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
       assert.equal(out.response.already_live_for_visitors, true);
       assert.equal(out.response.note, undefined);
     });
@@ -564,7 +573,7 @@ describe("toggle_module", () => {
       // Leída antes, una página publicada y al día diría «ya lo ven» justo
       // sobre el guardado que acaba de ponerla en deriva.
       const { deps, store } = makeDeps({ subdomain: "tacos", publishedAt: new Date() });
-      await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+      await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
       assert.deepEqual(store.derivaLeidaConGuardados, [1]);
     });
   });
@@ -2420,7 +2429,7 @@ describe("mutoDurable: lo que ya escribió en la base", () => {
     // Era `cambiar_motion`, retirada el 2026-08-26, y después
     // `preparar_marketing`, retirada en Len 2.1. `toggle_module` sirve igual:
     // escribe ajustes y no emite documento, que es lo que se mide.
-    const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "assistant" });
+    const out = await runAgentTool(makeSession(), deps, "toggle_module", { module: "chat" });
 
     assert.equal(out.response.ok, true, JSON.stringify(out.response));
     assert.equal(out.updatedHtml, undefined, "no debería emitir documento");
