@@ -50,9 +50,13 @@ export function HerPage({
   const source = remote ? { src: remote } : canvas.estado.modo === "esperando" ? { src: "about:blank" } : { srcDoc: html };
   const quiet = "her-ring flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] fg-muted transition-colors hover:bg-hover hover:fg";
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col border-l bd bg-elev" data-her-page="" aria-label={t("ownAssistant.page.title")}>
-      {/* The bar leaves its right end to her place's two floating buttons. */}
-      <div className="flex h-[52px] shrink-0 items-center gap-1.5 border-b bd pl-3 pr-[88px]">
+    // A card under its tab in her place's top bar (assistant-home.tsx): the tab sits on its top-left corner.
+    <section
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[12px] rounded-tl-none border bd bg-elev shadow-[0_12px_32px_-20px_rgba(0,0,0,0.55)]"
+      data-her-page=""
+      aria-label={t("ownAssistant.page.title")}
+    >
+      <div className="flex h-10 shrink-0 items-center gap-1.5 border-b bd px-2.5">
         <button type="button" data-her-page-reload="" onClick={() => setReload((n) => n + 1)} aria-label={t("ownAssistant.page.reload")} title={t("ownAssistant.page.reload")} className={quiet}>
           <RotateCw size={14} strokeWidth={1.8} aria-hidden="true" />
         </button>
