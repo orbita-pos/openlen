@@ -42,7 +42,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
   const { id } = await params;
-  const body = (await req.json().catch(() => null)) as { onPage?: unknown; name?: unknown; morningSummary?: unknown; locale?: unknown; look?: unknown } | null;
+  const sent: unknown = await req.json().catch(() => null);
+  // Anything that is not an object carries nothing to change.
+  const body = (typeof sent === "object" && sent !== null ? sent : null) as { onPage?: unknown; name?: unknown; morningSummary?: unknown; locale?: unknown; look?: unknown } | null;
   const onPage = typeof body?.onPage === "boolean" ? body.onPage : undefined;
   const name = typeof body?.name === "string" ? body.name : undefined;
   const morningSummary = typeof body?.morningSummary === "boolean" ? body.morningSummary : undefined;

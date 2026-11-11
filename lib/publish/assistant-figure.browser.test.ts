@@ -66,7 +66,7 @@ const header = () => {
 const press = (page: Page) => page.evaluate(() => (document.querySelector("body > div[aria-live]")!.shadowRoot!.querySelector(".btn") as HTMLButtonElement).click());
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function open(o: { figuras?: boolean | undefined; engineThere?: boolean; reducedMotion?: boolean }, run: (page: Page, errors: string[]) => Promise<void>): Promise<void> {
+async function open(o: { figuras?: boolean | undefined; engineThere?: boolean; reducedMotion?: boolean; noWebGL2?: boolean }, run: (page: Page, errors: string[]) => Promise<void>): Promise<void> {
   figuras = "figuras" in o ? o.figuras : true;
   engineThere = o.engineThere ?? true;
   engineAsked = 0;
@@ -75,6 +75,7 @@ async function open(o: { figuras?: boolean | undefined; engineThere?: boolean; r
     const page = await browser.newPage();
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(String(e)));
+    if (o.noWebGL2) await page.evaluateOnNewDocument("delete window.WebGL2RenderingContext");
     if (o.reducedMotion) await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
     await page.goto(`${origin}/`, { waitUntil: "networkidle0", timeout: 20_000 });
     await run(page, errors);
@@ -139,4 +140,48 @@ describe("her figure in the published bubble", () => {
       expect((await page.evaluate(header)).flatShown).toBe(true);
     });
   }, 60_000);
+
+  it("🔴 a browser without WebGL2 is asked for no engine: it could not draw it, and may not even parse it", async () => {
+    await open({ noWebGL2: true }, async (page, errors) => {
+      await press(page);
+      await wait(600);
+      expect(engineAsked).toBe(0);
+      expect((await page.evaluate(header)).flatShown).toBe(true);
+      expect(errors).toEqual([]);
+    });
+  }, 60_000);
+
+  it("🔴 asked while she sleeps, before the engine arrived, she is born asleep", async () => {
+    await open({}, async (page) => {
+      await page.evaluate(() => {
+        const made: unknown[] = [];
+        (window as never as { __born: unknown[] }).__born = made;
+        Object.defineProperty(window, "__openlenFigure", {
+          configurable: true,
+          set(v: { createFigure: (...a: unknown[]) => unknown }) {
+            Object.defineProperty(window, "__openlenFigure", { configurable: true, writable: true, value: { createFigure: (c: unknown, l: unknown, o: { activity?: string }) => (made.push(o?.activity), v.createFigure(c, l, o)) } });
+          },
+        });
+      });
+      // The status answer says the figures are on, but the engine is held back until she has answered «asleep».
+      await page.setRequestInterception(true);
+      let release: () => void = () => {};
+      const held = new Promise<void>((r) => (release = r));
+      page.on("request", (req) => {
+        if (req.url().includes("/openlen/figure-")) void held.then(() => req.continue());
+        else if (req.method() === "POST" && req.url().includes("/api/assistant/")) void req.respond({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ asleep: true }) });
+        else void req.continue();
+      });
+      await page.evaluate(() => {
+        const root = document.querySelector("body > div[aria-live]")!.shadowRoot!;
+        (root.querySelector(".btn") as HTMLButtonElement).click();
+        (root.querySelector(".ip input") as HTMLInputElement).value = "¿hay pan?";
+        (root.querySelector(".ip") as HTMLFormElement).requestSubmit();
+      });
+      await wait(500);
+      release();
+      await page.waitForFunction(() => (window as never as { __born: unknown[] }).__born.length > 0, { timeout: 20_000 });
+      expect(await page.evaluate(() => (window as never as { __born: unknown[] }).__born)).toEqual(["asleep"]);
+    });
+  }, 90_000);
 });

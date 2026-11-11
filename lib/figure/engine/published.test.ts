@@ -16,7 +16,9 @@ describe("the engine's published file", () => {
   it("is named by its content and weighs at most 60 KB gzipped", () => {
     expect(FIGURE_ENGINE.file).toBe(`figure-${createHash("sha256").update(FIGURE_ENGINE.code).digest("hex").slice(0, 8)}.js`);
     expect(gzipSync(Buffer.from(FIGURE_ENGINE.code)).length).toBeLessThanOrEqual(61_440);
-    expect(FIGURE_ENGINE.code).toContain("window.__openlenFigure=OpenLenFigure");
+    // One global on a customer's page, and only that one.
+    expect(FIGURE_ENGINE.code).toMatch(/^"use strict";var __openlenFigure=/);
+    expect(FIGURE_ENGINE.code).not.toContain("OpenLenFigure");
   });
 
   it("🔴 is what the engine builds to today: after changing the engine, run `npm run figure:engine`", async () => {

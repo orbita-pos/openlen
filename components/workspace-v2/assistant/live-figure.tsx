@@ -82,6 +82,8 @@ export function LiveFigure({
       .catch(() => {});
     return () => {
       gone = true;
+      // The next figure on this canvas starts from the flat one: its context may not survive the hand-over.
+      setAlive(false);
       removeEventListener("pointermove", follow);
       reduced?.removeEventListener?.("change", motion);
       figure.current?.destroy();
@@ -94,7 +96,7 @@ export function LiveFigure({
   useEffect(() => figure.current?.setActive(active), [active]);
 
   return (
-    <span data-figure={alive ? "live" : "flat"} style={{ position: "relative", display: "inline-flex", width: size, height: size, flex: "none" }}>
+    <span data-figure={alive ? "live" : "flat"} data-figure-active={String(active)} style={{ position: "relative", display: "inline-flex", width: size, height: size, flex: "none" }}>
       <span style={{ visibility: alive ? "hidden" : "visible", display: "inline-flex" }}>
         <AssistantFigure look={look} size={size} label={label} />
       </span>

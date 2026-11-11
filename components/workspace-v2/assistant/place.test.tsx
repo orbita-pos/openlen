@@ -463,7 +463,7 @@ describe("her place's controls, what they say", () => {
     expect(document.querySelector("[data-assistant-done]")).toBeNull();
     expect(host.querySelector("[data-figure-publish]")).not.toBeNull();
     // The heart's own outline is in her place now.
-    expect(host.querySelector('[data-assistant-empty] [data-part="body"] path')).not.toBeNull();
+    expect(host.querySelector('[data-assistant-empty] [data-part="body"] path[d^="M30 54"]')).not.toBeNull();
   });
 
   it("🔴 after a reload, on but not yet published with her still says it shows after publishing", async () => {

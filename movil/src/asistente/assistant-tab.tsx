@@ -50,6 +50,7 @@ export function AssistantTab({
   onCerrar,
   onHablar,
   onVerLen,
+  cubierta = false,
 }: {
   cliente: ClienteDeOpenLen;
   asistente: AssistantListItem;
@@ -58,6 +59,8 @@ export function AssistantTab({
   /** A request notice's card, highlighted and brought into view. */
   tarjeta?: string | null;
   idioma: string;
+  /** Her chat is open over this tab: her figure here waits (nothing draws where nobody looks). */
+  cubierta?: boolean;
   onCerrar: () => void;
   /** Opens her chat (the main screen's). */
   onHablar: () => void;
@@ -114,7 +117,7 @@ export function AssistantTab({
   return (
     <section className="app-gestion app-resumen lm-m lm-marca app-asistente" role="dialog" aria-modal="true" aria-labelledby="asistente-titulo">
       <header className="asist-cabecera" style={tinte ? ({ "--asist-suave": tinte.soft, "--asist-suave-oscuro": tinte.softDark } as React.CSSProperties) : undefined}>
-        <LiveFigure look={look} size={84} ask={preguntar} />
+        <LiveFigure look={look} size={84} ask={preguntar} active={!cubierta} />
         <div className="asist-quien">
           <p className="gestion-ceja">{t("own.place.yours")}</p>
           <h1 id="asistente-titulo">{name}</h1>
