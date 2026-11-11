@@ -276,17 +276,24 @@ describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => 
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
     const res = await pide();
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ asistente: true, chat: false, traspaso: false });
+    expect(await res.json()).toEqual({ asistente: true, chat: false, figuras: true, traspaso: false });
+  });
+
+  it("🔴 OPENLEN_FIGURES=0 reaches a published page through this answer: figuras:false", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    vi.stubEnv("OPENLEN_FIGURES", "0");
+    expect(await (await pide()).json()).toMatchObject({ asistente: true, figuras: false });
+    vi.unstubAllEnvs();
   });
 
   it("🔴 apagado: {asistente:false} — que es lo que retira la burbuja", async () => {
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: false } }));
-    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, figuras: true, traspaso: false });
   });
 
   it("🔴 los dos encendidos: {asistente:true, chat:true}", async () => {
     mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true }, chat: { enabled: true } }));
-    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, traspaso: true });
+    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, figuras: true, traspaso: true });
   });
 
   it("🔴 una página SIN texto cuenta como apagado, igual que en el POST", async () => {
@@ -296,7 +303,7 @@ describe("GET /api/assistant/[sub] — el estado de las dos superficies", () => 
     mocks.limit.mockResolvedValue([
       { title: "Vacía", data: { html: "<html><body></body></html>", settings: { assistant: { enabled: true } } } },
     ]);
-    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, figuras: true, traspaso: false });
   });
 
   it("un subdominio que no existe es 404, y el widget ante eso NO se toca", async () => {
@@ -334,7 +341,7 @@ describe("GET /api/assistant/[sub] — lo que no es un proyecto normal", () => {
 
   it("un proyecto sin ajustes: todo apagado, y sin reventar", async () => {
     mocks.limit.mockResolvedValue([{ title: "T", data: { html: "<p>hola</p>" } }]);
-    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, traspaso: false });
+    expect(await (await pide()).json()).toEqual({ asistente: false, chat: false, figuras: true, traspaso: false });
   });
 
   it("🔴 `enabled` con un valor raro cuenta como ENCENDIDO, igual que en el POST", async () => {
@@ -352,7 +359,7 @@ describe("GET /api/assistant/[sub] — lo que no es un proyecto normal", () => {
     mocks.limit.mockResolvedValue(
       fila({ assistant: { enabled: true }, chat: { enabled: true, identityMode: "account" } }),
     );
-    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, traspaso: false });
+    expect(await (await pide()).json()).toEqual({ asistente: true, chat: true, figuras: true, traspaso: false });
   });
 
   it("🔴 y un chat sólo por invitación, tampoco", async () => {

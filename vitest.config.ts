@@ -719,6 +719,7 @@ export default defineConfig({
       "lib/publish/serve-release.browser.test.ts",
       // Her visuals in the published bubble, in real Chromium (phase 2B: jsdom gives no window to a shadow root's iframe).
       "lib/publish/assistant-widget.browser.test.ts",
+      "lib/publish/assistant-figure.browser.test.ts",
       // La carpeta (pieza 9 de Len 2.5): el service worker que se da de baja.
       "lib/publish/service-worker.test.ts",
       // La guarda de las veinte frases que ve el visitante al enviar un

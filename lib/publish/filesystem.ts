@@ -18,7 +18,8 @@ import { gateReservedMarker, sealRelease, stripOpIds } from "@/lib/html-engine";
 import { optimizeHtmlForProduction, type FuenteDeClases } from "@/lib/publish/optimize-html";
 import { bakeResponsiveImages } from "@/lib/publish/image-bake";
 import { bakeGoogleFonts } from "@/lib/publish/font-bake";
-import { bakeAssistantPersona, bakeAssistantWidget, type AssistantPersona } from "@/lib/publish/assistant-widget";
+import { FIGURE_ENGINE } from "@/lib/figure/engine/published";
+import { FIGURE_ENGINE_PATH, bakeAssistantPersona, bakeAssistantWidget, type AssistantPersona } from "@/lib/publish/assistant-widget";
 import { widgetApiBase } from "@/lib/publish/base-host";
 import { bakeChatWidget } from "@/lib/publish/chat-widget";
 import { bakeMediaPreconnect } from "@/lib/publish/video-embed";
@@ -1116,6 +1117,9 @@ export async function publishToDir(
       path: `${p.slug}/index.html`,
       content: optOutOfEmailObfuscation(p.html),
     })),
+    // Her bubble asks for the figure engine when a visitor opens it (lib/publish/assistant-widget.ts): a file of the
+    // site itself, named by its content. Only where the bubble is hers.
+    ...(process.env.OPENLEN_ASSISTANT !== "0" && params.assistant?.enabled === true && params.assistant.persona ? [{ path: FIGURE_ENGINE_PATH, content: FIGURE_ENGINE.code }] : []),
     { path: "sitemap.xml", content: sitemap },
     { path: "robots.txt", content: buildRobots(baseUrl) },
     {

@@ -34,7 +34,7 @@ beforeAll(async () => {
     }
     res.setHeader("content-type", "text/html; charset=utf-8");
     if (req.url === "/elsewhere") return void res.end("<!doctype html><p>somewhere else</p>");
-    res.end(bakeAssistantPersona(PAGE, { sub: "canela", apiBase: origin, businessName: "Pastelería Canela", persona: { name: "Lucía", color: "#5FB8A6", shape: "drop" } }));
+    res.end(bakeAssistantPersona(PAGE, { sub: "canela", apiBase: origin, businessName: "Pastelería Canela", persona: { name: "Lucía", look: { v: 1, shape: "heart", color: "#5fb8a6", eyes: "round", eyewear: "none", accessory: "crown" } } }));
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
   const hostPort = `127.0.0.1:${(server.address() as AddressInfo).port}`;
