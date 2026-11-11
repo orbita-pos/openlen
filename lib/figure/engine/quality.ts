@@ -1,6 +1,9 @@
 // HOW MUCH FIGURE A DEVICE GETS (spec local 2026-11-10-figuras-del-asistente, §6). On a modest phone the figure
-// loses fur layers and resolution before it loses smoothness; and when even the lowest tier cannot keep up, the
-// engine says so and its host shows the flat figure. Pure: the engine measures, this decides.
+// loses fur layers and resolution before it loses smoothness, down to the lowest tier, and stays there however slow.
+// Slowness never takes her figure away (11/11, after real turns: a busy page — her answer arriving, React in
+// development, a page loading beside her — made a healthy figure go flat for the rest of the visit). OpenAI's figures
+// do the same (Codex 26.1103): frame times are telemetry there, and only a real failure — a lost context, an error
+// drawing — falls back to the still image. Pure: the engine measures, this decides.
 //
 // What "slow" means matters more than the thresholds. The time between two frames is the SCREEN's pace before it
 // is the device's: a phone saving battery refreshes 30 times a second and draws every one of them with ease. So
@@ -37,8 +40,8 @@ export function isSlow(medianMs: number, periodMs: number): boolean {
   return medianMs > TOO_LONG_MS || medianMs > periodMs * MISSING;
 }
 
-/** The tier to use next given how many windows in a row were slow, or "flat" when it should stop being live. */
-export function nextTier(tier: QualityTier, slowWindowsInARow: number): QualityTier | "flat" {
-  if (slowWindowsInARow < IN_A_ROW) return tier;
-  return tier === 0 ? "flat" : ((tier - 1) as QualityTier);
+/** The tier to use next given how many windows in a row were slow. The lowest is the floor. */
+export function nextTier(tier: QualityTier, slowWindowsInARow: number): QualityTier {
+  if (slowWindowsInARow < IN_A_ROW || tier === 0) return tier;
+  return (tier - 1) as QualityTier;
 }

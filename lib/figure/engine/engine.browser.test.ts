@@ -617,13 +617,13 @@ describe("what it costs", () => {
     );
 
   it(
-    "steps down when it draws slower than the screen refreshes, hands over to the flat figure, and gives its context back",
+    "🔴 steps down when it draws slower than the screen refreshes, and stays alive at its lowest tier",
     () =>
       withPage({ css: 96 }, async (p) => {
         // The screen is seen to refresh every 16 ms for a whole window (its pace is a window's, not a few frames');
         // then every frame takes 40.
         const fast = Array.from({ length: 40 }, () => 16);
-        expect(await paced(p, "slow", [...fast, 40], 260)).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
+        expect(await paced(p, "slow", [...fast, 40], 260)).toEqual({ seen: [2, 1, 0], lost: 0, released: false });
       }),
     120_000,
   );
@@ -667,11 +667,11 @@ describe("what it costs", () => {
   // that really draws that slowly (software WebGL, a weak phone on the creator's big figure). Only the browser's
   // own holding back — about a frame a second — is left out.
   it(
-    "🔴 a device that draws each frame in 300 ms still steps down to the flat figure",
+    "🔴 a device that draws each frame in 300 ms steps down to its lowest tier, and stays alive there",
     () =>
       withPage({ css: 96 }, async (p) => {
         const fast = Array.from({ length: 40 }, () => 16);
-        expect(await paced(p, "crawl", [...fast, 300], 260)).toEqual({ seen: [2, 1, 0], lost: 1, released: true });
+        expect(await paced(p, "crawl", [...fast, 300], 260)).toEqual({ seen: [2, 1, 0], lost: 0, released: false });
       }),
     120_000,
   );

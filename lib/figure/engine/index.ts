@@ -191,7 +191,6 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         slowInARow = isSlow(middle, period) ? slowInARow + 1 : 0;
         intervals.length = 0;
         const next = nextTier(tier, slowInARow);
-        if (next === "flat") throw new Error("too slow to be live");
         if (next !== tier) {
           tier = next;
           slowInARow = 0;

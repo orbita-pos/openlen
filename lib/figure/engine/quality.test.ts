@@ -56,9 +56,12 @@ describe("nextTier", () => {
     expect(nextTier(1, 2)).toBe(0);
   });
 
-  it("gives up below the lowest tier", () => {
+  // 11/11, after real turns: slowness never takes her figure away, as with OpenAI's figures (Codex 26.1103: frame
+  // times are telemetry there, and only a real failure falls back to the still image). The lowest tier is the floor.
+  it("🔴 stays at the lowest tier however slow: slowness never makes her flat", () => {
     expect(nextTier(0, 1)).toBe(0);
-    expect(nextTier(0, 2)).toBe("flat");
+    expect(nextTier(0, 2)).toBe(0);
+    expect(nextTier(0, 9)).toBe(0);
   });
 
   it("stays where it is while nothing is slow, and never steps back up", () => {
