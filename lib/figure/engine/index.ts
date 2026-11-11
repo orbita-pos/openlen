@@ -173,7 +173,10 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     const elapsed = Math.min((now - last) * 1000, LONGEST_MS);
     const dt = clamp(now - last, 0, 0.1);
     last = now;
-    if (!reduced && elapsed > 0 && ++warm > WARM_UP) {
+    // A frame as long as the cap is not this device drawing slowly: it is the browser holding the page back (a window
+    // behind another, a tab it is not painting: about a frame a second). Counting those would step a healthy figure
+    // down to the flat one, for good, because someone looked away.
+    if (!reduced && elapsed > 0 && elapsed < LONGEST_MS && ++warm > WARM_UP) {
       period = Math.min(period, Math.max(4, elapsed));
       intervals.push(elapsed);
       if (intervals.length === WINDOW) {

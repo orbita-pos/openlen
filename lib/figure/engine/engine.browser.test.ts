@@ -637,6 +637,18 @@ describe("what it costs", () => {
     120_000,
   );
 
+  // Seen on 11/11 in her place: left in a window the browser was not painting (one frame a second), she stepped down
+  // to the flat figure and never came back. A browser holding the page back is not a slow device.
+  it(
+    "🔴 a page the browser holds back (a frame a second) keeps her alive and at full quality",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const fast = Array.from({ length: 12 }, () => 16);
+        expect(await paced(p, "held", [...fast, 1000], 230)).toEqual({ seen: [2], lost: 0, released: false });
+      }),
+    120_000,
+  );
+
   it(
     "survives one long hiccup without lowering its quality",
     () =>
