@@ -3,9 +3,10 @@
 .app-asistente .asist-cabecera { justify-content: flex-start; gap: 14px; margin: -4px -4px 12px; padding: 10px 12px; border-radius: 18px; background: var(--asist-suave, transparent); color: #1d1d1f; }
 .app-asistente .asist-cabecera .asist-quien { flex: 1; min-width: 0; }
 .app-asistente .asist-cabecera .gestion-cerrar { color: inherit; }
-@media (prefers-color-scheme: dark) {
-  .app-asistente .asist-cabecera { background: var(--asist-suave-oscuro, transparent); color: #f4f4f5; }
-}
+/* The app's OWN theme (movil/src/tema.ts): it does not follow the phone's. */
+:root[data-theme="dark"] .app-asistente .asist-cabecera { background: var(--asist-suave-oscuro, transparent); color: #f4f4f5; }
+/* Gestión paints its paragraphs in the screen's own dim ink, which is not this band's. */
+.app-asistente .asist-cabecera .gestion-ceja { color: inherit; opacity: 0.7; }
 .app-asistente .asist-hablar { width: 100%; margin-bottom: 12px; }
 .app-asistente .asist-partes { display: flex; gap: 6px; margin-bottom: 10px; }
 .app-asistente .asist-partes button { flex: 1; padding: 8px; border-radius: 999px; border: 1px solid var(--lm-line, rgba(0, 0, 0, 0.12)); background: transparent; color: inherit; }
@@ -19,6 +20,8 @@
 .app-asistente .asist-pedido[data-resaltado="true"] { border-color: var(--lm-accent, #e8603c); box-shadow: 0 0 0 2px var(--lm-accent, #e8603c); }
 .app-asistente .asist-acciones { display: flex; gap: 8px; margin-top: 8px; }
 .ch-face-asistente { display: inline-flex; }
+/* The slot shrinks with the keyboard open (app.css): her figure follows it instead of its own 44 px. */
+.ch-face-asistente [data-assistant-figure], .ch-face-asistente svg { width: 100% !important; height: 100% !important; }
 .app-asistente .asist-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app-asistente .asist-aviso { color: var(--lm-bad, #c2410c); }
 .app-asistente .asist-de-visitante { text-align: right; }

@@ -400,7 +400,7 @@ describe("her chat and her notices", () => {
     await act(async () => aviso.asistente!("a1", { parte: "conversaciones", tarjeta: null }));
     await act(async () => host.querySelector<HTMLButtonElement>("[data-tab-hablar]")!.click());
     await act(async () => {});
-    expect(suChat()).toMatchObject({ abierto: true, projectId: "p1", asistente: { name: "Lucía", color: "#f4a48b" } });
+    expect(suChat()).toMatchObject({ abierto: true, projectId: "p1", asistente: { name: "Lucía", color: "#f4a48b", look: { shape: "drop", color: "#f4a48b" } } });
     expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
     expect(host.querySelector(".app-panel-motion .app-su-chat")).toBeNull();
     expect(host.querySelector(".app-su-chat")).not.toBeNull();

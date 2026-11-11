@@ -1,5 +1,8 @@
 // HER TAB IN LEN MÓVIL (spec local 2026-11-06-asistente-propio, §4.6.3, §4.6.2, phase 5): «Hablar con {name}» (her chat
 // itself is the main screen's, over the tab — final review I1), «Conversaciones» and «Pedidos» as her place on the web.
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -66,6 +69,34 @@ describe("AssistantTab wears her figure", () => {
     const gone = { id: "x", name: "", slug: "", color: "transparent", tone: "friendly" as const, projectId: "", projectIds: [] } as never;
     await act(async () => root.render(<AssistantTab cliente={{} as never} asistente={gone} idioma="es" onCerrar={() => {}} onHablar={() => {}} onVerLen={() => {}} />));
     expect(host.querySelector('.asist-cabecera [data-part="body"]')).not.toBeNull();
+  });
+});
+
+describe("her figure on the phone, what the review found", () => {
+  const css = readFileSync(path.join(process.cwd(), "movil/src/asistente/asistente.css"), "utf8");
+
+  it("🔴 her header's dark tint follows the APP's theme, not the phone's (movil/src/tema.ts), and its eyebrow reads on it", () => {
+    expect(css).not.toContain("prefers-color-scheme");
+    expect(css).toMatch(/:root\[data-theme="dark"\] \.app-asistente \.asist-cabecera\s*\{[^}]*--asist-suave-oscuro/);
+    expect(css).toMatch(/\.app-asistente \.asist-cabecera \.gestion-ceja\s*\{[^}]*color:\s*inherit/);
+  });
+
+  it("🔴 under her chat her figure waits: nothing draws where nobody looks", async () => {
+    vi.mocked(leerSusVisitas).mockResolvedValue([] as never);
+    vi.mocked(leerSusPedidos).mockResolvedValue([] as never);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const tab = (cubierta: boolean) => <AssistantTab cliente={{} as never} asistente={LUCIA} idioma="es" onCerrar={() => {}} onHablar={() => {}} onVerLen={() => {}} cubierta={cubierta} />;
+    await act(async () => root.render(tab(false)));
+    expect(host.querySelector("[data-figure]")!.getAttribute("data-figure-active")).toBe("true");
+    await act(async () => root.render(tab(true)));
+    expect(host.querySelector("[data-figure]")!.getAttribute("data-figure-active")).toBe("false");
+  });
+
+  it("her face in the chat's header follows its slot, which shrinks with the keyboard open", () => {
+    expect(css).toMatch(/\.ch-face-asistente \[data-assistant-figure\][^{]*\{[^}]*width:\s*100%\s*!important/);
   });
 });
 

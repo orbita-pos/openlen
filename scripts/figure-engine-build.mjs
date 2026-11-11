@@ -20,9 +20,8 @@ export async function builtEngine() {
     bundle: true,
     minify: true,
     format: "iife",
-    globalName: "OpenLenFigure",
-    // What the bubble calls once the file has loaded.
-    footer: { js: "window.__openlenFigure=OpenLenFigure;" },
+    // The one global it leaves on a customer's page: what the bubble calls once the file has loaded.
+    globalName: "__openlenFigure",
     target: "es2020",
     legalComments: "inline",
     write: false,

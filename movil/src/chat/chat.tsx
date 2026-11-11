@@ -57,7 +57,7 @@ interface Props {
   onHerramientasCambiaron?: () => void;
   /** Talking with the person's own assistant, not Len (phase 5): her name and colour in the header, and none of Len's
    *  own (the call, Equipo, his event and tool cards). */
-  asistente?: { readonly name: string; readonly color: string };
+  asistente?: { readonly name: string; readonly color: string; readonly look?: unknown };
 }
 
 export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente }: Props) {

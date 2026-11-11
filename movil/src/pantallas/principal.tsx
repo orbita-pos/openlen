@@ -479,7 +479,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
           : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} />
-          : panel === "asistente" && asistenteAbierta ? <AssistantTab key={`${asistenteAbierta.asistente.id}:${asistenteAbierta.n}`} cliente={cliente} asistente={asistenteAbierta.asistente} parte={asistenteAbierta.parte} tarjeta={asistenteAbierta.tarjeta ?? null} idioma={idioma} onCerrar={() => setPanel(null)} onHablar={() => hablarCon(asistenteAbierta.asistente)} onVerLen={(proyecto) => { setPanel(null); abrirAviso(proyecto, "chat"); }} /> : null}
+          : panel === "asistente" && asistenteAbierta ? <AssistantTab key={`${asistenteAbierta.asistente.id}:${asistenteAbierta.n}`} cubierta={suChat?.abierto === true} cliente={cliente} asistente={asistenteAbierta.asistente} parte={asistenteAbierta.parte} tarjeta={asistenteAbierta.tarjeta ?? null} idioma={idioma} onCerrar={() => setPanel(null)} onHablar={() => hablarCon(asistenteAbierta.asistente)} onVerLen={(proyecto) => { setPanel(null); abrirAviso(proyecto, "chat"); }} /> : null}
       </PanelAnimado>
       {suChat && (
         <div className="app-su-chat" style={{ position: "absolute", inset: 0, zIndex: 60, pointerEvents: suChat.abierto ? "auto" : "none" }}>
@@ -493,7 +493,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             onCerrar={() => setSuChat((x) => (x ? { ...x, abierto: false } : x))}
             onLlamar={() => {}}
             onVerPagina={() => {}}
-            asistente={{ name: suChat.asistente.name, color: suChat.asistente.color }}
+            asistente={{ name: suChat.asistente.name, color: suChat.asistente.color, look: suChat.asistente.look }}
           />
         </div>
       )}

@@ -124,6 +124,9 @@ describe("PATCH /api/assistants/[id] { look }", () => {
     expect(await res.json()).toEqual({ look: LOOK });
     expect(m.setAssistantLook).toHaveBeenCalledWith("a1", "u1", LOOK);
   });
+  it("a body that is not an object is a bad request, never a 500", async () => {
+    for (const body of ["x", 7, true, null]) expect((await patch(body)).status).toBe(400);
+  });
   it("refuses a look that is not of the catalog, before writing anything", async () => {
     const res = await patch({ look: { ...LOOK, accessory: "sword" }, name: "Marta" });
     expect(res.status).toBe(400);

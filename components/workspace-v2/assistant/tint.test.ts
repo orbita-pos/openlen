@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { FIGURE_COLORS } from "@/lib/figure/look";
@@ -45,5 +48,12 @@ describe("tintOf", () => {
     expect(tintStyle("red")).toEqual({});
     expect(Object.keys(tintStyle("#FFC21A"))).toEqual(["--assistant-tint", "--assistant-ink", "--assistant-soft", "--assistant-soft-dark"]);
     expect(tintStyle("#FFC21A")["--assistant-tint"]).toBe("#ffc21a");
+  });
+});
+
+describe("her tint in the workspace's CSS", () => {
+  const css = readFileSync(path.join(process.cwd(), "app/[locale]/new/tokens.css"), "utf8");
+  it("🔴 the muted lines and icons inside her owner's bubble take the bubble's ink: a photo's caption must read on her color", () => {
+    expect(css).toMatch(/\.assistant-tint \[data-user-bubble\] :is\(\.fg-muted, \.fg-faint, \[class\*="nc-accent-text"\]\)\s*\{[^}]*color:\s*inherit/);
   });
 });

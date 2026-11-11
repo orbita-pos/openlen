@@ -150,19 +150,21 @@ const PERSONA_VISUALS =
  *  loads with her flat figure, already in this script. The engine is asked for only when the visitor opens the bubble,
  *  only once, and only if the status answer said the figures are on (FIG) — so OPENLEN_FIGURES=0 reaches a page that
  *  is already published. If it does not arrive, cannot draw or loses its context, the flat figure stays or comes
- *  back. A visitor who asked for reduced motion keeps the flat one: it is the still pose.
+ *  back. A visitor who asked for reduced motion keeps the flat one: it is the still pose. A browser without WebGL2 is
+ *  not asked either: it could not draw her, and one that old may not even parse the file. What she was last told to do
+ *  (LAST) is what she is born doing: asleep, if the visitor asked before the engine arrived.
  *  No backticks here: this lives inside a template string. */
 const PERSONA_FIGURE =
-  'var FIG,LIVE=null,ASKED=false;\n' +
-  'function act(a){try{if(LIVE)LIVE.setActivity(a)}catch(e){}}\n' +
+  'var FIG,LIVE=null,ASKED=false,LAST="ready";\n' +
+  'function act(a){LAST=a;try{if(LIVE)LIVE.setActivity(a)}catch(e){}}\n' +
   'function settle(){setTimeout(function(){if(!busy)act(input.value.trim()?"listening":"ready")},1500)}\n' +
   'function alive(on){try{if(LIVE)LIVE.setActive(on)}catch(e){}}\n' +
-  'function figure(){if(ASKED||FIG!==true)return;\n' +
+  'function figure(){if(ASKED||FIG!==true||!window.WebGL2RenderingContext)return;\n' +
   'try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)return}catch(e){}\n' +
   'ASKED=true;var s=document.createElement("script");s.src=C.persona.engine;s.async=true;\n' +
   's.onload=function(){try{var slot=R.querySelector(".hd .ava"),flat=slot.querySelector("svg"),cv=document.createElement("canvas");\n' +
   'cv.width=' + FIGURE_PX + ';cv.height=' + FIGURE_PX + ';cv.setAttribute("aria-hidden","true");cv.style.visibility="hidden";slot.appendChild(cv);\n' +
-  'LIVE=window.__openlenFigure.createFigure(cv,C.persona.look,{onFirstFrame:function(){cv.style.visibility="visible";if(flat)flat.style.visibility="hidden"},\n' +
+  'LIVE=window.__openlenFigure.createFigure(cv,C.persona.look,{activity:LAST,onFirstFrame:function(){cv.style.visibility="visible";if(flat)flat.style.visibility="hidden"},\n' +
   'onLost:function(){LIVE=null;try{cv.remove()}catch(e){}if(flat)flat.style.visibility="visible"}});\n' +
   'if(!LIVE){cv.remove();return}alive(panel.classList.contains("open"))}catch(e){}};\n' +
   '(document.head||document.documentElement).appendChild(s)}\n' +
