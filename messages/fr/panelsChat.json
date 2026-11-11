@@ -778,6 +778,16 @@
           "hat": "Chapeau",
           "headphones": "Casque audio"
         }
+      },
+      "colors": {
+        "ff5fa8": "Rose",
+        "7ed321": "Vert",
+        "ffc21a": "Jaune",
+        "2f8bff": "Bleu",
+        "ff7a45": "Orange",
+        "9b6cff": "Violet",
+        "19c3b1": "Turquoise",
+        "ff4d5e": "Rouge"
       }
     },
     "tones": {

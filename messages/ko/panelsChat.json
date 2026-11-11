@@ -778,6 +778,16 @@
           "hat": "모자",
           "headphones": "헤드폰"
         }
+      },
+      "colors": {
+        "ff5fa8": "분홍",
+        "7ed321": "초록",
+        "ffc21a": "노랑",
+        "2f8bff": "파랑",
+        "ff7a45": "주황",
+        "9b6cff": "보라",
+        "19c3b1": "청록",
+        "ff4d5e": "빨강"
       }
     },
     "tones": {
@@ -826,7 +836,7 @@
         "talking": "작성 중…"
       },
       "settings": "설정",
-      "figureSaved": "피규어를 저장했어요"
+      "figureSaved": "모습을 저장했습니다"
     },
     "speaker": {
       "working": "{name} · 작업 중",

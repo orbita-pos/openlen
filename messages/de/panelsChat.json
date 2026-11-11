@@ -778,6 +778,16 @@
           "hat": "Hut",
           "headphones": "Kopfhörer"
         }
+      },
+      "colors": {
+        "ff5fa8": "Rosa",
+        "7ed321": "Grün",
+        "ffc21a": "Gelb",
+        "2f8bff": "Blau",
+        "ff7a45": "Orange",
+        "9b6cff": "Lila",
+        "19c3b1": "Türkis",
+        "ff4d5e": "Rot"
       }
     },
     "tones": {

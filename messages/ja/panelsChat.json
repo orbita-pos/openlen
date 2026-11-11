@@ -778,6 +778,16 @@
           "hat": "帽子",
           "headphones": "ヘッドホン"
         }
+      },
+      "colors": {
+        "ff5fa8": "ピンク",
+        "7ed321": "グリーン",
+        "ffc21a": "イエロー",
+        "2f8bff": "ブルー",
+        "ff7a45": "オレンジ",
+        "9b6cff": "パープル",
+        "19c3b1": "ターコイズ",
+        "ff4d5e": "レッド"
       }
     },
     "tones": {
@@ -826,7 +836,7 @@
         "talking": "入力中…"
       },
       "settings": "設定",
-      "figureSaved": "フィギュアを保存しました"
+      "figureSaved": "見た目を保存しました"
     },
     "speaker": {
       "working": "{name} が作業中",

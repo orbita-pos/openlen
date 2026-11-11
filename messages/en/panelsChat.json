@@ -778,6 +778,16 @@
           "hat": "Hat",
           "headphones": "Headphones"
         }
+      },
+      "colors": {
+        "ff5fa8": "Pink",
+        "7ed321": "Green",
+        "ffc21a": "Yellow",
+        "2f8bff": "Blue",
+        "ff7a45": "Orange",
+        "9b6cff": "Purple",
+        "19c3b1": "Turquoise",
+        "ff4d5e": "Red"
       }
     },
     "tones": {

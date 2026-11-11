@@ -778,6 +778,16 @@
           "hat": "Cappello",
           "headphones": "Cuffie"
         }
+      },
+      "colors": {
+        "ff5fa8": "Rosa",
+        "7ed321": "Verde",
+        "ffc21a": "Giallo",
+        "2f8bff": "Blu",
+        "ff7a45": "Arancione",
+        "9b6cff": "Viola",
+        "19c3b1": "Turchese",
+        "ff4d5e": "Rosso"
       }
     },
     "tones": {
