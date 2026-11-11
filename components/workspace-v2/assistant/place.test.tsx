@@ -210,6 +210,8 @@ describe("her place's controls", () => {
     await settle();
     const pane = host.querySelector<HTMLElement>("[data-her-page]")!;
     expect(pane).not.toBeNull();
+    // One window, not two apps (Jesús, 11/11): the page hangs from a tab in her place's own top bar.
+    expect(host.querySelector("[data-her-bar] [data-her-page-tab]")!.textContent).toBe("tienda.openlen.app");
     expect(pane.querySelector("[data-her-page-address]")!.textContent).toBe("tienda.openlen.app");
     expect(pane.querySelector<HTMLAnchorElement>("[data-her-page-open]")!.href).toBe("https://tienda.openlen.app/");
     const frame = pane.querySelector("iframe")!;
@@ -222,6 +224,7 @@ describe("her place's controls", () => {
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     act(() => toggle.click());
     expect(host.querySelector("[data-her-page]")).toBeNull();
+    expect(host.querySelector("[data-her-page-tab]")).toBeNull();
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     act(() => toggle.click());
     expect(host.querySelector("[data-her-page] iframe")).not.toBeNull();

@@ -10,7 +10,7 @@
 // Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
 // three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
 // pages) waits in a menu behind one button, so her place is her and the conversation.
-import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
+import { Globe, Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
@@ -110,56 +110,55 @@ export function AssistantHome({
   return (
     <ToastProvider dismissLabel={tc("close")}>
       <HerTint.Provider value={tint}>
-      <div className="workspace-v2 flex h-dvh bg-side" style={tint}>
-        <div role="tablist" aria-orientation="vertical" className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 border-r bd py-3.5" data-assistant-rail="">
-          {tabs.map((k) => {
-            const Icon = TAB_ICON[k];
-            return (
-              <button
-                key={k}
-                type="button"
-                role="tab"
-                aria-selected={tab === k}
-                title={t(TAB_LABEL[k])}
-                onClick={() => (setTab(k), setMenuOpen(false), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
-                className={`her-ring flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${tab === k ? "her-wash fg" : "fg-faint hover:bg-hover hover:fg"}`}
+      {/* ONE WINDOW (11/11, Jesús, on the reference he sent: «el mío se ve como si fueran dos apps»): one bar across the
+          top, one ground under her rail and her chat and around her page — her color washing down from the top —, and
+          her page as a card that hangs from its tab in that bar, as a browser's does. */}
+      <div className="workspace-v2 her-shell relative flex h-dvh flex-col" style={tint}>
+        <div className="flex h-11 shrink-0 items-end" data-her-bar="">
+          <div className="w-[54px] shrink-0" />
+          <div className="min-w-0 flex-1" />
+          {pageOpen && tab === "talk" && (
+            <div className="hidden min-w-0 flex-1 items-end pr-2 min-[860px]:flex">
+              <div
+                data-her-page-tab=""
+                className="relative z-10 -mb-px flex h-8 min-w-0 max-w-[260px] items-center gap-2 rounded-t-[10px] border border-b-0 bd bg-elev pl-3 pr-4 text-[12.5px] font-medium fg"
               >
-                <Icon size={18} strokeWidth={tab === k ? 2 : 1.7} aria-hidden="true" />
-                <span className="sr-only">{t(TAB_LABEL[k])}</span>
-              </button>
-            );
-          })}
+                <Globe size={13} strokeWidth={1.8} className="shrink-0 fg-muted" aria-hidden="true" />
+                <span className="truncate">{projectTitle ?? address ?? t("ownAssistant.page.title")}</span>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1">
-          {tab === "talk" && (
+            {tab === "talk" && (
+              <button
+                type="button"
+                data-her-page-toggle=""
+                aria-pressed={pageOpen}
+                aria-label={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
+                title={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
+                onClick={togglePage}
+                className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors min-[860px]:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
+              >
+                <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
-              data-her-page-toggle=""
-              aria-pressed={pageOpen}
-              aria-label={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
-              title={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
-              onClick={togglePage}
-              className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors min-[860px]:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
+              data-assistant-menu=""
+              aria-expanded={menuOpen}
+              aria-label={t("ownAssistant.place.settings")}
+              title={t("ownAssistant.place.settings")}
+              onClick={() => setMenuOpen((o) => !o)}
+              className={`her-ring flex h-8 w-8 items-center justify-center rounded-full transition-colors ${menuOpen ? "bg-hover fg" : "fg-muted hover:bg-hover hover:fg"}`}
             >
-              <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />
+              <MoreHorizontal size={17} aria-hidden="true" />
             </button>
-          )}
-          <button
-            type="button"
-            data-assistant-menu=""
-            aria-expanded={menuOpen}
-            aria-label={t("ownAssistant.place.settings")}
-            title={t("ownAssistant.place.settings")}
-            onClick={() => setMenuOpen((o) => !o)}
-            className={`her-ring flex h-8 w-8 items-center justify-center rounded-full transition-colors ${menuOpen ? "bg-hover fg" : "fg-muted hover:bg-hover hover:fg"}`}
-          >
-            <MoreHorizontal size={17} aria-hidden="true" />
-          </button>
           </div>
           {/* Closed it is hidden, not unmounted: a rename half written or a switch in flight is not lost. */}
-          <div className={menuOpen ? "slide-down flex w-[min(17.5rem,calc(100vw-5rem))] flex-col rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
+          <div
+            className={menuOpen ? "slide-down flex w-[min(17.5rem,calc(100vw-5rem))] flex-col rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
             data-assistant-controls=""
             // A row that opens its own sheet or dialog is the menu's answer: the menu steps aside.
             onClick={(e) => (e.target as Element).closest("[data-rename-open], [data-change-figure]") && setMenuOpen(false)}
@@ -171,28 +170,50 @@ export function AssistantHome({
             <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
           </div>
         </div>
-        {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
-        <div className={tab === "talk" ? "flex min-h-0 flex-1" : "hidden"}>
+        <div className="flex min-h-0 flex-1">
+          <div role="tablist" aria-orientation="vertical" className="flex w-[54px] shrink-0 flex-col items-center gap-1.5 pt-1" data-assistant-rail="">
+            {tabs.map((k) => {
+              const Icon = TAB_ICON[k];
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === k}
+                  title={t(TAB_LABEL[k])}
+                  onClick={() => (setTab(k), setMenuOpen(false), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
+                  className={`her-ring flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${tab === k ? "her-wash fg" : "fg-faint hover:bg-hover hover:fg"}`}
+                >
+                  <Icon size={18} strokeWidth={tab === k ? 2 : 1.7} aria-hidden="true" />
+                  <span className="sr-only">{t(TAB_LABEL[k])}</span>
+                </button>
+              );
+            })}
+          </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
-          </div>
-          {/* Windows of 860 px or more: on a narrower one the conversation is the place. */}
-          {pageOpen && (
-            <div className="hidden min-h-0 min-w-0 flex-1 min-[860px]:flex">
-              <HerPage projectId={assistant.projectId} html={projectHtml} address={address} title={projectTitle} />
+            {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
+            <div className={tab === "talk" ? "flex min-h-0 flex-1" : "hidden"}>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
+              </div>
+              {/* Windows of 860 px or more: on a narrower one the conversation is the place. */}
+              {pageOpen && (
+                <div className="hidden min-h-0 min-w-0 flex-1 pb-2 pr-2 min-[860px]:flex">
+                  <HerPage projectId={assistant.projectId} html={projectHtml} address={address} title={projectTitle} />
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        {seen.has("conversations") && (
-          <div className={tab === "conversations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <VisitorConversations assistantId={assistant.id} name={assistant.name} />
+            {seen.has("conversations") && (
+              <div className={tab === "conversations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+                <VisitorConversations assistantId={assistant.id} name={assistant.name} />
+              </div>
+            )}
+            {seen.has("requests") && (
+              <div className={tab === "requests" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+                <VisitorRequests assistantId={assistant.id} name={assistant.name} />
+              </div>
+            )}
           </div>
-        )}
-        {seen.has("requests") && (
-          <div className={tab === "requests" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-            <VisitorRequests assistantId={assistant.id} name={assistant.name} />
-          </div>
-        )}
         </div>
       </div>
       </HerTint.Provider>

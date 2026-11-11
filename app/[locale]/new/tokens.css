@@ -287,4 +287,11 @@
 .workspace-v2 .her-on { background: var(--assistant-tint, var(--nc-accent-text)); box-shadow: inset 0 0 0 1px var(--assistant-edge, transparent); }
 .workspace-v2 .her-wash { background: color-mix(in srgb, var(--assistant-tint, var(--nc-accent-text)) 16%, transparent); }
 .workspace-v2 .her-ring:focus-visible { outline: 2px solid var(--assistant-tint, var(--nc-accent-text)); outline-offset: 2px; }
+/* HER PLACE IS ONE WINDOW (assistant-home.tsx): her color washes down from the top over the bar, her rail and her chat
+   alike, and her page is a card on that ground. Her chat panel and its header stop painting a ground of their own. */
+.workspace-v2.her-shell { background: linear-gradient(180deg, var(--assistant-soft, transparent) 0, transparent 280px) no-repeat, var(--bg-sidebar); }
+.dark .workspace-v2.her-shell { background: linear-gradient(180deg, var(--assistant-soft-dark, transparent) 0, transparent 280px) no-repeat, var(--bg-sidebar); }
+.workspace-v2.her-shell .assistant-tint,
+.workspace-v2.her-shell .assistant-tint [data-assistant-header],
+.dark .workspace-v2.her-shell .assistant-tint [data-assistant-header] { background: transparent; }
 .workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); box-shadow: inset 0 0 0 1px var(--assistant-edge); }
