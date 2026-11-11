@@ -9,7 +9,7 @@ import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { LiveFigure } from "@/components/workspace-v2/assistant/live-figure";
-import { tintOf } from "@/components/workspace-v2/assistant/tint";
+import { tintOf } from "@/lib/figure/tint";
 import type { AssistantListItem } from "@/lib/assistants/view";
 import { lookOfRow } from "@/lib/assistants/look";
 

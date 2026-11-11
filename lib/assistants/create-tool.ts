@@ -7,8 +7,7 @@
 // Len may suggest her figure (spec local 2026-11-10-figuras-del-asistente, §5.6): parts of the catalog and a color.
 // The creator opens with it; the owner changes anything there, and Len never changes it afterwards.
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { checkLook, type FigureCategory, type FigureLook } from "@/lib/figure/look";
-import { curatedLook } from "@/lib/figure/random";
+import { DEFAULT_LOOK, checkLook, type FigureCategory, type FigureLook } from "@/lib/figure/look";
 
 import { assistantsEnabled } from "./enabled";
 import type { AssistantRow } from "./store";
@@ -30,6 +29,25 @@ export const SUGGESTABLE: Readonly<Record<FigureCategory, readonly string[]>> = 
 });
 const part = (category: FigureCategory, description: string) => ({ type: "STRING", enum: [...SUGGESTABLE[category]], description });
 
+/** WHAT EACH CHOICE LOOKS LIKE, in words, for Len — in his declaration and in his result (11/11, real turns: he called the
+ *  «hat» a «gorro de panadero»; an enum value with no words is whatever the model imagines). As OpenAI's function-calling
+ *  guide and Claude Code's own tool descriptions do, each choice says what it is. Kept with SUGGESTABLE, for the same
+ *  reason: the cached prefix of his tools moves only when someone teaches him on purpose. */
+const WORDS: Readonly<Record<FigureCategory, Readonly<Record<string, string>>>> = {
+  shape: { drop: "a drop", round: "a ball", capsule: "a capsule", cube: "a soft cube", ears: "a ball with two round ears", heart: "a heart", flower: "a flower", triangle: "a soft triangle" },
+  eyes: { oval: "oval eyes", round: "round eyes", dot: "two small dot eyes", smile: "smiling eyes", sleepy: "sleepy, half-closed eyes" },
+  eyewear: { none: "no glasses", round: "round glasses", shades: "dark sunglasses" },
+  accessory: { none: "nothing on its head", beret: "a beret", beanie: "a knit beanie with a pompom", bow: "a bow", crown: "a gold crown", hat: "a short top hat with a brim", headphones: "headphones" },
+};
+/** In his declaration, only the choices whose id doesn't say what they look like. */
+const HINTS: Readonly<Partial<Record<FigureCategory, Readonly<Record<string, string>>>>> = {
+  shape: { round: "a ball", ears: "a ball with two round ears" },
+  eyes: { dot: "two small dots", smile: "closed, smiling arcs", sleepy: "half-closed" },
+  eyewear: { round: "round glasses", shades: "dark sunglasses" },
+  accessory: { beanie: "a knit cap with a pompom", hat: "a short top hat with a brim" },
+};
+const listed = (category: FigureCategory) => SUGGESTABLE[category].map((id) => (HINTS[category]?.[id] ? `${id} (${HINTS[category]![id]})` : id)).join(", ");
+
 export const CREATE_ASSISTANT = "create_assistant";
 
 export const CREATE_ASSISTANT_DECLARATION = {
@@ -38,18 +56,25 @@ export const CREATE_ASSISTANT_DECLARATION = {
     "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. " +
     "Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. " +
     "If this project already has one, you get which, and say so. " +
-    "You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like.",
+    "You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. " +
+    "Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.",
   parameters: {
     type: "OBJECT",
     properties: {
-      shape: part("shape", "Optional. The figure's body."),
-      eyes: part("eyes", "Optional."),
-      eyewear: part("eyewear", "Optional."),
-      accessory: part("accessory", "Optional. What it wears on its head."),
+      shape: part("shape", `Optional. The figure's body: ${listed("shape")}.`),
+      eyes: part("eyes", `Optional. ${listed("eyes")}.`),
+      eyewear: part("eyewear", `Optional. ${listed("eyewear")}. Left out, it wears none.`),
+      accessory: part("accessory", `Optional. What it wears on its head: ${listed("accessory")}. There is no chef's hat. Left out, it wears none.`),
       color: { type: "STRING", description: "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent." },
     },
   },
 } as const;
+
+/** The card's figure in words, for Len to describe it as it is. */
+function lookInWords(look: FigureLook): string {
+  const say = (category: FigureCategory, id: string) => WORDS[category][id] ?? id;
+  return `${say("shape", look.shape)}, ${say("eyes", look.eyes)}, ${say("eyewear", look.eyewear)}, ${say("accessory", look.accessory)}, in ${look.color}`;
+}
 
 export interface CreateAssistantDeps {
   assistantOfProject(projectId: string): Promise<Pick<AssistantRow, "name" | "slug"> | null>;
@@ -57,8 +82,6 @@ export interface CreateAssistantDeps {
   assistantsOf(personId: string): Promise<Pick<AssistantRow, "name" | "slug">[]>;
   /** The accent of the project's page (#rrggbb), when it has one. */
   accentOf(projectId: string): Promise<string | null>;
-  /** What the unsaid parts are drawn from (tests fix it). */
-  seed?: () => number;
 }
 
 async function storeDeps(): Promise<CreateAssistantDeps> {
@@ -73,10 +96,12 @@ async function storeDeps(): Promise<CreateAssistantDeps> {
   };
 }
 
-/** The look the creator opens with: one that goes well together, with each part Len named that the catalog has, in
- *  his color or else the page's accent. A part it does not have is left out, never an error. */
+/** The look the creator opens with: each part Len named that the catalog has, in his color or else the page's accent.
+ *  A part it does not have is left out, never an error. What he leaves out is the plain default — no glasses, nothing
+ *  on its head — never a draw (11/11, real turns: four calls of four left eyewear out, and a random draw put glasses on
+ *  her that he never heard of). An optional parameter left out is its default, as in a JSON schema. */
 async function suggestedLook(args: Record<string, unknown>, projectId: string, d: CreateAssistantDeps): Promise<FigureLook> {
-  let look = curatedLook(d.seed ? d.seed() : Math.floor(Math.random() * 0xffffffff));
+  let look: FigureLook = DEFAULT_LOOK;
   const take = (patch: Record<string, unknown>) => {
     const next = checkLook({ ...look, ...patch });
     if (next.ok) look = next.value;
@@ -98,11 +123,15 @@ export async function runCreateAssistant(session: AgentSession, args: Record<str
   }
   // The session's user is the project's owner (a member never gets this tool): their own assistants, elsewhere.
   const theirs = (await d.assistantsOf(session.userId)).map((a) => ({ name: a.name, slug: a.slug }));
+  const look = await suggestedLook(args, session.projectId, d);
+  // What the card shows, said back as it is — like Claude Code's Edit answering with what the file now says — so what he
+  // tells the owner is what they see (11/11: he described a «gorro de panadero» over a top hat, and glasses he never chose).
+  const opens = `If a new one is created, the card opens with its figure as ${lookInWords(look)}. If you mention the figure, say exactly that; the owner can change any part on the card.`;
   const tool_result = theirs.length
-    ? `The owner already has ${theirs.map((a) => a.name).join(", ")}. Ask them whether to use ${theirs.length > 1 ? "one of them" : theirs[0]!.name} here too or create another: the card under your answer offers both.`
-    : "The owner now sees the card to create their assistant: they pick its name and its look there.";
+    ? `The owner already has ${theirs.map((a) => a.name).join(", ")}. Ask them whether to use ${theirs.length > 1 ? "one of them" : theirs[0]!.name} here too or create another: the card under your answer offers both. ${opens}`
+    : `The owner now sees the card to create their assistant: they pick its name and its look there. ${opens}`;
   return {
     response: { ok: true, card: "assistant_create", ...(theirs.length ? { existing: theirs } : {}), tool_result },
-    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(await suggestedLook(args, session.projectId, d)) },
+    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(look) },
   };
 }

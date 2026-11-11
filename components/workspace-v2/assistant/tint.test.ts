@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { FIGURE_COLORS } from "@/lib/figure/look";
 
 import { activityOf } from "./activity";
-import { contrast, tintOf, tintStyle } from "./tint";
+import { contrast, tintOf, tintStyle } from "@/lib/figure/tint";
 
 const QUIET = { failed: false, toolRunning: false, streaming: false, waiting: false, typing: false };
 

@@ -19,6 +19,7 @@
 import { FIGURE_ENGINE } from "@/lib/figure/engine/published";
 import { flatFigureSvg } from "@/lib/figure/flat";
 import type { FigureLook } from "@/lib/figure/look";
+import { tintOf } from "@/lib/figure/tint";
 import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
 
 interface AssistantStrings {
@@ -171,7 +172,16 @@ const PERSONA_FIGURE =
   'input.addEventListener("input",function(){if(!busy)act(input.value.trim()?"listening":"ready")});\n';
 const LEGACY_HEADER = 'R.querySelector(".hd span").textContent=C.name;\nR.querySelector(".hd .ava").textContent=(C.name||"A").charAt(0).toUpperCase();';
 
+/** THE VISITOR'S OWN MESSAGE IN HER BUBBLE: her color, with the ink computed over it — the same as the person's messages
+ *  in her place (lib/figure/tint.ts), as the figures' chats of OpenAI do. Until 11/11 it was 14 % of her color over
+ *  white on a beige log: with a crust color, beige on beige. Our own hex values, so safe inside the script's string. */
+function visitorBubbleRule(color: string): string {
+  const t = tintOf(color);
+  return t ? `.row.u .bub{background:${t.tint};color:${t.ink};box-shadow:inset 0 0 0 1px ${t.edge}}` : "";
+}
+
 function widgetScript(cfg: AssistantWidgetConfig, persona: AssistantPersona | null = null): string {
+  const visitorRule = persona ? visitorBubbleRule(persona.look.color) : "";
   // Config is JSON-injected; everything else is static runtime JS. Kept terse
   // (single IIFE) so the gzipped payload stays small. Escaping "<" keeps
   // anything inside the JSON (a business name, a locale string) from closing
@@ -257,7 +267,7 @@ R.innerHTML=
 +'.bub{max-width:80%;padding:8px 11px;border-radius:10px;font-size:14px;line-height:1.4;white-space:pre-wrap;word-wrap:break-word;box-shadow:0 1px 1px rgba(0,0,0,.08)}'
 +'.row.b .bub{background:#fff;color:#1a1a1a;border-top-left-radius:2px}'
 +'.row.u .bub{background:#ffe9e2;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#221b17;border-top-right-radius:2px}'
-+'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'\n+'.hd{background:#f6f1ee;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#1a1a1a;padding:10px 12px 10px 14px;gap:12px}.hd .ava{position:relative;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px;border-radius:0;background:transparent}.hd .ava svg,.hd .ava canvas{position:absolute;left:0;top:0;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px}.hd span{font-size:16px}.hd button{color:#1a1a1a}'" : ""}
++'.dots .bub{color:#888}'${persona ? "\n+'.row.vis{display:block}.row.vis iframe{display:block;width:100%;height:0;border:0;background:transparent}'\n+'.hd{background:#f6f1ee;background:color-mix(in srgb,'+ACC+' 14%,#fff);color:#1a1a1a;padding:10px 12px 10px 14px;gap:12px}.hd .ava{position:relative;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px;border-radius:0;background:transparent}.hd .ava svg,.hd .ava canvas{position:absolute;left:0;top:0;width:" + FIGURE_PX + "px;height:" + FIGURE_PX + "px}.hd span{font-size:16px}.hd button{color:#1a1a1a}'" : ""}${visitorRule ? "\n+'" + visitorRule + "'" : ""}
 +'.ft{padding:8px 10px;background:#f4ede8}'
 +'.ip{display:flex;gap:8px;align-items:center}'
 +'.ip input{flex:1;min-height:44px;border:0;border-radius:999px;padding:0 18px;font-size:14px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.08)}'

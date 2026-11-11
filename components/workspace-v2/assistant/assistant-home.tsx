@@ -25,7 +25,7 @@ import { HerProjects } from "./her-projects";
 import { HerTint } from "./her-sheet";
 import { MorningSummarySwitch } from "./morning-summary-switch";
 import { RenameHer } from "./rename-her";
-import { tintStyle } from "./tint";
+import { tintStyle } from "@/lib/figure/tint";
 import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
 

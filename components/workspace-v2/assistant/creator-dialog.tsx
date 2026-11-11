@@ -16,7 +16,7 @@ import { curatedLook } from "@/lib/figure/random";
 import { ModalShell } from "../modal-shell";
 import { AssistantFigure } from "./figure";
 import { LiveFigure } from "./live-figure";
-import { tintOf } from "./tint";
+import { tintOf } from "@/lib/figure/tint";
 
 type Failure = "name" | "nameTaken" | "projectHas" | "ownerOnly" | "generic" | "figure";
 
