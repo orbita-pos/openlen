@@ -141,7 +141,7 @@ export function AssistantHome({
               aria-label={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
               title={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
               onClick={togglePage}
-              className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors lg:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
+              className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors min-[860px]:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
             >
               <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />
             </button>
@@ -176,9 +176,9 @@ export function AssistantHome({
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
           </div>
-          {/* Wide windows only: on a narrow one the conversation is the place. */}
+          {/* Windows of 860 px or more: on a narrower one the conversation is the place. */}
           {pageOpen && (
-            <div className="hidden min-h-0 min-w-0 flex-1 lg:flex">
+            <div className="hidden min-h-0 min-w-0 flex-1 min-[860px]:flex">
               <HerPage projectId={assistant.projectId} html={projectHtml} address={address} title={projectTitle} />
             </div>
           )}
