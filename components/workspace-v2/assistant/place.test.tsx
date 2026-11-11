@@ -9,7 +9,8 @@ vi.mock("next-intl", () => ({
   useLocale: () => "es",
 }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "u1", name: "Ana" } }, status: "authenticated" }) }));
-vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {}, error: () => {} }), ToastProvider: ({ children }: { children: React.ReactNode }) => children }));
+const toast = vi.hoisted(() => ({ success: vi.fn() }));
+vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: toast.success, error: () => {} }), ToastProvider: ({ children }: { children: React.ReactNode }) => children }));
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { AssistantHome } from "./assistant-home";
@@ -469,6 +470,8 @@ describe("her place's controls, what they say", () => {
     expect(JSON.parse(String(patch.init!.body))).toEqual({ look: { ...LUCIA.look, shape: "heart" } });
     expect(document.querySelector("[data-assistant-done]")).toBeNull();
     expect(host.querySelector("[data-figure-publish]")).not.toBeNull();
+    // 🔴 «Listo» answers: the creator closing alone does not say the figure was kept.
+    expect(toast.success).toHaveBeenCalledWith("ownAssistant.place.figureSaved");
     // The heart's own outline is in her place now.
     expect(host.querySelector('[data-assistant-header] [data-part="body"] path[d^="M30 54"]')).not.toBeNull();
   });

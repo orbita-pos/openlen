@@ -5,6 +5,7 @@
 // eyes, glasses and accessory from the catalog; its color, free; and how it talks. «Listo» creates it
 // (`POST /api/assistants`). With `editing` it is the same creator changing the figure of one that exists
 // (`PATCH /api/assistants/<id>`). Nothing here depends on how many entries the catalog has.
+import { Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -15,6 +16,7 @@ import { curatedLook } from "@/lib/figure/random";
 import { ModalShell } from "../modal-shell";
 import { AssistantFigure } from "./figure";
 import { LiveFigure } from "./live-figure";
+import { tintOf } from "./tint";
 
 type Failure = "name" | "nameTaken" | "projectHas" | "ownerOnly" | "generic" | "figure";
 
@@ -92,13 +94,22 @@ export function AssistantCreatorDialog({
   };
 
   const shown = editing?.name ?? name;
+  // «Sorpréndeme» is the creator's best button: it wears the figure's color, with the ink that reads over it.
+  const tint = tintOf(look.color);
   return (
     <ModalShell open={open} onClose={onClose} titleId="assistant-creator-title" title={editing ? editing.name : t("ownAssistant.creator.title")} size="lg" dismissable={!saving} closeLabel={t("ownAssistant.creator.cancel")}>
       <div className="flex flex-col items-center gap-4 p-5">
         <div className="flex flex-col items-center gap-2">
           {/* Alive only while the dialog is open: a closed dialog must not hold the screen's one live figure. */}
           {open ? <LiveFigure look={look} size={160} activity={naming ? "listening" : "ready"} label={shown || undefined} /> : <AssistantFigure look={look} size={160} />}
-          <button type="button" data-figure-surprise="" onClick={() => setLook(curatedLook(seed()))} className="rounded-full border bd px-3 py-1 text-[12px] font-medium fg-muted hover:fg">
+          <button
+            type="button"
+            data-figure-surprise=""
+            onClick={() => setLook(curatedLook(seed()))}
+            className="flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold shadow-sm transition-transform hover:scale-[1.04] active:scale-95"
+            style={tint ? { background: tint.tint, color: tint.ink, boxShadow: `inset 0 0 0 1px ${tint.edge}` } : undefined}
+          >
+            <Sparkles size={14} aria-hidden="true" />
             {t("ownAssistant.creator.surprise")}
           </button>
         </div>
