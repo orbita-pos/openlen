@@ -15,6 +15,7 @@ import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { getProject } from "@/lib/projects";
 import { getChatMessages } from "@/lib/projects/chat";
+import { publishedHost } from "@/lib/publish/base-host";
 import "@/app/[locale]/new/tokens.css";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,8 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     <AssistantHome
       assistant={assistantView(assistant)}
       projectHtml={project.data?.html ?? ""}
+      address={project.subdomain ? publishedHost(project.subdomain) : null}
+      projectTitle={project.title ?? null}
       initialChat={chat}
       onPage={state.onPage}
       needsPublish={state.needsPublish}

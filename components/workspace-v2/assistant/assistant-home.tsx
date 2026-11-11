@@ -10,7 +10,7 @@
 // Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
 // three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
 // pages) waits in a menu behind one button, so her place is her and the conversation.
-import { Inbox, MessageCircle, MoreHorizontal, Users, type LucideIcon } from "lucide-react";
+import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
@@ -20,6 +20,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
 import { ChangeFigure } from "./change-figure";
+import { HerPage } from "./her-page";
 import { HerProjects } from "./her-projects";
 import { HerTint } from "./her-sheet";
 import { MorningSummarySwitch } from "./morning-summary-switch";
@@ -38,10 +39,13 @@ const TAB_LABEL: Record<Tab, string> = {
   requests: "ownAssistant.requests.tab",
 };
 const TAB_ICON: Record<Tab, LucideIcon> = { talk: MessageCircle, conversations: Users, requests: Inbox };
+const PAGE_PANE = "openlen:her-page-pane";
 
 export function AssistantHome({
   assistant,
   projectHtml,
+  address = null,
+  projectTitle = null,
   initialChat,
   onPage,
   needsPublish,
@@ -49,6 +53,9 @@ export function AssistantHome({
 }: {
   assistant: AssistantView;
   projectHtml: string;
+  /** Where her home's page is published, or null. */
+  address?: string | null;
+  projectTitle?: string | null;
   initialChat: StoredChatTurn[];
   /** Whether her bubble is on the page (`assistantProjects.onPage`). */
   onPage: boolean;
@@ -69,6 +76,24 @@ export function AssistantHome({
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
   const [menuOpen, setMenuOpen] = useState(false);
+  // Her page beside her chat. Put away, it stays away on this device until it is asked for again.
+  const [pageOpen, setPageOpen] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(PAGE_PANE) === "0") setPageOpen(false);
+    } catch {
+      // No storage (a private window): it opens, as it does the first time.
+    }
+  }, []);
+  const togglePage = () =>
+    setPageOpen((open) => {
+      try {
+        localStorage.setItem(PAGE_PANE, open ? "0" : "1");
+      } catch {
+        // Same.
+      }
+      return !open;
+    });
   const menu = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -107,6 +132,20 @@ export function AssistantHome({
         </div>
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
         <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
+          <div className="flex items-center gap-1">
+          {tab === "talk" && (
+            <button
+              type="button"
+              data-her-page-toggle=""
+              aria-pressed={pageOpen}
+              aria-label={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
+              title={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
+              onClick={togglePage}
+              className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors lg:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
+            >
+              <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          )}
           <button
             type="button"
             data-assistant-menu=""
@@ -118,6 +157,7 @@ export function AssistantHome({
           >
             <MoreHorizontal size={17} aria-hidden="true" />
           </button>
+          </div>
           {/* Closed it is hidden, not unmounted: a rename half written or a switch in flight is not lost. */}
           <div className={menuOpen ? "slide-down flex w-[min(17.5rem,calc(100vw-5rem))] flex-col rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
             data-assistant-controls=""
@@ -132,8 +172,16 @@ export function AssistantHome({
           </div>
         </div>
         {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
-        <div className={tab === "talk" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-          <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
+        <div className={tab === "talk" ? "flex min-h-0 flex-1" : "hidden"}>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
+          </div>
+          {/* Wide windows only: on a narrow one the conversation is the place. */}
+          {pageOpen && (
+            <div className="hidden min-h-0 min-w-0 flex-1 lg:flex">
+              <HerPage projectId={assistant.projectId} html={projectHtml} address={address} title={projectTitle} />
+            </div>
+          )}
         </div>
         {seen.has("conversations") && (
           <div className={tab === "conversations" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>

@@ -888,6 +888,14 @@
     },
     "composer": {
       "effort": "Impegno di {name}"
+    },
+    "page": {
+      "title": "La tua pagina",
+      "reload": "Ricarica",
+      "open": "Apri in un'altra scheda",
+      "hide": "Nascondi la pagina",
+      "show": "Mostra la pagina",
+      "empty": "La tua pagina è ancora vuota."
     }
   }
 }
