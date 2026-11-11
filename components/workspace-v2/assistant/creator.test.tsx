@@ -16,6 +16,8 @@ vi.mock("./live-figure", () => ({
 
 import { FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, checkLook } from "@/lib/figure/look";
 
+import panelsChatEn from "@/messages/en/panelsChat.json";
+
 import { AssistantCreateCard } from "./create-card";
 import { AssistantCreatorDialog } from "./creator-dialog";
 
@@ -118,6 +120,17 @@ describe("the creator", () => {
     const pressed = [...document.querySelectorAll('[data-figure-option][aria-pressed="true"]')].map((b) => b.getAttribute("data-figure-option"));
     expect(pressed).toEqual(["heart", "round", "shades", "crown"]);
     expect(document.querySelector("[data-live-figure]")!.getAttribute("data-live-figure")).toBe("heart");
+  });
+
+  it("🔴 every option is named in the person's language, not by its id in the catalog", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
+    const name = (category: string, id: string) => document.querySelector(`[data-figure-category="${category}"] [data-figure-option="${id}"]`)!.getAttribute("aria-label");
+    expect(name("shape", "heart")).toBe("ownAssistant.creator.option.shape.heart");
+    expect(name("accessory", "none")).toBe("ownAssistant.creator.option.accessory.none");
+    // The catalog and the texts are two lists: an entry offered without its name would be read as a missing key.
+    const texts = (panelsChatEn as unknown as { ownAssistant: { creator: { option?: Record<string, Record<string, string>> } } }).ownAssistant.creator.option ?? {};
+    const all = { shape: FIGURE_SHAPES, eyes: FIGURE_EYES, eyewear: FIGURE_EYEWEAR, accessory: FIGURE_ACCESSORIES };
+    for (const [category, ids] of Object.entries(all)) expect(Object.keys(texts[category] ?? {}).sort(), category).toEqual([...ids].sort());
   });
 
   it("«sorpréndeme» gives a look of the catalog, and a free color is taken", async () => {

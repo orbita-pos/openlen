@@ -745,7 +745,40 @@
       "eyewear": "안경",
       "accessory": "액세서리",
       "surprise": "랜덤으로",
-      "freeColor": "다른 색"
+      "freeColor": "다른 색",
+      "option": {
+        "shape": {
+          "drop": "물방울",
+          "round": "동그라미",
+          "capsule": "캡슐",
+          "cube": "큐브",
+          "ears": "귀 달린 모양",
+          "heart": "하트",
+          "flower": "꽃",
+          "triangle": "삼각형"
+        },
+        "eyes": {
+          "oval": "타원형",
+          "round": "동그란 눈",
+          "dot": "점",
+          "smile": "웃는 눈",
+          "sleepy": "졸린 눈"
+        },
+        "eyewear": {
+          "none": "안경 없음",
+          "round": "동그란 안경",
+          "shades": "선글라스"
+        },
+        "accessory": {
+          "none": "액세서리 없음",
+          "beret": "베레모",
+          "beanie": "비니",
+          "bow": "리본",
+          "crown": "왕관",
+          "hat": "모자",
+          "headphones": "헤드폰"
+        }
+      }
     },
     "tones": {
       "friendly": "친근하게",

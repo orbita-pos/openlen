@@ -62,6 +62,17 @@ describe("LiveFigure", () => {
     expect(host.querySelector('[data-part="body"]')).not.toBeNull();
   });
 
+  it("🔴 her name is on the figure itself, once, so it is still said when the flat one is hidden", async () => {
+    const host = await mount(<LiveFigure look={DEFAULT_LOOK} size={96} label="Lucía" ask={async () => false} />);
+    const named = [...host.querySelectorAll("[aria-label]")];
+    expect(named).toHaveLength(1);
+    expect(named[0]!.hasAttribute("data-figure")).toBe(true);
+    expect(named[0]!.getAttribute("role")).toBe("img");
+    expect(named[0]!.getAttribute("aria-label")).toBe("Lucía");
+    const bare = await mount(<LiveFigure look={DEFAULT_LOOK} size={96} ask={async () => false} />);
+    expect(bare.querySelector("[data-figure]")!.getAttribute("aria-hidden")).toBe("true");
+  });
+
   it("asks the switch once per page, and not knowing is off", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ enabled: true })));
     vi.stubGlobal("fetch", fetchMock);

@@ -745,7 +745,40 @@
       "eyewear": "Glasses",
       "accessory": "Accessory",
       "surprise": "Surprise me",
-      "freeColor": "Another color"
+      "freeColor": "Another color",
+      "option": {
+        "shape": {
+          "drop": "Drop",
+          "round": "Round",
+          "capsule": "Capsule",
+          "cube": "Cube",
+          "ears": "With ears",
+          "heart": "Heart",
+          "flower": "Flower",
+          "triangle": "Triangle"
+        },
+        "eyes": {
+          "oval": "Oval",
+          "round": "Round",
+          "dot": "Dots",
+          "smile": "Smiling",
+          "sleepy": "Sleepy"
+        },
+        "eyewear": {
+          "none": "No glasses",
+          "round": "Round glasses",
+          "shades": "Sunglasses"
+        },
+        "accessory": {
+          "none": "No accessory",
+          "beret": "Beret",
+          "beanie": "Beanie",
+          "bow": "Bow",
+          "crown": "Crown",
+          "hat": "Hat",
+          "headphones": "Headphones"
+        }
+      }
     },
     "tones": {
       "friendly": "Friendly",

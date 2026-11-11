@@ -745,7 +745,40 @@
       "eyewear": "Brille",
       "accessory": "Accessoire",
       "surprise": "Überrasch mich",
-      "freeColor": "Andere Farbe"
+      "freeColor": "Andere Farbe",
+      "option": {
+        "shape": {
+          "drop": "Tropfen",
+          "round": "Rund",
+          "capsule": "Kapsel",
+          "cube": "Würfel",
+          "ears": "Mit Ohren",
+          "heart": "Herz",
+          "flower": "Blume",
+          "triangle": "Dreieck"
+        },
+        "eyes": {
+          "oval": "Oval",
+          "round": "Rund",
+          "dot": "Punkte",
+          "smile": "Lächelnd",
+          "sleepy": "Schläfrig"
+        },
+        "eyewear": {
+          "none": "Keine Brille",
+          "round": "Runde Brille",
+          "shades": "Sonnenbrille"
+        },
+        "accessory": {
+          "none": "Kein Accessoire",
+          "beret": "Baskenmütze",
+          "beanie": "Mütze",
+          "bow": "Schleife",
+          "crown": "Krone",
+          "hat": "Hut",
+          "headphones": "Kopfhörer"
+        }
+      }
     },
     "tones": {
       "friendly": "Freundlich",

@@ -745,7 +745,40 @@
       "eyewear": "Bril",
       "accessory": "Accessoire",
       "surprise": "Verras me",
-      "freeColor": "Andere kleur"
+      "freeColor": "Andere kleur",
+      "option": {
+        "shape": {
+          "drop": "Druppel",
+          "round": "Rond",
+          "capsule": "Capsule",
+          "cube": "Kubus",
+          "ears": "Met oren",
+          "heart": "Hart",
+          "flower": "Bloem",
+          "triangle": "Driehoek"
+        },
+        "eyes": {
+          "oval": "Ovaal",
+          "round": "Rond",
+          "dot": "Stipjes",
+          "smile": "Lachend",
+          "sleepy": "Slaperig"
+        },
+        "eyewear": {
+          "none": "Geen bril",
+          "round": "Ronde bril",
+          "shades": "Zonnebril"
+        },
+        "accessory": {
+          "none": "Geen accessoire",
+          "beret": "Baret",
+          "beanie": "Muts",
+          "bow": "Strik",
+          "crown": "Kroon",
+          "hat": "Hoed",
+          "headphones": "Koptelefoon"
+        }
+      }
     },
     "tones": {
       "friendly": "Vriendelijk",

@@ -745,7 +745,40 @@
       "eyewear": "メガネ",
       "accessory": "アクセサリー",
       "surprise": "おまかせ",
-      "freeColor": "ほかの色"
+      "freeColor": "ほかの色",
+      "option": {
+        "shape": {
+          "drop": "しずく",
+          "round": "まる",
+          "capsule": "カプセル",
+          "cube": "キューブ",
+          "ears": "耳つき",
+          "heart": "ハート",
+          "flower": "花",
+          "triangle": "三角"
+        },
+        "eyes": {
+          "oval": "楕円",
+          "round": "まる",
+          "dot": "点",
+          "smile": "にっこり",
+          "sleepy": "ねむそう"
+        },
+        "eyewear": {
+          "none": "メガネなし",
+          "round": "丸メガネ",
+          "shades": "サングラス"
+        },
+        "accessory": {
+          "none": "アクセサリーなし",
+          "beret": "ベレー帽",
+          "beanie": "ニット帽",
+          "bow": "リボン",
+          "crown": "王冠",
+          "hat": "帽子",
+          "headphones": "ヘッドホン"
+        }
+      }
     },
     "tones": {
       "friendly": "親しみやすい",

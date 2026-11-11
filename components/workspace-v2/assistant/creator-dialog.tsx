@@ -131,7 +131,8 @@ export function AssistantCreatorDialog({
                   key={id}
                   type="button"
                   data-figure-option={id}
-                  aria-label={id}
+                  aria-label={t(`ownAssistant.creator.option.${category.id}.${id}`)}
+                  title={t(`ownAssistant.creator.option.${category.id}.${id}`)}
                   aria-pressed={look[category.id] === id}
                   onClick={() => pick({ [category.id]: id })}
                   className={`rounded-xl border-2 p-1 ${look[category.id] === id ? "border-[var(--nc-accent-text)]" : "border-transparent bg-elev"}`}
