@@ -649,6 +649,19 @@ describe("what it costs", () => {
     120_000,
   );
 
+  // Seen on 11/11 in her place, on a healthy 60 Hz screen: alive for three seconds, then flat. After a hiccup of the
+  // page the next frame comes early (a few ms, catching up); taken as the screen's pace, it made every normal frame
+  // look slow, one step down a second.
+  it(
+    "🔴 one early frame after a hiccup is not the screen's pace: she stays alive at full quality",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const pace = [...Array.from({ length: 10 }, () => 16.7), 240, 5, 16.7];
+        expect(await paced(p, "early", pace, 230)).toEqual({ seen: [2], lost: 0, released: false });
+      }),
+    120_000,
+  );
+
   it(
     "survives one long hiccup without lowering its quality",
     () =>

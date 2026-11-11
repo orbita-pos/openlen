@@ -54,6 +54,8 @@ const WINDOW = 30;
 const WARM_UP = 5;
 /** A frame counts as this long at most: slower than four a second is just "too slow". */
 const LONGEST_MS = 250;
+/** Which of a window's frames, shortest first, tells the screen's pace: the fourth, so three early ones are not it. */
+const PACE_RANK = 3;
 
 /** Canvases whose figure was destroyed and whose context is about to be given back (see `destroy`). */
 const releasing = new WeakMap<HTMLCanvasElement, ReturnType<typeof setTimeout>>();
@@ -128,7 +130,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   let reach = reachFor(look);
   let tier: QualityTier = 2;
   let slowInARow = 0;
-  /** The shortest frame this screen has shown: its own pace. */
+  /** The fastest this screen has been seen to go, window by window: its own pace. */
   let period = Number.POSITIVE_INFINITY;
   const intervals: number[] = [];
   let warm = 0;
@@ -177,9 +179,12 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     // behind another, a tab it is not painting: about a frame a second). Counting those would step a healthy figure
     // down to the flat one, for good, because someone looked away.
     if (!reduced && elapsed > 0 && elapsed < LONGEST_MS && ++warm > WARM_UP) {
-      period = Math.min(period, Math.max(4, elapsed));
       intervals.push(elapsed);
       if (intervals.length === WINDOW) {
+        // The screen's pace is what a window of frames shows several times, never one frame: after a hiccup of the
+        // page the next frame comes early (a few ms, catching up), and taken as the pace it makes every normal frame
+        // after it look slow.
+        period = Math.min(period, Math.max(4, [...intervals].sort((x, y) => x - y)[PACE_RANK]!));
         slowInARow = isSlow(median(intervals), period) ? slowInARow + 1 : 0;
         intervals.length = 0;
         const next = nextTier(tier, slowInARow);
