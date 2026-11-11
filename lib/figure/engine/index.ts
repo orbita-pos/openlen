@@ -9,9 +9,11 @@
 //   · the canvas is transparent. Its background is the host's.
 import { createRenderer, rotation, type Frame, type Renderer } from "./gl";
 import { partsFor, shadowOf, type Part } from "./parts";
+import { TIERS, nextTier, type QualityTier } from "./quality";
 import { NEUTRAL_POSE, blinkAt, stepPose, targetPose, type FigureActivity, type Pose } from "./pose";
 
 export type { FigureActivity } from "./pose";
+export type { QualityTier } from "./quality";
 
 export interface FigureOptions {
   activity?: FigureActivity;
@@ -41,11 +43,16 @@ export interface Figure {
   /** The neutral pose at `size`×`size` pixels, straight (not premultiplied) RGBA. null once the context is gone. */
   capture(size: number): ImageData | null;
   destroy(): void;
+  /** The tier it is drawing at now: 2 full, 0 the least. It lowers itself on a slow device. */
+  readonly quality: QualityTier;
 }
 
 /** The backing store never grows past this, whatever the screen says. */
 const MAX_PIXELS = 1024;
-const LAYERS = 40;
+/** Frames per quality decision, and the hiccups that are not the device's speed: a compile at birth, a pause. */
+const WINDOW = 30;
+const WARM_UP = 5;
+const PAUSE_MS = 250;
 
 const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
 
@@ -95,6 +102,13 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   let pose: Pose = NEUTRAL_POSE;
   let last = since;
   let lag: [number, number, number] = [0, 0, 0];
+  let tier: QualityTier = 2;
+  let windowsAtTier = 0;
+  let sampled = 0;
+  let sum = 0;
+  let warm = 0;
+  let onScreen = true;
+  let pageVisible = typeof document === "undefined" || !document.hidden;
   let active = true;
   let reduced = options.reducedMotion ?? (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
   let dead = false;
@@ -105,7 +119,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   let height = 0;
 
   function measure(): boolean {
-    const ratio = Math.min(typeof devicePixelRatio === "number" ? devicePixelRatio : 1, maxRatio);
+    const ratio = Math.min(typeof devicePixelRatio === "number" ? devicePixelRatio : 1, maxRatio, TIERS[tier]!.pixelRatio);
     const w = Math.min(MAX_PIXELS, Math.round(canvas.clientWidth * ratio));
     const h = Math.min(MAX_PIXELS, Math.round(canvas.clientHeight * ratio));
     if (w !== width || h !== height) {
@@ -123,8 +137,23 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   function paint(): void {
     if (!measure()) return;
     const now = clock();
+    const elapsed = (now - last) * 1000;
     const dt = clamp(now - last, 0, 0.1);
     last = now;
+    if (!reduced && elapsed > 0 && elapsed < PAUSE_MS && ++warm > WARM_UP) {
+      sum += elapsed;
+      if (++sampled === WINDOW) {
+        const next = nextTier(tier, sum / WINDOW, ++windowsAtTier);
+        sampled = 0;
+        sum = 0;
+        if (next === "flat") throw new Error("too slow to be live");
+        if (next !== tier) {
+          tier = next;
+          windowsAtTier = 0;
+          if (!measure()) return;
+        }
+      }
+    }
     const target = targetPose(activity, now - since, gaze);
     let frame: Omit<Frame, "layers" | "density" | "time" | "occluder">;
     if (reduced) {
@@ -143,7 +172,7 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
       pose = next;
       frame = frameOf({ ...pose, eyeOpen: pose.eyeOpen * (1 - 0.95 * blinkAt(now, seed)) }, lag);
     }
-    renderer.render(parts, { ...frame, time: reduced ? 0 : now, occluder, layers: LAYERS, density: densityFor(Math.min(width, height)) }, width, height);
+    renderer.render(parts, { ...frame, time: reduced ? 0 : now, occluder, layers: TIERS[tier]!.layers, density: densityFor(Math.min(width, height)) }, width, height);
     dirty = false;
     if (!painted) {
       painted = true;
@@ -156,14 +185,14 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
   }
 
   function schedule(): void {
-    if (raf || dead || !active) return;
+    if (raf || dead || !active || !onScreen || !pageVisible) return;
     if (reduced && !dirty) return;
     raf = requestAnimationFrame(tick);
   }
 
   function tick(): void {
     raf = 0;
-    if (dead || !active) return;
+    if (dead || !active || !onScreen || !pageVisible) return;
     try {
       paint();
     } catch {
@@ -179,6 +208,8 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
     observer?.disconnect();
+    watcher?.disconnect();
+    if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisibility);
     canvas.removeEventListener("webglcontextlost", onContextLost);
   }
 
@@ -211,6 +242,28 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
     dirty = true;
     schedule();
   }
+
+  /** Seen again after not being seen: not a jump in time, and not a slow frame. */
+  function resume(): void {
+    last = clock();
+    schedule();
+  }
+
+  function onVisibility(): void {
+    pageVisible = !document.hidden;
+    if (pageVisible) guarded(resume, undefined);
+  }
+
+  // No drawing for nobody: off screen, in a hidden tab, in a closed bubble.
+  const watcher =
+    typeof IntersectionObserver === "function"
+      ? new IntersectionObserver((entries) => {
+          onScreen = entries[entries.length - 1]?.isIntersecting ?? true;
+          if (onScreen) guarded(resume, undefined);
+        })
+      : null;
+  watcher?.observe(canvas);
+  if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisibility);
 
   const observer = typeof ResizeObserver === "function" ? new ResizeObserver(() => guarded(invalidate, undefined)) : null;
   observer?.observe(canvas);
@@ -271,7 +324,8 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         context.bindRenderbuffer(context.RENDERBUFFER, depth);
         context.renderbufferStorage(context.RENDERBUFFER, context.DEPTH_COMPONENT16, side, side);
         context.framebufferRenderbuffer(context.FRAMEBUFFER, context.DEPTH_ATTACHMENT, context.RENDERBUFFER, depth);
-        renderer.render(parts, { ...NEUTRAL, time: 0, occluder, layers: LAYERS, density: densityFor(side) }, side, side);
+        // Always at full quality: a capture is a picture to keep, whatever the device can animate.
+        renderer.render(parts, { ...NEUTRAL, time: 0, occluder, layers: TIERS[2]!.layers, density: densityFor(side) }, side, side);
         const raw = new Uint8Array(side * side * 4);
         context.readPixels(0, 0, side, side, context.RGBA, context.UNSIGNED_BYTE, raw);
         context.bindFramebuffer(context.FRAMEBUFFER, null);
@@ -291,6 +345,9 @@ export function createFigure(canvas: HTMLCanvasElement, look: unknown, options: 
         invalidate();
         return new ImageData(out, side, side);
       }, null),
+    get quality() {
+      return tier;
+    },
     destroy: () => {
       if (dead) return;
       stop();

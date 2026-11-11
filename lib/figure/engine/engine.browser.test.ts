@@ -277,10 +277,10 @@ describe("what it is doing, live", () => {
     () =>
       withPage({}, async (p) => {
         await show(p, PINK);
-        await advance(p, 1);
+        await advance(p, 0.4);
         const open = darkArea(await shot(p)).count;
         await run(p, `window.fig.setActivity("asleep")`);
-        await advance(p, 2);
+        await advance(p, 1);
         expect(open).toBeGreaterThan(40);
         expect(darkArea(await shot(p)).count).toBeLessThan(open * 0.3);
       }),
@@ -293,10 +293,10 @@ describe("what it is doing, live", () => {
       withPage({}, async (p) => {
         await show(p, PINK);
         await run(p, `window.fig.lookAt(0, 0.5)`);
-        await advance(p, 1.5);
+        await advance(p, 0.8);
         const left = darkArea(await shot(p)).x;
         await run(p, `window.fig.lookAt(1, 0.5)`);
-        await advance(p, 1.5);
+        await advance(p, 0.8);
         expect(darkArea(await shot(p)).x).toBeGreaterThan(left + 0.01);
       }),
     T,
@@ -314,7 +314,7 @@ describe("what it is doing, live", () => {
         await frames(p, 3);
         expect(difference(first, await shot(p), 0)).toBe(0);
         await run(p, `window.fig.setReducedMotion(false)`);
-        await advance(p, 1.3);
+        await advance(p, 0.9);
         expect(difference(first, await shot(p))).toBeGreaterThan(0.01);
       }),
     T,
@@ -325,10 +325,10 @@ describe("what it is doing, live", () => {
     () =>
       withPage({}, async (p) => {
         await show(p, PINK);
-        await advance(p, 2);
+        await advance(p, 0.6);
         const ready = await shot(p);
         await run(p, `window.fig.setActivity("listening")`);
-        await advance(p, 2);
+        await advance(p, 1);
         expect(difference(ready, await shot(p))).toBeGreaterThan(0.01);
       }),
     T,
@@ -367,7 +367,7 @@ describe("what it is doing, live", () => {
           const ready = Array.from(w.fig.capture(64).data);
           w.fig.setActivity("talking");
           for (let i = 0; i < 20; i++) {
-            w.__t += 1 / 30;
+            w.__t += 1 / 50;
             await w.frames(1);
           }
           const talking = Array.from(w.fig.capture(64).data);
@@ -517,5 +517,80 @@ describe("the look", () => {
         expect(difference(first, await shot(p), 0)).toBe(0);
       }),
     T,
+  );
+});
+
+describe("what it costs", () => {
+  /** The frames the page asked for over 300 ms, after letting things settle. */
+  const asked = (p: FigurePage) =>
+    p.page.evaluate(async () => {
+      const w = window as never as { __raf: number };
+      await new Promise((r) => setTimeout(r, 150));
+      const before = w.__raf;
+      await new Promise((r) => setTimeout(r, 300));
+      return w.__raf - before;
+    });
+
+  it(
+    "does not draw while it is off screen, and draws again when it comes back",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        expect(await asked(p)).toBeGreaterThan(0);
+        await p.page.evaluate(`document.getElementById("c").style.marginTop = "3000px"`);
+        expect(await asked(p)).toBe(0);
+        await p.page.evaluate(`document.getElementById("c").style.marginTop = "0"`);
+        expect(await asked(p)).toBeGreaterThan(0);
+      }),
+    T,
+  );
+
+  it(
+    "does not draw while the tab is hidden",
+    () =>
+      withPage({}, async (p) => {
+        await show(p, PINK);
+        const hide = (hidden: boolean) =>
+          p.page.evaluate((h) => {
+            Object.defineProperty(document, "hidden", { configurable: true, get: () => h });
+            Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (h ? "hidden" : "visible") });
+            document.dispatchEvent(new Event("visibilitychange"));
+          }, hidden);
+        await hide(true);
+        expect(await asked(p)).toBe(0);
+        await hide(false);
+        expect(await asked(p)).toBeGreaterThan(0);
+      }),
+    T,
+  );
+
+  it(
+    "lowers its quality when frames are slow, then hands over to the flat figure; stays at full when they are fast",
+    () =>
+      withPage({ css: 96 }, async (p) => {
+        const run = (ms: number) =>
+          p.page.evaluate(async (step) => {
+            const w = window as never as { make: (l: unknown, o: unknown, id: string) => boolean; fig: { quality: number; destroy(): void }; __lost: number; __t: number };
+            const c = document.createElement("canvas");
+            c.id = "q" + step;
+            c.style.cssText = "display:block;width:96px;height:96px;position:absolute;left:0;top:0";
+            document.body.append(c);
+            // Every time the engine reads the clock, `step` milliseconds have passed: that is how long a frame "took".
+            let t = 0;
+            w.make({ v: 1, shape: "round", color: "#ff5fa8", eyes: "oval", eyewear: "none", accessory: "none" }, { clock: () => (t += step / 1000) }, c.id);
+            const seen = [w.fig.quality];
+            for (let i = 0; i < 400 && w.__lost === 0; i++) {
+              await new Promise((r) => requestAnimationFrame(r));
+              if (seen[seen.length - 1] !== w.fig.quality) seen.push(w.fig.quality);
+            }
+            const lost = w.__lost;
+            w.fig.destroy();
+            c.remove();
+            return { seen, lost };
+          }, ms);
+        expect(await run(40)).toEqual({ seen: [2, 1, 0], lost: 1 });
+        expect(await run(8)).toEqual({ seen: [2], lost: 0 });
+      }),
+    120_000,
   );
 });
