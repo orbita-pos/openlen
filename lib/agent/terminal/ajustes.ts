@@ -2,7 +2,7 @@
  * `/ajustes/proyecto.json` (F5 de plans/len-agente-2026, tarea 10): los ajustes
  * del proyecto como un fichero que la terminal lee y escribe.
  *
- *   { "titulo": "…", "idiomas": ["en", …], "modulos": { "chat": false, "assistant": true } }
+ *   { "titulo": "…", "idiomas": ["en", …], "modulos": { "chat": false } }
  *
  * Escribirlo NO es escribir un JSON en ningún sitio: se valida con su esquema
  * (estricto: nada que no esté aquí) y cada campo que cambió va por el MISMO
@@ -31,7 +31,8 @@ const ESQUEMA = z
   .object({
     titulo: z.string().trim().min(1).max(200),
     idiomas: z.array(z.string()),
-    modulos: z.object({ chat: z.boolean(), assistant: z.boolean() }).strict(),
+    // No «assistant» since 2026-11-11: the old page assistant is not Len's to switch (lib/agent/catalog.ts).
+    modulos: z.object({ chat: z.boolean() }).strict(),
   })
   .strict();
 
@@ -42,7 +43,7 @@ function ajustesDe(row: { title: string; data: ProjectData }): Ajustes {
   return {
     titulo: row.title,
     idiomas: [...(s?.languages ?? [])],
-    modulos: { chat: s?.chat?.enabled === true, assistant: s?.assistant?.enabled === true },
+    modulos: { chat: s?.chat?.enabled === true },
   };
 }
 
@@ -79,7 +80,7 @@ export async function guardarAjustes(
     const p = leido.error.issues[0];
     return {
       ok: false,
-      motivo: `it does not match its schema: ${p ? `${p.path.join(".") || "(root)"}: ${p.message}` : "invalid"}. The shape is {"titulo": string, "idiomas": [...], "modulos": {"chat": boolean, "assistant": boolean}}.`,
+      motivo: `it does not match its schema: ${p ? `${p.path.join(".") || "(root)"}: ${p.message}` : "invalid"}. The shape is {"titulo": string, "idiomas": [...], "modulos": {"chat": boolean}}.`,
     };
   }
   const nuevo = leido.data;

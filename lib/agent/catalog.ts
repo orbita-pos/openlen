@@ -93,10 +93,11 @@ export const AGENT_MODULES = [
   // su vez el 2026-10-04: hoy, el backend de Supabase), sin nada que activar. Chat se queda porque es lo único que de verdad necesita el
   // servidor en vivo (/api/chat/*, bandeja, push).
   "chat",
-  // Y el ASISTENTE desde el 2026-09-16: también necesita el servidor en vivo
-  // (/api/assistant/[sub]) y, hasta esa fecha, sólo se encendía desde un panel
-  // al que no navegaba nada.
-  "assistant",
+  // ⚰️ The page ASSISTANT (2026-09-16 → 2026-11-11) is no longer Len's to switch. In real turns, asked for «an
+  // assistant that answers my customers», he turned it on AND offered create_assistant: two doors to one wish, and
+  // the old one won the page (her own assistant was left off it). As Claude Code does with a tool another replaces,
+  // the replaced one is not offered: her own assistant (create_assistant) is the only door. Pages that already have
+  // the old one keep it, switched from the Inbox.
 ] as const;
 export type AgentModule = (typeof AGENT_MODULES)[number];
 
@@ -136,7 +137,6 @@ const PUBLISH_LOCALE_CODES = PUBLISH_LOCALES.map((l) => l.code);
  */
 export const MODULE_NOMBRE: Record<AgentModule, string> = {
   chat: "chat",
-  assistant: "assistant",
 };
 
 // Conocimiento por módulo: qué es + cuándo recomendarlo. En inglés desde la
@@ -145,8 +145,6 @@ export const MODULE_NOMBRE: Record<AgentModule, string> = {
 const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
   chat:
     "Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.",
-  assistant:
-    "AI assistant on the published page — answers questions about the business's information. Turn it on when the user wants a bot to answer visitors using their information.",
 };
 
 /** Qué puede correr de verdad quien va a recibir estas declaraciones.

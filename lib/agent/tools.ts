@@ -1630,10 +1630,10 @@ export interface ToolOutcome {
 
 // AgentModule name -> the settings key it actually lives under. Identidad en
 // todos: la excepción era "pedidos" (settings.orders), y ese módulo se retiró.
-// Desde el 2026-08-29 queda Chat y Asistente: las colecciones se fueron con el hub.
-const MODULE_SETTINGS_KEY: Record<AgentModule, "chat" | "assistant"> = {
+// Desde el 2026-08-29 queda Chat y Asistente: las colecciones se fueron con el hub. Since 2026-11-11, only Chat: the
+// old page assistant is not Len's to switch (catalog.ts).
+const MODULE_SETTINGS_KEY: Record<AgentModule, "chat"> = {
   chat: "chat",
-  assistant: "assistant",
 };
 
 /** Los tokens de los que depende que el Tema del editor haga algo. Exportada
@@ -1782,8 +1782,6 @@ function buildModulePatch(modulo: AgentModule, encender: boolean, numero?: strin
   switch (modulo) {
     case "chat":
       return { chat: { enabled: encender } };
-    case "assistant":
-      return { assistant: { enabled: encender } };
   }
 }
 
