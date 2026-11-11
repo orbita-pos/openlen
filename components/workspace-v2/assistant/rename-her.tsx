@@ -55,7 +55,6 @@ export function RenameHer({
           <input
             data-rename-input=""
             aria-label={t("ownAssistant.place.rename")}
-            autoFocus
             value={value}
             maxLength={40}
             onChange={(e) => setValue(e.target.value)}

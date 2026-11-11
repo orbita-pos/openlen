@@ -129,6 +129,13 @@ describe("the creator", () => {
     expect(surprise.style.color).toBe("rgb(29, 29, 31)");
   });
 
+  // Second review's minors (11/11): the real color input is invisible over the wheel, so the wheel shows its focus.
+  it("🔴 the color wheel shows where the keyboard is", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
+    const wheel = document.querySelector("[data-assistant-free-color]")!.parentElement!;
+    expect(wheel.className).toContain("focus-within:");
+  });
+
   it("🔴 the eight colors are named in the person's language, not read as a code", () => {
     mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
     const names = [...document.querySelectorAll("[data-assistant-color]")].map((b) => b.getAttribute("aria-label"));

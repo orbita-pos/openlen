@@ -24,12 +24,13 @@ const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "d
 const roots: Root[] = [];
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
-  vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(min-width: 860px)", media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
 });
 afterEach(() => {
   for (const r of roots.splice(0)) act(() => r.unmount());
   document.body.innerHTML = "";
   vi.unstubAllGlobals();
+  localStorage.clear();
 });
 function mount(node: React.ReactNode) {
   const host = document.createElement("div");
@@ -80,6 +81,11 @@ describe("the assistant's place", () => {
     // What she said is a bubble of its own, without a row repeating her face and name: they head her place.
     expect(talked.querySelector("[data-her-bubble]")!.textContent).toContain("¡Hola!");
     expect(talked.querySelector("[data-reply-speaker]")).toBeNull();
+    // Second review's minors (11/11): her answer keeps its time, under the bubble; the bubble has an edge (light theme:
+    // bg-elev on bg-sidebar is ~1.1:1); and what she is doing is not a second live region (LiveBar announces the turn).
+    expect(talked.querySelector("[data-her-time]")!.textContent!.trim()).not.toBe("");
+    expect(talked.querySelector("[data-her-bubble]")!.classList.contains("border")).toBe(true);
+    expect(talked.querySelector("[data-her-status]")!.hasAttribute("aria-live")).toBe(false);
     // Her owner's bubble is the one her color paints (tokens.css).
     expect(talked.querySelector("[data-user-bubble]")!.textContent).toContain("hola");
   });
@@ -271,6 +277,81 @@ describe("her place's controls", () => {
     await settle();
     expect(empty.querySelector("[data-her-page] iframe")).toBeNull();
     expect(empty.querySelector("[data-her-page-empty]")!.textContent).toBe("ownAssistant.page.empty");
+  });
+
+  // Second review's minors (11/11), her page's pane.
+  it("🔴 her page is not loaded where it cannot be seen: a narrow window, another view, or put away before", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
+    const narrow = serve();
+    const one = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(one.querySelector("[data-her-page]")).toBeNull();
+    expect(narrow.some((c) => c.url.endsWith("/api/lienzo"))).toBe(false);
+    act(() => roots.splice(0).forEach((r) => r.unmount()));
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query === "(min-width: 860px)", media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, onchange: null, dispatchEvent: () => false }));
+    localStorage.setItem("openlen:her-page-pane", "0");
+    const away = serve();
+    const two = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(two.querySelector("[data-her-page]")).toBeNull();
+    expect(away.some((c) => c.url.endsWith("/api/lienzo"))).toBe(false);
+    localStorage.clear();
+    act(() => roots.splice(0).forEach((r) => r.unmount()));
+    serve();
+    const three = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    expect(three.querySelector("[data-her-page]")).not.toBeNull();
+    act(() => three.querySelectorAll<HTMLButtonElement>('[role="tab"]')[1]!.click());
+    await settle();
+    expect(three.querySelector("[data-her-page]")).toBeNull();
+  });
+
+  it("🔴 the page's switch keeps one name; whether it is on is aria-pressed", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="<h1>Hola</h1>" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const toggle = host.querySelector<HTMLButtonElement>("[data-her-page-toggle]")!;
+    const name = toggle.getAttribute("aria-label");
+    act(() => toggle.click());
+    expect(toggle.getAttribute("aria-pressed")).toBe("false");
+    expect(toggle.getAttribute("aria-label")).toBe(name);
+  });
+
+  // Second review's minors (11/11), her settings menu.
+  it("🔴 Escape closes the settings menu even after her projects' panel was opened inside it", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    act(() => host.querySelector<HTMLButtonElement>("[data-assistant-menu]")!.click());
+    act(() => host.querySelector<HTMLButtonElement>("[data-her-projects-open]")!.click());
+    await settle();
+    act(() => void document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(host.querySelector("[data-assistant-controls]")!.className).toContain("hidden");
+  });
+
+  it("🔴 the settings menu scrolls inside the window instead of running off it", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    act(() => host.querySelector<HTMLButtonElement>("[data-assistant-menu]")!.click());
+    const menu = host.querySelector("[data-assistant-controls]")!;
+    expect(menu.className).toMatch(/max-h-\[/);
+    expect(menu.className).toContain("overflow-y-auto");
+  });
+
+  it("🔴 closing the sheet a row of the menu opened gives the focus back to the settings button", async () => {
+    serve();
+    const host = mount(<AssistantHome assistant={LUCIA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await settle();
+    const menuButton = host.querySelector<HTMLButtonElement>("[data-assistant-menu]")!;
+    act(() => menuButton.click());
+    const row = host.querySelector<HTMLButtonElement>("[data-rename-open]")!;
+    act(() => (row.focus(), row.click()));
+    await settle();
+    const cancel = [...document.querySelectorAll<HTMLButtonElement>("[data-her-sheet] button")].find((b) => b.textContent === "ownAssistant.place.renameCancel")!;
+    act(() => cancel.click());
+    await settle();
+    expect(document.activeElement).toBe(menuButton);
   });
 
   it("her place has Hablar and Conversaciones, and Conversaciones lists what visitors said", async () => {

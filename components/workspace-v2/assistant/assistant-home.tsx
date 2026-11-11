@@ -76,14 +76,27 @@ export function AssistantHome({
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
   const [menuOpen, setMenuOpen] = useState(false);
-  // Her page beside her chat. Put away, it stays away on this device until it is asked for again.
-  const [pageOpen, setPageOpen] = useState(true);
+  // Her page beside her chat. Put away, it stays away on this device until it is asked for again. Not known until the
+  // device's choice is read (`null`): a page put away must not open, load and close again on every visit.
+  const [pageOpen, setPageOpen] = useState<boolean | null>(null);
   useEffect(() => {
+    let stored: string | null = null;
     try {
-      if (localStorage.getItem(PAGE_PANE) === "0") setPageOpen(false);
+      stored = localStorage.getItem(PAGE_PANE);
     } catch {
       // No storage (a private window): it opens, as it does the first time.
     }
+    setPageOpen(stored !== "0");
+  }, []);
+  // Only on a window wide enough for it: on a narrower one it is not loaded at all, not merely hidden.
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    if (typeof matchMedia !== "function") return setWide(true);
+    const query = matchMedia("(min-width: 860px)");
+    setWide(query.matches);
+    const change = (e: MediaQueryListEvent) => setWide(e.matches);
+    query.addEventListener?.("change", change);
+    return () => query.removeEventListener?.("change", change);
   }, []);
   const togglePage = () =>
     setPageOpen((open) => {
@@ -94,6 +107,8 @@ export function AssistantHome({
       }
       return !open;
     });
+  const pageShown = wide && pageOpen === true && tab === "talk";
+  const menuButton = useRef<HTMLButtonElement | null>(null);
   const menu = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -102,7 +117,8 @@ export function AssistantHome({
       const at = e.target as Element | null;
       if (menu.current && at && !menu.current.contains(at) && !at.closest('[role="dialog"]')) setMenuOpen(false);
     };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector('[role="dialog"]') && setMenuOpen(false);
+    // A modal one of its rows opened takes Escape first; her projects' panel inside the menu is not one.
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector('[aria-modal="true"]') && setMenuOpen(false);
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", esc);
     return () => (document.removeEventListener("pointerdown", away), document.removeEventListener("keydown", esc));
@@ -118,20 +134,22 @@ export function AssistantHome({
         <div className="h-11 shrink-0" data-her-bar="" />
         <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1">
-            {tab === "talk" && (
+            {tab === "talk" && wide && (
               <button
                 type="button"
                 data-her-page-toggle=""
-                aria-pressed={pageOpen}
-                aria-label={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
+                // One name; whether it is on is aria-pressed. The tooltip says what a press does.
+                aria-pressed={pageOpen === true}
+                aria-label={t("ownAssistant.page.title")}
                 title={t(pageOpen ? "ownAssistant.page.hide" : "ownAssistant.page.show")}
                 onClick={togglePage}
-                className={`her-ring hidden h-8 w-8 items-center justify-center rounded-full transition-colors min-[860px]:flex ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
+                className={`her-ring flex h-8 w-8 items-center justify-center rounded-full transition-colors ${pageOpen ? "fg" : "fg-muted"} hover:bg-hover hover:fg`}
               >
                 <PanelRight size={16} strokeWidth={1.8} aria-hidden="true" />
               </button>
             )}
             <button
+              ref={menuButton}
               type="button"
               data-assistant-menu=""
               aria-expanded={menuOpen}
@@ -145,10 +163,15 @@ export function AssistantHome({
           </div>
           {/* Closed it is hidden, not unmounted: a rename half written or a switch in flight is not lost. */}
           <div
-            className={menuOpen ? "slide-down flex w-[min(17.5rem,calc(100vw-5rem))] flex-col rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
+            className={menuOpen ? "slide-down flex max-h-[calc(100dvh-4.5rem)] w-[min(17.5rem,calc(100vw-5rem))] flex-col overflow-y-auto rounded-[14px] border bd-strong bg-elev p-1.5 shadow-[0_18px_48px_-12px_rgba(0,0,0,0.5)]" : "hidden"}
             data-assistant-controls=""
-            // A row that opens its own sheet or dialog is the menu's answer: the menu steps aside.
-            onClick={(e) => (e.target as Element).closest("[data-rename-open], [data-change-figure]") && setMenuOpen(false)}
+            // A row that opens its own sheet or dialog is the menu's answer: the menu steps aside, and the focus waits on
+            // the settings button, which is where the sheet gives it back when it closes (the row is hidden by then).
+            onClick={(e) => {
+              if (!(e.target as Element).closest("[data-rename-open], [data-change-figure]")) return;
+              menuButton.current?.focus();
+              setMenuOpen(false);
+            }}
           >
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
             <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
@@ -183,9 +206,9 @@ export function AssistantHome({
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
               </div>
-              {/* Windows of 860 px or more: on a narrower one the conversation is the place. */}
-              {pageOpen && (
-                <div className="hidden min-h-0 min-w-0 flex-1 pb-2 pr-2 min-[860px]:flex">
+              {/* Windows of 860 px or more, and only beside her chat: elsewhere it is not loaded. */}
+              {pageShown && (
+                <div className="flex min-h-0 min-w-0 flex-1 pb-2 pr-2">
                   <HerPage projectId={assistant.projectId} html={projectHtml} address={address} title={projectTitle} />
                 </div>
               )}

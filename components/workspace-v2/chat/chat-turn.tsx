@@ -378,23 +378,32 @@ export function LenTurn({
     <div className="nc-turn nc-up flex flex-col gap-2.5" data-last={isLast} data-chat-row={turn.id}>
       {/* In her place her figure and her name head the chat: a row repeating them over every answer is noise. Her
           name stays for whoever does not see the page. */}
-      {speaker && <b className="sr-only">{speaker.name}</b>}
-      <div className={speaker ? "hidden" : "flex items-center gap-1.5 text-[12.5px]"}>
-        <LenFace size={18} className="shrink-0" />
-        <b className="font-semibold">Len</b>
-        <span className="text-[11.5px] fg-faint">{when}</span>
-        {!samePage && (
-          <span className="ml-auto rounded-full border bd px-2 py-px text-[10.5px] fg-faint">
-            {turn.page ? `/${turn.page}` : t("turn.homePage")}
-          </span>
-        )}
-      </div>
+      {speaker ? (
+        <b className="sr-only">{speaker.name}</b>
+      ) : (
+        <div className="flex items-center gap-1.5 text-[12.5px]">
+          <LenFace size={18} className="shrink-0" />
+          <b className="font-semibold">Len</b>
+          <span className="text-[11.5px] fg-faint">{when}</span>
+          {!samePage && (
+            <span className="ml-auto rounded-full border bd px-2 py-px text-[10.5px] fg-faint">
+              {turn.page ? `/${turn.page}` : t("turn.homePage")}
+            </span>
+          )}
+        </div>
+      )}
       {hasSteps && <StepsCard turn={turn} projectId={projectId} onOpenFile={openFile} esApp={esApp} {...(speaker ? { speakerName: speaker.name } : {})} />}
       {/* LOS VISUALES (spec local 2026-10-16): el texto con sus visuales donde los puso Len. */}
       {speaker && text.length > 0 ? (
-        // What she says is a bubble, as what her owner says is (tokens.css tints the owner's).
-        <div data-her-bubble="" className="max-w-[88%] self-start rounded-[16px_16px_16px_4px] bg-elev px-3 py-2">
-          <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+        // What she says is a bubble, as what her owner says is (tokens.css tints the owner's); with an edge, because
+        // the light theme's bubble and ground are ~1.1:1. Its time goes under it.
+        <div className="flex max-w-[88%] flex-col items-start gap-1 self-start">
+          <div data-her-bubble="" className="rounded-[16px_16px_16px_4px] border bd bg-elev px-3 py-2">
+            <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+          </div>
+          <span data-her-time="" className="pl-1 text-[11px] fg-faint">
+            {when}
+          </span>
         </div>
       ) : (
         <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
