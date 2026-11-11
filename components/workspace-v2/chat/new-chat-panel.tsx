@@ -483,7 +483,7 @@ function AgentChatView({
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
   // Her figure does what her turn is doing (spec local 2026-11-10-figuras-del-asistente, §5.4), and there is one
-  // alive per screen: the big one while nothing was said yet, the header's after.
+  // alive per screen: the one that heads her place.
   const lastTurn = chat.turns[chat.turns.length - 1];
   const herActivity = activityOf({
     failed: lastTurn?.status === "error",
@@ -504,12 +504,13 @@ function AgentChatView({
       {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
       {assistant ? (
         // Its place: its figure and its name; no conversations, no scheduled clock, no floating (they are Len's).
-        <div className="flex h-14 shrink-0 items-center gap-2.5 border-b bd px-4" data-assistant-header="">
-          {chat.turns.length > 0 ? <LiveFigure look={assistant.look} size={44} activity={herActivity} active={herFigureOn} /> : <AssistantFigure look={assistant.look} size={30} />}
-          <div className="min-w-0">
-            <p className="truncate text-[14px] font-semibold fg">{assistant.name}</p>
-            <p className="truncate text-[11.5px] fg-faint">{t("ownAssistant.place.yours")}</p>
-          </div>
+        // Her figure heads the chat, alive, the only live one of the screen; under it her name and what she is doing.
+        <div className="flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
+          <LiveFigure look={assistant.look} size={76} activity={herActivity} active={herFigureOn} />
+          <p className="mt-1 max-w-full truncate text-[14px] font-semibold fg">{assistant.name}</p>
+          <p className="max-w-full truncate text-[11.5px] fg-muted" data-her-status="" aria-live="polite">
+            {herActivity === "thinking" || herActivity === "working" || herActivity === "talking" ? t(`ownAssistant.place.status.${herActivity}`) : t("ownAssistant.place.yours")}
+          </p>
         </div>
       ) : (
         <ChatHeader
@@ -558,7 +559,6 @@ function AgentChatView({
         {chat.turns.length === 0 && assistant ? (
           // Len's suggestions are about building; its place starts with its figure and an invitation to write.
           <div className="m-auto flex flex-col items-center gap-3 py-10 text-center" data-assistant-empty="">
-            <LiveFigure look={assistant.look} size={96} activity={herActivity} active={herFigureOn} />
             <p className="text-[13.5px] fg-muted">{t("ownAssistant.place.placeholder", { name: assistant.name })}</p>
           </div>
         ) : chat.turns.length === 0 ? (

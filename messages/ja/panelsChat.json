@@ -819,7 +819,12 @@
       "renameFailed": "名前を変更できませんでした。もう一度お試しください。",
       "changeFigure": "見た目を変える",
       "figurePublish": "公開中のページには、もう一度公開すると新しい見た目が表示されます。",
-      "figureFailed": "見た目を保存できませんでした。もう一度お試しください。"
+      "figureFailed": "見た目を保存できませんでした。もう一度お試しください。",
+      "status": {
+        "thinking": "考え中…",
+        "working": "作業中…",
+        "talking": "入力中…"
+      }
     },
     "speaker": {
       "working": "{name} が作業中",

@@ -274,8 +274,8 @@
    place, her owner's bubbles, the send button and her header's background take her color. The variables come from
    components/workspace-v2/assistant/tint.ts, which also picks the ink that reads over it. Links, focus rings and
    every other button keep the workspace's accent. */
-.workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft); }
-.dark .workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft-dark); }
+.workspace-v2 .assistant-tint [data-assistant-header] { background: linear-gradient(to bottom, var(--assistant-soft), transparent); }
+.dark .workspace-v2 .assistant-tint [data-assistant-header] { background: linear-gradient(to bottom, var(--assistant-soft-dark), transparent); }
 .workspace-v2 .assistant-tint [data-user-bubble] { background: var(--assistant-tint); color: var(--assistant-ink); border-color: var(--assistant-edge); }
 /* What the bubble holds in the workspace's muted ink or accent (a photo's caption, a file's name, their icons) would
    vanish on her color: it takes the bubble's own ink. */

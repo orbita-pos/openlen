@@ -819,7 +819,12 @@
       "renameFailed": "Couldn't change the name. Try again.",
       "changeFigure": "Change figure",
       "figurePublish": "Your published page will show the new figure after you publish it again.",
-      "figureFailed": "The figure couldn't be saved. Try again."
+      "figureFailed": "The figure couldn't be saved. Try again.",
+      "status": {
+        "thinking": "Thinking…",
+        "working": "Working…",
+        "talking": "Writing…"
+      }
     },
     "speaker": {
       "working": "{name} is working",
