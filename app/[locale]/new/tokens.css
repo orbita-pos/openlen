@@ -269,3 +269,12 @@
 .workspace-v2 .sx-pro { color: var(--sx-pro); }
 .workspace-v2 .sx-pun { color: var(--fg-faint); }
 .workspace-v2 .sx-tit { color: var(--sx-tit); font-weight: 600; }
+
+/* HER COLOR TINTS HER CHAT (spec local 2026-11-10-figuras-del-asistente, §2.4): in the person's own assistant's
+   place, her owner's bubbles, the send button and her header's background take her color. The variables come from
+   components/workspace-v2/assistant/tint.ts, which also picks the ink that reads over it. Links, focus rings and
+   every other button keep the workspace's accent. */
+.workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft); }
+.dark .workspace-v2 .assistant-tint [data-assistant-header] { background: var(--assistant-soft-dark); }
+.workspace-v2 .assistant-tint [data-user-bubble] { background: var(--assistant-tint); color: var(--assistant-ink); border-color: transparent; }
+.workspace-v2 .assistant-tint [data-send="send"]:not(:disabled) { background: var(--assistant-tint); color: var(--assistant-ink); }

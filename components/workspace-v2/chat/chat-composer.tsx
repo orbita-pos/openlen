@@ -532,6 +532,8 @@ export function ChatComposer({
           <button
             type="button"
             onClick={busy && !typed ? onStop : () => void enviar()}
+            // Sending, as opposed to stopping or waiting: what her place tints with her color (tokens.css).
+            data-send={hasContent && !(bloqueado && typed) && !(busy && !typed) ? "send" : "other"}
             disabled={(!busy && !hasContent) || (bloqueado && typed) || (uploading && typed)}
             aria-label={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}
             title={etiquetaEnviar && typed ? etiquetaEnviar : busy ? (typed ? t("composer.steer") : t("composer.stop")) : t("composer.send")}

@@ -740,7 +740,12 @@
       "tone": "話し方",
       "done": "完了",
       "cancel": "キャンセル",
-      "morningSummary": "毎朝、何があったか教えて"
+      "morningSummary": "毎朝、何があったか教えて",
+      "eyes": "目",
+      "eyewear": "メガネ",
+      "accessory": "アクセサリー",
+      "surprise": "おまかせ",
+      "freeColor": "ほかの色"
     },
     "tones": {
       "friendly": "親しみやすい",
@@ -778,7 +783,10 @@
       "renameSave": "保存",
       "renameCancel": "キャンセル",
       "renamePublish": "公開するとページに新しい名前が表示されます。",
-      "renameFailed": "名前を変更できませんでした。もう一度お試しください。"
+      "renameFailed": "名前を変更できませんでした。もう一度お試しください。",
+      "changeFigure": "見た目を変える",
+      "figurePublish": "公開中のページには、もう一度公開すると新しい見た目が表示されます。",
+      "figureFailed": "見た目を保存できませんでした。もう一度お試しください。"
     },
     "speaker": {
       "working": "{name} が作業中",

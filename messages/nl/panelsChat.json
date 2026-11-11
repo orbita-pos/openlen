@@ -740,7 +740,12 @@
       "tone": "Hoe hij praat",
       "done": "Klaar",
       "cancel": "Annuleren",
-      "morningSummary": "Vertel me elke ochtend wat er gebeurd is"
+      "morningSummary": "Vertel me elke ochtend wat er gebeurd is",
+      "eyes": "Ogen",
+      "eyewear": "Bril",
+      "accessory": "Accessoire",
+      "surprise": "Verras me",
+      "freeColor": "Andere kleur"
     },
     "tones": {
       "friendly": "Vriendelijk",
@@ -778,7 +783,10 @@
       "renameSave": "Opslaan",
       "renameCancel": "Annuleren",
       "renamePublish": "Je pagina toont de nieuwe naam zodra je die publiceert.",
-      "renameFailed": "De naam kon niet worden gewijzigd. Probeer het opnieuw."
+      "renameFailed": "De naam kon niet worden gewijzigd. Probeer het opnieuw.",
+      "changeFigure": "Figuur wijzigen",
+      "figurePublish": "Je gepubliceerde pagina toont de nieuwe figuur nadat je opnieuw publiceert.",
+      "figureFailed": "De figuur kon niet worden opgeslagen. Probeer het opnieuw."
     },
     "speaker": {
       "working": "{name} is bezig",

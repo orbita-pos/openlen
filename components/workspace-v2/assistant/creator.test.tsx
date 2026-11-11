@@ -9,6 +9,13 @@ vi.mock("next-intl", () => ({
   useLocale: () => "es",
 }));
 
+// The live figure asks the switch and wants WebGL: here it is a mark that says what it was given.
+vi.mock("./live-figure", () => ({
+  LiveFigure: ({ look, activity }: { look: { shape: string }; activity?: string }) => <i data-live-figure={look.shape} data-activity={activity ?? "ready"} />,
+}));
+
+import { FIGURE_ACCESSORIES, FIGURE_EYES, FIGURE_EYEWEAR, FIGURE_SHAPES, checkLook } from "@/lib/figure/look";
+
 import { AssistantCreateCard } from "./create-card";
 import { AssistantCreatorDialog } from "./creator-dialog";
 
@@ -51,13 +58,15 @@ describe("the creator", () => {
     const onCreated = vi.fn();
     mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={onCreated} />);
     type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Lucía");
-    act(() => document.querySelector<HTMLButtonElement>('[data-assistant-shape="ring"]')!.click());
+    act(() => document.querySelector<HTMLButtonElement>('[data-figure-category="shape"] [data-figure-option="heart"]')!.click());
+    act(() => document.querySelector<HTMLButtonElement>('[data-figure-category="accessory"] [data-figure-option="crown"]')!.click());
     act(() => document.querySelector<HTMLButtonElement>('[data-assistant-tone="formal"]')!.click());
     await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
     await flush();
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe("/api/assistants");
-    expect(JSON.parse(String(init.body))).toMatchObject({ projectId: "p1", name: "Lucía", shape: "ring", tone: "formal" });
+    expect(JSON.parse(String(init.body))).toMatchObject({ projectId: "p1", name: "Lucía", look: { v: 1, shape: "heart", accessory: "crown" }, tone: "formal" });
+    expect(checkLook(JSON.parse(String(init.body)).look).ok).toBe(true);
     expect(onCreated).toHaveBeenCalledWith({ id: "a1", slug: "lucia", name: "Lucía" });
   });
 
@@ -95,6 +104,57 @@ describe("the creator", () => {
     await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
     await flush();
     expect(document.querySelector("[data-assistant-error]")!.textContent).toContain("ownAssistant.errors.ownerOnly");
+  });
+
+  const HEART = { v: 1, shape: "heart", color: "#19c3b1", eyes: "round", eyewear: "shades", accessory: "crown" } as const;
+
+  it("🔴 offers every entry of the catalog, however many there are, and opens with the look it was given", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
+    const options = (category: string) => [...document.querySelectorAll(`[data-figure-category="${category}"] [data-figure-option]`)].map((b) => b.getAttribute("data-figure-option"));
+    expect(options("shape")).toEqual([...FIGURE_SHAPES]);
+    expect(options("eyes")).toEqual([...FIGURE_EYES]);
+    expect(options("eyewear")).toEqual([...FIGURE_EYEWEAR]);
+    expect(options("accessory")).toEqual([...FIGURE_ACCESSORIES]);
+    const pressed = [...document.querySelectorAll('[data-figure-option][aria-pressed="true"]')].map((b) => b.getAttribute("data-figure-option"));
+    expect(pressed).toEqual(["heart", "round", "shades", "crown"]);
+    expect(document.querySelector("[data-live-figure]")!.getAttribute("data-live-figure")).toBe("heart");
+  });
+
+  it("«sorpréndeme» gives a look of the catalog, and a free color is taken", async () => {
+    fetchMock.mockReturnValue(json({ id: "a1", slug: "lucia" }, 201));
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} initial={HEART} />);
+    type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Lucía");
+    act(() => document.querySelector<HTMLButtonElement>("[data-figure-surprise]")!.click());
+    type(document.querySelector<HTMLInputElement>("[data-assistant-free-color]")!, "#123abc");
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    const sent = JSON.parse(String(fetchMock.mock.calls[0]![1].body)).look;
+    expect(checkLook(sent)).toEqual({ ok: true, value: sent });
+    expect(sent.color).toBe("#123abc");
+  });
+
+  it("the figure listens while its name is being written", () => {
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} />);
+    const input = document.querySelector<HTMLInputElement>("[data-assistant-name]")!;
+    expect(document.querySelector("[data-live-figure]")!.getAttribute("data-activity")).toBe("ready");
+    act(() => input.focus());
+    expect(document.querySelector("[data-live-figure]")!.getAttribute("data-activity")).toBe("listening");
+  });
+
+  it("🔴 changing the figure of one that exists sends only her look, to her", async () => {
+    fetchMock.mockReturnValueOnce(json({ look: HEART }));
+    const onSaved = vi.fn();
+    mount(<AssistantCreatorDialog open projectId="p1" onClose={() => {}} onCreated={() => {}} editing={{ id: "a1", name: "Lucía", look: HEART }} onSaved={onSaved} />);
+    expect(document.querySelector("[data-assistant-name]")).toBeNull();
+    expect(document.querySelector("[data-assistant-tone]")).toBeNull();
+    act(() => document.querySelector<HTMLButtonElement>('[data-figure-category="shape"] [data-figure-option="flower"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe("/api/assistants/a1");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(String(init.body))).toEqual({ look: { ...HEART, shape: "flower" } });
+    expect(onSaved).toHaveBeenCalledWith({ ...HEART, shape: "flower" });
   });
 
   it("won't send without a name", () => {

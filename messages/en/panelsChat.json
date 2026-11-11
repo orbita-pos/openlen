@@ -740,7 +740,12 @@
       "tone": "How it talks",
       "done": "Done",
       "cancel": "Cancel",
-      "morningSummary": "Tell me each morning what happened"
+      "morningSummary": "Tell me each morning what happened",
+      "eyes": "Eyes",
+      "eyewear": "Glasses",
+      "accessory": "Accessory",
+      "surprise": "Surprise me",
+      "freeColor": "Another color"
     },
     "tones": {
       "friendly": "Friendly",
@@ -778,7 +783,10 @@
       "renameSave": "Save",
       "renameCancel": "Cancel",
       "renamePublish": "Your page will show the new name when you publish it.",
-      "renameFailed": "Couldn't change the name. Try again."
+      "renameFailed": "Couldn't change the name. Try again.",
+      "changeFigure": "Change figure",
+      "figurePublish": "Your published page will show the new figure after you publish it again.",
+      "figureFailed": "The figure couldn't be saved. Try again."
     },
     "speaker": {
       "working": "{name} is working",

@@ -740,7 +740,12 @@
       "tone": "Sa façon de parler",
       "done": "Terminé",
       "cancel": "Annuler",
-      "morningSummary": "Racontez-moi chaque matin ce qui s'est passé"
+      "morningSummary": "Racontez-moi chaque matin ce qui s'est passé",
+      "eyes": "Yeux",
+      "eyewear": "Lunettes",
+      "accessory": "Accessoire",
+      "surprise": "Surprends-moi",
+      "freeColor": "Autre couleur"
     },
     "tones": {
       "friendly": "Chaleureux",
@@ -778,7 +783,10 @@
       "renameSave": "Enregistrer",
       "renameCancel": "Annuler",
       "renamePublish": "Votre page affichera le nouveau nom quand vous la publierez.",
-      "renameFailed": "Impossible de changer le nom. Réessayez."
+      "renameFailed": "Impossible de changer le nom. Réessayez.",
+      "changeFigure": "Changer la figure",
+      "figurePublish": "Votre page publiée affichera la nouvelle figure après une nouvelle publication.",
+      "figureFailed": "La figure n’a pas pu être enregistrée. Réessayez."
     },
     "speaker": {
       "working": "{name} travaille",

@@ -66,7 +66,10 @@ import { EventCards } from "./event-cards";
 import { AssistantRequestCards } from "./assistant-request-cards";
 import { useToolCards } from "../tools/use-tool-cards";
 import type { AssistantView } from "@/lib/assistants/view";
+import { activityOf } from "../assistant/activity";
 import { AssistantFigure } from "../assistant/figure";
+import { LiveFigure } from "../assistant/live-figure";
+import { tintStyle } from "../assistant/tint";
 
 export interface NewChatPanelProps {
   flatProjectId?: string;
@@ -108,6 +111,8 @@ export interface NewChatPanelProps {
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.6): the panel is its place — its name and
    *  figure instead of Len's, its conversation, and none of Len's project chrome (team, Len Watch, event cards). */
   assistant?: AssistantView;
+  /** Something else is the screen's one live figure now (the creator, open over her place): hers waits. */
+  figurePaused?: boolean;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -182,6 +187,7 @@ function AgentChatView({
   soloLectura = false,
   onOpenPublish,
   assistant,
+  figurePaused,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -476,13 +482,30 @@ function AgentChatView({
   // su turno siguiente, no lo que se digan dos personas en medio.
   const siguienteDeLen = (i: number) => chat.turns.slice(i + 1).find((x) => x.tipo !== "persona");
 
+  // Her figure does what her turn is doing (spec local 2026-11-10-figuras-del-asistente, §5.4), and there is one
+  // alive per screen: the big one while nothing was said yet, the header's after.
+  const lastTurn = chat.turns[chat.turns.length - 1];
+  const herActivity = activityOf({
+    failed: lastTurn?.status === "error",
+    toolRunning: lastTurn?.status === "streaming" && (lastTurn.actions ?? []).some((a) => a.status === "running"),
+    streaming: lastTurn?.status === "streaming" && lastTurn.assistantReasoning.length > 0,
+    waiting: chat.busy,
+    typing: chat.draft.trim() !== "",
+  });
+  const herFigureOn = !figurePaused && !plegado;
+
   const body = (
-    <div className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""}`} {...drop.handlers}>
+    <div
+      className={`nc relative flex h-full min-h-0 flex-col bg-side ${flotante ? "rounded-[22px]" : ""} ${assistant ? "assistant-tint" : ""}`}
+      // Her color tints her chat (§2.4): her owner's bubbles, the send button and this header (tokens.css).
+      {...(assistant ? { style: tintStyle(assistant.color) as React.CSSProperties } : {})}
+      {...drop.handlers}
+    >
       {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
       {assistant ? (
         // Its place: its figure and its name; no conversations, no scheduled clock, no floating (they are Len's).
         <div className="flex h-14 shrink-0 items-center gap-2.5 border-b bd px-4" data-assistant-header="">
-          <AssistantFigure shape={assistant.shape} color={assistant.color} size={30} />
+          {chat.turns.length > 0 ? <LiveFigure look={assistant.look} size={44} activity={herActivity} active={herFigureOn} /> : <AssistantFigure look={assistant.look} size={30} />}
           <div className="min-w-0">
             <p className="truncate text-[14px] font-semibold fg">{assistant.name}</p>
             <p className="truncate text-[11.5px] fg-faint">{t("ownAssistant.place.yours")}</p>
@@ -535,7 +558,7 @@ function AgentChatView({
         {chat.turns.length === 0 && assistant ? (
           // Len's suggestions are about building; its place starts with its figure and an invitation to write.
           <div className="m-auto flex flex-col items-center gap-3 py-10 text-center" data-assistant-empty="">
-            <AssistantFigure shape={assistant.shape} color={assistant.color} size={72} />
+            <LiveFigure look={assistant.look} size={96} activity={herActivity} active={herFigureOn} />
             <p className="text-[13.5px] fg-muted">{t("ownAssistant.place.placeholder", { name: assistant.name })}</p>
           </div>
         ) : chat.turns.length === 0 ? (
@@ -583,7 +606,7 @@ function AgentChatView({
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
                 {...(soloLectura ? {} : { onContinue: chat.continueWith })}
                 esApp={esApp}
-                {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure shape={assistant.shape} color={assistant.color} size={18} /> } } : {})}
+                {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={18} /> } } : {})}
               />
             </div>
             ),
@@ -597,7 +620,7 @@ function AgentChatView({
             onStop={chat.handleCancel}
             esApp={esApp}
             subagentsRunning={subagentsRunning}
-            {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure shape={assistant.shape} color={assistant.color} size={34} /> } } : {})}
+            {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={34} /> } } : {})}
           />
         )}
         {/* Pieza 8: el encargo, si hay uno vivo (en marcha, en pausa o atascado). */}

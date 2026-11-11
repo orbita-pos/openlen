@@ -35,7 +35,7 @@ export function AssistantRailLinks({ open, onDone }: { open: boolean; onDone?: (
             onClick={onDone}
             className={cn("flex items-center rounded-lg fg-muted transition hover:bg-hover hover:fg", open ? "h-9 w-full gap-3 px-2.5 text-[13.5px] font-medium" : "h-9 w-9 justify-center")}
           >
-            <AssistantFigure shape={a.shape} color={a.color} size={20} />
+            <AssistantFigure look={a.look} size={20} />
             {open ? <span className="truncate">{a.name}</span> : null}
           </Link>
         );
