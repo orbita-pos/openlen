@@ -28,6 +28,8 @@ const CATEGORIES: readonly { id: FigureCategory; label: string }[] = [
   { id: "accessory", label: "ownAssistant.creator.accessory" },
 ];
 const seed = () => Math.floor(Math.random() * 0xffffffff);
+/** A group's name: small, quiet, apart from what it names. */
+const LABEL = "text-[11px] font-medium uppercase tracking-[0.06em] fg-faint";
 
 export function AssistantCreatorDialog({
   open,
@@ -98,10 +100,15 @@ export function AssistantCreatorDialog({
   const tint = tintOf(look.color);
   return (
     <ModalShell open={open} onClose={onClose} titleId="assistant-creator-title" title={editing ? editing.name : t("ownAssistant.creator.title")} size="lg" dismissable={!saving} closeLabel={t("ownAssistant.creator.cancel")}>
-      <div className="flex flex-col items-center gap-4 p-5">
-        <div className="flex flex-col items-center gap-2">
+      {/* Three bands: her figure on a wash of her color, what is chosen (it scrolls), and the two buttons, always in
+          sight. */}
+      <div className="flex max-h-[min(80vh,700px)] flex-col">
+        <div
+          className="flex shrink-0 flex-col items-center gap-3 px-5 pb-4 pt-5"
+          style={{ background: `radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, ${look.color} 24%, transparent), transparent 72%)` }}
+        >
           {/* Alive only while the dialog is open: a closed dialog must not hold the screen's one live figure. */}
-          {open ? <LiveFigure look={look} size={160} activity={naming ? "listening" : "ready"} label={shown || undefined} /> : <AssistantFigure look={look} size={160} />}
+          {open ? <LiveFigure look={look} size={132} activity={naming ? "listening" : "ready"} label={shown || undefined} /> : <AssistantFigure look={look} size={132} />}
           <button
             type="button"
             data-figure-surprise=""
@@ -113,107 +120,128 @@ export function AssistantCreatorDialog({
             {t("ownAssistant.creator.surprise")}
           </button>
         </div>
-        {!editing && (
-          <label className="flex w-full flex-col gap-1 text-[12px] fg-muted">
-            {t("ownAssistant.creator.name")}
-            <input
-              data-assistant-name=""
-              className="rounded-lg border bd bg-elev px-3 py-2 text-[14px] fg"
-              value={name}
-              maxLength={ASSISTANT_NAME_MAX}
-              placeholder={t("ownAssistant.creator.namePlaceholder")}
-              onChange={(e) => setName(e.target.value)}
-              onFocus={() => setNaming(true)}
-              onBlur={() => setNaming(false)}
-            />
-          </label>
-        )}
-        {failure && (
-          <p data-assistant-error="" role="alert" className="w-full text-[12px] text-[var(--nc-danger,#d93636)]">
-            {failure === "figure" ? t("ownAssistant.place.figureFailed") : t(`ownAssistant.errors.${failure}`)}
-          </p>
-        )}
-        {CATEGORIES.map((category) => (
-          <fieldset key={category.id} className="w-full" data-figure-category={category.id}>
-            <legend className="mb-1 text-[12px] fg-muted">{t(category.label)}</legend>
-            <div className="flex flex-wrap gap-1.5">
-              {offered(category.id).map((id) => (
-                <button
-                  key={id}
-                  type="button"
-                  data-figure-option={id}
-                  aria-label={t(`ownAssistant.creator.option.${category.id}.${id}`)}
-                  title={t(`ownAssistant.creator.option.${category.id}.${id}`)}
-                  aria-pressed={look[category.id] === id}
-                  onClick={() => pick({ [category.id]: id })}
-                  className={`rounded-xl border-2 p-1 ${look[category.id] === id ? "border-[var(--nc-accent-text)]" : "border-transparent bg-elev"}`}
-                >
-                  <AssistantFigure look={{ ...look, [category.id]: id } as FigureLook} size={32} />
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        ))}
-        <fieldset className="w-full">
-          <legend className="mb-1 text-[12px] fg-muted">{t("ownAssistant.creator.color")}</legend>
-          <div className="flex flex-wrap items-center gap-2">
-            {FIGURE_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                data-assistant-color={c}
-                aria-pressed={look.color === c}
-                aria-label={c}
-                onClick={() => pick({ color: c })}
-                className={`h-6 w-6 rounded-full ${look.color === c ? "ring-2 ring-[var(--nc-accent-text)] ring-offset-2" : ""}`}
-                style={{ background: c }}
+        <div className="nice-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-5 pb-5 pt-1">
+          {!editing && (
+            <label className={`flex w-full flex-col gap-1.5 ${LABEL}`}>
+              {t("ownAssistant.creator.name")}
+              <input
+                data-assistant-name=""
+                className="h-10 rounded-[10px] border bd bg-side px-3 text-[14px] font-normal normal-case tracking-normal fg"
+                value={name}
+                maxLength={ASSISTANT_NAME_MAX}
+                placeholder={t("ownAssistant.creator.namePlaceholder")}
+                onChange={(e) => setName(e.target.value)}
+                onFocus={() => setNaming(true)}
+                onBlur={() => setNaming(false)}
               />
-            ))}
-            <input
-              type="color"
-              data-assistant-free-color=""
-              aria-label={t("ownAssistant.creator.freeColor")}
-              title={t("ownAssistant.creator.freeColor")}
-              value={look.color}
-              onChange={(e) => pick({ color: e.target.value })}
-              className="h-7 w-9 cursor-pointer rounded border bd bg-transparent p-0"
-            />
-          </div>
-        </fieldset>
-        {!editing && (
-          <>
-            <fieldset className="w-full">
-              <legend className="mb-1 text-[12px] fg-muted">{t("ownAssistant.creator.tone")}</legend>
-              <div className="flex gap-1.5">
-                {ASSISTANT_TONES.map((x) => (
-                  <button
-                    key={x}
-                    type="button"
-                    data-assistant-tone={x}
-                    aria-pressed={tone === x}
-                    onClick={() => setTone(x)}
-                    className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] ${tone === x ? "seg-active" : "bd fg-muted"}`}
-                  >
-                    {t(`ownAssistant.tones.${x}`)}
-                  </button>
-                ))}
+            </label>
+          )}
+          {CATEGORIES.map((category) => (
+            <fieldset key={category.id} className="w-full" data-figure-category={category.id}>
+              <legend className={`mb-1.5 ${LABEL}`}>{t(category.label)}</legend>
+              <div className="flex flex-wrap gap-1.5">
+                {offered(category.id).map((id) => {
+                  const picked = look[category.id] === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      data-figure-option={id}
+                      aria-label={t(`ownAssistant.creator.option.${category.id}.${id}`)}
+                      title={t(`ownAssistant.creator.option.${category.id}.${id}`)}
+                      aria-pressed={picked}
+                      onClick={() => pick({ [category.id]: id })}
+                      className={`flex h-12 w-12 items-center justify-center rounded-[14px] transition ${picked ? "" : "bg-side hover:bg-hover"}`}
+                      style={picked ? { background: `color-mix(in srgb, ${look.color} 18%, transparent)`, boxShadow: `0 0 0 2px ${tint?.tint ?? look.color}` } : undefined}
+                    >
+                      <AssistantFigure look={{ ...look, [category.id]: id } as FigureLook} size={34} />
+                    </button>
+                  );
+                })}
               </div>
             </fieldset>
-            <label className="flex w-full items-center gap-2 text-[12.5px] fg">
-              <input type="checkbox" data-assistant-morning="" checked={morningSummary} onChange={(e) => setMorningSummary(e.target.checked)} />
-              {t("ownAssistant.creator.morningSummary")}
-            </label>
-          </>
-        )}
-        <button
-          type="button"
-          data-assistant-done=""
-          disabled={saving || (!editing && name.trim() === "")}
-          onClick={() => void create()}
-          className="w-full rounded-lg bg-[var(--nc-accent-text)] px-3 py-2 text-[14px] font-medium text-white disabled:opacity-50"
-        >
-          {t("ownAssistant.creator.done")}
-        </button>
+          ))}
+          <fieldset className="w-full">
+            <legend className={`mb-1.5 ${LABEL}`}>{t("ownAssistant.creator.color")}</legend>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {FIGURE_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  data-assistant-color={c}
+                  aria-pressed={look.color === c}
+                  aria-label={c}
+                  onClick={() => pick({ color: c })}
+                  className="h-7 w-7 rounded-full transition-transform hover:scale-110"
+                  style={{ background: c, boxShadow: look.color === c ? `0 0 0 2px var(--bg-elev), 0 0 0 4px ${c}` : "inset 0 0 0 1px rgba(0,0,0,0.12)" }}
+                />
+              ))}
+              {/* Any other color: the wheel is the swatch, the browser's picker is under it. */}
+              <label
+                className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full transition-transform hover:scale-110"
+                title={t("ownAssistant.creator.freeColor")}
+                style={{
+                  background: "conic-gradient(#ff5f5f, #ffc21a, #7ed321, #19c3b1, #2f8bff, #9b6cff, #ff5fa8, #ff5f5f)",
+                  boxShadow: FIGURE_COLORS.includes(look.color) ? "inset 0 0 0 1px rgba(0,0,0,0.12)" : `0 0 0 2px var(--bg-elev), 0 0 0 4px ${look.color}`,
+                }}
+              >
+                <input
+                  type="color"
+                  data-assistant-free-color=""
+                  aria-label={t("ownAssistant.creator.freeColor")}
+                  value={look.color}
+                  onChange={(e) => pick({ color: e.target.value })}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
+              </label>
+            </div>
+          </fieldset>
+          {!editing && (
+            <>
+              <fieldset className="w-full">
+                <legend className={`mb-1.5 ${LABEL}`}>{t("ownAssistant.creator.tone")}</legend>
+                <div className="flex gap-0.5 rounded-[10px] bg-side p-0.5">
+                  {ASSISTANT_TONES.map((x) => (
+                    <button
+                      key={x}
+                      type="button"
+                      data-assistant-tone={x}
+                      aria-pressed={tone === x}
+                      onClick={() => setTone(x)}
+                      className={`flex-1 rounded-[8px] px-2 py-1.5 text-[12.5px] transition-colors ${tone === x ? "seg-active font-medium" : "fg-muted hover:fg"}`}
+                    >
+                      {t(`ownAssistant.tones.${x}`)}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <label className="flex w-full items-center gap-2.5 text-[13px] fg">
+                <input type="checkbox" data-assistant-morning="" checked={morningSummary} onChange={(e) => setMorningSummary(e.target.checked)} className="h-4 w-4" style={{ accentColor: tint?.tint ?? look.color }} />
+                {t("ownAssistant.creator.morningSummary")}
+              </label>
+            </>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2 border-t bd bg-side px-5 py-3">
+          {failure && (
+            <p data-assistant-error="" role="alert" className="min-w-0 flex-1 text-[12px] leading-snug text-[var(--nc-danger,#d93636)]">
+              {failure === "figure" ? t("ownAssistant.place.figureFailed") : t(`ownAssistant.errors.${failure}`)}
+            </p>
+          )}
+          <button type="button" disabled={saving} onClick={onClose} className="ml-auto inline-flex h-9 items-center rounded-[10px] bg-hover px-4 text-[13px] font-medium fg transition hover:brightness-110 disabled:opacity-45">
+            {t("ownAssistant.creator.cancel")}
+          </button>
+          <button
+            type="button"
+            data-assistant-done=""
+            disabled={saving || (!editing && name.trim() === "")}
+            onClick={() => void create()}
+            className="inline-flex h-9 min-w-[88px] items-center justify-center rounded-[10px] px-5 text-[13px] font-semibold transition hover:brightness-105 active:scale-[0.98] disabled:opacity-45"
+            style={tint ? { background: tint.tint, color: tint.ink, boxShadow: `inset 0 0 0 1px ${tint.edge}` } : undefined}
+          >
+            {t("ownAssistant.creator.done")}
+          </button>
+        </div>
       </div>
     </ModalShell>
   );

@@ -3,10 +3,12 @@
 // HER CONVERSATIONS WITH VISITORS (spec local 2026-11-06-asistente-propio, §4.6.2 «Conversaciones», §6.2, §6.5; phase
 // 2A): what the page's visitors said and what she answered, newest first — with her visuals (phase 2B) —, and what they
 // may spend this month.
+import { Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { VisualFrame } from "../chat/visual-frame";
+import { HER_PRIMARY, HER_QUIET } from "./her-sheet";
 
 interface Line {
   role: "visitor" | "assistant";
@@ -93,10 +95,18 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col gap-3 overflow-y-auto px-4 py-4" data-visitor-conversations="">
+    <div className="nice-scroll min-h-0 flex-1 overflow-y-auto" data-visitor-conversations="">
+     <div className="mx-auto flex w-full max-w-[680px] flex-col gap-4 px-5 pb-10 pt-9">
+      <h1 className="text-[22px] font-semibold tracking-tight fg">{t("ownAssistant.place.conversations")}</h1>
       {budget && (
-        <div className="flex flex-wrap items-center gap-2 text-[12.5px] fg-muted" data-visitor-budget="">
-          <span>{t("ownAssistant.place.budget", { spent: credits(budget.spent), cap: credits(budget.cap) })}</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[14px] border bd bg-elev px-4 py-3 text-[12.5px] fg-muted" data-visitor-budget="">
+          <div className="min-w-0 flex-1 basis-56">
+            <span>{t("ownAssistant.place.budget", { spent: credits(budget.spent), cap: credits(budget.cap) })}</span>
+            {/* How much of the month's cap her visitors have used. */}
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-hover" aria-hidden="true">
+              <div className="her-on h-full rounded-full" style={{ width: `${budget.cap > 0 ? Math.min(100, Math.round((budget.spent / budget.cap) * 100)) : 0}%` }} />
+            </div>
+          </div>
           {editing ? (
             <>
               <label className="sr-only" htmlFor="visitor-cap">
@@ -112,15 +122,15 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
                 aria-describedby={budgetError ? "visitor-cap-error" : undefined}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                className="w-24 rounded-md border bd bg-elev px-2 py-1 text-[12.5px] fg"
+                className="her-ring h-8 w-24 rounded-[8px] border bd bg-side px-2.5 text-[13px] fg"
                 placeholder={credits(budget.cap)}
               />
-              <button type="button" onClick={() => void save()} className="rounded-full bg-[var(--nc-accent-text)] px-3 py-1 text-[12px] font-medium text-white">
+              <button type="button" onClick={() => void save()} className={HER_PRIMARY.replace("h-9", "h-8")}>
                 {t("ownAssistant.place.budgetSave")}
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => (setDraft(budget.explicit === null ? "" : String(budget.explicit / 100)), setEditing(true))} className="underline">
+            <button type="button" onClick={() => (setDraft(budget.explicit === null ? "" : String(budget.explicit / 100)), setEditing(true))} className={HER_QUIET.replace("h-9", "h-8")}>
               {t("ownAssistant.place.budgetChange")}
             </button>
           )}
@@ -131,21 +141,28 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
           )}
         </div>
       )}
-      {failed && <p className="text-[13px] fg-muted">{t("ownAssistant.place.loadError")}</p>}
-      {visits && visits.length === 0 && <p className="text-[13px] fg-muted">{t("ownAssistant.place.empty", { name })}</p>}
+      {failed && <p className="py-10 text-center text-[13px] fg-muted">{t("ownAssistant.place.loadError")}</p>}
+      {visits && visits.length === 0 && (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <span className="her-wash flex h-12 w-12 items-center justify-center rounded-full fg-muted" aria-hidden="true">
+            <Users size={20} strokeWidth={1.7} />
+          </span>
+          <p className="max-w-[320px] text-[13.5px] leading-relaxed fg-muted">{t("ownAssistant.place.empty", { name })}</p>
+        </div>
+      )}
       {visits?.map((v) => (
-        <article key={v.id} className="rounded-xl border bd bg-elev p-3" data-visit="">
-          <header className="mb-2 flex flex-wrap items-center gap-2 text-[11.5px] fg-faint">
+        <article key={v.id} className="rounded-[16px] border bd bg-elev p-4" data-visit="">
+          <header className="mb-3 flex flex-wrap items-center gap-2 text-[11.5px] fg-faint">
             <time dateTime={v.lastAt}>{new Date(v.lastAt).toLocaleString(locale, { dateStyle: "medium", timeStyle: "short" })}</time>
             <span>· {t("ownAssistant.place.messages", { count: v.messageCount })}</span>
             {several && v.projectTitle && <span>· {t("ownAssistant.place.inProject", { project: v.projectTitle })}</span>}
             {v.handedOff && <span className="rounded-full bg-hover px-2 py-0.5 fg-muted">{t("ownAssistant.place.handedOff")}</span>}
           </header>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             {v.lines.map((l, i) => (
-              <div key={i} className={`flex max-w-[85%] flex-col ${l.role === "visitor" ? "self-end" : "self-start w-full"}`}>
+              <div key={i} className={`flex max-w-[85%] flex-col ${l.role === "visitor" ? "items-end self-end" : "w-full items-start self-start"}`}>
                 {l.text && (
-                  <p className={`whitespace-pre-wrap rounded-lg px-2.5 py-1.5 text-[13px] ${l.role === "visitor" ? "bg-hover fg" : "fg"}`}>
+                  <p className={`whitespace-pre-wrap px-3 py-2 text-[13.5px] leading-relaxed fg ${l.role === "visitor" ? "rounded-[16px_16px_4px_16px] bg-hover" : "rounded-[16px_16px_16px_4px] bg-side"}`}>
                     <span className="sr-only">{l.role === "visitor" ? t("ownAssistant.place.visitor") : name}: </span>
                     {l.text}
                   </p>
@@ -160,6 +177,7 @@ export function VisitorConversations({ assistantId, name }: { assistantId: strin
           </div>
         </article>
       ))}
+     </div>
     </div>
   );
 }

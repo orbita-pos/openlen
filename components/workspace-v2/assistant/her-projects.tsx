@@ -4,9 +4,11 @@
 // switch stays in the header, as before; a button with how many projects she serves opens a panel with each one — its
 // name and address, «Su casa» on hers, its own «En mi página», and «Quitar de este proyecto» (never on her only
 // one) — and, at its foot, «Borrar a Lucía». Removing and deleting ask first.
+import { ChevronRight, FolderClosed } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { HER_ROW } from "./her-sheet";
 import { OnPageSwitch } from "./on-page-switch";
 
 interface Row {
@@ -88,10 +90,15 @@ export function HerProjects({
   const ghost = "rounded-full border bd px-2.5 py-1 text-[11.5px] font-medium fg-muted hover:fg disabled:opacity-50";
 
   return (
-    <div className="relative flex min-w-0 items-center gap-3">
-      <OnPageSwitch assistantId={assistantId} initial={homeOnPage} initialNeedsPublish={homeNeedsPublish} nothingToKnow={homeNothingToKnow} />
-      <button type="button" data-her-projects-open="" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={ghost}>
-        {t("ownAssistant.projects.count", { count })}
+    <div className="relative flex min-w-0 flex-col">
+      <div className="flex px-2.5 py-[7px]">
+        <OnPageSwitch assistantId={assistantId} initial={homeOnPage} initialNeedsPublish={homeNeedsPublish} nothingToKnow={homeNothingToKnow} />
+      </div>
+      <div className="my-1 h-px bg-[var(--border)]" />
+      <button type="button" data-her-projects-open="" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={HER_ROW}>
+        <FolderClosed size={15} strokeWidth={1.8} className="shrink-0 fg-muted" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate">{t("ownAssistant.projects.count", { count })}</span>
+        <ChevronRight size={14} className={`shrink-0 fg-faint transition-transform ${open ? "rotate-90" : ""}`} aria-hidden="true" />
       </button>
       {open && (
         <div
@@ -99,7 +106,7 @@ export function HerProjects({
           aria-label={t("ownAssistant.projects.count", { count })}
           data-her-projects=""
           onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-          className="absolute right-0 top-full z-20 mt-2 flex w-[min(360px,calc(100vw-32px))] flex-col gap-2 rounded-xl border bd bg-elev p-3 shadow-lg"
+          className="mt-1 flex flex-col gap-2 rounded-[10px] bg-side p-2"
         >
           {(rows ?? []).map((row) => (
             <div key={row.projectId} data-her-project={row.projectId} className="flex flex-col gap-1.5 rounded-lg border bd px-2.5 py-2">
