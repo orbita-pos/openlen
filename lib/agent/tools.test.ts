@@ -1642,6 +1642,65 @@ describe("publish", () => {
     assert.equal(pub(out)!.subdominio, "mi-negocio");
   });
 
+  // 🔴 VISTO EN PRODUCCIÓN (31/10 y 12/11, los dos proyectos donde Len publicó).
+  //
+  // Len pregunta la dirección con `ask_user_question`, como le manda la
+  // negativa. Desde Len 2.5 esa pregunta ESPERA dentro del turno, así que la
+  // respuesta del dueño llega como resultado de la herramienta y no como un
+  // mensaje nuevo. `publish` con esa respuesta se rechazaba con «you made that
+  // name up»: la guarda sólo miraba el mensaje que abrió el turno. Medido en
+  // las dos filas: la dirección rechazada estaba, letra por letra, en lo que
+  // el dueño acababa de contestar.
+  const addressQuestion = [{ id: "address", question: "¿Qué dirección quieres para tu página?" }];
+
+  it("la dirección que el dueño ESCRIBE en la tarjeta de pregunta cuenta como dicha", async () => {
+    const { deps } = makeDeps(); // sin reclamo
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    const withOwner = { ...deps, askUser: async () => [{ id: "address", selected: [], custom: "Tacos El Primo" }] };
+    const asked = await runAgentTool(session, withOwner, "ask_user_question", { questions: addressQuestion });
+    assert.equal(asked.response.ok, true);
+
+    const out = await runAgentTool(session, withOwner, "publish", { subdomain: "tacos-el-primo" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+    assert.equal(pub(out)!.subdominio, "tacos-el-primo");
+  });
+
+  it("y la que ELIGE entre las opciones también, sin la coletilla (Recommended)", async () => {
+    const { deps } = makeDeps(); // sin reclamo
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    const options = [{ id: "address", question: "¿Qué dirección quieres?", options: [{ label: "tacos-el-primo (Recommended)" }, { label: "el-primo" }] }];
+    const withOwner = { ...deps, askUser: async () => [{ id: "address", selected: ["tacos-el-primo (Recommended)"] }] };
+    await runAgentTool(session, withOwner, "ask_user_question", { questions: options });
+
+    const out = await runAgentTool(session, withOwner, "publish", { subdomain: "tacos-el-primo" });
+    assert.equal(out.response.ok, true, String(out.response.error));
+  });
+
+  // BRAZO DE CONTROL: haber contestado no abre la puerta a cualquier nombre.
+  it("pero una dirección que NO está en lo que contestó sigue rechazada", async () => {
+    const { deps, store } = makeDeps(); // sin reclamo
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    const withOwner = { ...deps, askUser: async () => [{ id: "address", selected: [], custom: "Tacos El Primo" }] };
+    await runAgentTool(session, withOwner, "ask_user_question", { questions: addressQuestion });
+
+    const out = await runAgentTool(session, withOwner, "publish", { subdomain: "taqueria-la-mejor" });
+    assert.equal(out.response.ok, false, "se coló una dirección que el dueño no contestó");
+    assert.equal(out.confirm, undefined);
+    assert.equal(store.saved.length, 0);
+    assert.match(String(out.response.error), /made (that name )?up/i);
+  });
+
+  // Y una pregunta que nadie contestó (no llegó a tiempo, o la descartó) no dice nada.
+  it("ni cuenta una pregunta que el dueño no llegó a contestar", async () => {
+    const { deps } = makeDeps(); // sin reclamo
+    const session = { ...makeSession(), mensajeDelUsuario: "ya publícala" };
+    await runAgentTool(session, { ...deps, askUser: async () => null }, "ask_user_question", { questions: addressQuestion });
+
+    const out = await runAgentTool(session, deps, "publish", { subdomain: "tacos-el-primo" });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /made (that name )?up/i);
+  });
+
   it("y con un reclamo YA existente la comprobación no estorba", async () => {
     // Republicar no elige nada nuevo: el nombre ya es del usuario de antes.
     const { deps } = makeDeps({ subdomain: "tienda-vieja" });
