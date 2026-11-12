@@ -114,6 +114,7 @@ import {
   ASK_USER_QUESTION,
   CONNECT_EMAIL_DOMAIN,
   QUESTION_DISMISSED,
+  RECOMMENDED_SUFFIX,
   REQUEST_SECRETS,
   answerSummary,
   questionText,
@@ -1297,6 +1298,12 @@ export interface AgentSession {
    *  inventó — ver su comentario. Opcional: sin él la comprobación no se aplica,
    *  así que un llamador que no lo pase no bloquea nada por sorpresa. */
   mensajeDelUsuario?: string;
+  /** Lo que el dueño CONTESTÓ este turno en una tarjeta de pregunta (lo elegido
+   *  y lo escrito, una entrada por cada cosa): `ask_user_question` espera dentro
+   *  del turno desde Len 2.5, así que su respuesta no llega como mensaje. Lo lee
+   *  `publish` junto a `mensajeDelUsuario`: una dirección que el dueño dio ahí es
+   *  suya, no inventada. */
+  answeredThisTurn?: string[];
   /**
    * EL IDIOMA DE LA INTERFAZ del dueño (`idioma` del panel). Lo usa la revisión
    * de seguridad de `publish` para escribir sus hallazgos en ese idioma.
@@ -2698,8 +2705,16 @@ async function toolPublicar(
   //
   // Sin `mensajeDelUsuario` no se comprueba nada: un llamador que no lo pase no
   // se encuentra un bloqueo que no pidió.
+  //
+  // 🔴 Y LO QUE CONTESTÓ EN LA TARJETA TAMBIÉN ES SUYO (visto en producción,
+  // 31/10 y 12/11). Lo de arriba —«su respuesta abre un turno nuevo»— dejó de
+  // ser verdad con Len 2.5: `ask_user_question` espera DENTRO del turno y la
+  // respuesta vuelve como resultado de la herramienta. Mirando sólo el mensaje
+  // que abrió el turno, la dirección que el dueño acababa de escribir en la
+  // tarjeta se rechazaba con «you made that name up»: las dos veces que Len
+  // preguntó y publicó, en los dos proyectos donde publicó.
   if (raw && !current && typeof session.mensajeDelUsuario === "string") {
-    const dicho = session.mensajeDelUsuario.toLowerCase();
+    const dicho = [session.mensajeDelUsuario, ...(session.answeredThisTurn ?? [])].join("\n").toLowerCase();
     // Se compara sobre el texto SIN separadores: el dueño escribe «mi negocio»
     // y el subdominio válido es «mi-negocio». Exigir el guion sería rechazar al
     // usuario por la ortografía de una regla que es nuestra, no suya.
@@ -2876,7 +2891,7 @@ async function toolPublicar(
  * bucle. Ver `ToolOutcome.pregunta`.
  */
 async function toolAskUserQuestion(
-  _session: AgentSession,
+  session: AgentSession,
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
@@ -2893,7 +2908,13 @@ async function toolAskUserQuestion(
     const answers = await deps.askUser(v.questions);
     // Lote 7-8: descartada para hablar, el error de DeepSeek; el bucle cierra.
     if (answers === QUESTION_DISMISSED) return { response: { ok: false, error: ASK_CANCELLED_ERROR }, preguntas: v.questions, dismissed: true };
-    if (answers) return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
+    if (answers) {
+      // Lo contestado queda dicho por el dueño en ESTE turno (`answeredThisTurn`):
+      // `publish` lo lee para no tomar por inventada la dirección que acaba de dar.
+      const said = answers.flatMap((a) => [...a.selected.map((s) => s.replace(RECOMMENDED_SUFFIX, "")), ...(a.custom ? [a.custom] : [])]).filter((s) => s.trim());
+      if (said.length > 0) session.answeredThisTurn = [...(session.answeredThisTurn ?? []), ...said];
+      return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
+    }
   }
   return {
     // `ok: true` de verdad: preguntar es una acción que sale bien. El turno
