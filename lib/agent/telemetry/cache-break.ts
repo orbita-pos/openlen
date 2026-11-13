@@ -13,6 +13,8 @@ export type CacheBreakCause =
   | "system_changed"
   | "tools_changed"
   | "compaction"
+  /** The turn started after the cache expired and trimmed the history on purpose (lib/agent/cold-return.ts). */
+  | "cold_trim"
   | "messages_rewritten"
   | "ttl_expired"
   | "likely_server_side"
@@ -56,7 +58,7 @@ function firstDifference(a: readonly string[], b: readonly string[]): number | u
 export function detectCacheBreak(
   prev: CallSnapshot | null,
   cur: CallSnapshot,
-  opts: { readonly ttlMs: number; readonly compactedSincePrev: boolean },
+  opts: { readonly ttlMs: number; readonly compactedSincePrev: boolean; readonly coldTrimSincePrev?: boolean },
 ): CacheBreak | null {
   if (!prev || prev.kind !== cur.kind) return null;
   const drop = prev.cachedTokens - cur.cachedTokens;
@@ -69,6 +71,7 @@ export function detectCacheBreak(
   if (prev.fingerprint.systemHash !== cur.fingerprint.systemHash) causes.push("system_changed");
   if (prev.fingerprint.toolsHash !== cur.fingerprint.toolsHash) causes.push("tools_changed");
   if (opts.compactedSincePrev) causes.push("compaction");
+  if (opts.coldTrimSincePrev) causes.push("cold_trim");
   const index = firstDifference(prev.fingerprint.messageHashes, cur.fingerprint.messageHashes);
   const shortened = index === undefined && cur.fingerprint.messageHashes.length < prev.fingerprint.messageHashes.length;
   const rewritten = index !== undefined || shortened;

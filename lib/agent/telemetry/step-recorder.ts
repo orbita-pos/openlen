@@ -20,6 +20,8 @@ export interface StepRecorder {
   onCall(call: BrainCall): void;
   onStepTools(batch: readonly ToolOutcomeSummary[]): void;
   onCompaction(): void;
+  /** The turn sent its history trimmed (a cold return): the next call's cache drop is that, not a fault. */
+  onColdTrim(): void;
   finish(end: { readonly endReason: string }): void;
   /** Resolves once every row handed to the store is written (the process is about to exit). */
   flush(): Promise<void>;
@@ -57,6 +59,7 @@ export function createStepRecorder(o: {
   const prev = new Map<CallKind, CallSnapshot | null>();
   const firstCount = new Map<CallKind, number>();
   const compacted = new Map<CallKind, boolean>();
+  const coldTrimmed = new Map<CallKind, boolean>();
   const pending: Pending[] = [];
   const history: ToolOutcomeSummary[][] = [];
   /** Los Read del turno por fichero (hash de la ruta → hashes de sus argumentos), hasta que se escribe en él. */
@@ -193,12 +196,13 @@ export function createStepRecorder(o: {
           turnFirstMessageCount: firstCount.get(call.kind)!,
         };
         const cacheBreak = call.usage
-          ? detectCacheBreak(prev.get(call.kind) ?? null, snapshot, { ttlMs, compactedSincePrev: compacted.get(call.kind) ?? false })
+          ? detectCacheBreak(prev.get(call.kind) ?? null, snapshot, { ttlMs, compactedSincePrev: compacted.get(call.kind) ?? false, coldTrimSincePrev: coldTrimmed.get(call.kind) ?? false })
           : null;
         // A failed attempt (no usage) gets its row but is not what the next call is compared with.
         if (call.usage) {
           prev.set(call.kind, snapshot);
           compacted.set(call.kind, false);
+          coldTrimmed.set(call.kind, false);
         }
         if (cacheBreak) o.log(formatCacheBreak(o.projectId, o.turnId, step, call.kind, call.provider, cacheBreak));
         pending.push({
@@ -229,6 +233,11 @@ export function createStepRecorder(o: {
     onCompaction() {
       guard("onCompaction", () => {
         for (const kind of KINDS) compacted.set(kind, true);
+      });
+    },
+    onColdTrim() {
+      guard("onColdTrim", () => {
+        for (const kind of KINDS) coldTrimmed.set(kind, true);
       });
     },
     finish(end) {
