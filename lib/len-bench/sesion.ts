@@ -81,6 +81,8 @@ export interface CuerpoDelTurno {
   readonly zonaHoraria?: string;
   /** Len Dynamis (`lib/agent/dynamis.ts`): como el panel, sólo se manda ése. */
   readonly mode?: "dynamis";
+  /** The person's own assistant (lib/assistants/): the turn is hers, in her own conversation. */
+  readonly assistantId?: string;
 }
 
 export async function enviarTurno(o: {

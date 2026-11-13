@@ -54,6 +54,7 @@
     "bench:len:artifacts": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-artifacts.ts",
     "bench:len:servidor": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-servidor.ts",
     "bench:len:repartir": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-repartir.ts",
+    "bench:return": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-return.ts",
     "bench:len:ver": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-ver.ts",
     "provider:probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/provider-probe.ts",
     "measure:cache-probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/measure/cache-probe.ts",
