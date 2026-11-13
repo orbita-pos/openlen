@@ -478,6 +478,8 @@ export default defineConfig({
       // turn counts as cold, and the trim the history repeats afterwards.
       "lib/agent/cold-return.test.ts",
       "lib/agent/transcripcion.cold.test.ts",
+      // The idle summary (same spec, piece B): a long conversation left idle is summarized while still cached.
+      "lib/agent/idle-summary.test.ts",
       "lib/agent/equipo.test.ts",
       "lib/agent/plegar-equipo.test.ts",
       // A · las fotos de la conversación (del almacén en dev, de internet si
