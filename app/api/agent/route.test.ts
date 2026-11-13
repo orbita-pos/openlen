@@ -96,6 +96,8 @@ const mocks = vi.hoisted(() => {
   // H4: el historial sale de la base. Sin este doble, estas pruebas escribían
   // turnos de verdad en la base local (fallaban en silencio: «p1» no existe).
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
+  // The cold return: when the conversation's last model call ended. By default, there was none.
+  lastModelTurnOfTheConversation: vi.fn(async (): Promise<{ createdAt: Date; durationMs: number | null } | null> => null),
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   apuntarMencionesDelTurno: vi.fn(async () => {}),
   nombresDeUsuarios: vi.fn(async (): Promise<Map<string, string>> => new Map()),
@@ -307,6 +309,7 @@ vi.mock("@/lib/projects/chat", () => ({
   latestTodoListForChat: vi.fn(async () => null),
   // Len's time context (spec local 2026-10-29-tareas-programadas): no turn before.
   lastTurnOfTheConversation: vi.fn(async () => null),
+  lastModelTurnOfTheConversation: mocks.lastModelTurnOfTheConversation,
 }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -2078,6 +2081,66 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     const wroteThePage = { ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, leidos: [{ ruta: "/index.html", huella: createHash("sha1").update(PAGE).digest("hex") }] } };
     mocks.turnosParaElHistorial.mockResolvedValue([wroteThePage, { userText: "✓ Publicada", assistantReasoning: "Tu página está en línea.", transcript: null }]);
     expect((await readStateOfTheTurn()).get("/index.html")?.instantanea).toBe(PAGE);
+  });
+
+  // THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): a turn that starts after the
+  // provider's cache expired sends the history trimmed and leaves its mark on its row; a warm one does not.
+  describe("the cold return", () => {
+    const FIRST = { userText: "cambia el título", assistantReasoning: "Hecho.", transcript: { mensajes: [{ role: "assistant", content: "Hecho.", reasoning: "primero el título" }], leidos: [] } };
+    const SECOND = { userText: "y el pie", assistantReasoning: "Listo.", transcript: { mensajes: [{ role: "assistant", content: "Listo.", reasoning: "ahora el pie" }], leidos: [] } };
+    const lastModelCallEnded = (msAgo: number) => ({ createdAt: new Date(Date.now() - msAgo - 30_000), durationMs: 30_000 });
+    const thoughtsSent = () =>
+      (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ history: { reasoning?: string }[] }])[0].history.flatMap((m) => (m.reasoning ? [m.reasoning] : []));
+    const MARK = { v: 1, keepResults: 12, clearAtLeastTokens: 20_000 };
+
+    it("a turn 2 h after the last model call sends the history trimmed and saves the mark", async () => {
+      mocks.turnosParaElHistorial.mockResolvedValueOnce([FIRST, SECOND]);
+      mocks.lastModelTurnOfTheConversation.mockResolvedValueOnce(lastModelCallEnded(2 * 3_600_000));
+      turnoQueEscribe();
+      await readEvents(await pedir());
+      expect(thoughtsSent()).toEqual(["ahora el pie"]);
+      expect(filaGuardada()).toMatchObject({ coldTrim: MARK });
+    });
+
+    it("a turn 10 min after it sends the history whole and saves no mark", async () => {
+      mocks.turnosParaElHistorial.mockResolvedValueOnce([FIRST, SECOND]);
+      mocks.lastModelTurnOfTheConversation.mockResolvedValueOnce(lastModelCallEnded(10 * 60_000));
+      turnoQueEscribe();
+      await readEvents(await pedir());
+      expect(thoughtsSent()).toEqual(["primero el título", "ahora el pie"]);
+      expect(filaGuardada()).not.toHaveProperty("coldTrim");
+    });
+
+    it("OPENLEN_COLD_RETURN=0: 2 h later the history is whole and no mark is saved", async () => {
+      vi.stubEnv("OPENLEN_COLD_RETURN", "0");
+      try {
+        mocks.turnosParaElHistorial.mockResolvedValueOnce([FIRST, SECOND]);
+        mocks.lastModelTurnOfTheConversation.mockResolvedValueOnce(lastModelCallEnded(2 * 3_600_000));
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(thoughtsSent()).toEqual(["primero el título", "ahora el pie"]);
+        expect(filaGuardada()).not.toHaveProperty("coldTrim");
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("the lookup failing means a warm turn, never an error", async () => {
+      mocks.turnosParaElHistorial.mockResolvedValueOnce([FIRST, SECOND]);
+      mocks.lastModelTurnOfTheConversation.mockRejectedValueOnce(new Error("the database is away"));
+      turnoQueEscribe();
+      await readEvents(await pedir());
+      expect(thoughtsSent()).toEqual(["primero el título", "ahora el pie"]);
+      expect(filaGuardada()).not.toHaveProperty("coldTrim");
+    });
+
+    it("a conversation with no saved transcript has nothing to trim, so no mark is saved", async () => {
+      mocks.turnosParaElHistorial.mockResolvedValueOnce([]);
+      mocks.lastModelTurnOfTheConversation.mockResolvedValueOnce(lastModelCallEnded(2 * 3_600_000));
+      turnoQueEscribe();
+      await readEvents(await pedir());
+      expect(filaGuardada()).not.toHaveProperty("coldTrim");
+    });
   });
 
   // A PDF ATTACHED (26/10): a file Len reads with Read when he decides, like

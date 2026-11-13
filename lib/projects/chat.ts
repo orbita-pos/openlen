@@ -280,6 +280,24 @@ export async function lastTurnOfTheConversation(projectId: string, charla: strin
 }
 
 /**
+ * The last turn of the conversation that CALLED THE MODEL — a finished turn row with a transcript —, for
+ * the cold return (lib/agent/cold-return.ts): when the provider's cache was last touched. Not the time
+ * context's question above: the «published» note the card leaves in the chat is a message the model will
+ * see, but it called nobody, and reading it as the last turn would make a cold return look warm (the same
+ * stumble as F3, which took the note's row for the conversation's read-state).
+ */
+export async function lastModelTurnOfTheConversation(projectId: string, charla: string | null = null): Promise<{ createdAt: Date; durationMs: number | null } | null> {
+  const t = schema.projectChatMessages;
+  const [fila] = await db
+    .select({ createdAt: t.createdAt, durationMs: t.durationMs })
+    .from(t)
+    .where(and(turnoDeLaHistoria(projectId, charla), sql`jsonb_typeof(${t.transcript}) = 'object'`))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  return fila ?? null;
+}
+
+/**
  * LA CHARLA ENTERA PARA EL HISTORIAL DEL AGENTE (H4; A11: sin ventana, como
  * Claude Code), de la más vieja a la más reciente, con su transcripción: desde
  * la fila de la última marca de resumen, incluida, o desde el principio. Sale de
