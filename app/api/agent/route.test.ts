@@ -2014,6 +2014,25 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(fila.attachedImage).toEqual([{ url: "https://u/a.jpg", alt: "logo" }, { url: "https://u/b.png" }]);
   });
 
+  // Seen in production on 12/11 (row aa6b7258): the image modal leaves an upload in the project's folder and
+  // the chat attaches its path. Resolved against the request it was http://localhost:3000/img/…: Len saw none
+  // of a customer's four photos, and wrote that address into the page.
+  it("a photo that is a file of the project's folder keeps its path: in the row, in the note, and its pixels are asked of the folder", async () => {
+    const A = { mimeType: "image/webp", dataBase64: "AAAA" };
+    mocks.turnosParaElHistorial.mockResolvedValue([]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([["/img/a.webp", A]]));
+    await readEvents(
+      await POST(new Request("http://localhost:3000/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "ponla arriba", attachedImage: { url: "/img/a.webp" } }) })),
+    );
+    const args = mocks.runAgentLoop.mock.calls.at(-1)![0] as { messages: { images?: unknown[] }[] };
+    expect(args.messages.at(-1)!.images).toEqual([A]);
+    // The note of the message is written from this address (`turnRequestText`): the path, seen.
+    expect(mocks.buildAgentMessages).toHaveBeenLastCalledWith(expect.objectContaining({ attachedImages: [{ url: "/img/a.webp", visible: true }] }));
+    expect(mocks.conseguirFotos).toHaveBeenCalledWith(["/img/a.webp"], expect.objectContaining({ fromFolder: expect.any(Function) }));
+    const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedImage: unknown }])[1];
+    expect(fila.attachedImage).toEqual({ url: "/img/a.webp" });
+  });
+
   // A PDF ATTACHED (26/10): a file Len reads with Read when he decides, like
   // Claude Code. The route keeps it on the row, puts its note in the message
   // and gives Read the files of the whole conversation — and only real ones.

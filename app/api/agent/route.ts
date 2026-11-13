@@ -85,7 +85,8 @@ import {
   type MensajeDelHistorial,
   type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
-import { conseguirFotos, fotosQueCaben } from "@/lib/agent/fotos-de-la-conversacion";
+import { conseguirFotos, fotosQueCaben, photoAddress } from "@/lib/agent/fotos-de-la-conversacion";
+import { readProjectFileBytes } from "@/lib/backend/files";
 import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
@@ -944,21 +945,18 @@ async function correrTurno(
   // LAS FOTOS DEL MENSAJE: `attachedImages` (hasta 4, como Crear) y el
   // `attachedImage` de siempre, que sigue llegando del chat. Misma validación
   // de antes para cada una —same shape/limits/posture as ai-design: a valid
-  // http(s) URL, root-relative resolved against req.url—; una inválida se
-  // descarta en silencio en vez de un 400 (el mensaje sigue valiendo).
+  // http(s) URL—; una inválida se descarta en silencio en vez de un 400 (el
+  // mensaje sigue valiendo). La que es un fichero de la carpeta del proyecto
+  // (el modal de imágenes las deja en /img) se queda con su ruta (`photoAddress`).
   const leerFoto = (raw: unknown): ChatPhoto | null => {
     if (!raw || typeof raw !== "object") return null;
     const r = raw as AttachedImageBody;
     const url = typeof r.url === "string" ? r.url.trim() : "";
     if (url.length === 0 || url.length > ATTACHED_URL_MAX) return null;
-    try {
-      const parsed = new URL(url, req.url);
-      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
-      const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
-      return alt ? { url: parsed.href, alt } : { url: parsed.href };
-    } catch {
-      return null;
-    }
+    const address = photoAddress(url, req.url);
+    if (!address) return null;
+    const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
+    return alt ? { url: address, alt } : { url: address };
   };
   const attachedImages: ChatPhoto[] = [];
   for (const raw of [...(Array.isArray(body?.attachedImages) ? body.attachedImages : []), body?.attachedImage]) {
@@ -1060,7 +1058,10 @@ async function correrTurno(
     // Y las capturas del modo Diseño de cada turno, detrás de sus fotos (Len 3.1).
     ...[...filasDelHistorial].reverse().flatMap((f) => [...photosOf(f.attachedImage).map((p) => p.url), ...(f.transcript?.designCaptures ?? [])]),
   ];
-  const fotos = fotosQueCaben(masNuevaPrimero, await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal }));
+  const fotos = fotosQueCaben(
+    masNuevaPrimero,
+    await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal, fromFolder: (path) => readProjectFileBytes(projectId, path) }),
+  );
   const pixelesDe = (url: string): InlineImage | null => {
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;

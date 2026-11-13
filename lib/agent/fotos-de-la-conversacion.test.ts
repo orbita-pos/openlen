@@ -7,7 +7,7 @@
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { conseguirFotos, fotosQueCaben, PRESUPUESTO_FOTOS_BYTES, rutaDeSubidaPropia } from "./fotos-de-la-conversacion";
+import { conseguirFotos, fotosQueCaben, photoAddress, PRESUPUESTO_FOTOS_BYTES, rutaDeSubidaPropia } from "./fotos-de-la-conversacion";
 import { NO_CABE } from "./transcripcion";
 
 const ORIGEN = "http://localhost:3007/api/agent";
@@ -32,6 +32,30 @@ describe("rutaDeSubidaPropia — las subidas NUESTRAS en disco se leen del disco
     expect(rutaDeSubidaPropia("http://localhost:3007/uploads/notas.txt", ORIGEN, DEV)).toBeNull();
     expect(rutaDeSubidaPropia("http://localhost:3007/api/x.jpg", ORIGEN, DEV)).toBeNull();
     expect(rutaDeSubidaPropia("no es una dirección", "tampoco", DEV)).toBeNull();
+  });
+});
+
+describe("photoAddress — the address a photo of the message is kept under", () => {
+  const PROD = "http://localhost:3000/api/agent";
+
+  it("a path of the project's folder stays that path: it is what Len reads and what the page uses", () => {
+    expect(photoAddress("/img/a.webp", PROD, R2)).toBe("/img/a.webp");
+    expect(photoAddress("  /img/mi foto.png ", PROD, R2)).toBe("/img/mi foto.png");
+  });
+
+  it("a web address stays as it was", () => {
+    expect(photoAddress("https://cdn.com/b.png", PROD, R2)).toBe("https://cdn.com/b.png");
+    expect(photoAddress("//cdn.com/b.png", PROD, R2)).toBe("http://cdn.com/b.png");
+  });
+
+  it("one of our own uploads on disk (development) is still this server's address", () => {
+    expect(photoAddress("/uploads/a.jpg", ORIGEN, DEV)).toBe("http://localhost:3007/uploads/a.jpg");
+  });
+
+  it("anything that is not http(s), or empty → null", () => {
+    expect(photoAddress("javascript:alert(1)", PROD, R2)).toBeNull();
+    expect(photoAddress("data:image/png;base64,AAAA", PROD, R2)).toBeNull();
+    expect(photoAddress("   ", PROD, R2)).toBeNull();
   });
 });
 
@@ -72,6 +96,26 @@ describe("conseguirFotos", () => {
       leer: async () => Buffer.alloc(4 * 1024 * 1024 + 1),
     });
     expect(fotos.get("/uploads/grande.jpg")).toBeNull();
+  });
+
+  // Seen in production on 12/11 (row aa6b7258): the image modal leaves an upload in the project's folder
+  // and the chat attaches its path; resolved against the request it was http://localhost:3000/img/…,
+  // which the SSRF guard rightly refuses, and Len saw none of a customer's four photos.
+  it("a file of the project's folder comes from the folder, never from the network", async () => {
+    const fromFolder = vi.fn(async () => new Uint8Array([1, 2, 3]));
+    const deInternet = vi.fn(async () => ({ mimeType: "image/png", dataBase64: "RED" }));
+    const fotos = await conseguirFotos(["/img/a.webp"], { origen: "http://localhost:3000/api/agent", env: R2, fromFolder, deInternet });
+    expect(fotos.get("/img/a.webp")).toEqual({ mimeType: "image/webp", dataBase64: Buffer.from([1, 2, 3]).toString("base64") });
+    expect(fromFolder).toHaveBeenCalledWith("/img/a.webp");
+    expect(deInternet).not.toHaveBeenCalled();
+  });
+
+  it("a folder file that is missing, too big, not an image, or asked with no folder to read → null", async () => {
+    const source = (fromFolder?: (path: string) => Promise<Uint8Array | null>) => ({ origen: "http://localhost:3000/api/agent", env: R2, ...(fromFolder ? { fromFolder } : {}) });
+    expect((await conseguirFotos(["/img/a.webp"], source(async () => null))).get("/img/a.webp")).toBeNull();
+    expect((await conseguirFotos(["/img/a.webp"], source(async () => new Uint8Array(4 * 1024 * 1024 + 1)))).get("/img/a.webp")).toBeNull();
+    expect((await conseguirFotos(["/files/a.pdf"], source(async () => new Uint8Array([1])))).get("/files/a.pdf")).toBeNull();
+    expect((await conseguirFotos(["/img/a.webp"], source())).get("/img/a.webp")).toBeNull();
   });
 
   it("sin direcciones no hace nada", async () => {
