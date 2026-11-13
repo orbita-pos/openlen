@@ -5,6 +5,17 @@ const lenMd = (text: string | null): MemoryFile => ({ path: "/LEN.md", label: "p
 const index = (text: string | null): MemoryFile => ({ path: "/.len/memory/MEMORY.md", label: "your notes", text });
 
 describe("la memoria del proyecto como mensaje duradero (dsh-agent-instructions)", () => {
+  // THE IDLE SUMMARY (final review, finding 2): a summary written while idle covers the whole turn of its row,
+  // the memory message at its start included. What that row says it showed is no longer in view.
+  it("a row whose summary was written while idle shows nothing any more: its memory goes again", () => {
+    const idle = { messages: [{ role: "user", content: "<compacted-summary>\ns\n</compacted-summary>" }], fromTranscript: 1, trigger: "idle", preTokens: 9, postTokens: 3 };
+    const row = { compaction: idle, transcript: { memoriaHuellas: { "/LEN.md": "a" } } };
+    expect(foldMemoryDigests([row])).toBeNull();
+    expect(foldMemoryDigests([row, { transcript: { memoriaHuellas: { "/LEN.md": "b" } } }])).toEqual({ "/LEN.md": "b" });
+    // CONTROL: a mark the turn wrote itself keeps what its row says, as before.
+    expect(foldMemoryDigests([{ ...row, compaction: { ...idle, trigger: "pressure" } }])).toEqual({ "/LEN.md": "a" });
+  });
+
   it("sin memoria y sin historia: nada, byte a byte", () => {
     expect(memoryMessageForTurn([lenMd(""), index(null)], null, 16_000)).toBeNull();
   });

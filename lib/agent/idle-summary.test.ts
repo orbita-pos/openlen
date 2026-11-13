@@ -72,7 +72,9 @@ describe("runIdleSummary", () => {
     const pending: PendingIdleSummary = job.save.mock.calls[0]![0];
     expect(pending.writtenAt).toBe("2026-11-13T10:00:00.000Z");
     expect(isCompactionMark(pending.mark)).toBe(true);
-    expect(pending.mark).toMatchObject({ trigger: "idle", fromTranscript: 13, skills: [] });
+    expect(pending.mark).toMatchObject({ trigger: "idle", fromTranscript: 13 });
+    // No skill comes back behind it, so the mark names none: the history then forgets what the row had loaded.
+    expect(pending.mark).not.toHaveProperty("skills");
     expect(pending.mark.messages[0]!.content).toContain(SUMMARY_OPEN_TAG);
     expect(pending.mark.messages[0]!.content).toContain(SUMMARY);
     expect(pending.mark.postTokens).toBeLessThan(pending.mark.preTokens);
