@@ -137,6 +137,21 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
     expect(traza).toEqual([{ ...TRAZA[0]!, opensTurn: true }, ...TRAZA.slice(1)]);
   });
 
+  // THE COLD RETURN: a turn that started cold left its mark on its row; the judge still sees what happened.
+  it("a row marked by a cold return does not hide earlier results or reasoning from the judge", () => {
+    const reads = Array.from({ length: 30 }, (_, k) => [
+      { role: "assistant" as const, content: "", functionCalls: [{ name: "Read", args: { file_path: "/src/f" + k + ".ts" } }] },
+      { role: "user" as const, content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "x".repeat(7_000) } }] },
+    ]).flat();
+    const traza = trazaDeLasFilas([
+      { userText: "lee todo", assistantReasoning: "", transcript: { mensajes: [...reads, { role: "assistant", content: "leído", reasoning: "pensado" }], leidos: [] } },
+      { userText: "sigue", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [] } },
+      { userText: "y ahora", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "listo" }], leidos: [], coldTrim: { v: 1, keepResults: 12, clearAtLeastTokens: 20_000 } } },
+    ]);
+    expect(traza.flatMap((m) => m.functionResponses ?? []).every((r) => r.response.tool_result === "x".repeat(7_000))).toBe(true);
+    expect(traza.some((m) => m.reasoning === "pensado")).toBe(true);
+  });
+
   it("una fila de antes del 2026-10-06 llega al juez con el nombre de hoy", () => {
     const vieja = TRAZA.slice(1).map((m) => ({
       ...m,

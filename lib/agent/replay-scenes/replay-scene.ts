@@ -21,6 +21,7 @@ import {
   type FilaDelHistorial,
   type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
+import { isColdTrimMark } from "@/lib/agent/cold-return";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import type { SceneFile, SceneRow } from "./scene-files";
 
@@ -102,7 +103,10 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
     // A11: the whole conversation the file holds, as the route loads it now.
     const historyRows = rows.slice(0, i);
     const photos = [...historyRows, row].flatMap((r) => photosOf(r.attachedImage as ChatPhoto | ChatPhoto[] | null).map((p) => p.url));
-    const history = historialDesdeLaBase(historyRows.map(fila), undefined, new Map(photos.map((url) => [url, pixelsOf(url)])));
+    // A turn that came back cold sent this history trimmed and left its mark on its own row (`coldTrim`):
+    // the request is rebuilt the way the route built it, or the turn after it would not match what it sent.
+    const cold = isColdTrimMark(row.transcript.coldTrim) ? row.transcript.coldTrim : null;
+    const history = historialDesdeLaBase(historyRows.map(fila), undefined, new Map(photos.map((url) => [url, pixelsOf(url)])), cold);
 
     // The request as the route builds it (`argsDelTurno.prompt` + avisos, the
     // photos on the last message). The context, the memory and the notices are

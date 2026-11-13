@@ -26,7 +26,7 @@
 import { callModel } from "@/lib/style-match/autofill/model-call";
 import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
-import { historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { WHOLE_HISTORY, historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
 
 /** Votos por grader, los mismos que Claude Code. */
@@ -69,7 +69,9 @@ const NOMBRE_DEL_FOCO: Record<FocoDelJuez, string> = {
  * lo recorta `recortar` por el medio, como el suyo.
  */
 export function trazaDeLasFilas(filas: readonly FilaDelHistorial[]): MensajeDelHistorial[] {
-  return historialDesdeLaBase(filas, { hasta: Infinity, deja: Infinity });
+  // And without the trim of a cold return (`WHOLE_HISTORY`): a row's mark hides from the MODEL what it can ask
+  // for again; the judge is not the model.
+  return historialDesdeLaBase(filas, { hasta: Infinity, deja: Infinity }, undefined, WHOLE_HISTORY);
 }
 
 /** Una llamada al modelo del juez: el texto que contestó y lo que costó. */

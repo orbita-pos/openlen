@@ -78,6 +78,23 @@ describe("replayScene", () => {
     expect(checks.map((c) => c.acrossTurns)).toEqual([null, { ok: true }]);
   });
 
+  // THE COLD RETURN (final review, finding 3): a turn that started cold sent the history trimmed and left its
+  // mark; the replayer rebuilds that turn's request trimmed too, or the gate goes red on correct behaviour.
+  it("a turn that came back cold is replayed trimmed, and the turn after it starts with what it sent", async () => {
+    const thinking = (id: string, thought: string): SceneRow => row(id, "pide " + id, [{ role: "assistant", content: "hecho " + id, reasoning: thought }]);
+    const c = thinking("c", "pensado en c");
+    const cold: SceneFile = {
+      ...scene,
+      rows: [thinking("a", "pensado en a"), thinking("b", "pensado en b"), { ...c, transcript: { ...c.transcript!, coldTrim: { v: 1, keepResults: 12, clearAtLeastTokens: 20_000 } } }, thinking("d", "pensado en d")],
+    };
+    // Only the cold turn and the one after it are replayed: a and b stay as production saved them.
+    const { checks, requests } = await replayScene(cold, ["c", "d"]);
+    const thoughtsSentBy = (id: string) => requests.get(id)![0]!.flatMap((m) => (m.reasoning ? [m.reasoning] : []));
+    expect(thoughtsSentBy("c")).toEqual(["pensado en b"]);
+    expect(thoughtsSentBy("d")).not.toContain("pensado en a");
+    expect(checks.map((k) => k.acrossTurns)).toEqual([null, { ok: true }]);
+  });
+
   it("a row with no transcript (the «published» note between two turns) is history, not a turn to replay", async () => {
     const note: SceneRow = { ...row("pub-1", "✓ Publicada", []), transcript: null, assistantReasoning: "Tu página está en línea." };
     const withNote: SceneFile = { ...scene, rows: [scene.rows[0]!, note, scene.rows[1]!] };
