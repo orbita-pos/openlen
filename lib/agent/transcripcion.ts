@@ -25,7 +25,7 @@
  * Puro salvo la huella (`node:crypto`).
  */
 
-// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos; la copia de mitad de turno (`partial`) es lo que el modelo vio más una respuesta sintética por llamada sin la suya (A6), así que un turno que muere con su proceso vuelve igual en cada turno siguiente; su marca sale del estado de la fila, igual en cada turno, y sólo cambia si se deshace ese turno (se paga desde ahí una vez).
+// Efecto en la caché: se guarda lo que se mandó (`limpio`, `sentText`, fotos y capturas del modo Diseño) para que el turno siguiente rehaga los mismos bytes; el microcompact vacía resultados a saltos; la copia de mitad de turno (`partial`) es lo que el modelo vio más una respuesta sintética por llamada sin la suya (A6), así que un turno que muere con su proceso vuelve igual en cada turno siguiente; su marca sale del estado de la fila, igual en cada turno, y sólo cambia si se deshace ese turno (se paga desde ahí una vez). Un turno que empieza con la caché del proveedor ya caducada manda lo anterior recortado (`coldTrim`) y deja su marca: no se pierde caché (no la había) y los turnos siguientes repiten el mismo recorte, así que lo que se vuelve a cachear sigue coincidiendo.
 import { createHash } from "node:crypto";
 
 import type { InlineImage, Message } from "@/lib/ai-gateway";
@@ -41,6 +41,7 @@ import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
+import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { SKILL_TOOL } from "@/lib/agent/skills/tool";
 
 /** La misma marca que usa Claude Code. */
@@ -176,6 +177,10 @@ export interface TranscripcionGuardada {
    *  de DeepSeek, la corrección ya es su propio mensaje en la transcripción y el
    *  mensaje que abrió el turno se rehace sin tocar. Ausente = `userText`. */
   readonly sentText?: string;
+  /** THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): THIS turn started after the
+   *  provider's cache had expired and sent the history before it trimmed (`coldTrim`). Every later turn
+   *  applies the same trim to the same rows, so what is cached again keeps matching. Absent = a warm turn. */
+  readonly coldTrim?: ColdTrimMark;
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en
@@ -309,6 +314,48 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
   return salida;
 }
 
+/**
+ * THE TRIM OF A COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): what a turn sends when
+ * it starts after the provider's cache expired, with no model call. Two independent steps:
+ *   1 · what was thought before the last turn goes (`lastTurnStart`: where that turn's messages begin). No
+ *       floor: with the cache gone there is nothing to lose.
+ *   2 · of all the tool results, the last turn's included, the `keepResults` most recent stay and the rest
+ *       are emptied with the usual mark — but only when that frees `clearAtLeastTokens` or more (Claude
+ *       Code's rule). A loaded skill and a result already emptied neither count nor change.
+ * Call arguments and text are never touched. Pure, and applying it twice gives the same as once: the
+ * history applies it again on every later turn (`historialDesdeLaBase`).
+ */
+export function coldTrim<M extends Message | MensajeDelHistorial>(messages: readonly M[], lastTurnStart: number, mark: ColdTrimMark): M[] {
+  const out = messages.map((m, i) => {
+    if (i >= lastTurnStart || m.reasoning === undefined) return m;
+    const { reasoning: _thought, ...rest } = m;
+    return rest as M;
+  });
+  const toClear = new Map<number, Set<number>>();
+  let kept = 0;
+  let characters = 0;
+  for (let i = out.length - 1; i >= 0; i--) {
+    const responses = out[i]!.functionResponses;
+    if (!responses?.length) continue;
+    for (let j = responses.length - 1; j >= 0; j--) {
+      const r = responses[j]!;
+      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || neverEmptied(r)) continue;
+      if (kept < mark.keepResults) {
+        kept += 1;
+        continue;
+      }
+      characters += tamanoDeRespuesta(r.response);
+      toClear.set(i, (toClear.get(i) ?? new Set<number>()).add(j));
+    }
+  }
+  if (toClear.size === 0 || Math.ceil(characters / COLD_CHARS_PER_TOKEN) < mark.clearAtLeastTokens) return out;
+  for (const [i, positions] of toClear) {
+    const m = out[i]!;
+    out[i] = { ...m, functionResponses: m.functionResponses!.map((r, j) => (positions.has(j) ? { name: r.name, response: vaciada(r.response) } : r)) };
+  }
+  return out;
+}
+
 /** La transcripción del turno lista para la fila: limpia, con la huella de lo
  *  leído y dentro de su tope. */
 export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: Leidos): TranscripcionGuardada {
@@ -413,14 +460,21 @@ export function historialDesdeLaBase(
   filas: readonly FilaDelHistorial[],
   presupuesto: PresupuestoDeResultados = PRESUPUESTO_DE_RESULTADOS,
   fotos: FotosDeLaConversacion = new Map(),
+  /** THE COLD RETURN: the turn being prepared is cold, so everything these rows give goes trimmed
+   *  (`coldTrim`). The route then saves this same mark on the turn's row (`coldTrim` of its transcript). */
+  cold: ColdTrimMark | null = null,
 ): MensajeDelHistorial[] {
-  const mensajes: MensajeDelHistorial[] = [];
+  let mensajes: MensajeDelHistorial[] = [];
+  /** Where the last row added begins: the «last turn» a cold trim leaves its reasoning to. */
+  let lastRowStart = 0;
   // A11 · LA MARCA DEL RESUMEN (el `compact_boundary` de Claude Code): el
   // historial arranca en la fila de la última marca; lo de antes ya va resumido.
   const desdeLaMarca = filas.findLastIndex((f) => isCompactionMark(f.compaction));
   for (const [i, f] of filas.entries()) {
     if (i < desdeLaMarca) continue;
     if (i === desdeLaMarca && isCompactionMark(f.compaction)) {
+      // Nothing comes before a summary: a cold mark on this same row has nothing to trim.
+      lastRowStart = mensajes.length;
       // Lo que vio el modelo tras resumir (ya trae, resumidos o tal cual, la
       // memoria, el contexto y el mensaje del dueño de ese turno) y, detrás, la
       // cola de su transcripción.
@@ -431,6 +485,12 @@ export function historialDesdeLaBase(
       if (diedMidTurn(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
       continue;
     }
+    // THE COLD RETURN: this row's turn started cold and sent what came before it trimmed. The same
+    // trim, on the same rows, every turn after: the bytes it sent are the bytes rebuilt here. Marks
+    // add up — an earlier one was already applied when its own row came by.
+    const coldMark = f.transcript?.coldTrim;
+    if (isColdTrimMark(coldMark)) mensajes = coldTrim(mensajes, lastRowStart, coldMark);
+    lastRowStart = mensajes.length;
     // La memoria del proyecto que llevó ese turno, en su sitio (plans/len-md).
     if (f.transcript?.memoria) mensajes.push({ role: "user", content: f.transcript.memoria });
     // Y el catálogo de skills que llevó, detrás (spec local 2026-10-26-len-skills).
@@ -446,6 +506,7 @@ export function historialDesdeLaBase(
     if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
     if (diedMidTurn(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
   }
+  if (cold) mensajes = coldTrim(mensajes, lastRowStart, cold);
   return microcompactarASaltos(mensajes, presupuesto);
 }
 
