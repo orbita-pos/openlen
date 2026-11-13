@@ -18,8 +18,12 @@ export interface CompactInput {
   readonly firstIndex: number;
   readonly pressureTokens: number;
   readonly policy: CompactionPolicy;
-  /** `"manual"` es `/compact` (A11): resume aunque no haya presión, como `force`. */
-  readonly trigger: "pressure" | "overflow" | "manual";
+  /** `"manual"` es `/compact` (A11): resume aunque no haya presión, como `force`.
+   *  `"idle"` (spec local 2026-11-13-conversar-todo-el-mes, piece B): the conversation sits idle and the
+   *  provider still has it cached. It summarizes with no pressure too, and it does NOT prune first: the
+   *  request must be, byte for byte, the conversation as it was sent plus the instruction, or the cached
+   *  prefix would end at the first pruned result. Nothing is written to a recovery file either. */
+  readonly trigger: "pressure" | "overflow" | "manual" | "idle";
   /** A11 · resumir aunque no haya presión (con la cola de `retainTokens`): la
    *  charla que no cabía al empezar (`compactFirst`) y `/compact`. */
   readonly force?: boolean;
@@ -60,7 +64,8 @@ function readPathsIn(messages: readonly Message[]): string[] {
 }
 
 export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> {
-  const force = o.force === true || o.trigger === "manual";
+  const idle = o.trigger === "idle";
+  const force = o.force === true || o.trigger === "manual" || idle;
   if (o.trigger === "pressure" && !force && o.pressureTokens < o.policy.thresholdTokens) {
     return { messages: [...o.messages], changed: false, pruned: 0, summarized: false };
   }
@@ -68,7 +73,7 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
   // 1 · Podar lo que el modelo ya vio.
   const protectFrom = o.protectFrom ?? o.messages.length - 1;
   const paths = new Map<string, string>();
-  if (o.saveRecovery) {
+  if (o.saveRecovery && !idle) {
     const stamp = Date.now();
     for (const { key, text, name } of oversizedResults(o.messages, protectFrom)) {
       // Invariant 5: what visitors wrote never goes into a file of the terminal (the E2B box on a paid plan): pruned with
@@ -81,7 +86,7 @@ export async function compactIfNeeded(o: CompactInput): Promise<CompactOutcome> 
       if (saved) paths.set(key, path);
     }
   }
-  const pruned = pruneToolResults(o.messages, protectFrom, paths);
+  const pruned = idle ? { messages: [...o.messages], count: 0 } : pruneToolResults(o.messages, protectFrom, paths);
   const prunedOnly: CompactOutcome = { messages: pruned.messages, changed: pruned.count > 0, pruned: pruned.count, summarized: false };
   const freed = estimateTokens(o.messages) - estimateTokens(pruned.messages);
   if (o.trigger === "pressure" && !force && o.pressureTokens - freed < o.policy.thresholdTokens) return prunedOnly;
