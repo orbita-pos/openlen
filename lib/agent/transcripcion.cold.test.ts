@@ -3,12 +3,13 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
-import { COLD_CHARS_PER_TOKEN, COLD_TRIM_MARK } from "./cold-return";
+import { COLD_CHARS_PER_TOKEN, COLD_CLEARABLE_TOOLS, COLD_TRIM_MARK } from "./cold-return";
 import { CHARS_PER_TOKEN } from "./compaction/estimate";
 import type { CompactionMark } from "./compaction/mark";
 import {
   CUT_OFF_TURN_MARK,
   RESULTADO_VACIADO,
+  WHOLE_HISTORY,
   coldTrim,
   historialDesdeLaBase,
   leidosSembrados,
@@ -92,6 +93,29 @@ describe("coldTrim", () => {
     expect(emptied(out)).toBe(18);
   });
 
+  // Final review, finding 1: `ask_user_question` returns the OWNER'S ANSWER as its result. Only what Len can
+  // ask for again is emptied, as in Claude Code (Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit, Write).
+  it("what the owner answered, and every result Len cannot ask for again, is never emptied and does not count among the 12", () => {
+    const asked: Message[] = [
+      { role: "assistant", content: "", functionCalls: [{ name: "ask_user_question", args: { question: "phone?" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "ask_user_question", response: { ok: true, tool_result: "555 0100" } }] },
+      { role: "assistant", content: "", functionCalls: [{ name: "subagent", args: { description: "look" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "subagent", response: { ok: true, tool_result: "R".repeat(30_000) } }] },
+    ];
+    const out = coldTrim([...asked, ...turn(1, { results: 30, size: 7_000 })], 0, COLD_TRIM_MARK);
+    expect(results(out).slice(0, 2)).toEqual(["555 0100", "R".repeat(30_000)]);
+    expect(emptied(out)).toBe(18);
+    // 13 answers after 30 Reads: the 12 Reads kept are still the 12 most recent Reads.
+    const answers = Array.from({ length: 13 }, () => asked.slice(0, 2)).flat();
+    const mixed = coldTrim([...turn(1, { results: 30, size: 7_000 }).slice(0, -1), ...answers], 0, COLD_TRIM_MARK);
+    expect(emptied(mixed)).toBe(18);
+    expect(results(mixed).filter((t) => t === "555 0100")).toHaveLength(13);
+  });
+
+  it("the list of what may be emptied is the tools whose result can be asked for again", () => {
+    expect([...COLD_CLEARABLE_TOOLS].sort()).toEqual(["Edit", "Glob", "Grep", "Read", "Write", "bash", "use_page", "view_page", "web_fetch", "web_search"]);
+  });
+
   it("leaves call arguments, text and its input untouched; twice gives the same as once", () => {
     const ms = turn(1, { reasoning: "x", results: 30, size: 7_000 });
     const copy = structuredClone(ms);
@@ -148,6 +172,36 @@ describe("historialDesdeLaBase with a cold return", () => {
     expect(thoughts(h)).toEqual(["a", "b"]);
     expect(emptied(h)).toBe(0);
     expect(h.at(-1)!.content).toBe(CUT_OFF_TURN_MARK);
+  });
+
+  // Final review, finding 4: the «published» note is a row, not a turn — the last TURN keeps its reasoning.
+  it("a published note after the last turn does not make that turn an old one", () => {
+    const note: FilaDelHistorial = { userText: "✓ Publicada", assistantReasoning: "Tu página está en línea.", transcript: null };
+    const sentByColdTurn = historialDesdeLaBase([r0, r1, note], undefined, undefined, COLD_TRIM_MARK);
+    expect(thoughts(sentByColdTurn)).toEqual(["b"]);
+    const r3 = row(4, turn(4, { reasoning: "d" }), { coldTrim: COLD_TRIM_MARK });
+    const next = historialDesdeLaBase([r0, r1, note, r3]);
+    expect(next.slice(0, sentByColdTurn.length)).toEqual(sentByColdTurn);
+    expect(thoughts(next)).toEqual(["b", "d"]);
+  });
+
+  // Review Focus 5, as the plan wrote it: the enormous turn is the LAST one.
+  it("an enormous last turn: its own results before the last 12 are emptied, and a file read in it stops counting as read", () => {
+    const h = historialDesdeLaBase([r0], undefined, undefined, COLD_TRIM_MARK);
+    expect(emptied(h)).toBe(18);
+    expect(thoughts(h)).toEqual(["a"]);
+    const text = (k: number) => fileText(1, k, 7_000);
+    const seeded = leidosSembrados([{ ruta: fileOf(1, 0), huella: sha1(text(0)) }, { ruta: fileOf(1, 29), huella: sha1(text(29)) }], h, (p) => (p === fileOf(1, 0) ? text(0) : text(29)));
+    expect(seeded.has(fileOf(1, 0))).toBe(false);
+    expect(seeded.has(fileOf(1, 29))).toBe(true);
+  });
+
+  // Final review, finding 2: a reader that is not the model (Len-Bench's judge) sees what happened.
+  it("WHOLE_HISTORY: a reader that is not the model gets the conversation with no mark applied", () => {
+    const r2 = row(3, turn(3, { reasoning: "c" }), { coldTrim: COLD_TRIM_MARK });
+    const whole = historialDesdeLaBase([r0, r1, r2], undefined, undefined, WHOLE_HISTORY);
+    expect(thoughts(whole)).toEqual(["a", "b", "c"]);
+    expect(emptied(whole)).toBe(0);
   });
 
   it("a mark that is not ours is ignored", () => {

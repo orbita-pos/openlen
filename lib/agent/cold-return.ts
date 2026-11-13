@@ -34,6 +34,13 @@ export interface ColdTrimMark {
 
 export const COLD_TRIM_MARK: ColdTrimMark = Object.freeze({ v: 1, keepResults: 12, clearAtLeastTokens: 20_000 });
 
+/** What a cold return may empty: only the results Len can ask for again — as Claude Code, which clears
+ *  Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit and Write and nothing else. What the owner answered
+ *  (`ask_user_question`), what a subagent handed back, a loaded skill, a publish… stay whole: nobody can
+ *  run those again to get them back. This list is part of what `v: 1` of the mark means: changing it
+ *  needs a new version, or every conversation already marked is paid in full once more. */
+export const COLD_CLEARABLE_TOOLS: ReadonlySet<string> = new Set(["Read", "Write", "Edit", "Glob", "Grep", "bash", "web_search", "web_fetch", "view_page", "use_page"]);
+
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
 
 /** A row's `coldTrim`, as jsonb gives it back. Anything else is ignored: the history then comes back whole. */
