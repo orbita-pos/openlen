@@ -28,7 +28,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { promoteIdleSummary, savePendingIdleSummary, startNewConversation, turnosParaElHistorial } = await import("./chat");
+const { clearPendingIdleSummaries, isLastModelTurn, promoteIdleSummary, savePendingIdleSummary, startNewConversation, turnosParaElHistorial } = await import("./chat");
 
 const T0 = Date.UTC(2026, 10, 13, 9, 0, 0);
 const transcriptOf = (answer: string) => ({ mensajes: [{ role: "assistant", content: answer }], leidos: [] });
@@ -194,6 +194,8 @@ describe("written while idle, ignored while warm, applied cold, and the turn aft
         firstIndex: 2,
         transcriptLength: first.mensajes.length,
         minTokens: 1_000,
+        // The real question, against the real row.
+        stillCurrent: () => isLastModelTurn("p1", null, "a1"),
         canAfford: async () => true,
         summarize: async (request) => ((asked = request), { text: "## Primary Request and Intent\n- read six files", usage: null }),
         charge: async () => {},
@@ -221,5 +223,61 @@ describe("written while idle, ignored while warm, applied cold, and the turn aft
     await row({ id: "a2", minute: 180, transcript: { mensajes: [{ role: "assistant", content: "Sigo." }], leidos: [], contexto: "CONTEXT 2" } });
     const next = historialDesdeLaBase(await turnosParaElHistorial("p1"));
     expect(next.slice(0, sentByColdTurn.length)).toEqual(sentByColdTurn);
+  });
+});
+
+// Asked when a summary's timer fires (Claude Code checks again at that moment): is the row it was armed for
+// still the conversation's last model turn?
+describe("isLastModelTurn", () => {
+  it("the last finished turn with messages is; an older one is not", async () => {
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(true);
+    expect(await isLastModelTurn("p1", null, "t1")).toBe(false);
+  });
+
+  it("a published note behind it changes nothing; a newer turn does", async () => {
+    await row({ id: "pub-1", minute: 20 });
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(true);
+    await row({ id: "t3", minute: 30, transcript: transcriptOf("third") });
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(false);
+  });
+
+  // Len Watch works in a copy and writes its row in the parent's chat: its turn does not cancel the parent's timer.
+  it("not while another turn of the conversation is running: its row will come after this one", async () => {
+    await row({ id: "watch-1", minute: 30, status: "en_curso" });
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(false);
+    // A turn running in another conversation of the project is not this one's business.
+    await pg.query(`update "projectChatMessages" set "conversation" = 'assistant:a1' where "id" = 'watch-1'`);
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(true);
+  });
+
+  it("not after «start from scratch», not once its row is gone, not when it already has a mark", async () => {
+    await row({ id: "luc1", minute: 5, transcript: transcriptOf("hola"), conversation: "assistant:a1" });
+    expect(await isLastModelTurn("p1", "assistant:a1", "luc1")).toBe(true);
+    await pg.query(`delete from "projectChatMessages" where "id" = 'luc1'`);
+    expect(await isLastModelTurn("p1", "assistant:a1", "luc1")).toBe(false);
+    await pg.query(`update "projectChatMessages" set "compaction" = $1::jsonb where "id" = 't2'`, [JSON.stringify(MARK)]);
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(false);
+    await pg.query(`update "projectChatMessages" set "compaction" = null where "id" = 't2'`);
+    await startNewConversation("p1");
+    expect(await isLastModelTurn("p1", null, "t2")).toBe(false);
+  });
+});
+
+// A summary that was waiting and was not used is dropped when the conversation goes on, as Claude Code drops
+// the one it holds when a newer request arrives: it no longer covers what came after, and it would be loaded
+// with every later turn.
+describe("clearPendingIdleSummaries", () => {
+  it("drops every summary waiting in the conversation and leaves the transcripts as they were", async () => {
+    await row({ id: "luc1", minute: 5, transcript: transcriptOf("hola"), conversation: "assistant:a1" });
+    await savePendingIdleSummary("p1", "t1", PENDING);
+    await savePendingIdleSummary("p1", "t2", PENDING);
+    await savePendingIdleSummary("p1", "luc1", PENDING);
+    await clearPendingIdleSummaries("p1");
+    expect((await stored("t1")).transcript).toEqual(transcriptOf("first"));
+    expect((await stored("t2")).transcript).toEqual(transcriptOf("second"));
+    // Another conversation's is not this turn's business.
+    expect((await stored("luc1")).transcript).toMatchObject({ idleSummary: PENDING });
+    await clearPendingIdleSummaries("p1", "assistant:a1");
+    expect((await stored("luc1")).transcript).toEqual(transcriptOf("hola"));
   });
 });

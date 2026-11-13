@@ -780,6 +780,13 @@ export async function guardarMarcaDelTurno(projectId: string, id: string, compac
     .where(and(eq(t.id, id), eq(t.projectId, projectId), eq(t.status, ESTADO_EN_CURSO)));
 }
 
+/** A finished turn of the conversation whose transcript has messages of its own: the rows
+ *  `lastModelCallEndedAt` counts. Not the «published» note, nor a turn that died saving only its state. */
+function modelTurn(projectId: string, charla: string | null = null) {
+  const t = schema.projectChatMessages;
+  return and(turnoDeLaHistoria(projectId, charla), sql`jsonb_typeof(${t.transcript}->'mensajes') = 'array'`, sql`jsonb_array_length(${t.transcript}->'mensajes') > 0`);
+}
+
 /**
  * THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B; lib/agent/idle-summary.ts): the
  * summary written while the conversation sat idle WAITS on its turn's row, inside the transcript
@@ -806,7 +813,7 @@ export async function promoteIdleSummary(projectId: string, charla: string | nul
   const lastModelTurn = db
     .select({ id: t.id })
     .from(t)
-    .where(and(turnoDeLaHistoria(projectId, charla), sql`jsonb_typeof(${t.transcript}->'mensajes') = 'array'`, sql`jsonb_array_length(${t.transcript}->'mensajes') > 0`))
+    .where(modelTurn(projectId, charla))
     .orderBy(desc(t.createdAt))
     .limit(1);
   const promoted = await db
@@ -823,6 +830,44 @@ export async function promoteIdleSummary(projectId: string, charla: string | nul
     )
     .returning({ id: t.id });
   return promoted.length > 0;
+}
+
+/**
+ * Asked when a summary's timer fires, before anything is paid for — Claude Code looks again at that moment
+ * (its `prefix_changed` and `newer_request`): is `rowId` still the conversation's last model turn, with no
+ * mark of its own? No after «start from scratch» (the row is archived), once the project, the assistant or
+ * the row is gone, or when a turn came after it — or is running right now — that this process did not
+ * cancel the timer for (Len Watch writes its row in the parent's chat).
+ */
+export async function isLastModelTurn(projectId: string, charla: string | null, rowId: string): Promise<boolean> {
+  const t = schema.projectChatMessages;
+  const [running] = await db
+    .select({ id: t.id })
+    .from(t)
+    .where(and(enCurso(projectId, charla), eq(t.status, ESTADO_EN_CURSO), isNull(t.tipo)))
+    .limit(1);
+  if (running) return false;
+  const [last] = await db
+    .select({ id: t.id, marked: sql<boolean>`${t.compaction} is not null` })
+    .from(t)
+    .where(modelTurn(projectId, charla))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  return last?.id === rowId && !last.marked;
+}
+
+/**
+ * The conversation went on: a summary that was waiting and was not used no longer covers what came after,
+ * and nothing would ever promote it. It is dropped, as Claude Code drops the one it holds when a newer
+ * request arrives — left there, it would be read from the base with every later turn (16.000 tokens or
+ * more) for nothing.
+ */
+export async function clearPendingIdleSummaries(projectId: string, charla: string | null = null): Promise<void> {
+  const t = schema.projectChatMessages;
+  await db
+    .update(t)
+    .set({ transcript: sql`${t.transcript} - 'idleSummary'` })
+    .where(and(enCurso(projectId, charla), sql`jsonb_typeof(${t.transcript}->'idleSummary') is not null`));
 }
 
 /** Cómo queda una fila huérfana (nadie la corre: el proceso murió): cortada y

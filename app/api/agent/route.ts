@@ -90,9 +90,10 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben, photoAddress } from "@/lib/agent/fotos-de-la-conversacion";
 import { readProjectFileBytes } from "@/lib/backend/files";
-import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, savePendingIdleSummary, turnosParaElHistorial } from "@/lib/projects/chat";
+import { clearPendingIdleSummaries, filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, turnosParaElHistorial } from "@/lib/projects/chat";
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
-import { IDLE_SUMMARY_OUTPUT_ESTIMATE, armIdleSummary, cancelIdleSummary, collectSummary, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
+import { armIdleSummary, cancelIdleSummary, idleSummaryDeadlineMs, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
+import { idleSummaryJobFor } from "@/lib/agent/idle-summary-job";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
@@ -905,6 +906,11 @@ async function correrTurno(
     await loadRows();
     coldMark = null;
   }
+  // A summary still waiting on a row after that was not used and never will be: the conversation goes on
+  // with this turn (a warm return), or it sits on a turn that is no longer the last. It is dropped, as Claude
+  // Code drops the one it holds when a newer request arrives; left there it would be read with every turn.
+  // Nothing the history sends reads it, so this turn does not wait for it.
+  if (filasDelHistorial.some((fila) => fila.transcript?.idleSummary)) void clearPendingIdleSummaries(projectId, ...enLaCharla).catch(() => {});
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
@@ -2877,43 +2883,27 @@ async function correrTurno(
             const idleMessages = [...messagesBeforeLoop, ...result.transcripcion];
             const minTokens = idleSummaryMinTokens();
             if (estimateTokens(idleMessages) >= minTokens) {
-              const rate = brain.creditRate();
-              const planAtTheEnd = planActivo;
-              // The turn's own brain may be aborted by now: the summary is asked with one of its own, built the
-              // same way (the tools are part of what the provider has cached).
-              let idleBrain: ReturnType<typeof createAgentBrain> | null = null;
-              armIdleSummary(
-                {
-                  key: idleKey,
-                  messages: idleMessages,
-                  firstIndex: 2,
-                  transcriptLength: result.transcripcion.length,
-                  minTokens,
-                  canAfford: async (tokens) => (await getCreditState(userId)).balance >= creditsForUsage(tokens, IDLE_SUMMARY_OUTPUT_ESTIMATE, rate, tokens),
-                  summarize: (request, signal) => {
-                    idleBrain = createAgentBrain({ tools, requestId: projectId, signal, esfuerzoDelTurno, esfuerzoDelUsuario, mode, preferredProvider: brain.lastProvider() });
-                    return collectSummary(idleBrain.openStream(withPlanSection(request, planAtTheEnd)));
-                  },
-                  // Nobody asked for this call: the owner pays it at the WARM price whatever the provider read
-                  // from its cache (DeepInfra does not say how long it keeps one). What it really was stays in
-                  // the ledger row — its list price and its cost —, and the production photo counts the misses.
-                  charge: async (u) => {
-                    const asked = idleBrain ?? brain;
-                    await chargeCredits(userId, creditsForUsage(u.inputTokens, u.outputTokens, rate, u.inputTokens), {
-                      surface: "idle_summary",
-                      outcome: "ok",
-                      projectId,
-                      refId: filaId,
-                      listCenticredits: creditsForUsage(u.inputTokens, u.outputTokens, rate, u.cachedTokens),
-                      uses: [{ provider: asked.lastProvider(), model: asked.modelId, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, at: new Date() }],
-                    });
-                  },
-                  // As the mark of a turn that summarized itself: without the personal memory of who spoke and
-                  // without pixels.
-                  save: (pending) => savePendingIdleSummary(proyectoDelChat, filaId, { ...pending, mark: compactionMarkForStorage(pending.mark) }),
-                },
-                idleSummaryDelayMs(),
-              );
+              // The job is built OUTSIDE this handler, from plain values (lib/agent/idle-summary-job.ts): a
+              // function written here would keep everything this turn holds alive for the hour it waits.
+              const job = idleSummaryJobFor({
+                key: idleKey,
+                messages: idleMessages,
+                transcriptLength: result.transcripcion.length,
+                minTokens,
+                projectId,
+                conversation: enLaCharla[0] ?? null,
+                rowId: filaId,
+                ownerId: userId,
+                memberId: miembro ? quien : null,
+                rate: brain.creditRate(),
+                planActive: planActivo,
+                provider: brain.lastProvider(),
+                model: brain.modelId,
+                brain: { tools, requestId: projectId, esfuerzoDelTurno, esfuerzoDelUsuario, mode },
+              });
+              // The call has until the conversation would be cold to answer.
+              if (!armIdleSummary(job, idleSummaryDelayMs(), { deadlineMs: idleSummaryDeadlineMs() }))
+                console.warn(`[idle-summary] ${idleKey}: not armed — too many conversations are already waiting`);
             }
           }
         } catch (err) {

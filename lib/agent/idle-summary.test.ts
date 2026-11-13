@@ -9,6 +9,7 @@ import {
   armedIdleSummaries,
   cancelIdleSummary,
   collectSummary,
+  idleSummaryDeadlineMs,
   idleSummaryDelayMs,
   idleSummaryEnabled,
   idleSummaryMinTokens,
@@ -42,6 +43,7 @@ function conversation(): Message[] {
 }
 
 type Mocked = IdleSummaryJob & {
+  stillCurrent: ReturnType<typeof vi.fn<IdleSummaryJob["stillCurrent"]>>;
   canAfford: ReturnType<typeof vi.fn<IdleSummaryJob["canAfford"]>>;
   summarize: ReturnType<typeof vi.fn<IdleSummaryJob["summarize"]>>;
   charge: ReturnType<typeof vi.fn<IdleSummaryJob["charge"]>>;
@@ -55,6 +57,7 @@ function jobFor(key = "p1:", over: Partial<IdleSummaryJob> = {}): Mocked {
     firstIndex: 2,
     transcriptLength: 13,
     minTokens: 1_000,
+    stillCurrent: vi.fn<IdleSummaryJob["stillCurrent"]>(async () => true),
     canAfford: vi.fn<IdleSummaryJob["canAfford"]>(async () => true),
     summarize: vi.fn<IdleSummaryJob["summarize"]>(async () => ({ text: SUMMARY, usage: USAGE })),
     charge: vi.fn<IdleSummaryJob["charge"]>(async () => {}),
@@ -97,6 +100,24 @@ describe("runIdleSummary", () => {
     expect(job.summarize).toHaveBeenCalledTimes(1);
     expect(job.charge).toHaveBeenCalledTimes(1);
     expect(job.charge).toHaveBeenCalledWith(USAGE);
+  });
+
+  // Claude Code checks again when its timer fires («prefix_changed», «newer_request»): the conversation armed
+  // may no longer be the one that is there.
+  it("the conversation moved on, was archived or is gone when the timer fires: nothing is asked, nothing is charged", async () => {
+    const job = jobFor();
+    job.stillCurrent.mockResolvedValueOnce(false);
+    expect(await runIdleSummary(job, never())).toBe("stale");
+    expect(job.canAfford).not.toHaveBeenCalled();
+    expect(job.summarize).not.toHaveBeenCalled();
+    expect(job.charge).not.toHaveBeenCalled();
+    expect(job.save).not.toHaveBeenCalled();
+  });
+
+  it("a short conversation is not even looked up", async () => {
+    const job = jobFor("p1:", { minTokens: 10_000_000 });
+    expect(await runIdleSummary(job, never())).toBe("small");
+    expect(job.stillCurrent).not.toHaveBeenCalled();
   });
 
   it("a conversation under the minimum is not summarized", async () => {
@@ -158,9 +179,9 @@ describe("runIdleSummary", () => {
 
 describe("armIdleSummary", () => {
   const keys: string[] = [];
-  const arm = (job: IdleSummaryJob, delayMs: number) => {
+  const arm = (job: IdleSummaryJob, delayMs: number, opts?: Parameters<typeof armIdleSummary>[2]) => {
     keys.push(job.key);
-    return armIdleSummary(job, delayMs);
+    return armIdleSummary(job, delayMs, opts);
   };
 
   beforeEach(() => {
@@ -246,6 +267,77 @@ describe("armIdleSummary", () => {
     expect(arm(jobFor("p0:"), 60_000)).toBe(true);
   });
 
+  // Claude Code's «lapsed»: fired more than a minute late (the process slept or was busy), the cache may be gone.
+  it("a timer that fires more than a minute late does nothing", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    let clock = 1_000_000;
+    const job = jobFor();
+    arm(job, 1_000, { now: () => clock });
+    clock += 1_000 + 60_001;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(job.stillCurrent).not.toHaveBeenCalled();
+    expect(job.summarize).not.toHaveBeenCalled();
+    expect(armedIdleSummaries()).toBe(0);
+    // The journal says why there is no summary.
+    expect(warn.mock.calls.map((c) => String(c[0]))).toEqual(["[idle-summary] p1:: fired 60 s late — nothing was asked"]);
+    warn.mockRestore();
+  });
+
+  it("a minute late or less still runs", async () => {
+    let clock = 1_000_000;
+    const job = jobFor();
+    arm(job, 1_000, { now: () => clock });
+    clock += 1_000 + 60_000;
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(job.summarize).toHaveBeenCalledTimes(1);
+  });
+
+  it("a call that is still not answered at its deadline is abandoned, and the conversation stops waiting", async () => {
+    let seen: AbortSignal | null = null;
+    const job = jobFor("p1:", {
+      summarize: vi.fn<IdleSummaryJob["summarize"]>(
+        (_request, signal) =>
+          new Promise((resolve) => {
+            seen = signal;
+            signal.addEventListener("abort", () => resolve({ text: null, usage: null }));
+          }),
+      ),
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    arm(job, 1_000, { deadlineMs: 5_000 });
+    await vi.advanceTimersByTimeAsync(1_000 + 4_999);
+    expect(seen!.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(seen!.aborted).toBe(true);
+    expect(job.save).not.toHaveBeenCalled();
+    expect(job.charge).not.toHaveBeenCalled();
+    expect(armedIdleSummaries()).toBe(0);
+    expect(warn.mock.calls.map((c) => String(c[0]))).toEqual(["[idle-summary] p1:: not answered in 5 s — abandoned"]);
+    warn.mockRestore();
+  });
+
+  it("a newer turn that arrives while the call is running clears its deadline too", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const job = jobFor("p1:", {
+      summarize: vi.fn<IdleSummaryJob["summarize"]>((_request, signal) => new Promise((resolve) => signal.addEventListener("abort", () => resolve({ text: null, usage: null })))),
+    });
+    arm(job, 1_000, { deadlineMs: 5_000 });
+    await vi.advanceTimersByTimeAsync(1_000);
+    cancelIdleSummary("p1:");
+    await vi.advanceTimersByTimeAsync(60_000);
+    // Nothing was abandoned at a deadline: the newer turn had already cancelled it.
+    expect(warn).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+    warn.mockRestore();
+  });
+
+  it("a call answered in time is not cut by its deadline", async () => {
+    const job = jobFor();
+    arm(job, 1_000, { deadlineMs: 5_000 });
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(job.save).toHaveBeenCalledTimes(1);
+  });
+
   it("a task that throws is logged and does not escape the timer", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const job = jobFor("p1:", { canAfford: vi.fn<IdleSummaryJob["canAfford"]>(async () => Promise.reject(new Error("the database is away"))) });
@@ -258,6 +350,11 @@ describe("armIdleSummary", () => {
 });
 
 describe("the idle summary's settings", () => {
+  it("the call has until the turn would be cold to answer: 6.5 minutes by default", () => {
+    expect(idleSummaryDeadlineMs({})).toBe(390_000);
+    expect(idleSummaryDeadlineMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(180_000);
+  });
+
   it("fires at 90 % of the cold threshold: 58.5 minutes by default", () => {
     expect(idleSummaryDelayMs({})).toBe(3_510_000);
     expect(idleSummaryDelayMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(1_620_000);

@@ -101,6 +101,8 @@ const mocks = vi.hoisted(() => {
   cancelIdleSummary: vi.fn((_key: string) => {}),
   promoteIdleSummary: vi.fn(async (_projectId: string, _conversation?: string | null) => false),
   savePendingIdleSummary: vi.fn(async (_projectId: string, _rowId: string, _pending: unknown) => {}),
+  isLastModelTurn: vi.fn(async (_projectId: string, _conversation: string | null, _rowId: string) => true),
+  clearPendingIdleSummaries: vi.fn(async (_projectId: string, _conversation?: string | null) => {}),
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   apuntarMencionesDelTurno: vi.fn(async () => {}),
   nombresDeUsuarios: vi.fn(async (): Promise<Map<string, string>> => new Map()),
@@ -317,6 +319,8 @@ vi.mock("@/lib/projects/chat", () => ({
   lastTurnOfTheConversation: vi.fn(async () => null),
   promoteIdleSummary: mocks.promoteIdleSummary,
   savePendingIdleSummary: mocks.savePendingIdleSummary,
+  isLastModelTurn: mocks.isLastModelTurn,
+  clearPendingIdleSummaries: mocks.clearPendingIdleSummaries,
 }));
 // The idle summary: its timers are the module's own business (idle-summary.test.ts); here, what the route hands it.
 vi.mock("@/lib/agent/idle-summary", async (original) => ({
@@ -2155,12 +2159,13 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     describe("the idle summary", () => {
       type Job = {
         key: string; messages: { role: string; content: string }[]; firstIndex: number; transcriptLength: number; minTokens: number;
+        stillCurrent(): Promise<boolean>;
         canAfford(tokens: number): Promise<boolean>;
         summarize(request: unknown[], signal: AbortSignal): Promise<{ text: string | null; usage: unknown }>;
         charge(usage: { inputTokens: number; cachedTokens: number; outputTokens: number }): Promise<void>;
         save(pending: unknown): Promise<void>;
       };
-      const armed = () => mocks.armIdleSummary.mock.calls.at(-1) as unknown as [Job, number];
+      const armed = () => mocks.armIdleSummary.mock.calls.at(-1) as unknown as [Job, number, { deadlineMs?: number }?];
       /** A turn of a conversation that counts as long: the minimum is lowered to one token. */
       const longTurn = async (rows: unknown[] = endedAgo(10 * 60_000)) => {
         vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
@@ -2175,8 +2180,10 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       it("a finished turn of a long conversation arms it with what the next turn will have cached", async () => {
         await longTurn();
         expect(mocks.armIdleSummary).toHaveBeenCalledTimes(1);
-        const [job, delay] = armed();
+        const [job, delay, opts] = armed();
         expect(delay).toBe(3_510_000);
+        // The call has until the turn would be cold to answer.
+        expect(opts).toEqual({ deadlineMs: 390_000 });
         expect(job).toMatchObject({ key: "p1:", firstIndex: 2, transcriptLength: 1, minTokens: 1 });
         expect(job.messages.at(-1)).toEqual({ role: "assistant", content: "listo" });
         expect(job.messages.length).toBeGreaterThan(1);
@@ -2234,6 +2241,17 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         for (const key of ["mode", "esfuerzoDelTurno", "esfuerzoDelUsuario"]) expect(idleBrain[key]).toBe(turnBrain[key]);
         expect(seen[0]![0]!.content).toContain(PLAN_POLICY);
         expect(seen[0]![1]).toEqual({ role: "user", content: "x" });
+      });
+
+      it("a summary that is not armed because too many conversations are waiting says so", async () => {
+        mocks.armIdleSummary.mockReturnValueOnce(false);
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        try {
+          await longTurn();
+          expect(warn.mock.calls.map((c) => String(c[0])).filter((line) => line.startsWith("[idle-summary]"))).toEqual(["[idle-summary] p1:: not armed — too many conversations are already waiting"]);
+        } finally {
+          warn.mockRestore();
+        }
       });
 
       it("an idle summary that cannot be armed never breaks the turn", async () => {
@@ -2332,6 +2350,85 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         } finally {
           mocks.creditsForUsage.mockReset();
         }
+      });
+
+      // The six loose ends of the idle summary (13/11), each as Claude Code does it or as this repo already does.
+      it("when its timer fires it asks whether its row is still the conversation's last turn", async () => {
+        await longTurn();
+        mocks.isLastModelTurn.mockResolvedValueOnce(false);
+        expect(await armed()[0].stillCurrent()).toBe(false);
+        const [projectId, conversation, rowId] = mocks.isLastModelTurn.mock.calls.at(-1)!;
+        expect([projectId, conversation]).toEqual(["p1", null]);
+        // The row the summary would be saved on.
+        await armed()[0].save({ mark: { messages: [], fromTranscript: 1, trigger: "idle", preTokens: 2, postTokens: 1 }, writtenAt: "x" });
+        expect(rowId).toBe(mocks.savePendingIdleSummary.mock.calls.at(-1)![1]);
+      });
+
+      it("after a member's turn the charge names the member and counts toward the members' cap, like the turn itself", async () => {
+        mocks.auth.mockResolvedValueOnce({ user: { id: "ana", email: "a@x" } });
+        fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "dueno-1" } : null));
+        mocks.cabeEnElTope.mockResolvedValueOnce(true);
+        mocks.margenDeMiembros.mockResolvedValueOnce(null);
+        try {
+          await longTurn();
+          mocks.chargeCredits.mockClear();
+          mocks.sumarGasto.mockClear();
+          mocks.creditsForUsage.mockImplementation((input: number, output: number, _rate: unknown, cached = 0) => input - cached + output);
+          await armed()[0].charge({ inputTokens: 200_000, cachedTokens: 190_000, outputTokens: 3_000 });
+          expect(mocks.chargeCredits).toHaveBeenCalledWith("dueno-1", 3_000, expect.objectContaining({ surface: "idle_summary", actorId: "ana" }));
+          expect(mocks.sumarGasto).toHaveBeenCalledWith("p1", "ana", 3_000);
+        } finally {
+          fijarAccesoDePrueba(null);
+          mocks.creditsForUsage.mockReset();
+        }
+      });
+
+      it("the owner's own turn names nobody and touches no cap", async () => {
+        await longTurn();
+        mocks.chargeCredits.mockClear();
+        mocks.sumarGasto.mockClear();
+        await armed()[0].charge({ inputTokens: 10, cachedTokens: 10, outputTokens: 1 });
+        expect((mocks.chargeCredits.mock.calls[0] as unknown as [string, number, { actorId: string | null }])[2].actorId).toBeNull();
+        expect(mocks.sumarGasto).not.toHaveBeenCalled();
+      });
+
+      it("the ledger says who answered with which model, also when the fallback did", async () => {
+        await longTurn();
+        const [job] = armed();
+        mocks.createAgentBrain.mockReturnValueOnce(
+          mocks.brainStub({
+            openStream: () => (async function* () {})(),
+            modelId: "primary-model",
+            lastProvider: () => "fireworks",
+            providersUsed: () => [
+              { provider: "deepinfra", model: "primary-model", inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 },
+              { provider: "fireworks", model: "fallback-model", inputTokens: 200_000, outputTokens: 3_000, cachedTokens: 0, thinkingTokens: 100 },
+            ],
+          }),
+        );
+        await job.summarize([{ role: "user", content: "x" }], new AbortController().signal);
+        mocks.chargeCredits.mockClear();
+        await job.charge({ inputTokens: 200_000, cachedTokens: 0, outputTokens: 3_000 });
+        const uses = (mocks.chargeCredits.mock.calls[0] as unknown as [string, number, { uses: Record<string, unknown>[] }])[2].uses;
+        expect(uses).toHaveLength(2);
+        expect(uses[1]).toMatchObject({ provider: "fireworks", model: "fallback-model", inputTokens: 200_000, outputTokens: 3_000, reasoningTokens: 100 });
+        expect(uses[0]).toMatchObject({ provider: "deepinfra", model: "primary-model" });
+      });
+
+      it("a summary that was waiting and was not used is dropped when the conversation goes on", async () => {
+        const waiting = { ...SECOND, endedAt: Date.now() - 10 * 60_000, transcript: { ...SECOND.transcript, idleSummary: { mark: { messages: [{ role: "user", content: "s" }], fromTranscript: 1, trigger: "idle", preTokens: 2, postTokens: 1 }, writtenAt: "x" } } };
+        mocks.turnosParaElHistorial.mockResolvedValueOnce([{ ...FIRST, endedAt: Date.now() - 20 * 60_000 }, waiting]);
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.clearPendingIdleSummaries).toHaveBeenCalledWith("p1");
+        expect(mocks.promoteIdleSummary).not.toHaveBeenCalled();
+      });
+
+      it("with nothing waiting in the rows no statement is spent on it", async () => {
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.clearPendingIdleSummaries).not.toHaveBeenCalled();
       });
 
       it("it is not asked for when the owner's balance does not cover it", async () => {
