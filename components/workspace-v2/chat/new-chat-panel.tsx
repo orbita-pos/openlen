@@ -574,10 +574,10 @@ function AgentChatView({
         ) : (
           chat.turns.map((turn, i) =>
             turn.tipo === "persona" ? (
-              <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} />
+              <MensajeDelEquipo key={turn.id} turn={turn} gente={equipo.gente} yo={equipo.yo} colorDe={colorDe} projectId={projectId} />
             ) : (
             <div key={turn.id} className="flex flex-col gap-4">
-              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} yo={equipo.yo} />
+              <UserMessage turn={turn} initial={initial} onAbrirOrigen={(ruta) => abrirEnElCodigo.abrir(projectId, ruta)} gente={equipo.gente} colorDe={colorDe} yo={equipo.yo} projectId={projectId} />
               <LenTurn
                 turn={turn}
                 next={siguienteDeLen(i)}
@@ -658,6 +658,7 @@ function AgentChatView({
             onClearAttachedImage={() => chat.setAttachedImage(null)}
             attachedImages={chat.attachedImages}
             onRemoveImage={(url) => chat.setAttachedImages((prev) => prev.filter((i) => i.url !== url))}
+            projectId={projectId}
             attachedFiles={chat.attachedFiles}
             {...(soloLectura ? {} : { onAttachPdf: () => pdfInput.current?.click() })}
             onRemoveFile={(url) => chat.setAttachedFiles(chat.attachedFiles.filter((f) => f.url !== url))}

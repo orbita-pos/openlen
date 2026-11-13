@@ -1,6 +1,6 @@
 "use client";
 
-import { uploadEndpointFor } from "@/lib/files/image-paths";
+import { uploadEndpointFor, workspaceSrc } from "@/lib/files/image-paths";
 import {
   useCallback,
   useEffect,
@@ -474,7 +474,7 @@ function MyUploadsTab({
             >
               {media === "video" ? (
                 <video
-                  src={a.url}
+                  src={workspaceSrc(projectId, a.url)}
                   muted
                   playsInline
                   preload="metadata"
@@ -483,7 +483,7 @@ function MyUploadsTab({
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={a.url}
+                  src={workspaceSrc(projectId, a.url)}
                   alt=""
                   loading="lazy"
                   className="h-full w-full object-cover"

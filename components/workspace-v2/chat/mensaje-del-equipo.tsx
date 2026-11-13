@@ -6,6 +6,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { workspaceSrc } from "@/lib/files/image-paths";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { AvatarContent } from "../avatar-content";
 import { TextoConMenciones } from "../hilos-del-codigo";
@@ -16,11 +17,14 @@ export function MensajeDelEquipo({
   gente,
   yo,
   colorDe,
+  projectId,
 }: {
   turn: DesignTurn;
   gente: readonly PersonaMencionable[];
   yo: string | null;
   colorDe: (userId: string) => string;
+  /** The project of this chat: a photo that is a file of its folder is painted from the folder's route. */
+  projectId?: string | null;
 }) {
   const t = useTranslations("panelsChat.equipo");
   const autorId = turn.autorId ?? "";
@@ -46,9 +50,9 @@ export function MensajeDelEquipo({
         {fotos.length > 0 && (
           <div className={`mt-1.5 flex flex-wrap gap-1.5 ${propio ? "justify-end" : ""}`}>
             {fotos.map((f) => (
-              <a key={f.url} href={f.url} target="_blank" rel="noreferrer">
+              <a key={f.url} href={workspaceSrc(projectId, f.url)} target="_blank" rel="noreferrer">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={f.url} alt={f.alt ?? ""} className="h-16 w-16 rounded-[8px] border bd object-cover" />
+                <img src={workspaceSrc(projectId, f.url)} alt={f.alt ?? ""} className="h-16 w-16 rounded-[8px] border bd object-cover" />
               </a>
             ))}
           </div>

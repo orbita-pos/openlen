@@ -31,6 +31,7 @@ import { useMentionMenu, type MentionIndex } from "./mention-menu";
 import type { MentionRef } from "@/lib/mentions/types";
 import type { PersonaMencionable } from "@/lib/workspace-v2/menciones";
 import { hasLink } from "@/lib/chat/links";
+import { workspaceSrc } from "@/lib/files/image-paths";
 
 const NADIE: readonly PersonaMencionable[] = [];
 const SIN_COLOR = () => "";
@@ -60,6 +61,7 @@ export function ChatComposer({
   onRemoveFile,
   attachedImages,
   onRemoveImage,
+  projectId,
   pendingUploads = [],
   onCancelUpload,
   onPasteFiles,
@@ -115,6 +117,8 @@ export function ChatComposer({
    *  message until they land; and the files a paste brings, for whoever uploads them. */
   attachedImages?: readonly AttachedImage[];
   onRemoveImage?: (url: string) => void;
+  /** The project of this chat: a photo that is a file of its folder is painted from the folder's route (`workspaceSrc`). */
+  projectId?: string | null;
   pendingUploads?: readonly PendingUpload[];
   onCancelUpload?: (id: string) => void;
   onPasteFiles?: (files: File[]) => void;
@@ -303,7 +307,7 @@ export function ChatComposer({
             {images.map((img) => (
               <Chip key={img.url} onRemove={onRemoveImage ? () => onRemoveImage(img.url) : onClearAttachedImage} removeLabel={t("composer.removeImage")}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt="" className="h-[18px] w-[18px] rounded object-cover" />
+                <img src={workspaceSrc(projectId, img.url)} alt="" className="h-[18px] w-[18px] rounded object-cover" />
                 <b className="shrink-0 font-semibold">{t("composer.image")}</b>
                 <span className="min-w-0 truncate">{img.alt || hostOf(img.url)}</span>
               </Chip>
