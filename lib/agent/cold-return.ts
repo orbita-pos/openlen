@@ -15,6 +15,11 @@
 
 export const COLD_AFTER_MIN_DEFAULT = 65;
 
+/** Characters per token, for the floor of the trim. The compaction's own figure (`CHARS_PER_TOKEN`,
+ *  ./compaction/estimate.ts), repeated here because that module reaches ./transcripcion.ts through
+ *  ./context.ts; a test keeps the two equal. */
+export const COLD_CHARS_PER_TOKEN = 3.5;
+
 /** What a cold turn did to the history before it, saved with its row (`TranscripcionGuardada.coldTrim`). */
 export interface ColdTrimMark {
   readonly v: 1;
