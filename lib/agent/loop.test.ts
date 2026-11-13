@@ -77,6 +77,36 @@ describe("runAgentLoop", () => {
     expect(r.transcripcion?.[0]?.functionCalls?.[0]?.args).toEqual({ file_path: "/index.html", offset: 10, limit: 50 });
   });
 
+  // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B): the summary written while a
+  // conversation sits idle has to be asked with the very request the provider still has cached. That request
+  // is what the turn was given plus the turn's own transcript — pinned here, and what the route hands to the
+  // idle summary when a turn ends.
+  it("what the turn was given plus its own transcript is the prefix the next turn will have cached", async () => {
+    const messages: Message[] = [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "lee dos ficheros" }];
+    const before = [...messages];
+    const seen: Message[][] = [];
+    const script = scripted(
+      [{ type: "reasoning", text: "primero uno" }, { type: "function_call", name: "Read", args: { file_path: "/a.html" } }, usage(1), done],
+      [{ type: "function_call", name: "Read", args: { file_path: "/b.html" } }, usage(1), done],
+      [{ type: "text_delta", text: "Leídos los dos." }, usage(1), done],
+    );
+    const result = await runAgentLoop({
+      messages, tools: [],
+      openStream: (m) => {
+        seen.push(structuredClone(m));
+        return script(m);
+      },
+      runTool: async (name) => ({ response: { ok: true, tool_result: `<p>${name}</p>` } }),
+      emit: () => {},
+    });
+    const lastRequest = seen.at(-1)!;
+    const rebuilt = [...before, ...(result.transcripcion ?? [])];
+    expect(seen).toHaveLength(3);
+    expect(rebuilt.slice(0, lastRequest.length)).toEqual(lastRequest);
+    expect(rebuilt).toHaveLength(lastRequest.length + 1);
+    expect(rebuilt.at(-1)).toEqual({ role: "assistant", content: "Leídos los dos." });
+  });
+
   it("an onStepTools that throws does not break the turn", async () => {
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
