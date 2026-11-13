@@ -40,8 +40,10 @@ describe("the twelve cases", () => {
 
 describe("a chat case", () => {
   it("is with the assistant, over a web where every result leads to a page that exists", () => {
+    // One person cannot have two assistants of the same name, and every case is the same owner's.
+    expect(new Set(CHAT_CASES.map((c) => c.assistant?.name)).size).toBe(CHAT_CASES.length);
     for (const c of CHAT_CASES) {
-      expect(c.assistant?.name, c.id).toBe("Lucía");
+      expect(c.assistant?.name, c.id).toMatch(/^[A-ZÁÉÍÓÚ][a-záéíóúñ]+$/);
       expect(problemasDeLaWeb(c.web!), c.id).toEqual([]);
       expect(c.build, c.id).toHaveLength(15);
     }

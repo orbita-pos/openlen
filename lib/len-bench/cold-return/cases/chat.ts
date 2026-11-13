@@ -15,6 +15,8 @@ interface ChatSpec {
   readonly id: string;
   readonly targetKTokens: 40 | 100;
   readonly domain: DomainSpec;
+  /** Her name: one person cannot have two assistants of the same name, and every case is the same owner's. */
+  readonly assistant: string;
   /** Who is asking and for what: the opening line. */
   readonly who: string;
   /** Two things the person says about themselves in the first message, and how they ask for them back. */
@@ -80,7 +82,7 @@ export function chatCase(spec: ChatSpec): ReturnCase & { readonly corpus: Corpus
     title: `Comparar ${d.plural}`,
     brief: `Investigación para elegir ${d.plural}.`,
     start: { html: "" },
-    assistant: { name: "Lucía" },
+    assistant: { name: spec.assistant },
     web: corpus.web,
     build,
     questions: [
@@ -190,6 +192,7 @@ export const DOMAINS = () => ({ PUMPS, BIKES, MIXERS, PRINTERS, LAMPS, LOOMS });
 export const CHAT_CASES = [
   chatCase({
     id: "chat-pumps-40k",
+    assistant: "Lucía",
     targetKTokens: 40,
     domain: PUMPS,
     who: "Tengo una huerta pequeña y necesito una bomba de agua.",
@@ -200,6 +203,7 @@ export const CHAT_CASES = [
   }),
   chatCase({
     id: "chat-bikes-40k",
+    assistant: "Marta",
     targetKTokens: 40,
     domain: BIKES,
     who: "Quiero una bicicleta para ir al trabajo.",
@@ -210,6 +214,7 @@ export const CHAT_CASES = [
   }),
   chatCase({
     id: "chat-lamps-40k",
+    assistant: "Irene",
     targetKTokens: 40,
     domain: LAMPS,
     who: "Estoy iluminando el patio de un restaurante.",
@@ -220,6 +225,7 @@ export const CHAT_CASES = [
   }),
   chatCase({
     id: "chat-mixers-100k",
+    assistant: "Clara",
     targetKTokens: 100,
     domain: MIXERS,
     who: "Voy a abrir una panadería y tengo que elegir la amasadora.",
@@ -230,6 +236,7 @@ export const CHAT_CASES = [
   }),
   chatCase({
     id: "chat-printers-100k",
+    assistant: "Elena",
     targetKTokens: 100,
     domain: PRINTERS,
     who: "Llevo una imprenta de barrio y quiero renovar equipo.",
@@ -240,6 +247,7 @@ export const CHAT_CASES = [
   }),
   chatCase({
     id: "chat-looms-100k",
+    assistant: "Sofía",
     targetKTokens: 100,
     domain: LOOMS,
     who: "Tengo un taller de confección con seis personas.",
