@@ -88,6 +88,13 @@ describe("personalSkillsReminder", () => {
 });
 
 describe("foldSkillsDigest", () => {
+  // THE IDLE SUMMARY (final review, finding 2): the catalog its row's turn sent was summarized away with it.
+  it("a row whose summary was written while idle no longer shows its catalog: it goes again", () => {
+    const idle = { messages: [{ role: "user", content: "<compacted-summary>\ns\n</compacted-summary>" }], fromTranscript: 1, trigger: "idle", preTokens: 9, postTokens: 3 };
+    expect(foldSkillsDigest([{ compaction: idle, transcript: { skillsDigest: "a" } }])).toBeNull();
+    expect(foldSkillsDigest([{ compaction: idle, transcript: { skillsDigest: "a" } }, { transcript: { skillsDigest: "b" } }])).toBe("b");
+    expect(foldSkillsDigest([{ compaction: { ...idle, trigger: "pressure" }, transcript: { skillsDigest: "a" } }])).toBe("a");
+  });
   it("is the newest digest the history still carries", () => {
     expect(foldSkillsDigest([{ transcript: { skillsDigest: "a" } }, { transcript: null }, { transcript: { skillsDigest: "b" } }, { transcript: {} }])).toBe("b");
     expect(foldSkillsDigest([{ transcript: null }])).toBeNull();

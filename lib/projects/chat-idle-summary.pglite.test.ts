@@ -9,9 +9,12 @@ import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
+import type { Message } from "@/lib/ai-gateway";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import { foldMemoryDigests } from "@/lib/agent/memory/memory-messages";
+import { foldLoadedSkills } from "@/lib/agent/skills/tool";
 import { SUMMARY_CLOSE_TAG, SUMMARY_OPEN_TAG } from "@/lib/agent/compaction/summary-prompt";
-import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
+import { runIdleSummary, type PendingIdleSummary } from "@/lib/agent/idle-summary";
 import { historialDesdeLaBase } from "@/lib/agent/transcripcion";
 
 const base = vi.hoisted(() => ({ db: null as unknown }));
@@ -164,5 +167,59 @@ describe("a cold turn promotes the summary that was waiting", () => {
     await pg.query(`update "projectChatMessages" set "transcript" = jsonb_set("transcript", '{idleSummary}', '{"mark":{"trigger":"idle"},"writtenAt":"x"}'::jsonb) where "id" = 't2'`);
     expect(await promoteIdleSummary("p1")).toBe(false);
     expect(await turnosParaElHistorial("p1")).toHaveLength(2);
+  });
+});
+
+// The whole path with the real pieces — the summary, the row, the history — and only the model made up.
+describe("written while idle, ignored while warm, applied cold, and the turn after rebuilds it", () => {
+  const reads = (n: number): Message[] =>
+    Array.from({ length: 6 }, (_, k): Message[] => [
+      { role: "assistant", content: "", reasoning: "thinking " + n, functionCalls: [{ name: "Read", args: { file_path: "/src/f" + n + "-" + k + ".ts" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: (n + "-" + k + ":").padEnd(7_000, "x") } }] },
+    ]).flat();
+  const HEAD: Message[] = [{ role: "system", content: "SYSTEM" }, { role: "user", content: "MANUAL" }];
+
+  it("the first row of a conversation, with its memory and a loaded skill", async () => {
+    await pg.query(`delete from "projectChatMessages"`);
+    const first = { mensajes: [...reads(1), { role: "assistant", content: "Hecho." }], leidos: [], memoria: "Contents of /LEN.md: be brief", memoriaHuellas: { "/LEN.md": "abc" }, skillsLoaded: ["game-development"], contexto: "CONTEXT 1" };
+    await row({ id: "a1", minute: 0, transcript: first });
+    const before = historialDesdeLaBase(await turnosParaElHistorial("p1"));
+
+    // The timer fires: the request is what the turn sent, and its summary waits on the row.
+    let asked: Message[] = [];
+    const outcome = await runIdleSummary(
+      {
+        key: "p1:",
+        messages: [...HEAD, ...(before as Message[])],
+        firstIndex: 2,
+        transcriptLength: first.mensajes.length,
+        minTokens: 1_000,
+        canAfford: async () => true,
+        summarize: async (request) => ((asked = request), { text: "## Primary Request and Intent\n- read six files", usage: null }),
+        charge: async () => {},
+        save: (pending) => savePendingIdleSummary("p1", "a1", pending),
+      },
+      new AbortController().signal,
+    );
+    expect(outcome).toBe("saved");
+    expect(asked.slice(0, -1)).toEqual([...HEAD, ...before].slice(0, asked.length - 1));
+
+    // While warm: the conversation goes on whole, byte for byte.
+    expect(historialDesdeLaBase(await turnosParaElHistorial("p1"))).toEqual(before);
+
+    // A turn comes back cold: it starts from the summary, and nothing of the row is believed to be in view.
+    expect(await promoteIdleSummary("p1")).toBe(true);
+    const coldRows = await turnosParaElHistorial("p1");
+    const sentByColdTurn = historialDesdeLaBase(coldRows);
+    expect(sentByColdTurn[0]!.content).toContain(SUMMARY_OPEN_TAG);
+    expect(sentByColdTurn.length).toBeLessThan(before.length);
+    expect(sentByColdTurn.map((m) => m.content)).not.toContain("Contents of /LEN.md: be brief");
+    expect(foldMemoryDigests(coldRows)).toBeNull();
+    expect(foldLoadedSkills(coldRows).size).toBe(0);
+
+    // And the turn after it starts with the very bytes the cold turn sent.
+    await row({ id: "a2", minute: 180, transcript: { mensajes: [{ role: "assistant", content: "Sigo." }], leidos: [], contexto: "CONTEXT 2" } });
+    const next = historialDesdeLaBase(await turnosParaElHistorial("p1"));
+    expect(next.slice(0, sentByColdTurn.length)).toEqual(sentByColdTurn);
   });
 });

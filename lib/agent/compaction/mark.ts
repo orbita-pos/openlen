@@ -45,3 +45,14 @@ export function isCompactionMark(v: unknown): v is CompactionMark {
     (m.skills === undefined || (Array.isArray(m.skills) && m.skills.every((s) => typeof s === "string")))
   );
 }
+
+/**
+ * A mark written while the conversation sat idle (lib/agent/idle-summary.ts). It was written AFTER its row's
+ * turn ended, so it covers that whole turn: the memory message and the skills catalog the turn opened with,
+ * and the skills it loaded, were summarized away with the rest. What the row says it showed (`memoriaHuellas`,
+ * `skillsDigest`, `skillsLoaded`) is therefore no longer in view, and whoever folds that state from the rows
+ * must not count it — or Len would stop receiving /LEN.md while the server believes he has it.
+ */
+export function isIdleMark(v: unknown): boolean {
+  return isCompactionMark(v) && v.trigger === "idle";
+}

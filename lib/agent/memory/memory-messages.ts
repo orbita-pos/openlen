@@ -15,6 +15,7 @@
  */
 
 // Efecto en la caché: la memoria entra UNA vez como mensaje durable al empezar la charla y se repite igual en cada turno; sólo lo que cambia entra después, como mensaje nuevo (DeepSeek).
+import { isIdleMark } from "@/lib/agent/compaction/mark";
 import { createHash } from "node:crypto";
 
 export interface MemoryFile {
@@ -47,10 +48,12 @@ export function digestMemory(files: readonly MemoryFile[]): MemoryDigests {
  * (`turnosQueSeQuedan`) deja de contar como visto y vuelve a entrar.
  */
 export function foldMemoryDigests(
-  rows: readonly { readonly transcript: { readonly memoriaHuellas?: MemoryDigests } | null }[],
+  rows: readonly { readonly compaction?: unknown; readonly transcript: { readonly memoriaHuellas?: MemoryDigests } | null }[],
 ): MemoryDigests | null {
   let known: Record<string, string> | null = null;
   for (const row of rows) {
+    // A summary written while idle covers its row's whole turn, the memory message included: not in view.
+    if (isIdleMark(row.compaction)) continue;
     const h = row.transcript?.memoriaHuellas;
     if (h) known = { ...(known ?? {}), ...h };
   }

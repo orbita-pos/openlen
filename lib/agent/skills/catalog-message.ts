@@ -15,6 +15,7 @@
  */
 
 // Cache effect: the catalog is saved in the transcript and replayed as sent; a change is a NEW message further down (by digest), never an edit of the one above, so the prefix before it stays cached. The personal reminder rides the turn's context, at the end.
+import { isIdleMark } from "@/lib/agent/compaction/mark";
 import { createHash } from "node:crypto";
 
 import type { ResolvedSkill } from "./registry";
@@ -62,9 +63,13 @@ export function catalogDigest(skills: readonly ResolvedSkill[]): string {
 
 /** What the model already knows: the newest catalog digest among the rows the history resends. A
  *  catalog that left the window no longer counts, so it goes again (like `foldMemoryDigests`). */
-export function foldSkillsDigest(rows: readonly { readonly transcript: { readonly skillsDigest?: string } | null }[]): string | null {
+export function foldSkillsDigest(rows: readonly { readonly compaction?: unknown; readonly transcript: { readonly skillsDigest?: string } | null }[]): string | null {
   let known: string | null = null;
-  for (const row of rows) if (row.transcript?.skillsDigest) known = row.transcript.skillsDigest;
+  for (const row of rows) {
+    // A summary written while idle covers its row's whole turn, the catalog it opened with included: not in view.
+    if (isIdleMark(row.compaction)) continue;
+    if (row.transcript?.skillsDigest) known = row.transcript.skillsDigest;
+  }
   return known;
 }
 

@@ -2182,6 +2182,60 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(job.messages.length).toBeGreaterThan(1);
       });
 
+      // Final review, finding 1 (critical) and 5: Len Watch works in a COPY and writes its row in the parent's chat —
+      // its summary would become the parent conversation's mark and erase it. And a task that runs every hour would
+      // pay for a summary every hour that the next run, still warm, ignores. Only a turn a person started is armed.
+      it("a turn the server started arms nothing: a scheduled run, or Len Watch working in its copy", async () => {
+        vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
+        const corredor = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+        const started = async (turnId: string, scheduled: Record<string, unknown>) => {
+          mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+          turnoQueEscribe();
+          await readEvents(await corredor("u1", { projectId: "p1", prompt: "x", turnId, zonaHoraria: "UTC" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled }));
+        };
+        await started("44444444-4444-4444-8444-444444444441", { framing: "[SCHEDULE]", origin: { kind: "scheduled", taskId: "t1", title: "PDF", occurrenceAt: "2026-11-02T15:03:00.000Z" }, onReply: vi.fn(async () => {}) });
+        await started("44444444-4444-4444-8444-444444444442", { framing: "[LEN WATCH] …", origin: { kind: "len_watch", incidentId: "i1", worktree: true }, onReply: vi.fn(async () => {}), chatProjectId: "parent-1" });
+        expect(mocks.runAgentLoop).toHaveBeenCalledTimes(2);
+        expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+      });
+
+      // Final review, finding 4: a compaction that only pruned changed what the turn had sent and left no mark.
+      it("a turn that pruned what it had sent arms nothing: the request would no longer be the cached one", async () => {
+        vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+        mocks.runAgentLoop.mockImplementationOnce(async (args: AgentLoopArgs) => {
+          args.emit({ type: "compaction", pruned: 2, summarized: false, discardChars: 0 });
+          return { finalText: "listo", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "listo" }] };
+        });
+        await readEvents(await pedir());
+        expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+      });
+
+      // Final review, finding 3: what makes the request the cached one. Remove any of these and the provider reads
+      // nothing from its cache.
+      it("the summary is asked the way the turn asked: its tools, its cache key, its effort and mode, the provider that answered, the plan section it ended with", async () => {
+        const inPlan = { ...SECOND, endedAt: Date.now() - 10 * 60_000, transcript: { ...SECOND.transcript, planMode: true as const } };
+        await longTurn([{ ...FIRST, endedAt: Date.now() - 20 * 60_000 }, inPlan]);
+        const turnBrain = (mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+        const seen: { role: string; content: string }[][] = [];
+        mocks.createAgentBrain.mockReturnValueOnce(
+          mocks.brainStub({
+            openStream: (messages: { role: string; content: string }[]) => {
+              seen.push(messages);
+              return (async function* () {})();
+            },
+          }),
+        );
+        const signal = new AbortController().signal;
+        await armed()[0].summarize([{ role: "system", content: "SYSTEM" }, { role: "user", content: "x" }], signal);
+        const idleBrain = (mocks.createAgentBrain.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+        expect(idleBrain.tools).toBe(turnBrain.tools);
+        expect(idleBrain).toMatchObject({ requestId: "p1", signal, preferredProvider: "fireworks" });
+        for (const key of ["mode", "esfuerzoDelTurno", "esfuerzoDelUsuario"]) expect(idleBrain[key]).toBe(turnBrain[key]);
+        expect(seen[0]![0]!.content).toContain(PLAN_POLICY);
+        expect(seen[0]![1]).toEqual({ role: "user", content: "x" });
+      });
+
       it("an idle summary that cannot be armed never breaks the turn", async () => {
         mocks.armIdleSummary.mockImplementationOnce(() => {
           throw new Error("no timers today");

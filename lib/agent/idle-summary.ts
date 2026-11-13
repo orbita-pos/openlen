@@ -160,9 +160,9 @@ export async function runIdleSummary(job: IdleSummaryJob, signal: AbortSignal, n
     trigger: "idle",
     preTokens: Math.round(tokens),
     postTokens: Math.round(estimateTokens(outcome.messages)),
-    // Nothing comes back behind an idle summary (the turn's session is long closed): no skill is loaded
-    // from here on, and `skill` gives it whole again when asked.
-    skills: [],
+    // No `skills`: nothing comes back behind an idle summary (the turn's session is long closed), and a mark
+    // that names none makes the history forget everything its row had loaded (`foldLoadedSkills`) — `skill`
+    // gives it whole again when asked. An empty list would keep what the row loaded, which is gone.
   };
   await job.save({ mark, writtenAt: now().toISOString() });
   return "saved";

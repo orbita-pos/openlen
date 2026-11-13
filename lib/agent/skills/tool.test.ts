@@ -26,6 +26,14 @@ describe("foldLoadedSkills", () => {
     expect([...foldLoadedSkills(rows as never)]).toEqual(["office-xlsx", "office-docx", "cotizar"]);
   });
 
+  // THE IDLE SUMMARY (final review, finding 2): nothing comes back behind a summary written while idle, so its
+  // mark names no skills and the row's own loads are forgotten with the rest: `skill` gives them whole again.
+  it("a summary written while idle forgets what its row had loaded", () => {
+    const idle = { messages: [{ role: "user", content: "<compacted-summary>\ns\n</compacted-summary>" }], fromTranscript: 1, trigger: "idle", preTokens: 9, postTokens: 3 };
+    const rows = [{ transcript: { skillsLoaded: ["pdf"] } }, { compaction: idle, transcript: { skillsLoaded: ["game-development"] } }, { transcript: { skillsLoaded: ["cotizar"] } }];
+    expect([...foldLoadedSkills(rows as never)]).toEqual(["cotizar"]);
+  });
+
   it("a mark from before skills came back with the summary forgets everything up to its row", () => {
     const rows = [
       { transcript: { skillsLoaded: ["office-xlsx"] } },

@@ -1732,6 +1732,9 @@ async function correrTurno(
       let readLiveTranscript: (() => Message[]) | null = null;
       /** A11 · la marca del último resumen del turno (`compactionMark`), para la fila. */
       let marcaDelTurno: CompactionMark | null = null;
+      /** THE IDLE SUMMARY: the turn compacted — pruned, summarized or both. What it had sent is no longer what
+       *  the provider has cached from its first calls, so its idle summary is not armed. */
+      let compactedThisTurn = false;
       // ⚰️ Aquí se recogía `suiteDelTurno`, CÓMO QUEDABA LA SUITE DE LA PÁGINA
       // al cerrar el turno. Lo llenaba el veredicto de los ojos (`verifyTurn`),
       // retirado el 2026-10-06 con las promesas rotas (plans/crear-es-len,
@@ -2577,7 +2580,10 @@ async function correrTurno(
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
-            if (ev.type === "compaction") stepRecorder?.onCompaction();
+            if (ev.type === "compaction") {
+              compactedThisTurn = true;
+              stepRecorder?.onCompaction();
+            }
             // Un reintento cambia la fila: `registro.texto` acaba de soltar lo
             // descartado, y `avance` la escribe ya, como tras un `text`. (El
             // reloj de silencio no va por aquí: lo rearma el `emit` de arriba
@@ -2859,10 +2865,15 @@ async function correrTurno(
         // is written. If the conversation is long, its summary is armed to be written a little before the
         // provider's cache expires, with the very request the provider has cached; it waits on this turn's row
         // and a turn that comes back cold starts from it (see `promoteIdleSummary` above). The next turn of the
-        // conversation cancels it. Not armed for a turn that failed, was stopped or summarized itself, nor for a
-        // short conversation — which then holds nothing in memory.
+        // conversation cancels it. Not armed for a turn that failed, was stopped or compacted, nor for a short
+        // conversation — which then holds nothing in memory. And only for a turn A PERSON started, in the chat
+        // it belongs to: Len Watch works in a copy and writes its row in the PARENT's chat, where its summary
+        // would become the mark of a conversation it never saw; and a task that runs every hour would pay, every
+        // hour, for a summary the next run — still warm — ignores.
         try {
-          if (idleSummaryEnabled() && finDelTurno === "completed" && !detenido && !asistenteBorrado && !creacionDelTurno && !marcaDelTurno && result.transcripcion?.length) {
+          const personStartedItHere = !programadaDelTurno && proyectoDelChat === projectId;
+          const endedWhole = finDelTurno === "completed" && !detenido && !asistenteBorrado && !marcaDelTurno && !compactedThisTurn;
+          if (idleSummaryEnabled() && personStartedItHere && endedWhole && result.transcripcion?.length) {
             const idleMessages = [...messagesBeforeLoop, ...result.transcripcion];
             const minTokens = idleSummaryMinTokens();
             if (estimateTokens(idleMessages) >= minTokens) {
