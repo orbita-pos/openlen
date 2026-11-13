@@ -62,6 +62,10 @@ describe("ledgerFields", () => {
 
   it("prices unit uses", () => {
     expect(ledgerFields({ surface: "agent_tool", outcome: "ok", uses: [{ provider: "exa", model: "search", queries: 2 }] }).costMicroUsd).toBe(30_000);
+    // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B): a model call like any other.
+    const idle = ledgerFields({ surface: "idle_summary", outcome: "ok", uses: [{ provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", inputTokens: 200_000, cachedTokens: 0, outputTokens: 3_000 }] });
+    expect(idle).toMatchObject({ inputTokens: 200_000, cachedTokens: 0, outputTokens: 3_000 });
+    expect(idle.costMicroUsd).toBeGreaterThan(0);
   });
 
   it("cost is null when there are no uses or one use is unknown", () => {
