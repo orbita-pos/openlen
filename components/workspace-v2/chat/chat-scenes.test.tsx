@@ -107,7 +107,10 @@ describe("real production scenes paint without the 24/10 defects", () => {
         const gap = [...host.querySelectorAll("*")].find((el) => !el.closest("pre, code") && textRuns(el).some((t) => t.includes("\n\n\n")));
         expect(gap, `${where}: an element shows a blank gap`).toBeUndefined();
 
-        const hrefs = [...host.querySelectorAll("a[href]")].map((a) => a.getAttribute("href")!);
+        // A link Len's text makes is a web address. The download button of a file he delivered
+        // with `present` is the panel's own, to OpenLen's route for it (the subagents scene, 06/11).
+        const ownDownload = (a: Element): boolean => a.hasAttribute("download") && /^\/api\/projects\/[^/]+\/deliveries\//.test(a.getAttribute("href")!);
+        const hrefs = [...host.querySelectorAll("a[href]")].filter((a) => !ownDownload(a)).map((a) => a.getAttribute("href")!);
         for (const href of hrefs) expect(/^https?:\/\//.test(href), `${where}: a link to ${href.slice(0, 12)}…`).toBe(true);
         for (const url of [...urlsIn(row.userText), ...markdownLinksIn(row.assistantReasoning)]) {
           expect(hrefs, `${where}: a URL that is not a link`).toContain(url);

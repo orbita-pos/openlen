@@ -94,6 +94,11 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
 
   for (let i = start; i <= end; i++) {
     const row = rows[i]!;
+    // A row with no transcript is not a turn the model answered — the «published»
+    // note the card leaves in the chat, a turn that died before it saved one —:
+    // there is nothing to say again. It stays in the history of the turns after
+    // it, which is where production reads it.
+    if (!row.transcript) continue;
     // A11: the whole conversation the file holds, as the route loads it now.
     const historyRows = rows.slice(0, i);
     const photos = [...historyRows, row].flatMap((r) => photosOf(r.attachedImage as ChatPhoto | ChatPhoto[] | null).map((p) => p.url));
@@ -102,27 +107,33 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
     // The request as the route builds it (`argsDelTurno.prompt` + avisos, the
     // photos on the last message). The context, the memory and the notices are
     // the exact ones the row saved.
-    const t: TranscripcionGuardada | null = row.transcript;
+    const t: TranscripcionGuardada = row.transcript;
     // Rows from before 12/10 did not save their context; today's route does.
-    const contextBlock = t?.contexto ?? "[context of the replay]";
+    const contextBlock = t.contexto ?? "[context of the replay]";
+    // A photo the turn never saw (it would not download) went without pixels and
+    // with the note that says so, and the history rebuilds it the same way.
+    const ownPhotos = photosOf(row.attachedImage as ChatPhoto | ChatPhoto[] | null);
+    const unseen = new Set(t.unseenPhotos ?? []);
     const initial = assembleTurnMessages({
       systemPrompt: SYSTEM,
       manual: MANUAL,
       history,
-      memoryMessage: t?.memoria ?? null,
-      skillCatalogMessage: t?.skills ?? null,
+      memoryMessage: t.memoria ?? null,
+      skillCatalogMessage: t.skills ?? null,
       contextBlock,
       prompt: turnRequestText({
-        prompt: row.userText,
-        avisos: t?.avisos ?? "",
-        // Seen in the turn: the replay gives every photo its pixels.
-        attachedImages: photosOf(row.attachedImage as ChatPhoto | ChatPhoto[] | null).map((p) => ({ ...p, visible: true })),
+        // What the model read, when it is not what the row shows: the framing of
+        // a turn the server started (a scheduled task, subagents handing back, Len
+        // Watch) or the message before its «↳» corrections (`sentText`, A7).
+        prompt: t.sentText ?? row.userText,
+        avisos: t.avisos ?? "",
+        attachedImages: ownPhotos.map((p) => ({ ...p, visible: !unseen.has(p.url) })),
       }),
     });
-    const ownPhotos = photosOf(row.attachedImage as ChatPhoto | ChatPhoto[] | null).map((p) => pixelsOf(p.url));
-    if (ownPhotos.length > 0) initial[initial.length - 1] = { ...initial[initial.length - 1]!, images: ownPhotos };
+    const pixels = ownPhotos.filter((p) => !unseen.has(p.url)).map((p) => pixelsOf(p.url));
+    if (pixels.length > 0) initial[initial.length - 1] = { ...initial[initial.length - 1]!, images: pixels };
 
-    const recorded = t?.mensajes ?? [];
+    const recorded = t.mensajes;
     const script = scriptOf(recorded);
     const answers = recorded.flatMap((m) => m.functionResponses ?? []).map((r) => ({ ...r, used: false }));
     const sent: Message[][] = [];
@@ -153,7 +164,7 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
 
     // Saved the way today's route saves it (with the context it sent), then
     // through jsonb, back on the row.
-    if (t && result.transcripcion) {
+    if (result.transcripcion) {
       const saved = jsonbRoundTrip(transcripcionParaGuardar(result.transcripcion, new Map()));
       rows[i] = { ...row, transcript: { ...t, mensajes: saved.mensajes, contexto: contextBlock } };
     }

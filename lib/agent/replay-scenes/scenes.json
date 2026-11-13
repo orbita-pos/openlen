@@ -34,5 +34,35 @@
     "projectId": "3607d875-16f7-4971-9855-39d693ae8905",
     "rowIds": ["7b9155a8-0876-4641-8bea-b0c85e854e6f", "cd52d7f1-3832-4e69-a428-64328fd106de"],
     "why": "11/10: a turn that ended in plan mode and the turn after it (from before rows saved their context)"
+  },
+  {
+    "name": "scheduled-reminder",
+    "projectId": "baff76a6-57f4-4d30-90dd-eb9109ce985c",
+    "rowIds": ["fdf01bf8-3862-4bf0-802f-b6925e896ed4", "50ab65b2-76b9-4b3e-bd1e-6ce561f2cbdb"],
+    "why": "02–03/11: a typed turn, then two daily runs of a scheduled task in the same chat (the model reads the [SCHEDULE REMINDER] framing, the row keeps the prompt)"
+  },
+  {
+    "name": "subagents-game",
+    "projectId": "c19666cc-cfc3-4cd0-9a76-7cd1ccbcedc7",
+    "rowIds": ["a4d8ec3e-d364-4821-8248-5862ca66abb9", "58473a87-2175-42dc-bff7-273a02bfdf80"],
+    "why": "06/11: two turns that launched three subagents each, the server-started turns that read what they handed back, and the typed turns after"
+  },
+  {
+    "name": "len-watch-incident",
+    "projectId": "e072fe83-60da-4692-b4bb-c153bfca669f",
+    "rowIds": ["6eab2fe5-d6d7-44a0-ab99-f5e88561ccfe"],
+    "why": "31/10: a turn Len Watch started from an incident, with no typed message"
+  },
+  {
+    "name": "customer-page-to-published",
+    "projectId": "efbebd91-53ad-43bf-9f2b-dff73a8d9a96",
+    "rowIds": ["df2c9acc-a0e0-49bb-8823-b2ef00022649", "d55ece2b-05e2-4a04-92cf-b26947c4eafb"],
+    "why": "12/11: a customer's page from the first message to published — question cards, a photo, and the publish that refused the address the owner had just answered (F2)"
+  },
+  {
+    "name": "customer-page-publish-note",
+    "projectId": "aba1335b-34da-43f4-a25d-a89b3bc2b3b4",
+    "rowIds": ["c18d3170-0af1-413c-8d8d-97e617e7f045", "bf70cdde-f4a4-44fb-bf28-4930e56e7aa9"],
+    "why": "31/10: a customer's page with the refused publish (F2), the «published» note the card leaves between two turns, and the turns after it"
   }
 ]

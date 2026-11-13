@@ -62,4 +62,40 @@ describe("replayScene", () => {
     ]);
     expect(requests.get("a")).toHaveLength(2);
   });
+
+  // What the scenes of November taught the replayer (12/11): three ways a production row is not
+  // «the owner typed this and the model answered», each rebuilt by the history its own way.
+  const lastUserText = (request: readonly { role: string; content: string }[]): string => request.findLast((m) => m.role === "user")!.content;
+
+  it("a turn the server started sends what the model read (sentText), not what the row shows", async () => {
+    const reminder = row("s", "resume las ventas", [{ role: "assistant", content: "Hecho." }]);
+    const started: SceneFile = {
+      ...scene,
+      rows: [{ ...reminder, transcript: { ...reminder.transcript!, sentText: "[SCHEDULE REMINDER] resume las ventas" } }, row("t", "gracias", [{ role: "assistant", content: "¡De nada!" }])],
+    };
+    const { checks, requests } = await replayScene(started, ["s", "t"]);
+    expect(lastUserText(requests.get("s")![0]!)).toBe("[SCHEDULE REMINDER] resume las ventas");
+    expect(checks.map((c) => c.acrossTurns)).toEqual([null, { ok: true }]);
+  });
+
+  it("a row with no transcript (the «published» note between two turns) is history, not a turn to replay", async () => {
+    const note: SceneRow = { ...row("pub-1", "✓ Publicada", []), transcript: null, assistantReasoning: "Tu página está en línea." };
+    const withNote: SceneFile = { ...scene, rows: [scene.rows[0]!, note, scene.rows[1]!] };
+    const { checks, requests } = await replayScene(withNote, ["a", "b"]);
+    expect(checks.map((c) => c.rowId)).toEqual(["a", "b"]);
+    expect(checks[1]!.acrossTurns).toEqual({ ok: true });
+    expect(requests.get("b")![0]!.map((m) => m.content)).toContain("✓ Publicada");
+  });
+
+  it("a photo the turn never saw goes without pixels and with its «did not load» note, as the history rebuilds it", async () => {
+    const photo = { url: "https://example.test/a.png" };
+    const withPhoto = row("p", "pon esta foto", [{ role: "assistant", content: "No pude verla." }]);
+    const unseen: SceneFile = {
+      ...scene,
+      rows: [{ ...withPhoto, attachedImage: photo, transcript: { ...withPhoto.transcript!, unseenPhotos: [photo.url] } }, row("q", "vale", [{ role: "assistant", content: "Listo." }])],
+    };
+    const { checks, requests } = await replayScene(unseen, ["p", "q"]);
+    expect(requests.get("p")![0]!.at(-1)!.images).toBeUndefined();
+    expect(checks.map((c) => c.acrossTurns)).toEqual([null, { ok: true }]);
+  });
 });
