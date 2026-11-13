@@ -10,6 +10,13 @@
  * como siempre: `validateUrl` antes de pedir nada, sin redirecciones, tope de
  * 4 MB (`fetchImageAsInlineData`).
  *
+ * Y las que son un FICHERO DE LA CARPETA del proyecto (`/img/a.webp`: donde el
+ * modal de imágenes deja una subida desde el 28/10) se leen de la carpeta, por
+ * su ruta, como Claude Code lee del disco la imagen que le nombras. Resuelta
+ * contra la petición era `http://localhost:3000/img/…` en producción, que la
+ * defensa SSRF corta: el 12/11 un cliente adjuntó cuatro fotos y Len no vio
+ * ninguna, y puso esa dirección en su página (`photoAddress`).
+ *
  * Una foto que no se consigue es `null`: la nota de tu mensaje lo dice
  * (`notaDeLaFoto`) y el turno sigue. Nunca tumba el turno.
  */
@@ -41,6 +48,9 @@ export interface FuentesDeFotos {
   /** Dobles para las pruebas; por defecto, el disco y `fetchImageAsInlineData`. */
   leer?: (ruta: string) => Promise<Buffer>;
   deInternet?: (url: string, signal?: AbortSignal) => Promise<InlineImage | null>;
+  /** The bytes of a file of the project's folder by its path, or `null` if it is not there. Without it
+   *  (nothing here knows which project), a folder photo is one that could not be loaded. */
+  fromFolder?: (path: string) => Promise<Uint8Array | null>;
   env?: Entorno;
 }
 
@@ -76,12 +86,47 @@ export function rutaDeSubidaPropia(
   return ruta.startsWith(raiz + sep) ? ruta : null;
 }
 
+/** The path of a file of the project's folder, when the address is one: root-relative, and not one of
+ *  our own uploads on disk (development, `rutaDeSubidaPropia`). Any other address → `null`. */
+function folderPathOf(url: string, origen: string, env: Entorno = process.env): string | null {
+  if (!url.startsWith("/") || url.startsWith("//")) return null;
+  return rutaDeSubidaPropia(url, origen, env) ? null : url;
+}
+
+/**
+ * THE ADDRESS A PHOTO OF THE MESSAGE IS KEPT UNDER — in the row, in the note Len reads and for its
+ * pixels. A path of the project's folder stays that path: it is what the page uses (`<img src="/img/a.webp">`)
+ * and what `Read` opens. Anything else is the http(s) address it always was, a root-relative one of our
+ * own disk uploads resolved against this server. `null` = not a photo address.
+ */
+export function photoAddress(raw: string, origen: string, env: Entorno = process.env): string | null {
+  const url = raw.trim();
+  if (!url) return null;
+  const inFolder = folderPathOf(url, origen, env);
+  if (inFolder) return inFolder;
+  try {
+    const parsed = new URL(url, origen);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 async function unaFoto(url: string, f: FuentesDeFotos): Promise<InlineImage | null> {
   const propia = rutaDeSubidaPropia(url, f.origen, f.env);
   if (propia) {
     const buf = await (f.leer ?? ((r: string) => readFile(r)))(propia);
     if (buf.length > TOPE_BYTES) return null;
     return { mimeType: MIME_POR_EXTENSION[extname(propia).toLowerCase()]!, dataBase64: buf.toString("base64") };
+  }
+  // A file of the project's folder: from the folder, never from the network. If it is deleted later,
+  // its turn reads «couldn't be loaded» from then on, like a web address that stops answering.
+  const inFolder = folderPathOf(url, f.origen, f.env);
+  if (inFolder) {
+    const mimeType = MIME_POR_EXTENSION[extname(inFolder).toLowerCase()];
+    const bytes = mimeType && f.fromFolder ? await f.fromFolder(inFolder) : null;
+    if (!bytes || bytes.length > TOPE_BYTES) return null;
+    return { mimeType: mimeType!, dataBase64: Buffer.from(bytes).toString("base64") };
   }
   if (f.deInternet) return f.deInternet(url, f.signal);
   const valida = await validateUrl(url);
