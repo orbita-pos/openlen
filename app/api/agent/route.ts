@@ -1636,6 +1636,8 @@ async function correrTurno(
           store: stepStore(),
           log: console.warn,
         });
+  // THE COLD RETURN: this turn's first call reads little from the cache on purpose; the telemetry says why.
+  if (coldMark) stepRecorder?.onColdTrim();
   const brain = createAgentBrain({
     ...(stepRecorder ? { onCall: stepRecorder.onCall } : {}),
     alPensar: () => pensando.vivo(),

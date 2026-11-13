@@ -67,6 +67,14 @@ describe("detectCacheBreak", () => {
     expect(r?.causes).toContain("compaction");
   });
 
+  // THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): the turn trimmed the history on purpose.
+  it("a drop on the first call after a cold trim is named cold_trim, with the rewrite it caused", () => {
+    const prev = snap({ cachedTokens: 200_000, hashes: ["a", "b", "c"] });
+    const cur = snap({ cachedTokens: 0, hashes: ["a", "B2", "c"] });
+    expect(detectCacheBreak(prev, cur, { ...OPTS, coldTrimSincePrev: true })?.causes).toEqual(["cold_trim", "messages_rewritten"]);
+    expect(detectCacheBreak(prev, cur, OPTS)?.causes).toEqual(["messages_rewritten"]);
+  });
+
   it("same prefix after the TTL is ttl_expired; within it, likely_server_side", () => {
     const prev = snap({ cachedTokens: 200_000 });
     expect(detectCacheBreak(prev, snap({ cachedTokens: 0, endedAt: T0 + DEFAULT_PROVIDER_CACHE_TTL_MS + 1 }), OPTS)?.causes).toEqual(["ttl_expired"]);

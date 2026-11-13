@@ -155,6 +155,20 @@ describe("createStepRecorder", () => {
     expect(f.rows[1]!.cacheBreak?.causes).toContain("compaction");
   });
 
+  it("a cold trim marks the next call, and only that one", async () => {
+    const f = fakeStore(null);
+    const rec = createStepRecorder({ projectId: "P", turnId: "U", hasHistory: false, store: f.store, log: () => {} });
+    rec.onCall(call(["a", "b", "c"], 200_000));
+    rec.onColdTrim();
+    rec.onCall(call(["a", "B2"], 5_000));
+    rec.onCall(call(["a", "B3"], 100));
+    rec.finish({ endReason: "completed" });
+    await flush();
+    expect(f.rows[1]!.cacheBreak?.causes).toContain("cold_trim");
+    expect(f.rows[2]!.cacheBreak).not.toBeNull();
+    expect(f.rows[2]!.cacheBreak?.causes ?? []).not.toContain("cold_trim");
+  });
+
   it("a failed attempt gets its row but neither becomes the comparison nor keeps the hashes", async () => {
     const f = fakeStore(null);
     const logs: string[] = [];
