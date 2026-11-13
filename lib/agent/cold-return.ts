@@ -13,6 +13,9 @@
 //
 // Pure, and it imports nothing from ./transcripcion.ts (that file imports this one).
 
+/** The environment these read: the process's, or a plain object in a test. */
+type Env = Readonly<Record<string, string | undefined>>;
+
 export const COLD_AFTER_MIN_DEFAULT = 65;
 
 /** Characters per token, for the floor of the trim. The compaction's own figure (`CHARS_PER_TOKEN`,
@@ -42,7 +45,7 @@ export function isColdTrimMark(v: unknown): v is ColdTrimMark {
 
 /** How long after the last model call a turn is cold. `OPENLEN_COLD_AFTER_MIN` (whole minutes, above
  *  zero) moves it; an unrecognized value is ignored rather than breaking the turn. */
-export function coldAfterMs(env: NodeJS.ProcessEnv = process.env): number {
+export function coldAfterMs(env: Env = process.env): number {
   const raw = env.OPENLEN_COLD_AFTER_MIN?.trim() ?? "";
   const minutes = /^[1-9]\d*$/.test(raw) ? Number(raw) : COLD_AFTER_MIN_DEFAULT;
   return minutes * 60_000;
@@ -50,12 +53,12 @@ export function coldAfterMs(env: NodeJS.ProcessEnv = process.env): number {
 
 /** Opt-out: only the literal `0` stops NEW trims. Marks already saved are applied regardless — they
  *  are data, and ignoring them would change a history the provider has cached. */
-export function coldReturnEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+export function coldReturnEnabled(env: Env = process.env): boolean {
   return env.OPENLEN_COLD_RETURN !== "0";
 }
 
 /** Whether a turn starting `sinceLastMs` after the conversation's last model call is a cold return.
  *  An unknown elapsed time (no earlier turn) or a negative one (a clock that went back) is not. */
-export function isColdReturn(sinceLastMs: number | null, env: NodeJS.ProcessEnv = process.env): boolean {
+export function isColdReturn(sinceLastMs: number | null, env: Env = process.env): boolean {
   return coldReturnEnabled(env) && sinceLastMs !== null && sinceLastMs > coldAfterMs(env);
 }
