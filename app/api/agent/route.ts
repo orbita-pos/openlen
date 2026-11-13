@@ -73,11 +73,13 @@ import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
 import { foldLoadedSkills } from "@/lib/agent/skills/tool";
 import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
+import { isFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
   historialDesdeLaBase,
   leidosSembrados,
+  savedReadState,
   stateOnlyTranscript,
   transcripcionParaGuardar,
   compactionMarkForStorage,
@@ -1493,6 +1495,15 @@ async function correrTurno(
   let canceladoAProposito = false;
   // Desde la app del teléfono no hay sesión que traiga el correo: se lee de la base.
   const ownerEmail = await correoDelUsuario(userId).catch(() => null);
+  // WHAT LEN HAD READ, TO SEED THIS TURN (F3 of Len 3.1, seen in production 30/10–06/11). Claude Code keeps its
+  // read-state for the whole session; here it is rebuilt at each turn, and until 12/11 it was rebuilt short twice:
+  // from the chat's LAST row even when that was the «published» note (`savedReadState`), and looking the files up
+  // among the PAGES only, so every file of the folder an app's turn had read or written was «not read» in the
+  // next one. The folder is loaded only when the saved state names one of its files.
+  const savedReads = historialDeLaBase ? savedReadState(filasDelHistorial) : [];
+  const folderOfSavedReads: Record<string, string> = savedReads.some((l) => isFolderPath(l.ruta) && leerFichero(project.data, l.ruta) === null)
+    ? ((await deps.projectFiles?.(projectId).catch(() => null)) ?? {})
+    : {};
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
     // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
@@ -1523,17 +1534,16 @@ async function correrTurno(
     // que Claude Code siembra al empezar: se le añade una línea sin un Read.
     leidos: new Map([
       // H4 · y lo que el turno anterior dejó leído, si no cambió y sigue a la
-      // vista (lo leído, como lo apunta Claude Code). Las páginas, con el mismo
-      // texto que les daría Read; la memoria (LEN.md) va aparte.
+      // vista (lo leído, como lo apunta Claude Code). Cada fichero, con el mismo
+      // texto que le daría Read (`sitioDe`: la carpeta primero, luego las páginas);
+      // la memoria (LEN.md) va aparte.
       ...(historialDeLaBase
-        ? leidosSembrados(
-            filasDelHistorial.at(-1)?.transcript?.leidos ?? [],
-            historialDeLaBase,
-            (ruta) => {
-              const html = leerFichero(project.data, ruta);
-              return html === null ? null : sinOpIds(html);
-            },
-          )
+        ? leidosSembrados(savedReads, historialDeLaBase, (ruta) => {
+            const file = isFolderPath(ruta) ? folderOfSavedReads[ruta] : undefined;
+            if (file !== undefined) return file;
+            const html = leerFichero(project.data, ruta);
+            return html === null ? null : sinOpIds(html);
+          })
         : []),
       ...memoriaSembrada({
         personal: userMemory,

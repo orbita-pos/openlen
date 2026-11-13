@@ -8,6 +8,7 @@ import {
   RESULTADO_VACIADO,
   historialDesdeLaBase,
   leidosSembrados,
+  savedReadState,
   stateOnlyTranscript,
   textoDelHistorial,
   transcripcionParaGuardar,
@@ -330,6 +331,25 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     const historial = historialDesdeLaBase([{ userText: "x", assistantReasoning: "", transcript: t }]);
     const leidos = leidosSembrados(t.leidos, historial, (ruta) => (ruta === "/index.html" ? PAGINA : null));
     expect(leidos.get("/index.html")?.instantanea).toBe(PAGINA);
+  });
+
+  // F3, seen in production on 31/10 (turn bf70cdde, a customer's page): the owner published from the card, which
+  // leaves a «published» note in the chat — a row with no transcript. The route took the read-state of the LAST
+  // row, so after that note Len had read nothing, and his next Write of the page was refused.
+  it("🔴 the read-state of the conversation is that of the last turn that SAVED one: a row with no transcript after it says nothing", () => {
+    const t = transcripcionParaGuardar(leer("/index.html", PAGINA), new Map([["/index.html", { instantanea: PAGINA, offset: undefined, limit: undefined }]]));
+    const turn = { userText: "haz la página", assistantReasoning: "", transcript: t };
+    const note = { userText: "✓ Publicada", assistantReasoning: "Tu página está en línea.", transcript: null };
+    expect(savedReadState([turn, note])).toEqual(t.leidos);
+    expect(savedReadState([turn, note, note])).toEqual(t.leidos);
+  });
+
+  it("CONTROL: a turn that fell and kept only its state leaves nothing read, as before; and no rows, nothing", () => {
+    const t = transcripcionParaGuardar(leer("/index.html", PAGINA), new Map([["/index.html", { instantanea: PAGINA, offset: undefined, limit: undefined }]]));
+    const turn = { userText: "haz la página", assistantReasoning: "", transcript: t };
+    const fell = { userText: "y el pie", assistantReasoning: "", transcript: { mensajes: [], leidos: [], planMode: true as const } };
+    expect(savedReadState([turn, fell])).toEqual([]);
+    expect(savedReadState([])).toEqual([]);
   });
 
   it("CONTRA-PRUEBA: si el dueño lo cambió entre turnos, NO cuenta como leído (hay que releerlo)", () => {

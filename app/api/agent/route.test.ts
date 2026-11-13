@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // El tipo REAL del bucle, no una copia a mano. Es `import type`, así que se
@@ -2031,6 +2032,52 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(mocks.conseguirFotos).toHaveBeenCalledWith(["/img/a.webp"], expect.objectContaining({ fromFolder: expect.any(Function) }));
     const fila = (mocks.abrirFilaDelTurno.mock.calls.at(-1) as unknown as [string, { attachedImage: unknown }])[1];
     expect(fila.attachedImage).toEqual({ url: "/img/a.webp" });
+  });
+
+  // F3 · WHAT LEN READ OR WROTE IS NOT FORGOTTEN BETWEEN TURNS (seen in production, 30/10–06/11: of the 11
+  // «you have not read this file», 6 came from here for certain and 2 more probably). Claude Code keeps its
+  // read-state for the whole session and checks it against the disk; here it is rebuilt at each turn from what
+  // the turn before saved.
+  const SOURCE = "export default () => null;\n";
+  const wroteTheSource = {
+    userText: "haz la app",
+    assistantReasoning: "Hecha.",
+    transcript: {
+      mensajes: [
+        { role: "assistant", content: "", functionCalls: [{ name: "Write", args: { file_path: "/src/App.tsx", content: SOURCE } }] },
+        { role: "user", content: "", functionResponses: [{ name: "Write", response: { ok: true, tool_result: "Created /src/App.tsx." } }] },
+        { role: "assistant", content: "Hecha." },
+      ],
+      leidos: [{ ruta: "/src/App.tsx", huella: createHash("sha1").update(SOURCE).digest("hex") }],
+    },
+  };
+  /** The read-state the turn's tools get: the session of its first tool call. */
+  const readStateOfTheTurn = async () => {
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return { finalText: "listo", turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, transcripcion: [{ role: "assistant", content: "listo" }] };
+    });
+    await readEvents(await pedir());
+    return (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ leidos: Map<string, { instantanea: string }> }])[0].leidos;
+  };
+
+  it("🔴 F3: a file of the folder Len wrote the turn before, unchanged since, still counts as read", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([wroteTheSource]);
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": SOURCE });
+    expect((await readStateOfTheTurn()).get("/src/App.tsx")?.instantanea).toBe(SOURCE);
+  });
+
+  it("CONTROL: if someone changed that file in between, it does not — it has to be read again, as in Claude Code", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([wroteTheSource]);
+    mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => <h1>otra</h1>;\n" });
+    expect((await readStateOfTheTurn()).has("/src/App.tsx")).toBe(false);
+  });
+
+  it("🔴 F3: the «published» note the card leaves after a turn does not make Len forget what he had read", async () => {
+    const PAGE = "<html><body><h1>El Farol</h1></body></html>";
+    const wroteThePage = { ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, leidos: [{ ruta: "/index.html", huella: createHash("sha1").update(PAGE).digest("hex") }] } };
+    mocks.turnosParaElHistorial.mockResolvedValue([wroteThePage, { userText: "✓ Publicada", assistantReasoning: "Tu página está en línea.", transcript: null }]);
+    expect((await readStateOfTheTurn()).get("/index.html")?.instantanea).toBe(PAGE);
   });
 
   // A PDF ATTACHED (26/10): a file Len reads with Read when he decides, like
