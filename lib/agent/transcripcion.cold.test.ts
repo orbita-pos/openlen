@@ -3,15 +3,17 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { Message } from "@/lib/ai-gateway";
-import { COLD_CHARS_PER_TOKEN, COLD_CLEARABLE_TOOLS, COLD_TRIM_MARK } from "./cold-return";
+import { COLD_CHARS_PER_TOKEN, COLD_TRIM_MARK } from "./cold-return";
 import { CHARS_PER_TOKEN } from "./compaction/estimate";
 import type { CompactionMark } from "./compaction/mark";
 import {
+  CLEARABLE_TOOLS,
   CUT_OFF_TURN_MARK,
   RESULTADO_VACIADO,
   WHOLE_HISTORY,
   coldTrim,
   historialDesdeLaBase,
+  lastModelCallEndedAt,
   leidosSembrados,
   type FilaDelHistorial,
   type TranscripcionGuardada,
@@ -113,7 +115,7 @@ describe("coldTrim", () => {
   });
 
   it("the list of what may be emptied is the tools whose result can be asked for again", () => {
-    expect([...COLD_CLEARABLE_TOOLS].sort()).toEqual(["Edit", "Glob", "Grep", "Read", "Write", "bash", "use_page", "view_page", "web_fetch", "web_search"]);
+    expect([...CLEARABLE_TOOLS].sort()).toEqual(["Edit", "Glob", "Grep", "Read", "Write", "bash", "use_page", "view_page", "web_fetch", "web_search"]);
   });
 
   it("leaves call arguments, text and its input untouched; twice gives the same as once", () => {
@@ -240,5 +242,30 @@ describe("historialDesdeLaBase with a cold return", () => {
     const both = { ...row(3, turn(3, { reasoning: "c" }), { coldTrim: COLD_TRIM_MARK }), compaction: mark };
     expect(historialDesdeLaBase([r0, r1, both])).toEqual(historialDesdeLaBase([r0, r1, summarized]));
     expect(thoughts(historialDesdeLaBase([r0, r1, both]))).toEqual(["from before", "c"]);
+  });
+});
+
+// Claude Code measures the idle time from the messages it already holds, up to its last reply from the API
+// (binary 2.1.321, the function that plans its clearing after an idle period). Here: the rows the turn already
+// loaded, up to the last one with messages of its own.
+describe("lastModelCallEndedAt", () => {
+  const at = (minutes: number) => Date.UTC(2026, 10, 13, 9, minutes);
+  const first = { ...row(1, turn(1)), endedAt: at(0) };
+  const second = { ...row(2, turn(2)), endedAt: at(10) };
+
+  it("is when the last row with messages of its own ended", () => {
+    expect(lastModelCallEndedAt([first, second])).toBe(at(10));
+  });
+
+  it("a published note, a turn that died with nothing saved and one that kept only its state are not model turns", () => {
+    const note: FilaDelHistorial = { userText: "✓ Publicada", assistantReasoning: "Tu página está en línea.", transcript: null, endedAt: at(120) };
+    const dead: FilaDelHistorial = { userText: "x", assistantReasoning: "", transcript: null, cutOff: true, endedAt: at(125) };
+    const stateOnly: FilaDelHistorial = { userText: "y", assistantReasoning: "", transcript: { mensajes: [], leidos: [], planMode: true }, endedAt: at(130) };
+    expect(lastModelCallEndedAt([first, note, dead, stateOnly])).toBe(at(0));
+  });
+
+  it("no model turn, or rows that do not say when they ended: null", () => {
+    expect(lastModelCallEndedAt([])).toBeNull();
+    expect(lastModelCallEndedAt([row(1, turn(1))])).toBeNull();
   });
 });

@@ -402,6 +402,30 @@ describe("transcripcionParaGuardar y leidosSembrados — lo leído dura la conve
     expect(salidas(t.mensajes)).toEqual(["salida 1", "salida 2", "salida 3"]);
   });
 
+  // What the owner answered to a question travels as a tool result. Only what Len can ask for again is ever
+  // emptied — Claude Code's rule (Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit, Write) — in the three
+  // places that empty: the history's jumps, a row's cap, and the cold return.
+  const preguntar = (respuesta: string): Message[] => [
+    { role: "assistant", content: "", functionCalls: [{ name: "ask_user_question", args: { question: "¿teléfono?" } }] },
+    { role: "user", content: "", functionResponses: [{ name: "ask_user_question", response: { ok: true, tool_result: respuesta } }] },
+  ];
+
+  it("🔴 the history's jump never empties what the owner answered, and it does not count toward the budget", () => {
+    const grande = "x".repeat(600);
+    const h = historialDesdeLaBase(
+      [fila("uno", [...preguntar("a".repeat(600)), ...leer("/a/index.html", grande)]), fila("dos", leer("/b/index.html", grande))],
+      { hasta: 1000, deja: 700 },
+    );
+    expect(h.flatMap((m) => m.functionResponses ?? []).map((r) => r.response.tool_result)).toEqual(["a".repeat(600), RESULTADO_VACIADO, grande]);
+  });
+
+  it("🔴 a transcript that does not fit keeps what the owner answered whole", () => {
+    const respuesta = "555 0100 ".repeat(100);
+    const lectura = (n: number) => leer(`/p${n}/index.html`, "y".repeat(150_000));
+    const t = transcripcionParaGuardar([...preguntar(respuesta), ...lectura(1), ...lectura(2), ...lectura(3)], new Map());
+    expect(salidas(t.mensajes)).toEqual([respuesta, RESULTADO_VACIADO, RESULTADO_VACIADO, "y".repeat(150_000)]);
+  });
+
   it("🔴 una transcripción que no cabe guarda entera la skill que cargó", () => {
     const skill = "instrucciones de la skill\n".repeat(400);
     const lectura = (n: number) => leer(`/p${n}/index.html`, "y".repeat(150_000));

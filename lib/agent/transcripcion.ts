@@ -41,17 +41,28 @@ import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
-import { COLD_CHARS_PER_TOKEN, COLD_CLEARABLE_TOOLS, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
-import { SKILL_TOOL } from "@/lib/agent/skills/tool";
+import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
 
-/** Lo que nunca se vacía ni cuenta en el presupuesto: una skill cargada. Como Claude Code, que sólo vacía lo
- *  que se vuelve a pedir (Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit, Write); `skill` contesta «already
- *  loaded above» al volver a pedirla, así que vaciada, Len trabajaba sin sus instrucciones creyendo tenerlas.
- *  Efecto en la caché: una charla que ya la tenía vaciada la manda entera desde su turno siguiente (se paga una vez). */
-const neverEmptied = (r: { readonly name: string }) => r.name === SKILL_TOOL;
+/**
+ * WHAT MAY BE EMPTIED, in the three places that empty a result (the history's jumps, a row's cap, the cold
+ * return): only the results Len can ask for again. It is Claude Code's rule — its binary (2.1.321) clears
+ * the results of Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit and Write and of nothing else. Every
+ * other result neither is emptied nor counts toward a budget: what the owner answered to a question
+ * (`ask_user_question` returns it as its result), a loaded skill (`skill` answers «already loaded above»
+ * when asked again, so emptied, Len worked without its instructions believing he had them), what a subagent
+ * handed back, a publish.
+ *
+ * Until 13/11 only the skill was spared, and only by name: past 400.000 characters the history emptied the
+ * owner's own answers. No saved conversation had got that far (production, 13/11: the largest held 197.715
+ * characters of results, and no result had ever been emptied), so nothing already sent changes.
+ * This list is also part of what `v: 1` of a cold return's mark means (lib/agent/cold-return.ts): changing
+ * it needs a new version there, or every conversation already marked is paid in full once more.
+ */
+export const CLEARABLE_TOOLS: ReadonlySet<string> = new Set(["Read", "Write", "Edit", "Glob", "Grep", "bash", "web_search", "web_fetch", "view_page", "use_page"]);
+const neverEmptied = (r: { readonly name: string }) => !CLEARABLE_TOOLS.has(r.name);
 
 /** Caracteres de resultados de herramientas que viajan enteros en el historial:
  *  se acumulan hasta `hasta`, y al pasarse se vacían los más viejos hasta `deja`.
@@ -204,6 +215,9 @@ export interface FilaDelHistorial {
    *  que hubo antes de este turno y quién lo pidió, ya en su sobre. Sólo en
    *  proyectos con miembros; ausente = el mensaje de siempre, byte a byte. */
   readonly prefijoDelEquipo?: string;
+  /** THE COLD RETURN: when this row's turn ended — when it started plus how long it took —, in milliseconds
+   *  since the epoch. The chat queries set it; `lastModelCallEndedAt` reads it. Absent = not known. */
+  readonly endedAt?: number;
   /** La fila quedó CORTADA (`ESTADO_CORTADO`). Si además su transcripción es la
    *  de mitad de turno, o no tiene, el historial lo dice detrás
    *  (`CUT_OFF_TURN_MARK`). Ausente = la de siempre. */
@@ -319,7 +333,7 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
  * it starts after the provider's cache expired, with no model call. Two independent steps:
  *   1 · what was thought before the last turn goes (`lastTurnStart`: where that turn's messages begin). No
  *       floor: with the cache gone there is nothing to lose.
- *   2 · of the results Len can ask for again (`COLD_CLEARABLE_TOOLS`), the last turn's included, the
+ *   2 · of the results Len can ask for again (`CLEARABLE_TOOLS`), the last turn's included, the
  *       `keepResults` most recent stay and the rest are emptied with the usual mark — but only when that
  *       frees `clearAtLeastTokens` or more (Claude Code's rule). Every other result — what the owner
  *       answered, a loaded skill — and one already emptied neither count nor change.
@@ -340,7 +354,7 @@ export function coldTrim<M extends Message | MensajeDelHistorial>(messages: read
     if (!responses?.length) continue;
     for (let j = responses.length - 1; j >= 0; j--) {
       const r = responses[j]!;
-      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || !COLD_CLEARABLE_TOOLS.has(r.name)) continue;
+      if (r.response[CLAVE_TOOL_RESULT] === RESULTADO_VACIADO || neverEmptied(r)) continue;
       if (kept < mark.keepResults) {
         kept += 1;
         continue;
@@ -603,6 +617,19 @@ function rutasALaVista(historial: readonly MensajeDelHistorial[]): Set<string> {
  */
 export function savedReadState(rows: readonly Pick<FilaDelHistorial, "transcript">[]): readonly LecturaGuardada[] {
   return rows.findLast((row) => row.transcript)?.transcript?.leidos ?? [];
+}
+
+/**
+ * WHEN THE CONVERSATION'S LAST MODEL CALL ENDED, for the cold return (lib/agent/cold-return.ts): the end of
+ * the last row that has messages of its own. Read off the rows the turn already loaded for its history — as
+ * Claude Code, which measures the idle time from the messages it holds, up to its last reply from the API —,
+ * so it costs no query. A row with no messages called nobody and says nothing about the provider's cache:
+ * the «published» note, a turn that died with nothing saved, one that fell and kept only its state
+ * (`stateOnlyTranscript`). Taking those for the last turn is the stumble of F3 (`savedReadState` above), and
+ * here it would make a cold return look warm. `null` = no such row, or the rows do not say when they ended.
+ */
+export function lastModelCallEndedAt(rows: readonly Pick<FilaDelHistorial, "transcript" | "endedAt">[]): number | null {
+  return rows.findLast((row) => row.transcript?.mensajes.length)?.endedAt ?? null;
 }
 
 /**
