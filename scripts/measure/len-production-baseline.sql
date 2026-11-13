@@ -209,9 +209,12 @@ where c.class = 'customer' and m.tipo is null and m.transcript is not null and m
 \echo '== 9. Coming back after a pause: the first provider call of a turn, by how long the conversation had been quiet =='
 \echo '   quiet = since the conversation''s previous turn that called the model ended. A turn past the provider''s cache'
 \echo '   pays its whole history again; the cold return (lib/agent/cold-return.ts) sends it trimmed. Turns a person typed.'
-\set quiet 'calls as (select s."projectId" as project_id, s."turnId" as turn_id, s.step, s."startedAt" as started, s."startedAt" + make_interval(secs => s."durationMs" / 1000.0) as ended, coalesce(s."inputTokens", 0) as input, least(coalesce(s."cachedTokens", 0), coalesce(s."inputTokens", 0)) as cached from "agentRequestSteps" s where s."subagentId" is null and s."createdAt" >= current_setting(''len.since'')::timestamp), spans as (select project_id, turn_id, min(started) as started, max(ended) as ended from calls group by 1, 2), firsts as (select distinct on (turn_id) turn_id, input as first_input, cached as first_cached from calls order by turn_id, step), quiet as (select sp.started, f.first_input, f.first_cached, m.origen->>''kind'' as origin, m.centicredits, coalesce(m.transcript ? ''coldTrim'', false) as trimmed, lag(sp.ended) over (partition by sp.project_id, coalesce(m.conversation, '''') order by sp.started) as prev_ended from spans sp join firsts f using (turn_id) join "projectChatMessages" m on m.id = sp.turn_id)'
+\echo '   Only calls the provider answered count (an attempt that failed sent no usage: it is neither a turn''s first call nor'
+\echo '   what the next one is compared with, as in the step recorder), and the turn before is looked for in everything'
+\echo '   recorded, not only since the first day asked.'
+\set quiet 'calls as (select s."projectId" as project_id, s."turnId" as turn_id, s.step, s."startedAt" as started, s."startedAt" + make_interval(secs => s."durationMs" / 1000.0) as ended, coalesce(s."inputTokens", 0) as input, least(coalesce(s."cachedTokens", 0), coalesce(s."inputTokens", 0)) as cached from "agentRequestSteps" s where s."subagentId" is null and s."inputTokens" is not null), spans as (select project_id, turn_id, min(started) as started, max(ended) as ended from calls group by 1, 2), firsts as (select distinct on (turn_id) turn_id, input as first_input, cached as first_cached from calls order by turn_id, step), quiet as (select sp.started, f.first_input, f.first_cached, m.origen->>''kind'' as origin, m.centicredits, coalesce(m.transcript ? ''coldTrim'', false) as trimmed, lag(sp.ended) over (partition by sp.project_id, coalesce(m.conversation, '''') order by sp.started) as prev_ended from spans sp join firsts f using (turn_id) join "projectChatMessages" m on m.id = sp.turn_id)'
 with :quiet
-select case when prev_ended is null then '0 first turn of the conversation'
+select case when prev_ended is null then '0 no earlier turn recorded'
             when started - prev_ended < interval '5 minutes' then '1 under 5 min'
             when started - prev_ended < interval '30 minutes' then '2 5 to 30 min'
             when started - prev_ended < interval '65 minutes' then '3 30 to 65 min'
@@ -226,7 +229,7 @@ select case when prev_ended is null then '0 first turn of the conversation'
        count(*) filter (where trimmed) as sent_trimmed,
        round(percentile_cont(0.5) within group (order by centicredits)::numeric / 100, 2) as credits_p50,
        round(avg(centicredits)::numeric / 100, 2) as credits_mean
-from quiet where origin is null group by 1 order by 1;
+from quiet where origin is null and started >= :'since'::timestamp group by 1 order by 1;
 
 \echo '   the turns that sent their history trimmed, of any origin (a scheduled run comes back cold too)'
 with :quiet
@@ -234,6 +237,6 @@ select count(*) as trimmed_turns,
        round(percentile_cont(0.5) within group (order by first_input)) as first_call_input_p50,
        round(percentile_cont(0.5) within group (order by first_input - first_cached)) as first_call_uncached_p50,
        round(percentile_cont(0.5) within group (order by centicredits)::numeric / 100, 2) as credits_p50
-from quiet where trimmed;
+from quiet where trimmed and started >= :'since'::timestamp;
 
 rollback;

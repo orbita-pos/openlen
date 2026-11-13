@@ -162,8 +162,11 @@ export async function replayScene(scene: SceneFile, replayIds: readonly string[]
     });
     requests.set(row.id, sent);
 
+    // A cold turn rewrote the history on purpose — the provider's cache had expired, so there was nothing to
+    // extend —: its first request is not expected to continue the previous turn's last one. The turn AFTER
+    // it is, and that is checked.
     const acrossTurns =
-      previous === null || sent.length === 0 ? null : comparePrefix(previous.last, sent[0]!);
+      previous === null || sent.length === 0 || cold !== null ? null : comparePrefix(previous.last, sent[0]!);
     checks.push({ rowId: row.id, withinTurn: isExtension(sent), acrossTurns });
 
     // Saved the way today's route saves it (with the context it sent), then

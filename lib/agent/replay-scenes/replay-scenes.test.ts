@@ -81,18 +81,27 @@ describe("replayScene", () => {
   // THE COLD RETURN (final review, finding 3): a turn that started cold sent the history trimmed and left its
   // mark; the replayer rebuilds that turn's request trimmed too, or the gate goes red on correct behaviour.
   it("a turn that came back cold is replayed trimmed, and the turn after it starts with what it sent", async () => {
-    const thinking = (id: string, thought: string): SceneRow => row(id, "pide " + id, [{ role: "assistant", content: "hecho " + id, reasoning: thought }]);
+    // As production saves a turn: what Len thought travels on the message that calls a tool; his closing
+    // answer is saved without it (`transcripcionDelTurno`). A replayed row is saved again the same way.
+    const thinking = (id: string, thought: string): SceneRow =>
+      row(id, "pide " + id, [
+        { role: "assistant", content: "", reasoning: thought, functionCalls: [{ name: "Read", args: { file_path: "/" + id + ".html" } }] },
+        { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: "<p>" + id + "</p>" } }] },
+        { role: "assistant", content: "hecho " + id },
+      ]);
     const c = thinking("c", "pensado en c");
     const cold: SceneFile = {
       ...scene,
       rows: [thinking("a", "pensado en a"), thinking("b", "pensado en b"), { ...c, transcript: { ...c.transcript!, coldTrim: { v: 1, keepResults: 12, clearAtLeastTokens: 20_000 } } }, thinking("d", "pensado en d")],
     };
-    // Only the cold turn and the one after it are replayed: a and b stay as production saved them.
-    const { checks, requests } = await replayScene(cold, ["c", "d"]);
+    const { checks, requests } = await replayScene(cold, ["a", "b", "c", "d"]);
     const thoughtsSentBy = (id: string) => requests.get(id)![0]!.flatMap((m) => (m.reasoning ? [m.reasoning] : []));
+    expect(thoughtsSentBy("b")).toEqual(["pensado en a"]);
     expect(thoughtsSentBy("c")).toEqual(["pensado en b"]);
-    expect(thoughtsSentBy("d")).not.toContain("pensado en a");
-    expect(checks.map((k) => k.acrossTurns)).toEqual([null, { ok: true }]);
+    expect(thoughtsSentBy("d")).toEqual(["pensado en b", "pensado en c"]);
+    // The cold turn itself (c) is not compared with the turn before it: it rewrote the history on purpose.
+    expect(checks.map((k) => k.acrossTurns)).toEqual([null, { ok: true }, null, { ok: true }]);
+    expect(checks.every((k) => k.withinTurn.ok)).toBe(true);
   });
 
   it("a row with no transcript (the «published» note between two turns) is history, not a turn to replay", async () => {

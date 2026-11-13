@@ -78,6 +78,7 @@ import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
   historialDesdeLaBase,
+  lastModelCallEndedAt,
   leidosSembrados,
   savedReadState,
   stateOnlyTranscript,
@@ -89,7 +90,7 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben, photoAddress } from "@/lib/agent/fotos-de-la-conversacion";
 import { readProjectFileBytes } from "@/lib/backend/files";
-import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastModelTurnOfTheConversation, lastTurnOfTheConversation, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
@@ -862,15 +863,6 @@ async function correrTurno(
   // The team's messages are Len's conversation: the assistant's has only its owner.
   const compartido = genteDelProyecto.length > 1 && !asistente;
   let equipoAhora = "";
-  // THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): if the conversation's last
-  // model call ended long ago, the provider's cache is gone and this turn sends the history trimmed
-  // (`coldTrim`), leaving this mark on its row so the next turns rebuild the same bytes. Decided here,
-  // before the rows are read. If the lookup fails, the turn is warm: the history goes whole, as before.
-  let coldMark: ColdTrimMark | null = isColdReturn(
-    sinceLastTurn(await lastModelTurnOfTheConversation(projectId, ...enLaCharla).catch(() => null), new Date()),
-  )
-    ? COLD_TRIM_MARK
-    : null;
   let filasDelHistorial: FilaDelHistorial[];
   // A11 · LA CHARLA ENTERA desde la última marca de resumen, como Claude Code
   // (spec local 2026-10-25-a11-continuity): sin ventana de turnos. Sólo crece por
@@ -889,6 +881,13 @@ async function correrTurno(
   } else {
     filasDelHistorial = await turnosParaElHistorial(projectId, ...enLaCharla).catch(() => []);
   }
+  // THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): if the conversation's last
+  // model call ended long ago, the provider's cache is gone and this turn sends the history trimmed
+  // (`coldTrim`), leaving this mark on its row so the next turns rebuild the same bytes. Read off the rows
+  // just loaded — no query of its own, as Claude Code measures its idle time from the messages it holds.
+  // Rows that do not say when they ended make a warm turn: the history goes whole, as before.
+  const lastModelCallEnded = lastModelCallEndedAt(filasDelHistorial);
+  let coldMark: ColdTrimMark | null = isColdReturn(lastModelCallEnded === null ? null : Date.now() - lastModelCallEnded) ? COLD_TRIM_MARK : null;
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
