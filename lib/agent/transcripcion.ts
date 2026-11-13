@@ -525,6 +525,18 @@ function rutasALaVista(historial: readonly MensajeDelHistorial[]): Set<string> {
 }
 
 /**
+ * THE READ-STATE THE CONVERSATION LEFT: that of the last turn that SAVED one. A row with no transcript after
+ * it says nothing about files — the «published» note the card leaves in the chat, a turn that died before it
+ * saved anything —, and taking the LAST row's (as the route did until 12/11) made Len forget everything he
+ * had read as soon as the owner published: his next Write of the page was refused with «you have not read
+ * this file in this conversation», which was false (F3, production, 31/10). A turn that fell and kept only its
+ * state (`stateOnlyTranscript`) still leaves nothing read, as before.
+ */
+export function savedReadState(rows: readonly Pick<FilaDelHistorial, "transcript">[]): readonly LecturaGuardada[] {
+  return rows.findLast((row) => row.transcript)?.transcript?.leidos ?? [];
+}
+
+/**
  * Lo que cuenta como leído al empezar el turno: lo que el turno anterior dejó
  * leído, si el fichero NO cambió desde entonces (su huella) y su resultado sigue
  * a la vista en el historial. Si cambió, hay que releerlo —como en Claude Code,
