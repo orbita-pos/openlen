@@ -16,4 +16,7 @@ export const DEFAULT_FILES = [
   "lib/agent/telemetry/cache-suspects.test.ts",
   "lib/agent/compaction/restore-files.test.ts",
   "lib/agent/compaction/manual.test.ts",
+  // The cold return (spec local 2026-11-13-conversar-todo-el-mes): the turn after a trim must rebuild the same bytes.
+  "lib/agent/cold-return.test.ts",
+  "lib/agent/transcripcion.cold.test.ts",
 ];
