@@ -4,7 +4,9 @@
 // it byte for byte instead of summarizing again or losing the summary. Pure.
 import type { Message } from "@/lib/ai-gateway";
 
-export type CompactionTrigger = "pressure" | "overflow" | "manual";
+/** `idle` (spec local 2026-11-13-conversar-todo-el-mes, piece B): the summary was written while the conversation
+ *  sat idle, with the provider's cache still warm, and became the mark when a turn came back cold. */
+export type CompactionTrigger = "pressure" | "overflow" | "manual" | "idle";
 
 export interface CompactionMark {
   /** What the model saw after the summary, from the first summarizable message
@@ -23,7 +25,7 @@ export interface CompactionMark {
   readonly skills?: string[];
 }
 
-const TRIGGERS: ReadonlySet<string> = new Set<CompactionTrigger>(["pressure", "overflow", "manual"]);
+const TRIGGERS: ReadonlySet<string> = new Set<CompactionTrigger>(["pressure", "overflow", "manual", "idle"]);
 
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
 

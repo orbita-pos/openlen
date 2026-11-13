@@ -189,6 +189,50 @@ describe("compactIfNeeded", () => {
     expect(out.readPaths).toEqual(["/a", "/b"]);
   });
 
+  // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B): while a conversation sits idle
+  // the provider still has it cached, so the summary is asked with the conversation exactly as it was sent —
+  // pruning first would end the cached prefix at the first pruned result.
+  describe("idle", () => {
+    const big = "x".repeat(20_000); // over the pruner's 8.192
+    const conversation = (): Message[] => [
+      { role: "system", content: "s" },
+      { role: "user", content: "manual" },
+      { role: "user", content: "lee" },
+      { role: "assistant", content: "", functionCalls: [{ name: "Read", args: { file_path: "/a" } }] },
+      { role: "user", content: "", functionResponses: [{ name: "Read", response: { ok: true, tool_result: big } }] },
+      { role: "assistant", content: "leído" },
+      { role: "user", content: "gracias" },
+      { role: "assistant", content: "de nada" },
+    ];
+    // A tail of 2 tokens keeps only the last message: the big result falls in what is summarized.
+    const idlePolicy = { thresholdTokens: 1_000_000, retainTokens: 2 };
+
+    it("summarizes with no pressure, and the request is the conversation as it was sent, nothing pruned", async () => {
+      const ms = conversation();
+      let seen: Message[] = [];
+      const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 0, policy: idlePolicy, trigger: "idle", summarize: async (r) => ((seen = r), "summary") });
+      expect(out.summarized).toBe(true);
+      expect(out.pruned).toBe(0);
+      expect(seen.length).toBeGreaterThan(5);
+      seen.slice(0, -1).forEach((m, i) => expect(m).toBe(ms[i])); // the same objects: the same bytes
+      expect(seen.at(-1)!.content).toBe(COMPACTION_INSTRUCTION);
+      expect(out.messages[2]!.content).toContain(SUMMARY_OPEN_TAG);
+    });
+
+    it("never writes a recovery file", async () => {
+      const saveRecovery = vi.fn(async () => true);
+      await compactIfNeeded({ messages: conversation(), firstIndex: 2, pressureTokens: 0, policy: idlePolicy, trigger: "idle", summarize: async () => "summary", saveRecovery });
+      expect(saveRecovery).not.toHaveBeenCalled();
+    });
+
+    it("a summary that does not shrink the conversation is refused, and nothing is pruned in its place", async () => {
+      const ms = conversation();
+      const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 0, policy: idlePolicy, trigger: "idle", summarize: async () => "y".repeat(200_000) });
+      expect(out).toMatchObject({ summarized: false, changed: false, pruned: 0 });
+      out.messages.forEach((m, i) => expect(m).toBe(ms[i]));
+    });
+  });
+
   it("un desborde compacta aunque la presión estimada sea baja, y deja sólo la unidad más nueva", async () => {
     const ms = largo(10);
     const out = await compactIfNeeded({ messages: ms, firstIndex: 2, pressureTokens: 0, policy, trigger: "overflow", summarize: async () => "r" });

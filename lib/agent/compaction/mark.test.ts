@@ -16,6 +16,10 @@ describe("A11 · what a stored compaction mark looks like", () => {
     expect(isCompactionMark({ ...mark, trigger: "overflow" })).toBe(true);
     expect(isCompactionMark({ ...mark, skills: ["office-xlsx"] })).toBe(true);
   });
+  // THE IDLE SUMMARY (piece B): written while the conversation sat idle, promoted when a turn comes back cold.
+  it("a mark written while idle is a mark", () => {
+    expect(isCompactionMark({ ...mark, trigger: "idle", skills: [] })).toBe(true);
+  });
   it("anything else is not: null, no messages, an unknown trigger, a negative index", () => {
     expect(isCompactionMark(null)).toBe(false);
     expect(isCompactionMark({ ...mark, messages: [] })).toBe(false);
