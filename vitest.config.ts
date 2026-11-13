@@ -474,6 +474,10 @@ export default defineConfig({
       "lib/agent/diario-del-turno.test.ts",
       // H4 parte 3: el historial desde la base, con su microcompact.
       "lib/agent/transcripcion.test.ts",
+      // The cold return (spec local 2026-11-13-conversar-todo-el-mes, piece A): when a
+      // turn counts as cold, and the trim the history repeats afterwards.
+      "lib/agent/cold-return.test.ts",
+      "lib/agent/transcripcion.cold.test.ts",
       "lib/agent/equipo.test.ts",
       "lib/agent/plegar-equipo.test.ts",
       // A · las fotos de la conversación (del almacén en dev, de internet si
