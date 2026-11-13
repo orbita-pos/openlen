@@ -42,6 +42,7 @@ import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
+import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 
 /** La misma marca que usa Claude Code. */
 export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
@@ -192,6 +193,11 @@ export interface TranscripcionGuardada {
    *  provider's cache had expired and sent the history before it trimmed (`coldTrim`). Every later turn
    *  applies the same trim to the same rows, so what is cached again keeps matching. Absent = a warm turn. */
   readonly coldTrim?: ColdTrimMark;
+  /** THE IDLE SUMMARY (same spec, piece B; lib/agent/idle-summary.ts): the summary written after THIS turn,
+   *  while the conversation sat idle, waiting. The history ignores it; a turn that comes back cold promotes
+   *  it to this row's `compaction` mark (`promoteIdleSummary`). Written apart, by its timer — never by the
+   *  turn. Absent = none was written, or it was promoted. */
+  readonly idleSummary?: PendingIdleSummary;
 }
 
 // La marca que va detrás de un turno que el dueño paró vive en

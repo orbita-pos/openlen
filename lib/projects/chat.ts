@@ -20,6 +20,7 @@ import { ESTADO_CORTADO } from "@/lib/agent/registro-del-turno";
 import { MAX_MENSAJES_DEL_EQUIPO } from "@/lib/agent/equipo";
 import { turnosDeshacibles } from "@/lib/projects/deshacer-turno";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 import type { AgentErrorCode } from "@/lib/agent/loop";
 import { ASSISTANT_CONVERSATION_PREFIX, isAssistantConversation } from "@/lib/assistants/conversation";
 
@@ -777,6 +778,51 @@ export async function guardarMarcaDelTurno(projectId: string, id: string, compac
     .update(t)
     .set({ compaction })
     .where(and(eq(t.id, id), eq(t.projectId, projectId), eq(t.status, ESTADO_EN_CURSO)));
+}
+
+/**
+ * THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B; lib/agent/idle-summary.ts): the
+ * summary written while the conversation sat idle WAITS on its turn's row, inside the transcript
+ * (`idleSummary`). It is not a mark yet: the history keeps sending the conversation whole, so nothing the
+ * provider has cached changes. A row with no transcript, or one that already has a mark, is left alone.
+ */
+export async function savePendingIdleSummary(projectId: string, rowId: string, pending: PendingIdleSummary): Promise<void> {
+  const t = schema.projectChatMessages;
+  await db
+    .update(t)
+    .set({ transcript: sql`jsonb_set(${t.transcript}, '{idleSummary}', ${JSON.stringify(pending)}::jsonb)` })
+    .where(and(eq(t.id, rowId), eq(t.projectId, projectId), sql`jsonb_typeof(${t.transcript}) = 'object'`, isNull(t.compaction)));
+}
+
+/**
+ * A turn came back COLD: if the conversation's last model turn — its last finished turn whose transcript has
+ * messages, the row `lastModelCallEndedAt` takes — carries a summary that was waiting, the summary becomes
+ * that row's compaction mark and leaves the transcript, and the history starts there from now on. One
+ * statement. Only that row: a summary waiting on an older turn is not promoted (it no longer covers what
+ * came after), and neither is one from a conversation that was archived. Returns whether it promoted.
+ */
+export async function promoteIdleSummary(projectId: string, charla: string | null = null): Promise<boolean> {
+  const t = schema.projectChatMessages;
+  const lastModelTurn = db
+    .select({ id: t.id })
+    .from(t)
+    .where(and(turnoDeLaHistoria(projectId, charla), sql`jsonb_typeof(${t.transcript}->'mensajes') = 'array'`, sql`jsonb_array_length(${t.transcript}->'mensajes') > 0`))
+    .orderBy(desc(t.createdAt))
+    .limit(1);
+  const promoted = await db
+    .update(t)
+    .set({ compaction: sql`${t.transcript}->'idleSummary'->'mark'`, transcript: sql`${t.transcript} - 'idleSummary'` })
+    .where(
+      and(
+        inArray(t.id, lastModelTurn),
+        isNull(t.compaction),
+        // Only something that is a mark: an unrecognized one would start the history at this row with no summary in it.
+        sql`jsonb_typeof(${t.transcript}->'idleSummary'->'mark'->'messages') = 'array'`,
+        sql`jsonb_array_length(${t.transcript}->'idleSummary'->'mark'->'messages') > 0`,
+      ),
+    )
+    .returning({ id: t.id });
+  return promoted.length > 0;
 }
 
 /** Cómo queda una fila huérfana (nadie la corre: el proceso murió): cortada y
