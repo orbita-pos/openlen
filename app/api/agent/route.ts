@@ -94,6 +94,7 @@ import { clearPendingIdleSummaries, filasParaElHistorialConEquipo, guardarMarcaD
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { armIdleSummary, cancelIdleSummary, idleSummaryDeadlineMs, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
 import { idleSummaryJobFor } from "@/lib/agent/idle-summary-job";
+import { captureIdleSummaryJob } from "@/lib/agent/idle-summary-capture";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
@@ -2885,7 +2886,7 @@ async function correrTurno(
             if (estimateTokens(idleMessages) >= minTokens) {
               // The job is built OUTSIDE this handler, from plain values (lib/agent/idle-summary-job.ts): a
               // function written here would keep everything this turn holds alive for the hour it waits.
-              const job = idleSummaryJobFor({
+              const jobInput = {
                 key: idleKey,
                 messages: idleMessages,
                 transcriptLength: result.transcripcion.length,
@@ -2900,9 +2901,11 @@ async function correrTurno(
                 provider: brain.lastProvider(),
                 model: brain.modelId,
                 brain: { tools, requestId: projectId, esfuerzoDelTurno, esfuerzoDelUsuario, mode },
-              });
-              // The call has until the conversation would be cold to answer.
-              if (!armIdleSummary(job, idleSummaryDelayMs(), { deadlineMs: idleSummaryDeadlineMs() }))
+              };
+              // The return bench writes the summary itself: its server hands it the job in a file and arms
+              // nothing (lib/agent/idle-summary-capture.ts; refused in production). Otherwise the timer, and
+              // the call has until the conversation would be cold to answer.
+              if (!captureIdleSummaryJob(jobInput) && !armIdleSummary(idleSummaryJobFor(jobInput), idleSummaryDelayMs(), { deadlineMs: idleSummaryDeadlineMs() }))
                 console.warn(`[idle-summary] ${idleKey}: not armed — too many conversations are already waiting`);
             }
           }
