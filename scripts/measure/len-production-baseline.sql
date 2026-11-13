@@ -38,6 +38,8 @@
 -- costs — the first call of each turn by how long its conversation had been quiet (quiet = since the
 -- previous turn that called the model ended), and the turns that sent their history trimmed, which is
 -- what the cold return does (lib/agent/cold-return.ts; its cache drops show in section 4 as `cold_trim`).
+-- It ends with the summaries written while a conversation sat idle (piece B, lib/agent/idle-summary.ts): how
+-- many, how many missed the provider's cache, and what they cost against what the owners paid.
 
 \set ON_ERROR_STOP on
 \pset pager off
@@ -238,5 +240,19 @@ select count(*) as trimmed_turns,
        round(percentile_cont(0.5) within group (order by first_input - first_cached)) as first_call_uncached_p50,
        round(percentile_cont(0.5) within group (order by centicredits)::numeric / 100, 2) as credits_p50
 from quiet where trimmed and started >= :'since'::timestamp;
+
+\echo '   the summaries written while a conversation sat idle (lib/agent/idle-summary.ts): how many, how many did NOT find'
+\echo '   the provider''s cache (under half of what they sent came from it), what the owners paid — always the warm price —,'
+\echo '   what they were worth at list price and what they cost'
+select count(*) as summaries,
+       count(*) filter (where coalesce("cachedTokens", 0) < coalesce("inputTokens", 0) / 2.0) as missed_the_cache,
+       round(coalesce(sum(centicredits), 0)::numeric / 100, 2) as credits_charged,
+       round(coalesce(sum("listCenticredits"), 0)::numeric / 100, 2) as credits_at_list,
+       round(coalesce(sum("costMicroUsd"), 0)::numeric / 1e6, 4) as usd_cost
+from "creditLedger" where surface = 'idle_summary' and "createdAt" >= :'since'::timestamp;
+
+\echo '   conversations that went on from one of those summaries (a row whose mark was written while idle)'
+select count(*) as rows_with_an_idle_mark, count(distinct "projectId") as projects
+from "projectChatMessages" where compaction->>'trigger' = 'idle' and "createdAt" >= :'since'::timestamp;
 
 rollback;

@@ -19,4 +19,6 @@ export const DEFAULT_FILES = [
   // The cold return (spec local 2026-11-13-conversar-todo-el-mes): the turn after a trim must rebuild the same bytes.
   "lib/agent/cold-return.test.ts",
   "lib/agent/transcripcion.cold.test.ts",
+  // The idle summary (same spec, piece B): one call, with the conversation as it was sent, cancelled by a newer turn.
+  "lib/agent/idle-summary.test.ts",
 ];
