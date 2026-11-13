@@ -101,6 +101,7 @@
     "shopify:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/shopify-migrate.ts",
     "agent-steps:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/agent-steps-migrate.ts",
     "replay-scenes:fetch": "tsx --tsconfig tsconfig.eval.json scripts/fetch-replay-scenes.ts",
+    "replay-scenes:where": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/replay-scene-where.ts",
     "requests:diff": "tsx --tsconfig tsconfig.eval.json scripts/request-diff.ts",
     "len-replay:gate": "node scripts/len-replay-gate.mjs",
     "test:flaky": "node scripts/flaky-hunt.mjs",
