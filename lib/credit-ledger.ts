@@ -37,6 +37,9 @@ export type LedgerSurface =
   /** An event task's judging turn (spec local 2026-11-03-len-que-avisa, §7.5): the owner pays, at Len's rate. */
   | "event_task"
   | "sandbox"
+  /** The summary written while a conversation sat idle (spec local 2026-11-13-conversar-todo-el-mes, piece B):
+   *  the owner pays it at the warm price; `listCenticredits` and the cost say what it really was. */
+  | "idle_summary"
   | "page_assistant"
   /** The person's own assistant answering a visitor (spec local 2026-11-06-asistente-propio, §4.7): the owner pays. */
   | "assistant_visitor"

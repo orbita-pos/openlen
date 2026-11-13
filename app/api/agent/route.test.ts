@@ -96,6 +96,11 @@ const mocks = vi.hoisted(() => {
   // H4: el historial sale de la base. Sin este doble, estas pruebas escribían
   // turnos de verdad en la base local (fallaban en silencio: «p1» no existe).
   turnosParaElHistorial: vi.fn(async (): Promise<unknown[]> => []),
+  // The idle summary (piece B): what the route arms, cancels, promotes and saves.
+  armIdleSummary: vi.fn((_job: unknown, _delayMs: number) => true),
+  cancelIdleSummary: vi.fn((_key: string) => {}),
+  promoteIdleSummary: vi.fn(async (_projectId: string, _conversation?: string | null) => false),
+  savePendingIdleSummary: vi.fn(async (_projectId: string, _rowId: string, _pending: unknown) => {}),
   filasParaElHistorialConEquipo: vi.fn(async (): Promise<unknown[]> => []),
   apuntarMencionesDelTurno: vi.fn(async () => {}),
   nombresDeUsuarios: vi.fn(async (): Promise<Map<string, string>> => new Map()),
@@ -218,6 +223,9 @@ vi.mock("@/lib/agent/catalog", () => ({
 }));
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
+  // What a photo weighs in the token estimate (compaction/estimate.ts): the route estimates a conversation's
+  // size before arming its idle summary.
+  TOKENS_POR_FOTO: 1_024,
 }));
 vi.mock("@/lib/agent/user-memory", () => ({ getUserMemoryBounded: mocks.getUserMemoryBounded, MEMORIA_TIMEOUT_MS: 1_500, AGENT_MEMORY_MAX: 4_000 }));
 // Task 5 (R11): sin este doble, la ruta bajo prueba llega a la base real por
@@ -307,6 +315,14 @@ vi.mock("@/lib/projects/chat", () => ({
   latestTodoListForChat: vi.fn(async () => null),
   // Len's time context (spec local 2026-10-29-tareas-programadas): no turn before.
   lastTurnOfTheConversation: vi.fn(async () => null),
+  promoteIdleSummary: mocks.promoteIdleSummary,
+  savePendingIdleSummary: mocks.savePendingIdleSummary,
+}));
+// The idle summary: its timers are the module's own business (idle-summary.test.ts); here, what the route hands it.
+vi.mock("@/lib/agent/idle-summary", async (original) => ({
+  ...(await original<typeof import("@/lib/agent/idle-summary")>()),
+  armIdleSummary: mocks.armIdleSummary,
+  cancelIdleSummary: mocks.cancelIdleSummary,
 }));
 vi.mock("@/lib/collections/catalog-block", () => ({ collectionCatalogBlock: () => "" }));
 vi.mock("@/lib/collections/store", () => ({ listPublishedItems: vi.fn() }));
@@ -2133,6 +2149,174 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       turnoQueEscribe();
       await readEvents(await pedir());
       expect(filaGuardada()).not.toHaveProperty("coldTrim");
+    });
+
+    // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B).
+    describe("the idle summary", () => {
+      type Job = {
+        key: string; messages: { role: string; content: string }[]; firstIndex: number; transcriptLength: number; minTokens: number;
+        canAfford(tokens: number): Promise<boolean>;
+        summarize(request: unknown[], signal: AbortSignal): Promise<{ text: string | null; usage: unknown }>;
+        charge(usage: { inputTokens: number; cachedTokens: number; outputTokens: number }): Promise<void>;
+        save(pending: unknown): Promise<void>;
+      };
+      const armed = () => mocks.armIdleSummary.mock.calls.at(-1) as unknown as [Job, number];
+      /** A turn of a conversation that counts as long: the minimum is lowered to one token. */
+      const longTurn = async (rows: unknown[] = endedAgo(10 * 60_000)) => {
+        vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(rows);
+        turnoQueEscribe();
+        await readEvents(await pedir());
+      };
+      afterEach(() => {
+        vi.unstubAllEnvs();
+      });
+
+      it("a finished turn of a long conversation arms it with what the next turn will have cached", async () => {
+        await longTurn();
+        expect(mocks.armIdleSummary).toHaveBeenCalledTimes(1);
+        const [job, delay] = armed();
+        expect(delay).toBe(3_510_000);
+        expect(job).toMatchObject({ key: "p1:", firstIndex: 2, transcriptLength: 1, minTokens: 1 });
+        expect(job.messages.at(-1)).toEqual({ role: "assistant", content: "listo" });
+        expect(job.messages.length).toBeGreaterThan(1);
+      });
+
+      it("an idle summary that cannot be armed never breaks the turn", async () => {
+        mocks.armIdleSummary.mockImplementationOnce(() => {
+          throw new Error("no timers today");
+        });
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+        try {
+          await longTurn();
+          expect(mocks.armIdleSummary).toHaveBeenCalledTimes(1);
+          expect(filaGuardada()).toMatchObject({ mensajes: [{ role: "assistant", content: "listo" }] });
+          expect(warn.mock.calls.some((c) => String(c[0]).includes("[idle-summary]"))).toBe(true);
+        } finally {
+          warn.mockRestore();
+        }
+      });
+
+      it("every turn cancels what was armed for its conversation before it reads the history", async () => {
+        await longTurn();
+        expect(mocks.cancelIdleSummary).toHaveBeenCalledWith("p1:");
+        expect(mocks.cancelIdleSummary.mock.invocationCallOrder[0]!).toBeLessThan(mocks.turnosParaElHistorial.mock.invocationCallOrder.at(-1)!);
+      });
+
+      it("a conversation under the minimum arms nothing", async () => {
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+      });
+
+      it("a turn that failed, was stopped or summarized itself arms nothing", async () => {
+        const base = { finalText: "", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, mutoDurable: true, transcripcion: [{ role: "assistant", content: "…" }] };
+        const endings = [
+          { ...base, terminalError: true, errorCode: "provider_error" },
+          { ...base, terminalError: true, errorCode: "cancelled" },
+          { ...base, terminalError: false, compactionMark: { messages: [{ role: "user", content: "s" }], fromTranscript: 0, trigger: "pressure", preTokens: 2, postTokens: 1 } },
+        ];
+        for (const ending of endings) {
+          vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
+          mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+          mocks.runAgentLoop.mockResolvedValueOnce(ending);
+          await readEvents(await pedir());
+        }
+        expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+      });
+
+      it("OPENLEN_IDLE_SUMMARY=0 arms nothing and promotes nothing, and the cold turn is still trimmed", async () => {
+        vi.stubEnv("OPENLEN_IDLE_SUMMARY", "0");
+        await longTurn(endedAgo(2 * 3_600_000));
+        expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+        expect(mocks.promoteIdleSummary).not.toHaveBeenCalled();
+        expect(filaGuardada()).toMatchObject({ coldTrim: MARK });
+      });
+
+      it("a cold turn promotes the summary that was waiting, reads the rows again and does not trim on top", async () => {
+        const summarized = { ...SECOND, endedAt: Date.now() - 2 * 3_600_000, compaction: { messages: [{ role: "user", content: "<compacted-summary>\nlo hecho\n</compacted-summary>" }], fromTranscript: 1, trigger: "idle", preTokens: 9, postTokens: 3, skills: [] } };
+        mocks.promoteIdleSummary.mockResolvedValueOnce(true);
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(2 * 3_600_000)).mockResolvedValueOnce([summarized]);
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.promoteIdleSummary).toHaveBeenCalledWith("p1");
+        expect(mocks.turnosParaElHistorial).toHaveBeenCalledTimes(2);
+        const history = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ history: { content: string }[] }])[0].history;
+        expect(history[0]!.content).toContain("<compacted-summary>");
+        expect(thoughtsSent()).toEqual([]);
+        expect(filaGuardada()).not.toHaveProperty("coldTrim");
+      });
+
+      it("a cold turn with nothing waiting falls back to the trim", async () => {
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(2 * 3_600_000));
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.promoteIdleSummary).toHaveBeenCalledTimes(1);
+        expect(mocks.turnosParaElHistorial).toHaveBeenCalledTimes(1);
+        expect(filaGuardada()).toMatchObject({ coldTrim: MARK });
+      });
+
+      it("a warm turn never promotes", async () => {
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+        turnoQueEscribe();
+        await readEvents(await pedir());
+        expect(mocks.promoteIdleSummary).not.toHaveBeenCalled();
+      });
+
+      it("the summary is charged to the owner at the warm price, whatever the provider read from its cache", async () => {
+        await longTurn();
+        mocks.creditsForUsage.mockClear();
+        mocks.chargeCredits.mockClear();
+        mocks.creditsForUsage.mockImplementation((input: number, output: number, _rate: unknown, cached = 0) => input - cached + output);
+        try {
+          await armed()[0].charge({ inputTokens: 200_000, cachedTokens: 0, outputTokens: 3_000 });
+          expect(mocks.creditsForUsage).toHaveBeenCalledWith(200_000, 3_000, expect.anything(), 200_000);
+          expect(mocks.chargeCredits).toHaveBeenCalledWith("u1", 3_000, expect.objectContaining({ surface: "idle_summary", outcome: "ok", projectId: "p1", listCenticredits: 203_000 }));
+          const uses = (mocks.chargeCredits.mock.calls[0] as unknown as [string, number, { uses: { inputTokens: number; cachedTokens: number; outputTokens: number }[] }])[2].uses;
+          expect(uses[0]).toMatchObject({ inputTokens: 200_000, cachedTokens: 0, outputTokens: 3_000 });
+        } finally {
+          mocks.creditsForUsage.mockReset();
+        }
+      });
+
+      it("it is not asked for when the owner's balance does not cover it", async () => {
+        await longTurn();
+        mocks.creditsForUsage.mockImplementation(() => 50);
+        try {
+          mocks.getCreditState.mockResolvedValueOnce({ balance: 49 });
+          expect(await armed()[0].canAfford(200_000)).toBe(false);
+          mocks.getCreditState.mockResolvedValueOnce({ balance: 50 });
+          expect(await armed()[0].canAfford(200_000)).toBe(true);
+        } finally {
+          mocks.creditsForUsage.mockReset();
+        }
+      });
+
+      it("it is asked with a brain of its own, and saved on the row of the turn without what a row never keeps", async () => {
+        await longTurn();
+        const [job] = armed();
+        const brains = mocks.createAgentBrain.mock.calls.length;
+        mocks.createAgentBrain.mockReturnValueOnce(
+          mocks.brainStub({
+            openStream: () =>
+              (async function* () {
+                yield { type: "text_delta", text: "## Primary Request and Intent" };
+                yield { type: "usage", inputTokens: 9, outputTokens: 5, cachedTokens: 9, thinkingTokens: 0 };
+                yield { type: "done", stopReason: { kind: "end_turn" } };
+              })(),
+          }),
+        );
+        expect(await job.summarize([{ role: "user", content: "x" }], new AbortController().signal)).toEqual({ text: "## Primary Request and Intent", usage: { inputTokens: 9, cachedTokens: 9, outputTokens: 5 } });
+        expect(mocks.createAgentBrain.mock.calls.length).toBe(brains + 1);
+        const mark = { messages: [{ role: "user", content: "<compacted-summary>\ns\n</compacted-summary>", images: [{ mimeType: "image/png", dataBase64: "AAAA" }] }], fromTranscript: 1, trigger: "idle", preTokens: 9, postTokens: 3, skills: [] };
+        await job.save({ mark, writtenAt: "2026-11-13T10:00:00.000Z" });
+        const [projectId, rowId, pending] = mocks.savePendingIdleSummary.mock.calls.at(-1) as unknown as [string, string, { mark: { messages: Record<string, unknown>[] }; writtenAt: string }];
+        expect(projectId).toBe("p1");
+        expect(typeof rowId).toBe("string");
+        expect(pending.writtenAt).toBe("2026-11-13T10:00:00.000Z");
+        expect(pending.mark.messages[0]).not.toHaveProperty("images");
+      });
     });
 
     // A turn that died a minute ago and kept only its state, or the «published» note, called nobody: what

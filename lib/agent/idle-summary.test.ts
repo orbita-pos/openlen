@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Message } from "@/lib/ai-gateway";
+import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { isCompactionMark } from "./compaction/mark";
 import { COMPACTION_INSTRUCTION, SUMMARY_OPEN_TAG } from "./compaction/summary-prompt";
 import {
@@ -8,6 +8,7 @@ import {
   armIdleSummary,
   armedIdleSummaries,
   cancelIdleSummary,
+  collectSummary,
   idleSummaryDelayMs,
   idleSummaryEnabled,
   idleSummaryMinTokens,
@@ -270,5 +271,40 @@ describe("the idle summary's settings", () => {
     expect(idleSummaryEnabled({})).toBe(true);
     expect(idleSummaryEnabled({ OPENLEN_IDLE_SUMMARY: "0" })).toBe(false);
     expect(idleSummaryEnabled({ OPENLEN_IDLE_SUMMARY: "false" })).toBe(true);
+  });
+});
+
+// One model call, read to the end: the same rule the loop has for a summary it asks for itself
+// (`summarizeWithModel`) — it is a summary only if the model called no tool and finished its answer.
+describe("collectSummary", () => {
+  const stream = (...events: StreamEvent[]) => (async function* () { for (const ev of events) yield ev; })();
+  const reported: StreamEvent = { type: "usage", inputTokens: 200_000, outputTokens: 3_000, cachedTokens: 199_000, thinkingTokens: 400 };
+  const end: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
+  const usage = { inputTokens: 200_000, cachedTokens: 199_000, outputTokens: 3_000 };
+
+  it("gathers the text and what the provider reported", async () => {
+    expect(await collectSummary(stream({ type: "reasoning", text: "…" }, { type: "text_delta", text: "## Primary" }, { type: "text_delta", text: " Request" }, reported, end))).toEqual({ text: "## Primary Request", usage });
+  });
+
+  it("an answer that calls a tool is not a summary, and what it cost is still reported", async () => {
+    expect(await collectSummary(stream({ type: "text_delta", text: "let me read" }, { type: "function_call", name: "Read", args: { file_path: "/a" } }, reported, end))).toEqual({ text: null, usage });
+  });
+
+  it("an answer that was cut or failed is not a summary", async () => {
+    expect(await collectSummary(stream({ type: "text_delta", text: "## Pri" }, reported, { type: "done", stopReason: { kind: "max_tokens" } }))).toEqual({ text: null, usage });
+    expect((await collectSummary(stream({ type: "text_delta", text: "## Pri" }, { type: "done", stopReason: { kind: "error", code: "provider_error", message: "x" } as never }))).text).toBeNull();
+  });
+
+  it("no text, or a stream that never said it was done: no summary", async () => {
+    expect((await collectSummary(stream(reported, end))).text).toBeNull();
+    expect((await collectSummary(stream({ type: "text_delta", text: "## Primary" }, reported))).text).toBeNull();
+  });
+
+  it("a stream that throws: no summary and nothing to charge", async () => {
+    const broken = (async function* (): AsyncGenerator<StreamEvent> {
+      yield { type: "text_delta", text: "## Pri" };
+      throw new Error("the network went away");
+    })();
+    expect(await collectSummary(broken)).toEqual({ text: null, usage: null });
   });
 });

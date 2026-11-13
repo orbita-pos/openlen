@@ -17,7 +17,7 @@
 //
 // The timers live in this process: a restart loses them, and the turn that comes back cold then falls back
 // to the cold return's trim (./cold-return.ts) and nothing else.
-import type { Message } from "@/lib/ai-gateway";
+import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { coldAfterMs } from "@/lib/agent/cold-return";
 import { compactIfNeeded } from "@/lib/agent/compaction/compact";
 import { estimateTokens } from "@/lib/agent/compaction/estimate";
@@ -35,6 +35,9 @@ export const IDLE_SUMMARY_AT = 0.9;
 /** Conversations waiting at once. Each holds its messages in memory until it fires; past this, a new one
  *  is not armed and its cold return is only trimmed. */
 export const IDLE_SUMMARY_MAX_ARMED = 200;
+
+/** What a summary writes, roughly: for asking whether the owner's balance covers one before asking for it. */
+export const IDLE_SUMMARY_OUTPUT_ESTIMATE = 3_000;
 
 /** Opt-out: only the literal `0` turns it off (no timer is armed and no pending summary is promoted). */
 export function idleSummaryEnabled(env: Env = process.env): boolean {
@@ -88,6 +91,30 @@ export interface IdleSummaryJob {
   summarize(request: Message[], signal: AbortSignal): Promise<{ text: string | null; usage: IdleUsage | null }>;
   charge(usage: IdleUsage): Promise<void>;
   save(pending: PendingIdleSummary): Promise<void>;
+}
+
+/**
+ * One model call, read to its end: the text of the summary and what the provider reported. The loop's own
+ * rule for a summary it asks for (`summarizeWithModel`, ./loop.ts): it is one only if the model called no
+ * tool and finished its answer with something in it. A stream that breaks gives no summary; whatever
+ * usage arrived before is still returned, because it was spent.
+ */
+export async function collectSummary(stream: AsyncIterable<StreamEvent>): Promise<{ text: string | null; usage: IdleUsage | null }> {
+  let text = "";
+  let usage: IdleUsage | null = null;
+  let calledTool = false;
+  let finished = false;
+  try {
+    for await (const ev of stream) {
+      if (ev.type === "text_delta") text += ev.text;
+      else if (ev.type === "function_call") calledTool = true;
+      else if (ev.type === "usage") usage = { inputTokens: ev.inputTokens, cachedTokens: Math.min(ev.cachedTokens, ev.inputTokens), outputTokens: ev.outputTokens };
+      else if (ev.type === "done") finished = ev.stopReason.kind === "end_turn";
+    }
+  } catch {
+    return { text: null, usage };
+  }
+  return { text: finished && !calledTool && text.trim() !== "" ? text : null, usage };
 }
 
 export type IdleSummaryOutcome = "saved" | "small" | "unaffordable" | "no_summary" | "cancelled";

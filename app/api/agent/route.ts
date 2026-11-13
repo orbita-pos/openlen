@@ -90,8 +90,9 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben, photoAddress } from "@/lib/agent/fotos-de-la-conversacion";
 import { readProjectFileBytes } from "@/lib/backend/files";
-import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, turnosParaElHistorial } from "@/lib/projects/chat";
+import { filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, savePendingIdleSummary, turnosParaElHistorial } from "@/lib/projects/chat";
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
+import { IDLE_SUMMARY_OUTPUT_ESTIMATE, armIdleSummary, cancelIdleSummary, collectSummary, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
 import { todosForTurn } from "@/lib/agent/todo-list";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
@@ -108,7 +109,7 @@ import { parseCompactCommand } from "@/lib/agent/compaction/manual";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import { POST_COMPACT_MAX_FILES, restoredFilesMessage } from "@/lib/agent/compaction/restore-files";
 import { restoredSkills } from "@/lib/agent/compaction/restore-skills";
-import { CHARS_PER_TOKEN } from "@/lib/agent/compaction/estimate";
+import { CHARS_PER_TOKEN, estimateTokens } from "@/lib/agent/compaction/estimate";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { SPILL_MAX_INLINE_TOKENS } from "@/lib/agent/compaction/spill";
 import { NOMBRE_BASH, terminalEncendida } from "@/lib/agent/terminal/declaracion";
@@ -863,24 +864,32 @@ async function correrTurno(
   // The team's messages are Len's conversation: the assistant's has only its owner.
   const compartido = genteDelProyecto.length > 1 && !asistente;
   let equipoAhora = "";
-  let filasDelHistorial: FilaDelHistorial[];
+  // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B): a newer turn of the conversation
+  // cancels the summary that was armed for it — its timer, or the call if it is being written right now —,
+  // before the rows are read: nothing may change them under this turn.
+  const idleKey = `${projectId}:${enLaCharla[0] ?? ""}`;
+  cancelIdleSummary(idleKey);
+  let filasDelHistorial: FilaDelHistorial[] = [];
   // A11 · LA CHARLA ENTERA desde la última marca de resumen, como Claude Code
   // (spec local 2026-10-25-a11-continuity): sin ventana de turnos. Sólo crece por
   // el final, así que lo de delante sigue en caché hasta el próximo resumen.
-  if (compartido) {
-    const crudas = await filasParaElHistorialConEquipo(projectId).catch(() => []);
-    // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
-    const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
-    const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
-      (id) => id && !enElProyecto.has(id),
-    );
-    const nombres = await nombresDeUsuarios(fuera).catch(() => new Map<string, string>());
-    const plegado = plegarEquipo(crudas, genteDelProyecto, userId, (id) => nombres.get(id) ?? null);
-    filasDelHistorial = plegado.filas;
-    equipoAhora = plegado.ahora;
-  } else {
-    filasDelHistorial = await turnosParaElHistorial(projectId, ...enLaCharla).catch(() => []);
-  }
+  const loadRows = async (): Promise<void> => {
+    if (compartido) {
+      const crudas = await filasParaElHistorialConEquipo(projectId).catch(() => []);
+      // Quien ya dejó el proyecto (autor o mencionado) se nombra igual en el sobre.
+      const enElProyecto = new Set(genteDelProyecto.map((p) => p.userId));
+      const fuera = [...new Set(crudas.filter((f) => f.tipo === "persona").flatMap((f) => [f.autorId ?? "", ...(f.menciones ?? [])]))].filter(
+        (id) => id && !enElProyecto.has(id),
+      );
+      const nombres = await nombresDeUsuarios(fuera).catch(() => new Map<string, string>());
+      const plegado = plegarEquipo(crudas, genteDelProyecto, userId, (id) => nombres.get(id) ?? null);
+      filasDelHistorial = plegado.filas;
+      equipoAhora = plegado.ahora;
+    } else {
+      filasDelHistorial = await turnosParaElHistorial(projectId, ...enLaCharla).catch(() => []);
+    }
+  };
+  await loadRows();
   // THE COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): if the conversation's last
   // model call ended long ago, the provider's cache is gone and this turn sends the history trimmed
   // (`coldTrim`), leaving this mark on its row so the next turns rebuild the same bytes. Read off the rows
@@ -888,6 +897,14 @@ async function correrTurno(
   // Rows that do not say when they ended make a warm turn: the history goes whole, as before.
   const lastModelCallEnded = lastModelCallEndedAt(filasDelHistorial);
   let coldMark: ColdTrimMark | null = isColdReturn(lastModelCallEnded === null ? null : Date.now() - lastModelCallEnded) ? COLD_TRIM_MARK : null;
+  // THE IDLE SUMMARY: this turn came back cold, and a summary may be waiting on the conversation's last turn,
+  // written while it sat idle. It becomes that row's mark and the rows are read again — the history now
+  // starts at the summary —, and it replaces the trim: there is nothing old left to trim. Claude Code's rule:
+  // «the summary is used on your next message if the prompt cache has expired». A warm turn never looks.
+  if (coldMark && idleSummaryEnabled() && (await promoteIdleSummary(projectId, ...enLaCharla).catch(() => false))) {
+    await loadRows();
+    coldMark = null;
+  }
   const pideAhora = compartido ? quienPide(genteDelProyecto.find((p) => p.userId === quien) ?? null) : "";
   // El historial se ARMA más abajo, después de conseguir las fotos de la
   // conversación (A): sin ellas, la foto de un turno anterior no tendría dónde ir.
@@ -2322,6 +2339,9 @@ async function correrTurno(
             sinCobro: "host",
           };
         };
+        // THE IDLE SUMMARY: what this turn is given, before the loop adds to it. With the turn's own transcript
+        // behind, it is the request the provider will have cached when the turn ends (pinned in loop.test.ts).
+        const messagesBeforeLoop = [...messages];
         const result = creacionDelTurno
           ? await hostToolCreation(creacionDelTurno)
           : await runAgentLoop({
@@ -2835,6 +2855,60 @@ async function correrTurno(
           }
         }
         await cerrarFila();
+        // THE IDLE SUMMARY (spec local 2026-11-13-conversar-todo-el-mes, piece B): the turn ended well and its row
+        // is written. If the conversation is long, its summary is armed to be written a little before the
+        // provider's cache expires, with the very request the provider has cached; it waits on this turn's row
+        // and a turn that comes back cold starts from it (see `promoteIdleSummary` above). The next turn of the
+        // conversation cancels it. Not armed for a turn that failed, was stopped or summarized itself, nor for a
+        // short conversation — which then holds nothing in memory.
+        try {
+          if (idleSummaryEnabled() && finDelTurno === "completed" && !detenido && !asistenteBorrado && !creacionDelTurno && !marcaDelTurno && result.transcripcion?.length) {
+            const idleMessages = [...messagesBeforeLoop, ...result.transcripcion];
+            const minTokens = idleSummaryMinTokens();
+            if (estimateTokens(idleMessages) >= minTokens) {
+              const rate = brain.creditRate();
+              const planAtTheEnd = planActivo;
+              // The turn's own brain may be aborted by now: the summary is asked with one of its own, built the
+              // same way (the tools are part of what the provider has cached).
+              let idleBrain: ReturnType<typeof createAgentBrain> | null = null;
+              armIdleSummary(
+                {
+                  key: idleKey,
+                  messages: idleMessages,
+                  firstIndex: 2,
+                  transcriptLength: result.transcripcion.length,
+                  minTokens,
+                  canAfford: async (tokens) => (await getCreditState(userId)).balance >= creditsForUsage(tokens, IDLE_SUMMARY_OUTPUT_ESTIMATE, rate, tokens),
+                  summarize: (request, signal) => {
+                    idleBrain = createAgentBrain({ tools, requestId: projectId, signal, esfuerzoDelTurno, esfuerzoDelUsuario, mode, preferredProvider: brain.lastProvider() });
+                    return collectSummary(idleBrain.openStream(withPlanSection(request, planAtTheEnd)));
+                  },
+                  // Nobody asked for this call: the owner pays it at the WARM price whatever the provider read
+                  // from its cache (DeepInfra does not say how long it keeps one). What it really was stays in
+                  // the ledger row — its list price and its cost —, and the production photo counts the misses.
+                  charge: async (u) => {
+                    const asked = idleBrain ?? brain;
+                    await chargeCredits(userId, creditsForUsage(u.inputTokens, u.outputTokens, rate, u.inputTokens), {
+                      surface: "idle_summary",
+                      outcome: "ok",
+                      projectId,
+                      refId: filaId,
+                      listCenticredits: creditsForUsage(u.inputTokens, u.outputTokens, rate, u.cachedTokens),
+                      uses: [{ provider: asked.lastProvider(), model: asked.modelId, inputTokens: u.inputTokens, cachedTokens: u.cachedTokens, outputTokens: u.outputTokens, at: new Date() }],
+                    });
+                  },
+                  // As the mark of a turn that summarized itself: without the personal memory of who spoke and
+                  // without pixels.
+                  save: (pending) => savePendingIdleSummary(proyectoDelChat, filaId, { ...pending, mark: compactionMarkForStorage(pending.mark) }),
+                },
+                idleSummaryDelayMs(),
+              );
+            }
+          }
+        } catch (err) {
+          // A summary nobody asked for can never cost the turn that just ended well.
+          console.warn(`[idle-summary] ${idleKey}: could not be armed — ${err instanceof Error ? err.message : String(err)}`);
+        }
         // LA RONDA SIGUIENTE, con la fila de ésta ya escrita (su historial la
         // ve entera) y ANTES del `done`, que la anuncia: el chat la sigue como
         // sigue un turno que llega en curso del servidor (Len 2.1). Nadie lee su
