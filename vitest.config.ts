@@ -113,6 +113,8 @@ export default defineConfig({
       // que abre Chromium o habla con el servidor se prueba con
       // `bench:len:validar`, que es su prueba en rojo y en verde.
       "lib/len-bench/**/*.test.ts",
+      // The measurement tools of «conversar todo el mes» (the cache probe).
+      "lib/measure/**/*.test.ts",
       // La terminal de Len (plans/len-agente-2026, F1).
       "lib/agent/terminal/**/*.test.ts",
       // GIT FOR LEN (spec local 2026-10-15-git-for-len): the repository, its commands and the
