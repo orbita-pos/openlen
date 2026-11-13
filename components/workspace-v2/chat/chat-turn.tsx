@@ -46,6 +46,7 @@ import { latestTodosOfActions } from "@/lib/agent/todo-list";
 import { TodoListView, continueStep } from "./todo-list";
 import { ArtifactTurnCards } from "../artifacts/artifact-turn-cards";
 import { SubagentCards } from "./subagent-card";
+import { workspaceSrc } from "@/lib/files/image-paths";
 
 const NO_TURNS: readonly CambiosDeUnTurno[] = [];
 
@@ -86,6 +87,7 @@ export function UserMessage({
   gente = SIN_GENTE,
   colorDe = SIN_COLOR,
   yo = null,
+  projectId,
 }: {
   turn: DesignTurn;
   initial: string;
@@ -97,6 +99,8 @@ export function UserMessage({
   colorDe?: (userId: string) => string;
   /** Quien mira: un turno recién mandado (sin `autorId`) es suyo, con su foto. */
   yo?: string | null;
+  /** The project of this chat: a photo that is a file of its folder is painted from the folder's route. */
+  projectId?: string | null;
 }) {
   const t = useTranslations("panelsChat");
   const { text: escrito, corrections } = splitCorrections(turn.userText);
@@ -140,7 +144,7 @@ export function UserMessage({
             <div className="mb-1.5 flex items-center gap-1.5 text-[11.5px] fg-muted">
               {fotos.map((f) => (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img key={f.url} src={f.url} alt="" className="h-9 w-9 rounded-[7px] object-cover" />
+                <img key={f.url} src={workspaceSrc(projectId, f.url)} alt="" className="h-9 w-9 rounded-[7px] object-cover" />
               ))}
               {fotos.length > 1 ? t("turn.imagesSent", { count: fotos.length }) : t("turn.imageSent")}
             </div>

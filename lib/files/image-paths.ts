@@ -26,6 +26,18 @@ export function imagePathFor(originalName: string, existing: ReadonlySet<string>
   }
 }
 
+/**
+ * WHERE THE WORKSPACE PAINTS A PHOTO FROM. A file of the project's folder is named by the path the page uses
+ * (`/img/a.webp`), and that is the address the modal hands back and the chat attaches. The page's own host
+ * serves it; openlen.com does not (a 404: the broken thumbnails of 12/11). The folder's route does, for whoever
+ * can open the project. A web address is returned as it is, and so is any path when no project is known.
+ * Not folder files: our own disk uploads in development (`/uploads/…`) and OpenLen's own routes (`/api/…`).
+ */
+export function workspaceSrc(projectId: string | null | undefined, url: string): string {
+  if (!projectId || !url.startsWith("/") || url.startsWith("//") || url.startsWith("/uploads/") || url.startsWith("/api/")) return url;
+  return `/api/projects/${encodeURIComponent(projectId)}/ficheros/raw?ruta=${encodeURIComponent(url)}`;
+}
+
 /** Where the modal uploads: the folder's upload route, optimizing images as the modal always did. */
 export function uploadEndpointFor(projectId: string): string {
   return `/api/projects/${encodeURIComponent(projectId)}/ficheros/upload?optimize=image`;
