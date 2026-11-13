@@ -17,6 +17,17 @@
 //
 // The timers live in this process: a restart loses them, and the turn that comes back cold then falls back
 // to the cold return's trim (./cold-return.ts) and nothing else.
+//
+// When its timer fires, a summary is asked for only if it still makes sense — Claude Code's checks at that
+// same moment: the timer is not more than a minute late (its `lapsed`: the process slept, the cache may be
+// gone), and the turn it was armed for is still the conversation's last one (its `prefix_changed` and
+// `newer_request`: archived, deleted, or a turn this process did not cancel for). The call then has a
+// deadline — Claude Code has none of its own; here nothing else would ever cut a provider that stopped
+// answering, and the conversation would hold its place and its messages for good.
+//
+// What stays as in Claude Code: a person who comes back AFTER the summary was written and BEFORE the
+// conversation is cold (between 90 % and 100 % of the threshold) is answered with the conversation whole,
+// and that summary was paid for nothing. It is the price of writing it while it is cheap.
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { coldAfterMs } from "@/lib/agent/cold-return";
 import { compactIfNeeded } from "@/lib/agent/compaction/compact";
@@ -38,6 +49,8 @@ export const IDLE_SUMMARY_MAX_ARMED = 200;
 
 /** What a summary writes, roughly: for asking whether the owner's balance covers one before asking for it. */
 export const IDLE_SUMMARY_OUTPUT_ESTIMATE = 3_000;
+/** A timer that fires later than this after it was due does nothing: Claude Code's 60 s. */
+export const IDLE_SUMMARY_LATE_MS = 60_000;
 
 /** Opt-out: only the literal `0` turns it off (no timer is armed and no pending summary is promoted). */
 export function idleSummaryEnabled(env: Env = process.env): boolean {
@@ -57,6 +70,11 @@ export function idleSummaryDelayMs(env: Env = process.env): number {
   return Math.round(coldAfterMs(env) * IDLE_SUMMARY_AT);
 }
 
+/** How long the summary's call may take once its timer fires: until the conversation would be cold. */
+export function idleSummaryDeadlineMs(env: Env = process.env): number {
+  return coldAfterMs(env) - idleSummaryDelayMs(env);
+}
+
 export interface IdleUsage {
   readonly inputTokens: number;
   /** A subset of `inputTokens`. */
@@ -72,8 +90,8 @@ export interface PendingIdleSummary {
   readonly writtenAt: string;
 }
 
-/** What one conversation's summary needs. The route builds it when a turn ends; everything that touches
- *  the model, the balance or the database comes through here. */
+/** What one conversation's summary needs. Built when a turn ends (./idle-summary-job.ts); everything that
+ *  touches the model, the balance or the database comes through here. */
 export interface IdleSummaryJob {
   /** `${projectId}:${conversation ?? ""}`: one summary waits per conversation. */
   readonly key: string;
@@ -85,6 +103,8 @@ export interface IdleSummaryJob {
   /** How many messages the turn's own transcript has: the mark covers them all. */
   readonly transcriptLength: number;
   readonly minTokens: number;
+  /** Asked when the timer fires: is the turn this was armed for still the conversation's last one? */
+  stillCurrent(): Promise<boolean>;
   canAfford(estimatedInputTokens: number): Promise<boolean>;
   /** ONE model call. `text: null` = no usable summary (it called a tool, was cut, failed); `usage: null` =
    *  the provider reported nothing, so there is nothing to charge. */
@@ -117,19 +137,22 @@ export async function collectSummary(stream: AsyncIterable<StreamEvent>): Promis
   return { text: finished && !calledTool && text.trim() !== "" ? text : null, usage };
 }
 
-export type IdleSummaryOutcome = "saved" | "small" | "unaffordable" | "no_summary" | "cancelled";
+export type IdleSummaryOutcome = "saved" | "small" | "stale" | "unaffordable" | "no_summary" | "cancelled";
 
 const warn = (key: string, what: string, err: unknown) =>
   console.warn(`[idle-summary] ${key}: ${what} — ${err instanceof Error ? err.message : String(err)}`);
 
 /**
  * Writes one conversation's summary, now. `signal`: a newer turn of the conversation cancels it — whatever
- * is in flight is abandoned and nothing is saved.
+ * is in flight is abandoned and nothing is saved. Nothing is asked for, and so nothing is charged, when the
+ * conversation is short, is no longer the one this was armed for (`stale`) or cannot be paid.
  */
 export async function runIdleSummary(job: IdleSummaryJob, signal: AbortSignal, now: () => Date = () => new Date()): Promise<IdleSummaryOutcome> {
   if (signal.aborted) return "cancelled";
   const tokens = estimateTokens(job.messages);
   if (tokens < job.minTokens) return "small";
+  if (!(await job.stillCurrent())) return "stale";
+  if (signal.aborted) return "cancelled";
   if (!(await job.canAfford(tokens))) return "unaffordable";
   if (signal.aborted) return "cancelled";
 
@@ -170,24 +193,53 @@ export async function runIdleSummary(job: IdleSummaryJob, signal: AbortSignal, n
 
 interface Waiting {
   timer: ReturnType<typeof setTimeout> | null;
+  /** Running: what abandons the call if it is still not answered. */
+  deadline: ReturnType<typeof setTimeout> | null;
   readonly controller: AbortController;
+}
+
+export interface ArmOptions {
+  /** How long the call may take once the timer fires. Absent = nothing cuts it. */
+  readonly deadlineMs?: number;
+  /** The clock, in ms: a test's. */
+  readonly now?: () => number;
 }
 
 const waiting = new Map<string, Waiting>();
 
 /** Arms a conversation's summary to be written `delayMs` from now. Arming it again replaces the one that
  *  was waiting. `false`: not armed — too many conversations are waiting already. */
-export function armIdleSummary(job: IdleSummaryJob, delayMs: number): boolean {
+export function armIdleSummary(job: IdleSummaryJob, delayMs: number, opts: ArmOptions = {}): boolean {
   cancelIdleSummary(job.key);
   if (waiting.size >= IDLE_SUMMARY_MAX_ARMED) return false;
-  const entry: Waiting = { timer: null, controller: new AbortController() };
+  const now = opts.now ?? Date.now;
+  const dueAt = now() + delayMs;
+  const entry: Waiting = { timer: null, deadline: null, controller: new AbortController() };
+  const done = () => {
+    if (entry.deadline) clearTimeout(entry.deadline);
+    entry.deadline = null;
+    if (waiting.get(job.key) === entry) waiting.delete(job.key);
+  };
   entry.timer = setTimeout(() => {
     entry.timer = null;
+    const late = now() - dueAt;
+    if (late > IDLE_SUMMARY_LATE_MS) {
+      // The process slept or was too busy to fire on time: by now the provider's cache may be gone, and the
+      // call would be paid whole. The cold return's trim is what is left.
+      console.warn(`[idle-summary] ${job.key}: fired ${Math.round(late / 1000)} s late — nothing was asked`);
+      return done();
+    }
+    if (opts.deadlineMs !== undefined) {
+      entry.deadline = setTimeout(() => {
+        entry.deadline = null;
+        console.warn(`[idle-summary] ${job.key}: not answered in ${Math.round(opts.deadlineMs! / 1000)} s — abandoned`);
+        entry.controller.abort();
+      }, opts.deadlineMs);
+      entry.deadline.unref?.();
+    }
     void runIdleSummary(job, entry.controller.signal)
       .catch((err) => warn(job.key, "the summary could not be written", err))
-      .finally(() => {
-        if (waiting.get(job.key) === entry) waiting.delete(job.key);
-      });
+      .finally(done);
   }, delayMs);
   // A summary nobody is waiting for never keeps the process alive.
   entry.timer.unref?.();
@@ -200,6 +252,7 @@ export function cancelIdleSummary(key: string): void {
   const entry = waiting.get(key);
   if (!entry) return;
   if (entry.timer) clearTimeout(entry.timer);
+  if (entry.deadline) clearTimeout(entry.deadline);
   entry.controller.abort();
   waiting.delete(key);
 }
