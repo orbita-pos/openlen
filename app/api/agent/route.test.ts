@@ -2243,6 +2243,26 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(seen[0]![1]).toEqual({ role: "user", content: "x" });
       });
 
+      // The return bench (spec §8.2) writes the summary itself, with the function the timer calls: its server
+      // hands it the job's plain values in a file and arms nothing. Never in production.
+      it("with the bench's capture folder set, the job goes to a file instead of a timer", async () => {
+        const fs = await import("node:fs");
+        const os = await import("node:os");
+        const path = await import("node:path");
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), "idle-capture-route-"));
+        try {
+          vi.stubEnv("OPENLEN_IDLE_SUMMARY_CAPTURE_DIR", dir);
+          await longTurn();
+          expect(mocks.armIdleSummary).not.toHaveBeenCalled();
+          const captured = JSON.parse(fs.readFileSync(path.join(dir, "p1_.json"), "utf8")) as { key: string; projectId: string; conversation: string | null; messages: { role: string; content: string }[]; brain: { tools: unknown[] } };
+          expect(captured).toMatchObject({ key: "p1:", projectId: "p1", conversation: null, transcriptLength: 1, minTokens: 1, provider: "fireworks" });
+          expect(captured.messages.at(-1)).toEqual({ role: "assistant", content: "listo" });
+          expect(Array.isArray(captured.brain.tools)).toBe(true);
+        } finally {
+          fs.rmSync(dir, { recursive: true, force: true });
+        }
+      });
+
       it("a summary that is not armed because too many conversations are waiting says so", async () => {
         mocks.armIdleSummary.mockReturnValueOnce(false);
         const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
