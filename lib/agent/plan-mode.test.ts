@@ -141,6 +141,20 @@ describe("la sección del prompt", () => {
     expect(base[0]!.content).toBe("You are Len.");
   });
 
+  // Como el arnés de DeepSeek en una ruta SIN la capacidad: cada mensaje de sistema posterior se vacía y se
+  // reescribe el primero. Un fork despertado de su copia guardada traía el prompt del modo dentro, con su
+  // texto (la copia de un subagente no pasa por el limpiador de la fila), y contradecía al mensaje 0.
+  it("🔴 con la palanca apagada no queda NINGÚN prompt posterior en la petición, tenga marca o texto: manda el mensaje 0", () => {
+    const conPrompts: Message[] = [base[0]!, base[1]!, { role: "system", content: PLAN }, { role: "assistant", content: "plan" }, { role: "system", content: "You are Len." }, base[2]!];
+    expect(withPlanSection(conPrompts, false, OFF)).toEqual([base[0], base[1], { role: "assistant", content: "plan" }, base[2]]);
+    const dentro = withPlanSection(conPrompts, true, OFF);
+    expect(dentro.filter((m) => m.role === "system")).toEqual([{ role: "system", content: PLAN }]);
+    expect(dentro[0]!.content).toBe(PLAN);
+    expect(dentro.slice(1)).toEqual([base[1], { role: "assistant", content: "plan" }, base[2]]);
+    // Con la palanca encendida esos mensajes son la conversación: no se tocan.
+    expect(withPlanSection(conPrompts, false).slice(0, conPrompts.length)).toEqual(conPrompts);
+  });
+
   it("🔴 con la palanca apagada, lo guardado a la manera nueva se quita: no queda un prompt contradiciendo al mensaje 0", () => {
     const guardado: Message[] = [
       { role: "system", content: "You are Len." },

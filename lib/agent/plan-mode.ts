@@ -105,7 +105,7 @@ export function systemUpdateFor(messages: readonly Message[], active: boolean): 
  * A request with the prompt of the mode that applies. A copy; the input is never touched. With the
  * conversation already carrying it — Len's own, where the loop appended it when the mode changed — nothing
  * is added: that is what a fork and the idle summary send. Lever off: the section goes in and out of
- * message 0, as it did.
+ * message 0, as it did, and no later system message is left in the request.
  */
 export function withPlanSection(messages: readonly Message[], active: boolean, env: Env = process.env): Message[] {
   const out = [...messages];
@@ -114,10 +114,12 @@ export function withPlanSection(messages: readonly Message[], active: boolean, e
     if (update) out.push(update);
     return out;
   }
+  // Lever off is DeepSeek's route WITHOUT the capability: every later system message is emptied and the first
+  // one rewritten. A prompt an earlier turn left in the conversation — as a marker in a row, or with its text
+  // in a subagent's stored transcript — would otherwise be the latest one and contradict message 0.
   const first = out[0];
   if (!first || first.role !== "system" || typeof first.content !== "string") return out;
-  out[0] = { ...first, content: planPrompt(first.content, active) };
-  return out;
+  return [{ ...first, content: planPrompt(first.content, active) }, ...out.slice(1).filter((m) => m.role !== "system")];
 }
 
 /**

@@ -148,17 +148,23 @@ export const PRESUPUESTO_FOTOS_BYTES = 20 * 1024 * 1024;
  * `NO_CABE` (lo que se quita es el principio de la conversación, nunca un hueco
  * en medio). Su nota conserva la dirección (`notaDeLaFoto`).
  *
- * Lo que NO se copia: DeepSeek no devuelve nunca una imagen quitada, para no
- * mover el principio de la conversación y conservar la caché. Aquí lo que Len ve
- * ya se desliza solo (los últimos turnos) y Fireworks no cacheó la foto
- * (medido el 2026-10-01), así que no hay caché que proteger.
+ * Y, desde el 14/11, lo que antes NO se copiaba: DeepSeek no devuelve nunca una
+ * imagen quitada («only advances: a replacement never reverts»), para no mover el
+ * principio de la conversación y conservar la caché. ⚰️ Aquí se dejaba volver
+ * porque «Fireworks no cacheó la foto (medido el 2026-10-01), así que no hay
+ * caché que proteger»; la sonda del cable del 14/11 vio que en DeepInfra, el
+ * proveedor de Len, las imágenes SÍ entran en la caché. `yaPerdidas`: las que un
+ * turno anterior dejó sin píxeles (`lostPhotos` / `lostScreenshots` de su fila);
+ * siguen sin ellos y no gastan presupuesto.
  *
- * @param masNuevaPrimero direcciones de la más nueva a la más vieja (la del turno, primero).
+ * @param masNuevaPrimero direcciones de la más nueva a la más vieja (la del turno, primero),
+ *   en UN solo orden para las fotos del dueño y las capturas de Len (`picturesOldestFirst`).
  */
 export function fotosQueCaben(
   masNuevaPrimero: readonly string[],
   fotos: ReadonlyMap<string, InlineImage | null>,
   presupuesto: number = PRESUPUESTO_FOTOS_BYTES,
+  yaPerdidas: ReadonlySet<string> = new Set(),
 ): Map<string, InlineImage | null | typeof NO_CABE> {
   const salida = new Map<string, InlineImage | null | typeof NO_CABE>(fotos);
   let usado = 0;
@@ -166,6 +172,10 @@ export function fotosQueCaben(
   for (const url of new Set(masNuevaPrimero)) {
     const foto = fotos.get(url);
     if (!foto) continue;
+    if (yaPerdidas.has(url)) {
+      salida.set(url, NO_CABE);
+      continue;
+    }
     if (!agotado && usado + foto.dataBase64.length <= presupuesto) {
       usado += foto.dataBase64.length;
       continue;

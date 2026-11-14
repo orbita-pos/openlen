@@ -145,6 +145,20 @@ describe("fotosQueCaben — las más viejas pierden los píxeles, no el turno", 
     expect(r.get("vieja")).toBe(NO_CABE);
   });
 
+  // 14/11 · como DeepSeek («only advances: a replacement never reverts»): la nota de arriba decía que aquí no
+  // había caché que proteger porque Fireworks no cacheaba la foto. En DeepInfra las imágenes SÍ entran en la
+  // caché (sonda del cable), y una foto que vuelve cambia dos veces un mensaje ya mandado.
+  it("🔴 la que un turno anterior dejó sin píxeles por no caber no vuelve aunque ahora quepa, y no gasta presupuesto", () => {
+    const fotos = new Map([["nueva", foto(6)], ["media", foto(6)], ["vieja", foto(6)]]);
+    const r = fotosQueCaben(["nueva", "media", "vieja"], fotos, 20, new Set(["media"]));
+    expect(r.get("media")).toBe(NO_CABE);
+    // Las otras dos caben juntas: la que ya no vuelve no cuenta.
+    expect(r.get("nueva")).toEqual(foto(6));
+    expect(r.get("vieja")).toEqual(foto(6));
+    // Sin esa memoria cabrían las tres (el brazo de control).
+    expect(fotosQueCaben(["nueva", "media", "vieja"], fotos, 20).get("media")).toEqual(foto(6));
+  });
+
   it("el límite exacto cabe", () => {
     expect(fotosQueCaben(["a", "b"], new Map([["a", foto(6)], ["b", foto(4)]]), 10).get("b")).toEqual(foto(4));
   });
