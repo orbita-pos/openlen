@@ -18,7 +18,18 @@
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 
 export type WireProvider = "deepinfra" | "fireworks";
-export type WireStepId = "base" | "control" | "system_in_history" | "tools_base" | "system_after_tool" | "images_base" | "images_again";
+export type WireStepId =
+  | "base"
+  | "control"
+  | "system_in_history"
+  | "tools_base"
+  | "system_after_tool"
+  | "images_base"
+  | "images_again"
+  // The position steps (`wirePositionSteps`).
+  | "long_base"
+  | "long_control"
+  | "long_system";
 
 export const WIRE_PROBE_CAP_USD_DEFAULT = 0.08;
 export const WIRE_PROBE_MAX_OUTPUT_TOKENS = 48;
@@ -104,6 +115,74 @@ export function wireProbeSteps(runId: string, images: readonly [InlineImage, Inl
     { id: "images_base", messages: [first, helloWithPictures] },
     { id: "images_again", messages: [first, helloWithPictures, helloAnswer, bye], reads: "images_base" },
   ];
+}
+
+// ── THE POSITION STEPS ──────────────────────────────────────────────────────────────────────────────────
+// The first run (20261114T085329) showed both providers take the second system message and the model follow
+// it, but not WHERE it ends up: only ~30 tokens of conversation sat between the two prompts, under the cache's
+// granularity (128 tokens on DeepInfra), and the first prompt was 5.000 — «left in place» and «moved up behind
+// the first prompt» read the same. Here the prompt is two lines and the conversation between them is long: in
+// place, nearly the whole earlier request is read from the cache; moved up, almost nothing is.
+export const WIRE_POSITION_CAP_USD_DEFAULT = 0.03;
+/** Longer than the first run's wait: there Fireworks had nothing cached nine seconds after a request. */
+export const WIRE_POSITION_SETTLE_MS = 20_000;
+const POSITION_PARTS = 6;
+const POSITION_WORDS_PER_PART = 700;
+
+const shortPrompt = (runId: string, word: string): string => `Test session ${seedOf(runId).toString(36)}-${runId}. You are a careful assistant.\nRULE: end every answer with the word ${word}.`;
+
+export function wirePositionSteps(runId: string): WireStep[] {
+  const first: Message = { role: "system", content: shortPrompt(runId, "ALFA") };
+  const second: Message = { role: "system", content: shortPrompt(runId, "BETA") };
+  const talk: Message[] = [];
+  for (let k = 0; k < POSITION_PARTS; k++) {
+    talk.push({ role: "user", content: `Notes to keep for later, part ${k + 1} of ${POSITION_PARTS}:\n${notes(`${runId}/${k}`, POSITION_WORDS_PER_PART)}\n\nAnswer only: noted.` });
+    talk.push({ role: "assistant", content: "Noted. ALFA" });
+  }
+  const hello: Message = { role: "user", content: "Say hello in three words." };
+  const helloAnswer: Message = { role: "assistant", content: "Hello to you. ALFA" };
+  const thanks: Message = { role: "user", content: "Say thanks in three words." };
+  const base = [first, ...talk, hello];
+  return [
+    { id: "long_base", messages: base },
+    // The same request again: by then, does the provider have it?
+    { id: "long_control", messages: [...base], reads: "long_base" },
+    { id: "long_system", messages: [...base, helloAnswer, second, thanks], reads: "long_base" },
+  ];
+}
+
+export interface WirePositionReport {
+  readonly provider: WireProvider;
+  /** The same request, sent again, was read from the cache. */
+  readonly control: boolean | null;
+  readonly accepted: boolean;
+  /** The conversation before the second prompt was read from the cache. `null`: cannot be told. */
+  readonly inPlace: boolean | null;
+  readonly followsLatest: boolean | null;
+  readonly spentUsd: number;
+  readonly lines: string[];
+}
+
+export function wirePositionReport(provider: WireProvider, calls: Partial<Record<WireStepId, WireCall>>): WirePositionReport {
+  const { long_base: base, long_control: again, long_system: system } = calls;
+  const control = ok(base) && ok(again) ? share(again, base) >= READ_SHARE : null;
+  const accepted = ok(system);
+  const read = accepted && ok(base) ? share(system, base) : null;
+  // A high reading stands on its own; a low one only means «moved» if the cache was there to be read.
+  const inPlace = read === null ? null : read >= READ_SHARE ? true : control === true ? false : null;
+  const answer = accepted ? system.text.trim() : "";
+  const followsLatest = !accepted || answer.length === 0 ? null : /\bBETA\b\W*$/i.test(answer);
+  const spentUsd = [base, again, system].reduce((sum, call) => sum + (call ? wireProbeCostUsd(provider, call) : 0), 0);
+  const lines = [
+    `${provider} · spent $${spentUsd.toFixed(4)} at list price`,
+    control === null ? "  control: not run or refused" : `  control: the same request again was ${control ? "" : "NOT "}read from the cache (${pct(share(again!, base!))})`,
+    !system
+      ? "  system message after a long conversation: not run"
+      : system.error
+        ? `  system message after a long conversation: REFUSED — ${system.error}`
+        : `  system message after a long conversation: accepted · ${inPlace === null ? "position not known" : inPlace ? "left in place" : "NOT left in place"} (${read === null ? "?" : pct(read)} of the earlier request read from the cache: ${system.cachedTokens} of ${base?.inputTokens ?? "?"} tokens) · ${followsLatest === null ? "no answer to judge" : followsLatest ? "follows the latest prompt" : "does NOT follow the latest prompt"} — «${answer.slice(0, 60)}»`,
+  ];
+  return { provider, control, accepted, inPlace, followsLatest, spentUsd, lines };
 }
 
 /** What a step can cost at most: its whole request at the dearest input price, nothing cached. */
