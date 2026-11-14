@@ -59,6 +59,11 @@ export interface Message {
    *  dueño adjuntó. Viajan con él en cada llamada, como una imagen pegada en
    *  Claude Code. Nunca se guardan: la transcripción sólo guarda texto. */
   images?: readonly InlineImage[];
+  /** Tool-result screenshots (lib/agent/screenshots-in-context.ts): the stored addresses of `images`, in order.
+   *  What a turn's row keeps of them — never the pixels —, so a later turn can send the same pictures again. */
+  screenshots?: readonly string[];
+  /** How many screenshots this message had before they were dropped from the conversation; they never come back. */
+  screenshotsDropped?: number;
   /** An in-history system prompt as it is SAVED with a turn's row (lib/agent/plan-mode.ts): which prompt it
    *  was, never its text — the text is rebuilt from the turn's own message 0 when the history is. Only on a
    *  `role: "system"` message that is not the first. */

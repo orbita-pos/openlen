@@ -187,12 +187,11 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(diffConsecutive(wire(roomy.messages), wire(tight.messages))).toEqual({ match: true });
   });
 
-  // A7 (25/10): in jumps, like the microcompact. Before, from the 4th screenshot on EVERY step dropped the
-  // oldest one's pixels and rewrote an earlier message (5 breaks in 8 screenshots); now they pile up to the
-  // same 3 and, past that, all but the newest batch go at once (2 breaks), never more than 3 images.
-  // Across turns the break is accepted: keeping the pixels would re-send up to 3 images in every later
-  // request, and with jumps what is paid again runs only from the last images to the end of the turn.
-  it("screenshots: dropped in jumps mid-turn (a break every few, not every step); the next turn still loses them (accepted)", async () => {
+  // FIXED in the turn (14/11, as Claude Code and DeepSeek keep images): screenshots stay where they were sent.
+  // Before, past three, every batch but the newest lost its pixels (in jumps since A7: 2 breaks in 8
+  // screenshots; one per step before that). Now nothing goes until there have been 40, and then the oldest 20
+  // at once. Across turns the saved row still keeps none — the next task's.
+  it("screenshots: a turn that looks eight times rewrites nothing; the next turn still loses them", async () => {
     const shot = { mimeType: "image/png", dataBase64: "AAAA" };
     const requests: Message[][] = [];
     let step = 0;
@@ -212,10 +211,36 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
       emit: () => {},
     });
     const inTurn = requests.slice(1).map((r, i) => diffConsecutive(wire(requests[i]!), wire(r)).match);
-    expect(inTurn).toEqual([true, true, true, false, true, true, false, true]);
-    expect(Math.max(...requests.map((r) => r.reduce((n, m) => n + (m.images?.length ?? 0), 0)))).toBe(3);
+    expect(inTurn).toEqual([true, true, true, true, true, true, true, true]);
+    expect(requests.at(-1)!.reduce((n, m) => n + (m.images?.length ?? 0), 0)).toBe(8);
     // And across turns, the saved row keeps no screenshot at all.
     expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toMatchObject({ ok: false, cause: "images_dropped" });
+  });
+
+  it("screenshots: past forty in a conversation the oldest twenty go at once — one break, not one per look", async () => {
+    const shot = { mimeType: "image/png", dataBase64: "AAAA" };
+    const requests: Message[][] = [];
+    let step = 0;
+    await runAgentLoop({
+      messages: [{ role: "system", content: "s" }, { role: "user", content: "mira" }],
+      tools: [],
+      openStream: (m) => {
+        requests.push(structuredClone(m));
+        const events: StreamEvent[] =
+          step++ < 45 ? [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, { type: "done", stopReason: { kind: "end_turn" } }] : [{ type: "text_delta", text: "Visto." }, { type: "done", stopReason: { kind: "end_turn" } }];
+        return (async function* () {
+          for (const e of events) yield e;
+        })();
+      },
+      runTool: async () => ({ response: { ok: true, screenshot: "attached below" }, images: [shot] }),
+      emit: () => {},
+      maxTurns: 100,
+    });
+    const breaks = requests.slice(1).flatMap((r, i) => (diffConsecutive(wire(requests[i]!), wire(r)).match ? [] : [i + 1]));
+    // The request after the 41st screenshot is the only one that does not extend the one before it.
+    expect(breaks).toEqual([41]);
+    expect(Math.max(...requests.map((r) => r.reduce((n, m) => n + (m.images?.length ?? 0), 0)))).toBe(40);
+    expect(requests.at(-1)!.reduce((n, m) => n + (m.images?.length ?? 0), 0)).toBe(25);
   });
 
   it("team messages (plegarEquipo): the turn's request and its rebuilt history carry the same envelope", () => {
