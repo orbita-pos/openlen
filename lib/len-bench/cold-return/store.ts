@@ -43,6 +43,25 @@ export function keepBuild(dir: string, built: BuiltCase): void {
   writeJson(path.join(dir, "cases.json"), [...all.values()]);
 }
 
+/** The bench's own copy of a built case's idle-summary job: the server's file is overwritten by every later
+ *  turn of the conversation, a question's included. */
+export const jobFile = (dir: string, caseId: string): string => path.join(dir, "jobs", `${caseId}.json`);
+
+/** A step of the measurement that is paid for with its own cap (spec §8.6). */
+export type Step = "build" | Arm;
+
+/** What a step has spent so far, across every command that ran it: its cap is the step's, so a command that
+ *  died and is run again goes on from here instead of starting a fresh one. */
+export function loadSpend(dir: string, step: Step): number {
+  return readJson<Partial<Record<Step, number>>>(path.join(dir, "spend.json"), {})[step] ?? 0;
+}
+
+export function addSpend(dir: string, step: Step, usd: number): void {
+  const file = path.join(dir, "spend.json");
+  const all = readJson<Partial<Record<Step, number>>>(file, {});
+  writeJson(file, { ...all, [step]: (all[step] ?? 0) + usd });
+}
+
 export const runsFile = (dir: string, arm: Arm): string => path.join(dir, `runs-${arm}.json`);
 
 /** An arm's runs, in a file written whole after each one: a bench that is killed has lost nothing it paid for. */

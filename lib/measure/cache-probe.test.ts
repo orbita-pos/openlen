@@ -185,7 +185,9 @@ describe("the run", () => {
     expect(w.sent).toHaveLength(18);
     expect(w.sent.slice(0, 9).map((s) => s.split(":")[0])).toEqual(["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8"]);
     expect(w.sent.every((s) => s.endsWith(":Probe"))).toBe(true);
-    expect(w.saved).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
+    // Saved after every call — and once more before each second call, which is written down before it is sent.
+    expect(w.saved).toHaveLength(18 + 9);
+    expect(w.saved.filter((n, i, all) => i === 0 || n !== all[i - 1])).toEqual(Array.from({ length: 18 }, (_, i) => i + 1));
     expect(w.clock() - T0).toBeLessThan(181 * 60_000);
     const report = probeReport(state);
     expect(report).toMatchObject({ controlOk: true, complete: true, clean: true, lastWarmMin: 60, firstColdMin: 75 });
@@ -210,5 +212,41 @@ describe("the run", () => {
     expect(await runProbe(state, 0.15, w.deps)).toBe("done");
     expect(w.sent).toHaveLength(8);
     expect(w.sent.some((s) => s.startsWith("p0:"))).toBe(false);
+  });
+});
+
+// Review, finding 11: a read refreshes the entry. A second call that was sent and never came back must not
+// be sent again — the answer would be «warm» because of the first try.
+describe("a second call that was cut", () => {
+  it("is written down BEFORE it is sent, and a run that goes on does not send it again", async () => {
+    const state = newProbeState("run-1", "some-model");
+    for (const entry of state.entries) entry.first = call(T0, 0);
+    const saved: (string | undefined)[] = [];
+    let clock = T0 + 60_000;
+    const killed = new Error("killed");
+    const dying = {
+      now: () => clock,
+      sleep: async (ms: number) => void (clock += ms),
+      save: (s: ProbeState) => void saved.push(s.entries[0]!.secondAttemptedAt),
+      log: () => {},
+      send: async (): Promise<ProbeCall> => {
+        throw killed;
+      },
+    };
+    await expect(runProbe(state, 0.15, dying)).rejects.toBe(killed);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]).toBe(new Date(T0 + 60_000).toISOString());
+    expect(state.entries[0]!.second).toBeNull();
+
+    // Going on: p0 is never sent again; the others are.
+    const sent: string[] = [];
+    const again = { ...dying, save: () => {}, send: async (entry: { id: string }): Promise<ProbeCall> => (sent.push(entry.id), call(clock, 0)) };
+    expect(await runProbe(state, 0.15, again)).toBe("done");
+    expect(sent).not.toContain("p0");
+    expect(sent).toHaveLength(8);
+    const report = probeReport(state);
+    expect(report.rows[0]).toMatchObject({ id: "p0", verdict: "failed" });
+    // The control is the one that was cut: this run cannot speak.
+    expect(report.controlOk).toBe(false);
   });
 });

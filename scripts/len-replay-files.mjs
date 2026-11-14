@@ -21,4 +21,5 @@ export const DEFAULT_FILES = [
   "lib/agent/transcripcion.cold.test.ts",
   // The idle summary (same spec, piece B): one call, with the conversation as it was sent, cancelled by a newer turn.
   "lib/agent/idle-summary.test.ts",
+  "lib/agent/idle-summary-capture.test.ts",
 ];

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { textoVisible } from "@/lib/len-bench/extraer";
 import { buscarEnLaWeb, leerDeLaWeb, problemasDeLaWeb } from "@/lib/len-bench/web-sustituta";
-import { numberPattern, namePattern, printed } from "../corpus";
+import { categoryPattern, numberPattern, namePattern, printed } from "../corpus";
 import { QUESTION_KINDS, type Check, type ReturnCase } from "../types";
 import { BUILD_CASES } from "./build";
 import { CHAT_CASES } from "./chat";
@@ -89,8 +89,14 @@ describe("a chat case", () => {
       const item = c.corpus.of(0)[3]!;
       const value = item.values[d.hidden.key]!;
       const [check] = answerChecks(c, 2);
-      expect(check!.has.source, c.id).toBe(numberPattern(value).source);
-      expect(textoVisible(leerDeLaWeb(c.web, c.corpus.url(0))!), c.id).toContain(`${printed(value)} ${d.hidden.unit}`);
+      const page = textoVisible(leerDeLaWeb(c.web, c.corpus.url(0))!);
+      expect(page, c.id).toContain(`${printed(value)} ${d.hidden.unit}`);
+      // Review, finding 10: the bare number is elsewhere on the page (a price ends in it, another item has it
+      // for something else). The answer has to carry the number WITH its unit, and on the page that pair is
+      // found exactly once: reading any other line cannot pass.
+      expect(check!.has.test(`${printed(value)} ${d.hidden.unit}`), c.id).toBe(true);
+      expect(check!.has.test(`son ${value}`), `${c.id}: the bare number passes`).toBe(false);
+      expect(page.match(new RegExp(check!.has.source, `${check!.has.flags}g`)) ?? [], `${c.id}: «${check!.has.source}» on the page`).toHaveLength(1);
       expect(c.questions[2].prompt, c.id).toContain(item.name);
       // Nobody asks about that attribute while the conversation is built: an answer cannot come from an
       // earlier reply of the assistant.
@@ -109,6 +115,27 @@ describe("a chat case", () => {
       // Under what `web_fetch` hands back whole.
       expect(chars, c.id).toBeLessThan(50_000);
     }
+  });
+
+  it("the unit of an old result is found as people write it, abbreviated too", () => {
+    const unit = (id: string) => answerChecks(CHAT_CASES.find((c) => c.id === id)!, 2)[0]!.has;
+    const value = (id: string) => {
+      const c = CHAT_CASES.find((x) => x.id === id)!;
+      return c.corpus.of(0)[3]!.values[c.corpus.spec.hidden.key]!;
+    };
+    expect(unit("chat-pumps-40k").test(`${value("chat-pumps-40k")} meses de garantía`)).toBe(true);
+    expect(unit("chat-bikes-40k").test(`cada ${printed(value("chat-bikes-40k"))} km`)).toBe(true);
+    expect(unit("chat-mixers-100k").test(`${value("chat-mixers-100k")} min`)).toBe(true);
+    expect(unit("chat-lamps-40k").test(`${printed(value("chat-lamps-40k"))} h de vida útil`)).toBe(true);
+  });
+
+  it("the messages read as Spanish: no «el mayor» or «mejor» glued to a word of the other gender", () => {
+    for (const c of CHAT_CASES) expect(c.build.join("\n"), c.id).not.toMatch(/\b(el mayor|mejor) (capacidad|velocidad|potencia|altura|resolución)\b/);
+  });
+
+  it("a category is found in a search whatever it has in it", () => {
+    expect(categoryPattern("de 3.5 (pulgadas)").test("discos de 3.5 (pulgadas)")).toBe(true);
+    expect(categoryPattern("de 3.5 (pulgadas)").test("discos de 345 pulgadas")).toBe(false);
   });
 
   it("is the same web every time it is generated", async () => {
@@ -170,6 +197,9 @@ describe("how a number or a name is looked for in an answer", () => {
     expect(numberPattern(37).test("37 metros")).toBe(true);
     expect(numberPattern(37).test("137 metros")).toBe(false);
     expect(numberPattern(37).test("3.7")).toBe(false);
+    // A price written with its cents, or grouped with the narrow space Spanish typography uses, is the same number.
+    for (const ok of ["$4,385.00", "4.385,00 pesos", "4 385", "4385.0"]) expect(numberPattern(4_385).test(ok), ok).toBe(true);
+    for (const no of ["4,385.50", "4385.07", "4,385.001"]) expect(numberPattern(4_385).test(no), no).toBe(false);
   });
 
   it("a name is found whatever the case and the dash", () => {

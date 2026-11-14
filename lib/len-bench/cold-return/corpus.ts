@@ -10,6 +10,8 @@ export interface AttrSpec {
   /** As the page's table names it, in lower case: «precio». */
   readonly label: string;
   readonly unit: string;
+  /** How the unit may be written back, as a pattern: «mes(es)?», «km|kil[óo]metros». Absent = as printed. */
+  readonly said?: string;
   readonly min: number;
   readonly max: number;
   readonly step: number;
@@ -83,12 +85,24 @@ export function printed(n: number): string {
   return n.toLocaleString("en-US");
 }
 
-/** A pattern that finds a number however it was written back: 4385, 4,385, 4.385 or 4 385 — and not as part
- *  of a longer number. */
-export function numberPattern(n: number): RegExp {
+/** The digits of a number however they were written back, without what may follow them. */
+function numberSource(n: number): string {
   const digits = String(Math.round(n));
-  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, "[.,\\s\u00a0]?");
-  return new RegExp(`(?<![\\d.,])${grouped}(?![.,]?\\d)`);
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, "[.,\\s\u00a0\u202f]?");
+  return `(?<![\\d.,])${grouped}(?:[.,]0{1,2})?`;
+}
+
+/** A pattern that finds a number however it was written back: 4385, 4,385, 4.385 or 4 385, with or without
+ *  empty cents (4,385.00) — and not as part of a longer number, nor of one with real decimals. */
+export function numberPattern(n: number): RegExp {
+  return new RegExp(`${numberSource(n)}(?![.,]?\\d)`);
+}
+
+/** A pattern for a value as an answer gives it: the number and, right after it, its unit — «11 meses»,
+ *  «2,350 km». The number alone is elsewhere on a page (a price ends in it, another item has it for something
+ *  else); with its unit it is one line of one table. */
+export function valuePattern(n: number, attr: AttrSpec): RegExp {
+  return new RegExp(`${numberSource(n)}\\s*(?:${attr.said ?? attr.unit})(?![A-Za-zÁÉÍÓÚáéíóúñ])`, "i");
 }
 
 const VOWELS: Readonly<Record<string, string>> = { a: "[aá]", e: "[eé]", i: "[ií]", o: "[oó]", u: "[uúü]", n: "[nñ]" };
@@ -101,7 +115,7 @@ export function categoryPattern(category: string): RegExp {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   const stem = plain.replace(/s$/, "").replace(/([aeiou][lrnd])e$/, "$1");
-  return new RegExp([...stem].map((ch) => VOWELS[ch] ?? ch.replace(/[.*+?^${}()|[\]\\]/g, "\\/** A pattern for a name, whatever the case and with any dash or space between its parts. */")).join(""), "i");
+  return new RegExp([...stem].map((ch) => VOWELS[ch] ?? ch.replace(/[.*+?^${}()|[\]\\]/g, (special) => `\\${special}`)).join(""), "i");
 }
 
 /** A pattern for a name, whatever the case and with any dash or space between its parts. */
@@ -109,14 +123,17 @@ export function namePattern(name: string): RegExp {
   return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-\s]+/g, "[-\\s\u2011]?"), "i");
 }
 
+// 🔴 No sentence here may use a unit that a `hidden` attribute is printed in (meses, minutos, horas,
+// kilómetros, páginas): an «old result» is asked back as its number WITH its unit, and that pair has to be
+// on the page exactly once — in the item's table (pinned in cases.test.ts).
 const OPINIONS = [
-  "En las pruebas de {site} funcionó {h} horas seguidas sin incidencias y con un consumo estable.",
-  "Quien la compró en la última temporada destaca que la instalación tomó menos de {m} minutos.",
+  "En las pruebas de {site} funcionó {h} jornadas seguidas sin incidencias y con un consumo estable.",
+  "Quien la compró en la última temporada destaca que la instalación tomó menos de {m} segundos.",
   "El fabricante, {maker}, la revisó en su versión {v} y cambió el empaque y los sellos.",
   "Se entrega en caja de {k} kilos con manual impreso y una lista de repuestos numerada.",
   "En el taller de {site} midieron una variación de apenas {p} por ciento entre unidades del mismo lote.",
   "Lleva {y} años en el catálogo y sigue entre las más pedidas de su categoría.",
-  "Su ficha recomienda una revisión cada {r} meses y guardar el comprobante de compra.",
+  "Su ficha recomienda una revisión cada {r} semanas y guardar el comprobante de compra.",
   "Para pedidos de más de {q} unidades, {maker} ofrece entrega directa desde su almacén.",
 ] as const;
 

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { RETURN_CASES } from "./cases";
 import { usdOf } from "./cost";
-import { Budget, BudgetStop, buildCase, estimateRunUsd, runArm, runOnce, type BuiltCase, type RunStore, type World } from "./runner";
+import { Budget, BudgetStop, SetupStop, buildCase, estimateRunUsd, runArm, runOnce, type BuiltCase, type RunStore, type World } from "./runner";
 import type { Arm, RunResult } from "./types";
 
 const CHAT = RETURN_CASES.find((c) => c.id === "chat-pumps-40k")!;
@@ -17,8 +17,11 @@ interface Script {
   files?: Record<string, string>;
   mechanism?: { firstQuestionTrimmed: boolean; summaryPromoted: boolean; sandboxRows: number };
   summary?: { outcome: string; usage: { inputTokens: number; cachedTokens: number; outputTokens: number } | null };
-  capture?: boolean;
-  callsPerTurn?: { inputTokens: number; cachedTokens: number; outputTokens: number }[];
+  /** What is wrong with the summary's job on file, asked after each build message (`n` = how many were sent). */
+  job?: (n: number) => string | null;
+  callsPerTurn?: { inputTokens: number; cachedTokens: number; outputTokens: number; provider?: string; reported?: boolean }[];
+  /** Rows of the real terminal's box for the project. */
+  sandboxRows?: number;
 }
 
 function world(script: Script = {}): World & { readonly log: string[]; readonly allowed: number[] } {
@@ -44,8 +47,14 @@ function world(script: Script = {}): World & { readonly log: string[]; readonly 
     async files() {
       return script.files ?? {};
     },
-    async hasCapture() {
-      return script.capture ?? true;
+    async jobProblem() {
+      return script.job?.(asked) ?? null;
+    },
+    async keepJob(caseId) {
+      log.push(`keep job ${caseId}`);
+    },
+    async trimEffect() {
+      return { tokensBefore: 41_500, tokensAfter: 30_000, resultsCleared: 9 };
     },
     async conversationTokens() {
       return 41_500;
@@ -66,11 +75,11 @@ function world(script: Script = {}): World & { readonly log: string[]; readonly 
       return asked;
     },
     async callsSince() {
-      return (script.callsPerTurn ?? [{ inputTokens: 60_000, cachedTokens: 0, outputTokens: 400 }]).map((c, i) => ({ ...c, step: i + 1 }));
+      return (script.callsPerTurn ?? [{ inputTokens: 60_000, cachedTokens: 0, outputTokens: 400 }]).map((c, i) => ({ provider: "deepinfra", reported: true, ...c, step: i + 1 }));
     },
     async mechanism() {
       log.push("mechanism");
-      return script.mechanism ?? { firstQuestionTrimmed: false, summaryPromoted: false, sandboxRows: 0 };
+      return script.mechanism ?? { firstQuestionTrimmed: false, summaryPromoted: false, sandboxRows: script.sandboxRows ?? 0 };
     },
     async summarize() {
       log.push("summarize");
@@ -103,8 +112,10 @@ describe("building a case", () => {
     const result = await buildCase(CHAT, w, new Budget(5));
     expect(w.log[0]).toBe("create chat-pumps-40k");
     expect(w.log.filter((l) => l.startsWith("ask"))).toHaveLength(15);
-    expect(w.log.at(-1)).toBe("save chat-pumps-40k");
+    expect(w.log.slice(-2)).toEqual(["keep job chat-pumps-40k", "save chat-pumps-40k"]);
     expect(result).toMatchObject({ caseId: "chat-pumps-40k", projectId: "p1", assistantId: "a1", conversation: "assistant:a1", tokens: 41_500, turns: 15 });
+    // What the trim will free on this conversation is read once, for free, and kept with the case.
+    expect(result.trim).toEqual({ tokensBefore: 41_500, tokensAfter: 30_000, resultsCleared: 9 });
     expect(result.spentUsd).toBeCloseTo(15 * usdOf({ inputTokens: 60_000, cachedTokens: 0, outputTokens: 400 }), 9);
   });
 
@@ -115,10 +126,30 @@ describe("building a case", () => {
     expect(w.log.at(-1)).toBe("discard p1");
   });
 
-  it("without the summary's job on file the server is not the building one, and it says so before keeping anything", async () => {
-    const w = world({ capture: false });
-    await expect(buildCase(PAGE, w, new Budget(5))).rejects.toThrow(/OPENLEN_IDLE_SUMMARY_CAPTURE_DIR/);
+  // Review, finding 4: a server that is not the building one was found out only after every message was paid.
+  it("🔴 the server is checked after the FIRST message: without the summary's job on file it stops everything, one turn in", async () => {
+    const w = world({ job: () => "no job on file" });
+    const failure = await buildCase(PAGE, w, new Budget(5)).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(SetupStop);
+    expect(String(failure)).toMatch(/OPENLEN_IDLE_SUMMARY_CAPTURE_DIR/);
+    expect(w.log.filter((l) => l.startsWith("ask"))).toHaveLength(1);
     expect(w.log.some((l) => l.startsWith("save"))).toBe(false);
+    expect(w.log.at(-1)).toBe("discard p1");
+  });
+
+  it("🔴 a box of the real terminal opened while building stops everything, one turn in", async () => {
+    const w = world({ sandboxRows: 1 });
+    const failure = await buildCase(PAGE, w, new Budget(5)).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(SetupStop);
+    expect(String(failure)).toMatch(/OPENLEN_SANDBOX=0/);
+    expect(w.log.filter((l) => l.startsWith("ask"))).toHaveLength(1);
+  });
+
+  // Review, finding 5: the job on file must be THIS conversation's last turn's, and the bench keeps its own copy.
+  it("a job on file that is not the last turn's is not a case: nothing is kept", async () => {
+    const w = world({ job: (n) => (n === PAGE.build.length ? "the job on file is of an earlier turn" : null) });
+    await expect(buildCase(PAGE, w, new Budget(5))).rejects.toThrow(/earlier turn/);
+    expect(w.log.some((l) => l.startsWith("save") || l.startsWith("keep job"))).toBe(false);
   });
 });
 
@@ -204,6 +235,54 @@ describe("the money", () => {
     expect(w.log.at(-1)).toBe("restore chat-pumps-40k");
   });
 
+  // Review, finding 1 (critical): with no step rows the runner counted $0 for ever and the cap never came.
+  it("🔴 a turn that was answered with no call recorded stops everything: the bench cannot count what it spends", async () => {
+    const w = world({ answer: rightAnswers, callsPerTurn: [] });
+    const failure = await runOnce(CHAT, built(), "today", 1, w, new Budget(1)).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(SetupStop);
+    expect(String(failure)).toMatch(/OPENLEN_STEP_TELEMETRY/);
+    expect(w.log.filter((l) => l.startsWith("ask"))).toHaveLength(1);
+    expect(w.log.at(-1)).toBe("restore chat-pumps-40k");
+  });
+
+  it("a turn the route could not even start has no calls, and that is not the server's fault", async () => {
+    const w = world({ answer: () => ({ answer: "", error: { code: "upstream", message: "503" } }), callsPerTurn: [] });
+    const result = await runOnce(CHAT, built(), "today", 1, w, new Budget(1));
+    expect(result.infra).toMatch(/cold return/);
+  });
+
+  // Review, finding 2: a fallback's calls are another provider's, at another price, and the route forgives them.
+  it("🔴 a call answered by another provider stops everything: the bench counts DeepInfra's price", async () => {
+    const w = world({ answer: rightAnswers, callsPerTurn: [{ inputTokens: 60_000, cachedTokens: 0, outputTokens: 400, provider: "fireworks" }] });
+    const failure = await runOnce(CHAT, built(), "today", 1, w, new Budget(1)).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(SetupStop);
+    expect(String(failure)).toMatch(/OPENLEN_AGENT_PROVIDERS=deepinfra/);
+  });
+
+  // Review, finding 9: the balance cuts a turn with a polite closing text, which was graded as a wrong answer.
+  it("a turn the balance cut short is the cap, not a wrong answer", async () => {
+    const w = world({ answer: () => ({ answer: "Me quedé sin saldo a mitad.", error: { code: "budget_limit", message: "Se acabó el saldo de la cuenta" } }) });
+    await expect(runOnce(CHAT, built(), "today", 1, w, new Budget(1))).rejects.toBeInstanceOf(BudgetStop);
+  });
+
+  // Review, finding 3: a command that died and was run again started a fresh cap.
+  it("a command that is run again starts from what its step had already spent, and tells whoever keeps the count", () => {
+    const seen: number[] = [];
+    const budget = new Budget(1, 0.4, (usd) => seen.push(usd));
+    expect(budget.remaining()).toBeCloseTo(0.6, 9);
+    budget.add(0.25);
+    expect(budget.remaining()).toBeCloseTo(0.35, 9);
+    expect(seen).toEqual([0.25]);
+  });
+
+  it("a call the provider reported no usage for is not counted, and the run says how many there were", async () => {
+    const w = world({ answer: rightAnswers, callsPerTurn: [{ inputTokens: 0, cachedTokens: 0, outputTokens: 0, reported: false }, { inputTokens: 60_000, cachedTokens: 0, outputTokens: 400 }] });
+    const result = await runOnce(CHAT, built(), "today", 1, w, new Budget(1));
+    expect(result.unreportedCalls).toBe(3);
+    // The cold return's first call is the first one the provider answered: the failed attempt before it is not.
+    expect(result.firstCallTokens).toBe(60_000);
+  });
+
   it("a run costs more to estimate the longer its conversation, and the summary arm more than the others", () => {
     expect(estimateRunUsd(100_000, "today")).toBeGreaterThan(estimateRunUsd(40_000, "today"));
     expect(estimateRunUsd(100_000, "trim_summary")).toBeGreaterThan(estimateRunUsd(100_000, "today"));
@@ -242,15 +321,27 @@ describe("an arm", () => {
   });
 
   it("a run that was left out of the count is run again only when asked to", async () => {
-    const w = world({ mechanism: { firstQuestionTrimmed: false, summaryPromoted: false, sandboxRows: 0 } });
+    // The provider fails every cold return: the run is out, and it is nobody's configuration.
+    const w = world({ answer: () => ({ answer: "", error: { code: "upstream", message: "503" } }) });
     const store = memory();
-    await runArm({ cases: [CHAT], builds, arm: "trim", runs: 1, budget: new Budget(50), world: w, store, log: () => {} });
+    await runArm({ cases: [CHAT], builds, arm: "today", runs: 1, budget: new Budget(50), world: w, store, log: () => {} });
     expect(store.kept).toHaveLength(1);
     expect(store.kept[0]!.infra).toBeDefined();
-    await runArm({ cases: [CHAT], builds, arm: "trim", runs: 1, budget: new Budget(50), world: w, store, log: () => {} });
+    await runArm({ cases: [CHAT], builds, arm: "today", runs: 1, budget: new Budget(50), world: w, store, log: () => {} });
     expect(store.kept).toHaveLength(1);
-    await runArm({ cases: [CHAT], builds, arm: "trim", runs: 1, budget: new Budget(50), world: w, store, retryInfra: true, log: () => {} });
+    await runArm({ cases: [CHAT], builds, arm: "today", runs: 1, budget: new Budget(50), world: w, store, retryInfra: true, log: () => {} });
     expect(store.kept).toHaveLength(2);
+  });
+
+  // Review, finding 4: a wrong server repeats in every run — all 36 would pay their first question for nothing.
+  it("🔴 a run whose mechanism did not happen stops the arm: the next ones would only repeat it", async () => {
+    const w = world({ mechanism: { firstQuestionTrimmed: false, summaryPromoted: false, sandboxRows: 0 } });
+    const store = memory();
+    const failure = await runArm({ cases, builds, arm: "trim", runs: 3, budget: new Budget(50), world: w, store, log: () => {} }).catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(SetupStop);
+    expect(String(failure)).toMatch(/was not trimmed/);
+    expect(store.kept).toHaveLength(1);
+    expect(w.log.filter((l) => l.startsWith("ask"))).toHaveLength(1);
   });
 
   it("🔴 stops BEFORE the run that might cross the cap, and says it stopped at the cap", async () => {

@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { eq } from "drizzle-orm";
 import { Pool } from "pg";
+import { COLD_TRIM_MARK } from "@/lib/agent/cold-return";
 import { estimateTokens } from "@/lib/agent/compaction/estimate";
 import { runIdleSummary } from "@/lib/agent/idle-summary";
 import { idleSummaryCaptureFile } from "@/lib/agent/idle-summary-capture";
@@ -17,7 +18,6 @@ import { idleSummaryJobFor, type IdleSummaryJobInput } from "@/lib/agent/idle-su
 import { WHOLE_HISTORY, historialDesdeLaBase } from "@/lib/agent/transcripcion";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { createAssistant } from "@/lib/assistants/store";
-import { CENTICREDITOS_POR_CREDITO } from "@/lib/credits";
 import { db, schema } from "@/lib/db";
 import { DEFAULT_LOOK } from "@/lib/figure/look";
 import { DIR_WEB, apagarEnEsteProceso, exigirBaseLocal } from "@/lib/len-bench/entorno";
@@ -26,10 +26,11 @@ import { createThrowawayProject, deleteThrowawayProject } from "@/lib/len-bench/
 import { acunarCookie, comprobarSesion, enviarTurno, textoDeLen } from "@/lib/len-bench/sesion";
 import { ficheroDeLaWeb, webASerializable } from "@/lib/len-bench/web-sustituta";
 import { turnosParaElHistorial } from "@/lib/projects/chat";
+import { lowerBalance, openBalance } from "./balance";
 import type { TokenUsage } from "./cost";
 import type { Target, World } from "./runner";
 import { ageConversation, restoreSnapshot, saveSnapshot, type Sql } from "./snapshot";
-import { PAUSE_MS, benchIdleMinTokens, capturesDir } from "./store";
+import { PAUSE_MS, benchIdleMinTokens, capturesDir, jobFile } from "./store";
 
 const ZONE = "America/Mexico_City";
 
@@ -62,6 +63,9 @@ export interface BenchSession {
   readonly owner: { readonly id: string; readonly email: string };
   readonly cookie: string;
   readonly sql: Sql;
+  /** The server's lock: the owner's balance is set to what this command may spend (./balance.ts). */
+  open(usd: number): Promise<void>;
+  /** Leaves the balance at zero and lets go of the database. */
   close(): Promise<void>;
 }
 
@@ -72,6 +76,9 @@ export interface BenchSession {
  */
 export async function startBench(base: string): Promise<BenchSession> {
   apagarEnEsteProceso(process.cwd());
+  // The one call the bench makes itself (the summary) goes to the provider everything is counted at, with
+  // no fallback — as the server's turns do (./arms.ts).
+  process.env.OPENLEN_AGENT_PROVIDERS = "deepinfra";
   await exigirBaseLocal();
   const identity = identidadDeEval(process.env.EVAL_USER_EMAIL);
   if (!identity.ok) throw new Error(identity.motivo);
@@ -82,18 +89,32 @@ export async function startBench(base: string): Promise<BenchSession> {
     [owner] = await db.insert(schema.users).values({ id: crypto.randomUUID(), email: identity.email, name: "Len-Bench" }).returning({ id: schema.users.id, email: schema.users.email });
   }
   if (!owner) throw new Error("the evaluation identity could not be created");
-  const cookie = await acunarCookie({ userId: owner.id, email: owner.email, entorno: process.env });
-  await comprobarSesion(base, cookie, owner.id);
+  const ownerId = owner.id;
+  const cookie = await acunarCookie({ userId: ownerId, email: owner.email, entorno: process.env });
+  await comprobarSesion(base, cookie, ownerId);
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
-  return { owner, cookie, sql: poolSql(pool), close: () => pool.end() };
+  const sql = poolSql(pool);
+  return {
+    owner,
+    cookie,
+    sql,
+    open: (usd) => openBalance(sql, ownerId, usd),
+    async close() {
+      await lowerBalance(sql, ownerId, 0).catch(() => {});
+      await pool.end();
+    },
+  };
 }
 
 export interface WorldOptions {
   readonly base: string;
-  readonly session: BenchSession;
+  readonly session: Pick<BenchSession, "owner" | "cookie" | "sql">;
   /** The bench's folder (`BENCH_DIR`). */
   readonly dir: string;
+  /** A question's turn is asked to stop after this long, like the panel's ■. */
   readonly timeoutTurnMs: number;
+  /** A building turn's (the first turn of an app can take longer). */
+  readonly timeoutBuildMs: number;
   readonly log: (line: string) => void;
 }
 
@@ -101,6 +122,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface StepRow {
   readonly step: number;
+  readonly provider: string;
   readonly inputTokens: number | null;
   readonly cachedTokens: number | null;
   readonly outputTokens: number | null;
@@ -110,11 +132,27 @@ export function createWorld(o: WorldOptions): World {
   const { sql, owner, cookie } = o.session;
   const webFile = (projectId: string) => ficheroDeLaWeb(path.join(process.cwd(), DIR_WEB), projectId);
   const captureFile = (t: Target) => idleSummaryCaptureFile(capturesDir(o.dir), `${t.projectId}:${t.conversation ?? ""}`);
+  const rowsOf = (t: Target) => turnosParaElHistorial(t.projectId, ...(t.conversation ? [t.conversation] : []));
   const stepsAfter = (t: Target, mark: string) =>
     sql.query<StepRow>(
-      `select "step", "inputTokens", "cachedTokens", "outputTokens" from "agentRequestSteps" where "projectId" = $1 and "createdAt" > $2::timestamp order by "createdAt", "step"`,
+      `select "step", "provider", "inputTokens", "cachedTokens", "outputTokens" from "agentRequestSteps" where "projectId" = $1 and "createdAt" > $2::timestamp order by "createdAt", "step"`,
       [t.projectId, mark],
     );
+  /** The conversation's newest row: its id, and how its turn ended. */
+  const lastRow = async (t: Target) =>
+    (
+      await sql.query<{ id: string; endReason: string | null }>(
+        `select "id", "endReason" from "projectChatMessages" where "projectId" = $1 and "conversation" is not distinct from $2 order by "createdAt" desc limit 1`,
+        [t.projectId, t.conversation],
+      )
+    )[0] ?? null;
+  const readJob = (file: string): IdleSummaryJobInput | null => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8")) as IdleSummaryJobInput;
+    } catch {
+      return null;
+    }
+  };
 
   return {
     async createProject(c) {
@@ -132,22 +170,30 @@ export function createWorld(o: WorldOptions): World {
       return { projectId, assistantId: made.assistant.id, conversation: assistantConversationKey(made.assistant.id) };
     },
 
-    async allow(usd) {
-      // One credit is one cent, and a turn is charged at least what it costs at list price: a balance of
-      // what is left of the cap stops a turn before it spends more than that.
-      const centicredits = Math.max(0, Math.floor(usd * 100 * CENTICREDITOS_POR_CREDITO));
-      await db.update(schema.users).set({ credits: centicredits, creditsRefreshedAt: new Date() }).where(eq(schema.users.id, owner.id));
-    },
+    allow: (usd) => lowerBalance(sql, owner.id, usd),
 
-    async ask(target, prompt) {
-      const events = await enviarTurno({
-        base: o.base,
-        cookie,
-        cuerpo: { projectId: target.projectId, prompt, turnId: crypto.randomUUID(), history: [], esfuerzo: "auto", zonaHoraria: ZONE, ...(target.assistantId ? { assistantId: target.assistantId } : {}) },
-        timeoutMs: o.timeoutTurnMs,
-      });
-      const error = events.find((e) => e.nombre === "error")?.datos as { code?: unknown; message?: unknown } | undefined;
-      return { answer: textoDeLen(events), error: error ? { code: String(error.code ?? "error"), message: String(error.message ?? "") } : null };
+    async ask(target, prompt, opts) {
+      let answer = "";
+      let error: { code: string; message: string } | null = null;
+      try {
+        const events = await enviarTurno({
+          base: o.base,
+          cookie,
+          cuerpo: { projectId: target.projectId, prompt, turnId: crypto.randomUUID(), history: [], esfuerzo: "auto", zonaHoraria: ZONE, ...(target.assistantId ? { assistantId: target.assistantId } : {}) },
+          timeoutMs: opts?.slow ? o.timeoutBuildMs : o.timeoutTurnMs,
+        });
+        answer = textoDeLen(events);
+        const sent = events.find((e) => e.nombre === "error")?.datos as { code?: unknown; message?: unknown } | undefined;
+        if (sent) error = { code: String(sent.code ?? "error"), message: String(sent.message ?? "") };
+      } catch (err) {
+        // The request itself failed — the route refused it, the connection dropped, or the turn was asked to
+        // stop at its time limit. Not an answer: the runner counts whatever calls it made and goes on.
+        const aborted = err instanceof Error && err.name === "AbortError";
+        error = { code: aborted ? "timeout" : "transport", message: err instanceof Error ? err.message.slice(0, 300) : String(err) };
+      }
+      // A turn the balance cut short closes politely, with no error event: its row says how it ended.
+      if (!error && (await lastRow(target))?.endReason === "budget_limit") error = { code: "budget_limit", message: "the turn was cut by the balance" };
+      return { answer, error };
     },
 
     async files(target) {
@@ -156,13 +202,39 @@ export function createWorld(o: WorldOptions): World {
       return { ...Object.fromEntries(rows.map((r) => [r.path, r.content])), ...(project?.html ? { "/index.html": project.html } : {}) };
     },
 
-    async hasCapture(target) {
-      return fs.existsSync(captureFile(target));
+    async jobProblem(target) {
+      const file = captureFile(target);
+      if (!fs.existsSync(file)) return `the idle summary's job was not written to a file (${file})`;
+      const job = readJob(file);
+      if (!job || job.projectId !== target.projectId) return "the job on file is not this project's";
+      const last = await lastRow(target);
+      if (!last || job.rowId !== last.id) return "the job on file is of an earlier turn, not of the conversation's last one";
+      return null;
+    },
+
+    async keepJob(caseId, target) {
+      const kept = jobFile(o.dir, caseId);
+      fs.mkdirSync(path.dirname(kept), { recursive: true });
+      fs.copyFileSync(captureFile(target), kept);
     },
 
     async conversationTokens(target) {
-      const rows = await turnosParaElHistorial(target.projectId, ...(target.conversation ? [target.conversation] : []));
-      return Math.round(estimateTokens(historialDesdeLaBase(rows, undefined, undefined, WHOLE_HISTORY) ?? []));
+      return Math.round(estimateTokens(historialDesdeLaBase(await rowsOf(target), undefined, undefined, WHOLE_HISTORY) ?? []));
+    },
+
+    async trimEffect(target) {
+      // What a cold turn would send, against the conversation whole: no model, no turn.
+      const rows = await rowsOf(target);
+      const whole = historialDesdeLaBase(rows, undefined, undefined, WHOLE_HISTORY) ?? [];
+      const trimmed = historialDesdeLaBase(rows, undefined, undefined, COLD_TRIM_MARK) ?? [];
+      let resultsCleared = 0;
+      whole.forEach((message, i) => {
+        const after = trimmed[i]?.functionResponses ?? [];
+        (message.functionResponses ?? []).forEach((response, j) => {
+          if (JSON.stringify(response) !== JSON.stringify(after[j])) resultsCleared += 1;
+        });
+      });
+      return { tokensBefore: Math.round(estimateTokens(whole)), tokensAfter: Math.round(estimateTokens(trimmed)), resultsCleared };
     },
 
     async save(caseId, target) {
@@ -194,9 +266,7 @@ export function createWorld(o: WorldOptions): World {
         last = rows.length;
         await sleep(1_000);
       }
-      const unreported = rows.filter((r) => r.inputTokens === null).length;
-      if (unreported > 0) o.log(`  (${unreported} call(s) with no usage from the provider: counted as zero)`);
-      return rows.map((r) => ({ step: r.step, inputTokens: r.inputTokens ?? 0, cachedTokens: r.cachedTokens ?? 0, outputTokens: r.outputTokens ?? 0 }));
+      return rows.map((r) => ({ step: r.step, provider: r.provider, reported: r.inputTokens !== null, inputTokens: r.inputTokens ?? 0, cachedTokens: r.cachedTokens ?? 0, outputTokens: r.outputTokens ?? 0 }));
     },
 
     async mechanism(target, before) {
@@ -212,10 +282,11 @@ export function createWorld(o: WorldOptions): World {
     },
 
     async summarize(built, run) {
-      const file = captureFile(built);
-      if (!fs.existsSync(file)) return { outcome: `no job on file (${file})`, usage: null };
-      const input = JSON.parse(fs.readFileSync(file, "utf8")) as IdleSummaryJobInput;
-      if (input.projectId !== built.projectId) return { outcome: "the job on file is another project's", usage: null };
+      // The bench's own copy, kept when the case was built: the server's file is overwritten by later turns.
+      const file = jobFile(o.dir, built.caseId);
+      const input = fs.existsSync(file) ? readJob(file) : null;
+      if (!input) return { outcome: `no job kept for this case (${file}): build it again`, usage: null };
+      if (input.projectId !== built.projectId) return { outcome: "the job kept is another project's", usage: null };
       const job = idleSummaryJobFor({ ...input, minTokens: benchIdleMinTokens(built.tokens) });
       let usage: TokenUsage | null = null;
       // The same function the idle timer calls; only the charge is listened to, for the bench's own count.

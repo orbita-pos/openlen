@@ -33,6 +33,16 @@ describe("the grade of an answer", () => {
     expect(result.failed).toEqual(["does not say it is done", "says it cannot", "the button was not changed", "the old button is still there", "no file says 750", "filler text was left"]);
   });
 
+  // Review, finding 10: «**37** metros» is the right answer.
+  it("an answer is read without its emphasis marks", () => {
+    const fact: ReturnQuestion = { kind: "early", prompt: "…", checks: [{ on: "answer", has: /\b37\s*metros/i, why: "no depth" }, { on: "answer", has: /Kuntur K-417/, why: "no name" }] };
+    expect(grade(fact, { answer: "Tu pozo tiene **37** metros; la `Kuntur K-417` sirve.", files: {} }).pass).toBe(true);
+    expect(grade(fact, { answer: "Son __37__ metros y la *Kuntur K-417*.", files: {} }).pass).toBe(true);
+    // A file is read as it is: an asterisk there is code.
+    const file: ReturnQuestion = { kind: "continue", prompt: "…", checks: [{ on: "file", path: "/a.ts", has: /a \* b/, why: "no product" }] };
+    expect(grade(file, { answer: "ok", files: { "/a.ts": "const c = a * b;" } }).pass).toBe(true);
+  });
+
   it("a file that is not there has nothing in it", () => {
     const result = grade(question, { answer: "Hecho.", files: { "/other.html": "Pide la tuya 750" } });
     expect(result.failed).toEqual(["the button was not changed"]);
@@ -113,6 +123,14 @@ describe("what a run costs", () => {
     expect(cost.costUsd).toBeCloseTo(usdOf(calls[0]!) + usdOf({ ...summary, cachedTokens: summary.inputTokens }), 9);
   });
 
+  // Review, finding 8: a first attempt that failed has no usage; the call after it was priced as warm.
+  it("the first call is the first the provider answered: a failed attempt before it does not take its place", () => {
+    const calls = [call(0, 1, 0, 0, 0), call(0, 2, 120_000, 119_000), call(1, 1, 121_000, 120_000)];
+    const cost = runCost(calls);
+    expect(cost.firstCallTokens).toBe(120_000);
+    expect(cost.costUsd).toBeCloseTo(usdOf({ ...calls[1]!, cachedTokens: 0 }) + usdOf(calls[2]!), 9);
+  });
+
   it("a run with no calls recorded has no cost to speak of", () => {
     expect(runCost([])).toEqual({ costUsd: 0, spentUsd: 0, firstCallTokens: 0 });
   });
@@ -178,11 +196,28 @@ describe("the gates (spec §8.5)", () => {
     expect(gates(input(today, runs("trim", "a", ALL, 0.015, 60_000))).cost.pass).toBe(true);
   });
 
-  it("cost is compared case by case: a cheap small case does not hide a dear big one", () => {
+  // Review, finding 6: the mean of each case's saving lets the many small cases decide; the money is in the long ones.
+  it("cost is the saving of the money as a whole: a big saving on a cheap case does not make up for none on a dear one", () => {
     const today = [...runs("today", "a", ALL, 0.01, 40_000), ...runs("today", "c", ALL, 0.06, 240_000)];
     const arm = [...runs("trim", "a", ALL, 0.002, 10_000), ...runs("trim", "c", ALL, 0.055, 220_000)];
-    // Case a saves 80 %, case c saves 8 %: the mean of the two savings, not of the dollars.
-    expect(gates(input(today, arm)).cost.saving).toBeCloseTo((0.8 + (1 - 0.055 / 0.06)) / 2, 6);
+    const cost = gates(input(today, arm)).cost;
+    // $0.07 becomes $0.057: 18.6 % less, though case a alone saves 80 %.
+    expect(cost.saving).toBeCloseTo(1 - 0.057 / 0.07, 6);
+    expect(cost.pass).toBe(false);
+    // Both other readings are given, not hidden: the mean of the cases' savings, and each size apart.
+    expect(cost.meanCaseSaving).toBeCloseTo((0.8 + (1 - 0.055 / 0.06)) / 2, 6);
+    expect(cost.bySize).toEqual([
+      { size: 40, cases: 1, saving: expect.closeTo(0.8, 6) },
+      { size: 220, cases: 1, saving: expect.closeTo(1 - 0.055 / 0.06, 6) },
+    ]);
+  });
+
+  it("a case weighs by what it costs, not by how many of its runs could be counted", () => {
+    const today = [...runs("today", "a", ALL, 0.01, 40_000), ...runs("today", "c", ALL, 0.06, 240_000)];
+    const arm = [...runs("trim", "a", ALL, 0.002, 10_000), ...runs("trim", "c", ALL, 0.055, 220_000)];
+    arm[4] = { ...arm[4]!, infra: "the provider failed" };
+    arm[5] = { ...arm[5]!, infra: "the provider failed" };
+    expect(gates(input(today, arm)).cost.saving).toBeCloseTo(1 - 0.057 / 0.07, 6);
   });
 
   it("what could not be judged counts for neither side, and is said", () => {

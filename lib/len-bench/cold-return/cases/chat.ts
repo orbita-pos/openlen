@@ -8,7 +8,7 @@
 //   · about the LAST list that was looked at (a recent result, which the trim keeps);
 //   · a detail of the FIRST list that nobody asked about then (an old result, which the trim clears: the
 //     assistant has to read the page again, or say it no longer has it — never make it up).
-import { makeCorpus, namePattern, numberPattern, type AttrSpec, type Corpus, type DomainSpec } from "../corpus";
+import { makeCorpus, namePattern, numberPattern, valuePattern, type AttrSpec, type Corpus, type DomainSpec } from "../corpus";
 import type { ReturnCase } from "../types";
 
 interface ChatSpec {
@@ -58,12 +58,12 @@ export function chatCase(spec: ChatSpec): ReturnCase & { readonly corpus: Corpus
 
   const build = [
     `Hola. ${spec.who} Dos cosas para que las tengas presentes: ${spec.facts[0].said}, y ${spec.facts[1].said}. Quiero que me ayudes a comparar ${d.plural} en ${d.site}. Empieza por las ${cat(0)}: ¿cuáles hay y cuánto cuesta cada una?`,
-    `Bien. Ahora mira las ${cat(1)} en el mismo sitio. ¿Cuál tiene mejor ${second.label}?`,
+    `Bien. Ahora mira las ${cat(1)} en el mismo sitio. ¿Cuál destaca más en ${second.label}?`,
     `Revisa también las ${cat(2)}. Dime la más barata y su ${second.label}.`,
     `Compara la ${a.name} con la ${b.name}: ¿cuál me conviene por ${price.label}?`,
     `Sigamos con las ${cat(3)}. ¿Hay alguna por debajo de ${Math.round((price.min + price.max) / 2)} ${price.unit}?`,
-    `Y las ${cat(4)}, ¿qué tal? Dame las tres con mejor ${second.label}.`,
-    `De todo lo que hemos visto hasta ahora, ¿cuál tiene el mayor ${second.label}? Dime de qué lista es.`,
+    `Y las ${cat(4)}, ¿qué tal? Dame las tres que más destacan en ${second.label}.`,
+    `De todo lo que hemos visto hasta ahora, ¿cuál tiene el valor más alto de ${second.label}? Dime de qué lista es.`,
     `Ahora las ${cat(5)}. Resúmelas en pocas líneas.`,
     `Mira las ${cat(6)} y dime cuáles dos elegirías tú y por qué.`,
     `Cambio de planes: necesito decidir antes de fin de mes. Revisa las ${cat(7)} con eso en mente.`,
@@ -105,7 +105,7 @@ export function chatCase(spec: ChatSpec): ReturnCase & { readonly corpus: Corpus
       {
         kind: "old_result",
         prompt: `Y una de la primera lista que revisamos, las ${cat(0)}: ¿qué ${d.hidden.label} tiene la ${old.name}?`,
-        checks: [{ on: "answer", has: numberPattern(old.values[d.hidden.key]!), why: `no da el ${d.hidden.label} de la ${old.name} (${old.values[d.hidden.key]} ${d.hidden.unit}), que sólo está en su ficha` }],
+        checks: [{ on: "answer", has: valuePattern(old.values[d.hidden.key]!, d.hidden), why: `no da el ${d.hidden.label} de la ${old.name} (${old.values[d.hidden.key]} ${d.hidden.unit}), que sólo está en su ficha` }],
       },
     ],
     corpus,
@@ -122,7 +122,7 @@ const PUMPS: DomainSpec = {
   brands: ["Kuntur", "Yaku", "Mayu", "Illapa", "Sumaq", "Wayra", "Qocha", "Tika"],
   categories: ["sumergibles", "periféricas", "centrífugas", "solares", "autocebantes", "multietapa", "manuales", "portátiles", "industriales"],
   attrs: [PRICE(2_400, 38_000, 35), { key: "caudal", label: "caudal", unit: "litros por minuto", min: 20, max: 480, step: 5 }, { key: "altura", label: "altura máxima", unit: "metros", min: 8, max: 140, step: 2 }],
-  hidden: { key: "garantia", label: "garantía", unit: "meses", min: 6, max: 96, step: 1 },
+  hidden: { key: "garantia", label: "garantía", unit: "meses", said: "mes(?:es)?", min: 6, max: 96, step: 1 },
   makers: ["Talleres Pumasillo", "Hidráulica del Cañón", "Fundición Tres Ríos", "Motores Altiplano", "Casa Quillabamba"],
 };
 
@@ -134,7 +134,7 @@ const BIKES: DomainSpec = {
   brands: ["Cierzo", "Brisa", "Garúa", "Tramontana", "Solano", "Levante", "Ábrego", "Galerna"],
   categories: ["urbanas", "plegables", "eléctricas", "infantiles", "gravel", "montañeras", "tándem", "reclinadas", "cargueras"],
   attrs: [PRICE(3_200, 64_000, 45), { key: "peso", label: "peso", unit: "gramos", min: 7_200, max: 28_000, step: 100 }, { key: "velocidades", label: "velocidades", unit: "marchas", min: 1, max: 27, step: 1 }],
-  hidden: { key: "revision", label: "intervalo de revisión", unit: "kilómetros", min: 300, max: 4_000, step: 50 },
+  hidden: { key: "revision", label: "intervalo de revisión", unit: "kilómetros", said: "km|kil[óo]metros", min: 300, max: 4_000, step: 50 },
   makers: ["Cuadros Ribera", "Taller Monteluz", "Ciclos Arrayán", "Fábrica La Rueda", "Hermanos Zubieta"],
 };
 
@@ -146,7 +146,7 @@ const MIXERS: DomainSpec = {
   brands: ["Brasa", "Tizón", "Rescoldo", "Lumbre", "Ascua", "Fogón", "Candela", "Llama"],
   categories: ["espirales", "planetarias", "horizontales", "basculantes", "industriales", "compactas", "refrigeradas", "artesanales", "sobadoras"],
   attrs: [PRICE(8_500, 240_000, 250), { key: "capacidad", label: "capacidad", unit: "kilos de masa", min: 3, max: 160, step: 1 }, { key: "potencia", label: "potencia", unit: "vatios", min: 600, max: 15_000, step: 50 }],
-  hidden: { key: "amasado", label: "tiempo de amasado", unit: "minutos", min: 4, max: 48, step: 1 },
+  hidden: { key: "amasado", label: "tiempo de amasado", unit: "minutos", said: "min(?:utos?)?", min: 4, max: 48, step: 1 },
   makers: ["Refractarios Maipo", "Metalúrgica Lonquén", "Hornería Chiloé", "Fundo San Blas", "Calderas Itata"],
 };
 
@@ -158,7 +158,7 @@ const PRINTERS: DomainSpec = {
   brands: ["Sepia", "Índigo", "Carmín", "Ocre", "Añil", "Bermejo", "Cobalto", "Gualda"],
   categories: ["láser", "térmicas", "matriciales", "fotográficas", "planas", "textiles", "resina", "etiquetadoras", "portátiles"],
   attrs: [PRICE(1_900, 180_000, 95), { key: "velocidad", label: "velocidad", unit: "páginas por minuto", min: 4, max: 120, step: 1 }, { key: "resolucion", label: "resolución", unit: "puntos por pulgada", min: 200, max: 4_800, step: 100 }],
-  hidden: { key: "ciclo", label: "ciclo mensual", unit: "páginas", min: 500, max: 90_000, step: 500 },
+  hidden: { key: "ciclo", label: "ciclo mensual", unit: "páginas", said: "p[áa]ginas", min: 500, max: 90_000, step: 500 },
   makers: ["Gráfica Tucapel", "Imprenta Yungay", "Rodillos Ñuble", "Tipos del Biobío", "Casa Linares"],
 };
 
@@ -170,7 +170,7 @@ const LAMPS: DomainSpec = {
   brands: ["Alba", "Ocaso", "Cénit", "Aurora", "Penumbra", "Fulgor", "Destello", "Lucero"],
   categories: ["colgantes", "empotradas", "solares", "regulables", "industriales", "náuticas", "portátiles", "sumergibles", "decorativas"],
   attrs: [PRICE(180, 9_600, 15), { key: "lumenes", label: "flujo", unit: "lúmenes", min: 120, max: 14_000, step: 20 }, { key: "consumo", label: "consumo", unit: "vatios", min: 2, max: 240, step: 1 }],
-  hidden: { key: "vida", label: "vida útil", unit: "horas", min: 3_000, max: 90_000, step: 500 },
+  hidden: { key: "vida", label: "vida útil", unit: "horas", said: "h|hrs?|horas?", min: 3_000, max: 90_000, step: 500 },
   makers: ["Vidrios Putaendo", "Latonería Petorca", "Luminaria Illapel", "Taller Combarbalá", "Casa Ovalle"],
 };
 
@@ -182,7 +182,7 @@ const LOOMS: DomainSpec = {
   brands: ["Urdimbre", "Lanzadera", "Trama", "Huso", "Madeja", "Ovillo", "Rueca", "Bastidor"],
   categories: ["rectas", "remalladoras", "bordadoras", "tejedoras", "cortadoras", "planchadoras", "ojaladoras", "recubridoras", "acolchadoras"],
   attrs: [PRICE(4_800, 310_000, 180), { key: "puntadas", label: "velocidad", unit: "puntadas por minuto", min: 400, max: 9_000, step: 50 }, { key: "agujas", label: "agujas", unit: "agujas", min: 1, max: 24, step: 1 }],
-  hidden: { key: "engrase", label: "intervalo de engrase", unit: "horas", min: 8, max: 600, step: 4 },
+  hidden: { key: "engrase", label: "intervalo de engrase", unit: "horas", said: "h|hrs?|horas?", min: 8, max: 600, step: 4 },
   makers: ["Mecánica Aysén", "Telar Coyhaique", "Fundición Cochrane", "Taller Puyuhuapi", "Casa Chaitén"],
 };
 
@@ -230,7 +230,7 @@ export const CHAT_CASES = [
     domain: MIXERS,
     who: "Voy a abrir una panadería y tengo que elegir la amasadora.",
     facts: [
-      { said: "pienso hacer unas 650 piezas de pan al día", asked: "¿cuántas piezas de pan al día pienso hacer?", answer: /\b650\s*piezas/i },
+      { said: "pienso hacer unas 650 piezas de pan al día", asked: "¿cuántas piezas de pan al día pienso hacer?", answer: /\b650\s*(piezas|panes|unidades|barras)/i },
       { said: "el local sólo tiene instalación monofásica", asked: "¿qué instalación eléctrica tiene el local?", answer: /monof[áa]sic/i },
     ],
   }),
