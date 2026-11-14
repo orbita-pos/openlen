@@ -11,7 +11,7 @@
 // (from catalog) is pure TS too — no native — so importing it here keeps that
 // invariant.
 
-// Cache effect: [system, manual, …history] is the cached prefix, rebuilt byte for byte from the saved transcripts; what changes each turn (memory changes, context, the request) goes last; pruning under pressure cuts in jumps (A7).
+// Cache effect: [system, manual, …history] is the cached prefix, rebuilt byte for byte from the saved transcripts; what changes each turn (memory changes, context, the request) goes last; a history over the ceiling is not pruned here, it is compacted first (`compactFirst`).
 
 import { todayLine } from "@/lib/ai/today-line";
 import { LOCALE_ENGLISH_NAMES } from "@/lib/publish/publish-locales";
@@ -449,10 +449,6 @@ export function estimateContextTokens(userContent: string, systemPrompt: string)
  *  2026-10-01: 945 una foto de 1672×941; una de 800 px, ~280. */
 export const TOKENS_POR_FOTO = 1_024;
 
-/** A7 · cada cuánto pensado acumulado hay un corte posible al podar bajo
- *  presión, como fracción del techo: un salto quita al menos esto, y el turno
- *  siguiente no vuelve a podar hasta que el historial crezca otro tanto. */
-export const TRAMO_DE_LO_PENSADO = 0.1;
 
 export interface BuildAgentMessagesArgs {
   /** Ver buildAgentContext.equipo. */
@@ -635,50 +631,14 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
   const cabe = (caracteresDelHistorial: number) =>
     Math.ceil((fijo.length + caracteresDelHistorial + systemPrompt.length) / 3.5) + fotos * TOKENS_POR_FOTO <=
     args.maxPromptTokens;
-  // 🔴 H15 fase 2 (02/10): CON PRESIÓN, SE VA PRIMERO LO PENSADO MÁS VIEJO. Lo
-  // pensado de turnos anteriores vuelve en el historial (como en el arnés de
-  // DeepSeek) y cuenta para el techo. Si no cabe, antes de rechazar el turno se
-  // le quita a los mensajes más viejos, uno a uno: es lo que hace la compactación
-  // de DeepSeek, cuyo resumen guarda el texto y deja fuera el razonamiento. El
-  // mensaje se queda; sólo pierde lo pensado. Si ni así cabe, `too_large` como
-  // siempre. La cuenta es lineal (`estimateContextTokens`): quitar lo pensado
-  // baja el historial en su longitud más el salto que lo separa.
-  //
-  // 🔴 A7 de Len 3.1 (25/10): Y A SALTOS, como el microcompact. Antes se quitaba
-  // justo lo que hacía falta, así que cada turno cerca del techo quitaba uno más:
-  // el corte se movía y cada turno pagaba otra vez el historial desde ahí. Los
-  // cortes posibles salen sólo de los mensajes viejos —cada `TRAMO_DE_LO_PENSADO`
-  // de lo pensado acumulado— y se usa el primero con el que cabe: mientras el
-  // historial crezca sin pasar del siguiente, el corte no se mueve y el prefijo
-  // sigue en caché.
-  let caracteres = historyText.length;
-  let history = args.history;
-  if (!cabe(caracteres)) {
-    const tramo = Math.max(1, Math.floor(args.maxPromptTokens * 3.5 * TRAMO_DE_LO_PENSADO));
-    const cortes: number[] = [];
-    let acumulado = 0;
-    args.history.forEach((m, i) => {
-      if (!m.reasoning) return;
-      acumulado += m.reasoning.length;
-      // Un pensado muy largo puede pasar de varios tramos a la vez: un corte por tramo.
-      while (acumulado >= (cortes.length + 1) * tramo) cortes.push(i);
-    });
-    // El último salto: todo lo pensado.
-    cortes.push(args.history.length - 1);
-    for (const corte of cortes) {
-      let quitado = 0;
-      const podado = args.history.map((m, i) => {
-        if (i > corte || !m.reasoning) return m;
-        quitado += m.reasoning.length + 1;
-        const { reasoning: _quitado, ...sinPensar } = m;
-        return sinPensar;
-      });
-      caracteres = historyText.length - quitado;
-      history = podado;
-      if (cabe(caracteres)) break;
-    }
-  }
-  const compactFirst = !cabe(caracteres);
+  // 🔴 SI NO CABE, NO SE PODA NADA: se resume antes de empezar (`compactFirst`, A11). Lo pensado de turnos
+  // anteriores vuelve en el historial (como en el arnés de DeepSeek) y cuenta para el techo, pero ni DeepSeek
+  // ni Claude Code lo quitan para caber: los dos compactan. ⚰️ Hasta el 14/11 aquí se quitaba primero lo
+  // pensado más viejo (H15 fase 2, y a saltos desde A7): reescribía el historial desde su primer mensaje y
+  // la compactación que venía detrás lo pagaba entero sin caché, cuando su petición —la conversación tal
+  // cual más la instrucción— la habría leído de ella.
+  const history = args.history;
+  const compactFirst = !cabe(historyText.length);
   const messages = assembleTurnMessages({
     systemPrompt,
     manual,
