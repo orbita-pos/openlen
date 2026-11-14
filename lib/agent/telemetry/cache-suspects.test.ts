@@ -54,7 +54,7 @@ function brainOn(s: FaultServer, calls: BrainCall[], extra: Partial<Parameters<t
   });
 }
 
-describe("cache suspects, pinned as they are today (A7: closeOut, screenshots and pruning fixed)", () => {
+describe("cache suspects, pinned as they are today (A7: closeOut and screenshots in jumps; 14/11: no pruning of what was thought)", () => {
   // A7 (25/10): fixed. The closing call sends the SAME tools with tool_choice "none" — it still cannot
   // call one — so its prefix is the loop's. Before, it sent none: `part=tools`, the whole call uncached.
   it("closeOut: the closing call keeps the loop's tools (tool_choice none), so it shares the loop's prefix", async () => {
@@ -102,7 +102,10 @@ describe("cache suspects, pinned as they are today (A7: closeOut, screenshots an
     expect(diffConsecutive(wire(withPlanSection(messages, true)), wire(withPlanSection(messages, true)))).toEqual({ match: true });
   });
 
-  it("reasoning pruned under pressure: the request is rewritten from the oldest message that loses its reasoning", () => {
+  // FIXED (14/11, as DeepSeek's harness and Claude Code: neither prunes what was thought to fit, both
+  // compact). Before, a history over the ceiling lost its oldest reasoning — the request was rewritten from
+  // the first assistant message — right before a compaction that would have read it from the cache.
+  it("over the ceiling nothing is pruned: the request keeps every byte and the turn compacts first", () => {
     const history: MensajeDelHistorial[] = [];
     for (let i = 0; i < 6; i++) {
       history.push({ role: "user", content: `pide ${i}`, opensTurn: true });
@@ -110,36 +113,12 @@ describe("cache suspects, pinned as they are today (A7: closeOut, screenshots an
     }
     const roomy = buildAgentMessages({ state: {}, history, prompt: "otra", maxPromptTokens: 200_000 });
     if (!roomy.ok) throw new Error("no cupo");
+    expect(roomy.compactFirst).toBeUndefined();
     const contextChars = roomy.messages.reduce((n, m) => n + m.content.length + (m.reasoning?.length ?? 0), 0);
-    // Room for everything but ~2 of the 6 reasonings.
     const tight = buildAgentMessages({ state: {}, history, prompt: "otra", maxPromptTokens: Math.ceil((contextChars - 8_500) / 3.5) });
     if (!tight.ok) throw new Error("no cupo apretado");
-    // system, manual, then the history: index 3 is the first assistant message.
-    expect(diffConsecutive(wire(roomy.messages), wire(tight.messages))).toMatchObject({ match: false, part: "messages", index: 3 });
-  });
-
-  // A7 (25/10): in jumps. The first prune still rewrites from the oldest message (above); what changes is
-  // the turn after: before, one more turn under the same ceiling pruned one more reasoning, so the cut
-  // moved and every turn near the ceiling paid the history again. Now the cut points depend only on the
-  // old messages, and the next turn keeps the same cut until the history grows past the next one.
-  it("reasoning pruned under pressure: the next turn keeps the same cut, so its prefix holds", () => {
-    const turns = (n: number): MensajeDelHistorial[] =>
-      Array.from({ length: n }, (_, i): MensajeDelHistorial[] => [
-        { role: "user", content: `pide ${i}`, opensTurn: true },
-        { role: "assistant", content: `hecho ${i}`, reasoning: "r".repeat(1_000) },
-      ]).flat();
-    const roomy = buildAgentMessages({ state: {}, history: turns(40), prompt: "otra", maxPromptTokens: 400_000 });
-    if (!roomy.ok) throw new Error("no cupo");
-    const contextChars = roomy.messages.reduce((n, m) => n + m.content.length + (m.reasoning?.length ?? 0), 0);
-    const ceiling = Math.ceil((contextChars - 10_000) / 3.5);
-    const pruned = (h: MensajeDelHistorial[]) => {
-      const r = buildAgentMessages({ state: {}, history: h, prompt: "otra", maxPromptTokens: ceiling });
-      if (!r.ok) throw new Error("no cupo apretado");
-      return r.messages.flatMap((m, i) => (m.role === "assistant" && m.content.startsWith("hecho") && !m.reasoning ? [m.content] : []));
-    };
-    const now = pruned(turns(40));
-    expect(now.length).toBeGreaterThanOrEqual(10);
-    expect(pruned(turns(41))).toEqual(now);
+    expect(tight.compactFirst).toBe(true);
+    expect(diffConsecutive(wire(roomy.messages), wire(tight.messages))).toEqual({ match: true });
   });
 
   // A7 (25/10): in jumps, like the microcompact. Before, from the 4th screenshot on EVERY step dropped the

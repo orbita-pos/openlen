@@ -378,11 +378,11 @@ describe("buildAgentMessages", () => {
     expect(buildAgentMessages({ ...base, history: [{ role: "user", content: "x", images: muchas }] })).toMatchObject({ ok: true, compactFirst: true });
   });
 
-  // 🔴 H15 fase 2 (02/10): lo pensado de turnos viejos vuelve en el historial y
-  // cuenta para el techo. Con presión, se va PRIMERO lo pensado más viejo —como
-  // la compactación de DeepSeek, cuyo resumen deja fuera el razonamiento— en vez
-  // de rechazar un turno que sin ello cabe.
-  it("🔴 con presión, se va primero lo pensado más viejo y el turno sigue", () => {
+  // 🔴 Lo pensado de turnos viejos vuelve en el historial y cuenta para el techo (H15 fase 2, 02/10). Con
+  // presión NO se poda: ni el arnés de DeepSeek ni Claude Code quitan lo pensado para caber —los dos
+  // compactan—, y quitarlo reescribía el historial desde su mensaje más viejo justo antes de un resumen que
+  // lo habría leído de la caché.
+  it("🔴 con presión no se poda lo pensado: el historial viaja entero y el bucle resume antes de empezar", () => {
     const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const history: MensajeDelHistorial[] = [
       { role: "user", content: "primero" },
@@ -391,10 +391,10 @@ describe("buildAgentMessages", () => {
       { role: "assistant", content: "hecho 2", reasoning: "NUEVO-PENSADO" },
     ];
     const r = buildAgentMessages({ ...base, history });
-    expect(r.ok).toBe(true);
+    expect(r).toMatchObject({ ok: true, compactFirst: true });
     if (!r.ok) return;
     const deLen = r.messages.filter((m) => m.role === "assistant");
-    expect(deLen[0]).toEqual({ role: "assistant", content: "hecho 1" });
+    expect(deLen[0]).toEqual({ role: "assistant", content: "hecho 1", reasoning: "v".repeat(220_000) });
     expect(deLen[1]).toEqual({ role: "assistant", content: "hecho 2", reasoning: "NUEVO-PENSADO" });
   });
 
@@ -404,7 +404,7 @@ describe("buildAgentMessages", () => {
     expect(r.ok && r.messages.find((m) => m.role === "assistant")?.reasoning).toBe("VIEJO-PENSADO");
   });
 
-  it("🔴 A11: y si ni sin lo pensado cabe, no hay 413: el bucle resume antes de empezar (compactFirst)", () => {
+  it("🔴 A11: si no cabe, no hay 413: el bucle resume antes de empezar (compactFirst)", () => {
     const base = { state: {}, prompt: "sigue", maxPromptTokens: 60_000 };
     const history: MensajeDelHistorial[] = [
       { role: "user", content: "x".repeat(400_000) },
