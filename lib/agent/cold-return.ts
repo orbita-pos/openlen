@@ -3,9 +3,10 @@
 // whole conversation is paid again at the full input price (production, 12/11: one message after a
 // day's pause re-sent 215.399 tokens). Such a turn sends the history TRIMMED, with no model call:
 // what was thought in older turns goes, and so do the tool results older than the most recent ones
-// (`coldTrim` in ./transcripcion.ts). The numbers are Claude Code's (binary 2.1.321, its tool-result
-// clearing after an idle period): `minIdleSeconds: 3900`, `keepToolUses: 12`,
-// `clearAtLeastTokens: 20000`.
+// (`coldTrim` in ./transcripcion.ts). What is kept and the floor are Claude Code's (binary 2.1.321, its
+// tool-result clearing after an idle period): `keepToolUses: 12`, `clearAtLeastTokens: 20000`. Its
+// `minIdleSeconds: 3900` is its own provider's cache — an hour — plus five minutes; ours is measured
+// (`COLD_AFTER_MIN_DEFAULT`).
 //
 // Effect on the cache: none is lost — the trim only happens when the cache has already expired. The
 // turn that trims leaves this mark on its row, and every later turn applies it to the same rows, so
@@ -16,7 +17,11 @@
 /** The environment these read: the process's, or a plain object in a test. */
 type Env = Readonly<Record<string, string | undefined>>;
 
-export const COLD_AFTER_MIN_DEFAULT = 65;
+/** Minutes after the conversation's last model call from which a turn is cold. Measured on Len's provider
+ *  (`npm run measure:cache-probe`, run 20261114T0326): a prefix was still read from the cache after 45
+ *  minutes of silence (99 %) and no longer after 60 (4 %). Between the cache's end and this threshold a
+ *  return pays the whole conversation, so the threshold sits at the first pause seen cold. */
+export const COLD_AFTER_MIN_DEFAULT = 60;
 
 /** Characters per token, for the floor of the trim. The compaction's own figure (`CHARS_PER_TOKEN`,
  *  ./compaction/estimate.ts), repeated here because that module reaches ./transcripcion.ts through

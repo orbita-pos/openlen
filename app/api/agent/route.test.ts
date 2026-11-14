@@ -2181,9 +2181,10 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         await longTurn();
         expect(mocks.armIdleSummary).toHaveBeenCalledTimes(1);
         const [job, delay, opts] = armed();
-        expect(delay).toBe(3_510_000);
+        // Minute 40: two thirds of the cold threshold (60 min), while the provider's cache was still seen alive.
+        expect(delay).toBe(40 * 60_000);
         // The call has until the turn would be cold to answer.
-        expect(opts).toEqual({ deadlineMs: 390_000 });
+        expect(opts).toEqual({ deadlineMs: 20 * 60_000 });
         expect(job).toMatchObject({ key: "p1:", firstIndex: 2, transcriptLength: 1, minTokens: 1 });
         expect(job.messages.at(-1)).toEqual({ role: "assistant", content: "listo" });
         expect(job.messages.length).toBeGreaterThan(1);

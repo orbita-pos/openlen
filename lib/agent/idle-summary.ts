@@ -7,7 +7,9 @@
 //
 // The trigger is Claude Code's idle compaction (binary 2.1.321: «a 200K+ token conversation left idle is
 // summarized, and the summary is used on your next message if the prompt cache has expired»; it fires at 90 %
-// of the cache's life, only while warm, never near the usage limit, and a newer request cancels it). The
+// of the cache's life, only while warm, never near the usage limit, and a newer request cancels it). Here the
+// cache's life is the one measured on Len's provider — alive after 45 minutes of silence, gone after 60 —, so
+// the summary is asked for at minute 40 (`IDLE_SUMMARY_AT`). The
 // summary itself is the compaction this repo already has, DeepSeek's (./compaction/compact.ts, trigger
 // `idle`): same model, same request, the instruction at the end, and a summary that does not shrink the
 // conversation is refused.
@@ -26,7 +28,7 @@
 // answering, and the conversation would hold its place and its messages for good.
 //
 // What stays as in Claude Code: a person who comes back AFTER the summary was written and BEFORE the
-// conversation is cold (between 90 % and 100 % of the threshold) is answered with the conversation whole,
+// conversation is cold (between minute 40 and 60, by default) is answered with the conversation whole,
 // and that summary was paid for nothing. It is the price of writing it while it is cheap.
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
 import { coldAfterMs } from "@/lib/agent/cold-return";
@@ -37,12 +39,17 @@ import type { CompactionMark } from "@/lib/agent/compaction/mark";
 /** The environment these read: the process's, or a plain object in a test. */
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** Where the measurement of the spec (§8) starts from: Claude Code's floor. Its own default is 200.000. */
-export const IDLE_SUMMARY_MIN_TOKENS_DEFAULT = 100_000;
+/** From what size a conversation is summarized: what the measurement of the spec fixed (§8.5, 14/11). From
+ *  40.000 tokens the summary saved over 40 % of a cold return and broke no question; at 30.000 it saved 28 %.
+ *  Claude Code's own default is 200.000, in a product where resuming is not billed apart. */
+export const IDLE_SUMMARY_MIN_TOKENS_DEFAULT = 40_000;
 /** The literal tail the summary keeps, as a share of the minimum: DeepSeek's proportion (16 %). */
 export const IDLE_SUMMARY_RETAIN_RATIO = 0.16;
-/** When it fires, as a share of the time after which a turn is cold: Claude Code's 90 %. */
-export const IDLE_SUMMARY_AT = 0.9;
+/** When it fires, as a share of the time after which a turn is cold: two thirds — minute 40 of 60. Claude
+ *  Code's rule is 90 % of the CACHE's life, and the provider's cache was last seen alive at minute 45
+ *  (./cold-return.ts): 90 % of the cold threshold fired after it, and a summary written cold reads the whole
+ *  conversation at the full input price. */
+export const IDLE_SUMMARY_AT = 2 / 3;
 /** Conversations waiting at once. Each holds its messages in memory until it fires; past this, a new one
  *  is not armed and its cold return is only trimmed. */
 export const IDLE_SUMMARY_MAX_ARMED = 200;
