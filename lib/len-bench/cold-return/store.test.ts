@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { BuiltCase } from "./runner";
-import { benchIdleMinTokens, keepBuild, latestRuns, loadBuilds, runStore } from "./store";
+import { benchIdleMinTokens, builtSizeOf, keepBuild, latestRuns, loadBuilds, runStore, sizeClassK } from "./store";
 import type { RunResult } from "./types";
 
 let dir: string;
@@ -61,6 +61,27 @@ describe("from what size the bench's summary is written", () => {
     expect(benchIdleMinTokens(38_000)).toBe(34_200);
     expect(benchIdleMinTokens(38_000)).toBeLessThan(38_000);
     expect(benchIdleMinTokens(0)).toBe(1);
+  });
+});
+
+// Seen in the full measurement's build (14/11): the app cases came out far lighter than their names say
+// («…-220k» weighed 94k, «…-100k» 42k), and the report was filing them under the name.
+describe("the size a case is filed under in the report", () => {
+  it("is what its conversation really weighs, to the nearest ten thousand tokens", () => {
+    expect(sizeClassK(34_916)).toBe(30);
+    expect(sizeClassK(40_265)).toBe(40);
+    expect(sizeClassK(56_268)).toBe(60);
+    expect(sizeClassK(93_751)).toBe(90);
+    expect(sizeClassK(4_000)).toBe(10);
+  });
+
+  it("🔴 comes from what was built, never from the label in the case's name; the label only for a case never built", () => {
+    keepBuild(dir, built("build-app-looms-220k", 93_751));
+    keepBuild(dir, built("build-app-printers-100k", 42_350));
+    const sizeOf = builtSizeOf(loadBuilds(dir), (id) => (id.endsWith("220k") ? 220 : 100));
+    expect(sizeOf("build-app-looms-220k")).toBe(90);
+    expect(sizeOf("build-app-printers-100k")).toBe(40);
+    expect(sizeOf("never-built-100k")).toBe(100);
   });
 });
 
