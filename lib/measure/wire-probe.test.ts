@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  WIRE_POSITION_CAP_USD_DEFAULT,
   WIRE_PROBE_CAP_USD_DEFAULT,
   WIRE_PROBE_PRICES,
+  wirePositionReport,
+  wirePositionSteps,
   wireProbeCostUsd,
   wireProbeReport,
   wireProbeSteps,
@@ -17,7 +20,7 @@ const step = (id: WireStepId) => steps.find((s) => s.id === id)!;
 
 const call = (inputTokens: number, cachedTokens: number, text: string, extra: Partial<WireCall> = {}): WireCall => ({ inputTokens, cachedTokens, outputTokens: 8, text, toolCalls: 0, ms: 900, ...extra });
 /** A provider on which everything works: the prefix is read from the cache and the latest prompt is followed. */
-const allGood = (): Record<WireStepId, WireCall> => ({
+const allGood = (): Partial<Record<WireStepId, WireCall>> => ({
   base: call(8_000, 0, "Hello to you. ALFA"),
   control: call(8_030, 7_990, "See you soon. ALFA"),
   system_in_history: call(16_080, 8_020, "Thank you kindly. BETA"),
@@ -136,5 +139,62 @@ describe("what the wire probe concludes", () => {
     expect(wireProbeReport("deepinfra", calls).images.cached).toBe(false);
     delete calls.images_again;
     expect(wireProbeReport("deepinfra", calls).images.cached).toBeNull();
+  });
+});
+
+// The first run (20261114T085329) could not tell «left in place» from «moved up behind the first prompt»: only
+// ~30 tokens of conversation sat between the two system messages, under the provider's cache granularity
+// (128 tokens), while the first prompt was 5.000. These steps put a long conversation between them.
+describe("the position steps: is what sits between the two system messages still read from the cache?", () => {
+  const position = wirePositionSteps("run1");
+  const at = (id: WireStepId) => position.find((s) => s.id === id)!;
+
+  it("🔴 between the first prompt and the second there is a LONG conversation, many times the prompt itself", () => {
+    const long = at("long_system").messages;
+    const second = long.map((m) => m.role).lastIndexOf("system");
+    const between = long.slice(1, second).reduce((n, m) => n + m.content.length, 0);
+    expect(long[0]!.role).toBe("system");
+    expect(second).toBeGreaterThan(10);
+    expect(between).toBeGreaterThan(20 * long[0]!.content.length);
+    expect(between).toBeGreaterThan(15_000);
+    expect(long[second]!.content).toBe(long[0]!.content.split("ALFA").join("BETA"));
+    expect(long.at(-1)!.role).toBe("user");
+  });
+
+  it("the control is the same request again, and the system step is that request plus its end", () => {
+    expect(JSON.stringify(at("long_control").messages)).toBe(JSON.stringify(at("long_base").messages));
+    expect(at("long_control").reads).toBe("long_base");
+    const base = at("long_base").messages;
+    expect(JSON.stringify(at("long_system").messages.slice(0, base.length))).toBe(JSON.stringify(base));
+    expect(at("long_system").reads).toBe("long_base");
+  });
+
+  it("its worst case on both providers fits under its own cap", () => {
+    expect(wireProbeWorstCaseUsd(position) * 2).toBeLessThan(WIRE_POSITION_CAP_USD_DEFAULT);
+  });
+});
+
+describe("what the position steps conclude", () => {
+  it("in place: nearly all of what came before the second prompt was read from the cache", () => {
+    const r = wirePositionReport("deepinfra", { long_base: call(5_000, 0, "Hello to you. ALFA"), long_control: call(5_000, 4_992, "Hello to you. ALFA"), long_system: call(5_100, 4_992, "Thank you kindly. BETA") });
+    expect(r).toMatchObject({ control: true, accepted: true, inPlace: true, followsLatest: true });
+  });
+
+  it("🔴 moved up to the top: only the head was read, and the conversation was paid again", () => {
+    const r = wirePositionReport("deepinfra", { long_base: call(5_000, 0, "x ALFA"), long_control: call(5_000, 4_992, "x ALFA"), long_system: call(5_100, 128, "Thank you kindly. BETA") });
+    expect(r).toMatchObject({ control: true, accepted: true, inPlace: false });
+    expect(r.lines.join("\n")).toMatch(/NOT left in place/);
+  });
+
+  it("without the control a low reading says nothing — the cache may not have been ready — but a high one stands on its own", () => {
+    const slow = { long_base: call(5_000, 0, "x ALFA"), long_control: call(5_000, 0, "x ALFA") };
+    expect(wirePositionReport("fireworks", { ...slow, long_system: call(5_100, 128, "y BETA") })).toMatchObject({ control: false, inPlace: null });
+    expect(wirePositionReport("fireworks", { ...slow, long_system: call(5_100, 4_992, "y BETA") })).toMatchObject({ control: false, inPlace: true });
+  });
+
+  it("a refused request is said with its error", () => {
+    const r = wirePositionReport("fireworks", { long_base: call(5_000, 0, "x ALFA"), long_control: call(5_000, 4_992, "x ALFA"), long_system: call(0, 0, "", { error: "400 bad request" }) });
+    expect(r).toMatchObject({ accepted: false, inPlace: null, followsLatest: null });
+    expect(r.lines.join("\n")).toContain("400 bad request");
   });
 });

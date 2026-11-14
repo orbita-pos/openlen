@@ -9,6 +9,7 @@
  *   npm run measure:wire-probe                                        → the plan, nothing sent
  *   npm run measure:wire-probe -- --yes --budget-usd=0.08              → both providers
  *   npm run measure:wire-probe -- --yes --provider=deepinfra           → one of them
+ *   npm run measure:wire-probe -- --only=position --yes --budget-usd=0.03 → the position steps alone (three calls per provider)
  *
  * The state and the report go to plans/conversar-todo-el-mes/wire-probe/ (local, never in the repo).
  */
@@ -20,9 +21,13 @@ import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-b
 import { createFireworksStreamClient, type FireworksStreamRequest } from "@/lib/ai/fireworks-stream-client";
 import { resolveAgentProviders } from "@/lib/ai/providers";
 import {
+  WIRE_POSITION_CAP_USD_DEFAULT,
+  WIRE_POSITION_SETTLE_MS,
   WIRE_PROBE_CAP_USD_DEFAULT,
   WIRE_PROBE_MAX_OUTPUT_TOKENS,
   WIRE_PROBE_SETTLE_MS,
+  wirePositionReport,
+  wirePositionSteps,
   wireProbeCostUsd,
   wireProbeReport,
   wireProbeSteps,
@@ -98,7 +103,10 @@ async function main(): Promise<number> {
   const asked = arg("--provider") ?? "both";
   const names = asked === "both" ? PROVIDERS : PROVIDERS.filter((p) => p === asked);
   if (names.length === 0) throw new Error("--provider must be deepinfra, fireworks or both");
-  const cap = arg("--budget-usd") !== undefined ? Number(arg("--budget-usd")) : WIRE_PROBE_CAP_USD_DEFAULT;
+  const only = arg("--only");
+  if (only !== undefined && only !== "position") throw new Error("--only takes one value: position");
+  const position = only === "position";
+  const cap = arg("--budget-usd") !== undefined ? Number(arg("--budget-usd")) : position ? WIRE_POSITION_CAP_USD_DEFAULT : WIRE_PROBE_CAP_USD_DEFAULT;
   if (!Number.isFinite(cap) || cap <= 0) throw new Error("--budget-usd must be a number above zero");
 
   const providers = names.flatMap((name) => {
@@ -108,8 +116,9 @@ async function main(): Promise<number> {
   });
   if (providers.length === 0) throw new Error("no provider key in the environment: nothing to probe");
 
-  const runId = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
-  const steps = wireProbeSteps(runId, [squares(11), squares(29)]);
+  const runId = `${new Date().toISOString().replace(/[-:]/g, "").slice(0, 15)}${position ? "-position" : ""}`;
+  const steps = position ? wirePositionSteps(runId) : wireProbeSteps(runId, [squares(11), squares(29)]);
+  const settleMs = position ? WIRE_POSITION_SETTLE_MS : WIRE_PROBE_SETTLE_MS;
   const worstEach = wireProbeWorstCaseUsd(steps);
   for (const p of providers) console.log(`provider  ${p.name} · ${p.resolved.dialect.endpoint} · ${p.resolved.modelId}`);
   console.log(`probe     ${runId} · ${steps.length} calls per provider: ${steps.map((s) => s.id).join(", ")}`);
@@ -184,7 +193,7 @@ async function main(): Promise<number> {
         stopped = true;
         break;
       }
-      if (step.reads) await new Promise((resolve) => setTimeout(resolve, WIRE_PROBE_SETTLE_MS));
+      if (step.reads) await new Promise((resolve) => setTimeout(resolve, settleMs));
       const call = await send(step);
       calls[step.id] = call;
       save();
@@ -193,7 +202,7 @@ async function main(): Promise<number> {
     if (stopped) break;
   }
 
-  const reports = providers.map((p) => wireProbeReport(p.name, state.calls[p.name] ?? {}));
+  const reports = providers.map((p) => (position ? wirePositionReport(p.name, state.calls[p.name] ?? {}) : wireProbeReport(p.name, state.calls[p.name] ?? {})));
   const lines = [`THE WIRE PROBE · run ${runId}`, "", ...reports.flatMap((r) => [...r.lines, ""]), `Spent in all: $${spent().toFixed(4)} at list price · cap $${cap.toFixed(2)}`];
   console.log(`\n${lines.join("\n")}`);
   fs.mkdirSync(DIR, { recursive: true });
