@@ -768,6 +768,17 @@ describe("forks (phase 2)", () => {
     expect(String(systems.at(-1)!.content)).not.toBe(String(SEED[0]!.content));
   });
 
+  // Review, finding 5: the prompt was appended to each request at its moving end, so every request of such a
+  // fork paid a whole system prompt again. It belongs in the fork's own conversation, once.
+  it("🔴 in plan mode a fork's second request starts with the whole of its first: the mode's prompt stays where it was sent", async () => {
+    const s = setup({ forkSeed: SEED, planMode: true, scripts: [llama("Read", { file_path: "/index.html" }), dice("ok")] });
+    await s.launcher.fork({ description: "Review", prompt: "Review it." });
+    await s.settled("r1");
+    const [first, second] = s.g.seen;
+    expect(second!.slice(0, first!.length)).toEqual(first);
+    expect(second!.filter((m) => m.role === "system")).toHaveLength(2);
+  });
+
   it("a fork whose inherited conversation is over the summary threshold summarizes it before its first call (Len summarizes first only above it)", async () => {
     const LONG: Message[] = [
       { role: "system", content: "LEN SYSTEM PROMPT" },

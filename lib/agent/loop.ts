@@ -1588,6 +1588,11 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       let generadoEnElIntento = 0;
       let pensadoEnElIntento = 0;
       let argumentosEnVivo = 0;
+      // The mode's prompt once more, right before the request leaves: a compaction since the top of the step —
+      // under pressure, or after the provider said the request was too long — may have summarized it away,
+      // and plan mode is held by that prompt alone.
+      const promptOfNow = args.systemUpdate?.(messages) ?? null;
+      if (promptOfNow) messages.push(promptOfNow);
       const peticionDelIntento = estimateTokens(messages);
       for await (const ev of args.openStream(messages)) {
         if (ev.type === "text_delta") generadoEnElIntento += ev.text.length;

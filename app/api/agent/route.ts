@@ -1107,6 +1107,9 @@ async function correrTurno(
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;
   };
+  /** Len's screenshots of earlier turns that could not be loaded now, or did not fit: their messages go without
+   *  pixels on this turn, and this turn's row says so, so they stay that way (`lostScreenshots`). */
+  const capturasPerdidas = capturasDeLen.filter((url) => !pixelesDe(url));
   /** Las fotos de este turno que no se pudieron bajar: su nota dice que no cargaron. */
   const fotosSinVer = attachedImages.filter((f) => !pixelesDe(f.url)).map((f) => f.url);
   const attachedInlines: InlineImage[] = attachedImages
@@ -1819,6 +1822,8 @@ async function correrTurno(
         // Len 3.1: las fotos que no se vieron y las capturas del modo
         // Diseño, para que el historial rehaga este mensaje tal cual.
         ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
+        ...(capturasPerdidas.length > 0 ? { lostScreenshots: capturasPerdidas } : {}),
+        ...(planDelTurno.notice ? { planNotice: planDelTurno.active ? ("on" as const) : ("off" as const) } : {}),
         ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
         // Y tu mensaje como se mandó, si no es lo que guarda la fila:
         // una corrección «↳» es su propio mensaje en la transcripción, y

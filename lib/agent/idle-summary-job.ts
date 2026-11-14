@@ -8,7 +8,7 @@
 import type { Message } from "@/lib/ai-gateway";
 import { createAgentBrain, type AgentBrain, type AgentBrainOptions } from "@/lib/agent/brain";
 import { IDLE_SUMMARY_OUTPUT_ESTIMATE, collectSummary, type IdleSummaryJob } from "@/lib/agent/idle-summary";
-import { withPlanSection } from "@/lib/agent/plan-mode";
+import { planInHistoryEnabled, withPlanSection } from "@/lib/agent/plan-mode";
 import { compactionMarkForStorage } from "@/lib/agent/transcripcion";
 import type { ProviderId } from "@/lib/ai/providers";
 import type { CreditRate } from "@/lib/ai/tarifas";
@@ -61,7 +61,9 @@ export function idleSummaryJobFor(input: IdleSummaryJobInput): IdleSummaryJob {
     canAfford: async (tokens) => (await getCreditState(ownerId)).balance >= creditsForUsage(tokens, IDLE_SUMMARY_OUTPUT_ESTIMATE, rate, tokens),
     summarize: (request, signal) => {
       asked = createAgentBrain({ ...input.brain, signal, preferredProvider: input.provider });
-      return collectSummary(asked.openStream(withPlanSection(request, input.planActive)));
+      // The request is the conversation as the turn sent it — the mode's prompt where the loop put it — cut
+      // where the summary ends, plus the instruction: it goes as it is. (Lever off: the section in message 0.)
+      return collectSummary(asked.openStream(planInHistoryEnabled() ? request : withPlanSection(request, input.planActive)));
     },
     // Nobody asked for this call: the owner pays it at the WARM price whatever the provider read from its
     // cache (DeepInfra does not say how long it keeps one). What it really was stays in the ledger row — its

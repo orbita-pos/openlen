@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Message } from "@/lib/ai-gateway";
-import { SCREENSHOTS_KEPT, SCREENSHOTS_QUANTUM, applyScreenshotBudget, droppedScreenshotCount, keepRecentScreenshots, screenshotsLabel } from "./screenshots-in-context";
+import { SCREENSHOTS_KEPT, SCREENSHOTS_QUANTUM, applyScreenshotBudget, droppedScreenshotCount, keepRecentScreenshots, screenshotLimits, screenshotsLabel } from "./screenshots-in-context";
 
 const img = (tag: string) => ({ mimeType: "image/jpeg", dataBase64: tag });
 const results = (tags: string[], content = ""): Message => ({
@@ -88,6 +88,18 @@ describe("screenshots in the conversation", () => {
     expect(messages[0]!.images).toHaveLength(1);
     expect(messages[0]!.screenshotsDropped).toBeUndefined();
     expect(withPixels(messages.slice(1, 7))).toEqual([]);
+  });
+
+  // Review: how a provider takes a request with forty real screenshots in it was not measured, and without a
+  // lever the way back was a deploy.
+  it("OPENLEN_SCREENSHOTS_KEPT moves the limit (half of it goes at once); a bad value is ignored", () => {
+    expect(screenshotLimits({})).toEqual({ kept: 40, quantum: 20 });
+    expect(screenshotLimits({ OPENLEN_SCREENSHOTS_KEPT: "3" })).toEqual({ kept: 3, quantum: 2 });
+    expect(screenshotLimits({ OPENLEN_SCREENSHOTS_KEPT: "12" })).toEqual({ kept: 12, quantum: 6 });
+    expect(screenshotLimits({ OPENLEN_SCREENSHOTS_KEPT: "1" })).toEqual({ kept: 1, quantum: 1 });
+    for (const bad of ["abc", "0", "-3", "1.5", ""]) expect(screenshotLimits({ OPENLEN_SCREENSHOTS_KEPT: bad })).toEqual({ kept: 40, quantum: 20 });
+    const few = screenshotLimits({ OPENLEN_SCREENSHOTS_KEPT: "3" });
+    expect(withPixels(applyScreenshotBudget(looks(4), few.kept, few.quantum))).toEqual(["3", "4"]);
   });
 
   it("their stored addresses count as they are, when the pixels are not loaded", () => {

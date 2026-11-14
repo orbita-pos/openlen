@@ -16,12 +16,13 @@ import { createAgentBrain, type BrainCall } from "@/lib/agent/brain";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { runAgentLoop } from "@/lib/agent/loop";
-import { PLAN_POLICY, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
+import { PLAN_ON_NOTICE, PLAN_POLICY, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import { quienPide } from "@/lib/agent/equipo";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { _resetProviderHealth } from "@/lib/agent/provider-health";
 import { checkReplay } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
+import * as await0 from "@/lib/agent/screenshots-in-context";
 import { historialDesdeLaBase, screenshotAddresses, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { diffConsecutive } from "./request-diff";
 
@@ -158,6 +159,107 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(JSON.stringify(saved)).not.toContain("PLAN MODE");
     // And the next turn rebuilds, byte for byte, what this one sent.
     expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toEqual({ ok: true });
+  });
+
+  // Review, finding 1: the prompt of the mode was asked for once, at the top of a step. A compaction right after
+  // it summarized that prompt away, and the working call that followed went out with the base prompt alone —
+  // in a mode that only the prompt holds.
+  const carriesPlan = (request: readonly Message[]) => request.some((m, i) => i > 0 && m.role === "system" && m.content.includes(PLAN_POLICY));
+  const isSummaryRequest = (request: readonly Message[]) => request.at(-1)!.content.startsWith("You are now acting as a compaction engine");
+  const planTurn = async (compaction: { thresholdTokens: number; retainTokens: number }, overflowAt: number | null) => {
+    const requests: Message[][] = [];
+    let step = 0;
+    let overflowed = false;
+    await runAgentLoop({
+      messages: [{ role: "system", content: "base" }, { role: "user", content: "manual" }, { role: "user", content: "plan it" }],
+      tools: [],
+      openStream: (m) => {
+        requests.push(structuredClone(m));
+        const say = (events: StreamEvent[]) =>
+          (async function* () {
+            for (const e of events) yield e;
+          })();
+        const done: StreamEvent = { type: "done", stopReason: { kind: "end_turn" } };
+        if (isSummaryRequest(m)) return say([{ type: "text_delta", text: "## Primary Request and Intent\n- a plan" }, done]);
+        step++;
+        if (overflowAt !== null && step === overflowAt && !overflowed) {
+          overflowed = true;
+          step--;
+          return say([{ type: "done", stopReason: { kind: "error", error: "too long", code: "context_window_exceeded" } as never }]);
+        }
+        return say(step <= 3 ? [{ type: "function_call", name: "Read", args: { file_path: `/f${step}.html` } }, done] : [{ type: "text_delta", text: "Plan." }, done]);
+      },
+      runTool: async () => ({ response: { ok: true, tool_result: "x".repeat(6000) } }),
+      systemUpdate: (m) => systemUpdateFor(m, true),
+      compaction: { policy: compaction, firstIndex: 2 },
+      emit: () => {},
+    });
+    return requests;
+  };
+
+  it("🔴 plan mode and a compaction in the turn: the call right after the summary still carries the mode's prompt", async () => {
+    const requests = await planTurn({ thresholdTokens: 3000, retainTokens: 500 }, null);
+    const summaryAt = requests.findIndex(isSummaryRequest);
+    expect(summaryAt).toBeGreaterThan(0);
+    expect(requests.slice(summaryAt + 1).length).toBeGreaterThan(0);
+    expect(requests.slice(summaryAt + 1).every(carriesPlan)).toBe(true);
+    // And every working call before it did too.
+    expect(requests.slice(0, summaryAt).every(carriesPlan)).toBe(true);
+  });
+
+  it("🔴 plan mode and a request the provider says is too long: the call sent again after summarizing carries the mode's prompt", async () => {
+    const requests = await planTurn({ thresholdTokens: 1_000_000, retainTokens: 100_000 }, 3);
+    const summaryAt = requests.findIndex(isSummaryRequest);
+    expect(summaryAt).toBeGreaterThan(0);
+    expect(requests.slice(summaryAt + 1).every(carriesPlan)).toBe(true);
+  });
+
+  // Review, finding 4 (on master too): the owner switching the mode in the composer adds DeepSeek's narration
+  // right before the request, and the row kept no trace of it: the next turn rebuilt that turn without it and
+  // paid it again.
+  it("🔴 the narration of the owner's switch of mode comes back where it was sent: right before the request", () => {
+    const history = historialDesdeLaBase([
+      { userText: "hazlo", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [], contexto: "CONTEXT", planNotice: "on" } },
+    ]);
+    expect(history.map((m) => m.content)).toEqual(["CONTEXT", PLAN_ON_NOTICE, "hazlo", "hecho"]);
+    expect(history[1]).toEqual({ role: "user", content: PLAN_ON_NOTICE });
+  });
+
+  // Review, finding 2: a screenshot that could not be loaded on one turn loaded on the next, and its message
+  // changed twice. Lost is lost: the turn that could not load it says so on its row.
+  it("🔴 a screenshot one turn could not load never comes back: the turns after it rebuild that message the same", () => {
+    const url = "https://files.example/uploads/p1/screenshot-1.jpg";
+    const pixels = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    const looked = { userText: "mira", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant" as const, content: "" }, { role: "user" as const, content: "Screenshots below", functionResponses: [{ name: "view_page", response: { ok: true } }], screenshots: [url] }], leidos: [] } };
+    // Turn N+1: the load fails. What it sends, and what it leaves on its own row.
+    const failed = historialDesdeLaBase([looked], undefined, new Map([[url, null]]))[2]!;
+    expect(failed).toMatchObject({ screenshotsDropped: 1 });
+    const next = { userText: "sigue", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant" as const, content: "ok" }], leidos: [], lostScreenshots: [url] } };
+    // Turn N+2: the file loads now. The message is the one N+1 sent, and nobody asks for the picture.
+    const later = historialDesdeLaBase([looked, next], undefined, new Map([[url, pixels]]));
+    expect(later[2]).toEqual(failed);
+    expect(screenshotAddresses(historialDesdeLaBase([looked, next]))).toEqual([]);
+    // Without that note on a row, a picture that loads is sent (the control).
+    expect(historialDesdeLaBase([looked], undefined, new Map([[url, pixels]]))[2]!.images).toEqual([pixels]);
+  });
+
+  // Review, finding 7: a batch whose pictures could not be stored counted in the turn and not from its row, so
+  // the turn and the next one disagreed on which twenty go.
+  it("🔴 screenshots that could not be stored are saved as dropped, with their count: the next turn drops the same ones the turn did", () => {
+    const px = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    const stored = (i: number): Message => ({ role: "user", content: `s${i}`, functionResponses: [{ name: "view_page", response: { ok: true } }], images: [px], screenshots: [`u${i}`] });
+    const unstored: Message = { role: "user", content: "unstored", functionResponses: [{ name: "view_page", response: { ok: true } }], images: [px] };
+    const live: Message[] = [...Array.from({ length: 20 }, (_, i) => stored(i)), unstored, ...Array.from({ length: 20 }, (_, i) => stored(20 + i))];
+    const saved = transcripcionParaGuardar([{ role: "assistant", content: "" }, ...live], new Map());
+    const kept = saved.mensajes.find((m) => m.content.startsWith("unstored"))!;
+    expect(kept).toMatchObject({ screenshotsDropped: 1 });
+    expect(kept.images).toBeUndefined();
+    const rebuilt = historialDesdeLaBase([{ userText: "x", assistantReasoning: "", transcript: saved }], undefined, new Map(live.flatMap((m) => (m.screenshots ?? []).map((u) => [u, px] as const))));
+    const droppedOf = (messages: readonly { content: string; screenshotsDropped?: number }[]) => messages.filter((m) => m.screenshotsDropped !== undefined && /^s\d+/.test(m.content)).map((m) => m.content.split("\n")[0]);
+    // In the turn, with 41 seen, the oldest twenty stored ones went; from the row, the same twenty.
+    const { applyScreenshotBudget } = await0;
+    expect(droppedOf(rebuilt)).toEqual(droppedOf(applyScreenshotBudget(live)));
+    expect(droppedOf(rebuilt)).toHaveLength(20);
   });
 
   it("a system message without the marker — nothing the loop ever saved — still has no place in a rebuilt history", () => {

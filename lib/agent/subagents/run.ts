@@ -17,7 +17,7 @@ import type { LaunchOptions } from "./tool";
 import { buildAgentMessages, type BuildAgentMessagesArgs } from "@/lib/agent/context";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AgentLoopArgs, AgentLoopResult, AgentStreamEvent } from "@/lib/agent/loop";
-import { withPlanSection } from "@/lib/agent/plan-mode";
+import { planInHistoryEnabled, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import { runSubagent } from "@/lib/agent/subagente";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
@@ -406,13 +406,21 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       // An isolated child's changes undo with what its copy brought back, not with a photo of the copy.
       if (!spec.worktree) before = await io.snapshot(session).catch(() => null);
       const b = (brain = io.brain(tools, id, abort.signal, definition?.effort ?? undefined));
+      // A fork in plan mode whose inherited conversation does not carry the mode's prompt yet (it was launched
+      // in the turn that entered the mode): the prompt goes into the fork's own conversation, once, where its
+      // later requests keep it. Appended to each request instead, it moved, and each one paid it again.
+      const planInHistory = planInHistoryEnabled();
+      if (spec.forked && planInHistory) {
+        const update = systemUpdateFor(initial, ctx.planMode);
+        if (update) initial.push(update);
+      }
       result = await runSubagent({
         messages: initial,
         tools,
         ...(spec.allowed ? { allowed: spec.allowed } : {}),
-        // A fork's request is Len's as he sends it, with the plan section of now (`withPlanSection`): his cache.
+        // A fork's request is Len's as he sends it: his cache. (Lever off: with the plan section in message 0.)
         openStream: (m) => {
-          const request = spec.forked ? withPlanSection(m, ctx.planMode) : m;
+          const request = spec.forked && !planInHistory ? withPlanSection(m, ctx.planMode) : m;
           if (definition?.maxTurns !== null && definition?.maxTurns !== undefined && calls >= definition.maxTurns) {
             turnLimitReached = true;
             omitClosingText = false;
@@ -421,7 +429,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
           calls++;
           return b.openStream(request);
         },
-        closeOut: (m) => b.closeOut(spec.forked ? withPlanSection(m, ctx.planMode) : m),
+        closeOut: (m) => b.closeOut(spec.forked && !planInHistory ? withPlanSection(m, ctx.planMode) : m),
         signal: abort.signal,
         runTool: async (name, args) => {
           if (name === SEND_MESSAGE_TOOL) {
