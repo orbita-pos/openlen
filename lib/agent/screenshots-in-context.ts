@@ -26,6 +26,8 @@ const DROPPED_NOTE = "(The screenshots that were here were dropped to keep the t
 export interface BatchScreenshots {
   readonly tool: string;
   readonly images: readonly InlineImage[];
+  /** Where each one was stored, in order, when storing worked (`Message.screenshots`). */
+  readonly urls?: readonly string[];
 }
 
 /** The line that tells the agent which image came from which call, in order. */
@@ -55,7 +57,10 @@ function screenshotsOf(m: Carrier): number {
   return m.screenshotsDropped ?? m.screenshots?.length ?? m.images?.length ?? 0;
 }
 
-function dropped<M extends Carrier>(m: M): M {
+/** A tool-result message without its screenshots: its text, the note that says they were dropped (once) and
+ *  how many they were. They never come back. */
+export function dropScreenshots<M extends Carrier>(m: M): M {
+  if (m.screenshotsDropped !== undefined) return m;
   const { images: _pixels, screenshots: _addresses, ...rest } = m;
   return { ...rest, content: [m.content, DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n"), screenshotsDropped: screenshotsOf(m) } as M;
 }
@@ -77,7 +82,7 @@ export function applyScreenshotBudget<M extends Carrier>(messages: readonly M[],
     if (mine === 0) return m;
     const goes = before < toDrop && i !== newest && m.screenshotsDropped === undefined;
     before += mine;
-    return goes ? dropped(m) : m;
+    return goes ? dropScreenshots(m) : m;
   });
 }
 

@@ -11,7 +11,7 @@ import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import type { AgentLoopArgs, AgentLoopResult, runAgentLoop } from "@/lib/agent/loop";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import { materializeSystemUpdates } from "@/lib/agent/plan-mode";
-import { compactionMarkForStorage, historialDesdeLaBase, transcripcionParaGuardar } from "@/lib/agent/transcripcion";
+import { compactionMarkForStorage, historialDesdeLaBase, transcripcionParaGuardar, type FotosDeLaConversacion } from "@/lib/agent/transcripcion";
 
 /**
  * What Postgres jsonb does to an object: keys ordered by UTF-8 byte length, then
@@ -76,16 +76,19 @@ export function checkReplay(o: {
   readonly compactionMark?: CompactionMark;
   /** Where the summarizable part starts (`compaction.firstIndex`). */
   readonly firstIndex?: number;
+  /** The stored screenshots the next turn loads (address → pixels), as the route does. Without them the
+   *  rebuilt history has none, and the difference shows as `images_dropped`. */
+  readonly photos?: FotosDeLaConversacion;
 }): ReplayCheck {
   const saved = jsonbRoundTrip(transcripcionParaGuardar(o.transcript, o.leidos));
   if (o.compactionMark) {
     // The next turn rebuilds from the stored mark and the tail of the transcript.
     const mark = jsonbRoundTrip(compactionMarkForStorage(o.compactionMark));
-    const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved, compaction: mark }]) as Message[];
+    const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved, compaction: mark }], undefined, o.photos) as Message[];
     return comparePrefix(o.lastRequest, materializeSystemUpdates([...o.initialMessages.slice(0, o.firstIndex ?? 2), ...stored]));
   }
   // The row's own user message comes first; the loop's messages follow it.
-  const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved }]).slice(1) as Message[];
+  const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved }], undefined, o.photos).slice(1) as Message[];
   // An in-history system prompt is saved as a marker and gets its text back from message 0, as when a turn is assembled.
   return comparePrefix([...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)], materializeSystemUpdates([...o.initialMessages, ...stored]));
 }
