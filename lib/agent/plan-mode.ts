@@ -8,7 +8,7 @@
  * como el suyo: no bloquea ninguna herramienta (el catálogo no cambia entre
  * modos, por la caché).
  *
- * Efecto en la caché (14/11): cambiar de modo NO reescribe el mensaje 0. El
+ * Efecto en la caché: cambiar de modo NO reescribe el mensaje 0 (14/11). El
  * prompt nuevo va ENTERO como un mensaje de sistema posterior, al final de la
  * conversación — el «in-history system prompt replacement» de DeepSeek (su
  * arnés @ 39163dd, nota 2026-09-02): su modelo acepta un mensaje de sistema en

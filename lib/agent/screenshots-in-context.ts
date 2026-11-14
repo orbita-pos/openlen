@@ -1,15 +1,25 @@
 // Screenshots the agent took (view_page, use_page) travel as images in the
 // message that follows a batch of tool results, like Claude Code's own
-// screenshots: the agent looks at them itself. Each one is ~1,000 tokens that
-// Fireworks does not cache and that every later step of the turn re-sends, so
-// only the most recent ones keep their pixels; older ones keep their label and
-// say they were dropped (how DeepSeek's harness handles old photos).
+// screenshots: the agent looks at them itself. They STAY in the conversation,
+// where they were sent, as in Claude Code (a request holds up to 100 media
+// items; past that the oldest 21 become text at once) and in DeepSeek's harness
+// (kept until the provider refuses the request, then the oldest go 20 at a
+// time and never come back).
+//
+// ⚰️ Until 14/11 only three kept their pixels («Fireworks does not cache
+// them»), and every few screenshots an earlier message was rewritten. The wire
+// probe showed that on DeepInfra, Len's provider, a request's images are part
+// of what is cached; and in production (the 30 days before) those rewrites were
+// 42 of the 52 cache breaks recorded — a turn that looks does it 8 times at the
+// median and 31 at most.
 
-// Cache effect: pixels are dropped in jumps (A7), so an earlier message is rewritten once every few screenshots, not every step; across turns the saved transcript keeps none (accepted).
+// Cache effect: none while the conversation holds up to SCREENSHOTS_KEPT screenshots — nothing sent is rewritten. Past that the oldest lose their pixels in whole batches of SCREENSHOTS_QUANTUM, one rewrite per batch; which ones go depends only on how many there have been, so every later turn drops the same ones.
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 
-/** Screenshots that keep their pixels in the conversation, the newest batch always whole. */
-export const MAX_SCREENSHOTS_IN_CONTEXT = 3;
+/** Screenshots that keep their pixels in the conversation before any goes. */
+export const SCREENSHOTS_KEPT = 40;
+/** How many go at once when that is passed: DeepSeek's quantum. */
+export const SCREENSHOTS_QUANTUM = 20;
 
 const DROPPED_NOTE = "(The screenshots that were here were dropped to keep the turn light: take a new one if you need to look again.)";
 
@@ -29,21 +39,50 @@ export function screenshotsLabel(batch: readonly BatchScreenshots[]): string {
   return `Screenshots below, in order: ${parts.join("; ")}. Look at them yourself.`;
 }
 
-/** Drops the pixels of older tool-result screenshots, in place, IN JUMPS (A7 of
- *  Len 3.1, like the history's microcompact): while the screenshots that keep
- *  their pixels fit in `keep`, nothing is touched; past it, every batch but the
- *  newest loses its pixels at once. Dropping one per step rewrote an earlier
- *  message on every step from the 4th screenshot on, and each rewrite pays the
- *  rest of the turn again uncached; in jumps it happens once every few, with
- *  never more than `keep` images. The newest batch always stays whole, and the
- *  user's own photos (a user message without tool results) are never touched. */
-export function keepRecentScreenshots(messages: Message[], keep = MAX_SCREENSHOTS_IN_CONTEXT): void {
-  const withPixels = messages.flatMap((m, i) => (m.functionResponses?.length && m.images?.length ? [i] : []));
-  const total = withPixels.reduce((n, i) => n + messages[i]!.images!.length, 0);
-  if (total <= keep) return;
-  for (const i of withPixels.slice(0, -1)) {
-    const m = messages[i]!;
-    const { images: _dropped, ...rest } = m;
-    messages[i] = { ...rest, content: [m.content, DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n") };
-  }
+/** How many of the conversation's screenshots, counted from the oldest, have lost their pixels once there
+ *  have been `total`: none up to the limit, then whole batches of the quantum (DeepSeek's
+ *  `offloadedImagePrefixCount`). It depends on the count alone and only ever grows. */
+export function droppedScreenshotCount(total: number, kept = SCREENSHOTS_KEPT, quantum = SCREENSHOTS_QUANTUM): number {
+  return total <= kept ? 0 : Math.ceil((total - kept) / quantum) * quantum;
+}
+
+type Carrier = Pick<Message, "content" | "functionResponses" | "images" | "screenshots" | "screenshotsDropped">;
+
+/** The screenshots a tool-result message carries or carried: its pixels, their stored addresses when the pixels
+ *  are not loaded, or how many it had when they were dropped. The person's own photos are not these. */
+function screenshotsOf(m: Carrier): number {
+  if (!m.functionResponses?.length) return 0;
+  return m.screenshotsDropped ?? m.screenshots?.length ?? m.images?.length ?? 0;
+}
+
+function dropped<M extends Carrier>(m: M): M {
+  const { images: _pixels, screenshots: _addresses, ...rest } = m;
+  return { ...rest, content: [m.content, DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n"), screenshotsDropped: screenshotsOf(m) } as M;
+}
+
+/**
+ * The conversation with the screenshots it may keep. Pure. The oldest `droppedScreenshotCount` lose their
+ * pixels — a message goes whole, and says so once —; one already dropped stays dropped and keeps counting; the
+ * newest batch always stays. The same function serves the turn's own messages and the history a later turn
+ * rebuilds: which ones go follows from how many there have been.
+ */
+export function applyScreenshotBudget<M extends Carrier>(messages: readonly M[], kept = SCREENSHOTS_KEPT, quantum = SCREENSHOTS_QUANTUM): M[] {
+  const total = messages.reduce((n, m) => n + screenshotsOf(m), 0);
+  const toDrop = droppedScreenshotCount(total, kept, quantum);
+  if (toDrop === 0) return [...messages];
+  const newest = messages.findLastIndex((m) => screenshotsOf(m) > 0);
+  let before = 0;
+  return messages.map((m, i) => {
+    const mine = screenshotsOf(m);
+    if (mine === 0) return m;
+    const goes = before < toDrop && i !== newest && m.screenshotsDropped === undefined;
+    before += mine;
+    return goes ? dropped(m) : m;
+  });
+}
+
+/** `applyScreenshotBudget` on the loop's own messages, in place. */
+export function keepRecentScreenshots(messages: Message[], kept = SCREENSHOTS_KEPT, quantum = SCREENSHOTS_QUANTUM): void {
+  const next = applyScreenshotBudget(messages, kept, quantum);
+  for (let i = 0; i < messages.length; i++) if (next[i] !== messages[i]) messages[i] = next[i]!;
 }
