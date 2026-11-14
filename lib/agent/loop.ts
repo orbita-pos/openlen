@@ -10,7 +10,7 @@
 // @openlen/ai-gateway / @/lib/html-engine .node bindings, which vite/vitest
 // cannot load — see loop.test.ts's header comment for the same constraint.
 
-// Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and screenshots dropped in jumps (A7), and a correction is a new message.
+// Cache effect: append-only within a turn — each step adds the assistant message and its results, reminders at the end; the only rewrites are compaction and, past forty screenshots in the conversation, the oldest twenty dropped at once (./screenshots-in-context.ts); a correction is a new message, and a change of plan mode appends the mode's prompt as a system message (`systemUpdate`).
 import type { InlineImage, Message, StopReason, StreamEvent } from "@/lib/ai-gateway";
 import { keepRecentScreenshots, screenshotsLabel, type BatchScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
