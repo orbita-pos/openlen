@@ -26,7 +26,7 @@ import { ARM_SPECS, SERVER_ENV, type ServerConfig } from "@/lib/len-bench/cold-r
 import { PILOT_CASE_IDS, RETURN_CASES, selectCases } from "@/lib/len-bench/cold-return/cases";
 import { gateLines, gates } from "@/lib/len-bench/cold-return/gates";
 import { Budget, BudgetStop, SetupStop, buildCase, estimateBuildUsd, estimateRunUsd, runArm, type BuiltCase } from "@/lib/len-bench/cold-return/runner";
-import { BENCH_DIR, addSpend, capturesDir, keepBuild, latestRuns, loadBuilds, loadSpend, runStore, type Step } from "@/lib/len-bench/cold-return/store";
+import { BENCH_DIR, addSpend, builtSizeOf, capturesDir, keepBuild, latestRuns, loadBuilds, loadSpend, runStore, type Step } from "@/lib/len-bench/cold-return/store";
 import { BASE_LEN_BENCH } from "@/lib/len-bench/entorno";
 
 /** The spec's caps (§8.6): what each step is asked for with. */
@@ -100,21 +100,24 @@ function report(dir: string, cases: readonly ReturnCase[]): number {
     console.log("No runs of today's arm yet: there is nothing to compare against.");
     return 1;
   }
-  const sizeOf = (id: string) => RETURN_CASES.find((c) => c.id === id)?.targetKTokens ?? 0;
+  // The size of a case is what was BUILT, never the label of its name (the «…-220k» apps weighed 94k).
+  const builds = loadBuilds(dir);
+  const sizeOf = builtSizeOf(builds, (id) => RETURN_CASES.find((c) => c.id === id)?.targetKTokens ?? 0);
+  const realSize = (id: string) => (builds.has(id) ? `${Math.round(builds.get(id)!.tokens / 1000)}k` : "—");
   const mean = (values: number[]) => (values.length ? values.reduce((s, v) => s + v, 0) / values.length : 0);
   const right = (runs: RunResult[], id: string) => {
     const answers = runs.filter((r) => r.caseId === id && !r.infra).flatMap((r) => r.questions.filter((q) => !q.infra));
     return answers.length ? `${answers.filter((q) => q.pass).length}/${answers.length}` : "—";
   };
   const all = { today, trim: runsOf("trim"), trim_summary: runsOf("trim_summary") };
-  lines.push(`${"case".padEnd(26)} ${ARMS.map((arm) => `${ARM_SPECS[arm].label} right`.padStart(10) + `${ARM_SPECS[arm].label} cost`.padStart(11)).join("")}`);
+  lines.push(`${"case".padEnd(26)} ${"built".padStart(6)} ${ARMS.map((arm) => `${ARM_SPECS[arm].label} right`.padStart(10) + `${ARM_SPECS[arm].label} cost`.padStart(11)).join("")}`);
   for (const c of cases) {
     lines.push(
-      `${c.id.padEnd(26)} ${ARMS.map((arm) => right(all[arm], c.id).padStart(10) + `$${mean(all[arm].filter((r) => r.caseId === c.id && !r.infra).map((r) => r.costUsd)).toFixed(4)}`.padStart(11)).join("")}`,
+      `${c.id.padEnd(26)} ${realSize(c.id).padStart(6)} ${ARMS.map((arm) => right(all[arm], c.id).padStart(10) + `$${mean(all[arm].filter((r) => r.caseId === c.id && !r.infra).map((r) => r.costUsd)).toFixed(4)}`.padStart(11)).join("")}`,
     );
   }
   lines.push("", "What the cold return's trim frees on each case (read off its history, no model):");
-  for (const c of cases) lines.push(`  ${c.id.padEnd(26)} ${trimLine(loadBuilds(dir).get(c.id))}`);
+  for (const c of cases) lines.push(`  ${c.id.padEnd(26)} ${trimLine(builds.get(c.id))}`);
   lines.push("");
   let verdicts = 0;
   for (const arm of ["trim", "trim_summary"] as const) {
@@ -124,7 +127,7 @@ function report(dir: string, cases: readonly ReturnCase[]): number {
     }
     const result = gates({ today, arm: all[arm], sizeOf });
     lines.push(...gateLines(ARM_SPECS[arm].label, result));
-    if (arm === "trim_summary") lines.push(`  umbral del resumen (medido con la cola literal de la política de 40k, la más corta): ${!result.thresholdKnown ? `no se puede decir todavía: hacen falta 3 corridas juzgadas de cada pregunta` : result.smallestCleanSize === null ? "rompe alguna pregunta en todos los tamaños" : `desde ${result.smallestCleanSize}k no rompe ninguna pregunta`}`);
+    if (arm === "trim_summary") lines.push(`  umbral del resumen (medido con la cola literal de la política de 40k, la más corta): ${!result.thresholdKnown ? `no se puede decir todavía: hacen falta 3 corridas juzgadas de cada pregunta` : result.smallestCleanSize === null ? "rompe alguna pregunta en todos los tamaños" : `desde ${result.smallestCleanSize}k de conversación real no rompe ninguna pregunta`}`);
     lines.push("");
     verdicts += 1;
   }

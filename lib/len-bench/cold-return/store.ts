@@ -21,6 +21,22 @@ export function benchIdleMinTokens(conversationTokens: number): number {
   return Math.max(1, Math.min(SMALLEST_THRESHOLD_TOKENS, Math.floor(conversationTokens * 0.9)));
 }
 
+/** The size a conversation is filed under in the report, in thousands of tokens: what it really weighs, to
+ *  the nearest ten thousand. */
+export function sizeClassK(tokens: number): number {
+  return Math.max(10, Math.round(tokens / 10_000) * 10);
+}
+
+/** The size class of each case for the report: the one of what was BUILT. A case's name carries the size it
+ *  was aimed at («…-220k»), and a build can come out far from it; the label is used only for a case that was
+ *  never built. */
+export function builtSizeOf(builds: ReadonlyMap<string, BuiltCase>, targetKOf: (caseId: string) => number): (caseId: string) => number {
+  return (caseId) => {
+    const built = builds.get(caseId);
+    return built ? sizeClassK(built.tokens) : targetKOf(caseId);
+  };
+}
+
 function readJson<T>(file: string, fallback: T): T {
   return fs.existsSync(file) ? (JSON.parse(fs.readFileSync(file, "utf8")) as T) : fallback;
 }

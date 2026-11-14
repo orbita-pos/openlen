@@ -182,7 +182,7 @@ export function gateLines(label: string, result: GateResult): string[] {
       : `  pregunta a pregunta  ${result.perQuestion.pass ? "pasa" : "NO pasa"} · ${result.perQuestion.broken.length} rota(s) de ${result.perQuestion.judged} juzgadas`,
     ...result.perQuestion.broken.map((b) => `      ${b.caseId} · pregunta ${b.question + 1} (${b.kind}): «hoy» ${b.todayRight} de 3, el brazo ${b.armRight} de 3`),
     `  coste y mecanismo    ${result.cost.pass ? "pasa" : "NO pasa"} · el dinero en conjunto baja ${pct(result.cost.saving)} (hacen falta ${pct(COST_SAVING)}) · la primera llamada baja ${pct(result.cost.firstCallDrop)}`,
-    `      por tamaño: ${result.cost.bySize.map((s) => `${s.size}k (${s.cases} casos) ${pct(s.saving)}`).join(" · ")} · media de los casos, pesando todos igual: ${pct(result.cost.meanCaseSaving)}`,
+    `      por tamaño real: ${result.cost.bySize.map((s) => `${s.size}k (${s.cases} casos) ${pct(s.saving)}`).join(" · ")} · media de los casos, pesando todos igual: ${pct(result.cost.meanCaseSaving)}`,
     `  contado: ${result.counted.arm.runs} corridas y ${result.counted.arm.questions} respuestas del brazo, ${result.counted.today.runs} y ${result.counted.today.questions} de «hoy»`,
   ];
   const out = result.left.arm.runs + result.left.arm.questions + result.left.today.runs + result.left.today.questions;
