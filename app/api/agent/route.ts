@@ -77,6 +77,7 @@ import { isFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
+  picturesOldestFirst,
   screenshotAddresses,
   historialDesdeLaBase,
   lastModelCallEndedAt,
@@ -94,6 +95,7 @@ import { readProjectFileBytes } from "@/lib/backend/files";
 import { clearPendingIdleSummaries, filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, turnosParaElHistorial } from "@/lib/projects/chat";
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { armIdleSummary, cancelIdleSummary, idleSummaryDeadlineMs, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
+import { applyScreenshotBudget } from "@/lib/agent/screenshots-in-context";
 import { idleSummaryJobFor } from "@/lib/agent/idle-summary-job";
 import { captureIdleSummaryJob } from "@/lib/agent/idle-summary-capture";
 import { sinceLastTurn, timeContext } from "@/lib/agent/time-context";
@@ -1093,16 +1095,20 @@ async function correrTurno(
   // ones the history still shows — after the cold trims and the budget, with nothing loaded yet — are loaded
   // with the photos, so the turn sends the same pictures the earlier ones sent.
   const capturasDeLen = filasDelHistorial.some((f) => f.transcript) ? screenshotAddresses(historialDesdeLaBase(filasDelHistorial, undefined, new Map(), coldMark)) : [];
-  const masNuevaPrimero = [
-    ...attachedImages.map((f) => f.url),
-    ...[...capturasDeLen].reverse(),
-    // Y las capturas del modo Diseño de cada turno, detrás de sus fotos (Len 3.1).
-    ...[...filasDelHistorial].reverse().flatMap((f) => [...photosOf(f.attachedImage).map((p) => p.url), ...(f.transcript?.designCaptures ?? [])]),
-  ];
+  // UN solo orden para todas, de la más nueva a la más vieja: las fotos de cada turno, las capturas del modo
+  // Diseño (Len 3.1) y lo que Len vio en él, como cuentan sus imágenes Claude Code y DeepSeek.
+  const masNuevaPrimero = [...attachedImages.map((f) => f.url), ...picturesOldestFirst(filasDelHistorial, new Set(capturasDeLen)).reverse()];
+  /** Las que un turno anterior dejó sin píxeles por no caber: no vuelven (`lostPhotos`), como en DeepSeek. */
+  const fotosPerdidasAntes = new Set(filasDelHistorial.flatMap((f) => f.transcript?.lostPhotos ?? []));
   const fotos = fotosQueCaben(
     masNuevaPrimero,
     await conseguirFotos(masNuevaPrimero, { origen: req.url, signal: req.signal, fromFolder: (path) => readProjectFileBytes(projectId, path) }),
+    undefined,
+    fotosPerdidasAntes,
   );
+  /** Y las que dejan de caber en ESTE turno: su fila lo dice, para que sigan así. */
+  const capturasDeLenVistas = new Set(capturasDeLen);
+  const fotosPerdidas = [...fotos].flatMap(([url, f]) => (f === NO_CABE && !fotosPerdidasAntes.has(url) && !capturasDeLenVistas.has(url) ? [url] : []));
   const pixelesDe = (url: string): InlineImage | null => {
     const f = fotos.get(url);
     return f && f !== NO_CABE ? f : null;
@@ -1823,6 +1829,7 @@ async function correrTurno(
         // Diseño, para que el historial rehaga este mensaje tal cual.
         ...(fotosSinVer.length > 0 ? { unseenPhotos: fotosSinVer } : {}),
         ...(capturasPerdidas.length > 0 ? { lostScreenshots: capturasPerdidas } : {}),
+        ...(fotosPerdidas.length > 0 ? { lostPhotos: fotosPerdidas } : {}),
         ...(planDelTurno.notice ? { planNotice: planDelTurno.active ? ("on" as const) : ("off" as const) } : {}),
         ...(capturasGuardadas.length > 0 ? { designCaptures: capturasGuardadas } : {}),
         // Y tu mensaje como se mandó, si no es lo que guarda la fila:
@@ -2898,7 +2905,10 @@ async function correrTurno(
           const personStartedItHere = !programadaDelTurno && proyectoDelChat === projectId;
           const endedWhole = finDelTurno === "completed" && !detenido && !asistenteBorrado && !marcaDelTurno && !compactedThisTurn;
           if (idleSummaryEnabled() && personStartedItHere && endedWhole && result.transcripcion?.length) {
-            const idleMessages = [...messagesBeforeLoop, ...result.transcripcion];
+            // What the turn LAST sent, as Claude Code's idle compaction forks on its last request: the loop
+            // drops the oldest screenshots from its own messages when the conversation passes the limit, and
+            // which ones go follows from how many there have been — the same answer here.
+            const idleMessages = applyScreenshotBudget([...messagesBeforeLoop, ...result.transcripcion]);
             const minTokens = idleSummaryMinTokens();
             if (estimateTokens(idleMessages) >= minTokens) {
               // The job is built OUTSIDE this handler, from plain values (lib/agent/idle-summary-job.ts): a

@@ -4,7 +4,7 @@
 // the next turn rebuilds the conversation from the saved row. Otherwise the next
 // turn's first call misses the provider's cache from the first changed message
 // on (the 24/10 «graciasa», 29,749 uncached tokens). Test-only code.
-import type { Message } from "@/lib/ai-gateway";
+import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { COMPACTION_INSTRUCTION } from "@/lib/agent/compaction/summary-prompt";
 import type { Leidos } from "@/lib/agent/ficheros/read";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
@@ -102,10 +102,27 @@ export function checkReplay(o: {
  * the closing call (`closeOut`), whose last user message is the cap notice the
  * transcript does not keep, and the compaction summary, which goes through
  * `openStream` with the summary instruction as its last message.
+ *
+ * SCREENSHOTS COME BACK TOO (14/11). In production every step's screenshots are stored and the row keeps
+ * their addresses, so the next turn sends the same pictures. The wrapper does what the route does: it stores
+ * them (with the test's own `storeScreenshots` if it has one, or a made-up address each) and gives them back
+ * when the turn is rebuilt. So a picture that stops coming back fails the test: `images_dropped` is no longer
+ * allowed by default. A turn whose pictures could NOT be stored — the test's store failed or gave nothing —
+ * has nothing to bring back, in production either: only there is the difference still let through.
  */
 export function withReplayInvariant(run: typeof runAgentLoop, o: { readonly allow?: readonly ReplayAllowance[] } = {}): typeof runAgentLoop {
-  const allow = new Set<ReplayAllowance>(o.allow ?? ["images_dropped"]);
+  const allow = new Set<ReplayAllowance>(o.allow ?? []);
   return async (args: AgentLoopArgs): Promise<AgentLoopResult> => {
+    const stored = new Map<string, InlineImage>();
+    let unstored = false;
+    const storeScreenshots = async (images: readonly InlineImage[]): Promise<readonly string[]> => {
+      const urls = args.storeScreenshots
+        ? await args.storeScreenshots(images).catch(() => [] as readonly string[])
+        : images.map(() => `https://replay.invalid/uploads/screenshot-${stored.size + 1}-${Math.random().toString(36).slice(2, 8)}.jpg`);
+      if (urls.length === images.length) urls.forEach((url, i) => stored.set(url, images[i]!));
+      else unstored = true;
+      return urls;
+    };
     // Each request with how many compactions came before it. A11: the ones after
     // the LAST summary must replay from the mark; the ones before a compaction
     // (or after a prune-only one) are not what the next turn rebuilds.
@@ -114,6 +131,7 @@ export function withReplayInvariant(run: typeof runAgentLoop, o: { readonly allo
     let lastSummaryAt = -1;
     const result = await run({
       ...args,
+      storeScreenshots,
       openStream: (messages) => {
         if (messages.at(-1)?.content !== COMPACTION_INSTRUCTION) requests.push({ messages: structuredClone(messages), compactionsBefore: compactions });
         return args.openStream(messages);
@@ -135,9 +153,12 @@ export function withReplayInvariant(run: typeof runAgentLoop, o: { readonly allo
         lastRequest: request,
         transcript: result.transcripcion!,
         leidos: new Map(),
+        photos: stored,
         ...(afterSummary ? { compactionMark: result.compactionMark, firstIndex: args.compaction?.firstIndex } : {}),
       });
       if (check.ok || (check.cause && check.cause !== "bytes_differ" && allow.has(check.cause))) return;
+      // Pictures that could not be stored have no address to come back by.
+      if (check.cause === "images_dropped" && unstored) return;
       throw new Error(
         `replay invariant: request ${n} does not replay from the saved transcript (message ${check.firstMismatch}, ${check.cause})`,
       );

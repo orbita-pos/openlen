@@ -23,7 +23,7 @@ import { _resetProviderHealth } from "@/lib/agent/provider-health";
 import { checkReplay } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
 import * as await0 from "@/lib/agent/screenshots-in-context";
-import { historialDesdeLaBase, screenshotAddresses, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { historialDesdeLaBase, picturesOldestFirst, screenshotAddresses, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { diffConsecutive } from "./request-diff";
 
 const wire = (messages: readonly Message[], tools?: readonly Record<string, unknown>[]): WireBody => ({
@@ -241,6 +241,21 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(screenshotAddresses(historialDesdeLaBase([looked, next]))).toEqual([]);
     // Without that note on a row, a picture that loads is sent (the control).
     expect(historialDesdeLaBase([looked], undefined, new Map([[url, pixels]]))[2]!.images).toEqual([pixels]);
+  });
+
+  // Review, minor 8. As Claude Code («past 100 media items the oldest become text») and DeepSeek
+  // (`offloadOldestImages`): ONE order for every picture of the conversation, whoever put it there. The route
+  // walked Len's screenshots before the photos of earlier turns, so an owner's old photo could lose its pixels
+  // while an older screenshot kept them.
+  it("🔴 the pictures of a conversation in one order, oldest first: each turn's photos, its design captures, then what Len saw in it", () => {
+    const shot = (n: number): Message => ({ role: "user", content: "", functionResponses: [{ name: "view_page", response: { ok: true } }], screenshots: [`shot-${n}`] });
+    const rows = [
+      { userText: "uno", assistantReasoning: "", attachedImage: { url: "photo-1" }, transcript: { mensajes: [shot(1), shot(2)], leidos: [], designCaptures: ["design-1"] } },
+      { userText: "dos", assistantReasoning: "", attachedImage: [{ url: "photo-2a" }, { url: "photo-2b" }], transcript: { mensajes: [shot(3)], leidos: [] } },
+    ];
+    expect(picturesOldestFirst(rows, new Set(["shot-1", "shot-2", "shot-3"]))).toEqual(["photo-1", "design-1", "shot-1", "shot-2", "photo-2a", "photo-2b", "shot-3"]);
+    // A screenshot the history no longer shows (dropped, lost, trimmed) is not asked for.
+    expect(picturesOldestFirst(rows, new Set(["shot-3"]))).toEqual(["photo-1", "design-1", "photo-2a", "photo-2b", "shot-3"]);
   });
 
   // Review, finding 7: a batch whose pictures could not be stored counted in the turn and not from its row, so

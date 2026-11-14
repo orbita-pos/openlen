@@ -187,6 +187,10 @@ export interface TranscripcionGuardada {
    *  request (`PLAN_ON_NOTICE` / `PLAN_OFF_NOTICE`). The history puts it back there; without this the next
    *  turn rebuilt the turn without it and paid it again. */
   readonly planNotice?: "on" | "off";
+  /** Photos of this conversation (the owner's, the design mode's captures) that did not fit with the newer
+   *  pictures on THIS turn: they went with their note and no pixels, and they stay that way on every later
+   *  turn, as in DeepSeek's harness — a picture that came back would change a message already sent. */
+  readonly lostPhotos?: readonly string[];
   /** Screenshots of EARLIER turns that this turn could not load (the file did not come, or they did not fit
    *  with the newer pictures): their messages went without pixels, and they stay that way on every later
    *  turn — a picture that came back would change a message already sent twice. */
@@ -572,6 +576,21 @@ export function historialDesdeLaBase(
   const lost = new Set(filas.flatMap((f) => f.transcript?.lostScreenshots ?? []));
   mensajes = withScreenshots(applyScreenshotBudget(mensajes.map((m) => (m.screenshots?.some((url) => lost.has(url)) ? dropScreenshots(m) : m))), fotos);
   return microcompactarASaltos(mensajes, presupuesto);
+}
+
+/**
+ * EVERY PICTURE OF THE CONVERSATION IN ONE ORDER, oldest first, whoever put it there — as Claude Code counts
+ * its media items and DeepSeek offloads its oldest images: each turn's photos, its design captures, then what
+ * Len saw in it. It is the order the byte budget walks (newest first), so what loses its pixels is the start
+ * of the conversation and never an owner's photo ahead of an older screenshot. `shown`: the screenshots the
+ * history still shows (`screenshotAddresses`); the others are not asked for.
+ */
+export function picturesOldestFirst(filas: readonly FilaDelHistorial[], shown: ReadonlySet<string>): string[] {
+  return filas.flatMap((f) => [
+    ...photosOf(f.attachedImage).map((p) => p.url),
+    ...(f.transcript?.designCaptures ?? []),
+    ...[...(isCompactionMark(f.compaction) ? f.compaction.messages : []), ...(f.transcript?.mensajes ?? [])].flatMap((m) => (m.screenshots ?? []).filter((url) => shown.has(url))),
+  ]);
 }
 
 /** The stored addresses of the screenshots a history still shows, oldest first: what the route has to load. */

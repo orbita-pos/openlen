@@ -2068,6 +2068,25 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(filaGuardada()).toMatchObject({ lostScreenshots: [URL_SHOT] });
   });
 
+  // Menor 8 de la revisión, como DeepSeek («a replacement never reverts»): una foto de un turno anterior que
+  // un turno dejó sin píxeles por no caber no vuelve en los siguientes, aunque ya quepa.
+  it("🔴 una foto que un turno anterior anotó como perdida por no caber sigue sin píxeles aunque ahora baje", async () => {
+    const URL_VIEJA = "https://u/vieja.jpg";
+    const conFoto = { ...TRANSCRITO, attachedImage: { url: URL_VIEJA } };
+    const despues = { ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, lostPhotos: [URL_VIEJA] } };
+    mocks.turnosParaElHistorial.mockResolvedValue([conFoto, despues]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_VIEJA, { mimeType: "image/jpeg", dataBase64: "AAAA" }]]));
+    await readEvents(await pedir());
+    const tuMensaje = (historialQueRecibio() as { content: string; images?: unknown[] }[])[0]!;
+    expect(tuMensaje.images).toBeUndefined();
+    expect(tuMensaje.content).toContain("it didn't fit with the others");
+    // El brazo de control: sin esa nota en ninguna fila, la foto se ve.
+    mocks.turnosParaElHistorial.mockResolvedValue([conFoto, TRANSCRITO]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_VIEJA, { mimeType: "image/jpeg", dataBase64: "AAAA" }]]));
+    await readEvents(await pedir());
+    expect((historialQueRecibio() as { images?: unknown[] }[])[0]!.images).toHaveLength(1);
+  });
+
   // Crear es Len: hasta 4 fotos en un mensaje, como los adjuntos de DeepSeek.
   it("varias fotos en ESTE mensaje: todas pegadas a tu mensaje, en orden, y la fila las guarda como lista", async () => {
     const A = { mimeType: "image/jpeg", dataBase64: "AAAA" };
@@ -2315,6 +2334,32 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         );
         await armed()[0].summarize([{ role: "system", content: "SYSTEM" }, { role: "user", content: "x" }], signal);
         expect(seen[1]).toEqual([{ role: "system", content: `SYSTEM\n\n${PLAN_POLICY}` }, { role: "user", content: "x" }]);
+      });
+
+      // Review, minor 9. As Claude Code's idle compaction, which forks on the request it last sent: a turn that
+      // passed forty screenshots dropped the oldest twenty from what it was sending, and the summary's request
+      // was built from the messages of BEFORE the turn — it no longer matched what the provider had cached.
+      it("🔴 the summary is asked with what the turn last sent: the screenshots it dropped on passing forty are dropped in its request too", async () => {
+        const PX = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+        const shot = (n: number) => ({ role: "user", content: `seen ${n}`, functionResponses: [{ name: "view_page", response: { ok: true } }], images: [PX], screenshots: [`https://u/uploads/p1/screenshot-${n}.jpg`] });
+        vi.stubEnv("OPENLEN_IDLE_SUMMARY_MIN_TOKENS", "1");
+        mocks.turnosParaElHistorial.mockResolvedValueOnce(endedAgo(10 * 60_000));
+        // What the turn received: forty screenshots of earlier turns, all with their pixels.
+        mocks.buildAgentMessages.mockReturnValueOnce({
+          ok: true as const,
+          messages: [{ role: "system", content: "SYS" }, { role: "user", content: "manual" }, ...Array.from({ length: 40 }, (_, i) => shot(i)), { role: "user", content: "mira otra vez" }],
+          systemPrompt: "SYS",
+          contextBlock: "",
+        } as never);
+        // And the turn took one more.
+        mocks.runAgentLoop.mockResolvedValueOnce({
+          finalText: "listo", turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 },
+          terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "" }, shot(40), { role: "assistant", content: "listo" }],
+        });
+        await readEvents(await pedir());
+        const messages = armed()[0].messages as { content: string; images?: unknown[]; screenshotsDropped?: number }[];
+        expect(messages.filter((m) => m.images?.length).map((m) => m.content)).toEqual(Array.from({ length: 21 }, (_, i) => `seen ${20 + i}`));
+        expect(messages.filter((m) => m.screenshotsDropped === 1)).toHaveLength(20);
       });
 
       // The return bench (spec §8.2) writes the summary itself, with the function the timer calls: its server
