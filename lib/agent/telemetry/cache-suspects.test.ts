@@ -22,7 +22,7 @@ import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { _resetProviderHealth } from "@/lib/agent/provider-health";
 import { checkReplay } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
-import { historialDesdeLaBase, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { historialDesdeLaBase, screenshotAddresses, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { diffConsecutive } from "./request-diff";
 
 const wire = (messages: readonly Message[], tools?: readonly Record<string, unknown>[]): WireBody => ({
@@ -187,11 +187,73 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(diffConsecutive(wire(roomy.messages), wire(tight.messages))).toEqual({ match: true });
   });
 
-  // FIXED in the turn (14/11, as Claude Code and DeepSeek keep images): screenshots stay where they were sent.
-  // Before, past three, every batch but the newest lost its pixels (in jumps since A7: 2 breaks in 8
-  // screenshots; one per step before that). Now nothing goes until there have been 40, and then the oldest 20
-  // at once. Across turns the saved row still keeps none — the next task's.
-  it("screenshots: a turn that looks eight times rewrites nothing; the next turn still loses them", async () => {
+  // FIXED (14/11, as Claude Code and DeepSeek keep images): screenshots stay where they were sent, in the turn
+  // and in the turns after it. Before, past three, every batch but the newest lost its pixels (in jumps since
+  // A7), and the saved row kept none: the next turn paid again from the first screenshot of the one before.
+  // Now the row keeps each picture's stored address and the next turn sends the same bytes.
+  it("🔴 screenshots across turns: the row keeps their addresses, never their pixels, and the next turn sends the same pictures", async () => {
+    const requests: Message[][] = [];
+    const stored = new Map<string, { mimeType: string; dataBase64: string }>();
+    let step = 0;
+    const initial: Message[] = [{ role: "system", content: "s" }, { role: "user", content: "mira" }];
+    const result = await runAgentLoop({
+      messages: initial,
+      tools: [],
+      openStream: (m) => {
+        requests.push(structuredClone(m));
+        const events: StreamEvent[] =
+          step++ < 3 ? [{ type: "function_call", name: "view_page", args: { mode: "screenshot" } }, { type: "done", stopReason: { kind: "end_turn" } }] : [{ type: "text_delta", text: "Visto." }, { type: "done", stopReason: { kind: "end_turn" } }];
+        return (async function* () {
+          for (const e of events) yield e;
+        })();
+      },
+      runTool: async () => ({ response: { ok: true, screenshot: "attached below" }, images: [{ mimeType: "image/jpeg", dataBase64: `PIXELS${step}` }] }),
+      // What the route's `storeStepScreenshots` does: each picture stored, its address given back in order.
+      storeScreenshots: async (images) =>
+        images.map((image) => {
+          const url = `https://files.example/uploads/p1/screenshot-${stored.size + 1}.jpg`;
+          stored.set(url, { ...image });
+          return url;
+        }),
+      emit: () => {},
+    });
+    const saved = transcripcionParaGuardar(result.transcripcion!, new Map());
+    const withPictures = saved.mensajes.filter((m) => m.screenshots?.length);
+    expect(withPictures.map((m) => m.screenshots)).toEqual([...stored.keys()].map((url) => [url]));
+    expect(JSON.stringify(saved)).not.toContain("PIXELS");
+    // What the next turn has to load: exactly those.
+    const rows = [{ userText: "mira", assistantReasoning: "", transcript: saved }];
+    expect(screenshotAddresses(historialDesdeLaBase(rows))).toEqual([...stored.keys()]);
+    // With them loaded, the turn replays byte for byte: no allowance for dropped images.
+    expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map(), photos: stored })).toEqual({ ok: true });
+  });
+
+  it("a stored screenshot that cannot be loaded: its message says they were dropped, the others keep theirs", () => {
+    const shot = (n: number): Message => ({ role: "user", content: `Screenshots below ${n}`, functionResponses: [{ name: "view_page", response: { ok: true } }], screenshots: [`https://files.example/${n}.jpg`] });
+    const rows = [{ userText: "mira", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant" as const, content: "" }, shot(1), { role: "assistant" as const, content: "" }, shot(2)], leidos: [] } }];
+    const pixels = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    const history = historialDesdeLaBase(rows, undefined, new Map([["https://files.example/1.jpg", null], ["https://files.example/2.jpg", pixels]]));
+    const [, , first, , second] = history;
+    expect(first).toMatchObject({ screenshotsDropped: 1 });
+    expect(first!.images).toBeUndefined();
+    expect(first!.content).toMatch(/^Screenshots below 1\n\n\(The screenshots that were here were dropped/);
+    expect(second!.images).toEqual([pixels]);
+    expect(second!.screenshotsDropped).toBeUndefined();
+    // Nobody asked for the pictures (a reader that is not the model): the addresses stay, nothing is said.
+    const unread = historialDesdeLaBase(rows);
+    expect(unread[2]).toMatchObject({ content: "Screenshots below 1", screenshots: ["https://files.example/1.jpg"] });
+    expect(unread[2]!.images).toBeUndefined();
+  });
+
+  it("the forty-screenshot budget holds across turns: a later turn drops the same oldest twenty, whatever was loaded", () => {
+    const shot = (n: number): Message => ({ role: "user", content: "", functionResponses: [{ name: "view_page", response: { ok: true } }], screenshots: [`https://files.example/${n}.jpg`] });
+    const row = (from: number, count: number) => ({ userText: "mira", assistantReasoning: "", transcript: { mensajes: Array.from({ length: count }, (_, i) => shot(from + i)), leidos: [] } });
+    const history = historialDesdeLaBase([row(1, 30), row(31, 11)]);
+    expect(screenshotAddresses(history)).toEqual(Array.from({ length: 21 }, (_, i) => `https://files.example/${21 + i}.jpg`));
+    expect(history.filter((m) => m.screenshotsDropped === 1)).toHaveLength(20);
+  });
+
+  it("screenshots: a turn that looks eight times rewrites nothing; without stored addresses the next turn still loses them", async () => {
     const shot = { mimeType: "image/png", dataBase64: "AAAA" };
     const requests: Message[][] = [];
     let step = 0;

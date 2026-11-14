@@ -43,6 +43,7 @@ import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { isPlanPrompt } from "@/lib/agent/plan-mode";
+import { applyScreenshotBudget, dropScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 
 /** La misma marca que usa Claude Code. */
@@ -312,6 +313,9 @@ function limpio<M extends Message | MensajeDelHistorial>(m: M, siguiente?: Messa
           })),
         }
       : {}),
+    // A step's screenshots: where they were stored, never their pixels; or how many there were, once dropped.
+    ...(m.screenshots?.length && m.screenshotsDropped === undefined ? { screenshots: [...m.screenshots] } : {}),
+    ...(m.screenshotsDropped !== undefined ? { screenshotsDropped: m.screenshotsDropped } : {}),
   } as M;
 }
 
@@ -543,7 +547,29 @@ export function historialDesdeLaBase(
     if (diedMidTurn(f)) mensajes.push({ role: "user", content: CUT_OFF_TURN_MARK });
   }
   if (cold && cold !== WHOLE_HISTORY) mensajes = coldTrim(mensajes, lastRowStart, cold);
+  // THE SCREENSHOTS LEN TOOK stay in the conversation, as they were sent: the ones the budget keeps get their
+  // pixels back from `fotos`. Which ones the budget drops follows from how many there have been, so every
+  // turn drops the same ones.
+  mensajes = withScreenshots(applyScreenshotBudget(mensajes), fotos);
   return microcompactarASaltos(mensajes, presupuesto);
+}
+
+/** The stored addresses of the screenshots a history still shows, oldest first: what the route has to load. */
+export function screenshotAddresses(history: readonly MensajeDelHistorial[]): string[] {
+  return history.flatMap((m) => (m.screenshotsDropped === undefined ? [...(m.screenshots ?? [])] : []));
+}
+
+/** Each message's screenshots with their pixels, when every one of them was loaded. One that could not be
+ *  loaded, or did not fit with the newer ones, takes its message's pictures with it: the message says they
+ *  were dropped. An address nobody asked for (`fotos` does not know it) is left as it is — the reader is
+ *  not the model, or is only collecting what to load. */
+function withScreenshots(mensajes: readonly MensajeDelHistorial[], fotos: FotosDeLaConversacion): MensajeDelHistorial[] {
+  return mensajes.map((m) => {
+    if (!m.screenshots?.length || m.screenshotsDropped !== undefined) return m;
+    const loaded = m.screenshots.map((url) => fotos.get(url));
+    if (loaded.every((f): f is InlineImage => typeof f === "object" && f !== null)) return { ...m, images: loaded };
+    return loaded.some((f) => f === null || f === NO_CABE) ? dropScreenshots(m) : m;
+  });
 }
 
 /** Un turno cortado que murió con su proceso: su fila se quedó con la copia de

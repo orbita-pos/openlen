@@ -2039,6 +2039,29 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     expect(tuMensaje.images).toEqual([CAPTURA]);
   });
 
+  // Como Claude Code y DeepSeek, que conservan las imágenes en la conversación: la fila guarda la dirección
+  // de cada captura que Len hizo y el turno siguiente la vuelve a mandar, así lo que mandó el anterior sigue
+  // coincidiendo con la caché del proveedor.
+  it("🔴 las capturas que Len hizo en un turno anterior vuelven con sus píxeles: se piden sus direcciones y van en su mensaje", async () => {
+    const URL_SHOT = "https://u/uploads/p1/screenshot-1.jpg";
+    const SHOT = { mimeType: "image/jpeg", dataBase64: "SSSS" };
+    const miro = { role: "assistant", content: "", functionCalls: [{ name: "view_page", args: { mode: "screenshot" } }] };
+    const visto = { role: "user", content: "Screenshots below, in order: image 1 from view_page. Look at them yourself.", functionResponses: [{ name: "view_page", response: { ok: true } }], screenshots: [URL_SHOT] };
+    mocks.turnosParaElHistorial.mockResolvedValue([{ ...TRANSCRITO, transcript: { ...TRANSCRITO.transcript, mensajes: [miro, visto, { role: "assistant", content: "Visto." }] } }]);
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_SHOT, SHOT]]));
+    await readEvents(await pedir());
+    expect(mocks.conseguirFotos).toHaveBeenLastCalledWith([URL_SHOT], expect.anything());
+    const historial = historialQueRecibio() as { content: string; images?: unknown[]; screenshots?: string[] }[];
+    expect(historial.find((m) => m.screenshots?.length)?.images).toEqual([SHOT]);
+
+    // Si no se puede bajar, ese mensaje dice que se quitaron y el turno sigue.
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_SHOT, null]]));
+    await readEvents(await pedir());
+    const sinPixeles = (historialQueRecibio() as { content: string; images?: unknown[]; screenshotsDropped?: number }[]).find((m) => m.screenshotsDropped === 1);
+    expect(sinPixeles?.content).toContain("were dropped");
+    expect(sinPixeles?.images).toBeUndefined();
+  });
+
   // Crear es Len: hasta 4 fotos en un mensaje, como los adjuntos de DeepSeek.
   it("varias fotos en ESTE mensaje: todas pegadas a tu mensaje, en orden, y la fila las guarda como lista", async () => {
     const A = { mimeType: "image/jpeg", dataBase64: "AAAA" };

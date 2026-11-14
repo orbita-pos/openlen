@@ -2156,7 +2156,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (outcome.notice) avisos.push(outcome.notice);
         // La lista vigente es la última que escribió (también vacía).
         if (outcome.todos) currentTodos = outcome.todos;
-        if (outcome.images?.length) capturas.push({ tool: call.name, images: outcome.images });
+        if (outcome.images?.length) capturas.push({ tool: call.name, images: outcome.images, ...(screenshots.length === outcome.images.length ? { urls: screenshots } : {}) });
         const respuesta = outcome.response;
         // LA EVIDENCIA, contada aquí y no fiada del texto del modelo. `cambio`
         // viene de `declararCambio` (hash antes ≠ hash después); lo durable cubre
@@ -2352,6 +2352,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // él, sin nadie que se las describa (como la skill `verify` de Claude Code:
     // la captura es la prueba). Las viejas pierden los píxeles.
     const imagenes = capturas.flatMap((c) => c.images);
+    // Where they were stored, when every one was: what the row keeps of them, so the next turn sends the
+    // same pictures and what this one sent still matches (`Message.screenshots`).
+    const direcciones = capturas.every((c) => c.urls?.length === c.images.length) ? capturas.flatMap((c) => c.urls ?? []) : [];
     messages.push({
       role: "user",
       // El aviso del corte, el último: es lo que decide el paso siguiente.
@@ -2371,6 +2374,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       ].filter((x) => x.length > 0).join("\n\n"),
       functionResponses,
       ...(imagenes.length > 0 ? { images: imagenes } : {}),
+      ...(imagenes.length > 0 && direcciones.length === imagenes.length ? { screenshots: direcciones } : {}),
     });
     if (imagenes.length > 0) keepRecentScreenshots(messages);
     if (args.onStepTools) {

@@ -77,6 +77,7 @@ import { isFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
   NO_CABE,
+  screenshotAddresses,
   historialDesdeLaBase,
   lastModelCallEndedAt,
   leidosSembrados,
@@ -1088,8 +1089,13 @@ async function correrTurno(
   // De la más nueva a la más vieja: la del turno primero. Si no caben juntas en
   // la petición, las más viejas van sin píxeles y con su dirección, como DeepSeek
   // (`fotosQueCaben`); el turno sigue.
+  // THE SCREENSHOTS LEN TOOK in earlier turns stay in the conversation (as in Claude Code and DeepSeek): the
+  // ones the history still shows — after the cold trims and the budget, with nothing loaded yet — are loaded
+  // with the photos, so the turn sends the same pictures the earlier ones sent.
+  const capturasDeLen = filasDelHistorial.some((f) => f.transcript) ? screenshotAddresses(historialDesdeLaBase(filasDelHistorial, undefined, new Map(), coldMark)) : [];
   const masNuevaPrimero = [
     ...attachedImages.map((f) => f.url),
+    ...[...capturasDeLen].reverse(),
     // Y las capturas del modo Diseño de cada turno, detrás de sus fotos (Len 3.1).
     ...[...filasDelHistorial].reverse().flatMap((f) => [...photosOf(f.attachedImage).map((p) => p.url), ...(f.transcript?.designCaptures ?? [])]),
   ];
