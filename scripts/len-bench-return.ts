@@ -124,7 +124,7 @@ function report(dir: string, cases: readonly ReturnCase[]): number {
     }
     const result = gates({ today, arm: all[arm], sizeOf });
     lines.push(...gateLines(ARM_SPECS[arm].label, result));
-    if (arm === "trim_summary") lines.push(`  umbral del resumen (medido con la cola literal de la política de 40k, la más corta): ${result.smallestCleanSize === null ? "rompe alguna pregunta en todos los tamaños" : `desde ${result.smallestCleanSize}k no rompe ninguna pregunta`}`);
+    if (arm === "trim_summary") lines.push(`  umbral del resumen (medido con la cola literal de la política de 40k, la más corta): ${!result.thresholdKnown ? `no se puede decir todavía: hacen falta 3 corridas juzgadas de cada pregunta` : result.smallestCleanSize === null ? "rompe alguna pregunta en todos los tamaños" : `desde ${result.smallestCleanSize}k no rompe ninguna pregunta`}`);
     lines.push("");
     verdicts += 1;
   }

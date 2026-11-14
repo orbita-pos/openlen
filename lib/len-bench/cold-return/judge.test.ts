@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { ARM_SPECS, mechanismProblem } from "./arms";
 import { LIST_PRICE, runCost, usdOf, type CallUsage } from "./cost";
-import { gates, QUALITY_MARGIN, COST_SAVING, type GateInput } from "./gates";
+import { gateLines, gates, QUALITY_MARGIN, COST_SAVING, type GateInput } from "./gates";
 import { grade } from "./grade";
 import type { Arm, QuestionResult, ReturnQuestion, RunResult } from "./types";
 
@@ -233,11 +233,40 @@ describe("the gates (spec §8.5)", () => {
     expect(result.perQuestion.unjudged.length).toBeGreaterThan(0);
   });
 
+  // Seen in the $0 rehearsal of the pilot: with ONE run per case the report said «from 40k no question
+  // breaks» — of questions nobody had judged.
+  it("🔴 with fewer than three judged answers per question, neither the fine gate nor the threshold claims anything", () => {
+    const once = [[true, true, true]];
+    const today = [...runs("today", "a", once, 0.03, 120_000), ...runs("today", "b", once, 0.03, 120_000)];
+    const arm = [...runs("trim_summary", "a", once, 0.01, 30_000), ...runs("trim_summary", "b", once, 0.01, 30_000)];
+    const result = gates(input(today, arm));
+    expect(result.perQuestion.judged).toBe(0);
+    expect(result.perQuestion.unjudged).toHaveLength(6);
+    expect(result.thresholdKnown).toBe(false);
+    expect(result.smallestCleanSize).toBeNull();
+    const lines = gateLines("A+B", result).join("\n");
+    expect(lines).toMatch(/pregunta a pregunta\s+no se puede decir/);
+    expect(lines).not.toMatch(/pregunta a pregunta\s+pasa/);
+    // What the money did is still said: one run is enough to see a cost.
+    expect(result.cost.saving).toBeCloseTo(1 - 0.01 / 0.03, 6);
+  });
+
+  it("a size with one question nobody could judge has no threshold to give, even when the others are clean", () => {
+    const today = [...runs("today", "a", ALL, 0.03, 120_000), ...runs("today", "b", ALL, 0.03, 120_000)];
+    const arm = [...runs("trim_summary", "a", ALL, 0.01, 30_000), ...runs("trim_summary", "b", ALL, 0.01, 30_000)];
+    arm[0] = { ...arm[0]!, infra: "the provider failed" };
+    const result = gates(input(today, arm));
+    expect(result.perQuestion.judged).toBe(3);
+    expect(result.thresholdKnown).toBe(false);
+    expect(result.smallestCleanSize).toBeNull();
+  });
+
   it("the smallest size at which the summary breaks no question", () => {
     const today = [...runs("today", "a", ALL, 0.03, 120_000), ...runs("today", "b", ALL, 0.03, 120_000), ...runs("today", "c", ALL, 0.03, 120_000)];
     const broken = [[true, true, false], [true, true, false], [true, true, true]];
     const arm = [...runs("trim_summary", "a", broken, 0.01, 30_000), ...runs("trim_summary", "b", ALL, 0.01, 30_000), ...runs("trim_summary", "c", ALL, 0.01, 30_000)];
     expect(gates(input(today, arm)).smallestCleanSize).toBe(100);
+    expect(gates(input(today, arm)).thresholdKnown).toBe(true);
     const allBroken = arm.map((r) => ({ ...r, questions: [q(true), q(true), q(false)] }));
     expect(gates(input(today, allBroken)).smallestCleanSize).toBeNull();
   });
