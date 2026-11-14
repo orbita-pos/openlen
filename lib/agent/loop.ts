@@ -349,6 +349,11 @@ export interface AgentLoopArgs {
    *  children this turn launched, taken (and so consumed) before each model call and once more before
    *  the turn closes. Each one enters as its own user message, as DeepSeek's harness sends it. */
   takeAgentNotices?(): readonly string[];
+  /** THE SYSTEM PROMPT, WHEN IT CHANGES MID-CONVERSATION (plan mode, lib/agent/plan-mode.ts): asked before
+   *  every model call with the conversation as it stands; what it returns — a `system` message with the whole
+   *  new prompt — is appended to the loop's own messages, so it stays where it was sent for the rest of the
+   *  turn and is saved with it. Nothing already sent is rewritten. `null`: the conversation already says it. */
+  systemUpdate?(messages: readonly Message[]): Message | null;
   /** For a turn nobody watches (thread, email, scheduled): when it would close with children still
    *  running, it waits here. `true` = a notice arrived (take it and go on); `false` = none is left. */
   awaitAgentNotices?(): Promise<boolean>;
@@ -1488,6 +1493,10 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       maxTurns += VUELTAS_POR_DIRECCION;
     }
     for (const notice of args.takeAgentNotices?.() ?? []) messages.push({ role: "user", content: notice });
+    // The prompt of the mode the turn is in NOW, if the conversation does not say it yet: before the caps, so
+    // a closing call reads it too.
+    const systemUpdate = args.systemUpdate?.(messages) ?? null;
+    if (systemUpdate) messages.push(systemUpdate);
     if (mutatingTurns >= maxTurns) {
       return await finishOnCap("turn_limit");
     }

@@ -10,6 +10,7 @@ import type { Leidos } from "@/lib/agent/ficheros/read";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import type { AgentLoopArgs, AgentLoopResult, runAgentLoop } from "@/lib/agent/loop";
 import type { CompactionMark } from "@/lib/agent/compaction/mark";
+import { materializeSystemUpdates } from "@/lib/agent/plan-mode";
 import { compactionMarkForStorage, historialDesdeLaBase, transcripcionParaGuardar } from "@/lib/agent/transcripcion";
 
 /**
@@ -81,11 +82,12 @@ export function checkReplay(o: {
     // The next turn rebuilds from the stored mark and the tail of the transcript.
     const mark = jsonbRoundTrip(compactionMarkForStorage(o.compactionMark));
     const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved, compaction: mark }]) as Message[];
-    return comparePrefix(o.lastRequest, [...o.initialMessages.slice(0, o.firstIndex ?? 2), ...stored]);
+    return comparePrefix(o.lastRequest, materializeSystemUpdates([...o.initialMessages.slice(0, o.firstIndex ?? 2), ...stored]));
   }
   // The row's own user message comes first; the loop's messages follow it.
   const stored = historialDesdeLaBase([{ userText: "", assistantReasoning: "", transcript: saved }]).slice(1) as Message[];
-  return comparePrefix([...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)], [...o.initialMessages, ...stored]);
+  // An in-history system prompt is saved as a marker and gets its text back from message 0, as when a turn is assembled.
+  return comparePrefix([...o.initialMessages, ...o.lastRequest.slice(o.initialMessages.length)], materializeSystemUpdates([...o.initialMessages, ...stored]));
 }
 
 /**

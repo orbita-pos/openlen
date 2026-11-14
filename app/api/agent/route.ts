@@ -136,7 +136,7 @@ import { createArtifactAgent } from "@/lib/artifacts/tools";
 
 import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente, queuedDirections } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
-import { planModeFromRows, resolveTurnPlanMode, withPlanSection } from "@/lib/agent/plan-mode";
+import { materializeSystemUpdates, planInHistoryEnabled, planModeFromRows, resolveTurnPlanMode, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import {
   GoalError,
   blockGoal,
@@ -1494,6 +1494,8 @@ async function correrTurno(
   // The person's own assistant: Len's system prompt byte for byte, then its section and who it is.
   if (asistente && messages[0]?.role === "system") {
     messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, asistente) };
+    // A prompt the plan mode left in the history gets its text from message 0 as it is NOW sent.
+    messages.splice(0, messages.length, ...materializeSystemUpdates(messages));
   }
   // LA FOTO DE ESTE TURNO, PEGADA A TU MENSAJE (A): viaja en todas las vueltas
   // y en el cierre, como una imagen pegada en Claude Code. Antes se anclaba a
@@ -1507,6 +1509,8 @@ async function correrTurno(
   // `enter_plan_mode` y `exit_plan_mode` (`deps.planMode`, más abajo); la
   // sección entra o sale del prompt en CADA petición (`withPlanSection`).
   const planPlegado = planModeFromRows(filasDelHistorial);
+  /** The plan prompt travels as a later system message (DeepSeek's way); `OPENLEN_PLAN_IN_HISTORY=0`: in message 0. */
+  const planEnElHistorial = planInHistoryEnabled();
   // Plan mode is Len's: the assistant's turn never enters it, whatever the composer sent.
   const planDelTurno = resolveTurnPlanMode({ folded: planPlegado, selected: asistente ? null : planElegido });
   let planActivo = planDelTurno.active;
@@ -2538,8 +2542,9 @@ async function correrTurno(
           // (`lib/agent/retry-policy.ts`, como DeepSeek). Cada evento del modelo
           // rearma el reloj de silencio.
           openStream: (msgs) => {
-            // Pieza 7: la sección del modo plan, con el estado de AHORA.
-            const conModo = withPlanSection(msgs, planActivo);
+            // Pieza 7: el prompt del modo plan, con el estado de AHORA. Lo añade el bucle a su conversación
+            // cuando el modo cambia (`systemUpdate`); con la palanca apagada, entra y sale del mensaje 0 aquí.
+            const conModo = planEnElHistorial ? msgs : withPlanSection(msgs, planActivo);
             const s = conSenales(streamWithRetry(() => brain.openStream(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             // `envuelve` deja pasar cada evento tal cual y se queda una copia:
             // no cambia el orden, ni el contenido, ni el momento en que llega.
@@ -2548,8 +2553,9 @@ async function correrTurno(
           // Graceful termination: a tools-OFF stream the loop uses only to
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
+          ...(planEnElHistorial ? { systemUpdate: (msgs: readonly Message[]) => systemUpdateFor(msgs, planActivo) } : {}),
           closeOut: (msgs) => {
-            const conModo = withPlanSection(msgs, planActivo);
+            const conModo = planEnElHistorial ? msgs : withPlanSection(msgs, planActivo);
             const s = conSenales(streamWithRetry(() => brain.closeOut(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
             return grabadora ? grabadora.envuelveCierre(s) : s;
           },

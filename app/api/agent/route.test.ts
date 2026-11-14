@@ -1076,8 +1076,17 @@ describe("POST /api/agent — la pregunta que espera", () => {
 describe("POST /api/agent — el modo plan", () => {
   const SYS = "You are Len.";
   let enviados: Message[][] = [];
-  const conSeccion = (m: Message[]) => typeof m[0]?.content === "string" && m[0].content === `${SYS}\n\n${PLAN_POLICY}`;
-  const sinSeccion = (m: Message[]) => m[0]?.content === SYS;
+  // The prompt that rules is the LATEST system message (DeepSeek's in-history replacement): the mode's prompt
+  // is appended, whole, and message 0 is never rewritten.
+  const elUltimoDeSistema = (m: Message[]) => m.filter((x) => x.role === "system").at(-1)?.content;
+  const conSeccion = (m: Message[]) => m[0]?.content === SYS && elUltimoDeSistema(m) === `${SYS}\n\n${PLAN_POLICY}`;
+  const sinSeccion = (m: Message[]) => m[0]?.content === SYS && elUltimoDeSistema(m) === SYS;
+  /** What the real loop does before each model call: the prompt of the mode, if the conversation lacks it. */
+  const llamar = (args: AgentLoopArgs) => {
+    const update = args.systemUpdate?.(args.messages) ?? null;
+    if (update) args.messages.push(update);
+    args.openStream(args.messages);
+  };
   const filaEnPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "plan" }], leidos: [], planMode: true } };
   const filaSinPlan = { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [] } };
   const cierre = { finalText: "ok", turns: 1, toolCalls: 0, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0 }, terminalError: false, mutoDurable: true, transcripcion: [{ role: "assistant", content: "ok" }] };
@@ -1112,14 +1121,14 @@ describe("POST /api/agent — el modo plan", () => {
     mocks.createAgentBrain.mockReturnValue(
       mocks.brainStub({
         openStream: (m: Message[]) => {
-          enviados.push(m);
+          enviados.push([...m]);
           return (async function* () {})();
         },
       }),
     );
     vi.mocked(streamWithRetry).mockImplementation(((f: () => unknown) => f()) as never);
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-      args.openStream(args.messages);
+      llamar(args);
       return cierre;
     });
   });
@@ -1133,6 +1142,7 @@ describe("POST /api/agent — el modo plan", () => {
     mocks.turnosParaElHistorial.mockReset();
     mocks.turnosParaElHistorial.mockResolvedValue([]);
     vi.mocked(streamWithRetry).mockReset();
+    vi.unstubAllEnvs();
   });
   const turno = async (extra: Record<string, unknown> = {}) =>
     readEvents(await POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "añade reseñas", ...extra }) })));
@@ -1149,8 +1159,10 @@ describe("POST /api/agent — el modo plan", () => {
     await turno({ plan: true });
     const m = enviados[0]!;
     expect(conSeccion(m)).toBe(true);
-    expect(m.at(-2)).toEqual({ role: "user", content: PLAN_ON_NOTICE });
-    expect(m.at(-1)?.content).toBe("añade reseñas");
+    // The narration, the request, and behind them the mode's prompt: nothing before it is rewritten.
+    expect(m.at(-3)).toEqual({ role: "user", content: PLAN_ON_NOTICE });
+    expect(m.at(-2)?.content).toBe("añade reseñas");
+    expect(m.at(-1)).toEqual({ role: "system", content: `${SYS}\n\n${PLAN_POLICY}` });
   });
 
   it("el dueño lo apaga: sin sección, con su narración, y la fila sin la foto", async () => {
@@ -1168,14 +1180,17 @@ describe("POST /api/agent — el modo plan", () => {
       return { response: { ok: true, approved: true } };
     });
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-      args.openStream(args.messages);
+      llamar(args);
       await args.runTool("exit_plan_mode", { plan: "# Reseñas" });
-      args.openStream(args.messages);
+      llamar(args);
       return cierre;
     });
     const eventos = await turno();
     expect(conSeccion(enviados[0]!)).toBe(true);
     expect(sinSeccion(enviados[1]!)).toBe(true);
+    // The second request is the first plus the prompt of the mode it is in now: nothing sent is rewritten.
+    expect(enviados[1]!.slice(0, enviados[0]!.length)).toEqual(enviados[0]);
+    expect(enviados[1]).toHaveLength(enviados[0]!.length + 1);
     // El estado al empezar y el cambio.
     expect(eventos.filter((e) => e.event === "plan").map((e) => e.data)).toEqual([{ active: true }, { active: false }]);
     expect(filaGuardada()?.planMode).toBeUndefined();
@@ -1185,7 +1200,23 @@ describe("POST /api/agent — el modo plan", () => {
     mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
     await turno({ plan: "yes" });
     expect(conSeccion(enviados[0]!)).toBe(true);
-    expect(enviados[0]!.at(-2)?.content).toBe("manual");
+    expect(enviados[0]!.some((m) => m.content === PLAN_ON_NOTICE || m.content === PLAN_OFF_NOTICE)).toBe(false);
+    expect(enviados[0]!.at(-3)?.content).toBe("manual");
+  });
+
+  it("OPENLEN_PLAN_IN_HISTORY=0: la sección entra y sale del mensaje 0, como antes, y el bucle no recibe nada que añadir", async () => {
+    vi.stubEnv("OPENLEN_PLAN_IN_HISTORY", "0");
+    mocks.turnosParaElHistorial.mockResolvedValue([filaEnPlan]);
+    let conGancho = true;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      conGancho = args.systemUpdate !== undefined;
+      llamar(args);
+      return cierre;
+    });
+    await turno();
+    expect(conGancho).toBe(false);
+    expect(enviados[0]![0]!.content).toBe(`${SYS}\n\n${PLAN_POLICY}`);
+    expect(enviados[0]!.filter((m) => m.role === "system")).toHaveLength(1);
   });
 
   it("BRAZO DE CONTROL: sin modo plan ni elección, el prompt es el de siempre", async () => {
@@ -2240,8 +2271,10 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(idleBrain.tools).toBe(turnBrain.tools);
         expect(idleBrain).toMatchObject({ requestId: "p1", signal, preferredProvider: "fireworks" });
         for (const key of ["mode", "esfuerzoDelTurno", "esfuerzoDelUsuario"]) expect(idleBrain[key]).toBe(turnBrain[key]);
-        expect(seen[0]![0]!.content).toContain(PLAN_POLICY);
+        // The request goes as it is; the mode's prompt is its latest system message, never message 0 rewritten.
+        expect(seen[0]![0]).toEqual({ role: "system", content: "SYSTEM" });
         expect(seen[0]![1]).toEqual({ role: "user", content: "x" });
+        expect(seen[0]!.at(-1)).toEqual({ role: "system", content: `SYSTEM\n\n${PLAN_POLICY}` });
       });
 
       // The return bench (spec §8.2) writes the summary itself, with the function the timer calls: its server

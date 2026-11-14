@@ -8,6 +8,16 @@
  * como el suyo: no bloquea ninguna herramienta (el catálogo no cambia entre
  * modos, por la caché).
  *
+ * Efecto en la caché (14/11): cambiar de modo NO reescribe el mensaje 0. El
+ * prompt nuevo va ENTERO como un mensaje de sistema posterior, al final de la
+ * conversación — el «in-history system prompt replacement» de DeepSeek (su
+ * arnés @ 39163dd, nota 2026-09-02): su modelo acepta un mensaje de sistema en
+ * cualquier posición y toma el ÚLTIMO como el prompt completo, así que no vale
+ * mandar sólo la sección. Comprobado en los dos proveedores de Len con
+ * `npm run measure:wire-probe` (lo de antes sigue saliendo de la caché, 97–99 %).
+ * Antes entrar y salir del modo repagaban la conversación entera.
+ * `OPENLEN_PLAN_IN_HISTORY=0` vuelve a la reescritura del mensaje 0.
+ *
  * Lo de Claude Code es la conducta de la otra puerta: el modelo puede pedir
  * entrar (`enter_plan_mode`, su `EnterPlanMode` sin parámetros) y el dueño tiene
  * que aceptar. Su texto no se copia.
@@ -51,22 +61,77 @@ export const PLAN_ON_NOTICE = "The user switched this session to plan mode.";
 export const PLAN_OFF_NOTICE = "The user switched this session back to the default mode.";
 
 const SEPARATOR = "\n\n";
+const TAIL = `${SEPARATOR}${PLAN_POLICY}`;
+
+/** The environment these read: the process's, or a plain object in a test. */
+type Env = Readonly<Record<string, string | undefined>>;
+
+/** Opt-out: only the literal `0` brings back the rewrite of message 0. */
+export function planInHistoryEnabled(env: Env = process.env): boolean {
+  return env.OPENLEN_PLAN_IN_HISTORY !== "0";
+}
+
+/** Whether a system prompt carries the plan section. */
+export function isPlanPrompt(text: string): boolean {
+  return text.endsWith(TAIL);
+}
+
+/** The system prompt of a mode: the base and, active, the section behind it. `base` may already carry it. */
+export function planPrompt(base: string, active: boolean): string {
+  const bare = isPlanPrompt(base) ? base.slice(0, -TAIL.length) : base;
+  return active ? `${bare}${TAIL}` : bare;
+}
 
 /**
- * Los mensajes con el prompt de sistema del modo que toca: la base y, activo,
- * la sección detrás. Devuelve una copia y sólo cambia `messages[0]` si es de
- * sistema; quitarla deja la base aunque ya la llevara (se llama en cada
- * petición del turno: al aprobar a media vuelta, la siguiente sale sin ella,
- * como en DeepSeek, que la evalúa por petición).
+ * THE PROMPT THAT RULES IS THE LATEST SYSTEM MESSAGE of the conversation. When it is not the one the mode
+ * asks for — rendered from message 0 —, this is the message to append at the END: the whole prompt, never a
+ * delta. `null`: the conversation already says it (or has no system prompt to speak of).
  */
-export function withPlanSection(messages: readonly Message[], active: boolean): Message[] {
+export function systemUpdateFor(messages: readonly Message[], active: boolean): Message | null {
+  const first = messages[0];
+  if (!first || first.role !== "system" || typeof first.content !== "string") return null;
+  const rendered = planPrompt(first.content, active);
+  let latest = first.content;
+  for (let i = messages.length - 1; i > 0; i--) {
+    if (messages[i]!.role === "system") {
+      latest = messages[i]!.content;
+      break;
+    }
+  }
+  return latest === rendered ? null : { role: "system", content: rendered };
+}
+
+/**
+ * A request with the prompt of the mode that applies. A copy; the input is never touched. With the
+ * conversation already carrying it — Len's own, where the loop appended it when the mode changed — nothing
+ * is added: that is what a fork and the idle summary send. Lever off: the section goes in and out of
+ * message 0, as it did.
+ */
+export function withPlanSection(messages: readonly Message[], active: boolean, env: Env = process.env): Message[] {
   const out = [...messages];
+  if (planInHistoryEnabled(env)) {
+    const update = systemUpdateFor(out, active);
+    if (update) out.push(update);
+    return out;
+  }
   const first = out[0];
   if (!first || first.role !== "system" || typeof first.content !== "string") return out;
-  const tail = `${SEPARATOR}${PLAN_POLICY}`;
-  const base = first.content.endsWith(tail) ? first.content.slice(0, -tail.length) : first.content;
-  out[0] = { ...first, content: active ? `${base}${tail}` : base };
+  out[0] = { ...first, content: planPrompt(first.content, active) };
   return out;
+}
+
+/**
+ * WHAT A ROW SAVED AS A MARKER GETS ITS TEXT BACK (`Message.systemUpdate`, written by the transcript): from
+ * message 0 of THIS turn, so the bytes are the ones that were sent while the prompt has not changed, and a
+ * deploy that changes it changes message 0 and these alike. Lever off: they are taken out — the mode is
+ * then in message 0 alone, and one left behind would contradict it (the latest system message rules).
+ */
+export function materializeSystemUpdates(messages: readonly Message[], env: Env = process.env): Message[] {
+  const first = messages[0];
+  const saved = (m: Message, i: number): boolean => i > 0 && m.role === "system" && m.systemUpdate !== undefined;
+  if (!planInHistoryEnabled(env)) return messages.filter((m, i) => !saved(m, i));
+  if (!first || first.role !== "system" || typeof first.content !== "string") return [...messages];
+  return messages.map((m, i) => (saved(m, i) ? { ...m, content: planPrompt(first.content, m.systemUpdate === "plan") } : m));
 }
 
 /**

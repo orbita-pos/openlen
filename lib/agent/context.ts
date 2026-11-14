@@ -20,6 +20,7 @@ import { buildAgentSystemPrompt } from "@/lib/agent/catalog";
 import { adjuntoDelManual, buildManualDeLaPlataforma } from "@/lib/agent/manual-de-la-plataforma";
 import type { AgentMode } from "@/lib/agent/dynamis";
 import type { AppDeProyecto } from "@/lib/projects/types";
+import { materializeSystemUpdates } from "@/lib/agent/plan-mode";
 import { notaDeLaFoto, textoDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
@@ -682,7 +683,8 @@ export function assembleTurnMessages(o: {
   readonly contextBlock: string;
   readonly prompt: string;
 }): Message[] {
-  return [
+  // A prompt the plan mode appended in an earlier turn comes back as a marker: its text is this turn's.
+  return materializeSystemUpdates([
     { role: "system", content: o.systemPrompt },
     { role: "user", content: o.manual },
     ...o.history,
@@ -690,5 +692,5 @@ export function assembleTurnMessages(o: {
     ...(o.skillCatalogMessage ? [{ role: "user" as const, content: o.skillCatalogMessage }] : []),
     { role: "user", content: o.contextBlock },
     { role: "user", content: o.prompt },
-  ];
+  ]);
 }

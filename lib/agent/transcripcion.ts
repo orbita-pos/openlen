@@ -42,6 +42,7 @@ import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
+import { isPlanPrompt } from "@/lib/agent/plan-mode";
 import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 
 /** La misma marca que usa Claude Code. */
@@ -97,7 +98,9 @@ export const TOPE_TRANSCRIPCION = 400_000;
  *  con papel de usuario viajan también cosas que no abren turno: la insistencia
  *  del servidor, lo medido al cerrar, la corrección a media faena. No llega al
  *  modelo: el puente arma cada mensaje campo a campo. */
-export type MensajeDelHistorial = Omit<Message, "role"> & { role: "user" | "assistant"; opensTurn?: true };
+/** `system`: only an in-history system prompt saved as a marker (`Message.systemUpdate`); its text is put back
+ *  when the turn's messages are assembled (`materializeSystemUpdates`). */
+export type MensajeDelHistorial = Omit<Message, "role"> & { role: "user" | "assistant" | "system"; opensTurn?: true };
 
 /** Todo lo que el historial pone delante del modelo, como texto: el contenido,
  *  lo pensado (H15), los argumentos de cada llamada y cada respuesta tal y como
@@ -285,6 +288,11 @@ function sinHerramienta(m: Message | MensajeDelHistorial | undefined): ReadonlyS
  *  siguientes, como en el arnés de DeepSeek; las fotos no (las pone la ruta).
  *  `siguiente`: el mensaje de después, el que trae las respuestas a sus llamadas. */
 function limpio<M extends Message | MensajeDelHistorial>(m: M, siguiente?: Message | MensajeDelHistorial): M {
+  // An in-history system prompt (plan mode): the row keeps WHICH prompt it was, never its text.
+  if (m.role === "system") {
+    const plan = m.systemUpdate ? m.systemUpdate === "plan" : typeof m.content === "string" && isPlanPrompt(m.content);
+    return { role: "system", content: "", systemUpdate: plan ? "plan" : "default" } as M;
+  }
   const llamadasTalCual = sinHerramienta(siguiente);
   const respuestasTalCual = sinHerramienta(m);
   return {
@@ -545,13 +553,15 @@ function diedMidTurn(f: FilaDelHistorial): boolean {
   return f.cutOff === true && (f.transcript === null || f.transcript.partial === true) && !f.transcript?.detenido;
 }
 
-/** Mensajes del bucle tal y como vuelven en el historial. Del bucle sólo salen
- *  mensajes de usuario y de asistente; uno de sistema no tiene sitio en un
- *  historial y no se reenvía. Sin la memoria personal, también en las filas de
- *  antes de que se dejara de guardar (y en las de /memoria/dueno.md). */
+/** Mensajes del bucle tal y como vuelven en el historial. Del bucle salen
+ *  mensajes de usuario y de asistente y, desde el 14/11, el prompt de sistema
+ *  que el modo plan añadió a media conversación, guardado como marca
+ *  (`systemUpdate`): vuelve en su sitio. Cualquier otro mensaje de sistema no
+ *  tiene sitio en un historial y no se reenvía. Sin la memoria personal, también
+ *  en las filas de antes de que se dejara de guardar (y en las de /memoria/dueno.md). */
 function enElHistorial(deLaFila: readonly Message[]): MensajeDelHistorial[] {
-  const propios = withoutPersonalMemory(deLaFila).filter((m) => m.role !== "system");
-  return propios.map((m, i) => limpio({ ...m, role: m.role as "user" | "assistant" }, propios[i + 1]));
+  const propios = withoutPersonalMemory(deLaFila).filter((m) => m.role !== "system" || m.systemUpdate !== undefined);
+  return propios.map((m, i) => limpio({ ...m, role: m.role as "user" | "assistant" | "system" }, propios[i + 1]));
 }
 
 /** A11 · la marca lista para la fila, limpia como una transcripción

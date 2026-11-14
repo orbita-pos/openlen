@@ -757,14 +757,15 @@ describe("forks (phase 2)", () => {
     expect(s.rows.get("r1")).toMatchObject({ forked: true, preset: "general-purpose" });
   });
 
-  it("🔴 in plan mode a fork's request starts with Len's system prompt as he sends it: with the plan section", async () => {
+  it("🔴 in plan mode a fork's request is Len's as he sends it: his messages untouched, the plan prompt as the latest system message", async () => {
     const s = setup({ forkSeed: SEED, planMode: true });
     await s.launcher.fork({ description: "Review", prompt: "Review it." });
     await s.settled("r1");
     const first = s.g.seen[0]!;
-    expect(first[0]).toEqual(withPlanSection(SEED, true)[0]);
-    expect(first[0]).not.toEqual(SEED[0]);
-    expect(first.slice(1, SEED.length)).toEqual(SEED.slice(1));
+    expect(first.slice(0, SEED.length)).toEqual(SEED);
+    const systems = first.filter((m) => m.role === "system");
+    expect(systems.at(-1)).toEqual(withPlanSection(SEED, true).at(-1));
+    expect(String(systems.at(-1)!.content)).not.toBe(String(SEED[0]!.content));
   });
 
   it("a fork whose inherited conversation is over the summary threshold summarizes it before its first call (Len summarizes first only above it)", async () => {
