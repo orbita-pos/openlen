@@ -127,7 +127,8 @@ export function sanearHistorial(raw: unknown, nombresValidos: ReadonlySet<string
 
 /** Lo que necesitan los dos contadores de abajo de cada mensaje. */
 type MensajeContado = {
-  role: "user" | "assistant";
+  // `system`: a prompt the plan mode left in the history; never an owner's request.
+  role: "user" | "assistant" | "system";
   content: string;
   functionCalls?: readonly unknown[];
   functionResponses?: readonly unknown[];

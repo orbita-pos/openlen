@@ -59,6 +59,10 @@ export interface Message {
    *  dueño adjuntó. Viajan con él en cada llamada, como una imagen pegada en
    *  Claude Code. Nunca se guardan: la transcripción sólo guarda texto. */
   images?: readonly InlineImage[];
+  /** An in-history system prompt as it is SAVED with a turn's row (lib/agent/plan-mode.ts): which prompt it
+   *  was, never its text — the text is rebuilt from the turn's own message 0 when the history is. Only on a
+   *  `role: "system"` message that is not the first. */
+  systemUpdate?: "plan" | "default";
   /** Asistente: lo que el modelo PENSÓ en ese paso, entero y tal cual llegó.
    *  Vuelve al modelo en los pasos siguientes del turno (H15, como el arnés de
    *  DeepSeek); al dueño no se le enseña, y no se guarda en la base. */

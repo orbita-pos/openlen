@@ -16,13 +16,13 @@ import { createAgentBrain, type BrainCall } from "@/lib/agent/brain";
 import { buildAgentMessages } from "@/lib/agent/context";
 import { messagesForFireworks } from "@/lib/agent/fireworks-bridge";
 import { runAgentLoop } from "@/lib/agent/loop";
-import { withPlanSection } from "@/lib/agent/plan-mode";
+import { PLAN_POLICY, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import { quienPide } from "@/lib/agent/equipo";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { _resetProviderHealth } from "@/lib/agent/provider-health";
 import { checkReplay } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
-import { historialDesdeLaBase, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { historialDesdeLaBase, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import { diffConsecutive } from "./request-diff";
 
 const wire = (messages: readonly Message[], tools?: readonly Record<string, unknown>[]): WireBody => ({
@@ -95,11 +95,77 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(diffConsecutive(a!, b!)).toEqual({ match: true });
   });
 
-  it("plan mode: entering or leaving it rewrites the system prompt (part system), as in DeepSeek", () => {
+  // FIXED (14/11, DeepSeek's in-history system prompt replacement, checked on both providers with the wire
+  // probe): entering or leaving plan mode APPENDS the new prompt, whole, as a later system message. Before, it
+  // rewrote message 0 (`part=system`) and the whole conversation was paid again on each change of mode.
+  it("plan mode: entering or leaving it appends the prompt at the end; everything sent before still matches", () => {
     const messages: Message[] = [{ role: "system", content: "base" }, { role: "user", content: "planea" }];
-    expect(diffConsecutive(wire(withPlanSection(messages, false)), wire(withPlanSection(messages, true)))).toMatchObject({ match: false, part: "system", index: 0 });
-    // Staying in plan mode keeps it identical.
-    expect(diffConsecutive(wire(withPlanSection(messages, true)), wire(withPlanSection(messages, true)))).toEqual({ match: true });
+    const entered = withPlanSection(messages, true);
+    expect(diffConsecutive(wire(messages), wire(entered))).toEqual({ match: true });
+    const left = withPlanSection([...entered, { role: "assistant", content: "plan" }], false);
+    expect(diffConsecutive(wire(entered), wire(left))).toEqual({ match: true });
+    // Staying in plan mode adds nothing.
+    expect(withPlanSection(entered, true)).toEqual(entered);
+    // With the lever off it is the rewrite of before, and it shows as a changed system prompt.
+    const off = { OPENLEN_PLAN_IN_HISTORY: "0" };
+    expect(diffConsecutive(wire(withPlanSection(messages, false, off)), wire(withPlanSection(messages, true, off)))).toMatchObject({ match: false, part: "system", index: 0 });
+  });
+
+  it("🔴 plan mode in a turn: the loop appends the prompt when the mode changes and keeps it where it was sent; the saved turn rebuilds the same bytes", async () => {
+    let active = false;
+    let step = 0;
+    const requests: Message[][] = [];
+    const initial: Message[] = [{ role: "system", content: "base" }, { role: "user", content: "planea y hazlo" }];
+    const tools = ["enter_plan_mode", "exit_plan_mode", "Read"];
+    const result = await runAgentLoop({
+      messages: initial,
+      tools: [],
+      openStream: (m) => {
+        requests.push(structuredClone(m));
+        const name = tools[step++];
+        const events: StreamEvent[] = name
+          ? [{ type: "function_call", name, args: name === "Read" ? { file_path: "/index.html" } : {} }, { type: "done", stopReason: { kind: "end_turn" } }]
+          : [{ type: "text_delta", text: "Hecho." }, { type: "done", stopReason: { kind: "end_turn" } }];
+        return (async function* () {
+          for (const e of events) yield e;
+        })();
+      },
+      runTool: async (name) => {
+        if (name === "enter_plan_mode") active = true;
+        if (name === "exit_plan_mode") active = false;
+        return { response: { ok: true } };
+      },
+      systemUpdate: (m) => systemUpdateFor(m, active),
+      emit: () => {},
+    });
+    expect(requests).toHaveLength(4);
+    // Nothing sent before is ever rewritten: each request extends the one before it.
+    for (let i = 1; i < requests.length; i++) expect(diffConsecutive(wire(requests[i - 1]!), wire(requests[i]!))).toEqual({ match: true });
+    const systems = (r: Message[]) => r.flatMap((m, i) => (m.role === "system" ? [`${i}:${m.content === "base" ? "base" : m.content === `base\n\n${PLAN_POLICY}` ? "plan" : "?"}`] : []));
+    expect(systems(requests[0]!)).toEqual(["0:base"]);
+    // After entering: the plan prompt, whole, right behind the tool's result.
+    expect(systems(requests[1]!)).toEqual(["0:base", "4:plan"]);
+    // After leaving: the base prompt again as the latest; the plan one stays where it was.
+    expect(systems(requests[2]!)).toEqual(["0:base", "4:plan", "7:base"]);
+    // And with no change of mode, nothing more.
+    expect(systems(requests[3]!)).toEqual(["0:base", "4:plan", "7:base"]);
+    // What the row keeps is which prompt it was, never its text.
+    const saved = transcripcionParaGuardar(result.transcripcion!, new Map());
+    expect(saved.mensajes.filter((m) => m.role === "system")).toEqual([
+      { role: "system", content: "", systemUpdate: "plan" },
+      { role: "system", content: "", systemUpdate: "default" },
+    ]);
+    expect(JSON.stringify(saved)).not.toContain("PLAN MODE");
+    // And the next turn rebuilds, byte for byte, what this one sent.
+    expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toEqual({ ok: true });
+  });
+
+  it("a system message without the marker — nothing the loop ever saved — still has no place in a rebuilt history", () => {
+    const [first, ...rest] = historialDesdeLaBase([
+      { userText: "hola", assistantReasoning: "", transcript: { mensajes: [{ role: "system", content: "viejo" }, { role: "assistant", content: "hecho" }], leidos: [] } },
+    ]);
+    expect(first).toMatchObject({ role: "user", content: "hola" });
+    expect(rest).toEqual([{ role: "assistant", content: "hecho" }]);
   });
 
   // FIXED (14/11, as DeepSeek's harness and Claude Code: neither prunes what was thought to fit, both

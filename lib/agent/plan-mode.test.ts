@@ -12,12 +12,17 @@ import {
   PLAN_POLICY,
   SKIP_PLANNING_LABEL,
   consentGiven,
+  isPlanPrompt,
+  materializeSystemUpdates,
   planConsentQuestion,
+  planInHistoryEnabled,
   planModeFromRows,
+  planPrompt,
   planReviewQuestion,
   planTitle,
   resolveTurnPlanMode,
   reviewOutcome,
+  systemUpdateFor,
   withPlanSection,
 } from "./plan-mode";
 
@@ -60,21 +65,90 @@ describe("la sección del prompt", () => {
     { role: "user", content: "manual" },
     { role: "user", content: "hola" },
   ];
+  const PLAN = `You are Len.\n\n${PLAN_POLICY}`;
+  const OFF = { OPENLEN_PLAN_IN_HISTORY: "0" };
 
-  it("activo, la añade UNA vez al prompt de sistema", () => {
-    const una = withPlanSection(base, true);
-    expect(una[0]!.content).toBe(`You are Len.\n\n${PLAN_POLICY}`);
-    expect(withPlanSection(una, true)[0]!.content).toBe(una[0]!.content);
+  it("el prompt del modo: la base y, activo, la sección detrás", () => {
+    expect(planPrompt("You are Len.", true)).toBe(PLAN);
+    expect(planPrompt("You are Len.", false)).toBe("You are Len.");
+    expect(planPrompt(PLAN, true)).toBe(PLAN);
+    expect(planPrompt(PLAN, false)).toBe("You are Len.");
+    expect(isPlanPrompt(PLAN)).toBe(true);
+    expect(isPlanPrompt("You are Len.")).toBe(false);
   });
 
-  it("inactivo, la quita y deja la base", () => {
-    expect(withPlanSection(withPlanSection(base, true), false)[0]!.content).toBe("You are Len.");
-  });
-
-  it("no toca el resto ni el array de entrada", () => {
+  // Como DeepSeek (in-history system prompt replacement): el prompt que manda es el ÚLTIMO mensaje de
+  // sistema de la conversación. Cambiar de modo AÑADE el prompt nuevo, entero, al final; el mensaje 0 y
+  // todo lo que el proveedor ya tiene en caché no se tocan.
+  it("🔴 al entrar en el modo no se reescribe nada: el prompt nuevo, entero, es un mensaje de sistema al final", () => {
+    expect(systemUpdateFor(base, true)).toEqual({ role: "system", content: PLAN });
     const out = withPlanSection(base, true);
-    expect(out.slice(1)).toEqual(base.slice(1));
+    expect(out.slice(0, base.length)).toEqual(base);
+    expect(out.at(-1)).toEqual({ role: "system", content: PLAN });
+    expect(out).toHaveLength(base.length + 1);
+    expect(base).toHaveLength(3);
+  });
+
+  it("mientras el modo no cambia, no se añade nada", () => {
+    expect(systemUpdateFor(base, false)).toBeNull();
+    expect(withPlanSection(base, false)).toEqual(base);
+    const dentro = withPlanSection(base, true);
+    expect(systemUpdateFor(dentro, true)).toBeNull();
+    expect(withPlanSection(dentro, true)).toEqual(dentro);
+  });
+
+  it("al salir, el prompt de siempre vuelve como OTRO mensaje de sistema: manda el último, no el mensaje 0", () => {
+    const dentro = [...withPlanSection(base, true), { role: "assistant" as const, content: "plan listo" }];
+    expect(systemUpdateFor(dentro, false)).toEqual({ role: "system", content: "You are Len." });
+    const fuera = withPlanSection(dentro, false);
+    expect(fuera.slice(0, dentro.length)).toEqual(dentro);
+    expect(fuera.at(-1)).toEqual({ role: "system", content: "You are Len." });
+    // Y de vuelta dentro, otra vez al final.
+    expect(systemUpdateFor(fuera, true)).toEqual({ role: "system", content: PLAN });
+    expect(systemUpdateFor(fuera, false)).toBeNull();
+  });
+
+  it("sin mensaje de sistema delante no hay nada que decir", () => {
+    expect(systemUpdateFor([{ role: "user", content: "hola" }], true)).toBeNull();
+    expect(systemUpdateFor([], true)).toBeNull();
+  });
+
+  it("lo que se guardó como marca recupera su texto del mensaje 0 de ESTE turno", () => {
+    const guardado: Message[] = [
+      { role: "system", content: "You are Len, v2." },
+      { role: "user", content: "hola" },
+      { role: "system", content: "", systemUpdate: "plan" },
+      { role: "assistant", content: "plan listo" },
+      { role: "system", content: "", systemUpdate: "default" },
+    ];
+    const out = materializeSystemUpdates(guardado);
+    expect(out[2]).toEqual({ role: "system", content: `You are Len, v2.\n\n${PLAN_POLICY}`, systemUpdate: "plan" });
+    expect(out[4]).toEqual({ role: "system", content: "You are Len, v2.", systemUpdate: "default" });
+    expect(out[0]).toBe(guardado[0]);
+    expect(systemUpdateFor(out, false)).toBeNull();
+    expect(systemUpdateFor(out, true)).toEqual({ role: "system", content: `You are Len, v2.\n\n${PLAN_POLICY}` });
+  });
+
+  it("OPENLEN_PLAN_IN_HISTORY=0 vuelve a lo de antes: la sección entra y sale del mensaje 0", () => {
+    expect(planInHistoryEnabled({})).toBe(true);
+    expect(planInHistoryEnabled(OFF)).toBe(false);
+    const una = withPlanSection(base, true, OFF);
+    expect(una).toHaveLength(base.length);
+    expect(una[0]!.content).toBe(PLAN);
+    expect(withPlanSection(una, true, OFF)[0]!.content).toBe(PLAN);
+    expect(withPlanSection(una, false, OFF)[0]!.content).toBe("You are Len.");
+    expect(una.slice(1)).toEqual(base.slice(1));
     expect(base[0]!.content).toBe("You are Len.");
+  });
+
+  it("🔴 con la palanca apagada, lo guardado a la manera nueva se quita: no queda un prompt contradiciendo al mensaje 0", () => {
+    const guardado: Message[] = [
+      { role: "system", content: "You are Len." },
+      { role: "user", content: "hola" },
+      { role: "system", content: "", systemUpdate: "plan" },
+      { role: "assistant", content: "plan listo" },
+    ];
+    expect(materializeSystemUpdates(guardado, OFF)).toEqual([guardado[0], guardado[1], guardado[3]]);
   });
 
   it("es la de DeepSeek: sin todo_write y con la verificación para el dueño", () => {
