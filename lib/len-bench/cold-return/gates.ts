@@ -49,6 +49,8 @@ export interface GateResult {
   readonly pass: boolean;
   readonly quality: { readonly pass: boolean; readonly today: number; readonly arm: number };
   readonly perQuestion: {
+    /** Questions with three judged answers on both sides: the ones the gate could speak for. */
+    readonly judged: number;
     readonly pass: boolean;
     readonly broken: readonly BrokenQuestion[];
     /** Questions with fewer than three judged answers on either side: the gate says nothing about them. */
@@ -70,6 +72,9 @@ export interface GateResult {
   /** The smallest size class from which no question breaks, at that size or any larger: where the summary's
    *  threshold can sit. `null`: it breaks one at every size. */
   readonly smallestCleanSize: number | null;
+  /** Every question of every case was judged: only then does `smallestCleanSize` mean anything (with fewer
+   *  than three runs it is `null` because nothing is known, not because every size breaks). */
+  readonly thresholdKnown: boolean;
 }
 
 const valid = (runs: readonly RunResult[]) => runs.filter((run) => !run.infra);
@@ -148,17 +153,20 @@ export function gates(input: GateInput): GateResult {
     return { size, cases: ids.length, saving: dropOf(ids, cost) };
   });
   const dirty = new Set(broken.map((b) => input.sizeOf(b.caseId)));
-  const smallestCleanSize = sizes.find((size) => sizes.filter((s) => s >= size).every((s) => !dirty.has(s))) ?? null;
+  const judgedQuestions = todayQ.size - unjudged.length;
+  const thresholdKnown = judgedQuestions > 0 && unjudged.length === 0;
+  const smallestCleanSize = thresholdKnown ? (sizes.find((size) => sizes.filter((s) => s >= size).every((s) => !dirty.has(s))) ?? null) : null;
 
   const perQuestionPass = broken.length === 0;
   return {
     pass: qualityPass && perQuestionPass && costPass,
     quality: { pass: qualityPass, ...quality },
-    perQuestion: { pass: perQuestionPass, broken, unjudged },
+    perQuestion: { pass: perQuestionPass, judged: judgedQuestions, broken, unjudged },
     cost: { pass: costPass, saving, meanCaseSaving, bySize, firstCallDrop },
     counted: { today: today.counted, arm: arm.counted },
     left: { today: today.left, arm: arm.left },
     smallestCleanSize,
+    thresholdKnown,
   };
 }
 
@@ -169,7 +177,9 @@ export function gateLines(label: string, result: GateResult): string[] {
   const lines = [
     `Brazo ${label}: ${result.pass ? "PASA" : "NO PASA"}`,
     `  calidad en conjunto  ${result.quality.pass ? "pasa" : "NO pasa"} · acierta ${pct(result.quality.arm)} frente a ${pct(result.quality.today)} de «hoy» (margen ${pct(QUALITY_MARGIN)})`,
-    `  pregunta a pregunta  ${result.perQuestion.pass ? "pasa" : "NO pasa"} · ${result.perQuestion.broken.length} rota(s)`,
+    result.perQuestion.judged === 0
+      ? `  pregunta a pregunta  no se puede decir: ninguna pregunta tiene ${RUNS_TO_JUDGE} respuestas juzgadas en los dos lados`
+      : `  pregunta a pregunta  ${result.perQuestion.pass ? "pasa" : "NO pasa"} · ${result.perQuestion.broken.length} rota(s) de ${result.perQuestion.judged} juzgadas`,
     ...result.perQuestion.broken.map((b) => `      ${b.caseId} · pregunta ${b.question + 1} (${b.kind}): «hoy» ${b.todayRight} de 3, el brazo ${b.armRight} de 3`),
     `  coste y mecanismo    ${result.cost.pass ? "pasa" : "NO pasa"} · el dinero en conjunto baja ${pct(result.cost.saving)} (hacen falta ${pct(COST_SAVING)}) · la primera llamada baja ${pct(result.cost.firstCallDrop)}`,
     `      por tamaño: ${result.cost.bySize.map((s) => `${s.size}k (${s.cases} casos) ${pct(s.saving)}`).join(" · ")} · media de los casos, pesando todos igual: ${pct(result.cost.meanCaseSaving)}`,
