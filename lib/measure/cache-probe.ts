@@ -1,6 +1,6 @@
 // THE CACHE PROBE (spec local 2026-11-13-conversar-todo-el-mes, §8.1): how long does DeepInfra keep a prompt
 // cached for Len's model? Its documentation says «entries expire after a period of inactivity» and gives no
-// number; the 65 minutes after which a turn counts as cold (lib/agent/cold-return.ts) are Claude Code's, read
+// number; the 65 minutes after which a turn counted as cold (lib/agent/cold-return.ts) were Claude Code's, read
 // off ITS provider. This sends eight prefixes of about 30.000 tokens, each under its own cache key, and sends
 // each one again exactly once after 15, 30, 45, 60, 75, 90, 120 and 180 minutes: how much of the second call
 // came back cached says whether the entry was still there. A read refreshes an entry, which is why every

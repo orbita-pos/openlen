@@ -219,8 +219,8 @@ with :quiet
 select case when prev_ended is null then '0 no earlier turn recorded'
             when started - prev_ended < interval '5 minutes' then '1 under 5 min'
             when started - prev_ended < interval '30 minutes' then '2 5 to 30 min'
-            when started - prev_ended < interval '65 minutes' then '3 30 to 65 min'
-            when started - prev_ended < interval '6 hours' then '4 65 min to 6 h'
+            when started - prev_ended < interval '60 minutes' then '3 30 to 60 min'
+            when started - prev_ended < interval '6 hours' then '4 60 min to 6 h'
             when started - prev_ended < interval '24 hours' then '5 6 to 24 h'
             else '6 over a day' end as quiet_for,
        count(*) as turns,

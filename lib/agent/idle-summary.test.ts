@@ -194,9 +194,9 @@ describe("armIdleSummary", () => {
 
   it("fires once after the delay, and the conversation stops waiting when it is done", async () => {
     const job = jobFor();
-    expect(arm(job, 58.5 * 60_000)).toBe(true);
+    expect(arm(job, 40 * 60_000)).toBe(true);
     expect(armedIdleSummaries()).toBe(1);
-    await vi.advanceTimersByTimeAsync(58.5 * 60_000 - 1);
+    await vi.advanceTimersByTimeAsync(40 * 60_000 - 1);
     expect(job.summarize).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(job.summarize).toHaveBeenCalledTimes(1);
@@ -350,20 +350,25 @@ describe("armIdleSummary", () => {
 });
 
 describe("the idle summary's settings", () => {
-  it("the call has until the turn would be cold to answer: 6.5 minutes by default", () => {
-    expect(idleSummaryDeadlineMs({})).toBe(390_000);
-    expect(idleSummaryDeadlineMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(180_000);
+  it("the call has until the turn would be cold to answer: 20 minutes by default", () => {
+    expect(idleSummaryDeadlineMs({})).toBe(20 * 60_000);
+    expect(idleSummaryDeadlineMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(10 * 60_000);
   });
 
-  it("fires at 90 % of the cold threshold: 58.5 minutes by default", () => {
-    expect(idleSummaryDelayMs({})).toBe(3_510_000);
-    expect(idleSummaryDelayMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(1_620_000);
+  // The probe of 14/11: the cache was still alive after 45 minutes of silence, and gone after 60. At 90 % of
+  // the cold threshold (minute 58.5 of 65, as it was) the summary read the whole conversation at the full price.
+  it("🔴 fires at two thirds of the cold threshold: minute 40 by default, while the probe still saw the cache alive", () => {
+    expect(idleSummaryDelayMs({})).toBe(40 * 60_000);
+    expect(idleSummaryDelayMs({})).toBeLessThanOrEqual(0.9 * 45 * 60_000);
+    expect(idleSummaryDelayMs({ OPENLEN_COLD_AFTER_MIN: "30" })).toBe(20 * 60_000);
   });
 
-  it("100.000 tokens by default; OPENLEN_IDLE_SUMMARY_MIN_TOKENS moves it and a bad value is ignored", () => {
-    expect(idleSummaryMinTokens({})).toBe(100_000);
-    expect(idleSummaryMinTokens({ OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "40000" })).toBe(40_000);
-    for (const bad of ["abc", "0", "-1", "1.5", ""]) expect(idleSummaryMinTokens({ OPENLEN_IDLE_SUMMARY_MIN_TOKENS: bad })).toBe(100_000);
+  // The measurement of 14/11 (12 conversations × 3 arms × 3 runs): from 40.000 tokens the summary saved over
+  // 40 % of a cold return and broke no question; none of the measured conversations reached 100.000.
+  it("40.000 tokens by default; OPENLEN_IDLE_SUMMARY_MIN_TOKENS moves it and a bad value is ignored", () => {
+    expect(idleSummaryMinTokens({})).toBe(40_000);
+    expect(idleSummaryMinTokens({ OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "100000" })).toBe(100_000);
+    for (const bad of ["abc", "0", "-1", "1.5", ""]) expect(idleSummaryMinTokens({ OPENLEN_IDLE_SUMMARY_MIN_TOKENS: bad })).toBe(40_000);
   });
 
   it("only the literal 0 turns it off", () => {
