@@ -83,8 +83,13 @@ export interface RunResult {
   /** 1-based. */
   readonly run: number;
   readonly questions: readonly QuestionResult[];
-  /** The whole run is out of the count: the arm's mechanism did not happen, the case could not be put back… */
+  /** The whole run is out of the count, and why. */
   readonly infra?: string;
+  /** Whose fault: `setup` — the route did not do what the arm claims, which repeats in every run, so the arm
+   *  stops; `provider` — the cold return could not be answered; `summary` — its summary was not written. */
+  readonly infraKind?: "setup" | "provider" | "summary";
+  /** Calls the provider reported no usage for (a failed attempt): not in the cost, and said. */
+  readonly unreportedCalls?: number;
   /** What the run would cost in production (see ./cost.ts), USD at list price. */
   readonly costUsd: number;
   /** Input tokens of the cold return's first call: where the saving has to show. */

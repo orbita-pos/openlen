@@ -50,6 +50,10 @@ export interface ProbeEntry {
   readonly delayMin: number;
   first: ProbeCall | null;
   second: ProbeCall | null;
+  /** ISO: when the second call was about to be sent — written down BEFORE sending it. A read refreshes the
+   *  entry, so a second call that was cut (the runner was killed) is never sent again: its answer would say
+   *  «still cached» because of the first try. */
+  secondAttemptedAt?: string;
 }
 
 /** What the runner saves after every call: a probe that is killed goes on from here. */
@@ -119,7 +123,7 @@ const dueAt = (entry: ProbeEntry): number => Date.parse(entry.first!.at) + entry
 export function nextAction(state: ProbeState, nowMs: number): ProbeAction {
   const unsent = state.entries.find((entry) => entry.first === null);
   if (unsent) return { kind: "first", entry: unsent };
-  const pending = state.entries.filter((entry) => answeredFirst(entry) && entry.second === null).sort((a, b) => dueAt(a) - dueAt(b));
+  const pending = state.entries.filter((entry) => answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt).sort((a, b) => dueAt(a) - dueAt(b));
   const next = pending[0];
   if (!next) return { kind: "done" };
   return dueAt(next) <= nowMs ? { kind: "second", entry: next } : { kind: "wait", untilMs: dueAt(next) };
@@ -144,7 +148,7 @@ function prefixTokens(state: ProbeState): number {
 
 /** What the calls still to make would cost if NONE came back cached and each wrote all it is allowed to. */
 export function worstCaseRemainingUsd(state: ProbeState): number {
-  const left = state.entries.reduce((n, entry) => n + (entry.first === null ? 2 : answeredFirst(entry) && entry.second === null ? 1 : 0), 0);
+  const left = state.entries.reduce((n, entry) => n + (entry.first === null ? 2 : answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt ? 1 : 0), 0);
   return left * callCostUsd({ inputTokens: prefixTokens(state), cachedTokens: 0, outputTokens: PROBE_MAX_OUTPUT_TOKENS });
 }
 
@@ -188,6 +192,8 @@ export interface ProbeReport {
 function rowOf(entry: ProbeEntry): ProbeRow {
   const base = { id: entry.id, delayMin: entry.delayMin };
   if (!entry.first || entry.first.error) return { ...base, actualMin: null, share: null, verdict: entry.first ? "failed" : "pending" };
+  // Sent and never answered: it cannot be asked again, so this delay has no reading.
+  if (!entry.second && entry.secondAttemptedAt) return { ...base, actualMin: null, share: null, verdict: "failed" };
   if (!entry.second) return { ...base, actualMin: null, share: null, verdict: "pending" };
   const actualMin = Math.round((Date.parse(entry.second.at) - Date.parse(entry.first.at)) / 60_000);
   if (entry.second.error) return { ...base, actualMin, share: null, verdict: "failed" };
@@ -258,6 +264,10 @@ export async function runProbe(state: ProbeState, capUsd: number, deps: ProbeDep
       return "cap";
     }
     const { entry } = action;
+    if (action.kind === "second") {
+      entry.secondAttemptedAt = new Date(deps.now()).toISOString();
+      deps.save(state);
+    }
     const result = await deps.send(entry, probeText(state.runId, entry.index));
     if (action.kind === "first") entry.first = result;
     else entry.second = result;

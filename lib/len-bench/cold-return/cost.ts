@@ -42,7 +42,9 @@ export interface RunCost {
 }
 
 export function runCost(calls: readonly CallUsage[], summary?: TokenUsage | null): RunCost {
-  const first = [...calls].sort((a, b) => a.question - b.question || a.step - b.step)[0];
+  // The first call the provider ANSWERED: an attempt that failed before it has no usage, and letting it take
+  // the place would price the real first call as the warm one that follows.
+  const first = [...calls].sort((a, b) => a.question - b.question || a.step - b.step).find((call) => call.inputTokens > 0);
   let costUsd = 0;
   let spentUsd = 0;
   for (const call of calls) {

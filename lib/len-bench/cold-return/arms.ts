@@ -9,17 +9,22 @@ export type ServerConfig = "build" | "today" | "new";
 
 /**
  * What the bench's server is started with, on top of Len-Bench's own environment (lib/len-bench/entorno.ts).
- * `OPENLEN_SANDBOX=0` in all three: a box of the real terminal costs money by the second.
+ * In all three: `OPENLEN_SANDBOX=0` (a box of the real terminal costs money by the second),
+ * `OPENLEN_AGENT_PROVIDERS=deepinfra` (no fallback: its calls are another provider's, at another price, and
+ * the route forgives them, so neither lock of the cap would see them) and the step telemetry on (the runner
+ * counts what a turn spent from its rows).
  *   · build — the cases are built on the new code; at the end of a turn the idle summary's job is WRITTEN TO
  *     A FILE instead of armed (lib/agent/idle-summary-capture.ts), for every conversation however short.
  *   · today — neither piece: the whole conversation is sent again, as before.
  *   · new — both pieces. No timer is ever armed (the minimum is out of reach): the bench writes the summary
  *     itself, with the same function the timer calls, and the route only has to promote it.
  */
+const ALWAYS = { OPENLEN_SANDBOX: "0", OPENLEN_AGENT_PROVIDERS: "deepinfra", OPENLEN_STEP_TELEMETRY: "1" } as const;
+
 export const SERVER_ENV: Readonly<Record<ServerConfig, Readonly<Record<string, string>>>> = {
-  build: { OPENLEN_SANDBOX: "0", OPENLEN_COLD_RETURN: "1", OPENLEN_IDLE_SUMMARY: "1", OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "1", OPENLEN_IDLE_SUMMARY_CAPTURE_DIR: "<the bench's captures folder>" },
-  today: { OPENLEN_SANDBOX: "0", OPENLEN_COLD_RETURN: "0", OPENLEN_IDLE_SUMMARY: "0" },
-  new: { OPENLEN_SANDBOX: "0", OPENLEN_COLD_RETURN: "1", OPENLEN_IDLE_SUMMARY: "1", OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "999999999" },
+  build: { ...ALWAYS, OPENLEN_COLD_RETURN: "1", OPENLEN_IDLE_SUMMARY: "1", OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "1", OPENLEN_IDLE_SUMMARY_CAPTURE_DIR: "<the bench's captures folder>" },
+  today: { ...ALWAYS, OPENLEN_COLD_RETURN: "0", OPENLEN_IDLE_SUMMARY: "0" },
+  new: { ...ALWAYS, OPENLEN_COLD_RETURN: "1", OPENLEN_IDLE_SUMMARY: "1", OPENLEN_IDLE_SUMMARY_MIN_TOKENS: "999999999" },
 };
 
 export interface ArmSpec {

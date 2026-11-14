@@ -63,3 +63,22 @@ describe("from what size the bench's summary is written", () => {
     expect(benchIdleMinTokens(0)).toBe(1);
   });
 });
+
+// Review, finding 3: the cap is the step's, across every time its command is run.
+describe("what each step has spent", () => {
+  it("is nothing before anything ran, and adds up across commands", async () => {
+    const { addSpend, loadSpend } = await import("./store");
+    expect(loadSpend(dir, "build")).toBe(0);
+    addSpend(dir, "build", 0.12);
+    addSpend(dir, "build", 0.05);
+    addSpend(dir, "trim", 0.3);
+    expect(loadSpend(dir, "build")).toBeCloseTo(0.17, 9);
+    expect(loadSpend(dir, "trim")).toBeCloseTo(0.3, 9);
+    expect(loadSpend(dir, "today")).toBe(0);
+  });
+
+  it("the summary's job of a built case is the bench's own copy, by case", async () => {
+    const { jobFile } = await import("./store");
+    expect(jobFile(dir, "chat-pumps-40k")).toBe(path.join(dir, "jobs", "chat-pumps-40k.json"));
+  });
+});

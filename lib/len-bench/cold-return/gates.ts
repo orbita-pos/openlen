@@ -7,7 +7,10 @@
 //     or more of the arm's three. The fine gate: a question that always breaks shows even when the whole
 //     does not move;
 //   · cost and mechanism: the return and the two messages after it cost at least 40 % less, re-reads
-//     included, and the drop shows in the tokens of the first call.
+//     included, and the drop shows in the tokens of the first call. «40 % less» is of the MONEY AS A WHOLE
+//     (each case's mean run, added up): the spec does not say how to add cases up, and the mean of each
+//     case's own saving would let the many short conversations decide, where the trim saves little and
+//     where little money is. The mean of the cases and each size apart are reported beside it, not hidden.
 //
 // What could not be judged — the provider failed, the arm's mechanism did not happen — counts for neither
 // side and is reported apart.
@@ -51,7 +54,16 @@ export interface GateResult {
     /** Questions with fewer than three judged answers on either side: the gate says nothing about them. */
     readonly unjudged: readonly { readonly caseId: string; readonly question: number; readonly todayJudged: number; readonly armJudged: number }[];
   };
-  readonly cost: { readonly pass: boolean; readonly saving: number; readonly firstCallDrop: number };
+  readonly cost: {
+    readonly pass: boolean;
+    /** Of the money as a whole: what decides. */
+    readonly saving: number;
+    /** The mean of each case's own saving, every case weighing the same. */
+    readonly meanCaseSaving: number;
+    /** The saving of the money within each size class. */
+    readonly bySize: readonly { readonly size: number; readonly cases: number; readonly saving: number }[];
+    readonly firstCallDrop: number;
+  };
   /** What entered the count, and what was left out of it. */
   readonly counted: { readonly today: Tally; readonly arm: Tally };
   readonly left: { readonly today: Tally; readonly arm: Tally };
@@ -115,21 +127,26 @@ export function gates(input: GateInput): GateResult {
     if (t.right === t.judged && armJudged - a!.right >= 2) broken.push({ caseId: t.caseId, question: t.question, kind: t.kind, todayRight: t.right, armRight: a!.right });
   }
 
-  // Case by case, then the mean of the savings: a cheap small case must not hide a dear big one.
+  // Each case counts as its mean run (so a case with a run left out weighs the same), and the cases are
+  // added up: the saving is of the money, where a long conversation weighs what it costs.
   const cases = [...new Set(valid(input.today).map((run) => run.caseId))].filter((id) => valid(input.arm).some((run) => run.caseId === id));
   const of = (runs: readonly RunResult[], id: string, pick: (run: RunResult) => number) => mean(valid(runs).filter((run) => run.caseId === id).map(pick));
-  const drop = (pick: (run: RunResult) => number) =>
-    mean(
-      cases.flatMap((id) => {
-        const before = of(input.today, id, pick);
-        return before > 0 ? [1 - of(input.arm, id, pick) / before] : [];
-      }),
-    );
-  const saving = drop((run) => run.costUsd);
-  const firstCallDrop = drop((run) => run.firstCallTokens);
+  const sum = (ids: readonly string[], runs: readonly RunResult[], pick: (run: RunResult) => number) => ids.reduce((s, id) => s + of(runs, id, pick), 0);
+  const dropOf = (ids: readonly string[], pick: (run: RunResult) => number) => {
+    const before = sum(ids, input.today, pick);
+    return before > 0 ? 1 - sum(ids, input.arm, pick) / before : 0;
+  };
+  const cost = (run: RunResult) => run.costUsd;
+  const saving = dropOf(cases, cost);
+  const meanCaseSaving = mean(cases.filter((id) => of(input.today, id, cost) > 0).map((id) => dropOf([id], cost)));
+  const firstCallDrop = dropOf(cases, (run) => run.firstCallTokens);
   const costPass = cases.length > 0 && saving >= COST_SAVING - EPSILON && firstCallDrop >= FIRST_CALL_DROP - EPSILON;
 
   const sizes = [...new Set(cases.map(input.sizeOf))].sort((a, b) => a - b);
+  const bySize = sizes.map((size) => {
+    const ids = cases.filter((id) => input.sizeOf(id) === size);
+    return { size, cases: ids.length, saving: dropOf(ids, cost) };
+  });
   const dirty = new Set(broken.map((b) => input.sizeOf(b.caseId)));
   const smallestCleanSize = sizes.find((size) => sizes.filter((s) => s >= size).every((s) => !dirty.has(s))) ?? null;
 
@@ -138,7 +155,7 @@ export function gates(input: GateInput): GateResult {
     pass: qualityPass && perQuestionPass && costPass,
     quality: { pass: qualityPass, ...quality },
     perQuestion: { pass: perQuestionPass, broken, unjudged },
-    cost: { pass: costPass, saving, firstCallDrop },
+    cost: { pass: costPass, saving, meanCaseSaving, bySize, firstCallDrop },
     counted: { today: today.counted, arm: arm.counted },
     left: { today: today.left, arm: arm.left },
     smallestCleanSize,
@@ -154,7 +171,8 @@ export function gateLines(label: string, result: GateResult): string[] {
     `  calidad en conjunto  ${result.quality.pass ? "pasa" : "NO pasa"} · acierta ${pct(result.quality.arm)} frente a ${pct(result.quality.today)} de «hoy» (margen ${pct(QUALITY_MARGIN)})`,
     `  pregunta a pregunta  ${result.perQuestion.pass ? "pasa" : "NO pasa"} · ${result.perQuestion.broken.length} rota(s)`,
     ...result.perQuestion.broken.map((b) => `      ${b.caseId} · pregunta ${b.question + 1} (${b.kind}): «hoy» ${b.todayRight} de 3, el brazo ${b.armRight} de 3`),
-    `  coste y mecanismo    ${result.cost.pass ? "pasa" : "NO pasa"} · ${pct(result.cost.saving)} menos (hacen falta ${pct(COST_SAVING)}) · la primera llamada baja ${pct(result.cost.firstCallDrop)}`,
+    `  coste y mecanismo    ${result.cost.pass ? "pasa" : "NO pasa"} · el dinero en conjunto baja ${pct(result.cost.saving)} (hacen falta ${pct(COST_SAVING)}) · la primera llamada baja ${pct(result.cost.firstCallDrop)}`,
+    `      por tamaño: ${result.cost.bySize.map((s) => `${s.size}k (${s.cases} casos) ${pct(s.saving)}`).join(" · ")} · media de los casos, pesando todos igual: ${pct(result.cost.meanCaseSaving)}`,
     `  contado: ${result.counted.arm.runs} corridas y ${result.counted.arm.questions} respuestas del brazo, ${result.counted.today.runs} y ${result.counted.today.questions} de «hoy»`,
   ];
   const out = result.left.arm.runs + result.left.arm.questions + result.left.today.runs + result.left.today.questions;
