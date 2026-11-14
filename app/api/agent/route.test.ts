@@ -1163,6 +1163,8 @@ describe("POST /api/agent — el modo plan", () => {
     expect(m.at(-3)).toEqual({ role: "user", content: PLAN_ON_NOTICE });
     expect(m.at(-2)?.content).toBe("añade reseñas");
     expect(m.at(-1)).toEqual({ role: "system", content: `${SYS}\n\n${PLAN_POLICY}` });
+    // The row keeps that the narration was sent, so the next turn rebuilds it where it was (review, finding 4).
+    expect(filaGuardada()).toMatchObject({ planNotice: "on" });
   });
 
   it("el dueño lo apaga: sin sección, con su narración, y la fila sin la foto", async () => {
@@ -1171,6 +1173,7 @@ describe("POST /api/agent — el modo plan", () => {
     expect(sinSeccion(enviados[0]!)).toBe(true);
     expect(enviados[0]!.at(-2)).toEqual({ role: "user", content: PLAN_OFF_NOTICE });
     expect(filaGuardada()?.planMode).toBeUndefined();
+    expect(filaGuardada()).toMatchObject({ planNotice: "off" });
   });
 
   it("🔴 aprobado a media vuelta: la petición SIGUIENTE sale sin la sección, se avisa al chat y se guarda apagado", async () => {
@@ -2056,10 +2059,13 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
 
     // Si no se puede bajar, ese mensaje dice que se quitaron y el turno sigue.
     mocks.conseguirFotos.mockResolvedValueOnce(new Map([[URL_SHOT, null]]));
+    turnoQueEscribe();
     await readEvents(await pedir());
     const sinPixeles = (historialQueRecibio() as { content: string; images?: unknown[]; screenshotsDropped?: number }[]).find((m) => m.screenshotsDropped === 1);
     expect(sinPixeles?.content).toContain("were dropped");
     expect(sinPixeles?.images).toBeUndefined();
+    // And the row of THIS turn says which one it could not load: it never comes back (review, finding 2).
+    expect(filaGuardada()).toMatchObject({ lostScreenshots: [URL_SHOT] });
   });
 
   // Crear es Len: hasta 4 fotos en un mensaje, como los adjuntos de DeepSeek.
@@ -2294,10 +2300,21 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(idleBrain.tools).toBe(turnBrain.tools);
         expect(idleBrain).toMatchObject({ requestId: "p1", signal, preferredProvider: "fireworks" });
         for (const key of ["mode", "esfuerzoDelTurno", "esfuerzoDelUsuario"]) expect(idleBrain[key]).toBe(turnBrain[key]);
-        // The request goes as it is; the mode's prompt is its latest system message, never message 0 rewritten.
-        expect(seen[0]![0]).toEqual({ role: "system", content: "SYSTEM" });
-        expect(seen[0]![1]).toEqual({ role: "user", content: "x" });
-        expect(seen[0]!.at(-1)).toEqual({ role: "system", content: `SYSTEM\n\n${PLAN_POLICY}` });
+        // Review, finding 3: the request is the conversation as the turn sent it, cut where the summary ends, plus
+        // the instruction. It goes AS IT IS: a prompt appended behind the instruction would be the last thing the
+        // model reads. (With the lever off the section goes in message 0, as it did.)
+        expect(seen[0]).toEqual([{ role: "system", content: "SYSTEM" }, { role: "user", content: "x" }]);
+        vi.stubEnv("OPENLEN_PLAN_IN_HISTORY", "0");
+        mocks.createAgentBrain.mockReturnValueOnce(
+          mocks.brainStub({
+            openStream: (messages: { role: string; content: string }[]) => {
+              seen.push(messages);
+              return (async function* () {})();
+            },
+          }),
+        );
+        await armed()[0].summarize([{ role: "system", content: "SYSTEM" }, { role: "user", content: "x" }], signal);
+        expect(seen[1]).toEqual([{ role: "system", content: `SYSTEM\n\n${PLAN_POLICY}` }, { role: "user", content: "x" }]);
       });
 
       // The return bench (spec §8.2) writes the summary itself, with the function the timer calls: its server

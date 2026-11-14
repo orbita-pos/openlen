@@ -42,7 +42,7 @@ import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
 import { COLD_CHARS_PER_TOKEN, isColdTrimMark, type ColdTrimMark } from "@/lib/agent/cold-return";
-import { isPlanPrompt } from "@/lib/agent/plan-mode";
+import { PLAN_OFF_NOTICE, PLAN_ON_NOTICE, isPlanPrompt } from "@/lib/agent/plan-mode";
 import { applyScreenshotBudget, dropScreenshots } from "@/lib/agent/screenshots-in-context";
 import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 
@@ -183,6 +183,14 @@ export interface TranscripcionGuardada {
    *  igual, aunque ahora sí bajen: si no, el mensaje cambiaba en el turno
    *  siguiente y se pagaba sin caché desde ahí. */
   readonly unseenPhotos?: readonly string[];
+  /** The owner switched plan mode in the composer for THIS turn: DeepSeek's narration went right before the
+   *  request (`PLAN_ON_NOTICE` / `PLAN_OFF_NOTICE`). The history puts it back there; without this the next
+   *  turn rebuilt the turn without it and paid it again. */
+  readonly planNotice?: "on" | "off";
+  /** Screenshots of EARLIER turns that this turn could not load (the file did not come, or they did not fit
+   *  with the newer pictures): their messages went without pixels, and they stay that way on every later
+   *  turn — a picture that came back would change a message already sent twice. */
+  readonly lostScreenshots?: readonly string[];
   /** LEN 3.1 · las capturas del modo Diseño que llevó ESTE turno, guardadas como
    *  cualquier subida (`storeDesignCaptures`): el historial vuelve a pegar las
    *  MISMAS detrás de las fotos, como Claude Code guarda la imagen pegada. */
@@ -406,7 +414,10 @@ export function transcripcionParaGuardar(mensajes: readonly Message[], leidos: L
     ...(l.limit !== undefined ? { limit: l.limit } : {}),
     ...(l.vistaParcial ? { vistaParcial: true as const } : {}),
   }));
-  let limpios = withoutPersonalMemory(mensajes.map((m, i) => limpio(m, mensajes[i + 1])));
+  // Screenshots that could not be stored have no address to come back by: the row keeps how many they were,
+  // so the budget counts the same from the row as it did in the turn. (Their pixels are not saved either way.)
+  const contadas = mensajes.map((m) => (m.functionResponses?.length && m.images?.length && !m.screenshots?.length && m.screenshotsDropped === undefined ? { ...m, screenshotsDropped: m.images.length } : m));
+  let limpios = withoutPersonalMemory(contadas.map((m, i) => limpio(m, contadas[i + 1])));
   // Lo que sólo es para la pantalla se va ANTES que nada de lo que lee el
   // modelo: que la lente pierda un diff, no que Len pierda un resultado.
   if (JSON.stringify(limpios).length > TOPE_TRANSCRIPCION) limpios = sinLoDeLaPantalla(limpios);
@@ -542,6 +553,8 @@ export function historialDesdeLaBase(
     if (f.transcript?.skills) mensajes.push({ role: "user", content: f.transcript.skills });
     // Y su contexto, en su sitio: lo de delante sigue en caché (ver `contexto`).
     if (f.transcript?.contexto) mensajes.push({ role: "user", content: f.transcript.contexto });
+    // And the narration of the owner's switch of plan mode, where it went: right before the request.
+    if (f.transcript?.planNotice) mensajes.push({ role: "user", content: f.transcript.planNotice === "on" ? PLAN_ON_NOTICE : PLAN_OFF_NOTICE });
     mensajes.push(mensajeDelDueno(f, fotos));
     if (f.transcript?.mensajes.length) {
       mensajes.push(...enElHistorial(f.transcript.mensajes));
@@ -555,7 +568,9 @@ export function historialDesdeLaBase(
   // THE SCREENSHOTS LEN TOOK stay in the conversation, as they were sent: the ones the budget keeps get their
   // pixels back from `fotos`. Which ones the budget drops follows from how many there have been, so every
   // turn drops the same ones.
-  mensajes = withScreenshots(applyScreenshotBudget(mensajes), fotos);
+  // One that an earlier turn could not load is lost for good (`lostScreenshots` on that turn's row).
+  const lost = new Set(filas.flatMap((f) => f.transcript?.lostScreenshots ?? []));
+  mensajes = withScreenshots(applyScreenshotBudget(mensajes.map((m) => (m.screenshots?.some((url) => lost.has(url)) ? dropScreenshots(m) : m))), fotos);
   return microcompactarASaltos(mensajes, presupuesto);
 }
 

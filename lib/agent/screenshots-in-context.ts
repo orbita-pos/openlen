@@ -21,6 +21,19 @@ export const SCREENSHOTS_KEPT = 40;
 /** How many go at once when that is passed: DeepSeek's quantum. */
 export const SCREENSHOTS_QUANTUM = 20;
 
+/** The environment these read: the process's, or a plain object in a test. */
+type Env = Readonly<Record<string, string | undefined>>;
+
+/** The limit in force. `OPENLEN_SCREENSHOTS_KEPT` (a whole number above zero) moves it, and half of it goes at
+ *  once when it is passed; an unrecognized value is ignored. How a provider takes a request with forty real
+ *  screenshots in it was not measured before this shipped: this is the way back without a deploy. */
+export function screenshotLimits(env: Env = process.env): { kept: number; quantum: number } {
+  const raw = env.OPENLEN_SCREENSHOTS_KEPT?.trim() ?? "";
+  if (!/^[1-9]\d*$/.test(raw)) return { kept: SCREENSHOTS_KEPT, quantum: SCREENSHOTS_QUANTUM };
+  const kept = Number(raw);
+  return { kept, quantum: Math.max(1, Math.ceil(kept / 2)) };
+}
+
 const DROPPED_NOTE = "(The screenshots that were here were dropped to keep the turn light: take a new one if you need to look again.)";
 
 export interface BatchScreenshots {
@@ -71,7 +84,7 @@ export function dropScreenshots<M extends Carrier>(m: M): M {
  * newest batch always stays. The same function serves the turn's own messages and the history a later turn
  * rebuilds: which ones go follows from how many there have been.
  */
-export function applyScreenshotBudget<M extends Carrier>(messages: readonly M[], kept = SCREENSHOTS_KEPT, quantum = SCREENSHOTS_QUANTUM): M[] {
+export function applyScreenshotBudget<M extends Carrier>(messages: readonly M[], kept = screenshotLimits().kept, quantum = screenshotLimits().quantum): M[] {
   const total = messages.reduce((n, m) => n + screenshotsOf(m), 0);
   const toDrop = droppedScreenshotCount(total, kept, quantum);
   if (toDrop === 0) return [...messages];
@@ -87,7 +100,7 @@ export function applyScreenshotBudget<M extends Carrier>(messages: readonly M[],
 }
 
 /** `applyScreenshotBudget` on the loop's own messages, in place. */
-export function keepRecentScreenshots(messages: Message[], kept = SCREENSHOTS_KEPT, quantum = SCREENSHOTS_QUANTUM): void {
+export function keepRecentScreenshots(messages: Message[], kept = screenshotLimits().kept, quantum = screenshotLimits().quantum): void {
   const next = applyScreenshotBudget(messages, kept, quantum);
   for (let i = 0; i < messages.length; i++) if (next[i] !== messages[i]) messages[i] = next[i]!;
 }
