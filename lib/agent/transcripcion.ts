@@ -350,7 +350,9 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
  * THE TRIM OF A COLD RETURN (spec local 2026-11-13-conversar-todo-el-mes, piece A): what a turn sends when
  * it starts after the provider's cache expired, with no model call. Two independent steps:
  *   1 · what was thought before the last turn goes (`lastTurnStart`: where that turn's messages begin). No
- *       floor: with the cache gone there is nothing to lose.
+ *       floor: with the cache gone there is nothing to lose. And with it (14/11) the screenshots Len took
+ *       before the last turn: they stay in the conversation while it is cached (as in Claude Code and
+ *       DeepSeek), and a cold return is when dropping them costs nothing. The last turn keeps its own.
  *   2 · of the results Len can ask for again (`CLEARABLE_TOOLS`), the last turn's included, the
  *       `keepResults` most recent stay and the rest are emptied with the usual mark — but only when that
  *       frees `clearAtLeastTokens` or more (Claude Code's rule). Every other result — what the owner
@@ -360,8 +362,11 @@ function microcompactar<M extends Message | MensajeDelHistorial>(mensajes: M[], 
  */
 export function coldTrim<M extends Message | MensajeDelHistorial>(messages: readonly M[], lastTurnStart: number, mark: ColdTrimMark): M[] {
   const out = messages.map((m, i) => {
-    if (i >= lastTurnStart || m.reasoning === undefined) return m;
-    const { reasoning: _thought, ...rest } = m;
+    if (i >= lastTurnStart) return m;
+    // 1b · the screenshots Len took before the last turn: with the cache gone they go for nothing.
+    const seen = m.functionResponses?.length && (m.images?.length || m.screenshots?.length) ? dropScreenshots(m) : m;
+    if (seen.reasoning === undefined) return seen;
+    const { reasoning: _thought, ...rest } = seen;
     return rest as M;
   });
   const toClear = new Map<number, Set<number>>();

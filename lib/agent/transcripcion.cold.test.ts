@@ -269,3 +269,50 @@ describe("lastModelCallEndedAt", () => {
     expect(lastModelCallEndedAt([row(1, turn(1))])).toBeNull();
   });
 });
+
+// 14/11: the screenshots Len took stay in the conversation while the provider has it cached (as Claude Code and
+// DeepSeek keep images). When the cache is gone anyway — a cold return — the old ones go for nothing.
+describe("cold return: the screenshots of earlier turns go with what was thought", () => {
+  const shot = (n: number): Message => ({
+    role: "user",
+    content: `Screenshots below ${n}`,
+    functionResponses: [{ name: "view_page", response: { ok: true } }],
+    screenshots: [`https://files.example/${n}.jpg`],
+  });
+  const looked = (n: number): TranscripcionGuardada => ({ mensajes: [{ role: "assistant", content: "", reasoning: `thought ${n}` }, shot(n), { role: "assistant", content: `seen ${n}` }], leidos: [] });
+  const pixels = (n: number) => ({ mimeType: "image/jpeg", dataBase64: `PX${n}` });
+  const loaded = new Map([1, 2, 3].map((n) => [`https://files.example/${n}.jpg`, pixels(n)] as const));
+
+  it("🔴 before the last turn every screenshot loses its pixels and says so; the last turn keeps its own", () => {
+    const messages: Message[] = [...looked(1).mensajes, ...looked(2).mensajes].map((m) => (m.screenshots ? { ...m, images: [pixels(Number(m.screenshots[0]!.match(/(\d+)\.jpg/)![1]))] } : m));
+    const out = coldTrim(messages, 3, COLD_TRIM_MARK);
+    expect(out[1]).toMatchObject({ screenshotsDropped: 1 });
+    expect(out[1]!.images).toBeUndefined();
+    expect(out[1]!.screenshots).toBeUndefined();
+    expect(out[1]!.content).toMatch(/^Screenshots below 1\n\n\(The screenshots that were here were dropped/);
+    expect(out[4]!.images).toEqual([pixels(2)]);
+    expect(out[4]!.screenshotsDropped).toBeUndefined();
+    // Twice is the same as once: the history applies it again on every later turn.
+    expect(coldTrim(out, 3, COLD_TRIM_MARK)).toEqual(out);
+  });
+
+  it("the turn that comes back cold and every turn after it rebuild the same thing, and only what is left is asked for", () => {
+    const rows: FilaDelHistorial[] = [
+      { userText: "mira 1", assistantReasoning: "", transcript: looked(1) },
+      { userText: "mira 2", assistantReasoning: "", transcript: looked(2) },
+    ];
+    // The cold turn itself: the mark is the one it is about to save.
+    const cold = historialDesdeLaBase(rows, undefined, loaded, COLD_TRIM_MARK);
+    const dropped = cold.filter((m) => m.screenshotsDropped !== undefined);
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]!.content).toContain("Screenshots below 1");
+    expect(cold.filter((m) => m.images?.length).map((m) => m.images)).toEqual([[pixels(2)]]);
+    // A later, warm turn: the mark sits on the row of the turn that came back cold.
+    const later: FilaDelHistorial[] = [...rows, { userText: "mira 3", assistantReasoning: "", transcript: { ...looked(3), coldTrim: COLD_TRIM_MARK } }];
+    const warm = historialDesdeLaBase(later, undefined, loaded);
+    expect(warm.slice(0, cold.length)).toEqual(cold);
+    expect(warm.filter((m) => m.images?.length).map((m) => m.images)).toEqual([[pixels(2)], [pixels(3)]]);
+    // A reader that is not the model sees the whole history, with nothing dropped.
+    expect(historialDesdeLaBase(later, undefined, undefined, WHOLE_HISTORY).filter((m) => m.screenshotsDropped !== undefined)).toEqual([]);
+  });
+});
