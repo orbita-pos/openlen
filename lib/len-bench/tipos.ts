@@ -203,6 +203,10 @@ export interface Encargo {
    *  mensaje lleva `naceComo: "app"` con el idioma de la interfaz, como lo
    *  manda la tarjeta App del estado vacío. */
   readonly naceComo?: { readonly como: "app"; readonly idioma: string };
+  /** UN PROYECTO REAL DE UN CLIENTE (la batería 1 de Len 3.1, `casos/clientes/`): su guion son sus mensajes y su
+   *  solución, su estado final en producción. Se califica con una rúbrica genérica, así que no declara lo que no
+   *  se pidió tocar (la regla 4 de `validar.ts` no aplica) y su solución puede suspender de verdad (el oráculo). */
+  readonly origen?: "cliente";
 }
 
 /**

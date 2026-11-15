@@ -29,6 +29,8 @@ import { PROVIDER_DIALECTS } from "@/lib/ai/providers";
 import { MODEL_POLICY, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { WHOLE_HISTORY, historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
+import { textoVisible } from "./extraer";
+import { todoLoPublicado } from "./graders";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
 
 /** Votos por grader, los mismos que Claude Code. */
@@ -53,11 +55,22 @@ const PIDE = "Responde con exactamente una palabra: PASS o FAIL.";
  * literalmente lo que contesta `ver_visitas`, porque no veía la herramienta y lo
  * leyó como una explicación inventada (corridas/2026-10-01-resultados-arreglos/).
  */
-export type FocoDelJuez = "ultimo_mensaje" | "traza";
+export type FocoDelJuez = "ultimo_mensaje" | "traza" | "pedidos_y_pagina";
 const NOMBRE_DEL_FOCO: Record<FocoDelJuez, string> = {
   ultimo_mensaje: "último mensaje",
   traza: "traza",
+  pedidos_y_pagina: "lo que pidió el dueño y la página publicada",
 };
+
+/**
+ * EL FOCO DE LA BATERÍA 1 DE LEN 3.1 (plan local 2026-11-15-len-3-1-bateria-de-paginas-gratis, tarea 9): lo que
+ * pidió el dueño, numerado, y el TEXTO VISIBLE de lo publicado. Pequeño a propósito —«un criterio con juez por
+ * caso como mucho, con foco pequeño» (spec §5)—: el juez no ve la traza de Len, ve el pedido y el resultado.
+ */
+export function pedidosYPagina(conversacion: readonly { readonly quien: string; readonly texto: string }[], htmlPublicado: string): string {
+  const pedidos = conversacion.filter((x) => x.quien === "dueno").map((x, i) => `${i + 1}. ${x.texto}`);
+  return `Lo que pidió el dueño, en orden:\n${pedidos.join("\n")}\n\nEl texto visible de la página publicada:\n${textoVisible(htmlPublicado)}`;
+}
 
 /**
  * LA TRAZA DEL ENCARGO desde las filas que escribió el servidor: el pedido del
@@ -129,7 +142,7 @@ const llamarDeVerdad: LlamarAlJuez = (sistema, usuario) => createJudgeCall()(sis
 
 /** El texto que ve el juez, según el foco. La traza, un mensaje por línea en
  *  JSON y, si es larga, sus 12 primeros y sus 12 últimos, como la suya. */
-export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion" | "traza">, foco: FocoDelJuez): string {
+export function textoDelFoco(ctx: Pick<ContextoDeCalificacion, "conversacion" | "traza">, foco: Exclude<FocoDelJuez, "pedidos_y_pagina">): string {
   if (foco === "ultimo_mensaje") return [...ctx.conversacion].reverse().find((x) => x.quien === "len")?.texto ?? "";
   const lineas = ctx.traza.map((m) => JSON.stringify(m));
   if (lineas.length <= 2 * MENSAJES_POR_PUNTA) return lineas.join("\n");
@@ -186,7 +199,7 @@ export function juez(
     criterio: o.criterio,
     foco,
     async calificar(ctx) {
-      const texto = textoDelFoco(ctx, foco);
+      const texto = foco === "pedidos_y_pagina" ? pedidosYPagina(ctx.conversacion, await todoLoPublicado(ctx)) : textoDelFoco(ctx, foco);
       // Nada que juzgar no se paga: no hay a quién preguntar.
       if (texto.trim() === "") return { paso: false, explicacion: `no hubo ${NOMBRE_DEL_FOCO[foco]} de Len que juzgar` };
       const prompt = promptDelJuez(o.criterio, foco, texto);
