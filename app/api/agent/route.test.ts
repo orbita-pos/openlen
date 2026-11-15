@@ -4756,7 +4756,8 @@ describe("POST /api/agent — Len's subagents", () => {
     });
     try {
       await pedir();
-      expect(observed).toEqual([false, true, ["general-purpose", "Explore", "Plan", "reviewer"], false, ["general-purpose", "Explore", "Plan"]]);
+      // OpenLen's own types (len-design, len-office) come after the three presets, before the project's.
+      expect(observed).toEqual([false, true, ["general-purpose", "Explore", "Plan", "len-design", "len-office", "reviewer"], false, ["general-purpose", "Explore", "Plan", "len-design", "len-office"]]);
     }
     finally {
       agentTypeStore.list.mockImplementation(async () => []);
@@ -4782,7 +4783,8 @@ describe("POST /api/agent — Len's subagents", () => {
       agentTypeStore.list.mockImplementation(load);
       try {
         await pedir();
-        expect(launcherArgs()[0].agentTypes.names()).toEqual(["general-purpose", "Explore", "Plan"]);
+        // The built-ins are the three presets AND OpenLen's own types: neither needs the store.
+        expect(launcherArgs()[0].agentTypes.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office"]);
       } finally { agentTypeStore.list.mockImplementation(async () => []); }
     }
   });
