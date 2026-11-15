@@ -10,6 +10,14 @@ import { encode } from "next-auth/jwt";
 import type { Entorno } from "./entorno";
 import { crearLectorSse, type EventoSse } from "./sse";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import type { QuestionAnswer, UserQuestion } from "@/lib/agent/ask-user-question";
+
+/** El evento que ESCRIBE EL BANCO (no la ruta) tras contestar una pregunta dentro del turno: si
+ *  `POST /api/agent/responder` la aceptó y con qué código. Lo lee `preguntaSinContestar`. */
+export const BENCH_ANSWER_EVENT = "bench_answer";
+
+/** Lo que el banco contesta a una tarjeta de pregunta, o `null` para no contestarla. */
+export type OnQuestion = (q: { readonly turnoId: string; readonly questions: readonly UserQuestion[] }) => readonly QuestionAnswer[] | null;
 
 /**
  * El nombre de la cookie de sesión, decidido como lo decide Auth.js.
@@ -90,6 +98,14 @@ export async function enviarTurno(o: {
   readonly cookie: string;
   readonly cuerpo: CuerpoDelTurno;
   readonly timeoutMs: number;
+  /**
+   * 🔴 LA PREGUNTA DENTRO DEL TURNO, como el panel (Len 2.5, pieza 3). Con él, el cuerpo lleva
+   * `answersQuestions: true` —sin ese literal la ruta NO espera: `ask_user_question` cierra el turno
+   * con la pregunta— y cada evento `question` se contesta por `POST /api/agent/responder` mientras
+   * el turno sigue abierto. Ahí vivía F2 (la dirección contestada en la tarjeta), que el camino
+   * viejo de Len-Bench nunca ejercitaba (spec local 2026-11-12-len-3-1-ruta, §11).
+   */
+  readonly onQuestion?: OnQuestion;
 }): Promise<EventoSse[]> {
   const abort = new AbortController();
   /** El id que la ruta manda en el primer evento: con él se pide parar. */
@@ -112,7 +128,7 @@ export async function enviarTurno(o: {
     const r = await fetch(`${o.base}/api/agent`, {
       method: "POST",
       headers: { "content-type": "application/json", cookie: o.cookie },
-      body: JSON.stringify(o.cuerpo),
+      body: JSON.stringify(o.onQuestion ? { ...o.cuerpo, answersQuestions: true } : o.cuerpo),
       signal: abort.signal,
     });
     if (!r.ok || !r.body) throw new Error(`/api/agent respondió ${r.status}: ${(await r.text()).slice(0, 300)}`);
@@ -125,16 +141,40 @@ export async function enviarTurno(o: {
       if (done) break;
       const nuevos = lector.empujar(dec.decode(value, { stream: true }));
       for (const e of nuevos) {
+        eventos.push(e);
         const id = (e.datos as { turnoId?: unknown } | null)?.turnoId;
         if (e.nombre === "turno" && typeof id === "string") turnoId = id;
+        const questions = (e.datos as { questions?: unknown } | null)?.questions;
+        if (e.nombre === "question" && o.onQuestion && turnoId && Array.isArray(questions)) {
+          const answers = o.onQuestion({ turnoId, questions: questions as UserQuestion[] });
+          if (answers) eventos.push(await contestarDentro({ base: o.base, cookie: o.cookie, turnoId, answers }));
+        }
       }
-      eventos.push(...nuevos);
     }
     eventos.push(...lector.empujar(dec.decode() + "\n\n"));
     return eventos;
   } finally {
     clearTimeout(reloj);
   }
+}
+
+/** La respuesta a la pregunta que espera, por la misma ruta que el panel. Un 409 (`sin_pregunta`,
+ *  `ya_respondida`) o un fallo de red no cortan el turno: quedan anotados en el evento del banco y el
+ *  conductor cae al camino viejo (la ficha como mensaje nuevo). */
+async function contestarDentro(o: {
+  readonly base: string;
+  readonly cookie: string;
+  readonly turnoId: string;
+  readonly answers: readonly QuestionAnswer[];
+}): Promise<EventoSse> {
+  const status = await fetch(`${o.base}/api/agent/responder`, {
+    method: "POST",
+    headers: { "content-type": "application/json", cookie: o.cookie },
+    body: JSON.stringify({ turnoId: o.turnoId, answers: o.answers }),
+  })
+    .then((r) => r.status)
+    .catch(() => 0);
+  return { nombre: BENCH_ANSWER_EVENT, datos: { ok: status === 200, status } };
 }
 
 export interface TarjetaDePublicar {

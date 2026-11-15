@@ -1,6 +1,6 @@
 // lib/len-bench/cliente-simulado.test.ts
 import { describe, expect, it } from "vitest";
-import { decidirComoCliente, preguntoLen, respetaLaFicha, respuestaFija } from "./cliente-simulado";
+import { cardAnswers, decidirComoCliente, preguntaSinContestar, preguntoLen, respetaLaFicha, respuestaFija } from "./cliente-simulado";
 import type { Ficha } from "./tipos";
 
 const ficha: Ficha = {
@@ -117,5 +117,35 @@ describe("preguntoLen — la señal sale de la herramienta, no del texto", () =>
     expect(preguntoLen([{ nombre: "text", datos: { type: "text", text: "¿Te parece?" } }])).toBe(false);
     expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "Edit", status: "done", summary: "" } }])).toBe(false);
     expect(preguntoLen([{ nombre: "action", datos: { type: "action", tool: "preguntar", status: "running", summary: "" } }])).toBe(false);
+  });
+});
+
+describe("cardAnswers — la tarjeta contestada dentro del turno", () => {
+  it("contesta cada pregunta por su id, sin elegir opción y con la ficha entera escrita", () => {
+    const f: Ficha = { negocio: "Fotógrafos", datos: { subdominio: "robleyluz" } };
+    const r = cardAnswers(f, [
+      { id: "a", question: "¿Qué dirección?" },
+      { id: "b", question: "¿Algo más?", options: [{ label: "Sí" }, { label: "No" }] },
+    ]);
+    expect(r.map((x) => x.id)).toEqual(["a", "b"]);
+    for (const x of r) {
+      expect(x.selected).toEqual([]);
+      expect(x.custom).toBe(respuestaFija(f));
+      expect(x.custom).toContain("subdominio: robleyluz");
+    }
+  });
+});
+
+describe("preguntaSinContestar — no se manda la ficha otra vez si ya se contestó dentro", () => {
+  const pregunta = { nombre: "action", datos: { type: "action", tool: "ask_user_question", status: "done" } };
+  it("contestada dentro del turno → no hay que responder con un mensaje nuevo", () => {
+    expect(preguntaSinContestar([pregunta, { nombre: "bench_answer", datos: { ok: true, status: 200 } }])).toBe(false);
+  });
+  it("sin respuesta dentro, o con la respuesta rechazada → sí, como antes", () => {
+    expect(preguntaSinContestar([pregunta])).toBe(true);
+    expect(preguntaSinContestar([pregunta, { nombre: "bench_answer", datos: { ok: false, status: 409 } }])).toBe(true);
+  });
+  it("sin pregunta, nada", () => {
+    expect(preguntaSinContestar([{ nombre: "bench_answer", datos: { ok: true, status: 200 } }])).toBe(false);
   });
 });

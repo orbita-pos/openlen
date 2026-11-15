@@ -35,7 +35,7 @@ import type { ProjectData } from "@/lib/projects/types";
 import { capturarPublicada } from "./capturas";
 import { usdDeProyecto } from "./coste";
 import { rutasPublicadas } from "./graders";
-import { decidirComoCliente, MAX_RESPUESTAS_POR_PASO, preguntoLen, respetaLaFicha } from "./cliente-simulado";
+import { cardAnswers, decidirComoCliente, MAX_RESPUESTAS_POR_PASO, preguntaSinContestar, respetaLaFicha } from "./cliente-simulado";
 import { DIR_WEB, problemasDelEntorno } from "./entorno";
 import { htmlDe } from "./extraer";
 import { benchPublishParams } from "./owner-publish";
@@ -326,6 +326,8 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
             ...(primerTurno && e.naceComo ? { naceComo: e.naceComo.como, idioma: e.naceComo.idioma } : {}),
           },
           timeoutMs: o.timeoutTurnoMs,
+          // La tarjeta de pregunta se contesta DENTRO del turno, como el panel: ahí vivía F2.
+          onQuestion: (q) => cardAnswers(e.ficha, q.questions),
         });
         turnosDeLen++;
         primerTurno = false;
@@ -358,7 +360,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
           const tap = await tocarPublicar({ base: o.base, cookie: o.cookie, projectId, tarjeta });
           if (!tap.ok) console.log(`      ⚠ ${e.id}: el dueño tocó «Publicar» y no salió (${tap.motivo})`);
         }
-        const d = await decidirComoCliente({ ficha: e.ficha, paso, conversacion, pregunto: preguntoLen(eventos) });
+        const d = await decidirComoCliente({ ficha: e.ficha, paso, conversacion, pregunto: preguntaSinContestar(eventos) });
         if (!d.ok) {
           desenlace = "proveedor";
           error = `cliente simulado: ${d.motivo}`;

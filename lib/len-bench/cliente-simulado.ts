@@ -20,7 +20,8 @@
 // sobre la web publicada.
 
 import type { EventoSse } from "./sse";
-import { asksTheOwner } from "@/lib/agent/ask-user-question";
+import { BENCH_ANSWER_EVENT } from "./sesion";
+import { asksTheOwner, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
 import {
   correosDe,
   esElTelefonoDado,
@@ -65,6 +66,26 @@ export function preguntoLen(eventos: readonly EventoSse[]): boolean {
     // Con el nombre de hoy (`ask_user_question`, pieza 3) o el de antes.
     return e.nombre === "action" && typeof d?.tool === "string" && asksTheOwner(d.tool) && d.status === "done";
   });
+}
+
+/**
+ * LA TARJETA CONTESTADA DENTRO DEL TURNO (`enviarTurno` con `onQuestion`): cada pregunta por su
+ * `id`, sin elegir opción y con la ficha entera escrita (`custom`), como contesta un dueño que
+ * escribe en vez de tocar. Es la misma respuesta fija de siempre, por el camino del panel.
+ */
+export function cardAnswers(ficha: Ficha, questions: readonly UserQuestion[]): QuestionAnswer[] {
+  const custom = respuestaFija(ficha);
+  return questions.map((q) => ({ id: q.id, selected: [], custom }));
+}
+
+/**
+ * ¿Hay que contestarle a Len con un MENSAJE NUEVO? Sólo si preguntó y la respuesta no entró dentro
+ * del turno (sin evento del banco, o rechazada: el camino viejo). Contestada dentro, la ficha no se
+ * manda otra vez.
+ */
+export function preguntaSinContestar(eventos: readonly EventoSse[]): boolean {
+  if (!preguntoLen(eventos)) return false;
+  return !eventos.some((e) => e.nombre === BENCH_ANSWER_EVENT && (e.datos as { ok?: unknown } | null)?.ok === true);
 }
 
 /**

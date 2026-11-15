@@ -5,9 +5,11 @@
 // se le dijo. La ida y vuelta al servidor la prueba el humo de Len-Bench. Aquí
 // se prueba lo que NO necesita servidor: que la cookie la abre el `decode`
 // real de Auth.js, y que el nombre y el secreto salen como los saca Auth.js.
+import http from "node:http";
+import type { AddressInfo } from "node:net";
 import { decode } from "next-auth/jwt";
-import { describe, expect, it } from "vitest";
-import { acunarCookie, herramientasDeLen, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
+import { afterEach, describe, expect, it } from "vitest";
+import { acunarCookie, enviarTurno, herramientasDeLen, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 
 const SECRETO = "secreto-de-prueba-de-treinta-y-dos-bytes";
 
@@ -168,5 +170,92 @@ describe("tocarPublicar — lo mismo que hace agent-confirm-card.tsx al tocarla"
     const r = await tocarPublicar({ base, cookie: "c", projectId: "p1", tarjeta: { subdominio: "x", idiomas: [], republicar: false }, fetch: f });
     expect(r).toEqual({ ok: false, motivo: "subdominio no disponible: taken" });
     expect(llamadas).toHaveLength(1);
+  });
+});
+
+// 🔴 La pregunta DENTRO del turno, como el panel (Len 2.5, pieza 3): la ruta sólo
+// espera si el cuerpo lleva `answersQuestions: true`, emite `question` y la
+// respuesta entra por `POST /api/agent/responder` mientras el turno sigue abierto.
+// Un servidor HTTP de verdad en 127.0.0.1 que se comporta así: el SSE no se
+// cierra hasta que llega la respuesta.
+describe("enviarTurno — contesta la pregunta mientras el turno espera", () => {
+  let servidor: http.Server | null = null;
+  afterEach(async () => {
+    await new Promise<void>((r) => (servidor ? servidor.close(() => r()) : r()));
+    servidor = null;
+  });
+
+  async function rutaQuePregunta(o: { responderStatus: number }) {
+    const recibido: { turno?: Record<string, unknown>; respuesta?: unknown } = {};
+    let alResponder: (() => void) | null = null;
+    servidor = http.createServer((req, res) => {
+      let cuerpo = "";
+      req.on("data", (c) => (cuerpo += c));
+      req.on("end", () => {
+        if (req.url === "/api/agent/responder") {
+          recibido.respuesta = JSON.parse(cuerpo);
+          res.writeHead(o.responderStatus, { "content-type": "application/json" });
+          res.end(JSON.stringify(o.responderStatus === 200 ? { ok: true } : { error: "sin_pregunta" }));
+          alResponder?.();
+          return;
+        }
+        recibido.turno = JSON.parse(cuerpo);
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.write(`event: turno\ndata: ${JSON.stringify({ type: "turno", turnoId: "t1" })}\n\n`);
+        res.write(`event: question\ndata: ${JSON.stringify({ type: "question", questions: [{ id: "q1", question: "¿Qué dirección?" }] })}\n\n`);
+        // La herramienta espera: el SSE sigue abierto hasta que llega la respuesta.
+        alResponder = () => {
+          res.write(`event: text\ndata: ${JSON.stringify({ type: "text", text: "Publico en esa." })}\n\n`);
+          res.end();
+        };
+      });
+    });
+    await new Promise<void>((r) => servidor!.listen(0, "127.0.0.1", () => r()));
+    const base = `http://127.0.0.1:${(servidor!.address() as AddressInfo).port}`;
+    return { base, recibido };
+  }
+
+  const cuerpo = { projectId: "p1", prompt: "publícala", turnId: "00000000-0000-4000-8000-000000000001", history: [], esfuerzo: "auto" };
+
+  it("manda answersQuestions, contesta por /api/agent/responder y sigue leyendo el turno", async () => {
+    const { base, recibido } = await rutaQuePregunta({ responderStatus: 200 });
+    const eventos = await enviarTurno({
+      base,
+      cookie: "c",
+      cuerpo,
+      timeoutMs: 5_000,
+      onQuestion: (q) => q.questions.map((p) => ({ id: p.id, selected: [], custom: "FICHA" })),
+    });
+    expect(recibido.turno?.answersQuestions).toBe(true);
+    expect(recibido.respuesta).toEqual({ turnoId: "t1", answers: [{ id: "q1", selected: [], custom: "FICHA" }] });
+    expect(textoDeLen(eventos)).toBe("Publico en esa.");
+    expect(eventos.find((e) => e.nombre === "bench_answer")?.datos).toEqual({ ok: true, status: 200 });
+  });
+
+  it("si nadie espera ya (409), lo anota y el turno no se corta", async () => {
+    const { base } = await rutaQuePregunta({ responderStatus: 409 });
+    const eventos = await enviarTurno({
+      base,
+      cookie: "c",
+      cuerpo,
+      timeoutMs: 5_000,
+      onQuestion: (q) => q.questions.map((p) => ({ id: p.id, selected: [], custom: "FICHA" })),
+    });
+    expect(eventos.find((e) => e.nombre === "bench_answer")?.datos).toEqual({ ok: false, status: 409 });
+    expect(textoDeLen(eventos)).toBe("Publico en esa.");
+  });
+
+  it("sin manejador de preguntas, el cuerpo va como antes (sin answersQuestions)", async () => {
+    servidor = http.createServer((req, res) => {
+      let c = "";
+      req.on("data", (x) => (c += x));
+      req.on("end", () => {
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.end(`event: text\ndata: ${JSON.stringify({ type: "text", text: JSON.stringify(JSON.parse(c).answersQuestions ?? null) })}\n\n`);
+      });
+    });
+    await new Promise<void>((r) => servidor!.listen(0, "127.0.0.1", () => r()));
+    const base = `http://127.0.0.1:${(servidor!.address() as AddressInfo).port}`;
+    expect(textoDeLen(await enviarTurno({ base, cookie: "c", cuerpo, timeoutMs: 5_000 }))).toBe("null");
   });
 });
