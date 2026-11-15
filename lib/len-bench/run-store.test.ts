@@ -9,7 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "./run-store";
+import { estimateFromPilot, infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "./run-store";
 import { resumirCaso } from "./puntuar";
 import type { ResultadoDeCorrida } from "./tipos";
 
@@ -74,5 +74,22 @@ describe("runsDirProblem — two suites never share a folder by accident", () =>
     const dir = path.join(tmp(), "nueva");
     expect(runsDirProblem(dir, false)).toBeNull();
     expect(runsDirProblem(dir, true)).toMatch(/no hay corridas/);
+  });
+});
+
+describe("estimateFromPilot — the cost of a case run comes from the pilot, not from a constant", () => {
+  it("is the mean of the runs Len finished; the harness's are left out", () => {
+    const dir = tmp();
+    const runAt = (usd: number, desenlace: ResultadoDeCorrida["desenlace"] = "completa") => ({ ...corrida(desenlace), usd });
+    saveRun(dir, "c-1", 1, runAt(0.02));
+    saveRun(dir, "c-2", 1, runAt(0.06));
+    saveRun(dir, "c-3", 1, runAt(0.04, "error_de_len"));
+    saveRun(dir, "c-4", 1, runAt(9, "proveedor"));
+    const e = estimateFromPilot(dir);
+    expect(e.runs).toBe(3);
+    expect(e.usdPerCaseRun).toBeCloseTo(0.04, 12);
+  });
+  it("a pilot with no runs is not an estimate", () => {
+    expect(() => estimateFromPilot(tmp())).toThrow(/piloto/);
   });
 });

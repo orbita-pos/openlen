@@ -2,7 +2,22 @@
 import { describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
-import { gastoDelJuez, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { gastoDelJuez, judgeIdentity, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+
+describe("what the evaluator's fingerprint reads from the judge (evaluator-fingerprint.ts)", () => {
+  it("a judge grader says its criterion and its focus; a deterministic one says neither", () => {
+    const g = juez({ nombre: "cumple", criterio: "Cada cosa pedida está hecha.", foco: "traza" }, async () => ({ texto: "PASS", usd: 0 }));
+    expect(g.criterio).toBe("Cada cosa pedida está hecha.");
+    expect(g.foco).toBe("traza");
+    expect(juez({ nombre: "x", criterio: "c" }, async () => ({ texto: "PASS", usd: 0 })).foco).toBe("ultimo_mensaje");
+  });
+  it("the judge's identity is its model, the prompt it is asked with and its votes", () => {
+    const id = judgeIdentity();
+    expect(id.votes).toBe(VOTOS_DEL_JUEZ);
+    expect(id.model.length).toBeGreaterThan(0);
+    expect(id.prompt).toContain("PASS o FAIL");
+  });
+});
 
 const ctx = (len: string[], dueno = "¿cómo van las visitas?") =>
   ({

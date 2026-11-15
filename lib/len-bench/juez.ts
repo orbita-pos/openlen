@@ -124,6 +124,16 @@ function recortar(texto: string): string {
   return `${texto.slice(0, principio)}\n[…${texto.length - LARGO_MAXIMO} caracteres omitidos…]\n${texto.slice(-LARGO_DEL_FINAL)}`;
 }
 
+/** Quién juzga, para la huella del evaluador (evaluator-fingerprint.ts): el modelo de su papel, el prompt con
+ *  el que se le pregunta (sin criterio ni salida: ésos van con cada grader) y sus votos. */
+export function judgeIdentity(): { model: string; prompt: string; votes: number } {
+  return {
+    model: modelIdForRole(roleForOperation("len_bench_juez")),
+    prompt: `${SISTEMA}\n${promptDelJuez("<criterio>", "traza", "<salida>")}`,
+    votes: VOTOS_DEL_JUEZ,
+  };
+}
+
 /** El prompt del juez: el suyo, con la misma forma. */
 export function promptDelJuez(criterio: string, foco: FocoDelJuez, texto: string): string {
   return `Calificas la salida de un agente contra un criterio.\n\nCriterio:\n${criterio}\n\n\nSalida del agente (${NOMBRE_DEL_FOCO[foco]}):\n${recortar(texto)}\n\n\n${PIDE}`;
@@ -146,6 +156,8 @@ export function juez(
     peso: o.peso ?? 1,
     ...(o.puntua === false ? { puntua: false as const } : {}),
     pago: true,
+    criterio: o.criterio,
+    foco,
     async calificar(ctx) {
       const texto = textoDelFoco(ctx, foco);
       // Nada que juzgar no se paga: no hay a quién preguntar.
