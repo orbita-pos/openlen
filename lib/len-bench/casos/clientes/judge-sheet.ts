@@ -22,6 +22,15 @@ export const SANITY_ENTRIES: readonly { readonly nombre: string; readonly pedido
   },
 ];
 
+/** How many cases the sheet takes: the most recent, as cases.json orders them. */
+export const SHEET_SIZE = 15;
+
+/** «hoja» = the cases the criterion was read against; «reserva» = the rest, held out: neither the labeller nor the
+ *  judge saw them before the criterion was fixed, so they say whether it holds where it was not fitted. */
+export function sheetCases<T>(all: readonly T[], which: "hoja" | "reserva"): T[] {
+  return which === "hoja" ? all.slice(0, SHEET_SIZE) : all.slice(SHEET_SIZE);
+}
+
 /** The visible text of every page of a state, home first: `renderedText` with a browser, a stand-in in tests. */
 export type Painter = (d: DatosDelCaso) => Promise<string>;
 
@@ -36,7 +45,7 @@ export interface SheetEntry {
 }
 
 /** Up to `max` customer cases (the most recent first, as cases.json), then the sanity entries, all painted alike. */
-export async function sheetEntries(cases: readonly FetchedCase[], paint: Painter, max = 15): Promise<SheetEntry[]> {
+export async function sheetEntries(cases: readonly FetchedCase[], paint: Painter, max = SHEET_SIZE): Promise<SheetEntry[]> {
   const out: SheetEntry[] = [];
   for (const c of cases.slice(0, max)) {
     out.push({ caso: `cliente-${c.projectId.slice(0, 8)}`, cordura: false, view: viewOf(c.ownerMessages, await paint(c.final)) });
@@ -50,11 +59,11 @@ export async function sheetEntries(cases: readonly FetchedCase[], paint: Painter
 const section = (title: string, view: string) => `## ${title}\n\n\`\`\`text\n${view}\n\`\`\`\n\nTu etiqueta: [ ] PASS · [ ] FAIL\n`;
 
 /** The sheet, as markdown: the criterion once, up to `max` cases, then the sanity entries. */
-export async function judgeSheet(cases: readonly FetchedCase[], paint: Painter, max = 15): Promise<string> {
+export async function judgeSheet(cases: readonly FetchedCase[], paint: Painter, max = SHEET_SIZE): Promise<string> {
   let n = 0;
   const entries = await sheetEntries(cases, paint, max);
   return [
-    `# Calibración del juez — batería 1 de Len 3.1\n\nCriterio (el mismo para todos):\n\n> ${CUMPLE_LO_PEDIDO}\n\n` +
+    `# Calibración del juez — batería 1 de Len 3.1\n\nCriterio (el mismo para todos):\n\n${CUMPLE_LO_PEDIDO.split("\n").map((l) => `> ${l}\n`).join("")}\n` +
       `Marca cada caso como lo marcarías tú. El juez vota sólo si coincide contigo en ~90 %.\n`,
     ...entries.map((e) =>
       e.cordura ? section(`cordura · ${e.caso.replace(/^cordura-/, "")} · esperado: FAIL`, e.view) : section(`${++n}. ${e.caso}`, e.view),
