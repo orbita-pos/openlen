@@ -133,13 +133,19 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
           return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, evidence:revision.evidence, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobsForLen, ...(pending ? { pending: true, note: `the export is still ${pending} after ${seconds(Math.min(waitMs, MAX_WAIT_MS))}; wait again with wait_ms, or tell the user it is still rendering` } : {}) } };
         }
         if (name === "render_artifact") {
-          if (!kinds.includes(artifact.kind) || !Array.isArray(args.formats) || !args.formats.length || args.formats.some((f) => typeof f !== "string" || !ARTIFACT_FORMATS[artifact.kind].includes(f))) throw new ArtifactError("format_unavailable");
+          // validateInput, as Claude Code does: a refusal says which value was wrong and what it must be.
+          const allowed = ARTIFACT_FORMATS[artifact.kind];
+          if (!kinds.includes(artifact.kind)) throw new ArtifactError("format_unavailable", `this server does not export ${artifact.kind}`);
+          if (!Array.isArray(args.formats) || !args.formats.length || args.formats.some((f) => typeof f !== "string" || !allowed.includes(f))) throw new ArtifactError("format_unavailable", `"formats" is ${args.formats === undefined ? "missing" : JSON.stringify(args.formats)}; for ${artifact.kind} use ${allowed.join(", ")} (one or more)`);
           if (!Number.isSafeInteger(args.revision) || Number(args.revision) < 0) throw new ArtifactError("invalid_revision");
           let revision=Number(args.revision);
+          // Only the current revision is sealed (store.sealArtifactRevision), so another one is refused HERE, before
+          // its files are checked: the 23/10 trial rendered revision 1 of a piece at 6 and read «dashboard.json is not
+          // JSON» about a file only later revisions had. Each Write or Edit of a piece's file makes a revision.
+          if(artifact.currentRevision!==revision)throw new ArtifactError("revision_conflict",`revision ${revision} is not this piece's current one: its current revision is ${artifact.currentRevision} (each Write or Edit of its files makes a new one); render that one`);
           if(args.refresh_source_paths!==undefined){
             if(artifact.kind!=="motion")throw new ArtifactError("invalid_artifact_arguments");
             if(!services.freezeSource)throw new ArtifactError("source_capture_unavailable");
-            if(artifact.currentRevision!==revision)throw new ArtifactError("revision_conflict");
             const before=await store.getRevision(ctx,id,revision),frozen=await services.freezeSource(ctx,args.refresh_source_paths as string[]);
             const prefix=before.sourceRef?.frozenSourcePrefix;
             const removePaths=prefix?Object.keys(before.files).filter(path=>path.startsWith(prefix)&&!Object.hasOwn(frozen.files,path)):[];

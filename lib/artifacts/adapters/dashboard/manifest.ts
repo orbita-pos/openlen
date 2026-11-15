@@ -3,11 +3,11 @@ import { safeArtifactPath } from "../../state";
 import { validateRenderPacket, type RenderProbe } from "../../render-protocol";
 import {CATALOGO_ACTUAL,catalogo} from "../../../apps/dependencias";
 import { DATASET_FILE, fileDataset } from "./file-datasets";
+import { manifestJson } from "../../manifest-json";
 export interface DashboardManifest { readonly entry: string; readonly datasetIds: readonly string[]; readonly width: number; readonly height: number; readonly probes: readonly RenderProbe[]; readonly catalogo?:string; readonly datasets?: Readonly<Record<string, { title?: string; description?: string }>> }
 export const NONE = 'dashboard.json datasetIds needs at least one dataset: an id that query_artifact_data returned, or a CSV, TSV or JSON file of this dashboard (rows you write are a hypothetical scenario; say what they are in "datasets": {"<file>": {"title", "description"}})';
 export function dashboardManifest(input: SealedArtifactInput): DashboardManifest & { readonly resolved: readonly ArtifactDataset[] } {
-  let m: DashboardManifest;
-  try { m = JSON.parse(input.revision.files["dashboard.json"] ?? ""); } catch { throw new ArtifactError("invalid_dashboard_manifest", "dashboard.json is not JSON"); }
+  const m = manifestJson(input.revision.files, "dashboard.json", "invalid_dashboard_manifest") as DashboardManifest;
   if (!m || typeof m.entry !== "string" || !safeArtifactPath(m.entry) || !m.entry.endsWith(".html") || !Object.hasOwn(input.revision.files, m.entry)) throw new ArtifactError("invalid_dashboard_manifest", 'dashboard.json "entry" names this dashboard\'s .html file');
   if (!Array.isArray(m.datasetIds) || !m.datasetIds.length) throw new ArtifactError("dashboard_dataset_missing", NONE);
   if (m.datasetIds.length > 20 || new Set(m.datasetIds).size !== m.datasetIds.length || m.datasetIds.some((id) => typeof id !== "string")) throw new ArtifactError("dashboard_dataset_missing", "dashboard.json datasetIds: up to 20 distinct ids");
