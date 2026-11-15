@@ -11,11 +11,15 @@ import type { Desenlace, Nivel, ResultadoDeCaso, ResultadoDeCorrida, ResultadoDe
 
 /**
  * Las corridas que el ARNÉS no pudo medir: el proveedor que no contestó, el
- * cliente simulado que se salió de su ficha. Como en el
- * corredor de evals de Claude Code: cuentan como 0 —no se quitan en
- * silencio— y dejan la suite en error, porque sus números no valen. Hasta el
- * 2026-09-23 se repetían una vez y se quitaban del cálculo: con dos de tres
- * fallidas, el passRate salía de UNA corrida y la tabla no lo decía.
+ * cliente simulado que se salió de su ficha.
+ *
+ * 🔴 Desde el 15/11 (spec local 2026-11-12-len-3-1-ruta, §5 pieza 5, con la
+ * forma del andamio de Claude Code): salen de la media y van APARTE
+ * (`infraestructura.json`, `run-store.ts`), la suite sigue saliendo con 1 y
+ * `--reanudar` las vuelve a correr. Antes contaban como 0, como el corredor de
+ * `plugin eval`. Lo que se temía el 2026-09-23 —con dos de tres fallidas, un
+ * passRate de UNA corrida sin que la tabla lo dijera— no pasa: el fichero y el
+ * código de salida lo dicen, y reanudar completa las corridas.
  */
 export const DEL_ARNES: ReadonlySet<Desenlace> = new Set<Desenlace>(["proveedor", "cliente_fuera_de_ficha"]);
 
@@ -37,14 +41,16 @@ export function notasDeCorrida(c: Pick<ResultadoDeCorrida, "graders" | "error">)
 
 export function resumirCaso(id: string, nivel: Nivel, corridas: readonly ResultadoDeCorrida[]): ResultadoDeCaso {
   // Las que saltó el tope no se llegaron a correr: en Claude Code ni se apuntan.
-  const medidas = corridas.filter((c) => c.desenlace !== "tope_de_gasto");
+  // Las del arnés van aparte (ver `DEL_ARNES`).
+  const delArnes = corridas.filter((c) => DEL_ARNES.has(c.desenlace));
+  const medidas = corridas.filter((c) => c.desenlace !== "tope_de_gasto" && !DEL_ARNES.has(c.desenlace));
   if (medidas.length === 0) {
-    return { id, nivel, corridas, score: 0, passRate: 0, notas: "sin corridas medidas: las saltó el tope de gasto" };
+    const notas = delArnes.length > 0 ? `sin corridas de Len medidas: ${delArnes[0]!.error ?? delArnes[0]!.desenlace}` : "sin corridas medidas: las saltó el tope de gasto";
+    return { id, nivel, corridas, score: 0, passRate: 0, notas };
   }
-  const scoreDe = (c: ResultadoDeCorrida) => (DEL_ARNES.has(c.desenlace) ? 0 : c.score);
-  const score = medidas.reduce((s, c) => s + scoreDe(c), 0) / medidas.length;
-  const passRate = medidas.filter((c) => scoreDe(c) >= 1).length / medidas.length;
-  const primeraMala = medidas.find((c) => scoreDe(c) < 1);
+  const score = medidas.reduce((s, c) => s + c.score, 0) / medidas.length;
+  const passRate = medidas.filter((c) => c.score >= 1).length / medidas.length;
+  const primeraMala = medidas.find((c) => c.score < 1);
   return { id, nivel, corridas, score, passRate, notas: primeraMala ? notasDeCorrida(primeraMala) : "" };
 }
 
@@ -61,7 +67,7 @@ export function salidaDeLaSuite(casos: readonly ResultadoDeCaso[], parcial: bool
   if (fallos > 0) {
     return {
       codigo: 1,
-      aviso: `✘ ${fallos} corrida(s) no las pudo medir el arnés (proveedor o cliente simulado); cuentan como 0 y estos números NO valen: repite la corrida`,
+      aviso: `✘ ${fallos} corrida(s) no las pudo medir el arnés (proveedor o cliente simulado); están en infraestructura.json, fuera de la media, y estos números NO valen todavía: vuelve a correr con --reanudar=<la carpeta>`,
     };
   }
   return { codigo: 0 };
