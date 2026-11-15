@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { promptDelJuez, VOTOS_DEL_JUEZ } from "../../juez";
-import { agreement, CALIBRATION_BAR, estimateCalibrationUsd } from "./calibration";
+import { agreement, askEntries, CALIBRATION_BAR, estimateCalibrationUsd } from "./calibration";
 import type { FetchedCase } from "./fetched";
 import { sheetEntries, SANITY_ENTRIES } from "./judge-sheet";
 import { CUMPLE_LO_PEDIDO } from "./rubric";
@@ -95,5 +95,39 @@ describe("estimateCalibrationUsd", () => {
   it("adds up every entry", () => {
     const one = estimateCalibrationUsd([entry("a")], rate);
     expect(estimateCalibrationUsd([entry("a"), entry("a")], rate)).toBeCloseTo(2 * one, 12);
+  });
+});
+
+// A provider that refuses one entry (15/11: «data_inspection_failed» from the judge's provider) must not lose the
+// rest of a paid run: the entry is written down as an error, the next one is asked, and the cap still holds.
+describe("askEntries", () => {
+  const entries = ["cliente-aaaaaaaa", "cliente-bbbbbbbb", "cliente-cccccccc"].map((caso) => ({ caso, cordura: false, view: "v" }));
+  it("an entry the judge cannot answer is an error by id, and the run goes on", async () => {
+    let spent = 0;
+    const r = await askEntries(
+      entries,
+      async (e) => {
+        spent += 0.001;
+        if (e.caso === "cliente-bbbbbbbb") throw new Error("data_inspection_failed");
+        return { paso: true, votos: [true, true, true] };
+      },
+      { budgetUsd: 1, spentUsd: () => spent, estimateUsd: () => 0.001 },
+    );
+    expect(r.veredictos.map((v) => v.caso)).toEqual(["cliente-aaaaaaaa", "cliente-cccccccc"]);
+    expect(r.errores).toEqual([{ caso: "cliente-bbbbbbbb", error: "data_inspection_failed" }]);
+    expect(r.parado).toBe(false);
+  });
+  it("stops before an entry that would go past the cap", async () => {
+    let spent = 0;
+    const r = await askEntries(
+      entries,
+      async () => {
+        spent += 0.004;
+        return { paso: false, votos: [false, false, false] };
+      },
+      { budgetUsd: 0.01, spentUsd: () => spent, estimateUsd: () => 0.004 },
+    );
+    expect(r.veredictos).toHaveLength(2);
+    expect(r.parado).toBe(true);
   });
 });

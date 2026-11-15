@@ -71,3 +71,25 @@ export function agreement(labels: readonly ReferenceLabel[], verdicts: readonly 
   const pct = total === 0 ? 0 : (100 * acuerdo) / total;
   return { acuerdo, total, pct, desacuerdos, cordura, fallosAtrapados, vota: total > 0 && pct >= CALIBRATION_BAR && cordura.every((c) => c.ok) };
 }
+
+/** Asks the judge about each entry in order, never past the cap: the next entry goes only if what it may cost still
+ *  fits. An entry the judge's provider refuses is written down by id and the run goes on — a paid run is not lost to
+ *  one refusal — and a run with errors is not a calibration (the script says so). */
+export async function askEntries(
+  entries: readonly SheetEntry[],
+  ask: (e: SheetEntry) => Promise<{ paso: boolean; votos: boolean[] }>,
+  o: { readonly budgetUsd: number; readonly spentUsd: () => number; readonly estimateUsd: (e: SheetEntry) => number },
+): Promise<{ veredictos: { caso: string; paso: boolean; votos: boolean[] }[]; errores: { caso: string; error: string }[]; parado: boolean }> {
+  const veredictos: { caso: string; paso: boolean; votos: boolean[] }[] = [];
+  const errores: { caso: string; error: string }[] = [];
+  for (const e of entries) {
+    if (o.spentUsd() + o.estimateUsd(e) > o.budgetUsd) return { veredictos, errores, parado: true };
+    try {
+      const v = await ask(e);
+      veredictos.push({ caso: e.caso, paso: v.paso, votos: v.votos });
+    } catch (err) {
+      errores.push({ caso: e.caso, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return { veredictos, errores, parado: false };
+}
