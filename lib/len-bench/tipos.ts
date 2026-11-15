@@ -204,8 +204,9 @@ export interface Encargo {
 /**
  * CÓMO TERMINÓ UNA CORRIDA. `completa` y `error_de_len` son de Len. `proveedor`
  * (no contestó) y `cliente_fuera_de_ficha` (el cliente simulado dijo algo que
- * no estaba en su ficha) son del ARNÉS: cuentan como 0 y dejan la suite en
- * error, como en el corredor de evals de Claude Code (ver `DEL_ARNES` en puntuar.ts).
+ * no estaba en su ficha) son del ARNÉS: salen de la media, van a
+ * `infraestructura.json` y dejan la suite en error hasta que `--reanudar` las
+ * vuelve a correr (desde el 15/11; ver `DEL_ARNES` en puntuar.ts).
  * `tope_de_gasto` es una corrida que no se llegó a correr.
  */
 export type Desenlace =

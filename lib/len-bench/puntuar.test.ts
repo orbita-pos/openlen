@@ -53,17 +53,26 @@ describe("notasDeCorrida", () => {
 });
 
 describe("resumirCaso", () => {
-  it("lo que el arnés no pudo medir cuenta como 0, como en el corredor de evals de Claude Code, y su error manda en las notas", () => {
-    // Quitarlas en silencio sacaba el passRate de UNA corrida si fallaban dos,
-    // y la tabla no lo decía. Claude Code las cuenta y deja la suite en error.
+  // 🔴 CAMBIÓ EL 15/11 (spec local 2026-11-12-len-3-1-ruta, §5 pieza 5, con la forma del andamio de
+  // Claude Code): lo que el arnés no pudo medir sale de la media y va aparte (`infraestructura.json`), la
+  // suite sigue saliendo con 1 y `--reanudar` lo vuelve a correr. Antes contaba como 0, como el corredor de
+  // `plugin eval`. Lo que se temía el 23/09 —un passRate de UNA corrida sin decirlo— no pasa: el fichero y
+  // el código de salida lo dicen, y reanudar completa las corridas.
+  it("lo que el arnés no pudo medir sale de la media; las notas son de Len", () => {
     const r = resumirCaso("c", "N2", [
       corrida(1, "completa"),
+      corrida(0.5, "completa", [g("x", false, 1)]),
       corrida(0, "proveedor", [], "upstream: 0 tokens"),
-      corrida(0, "cliente_fuera_de_ficha", [], "el cliente dijo «$99»"),
     ]);
-    expect(r.passRate).toBeCloseTo(1 / 3, 12);
-    expect(r.score).toBeCloseTo(1 / 3, 12);
-    expect(r.notas).toBe("upstream: 0 tokens");
+    expect(r.score).toBe(0.75);
+    expect(r.passRate).toBe(0.5);
+    expect(r.notas).toBe("x: x mal");
+  });
+  it("si el arnés no pudo medir ninguna, lo dice, no inventa un cero de Len", () => {
+    const r = resumirCaso("c", "N2", [corrida(0, "proveedor", [], "upstream: 0 tokens"), corrida(0, "cliente_fuera_de_ficha", [], "el cliente dijo «$99»")]);
+    expect(r.score).toBe(0);
+    expect(r.passRate).toBe(0);
+    expect(r.notas).toBe("sin corridas de Len medidas: upstream: 0 tokens");
   });
   it("las que saltó el tope de gasto no se midieron: no cuentan", () => {
     const r = resumirCaso("c", "N2", [corrida(1, "completa"), corrida(0, "tope_de_gasto")]);

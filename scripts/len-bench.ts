@@ -13,6 +13,7 @@ import path from "node:path";
 import { Pool } from "pg";
 import { BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES } from "@/lib/len-bench/entorno";
 import { poolSql } from "@/lib/len-bench/cold-return/world";
+import { infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "@/lib/len-bench/run-store";
 import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
@@ -51,6 +52,13 @@ async function main(): Promise<number> {
   const base = arg("--base") ?? BASE_LEN_BENCH;
   const etiqueta = arg("--etiqueta") ?? juego;
   const conservar = arg("--conservar") !== undefined;
+  // Cada corrida se guarda al acabar (`run-store.ts`); `--reanudar=<carpeta>` salta las que Len terminó y
+  // vuelve a correr las que el arnés no pudo medir. Sin él, una carpeta con corridas no se reutiliza.
+  const reanudar = arg("--reanudar");
+  const dir = reanudar ?? path.join(DIR_CORRIDAS, `${new Date().toISOString().slice(0, 10)}-${etiqueta}`);
+  const problemaDeCarpeta = runsDirProblem(dir, reanudar !== undefined);
+  if (problemaDeCarpeta) throw new Error(problemaDeCarpeta);
+  const guardadas = reanudar !== undefined ? keptRuns(dir) : new Map<string, ResultadoDeCorrida>();
   // Len Dynamis (lib/agent/dynamis.ts): cada turno lo manda en el cuerpo, como
   // el panel. Sólo existe con la terminal encendida en el servidor del banco.
   const modeArg = arg("--mode");
@@ -93,7 +101,6 @@ async function main(): Promise<number> {
   // puede correr en otra carpeta, con sus grabaciones en ella (la columna base de Len 3.1).
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
   const dirGrabaciones = path.resolve(DIR_GRABACIONES);
-  const dir = path.join(DIR_CORRIDAS, `${new Date().toISOString().slice(0, 10)}-${etiqueta}`);
   // La página final de cada corrida, en escritorio y en móvil, junto a sus
   // resultados (lib/len-bench/capturas.ts). `--sin-capturas` para no hacerlas.
   const capturasEn = arg("--sin-capturas") === undefined ? path.join(dir, "capturas") : undefined;
@@ -124,6 +131,12 @@ async function main(): Promise<number> {
     for (const e of encargos) {
       const corridas: ResultadoDeCorrida[] = [];
       for (let i = 0; i < runs; i++) {
+        const guardada = guardadas.get(runKey(e.id, i + 1));
+        if (guardada) {
+          corridas.push(guardada);
+          console.log(`  ${e.id} #${i + 1}: ya estaba (${guardada.desenlace}, score=${guardada.score.toFixed(2)}): no se vuelve a correr`);
+          continue;
+        }
         if (gastado * MARGEN_NO_GRABADO >= tope) {
           if (!parcial) console.log(`⚠ tope de gasto $${tope.toFixed(2)} alcanzado: se saltan las corridas que quedan`);
           parcial = true;
@@ -132,6 +145,7 @@ async function main(): Promise<number> {
         const r = await correrEncargo(e, opciones);
         gastado += r.usd;
         corridas.push(r);
+        saveRun(dir, e.id, i + 1, r);
         if (conservar && r.sub) subs.push(r.sub);
         console.log(
           // El juez, dentro del total y dicho aparte (su `judge_cost_usd`).
@@ -170,6 +184,8 @@ async function main(): Promise<number> {
 
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, "resultados.json"), JSON.stringify({ comando: process.argv.slice(2), casos, vias, gastado, parcial }, null, 2));
+  // Lo que el arnés no pudo medir, fuera de la media y por (caso, corrida): lo vuelve a correr `--reanudar`.
+  fs.writeFileSync(path.join(dir, "infraestructura.json"), JSON.stringify(infraFailures(casos), null, 2));
   console.log(`Resultados: ${dir}/resultados.json`);
   if (capturasEn && fs.existsSync(capturasEn)) {
     console.log(`Capturas: ${fs.readdirSync(capturasEn).length} en ${capturasEn} (el nombre lleva el sub de cada corrida)`);
