@@ -7,7 +7,7 @@
 import http from "node:http";
 import type { Browser } from "puppeteer";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { datosDeLaFicha, enlacesInternosVan, flujo, formularioLlega, sigueAhi, sinDesbordeMovil, textoSeLee } from "./graders";
+import { datosDeLaFicha, enlacesInternosVan, flujo, formularioLlega, paginaHecha, sigueAhi, sinDesbordeMovil, textoSeLee } from "./graders";
 import { OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 import { cerrarPestana, lanzarNavegador, REGLAS_SIN_PRODUCCION } from "./navegador";
 import { calificarCon, INICIO_TAQUERIA, SOLUCION_TAQUERIA } from "./publicada-de-prueba";
@@ -99,6 +99,18 @@ describe("el navegador de Len-Bench", () => {
       await cerrarPestana(page);
     }
   }, 30_000);
+});
+
+describe("pagina-hecha — el texto que ve un visitante, con la página ya pintada", () => {
+  it("verde con la solución, rojo con una página en blanco", async () => {
+    expect((await calificarCon(paginaHecha(), { html: SOLUCION_TAQUERIA }, { navegador })).paso).toBe(true);
+    expect((await calificarCon(paginaHecha(), { html: "<!doctype html><html><body></body></html>" }, { navegador })).paso).toBe(false);
+  }, 60_000);
+  it("una página que pinta su contenido con su script tiene página (cliente 1392b65e)", async () => {
+    const texto = "Pan dulce y bolillo recién hecho todos los días, con entrega a domicilio en toda la colonia. ".repeat(4);
+    const html = `<!doctype html><html><body><main id="app"></main><script>document.getElementById("app").innerHTML = "<h1>Panadería</h1><p>${texto}</p>";</script></body></html>`;
+    expect((await calificarCon(paginaHecha(), { html }, { navegador })).paso).toBe(true);
+  }, 60_000);
 });
 
 describe("sin-desborde-movil", () => {

@@ -8,21 +8,17 @@ import { describe, expect, it } from "vitest";
 import { veredictoPaginaHecha } from "./graders";
 
 // EL NULO DE LA BATERÍA DE CLIENTES (revisión C1, 15/11): una página en blanco pasaba todos los graders que votan
-// —todos eran «no hizo nada mal»—, así que un Len que no escribe nada contaba como encargo terminado.
-describe("veredictoPaginaHecha — hay una página, y no es la de partida", () => {
-  const larga = `<body><h1>Panadería</h1><p>${"Pan dulce y bolillo recién hecho todos los días. ".repeat(6)}</p></body>`;
-  it("una página en blanco no es un encargo hecho", () => {
-    expect(veredictoPaginaHecha("", "").paso).toBe(false);
+// —todos eran «no hizo nada mal»—, así que un Len que no escribe nada contaba como encargo terminado. Se cuenta el
+// texto que ve un visitante (la página ya pintada, `pagina-hecha` en graders.browser.test.ts): leído del HTML
+// estático, una página que pinta su contenido con su script salía «sin página» (cliente 1392b65e, 141 caracteres).
+describe("veredictoPaginaHecha — hay una página de verdad", () => {
+  it("una página en blanco, o tres palabras, no es un encargo hecho", () => {
+    expect(veredictoPaginaHecha(0).paso).toBe(false);
+    expect(veredictoPaginaHecha("No sé.".length).paso).toBe(false);
+    expect(veredictoPaginaHecha(199).paso).toBe(false);
   });
-  it("tres palabras tampoco: hace falta una página de verdad", () => {
-    expect(veredictoPaginaHecha("<body><p>No sé.</p></body>", "").paso).toBe(false);
-  });
-  it("la misma página de partida, sin cambiar nada, tampoco", () => {
-    expect(veredictoPaginaHecha(larga, larga).paso).toBe(false);
-  });
-  it("una página con contenido, distinta de la partida, sí", () => {
-    expect(veredictoPaginaHecha(larga, "").paso).toBe(true);
-    expect(veredictoPaginaHecha(larga, "<body><p>otra cosa</p></body>").paso).toBe(true);
+  it("desde 200 caracteres de texto visible, sí, y lo dice", () => {
+    expect(veredictoPaginaHecha(200)).toEqual({ paso: true, explicacion: "hay una página: 200 caracteres de texto visible" });
   });
 });
 
