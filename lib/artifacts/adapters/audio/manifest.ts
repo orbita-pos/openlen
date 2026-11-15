@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ArtifactError, type SealedArtifactInput } from "../../types";
+import { manifestJson } from "../../manifest-json";
 export const audioTrackSchema=z.object({
   asset:z.string().regex(/^(?:[A-Za-z0-9_-]+@[1-9]\d*\/\d+|upload:[a-f0-9]{64}\.(?:mp3|m4a|ogg|wav))$/),
   role:z.enum(["narration","music","effect"]).default("effect"),
@@ -22,8 +23,7 @@ export function audioManifestIssue(raw:unknown):string|null{
   return `${issue.path.join(".")||"(root)"}: ${issue.message}`;
 }
 export function audioManifest(input:SealedArtifactInput){
-  let raw:unknown;
-  try{raw=JSON.parse(input.revision.files["audio.json"]??"");}catch{throw new ArtifactError("invalid_audio_manifest","audio.json is not JSON");}
+  const raw=manifestJson(input.revision.files,"audio.json","invalid_audio_manifest");
   const issue=audioManifestIssue(raw);
   if(issue)throw new ArtifactError("invalid_audio_manifest",`audio.json ${issue}`);
   return schema.parse(raw);

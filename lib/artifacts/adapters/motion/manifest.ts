@@ -2,6 +2,7 @@ import { z } from "zod";
 import { safeArtifactPath } from "../../state";
 import { ArtifactError, type SealedArtifactInput } from "../../types";
 import {audioTrackSchema} from "../audio/manifest";
+import { manifestJson } from "../../manifest-json";
 export const CAPTURE_ROUTE=/^#\/[A-Za-z0-9\/_.~%-]{0,200}$/;
 const schema=z.object({version:z.literal(1),entry:z.string(),runtime:z.literal("gsap-3.15.0"),width:z.literal(1280),height:z.literal(720),fps:z.literal(30),durationSeconds:z.number().finite().min(1).max(120),audio:z.object({tracks:z.array(audioTrackSchema).min(1).max(8),duckMusic:z.boolean().default(true)}).strict().optional(),datasetIds:z.array(z.string().min(1)).max(20).default([]),captures:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,40}$/),entry:z.string()}).strict()).max(4).default([])}).strict();
 /** What is wrong with a motion.json's shape, by field, or null (the files it names are checked on render). */
@@ -14,8 +15,7 @@ export function motionManifestIssue(raw:unknown):string|null{
 /** What is wrong, by field: Len fixes motion.json from this message. */
 export function motionManifest(input:SealedArtifactInput){
   const fail=(detail:string):never=>{throw new ArtifactError("invalid_motion_manifest",`motion.json ${detail}`);};
-  let raw:unknown;
-  try{raw=JSON.parse(input.revision.files["motion.json"]??"");}catch{throw new ArtifactError("invalid_motion_manifest","motion.json is not JSON");}
+  const raw=manifestJson(input.revision.files,"motion.json","invalid_motion_manifest");
   const parsed=schema.safeParse(raw);
   if(!parsed.success){const issue=parsed.error.issues[0]!;return fail(`${issue.path.join(".")||"(root)"}: ${issue.message}`);}
   const value=parsed.data;

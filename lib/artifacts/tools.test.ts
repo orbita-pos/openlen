@@ -145,6 +145,42 @@ it("render returns queued with persisted ids and refuses an unavailable format",
   expect((await a.execute("create_artifact", { ...piece("video"), kind: "motion" })).response).toMatchObject({ ok: false, error: "format_unavailable" });
 });
 
+// The 23/10 trial in production (project 25b92e46): every Write of a piece's file makes a revision and nothing
+// said which; Len rendered revisions 1 and 0 of a piece at 6, the check ran on those, and «dashboard.json is not
+// JSON» came back twice about a file only a later revision had. Sealing takes the current revision anyway.
+it("refuses a revision that is not the current one before checking it, and says which one is", async () => {
+  const a = agent();
+  const created = await a.execute("create_artifact", { kind: "slides", item_key: "deck", title: "Presentación", brief: "Mi app" });
+  const id = String(created.response.artifactId);
+  await a.workspace.write(`/.len/artifacts/${id}/slides/cover.html`, '<section id="cover" style="background:#fff"><h1>Turnia</h1></section>', null);
+  await a.workspace.write(`/.len/artifacts/${id}/deck.json`, JSON.stringify({ version: 3, title: "Turnia", order: ["cover"] }), null);
+  for (const revision of [1, 0, 7]) {
+    const stale = await a.execute("render_artifact", { artifact_id: id, revision, formats: ["pdf"] });
+    expect(stale.response).toEqual({ ok: false, error: "revision_conflict", message: expect.stringMatching(new RegExp(`revision ${revision} .*current revision is 2`)) });
+  }
+  expect(await f.database.query(`select "id" from "artifactJobs" where "artifactId"=$1`, [id])).toEqual([]);
+  expect((await a.execute("render_artifact", { artifact_id: id, revision: 2, formats: ["pdf"] })).response).toMatchObject({ ok: true, status: "queued", revision: 2 });
+});
+
+it("a manifest that does not exist yet says so, not «is not JSON»", async () => {
+  const a = createArtifactAgent({ database: f.database, store: f.store, jobs: createArtifactJobs(f.database, f.store), data: createArtifactData(f.database, f.store, async () => null), captureContext: async () => ({ files: {}, settingsHash: "a".repeat(64), capturedAt: new Date().toISOString(), resourceRefs: [] }) }, f.owner, () => "human-message", ["slides", "dashboard"]);
+  const board = String((await a.execute("create_artifact", { kind: "dashboard", item_key: "board", title: "Escenario", brief: "Mi app" })).response.artifactId);
+  await a.workspace.write(`/.len/artifacts/${board}/index.html`, "<html><head></head><body></body></html>", null);
+  expect((await a.execute("render_artifact", { artifact_id: board, revision: 1, formats: ["html"] })).response).toEqual({ ok: false, error: "invalid_dashboard_manifest", message: "dashboard.json does not exist yet: write it before rendering" });
+  const deck = String((await a.execute("create_artifact", { kind: "slides", item_key: "deck", title: "Presentación", brief: "Mi app" })).response.artifactId);
+  await a.workspace.write(`/.len/artifacts/${deck}/slides/cover.html`, '<section id="cover" style="background:#fff"><h1>Turnia</h1></section>', null);
+  expect((await a.execute("render_artifact", { artifact_id: deck, revision: 1, formats: ["pdf"] })).response).toEqual({ ok: false, error: "invalid_slide_deck", message: "deck.json does not exist yet: write it before rendering" });
+});
+
+// The same trial: `formats` left out once and ["web","png","csv"] once, each answered with a bare code.
+it("an unavailable format says what the piece exports", async () => {
+  const a = agent();
+  const { id } = await queuedDeck(a);
+  expect((await a.execute("render_artifact", { artifact_id: id, revision: 2, formats: ["web", "pdf"] })).response).toEqual({ ok: false, error: "format_unavailable", message: '"formats" is ["web","pdf"]; for slides use html, pdf, pptx (one or more)' });
+  expect((await a.execute("render_artifact", { artifact_id: id, revision: 2 })).response).toEqual({ ok: false, error: "format_unavailable", message: '"formats" is missing; for slides use html, pdf, pptx (one or more)' });
+  expect((await a.execute("render_artifact", { artifact_id: id, revision: 2, formats: [] })).response).toMatchObject({ ok: false, error: "format_unavailable", message: expect.stringContaining('"formats" is []') });
+});
+
 it("declares only wired formats when enabled and exposes manuals by Read path", () => {
   expect(artifactToolDeclarations([])).toEqual([]);
   const off = buildFunctionDeclarations({ OPENLEN_ARTIFACTS: "0" }, { artifactKinds: ["slides"] });

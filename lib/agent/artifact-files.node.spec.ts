@@ -79,8 +79,15 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     const result = await runAgentTool(session, deps, "create_artifact", { kind: "slides", item_key: "deck", title: "Deck", brief: "App" });
     assert.equal(result.response.ok, true);
     const id = result.response.artifactId;
-    assert.equal((await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/deck.json`, content: JSON.stringify({ version: 3, title: "Deck", order: ["cover"] }) })).response.ok, true);
-    assert.equal((await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' })).response.ok, true);
+    // Each save says the revision it made: render_artifact seals one by its number (the 23/10 trial guessed).
+    const index = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/deck.json`, content: JSON.stringify({ version: 3, title: "Deck", order: ["cover"] }) });
+    assert.match(String(index.response.tool_result), /no need to Read it again\) The piece is now at revision 1\.$/);
+    const cover = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' });
+    assert.match(String(cover.response.tool_result), /The piece is now at revision 2\.$/);
+    // Saving the same bytes again makes no revision, and says none.
+    const same = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' });
+    assert.equal(same.response.ok, true);
+    assert.doesNotMatch(String(same.response.tool_result), /revision/);
     const queued = await runAgentTool(session, deps, "render_artifact", { artifact_id: id, revision: 2, formats: ["pdf"] });
     assert.equal(queued.response.status, "queued");
     assert.equal(queued.updatedHtml, undefined);

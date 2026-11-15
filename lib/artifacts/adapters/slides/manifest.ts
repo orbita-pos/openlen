@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ArtifactError, type ArtifactDataset, type SealedArtifactInput } from "../../types";
+import { manifestJson } from "../../manifest-json";
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,80}$/);
 const color = z.string().regex(/^#?[a-fA-F0-9]{6}$/).transform((v) => v.replace(/^#/, "").toUpperCase());
@@ -26,8 +27,7 @@ export function chartData(chart: SlideChart, input: SealedArtifactInput): { data
 }
 export function parseSlideDeck(input: SealedArtifactInput): SlideDeck {
   let deck: SlideDeck;
-  let raw: unknown;
-  try { raw = JSON.parse(input.revision.files["deck.json"] ?? ""); } catch { throw new ArtifactError("invalid_slide_deck", "deck.json is not JSON"); }
+  const raw = manifestJson(input.revision.files, "deck.json", "invalid_slide_deck");
   // A retired format says what to write instead, as a deprecated option does.
   if ((raw as { version?: unknown })?.version === 2) throw new ArtifactError("invalid_slide_deck", 'deck.json version 2 (a full HTML document per slide) is retired; write version 3: deck.json {"version":3,"title":"…","order":["cover",…]} and slides/<id>.html, one <section> each (/.openlen/docs/artifacts/slides.md)');
   const parsed = schema.safeParse(raw);
