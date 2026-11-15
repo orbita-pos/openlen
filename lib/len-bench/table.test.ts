@@ -69,9 +69,18 @@ describe("tableRows", () => {
     expect(row("Encargos terminados").ruido).toBe("±57,7 pts");
   });
 
-  it("F2: among the runs of cases the customer published, those with no rejected publish", () => {
-    expect(row("Publica sin rechazo").base).toBe("1 de 2 (50,0 %)");
-    expect(row("Publica sin rechazo").candidato).toBe("2 de 2 (100,0 %)");
+  // REVIEW I2 (15/11): a run that never published counted as «publica sin rechazo», and so did one where nothing was
+  // measured. Now: publishes = len-publico passed; with no rejected publish; unmeasured runs said apart.
+  it("F2: among the runs of cases where Len published, those that DID publish with no rejected publish; unmeasured apart", () => {
+    const lp = (paso: boolean) => [{ nombre: "len-publico", paso, peso: 2, puntua: true, explicacion: "" }];
+    const b = columnOf(allRuns(column([
+      ["c-1", 1, { publishRechazados: 0, graders: lp(true) }],
+      ["c-1", 2, { publishRechazados: 1, graders: lp(true) }],
+      ["c-1", 3, { publishRechazados: 0, graders: lp(false) }],
+      ["c-1", 4, { desenlace: "error_de_len", score: 0, publishRechazados: undefined, graders: [] }],
+    ])));
+    const r = tableRows(b, b, { publishingCases: new Set(["c-1"]) }).find((x) => x.fila.startsWith("Publica sin rechazo"))!;
+    expect(r.base).toBe("1 de 3 (33,3 %) · 1 sin medir");
   });
 
   it("cost, calls and minutes per task as mean · p50 · p90, over Len's runs", () => {

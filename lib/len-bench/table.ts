@@ -90,8 +90,15 @@ export function tableRows(base: Column, candidate: Column, o: { readonly publish
       ruido: n === 0 ? "—" : `±${num(100 / Math.sqrt(n), 1)} pts`,
     },
     {
-      fila: "Publica sin rechazo de `publish` (F2), en los casos que el cliente publicó",
-      ...each((c) => pct(publishing(c).filter((r) => (r.result.publishRechazados ?? 0) === 0).length, publishing(c).length)),
+      // Review I2: «sin rechazo» needs a publish that HAPPENED (len-publico passed) and none rejected; a run with
+      // nothing measured (an error before grading) is said apart, never counted as a success.
+      fila: "Publica sin rechazo de `publish` (F2), en los casos donde Len publicó",
+      ...each((c) => {
+        const medidas = publishing(c).filter((r) => r.result.publishRechazados !== undefined);
+        const bien = medidas.filter((r) => r.result.publishRechazados === 0 && r.result.graders.some((g) => g.nombre === "len-publico" && g.paso)).length;
+        const sinMedir = publishing(c).length - medidas.length;
+        return `${pct(bien, medidas.length)}${sinMedir > 0 ? ` · ${sinMedir} sin medir` : ""}`;
+      }),
       ruido: publishing(base).length === 0 ? "—" : `±${num(100 / Math.sqrt(publishing(base).length), 1)} pts`,
     },
     {

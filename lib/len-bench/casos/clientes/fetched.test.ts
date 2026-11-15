@@ -14,15 +14,44 @@ import { casesDir, fetchedCaseFrom, readFetchedCase, writeFetchedCase, type RawC
 const askCall = (questions: { id: string; question: string }[]) => ({ role: "assistant", content: "", functionCalls: [{ name: "ask_user_question", args: { questions } }] });
 const askAnswer = (answers: { id: string; selected: string[]; custom?: string }[]) => ({ role: "user", content: "", functionResponses: [{ name: "ask_user_question", response: { ok: true, answers } }] });
 
+// A SYNTHETIC id (review I5): a real customer's id never sits next to any content in this public repository.
+const ID = "00000000-0000-4000-8000-0000000000aa";
+const publishCall = { role: "assistant", content: "", functionCalls: [{ name: "publish", args: { subdomain: "tacos-don-pepe" } }] };
+
 const raw = (o: Partial<RawCaseRows> = {}): RawCaseRows => ({
-  projectId: "aba1335b-34da-43f4-a25d-a89b3bc2b3b4",
+  projectId: ID,
   project: { data: { html: "<h1>Final</h1>", pages: { menu: { html: "<h1>Menú</h1>" } } }, subdomain: "tacos-don-pepe" },
   versionsBefore: [],
   rows: [
-    { userText: "hazme una página para mi taquería", attachedImage: null, attachedFiles: null, createdAt: "2026-10-31T10:00:00Z", transcript: { mensajes: [askCall([{ id: "q1", question: "¿Qué dirección quieres?" }]), askAnswer([{ id: "q1", selected: [], custom: "tacos-don-pepe" }])] } },
-    { userText: "ponle el menú", attachedImage: null, attachedFiles: null, createdAt: "2026-10-31T10:05:00Z", transcript: null },
+    { userText: "hazme una página para mi taquería", attachedImage: null, attachedFiles: null, page: null, createdAt: "2026-10-31T10:00:00Z", transcript: { mensajes: [askCall([{ id: "q1", question: "¿Qué dirección quieres?" }]), askAnswer([{ id: "q1", selected: [], custom: "tacos-don-pepe" }]), publishCall] } },
+    { userText: "ponle el menú", attachedImage: null, attachedFiles: null, page: null, createdAt: "2026-10-31T10:05:00Z", transcript: null },
   ],
   ...o,
+});
+
+describe("fetchedCaseFrom — what the review found (15/11)", () => {
+  it("I1: published counts only when LEN published (called publish); a customer who used the publish button never asked Len", () => {
+    const sinPublish = fetchedCaseFrom(raw({ rows: raw().rows.map((r) => ({ ...r, transcript: null })) }), "t");
+    if ("left" in sinPublish) throw new Error(sinPublish.left);
+    expect(sinPublish.published).toBeNull();
+    const conPublish = fetchedCaseFrom(raw(), "t");
+    if ("left" in conPublish) throw new Error(conPublish.left);
+    expect(conPublish.published).toEqual({ subdomain: "tacos-don-pepe" });
+  });
+  it("I3: of the final state, only what a page is (html; each page's html, title, membersOnly) — never a preview token or a passcode", () => {
+    const c = fetchedCaseFrom(raw({
+      project: {
+        data: { html: "<h1>F</h1>", pages: { menu: { html: "<p>m</p>", title: "Menú", membersOnly: true, secreto: "x" } }, preview: { token: "t0k3n" }, passcodeHash: "h4sh" } as never,
+        subdomain: null,
+      },
+    }), "t");
+    if ("left" in c) throw new Error(c.left);
+    expect(c.final).toEqual({ html: "<h1>F</h1>", pages: { menu: { html: "<p>m</p>", title: "Menú", membersOnly: true } } });
+    expect(JSON.stringify(c)).not.toMatch(/t0k3n|h4sh|secreto/);
+  });
+  it("I4: a message typed while looking at a sub-page is left out (the bench replays every message against Home)", () => {
+    expect(fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, page: "menu" }] }), "t")).toEqual({ left: "un mensaje se escribió viendo una subpágina: el banco lo repetiría contra la portada" });
+  });
 });
 
 describe("fetchedCaseFrom", () => {
@@ -106,6 +135,6 @@ describe("the fetched file, outside the repo", () => {
 
   it("a case never fetched says how to fetch it", () => {
     process.env.OPENLEN_BENCH_CASES_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "lb-cases-"));
-    expect(() => readFetchedCase("5c153a4c-0c4c-409c-ad74-103d1b6df1d9")).toThrow(/bench:clientes:fetch/);
+    expect(() => readFetchedCase("00000000-0000-4000-8000-0000000000bb")).toThrow(/bench:clientes:fetch/);
   });
 });

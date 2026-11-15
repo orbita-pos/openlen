@@ -11,7 +11,7 @@ import { CUMPLE_LO_PEDIDO } from "./rubric";
 import type { FetchedCase } from "./fetched";
 
 const fetched = (o: Partial<FetchedCase> = {}): FetchedCase => ({
-  projectId: "aba1335b-34da-43f4-a25d-a89b3bc2b3b4",
+  projectId: "00000000-0000-4000-8000-0000000000aa",
   fetchedAt: "2026-11-15T00:00:00Z",
   start: { html: "" },
   final: { html: "<html><body><h1>Tacos</h1></body></html>" },
@@ -24,7 +24,7 @@ const fetched = (o: Partial<FetchedCase> = {}): FetchedCase => ({
 describe("customerCase", () => {
   it("replays the owner's messages in order, from the page they started on, graded against their final page", () => {
     const e = customerCase(fetched());
-    expect(e.id).toBe("cliente-aba1335b");
+    expect(e.id).toBe("cliente-00000000");
     expect(e.origen).toBe("cliente");
     expect(e.guion).toEqual([
       { tipo: "pide", mensaje: "hazme una página para mi taquería" },
@@ -52,9 +52,10 @@ describe("customerCase", () => {
 });
 
 describe("customerGraders — the generic rubric", () => {
-  it("publishes when the customer published, invents nothing, fits a phone, keeps its links, and a judge that does not vote yet", () => {
+  it("publishes when Len published, there IS a page (the null fails it), invents nothing, fits a phone, keeps its links, and a judge that does not vote yet", () => {
     expect(customerGraders(fetched()).map((g) => [g.nombre, g.puntua !== false])).toEqual([
       ["len-publico", true],
+      ["pagina-hecha", true],
       ["nada-inventado", true],
       ["sin-cifras-inventadas", false],
       ["sin-desborde-movil", true],

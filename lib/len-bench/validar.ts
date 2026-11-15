@@ -56,6 +56,12 @@ export function revisarCaso(
       problemas.push(`regla 3 — ${g.nombre} nunca se vio en rojo (ni en la partida ni en las rotas)`);
     }
   }
+  // EL NULO de un caso de cliente (revisión C1): la página en blanco tiene que suspender algo que vota; si los pasa
+  // todos, un Len que no escribe nada contaría como encargo terminado.
+  const nulo = r.variantes.find((v) => v.nombre === "pagina-en-blanco");
+  if (deCliente && nulo && nulo.graders.filter((g) => g.puntua).every((g) => g.paso)) {
+    problemas.push("nulo — la página en blanco pasa todos los graders que votan: un Len que no escribe nada contaría como encargo terminado");
+  }
   // Lo que el cliente no pidió tocar no se escribe a mano: metería su texto en el repo (rubric.ts).
   if (deCliente) avisos.push("regla 4 no aplica: caso de cliente (su rúbrica es genérica)");
   else if (faltaLoQueSigue(e)) {

@@ -31,10 +31,11 @@ describe("cargarEncargos — el juego clientes (batería 1 de Len 3.1)", () => {
     const encargos = await conCarpeta(dir, () => cargarEncargos("clientes"));
     expect(encargos.map((e) => e.id)).toEqual(ids.map((id) => `cliente-${id.slice(0, 8)}`));
     expect(encargos.every((e) => e.origen === "cliente")).toBe(true);
-  });
+    // Como las de `dev` de abajo: sola, ~1 s; con una validación de Len-Bench en la máquina, 4,4 s (15/11).
+  }, 30_000);
   it("si falta un caso traído, dice cómo traerlo", async () => {
     await expect(conCarpeta(fs.mkdtempSync(path.join(os.tmpdir(), "lb-clientes-")), () => cargarEncargos("clientes"))).rejects.toThrow(/bench:clientes:fetch/);
-  });
+  }, 30_000);
 });
 
 describe("cargarEncargos", () => {
