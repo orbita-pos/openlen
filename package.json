@@ -106,6 +106,8 @@
     "agent-steps:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/agent-steps-migrate.ts",
     "replay-scenes:fetch": "tsx --tsconfig tsconfig.eval.json scripts/fetch-replay-scenes.ts",
     "bench:clientes:fetch": "tsx --tsconfig tsconfig.eval.json scripts/fetch-bench-customer-cases.ts",
+    "bench:clientes:hoja": "tsx --tsconfig tsconfig.eval.json scripts/len-bench-judge-sheet.ts",
+    "bench:len:tabla": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/len-bench-table.ts",
     "replay-scenes:where": "tsx --tsconfig tsconfig.eval.json --require ./scripts/test-node-server-only-shim.cjs scripts/replay-scene-where.ts",
     "requests:diff": "tsx --tsconfig tsconfig.eval.json scripts/request-diff.ts",
     "len-replay:gate": "node scripts/len-replay-gate.mjs",
