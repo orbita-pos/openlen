@@ -15,10 +15,11 @@ describe("veredictoPaginaHecha — hay una página de verdad", () => {
   it("una página en blanco, o tres palabras, no es un encargo hecho", () => {
     expect(veredictoPaginaHecha(0).paso).toBe(false);
     expect(veredictoPaginaHecha("No sé.".length).paso).toBe(false);
-    expect(veredictoPaginaHecha(199).paso).toBe(false);
+    expect(veredictoPaginaHecha(49).paso).toBe(false);
   });
-  it("desde 200 caracteres de texto visible, sí, y lo dice", () => {
-    expect(veredictoPaginaHecha(200)).toEqual({ paso: true, explicacion: "hay una página: 200 caracteres de texto visible" });
+  it("desde 50 caracteres de texto visible, sí, y lo dice: un juego de 15 botones y 123 caracteres es una página (cliente 1392b65e)", () => {
+    expect(veredictoPaginaHecha(50)).toEqual({ paso: true, explicacion: "hay una página: 50 caracteres de texto visible" });
+    expect(veredictoPaginaHecha(123).paso).toBe(true);
   });
 });
 
