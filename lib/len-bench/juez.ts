@@ -29,8 +29,7 @@ import { PROVIDER_DIALECTS } from "@/lib/ai/providers";
 import { MODEL_POLICY, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { WHOLE_HISTORY, historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
-import { textoVisible } from "./extraer";
-import { todoLoPublicado } from "./graders";
+import { textoPintadoDelSitio } from "./graders";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
 
 /** Votos por grader, los mismos que Claude Code. */
@@ -64,12 +63,15 @@ const NOMBRE_DEL_FOCO: Record<FocoDelJuez, string> = {
 
 /**
  * EL FOCO DE LA BATERÍA 1 DE LEN 3.1 (plan local 2026-11-15-len-3-1-bateria-de-paginas-gratis, tarea 9): lo que
- * pidió el dueño, numerado, y el TEXTO VISIBLE de lo publicado. Pequeño a propósito —«un criterio con juez por
- * caso como mucho, con foco pequeño» (spec §5)—: el juez no ve la traza de Len, ve el pedido y el resultado.
+ * pidió el dueño, numerado, y el TEXTO que ve un visitante de lo publicado. Pequeño a propósito —«un criterio con
+ * juez por caso como mucho, con foco pequeño» (spec §5)—: el juez no ve la traza de Len, ve el pedido y el resultado.
+ * El texto llega ya PINTADO (`textoPintadoDelSitio` en una corrida, `renderedText` en la calibración): leído del HTML
+ * estático, el juez no veía lo que monta el script de la página (15/11).
  */
-export function pedidosYPagina(conversacion: readonly { readonly quien: string; readonly texto: string }[], htmlPublicado: string): string {
+export function pedidosYPagina(conversacion: readonly { readonly quien: string; readonly texto: string }[], textoDeLaPagina: string): string {
   const pedidos = conversacion.filter((x) => x.quien === "dueno").map((x, i) => `${i + 1}. ${x.texto}`);
-  return `Lo que pidió el dueño, en orden:\n${pedidos.join("\n")}\n\nEl texto visible de la página publicada:\n${textoVisible(htmlPublicado)}`;
+  const texto = textoDeLaPagina.replace(/[ \t]+/g, " ").replace(/\n\s*\n+/g, "\n").trim();
+  return `Lo que pidió el dueño, en orden:\n${pedidos.join("\n")}\n\nEl texto visible de la página publicada:\n${texto}`;
 }
 
 /**
@@ -199,18 +201,34 @@ export function juez(
     criterio: o.criterio,
     foco,
     async calificar(ctx) {
-      const texto = foco === "pedidos_y_pagina" ? pedidosYPagina(ctx.conversacion, await todoLoPublicado(ctx)) : textoDelFoco(ctx, foco);
+      const texto = foco === "pedidos_y_pagina" ? pedidosYPagina(ctx.conversacion, await textoPintadoDelSitio(ctx)) : textoDelFoco(ctx, foco);
       // Nada que juzgar no se paga: no hay a quién preguntar.
       if (texto.trim() === "") return { paso: false, explicacion: `no hubo ${NOMBRE_DEL_FOCO[foco]} de Len que juzgar` };
-      const prompt = promptDelJuez(o.criterio, foco, texto);
-      const votos: boolean[] = [];
-      for (let i = 0; i < VOTOS_DEL_JUEZ; i++) {
-        const r = await llamar(SISTEMA, prompt);
-        gastado += r.usd;
-        votos.push(votoDe(r.texto));
-      }
-      const paso = votos.filter(Boolean).length > votos.length / 2;
+      const { paso, votos } = await judgeVerdict(o.criterio, foco, texto, llamar);
       return { paso, explicacion: `votos del juez: ${votos.map((v) => (v ? "PASS" : "FAIL")).join(" ")}`, votos, evidencia: recortar(texto) };
     },
   };
+}
+
+/**
+ * EL VEREDICTO DEL JUEZ sobre un texto ya armado: el prompt del banco, sus tres votos y la mayoría. Lo usa el grader
+ * `juez()` dentro de una corrida y la CALIBRACIÓN fuera de ella (casos/clientes/calibration.ts): el juez que se
+ * calibra es el mismo que vota.
+ */
+export async function judgeVerdict(
+  criterio: string,
+  foco: FocoDelJuez,
+  texto: string,
+  llamar: LlamarAlJuez = llamarDeVerdad,
+): Promise<{ paso: boolean; votos: boolean[]; usd: number }> {
+  const prompt = promptDelJuez(criterio, foco, texto);
+  const votos: boolean[] = [];
+  let usd = 0;
+  for (let i = 0; i < VOTOS_DEL_JUEZ; i++) {
+    const r = await llamar(SISTEMA, prompt);
+    gastado += r.usd;
+    usd += r.usd;
+    votos.push(votoDe(r.texto));
+  }
+  return { paso: votos.filter(Boolean).length > votos.length / 2, votos, usd };
 }

@@ -12,6 +12,7 @@ import { OPENLEN_STATIC_HOSTS } from "@/lib/publish/base-host";
 import { cerrarPestana, lanzarNavegador, REGLAS_SIN_PRODUCCION } from "./navegador";
 import { calificarCon, INICIO_TAQUERIA, SOLUCION_TAQUERIA } from "./publicada-de-prueba";
 import { cargarEncargos } from "./casos/cargar";
+import { juez } from "./juez";
 import type { Encargo, Grader } from "./tipos";
 import type { ProjectData } from "@/lib/projects/types";
 
@@ -99,6 +100,22 @@ describe("el navegador de Len-Bench", () => {
       await cerrarPestana(page);
     }
   }, 30_000);
+});
+
+// EL JUEZ DE LA BATERÍA LEE LA PÁGINA PINTADA (15/11): leía el texto del HTML estático, y en una página que monta
+// su contenido con su script no veía lo que el cliente pidió (lo señaló la calibración: 3dadfab3, 86673762).
+describe("juez con foco pedidos_y_pagina — ve lo que ve un visitante", () => {
+  it("el contenido que pinta el script de la página llega al juez", async () => {
+    const vistos: string[] = [];
+    const g = juez({ nombre: "cumple", criterio: "c", foco: "pedidos_y_pagina" }, async (_s, u) => {
+      vistos.push(u);
+      return { texto: "PASS", usd: 0 };
+    });
+    const html = `<!doctype html><html><body><main id="app">Cargando…</main><script>document.getElementById("app").innerHTML = "<h2>Menú del día</h2><p>Chilaquiles verdes con huevo</p>";</script></body></html>`;
+    await calificarCon(g, { html }, { navegador, conversacion: [{ quien: "dueno", texto: "pon el menú del día" }] });
+    expect(vistos[0]).toContain("Chilaquiles verdes con huevo");
+    expect(vistos[0]).not.toContain("Cargando…");
+  }, 60_000);
 });
 
 describe("pagina-hecha — el texto que ve un visitante, con la página ya pintada", () => {

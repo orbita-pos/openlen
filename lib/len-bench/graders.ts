@@ -1123,23 +1123,28 @@ export function veredictoPaginaHecha(caracteres: number): { paso: boolean; expli
     : { paso: true, explicacion: `hay una página: ${caracteres} caracteres de texto visible` };
 }
 
-/** El texto visible de todo lo publicado, con cada página ya PINTADA en el navegador (`innerText`), como lo lee un
- *  visitante: el de una página que monta su contenido con su script cuenta. */
+/** EL TEXTO QUE VE UN VISITANTE de todo lo publicado: cada ruta PINTADA en el navegador (`innerText`), la home
+ *  primero. Lo de una página que monta su contenido con su script cuenta; el «Cargando…» que reemplaza, no. Lo leen
+ *  `pagina-hecha` y el juez de la batería de clientes (`pedidos_y_pagina`). */
+export async function textoPintadoDelSitio(ctx: ContextoDeCalificacion): Promise<string> {
+  const partes: string[] = [];
+  for (const ruta of rutasPublicadas(ctx)) {
+    const page = await abrir(ctx, ruta);
+    try {
+      partes.push(await page.evaluate(() => document.body?.innerText ?? ""));
+    } finally {
+      await cerrarPestana(page);
+    }
+  }
+  return partes.join("\n");
+}
+
 export function paginaHecha(peso = 3): Grader {
   return {
     nombre: "pagina-hecha",
     peso,
     async calificar(ctx) {
-      let caracteres = 0;
-      for (const ruta of rutasPublicadas(ctx)) {
-        const page = await abrir(ctx, ruta);
-        try {
-          caracteres += await page.evaluate(() => (document.body?.innerText ?? "").replace(/\s+/g, " ").trim().length);
-        } finally {
-          await cerrarPestana(page);
-        }
-      }
-      return veredictoPaginaHecha(caracteres);
+      return veredictoPaginaHecha((await textoPintadoDelSitio(ctx)).replace(/\s+/g, " ").trim().length);
     },
   };
 }

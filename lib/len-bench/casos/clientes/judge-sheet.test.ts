@@ -6,8 +6,16 @@
 // the repo: it carries customers' words.
 import { describe, expect, it } from "vitest";
 
+import type { DatosDelCaso } from "../../tipos";
 import type { FetchedCase } from "./fetched";
 import { judgeSheet, SANITY_ENTRIES } from "./judge-sheet";
+
+// Stands in for Chromium (rendered.ts, covered by rendered.browser.test.ts): every page, home first, without tags.
+const painted: DatosDelCaso[] = [];
+const paint = async (d: DatosDelCaso) => {
+  painted.push(d);
+  return [d.html ?? "", ...Object.values(d.pages ?? {}).map((p) => p.html)].map((h) => h.replace(/<[^>]+>/g, "")).join("\n");
+};
 
 const caso = (i: number): FetchedCase => ({
   projectId: `0000000${i.toString(16)}-0000-4000-8000-000000000000`.slice(-36),
@@ -20,23 +28,29 @@ const caso = (i: number): FetchedCase => ({
 });
 
 describe("judgeSheet", () => {
-  it("at most 15 cases, each with what the judge sees and a box to label", () => {
-    const sheet = judgeSheet(Array.from({ length: 20 }, (_, i) => caso(i + 1)));
+  it("at most 15 cases, each with what the judge sees and a box to label", async () => {
+    const sheet = await judgeSheet(Array.from({ length: 20 }, (_, i) => caso(i + 1)), paint);
     expect(sheet.match(/^## \d+\. cliente-/gm)).toHaveLength(15);
     expect(sheet.match(/Tu etiqueta: \[ \] PASS · \[ \] FAIL/g)).toHaveLength(15 + SANITY_ENTRIES.length);
     expect(sheet).toContain("1. pedido 1");
     expect(sheet).toContain("Página 1");
     // Every page of the final state is in the judge's view, not only the home.
     expect(sheet).toContain("Menú 1");
+    // The page as a visitor sees it, never its markup: the judge in a run reads it painted.
+    expect(sheet).not.toContain("<h1>");
   });
 
-  it("ends with the three sanity entries the judge must FAIL: an empty page, «I don't know», an answer to another request", () => {
+  it("ends with the three sanity entries the judge must FAIL: an empty page, «I don't know», an answer to another request", async () => {
     expect(SANITY_ENTRIES.map((s) => s.nombre)).toEqual(["pagina-vacia", "no-se", "otra-peticion"]);
-    const sheet = judgeSheet([caso(1)]);
+    painted.length = 0;
+    const sheet = await judgeSheet([caso(1)], paint);
     for (const s of SANITY_ENTRIES) expect(sheet).toContain(`cordura · ${s.nombre} · esperado: FAIL`);
+    // Painted like the cases: the sanity entries reach the judge the same way.
+    expect(painted.map((d) => d.html)).toEqual([caso(1).final.html, ...SANITY_ENTRIES.map((s) => s.html)]);
+    expect(sheet).not.toContain("<h1>");
   });
 
-  it("states the criterion once, as the judge gets it", () => {
-    expect(judgeSheet([caso(1)])).toMatch(/Cada cosa concreta que el dueño pidió/);
+  it("states the criterion once, as the judge gets it", async () => {
+    expect(await judgeSheet([caso(1)], paint)).toMatch(/Cada cosa concreta que el dueño pidió/);
   });
 });
