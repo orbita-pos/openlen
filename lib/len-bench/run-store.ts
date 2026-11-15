@@ -55,6 +55,25 @@ export function infraFailures(casos: readonly ResultadoDeCaso[]): InfraFailure[]
   );
 }
 
+const SPEND_FILE = "gasto.json";
+
+/** What a column has spent so far, across every invocation (review I1: the cap is per PASS, spec §7.5, and a
+ *  resumed pass used to start counting from $0). Infra-failure runs are paid too: they count here even though
+ *  their run file is overwritten when they run again. */
+export function spentSoFar(dir: string): number {
+  const file = path.join(dir, SPEND_FILE);
+  if (!fs.existsSync(file)) return 0;
+  const total = (JSON.parse(fs.readFileSync(file, "utf8")) as { totalUsd?: unknown }).totalUsd;
+  return typeof total === "number" && Number.isFinite(total) ? total : 0;
+}
+
+/** Adds what one run cost to the column's spend, as soon as it ends. */
+export function recordSpend(dir: string, usd: number): void {
+  if (!Number.isFinite(usd) || usd <= 0) return;
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, SPEND_FILE), JSON.stringify({ totalUsd: spentSoFar(dir) + usd }, null, 2));
+}
+
 /** The cost of one case run, from a PILOT's kept runs (spec §5 piece 5: «el estimado desde el piloto en lugar
  *  de la constante de hoy»; Anthropic: estimates from logs «are routinely 2-4× off»). The harness's runs are
  *  left out, as from the mean. */

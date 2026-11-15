@@ -20,6 +20,10 @@ export const EVALUATOR_SOURCES: readonly string[] = [
   "lib/len-bench/honestidad.ts",
   "lib/len-bench/pasos.ts",
   "lib/len-bench/steps-of-run.ts",
+  // The simulated owner and the conductor decide what Len is told and when (review I7).
+  "lib/len-bench/cliente-simulado.ts",
+  "lib/len-bench/sesion.ts",
+  "lib/len-bench/conductor.ts",
 ];
 
 const EVALUATOR_FILE = "evaluador.json";
@@ -35,6 +39,9 @@ export interface GraderIdentity {
 
 export interface EvaluatorParts {
   readonly caseIds: readonly string[];
+  /** What each case IS — the page it starts from, the owner's ficha, the script, what the run allows — by id
+   *  (review I7): a customer case fetched again between two columns keeps its id and may change. */
+  readonly caseContents?: Readonly<Record<string, string>>;
   readonly graders: readonly GraderIdentity[];
   readonly judgeModel: string;
   readonly judgePrompt: string;
@@ -48,6 +55,7 @@ export interface EvaluatorParts {
 export function evaluatorFingerprint(p: EvaluatorParts): string {
   const canonical = JSON.stringify({
     caseIds: [...p.caseIds].sort(),
+    caseContents: Object.entries(p.caseContents ?? {}).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
     graders: p.graders.map((g) => [g.nombre, g.peso, g.puntua, g.criterio ?? null, g.foco ?? null]),
     judgeModel: p.judgeModel,
     judgePrompt: p.judgePrompt,
@@ -60,12 +68,13 @@ export function evaluatorFingerprint(p: EvaluatorParts): string {
 /** The evaluator of a suite, from its cases. Each grader is named with its case: the same grader in two cases
  *  counts twice, as it votes twice. */
 export function evaluatorPartsOf(
-  encargos: readonly Pick<Encargo, "id" | "graders">[],
+  encargos: readonly Encargo[],
   judge: { readonly model: string; readonly prompt: string; readonly votes: number },
   sources: readonly string[],
 ): EvaluatorParts {
   return {
     caseIds: encargos.map((e) => e.id),
+    caseContents: Object.fromEntries(encargos.map((e) => [e.id, caseContentHash(e)])),
     graders: encargos.flatMap((e) =>
       e.graders.map((g) => ({
         nombre: `${e.id}/${g.nombre}`,
@@ -80,6 +89,14 @@ export function evaluatorPartsOf(
     votes: judge.votes,
     sources,
   };
+}
+
+/** What Len is given and allowed in a case, hashed: the starting page, the ficha, the script, publishing, the
+ *  case's web, how it is born and the owner's zone. A regular expression in the case's web counts by its text. */
+function caseContentHash(e: Encargo): string {
+  const material = { inicio: e.inicio, ficha: e.ficha, guion: e.guion, publicaLen: e.publicaLen ?? false, web: e.web ?? null, naceComo: e.naceComo ?? null, zona: e.zona ?? null };
+  const text = JSON.stringify(material, (_k, v: unknown) => (v instanceof RegExp ? v.toString() : v));
+  return crypto.createHash("sha256").update(text).digest("hex").slice(0, 16);
 }
 
 /** Written when a column STARTS, so a column that dies half way still says who graded it. */

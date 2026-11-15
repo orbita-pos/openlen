@@ -10,7 +10,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { evaluatorFingerprint, evaluatorPartsOf, fingerprintProblem, readEvaluatorFile, writeEvaluatorFile, type EvaluatorParts } from "./evaluator-fingerprint";
+import { EVALUATOR_SOURCES, evaluatorFingerprint, evaluatorPartsOf, fingerprintProblem, readEvaluatorFile, writeEvaluatorFile, type EvaluatorParts } from "./evaluator-fingerprint";
 import type { Encargo, Grader } from "./tipos";
 
 describe("evaluatorPartsOf — the evaluator of a suite, from its cases", () => {
@@ -24,6 +24,23 @@ describe("evaluatorPartsOf — the evaluator of a suite, from its cases", () => 
       { nombre: "b/nada-inventado", peso: 2, puntua: false, criterio: "c", foco: "traza" },
     ]);
     expect(p).toMatchObject({ judgeModel: "m", judgePrompt: "p", votes: 3, sources: ["src"] });
+  });
+});
+
+describe("the fingerprint covers what each case IS, not only its id (review I7)", () => {
+  const judge = { model: "m", prompt: "p", votes: 3 };
+  const caso = (mensaje: string, extra: Partial<Encargo> = {}) =>
+    ({ id: "cliente-aaaa1111", graders: [], inicio: { html: "" }, ficha: { negocio: "x", datos: { subdominio: "a" } }, guion: [{ tipo: "pide", mensaje }], ...extra }) as unknown as Encargo;
+  it("a re-fetched case with the same id and another message is another evaluator", () => {
+    expect(evaluatorFingerprint(evaluatorPartsOf([caso("haz mi página")], judge, []))).not.toBe(evaluatorFingerprint(evaluatorPartsOf([caso("haz mi página, con fotos")], judge, [])));
+  });
+  it("so is another ficha, or another starting page", () => {
+    const base = evaluatorFingerprint(evaluatorPartsOf([caso("x")], judge, []));
+    expect(evaluatorFingerprint(evaluatorPartsOf([caso("x", { ficha: { negocio: "x", datos: { subdominio: "b" } } })], judge, []))).not.toBe(base);
+    expect(evaluatorFingerprint(evaluatorPartsOf([caso("x", { inicio: { html: "<p>hola</p>" } })], judge, []))).not.toBe(base);
+  });
+  it("the simulated owner and the conductor are part of the evaluator's code", () => {
+    expect(EVALUATOR_SOURCES).toEqual(expect.arrayContaining(["lib/len-bench/cliente-simulado.ts", "lib/len-bench/sesion.ts", "lib/len-bench/conductor.ts"]));
   });
 });
 

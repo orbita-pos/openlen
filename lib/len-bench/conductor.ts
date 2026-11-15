@@ -416,7 +416,12 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   const saldo1 = await creditos(o.owner.id);
   // Medida desde las filas que grabó el servidor, sea cual sea su carpeta. Sin filas cuando Len contestó, o
   // con otro proveedor, la suite se para: contaría un coste falso y el tope no saltaría.
-  const pasosMedidos = o.sql ? await settledRunSteps(() => readRunSteps(o.sql!, projectId), (ms) => new Promise((r) => setTimeout(r, ms))) : null;
+  const pasosMedidos = o.sql
+    ? await settledRunSteps(() => readRunSteps(o.sql!, projectId), (ms) => new Promise((r) => setTimeout(r, ms))).catch((err: unknown) => {
+        // Un fallo de la base al medir es del MONTAJE: para la suite con el consejo, no como error de Len.
+        throw new ErrorDeMontaje(`no se pudo medir la corrida en agentRequestSteps (${err instanceof Error ? err.message : String(err)}): ¿la base del banco tiene la tabla? npm run agent-steps:migrate`);
+      })
+    : null;
   if (pasosMedidos) {
     const problema = stepsProblem(pasosMedidos, { lenAnswered: conversacion.some((x) => x.quien === "len" && x.texto.trim() !== "") });
     if (problema) throw new ErrorDeMontaje(problema);

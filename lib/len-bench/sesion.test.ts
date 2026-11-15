@@ -186,17 +186,27 @@ describe("enviarTurno — contesta la pregunta mientras el turno espera", () => 
   });
 
   async function rutaQuePregunta(o: { responderStatus: number }) {
-    const recibido: { turno?: Record<string, unknown>; respuesta?: unknown } = {};
+    const recibido: { turno?: Record<string, unknown>; respuesta?: unknown; descartes: unknown[] } = { descartes: [] };
     let alResponder: (() => void) | null = null;
     servidor = http.createServer((req, res) => {
       let cuerpo = "";
       req.on("data", (c) => (cuerpo += c));
       req.on("end", () => {
         if (req.url === "/api/agent/responder") {
-          recibido.respuesta = JSON.parse(cuerpo);
+          const b = JSON.parse(cuerpo) as { dismiss?: unknown };
+          // Un descarte suelta la espera, como `dismissQuestion` en la ruta.
+          if (b.dismiss === true) {
+            recibido.descartes.push(b);
+            res.writeHead(200, { "content-type": "application/json" });
+            res.end(JSON.stringify({ ok: true }));
+            alResponder?.();
+            return;
+          }
+          recibido.respuesta = b;
           res.writeHead(o.responderStatus, { "content-type": "application/json" });
-          res.end(JSON.stringify(o.responderStatus === 200 ? { ok: true } : { error: "sin_pregunta" }));
-          alResponder?.();
+          res.end(JSON.stringify(o.responderStatus === 200 ? { ok: true } : { error: o.responderStatus === 409 ? "sin_pregunta" : "respuesta_invalida" }));
+          // Con 200 la herramienta sigue; con 409 ya nadie esperaba; con 400 la ruta SIGUE esperando.
+          if (o.responderStatus !== 400) alResponder?.();
           return;
         }
         recibido.turno = JSON.parse(cuerpo);
@@ -243,6 +253,19 @@ describe("enviarTurno — contesta la pregunta mientras el turno espera", () => 
     });
     expect(eventos.find((e) => e.nombre === "bench_answer")?.datos).toEqual({ ok: false, status: 409 });
     expect(textoDeLen(eventos)).toBe("Publico en esa.");
+  });
+
+  it("si la ruta rechaza la respuesta (400), descarta la pregunta para que el turno no espere 120 s (revisión I5)", async () => {
+    const { base, recibido } = await rutaQuePregunta({ responderStatus: 400 });
+    const eventos = await enviarTurno({
+      base,
+      cookie: "c",
+      cuerpo,
+      timeoutMs: 5_000,
+      onQuestion: (q) => q.questions.map((p) => ({ id: p.id, selected: [], custom: "FICHA" })),
+    });
+    expect(recibido.descartes).toEqual([{ turnoId: "t1", dismiss: true }]);
+    expect(eventos.find((e) => e.nombre === "bench_answer")?.datos).toEqual({ ok: false, status: 400, dismissed: true });
   });
 
   it("sin manejador de preguntas, el cuerpo va como antes (sin answersQuestions)", async () => {

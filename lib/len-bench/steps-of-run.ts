@@ -6,11 +6,29 @@
 // a server started from another worktree (the base column, 2e05b6df1) writes to its own, so the cost read
 // $0 and the cap never tripped. The table is shared: both servers write to the bench's database.
 import { LIST_PRICE, usdOf } from "./cold-return/cost";
+import { PILOT_ONLY_GAMES } from "./coste";
 import type { Sql } from "./cold-return/snapshot";
 import { REPEAT_THRESHOLDS } from "@/lib/agent/repeat-reminder";
 
 /** The only provider the bench counts: both columns run on it (OPENLEN_AGENT_PROVIDERS=deepinfra). */
 export const BENCH_PROVIDER = "deepinfra";
+
+/** Which suites are measured from the table, with its «DeepInfra only» stop (review I2): the battery's games,
+ *  whose base column runs from another folder, or any suite on purpose (`--medir-desde-la-base`). The other
+ *  games keep their recordings and the server's Fireworks fallback, as their past numbers were taken. */
+export function measuresFromSteps(juego: string, forced: boolean): boolean {
+  return forced || PILOT_ONLY_GAMES.has(juego);
+}
+
+/** Before the first paid run (review I3): the bench's database has the table the runs are measured from. */
+export async function preflightSteps(sql: Sql): Promise<string | null> {
+  try {
+    await sql.query(`select 1 from "agentRequestSteps" limit 0`);
+    return null;
+  } catch (err) {
+    return `the bench's database has no agentRequestSteps table (${err instanceof Error ? err.message : String(err)}): run npm run agent-steps:migrate against it before a paid run`;
+  }
+}
 
 export interface RunSteps {
   /** Calls to the provider, the main thread's and its subagents'. */

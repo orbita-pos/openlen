@@ -8,10 +8,18 @@
 // contestó tres veces «tú sabrás». La validación no lo vio porque da la
 // solución por publicada sin pasar por la tarjeta.
 
+import { MAX_RESPUESTA_LIBRE } from "@/lib/agent/direcciones";
+import { respuestaFija } from "./cliente-simulado";
 import type { Encargo } from "./tipos";
 
 export function avisosDelEncargo(e: Encargo): string[] {
   const avisos: string[] = [];
+  // La ficha viaja como la respuesta libre de una tarjeta (`cardAnswers`), y la ruta la corta a
+  // MAX_RESPUESTA_LIBRE: lo que pase no llega a Len, y los graders lo darían por dado (revisión I4).
+  const largo = respuestaFija(e.ficha).length;
+  if (largo > MAX_RESPUESTA_LIBRE) {
+    avisos.push(`la ficha ocupa ${largo} caracteres y la respuesta de una tarjeta admite ${MAX_RESPUESTA_LIBRE}: lo que pase no le llega a Len`);
+  }
   const votaPublicar = e.graders.some((g) => g.nombre === "len-publico" && g.puntua !== false);
   if (!votaPublicar) return avisos;
   if (!e.publicaLen) {

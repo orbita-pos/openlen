@@ -8,7 +8,27 @@ import { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Sql } from "./cold-return/snapshot";
-import { readRunSteps, settledRunSteps, stepsProblem, type RunSteps } from "./steps-of-run";
+import { measuresFromSteps, preflightSteps, readRunSteps, settledRunSteps, stepsProblem, type RunSteps } from "./steps-of-run";
+
+describe("measuresFromSteps — only the battery, or on purpose (review I2)", () => {
+  it("the battery's game is measured from the table; the other games keep their recordings and their fallback", () => {
+    expect(measuresFromSteps("clientes", false)).toBe(true);
+    expect(measuresFromSteps("dev", false)).toBe(false);
+    expect(measuresFromSteps("dev", true)).toBe(true);
+  });
+});
+
+describe("preflightSteps — a database without the table is found before the first paid run (review I3)", () => {
+  it("with the table: nothing to say", async () => {
+    const p = new PGlite();
+    await p.exec(`create table "agentRequestSteps" ("projectId" text)`);
+    expect(await preflightSteps({ query: async (t, a) => (await p.query(t, a as unknown[] | undefined)).rows as never })).toBeNull();
+  });
+  it("without it: says what to do, instead of a raw database error after a paid run", async () => {
+    const p = new PGlite();
+    expect(await preflightSteps({ query: async (t, a) => (await p.query(t, a as unknown[] | undefined)).rows as never })).toMatch(/agentRequestSteps.*agent-steps:migrate/);
+  });
+});
 
 let pg: PGlite;
 let sql: Sql;
