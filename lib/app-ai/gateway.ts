@@ -15,10 +15,10 @@
 // No database or provider here: everything comes in through `AppAiDeps`.
 
 import type { FireworksStreamEvent } from "@/lib/ai/fireworks-stream-client";
+import { servedBy } from "@/lib/ai/providers";
 import { hashSecretKey } from "@/lib/backend/keys";
 import type { LedgerEntry } from "@/lib/credit-ledger";
 import type { CreditRate } from "@/lib/credits";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import type { ConcurrencyLimiter } from "@/lib/functions/concurrency";
 import { monthKey } from "@/lib/functions/meter";
 import type { WindowLimiter } from "@/lib/functions/window-limiter";
@@ -167,6 +167,8 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
     }
 
     let settled = false;
+    /** The provider's own count, which also says who served the call (`servedBy`). */
+    let served: Extract<FireworksStreamEvent, { type: "usage" }> | null = null;
     const settle = async (o: { readonly usage: Usage | null; readonly streamedChars: number }): Promise<void> => {
       if (settled) return;
       settled = true;
@@ -183,8 +185,7 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
           uses: o.usage
             ? [
                 {
-                  provider: "fireworks",
-                  model: modelIdForRole(roleForOperation(request.model.operation)),
+                  ...servedBy(served, request.model.operation),
                   inputTokens: o.usage.inputTokens,
                   cachedTokens: o.usage.cachedTokens,
                   outputTokens: o.usage.outputTokens,
@@ -226,7 +227,10 @@ export async function handleAppAiRequest(req: Request, deps: AppAiDeps): Promise
         return { type: "done", stopReason: { kind: "error", error: e instanceof Error ? e.message : String(e) } };
       }
     };
-    const usageOf = (ev: Extract<FireworksStreamEvent, { type: "usage" }>): Usage => ({ inputTokens: ev.inputTokens, outputTokens: ev.outputTokens, cachedTokens: ev.cachedTokens });
+    const usageOf = (ev: Extract<FireworksStreamEvent, { type: "usage" }>): Usage => {
+      served = ev;
+      return { inputTokens: ev.inputTokens, outputTokens: ev.outputTokens, cachedTokens: ev.cachedTokens };
+    };
     const estimatedUsage = (chars: number) => ({ inputTokens: estimateTokens(body.length), outputTokens: estimateTokens(chars) });
 
     if (!request.stream) {

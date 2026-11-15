@@ -1,5 +1,6 @@
 /**
- * WHO SERVES LEN'S TURNS (spec local docs/superpowers/specs/2026-10-16-second-provider-design.md).
+ * WHO SERVES LEN'S TURNS (spec local docs/superpowers/specs/2026-10-16-second-provider-design.md) — and, since
+ * 2026-11-15, the reasoner's and the vision role's calls too.
  *
  * The same model (DeepSeek V4.1 Flash) from two providers: DeepInfra first,
  * Fireworks as the fallback. `OPENLEN_AGENT_PROVIDERS` (comma-separated, in
@@ -8,10 +9,14 @@
  * deploy. A provider without its key is skipped, so a box without
  * `DEEPINFRA_API_KEY` keeps running on Fireworks alone.
  *
+ * ONE switch for every role, and its name is historical: it was born when only Len's turns had a second provider.
+ * Turning DeepInfra off is a decision about the provider (it is down, it answers wrong), not about one surface.
+ *
  * Both speak OpenAI's chat format; what differs lives in the dialect. The
- * per-provider model ids live in the policy table (`MODEL_POLICY.agent.providers`).
+ * per-provider model ids live in the policy table (`providers` of each role).
  */
-import { MODEL_POLICY } from "@/lib/generation/model-policy";
+import type { ModelRole } from "@/lib/ai/fireworks-contracts";
+import { modelIdForRole, providersForRole, roleForOperation, type ModelOperation } from "@/lib/generation/model-policy";
 
 export type ProviderId = "fireworks" | "deepinfra";
 
@@ -75,7 +80,17 @@ export function resolveAgentProviders(
   env: Readonly<Record<string, string | undefined>>,
   only?: readonly ProviderId[],
 ): ResolvedProvider[] {
-  const models = new Map(MODEL_POLICY.agent.providers.map((p) => [p.provider, p.modelId] as const));
+  return resolveRoleProviders("agent", env, only);
+}
+
+/** A role's providers that are on and have a key, in order — the same answer `resolveAgentProviders` gives for the
+ *  agent, for any role of the policy. */
+export function resolveRoleProviders(
+  role: ModelRole,
+  env: Readonly<Record<string, string | undefined>>,
+  only?: readonly ProviderId[],
+): ResolvedProvider[] {
+  const models = new Map(providersForRole(role).map((p) => [p.provider, p.modelId] as const));
   const names = (env.OPENLEN_AGENT_PROVIDERS?.trim() || DEFAULT_AGENT_PROVIDERS).split(",").map((n) => n.trim()).filter(Boolean);
   const out: ResolvedProvider[] = [];
   for (const name of names) {
@@ -96,4 +111,14 @@ export function resolveAgentProviders(
     out.push({ id, modelId, apiKey, dialect });
   }
   return out;
+}
+
+/** The `provider` and `model` of a spend-ledger use: who the usage says served the call, or — a usage from the
+ *  bare Fireworks client, which names nobody — Fireworks with the role's model, as every row said before. */
+export function servedBy(
+  usage: { readonly provider?: ProviderId; readonly model?: string } | null | undefined,
+  operation: ModelOperation,
+): { provider: ProviderId; model: string } {
+  if (usage?.provider && usage.model) return { provider: usage.provider, model: usage.model };
+  return { provider: "fireworks", model: modelIdForRole(roleForOperation(operation)) };
 }

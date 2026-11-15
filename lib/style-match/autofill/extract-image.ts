@@ -3,7 +3,7 @@
 // structured business data the autofill pipeline can use to fill a
 // template. Never invents — only extracts what's visible.
 
-import { callModel } from "./model-call";
+import { callModel, type ModelCallUsage } from "./model-call";
 import {
   getCachedExtraction,
   hashImage,
@@ -66,7 +66,7 @@ export interface ExtractImageOk {
   ok: true;
   data: ExtractedBusinessData;
   raw: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   durationMs: number;
 }
 
@@ -83,7 +83,7 @@ export interface ExtractImageErr {
     message: string;
   };
   raw?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   durationMs: number;
 }
 

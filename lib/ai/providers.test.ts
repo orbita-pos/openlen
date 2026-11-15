@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_AGENT_PROVIDERS, PROVIDER_DIALECTS, _resetProviderWarnings, resolveAgentProviders } from "./providers";
+import { DEFAULT_AGENT_PROVIDERS, PROVIDER_DIALECTS, _resetProviderWarnings, resolveAgentProviders, resolveRoleProviders } from "./providers";
 
 const BOTH = { FIREWORKS_API_KEY: "fw-key", DEEPINFRA_API_KEY: "di-key" };
 const ids = (env: Record<string, string | undefined>, only?: readonly ("fireworks" | "deepinfra")[]) =>
@@ -53,5 +53,27 @@ describe("resolveAgentProviders", () => {
 
   it("no provider with a key gives an empty list", () => {
     expect(ids({})).toEqual([]);
+  });
+});
+
+describe("resolveRoleProviders — the reasoner and the vision role, like the agent", () => {
+  beforeEach(() => _resetProviderWarnings());
+
+  it.each(["reasoner", "visual_critic"] as const)("%s: DeepInfra first, Fireworks as fallback, the same 1017", (role) => {
+    const [deepinfra, fireworks, ...rest] = resolveRoleProviders(role, BOTH);
+    expect(rest).toEqual([]);
+    expect(deepinfra).toMatchObject({ id: "deepinfra", modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017", apiKey: "di-key", dialect: PROVIDER_DIALECTS.deepinfra });
+    expect(fireworks).toMatchObject({ id: "fireworks", modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017", apiKey: "fw-key" });
+  });
+
+  it("the agent's answer does not change", () => {
+    expect(resolveRoleProviders("agent", BOTH)).toEqual(resolveAgentProviders(BOTH));
+  });
+
+  it("one switch for all of them: OPENLEN_AGENT_PROVIDERS=fireworks turns DeepInfra off everywhere", () => {
+    const env = { ...BOTH, OPENLEN_AGENT_PROVIDERS: "fireworks" };
+    for (const role of ["agent", "reasoner", "visual_critic"] as const) {
+      expect(resolveRoleProviders(role, env).map((p) => p.id), role).toEqual(["fireworks"]);
+    }
   });
 });

@@ -7,7 +7,9 @@ import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, chargeCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
 import type { LedgerUse } from "@/lib/credit-ledger";
-import { modelIdForRole, roleForOperation, type ModelOperation } from "@/lib/generation/model-policy";
+import type { ModelOperation } from "@/lib/generation/model-policy";
+import { servedBy } from "@/lib/ai/providers";
+import type { ModelCallUsage } from "@/lib/style-match/autofill/model-call";
 import { consumeToken, RATE_LIMITS } from "@/lib/rate-limit";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
@@ -191,8 +193,8 @@ export async function POST(req: Request) {
         let businessData: ExtractedBusinessData;
         // EL LIBRO DE GASTO: lo que costó leer los datos va en la fila del cobro.
         const usosDelLibro: LedgerUse[] = [];
-        const anotarUso = (operation: ModelOperation, usage: { inputTokens: number; outputTokens: number } | undefined) => {
-          if (usage) usosDelLibro.push({ provider: "fireworks", model: modelIdForRole(roleForOperation(operation)), inputTokens: usage.inputTokens, cachedTokens: 0, outputTokens: usage.outputTokens, at: new Date() });
+        const anotarUso = (operation: ModelOperation, usage: ModelCallUsage | undefined) => {
+          if (usage) usosDelLibro.push({ ...servedBy(usage, operation), inputTokens: usage.inputTokens, cachedTokens: 0, outputTokens: usage.outputTokens, at: new Date() });
         };
 
         if (source === "image" && imageBuffer) {

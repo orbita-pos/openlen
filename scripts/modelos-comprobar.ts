@@ -37,6 +37,22 @@
 // que frenar. El cotejo de tarifas es UNA descarga de una página pública: ni
 // gasta tokens ni necesita credencial.
 //
+// ─── Y CADA PROVEEDOR DE CADA PAPEL (15/11) ──────────────────────────────────
+//
+// Hasta aquí este fichero sólo preguntaba a Fireworks, y desde el 17/10 el
+// papel `agent` corría PRIMERO en DeepInfra con un id que nadie comprobaba. El
+// 15/11 el razonador y el papel con visión se fueron también allí, así que se
+// pregunta a los DOS proveedores de cada papel (`providers` en la política),
+// cada uno con su clave: sin `DEEPINFRA_API_KEY` no se pasa en verde.
+//
+// Y una vez por proveedor, EL CABLE DE VERDAD de esos dos papeles: el cliente
+// de producción (`createRoleStreamClient`) con lo que manda el papel con visión
+// —una imagen (`public/icon-192.png`), `response_format: json_object` y
+// `reasoning_effort: "none"`— y se exige que vea la imagen, que conteste JSON y
+// que no piense. Son las tres cosas que este papel da por hechas y que un
+// proveedor puede no hacer sin dar error. ~500 tokens de entrada y ~10 de
+// salida por proveedor: menos de 0,0003 USD la pasada entera.
+//
 // SALE 1 SI ALGUNO NO RESPONDE O ALGUNA TARIFA NO CUADRA, para que sirva de
 // puerta en el despliegue.
 //
@@ -46,6 +62,11 @@
 // NO. Una puerta que sólo se ha visto en verde no está verificada: está sin
 // mirar, que es el mismo defecto que persigue.
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { PROVIDER_DIALECTS, type ProviderId } from "@/lib/ai/providers";
+import { createRoleStreamClient } from "@/lib/ai/role-stream-client";
 import { TARIFAS_POR_MILLON, type TarifaPorMillon } from "@/lib/ai/tarifas";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
@@ -69,10 +90,11 @@ function modelosDeLaPolitica(): Map<string, string[]> {
 async function responde(
   modelId: string,
   apiKey: string,
+  endpoint: string = ENDPOINT,
 ): Promise<{ ok: true } | { ok: false; detalle: string }> {
   let r: Response;
   try {
-    r = await fetch(ENDPOINT, {
+    r = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       // El aviso más corto que el proveedor acepta. No se lee la respuesta: lo
@@ -97,6 +119,68 @@ async function responde(
     /* sin cuerpo */
   }
   return { ok: false, detalle: `http_${r.status}${cuerpo ? `: ${cuerpo}` : ""}` };
+}
+
+/** Los pares proveedor/modelo DISTINTOS que nombran los `providers` de los
+ *  papeles, con los papeles que los piden. */
+function proveedoresDeLaPolitica(): Map<string, { provider: ProviderId; modelId: string; papeles: string[] }> {
+  const pares = new Map<string, { provider: ProviderId; modelId: string; papeles: string[] }>();
+  for (const [papel, cfg] of Object.entries(MODEL_POLICY)) {
+    for (const p of cfg.providers) {
+      const clave = `${p.provider}/${p.modelId}`;
+      const previo = pares.get(clave);
+      if (previo) previo.papeles.push(papel);
+      else pares.set(clave, { provider: p.provider, modelId: p.modelId, papeles: [papel] });
+    }
+  }
+  return pares;
+}
+
+/** El cable del papel con visión en UN proveedor, por el cliente de producción. `null` = todo bien. */
+async function cableDelPapelQueMira(provider: ProviderId): Promise<string | null> {
+  const imagen = readFileSync(path.join(process.cwd(), "public", "icon-192.png")).toString("base64");
+  // El proveedor que se prueba y ningún otro: la palanca del operador no lo desvía y no hay respaldo.
+  const client = createRoleStreamClient({ env: { ...process.env, OPENLEN_AGENT_PROVIDERS: provider }, providers: [provider] });
+  let texto = "";
+  let pensado = 0;
+  let servido: string | undefined;
+  let fin = "sin final";
+  try {
+    for await (const ev of client.stream({
+      messages: [
+        { role: "system", content: "You check whether an image reached you. Answer with JSON only." },
+        { role: "user", content: 'Is there an image attached to this message? Answer {"image": true} or {"image": false}.' },
+      ],
+      images: [{ mimeType: "image/png", dataBase64: imagen }],
+      jsonObject: true,
+      maxOutputTokens: 24,
+      temperature: 0,
+      requestId: "modelos-comprobar",
+      operation: "candidate_scouting",
+    })) {
+      if (ev.type === "text_delta") texto += ev.text;
+      else if (ev.type === "reasoning_delta") pensado += ev.text.length;
+      else if (ev.type === "usage") {
+        servido = ev.provider;
+        pensado += ev.thinkingTokens;
+      } else if (ev.type === "done") {
+        fin = ev.stopReason.kind === "error" ? `error: ${ev.stopReason.error.slice(0, 200)}` : ev.stopReason.kind;
+      }
+    }
+  } catch (e) {
+    return `sin red: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  if (fin !== "end_turn") return `no terminó limpio (${fin})`;
+  if (servido !== provider) return `lo sirvió «${servido ?? "nadie"}», no ${provider}`;
+  let json: unknown;
+  try {
+    json = JSON.parse(texto);
+  } catch {
+    return `«response_format: json_object» no dio JSON: ${JSON.stringify(texto.slice(0, 120))}`;
+  }
+  if ((json as { image?: unknown } | null)?.image !== true) return `no vio la imagen: contestó ${JSON.stringify(json)}`;
+  if (pensado > 0) return `pensó con «reasoning_effort: none» (${pensado}): cada llamada del papel pagaría ese pensamiento`;
+  return null;
 }
 
 // ─── ¿Y CUESTA LO QUE CREEMOS? ───────────────────────────────────────────────
@@ -259,6 +343,49 @@ async function main(): Promise<void> {
       console.log(`  MUERTO ${modelId}  (${quien})`);
       console.log(`         ${r.detalle}`);
       muertos.push(`${modelId} — lo piden: ${quien}`);
+    }
+  }
+
+  // ── Cada proveedor de cada papel ───────────────────────────────────────────
+  //
+  // Los ids de Fireworks ya se preguntaron arriba; aquí, los demás, cada uno
+  // con SU clave y SU dirección.
+  console.log("\ncomprobando los proveedores de cada papel…\n");
+  const proveedores = new Set<ProviderId>();
+  for (const { provider, modelId, papeles } of proveedoresDeLaPolitica().values()) {
+    proveedores.add(provider);
+    const quien = papeles.join(", ");
+    if (provider === "fireworks" && porModelo.has(modelId)) {
+      console.log(`  ok    ${provider}/${modelId}  (${quien}; preguntado arriba)`);
+      continue;
+    }
+    const dialecto = PROVIDER_DIALECTS[provider];
+    const clave = process.env[dialecto.apiKeyEnv]?.trim();
+    if (!clave) {
+      console.log(`  SIN CLAVE ${provider}/${modelId}  (${quien}) — falta ${dialecto.apiKeyEnv}`);
+      muertos.push(`${provider}/${modelId} — sin ${dialecto.apiKeyEnv}, no se pudo preguntar; lo piden: ${quien}`);
+      continue;
+    }
+    const r = await responde(modelId, clave, dialecto.endpoint);
+    if (r.ok) {
+      console.log(`  ok    ${provider}/${modelId}  (${quien})`);
+    } else {
+      console.log(`  MUERTO ${provider}/${modelId}  (${quien})`);
+      console.log(`         ${r.detalle}`);
+      muertos.push(`${provider}/${modelId} — lo piden: ${quien}`);
+    }
+  }
+
+  console.log("\nel cable del papel con visión (imagen + JSON + sin pensar), por el cliente de producción…\n");
+  for (const provider of proveedores) {
+    // Sin clave ya está contado arriba como SIN CLAVE.
+    if (!process.env[PROVIDER_DIALECTS[provider].apiKeyEnv]?.trim()) continue;
+    const fallo = await cableDelPapelQueMira(provider);
+    if (fallo === null) {
+      console.log(`  ok    ${provider}: ve la imagen, contesta JSON, no piensa`);
+    } else {
+      console.log(`  ROTO  ${provider}: ${fallo}`);
+      muertos.push(`${provider} — el cable del papel con visión: ${fallo}`);
     }
   }
 
