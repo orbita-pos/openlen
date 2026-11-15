@@ -15,7 +15,7 @@ import path from "node:path";
 
 import { rateFor } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
-import { agreement, estimateCalibrationUsd, type ReferenceLabel } from "../lib/len-bench/casos/clientes/calibration";
+import { agreement, askEntries, estimateCalibrationUsd, type ReferenceLabel } from "../lib/len-bench/casos/clientes/calibration";
 import { casesDir, readFetchedCase } from "../lib/len-bench/casos/clientes/fetched";
 import { sheetCases, sheetEntries } from "../lib/len-bench/casos/clientes/judge-sheet";
 import { renderedText } from "../lib/len-bench/casos/clientes/rendered";
@@ -62,38 +62,33 @@ async function main(): Promise<void> {
   }
   if (estimado > tope) throw new Error(`RECHAZADO: el estimado ($${estimado.toFixed(4)}) excede el tope ($${tope})`);
 
-  const veredictos: { caso: string; paso: boolean; votos: boolean[] }[] = [];
-  let parado = false;
-  for (const e of entries) {
-    // Never past the cap: the next entry goes only if what it may cost still fits.
-    if (gastoDelJuez() + estimateCalibrationUsd([e], rate) > tope) {
-      parado = true;
-      break;
-    }
-    const v = await judgeVerdict(CUMPLE_LO_PEDIDO, "pedidos_y_pagina", e.view);
-    veredictos.push({ caso: e.caso, paso: v.paso, votos: v.votos });
-  }
+  const { veredictos, errores, parado } = await askEntries(entries, (e) => judgeVerdict(CUMPLE_LO_PEDIDO, "pedidos_y_pagina", e.view), {
+    budgetUsd: tope,
+    spentUsd: gastoDelJuez,
+    estimateUsd: (e) => estimateCalibrationUsd([e], rate),
+  });
 
-  const acuerdo = parado ? null : agreement(labels, veredictos);
+  const completo = !parado && errores.length === 0;
+  const acuerdo = veredictos.length > 0 ? agreement(labels, veredictos) : null;
   const out = path.join(casesDir(), reserva ? "calibracion-reserva-resultado.json" : "calibracion-resultado.json");
   fs.writeFileSync(
     out,
     JSON.stringify(
-      { fecha: new Date().toISOString(), hoja: reserva ? "reserva" : "hoja", juez: judgeIdentity().model, etiquetas: path.basename(labelsFile), usd: gastoDelJuez(), completo: !parado, veredictos, acuerdo },
+      { fecha: new Date().toISOString(), hoja: reserva ? "reserva" : "hoja", juez: judgeIdentity().model, etiquetas: path.basename(labelsFile), usd: gastoDelJuez(), completo, veredictos, errores, acuerdo },
       null,
       2,
     ),
   );
   console.log(`gastado $${gastoDelJuez().toFixed(4)} · ${veredictos.length}/${entries.length} entradas · ${out}`);
-  if (acuerdo === null) {
-    console.log("PARADO por el tope: sin resultado de calibración.");
-    return;
-  }
+  for (const e of errores) console.log(`  sin respuesta ${e.caso}: ${e.error.slice(0, 200)}`);
+  if (parado) console.log("PARADO por el tope.");
+  if (acuerdo === null) return;
+  if (!completo) console.log(`INCOMPLETO (${errores.length} sin respuesta${parado ? ", parado por el tope" : ""}): lo de abajo no es una calibración.`);
   console.log(`acuerdo ${acuerdo.acuerdo}/${acuerdo.total} = ${acuerdo.pct.toFixed(1)} %`);
   console.log(`FAIL de referencia que el juez también falla: ${acuerdo.fallosAtrapados.atrapados}/${acuerdo.fallosAtrapados.total}`);
   for (const d of acuerdo.desacuerdos) console.log(`  desacuerdo ${d.caso}: etiqueta ${d.etiqueta}, juez ${d.juez}`);
   for (const c of acuerdo.cordura) console.log(`  cordura ${c.caso}: juez ${c.juez}${c.ok ? "" : "  ← tenía que ser FAIL"}`);
-  console.log(acuerdo.vota ? "El juez VOTA (≥ 90 % y cordura en FAIL)." : "El juez NO vota todavía.");
+  console.log(completo && acuerdo.vota ? "El juez VOTA (≥ 90 % y cordura en FAIL)." : "El juez NO vota todavía.");
 }
 
 main().catch((e: unknown) => {
