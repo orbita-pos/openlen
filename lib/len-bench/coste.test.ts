@@ -10,11 +10,35 @@ import {
   centimosDelEstimado,
   esperarUsdDeProyecto,
   estimadoExcedeTope,
+  MARGEN_NO_GRABADO,
+  PILOT_USD_PER_CASE_RUN,
+  suiteEstimate,
   tarifaDelModelo,
   USD_POR_TURNO_ESTIMADO,
   usdDeGrabacion,
   usdDeProyecto,
 } from "./coste";
+
+describe("suiteEstimate — what a suite may cost, before it starts", () => {
+  it("with a pilot: its cost per case run × cases × runs × the margin", () => {
+    const r = suiteEstimate({ juego: "clientes", cases: 25, runs: 3, turns: 999, pilot: { usdPerCaseRun: 0.04 } });
+    expect(r.ok).toBe(true);
+    expect(r.ok && r.usd).toBeCloseTo(0.04 * 25 * 3 * MARGEN_NO_GRABADO, 12);
+    expect(r.ok && r.how).toMatch(/piloto: \$0\.0400 por corrida × 25 casos × 3 corridas/);
+  });
+  it("a pilot-only game without a pilot runs only the pilot (≤ 5 cases × 1 run), at $0.09 a case run (spec §7.3)", () => {
+    const piloto = suiteEstimate({ juego: "clientes", cases: 5, runs: 1, turns: 999 });
+    expect(piloto.ok && piloto.usd).toBeCloseTo(5 * PILOT_USD_PER_CASE_RUN, 12);
+    expect(PILOT_USD_PER_CASE_RUN).toBe(0.09);
+    expect(suiteEstimate({ juego: "clientes", cases: 6, runs: 1, turns: 999 }).ok).toBe(false);
+    const r = suiteEstimate({ juego: "clientes", cases: 5, runs: 3, turns: 999 });
+    expect(r.ok === false && r.reason).toMatch(/--estimado-desde/);
+  });
+  it("any other game, as before: turns × the per-turn estimate × the margin", () => {
+    const r = suiteEstimate({ juego: "dev", cases: 4, runs: 3, turns: 48 });
+    expect(r.ok && r.usd).toBeCloseTo(48 * USD_POR_TURNO_ESTIMADO * MARGEN_NO_GRABADO, 12);
+  });
+});
 
 const T = () => rateFor(MODEL_POLICY.agent.modelId);
 

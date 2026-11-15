@@ -121,6 +121,40 @@ export const USD_POR_TURNO_ESTIMADO = 0.01;
 export const MARGEN_NO_GRABADO = 1.5;
 export const TOPE_POR_DEFECTO_USD = 0.3;
 
+/** BATTERY 1 OF LEN 3.1 (spec local 2026-11-12-len-3-1-ruta, §7.3): a case is a customer's whole project, and
+ *  this is what a case run costs «para presupuestar» (twice the measured mean). It is used only for the pilot:
+ *  after it, the estimate comes from the pilot's runs (`estimateFromPilot`). */
+export const PILOT_USD_PER_CASE_RUN = 0.09;
+/** The pilot of spec §7.5: 5 cases × 1 run. */
+export const PILOT_MAX = Object.freeze({ cases: 5, runs: 1 });
+/** Games whose cost per run is unknown until a pilot measures it. */
+export const PILOT_ONLY_GAMES: ReadonlySet<string> = new Set(["clientes"]);
+
+/** What a suite may cost, before it starts, and how that was worked out — or why it may not start. */
+export function suiteEstimate(o: {
+  readonly juego: string;
+  readonly cases: number;
+  readonly runs: number;
+  /** Most turns the suite can send (each script step × its replies × runs): the old estimate. */
+  readonly turns: number;
+  readonly pilot?: { readonly usdPerCaseRun: number };
+}): { ok: true; usd: number; how: string } | { ok: false; reason: string } {
+  if (o.pilot) {
+    return {
+      ok: true,
+      usd: o.pilot.usdPerCaseRun * o.cases * o.runs * MARGEN_NO_GRABADO,
+      how: `piloto: $${o.pilot.usdPerCaseRun.toFixed(4)} por corrida × ${o.cases} casos × ${o.runs} corridas × margen ${MARGEN_NO_GRABADO}`,
+    };
+  }
+  if (PILOT_ONLY_GAMES.has(o.juego)) {
+    if (o.cases > PILOT_MAX.cases || o.runs > PILOT_MAX.runs) {
+      return { ok: false, reason: `«${o.juego}» sin --estimado-desde=<carpeta del piloto> sólo corre el piloto (≤ ${PILOT_MAX.cases} casos × ${PILOT_MAX.runs} corrida)` };
+    }
+    return { ok: true, usd: PILOT_USD_PER_CASE_RUN * o.cases * o.runs, how: `piloto sin medir: $${PILOT_USD_PER_CASE_RUN} por corrida × ${o.cases} casos × ${o.runs} corrida` };
+  }
+  return { ok: true, usd: o.turns * USD_POR_TURNO_ESTIMADO * MARGEN_NO_GRABADO, how: `hasta ${o.turns} turnos × $${USD_POR_TURNO_ESTIMADO} × margen ${MARGEN_NO_GRABADO}` };
+}
+
 /**
  * EL ESTIMADO, EN CÉNTIMOS Y HACIA ARRIBA.
  *

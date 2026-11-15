@@ -13,7 +13,7 @@ import path from "node:path";
 import { Pool } from "pg";
 import { BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES } from "@/lib/len-bench/entorno";
 import { poolSql } from "@/lib/len-bench/cold-return/world";
-import { infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "@/lib/len-bench/run-store";
+import { estimateFromPilot, infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "@/lib/len-bench/run-store";
 import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
@@ -22,13 +22,9 @@ import { REGRESION } from "@/lib/len-bench/casos/dev/regresion";
 import { cargarEncargos, type Juego } from "@/lib/len-bench/casos/cargar";
 import { avisosDelEncargo } from "@/lib/len-bench/avisos";
 import { MAX_RESPUESTAS_POR_PASO } from "@/lib/len-bench/cliente-simulado";
-import {
-  centimosDelEstimado,
-  estimadoExcedeTope,
-  MARGEN_NO_GRABADO,
-  TOPE_POR_DEFECTO_USD,
-  USD_POR_TURNO_ESTIMADO,
-} from "@/lib/len-bench/coste";
+import { centimosDelEstimado, estimadoExcedeTope, MARGEN_NO_GRABADO, suiteEstimate, TOPE_POR_DEFECTO_USD } from "@/lib/len-bench/coste";
+import { EVALUATOR_SOURCES, evaluatorFingerprint, evaluatorPartsOf, fingerprintProblem, readEvaluatorFile, writeEvaluatorFile } from "@/lib/len-bench/evaluator-fingerprint";
+import { judgeIdentity } from "@/lib/len-bench/juez";
 import type { ResultadoDeCaso, ResultadoDeCorrida } from "@/lib/len-bench/tipos";
 
 // El estimado (`USD_POR_TURNO_ESTIMADO`, `MARGEN_NO_GRABADO`) y el tope por
@@ -74,18 +70,45 @@ async function main(): Promise<number> {
   for (const e of encargos) for (const a of avisosDelEncargo(e)) console.log(`⚠ encargo «${e.id}»: ${a}`);
 
   const turnos = encargos.reduce((s, e) => s + e.guion.length * (1 + MAX_RESPUESTAS_POR_PASO), 0) * runs;
-  const estimado = turnos * USD_POR_TURNO_ESTIMADO * MARGEN_NO_GRABADO;
+  // El estimado, desde el piloto cuando lo hay (`--estimado-desde=<carpeta del piloto>`, `run-store.ts`); un
+  // juego que sólo se corre tras un piloto («clientes») sin él sólo admite el piloto (`suiteEstimate`).
+  const desdeElPiloto = arg("--estimado-desde");
+  const estimacion = suiteEstimate({
+    juego,
+    cases: encargos.length,
+    runs,
+    turns: turnos,
+    ...(desdeElPiloto ? { pilot: estimateFromPilot(desdeElPiloto) } : {}),
+  });
+  if (!estimacion.ok) throw new Error(estimacion.reason);
+  const estimado = estimacion.usd;
   // En céntimos y hacia arriba: ver `estimadoExcedeTope`. Se imprime la MISMA
   // cifra que se compara, así que declarar lo que se lee siempre pasa.
   const estimadoImpreso = (centimosDelEstimado(estimado) / 100).toFixed(2);
   console.log(`Len-Bench · juego=${juego} · ${encargos.length} encargo(s) × ${runs} corrida(s)${mode ? " · Len Dynamis" : ""}`);
-  console.log(`Estimado PESIMISTA: ~$${estimadoImpreso} (hasta ${turnos} turnos × $${USD_POR_TURNO_ESTIMADO} × margen ${MARGEN_NO_GRABADO})`);
+  console.log(`Estimado PESIMISTA: ~$${estimadoImpreso} (${estimacion.how})`);
   console.log(`Tope de gasto: $${tope.toFixed(2)}`);
   if (estimadoExcedeTope(estimado, tope)) throw new Error(`RECHAZADO: el estimado ($${estimadoImpreso}) excede el tope. Decláralo: --budget-usd=${estimadoImpreso}`);
+
+  // LA HUELLA DEL EVALUADOR (`evaluator-fingerprint.ts`): dos columnas de la tabla de Len 3.1 sólo se comparan
+  // si las calificó el mismo evaluador. Se compara con la de la columna base (`--base-de=<carpeta>`) y, al
+  // reanudar, con la de la propia carpeta; `--aprobar-evaluador` lo acepta a propósito (una persona, nunca una
+  // corrida desatendida, como `--approve-harness` de Claude Code).
+  const juezDeLaSuite = judgeIdentity();
+  const huella = evaluatorFingerprint(evaluatorPartsOf(encargos, juezDeLaSuite, EVALUATOR_SOURCES.map((f) => fs.readFileSync(f, "utf8"))));
+  const aprobada = arg("--aprobar-evaluador") !== undefined;
+  const baseDe = arg("--base-de");
+  if (baseDe !== undefined && readEvaluatorFile(baseDe) === undefined) throw new Error(`la columna base ${baseDe} no tiene evaluador.json: no se puede comparar`);
+  for (const esperada of [reanudar !== undefined ? readEvaluatorFile(dir) : undefined, baseDe !== undefined ? readEvaluatorFile(baseDe) : undefined]) {
+    const problema = fingerprintProblem({ ...(esperada !== undefined ? { expected: esperada } : {}), actual: huella, approved: aprobada });
+    if (problema) throw new Error(problema);
+  }
+  console.log(`Evaluador: ${huella} (juez ${juezDeLaSuite.model})`);
   if (arg("--yes") === undefined) {
     console.log("Esto GASTA dinero real del proveedor. Vuelve a correr con --yes.");
     return 0;
   }
+  writeEvaluatorFile(dir, { huella, judgeModel: juezDeLaSuite.model, cases: encargos.length });
 
   const { owner, cookie } = await arrancarCorredor(base);
   // 🔴 Sin la terminal en el servidor, la ruta convierte Dynamis en Len SIN
@@ -183,7 +206,7 @@ async function main(): Promise<number> {
   }
 
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, "resultados.json"), JSON.stringify({ comando: process.argv.slice(2), casos, vias, gastado, parcial }, null, 2));
+  fs.writeFileSync(path.join(dir, "resultados.json"), JSON.stringify({ comando: process.argv.slice(2), huella, casos, vias, gastado, parcial }, null, 2));
   // Lo que el arnés no pudo medir, fuera de la media y por (caso, corrida): lo vuelve a correr `--reanudar`.
   fs.writeFileSync(path.join(dir, "infraestructura.json"), JSON.stringify(infraFailures(casos), null, 2));
   console.log(`Resultados: ${dir}/resultados.json`);

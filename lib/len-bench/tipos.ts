@@ -127,6 +127,10 @@ export interface Grader {
   /** Llama a un modelo y CUESTA (el juez, `juez.ts`): el validador, que corre a
    *  $0, lo salta y lo dice — los `llm` de Claude Code son «paid graders». */
   readonly pago?: true;
+  /** Lo que juzga un juez (juez.ts): su criterio y su foco. Lo lee la huella del evaluador
+   *  (evaluator-fingerprint.ts); un grader determinista no lo tiene. */
+  readonly criterio?: string;
+  readonly foco?: string;
   calificar(ctx: ContextoDeCalificacion): Promise<{ paso: boolean; explicacion: string; votos?: readonly boolean[]; evidencia?: string }>;
 }
 

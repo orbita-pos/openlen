@@ -55,6 +55,15 @@ export function infraFailures(casos: readonly ResultadoDeCaso[]): InfraFailure[]
   );
 }
 
+/** The cost of one case run, from a PILOT's kept runs (spec §5 piece 5: «el estimado desde el piloto en lugar
+ *  de la constante de hoy»; Anthropic: estimates from logs «are routinely 2-4× off»). The harness's runs are
+ *  left out, as from the mean. */
+export function estimateFromPilot(pilotDir: string): { usdPerCaseRun: number; runs: number } {
+  const runs = [...keptRuns(pilotDir).values()].filter((r) => r.desenlace !== "tope_de_gasto");
+  if (runs.length === 0) throw new Error(`no hay corridas del piloto en ${pilotDir}: el estimado sale de un piloto corrido`);
+  return { usdPerCaseRun: runs.reduce((s, r) => s + r.usd, 0) / runs.length, runs: runs.length };
+}
+
 /** Two suites never share a folder by accident: a folder with runs is only reused by `--reanudar`, and
  *  `--reanudar` on a folder with none is a typo that would start from zero. */
 export function runsDirProblem(dir: string, resuming: boolean): string | null {
