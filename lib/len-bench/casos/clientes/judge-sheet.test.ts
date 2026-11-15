@@ -8,7 +8,8 @@ import { describe, expect, it } from "vitest";
 
 import type { DatosDelCaso } from "../../tipos";
 import type { FetchedCase } from "./fetched";
-import { judgeSheet, SANITY_ENTRIES } from "./judge-sheet";
+import { judgeSheet, SANITY_ENTRIES, SHEET_SIZE, sheetCases } from "./judge-sheet";
+import { CUMPLE_LO_PEDIDO } from "./rubric";
 
 // Stands in for Chromium (rendered.ts, covered by rendered.browser.test.ts): every page, home first, without tags.
 const painted: DatosDelCaso[] = [];
@@ -50,7 +51,23 @@ describe("judgeSheet", () => {
     expect(sheet).not.toContain("<h1>");
   });
 
-  it("states the criterion once, as the judge gets it", async () => {
-    expect(await judgeSheet([caso(1)], paint)).toMatch(/Cada cosa concreta que el dueño pidió/);
+  it("states the criterion once, as the judge gets it, every line of it quoted", async () => {
+    const sheet = await judgeSheet([caso(1)], paint);
+    expect(sheet.split("Cada cosa concreta que el dueño pidió")).toHaveLength(2);
+    for (const line of CUMPLE_LO_PEDIDO.split("\n")) expect(sheet).toContain(`> ${line}\n`);
+  });
+});
+
+// The first 15 cases are the sheet the criterion was read against; the rest are held out — neither the labeller
+// nor the judge saw them before the criterion was fixed — and say whether it holds on cases it was not fitted to.
+describe("sheetCases", () => {
+  const ids = Array.from({ length: 24 }, (_, i) => `id-${i}`);
+  it("the sheet is the 15 most recent; the held-out sheet, everything after them", () => {
+    expect(sheetCases(ids, "hoja")).toEqual(ids.slice(0, SHEET_SIZE));
+    expect(sheetCases(ids, "reserva")).toEqual(ids.slice(SHEET_SIZE));
+    expect(SHEET_SIZE).toBe(15);
+  });
+  it("together they are every case, once", () => {
+    expect([...sheetCases(ids, "hoja"), ...sheetCases(ids, "reserva")]).toEqual(ids);
   });
 });

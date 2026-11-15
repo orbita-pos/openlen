@@ -18,10 +18,24 @@ import type { DatosDelCaso, Encargo, Grader } from "../../tipos";
 import type { FetchedCase } from "./fetched";
 
 /** The judge's one criterion, fixed text: nobody's data in it. It starts without voting (`puntua: false`) until it
- *  agrees with ~15 labels Jesús puts by hand (spec §9 row 7). */
+ *  agrees with the reference labels (~90 %, spec §9 row 7).
+ *
+ *  Rewritten 15/11 after the first calibration (86.7 %): each «Cómo leerlo» line settles one CLASS of case the
+ *  reference labeller itself called ambiguous —never a case's answer—, and is checked on 9 cases neither the
+ *  labeller nor the judge had seen (the held-out sheet, judge-sheet.ts `sheetCases`). Two of them say what this
+ *  criterion is NOT: what the visible text cannot show, and what the page adds unasked (nada-inventado grades that;
+ *  counting it here too would fail a page twice for one defect). */
 export const CUMPLE_LO_PEDIDO =
-  "Cada cosa concreta que el dueño pidió en sus mensajes numerados está hecha en la página final. " +
-  "Lo que pidió y después cambió cuenta en su última versión. Si falta una sola cosa pedida, FAIL.";
+  "Cada cosa concreta que el dueño pidió en sus mensajes numerados está hecha en la página final. Cómo leerlo:\n" +
+  "- Lo que pidió y después cambió cuenta en su última versión. Una queja sobre cómo se ve algo no es pedir que se quite: si se quitó, falta.\n" +
+  "- Una pregunta que pide algo («¿puedes poner…?») es un pedido; una que sólo pide opinión o información, no. " +
+  "Si no pidió nada concreto aparte de su página, basta una página de su negocio.\n" +
+  "- Cuenta lo que está aunque no use sus mismas palabras. Lo que se usa con un clic (carrito, formulario, detalle) está hecho " +
+  "si la página muestra cómo llegar a ello; si no hay ni rastro, falta.\n" +
+  "- Una sección pedida cuyo dato el dueño nunca dio, con un hueco visible para ponerlo, está hecha.\n" +
+  "- Sólo ves el texto visible: lo que el texto no puede mostrar (imágenes, colores, letra, diseño, el servidor, ficheros) " +
+  "no cuenta ni a favor ni en contra. Lo que la página añade sin que se pidiera tampoco: eso lo califica otro.\n" +
+  "Si falta una sola cosa pedida, FAIL.";
 
 export function customerGraders(f: FetchedCase): Grader[] {
   return [

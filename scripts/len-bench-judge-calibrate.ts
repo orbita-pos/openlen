@@ -4,6 +4,8 @@
 //
 //   npm run bench:clientes:calibrar                                  → $0: paints, checks the labels, prints the estimate
 //   npm run bench:clientes:calibrar -- --budget-usd=0.05 --yes       → asks the judge, never past the cap
+//   … --reserva            the held-out sheet (the cases after the first 15): labels etiquetas-fable-reserva.json,
+//                          result calibracion-reserva-resultado.json
 //   … --etiquetas=<file>   the labels (default: etiquetas-fable.json in the cases' folder)
 //
 // Writes calibracion-resultado.json next to the cases (ids, verdicts and votes: no customer text) and prints only ids,
@@ -15,7 +17,7 @@ import { rateFor } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import { agreement, estimateCalibrationUsd, type ReferenceLabel } from "../lib/len-bench/casos/clientes/calibration";
 import { casesDir, readFetchedCase } from "../lib/len-bench/casos/clientes/fetched";
-import { sheetEntries } from "../lib/len-bench/casos/clientes/judge-sheet";
+import { sheetCases, sheetEntries } from "../lib/len-bench/casos/clientes/judge-sheet";
 import { renderedText } from "../lib/len-bench/casos/clientes/rendered";
 import { CUMPLE_LO_PEDIDO } from "../lib/len-bench/casos/clientes/rubric";
 import { gastoDelJuez, judgeIdentity, judgeVerdict } from "../lib/len-bench/juez";
@@ -28,7 +30,8 @@ const arg = (name: string): string | undefined => {
 const key = (caso: string) => caso.replace(/^cordura-/, "");
 
 async function main(): Promise<void> {
-  const labelsFile = arg("--etiquetas") || path.join(casesDir(), "etiquetas-fable.json");
+  const reserva = process.argv.includes("--reserva");
+  const labelsFile = arg("--etiquetas") || path.join(casesDir(), reserva ? "etiquetas-fable-reserva.json" : "etiquetas-fable.json");
   const labels: ReferenceLabel[] = (JSON.parse(fs.readFileSync(labelsFile, "utf8")) as ReferenceLabel[]).map((l) => ({
     caso: l.caso,
     etiqueta: l.etiqueta,
@@ -39,7 +42,8 @@ async function main(): Promise<void> {
   const navegador = await lanzarNavegador();
   let entries;
   try {
-    entries = await sheetEntries(ids.map(readFetchedCase), (d) => renderedText(navegador, d));
+    const cases = sheetCases(ids, reserva ? "reserva" : "hoja").map(readFetchedCase);
+    entries = await sheetEntries(cases, (d) => renderedText(navegador, d), cases.length);
   } finally {
     await navegador.close();
   }
@@ -71,11 +75,11 @@ async function main(): Promise<void> {
   }
 
   const acuerdo = parado ? null : agreement(labels, veredictos);
-  const out = path.join(casesDir(), "calibracion-resultado.json");
+  const out = path.join(casesDir(), reserva ? "calibracion-reserva-resultado.json" : "calibracion-resultado.json");
   fs.writeFileSync(
     out,
     JSON.stringify(
-      { fecha: new Date().toISOString(), juez: judgeIdentity().model, etiquetas: path.basename(labelsFile), usd: gastoDelJuez(), completo: !parado, veredictos, acuerdo },
+      { fecha: new Date().toISOString(), hoja: reserva ? "reserva" : "hoja", juez: judgeIdentity().model, etiquetas: path.basename(labelsFile), usd: gastoDelJuez(), completo: !parado, veredictos, acuerdo },
       null,
       2,
     ),
