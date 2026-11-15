@@ -1,0 +1,42 @@
+// lib/len-bench/casos/clientes/judge-sheet.test.ts
+// @vitest-environment node
+//
+// THE JUDGE'S CALIBRATION SHEET (plan local 2026-11-15, task 10; spec §9 row 7): ~15 cases as the judge would see
+// them, for Jesús to label by hand, and the three sanity entries the spec asks the judge to fail. Written outside
+// the repo: it carries customers' words.
+import { describe, expect, it } from "vitest";
+
+import type { FetchedCase } from "./fetched";
+import { judgeSheet, SANITY_ENTRIES } from "./judge-sheet";
+
+const caso = (i: number): FetchedCase => ({
+  projectId: `0000000${i.toString(16)}-0000-4000-8000-000000000000`.slice(-36),
+  fetchedAt: "t",
+  start: { html: "" },
+  final: { html: `<body><h1>Página ${i}</h1></body>`, pages: { menu: { html: `<p>Menú ${i}</p>` } } },
+  ownerMessages: [`pedido ${i}`],
+  cardAnswers: [],
+  published: null,
+});
+
+describe("judgeSheet", () => {
+  it("at most 15 cases, each with what the judge sees and a box to label", () => {
+    const sheet = judgeSheet(Array.from({ length: 20 }, (_, i) => caso(i + 1)));
+    expect(sheet.match(/^## \d+\. cliente-/gm)).toHaveLength(15);
+    expect(sheet.match(/Tu etiqueta: \[ \] PASS · \[ \] FAIL/g)).toHaveLength(15 + SANITY_ENTRIES.length);
+    expect(sheet).toContain("1. pedido 1");
+    expect(sheet).toContain("Página 1");
+    // Every page of the final state is in the judge's view, not only the home.
+    expect(sheet).toContain("Menú 1");
+  });
+
+  it("ends with the three sanity entries the judge must FAIL: an empty page, «I don't know», an answer to another request", () => {
+    expect(SANITY_ENTRIES.map((s) => s.nombre)).toEqual(["pagina-vacia", "no-se", "otra-peticion"]);
+    const sheet = judgeSheet([caso(1)]);
+    for (const s of SANITY_ENTRIES) expect(sheet).toContain(`cordura · ${s.nombre} · esperado: FAIL`);
+  });
+
+  it("states the criterion once, as the judge gets it", () => {
+    expect(judgeSheet([caso(1)])).toMatch(/Cada cosa concreta que el dueño pidió/);
+  });
+});

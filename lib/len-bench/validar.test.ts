@@ -23,6 +23,25 @@ const caso = {
   rotas: [{ nombre: "roto", datos: { html: "<p>mal</p>" } }],
 };
 
+// LA BATERÍA 1 DE LEN 3.1 (plan local 2026-11-15, tarea 10): un caso de cliente califica contra su estado final
+// en producción, que puede suspender DE VERDAD (Len de producción inventó un teléfono, por ejemplo). Se lista con
+// el grader y el motivo, nunca se fuerza ni se quita el caso (review focus 1).
+describe("revisarCaso — un caso de cliente", () => {
+  const cliente = { graders: [grader("nada-inventado"), grader("enlaces")], solucion: { html: "<p>final</p>" }, rotas: [{ nombre: "roto", datos: { html: "<p>roto</p>" } }], origen: "cliente" as const };
+  const enRojo = [{ nombre: "inicio", graders: [res("nada-inventado", false), res("enlaces", false)] }];
+  it("un estado final de producción que no pasa un grader sale como tal, con su motivo", () => {
+    const r = revisarCaso(cliente, { solucion: [res("nada-inventado", false, "no están en la ficha: teléfono 3312345678"), res("enlaces", true)], variantes: enRojo });
+    expect(r.ok).toBe(false);
+    expect(r.problemas).toEqual(["regla 2 — el estado final de producción no pasa nada-inventado: no están en la ficha: teléfono 3312345678"]);
+  });
+  it("la regla 4 no aplica: no se escribe a mano lo que el cliente no pidió tocar, y lo dice", () => {
+    const r = revisarCaso(cliente, { solucion: [res("nada-inventado", true), res("enlaces", true)], variantes: enRojo });
+    expect(r.ok).toBe(true);
+    expect(r.problemas).toEqual([]);
+    expect(r.avisos).toContain("regla 4 no aplica: caso de cliente (su rúbrica es genérica)");
+  });
+});
+
 describe("revisarCaso — las reglas 2, 3 y 4, y que las rotas rompan algo", () => {
   it("un caso sano no tiene problemas", () => {
     const r = revisarCaso(caso, {

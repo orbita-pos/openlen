@@ -15,7 +15,7 @@
 import type { Encargo, Intercambio, ResultadoDeGrader, TurnoDeValidacion } from "./tipos";
 
 export function revisarCaso(
-  e: Pick<Encargo, "graders" | "solucion" | "rotas" | "solucionTurno" | "solucionDespues">,
+  e: Pick<Encargo, "graders" | "solucion" | "rotas" | "solucionTurno" | "solucionDespues" | "origen">,
   r: {
     readonly solucion: readonly ResultadoDeGrader[];
     /** La partida y cada rota, con lo que sacó cada grader. */
@@ -38,8 +38,13 @@ export function revisarCaso(
       problemas.push(`la rota «${rota.nombre}» es IDÉNTICA a la solución: su cambio no encontró el texto que buscaba`);
     }
   }
+  // Un caso de CLIENTE (la batería 1 de Len 3.1) no tiene solución escrita a mano: es su estado final en
+  // producción, que puede suspender de verdad. Se dice así y queda como problema; nunca se fuerza ni se quita.
+  const deCliente = e.origen === "cliente";
   for (const g of r.solucion) {
-    if (g.puntua && !g.paso) problemas.push(`regla 2 — la SOLUCIÓN suspende ${g.nombre}: ${g.explicacion}`);
+    if (g.puntua && !g.paso) {
+      problemas.push(deCliente ? `regla 2 — el estado final de producción no pasa ${g.nombre}: ${g.explicacion}` : `regla 2 — la SOLUCIÓN suspende ${g.nombre}: ${g.explicacion}`);
+    }
   }
   const suspendio = new Set(r.variantes.flatMap((v) => v.graders.filter((g) => g.puntua && !g.paso).map((g) => g.nombre)));
   for (const g of e.graders) {
@@ -51,7 +56,9 @@ export function revisarCaso(
       problemas.push(`regla 3 — ${g.nombre} nunca se vio en rojo (ni en la partida ni en las rotas)`);
     }
   }
-  if (faltaLoQueSigue(e)) {
+  // Lo que el cliente no pidió tocar no se escribe a mano: metería su texto en el repo (rubric.ts).
+  if (deCliente) avisos.push("regla 4 no aplica: caso de cliente (su rúbrica es genérica)");
+  else if (faltaLoQueSigue(e)) {
     problemas.push("regla 4 — no declara lo que NO se pidió tocar: ningún grader «sigue-…» que vote (el que no vota no cuenta)");
   }
   return { ok: problemas.length === 0, problemas, avisos };
