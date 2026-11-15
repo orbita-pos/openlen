@@ -236,6 +236,13 @@ export interface ResultadoDeCorrida {
   /** Los `Edit` que volvieron con `ok:false` («no leído», texto no encontrado…).
    *  Ausente si la corrida no llegó a calificarse: sale de la traza. */
   readonly editFallidos?: number;
+  /** Medido desde `agentRequestSteps` (steps-of-run.ts; ausente si la corrida no se midió así): quién
+   *  contestó las llamadas, qué parte de la entrada se leyó de caché (0–1), las escrituras negadas por no
+   *  haber leído (F3) y las llamadas en bucle (F4). */
+  readonly proveedores?: readonly string[];
+  readonly cacheLeida?: number;
+  readonly noLeidos?: number;
+  readonly repeticiones?: number;
   readonly sub: string;
   /** Lo que se dijeron el dueño simulado y Len. Es lo que se lee para saber
    *  POR QUÉ falló un caso (fase 2): sin ella, `resultados.json` sólo dice que

@@ -45,6 +45,8 @@ import { cierreHonesto } from "./honestidad";
 import { gastoDelJuez, trazaDeLasFilas } from "./juez";
 import { fallidasDeLaTraza, pasosDeProyecto } from "./pasos";
 import { puntuarCorrida } from "./puntuar";
+import { readRunSteps, settledRunSteps, stepsProblem } from "./steps-of-run";
+import type { Sql } from "./cold-return/snapshot";
 import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader, VerificacionDeLaApp } from "./tipos";
@@ -70,6 +72,10 @@ export interface OpcionesDelConductor {
   /** El modo de Len en cada turno, como lo manda el panel (`lib/agent/dynamis.ts`).
    *  Ausente = Len. Con la terminal apagada en el servidor, la ruta lo ignora. */
   readonly mode?: AgentMode;
+  /** La base del banco, para medir la corrida desde `agentRequestSteps` (steps-of-run.ts) en vez de las
+   *  grabaciones de ESTA carpeta: el servidor puede correr en otra (la columna base de Len 3.1). Ausente =
+   *  las grabaciones, como antes. */
+  readonly sql?: Sql;
 }
 
 /**
@@ -406,7 +412,14 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     if (!o.conservar) await deleteThrowawayProject(projectId);
   }
   const saldo1 = await creditos(o.owner.id);
-  const agente = usdDeProyecto(o.dirGrabaciones, projectId);
+  // Medida desde las filas que grabó el servidor, sea cual sea su carpeta. Sin filas cuando Len contestó, o
+  // con otro proveedor, la suite se para: contaría un coste falso y el tope no saltaría.
+  const pasosMedidos = o.sql ? await settledRunSteps(() => readRunSteps(o.sql!, projectId), (ms) => new Promise((r) => setTimeout(r, ms))) : null;
+  if (pasosMedidos) {
+    const problema = stepsProblem(pasosMedidos, { lenAnswered: conversacion.some((x) => x.quien === "len" && x.texto.trim() !== "") });
+    if (problema) throw new ErrorDeMontaje(problema);
+  }
+  const agente = pasosMedidos ? { usd: pasosMedidos.usdAtList } : usdDeProyecto(o.dirGrabaciones, projectId);
   const usdJuez = gastoDelJuez() - juez0;
   return {
     graders,
@@ -420,8 +433,16 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     usd: agente.usd + usdCliente + usdJuez,
     ...(usdJuez > 0 ? { usdJuez } : {}),
     segundos: (Date.now() - t0) / 1000,
-    pasos: pasosDeProyecto(o.dirGrabaciones, projectId),
+    pasos: pasosMedidos ? pasosMedidos.calls : pasosDeProyecto(o.dirGrabaciones, projectId),
     ...(editFallidos !== undefined ? { editFallidos } : {}),
+    ...(pasosMedidos
+      ? {
+          proveedores: pasosMedidos.providers,
+          cacheLeida: pasosMedidos.inputTokens > 0 ? pasosMedidos.cachedTokens / pasosMedidos.inputTokens : 0,
+          noLeidos: pasosMedidos.notRead,
+          repeticiones: pasosMedidos.repeats,
+        }
+      : {}),
     sub,
     conversacion,
   };
