@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import type { MensajeDelHistorial } from "@/lib/agent/transcripcion";
-import { fallidasDeLaTraza, pasosDeGrabacion, pasosDeProyecto } from "./pasos";
+import { fallidasDeLaTraza, pasosDeGrabacion, pasosDeProyecto, publishRejections } from "./pasos";
 
 const grabacion = (turnos: unknown[][], cierre?: unknown[]) => ({
   formato: 1,
@@ -52,5 +52,24 @@ describe("fallidasDeLaTraza", () => {
   });
   it("una respuesta sin `ok` no cuenta como fallida", () => {
     expect(fallidasDeLaTraza([{ role: "user", content: "", functionResponses: [{ name: "use_page", response: { resultado: "x" } }] }])).toEqual({});
+  });
+});
+
+describe("publishRejections — la fila de F2 de la tabla de Len 3.1", () => {
+  const publicar = (response: Record<string, unknown>): MensajeDelHistorial => ({
+    role: "user",
+    content: "",
+    functionResponses: [{ name: "publish", response }],
+  });
+  it("cuenta los `publish` que volvieron rechazados, y no los que publicaron", () => {
+    const traza: MensajeDelHistorial[] = [
+      { role: "user", content: "publícala en robleyluz" },
+      publicar({ ok: false, error: 'the user has never said "robleyluz" — you made that name up' }),
+      publicar({ ok: true }),
+    ];
+    expect(publishRejections(traza)).toBe(1);
+  });
+  it("sin `publish` en la traza, cero", () => {
+    expect(publishRejections([{ role: "user", content: "cambia el precio" }])).toBe(0);
   });
 });

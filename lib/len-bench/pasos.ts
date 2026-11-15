@@ -35,3 +35,10 @@ export function fallidasDeLaTraza(traza: readonly MensajeDelHistorial[]): Record
   }
   return fallidas;
 }
+
+/** Los `publish` que volvieron rechazados (`ok:false`): la fila de F2 de la tabla de Len 3.1 (spec local
+ *  2026-11-12-len-3-1-ruta, §4). En producción eran «you made that name up» con la dirección que el dueño
+ *  acababa de contestar en la tarjeta. */
+export function publishRejections(traza: readonly MensajeDelHistorial[]): number {
+  return fallidasDeLaTraza(traza).publish ?? 0;
+}

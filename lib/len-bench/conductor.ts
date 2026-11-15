@@ -43,7 +43,7 @@ import { filaComoLaDeUnDueno } from "./fila-del-dueno";
 import { conReintentoPorEperm } from "./reintentar-publicar";
 import { cierreHonesto } from "./honestidad";
 import { gastoDelJuez, trazaDeLasFilas } from "./juez";
-import { fallidasDeLaTraza, pasosDeProyecto } from "./pasos";
+import { fallidasDeLaTraza, pasosDeProyecto, publishRejections } from "./pasos";
 import { puntuarCorrida } from "./puntuar";
 import { readRunSteps, settledRunSteps, stepsProblem } from "./steps-of-run";
 import type { Sql } from "./cold-return/snapshot";
@@ -301,6 +301,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
   let sub = "";
   let graders: ResultadoDeGrader[] = [];
   let editFallidos: number | undefined;
+  let publishRechazados: number | undefined;
   // UNA APP: su verificación al cerrar cada paso del guion (`app-verificada.ts`).
   const verificaciones: VerificacionDeLaApp[] = [];
   let primerTurno = true;
@@ -403,6 +404,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     graders = cal.graders;
     sub = cal.sub;
     editFallidos = fallidasDeLaTraza(cal.traza).Edit ?? 0;
+    publishRechazados = publishRejections(cal.traza);
   } catch (err) {
     if (err instanceof ErrorDeMontaje) throw err;
     desenlace = desenlace === "completa" ? "error_de_len" : desenlace;
@@ -435,6 +437,7 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     segundos: (Date.now() - t0) / 1000,
     pasos: pasosMedidos ? pasosMedidos.calls : pasosDeProyecto(o.dirGrabaciones, projectId),
     ...(editFallidos !== undefined ? { editFallidos } : {}),
+    ...(publishRechazados !== undefined ? { publishRechazados } : {}),
     ...(pasosMedidos
       ? {
           proveedores: pasosMedidos.providers,

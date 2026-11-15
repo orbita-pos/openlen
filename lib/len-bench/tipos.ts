@@ -236,6 +236,9 @@ export interface ResultadoDeCorrida {
   /** Los `Edit` que volvieron con `ok:false` («no leído», texto no encontrado…).
    *  Ausente si la corrida no llegó a calificarse: sale de la traza. */
   readonly editFallidos?: number;
+  /** Los `publish` que volvieron rechazados (`pasos.ts`, la fila de F2). Ausente si la corrida no llegó a
+   *  calificarse. */
+  readonly publishRechazados?: number;
   /** Medido desde `agentRequestSteps` (steps-of-run.ts; ausente si la corrida no se midió así): quién
    *  contestó las llamadas, qué parte de la entrada se leyó de caché (0–1), las escrituras negadas por no
    *  haber leído (F3) y las llamadas en bucle (F4). */
