@@ -2,7 +2,28 @@
 import { describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
-import { createJudgeCall, gastoDelJuez, judgeIdentity, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { createJudgeCall, gastoDelJuez, judgeIdentity, juez, pedidosYPagina, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+
+// EL FOCO DE LA BATERÍA 1 (plan local 2026-11-15, tarea 9): lo que pidió el dueño, numerado, y lo que se lee en
+// la página publicada. Pequeño a propósito («un criterio con juez por caso como mucho, con foco pequeño», spec §5).
+describe("pedidosYPagina — lo que ve el juez de la batería de clientes", () => {
+  it("los mensajes del dueño, numerados, y el texto visible de lo publicado", () => {
+    const t = pedidosYPagina(
+      [
+        { quien: "dueno", texto: "haz mi página" },
+        { quien: "len", texto: "Listo." },
+        { quien: "dueno", texto: "ponle el horario" },
+      ],
+      "<html><body><script>var x=1</script><h1>Mi taller</h1><p>Abierto de 9 a 6</p></body></html>",
+    );
+    expect(t).toContain("1. haz mi página");
+    expect(t).toContain("2. ponle el horario");
+    expect(t).not.toContain("Listo.");
+    expect(t).toContain("Mi taller");
+    expect(t).toContain("Abierto de 9 a 6");
+    expect(t).not.toContain("var x=1");
+  });
+});
 import { PROVIDER_DIALECTS } from "@/lib/ai/providers";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";

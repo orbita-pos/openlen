@@ -8,7 +8,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Encargo } from "../tipos";
 
-export type Juego = "dev" | "pendientes" | "sellado" | "resultados" | "agente" | "hard";
+export type Juego = "dev" | "pendientes" | "sellado" | "resultados" | "agente" | "hard" | "clientes";
 
 export async function cargarEncargos(juego: Juego, raiz = process.cwd()): Promise<Encargo[]> {
   if (juego === "dev") return (await import("./dev")).ENCARGOS;
@@ -19,6 +19,8 @@ export async function cargarEncargos(juego: Juego, raiz = process.cwd()): Promis
   if (juego === "agente") return (await import("./agente")).ENCARGOS;
   // Len Dynamis contra Len 2.5, como DeepSeek (plans/len-2/corridas/2026-10-03-dynamis).
   if (juego === "hard") return (await import("./hard")).ENCARGOS;
+  // La batería 1 de Len 3.1: proyectos reales de clientes, traídos fuera del repo (`npm run bench:clientes:fetch`).
+  if (juego === "clientes") return (await import("./clientes")).loadCustomerCases(raiz);
   const ruta = path.resolve(raiz, "plans", "len-2", juego, "index.ts");
   try {
     return ((await import(pathToFileURL(ruta).href)) as { ENCARGOS: Encargo[] }).ENCARGOS;

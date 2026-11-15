@@ -8,6 +8,35 @@ import { cargarEncargos } from "./cargar";
 import { faltaLoQueSigue } from "../validar";
 import { problemasDeLaWeb } from "../web-sustituta";
 
+describe("cargarEncargos — el juego clientes (batería 1 de Len 3.1)", () => {
+  const conCarpeta = async <T>(dir: string, fn: () => Promise<T>): Promise<T> => {
+    const prev = process.env.OPENLEN_BENCH_CASES_DIR;
+    process.env.OPENLEN_BENCH_CASES_DIR = dir;
+    try {
+      return await fn();
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_BENCH_CASES_DIR;
+      else process.env.OPENLEN_BENCH_CASES_DIR = prev;
+    }
+  };
+  it("carga un caso por id de cases.json, desde la carpeta de fuera del repo", async () => {
+    const ids = (JSON.parse(fs.readFileSync("lib/len-bench/casos/clientes/cases.json", "utf8")) as { projectId: string }[]).map((c) => c.projectId);
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-clientes-"));
+    for (const projectId of ids) {
+      fs.writeFileSync(
+        path.join(dir, `${projectId}.json`),
+        JSON.stringify({ projectId, fetchedAt: "t", start: { html: "" }, final: { html: "<p>x</p>" }, ownerMessages: ["haz mi página"], cardAnswers: [], published: null }),
+      );
+    }
+    const encargos = await conCarpeta(dir, () => cargarEncargos("clientes"));
+    expect(encargos.map((e) => e.id)).toEqual(ids.map((id) => `cliente-${id.slice(0, 8)}`));
+    expect(encargos.every((e) => e.origen === "cliente")).toBe(true);
+  });
+  it("si falta un caso traído, dice cómo traerlo", async () => {
+    await expect(conCarpeta(fs.mkdtempSync(path.join(os.tmpdir(), "lb-clientes-")), () => cargarEncargos("clientes"))).rejects.toThrow(/bench:clientes:fetch/);
+  });
+});
+
 describe("cargarEncargos", () => {
   it("el juego dev va en el repo y se carga sin nada fuera de él", async () => {
     expect(Array.isArray(await cargarEncargos("dev"))).toBe(true);

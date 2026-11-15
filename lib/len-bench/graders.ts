@@ -48,7 +48,7 @@ async function servido(ctx: ContextoDeCalificacion, ruta: string): Promise<{ sta
   return { status: r.status, body: await r.text() };
 }
 
-async function todoLoPublicado(ctx: ContextoDeCalificacion): Promise<string> {
+export async function todoLoPublicado(ctx: ContextoDeCalificacion): Promise<string> {
   const partes = await Promise.all(rutasPublicadas(ctx).map((r) => servido(ctx, r).then((x) => x.body)));
   return partes.join("\n");
 }
