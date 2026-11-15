@@ -9,17 +9,42 @@ const link = "https://app.fireworks.ai/models/fireworks/deepseek-v4p1-flash-1017
 const label = "DeepSeek V4.1 Flash 1017";
 const row = (name: string, prices = "$0.30 / $0.006 / $1.20") => "| [" + name + "](" + link + ") | " + prices + " | — |";
 
-function check(rows: string[]) {
-  // Exercise the real CLI. Both provider calls are mocked before it loads; no network or paid calls.
+// DeepInfra's public models list, as the judge's price is read from it (15/11): Qwen3.8 Flash at its list price.
+const QWEN = { model_name: "Qwen/Qwen3.8-Flash", type: "text-generation", pricing: { type: "tokens", cents_per_input_token: 0.0000113, cents_per_output_token: 0.0000382, rate_per_input_token_cached: 0.12477876 } };
+
+function check(rows: string[], o: { deepinfraList?: unknown; env?: Record<string, string | undefined> } = {}) {
+  // Exercise the real CLI. Every provider call is mocked before it loads; no network or paid calls. The
+  // completions endpoints of BOTH providers end in /chat/completions; the requests are recorded on stderr.
   const preload = "globalThis.fetch = async input => { const url = String(input); "
-    + "if (url.endsWith('/chat/completions')) return new Response('{}'); "
+    + "if (url.endsWith('/chat/completions')) { console.error('ASKED ' + url); return new Response('{}'); } "
     + "if (url === 'https://docs.fireworks.ai/serverless/pricing.md') return new Response(" + JSON.stringify(rows.join("\n")) + "); "
+    + "if (url === 'https://api.deepinfra.com/models/list') return new Response(" + JSON.stringify(JSON.stringify(o.deepinfraList ?? [QWEN])) + "); "
     + "throw new Error('Unexpected network request: ' + url); };";
   return spawnSync(process.execPath, [
     "--import", "data:text/javascript;base64," + Buffer.from(preload).toString("base64"),
     "--import", pathToFileURL(require.resolve("tsx")).href, "scripts/modelos-comprobar.ts",
-  ], { encoding: "utf8", env: { ...process.env, FIREWORKS_API_KEY: "test-only", TSX_TSCONFIG_PATH: "tsconfig.eval.json" }, timeout: 15_000 });
+  ], { encoding: "utf8", env: { ...process.env, FIREWORKS_API_KEY: "test-only", DEEPINFRA_API_KEY: "test-only", TSX_TSCONFIG_PATH: "tsconfig.eval.json", ...o.env }, timeout: 15_000 });
 }
+
+describe("modelos:comprobar asks each provider the policy names (the judge is DeepInfra's, 15/11)", () => {
+  it("asks DeepInfra and Fireworks, and checks the judge's price against DeepInfra's public list", () => {
+    const r = check([row(label)]);
+    expect(r.status, r.stdout + r.stderr).toBe(0);
+    expect(r.stderr).toContain("ASKED https://api.deepinfra.com/v1/openai/chat/completions");
+    expect(r.stderr).toContain("ASKED https://api.fireworks.ai/inference/v1/chat/completions");
+    expect(r.stdout).toContain("deepinfra/Qwen/Qwen3.8-Flash");
+  });
+  it("a judge whose list price moved is a drift, not a pass", () => {
+    const r = check([row(label)], { deepinfraList: [{ ...QWEN, pricing: { ...QWEN.pricing, cents_per_output_token: 0.00005 } }] });
+    expect(r.status).toBe(1);
+    expect(r.stdout).toMatch(/salida: nosotros 0\.382, ellos 0\.5/);
+  });
+  it("without DeepInfra's key it is not a pass", () => {
+    const r = check([row(label)], { env: { DEEPINFRA_API_KEY: "" } });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain("DEEPINFRA_API_KEY");
+  });
+});
 
 describe("modelos:comprobar published price selection", () => {
   it("checks the standard row when the same id has Ultra-fast Preview and US rows", () => {

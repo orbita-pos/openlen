@@ -2,7 +2,70 @@
 import { describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
-import { gastoDelJuez, judgeIdentity, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { createJudgeCall, gastoDelJuez, judgeIdentity, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { PROVIDER_DIALECTS } from "@/lib/ai/providers";
+import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
+import { MODEL_POLICY } from "@/lib/generation/model-policy";
+import type { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+
+// EL JUEZ EN DEEPINFRA, DE OTRA FAMILIA (Jesús, 15/11: Qwen3.8-Flash). Un cliente de mentira recoge lo que se
+// le pide: se comprueba la petición, no al proveedor (eso lo hace `npm run modelos:comprobar`).
+describe("createJudgeCall — a quién y cómo se le pregunta", () => {
+  type Opciones = Parameters<typeof createFireworksStreamClient>[0];
+  function clienteDeMentira(usage = { inputTokens: 12_000, cachedTokens: 8_000, outputTokens: 1 }) {
+    const vistos: { opciones: Opciones; peticiones: { requestId: string; operation: string; maxOutputTokens?: number; temperature?: number }[] } = { opciones: {}, peticiones: [] };
+    const makeClient = ((opciones: Opciones) => {
+      vistos.opciones = opciones;
+      return {
+        modelId: "x",
+        async *stream(request: { requestId: string; operation: string; maxOutputTokens?: number; temperature?: number }) {
+          vistos.peticiones.push(request);
+          yield { type: "text_delta", text: "PASS" };
+          yield { type: "usage", ...usage, thinkingTokens: 0 };
+          yield { type: "done", stopReason: { kind: "stop" } };
+        },
+      };
+    }) as unknown as typeof createFireworksStreamClient;
+    return { vistos, makeClient };
+  }
+
+  it("llama a DeepInfra con el modelo de su papel y su clave, 16 tokens, temperatura 1", async () => {
+    const { vistos, makeClient } = clienteDeMentira();
+    const r = await createJudgeCall({ makeClient, env: { DEEPINFRA_API_KEY: "clave" } })("sistema", "prompt");
+    expect(r.texto).toBe("PASS");
+    expect(vistos.opciones).toMatchObject({
+      apiKey: "clave",
+      endpoint: PROVIDER_DIALECTS.deepinfra.endpoint,
+      modelId: MODEL_POLICY.judge.providers[0]!.modelId,
+      affinityField: PROVIDER_DIALECTS.deepinfra.affinityField,
+      effortStyle: PROVIDER_DIALECTS.deepinfra.effortStyle,
+    });
+    expect(vistos.peticiones[0]).toMatchObject({ operation: "len_bench_juez", maxOutputTokens: 16, temperature: 1 });
+  });
+
+  it("los tres votos de un mismo prompt llevan la misma clave de caché; otro prompt, otra", async () => {
+    const { vistos, makeClient } = clienteDeMentira();
+    const llamar = createJudgeCall({ makeClient, env: { DEEPINFRA_API_KEY: "clave" } });
+    await llamar("s", "el mismo");
+    await llamar("s", "el mismo");
+    await llamar("s", "otro");
+    const [a, b, c] = vistos.peticiones.map((p) => p.requestId);
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
+  });
+
+  it("cuesta lo que dice su tarifa, con lo leído de caché a precio de caché", async () => {
+    const { makeClient } = clienteDeMentira({ inputTokens: 12_000, cachedTokens: 8_000, outputTokens: 1 });
+    const r = await createJudgeCall({ makeClient, env: { DEEPINFRA_API_KEY: "clave" } })("s", "p");
+    expect(r.usd).toBeCloseTo(usdDeTurno({ entrada: 12_000, cacheada: 8_000, salida: 1 }, rateFor(MODEL_POLICY.judge.modelId)), 12);
+  });
+
+  it("sin clave de DeepInfra lo dice, y no cae a Fireworks", async () => {
+    const { vistos, makeClient } = clienteDeMentira();
+    await expect(createJudgeCall({ makeClient, env: {} })("s", "p")).rejects.toThrow(/DEEPINFRA_API_KEY/);
+    expect(vistos.peticiones).toHaveLength(0);
+  });
+});
 
 describe("what the evaluator's fingerprint reads from the judge (evaluator-fingerprint.ts)", () => {
   it("a judge grader says its criterion and its focus; a deterministic one says neither", () => {

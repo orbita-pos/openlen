@@ -71,6 +71,15 @@ const V4_FLASH = { input: 0.22, output: 0.66, cached: 0.007 } as const;
  */
 const V4P1_FLASH = { input: 0.30, output: 1.20, cached: 0.006 } as const;
 
+/**
+ * Qwen3.8 Flash en DeepInfra, a PRECIO DE LISTA. El papel `judge` (el juez de Len-Bench, que nunca se le
+ * cobra a nadie: sólo frena y cuenta las corridas del banco). Leído el 15/11/2026 en la API pública
+ * `GET https://api.deepinfra.com/models/list` (`Qwen/Qwen3.8-Flash`): `cents_per_input_token` 0.0000113,
+ * `cents_per_output_token` 0.0000382, `rate_per_input_token_cached` 0.12477876 (de la entrada), sin descuento.
+ * `npm run modelos:comprobar` lo vuelve a cotejar contra esa misma API.
+ */
+const QWEN3P8_FLASH = { input: 0.113, output: 0.382, cached: 0.0141 } as const;
+
 /** DeepSeek V4 Pro. Hoy no lo corre ningún papel (lo montaba a mano
  *  `lib/agent/redesign.ts`, retirado con Len 2.0). Se queda: es la vuelta
  *  atrás del papel `agent` (ver `model-policy.ts`) y tasa grabaciones viejas. */
@@ -96,6 +105,7 @@ export const TARIFAS_POR_MILLON = {
   "deepseek-flash": V4_FLASH,
   "deepseek-flash-4p1": V4P1_FLASH,
   "deepseek-pro": V4_PRO,
+  "qwen-3p8-flash": QWEN3P8_FLASH,
 } as const satisfies Readonly<Record<string, TarifaPorMillon>>;
 
 export type CreditRate = keyof typeof TARIFAS_POR_MILLON;

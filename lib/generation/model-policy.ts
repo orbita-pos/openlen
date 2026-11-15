@@ -193,6 +193,19 @@ export const MODEL_POLICY = Object.freeze({
       Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" }),
     ]),
   }),
+  // EL JUEZ DE LEN-BENCH (`len_bench_juez`, lib/len-bench/juez.ts), PAPEL PROPIO desde el 2026-11-15 (Jesús).
+  // Era el razonador —la misma 1017 que Len, y sólo por Fireworks—, y la guía de evals de Anthropic pide que
+  // el juez nunca sea el modelo que se prueba (spec local 2026-11-12-len-3-1-ruta, §8.5 y §9 fila 7). Otra
+  // familia (Alibaba), en DeepInfra para pagar el banco entero de una cuenta, y SIN razonamiento: contesta una
+  // palabra con 16 tokens de salida. Se eligió por precio y forma, no por una medida: lo calibran unas 15
+  // etiquetas puestas a mano antes de que vote; si no llega a ~90 % de acuerdo, se cambia esta fila.
+  judge: Object.freeze({
+    modelId: "Qwen/Qwen3.8-Flash",
+    creditRate: "qwen-3p8-flash" as CreditRate,
+    displayName: "Qwen3.8 Flash",
+    capturaRuntime: false,
+    providers: Object.freeze([Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "Qwen/Qwen3.8-Flash" })]),
+  }),
 });
 
 // ⚰️ AQUÍ VIVÍAN CUATRO OPERACIONES CON CERO LLAMADORES, retiradas el
@@ -308,7 +321,7 @@ const OPERATION_POLICY: Readonly<Record<ModelOperation, { role: ModelRole; effor
   // El juez de Len-Bench: leer un mensaje y decir PASS o FAIL contra UN
   // criterio. Texto, así que el razonador; y sin pensar, porque contestar una
   // palabra no mejora discurriendo — lo que reduce el ruido son los tres votos.
-  len_bench_juez: { role: "reasoner", effort: "none" },
+  len_bench_juez: { role: "judge", effort: "none" },
   // La IA de las apps: `openlen-fast` contesta sin pensar —ordenar un pedido,
   // clasificar, resumir—; `openlen-smart` piensa, con el único esfuerzo que el
   // razonador admite además de `none` (`reasoningEffortAllowed`).
@@ -476,6 +489,8 @@ export function reasoningEffortAllowed(role: ModelRole, effort: FireworksReasoni
   // exactamente el despiste que este comentario existe para no repetir.
   if (role === "agent") return false;
   if (role === "reasoner") return effort === "none" || effort === "high";
+  // El juez no razona: contesta PASS o FAIL.
+  if (role === "judge") return effort === "none";
   // ⚰️ Y aquí `designer`, que era el único papel que admitía `"max"`. El
   // esfuerzo sigue en el vocabulario del proveedor —`FireworksReasoningEffort`
   // describe lo que el CABLE acepta, no lo que nosotros pedimos— pero ya no hay

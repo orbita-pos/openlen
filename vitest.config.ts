@@ -261,6 +261,8 @@ export default defineConfig({
       "lib/ai/image-edit-core.test.ts",
       // La tarifa de COSTO, aparte de la de cobro (spec local 2026-10-16-credit-ledger).
       "lib/ai/cost-rates.test.ts",
+      // Qué pregunta `modelos:comprobar` y a quién (el juez de Len-Bench, en DeepInfra, 15/11).
+      "lib/ai/policy-models.test.ts",
       // El segundo proveedor (spec local 2026-10-16-second-provider).
       "lib/ai/providers.test.ts",
       "lib/ai/fireworks-client.test.ts",

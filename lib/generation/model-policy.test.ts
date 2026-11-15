@@ -6,9 +6,31 @@ import {
   capturaRuntimeDelPapel,
   displayNameForRole,
   esfuerzoDisponible,
+  modelIdForRole,
+  reasoningEffortAllowed,
   reasoningEffortFor,
   roleForOperation,
 } from "./model-policy";
+
+// EL JUEZ DE LEN-BENCH, PAPEL PROPIO (spec local 2026-11-12-len-3-1-ruta, §8.5 y §9 fila 7; Jesús, 15/11):
+// era la misma 1017 que Len, y sólo por Fireworks. La guía de evals de Anthropic: el juez nunca es el modelo
+// que se prueba.
+describe("el juez de Len-Bench", () => {
+  it("tiene papel propio, servido por DeepInfra", () => {
+    expect(roleForOperation("len_bench_juez")).toBe("judge");
+    expect(MODEL_POLICY.judge.providers.map((p) => p.provider)).toEqual(["deepinfra"]);
+    expect(modelIdForRole("judge")).toBe(MODEL_POLICY.judge.providers[0]!.modelId);
+  });
+  it("no es de la familia de Len", () => {
+    expect(/deepseek/i.test(MODEL_POLICY.judge.modelId)).toBe(false);
+    expect(MODEL_POLICY.judge.modelId).not.toBe(MODEL_POLICY.agent.providers[0]!.modelId);
+  });
+  it("contesta una palabra sin pensar: sólo admite «none»", () => {
+    expect(reasoningEffortAllowed("judge", "none")).toBe(true);
+    expect(reasoningEffortAllowed("judge", "high")).toBe(false);
+    expect(reasoningEffortFor("judge", "len_bench_juez")).toBe("none");
+  });
+});
 
 describe("Fable model policy", () => {
   it("routes each provider role through the one approved Fireworks model", () => {
@@ -35,7 +57,8 @@ describe("Fable model policy", () => {
   // del id tiene que estar en el nombre («V4.1» se escribe `v4p1` en el id; la
   // fecha del final no lleva letras y no cuenta).
   it.each(Object.entries(MODEL_POLICY))("el nombre visible de %s es el de su modelo", (_papel, entrada) => {
-    const tramos = entrada.modelId.split("/").at(-1)!.split("-");
+    // Normalizado como el nombre: un id de DeepInfra conserva mayúsculas y puntos («Qwen3.8-Flash»).
+    const tramos = entrada.modelId.split("/").at(-1)!.toLowerCase().replace(/\./g, "p").split("-");
     const palabras = entrada.displayName.toLowerCase().replace(/\./g, "p").split(/\s+/);
     for (const palabra of palabras) expect(tramos).toContain(palabra);
     for (const tramo of tramos.filter((t) => /[a-z]/.test(t))) expect(palabras).toContain(tramo);
