@@ -2,26 +2,42 @@
 import { describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
-import { createJudgeCall, gastoDelJuez, judgeIdentity, juez, pedidosYPagina, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+import { createJudgeCall, gastoDelJuez, judgeIdentity, judgeVerdict, juez, pedidosYPagina, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
+
+// LA CALIBRACIÓN (spec §9 fila 7): el juez se compara con las etiquetas FUERA de una corrida, y tiene que ser el
+// mismo juez — el mismo prompt, los mismos tres votos, la misma mayoría — que el del banco.
+describe("judgeVerdict — el juez del banco, fuera de una corrida", () => {
+  it("pregunta tres veces con el prompt del banco, gana la mayoría y suma lo que costó", async () => {
+    const vistos: string[] = [];
+    const llamar = async (_s: string, u: string) => {
+      vistos.push(u);
+      return { texto: vistos.length === 2 ? "FAIL" : "PASS", usd: 0.001 };
+    };
+    const r = await judgeVerdict("Cada cosa pedida está hecha.", "pedidos_y_pagina", "1. haz mi página", llamar);
+    expect(r.paso).toBe(true);
+    expect(r.votos).toEqual([true, false, true]);
+    expect(r.usd).toBeCloseTo(0.003, 12);
+    expect(vistos).toEqual(Array(VOTOS_DEL_JUEZ).fill(promptDelJuez("Cada cosa pedida está hecha.", "pedidos_y_pagina", "1. haz mi página")));
+  });
+});
 
 // EL FOCO DE LA BATERÍA 1 (plan local 2026-11-15, tarea 9): lo que pidió el dueño, numerado, y lo que se lee en
 // la página publicada. Pequeño a propósito («un criterio con juez por caso como mucho, con foco pequeño», spec §5).
 describe("pedidosYPagina — lo que ve el juez de la batería de clientes", () => {
-  it("los mensajes del dueño, numerados, y el texto visible de lo publicado", () => {
+  // The page arrives already PAINTED (innerText, graders.browser.test.ts covers that what a script builds is there).
+  it("los mensajes del dueño, numerados, y el texto pintado de lo publicado, sin líneas vacías de más", () => {
     const t = pedidosYPagina(
       [
         { quien: "dueno", texto: "haz mi página" },
         { quien: "len", texto: "Listo." },
         { quien: "dueno", texto: "ponle el horario" },
       ],
-      "<html><body><script>var x=1</script><h1>Mi taller</h1><p>Abierto de 9 a 6</p></body></html>",
+      "Mi   taller\n\n\n  \nAbierto de 9 a 6",
     );
     expect(t).toContain("1. haz mi página");
     expect(t).toContain("2. ponle el horario");
     expect(t).not.toContain("Listo.");
-    expect(t).toContain("Mi taller");
-    expect(t).toContain("Abierto de 9 a 6");
-    expect(t).not.toContain("var x=1");
+    expect(t).toMatch(/El texto visible de la página publicada:\nMi taller\nAbierto de 9 a 6$/);
   });
 });
 import { PROVIDER_DIALECTS } from "@/lib/ai/providers";

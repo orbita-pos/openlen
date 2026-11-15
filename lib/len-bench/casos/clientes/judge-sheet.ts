@@ -2,9 +2,10 @@
 //
 // Spec local 2026-11-12-len-3-1-ruta, §9 row 7 (Anthropic's eval health checklist): the judge is «calibrado
 // contra etiquetas humanas (~90 %)» and «probado con vacío, "no sé" y una respuesta a otra pregunta». This writes
-// what the judge would see for ~15 customer cases —their requests and their final page in production— with a box
-// for Jesús to label PASS or FAIL by hand, and the three sanity entries the judge must fail. Asking the judge
-// about the same entries is the first PAID step (a few cents at most), with its own command and cap.
+// what the judge would see for ~15 customer cases —their requests and their final page in production, PAINTED as a
+// visitor sees it, exactly as the judge reads it in a run (rendered.ts)— with a box for a reference label, and the
+// three sanity entries the judge must fail. `sheetEntries` is also what the calibration asks the judge
+// (calibration.ts): the sheet and the questions are the same.
 import { pedidosYPagina } from "../../juez";
 import type { DatosDelCaso } from "../../tipos";
 import type { FetchedCase } from "./fetched";
@@ -21,21 +22,42 @@ export const SANITY_ENTRIES: readonly { readonly nombre: string; readonly pedido
   },
 ];
 
-/** Every page of a state, home first: the judge reads the whole published site. */
-const allHtml = (d: DatosDelCaso): string => [d.html ?? "", ...Object.values(d.pages ?? {}).map((p) => p.html)].join("\n");
+/** The visible text of every page of a state, home first: `renderedText` with a browser, a stand-in in tests. */
+export type Painter = (d: DatosDelCaso) => Promise<string>;
+
+const viewOf = (pedidos: readonly string[], texto: string) => pedidosYPagina(pedidos.map((t) => ({ quien: "dueno", texto: t })), texto);
+
+export interface SheetEntry {
+  /** `cliente-<8 hex>` for a real case, `cordura-<name>` for a sanity entry. */
+  readonly caso: string;
+  readonly cordura: boolean;
+  /** Exactly what the judge is shown (the `pedidos_y_pagina` focus). */
+  readonly view: string;
+}
+
+/** Up to `max` customer cases (the most recent first, as cases.json), then the sanity entries, all painted alike. */
+export async function sheetEntries(cases: readonly FetchedCase[], paint: Painter, max = 15): Promise<SheetEntry[]> {
+  const out: SheetEntry[] = [];
+  for (const c of cases.slice(0, max)) {
+    out.push({ caso: `cliente-${c.projectId.slice(0, 8)}`, cordura: false, view: viewOf(c.ownerMessages, await paint(c.final)) });
+  }
+  for (const s of SANITY_ENTRIES) {
+    out.push({ caso: `cordura-${s.nombre}`, cordura: true, view: viewOf(s.pedidos, await paint({ html: s.html })) });
+  }
+  return out;
+}
 
 const section = (title: string, view: string) => `## ${title}\n\n\`\`\`text\n${view}\n\`\`\`\n\nTu etiqueta: [ ] PASS · [ ] FAIL\n`;
 
 /** The sheet, as markdown: the criterion once, up to `max` cases, then the sanity entries. */
-export function judgeSheet(cases: readonly FetchedCase[], max = 15): string {
-  const picked = cases.slice(0, max);
-  const parts = [
+export async function judgeSheet(cases: readonly FetchedCase[], paint: Painter, max = 15): Promise<string> {
+  let n = 0;
+  const entries = await sheetEntries(cases, paint, max);
+  return [
     `# Calibración del juez — batería 1 de Len 3.1\n\nCriterio (el mismo para todos):\n\n> ${CUMPLE_LO_PEDIDO}\n\n` +
       `Marca cada caso como lo marcarías tú. El juez vota sólo si coincide contigo en ~90 %.\n`,
-    ...picked.map((c, i) =>
-      section(`${i + 1}. cliente-${c.projectId.slice(0, 8)}`, pedidosYPagina(c.ownerMessages.map((texto) => ({ quien: "dueno", texto })), allHtml(c.final))),
+    ...entries.map((e) =>
+      e.cordura ? section(`cordura · ${e.caso.replace(/^cordura-/, "")} · esperado: FAIL`, e.view) : section(`${++n}. ${e.caso}`, e.view),
     ),
-    ...SANITY_ENTRIES.map((s) => section(`cordura · ${s.nombre} · esperado: FAIL`, pedidosYPagina(s.pedidos.map((texto) => ({ quien: "dueno", texto })), s.html))),
-  ];
-  return parts.join("\n");
+  ].join("\n");
 }
