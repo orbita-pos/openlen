@@ -1102,8 +1102,10 @@ export function enlacesInternosVan(peso = 2): Grader {
  * (`/entrenos/#la-larga`), que aquél no mira. Un `href="#"` no lleva a ninguna
  * página: es un botón sin destino, y ése lo cuenta `enlaces-internos-van`.
  */
-/** Lo mínimo que es una página: texto visible de verdad. Tres palabras («No sé.») no lo son. */
-const MINIMO_DE_PAGINA = 200;
+/** Lo mínimo que es una página: texto visible de verdad. Tres palabras («No sé.», 6) no lo son; la página en blanco
+ *  (el nulo) tiene 0. Era 200 y suspendía una página de verdad: un juego de un cliente (1392b65e) con 15 botones y
+ *  123 caracteres de texto. Calibrado el 15/11 contra los 24 estados finales de clientes. */
+const MINIMO_DE_PAGINA = 50;
 
 /**
  * ¿HAY UNA PÁGINA? El NULO de la batería de clientes de Len 3.1 (revisión C1, 15/11): todos los graders que votaban
