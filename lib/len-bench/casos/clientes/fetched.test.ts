@@ -73,6 +73,12 @@ describe("fetchedCaseFrom", () => {
     expect("left" in fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, attachedImage: [], attachedFiles: [] }] }), "t")).toBe(false);
   });
 
+  it("a project where Len made an ARTIFACT (a dashboard, a deck) is another flow, not a page: left out", () => {
+    const artefacto = { role: "assistant", content: "", functionCalls: [{ name: "create_artifact", args: {} }] };
+    const c = fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, transcript: { mensajes: [artefacto] } }] }), "t");
+    expect(c).toEqual({ left: "Len hizo un artefacto (create_artifact), no la página: es otro flujo" });
+  });
+
   it("a project with no owner message is not a case", () => {
     expect(fetchedCaseFrom(raw({ rows: [] }), "t")).toEqual({ left: "sin mensajes del dueño" });
   });

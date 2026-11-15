@@ -89,6 +89,12 @@ export function fetchedCaseFrom(raw: RawCaseRows, fetchedAt: string): FetchedCas
   if (raw.rows.some((r) => attached(r.attachedImage) || attached(r.attachedFiles))) {
     return { left: "el dueño adjuntó una foto o un fichero: el banco no repite adjuntos" };
   }
+  // The battery measures «crear, editar y publicar una página»; a dashboard or a deck is another flow, and its
+  // project's page stays empty — the oracle would be a page nobody asked for (case 25b92e46, 15/11).
+  const madeArtifact = raw.rows.some((r) =>
+    ((r.transcript?.mensajes ?? []) as Wire[]).some((m) => (m.functionCalls ?? []).some((c) => c.name === "create_artifact")),
+  );
+  if (madeArtifact) return { left: "Len hizo un artefacto (create_artifact), no la página: es otro flujo" };
   return {
     projectId: raw.projectId,
     fetchedAt,
