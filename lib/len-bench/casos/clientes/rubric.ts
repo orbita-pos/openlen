@@ -9,6 +9,7 @@ import {
   lenPublico,
   nadaInventado,
   ningunEnlaceRoto,
+  paginaHecha,
   sinCifrasInventadas,
   sinDesbordeMovil,
 } from "../../graders";
@@ -25,6 +26,8 @@ export const CUMPLE_LO_PEDIDO =
 export function customerGraders(f: FetchedCase): Grader[] {
   return [
     ...(f.published ? [lenPublico()] : []),
+    // The battery's null (review C1): without it a blank page passed every voting grader.
+    paginaHecha(),
     nadaInventado(),
     sinCifrasInventadas(),
     sinDesbordeMovil(),

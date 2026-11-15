@@ -1102,6 +1102,35 @@ export function enlacesInternosVan(peso = 2): Grader {
  * (`/entrenos/#la-larga`), que aquél no mira. Un `href="#"` no lleva a ninguna
  * página: es un botón sin destino, y ése lo cuenta `enlaces-internos-van`.
  */
+/** Lo mínimo que es una página: texto visible de verdad. Tres palabras («No sé.») no lo son. */
+const MINIMO_DE_PAGINA = 200;
+
+/**
+ * ¿HAY UNA PÁGINA, Y NO ES LA DE PARTIDA? El NULO de la batería de clientes de Len 3.1 (revisión C1, 15/11): todos
+ * los graders que votaban eran «no hizo nada mal» —nada inventado, nada desborda, nada roto—, así que una página
+ * en blanco los pasaba todos y un Len que no escribe nada contaba como encargo terminado. Puro: recibe el HTML de
+ * todo lo publicado y el de la partida.
+ */
+export function veredictoPaginaHecha(publicado: string, inicio: string): { paso: boolean; explicacion: string } {
+  const visible = textoVisible(publicado).replace(/\s+/g, " ").trim();
+  if (visible.length < MINIMO_DE_PAGINA) {
+    return { paso: false, explicacion: `lo publicado tiene ${visible.length} caracteres de texto visible: no hay una página (mínimo ${MINIMO_DE_PAGINA})` };
+  }
+  if (visible === textoVisible(inicio).replace(/\s+/g, " ").trim()) return { paso: false, explicacion: "lo publicado es la página de partida, sin cambios" };
+  return { paso: true, explicacion: `hay una página (${visible.length} caracteres de texto visible) y no es la de partida` };
+}
+
+export function paginaHecha(peso = 3): Grader {
+  return {
+    nombre: "pagina-hecha",
+    peso,
+    async calificar(ctx) {
+      const inicio = [htmlDe(ctx.inicio), ...Object.values(ctx.inicio.pages ?? {}).map((p) => p.html)].join("\n");
+      return veredictoPaginaHecha(await todoLoPublicado(ctx), inicio);
+    },
+  };
+}
+
 export function ningunEnlaceRoto(peso = 3): Grader {
   return {
     nombre: "ningun-enlace-roto",

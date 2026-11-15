@@ -34,6 +34,13 @@ describe("revisarCaso — un caso de cliente", () => {
     expect(r.ok).toBe(false);
     expect(r.problemas).toEqual(["regla 2 — el estado final de producción no pasa nada-inventado: no están en la ficha: teléfono 3312345678"]);
   });
+  it("el NULO: si la página en blanco pasa todos los graders que votan, el caso no mide nada (revisión C1)", () => {
+    const r = revisarCaso(cliente, {
+      solucion: [res("nada-inventado", true), res("enlaces", true)],
+      variantes: [...enRojo, { nombre: "pagina-en-blanco", graders: [res("nada-inventado", true), res("enlaces", true)] }],
+    });
+    expect(r.problemas).toContain("nulo — la página en blanco pasa todos los graders que votan: un Len que no escribe nada contaría como encargo terminado");
+  });
   it("la regla 4 no aplica: no se escribe a mano lo que el cliente no pidió tocar, y lo dice", () => {
     const r = revisarCaso(cliente, { solucion: [res("nada-inventado", true), res("enlaces", true)], variantes: enRojo });
     expect(r.ok).toBe(true);

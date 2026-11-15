@@ -24,6 +24,8 @@ export interface RawCaseRows {
     readonly userText: string;
     readonly attachedImage: unknown;
     readonly attachedFiles: unknown;
+    /** The site page the owner was looking at when they typed it (`projectChatMessages.page`); null = Home. */
+    readonly page?: string | null;
     readonly createdAt: string;
     readonly transcript: { readonly mensajes?: readonly unknown[] } | null;
   }[];
@@ -95,15 +97,37 @@ export function fetchedCaseFrom(raw: RawCaseRows, fetchedAt: string): FetchedCas
     ((r.transcript?.mensajes ?? []) as Wire[]).some((m) => (m.functionCalls ?? []).some((c) => c.name === "create_artifact")),
   );
   if (madeArtifact) return { left: "Len hizo un artefacto (create_artifact), no la página: es otro flujo" };
+  // Review I4: the bench sends every message against Home; one typed while looking at a sub-page would be another
+  // request. Left out and counted, as attachments.
+  if (raw.rows.some((r) => typeof r.page === "string" && r.page !== "")) {
+    return { left: "un mensaje se escribió viendo una subpágina: el banco lo repetiría contra la portada" };
+  }
+  // Review I1: «published» is a publish LEN made. A customer who published with the publish button never asked Len,
+  // and the replay would fail len-publico in both columns.
+  const lenPublished = raw.rows.some((r) =>
+    ((r.transcript?.mensajes ?? []) as Wire[]).some((m) => (m.functionCalls ?? []).some((c) => c.name === "publish")),
+  );
   return {
     projectId: raw.projectId,
     fetchedAt,
     start: startOf(raw.versionsBefore),
-    final: raw.project.data,
+    final: pageStateOf(raw.project.data),
     ownerMessages: raw.rows.map((r) => r.userText),
     cardAnswers: cardAnswersOf(raw.rows),
-    published: raw.project.subdomain ? { subdomain: raw.project.subdomain } : null,
+    published: lenPublished && raw.project.subdomain ? { subdomain: raw.project.subdomain } : null,
   };
+}
+
+/** Review I3: of `projects.data`, only what a page is — the Home's html and each page's html, title and
+ *  membersOnly. Never a preview token, a passcode or anything else the project keeps. */
+function pageStateOf(data: DatosDelCaso): DatosDelCaso {
+  const pages = Object.fromEntries(
+    Object.entries(data.pages ?? {}).map(([slug, p]) => [
+      slug,
+      { html: p.html, ...(typeof p.title === "string" ? { title: p.title } : {}), ...(p.membersOnly === true ? { membersOnly: true } : {}) },
+    ]),
+  );
+  return { html: data.html ?? "", ...(Object.keys(pages).length > 0 ? { pages } : {}) };
 }
 
 /** Where the cases live: outside the repo, always. */

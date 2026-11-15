@@ -36,11 +36,16 @@ function fetchRaw(projectId: string): RawCaseRows | null {
     with first as (select min(m."createdAt") as at from ${OWNER_ROWS(projectId)})
     select json_build_object(
       'projectId', p.id,
-      'project', json_build_object('data', p.data, 'subdomain', p.subdomain),
+      -- Review I3: only what a page is leaves the box (never a preview token, a passcode or anything else).
+      'project', json_build_object('data', json_build_object(
+          'html', p.data->'html',
+          'pages', coalesce((select json_object_agg(e.k, json_build_object('html', e.v->'html', 'title', e.v->'title', 'membersOnly', e.v->'membersOnly'))
+                             from jsonb_each(case when jsonb_typeof(p.data->'pages') = 'object' then p.data->'pages' else '{}'::jsonb end) as e(k, v)), '{}'::json)),
+        'subdomain', p.subdomain),
       'versionsBefore', coalesce((select json_agg(json_build_object('page', v.page, 'html', v.html, 'createdAt', v."createdAt") order by v."createdAt")
                                   from "projectVersions" v, first where v."projectId" = p.id and v."createdAt" < first.at), '[]'::json),
       'rows', coalesce((select json_agg(json_build_object('userText', m."userText", 'attachedImage', m."attachedImage", 'attachedFiles', m."attachedFiles",
-                                                          'createdAt', m."createdAt", 'transcript', m.transcript) order by m."createdAt")
+                                                          'page', m.page, 'createdAt', m."createdAt", 'transcript', m.transcript) order by m."createdAt")
                         from ${OWNER_ROWS(projectId)}), '[]'::json)
     ) from projects p where p.id = '${projectId}';`);
   return json ? (JSON.parse(json) as RawCaseRows) : null;

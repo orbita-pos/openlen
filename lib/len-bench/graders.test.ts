@@ -5,6 +5,27 @@
 // release de verdad servida como Caddy (regla 3 del diseño de Len-Bench). Los
 // que abren Chromium están en graders.browser.test.ts.
 import { describe, expect, it } from "vitest";
+import { veredictoPaginaHecha } from "./graders";
+
+// EL NULO DE LA BATERÍA DE CLIENTES (revisión C1, 15/11): una página en blanco pasaba todos los graders que votan
+// —todos eran «no hizo nada mal»—, así que un Len que no escribe nada contaba como encargo terminado.
+describe("veredictoPaginaHecha — hay una página, y no es la de partida", () => {
+  const larga = `<body><h1>Panadería</h1><p>${"Pan dulce y bolillo recién hecho todos los días. ".repeat(6)}</p></body>`;
+  it("una página en blanco no es un encargo hecho", () => {
+    expect(veredictoPaginaHecha("", "").paso).toBe(false);
+  });
+  it("tres palabras tampoco: hace falta una página de verdad", () => {
+    expect(veredictoPaginaHecha("<body><p>No sé.</p></body>", "").paso).toBe(false);
+  });
+  it("la misma página de partida, sin cambiar nada, tampoco", () => {
+    expect(veredictoPaginaHecha(larga, larga).paso).toBe(false);
+  });
+  it("una página con contenido, distinta de la partida, sí", () => {
+    expect(veredictoPaginaHecha(larga, "").paso).toBe(true);
+    expect(veredictoPaginaHecha(larga, "<body><p>otra cosa</p></body>").paso).toBe(true);
+  });
+});
+
 import {
   contieneTexto,
   datosDeLaFicha,
