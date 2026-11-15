@@ -65,6 +65,18 @@ describe("agreement", () => {
     expect(agreement(labels, [...todos, { caso: "cordura-pagina-vacia", paso: false }]).vota).toBe(true);
     expect(agreement(labels, [...todos, { caso: "cordura-pagina-vacia", paso: true }]).vota).toBe(false);
   });
+  // A sheet that is mostly PASS rewards a judge that always says PASS: how many of the cases labelled FAIL it also
+  // failed is said apart (the sanity entries are not cases: they are counted in `cordura`).
+  it("says how many of the cases labelled FAIL the judge also failed", () => {
+    const r = agreement(labels, [
+      { caso: "cliente-aaaaaaaa", paso: true },
+      { caso: "cliente-bbbbbbbb", paso: true },
+      { caso: "cliente-cccccccc", paso: false },
+      { caso: "cordura-pagina-vacia", paso: false },
+    ]);
+    expect(r.fallosAtrapados).toEqual({ atrapados: 0, total: 1 });
+    expect(agreement(labels, [{ caso: "cliente-bbbbbbbb", paso: false }]).fallosAtrapados).toEqual({ atrapados: 1, total: 1 });
+  });
   it("a verdict without a label is a mistake in the inputs, said by id", () => {
     expect(() => agreement(labels, [{ caso: "cliente-zzzzzzzz", paso: true }])).toThrow(/cliente-zzzzzzzz/);
   });

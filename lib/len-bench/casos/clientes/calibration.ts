@@ -43,11 +43,14 @@ export function agreement(labels: readonly ReferenceLabel[], verdicts: readonly 
   pct: number;
   desacuerdos: { caso: string; etiqueta: "PASS" | "FAIL"; juez: "PASS" | "FAIL" }[];
   cordura: { caso: string; juez: "PASS" | "FAIL"; ok: boolean }[];
+  /** Of the cases labelled FAIL, how many the judge failed too: a mostly-PASS sheet rewards a judge that always says PASS. */
+  fallosAtrapados: { atrapados: number; total: number };
   vota: boolean;
 } {
   const byKey = new Map(labels.map((l) => [key(l.caso), l]));
   let acuerdo = 0;
   let total = 0;
+  const fallosAtrapados = { atrapados: 0, total: 0 };
   const desacuerdos: { caso: string; etiqueta: "PASS" | "FAIL"; juez: "PASS" | "FAIL" }[] = [];
   const cordura: { caso: string; juez: "PASS" | "FAIL"; ok: boolean }[] = [];
   for (const v of verdicts) {
@@ -58,9 +61,13 @@ export function agreement(labels: readonly ReferenceLabel[], verdicts: readonly 
     const label = byKey.get(key(v.caso));
     if (!label) throw new Error(`el juez juzgó ${v.caso} y no hay etiqueta para ese caso`);
     total++;
+    if (label.etiqueta === "FAIL") {
+      fallosAtrapados.total++;
+      if (!v.paso) fallosAtrapados.atrapados++;
+    }
     if ((label.etiqueta === "PASS") === v.paso) acuerdo++;
     else desacuerdos.push({ caso: v.caso, etiqueta: label.etiqueta, juez: word(v.paso) });
   }
   const pct = total === 0 ? 0 : (100 * acuerdo) / total;
-  return { acuerdo, total, pct, desacuerdos, cordura, vota: total > 0 && pct >= CALIBRATION_BAR && cordura.every((c) => c.ok) };
+  return { acuerdo, total, pct, desacuerdos, cordura, fallosAtrapados, vota: total > 0 && pct >= CALIBRATION_BAR && cordura.every((c) => c.ok) };
 }

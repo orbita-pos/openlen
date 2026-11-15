@@ -90,6 +90,7 @@ async function main(): Promise<void> {
     return;
   }
   console.log(`acuerdo ${acuerdo.acuerdo}/${acuerdo.total} = ${acuerdo.pct.toFixed(1)} %`);
+  console.log(`FAIL de referencia que el juez también falla: ${acuerdo.fallosAtrapados.atrapados}/${acuerdo.fallosAtrapados.total}`);
   for (const d of acuerdo.desacuerdos) console.log(`  desacuerdo ${d.caso}: etiqueta ${d.etiqueta}, juez ${d.juez}`);
   for (const c of acuerdo.cordura) console.log(`  cordura ${c.caso}: juez ${c.juez}${c.ok ? "" : "  ← tenía que ser FAIL"}`);
   console.log(acuerdo.vota ? "El juez VOTA (≥ 90 % y cordura en FAIL)." : "El juez NO vota todavía.");
