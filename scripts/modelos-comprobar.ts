@@ -46,33 +46,25 @@
 // NO. Una puerta que sólo se ha visto en verde no está verificada: está sin
 // mirar, que es el mismo defecto que persigue.
 
+import { deepinfraListPrice, policyModels, tariffedProvider, type PolicyModel } from "@/lib/ai/policy-models";
+import { PROVIDER_DIALECTS, type ProviderId } from "@/lib/ai/providers";
 import { TARIFAS_POR_MILLON, type TarifaPorMillon } from "@/lib/ai/tarifas";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
-const ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
-
-/** Los modelos DISTINTOS que nombra la política, con los papeles que los piden.
- *
- *  Se deduplica porque dos papeles pueden compartir modelo —desde el
- *  2026-09-12 `agent` y `visualCritic` lo hacen— y preguntar dos veces por el
- *  mismo no dice nada nuevo. El papel viaja al lado para que el mensaje de
- *  fallo nombre lo que se rompe, no sólo la cadena que falla. */
-function modelosDeLaPolitica(): Map<string, string[]> {
-  const porModelo = new Map<string, string[]>();
-  for (const [papel, cfg] of Object.entries(MODEL_POLICY)) {
-    const previos = porModelo.get(cfg.modelId) ?? [];
-    porModelo.set(cfg.modelId, [...previos, papel]);
-  }
-  return porModelo;
-}
+// LOS MODELOS DISTINTOS QUE NOMBRA LA POLÍTICA, POR PROVEEDOR (lib/ai/policy-models.ts). Hasta el 2026-11-15
+// todos eran de Fireworks y esto sólo hablaba con Fireworks; el juez de Len-Bench es de DeepInfra, y el papel
+// `agent` corre primero en DeepInfra: se pregunta a cada proveedor por lo suyo. Se deduplica porque dos papeles
+// pueden compartir modelo y preguntar dos veces no dice nada nuevo; el papel viaja al lado para que el fallo
+// nombre lo que se rompe.
 
 async function responde(
+  provider: ProviderId,
   modelId: string,
   apiKey: string,
 ): Promise<{ ok: true } | { ok: false; detalle: string }> {
   let r: Response;
   try {
-    r = await fetch(ENDPOINT, {
+    r = await fetch(PROVIDER_DIALECTS[provider].endpoint, {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
       // El aviso más corto que el proveedor acepta. No se lee la respuesta: lo
@@ -214,7 +206,15 @@ function cotejaUno(
     };
   }
   const suya = globales[0]!;
+  return cotejaTarifa(esperada, suya, suya.etiqueta);
+}
 
+/** La lista pública de modelos de DeepInfra: el precio de lista de cada uno, sin clave (spec local
+ *  2026-11-12-len-3-1-ruta, §7.1). */
+const LISTA_DE_DEEPINFRA = "https://api.deepinfra.com/models/list";
+
+/** Eje por eje, la nuestra contra la suya. */
+function cotejaTarifa(esperada: TarifaPorMillon, suya: TarifaPorMillon, etiqueta: string): Cotejo {
   const dif: string[] = [];
   const eje = (nombre: string, nuestro: number | undefined, suyo: number): void => {
     if (nuestro === undefined) {
@@ -229,36 +229,41 @@ function cotejaUno(
   eje("cacheada", esperada.cached, suya.cached);
   eje("salida", esperada.output, suya.output);
 
-  return dif.length === 0 ? { ok: true } : { ok: false, detalle: `«${suya.etiqueta}» · ${dif.join(" · ")}` };
+  return dif.length === 0 ? { ok: true } : { ok: false, detalle: `«${etiqueta}» · ${dif.join(" · ")}` };
 }
 
 async function main(): Promise<void> {
-  const apiKey = process.env.FIREWORKS_API_KEY?.trim();
-  if (!apiKey) {
-    // Sin clave NO se pasa en verde. Una comprobación que se salta sola cuando
-    // le falta algo es peor que no tenerla: da el visto bueno sin haber mirado,
-    // que es exactamente la forma del defecto que este fichero persigue.
-    console.error("FIREWORKS_API_KEY no está — no se puede comprobar nada. Esto NO es un pase.");
-    process.exit(1);
-  }
-
-  const porModelo = modelosDeLaPolitica();
+  const modelos: PolicyModel[] = policyModels();
+  // `--ademas=` es un modelo de Fireworks fuera de la política (un candidato, o probar que esto sabe decir NO).
   for (const arg of process.argv.filter((a) => a.startsWith("--ademas="))) {
     const id = arg.slice("--ademas=".length).trim();
-    if (id) porModelo.set(id, [...(porModelo.get(id) ?? []), "pedido a mano"]);
+    if (id) modelos.push({ provider: "fireworks", modelId: id, roles: ["pedido a mano"] });
   }
-  console.log(`comprobando ${porModelo.size} modelos…\n`);
+  // Sin la clave de un proveedor que la política nombra NO se pasa en verde. Una comprobación que se salta
+  // sola cuando le falta algo es peor que no tenerla: da el visto bueno sin haber mirado, que es exactamente
+  // la forma del defecto que este fichero persigue.
+  const claves = new Map<ProviderId, string>();
+  for (const provider of new Set(modelos.map((m) => m.provider))) {
+    const env = PROVIDER_DIALECTS[provider].apiKeyEnv;
+    const clave = process.env[env]?.trim();
+    if (!clave) {
+      console.error(`${env} no está y la política nombra modelos de ${provider} — no se puede comprobar. Esto NO es un pase.`);
+      process.exit(1);
+    }
+    claves.set(provider, clave);
+  }
+  console.log(`comprobando ${modelos.length} modelos…\n`);
 
   const muertos: string[] = [];
-  for (const [modelId, papeles] of porModelo) {
-    const r = await responde(modelId, apiKey);
-    const quien = papeles.join(", ");
+  for (const m of modelos) {
+    const r = await responde(m.provider, m.modelId, claves.get(m.provider)!);
+    const quien = m.roles.join(", ");
     if (r.ok) {
-      console.log(`  ok    ${modelId}  (${quien})`);
+      console.log(`  ok    ${m.provider}/${m.modelId}  (${quien})`);
     } else {
-      console.log(`  MUERTO ${modelId}  (${quien})`);
+      console.log(`  MUERTO ${m.provider}/${m.modelId}  (${quien})`);
       console.log(`         ${r.detalle}`);
-      muertos.push(`${modelId} — lo piden: ${quien}`);
+      muertos.push(`${m.provider}/${m.modelId} — lo piden: ${quien}`);
     }
   }
 
@@ -278,12 +283,22 @@ async function main(): Promise<void> {
     console.error("   Esto NO es un pase: no se ha cotejado ninguna tarifa.");
     process.exit(1);
   }
+  // La tarifa de un papel se coteja donde sale su `creditRate`: Fireworks (su página de precios) o DeepInfra
+  // (la lista pública de su API, una descarga sin clave, sólo si algún papel la necesita).
+  let listaDeDeepinfra: unknown = null;
   const vistos = new Set<string>();
   for (const [papel, cfg] of Object.entries(MODEL_POLICY)) {
     if (vistos.has(cfg.modelId)) continue;
     vistos.add(cfg.modelId);
     const nuestra: TarifaPorMillon = TARIFAS_POR_MILLON[cfg.creditRate];
-    const c = cotejaUno(cfg.modelId, nuestra, tabla);
+    let c: Cotejo;
+    if (tariffedProvider(cfg) === "deepinfra") {
+      listaDeDeepinfra ??= await fetch(LISTA_DE_DEEPINFRA).then((r) => (r.ok ? r.json() : `http_${r.status}`)).catch((e: unknown) => `sin red: ${e instanceof Error ? e.message : String(e)}`);
+      const suya = deepinfraListPrice(listaDeDeepinfra, cfg.modelId);
+      c = typeof suya === "string" ? { ok: false, detalle: suya } : cotejaTarifa(nuestra, suya, `${cfg.modelId} en DeepInfra`);
+    } else {
+      c = cotejaUno(cfg.modelId, nuestra, tabla);
+    }
     if (c.ok) {
       console.log(`  ok    ${cfg.modelId}  (${cfg.creditRate})`);
     } else {

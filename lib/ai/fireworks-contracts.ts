@@ -4,7 +4,9 @@ import type { ModelTokenUsage } from "../generation/model-cost";
 
 // ⚰️ `designer` (GLM 5p2) salió el 2026-09-06 con las dos únicas operaciones
 // que lo pedían — ver la lápida en `lib/generation/model-policy.ts`.
-export type ModelRole = "reasoner" | "visual_critic" | "agent";
+/** `judge`: el juez de Len-Bench (lib/len-bench/juez.ts), de otra familia que Len y en DeepInfra. Sólo lo
+ *  llama el banco, nunca un usuario. */
+export type ModelRole = "reasoner" | "visual_critic" | "agent" | "judge";
 export type FireworksReasoningEffort = "none" | "high" | "max";
 export type FireworksServiceTier = "standard" | "priority";
 // Runtime list, not just a type: telemetry validates against it, and a value

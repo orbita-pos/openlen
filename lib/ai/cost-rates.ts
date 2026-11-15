@@ -49,6 +49,9 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // Standard, 51 % promotion; cached price rounded as displayed. Without the
   // promotion, 0.20 / 0.006 / 0.60. Keep the previous id for historical usage.
   "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017": { input: 0.098, cached: 0.003, output: 0.294 },
+  // The Len-Bench judge (role `judge`, 2026-11-15). api.deepinfra.com/models/list, read 2026-11-15:
+  // 0.113 / 0.382 per million, cached at 0.12477876 of the input, no promotion.
+  "deepinfra/Qwen/Qwen3.8-Flash": { input: 0.113, cached: 0.0141, output: 0.382 },
 };
 
 export const UNIT_COSTS_USD = {

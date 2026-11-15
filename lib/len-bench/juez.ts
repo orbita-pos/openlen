@@ -23,8 +23,10 @@
 //     hay ese foco.
 // Y lo que dice la memoria `llm-judge-is-not-a-ship-gate`: un juez se estrena
 // SIN votar (`puntua: false`, su `scored: false`) hasta que haya corpus.
-import { callModel } from "@/lib/style-match/autofill/model-call";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import crypto from "node:crypto";
+import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { PROVIDER_DIALECTS } from "@/lib/ai/providers";
+import { MODEL_POLICY, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
 import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { WHOLE_HISTORY, historialDesdeLaBase, type FilaDelHistorial, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion, Grader } from "./tipos";
@@ -83,22 +85,47 @@ export function gastoDelJuez(): number {
   return gastado;
 }
 
-const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
-  const r = await callModel({
-    system: sistema,
-    user: usuario,
-    operation: "len_bench_juez",
-    requestId: "len-bench-juez",
-    maxOutputTokens: 16,
-    // El suyo no la fija: va con la de la API por defecto, 1. Con cero, los
-    // tres votos saldrían iguales y votar no serviría.
-    temperature: 1,
-  });
-  if (!r.ok) throw new Error(`el juez no contestó (${r.kind}): ${r.message}`);
-  const tarifa = rateFor(modelIdForRole(roleForOperation("len_bench_juez")));
-  const usd = r.usage ? usdDeTurno({ entrada: r.usage.inputTokens, cacheada: 0, salida: r.usage.outputTokens }, tarifa) : 0;
-  return { texto: r.raw, usd };
-};
+/**
+ * EL JUEZ, EN DEEPINFRA (papel `judge`, model-policy.ts; desde el 15/11). Ya no pasa por `callModel`, que sólo
+ * habla con Fireworks: el cliente de flujo con el dialecto de DeepInfra, como `scripts/measure/wire-probe.ts`.
+ * La clave de caché es la huella del prompt: los tres votos de un mismo prompt la comparten y los dos
+ * últimos se leen de caché. Sin `DEEPINFRA_API_KEY` lanza: no cae a Fireworks ni a otro modelo, que sería
+ * otro juez.
+ */
+export function createJudgeCall(o: { readonly makeClient?: typeof createFireworksStreamClient; readonly env?: NodeJS.ProcessEnv | Readonly<Record<string, string | undefined>> } = {}): LlamarAlJuez {
+  const makeClient = o.makeClient ?? createFireworksStreamClient;
+  const env = o.env ?? process.env;
+  const proveedor = MODEL_POLICY.judge.providers[0]!;
+  const dialecto = PROVIDER_DIALECTS[proveedor.provider];
+  return async (sistema, usuario) => {
+    const apiKey = env[dialecto.apiKeyEnv]?.trim();
+    if (!apiKey) throw new Error(`el juez no tiene clave: falta ${dialecto.apiKeyEnv} (el juez es ${proveedor.modelId} en ${proveedor.provider}, sin respaldo)`);
+    const cliente = makeClient({ apiKey, endpoint: dialecto.endpoint, modelId: proveedor.modelId, affinityField: dialecto.affinityField, effortStyle: dialecto.effortStyle });
+    let texto = "";
+    let uso: { inputTokens: number; cachedTokens: number; outputTokens: number } | undefined;
+    for await (const ev of cliente.stream({
+      messages: [
+        { role: "system", content: sistema },
+        { role: "user", content: usuario },
+      ],
+      maxOutputTokens: 16,
+      // El suyo no la fija: va con la de la API por defecto, 1. Con cero, los
+      // tres votos saldrían iguales y votar no serviría.
+      temperature: 1,
+      requestId: `len-bench-juez-${crypto.createHash("sha256").update(`${sistema}\n${usuario}`).digest("hex").slice(0, 16)}`,
+      operation: "len_bench_juez",
+    })) {
+      if (ev.type === "text_delta") texto += ev.text;
+      else if (ev.type === "usage") uso = { inputTokens: ev.inputTokens, cachedTokens: Math.min(ev.cachedTokens ?? 0, ev.inputTokens), outputTokens: ev.outputTokens };
+      else if (ev.type === "done" && ev.stopReason.kind === "error") throw new Error(`el juez no contestó: ${String(ev.stopReason.error)}`);
+    }
+    const tarifa = rateFor(MODEL_POLICY.judge.modelId);
+    const usd = uso ? usdDeTurno({ entrada: uso.inputTokens, cacheada: uso.cachedTokens, salida: uso.outputTokens }, tarifa) : 0;
+    return { texto, usd };
+  };
+}
+
+const llamarDeVerdad: LlamarAlJuez = (sistema, usuario) => createJudgeCall()(sistema, usuario);
 
 /** El texto que ve el juez, según el foco. La traza, un mensaje por línea en
  *  JSON y, si es larga, sus 12 primeros y sus 12 últimos, como la suya. */

@@ -51,8 +51,10 @@ describe("tokenCostMicroUsd", () => {
 
   it("every provider of every role has a cost rate", () => {
     for (const policy of Object.values(MODEL_POLICY)) {
-      expect(TOKEN_COST_RATES[`fireworks/${policy.modelId}`], policy.modelId).toBeDefined();
       const providers = (policy as { providers?: readonly { provider: string; modelId: string }[] }).providers ?? [];
+      // A role's `modelId` belongs to Fireworks unless its providers say otherwise (the judge's is DeepInfra's).
+      const own = providers.find((p) => p.modelId === policy.modelId)?.provider ?? "fireworks";
+      expect(TOKEN_COST_RATES[`${own}/${policy.modelId}`], policy.modelId).toBeDefined();
       for (const p of providers) expect(TOKEN_COST_RATES[`${p.provider}/${p.modelId}`], `${p.provider}/${p.modelId}`).toBeDefined();
     }
     // The agent has its second provider, so the loop above did check DeepInfra.

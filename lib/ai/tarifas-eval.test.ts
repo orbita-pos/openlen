@@ -38,6 +38,13 @@ describe("las tarifas salen de donde se cobra", () => {
   // quien corra, es que el arnés tarifique el papel `agent` a un precio
   // distinto del que se le cobra al usuario: ése era el fallo original (se
   // cobraba Pro a precio de Flash) y es el que se afirma.
+  it("el juez de Len-Bench se tarifica a su precio, no al de respaldo (el más caro)", () => {
+    const delJuez = rateFor(MODEL_POLICY.judge.modelId);
+    const suTarifa = creditRate(MODEL_POLICY.judge.creditRate);
+    expect(delJuez).toEqual({ input: suTarifa.input, cached: suTarifa.cached ?? 0, output: suTarifa.output });
+    expect(delJuez).not.toEqual(rateFor("un-modelo-que-no-existe"));
+  });
+
   it("el arnés tarifica el papel `agent` EXACTAMENTE a lo que se le cobra al usuario", () => {
     const delArnes = rateFor(MODEL_POLICY.agent.modelId);
     const delCobro = creditRate(MODEL_POLICY.agent.creditRate);
@@ -98,6 +105,7 @@ describe("las tarifas salen de donde se cobra", () => {
       MODEL_POLICY.reasoner.modelId,
       MODEL_POLICY.visualCritic.modelId,
       MODEL_POLICY.agent.modelId,
+      MODEL_POLICY.judge.modelId,
     ]);
     expect([...MODELOS_TARIFADOS].sort()).toEqual([...corriendo].sort());
   });
