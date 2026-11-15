@@ -9,7 +9,23 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { estimateFromPilot, infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "./run-store";
+import { estimateFromPilot, infraFailures, keptRuns, recordSpend, runKey, runsDirProblem, saveRun, spentSoFar } from "./run-store";
+
+describe("the spend of a column survives a resume (review I1)", () => {
+  it("a column that resumes keeps counting from what it already spent — infra failures included", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-spend-"));
+    expect(spentSoFar(dir)).toBe(0);
+    recordSpend(dir, 0.03);
+    recordSpend(dir, 0.05);
+    expect(spentSoFar(dir)).toBeCloseTo(0.08, 12);
+  });
+  it("a negative or non-finite amount is never recorded as spent", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lb-spend-"));
+    recordSpend(dir, Number.NaN);
+    recordSpend(dir, -1);
+    expect(spentSoFar(dir)).toBe(0);
+  });
+});
 import { resumirCaso } from "./puntuar";
 import type { ResultadoDeCorrida } from "./tipos";
 

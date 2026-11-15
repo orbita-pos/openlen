@@ -13,7 +13,8 @@ import path from "node:path";
 import { Pool } from "pg";
 import { BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES } from "@/lib/len-bench/entorno";
 import { poolSql } from "@/lib/len-bench/cold-return/world";
-import { estimateFromPilot, infraFailures, keptRuns, runKey, runsDirProblem, saveRun } from "@/lib/len-bench/run-store";
+import { measuresFromSteps, preflightSteps } from "@/lib/len-bench/steps-of-run";
+import { estimateFromPilot, infraFailures, keptRuns, recordSpend, runKey, runsDirProblem, saveRun, spentSoFar } from "@/lib/len-bench/run-store";
 import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
@@ -120,9 +121,18 @@ async function main(): Promise<number> {
   }
 
   const navegador = await lanzarNavegador();
-  // Cada corrida se mide desde `agentRequestSteps` de la base del banco (steps-of-run.ts): el servidor
-  // puede correr en otra carpeta, con sus grabaciones en ella (la columna base de Len 3.1).
+  // La batería de Len 3.1 (o `--medir-desde-la-base`) se mide desde `agentRequestSteps` de la base del banco
+  // (steps-of-run.ts): su columna base corre en otra carpeta, con sus grabaciones en ella. Los demás juegos
+  // siguen con las grabaciones y el respaldo de Fireworks, como se tomaron sus números.
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
+  const medirDesdeLaBase = measuresFromSteps(juego, arg("--medir-desde-la-base") !== undefined);
+  if (medirDesdeLaBase) {
+    const problema = await preflightSteps(poolSql(pool));
+    if (problema) {
+      await Promise.all([navegador.close(), pool.end()]);
+      throw new Error(problema);
+    }
+  }
   const dirGrabaciones = path.resolve(DIR_GRABACIONES);
   // La página final de cada corrida, en escritorio y en móvil, junto a sus
   // resultados (lib/len-bench/capturas.ts). `--sin-capturas` para no hacerlas.
@@ -133,7 +143,7 @@ async function main(): Promise<number> {
     owner,
     navegador,
     dirGrabaciones,
-    sql: poolSql(pool),
+    ...(medirDesdeLaBase ? { sql: poolSql(pool) } : {}),
     conservar,
     // Len Dynamis piensa ×11 por llamada (sonda del 03/10: 14 min un solo turno
     // de `encargo-grande`). El reloj del banco es un tope de SEGURIDAD que un turno
@@ -142,11 +152,15 @@ async function main(): Promise<number> {
     ...(capturasEn ? { capturasEn } : {}),
     ...(mode ? { mode } : {}),
   };
-  let gastado = 0;
+  // El tope es de la PASADA (spec local 2026-11-12-len-3-1-ruta, §7.5): al reanudar se sigue contando desde lo
+  // que la carpeta ya gastó (`gasto.json`, run-store.ts), corridas del arnés incluidas.
+  let gastado = spentSoFar(dir);
+  if (gastado > 0) console.log(`Gastado ya en esta carpeta: $${gastado.toFixed(3)}`);
   // Como el corredor de Claude Code: el tope se mira ANTES de cada corrida, las
-  // que salta no se corren ni se apuntan, y la suite queda «a medias». Y sin
-  // reintentos: lo que el arnés no pudo medir cuenta como 0 y deja la suite en
-  // error (`salidaDeLaSuite`), en vez de repetirse y quitarse en silencio.
+  // que salta no se corren ni se apuntan, y la suite queda «a medias». Sin
+  // reintentos en la misma pasada: lo que el arnés no pudo medir sale de la media,
+  // va a infraestructura.json y deja la suite en error (`salidaDeLaSuite`) hasta
+  // que `--reanudar` lo vuelve a correr.
   let parcial = false;
   const casos: ResultadoDeCaso[] = [];
   const subs: string[] = [];
@@ -167,6 +181,7 @@ async function main(): Promise<number> {
         }
         const r = await correrEncargo(e, opciones);
         gastado += r.usd;
+        recordSpend(dir, r.usd);
         corridas.push(r);
         saveRun(dir, e.id, i + 1, r);
         if (conservar && r.sub) subs.push(r.sub);

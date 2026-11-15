@@ -147,7 +147,7 @@ export async function enviarTurno(o: {
         const questions = (e.datos as { questions?: unknown } | null)?.questions;
         if (e.nombre === "question" && o.onQuestion && turnoId && Array.isArray(questions)) {
           const answers = o.onQuestion({ turnoId, questions: questions as UserQuestion[] });
-          if (answers) eventos.push(await contestarDentro({ base: o.base, cookie: o.cookie, turnoId, answers }));
+          if (answers) eventos.push(await contestarDentro({ base: o.base, cookie: o.cookie, turnoId, answers, signal: abort.signal }));
         }
       }
     }
@@ -159,22 +159,30 @@ export async function enviarTurno(o: {
 }
 
 /** La respuesta a la pregunta que espera, por la misma ruta que el panel. Un 409 (`sin_pregunta`,
- *  `ya_respondida`) o un fallo de red no cortan el turno: quedan anotados en el evento del banco y el
- *  conductor cae al camino viejo (la ficha como mensaje nuevo). */
+ *  `ya_respondida`: ya nadie espera) no corta el turno. Cualquier otro rechazo, o un fallo de red, deja la
+ *  herramienta esperando: se DESCARTA la pregunta (`dismiss`, como «Pedir cambios» del panel) para que el
+ *  turno no se quede los 120 s (revisión I5). Todo queda en el evento del banco, y el conductor cae al camino
+ *  viejo (la ficha como mensaje nuevo). Con la señal del turno: su reloj también corta esta petición. */
 async function contestarDentro(o: {
   readonly base: string;
   readonly cookie: string;
   readonly turnoId: string;
   readonly answers: readonly QuestionAnswer[];
+  readonly signal: AbortSignal;
 }): Promise<EventoSse> {
-  const status = await fetch(`${o.base}/api/agent/responder`, {
-    method: "POST",
-    headers: { "content-type": "application/json", cookie: o.cookie },
-    body: JSON.stringify({ turnoId: o.turnoId, answers: o.answers }),
-  })
-    .then((r) => r.status)
-    .catch(() => 0);
-  return { nombre: BENCH_ANSWER_EVENT, datos: { ok: status === 200, status } };
+  const post = (body: unknown) =>
+    fetch(`${o.base}/api/agent/responder`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie: o.cookie },
+      body: JSON.stringify(body),
+      signal: o.signal,
+    })
+      .then((r) => r.status)
+      .catch(() => 0);
+  const status = await post({ turnoId: o.turnoId, answers: o.answers });
+  if (status === 200 || status === 409) return { nombre: BENCH_ANSWER_EVENT, datos: { ok: status === 200, status } };
+  const dismissed = (await post({ turnoId: o.turnoId, dismiss: true })) === 200;
+  return { nombre: BENCH_ANSWER_EVENT, datos: { ok: false, status, dismissed } };
 }
 
 export interface TarjetaDePublicar {

@@ -148,4 +148,10 @@ describe("preguntaSinContestar — no se manda la ficha otra vez si ya se contes
   it("sin pregunta, nada", () => {
     expect(preguntaSinContestar([{ nombre: "bench_answer", datos: { ok: true, status: 200 } }])).toBe(false);
   });
+  it("dos tarjetas en el turno y sólo una contestada dentro → queda una sin contestar (revisión I6)", () => {
+    const ok = { nombre: "bench_answer", datos: { ok: true, status: 200 } };
+    const mal = { nombre: "bench_answer", datos: { ok: false, status: 400 } };
+    expect(preguntaSinContestar([pregunta, ok, pregunta, mal])).toBe(true);
+    expect(preguntaSinContestar([pregunta, ok, pregunta, ok])).toBe(false);
+  });
 });

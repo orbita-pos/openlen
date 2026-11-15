@@ -84,8 +84,10 @@ export function cardAnswers(ficha: Ficha, questions: readonly UserQuestion[]): Q
  * manda otra vez.
  */
 export function preguntaSinContestar(eventos: readonly EventoSse[]): boolean {
-  if (!preguntoLen(eventos)) return false;
-  return !eventos.some((e) => e.nombre === BENCH_ANSWER_EVENT && (e.datos as { ok?: unknown } | null)?.ok === true);
+  // Pregunta por pregunta (revisión I6): con dos tarjetas en el turno y una sola aceptada, queda una abierta.
+  const preguntas = eventos.filter((e) => preguntoLen([e])).length;
+  const contestadas = eventos.filter((e) => e.nombre === BENCH_ANSWER_EVENT && (e.datos as { ok?: unknown } | null)?.ok === true).length;
+  return preguntas > contestadas;
 }
 
 /**

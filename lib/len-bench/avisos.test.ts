@@ -19,6 +19,16 @@ const base: Encargo = {
   publicaLen: true,
 };
 
+describe("avisosDelEncargo — una ficha más larga de lo que admite la respuesta de una tarjeta (revisión I4)", () => {
+  it("lo dice: lo que pase de MAX_RESPUESTA_LIBRE no llega a Len, y los graders lo darían por dado", () => {
+    const larga: Encargo = { ...base, graders: [], ficha: { negocio: "x", datos: { notas: "a".repeat(2_100) } } };
+    expect(avisosDelEncargo(larga).join("\n")).toMatch(/ficha.*2000/);
+  });
+  it("una ficha corta no avisa", () => {
+    expect(avisosDelEncargo({ ...base, graders: [], ficha: { negocio: "x", datos: { tel: "33 1234 5678" } } })).toEqual([]);
+  });
+});
+
 describe("avisosDelEncargo — lo que no puede pasar con lo que la corrida permite", () => {
   it("publicar sin dirección en la ficha: Len la pide, el dueño no la tiene, nadie publica", () => {
     // Calibración del 2026-09-24, `cambialo-y-publicalo`: 0 de 3 por esto.
