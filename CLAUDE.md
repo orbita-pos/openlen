@@ -79,6 +79,9 @@ npm run test:node         # the suites that need the native Rust binding (node:t
 npm run len-replay:gate   # Len 3.1 layer 1: replay invariant, real production scenes, provider faults — deploy.ps1 runs it
 npm run deploy:prod       # infra/scripts/deploy.ps1
 npm run apps:vendor       # build the app catalog in public/app-vendor/ — an existing one is FROZEN (never rewritten); `-- --comprobar` checks it
+npm run bench:clientes:fetch   # Len 3.1 battery 1: the customer cases of lib/len-bench/casos/clientes/cases.json, read-only over ssh, into ~/.openlen/bench-cases (never the repo)
+npm run bench:clientes:hoja    # the judge's calibration sheet (15 cases + 3 sanity), next to the cases — Jesús labels it by hand
+npm run bench:len:tabla -- --base=<dir> --candidato=<dir>   # the 3.1 table from two columns of `bench:len --juego=clientes` ($0)
 ```
 
 ⚠️ **`infra/scripts/deploy.sh` does not exist** and there is no rsync anywhere.
