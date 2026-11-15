@@ -10,7 +10,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { Pool } from "pg";
 import { BASE_LEN_BENCH, DIR_CORRIDAS, DIR_GRABACIONES } from "@/lib/len-bench/entorno";
+import { poolSql } from "@/lib/len-bench/cold-return/world";
 import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
@@ -87,6 +89,9 @@ async function main(): Promise<number> {
   }
 
   const navegador = await lanzarNavegador();
+  // Cada corrida se mide desde `agentRequestSteps` de la base del banco (steps-of-run.ts): el servidor
+  // puede correr en otra carpeta, con sus grabaciones en ella (la columna base de Len 3.1).
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2 });
   const dirGrabaciones = path.resolve(DIR_GRABACIONES);
   const dir = path.join(DIR_CORRIDAS, `${new Date().toISOString().slice(0, 10)}-${etiqueta}`);
   // La página final de cada corrida, en escritorio y en móvil, junto a sus
@@ -98,6 +103,7 @@ async function main(): Promise<number> {
     owner,
     navegador,
     dirGrabaciones,
+    sql: poolSql(pool),
     conservar,
     // Len Dynamis piensa ×11 por llamada (sonda del 03/10: 14 min un solo turno
     // de `encargo-grande`). El reloj del banco es un tope de SEGURIDAD que un turno
@@ -139,6 +145,7 @@ async function main(): Promise<number> {
     }
   } finally {
     await navegador.close();
+    await pool.end();
   }
 
   console.log(`\n${"CASO".padEnd(36)} NIVEL SCORE  PASS%  RUNS  COSTE    NOTAS`);
