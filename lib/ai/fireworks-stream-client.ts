@@ -25,6 +25,7 @@ import { captureRequest } from "./request-capture";
 import { admiteEsfuerzo, marcarSinEsfuerzo, rechazoDeEsfuerzo } from "./esfuerzo-no-admitido";
 import { codeForInBandError, codeForProviderError, retryAfterMs, type ProviderErrorCode } from "./provider-error-code";
 import type { InlineImage } from "@/lib/ai-gateway";
+import type { ProviderId } from "./providers";
 import { presupuestoDeEsfuerzo, resolverEsfuerzo, type EsfuerzoAgente } from "@/lib/agent/esfuerzo";
 
 const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completions";
@@ -32,7 +33,18 @@ const FIREWORKS_ENDPOINT = "https://api.fireworks.ai/inference/v1/chat/completio
 export type FireworksStreamEvent =
   | { readonly type: "reasoning_delta"; readonly text: string }
   | { readonly type: "text_delta"; readonly text: string }
-  | { readonly type: "usage"; readonly inputTokens: number; readonly outputTokens: number; readonly cachedTokens: number; readonly thinkingTokens: number }
+  | {
+      readonly type: "usage";
+      readonly inputTokens: number;
+      readonly outputTokens: number;
+      readonly cachedTokens: number;
+      readonly thinkingTokens: number;
+      /** QUIÉN SIRVIÓ la llamada y con qué id de modelo, cuando lo sabe quien eligió el proveedor
+       *  (`createRoleStreamClient`). El libro de gasto lo necesita: el coste de una fila se busca por
+       *  `proveedor/modelo` (`lib/ai/cost-rates.ts`). Ausente = este cliente a solas, o sea Fireworks. */
+      readonly provider?: ProviderId;
+      readonly model?: string;
+    }
   // Las llamadas a herramienta llegan partidas —el id y el nombre una vez, los
   // argumentos de a pocos caracteres, y ordenadas por índice, nunca por orden de
   // llegada—, así que se ceden ARMADAS al cerrar el turno. El texto sigue

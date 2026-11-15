@@ -1,5 +1,5 @@
 // lib/len-bench/juez.test.ts — el juez con un modelo de mentira: $0.
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PRESUPUESTO_DE_RESULTADOS, RESULTADO_VACIADO, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
 import type { ContextoDeCalificacion } from "./tipos";
 import { gastoDelJuez, juez, promptDelJuez, textoDelFoco, trazaDeLasFilas, VOTOS_DEL_JUEZ, votoDe } from "./juez";
@@ -188,5 +188,35 @@ describe("trazaDeLasFilas — la traza sale de las filas que escribió el servid
       { role: "user", content: "hola", opensTurn: true },
       { role: "assistant", content: "Hola, ¿qué hacemos?" },
     ]);
+  });
+});
+
+describe("el juez se queda en Fireworks mientras no tenga papel propio", () => {
+  // El razonador pasó a DeepInfra (15/11) y el juez es una operación del razonador. Hasta que tenga su papel,
+  // sigue donde se midió: una sola llamada a otro proveedor movería los votos del banco sin decirlo.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("con las dos claves, las tres llamadas van a Fireworks", async () => {
+    vi.stubEnv("FIREWORKS_API_KEY", "fw-key");
+    vi.stubEnv("DEEPINFRA_API_KEY", "di-key");
+    vi.stubEnv("OPENLEN_AGENT_PROVIDERS", "");
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        urls.push(String(url));
+        const sse =
+          `data: ${JSON.stringify({ choices: [{ delta: { content: "PASS" }, finish_reason: "stop" }] })}\n\n` +
+          `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 10, completion_tokens: 1, total_tokens: 11 } })}\n\n` +
+          "data: [DONE]\n\n";
+        return new Response(sse, { status: 200 });
+      }),
+    );
+    const r = await juez({ nombre: "contesta", criterio: "contesta la pregunta" }).calificar(ctx(["Hoy llevas 3."]));
+    expect(r.paso).toBe(true);
+    expect(urls).toEqual(Array(VOTOS_DEL_JUEZ).fill("https://api.fireworks.ai/inference/v1/chat/completions"));
   });
 });

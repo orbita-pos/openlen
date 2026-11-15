@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   // THE PERSON'S OWN ASSISTANT ON THE PAGE (phase 2A): whether she is there, and her turn.
   onPage: vi.fn(async (): Promise<unknown> => null),
   visitorTurn: vi.fn(),
+  /** What the model's usage event says; a test may name who served it. */
+  usage: { type: "usage", inputTokens: 900, outputTokens: 40, cachedTokens: 0, thinkingTokens: 0 } as Record<string, unknown>,
 }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ assistantOnPage: mocks.onPage }));
 vi.mock("@/lib/assistants/visitor/turn", () => ({ runVisitorTurn: mocks.visitorTurn }));
@@ -32,7 +34,7 @@ vi.mock("@/lib/ai/fireworks-as-stream-provider", () => ({
   fireworksStreamProvider: () => ({
     stream: async function* () {
       yield { type: "text_delta", text: JSON.stringify({ respuesta: "Abrimos de lunes a viernes.", intent: "answer" }) };
-      yield { type: "usage", inputTokens: 900, outputTokens: 40, cachedTokens: 0, thinkingTokens: 0 };
+      yield mocks.usage;
       yield { type: "done", stopReason: { kind: "end_turn" } };
     },
   }),
@@ -73,6 +75,7 @@ beforeEach(() => {
   mocks.duenyo.mockResolvedValue({ userId: "u1", projectId: "p1" });
   mocks.tope.mockResolvedValue({ ok: true });
   mocks.onPage.mockResolvedValue(null);
+  mocks.usage = { type: "usage", inputTokens: 900, outputTokens: 40, cachedTokens: 0, thinkingTokens: 0 };
 });
 
 // THE PERSON'S OWN ASSISTANT IN THE BUBBLE (spec local 2026-11-06-asistente-propio, §4.2, §4.7; phase 2A): with her on
@@ -403,6 +406,19 @@ describe("POST /api/assistant/[sub] — el libro de gasto", () => {
         // Lo que valía a la tarifa de cobro: es lo que OpenLen regala.
         listCenticredits: 7,
         uses: [expect.objectContaining({ provider: "fireworks", inputTokens: 900, outputTokens: 40 })],
+      }),
+    );
+  });
+
+  it("ledger: the row names who answered — a DeepInfra answer is priced as DeepInfra's", async () => {
+    mocks.limit.mockResolvedValue(fila({ assistant: { enabled: true } }));
+    mocks.usage = { ...mocks.usage, provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017" };
+    expect((await pregunta()).status).toBe(200);
+    await vi.waitFor(() => expect(mocks.recordUncharged).toHaveBeenCalled());
+    expect(mocks.recordUncharged).toHaveBeenCalledWith(
+      "u1",
+      expect.objectContaining({
+        uses: [expect.objectContaining({ provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", inputTokens: 900 })],
       }),
     );
   });

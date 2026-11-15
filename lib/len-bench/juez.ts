@@ -93,6 +93,9 @@ const llamarDeVerdad: LlamarAlJuez = async (sistema, usuario) => {
     // El suyo no la fija: va con la de la API por defecto, 1. Con cero, los
     // tres votos saldrían iguales y votar no serviría.
     temperature: 1,
+    // SE QUEDA EN FIREWORKS mientras no tenga papel propio (15/11): el razonador pasó a DeepInfra, y el juez,
+    // que es una operación suya, se medía aquí. Su papel en DeepInfra es otro trabajo; esta línea se va con él.
+    providers: ["fireworks"],
   });
   if (!r.ok) throw new Error(`el juez no contestó (${r.kind}): ${r.message}`);
   const tarifa = rateFor(modelIdForRole(roleForOperation("len_bench_juez")));

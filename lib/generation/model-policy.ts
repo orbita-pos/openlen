@@ -39,6 +39,15 @@ export const MODEL_POLICY = Object.freeze({
     // el día que cambie el modelo; `model-policy.test.ts` exige que se
     // correspondan.
     displayName: "DeepSeek V4.1 Flash",
+    // LOS MISMOS DOS PROVEEDORES QUE EL AGENTE (15/11): DeepInfra primero, Fireworks de respaldo, la misma 1017.
+    // Hasta aquí este papel iba SOLO por Fireworks, al doble de precio de salida, sin respaldo, y nadie lo había
+    // decidido: el segundo proveedor (17/10) se cableó sólo en el cerebro de Len. Lo resuelve
+    // `createRoleStreamClient` (`lib/ai/role-stream-client.ts`) con la misma palanca, `OPENLEN_AGENT_PROVIDERS`.
+    // `modelId` de arriba sigue siendo el de Fireworks: lo leen el esfuerzo de la tabla y el cobro, que no cambian.
+    providers: Object.freeze([
+      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
+      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" }),
+    ]),
   }),
   // EL PAPEL CON VISIÓN. Lo piden tres operaciones: `agent_visual_verify`
   // (los ojos de Len), `page_write_with_reference` (escribir mirando una
@@ -97,6 +106,12 @@ export const MODEL_POLICY = Object.freeze({
     creditRate: "deepseek-flash-4p1" as CreditRate,
     displayName: "DeepSeek V4.1 Flash",
     capturaRuntime: true,
+    // Como el razonador (15/11). Que DeepInfra VE con este modelo no es una apuesta: los ojos de Len le mandan sus
+    // capturas por ese proveedor desde el 14/10, y `npm run modelos:comprobar` lo pregunta en cada pasada.
+    providers: Object.freeze([
+      Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
+      Object.freeze({ provider: "fireworks" as ProviderId, modelId: "accounts/fireworks/models/deepseek-v4p1-flash-1017" }),
+    ]),
   }),
   // EL AGENTE TIENE PAPEL PROPIO, y no por capricho de tamaño: su trabajo es el
   // único que arrastra estado entre turnos —un bucle de herramientas donde cada
@@ -397,6 +412,12 @@ export function displayNameForRole(role: ModelRole): string {
  *  vocabulario del cable (`visual_critic`) contra la clave camel de la tabla. */
 function entradaDelPapel(role: ModelRole) {
   return role === "visual_critic" ? MODEL_POLICY.visualCritic : MODEL_POLICY[role];
+}
+
+/** Quién sirve el papel, en orden, con el id del modelo EN ESE proveedor. El cuarto gemelo: el proveedor viaja con
+ *  el modelo igual que la tarifa. Lo lee `resolveRoleProviders` (`lib/ai/providers.ts`). */
+export function providersForRole(role: ModelRole): readonly { readonly provider: ProviderId; readonly modelId: string }[] {
+  return entradaDelPapel(role).providers;
 }
 
 /**

@@ -35,7 +35,8 @@ import {
 } from "@/lib/publish/publish-locales";
 import type { LedgerEntry } from "@/lib/credit-ledger";
 import { creditsForUsage, recordUncharged } from "@/lib/credits";
-import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { servedBy, type ProviderId } from "@/lib/ai/providers";
 
 const TRANSLATE_TIMEOUT_MS = 90_000;
 const MAX_OUTPUT_TOKENS = 32_768;
@@ -63,6 +64,9 @@ export interface TranslationUsage {
   inputTokens: number;
   cachedTokens: number;
   outputTokens: number;
+  /** Quién tradujo (15/11: DeepInfra primero, Fireworks detrás). Ausente = Fireworks, como antes. */
+  provider?: ProviderId;
+  model?: string;
 }
 
 export type TranslateFn = (
@@ -88,7 +92,15 @@ export function translationLedgerEntry(projectId: string, locale: string, usage:
       creditRateForRole(roleForOperation("copy")),
       usage.cachedTokens,
     ),
-    uses: [{ provider: "fireworks", model: modelIdForRole(roleForOperation("copy")), ...usage, at: new Date() }],
+    uses: [
+      {
+        ...servedBy(usage, "copy"),
+        inputTokens: usage.inputTokens,
+        cachedTokens: usage.cachedTokens,
+        outputTokens: usage.outputTokens,
+        at: new Date(),
+      },
+    ],
   };
 }
 
@@ -158,7 +170,8 @@ export function buildTranslatePrompt(
   ].join("\n");
 }
 
-async function translateStrings(
+/** Exportada para su prueba (`localize.test.ts`): el libro de gasto depende de lo que su `onUsage` entrega. */
+export async function translateStrings(
   texts: string[],
   targetLocale: string,
   sourceLang: string,
@@ -170,8 +183,8 @@ async function translateStrings(
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TRANSLATE_TIMEOUT_MS);
   try {
-    // Traducir es texto, no pixeles: lo hace DeepSeek por el transporte de
-    // Fireworks. Aqui vivia `OPENLEN_TRANSLATE=gemini`, retirado el 2026-08-28
+    // Traducir es texto, no pixeles: lo hace DeepSeek por el transporte
+    // compatible con OpenAI (DeepInfra primero, Fireworks detrás, desde el 15/11). Aqui vivia `OPENLEN_TRANSLATE=gemini`, retirado el 2026-08-28
     // con el proveedor — y con el, la exigencia de una clave que esta funcion
     // pedia ANTES de mirar si iba a usarla: sin `GEMINI_API_KEY` devolvia null
     // y la pagina se publicaba sin traducir, en silencio.
@@ -199,7 +212,12 @@ async function translateStrings(
       if (ev.type === "text_delta") {
         raw += ev.text;
       } else if (ev.type === "usage") {
-        onUsage?.({ inputTokens: ev.inputTokens, cachedTokens: ev.cachedTokens ?? 0, outputTokens: ev.outputTokens });
+        onUsage?.({
+          inputTokens: ev.inputTokens,
+          cachedTokens: ev.cachedTokens ?? 0,
+          outputTokens: ev.outputTokens,
+          ...(ev.provider && ev.model ? { provider: ev.provider, model: ev.model } : {}),
+        });
       } else if (ev.type === "done" && ev.stopReason.kind === "error") {
         // eslint-disable-next-line no-console
         console.warn(`[localize] model error (${targetLocale}):`, ev.stopReason.error);
