@@ -241,13 +241,22 @@ ${texto}
   });
 
   it("🔴 al reabrir una charla archivada, su historial arranca en SU marca", async () => {
-    await turno({ id: "x1", minuto: 0, conversation: "c1" });
-    await turno({ id: "x2", minuto: 1, conversation: "c1", compaction: marca("de c1") });
-    await turno({ id: "x3", minuto: 2, conversation: "c1" });
-    await turno({ id: "y1", minuto: 3, compaction: marca("de la en curso") });
-    expect(await reopenConversation("p1", "c1")).toMatchObject({ ok: true });
-    const filas = await turnosParaElHistorial("p1");
-    expect(filas.map((f) => f.userText)).toEqual(["turno x2", "turno x3"]);
+    // Reabrir borra antes lo que pasó los 30 días (A11), con el reloj de verdad. Las filas de
+    // `turno` son del 05/10: desde el 04/11 caducaban y esta prueba medía la retención, no la
+    // marca. El reloj se fija en el día de las filas (sólo `Date`: pglite sigue con sus timers).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.UTC(2026, 9, 5, 13, 0)));
+    try {
+      await turno({ id: "x1", minuto: 0, conversation: "c1" });
+      await turno({ id: "x2", minuto: 1, conversation: "c1", compaction: marca("de c1") });
+      await turno({ id: "x3", minuto: 2, conversation: "c1" });
+      await turno({ id: "y1", minuto: 3, compaction: marca("de la en curso") });
+      expect(await reopenConversation("p1", "c1")).toMatchObject({ ok: true });
+      const filas = await turnosParaElHistorial("p1");
+      expect(filas.map((f) => f.userText)).toEqual(["turno x2", "turno x3"]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

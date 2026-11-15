@@ -36,6 +36,9 @@ export const PREFIJOS_A_NEXT: readonly string[] = [
   "/realtime/v1/",
   // Sus Edge Functions (lib/functions) y la IA de las apps (lib/app-ai): las atiende Next.
   "/functions/v1/", "/ai/v1/",
+  // El correo de los proyectos (lib/project-email): el API de Resend que llaman sus Edge
+  // Functions con la llave secreta del proyecto. Lo atiende Next, como en producción.
+  "/email/v1/",
 ];
 
 const MIME: Record<string, string> = {
