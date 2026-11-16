@@ -1,7 +1,7 @@
 export const en = {
   htmlLang: "en",
   meta: {
-    title: "Len 3.0 — from idea to deliverable",
+    title: "Len 3.1 — from idea to deliverable",
     description: "An agent that works with your project’s context, plans, executes and checks. Now it also creates presentations, dashboards, images, videos and voice, with a real terminal to put the work into practice."
   },
   nav: {
@@ -37,13 +37,19 @@ export const en = {
     antetitulo: "Len, by OpenLen",
     titular: [
       "Introducing ",
-      "Len 3.0",
+      "Len 3.1",
       "."
     ],
-    parrafo: "Our most capable agent yet. It understands your task, works with your project’s context, plans the steps and checks what it builds. Now it also creates presentations, dashboards, images, videos and voice, with a real terminal to run code and tests.",
+    parrafo: "The same results as the previous version at 19% lower cost per page, with fewer steps to get there; and a long conversation now costs about half as much to pick up later. Len still understands your task, works with your project’s context, plans the steps and checks what it builds, and it creates presentations, dashboards, images, videos and voice, with a real terminal to run code and tests.",
     cta: "Try Len",
     ctaSecundario: "Explore what is new",
-    altCielo: "Len 3.0 beneath an orange horizon. Our most capable agent yet. Now also creates images, videos, and presentations.",
+    altCielo: "Len 3.1 over a sea of clouds at sunrise. Same results, 19% lower cost per page.",
+    // The evidence behind the numbers above and in the image (the footer’s promise).
+    fuentes: {
+      texto: "The numbers:",
+      tabla: { commit: "c947d87d4" },
+      conversaciones: { commit: "b604f0ef4" }
+    },
     cielo: {
       titulo: "Len 3.0",
       texto: "Websites and apps. Presentations, dashboards, images, videos and voice. Len turns more of your ideas into something you can open, review and download, in the same conversation.",
@@ -92,8 +98,8 @@ export const en = {
       ]
     },
     tarjeta: {
-      antetitulo: "Len 3.0 · October 2026",
-      titulo: "38 tools, one agent",
+      antetitulo: "Len 3.1 · November 2026",
+      titulo: "51 tools, one agent",
       texto: "It reads and changes project files, runs code in a real terminal and prepares deliverables with their own versions. It asks for what is missing and shows what it checked before calling the work finished.",
       como: "How it works →",
       grupos: {
@@ -103,7 +109,7 @@ export const en = {
         },
         leer: {
           titulo: "Read, search and the terminal",
-          texto: "Reads project files and guides, searches the web and runs code in a real terminal inside an isolated environment."
+          texto: "Reads project files, guides and skills, searches the web and runs code in a real terminal inside an isolated environment."
         },
         editar: {
           titulo: "Write",
@@ -111,7 +117,7 @@ export const en = {
         },
         fotos: {
           titulo: "Photos",
-          texto: "Choose and edit images for your line of business."
+          texto: "Finds real, freely licensed photos, and chooses and edits images for your line of business."
         },
         datos: {
           titulo: "Data and modules",
@@ -123,11 +129,19 @@ export const en = {
         },
         contigo: {
           titulo: "With you",
-          texto: "Asks with options, can show an interactive interface in chat and publishes when you confirm."
+          texto: "Asks with options, can show an interactive interface in chat, helps you create your own assistant and publishes when you confirm."
         },
         planear: {
           titulo: "Plans and long jobs",
           texto: "On a long job it shows you the list of steps and where it is. If you ask, it proposes a plan and touches nothing until you approve it. A long job it works through on its own, round after round."
+        },
+        programar: {
+          titulo: "Scheduled tasks",
+          texto: "Does a job at the time you say, once or on a schedule, and sends you the result by email; you can list, change and remove each task. On paid plans."
+        },
+        equipo: {
+          titulo: "Subagents",
+          texto: "Splits a long job among helpers that work apart, each with its own context; it messages them, stops them when needed, and you get the result."
         },
         recordar: {
           titulo: "Memory",
@@ -135,7 +149,7 @@ export const en = {
         },
         entregables: {
           titulo: "Deliverables",
-          texto: "Creates, inspects and renders presentations, dashboards, images, videos and voice; queries data and reuses audio you have uploaded."
+          texto: "Creates, inspects and renders presentations, dashboards, images, videos and voice; queries data, reuses audio you have uploaded and hands you the finished files."
         }
       }
     },

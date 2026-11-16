@@ -13,7 +13,8 @@
       "bash",
       "web_search",
       "web_fetch",
-      "read_me"
+      "read_me",
+      "skill"
     ]
   },
   {
@@ -29,7 +30,8 @@
     "id": "fotos",
     "herramientas": [
       "find_photo",
-      "edit_image"
+      "edit_image",
+      "image_search"
     ]
   },
   {
@@ -53,7 +55,8 @@
     "herramientas": [
       "ask_user_question",
       "publish",
-      "show_widget"
+      "show_widget",
+      "create_assistant"
     ]
   },
   {
@@ -65,6 +68,25 @@
       "get_goal",
       "create_goal",
       "update_goal"
+    ]
+  },
+  {
+    "id": "programar",
+    "herramientas": [
+      "schedule_create",
+      "schedule_list",
+      "schedule_update",
+      "schedule_delete"
+    ]
+  },
+  {
+    "id": "equipo",
+    "herramientas": [
+      "subagent",
+      "subagent_fork",
+      "send_message",
+      "interrupt_agent",
+      "list_agents"
     ]
   },
   {
@@ -84,7 +106,8 @@
       "inspect_artifact",
       "render_artifact",
       "cancel_artifact_job",
-      "query_artifact_data"
+      "query_artifact_data",
+      "present"
     ]
   }
 ]
