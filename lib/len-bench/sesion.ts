@@ -93,6 +93,15 @@ export interface CuerpoDelTurno {
   readonly assistantId?: string;
 }
 
+/** The bench's own turn clock ran out on a turn that was still working (16/11). Its own error, so the conductor
+ *  does not count it as Len's: in production nothing cuts a working turn. */
+export class BenchClockError extends Error {
+  constructor(readonly timeoutMs: number) {
+    super(`the bench's clock cut the turn at ${Math.round(timeoutMs / 60_000)} min (the bench's safety cap; production has none)`);
+    this.name = "BenchClockError";
+  }
+}
+
 export async function enviarTurno(o: {
   readonly base: string;
   readonly cookie: string;
@@ -114,7 +123,9 @@ export async function enviarTurno(o: {
   // el turno cuando el cliente se va, así que abortar el `fetch` dejaría a Len
   // trabajando —y gastando— detrás de una corrida que ya pasó a la siguiente.
   // Primero se le pide parar, como el ■ del panel; luego se deja de leer.
+  let ranOut = false;
   const reloj = setTimeout(async () => {
+    ranOut = true;
     if (turnoId) {
       await fetch(`${o.base}/api/agent/cancelar`, {
         method: "POST",
@@ -153,6 +164,9 @@ export async function enviarTurno(o: {
     }
     eventos.push(...lector.empujar(dec.decode() + "\n\n"));
     return eventos;
+  } catch (err) {
+    if (ranOut) throw new BenchClockError(o.timeoutMs);
+    throw err;
   } finally {
     clearTimeout(reloj);
   }
