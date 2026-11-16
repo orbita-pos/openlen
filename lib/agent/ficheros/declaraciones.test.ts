@@ -16,11 +16,19 @@ describe("las cinco herramientas de ficheros, como Claude Code", () => {
     expect(DECLARACIONES_DE_FICHEROS.map((d) => d.name)).toEqual(["Read", "Edit", "Write", "Grep", "Glob"]);
   });
 
-  it("Read: file_path obligatorio, offset, limit y (26/10, para un PDF adjunto) pages, como Claude Code", () => {
+  it("Read: file_path obligatorio, offset, limit y (26/10, para un PDF adjunto) pages, como Claude Code; y (05/11) el region de Kimi", () => {
     const d = porNombre("Read");
-    expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "offset", "limit", "pages"]);
+    expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "offset", "limit", "pages", "region"]);
     expect(d.parameters.required).toEqual(["file_path"]);
     expect(d.parameters.properties.offset!.type).toBe("NUMBER");
+  });
+
+  it("Read: region es el de ReadMediaFile de Kimi Code — un rectángulo en píxeles de la imagen original, los cuatro obligatorios", () => {
+    const region = porNombre("Read").parameters.properties.region as unknown as { type: string; properties: Record<string, { type: string }>; required: string[] };
+    expect(region.type).toBe("OBJECT");
+    expect(Object.keys(region.properties)).toEqual(["x", "y", "width", "height"]);
+    expect(Object.values(region.properties).map((p) => p.type)).toEqual(["NUMBER", "NUMBER", "NUMBER", "NUMBER"]);
+    expect(region.required).toEqual(["x", "y", "width", "height"]);
   });
 
   it("Edit: file_path, old_string, new_string y replace_all", () => {

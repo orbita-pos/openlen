@@ -977,7 +977,9 @@ async function guardarMemoria(
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
   const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
   return {
-    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: true }) }, { cambio }),
+    // «Exactly what was saved» only when it is: Claude Code leaves its «no need to Read it back» out when it
+    // stamped a memory file (`memdirStamped`, binary 2.1.325), and so does a page that saving changed (`aplicarPlan`).
+    response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: saved === plan.contenido }) }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
     ...(cambio === "cambio" ? { mutoDurable: true } : {}),
   };
