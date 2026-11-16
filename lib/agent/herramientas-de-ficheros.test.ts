@@ -819,6 +819,29 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     assert.match(texto(indice), /\[hero-oscuro\]\(hero-oscuro\.md\) \(feedback\)/);
   });
 
+  // F3 (Len 3.1, battery 1, 16/11): a note is kept as its fields and Read gives it back re-serialized
+  // (`serializeNote`: the fields in order, a blank line after the frontmatter, the body trimmed). 74 of the 84 note
+  // Writes the battery recorded differed from that only in whitespace — and the read-state kept what Len SENT, so
+  // the file looked «changed since read» to the same turn and «not read» to the next one.
+  const AS_LEN_WRITES_IT = `---\ntype: ${NOTA.type}\nname: ${NOTA.name}\ndescription: ${NOTA.description}\n---\n${NOTA.body}`;
+
+  it("🔴 F3: a note saved in other whitespace counts as read with the text Read gives", async () => {
+    const { deps } = depsConLenMd();
+    const s = makeSession();
+    const out = await runAgentTool(s, deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: AS_LEN_WRITES_IT });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(s.leidos?.get("/.len/memory/hero-oscuro.md")?.instantanea, serializeNote(NOTA));
+  });
+
+  it("🔴 F3: and the same turn can write that note again", async () => {
+    const { deps, estado } = depsConLenMd();
+    const s = makeSession();
+    await runAgentTool(s, deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: AS_LEN_WRITES_IT });
+    const again = await runAgentTool(s, deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: serializeNote({ ...NOTA, body: "Fondos claros." }) });
+    assert.equal(again.response.ok, true, texto(again));
+    assert.equal(estado.notas.get("hero-oscuro")?.body, "Fondos claros.");
+  });
+
   it("una nota mal formada: el error trae la plantilla", async () => {
     const { deps, estado } = depsConLenMd();
     const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: "sólo texto" });

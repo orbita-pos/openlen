@@ -64,8 +64,8 @@ import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memor
 import { gitEnabled } from "@/lib/git/enabled";
 import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
-import { ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD } from "@/lib/agent/ficheros/len-md";
-import { MEMORY_INDEX_MAX, buildMemoryIndex } from "@/lib/agent/memory/note";
+import { ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD, noteNameOf } from "@/lib/agent/ficheros/len-md";
+import { MEMORY_INDEX_MAX, buildMemoryIndex, serializeNote } from "@/lib/agent/memory/note";
 import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { bundledSkills } from "@/lib/agent/skills/bundled";
 import { catalogBudgetChars, foldSkillsDigest, personalSkillsReminder, skillCatalogMessage } from "@/lib/agent/skills/catalog-message";
@@ -1593,6 +1593,13 @@ async function correrTurno(
       // la memoria (LEN.md) va aparte.
       ...(historialDeLaBase
         ? leidosSembrados(savedReads, historialDeLaBase, (ruta) => {
+            // A memory note lives in `lenMemoryNotes`, neither among the pages nor in the folder: it is looked up
+            // in the notes this turn already loaded, as Read gives it (F3, battery 1 of Len 3.1, 16/11).
+            const noteName = noteNameOf(ruta);
+            if (noteName !== null) {
+              const note = notasDeMemoria.find((n) => n.name === noteName);
+              return note ? serializeNote(note) : null;
+            }
             const file = isFolderPath(ruta) ? folderOfSavedReads[ruta] : undefined;
             if (file !== undefined) return file;
             const html = leerFichero(project.data, ruta);
