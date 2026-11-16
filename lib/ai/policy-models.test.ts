@@ -6,7 +6,7 @@
 // provider the policy names, and checks each role's price where that price comes from.
 import { describe, expect, it } from "vitest";
 
-import { deepinfraListPrice, policyModels, tariffedProvider } from "./policy-models";
+import { deepinfraListPrice, deepinfraServesItself, policyModels, tariffedProvider } from "./policy-models";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 
 describe("policyModels — every (provider, model) the policy names, once", () => {
@@ -50,5 +50,21 @@ describe("deepinfraListPrice — the list price from DeepInfra's public models l
     expect(deepinfraListPrice(list, "other/model")).toMatch(/caché/);
     expect(deepinfraListPrice(list, "nope/nope")).toMatch(/no aparece/);
     expect(deepinfraListPrice({ not: "a list" }, "Qwen/Qwen3.8-Flash")).toMatch(/lista/);
+  });
+});
+
+// The judge reads customers' requests and pages. 15/11: Qwen3.8-Flash was a partner's model on DeepInfra — handed
+// on, and the partner's moderation refused a customer's page (data_inspection_failed).
+describe("deepinfraServesItself — a model DeepInfra serves, not one it hands to a partner", () => {
+  it("served by DeepInfra passes; a partner's says so; one the list says nothing about is not a pass", () => {
+    expect(deepinfraServesItself([{ model_name: "a/own", is_partner: false }], "a/own")).toBe(true);
+    expect(deepinfraServesItself([{ model_name: "a/partner", is_partner: true }], "a/partner")).toMatch(/socio/);
+    expect(deepinfraServesItself([{ model_name: "a/silent" }], "a/silent")).toMatch(/no dice/);
+    expect(deepinfraServesItself([], "a/none")).toMatch(/no aparece/);
+    expect(deepinfraServesItself({ not: "a list" }, "a/none")).toMatch(/lista/);
+  });
+  it("the judge is Qwen3.8-27B, open weights, which DeepInfra's list showed as its own on 15/11", () => {
+    expect(MODEL_POLICY.judge.modelId).toBe("Qwen/Qwen3.8-27B");
+    expect(MODEL_POLICY.judge.providers.map((p) => [p.provider, p.modelId])).toEqual([["deepinfra", "Qwen/Qwen3.8-27B"]]);
   });
 });
