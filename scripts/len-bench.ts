@@ -16,6 +16,7 @@ import { poolSql } from "@/lib/len-bench/cold-return/world";
 import { measuresFromSteps, preflightSteps } from "@/lib/len-bench/steps-of-run";
 import { estimateFromPilot, infraFailures, keptRuns, recordSpend, runKey, runsDirProblem, saveRun, spentSoFar } from "@/lib/len-bench/run-store";
 import { arrancarCorredor, TIMEOUT_TURNO_MS } from "@/lib/len-bench/arranque";
+import { freshCookie } from "@/lib/len-bench/fresh-cookie";
 import { correrEncargo } from "@/lib/len-bench/conductor";
 import { lanzarNavegador } from "@/lib/len-bench/navegador";
 import { resumenPorVia, resumirCaso, salidaDeLaSuite } from "@/lib/len-bench/puntuar";
@@ -112,6 +113,7 @@ async function main(): Promise<number> {
   writeEvaluatorFile(dir, { huella, judgeModel: juezDeLaSuite.model, cases: encargos.length });
 
   const { owner, cookie } = await arrancarCorredor(base);
+  const mintCookie = freshCookie(owner);
   // 🔴 Sin la terminal en el servidor, la ruta convierte Dynamis en Len SIN
   // DECIRLO, y el brazo mediría a Len con otro nombre. Se pregunta antes de gastar.
   if (mode) {
@@ -179,7 +181,8 @@ async function main(): Promise<number> {
           parcial = true;
           break;
         }
-        const r = await correrEncargo(e, opciones);
+        // A cookie per run: the one minted at start lives 6 h and a column runs ~9 (fresh-cookie.ts, 16/11).
+        const r = await correrEncargo(e, { ...opciones, cookie: await mintCookie() });
         gastado += r.usd;
         recordSpend(dir, r.usd);
         corridas.push(r);
