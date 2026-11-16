@@ -63,8 +63,8 @@ describe("deepinfraServesItself — a model DeepInfra serves, not one it hands t
     expect(deepinfraServesItself([], "a/none")).toMatch(/no aparece/);
     expect(deepinfraServesItself({ not: "a list" }, "a/none")).toMatch(/lista/);
   });
-  it("the judge is Qwen3.8-27B, open weights, which DeepInfra's list showed as its own on 15/11", () => {
-    expect(MODEL_POLICY.judge.modelId).toBe("Qwen/Qwen3.8-27B");
-    expect(MODEL_POLICY.judge.providers.map((p) => [p.provider, p.modelId])).toEqual([["deepinfra", "Qwen/Qwen3.8-27B"]]);
+  it("the judge is GLM-5.3, which DeepInfra's list showed as its own on 15/11", () => {
+    expect(MODEL_POLICY.judge.modelId).toBe("zai-org/GLM-5.3");
+    expect(MODEL_POLICY.judge.providers.map((p) => [p.provider, p.modelId])).toEqual([["deepinfra", "zai-org/GLM-5.3"]]);
   });
 });
