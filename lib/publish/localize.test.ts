@@ -27,7 +27,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import { creditsForUsage } from "@/lib/credits";
 import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
-import { buildTranslatePrompt, translationLedgerEntry } from "./localize";
+import { buildTranslatePrompt, translateStrings, translationLedgerEntry, type TranslationUsage } from "./localize";
 
 const TEXTOS = ["Cómo funciona", "Solicitar acceso", "Precios"];
 
@@ -85,4 +85,53 @@ test("ledger: each translated locale is one publish_translation row", () => {
   assert.equal(entry.uses?.[0]?.outputTokens, 300);
   // Lo que valía a la tarifa de cobro: es lo que OpenLen regala.
   assert.equal(entry.listCenticredits, creditsForUsage(1_200, 300, creditRateForRole(roleForOperation("copy")), 0));
+});
+
+// El razonador corre en DeepInfra desde el 15/11: la fila dice quién tradujo, y con eso el coste es el suyo.
+test("ledger: the row names the provider that translated, not always Fireworks", () => {
+  const entry = translationLedgerEntry("p1", "en", {
+    inputTokens: 1_200,
+    cachedTokens: 0,
+    outputTokens: 300,
+    provider: "deepinfra",
+    model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  });
+  assert.equal(entry.uses?.[0]?.provider, "deepinfra");
+  assert.equal(entry.uses?.[0]?.model, "deepseek-ai/DeepSeek-V4.1-Flash-1017");
+  // Lo que se cobra (nada, aquí; lo que vale) sigue a la tarifa de cobro, sea quien sea el proveedor.
+  assert.equal(entry.listCenticredits, creditsForUsage(1_200, 300, creditRateForRole(roleForOperation("copy")), 0));
+});
+
+// Y LO QUE LLEGA A ESA FILA: `onUsage` dice quién tradujo. Aquí se perdía — la fila ya sabía escribir el proveedor,
+// pero la traducción le entregaba sólo los tokens, y todo salía como Fireworks.
+test("translating: onUsage says DeepInfra served it, with its model id", async () => {
+  const before = { fetch: globalThis.fetch, fw: process.env.FIREWORKS_API_KEY, di: process.env.DEEPINFRA_API_KEY, order: process.env.OPENLEN_AGENT_PROVIDERS };
+  const urls: string[] = [];
+  process.env.FIREWORKS_API_KEY = "fw-key";
+  process.env.DEEPINFRA_API_KEY = "di-key";
+  delete process.env.OPENLEN_AGENT_PROVIDERS;
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    urls.push(String(url));
+    const sse =
+      `data: ${JSON.stringify({ choices: [{ delta: { content: '{"translations":["How it works"]}' }, finish_reason: "stop" }] })}\n\n` +
+      `data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: 120, completion_tokens: 9, total_tokens: 129 } })}\n\n` +
+      "data: [DONE]\n\n";
+    return new Response(sse, { status: 200 });
+  }) as typeof fetch;
+  try {
+    const usages: TranslationUsage[] = [];
+    const out = await translateStrings(["Cómo funciona"], "en", "es", (u) => usages.push(u));
+    assert.deepEqual(out, ["How it works"]);
+    assert.deepEqual(urls, ["https://api.deepinfra.com/v1/openai/chat/completions"]);
+    assert.equal(usages.length, 1);
+    assert.equal(usages[0]?.provider, "deepinfra");
+    assert.equal(usages[0]?.model, "deepseek-ai/DeepSeek-V4.1-Flash-1017");
+    assert.equal(translationLedgerEntry("p1", "en", usages[0]!).uses?.[0]?.provider, "deepinfra");
+  } finally {
+    globalThis.fetch = before.fetch;
+    for (const [k, v] of [["FIREWORKS_API_KEY", before.fw], ["DEEPINFRA_API_KEY", before.di], ["OPENLEN_AGENT_PROVIDERS", before.order]] as const) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+  }
 });

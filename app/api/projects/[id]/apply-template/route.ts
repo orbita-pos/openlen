@@ -13,7 +13,7 @@ import { getProject } from "@/lib/projects";
 import type { ProjectData } from "@/lib/projects/types";
 import { createVersion } from "@/lib/projects/versions";
 import { getCreditState, chargeCredits, AUTOFILL_CREDIT_COST } from "@/lib/credits";
-import { modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { servedBy } from "@/lib/ai/providers";
 import { sanitizeForPublish } from "@/lib/html-engine";
 import { passHtmlGate } from "@/lib/html-gate/document-gate";
 import { getTemplateHtml } from "@/lib/templates/store";
@@ -142,8 +142,7 @@ export async function POST(
     uses: res.usage
       ? [
           {
-            provider: "fireworks",
-            model: modelIdForRole(roleForOperation("template_autofill")),
+            ...servedBy(res.usage, "template_autofill"),
             inputTokens: res.usage.in,
             cachedTokens: 0,
             outputTokens: res.usage.out,
