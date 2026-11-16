@@ -201,16 +201,18 @@ export const MODEL_POLICY = Object.freeze({
   // 🔴 QWEN3.8-27B, NO FLASH (Jesús, 15/11, tras la calibración): Flash es un modelo de SOCIO en DeepInfra
   // (`is_partner: true` en su lista pública): se lo pasa a Alibaba Cloud, cuya moderación rechazó la página de
   // un cliente a media corrida (`data_inspection_failed`), y el texto de los clientes salía hacia ellos. Además
-  // sacó 6/9 en la reserva. Luego Qwen3.8-27B (pesos abiertos, lo sirve DeepInfra): 19/23 contra el consenso de
-  // dos etiquetadores a ciegas que coincidían 23/24 — el juez era lo flojo, no las etiquetas. 🔴 GLM-5.3 (Z.ai,
-  // otra familia que Len y que Qwen; lo sirve DeepInfra, `is_partner: false`), Jesús, 15/11: «Try GLM-5.3».
-  // `npm run modelos:comprobar` falla si deja de servirlo DeepInfra (`deepinfraServesItself`).
+  // sacó 6/9 en la reserva. El 27B es de pesos abiertos y lo sirve DeepInfra (`is_partner: false`);
+  // `npm run modelos:comprobar` falla si eso cambia (`deepinfraServesItself`).
+  // Calibrado: 19/23 (82,6 %) contra el consenso de dos etiquetadores a ciegas (23/24 entre ellos), bajo la
+  // barra: en la batería de clientes OBSERVA y no vota (`puntua: false`, el `scored: false` de Claude Code;
+  // Jesús, 15/11: «27B, advisory only»). ⚰️ GLM-5.3 se probó el mismo día: aun con esfuerzo `none` razona en
+  // voz alta y 16 tokens lo cortan sin veredicto. Otro juez que piense pide otro juez, no más tokens a éste.
   judge: Object.freeze({
-    modelId: "zai-org/GLM-5.3",
-    creditRate: "glm-5p3" as CreditRate,
-    displayName: "GLM 5.3",
+    modelId: "Qwen/Qwen3.8-27B",
+    creditRate: "qwen-3p8-27b" as CreditRate,
+    displayName: "Qwen3.8 27B",
     capturaRuntime: false,
-    providers: Object.freeze([Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "zai-org/GLM-5.3" })]),
+    providers: Object.freeze([Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "Qwen/Qwen3.8-27B" })]),
   }),
 });
 
