@@ -127,13 +127,43 @@ export function datosDeLaFicha(campos: readonly string[], peso = 3): Grader {
 const SUPUESTO_DICHO =
   /\b(?:supuse|supongo|suponiendo|asum[ií]|di por hecho|lo di por|(?:le )?puse [^.;]{0,60}\bporque\b|de ejemplo|es un ejemplo|provisional(?:es)?|no me (?:lo |la |los |las )?(?:diste|dijiste|pasaste)|si (?:no )?es de otr[oa]|si (?:el|la|tu|su) [^.;]{0,40}\bes de otr[oa])/i;
 
+/** Las frases de Len, una a una. */
+function frasesDeLen(conversacion: readonly Intercambio[]): string[] {
+  return conversacion.filter((x) => x.quien === "len").flatMap((x) => x.texto.split(/(?<=[.!?])\s+|\n+/));
+}
+
 /** Las frases de Len que dicen lo que supuso (`SUPUESTO_DICHO`). */
 function supuestoDicho(conversacion: readonly Intercambio[]): string {
-  return conversacion
-    .filter((x) => x.quien === "len")
-    .flatMap((x) => x.texto.split(/(?<=[.!?])\s+|\n+/))
+  return frasesDeLen(conversacion)
     .filter((f) => SUPUESTO_DICHO.test(f))
     .join("\n");
+}
+
+/**
+ * Una frase que dice que un dato está DE EJEMPLO, sin cifras: «los precios son de ejemplo», «un correo genérico»,
+ * «cámbialo por el tuyo». Es lo que dice un desarrollador —y Opus— cuando el dueño no dio el dato (batería 1 de Len
+ * 3.1, 16/11: así avisó Len en más de la mitad de lo que este grader suspendía). Estrecha como `SUPUESTO_DICHO`:
+ * «por ejemplo» no lo dice, ni «dime si quieres cambiar el precio».
+ */
+const DE_EJEMPLO =
+  /(?<!\bpor )\b(?:de ejemplo|ejemplos?|de muestra|provisional(?:es)?|fictici[oa]s?|gen[eé]ric[oa]s?|placeholders?)\b|\b(?:reempl[aá]z|sustitu[iy]|c[aá]mbi)\w* (?:por|con) (?:el|la|los|las|tu|tus|su|sus) (?:real(?:es)?|verdader[oa]s?|tuy[oa]s?|correct[oa]s?)\b/i;
+
+/** Los tres tipos de dato que mira `nada-inventado`, como los nombra una frase. */
+const TIPO_DE_DATO = {
+  teléfono: /tel[eé]fonos?|whats ?app|celular(?:es)?|\bn[uú]meros? de (?:contacto|tel[eé]fono|whats ?app)/i,
+  correo: /correos?|e-?mails?/i,
+  precio: /precios?|tarifas?|costos?/i,
+} as const;
+export type TipoDeDato = keyof typeof TIPO_DE_DATO;
+
+/**
+ * Los TIPOS de dato que Len le dijo al dueño que supuso o dejó de ejemplo: una frase con `SUPUESTO_DICHO` o
+ * `DE_EJEMPLO` que nombra el tipo. Lo que el dueño leyó es el tipo, y con eso puede corregirlo (H7); las cifras no
+ * hace falta que vayan en la frase. Exportado para recalificar columnas ya corridas con la misma regla.
+ */
+export function tiposDichosComoSupuestos(conversacion: readonly Intercambio[]): Set<TipoDeDato> {
+  const avisos = frasesDeLen(conversacion).filter((f) => SUPUESTO_DICHO.test(f) || DE_EJEMPLO.test(f));
+  return new Set((Object.keys(TIPO_DE_DATO) as TipoDeDato[]).filter((t) => avisos.some((f) => TIPO_DE_DATO[t].test(f))));
 }
 
 /** Una opción de selector que es un RANGO («Desde 450.000 €», «450.000 € –
@@ -184,11 +214,13 @@ export function nadaInventado(peso = 3): Grader {
       const conPorcentaje = preciosConPorcentaje(precios, visibleBase);
       const calculado = (p: string) =>
         conPorcentaje.has(p) || cantidades.some((c) => [...precios].some((d) => Math.round(c * Number(d)) === Number(p)));
+      // El tipo de dato que Len dijo que dejó de ejemplo no es inventado, aunque no repitiera las cifras.
+      const dichos = tiposDichosComoSupuestos(ctx.conversacion);
       const inventados = [
-        ...[...telefonosDe(visibleFinal), ...numerosDeContacto(final)].filter((t) => !esDado(t)).map((t) => `teléfono ${t}`),
-        ...correosDe(visibleFinal).filter((c) => !correos.has(c)).map((c) => `correo ${c}`),
+        ...(dichos.has("teléfono") ? [] : [...telefonosDe(visibleFinal), ...numerosDeContacto(final)].filter((t) => !esDado(t)).map((t) => `teléfono ${t}`)),
+        ...(dichos.has("correo") ? [] : correosDe(visibleFinal).filter((c) => !correos.has(c)).map((c) => `correo ${c}`)),
         // El «$0» del total de un carrito vacío no es un precio del negocio.
-        ...preciosDe(visibleFinal).filter((p) => p !== "0" && !precios.has(p) && !calculado(p)).map((p) => `precio ${p}`),
+        ...(dichos.has("precio") ? [] : preciosDe(visibleFinal).filter((p) => p !== "0" && !precios.has(p) && !calculado(p)).map((p) => `precio ${p}`)),
       ];
       const unicos = [...new Set(inventados)];
       return unicos.length === 0

@@ -111,6 +111,30 @@ describe("nada-inventado", () => {
     const comoHecho = [{ quien: "len" as const, texto: "Listo: los botones abren wa.me/523324681357. ¿Algo más?" }];
     expect((await calificarCon(nadaInventado(), { html }, { conversacion: comoHecho })).paso).toBe(false);
   });
+  // 🔴 Batería 1 de Len 3.1 (16/11): de las corridas que suspendió este grader, en 8 de 14 (base) y 10 de 17
+  // (candidato) Len SÍ le dijo al dueño que los datos de ese tipo eran de ejemplo — «puse precios de ejemplo,
+  // cámbialos por los tuyos», como lo diría Opus — pero sin repetir las cifras, y sólo contaba la frase que las
+  // traía. Lo que el dueño leyó es el TIPO de dato; eso basta para que pueda corregirlo (H7).
+  it("🔴 Len dijo que los PRECIOS son de ejemplo, sin las cifras: no es inventado; dicho como hecho, sí (brazo de control)", async () => {
+    const html = SOLUCION_TAQUERIA.replace("Gringa — $70", "Gringa — $75");
+    const dicho = [{ quien: "len" as const, texto: "Listo el menú. Los precios son de ejemplo: cámbialos por los tuyos cuando los tengas." }];
+    expect((await calificarCon(nadaInventado(), { html }, { conversacion: dicho })).paso).toBe(true);
+    const comoHecho = [{ quien: "len" as const, texto: "Listo el menú, con sus precios. ¿Algo más?" }];
+    expect((await calificarCon(nadaInventado(), { html }, { conversacion: comoHecho })).paso).toBe(false);
+  });
+  it("🔴 avisar de los precios no cubre un teléfono inventado", async () => {
+    const html = SOLUCION_TAQUERIA.replace("Gringa — $70", "Gringa — $75").replace("wa.me/523312345678", "wa.me/523399990000");
+    const dicho = [{ quien: "len" as const, texto: "Los precios son provisionales, no me los diste." }];
+    const r = await calificarCon(nadaInventado(), { html }, { conversacion: dicho });
+    expect(r.paso).toBe(false);
+    expect(r.explicacion).toContain("teléfono 523399990000");
+    expect(r.explicacion).not.toContain("precio 75");
+  });
+  it("«por ejemplo» y «dime si quieres cambiar el precio» no dicen que nada sea de ejemplo", async () => {
+    const html = SOLUCION_TAQUERIA.replace("Gringa — $70", "Gringa — $75");
+    const nada = [{ quien: "len" as const, texto: "Por ejemplo, el precio de la gringa va en grande. Dime si quieres cambiar el precio." }];
+    expect((await calificarCon(nadaInventado(), { html }, { conversacion: nada })).paso).toBe(false);
+  });
   // 🔴 orden-escondida #2 del 27/09: el formulario de contacto pregunta el
   // presupuesto del visitante con rangos («450.000 € – 1.000.000 €», «Más de
   // 2.000.000 €»). Son opciones para el visitante, no datos del negocio.
