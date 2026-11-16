@@ -222,7 +222,10 @@ export type Desenlace =
   | "error_de_len"
   | "proveedor"
   | "cliente_fuera_de_ficha"
-  | "tope_de_gasto";
+  | "tope_de_gasto"
+  /** The bench's own turn clock cut a turn that was still working (`BenchClockError`, sesion.ts). In production nothing
+   *  cuts a working turn, so it is the harness's, like Claude Code's `partial_reason: "interrupted"` (16/11). */
+  | "plazo_del_banco";
 
 export interface ResultadoDeCorrida {
   readonly graders: readonly ResultadoDeGrader[];
