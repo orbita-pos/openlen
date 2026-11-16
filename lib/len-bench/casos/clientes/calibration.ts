@@ -93,3 +93,21 @@ export async function askEntries(
   }
   return { veredictos, errores, parado: false };
 }
+
+/** The reference from several labellers who labelled blind and apart: a case is in it only if every one labelled
+ *  it alike; the others are genuinely open under the criterion and are left out of the bar (by id). A case one
+ *  labeller missed is a mistake in the inputs. */
+export function consensus(sets: readonly (readonly ReferenceLabel[])[]): { labels: ReferenceLabel[]; excluded: string[] } {
+  const [first = [], ...rest] = sets;
+  const maps = rest.map((s) => new Map(s.map((l) => [key(l.caso), l.etiqueta])));
+  const labels: ReferenceLabel[] = [];
+  const excluded: string[] = [];
+  for (const l of first) {
+    const others = maps.map((m) => m.get(key(l.caso)));
+    if (others.some((o) => o === undefined)) throw new Error(`no todas las etiquetas tienen ${l.caso}`);
+    if (others.every((o) => o === l.etiqueta)) labels.push(l);
+    else excluded.push(l.caso);
+  }
+  for (const m of maps) if (m.size !== first.length) throw new Error("las etiquetas no cubren los mismos casos");
+  return { labels, excluded };
+}

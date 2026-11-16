@@ -4,9 +4,10 @@
 //
 //   npm run bench:clientes:calibrar                                  → $0: paints, checks the labels, prints the estimate
 //   npm run bench:clientes:calibrar -- --budget-usd=0.05 --yes       → asks the judge, never past the cap
-//   … --reserva            the held-out sheet (the cases after the first 15): labels etiquetas-fable-reserva.json,
+//   … --reserva            the held-out sheet (the cases after the first 15): labels etiquetas-*-reserva.json,
 //                          result calibracion-reserva-resultado.json
-//   … --etiquetas=<file>   the labels (default: etiquetas-fable.json in the cases' folder)
+//   … --etiquetas=<a,b>    the labels, one file per blind labeller (default: etiquetas-fable.json + etiquetas-opus.json
+//                          in the cases' folder); the reference is where they all agree (`consensus`), the rest is left out
 //
 // Writes calibracion-resultado.json next to the cases (ids, verdicts and votes: no customer text) and prints only ids,
 // percentages and dollars. Spending needs both flags: the estimate is printed first, and Jesús says yes to it.
@@ -15,7 +16,7 @@ import path from "node:path";
 
 import { rateFor } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
-import { agreement, askEntries, estimateCalibrationUsd, type ReferenceLabel } from "../lib/len-bench/casos/clientes/calibration";
+import { agreement, askEntries, consensus, estimateCalibrationUsd, type ReferenceLabel } from "../lib/len-bench/casos/clientes/calibration";
 import { casesDir, readFetchedCase } from "../lib/len-bench/casos/clientes/fetched";
 import { sheetCases, sheetEntries } from "../lib/len-bench/casos/clientes/judge-sheet";
 import { renderedText } from "../lib/len-bench/casos/clientes/rendered";
@@ -31,12 +32,18 @@ const key = (caso: string) => caso.replace(/^cordura-/, "");
 
 async function main(): Promise<void> {
   const reserva = process.argv.includes("--reserva");
-  const labelsFile = arg("--etiquetas") || path.join(casesDir(), reserva ? "etiquetas-fable-reserva.json" : "etiquetas-fable.json");
-  const labels: ReferenceLabel[] = (JSON.parse(fs.readFileSync(labelsFile, "utf8")) as ReferenceLabel[]).map((l) => ({
-    caso: l.caso,
-    etiqueta: l.etiqueta,
-  }));
-  for (const l of labels) if (l.etiqueta !== "PASS" && l.etiqueta !== "FAIL") throw new Error(`etiqueta inválida para ${l.caso}`);
+  // Two blind labellers by default (15/11): Fable and Opus; the reference is where they agree.
+  const labelsFiles = (arg("--etiquetas") || ["fable", "opus"].map((who) => `etiquetas-${who}${reserva ? "-reserva" : ""}.json`).join(","))
+    .split(",")
+    .map((f) => (path.isAbsolute(f) ? f : path.join(casesDir(), f)));
+  const sets: ReferenceLabel[][] = labelsFiles.map((f) =>
+    (JSON.parse(fs.readFileSync(f, "utf8")) as ReferenceLabel[]).map((l) => {
+      if (l.etiqueta !== "PASS" && l.etiqueta !== "FAIL") throw new Error(`etiqueta inválida para ${l.caso} en ${path.basename(f)}`);
+      return { caso: l.caso, etiqueta: l.etiqueta };
+    }),
+  );
+  const { labels, excluded } = consensus(sets);
+  const fuera = new Set(excluded.map(key));
 
   const ids = (JSON.parse(fs.readFileSync("lib/len-bench/casos/clientes/cases.json", "utf8")) as { projectId: string }[]).map((c) => c.projectId);
   const navegador = await lanzarNavegador();
@@ -48,12 +55,17 @@ async function main(): Promise<void> {
     await navegador.close();
   }
   const labelled = new Set(labels.map((l) => key(l.caso)));
-  const missing = entries.filter((e) => !e.cordura && !labelled.has(key(e.caso))).map((e) => e.caso);
+  const missing = entries.filter((e) => !e.cordura && !labelled.has(key(e.caso)) && !fuera.has(key(e.caso))).map((e) => e.caso);
   if (missing.length > 0) throw new Error(`faltan etiquetas: ${missing.join(", ")}`);
+  // A case the labellers split on does not count, so the judge is not asked about it.
+  entries = entries.filter((e) => !fuera.has(key(e.caso)));
 
   const rate = rateFor(MODEL_POLICY.judge.modelId);
   const estimado = estimateCalibrationUsd(entries, rate);
-  console.log(`juez ${judgeIdentity().model} · ${entries.length} entradas × 3 votos · estimado $${estimado.toFixed(4)} · etiquetas ${path.basename(labelsFile)}`);
+  console.log(
+    `juez ${judgeIdentity().model} · ${entries.length} entradas × 3 votos · estimado $${estimado.toFixed(4)} · etiquetas ${labelsFiles.map((f) => path.basename(f)).join(" + ")}` +
+      (excluded.length > 0 ? ` · fuera (las etiquetas discrepan): ${excluded.join(", ")}` : ""),
+  );
 
   const tope = arg("--budget-usd") ? Number(arg("--budget-usd")) : undefined;
   if (tope === undefined || !(tope > 0) || arg("--yes") === undefined) {
@@ -74,7 +86,7 @@ async function main(): Promise<void> {
   fs.writeFileSync(
     out,
     JSON.stringify(
-      { fecha: new Date().toISOString(), hoja: reserva ? "reserva" : "hoja", juez: judgeIdentity().model, etiquetas: path.basename(labelsFile), usd: gastoDelJuez(), completo, veredictos, errores, acuerdo },
+      { fecha: new Date().toISOString(), hoja: reserva ? "reserva" : "hoja", juez: judgeIdentity().model, etiquetas: labelsFiles.map((f) => path.basename(f)), fuera: excluded, usd: gastoDelJuez(), completo, veredictos, errores, acuerdo },
       null,
       2,
     ),
