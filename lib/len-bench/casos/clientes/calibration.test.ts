@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { promptDelJuez, VOTOS_DEL_JUEZ } from "../../juez";
-import { agreement, askEntries, CALIBRATION_BAR, estimateCalibrationUsd } from "./calibration";
+import { agreement, askEntries, CALIBRATION_BAR, consensus, estimateCalibrationUsd } from "./calibration";
 import type { FetchedCase } from "./fetched";
 import { sheetEntries, SANITY_ENTRIES } from "./judge-sheet";
 import { CUMPLE_LO_PEDIDO } from "./rubric";
@@ -129,5 +129,32 @@ describe("askEntries", () => {
     );
     expect(r.veredictos).toHaveLength(2);
     expect(r.parado).toBe(true);
+  });
+});
+
+// Two reference labellers, blind and apart (15/11: Fable and Opus agreed on 23 of 24): where they agree is the
+// reference; where they do not, the case is genuinely open under the criterion and is left out of the bar.
+describe("consensus", () => {
+  it("keeps the cases every labeller labelled alike, and lists the rest by id", () => {
+    const fable = [
+      { caso: "cliente-aaaaaaaa", etiqueta: "PASS" as const },
+      { caso: "cliente-bbbbbbbb", etiqueta: "FAIL" as const },
+      { caso: "pagina-vacia", etiqueta: "FAIL" as const },
+    ];
+    const opus = [
+      { caso: "cliente-aaaaaaaa", etiqueta: "PASS" as const },
+      { caso: "cliente-bbbbbbbb", etiqueta: "PASS" as const },
+      { caso: "pagina-vacia", etiqueta: "FAIL" as const },
+    ];
+    const c = consensus([fable, opus]);
+    expect(c.labels).toEqual([fable[0], fable[2]]);
+    expect(c.excluded).toEqual(["cliente-bbbbbbbb"]);
+  });
+  it("a case one labeller did not label is a mistake in the inputs, said by id", () => {
+    expect(() => consensus([[{ caso: "cliente-aaaaaaaa", etiqueta: "PASS" }], []])).toThrow(/cliente-aaaaaaaa/);
+  });
+  it("one labeller is its own consensus", () => {
+    const one = [{ caso: "cliente-aaaaaaaa", etiqueta: "FAIL" as const }];
+    expect(consensus([one])).toEqual({ labels: one, excluded: [] });
   });
 });
