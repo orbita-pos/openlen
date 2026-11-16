@@ -17,8 +17,10 @@ import { juez } from "../../juez";
 import type { DatosDelCaso, Encargo, Grader } from "../../tipos";
 import type { FetchedCase } from "./fetched";
 
-/** The judge's one criterion, fixed text: nobody's data in it. It starts without voting (`puntua: false`) until it
- *  agrees with the reference labels (~90 %, spec §9 row 7).
+/** The judge's one criterion, fixed text: nobody's data in it. It does not vote (`puntua: false`) until it agrees
+ *  with the reference labels (~90 %, spec §9 row 7). Calibrated 15/11: 19/23 (82.6 %) against two blind labellers
+ *  who agreed 23/24 — so for Len 3.1 it OBSERVES: run and reported, never in the score (Jesús: «27B, advisory
+ *  only»; Claude Code's `scored: false`). `npm run bench:clientes:calibrar` says when a judge earns the vote.
  *
  *  Rewritten 15/11 after the first calibration (86.7 %): each «Cómo leerlo» line settles one CLASS of case the
  *  reference labeller itself called ambiguous —never a case's answer—, and is checked on 9 cases neither the

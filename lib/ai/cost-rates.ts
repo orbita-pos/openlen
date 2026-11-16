@@ -50,9 +50,9 @@ export const TOKEN_COST_RATES: Readonly<Record<string, TokenCostRate>> = {
   // promotion, 0.20 / 0.006 / 0.60. Keep the previous id for historical usage.
   "deepinfra/deepseek-ai/DeepSeek-V4.1-Flash-1017": { input: 0.098, cached: 0.003, output: 0.294 },
   // The Len-Bench judge (role `judge`, 2026-11-15). api.deepinfra.com/models/list, read 2026-11-15:
-  // 0.90 / 4.00 per million, cached at 0.22222222 of the input — list price; the list also shows a 0.375
-  // discount, not subtracted. The third judge of the day (Qwen3.8-Flash, then -27B: see model-policy.ts).
-  "deepinfra/zai-org/GLM-5.3": { input: 0.9, cached: 0.2, output: 4.0 },
+  // 0.20 / 2.50 per million, cached at 0.25 of the input — list price; the list also shows a 0.25 discount,
+  // not subtracted. It replaced Qwen3.8-Flash the same day (a partner's model: see model-policy.ts).
+  "deepinfra/Qwen/Qwen3.8-27B": { input: 0.2, cached: 0.05, output: 2.5 },
 };
 
 export const UNIT_COSTS_USD = {
