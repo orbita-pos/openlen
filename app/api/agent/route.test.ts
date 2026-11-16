@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { serializeNote, type MemoryNote } from "@/lib/agent/memory/note";
 
 // El tipo REAL del bucle, no una copia a mano. Es `import type`, así que se
 // borra al compilar y no despierta al módulo mockeado.
@@ -2170,6 +2171,44 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
     mocks.turnosParaElHistorial.mockResolvedValue([wroteTheSource]);
     mocks.projectFiles.mockResolvedValue({ "/src/App.tsx": "export default () => <h1>otra</h1>;\n" });
     expect((await readStateOfTheTurn()).has("/src/App.tsx")).toBe(false);
+  });
+
+  // F3, the memory notes (battery 1 of Len 3.1, 16/11: all 5 refused writes of the candidate column). A note lives in
+  // `lenMemoryNotes`, not among the pages nor in the folder, so the seeding never found it: a note Len wrote in one
+  // turn was «not read» in the next.
+  const NOTE: MemoryNote = { name: "landing", type: "project", description: "La landing de la academia", body: "Tres planes, sin precios." };
+  const wroteTheNote = (text: string) => ({
+    userText: "haz la landing",
+    assistantReasoning: "Hecha.",
+    transcript: {
+      mensajes: [
+        { role: "assistant", content: "", functionCalls: [{ name: "Write", args: { file_path: "/.len/memory/landing.md", content: text } }] },
+        { role: "user", content: "", functionResponses: [{ name: "Write", response: { ok: true, tool_result: "Created /.len/memory/landing.md." } }] },
+        { role: "assistant", content: "Hecha." },
+      ],
+      leidos: [{ ruta: "/.len/memory/landing.md", huella: createHash("sha1").update(text).digest("hex") }],
+    },
+  });
+  const withNotes = async <T,>(notes: MemoryNote[], run: () => Promise<T>): Promise<T> => {
+    mocks.memoryNotes.list.mockImplementation(async () => notes.map((n) => ({ ...n, updatedAt: new Date(0) })));
+    try {
+      return await run();
+    } finally {
+      mocks.memoryNotes.list.mockImplementation(async () => []);
+    }
+  };
+
+  it("🔴 F3: a memory note Len wrote the turn before, unchanged since, still counts as read", async () => {
+    const text = serializeNote(NOTE);
+    mocks.turnosParaElHistorial.mockResolvedValue([wroteTheNote(text)]);
+    const leidos = await withNotes([NOTE], readStateOfTheTurn);
+    expect(leidos.get("/.len/memory/landing.md")?.instantanea).toBe(text);
+  });
+
+  it("CONTROL: if the note changed in between, it has to be read again", async () => {
+    mocks.turnosParaElHistorial.mockResolvedValue([wroteTheNote(serializeNote(NOTE))]);
+    const leidos = await withNotes([{ ...NOTE, body: "Cuatro planes." }], readStateOfTheTurn);
+    expect(leidos.has("/.len/memory/landing.md")).toBe(false);
   });
 
   it("🔴 F3: the «published» note the card leaves after a turn does not make Len forget what he had read", async () => {

@@ -934,6 +934,10 @@ async function guardarMemoria(
 ): Promise<ToolOutcome> {
   const layer = memoryLayerOf(plan.ruta)!;
   const before = memoria.get(plan.ruta) ?? null;
+  /** What Read gives back from now on. A note is kept as its fields, so it comes back re-serialized — whitespace
+   *  Len wrote otherwise included (74 of 84 note Writes in battery 1 of Len 3.1, 16/11). Keeping what he SENT made
+   *  his own note look «changed since read» to the same turn and «not read» to the next (F3). */
+  let saved = plan.contenido;
   if (layer === "index") {
     return { response: respuesta(fallo(`${MEMORY_INDEX} is generated from the notes. Write or edit /.len/memory/<name>.md instead.`)) };
   }
@@ -948,6 +952,7 @@ async function guardarMemoria(
     }
     if (!deps.memoryNotes) return { response: respuesta(fallo("Memory notes are not available right now.")) };
     await deps.memoryNotes.upsert(virtualProjectOf(session), parsed.note, personOf(session));
+    saved = serializeNote(parsed.note);
   } else {
     if (layer === "assistant" && (!session.assistant || !deps.assistantMemory)) {
       return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is the person's own assistant's memory: only that assistant writes it.`)) };
@@ -968,7 +973,7 @@ async function guardarMemoria(
           : await deps.setUserBrief(virtualProjectOf(session), session.userId, plan.contenido);
     if (!ok) return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} could not be saved.`)) };
   }
-  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(plan.contenido), offset: undefined, limit: undefined });
+  leidosDe(session).set(plan.ruta, { instantanea: normalizarFinales(saved), offset: undefined, limit: undefined });
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
   const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
   return {
