@@ -47,7 +47,7 @@ import { fallidasDeLaTraza, pasosDeProyecto, publishRejections } from "./pasos";
 import { puntuarCorrida } from "./puntuar";
 import { readRunSteps, settledRunSteps, stepsProblem } from "./steps-of-run";
 import type { Sql } from "./cold-return/snapshot";
-import { enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
+import { BenchClockError, enviarTurno, herramientasDeLen, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 import { servirPublicada } from "./servidor-publicada";
 import type { Desenlace, Encargo, Intercambio, ResultadoDeCorrida, ResultadoDeGrader, VerificacionDeLaApp } from "./tipos";
 import { verificarAppDelProyecto } from "./app-verificada";
@@ -407,7 +407,8 @@ export async function correrEncargo(e: Encargo, o: OpcionesDelConductor): Promis
     publishRechazados = publishRejections(cal.traza);
   } catch (err) {
     if (err instanceof ErrorDeMontaje) throw err;
-    desenlace = desenlace === "completa" ? "error_de_len" : desenlace;
+    // The bench's own clock is the harness's, not Len's (16/11): in production nothing cuts a working turn.
+    desenlace = desenlace === "completa" ? (err instanceof BenchClockError ? "plazo_del_banco" : "error_de_len") : desenlace;
     error = err instanceof Error ? err.message : String(err);
   } finally {
     await restoreAgentMemory(o.owner.id, memoria);
