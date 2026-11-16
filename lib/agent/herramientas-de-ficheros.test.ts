@@ -833,6 +833,22 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     assert.equal(s.leidos?.get("/.len/memory/hero-oscuro.md")?.instantanea, serializeNote(NOTA));
   });
 
+  // Claude Code (binary 2.1.325) leaves out «(file state is current in your context — no need to Read it back)»
+  // when what it saved is not what the model sent — a memory file it stamped (`memdirStamped`), or one the user
+  // changed. Len's «exactly what was saved» is the same promise.
+  it("🔴 like Claude Code: a note saved in other whitespace does not say it was saved exactly as sent", async () => {
+    const { deps } = depsConLenMd();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: AS_LEN_WRITES_IT });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.doesNotMatch(texto(out), /exactly what was saved/);
+  });
+
+  it("CONTROL: a note sent as it is stored still says so", async () => {
+    const { deps } = depsConLenMd();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: serializeNote(NOTA) });
+    assert.match(texto(out), /exactly what was saved/);
+  });
+
   it("🔴 F3: and the same turn can write that note again", async () => {
     const { deps, estado } = depsConLenMd();
     const s = makeSession();
