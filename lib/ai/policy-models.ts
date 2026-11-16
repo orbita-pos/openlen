@@ -39,7 +39,21 @@ export function tariffedProvider(entry: PolicyEntry): ProviderId {
 
 interface DeepinfraListModel {
   readonly model_name?: unknown;
+  /** True when DeepInfra hands the model to a partner instead of serving it (as Qwen3.8-Flash and -Max, 15/11). */
+  readonly is_partner?: unknown;
   readonly pricing?: { readonly cents_per_input_token?: unknown; readonly cents_per_output_token?: unknown; readonly rate_per_input_token_cached?: unknown };
+}
+
+/** Whether DeepInfra SERVES the model itself, per its public list (`is_partner: false`), or why not. A partner's
+ *  model is handed on: what it reads leaves for the partner and passes its moderation — 15/11, Qwen3.8-Flash, the
+ *  judge then, refused a customer's page with Alibaba Cloud's `data_inspection_failed`. */
+export function deepinfraServesItself(list: unknown, modelId: string): true | string {
+  if (!Array.isArray(list)) return "la respuesta de DeepInfra no es una lista de modelos";
+  const m = (list as DeepinfraListModel[]).find((x) => x?.model_name === modelId);
+  if (!m) return `no aparece en la lista de DeepInfra («${modelId}»)`;
+  if (m.is_partner === false) return true;
+  if (m.is_partner === true) return `DeepInfra no lo sirve: se lo pasa a un socio («${modelId}», is_partner)`;
+  return `la lista de DeepInfra no dice quién lo sirve («${modelId}», sin is_partner)`;
 }
 
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);

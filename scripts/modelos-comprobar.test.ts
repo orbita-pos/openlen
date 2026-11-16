@@ -9,8 +9,9 @@ const link = "https://app.fireworks.ai/models/fireworks/deepseek-v4p1-flash-1017
 const label = "DeepSeek V4.1 Flash 1017";
 const row = (name: string, prices = "$0.30 / $0.006 / $1.20") => "| [" + name + "](" + link + ") | " + prices + " | — |";
 
-// DeepInfra's public models list, as the judge's price is read from it (15/11): Qwen3.8 Flash at its list price.
-const QWEN = { model_name: "Qwen/Qwen3.8-Flash", type: "text-generation", pricing: { type: "tokens", cents_per_input_token: 0.0000113, cents_per_output_token: 0.0000382, rate_per_input_token_cached: 0.12477876 } };
+// DeepInfra's public models list, as the judge's price is read from it (15/11): Qwen3.8 27B at its list price,
+// served by DeepInfra itself (`is_partner: false`).
+const QWEN = { model_name: "Qwen/Qwen3.8-27B", type: "text-generation", is_partner: false, pricing: { type: "tokens", cents_per_input_token: 0.00002, cents_per_output_token: 0.00025, rate_per_input_token_cached: 0.25 } };
 
 function check(rows: string[], o: { deepinfraList?: unknown; env?: Record<string, string | undefined> } = {}) {
   // Exercise the real CLI. Every provider call is mocked before it loads; no network or paid calls. The
@@ -32,12 +33,19 @@ describe("modelos:comprobar asks each provider the policy names (the judge is De
     expect(r.status, r.stdout + r.stderr).toBe(0);
     expect(r.stderr).toContain("ASKED https://api.deepinfra.com/v1/openai/chat/completions");
     expect(r.stderr).toContain("ASKED https://api.fireworks.ai/inference/v1/chat/completions");
-    expect(r.stdout).toContain("deepinfra/Qwen/Qwen3.8-Flash");
+    expect(r.stdout).toContain("deepinfra/Qwen/Qwen3.8-27B");
+  });
+  // 15/11: Qwen3.8-Flash was a partner's model — DeepInfra handed it on, and the partner's moderation refused a
+  // customer's page. The judge reads customers' text: it must be served by DeepInfra itself.
+  it("a judge DeepInfra hands to a partner is not a pass", () => {
+    const r = check([row(label)], { deepinfraList: [{ ...QWEN, is_partner: true }] });
+    expect(r.status).toBe(1);
+    expect(r.stdout + r.stderr).toMatch(/socio/);
   });
   it("a judge whose list price moved is a drift, not a pass", () => {
-    const r = check([row(label)], { deepinfraList: [{ ...QWEN, pricing: { ...QWEN.pricing, cents_per_output_token: 0.00005 } }] });
+    const r = check([row(label)], { deepinfraList: [{ ...QWEN, pricing: { ...QWEN.pricing, cents_per_output_token: 0.0004 } }] });
     expect(r.status).toBe(1);
-    expect(r.stdout).toMatch(/salida: nosotros 0\.382, ellos 0\.5/);
+    expect(r.stdout).toMatch(/salida: nosotros 2\.5, ellos 4\b/);
   });
   it("without DeepInfra's key it is not a pass", () => {
     const r = check([row(label)], { env: { DEEPINFRA_API_KEY: "" } });

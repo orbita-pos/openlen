@@ -72,13 +72,17 @@ const V4_FLASH = { input: 0.22, output: 0.66, cached: 0.007 } as const;
 const V4P1_FLASH = { input: 0.30, output: 1.20, cached: 0.006 } as const;
 
 /**
- * Qwen3.8 Flash en DeepInfra, a PRECIO DE LISTA. El papel `judge` (el juez de Len-Bench, que nunca se le
+ * Qwen3.8 27B en DeepInfra, a PRECIO DE LISTA. El papel `judge` (el juez de Len-Bench, que nunca se le
  * cobra a nadie: sólo frena y cuenta las corridas del banco). Leído el 15/11/2026 en la API pública
- * `GET https://api.deepinfra.com/models/list` (`Qwen/Qwen3.8-Flash`): `cents_per_input_token` 0.0000113,
- * `cents_per_output_token` 0.0000382, `rate_per_input_token_cached` 0.12477876 (de la entrada), sin descuento.
+ * `GET https://api.deepinfra.com/models/list` (`Qwen/Qwen3.8-27B`): `cents_per_input_token` 0.00002,
+ * `cents_per_output_token` 0.00025, `rate_per_input_token_cached` 0.25 (de la entrada). La lista anuncia además
+ * `discount: 0.25`; no se resta: equivocarse hacia arriba frena el banco antes, hacia abajo lo deja pasarse.
  * `npm run modelos:comprobar` lo vuelve a cotejar contra esa misma API.
+ *
+ * ⚰️ Aquí estaba `qwen-3p8-flash` (0.113/0.382), el juez de unas horas del 15/11: lo sirve un socio de DeepInfra
+ * (ver `model-policy.ts`). Se quita la fila con él, por lo mismo que se quitaron las de Gemini (abajo).
  */
-const QWEN3P8_FLASH = { input: 0.113, output: 0.382, cached: 0.0141 } as const;
+const QWEN3P8_27B = { input: 0.2, output: 2.5, cached: 0.05 } as const;
 
 /** DeepSeek V4 Pro. Hoy no lo corre ningún papel (lo montaba a mano
  *  `lib/agent/redesign.ts`, retirado con Len 2.0). Se queda: es la vuelta
@@ -105,7 +109,7 @@ export const TARIFAS_POR_MILLON = {
   "deepseek-flash": V4_FLASH,
   "deepseek-flash-4p1": V4P1_FLASH,
   "deepseek-pro": V4_PRO,
-  "qwen-3p8-flash": QWEN3P8_FLASH,
+  "qwen-3p8-27b": QWEN3P8_27B,
 } as const satisfies Readonly<Record<string, TarifaPorMillon>>;
 
 export type CreditRate = keyof typeof TARIFAS_POR_MILLON;

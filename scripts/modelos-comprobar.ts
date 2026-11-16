@@ -46,7 +46,7 @@
 // NO. Una puerta que sólo se ha visto en verde no está verificada: está sin
 // mirar, que es el mismo defecto que persigue.
 
-import { deepinfraListPrice, policyModels, tariffedProvider, type PolicyModel } from "@/lib/ai/policy-models";
+import { deepinfraListPrice, deepinfraServesItself, policyModels, tariffedProvider, type PolicyModel } from "@/lib/ai/policy-models";
 import { PROVIDER_DIALECTS, type ProviderId } from "@/lib/ai/providers";
 import { TARIFAS_POR_MILLON, type TarifaPorMillon } from "@/lib/ai/tarifas";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
@@ -286,6 +286,7 @@ async function main(): Promise<void> {
   // La tarifa de un papel se coteja donde sale su `creditRate`: Fireworks (su página de precios) o DeepInfra
   // (la lista pública de su API, una descarga sin clave, sólo si algún papel la necesita).
   let listaDeDeepinfra: unknown = null;
+  const ajenos: string[] = [];
   const vistos = new Set<string>();
   for (const [papel, cfg] of Object.entries(MODEL_POLICY)) {
     if (vistos.has(cfg.modelId)) continue;
@@ -296,6 +297,14 @@ async function main(): Promise<void> {
       listaDeDeepinfra ??= await fetch(LISTA_DE_DEEPINFRA).then((r) => (r.ok ? r.json() : `http_${r.status}`)).catch((e: unknown) => `sin red: ${e instanceof Error ? e.message : String(e)}`);
       const suya = deepinfraListPrice(listaDeDeepinfra, cfg.modelId);
       c = typeof suya === "string" ? { ok: false, detalle: suya } : cotejaTarifa(nuestra, suya, `${cfg.modelId} en DeepInfra`);
+      // Quien lo sirve, además de lo que cuesta: un modelo de socio se lo pasa DeepInfra a otro, y lo que lee
+      // (el juez lee pedidos y páginas de clientes) sale hacia él y pasa su moderación (15/11, Qwen3.8-Flash).
+      const sirve = deepinfraServesItself(listaDeDeepinfra, cfg.modelId);
+      if (sirve !== true) {
+        console.log(`  AJENO ${cfg.modelId}  (lo pide ${papel})`);
+        console.log(`         ${sirve}`);
+        ajenos.push(`${cfg.modelId} — ${sirve}`);
+      }
     } else {
       c = cotejaUno(cfg.modelId, nuestra, tabla);
     }
@@ -321,7 +330,17 @@ async function main(): Promise<void> {
     );
   }
 
-  if (muertos.length === 0 && desviadas.length === 0) {
+  if (ajenos.length > 0) {
+    console.error(
+      `\n🔴 ${ajenos.length} modelo(s) que DeepInfra no sirve: se los pasa a un socio:\n` +
+        ajenos.map((d) => `   · ${d}`).join("\n") +
+        "\n\nLo que leen sale de DeepInfra hacia ese socio y pasa por su moderación, que" +
+        "\npuede negarse a contestar a media corrida. Elige uno que DeepInfra sirva" +
+        "\n(`is_partner: false` en su lista) en `lib/generation/model-policy.ts`.",
+    );
+  }
+
+  if (muertos.length === 0 && desviadas.length === 0 && ajenos.length === 0) {
     console.log("\nlos modelos de la política responden, y cuestan lo que decimos.");
     return;
   }

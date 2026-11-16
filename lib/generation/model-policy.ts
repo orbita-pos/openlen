@@ -197,14 +197,18 @@ export const MODEL_POLICY = Object.freeze({
   // Era el razonador —la misma 1017 que Len, y sólo por Fireworks—, y la guía de evals de Anthropic pide que
   // el juez nunca sea el modelo que se prueba (spec local 2026-11-12-len-3-1-ruta, §8.5 y §9 fila 7). Otra
   // familia (Alibaba), en DeepInfra para pagar el banco entero de una cuenta, y SIN razonamiento: contesta una
-  // palabra con 16 tokens de salida. Se eligió por precio y forma, no por una medida: lo calibran unas 15
-  // etiquetas puestas a mano antes de que vote; si no llega a ~90 % de acuerdo, se cambia esta fila.
+  // palabra con 16 tokens de salida. Lo calibran etiquetas de referencia antes de que vote (~90 % de acuerdo).
+  // 🔴 QWEN3.8-27B, NO FLASH (Jesús, 15/11, tras la calibración): Flash es un modelo de SOCIO en DeepInfra
+  // (`is_partner: true` en su lista pública): se lo pasa a Alibaba Cloud, cuya moderación rechazó la página de
+  // un cliente a media corrida (`data_inspection_failed`), y el texto de los clientes salía hacia ellos. Además
+  // sacó 6/9 en la reserva. El 27B es de pesos abiertos y lo sirve DeepInfra (`is_partner: false`);
+  // `npm run modelos:comprobar` falla si eso cambia (`deepinfraServesItself`).
   judge: Object.freeze({
-    modelId: "Qwen/Qwen3.8-Flash",
-    creditRate: "qwen-3p8-flash" as CreditRate,
-    displayName: "Qwen3.8 Flash",
+    modelId: "Qwen/Qwen3.8-27B",
+    creditRate: "qwen-3p8-27b" as CreditRate,
+    displayName: "Qwen3.8 27B",
     capturaRuntime: false,
-    providers: Object.freeze([Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "Qwen/Qwen3.8-Flash" })]),
+    providers: Object.freeze([Object.freeze({ provider: "deepinfra" as ProviderId, modelId: "Qwen/Qwen3.8-27B" })]),
   }),
 });
 
