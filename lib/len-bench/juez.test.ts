@@ -45,7 +45,7 @@ import { rateFor, usdDeTurno } from "@/lib/ai/tarifas-eval";
 import { MODEL_POLICY } from "@/lib/generation/model-policy";
 import type { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 
-// EL JUEZ EN DEEPINFRA, DE OTRA FAMILIA (Jesús, 15/11: Qwen3.8-Flash; tras la calibración, Qwen3.8-27B). Un cliente de mentira recoge lo que se
+// EL JUEZ EN DEEPINFRA, DE OTRA FAMILIA (Jesús, 15/11: Qwen3.8-Flash, luego Qwen3.8-27B; tras la calibración, GLM-5.3). Un cliente de mentira recoge lo que se
 // le pide: se comprueba la petición, no al proveedor (eso lo hace `npm run modelos:comprobar`).
 describe("createJudgeCall — a quién y cómo se le pregunta", () => {
   type Opciones = Parameters<typeof createFireworksStreamClient>[0];

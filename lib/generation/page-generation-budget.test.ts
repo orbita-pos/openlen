@@ -35,7 +35,7 @@ describe("page generation budget", () => {
       "accounts/fireworks/models/glm-5p2": { input: 1.40, cached: .26, output: 4.40 },
       "accounts/fireworks/models/deepseek-v4p1-flash-1017": { input: .30, cached: .006, output: 1.20 },
       // El juez de Len-Bench (papel `judge`, 15/11): un papel nuevo entra en la tarjeta solo.
-      "Qwen/Qwen3.8-27B": { input: .20, cached: .05, output: 2.50 },
+      "zai-org/GLM-5.3": { input: .90, cached: .20, output: 4 },
       "gemini-2.5-flash-image": { image: .039 },
     });
     expect(FABLE_PRIORITY_RATES).toEqual({
