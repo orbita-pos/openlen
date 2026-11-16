@@ -140,7 +140,7 @@ export function tableRows(base: Column, candidate: Column, o: { readonly publish
       ruido: "recuento",
     },
     {
-      fila: "Turnos que no terminan: de Len (error) · del arnés (proveedor, cliente fuera de ficha)",
+      fila: "Turnos que no terminan: de Len (error) · del arnés (proveedor, cliente fuera de ficha, reloj del banco)",
       ...each((c) => `${c.runs.filter((r) => r.result.desenlace === "error_de_len").length} de Len · ${c.runs.filter((r) => DEL_ARNES.has(r.result.desenlace)).length} del arnés`),
       ruido: "recuento",
     },

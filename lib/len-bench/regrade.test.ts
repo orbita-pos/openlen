@@ -1,10 +1,10 @@
-// lib/len-bench/regrade-told.test.ts
+// lib/len-bench/regrade.test.ts
 // @vitest-environment node
 //
 // Re-grading a column already run with the revised `nada-inventado` (16/11): the published pages are gone, but the
 // grader's explanation lists every value it called invented, with its kind, and the run keeps the conversation.
 import { describe, expect, it } from "vitest";
-import { regradeToldPlaceholders } from "./regrade-told";
+import { reclassifyBenchClock, regradeToldPlaceholders } from "./regrade";
 import type { ResultadoDeCorrida, ResultadoDeGrader } from "./tipos";
 
 const grader = (nombre: string, paso: boolean, explicacion = "", peso = 3): ResultadoDeGrader => ({ nombre, paso, peso, explicacion, puntua: true });
@@ -26,6 +26,20 @@ function run(o: { readonly graders: readonly ResultadoDeGrader[]; readonly len?:
     ],
   } as unknown as ResultadoDeCorrida;
 }
+
+describe("reclassifyBenchClock", () => {
+  it("🔴 a stored run the old 20-min clock cut («This operation was aborted») becomes the harness's", () => {
+    const cut = { ...run({ graders: [], desenlace: "error_de_len" }), error: "This operation was aborted" } as ResultadoDeCorrida;
+    const r = reclassifyBenchClock(cut);
+    expect(r.desenlace).toBe("plazo_del_banco");
+    expect(r.error).toMatch(/20 min/);
+  });
+
+  it("CONTROL: any other error of Len stays Len's", () => {
+    const other = { ...run({ graders: [], desenlace: "error_de_len" }), error: "upstream: boom" } as ResultadoDeCorrida;
+    expect(reclassifyBenchClock(other)).toEqual(other);
+  });
+});
 
 describe("regradeToldPlaceholders", () => {
   it("🔴 the kinds Len said were examples come off the list; what is left still fails, and the score follows", () => {

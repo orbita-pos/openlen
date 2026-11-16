@@ -61,6 +61,12 @@ describe("saveRun / keptRuns", () => {
     expect([...kept.keys()].sort()).toEqual([runKey("c-1", 1), runKey("c-1", 2)]);
   });
 
+  it("🔴 a run the bench's own clock cut is the harness's: it runs again on resume (16/11)", () => {
+    const dir = tmp();
+    saveRun(dir, "c-1", 1, corrida("plazo_del_banco", 0, "the bench's clock"));
+    expect(keptRuns(dir).has(runKey("c-1", 1))).toBe(false);
+  });
+
   it("a case id with hyphens and a two-digit run are told apart", () => {
     const dir = tmp();
     saveRun(dir, "a-b-c", 12, corrida("completa"));

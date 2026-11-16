@@ -9,7 +9,7 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { decode } from "next-auth/jwt";
 import { afterEach, describe, expect, it } from "vitest";
-import { acunarCookie, enviarTurno, herramientasDeLen, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
+import { BenchClockError, acunarCookie, enviarTurno, herramientasDeLen, nombreDeCookie, secretoDeAuth, tarjetaDePublicar, textoDeLen, tocarPublicar } from "./sesion";
 
 const SECRETO = "secreto-de-prueba-de-treinta-y-dos-bytes";
 
@@ -280,5 +280,42 @@ describe("enviarTurno — contesta la pregunta mientras el turno espera", () => 
     await new Promise<void>((r) => servidor!.listen(0, "127.0.0.1", () => r()));
     const base = `http://127.0.0.1:${(servidor!.address() as AddressInfo).port}`;
     expect(textoDeLen(await enviarTurno({ base, cookie: "c", cuerpo, timeoutMs: 5_000 }))).toBe("null");
+  });
+});
+
+// 16/11 (battery 1 of Len 3.1): the bench's own turn clock cut 13 runs at 20 min and they were counted as Len's
+// errors — «This operation was aborted» fell in the conductor's catch-all. In production nothing cuts a turn that
+// is working (only a 180 s silence watchdog), so a cut by this clock is the bench's, said with its own error.
+describe("enviarTurno — the bench's clock", () => {
+  let servidor: http.Server | null = null;
+  afterEach(async () => {
+    servidor?.closeAllConnections();
+    await new Promise<void>((r) => (servidor ? servidor.close(() => r()) : r()));
+    servidor = null;
+  });
+
+  it("🔴 a turn still working when the clock runs out: asks the route to stop and throws BenchClockError", async () => {
+    const cancelled: unknown[] = [];
+    servidor = http.createServer((req, res) => {
+      let c = "";
+      req.on("data", (x) => (c += x));
+      req.on("end", () => {
+        if (req.url === "/api/agent/cancelar") {
+          cancelled.push(JSON.parse(c));
+          res.writeHead(200, { "content-type": "application/json" });
+          res.end("{}");
+          return;
+        }
+        res.writeHead(200, { "content-type": "text/event-stream" });
+        res.write(`event: turno\ndata: ${JSON.stringify({ type: "turno", turnoId: "t1" })}\n\n`);
+        // Len keeps working: the stream never ends on its own.
+      });
+    });
+    await new Promise<void>((r) => servidor!.listen(0, "127.0.0.1", () => r()));
+    const base = `http://127.0.0.1:${(servidor!.address() as AddressInfo).port}`;
+    const cuerpo = { projectId: "p1", prompt: "hazla", turnId: "00000000-0000-4000-8000-000000000002", history: [], esfuerzo: "auto" };
+    const sent = enviarTurno({ base, cookie: "c", cuerpo, timeoutMs: 300 });
+    await expect(sent).rejects.toBeInstanceOf(BenchClockError);
+    expect(cancelled).toEqual([{ turnoId: "t1" }]);
   });
 });

@@ -21,7 +21,11 @@ import type { Desenlace, Nivel, ResultadoDeCaso, ResultadoDeCorrida, ResultadoDe
  * passRate de UNA corrida sin que la tabla lo dijera— no pasa: el fichero y el
  * código de salida lo dicen, y reanudar completa las corridas.
  */
-export const DEL_ARNES: ReadonlySet<Desenlace> = new Set<Desenlace>(["proveedor", "cliente_fuera_de_ficha"]);
+// 🔴 16/11: and the turn the bench's OWN clock cut (`plazo_del_banco`). In battery 1 of Len 3.1 it cut 13 turns
+// that were still working —55 to 110 calls, 90–97 % of the time in the model— and they counted as Len's errors; in
+// production only a silence watchdog stops a turn. Claude Code's eval runner reports such a run as partial
+// (`partial_reason: "interrupted"`), not as the model failing.
+export const DEL_ARNES: ReadonlySet<Desenlace> = new Set<Desenlace>(["proveedor", "cliente_fuera_de_ficha", "plazo_del_banco"]);
 
 export function puntuarCorrida(graders: readonly ResultadoDeGrader[]): number {
   const votan = graders.filter((x) => x.puntua);
