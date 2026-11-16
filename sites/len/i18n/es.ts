@@ -1,7 +1,7 @@
 export const es = {
   htmlLang: "es",
   meta: {
-    title: "Len 3.0 — de la idea al entregable",
+    title: "Len 3.1 — de la idea al entregable",
     description: "Un agente que trabaja con el contexto de tu proyecto, planea, ejecuta y comprueba. Ahora también crea presentaciones, dashboards, imágenes, videos y voz, con una terminal real para llevar el trabajo a la práctica."
   },
   nav: {
@@ -37,13 +37,19 @@ export const es = {
     antetitulo: "Len, de OpenLen",
     titular: [
       "Presentamos ",
-      "Len 3.0",
+      "Len 3.1",
       "."
     ],
-    parrafo: "Nuestro agente más capaz hasta ahora. Entiende tu encargo, trabaja con el contexto de tu proyecto, planea los pasos y comprueba lo que construye. Ahora también crea presentaciones, dashboards, imágenes, videos y voz, con una terminal real para ejecutar código y pruebas.",
+    parrafo: "Los mismos resultados que la versión anterior con un 19 % menos de coste por página y menos pasos para llegar a ella; y retomar más tarde una conversación larga cuesta ahora cerca de la mitad. Len sigue entendiendo tu encargo, trabajando con el contexto de tu proyecto, planeando los pasos y comprobando lo que construye, y crea presentaciones, dashboards, imágenes, videos y voz, con una terminal real para ejecutar código y pruebas.",
     cta: "Prueba Len",
     ctaSecundario: "Conoce todas las novedades",
-    altCielo: "Len 3.0 sobre un horizonte naranja. Nuestro agente más capaz hasta ahora. Ahora también crea imágenes, videos y presentaciones.",
+    altCielo: "Len 3.1 sobre un mar de nubes al amanecer. Mismos resultados, un 19 % menos de coste por página.",
+    // La evidencia de las cifras de arriba y de la imagen (la promesa del pie).
+    fuentes: {
+      texto: "Los números:",
+      tabla: { commit: "c947d87d4" },
+      conversaciones: { commit: "b604f0ef4" }
+    },
     cielo: {
       titulo: "Len 3.0",
       texto: "Páginas y apps. Presentaciones, dashboards, imágenes, videos y voz. Len ahora lleva más de tus ideas a un resultado que puedes abrir, revisar y descargar, desde la misma conversación.",
@@ -92,8 +98,8 @@ export const es = {
       ]
     },
     tarjeta: {
-      antetitulo: "Len 3.0 · octubre 2026",
-      titulo: "38 herramientas, un solo agente",
+      antetitulo: "Len 3.1 · noviembre 2026",
+      titulo: "51 herramientas, un solo agente",
       texto: "Lee y cambia los archivos de tu proyecto, ejecuta código en una terminal real y prepara entregables con sus propias versiones. Te pregunta lo que falta y te muestra qué ha comprobado antes de dar el trabajo por terminado.",
       como: "Cómo trabaja →",
       grupos: {
@@ -103,7 +109,7 @@ export const es = {
         },
         leer: {
           titulo: "Leer, buscar y la terminal",
-          texto: "Lee los archivos y las guías del proyecto, busca en internet y ejecuta código en una terminal real dentro de un entorno aislado."
+          texto: "Lee los archivos, las guías y las habilidades del proyecto, busca en internet y ejecuta código en una terminal real dentro de un entorno aislado."
         },
         editar: {
           titulo: "Escribir",
@@ -111,7 +117,7 @@ export const es = {
         },
         fotos: {
           titulo: "Fotos",
-          texto: "Elegir y editar imágenes para tu rubro."
+          texto: "Busca fotos reales con licencia libre, y elige y edita imágenes para tu rubro."
         },
         datos: {
           titulo: "Datos y módulos",
@@ -123,11 +129,19 @@ export const es = {
         },
         contigo: {
           titulo: "Contigo",
-          texto: "Te pregunta con opciones, puede mostrarte una interfaz interactiva en el chat y publica cuando tú lo confirmas."
+          texto: "Te pregunta con opciones, puede mostrarte una interfaz interactiva en el chat, te ayuda a crear tu propio asistente y publica cuando tú lo confirmas."
         },
         planear: {
           titulo: "Planear y encargos",
           texto: "En un trabajo largo te enseña la lista de pasos y por dónde va. Si se lo pides, te propone un plan y no toca nada hasta que lo apruebas. Un encargo largo lo trabaja solo, ronda tras ronda."
+        },
+        programar: {
+          titulo: "Tareas programadas",
+          texto: "Hace un trabajo a la hora que le digas, una vez o cada cierto tiempo, y te manda el resultado por correo; puedes ver, cambiar y quitar cada tarea. En los planes de pago."
+        },
+        equipo: {
+          titulo: "Subagentes",
+          texto: "Reparte un trabajo largo entre ayudantes que trabajan aparte, cada uno con su propio contexto; les manda mensajes, los para cuando hace falta y a ti te llega el resultado."
         },
         recordar: {
           titulo: "Recordar",
@@ -135,7 +149,7 @@ export const es = {
         },
         entregables: {
           titulo: "Entregables",
-          texto: "Crea, revisa y renderiza presentaciones, dashboards, imágenes, videos y voz; consulta datos y reutiliza el audio que has subido."
+          texto: "Crea, revisa y renderiza presentaciones, dashboards, imágenes, videos y voz; consulta datos, reutiliza el audio que has subido y te entrega los archivos terminados."
         }
       }
     },

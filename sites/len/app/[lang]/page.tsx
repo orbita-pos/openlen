@@ -40,8 +40,14 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
         </section>
 
         <figure className="launch-art">
-          <Imagen nombre="len3" alt={p.altCielo} className="release-art" prioridad />
-          <figcaption><span>Len 3.0</span><Link href={`/${lang}/research/len-3-0/`}>{p.novedades.leer}</Link></figcaption>
+          <Imagen nombre="len31" alt={p.altCielo} className="release-art" prioridad />
+          {/* Every number on this site links to its evidence: the 3.1 table and the conversation-return measurement. */}
+          <figcaption>
+            <span>Len 3.1</span>
+            <span>
+              {p.fuentes.texto} <Fuente commit={p.fuentes.tabla.commit} /> · <Fuente commit={p.fuentes.conversaciones.commit} />
+            </span>
+          </figcaption>
         </figure>
 
         <section className="sec release-thinking" aria-labelledby="release-thinking-title">
