@@ -31,6 +31,7 @@
 // ─── Public types ──────────────────────────────────────────────────────────
 
 import type { ProviderErrorCode } from "@/lib/ai/provider-error-code";
+import type { ProviderId } from "@/lib/ai/providers";
 
 export type Role = "system" | "user" | "assistant";
 
@@ -152,6 +153,10 @@ export type StreamEvent =
       cachedTokens: number;
       /** Provider-reported internal reasoning tokens; `0` when absent. */
       thinkingTokens: number;
+      /** Who served the call and the model id there, when the client chose the provider
+       *  (`lib/ai/role-stream-client.ts`); absent = Fireworks. The spend ledger prices a row by it. */
+      provider?: ProviderId;
+      model?: string;
     }
   | { type: "done"; stopReason: StopReason }
   /** Lo que el modelo pensó en esta respuesta, ENTERO y en un solo evento

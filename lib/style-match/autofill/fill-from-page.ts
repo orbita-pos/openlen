@@ -12,6 +12,7 @@ import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
 import { sanitizeFilledHtml } from "./sanitize";
 
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
+import type { ProviderId } from "@/lib/ai/providers";
 
 const MAX_TOKENS = 16_000;
 
@@ -73,11 +74,19 @@ function safeLeafOpIds(taggedHtml: string): Set<string> {
 
 // ───────── Model call (duplicated from fill-template.ts; see NOTE) ─────────
 
+/** What a fill cost, and who served it (`provider`, `model`): the spend ledger prices the row by it (`servedBy`). */
+export interface FillUsage {
+  readonly in: number;
+  readonly out: number;
+  readonly provider?: ProviderId;
+  readonly model?: string;
+}
+
 async function callModel(
   system: string,
   user: string,
   signal?: AbortSignal,
-): Promise<{ text: string; error?: string; usage?: { in: number; out: number } }> {
+): Promise<{ text: string; error?: string; usage?: FillUsage }> {
   // Rellenar una plantilla con el contenido de una pagina es TEXTO: lo escribe
   // DeepSeek. Aqui vivia `OPENLEN_AUTOFILL=gemini`, retirado el 2026-08-28.
   //
@@ -95,7 +104,7 @@ async function callModel(
     temperature: 0.5,
   });
   let text = "";
-  let usage: { in: number; out: number } | undefined;
+  let usage: FillUsage | undefined;
   try {
     for await (const ev of provider.stream(
       {
@@ -109,7 +118,9 @@ async function callModel(
       signal ? { signal } : {},
     )) {
       if (ev.type === "text_delta") text += ev.text;
-      else if (ev.type === "usage") usage = { in: ev.inputTokens, out: ev.outputTokens };
+      else if (ev.type === "usage") {
+        usage = { in: ev.inputTokens, out: ev.outputTokens, ...(ev.provider && ev.model ? { provider: ev.provider, model: ev.model } : {}) };
+      }
       else if (ev.type === "done" && ev.stopReason.kind === "error") {
         return { text: "", error: "el proveedor devolvió un error" };
       }
@@ -162,7 +173,7 @@ export interface PageFillResult {
   totalOps?: number;
   droppedUnsafeOps?: number;
   attempts?: number;
-  usage?: { in: number; out: number };
+  usage?: FillUsage;
   durationMs: number;
   error?: string;
   raw?: string;
@@ -227,7 +238,7 @@ const EXTRACT_SYSTEM_PROMPT = `Extract the business information from this landin
 export async function extractPageData(
   sourcePageHtml: string,
   signal?: AbortSignal,
-): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: string; usage?: { in: number; out: number } }> {
+): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: string; usage?: FillUsage }> {
   const inventory = pageContentInventory(sourcePageHtml);
   if (!inventory) return { ok: false, error: "source page has no extractable text" };
   const res = await callModel(EXTRACT_SYSTEM_PROMPT, `PAGE CONTENT:\n\n${inventory}\n\nOutput the JSON now.`, signal);

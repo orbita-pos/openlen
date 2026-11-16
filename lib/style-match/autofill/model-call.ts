@@ -1,6 +1,7 @@
 import type { InlineImage } from "@/lib/ai-gateway";
 import type { ModelOperation } from "@/lib/generation/model-policy";
 import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
+import type { ProviderId } from "@/lib/ai/providers";
 
 // lib/style-match/autofill/model-call.ts — una llamada, tres módulos.
 //
@@ -9,13 +10,22 @@ import { fireworksStreamProvider } from "@/lib/ai/fireworks-as-stream-provider";
 // error a su vocabulario— cada uno con su copia. Aquí vive una vez.
 //
 // QUÉ MODELO CORRE lo decide la política por `operation`: el razonador para
-// texto, Qwen para lo que mira. Al razonador NUNCA se le manda una imagen.
+// texto, el papel con visión para lo que mira. Al razonador NUNCA se le manda una imagen.
+// QUIÉN LO SIRVE, también: DeepInfra primero y Fireworks detrás (15/11), y el uso lo dice.
+
+/** Lo que gastó una llamada y con quién corrió (`provider`, `model`): lo necesita el libro de gasto (`servedBy`). */
+export interface ModelCallUsage {
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly provider?: ProviderId;
+  readonly model?: string;
+}
 
 export type ModelCallResult =
   | {
       readonly ok: true;
       readonly raw: string;
-      readonly usage?: { readonly inputTokens: number; readonly outputTokens: number };
+      readonly usage?: ModelCallUsage;
     }
   | { readonly ok: false; readonly kind: "aborted" | "api"; readonly message: string };
 
@@ -32,6 +42,8 @@ export async function callModel(input: {
    *  de ops con protocolo propio. */
   readonly jsonObject?: boolean;
   readonly signal?: AbortSignal;
+  /** Restringe los proveedores del papel (`["fireworks"]`: el juez de Len-Bench, que no se mueve sin papel propio). */
+  readonly providers?: readonly ProviderId[];
 }): Promise<ModelCallResult> {
   const provider = fireworksStreamProvider({
     requestId: input.requestId,
@@ -39,10 +51,11 @@ export async function callModel(input: {
     maxOutputTokens: input.maxOutputTokens,
     temperature: input.temperature,
     ...(input.jsonObject ? { jsonObject: true } : {}),
+    ...(input.providers ? { providers: input.providers } : {}),
   });
 
   let raw = "";
-  let usage: { inputTokens: number; outputTokens: number } | undefined;
+  let usage: { inputTokens: number; outputTokens: number; provider?: ProviderId; model?: string } | undefined;
   try {
     for await (const ev of provider.stream(
       {
@@ -58,7 +71,11 @@ export async function callModel(input: {
     )) {
       if (ev.type === "text_delta") raw += ev.text;
       else if (ev.type === "usage") {
-        usage = { inputTokens: ev.inputTokens, outputTokens: ev.outputTokens };
+        usage = {
+          inputTokens: ev.inputTokens,
+          outputTokens: ev.outputTokens,
+          ...(ev.provider && ev.model ? { provider: ev.provider, model: ev.model } : {}),
+        };
       } else if (ev.type === "done" && ev.stopReason.kind === "error") {
         return { ok: false, kind: "api", message: "el proveedor devolvió un error" };
       }

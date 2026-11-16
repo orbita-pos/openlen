@@ -7,7 +7,8 @@
 // faltaba la clave de Fireworks. Retirado el 2026-08-28 con el proveedor.
 
 import { applyOps, parseOps, stripOpIds, tagWithOpIds } from "@/lib/html-ops";
-import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { createRoleStreamClient } from "@/lib/ai/role-stream-client";
+import type { ModelCallUsage } from "./model-call";
 import { dropDecorativeOps } from "./decorative-ops";
 import { getCachedFill, hashFillInput, setCachedFill } from "./cache";
 import { sanitizeFilledHtml } from "./sanitize";
@@ -216,7 +217,7 @@ export interface FillTemplateOk {
   totalOps: number;
   cascadeErrors: number;
   finishReason: string | null;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   durationMs: number;
   rawResponse: string;
 }
@@ -246,7 +247,7 @@ export type FillTemplateResult = FillTemplateOk | FillTemplateErr;
 
 interface FillModelCall {
   accumulated: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   finishReason: string | null;
 }
 type FillModelOutcome =
@@ -261,7 +262,7 @@ async function callDeepSeekFill(
 ): Promise<FillModelOutcome> {
   const call: FillModelCall = { accumulated: "", finishReason: null };
   try {
-    for await (const event of createFireworksStreamClient().stream(
+    for await (const event of createRoleStreamClient().stream(
       {
         messages: [
           { role: "system", content: FILL_SYSTEM_PROMPT },
@@ -275,7 +276,13 @@ async function callDeepSeekFill(
       signal ? { signal } : {},
     )) {
       if (event.type === "text_delta") call.accumulated += event.text;
-      else if (event.type === "usage") call.usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
+      else if (event.type === "usage") {
+        call.usage = {
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          ...(event.provider && event.model ? { provider: event.provider, model: event.model } : {}),
+        };
+      }
       else if (event.type === "done") {
         if (event.stopReason.kind === "cancelled") return { ok: false, kind: "aborted", message: "Request aborted" };
         if (event.stopReason.kind === "error") return { ok: false, kind: "api", message: event.stopReason.error };

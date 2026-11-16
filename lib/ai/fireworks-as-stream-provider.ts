@@ -1,6 +1,7 @@
 import type { StreamEvent, StreamRequest } from "@/lib/ai-gateway";
 import type { ModelOperation } from "@/lib/generation/model-policy";
-import { createFireworksStreamClient } from "./fireworks-stream-client";
+import type { ProviderId } from "./providers";
+import { createRoleStreamClient } from "./role-stream-client";
 
 // lib/ai/fireworks-as-stream-provider.ts — presentar Fireworks con la misma
 // forma que el proveedor de Gemini.
@@ -20,6 +21,10 @@ import { createFireworksStreamClient } from "./fireworks-stream-client";
 // QUÉ MODELO CORRE lo decide la política por `operation`
 // (`lib/generation/model-policy.ts`): el razonador para texto, el papel con vision para
 // lo que mira. Al razonador NUNCA se le manda una imagen.
+//
+// Y QUIÉN LO SIRVE, también (15/11): el papel nombra sus proveedores —DeepInfra primero,
+// Fireworks de respaldo— y `createRoleStreamClient` elige. El nombre del fichero se queda: es
+// el transporte de Fireworks en su forma (el cable compatible con OpenAI que hablan los dos).
 
 /**
  * La petición, con `model` OPCIONAL: por este camino el modelo lo decide la
@@ -47,6 +52,8 @@ export interface FireworksProviderOpts {
   /** Pedir un objeto JSON. Los críticos y la traducción lo necesitan; el que
    *  escribe una página entera NO —ahí la salida es HTML. */
   readonly jsonObject?: boolean;
+  /** Restringe los proveedores del papel sin reordenarlos (`["fireworks"]` = el de antes). */
+  readonly providers?: readonly ProviderId[];
 }
 
 /** Los papeles del gateway no coinciden uno a uno con los del wire. */
@@ -57,7 +64,7 @@ function rol(role: StreamRequest["messages"][number]["role"]) {
 }
 
 export function fireworksStreamProvider(opts: FireworksProviderOpts): StreamProviderLike {
-  const client = createFireworksStreamClient();
+  const client = createRoleStreamClient(opts.providers ? { providers: opts.providers } : {});
   return {
     stream(request, streamOpts) {
       return client.stream(

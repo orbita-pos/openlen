@@ -5,7 +5,7 @@
 // pitch, hero keyword and CTA from the description — but never invents facts
 // (no fake prices, testimonials, or claims the user didn't make).
 
-import { callModel } from "./model-call";
+import { callModel, type ModelCallUsage } from "./model-call";
 import {
   ExtractedBusinessDataSchema,
   type ExtractedBusinessData,
@@ -55,7 +55,7 @@ export interface ExtractTextOk {
   ok: true;
   data: ExtractedBusinessData;
   raw: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   durationMs: number;
 }
 
@@ -66,7 +66,7 @@ export interface ExtractTextErr {
     message: string;
   };
   raw?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  usage?: ModelCallUsage;
   durationMs: number;
 }
 

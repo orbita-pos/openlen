@@ -238,6 +238,7 @@ export default defineConfig({
       "lib/ingestion/**/*.test.ts",
       // El rellenador escribia copia dentro de elementos aria-hidden.
       "lib/style-match/autofill/decorative-ops.test.ts",
+      "lib/style-match/autofill/model-call.test.ts",
       // La defensa SSRF del scraping. Vivía sin pruebas Y fuera de este include:
       // un test que no corre no protege nada.
       "lib/style-match/scrape/**/*.test.ts",
@@ -265,6 +266,7 @@ export default defineConfig({
       "lib/ai/policy-models.test.ts",
       // El segundo proveedor (spec local 2026-10-16-second-provider).
       "lib/ai/providers.test.ts",
+      "lib/ai/role-stream-client.test.ts",
       "lib/ai/fireworks-client.test.ts",
       // La carpeta (pieza 9 de Len 2.5): los ojos de Len cargan sus ficheros.
       "lib/ai/origen-de-medida-carpeta.test.ts",

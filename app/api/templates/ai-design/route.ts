@@ -25,7 +25,8 @@ import {
 } from "@/lib/ai-stream/document-ops";
 import { documentOpsEnabled } from "@/lib/publish/kill-switches";
 import { credencialDelTurno, faltaCredencial } from "@/lib/ai/turn-credentials";
-import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { createRoleStreamClient } from "@/lib/ai/role-stream-client";
+import { servedBy } from "@/lib/ai/providers";
 import { detectSlotPath, sanitizeForPublish } from "@/lib/html-engine";
 import type { InlineImage, Message } from "@/lib/ai-gateway";
 import { renderHtmlToInlineImage } from "@/lib/ai/inline-image";
@@ -52,7 +53,6 @@ import type { TurnWriter } from "@/lib/ai/provider-switch";
 import {
   capturaRuntimeDelPapel,
   creditRateForRole,
-  modelIdForRole,
   roleForOperation,
   type ModelOperation,
 } from "@/lib/generation/model-policy";
@@ -539,8 +539,7 @@ export async function POST(req: Request): Promise<Response> {
         if (ev.type === "text_delta") out += ev.text;
         else if (ev.type === "usage") {
           usoDeLosOjos = {
-            provider: "fireworks",
-            model: modelIdForRole(roleForOperation("simple_extraction")),
+            ...servedBy(ev, "simple_extraction"),
             inputTokens: ev.inputTokens,
             cachedTokens: ev.cachedTokens ?? 0,
             outputTokens: ev.outputTokens,
@@ -890,8 +889,9 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
 
         // Aqui habia un ternario con la rama de Gemini. Con el proveedor fuera
         // (2026-08-28) queda un solo camino, y el `useFireworks` que lo elegia
-        // era siempre verdadero.
-        const events = createFireworksStreamClient().stream(
+        // era siempre verdadero. Desde el 15/11 el proveedor lo elige el papel:
+        // DeepInfra primero, Fireworks si aquél falla antes de la primera letra.
+        const events = createRoleStreamClient().stream(
           {
             messages: messages.map((message) => ({ role: message.role, content: message.content })),
             // La referencia viaja SÓLO en el turno de visión: mandársela al
@@ -917,6 +917,8 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
           | "error"
           | null = null;
         let usage: { inputTokens: number; outputTokens: number; cachedTokens: number; thinkingTokens: number } | null = null;
+        /** Quién escribió el turno: el coste de su fila en el libro es el suyo. */
+        let served: ReturnType<typeof servedBy> | null = null;
         let providerError: string | null = null;
 
         try {
@@ -930,6 +932,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               accumulatedReasoning += event.text;
               emit("reasoning_chunk", { text: event.text });
             } else if (event.type === "usage") {
+              served = servedBy(event, operation);
               usage = {
                 inputTokens: event.inputTokens,
                 outputTokens: event.outputTokens,
@@ -1498,8 +1501,7 @@ VISUAL CONTEXT: the attached image is a full-page render of the CURRENT page (wh
               ...(usage
                 ? [
                     {
-                      provider: "fireworks" as const,
-                      model: modelIdForRole(writer),
+                      ...(served ?? servedBy(null, operation)),
                       inputTokens: usage.inputTokens,
                       cachedTokens: usage.cachedTokens,
                       outputTokens: usage.outputTokens,

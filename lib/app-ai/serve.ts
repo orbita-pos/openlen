@@ -1,12 +1,13 @@
 // lib/app-ai/serve.ts — THE AI GATEWAY WITH THE REAL THINGS (spec local
 // 2026-10-15): the host → the backend (registry; the draft's own ref makes it
-// the draft), the owner and their credits, the month in Postgres, Fireworks
-// through the same streaming client Len uses, and the alerts (which neither
-// wait nor throw).
+// the draft), the owner and their credits, the month in Postgres, the model
+// through the role's providers (DeepInfra first, Fireworks behind: since
+// 2026-11-15, `createRoleStreamClient`), and the alerts (which neither wait
+// nor throw).
 
 import "server-only";
 
-import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
+import { createRoleStreamClient } from "@/lib/ai/role-stream-client";
 import { backendForHost } from "@/lib/backend/registry";
 import { chargeCredits, chargeCreditsIfEnough, getCreditState, recordUncharged, returnCredits } from "@/lib/credits";
 import { functionsBlocked } from "@/lib/functions/blocks-pg";
@@ -28,7 +29,7 @@ const reservations = new CapReservations();
 const concurrency = new ConcurrencyLimiter();
 const rate = new WindowLimiter();
 const freePool = new FreeDailyPool(freeDailyCapCenticredits());
-const fireworks = createFireworksStreamClient();
+const model = createRoleStreamClient();
 
 function realDeps(): AppAiDeps {
   return {
@@ -59,7 +60,7 @@ function realDeps(): AppAiDeps {
     rate,
     freePool,
     upstream: ({ request, requestId, signal }) =>
-      fireworks.stream(
+      model.stream(
         {
           messages: request.messages,
           maxOutputTokens: request.maxTokens,

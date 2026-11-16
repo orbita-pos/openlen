@@ -340,6 +340,15 @@ describe("the AI gateway: streaming", () => {
     expect(reserve!.centicredits + settle!.centicredits).toBe(2);
   });
 
+  it("ledger: the settlement names who served the call — DeepInfra's row costs DeepInfra's price", async () => {
+    const served = { ...USAGE, provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017" } as const;
+    const { deps, wallet } = mount(() => answer("hola", served));
+    await send(deps, BODY);
+    expect(wallet.ledger.at(-1)!.entry.uses).toEqual([
+      expect.objectContaining({ provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", inputTokens: 600, outputTokens: 80 }),
+    ]);
+  });
+
   it("ledger: an aborted request nets to zero", async () => {
     const { deps, wallet } = mount(() => [{ type: "done", stopReason: { kind: "error", error: "x" } }]);
     await send(deps, BODY);

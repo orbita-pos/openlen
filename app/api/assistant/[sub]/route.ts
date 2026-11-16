@@ -15,7 +15,8 @@ import {
 import { siteToText, detectPageLang } from "@/lib/site-assistant/extract-text";
 import { consumeAssistantMessage } from "@/lib/site-assistant/quota";
 import { creditsForUsage, recordUncharged } from "@/lib/credits";
-import { creditRateForRole, modelIdForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { creditRateForRole, roleForOperation } from "@/lib/generation/model-policy";
+import { servedBy } from "@/lib/ai/providers";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import type { AssistantTone } from "@/lib/assistants/names";
 import { answersVisitors } from "@/lib/assistants/visitor/on-page";
@@ -260,10 +261,13 @@ export async function POST(
 
     let raw = "";
     let usage: { inputTokens: number; cachedTokens: number; outputTokens: number } | null = null;
+    /** Quién contestó (DeepInfra primero, Fireworks detrás, desde el 15/11): el coste de la fila es el suyo. */
+    let served: ReturnType<typeof servedBy> | null = null;
     for await (const event of events) {
       if (event.type === "text_delta") raw += event.text;
       else if (event.type === "usage") {
         usage = { inputTokens: event.inputTokens, cachedTokens: event.cachedTokens ?? 0, outputTokens: event.outputTokens };
+        served = servedBy(event, "copy");
       }
     }
     // EL LIBRO DE GASTO: lo paga OpenLen, a nombre del dueño de la página. No
@@ -282,8 +286,7 @@ export async function POST(
         ),
         uses: [
           {
-            provider: "fireworks",
-            model: modelIdForRole(roleForOperation("copy")),
+            ...(served ?? servedBy(null, "copy")),
             ...usage,
             at: new Date(),
           },
