@@ -13,6 +13,11 @@ const montajes = vi.hoisted(() => ({ n: 0 }));
 vi.mock("../asistente/assistant-tab", async () => { const { useEffect } = await import("react"); return { AssistantTab: (p: { asistente: { id: string }; parte?: string; tarjeta?: string | null; onHablar: () => void; onVerLen: (projectId: string) => void }) => <div data-assistant-tab={p.asistente.id} data-parte={p.parte ?? ""} data-tarjeta={p.tarjeta ?? ""}><button data-tab-hablar="" onClick={p.onHablar} /><button data-tab-ver-len="" onClick={() => p.onVerLen("p1")} /><Montado /></div> }; function Montado() { useEffect(() => { montajes.n++; }, []); return null; } });
 vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
+// What Len did has its own test (../asistente/len-turn-view.test.tsx): here, which row opens.
+vi.mock("../asistente/len-turn-view", () => ({ LenTurnView: (p: { fila: string; projectTitle: string }) => <div data-len-turn={p.fila} data-len-turn-project={p.projectTitle} /> }));
+// Delivered has its own test: here, where «Ver en el chat» leads.
+const entregado = vi.hoisted(() => ({ irAlChat: null as null | ((projectId: string, turno: string) => void) }));
+vi.mock("../overview/delivered-tab", () => ({ DeliveredTab: (p: { onIrAlChat: (projectId: string, turno: string) => void }) => { entregado.irAlChat = p.onIrAlChat; return <div data-delivered-tab="" />; } }));
 const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: number) => void) }));
 vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: (o: { alMedir?: (v: number) => void }) => { hoja.alMedir = o.alMedir ?? null; return null; } }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
@@ -528,6 +533,24 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(reads()).toBe(before + 1);
     await act(async () => cards.onSettled({ filaId: "f2", projectId: "p9" }));
     expect(reads()).toBe(before + 1);
+  });
+
+  it("🔴 «Ver lo que hizo Len» on a card opens what he did, never his chat", async () => {
+    await paint();
+    const cards = chatProps.ella?.lenCards as { onOpen: (r: { filaId: string; projectId: string }) => void };
+    await act(async () => cards.onOpen({ filaId: "f1", projectId: "p1" }));
+    expect(host.querySelector('[data-len-turn="f1"]')?.getAttribute("data-len-turn-project")).toBe("Página");
+    expect(chatProps.len).toBeNull();
+  });
+
+  it("🔴 «Ver en el chat» from Entregado opens what Len did, not Len's chat", async () => {
+    await paint();
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find((b) => b.textContent === "entregado")!.click());
+    await act(async () => entregado.irAlChat!("p1", "f7"));
+    await act(async () => {});
+    expect(host.querySelector('[data-len-turn="f7"]')).not.toBeNull();
+    expect(chatProps.len).toBeNull();
   });
 
   it("her face in the bar opens her place", async () => {
