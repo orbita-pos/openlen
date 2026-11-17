@@ -116,7 +116,8 @@ export type ResultadoDeDeshacer =
   /** Otro guardado se coló las `INTENTOS` veces. */
   | { readonly ok: false; readonly motivo: "conflicto" };
 
-async function cambiosDe(projectId: string, turnId: string): Promise<{ cambios: CambioDelTurno[]; deshecho: boolean } | null> {
+/** What one turn changed, path by path (also «Antes / Ahora» of a Len card on the phone, app/api/movil/entrega). */
+export async function cambiosDe(projectId: string, turnId: string): Promise<{ cambios: CambioDelTurno[]; deshecho: boolean } | null> {
   const t = schema.projectTurnChanges;
   const filas = await db
     .select({ ruta: t.path, antes: t.contentBefore, despues: t.contentAfter, deshacible: t.undoable, undoneAt: t.undoneAt })

@@ -53,6 +53,43 @@ describe("what Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §
     expect(m.leer).toHaveBeenCalledTimes(2);
   });
 
+  // Deferred minor of the final review: a question Len ended on had no answer on the phone.
+  describe("🔴 a turn that ended on Len's question", () => {
+    const asked = (preguntas: unknown[]) => ({ tool: "ask_user_question", status: "done" as const, summary: "", preguntas }) as NonNullable<StoredChatTurn["actions"]>[number];
+    const answer = vi.fn();
+    const paintToAnswer = async () => act(async () => root.render(<LenTurnView cliente={cliente} fila="f1" projectTitle="Pan" onClose={vi.fn()} onAnswer={answer} />));
+    beforeEach(() => answer.mockReset());
+
+    it("shows it, and an option sends its label (without «(Recommended)»)", async () => {
+      m.leer.mockResolvedValue({ turno: turn({ actions: [asked([{ id: "q1", question: "¿Azul o verde?", options: [{ label: "Azul (Recommended)" }, { label: "Verde" }] }])] }) });
+      await paintToAnswer();
+      expect(host.textContent).toContain("¿Azul o verde?");
+      act(() => [...host.querySelectorAll("button")].find((b) => b.textContent === "Azul (Recommended)")!.click());
+      expect(answer).toHaveBeenCalledWith("Azul");
+    });
+
+    it("an answer in your own words goes as written", async () => {
+      m.leer.mockResolvedValue({ turno: turn({ actions: [asked([{ id: "q1", question: "¿Qué foto?" }])] }) });
+      await paintToAnswer();
+      const box = host.querySelector("textarea")!;
+      act(() => {
+        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")!.set!.call(box, "la del local");
+        box.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      act(() => [...host.querySelectorAll("button")].find((b) => b.textContent === "contestar")!.click());
+      expect(answer).toHaveBeenCalledWith("la del local");
+    });
+
+    it("already answered, or with nowhere to answer: nothing to type", async () => {
+      m.leer.mockResolvedValue({ turno: turn({ actions: [{ ...asked([{ id: "q1", question: "¿Azul?" }]), respuesta: "Azul" }] }) });
+      await paintToAnswer();
+      expect(host.querySelector("textarea")).toBeNull();
+      m.leer.mockResolvedValue({ turno: turn({ actions: [asked([{ id: "q1", question: "¿Azul?" }])] }) });
+      await paint();
+      expect(host.querySelector("textarea")).toBeNull();
+    });
+  });
+
   it("a row that isn't there says so", async () => {
     m.leer.mockRejectedValue(new Error("OpenLen respondió 404"));
     await paint();

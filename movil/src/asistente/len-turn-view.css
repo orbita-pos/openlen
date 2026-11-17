@@ -1,6 +1,15 @@
-/* What Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §5.4.9): no composer — you talk only to her. */
+/* What Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §5.4.9): no composer — you talk only to her — except to answer a question Len ended on. */
 .app-len-turn .lenturn-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
 .app-len-turn .lenturn-body{display:grid;gap:10px;align-content:start}
 .app-len-turn .lenturn-asked{padding:10px 12px;border-radius:14px;background:var(--lm-soft)}
 .app-len-turn .lenturn-asked small{display:block;margin-bottom:4px;font:600 11.5px Inter,sans-serif;color:var(--lm-muted)}
 .app-len-turn .lenturn-asked p,.app-len-turn .lenturn-said{margin:0;font:14px/1.5 Inter,sans-serif}
+/* The one thing to type here: the answer to a question Len ended on (it goes to Len as your next message). */
+.app-len-turn .lenturn-answer{display:grid;gap:8px;padding:12px;border-radius:14px;border:1px solid var(--lm-line);background:var(--lm-panel)}
+.app-len-turn .lenturn-q-head{margin:0;font:600 11.5px Inter,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--lm-muted)}
+.app-len-turn .lenturn-q{margin:0;font:600 15px/1.4 Inter,sans-serif}
+.app-len-turn .lenturn-options{display:flex;flex-wrap:wrap;gap:8px}
+.app-len-turn .lenturn-options .lm-btn{min-height:44px}
+.app-len-turn .lenturn-own{display:grid;gap:6px;font:600 11.5px Inter,sans-serif;color:var(--lm-muted)}
+.app-len-turn .lenturn-own textarea{min-height:64px;border:1px solid var(--lm-line);border-radius:12px;background:var(--lm-bg);color:var(--lm-ink);padding:10px 12px;font:15px/1.4 Inter,sans-serif;resize:vertical}
+.app-len-turn .lenturn-answer > .lm-btn{min-height:48px}

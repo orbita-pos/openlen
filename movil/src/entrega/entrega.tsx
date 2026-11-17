@@ -28,9 +28,10 @@ export function Progreso({ pasos = [], trabajando }: { pasos?: Paso[]; trabajand
   </details>;
 }
 
-type Version = { html: string; fecha: string };
-type Cambio = { antes: Version; ahora: Version };
-export function Comparacion({ cliente, projectId, page, onCerrar }: { cliente: ClienteDeOpenLen; projectId: string; page?: string | null; onCerrar: () => void }) {
+type Version = { html: string; fecha?: string };
+type Cambio = { antes: Version; ahora: Version; page?: string | null };
+/** The page's latest change, or — with `fila`, from a Len card — what that turn changed (the server says which page). */
+export function Comparacion({ cliente, projectId, page, fila, onCerrar }: { cliente: ClienteDeOpenLen; projectId: string; page?: string | null; fila?: string; onCerrar: () => void }) {
   const t = useTranslations("movil.entrega");
   const [cambio, setCambio] = useState<Cambio | null>(null);
   const [estado, setEstado] = useState<"cargando" | "listo" | "error">("cargando");
@@ -48,14 +49,16 @@ export function Comparacion({ cliente, projectId, page, onCerrar }: { cliente: C
     let vigente = true;
     setCambio(null); setEstado("cargando");
     const params = new URLSearchParams({ project: projectId });
-    if (page) params.set("page", page);
+    if (fila) params.set("fila", fila);
+    else if (page) params.set("page", page);
     void cliente.pedir(`/api/movil/entrega?${params}`).then(async (r) => {
       if (!r.ok) throw new Error("entrega");
       const j = await r.json() as { comparacion: Cambio | null };
       if (vigente) { setCambio(j.comparacion); setEstado("listo"); }
     }).catch(() => { if (vigente) setEstado("error"); });
     return () => { vigente = false; };
-  }, [cliente, projectId, page, intento]);
+  }, [cliente, projectId, page, fila, intento]);
+  const pagina = fila ? cambio?.page : page;
   return <section className="ent-panel" ref={panel} role="dialog" aria-modal="true" aria-label={t("comparar")} onKeyDown={(e) => {
     if (e.key === "Escape") onCerrar();
     if (e.key === "Tab") {
@@ -65,14 +68,14 @@ export function Comparacion({ cliente, projectId, page, onCerrar }: { cliente: C
       if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero?.focus(); }
     }
   }}>
-    <header><div><small>{t("ultimoCambio")}{page ? ` · /${page}` : ""}</small><h1>{t("comparar")}</h1></div><button ref={cerrar} type="button" onClick={onCerrar} aria-label={t("cerrar")}>×</button></header>
+    <header><div><small>{[fila ? "" : t("ultimoCambio"), pagina ? `/${pagina}` : ""].filter(Boolean).join(" · ")}</small><h1>{t("comparar")}</h1></div><button ref={cerrar} type="button" onClick={onCerrar} aria-label={t("cerrar")}>×</button></header>
     {estado === "cargando" && <p role="status">{t("cargando")}</p>}
     {estado === "error" && <div role="alert"><p>{t("error")}</p><button className="lm-btn lm-pri" onClick={() => setIntento((x) => x + 1)}>{t("reintentar")}</button></div>}
     {estado === "listo" && !cambio && <p>{t("sinAntes")}</p>}
     {cambio && <>
       <div className="ent-tabs" role="group" aria-label={t("comparar")}>{(["antes", "ahora"] as const).map((x) => <button key={x} type="button" aria-pressed={lado === x} onClick={() => setLado(x)}>{t(x)}</button>)}</div>
       <div className="ent-versiones">{(["antes", "ahora"] as const).map((x) => <figure key={x} hidden={lado !== x}>
-        <figcaption>{t(x)} <time dateTime={cambio[x].fecha}>{new Date(cambio[x].fecha).toLocaleString()}</time></figcaption>
+        <figcaption>{t(x)} {cambio[x].fecha && <time dateTime={cambio[x].fecha}>{new Date(cambio[x].fecha!).toLocaleString()}</time>}</figcaption>
         {/* HTML del usuario: origen opaco, sin scripts, formularios, ventanas ni navegación del padre. */}
         <iframe title={t(x)} sandbox="" srcDoc={cambio[x].html} referrerPolicy="no-referrer" tabIndex={-1} />
       </figure>)}</div>
