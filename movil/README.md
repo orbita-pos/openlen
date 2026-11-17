@@ -77,6 +77,15 @@ suspender/reabrir y pérdida/recuperación de red. Compilar no verifica esos flu
 
 ## Etapas nuevas
 
+**La app es de tu asistente** (16/11, spec local `2026-11-16-movil-es-tu-asistente`). Con una asistente, la
+hoja y el único chat son de ella, y la app entera toma su color (`src/asistente/color.ts`; el naranja de Len
+queda sólo como respaldo de las variables `--her-*`). Lo que le pides lo pasa a Len (`ask_len`), y el trabajo
+de Len se ve dentro de su chat como una tarjeta (en cola, trabajando con «Parar», terminado con «Antes / Ahora»
+y «Publicar»); lo que hizo Len se lee sin chat (`src/asistente/len-turn-view.tsx`). Sin asistente, la app abre
+el creador («Conoce a tu asistente»); con «Ahora no», o con los asistentes apagados en el servidor, o sin
+ningún proyecto propio, la app es la de siempre, con Len. Creada o conectada desde el teléfono, su burbuja
+entra apagada en la página. La llamada sigue siendo sólo con Len. `?muestra=1` enseña a una asistente azul.
+
 La principal incluye el progreso real del turno, una entrega visual breve que
 se puede saltar y «Antes / Ahora», basado en la última versión guardada distinta
 del mismo documento. La comparación es estática y aislada; para interactuar con

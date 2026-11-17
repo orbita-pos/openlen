@@ -627,6 +627,14 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     });
   });
 
+  it("🔴 a Len push for a project opens that project with HER chat, never his", async () => {
+    await paint();
+    await act(async () => (aviso.abrir as unknown as (id: string, panel?: string) => void)("p1", "chat"));
+    await act(async () => {});
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Lucía" } });
+    expect(chatProps.len).toBeNull();
+  });
+
   it("her face in the bar opens her place", async () => {
     await paint();
     await act(async () => host.querySelector<HTMLButtonElement>(".ent-face-button")!.click());
