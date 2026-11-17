@@ -493,12 +493,27 @@ async function correrTurno(
   const turnoId = randomUUID();
   const artifactMessageId = opts.round?.artifactMessageId ?? turnIdDelCliente ?? turnoId;
   if (!projectId) return errorJson(400, "projectId is required");
+  // Hasta cuatro fotos entre las dos claves del chat. Las inválidas se descartan
+  // y las de la carpeta del proyecto conservan su ruta.
+  const attachedImages: ChatPhoto[] = [];
+  for (const raw of [...(Array.isArray(body?.attachedImages) ? body.attachedImages : []), body?.attachedImage]) {
+    if (!raw || typeof raw !== "object") continue;
+    const r = raw as AttachedImageBody;
+    const url = typeof r.url === "string" ? r.url.trim() : "";
+    if (url.length === 0 || url.length > ATTACHED_URL_MAX) continue;
+    const address = photoAddress(url, req.url);
+    if (!address || attachedImages.some((f) => f.url === address)) continue;
+    const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
+    attachedImages.push(alt ? { url: address, alt } : { url: address });
+    if (attachedImages.length === MAX_PHOTOS_PER_MESSAGE) break;
+  }
   // El tope es el del mensaje ENTERO: lo que escribes sigue en 2.000 en la caja,
   // y los comentarios de líneas van dentro (la #8, `comentarios-de-lineas.ts`).
   // Reanudar un encargo y una ronda no traen mensaje: lo pone el de ronda.
   // Nor the server turn that carries the subagents' notices: Len reads them, nobody wrote anything.
   const sinMensajeDelDueno = pedidoDelEncargo === "resume" || opts.round !== undefined || opts.scheduled?.origin.kind === "subagents";
-  if ((prompt.length === 0 && !sinMensajeDelDueno) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
+  const soloFotos = attachedImages.length > 0 && pedidoDelEncargo === null;
+  if ((prompt.length === 0 && !sinMensajeDelDueno && !soloFotos) || prompt.length > MAX_PROMPT) return errorJson(400, `prompt must be 1–${MAX_PROMPT} chars`, "promptLength");
   // COMPARTIR EL PROYECTO (lib/projects/acceso.ts): un EDITOR también habla con
   // Len. Desde aquí `userId` es el DUEÑO —con él se lee y se escribe el proyecto
   // y él paga, como un canal en Claude Tag lo paga la organización— y `quien`,
@@ -999,30 +1014,6 @@ async function correrTurno(
       scopePath = body.scope.path.trim().slice(0, 2000);
     }
   }
-
-  // LAS FOTOS DEL MENSAJE: `attachedImages` (hasta 4, como Crear) y el
-  // `attachedImage` de siempre, que sigue llegando del chat. Misma validación
-  // de antes para cada una —same shape/limits/posture as ai-design: a valid
-  // http(s) URL—; una inválida se descarta en silencio en vez de un 400 (el
-  // mensaje sigue valiendo). La que es un fichero de la carpeta del proyecto
-  // (el modal de imágenes las deja en /img) se queda con su ruta (`photoAddress`).
-  const leerFoto = (raw: unknown): ChatPhoto | null => {
-    if (!raw || typeof raw !== "object") return null;
-    const r = raw as AttachedImageBody;
-    const url = typeof r.url === "string" ? r.url.trim() : "";
-    if (url.length === 0 || url.length > ATTACHED_URL_MAX) return null;
-    const address = photoAddress(url, req.url);
-    if (!address) return null;
-    const alt = typeof r.alt === "string" ? r.alt.trim().slice(0, ATTACHED_ALT_MAX) : "";
-    return alt ? { url: address, alt } : { url: address };
-  };
-  const attachedImages: ChatPhoto[] = [];
-  for (const raw of [...(Array.isArray(body?.attachedImages) ? body.attachedImages : []), body?.attachedImage]) {
-    const foto = leerFoto(raw);
-    // La misma foto dos veces (el chat manda las dos claves) es una sola.
-    if (foto && !attachedImages.some((f) => f.url === foto.url)) attachedImages.push(foto);
-  }
-  attachedImages.splice(MAX_PHOTOS_PER_MESSAGE);
 
   // LOS FICHEROS DEL MENSAJE (26/10): ficheros que Len lee con Read cuando decide,
   // como en Claude Code — un PDF, uno de oficina o un CSV —, y un vídeo (27/10), que

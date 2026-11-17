@@ -3,9 +3,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useChat, type Chat } from "./use-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
-const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn() }));
+const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn(), foto: vi.fn() }));
 vi.mock("./archivos", async importar => ({...await importar<typeof import("./archivos")>(), subirArchivo:m.archivo}));
-vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: vi.fn(), subirFoto: vi.fn(), transcribir: vi.fn() }));
+vi.mock("./foto", () => ({ achicarFoto: async (foto: Blob) => foto }));
+vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: vi.fn(), subirFoto: m.foto, transcribir: vi.fn() }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root;
 let host: HTMLDivElement;
@@ -14,7 +15,7 @@ const cliente = { pedir: vi.fn(), avisarAlCerrar: vi.fn() };
 const historia: [] = [];
 const recargar = vi.fn();
 function Pantalla({ id, historial = historia, assistantId, viewingProjectId }: { id: string; historial?: StoredChatTurn[]; assistantId?: string; viewingProjectId?: string }) {
-  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeFotoSola: "Foto", textoDeArchivoSolo: "Revisa el archivo", ...(assistantId ? { assistantId } : {}), ...(viewingProjectId ? { viewingProjectId } : {}) });
+  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeArchivoSolo: "Revisa el archivo", ...(assistantId ? { assistantId } : {}), ...(viewingProjectId ? { viewingProjectId } : {}) });
   return null;
 }
 beforeEach(() => {
@@ -22,12 +23,34 @@ beforeEach(() => {
   host = document.createElement("div");
   root = createRoot(host);
 });
-afterEach(() => act(() => root.unmount()));
+afterEach(() => {
+  act(() => root.unmount());
+  vi.unstubAllGlobals();
+});
 it("sends the project on screen with each message to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3)", async () => {
   m.mandar.mockResolvedValue("terminado");
   await act(async () => root.render(<Pantalla id="p1" assistantId="a1" viewingProjectId="p2" />));
   await act(async () => chat.mandar("botón verde"));
   expect(m.mandar).toHaveBeenCalledWith(cliente, expect.objectContaining({ projectId: "p1", assistantId: "a1", viewingProjectId: "p2" }), expect.any(Function));
+});
+it.each(["", "mira esta foto"])("conserva la captura y su texto (%j) al enviar y reintentar", async (texto) => {
+  vi.stubGlobal("URL", class extends URL {
+    static createObjectURL = () => "blob:captura";
+    static revokeObjectURL = vi.fn();
+  });
+  const captura = new Blob(["captura"], { type: "image/png" });
+  const url = "https://example.com/captura.jpg";
+  m.foto.mockResolvedValue(url);
+  m.mandar.mockResolvedValueOnce("sinRed").mockResolvedValueOnce("terminado");
+  await act(async () => root.render(<Pantalla id="p1" assistantId="a1" viewingProjectId="p2" />));
+  await act(async () => chat.mandar(texto, captura));
+  const mensaje = chat.elementos.find((e) => e.tipo === "tu")!;
+  expect(mensaje).toMatchObject({ texto, foto: "blob:captura", estado: "noSeEnvio" });
+  await act(async () => chat.reintentar(mensaje.clave));
+  expect(m.foto).toHaveBeenCalledTimes(1);
+  const cuerpo = expect.objectContaining({ projectId: "p1", assistantId: "a1", viewingProjectId: "p2", prompt: texto, foto: url });
+  expect(m.mandar.mock.calls.map(([, turno]) => turno)).toEqual([cuerpo, cuerpo]);
+  expect(chat.elementos.find((e) => e.tipo === "tu")).toMatchObject({ texto, estado: "ok" });
 });
 it("crear un encargo envía el objetivo con goal y lo pone en el hilo", async () => {
   m.mandar.mockResolvedValue("terminado");

@@ -41,8 +41,6 @@ export interface OpcionesDelChat {
   historial: StoredChatTurn[];
   /** Al acabar un turno: releer la página (conversación y vista previa). */
   alCambiarLaPagina: () => void;
-  /** Lo que se le manda a Len con una foto sin texto: que diga dónde la pondría antes de ponerla. */
-  textoDeFotoSola: string;
   textoDeArchivoSolo: string;
   /** Talking with the person's own assistant instead of Len (phase 5): every message carries her id. */
   assistantId?: string;
@@ -138,7 +136,7 @@ export function useChat(o: OpcionesDelChat) {
 
   const enviar = useCallback(
     async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume", documentos: readonly File[] = []) => {
-      const { cliente, base, projectId, textoDeFotoSola } = op.current;
+      const { cliente, base, projectId } = op.current;
       const actual = epoca.current;
       setLocales((ls) => marcar(ls, k, { estado: "enviando" }));
       if (!projectId || subiendoRef.current || validarArchivos(documentos)) { setLocales(ls => marcar(ls,k,{estado:"noSeEnvio"})); return; }
@@ -182,7 +180,7 @@ export function useChat(o: OpcionesDelChat) {
       // conversación releída ya trae este mensaje.
       const fila = crypto.randomUUID();
       setLocales((ls) => marcar(ls, k, { estado: "enviando", fila }));
-      const ok = await correr(texto || textoDeFotoSola, fila, url, goal, enviados);
+      const ok = await correr(texto, fila, url, goal, enviados);
       if (actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
     },
     [correr],
@@ -193,12 +191,9 @@ export function useChat(o: OpcionesDelChat) {
       const k = nuevaClave("tu");
       if (foto) fotos.current.set(k, foto);
       if(documentos.length) archivos.current.set(k,documentos);
-      // La foto sola va con lo que la app le pide a Len de tu parte («¿dónde
-      // la pondrías?…»), y tu burbuja lo enseña ya: es lo que el servidor
-      // guarda como tu mensaje, y al releer no cambia.
       const vistaFoto=foto?URL.createObjectURL(foto):undefined;
       if(vistaFoto)vistasFoto.current.set(k,vistaFoto);
-      const texto = escrito || (documentos.length ? op.current.textoDeArchivoSolo : foto ? op.current.textoDeFotoSola : "");
+      const texto = escrito || (documentos.length ? op.current.textoDeArchivoSolo : "");
       setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, foto: vistaFoto, archivos: documentos.map(f=>({name:f.name,size:f.size,kind:tipoArchivo(f.name)??undefined})), estado: "enviando" }]);
       void enviar(k, texto, foto, undefined, documentos);
     },

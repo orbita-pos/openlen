@@ -395,7 +395,6 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     idioma,
     historial: p?.historial ?? SIN_HISTORIAL,
     alCambiarLaPagina: recargar,
-    textoDeFotoSola: tc("fotoSola"),
     textoDeArchivoSolo: ta("archivoSolo"),
   });
   const chatDeElla = useChat({
@@ -405,7 +404,6 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     idioma,
     historial: suHistorial,
     alCambiarLaPagina: recargarSuChat,
-    textoDeFotoSola: tc("fotoSola"),
     textoDeArchivoSolo: ta("archivoSolo"),
     ...(ella ? { assistantId: ella.id, ...(id ? { viewingProjectId: id } : {}) } : {}),
   });
