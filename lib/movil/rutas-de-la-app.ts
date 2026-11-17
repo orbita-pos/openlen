@@ -14,6 +14,8 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/assistants/[id]/visits/read/route.ts", metodos: ["POST"] },
   { fichero: "app/api/assistants/[id]/requests/route.ts", metodos: ["GET"] },
   { fichero: "app/api/assistants/[id]/requests/[cardId]/route.ts", metodos: ["POST"] },
+  // Her chat's Len cards (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5).
+  { fichero: "app/api/assistants/[id]/len-requests/route.ts", metodos: ["GET"] },
   { fichero: "app/api/agent/dirigir/route.ts", metodos: ["POST"] },
   { fichero: "app/api/agent/cancelar/route.ts", metodos: ["POST"] },
   { fichero: "app/api/agent/turno/[fila]/route.ts", metodos: ["GET"] },
