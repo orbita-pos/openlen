@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventoSse } from "@/lib/len-bench/sse";
 import { dirigirA, mandarALen, transcribir } from "./api/chat";
-import { leerProyecto } from "./api/proyectos";
+import { leerProyecto, leerTurno } from "./api/proyectos";
 import { leerSuChat, readAssistants, readLenRequests } from "./api/asistente";
 import { clienteDeMuestra, RITMO } from "./muestra";
 
@@ -62,6 +62,12 @@ describe("la muestra (sólo dev)", () => {
     expect(suyo.at(-1)!.userText).toBe("Pon el botón verde");
     const [view] = await readLenRequests(clienteDeMuestra, "am1", [accion!.datos.lenRequest!.filaId]);
     expect(view!.status).toBe("done");
+  });
+
+  it("what Len did can be read in the sample, as from the server", async () => {
+    const r = await leerTurno(clienteDeMuestra, "t2");
+    expect(r.turno.id).toBe("t2");
+    expect(r.turno.assistantReasoning).toContain("portada");
   });
 
   it("transcribe una nota de mentira", async () => {

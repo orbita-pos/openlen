@@ -4,5 +4,6 @@
 .lenreq-live{color:var(--c-qr-ink)}
 .lenreq-dijo{margin:0;font:14px/1.45 Inter,sans-serif}
 .lenreq-acc{display:flex;flex-wrap:wrap;gap:8px}
-.lenreq-acc .lm-btn{min-height:44px;flex:1 1 auto}
+.lenreq-acc .lm-btn{min-height:44px;flex:1 1 auto;border:1px solid var(--c-line);border-radius:14px;background:var(--c-chip);color:var(--c-ink);font:600 13.5px Inter,sans-serif;box-shadow:none}
+.lenreq-acc .lm-btn.lm-pri{border-color:transparent;background:var(--c-me);color:var(--c-me-ink)}
 .lenreq-ver{justify-self:start;min-height:44px;border:0;background:none;color:var(--c-qr-ink);font:600 13px Inter,sans-serif;padding:0;text-decoration:underline;text-underline-offset:3px}

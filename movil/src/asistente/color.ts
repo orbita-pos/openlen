@@ -18,6 +18,9 @@ export const HER_VARS = [
   "--her-me",
   "--her-deep",
   "--her-light",
+  "--her-sheet",
+  "--her-on",
+  "--her-on-rgb",
 ] as const;
 
 export type HerVar = (typeof HER_VARS)[number];
@@ -52,6 +55,11 @@ export function herColorVars(color: string): Record<HerVar, string> | null {
     // Accent text: on the light theme's white, and on the dark theme's panel.
     "--her-deep": readableOn(t.tint, "#ffffff", "#000000"),
     "--her-light": readableOn(t.tint, DARK_PANEL, "#ffffff"),
+    // The brand sheet over your page (light theme): her color in full, and the ink on it — Len's sheet was orange
+    // with white on it; with a free color the white may not read, so the ink is hers.
+    "--her-sheet": `linear-gradient(180deg,${mix(t.tint, "#ffffff", 0.1)} 0%,${t.tint} 45%,${mix(t.tint, "#000000", 0.1)} 100%)`,
+    "--her-on": t.ink,
+    "--her-on-rgb": [1, 3, 5].map((i) => parseInt(t.ink.slice(i, i + 2), 16)).join(","),
   };
 }
 

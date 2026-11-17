@@ -137,7 +137,7 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "
 
 // HER CHAT IN THE SAMPLE: one request she already passed to Len (his row t2, done), and what you say to her next.
 const SU_HISTORIAL: StoredChatTurn[] = [
-  { id: "e1", userText: "Pon esta foto en la portada", assistantReasoning: "Se lo paso a Len.", status: "applied", appliedAt: Date.now() - 2 * HORA - 60_000,
+  { id: "e1", userText: "Pon esta foto en la portada", assistantReasoning: "Se lo paso a Len.", status: "applied", noDocChange: true, appliedAt: Date.now() - 2 * HORA - 60_000,
     actions: [{ tool: "ask_len", status: "done", summary: "Pon esta foto en la portada", lenRequest: { filaId: "t2", projectId: "m1" } }] },
 ];
 
@@ -158,7 +158,7 @@ function turnoDeElla(prompt: string, turnId?: string): Response {
         await espera(ms);
         c.enqueue(enc.encode(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`));
       }
-      SU_HISTORIAL.push({ id: turnId ?? `e${SU_HISTORIAL.length + 1}`, userText: prompt, assistantReasoning: "Se lo paso a Len.", status: "applied", appliedAt: Date.now(), actions: [accion] });
+      SU_HISTORIAL.push({ id: turnId ?? `e${SU_HISTORIAL.length + 1}`, userText: prompt, assistantReasoning: "Se lo paso a Len.", status: "applied", noDocChange: true, appliedAt: Date.now(), actions: [accion] });
       c.close();
     },
   });
@@ -195,6 +195,12 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
     // The person's own assistant's tab (phase 5): one assistant, Lucía, at home in the bakery.
     if (ruta === "/api/assistants") return Response.json({ enabled: true, assistants: [ASISTENTE_DE_MUESTRA] });
     if (ruta === "/api/assistants/am1/chat") return Response.json({ chatHistory: SU_HISTORIAL });
+    if (ruta.startsWith("/api/agent/turno/")) {
+      // What Len did, as `GET /api/agent/turno/<fila>` gives it: one of the page's rows (her requests' rows are its last).
+      const fila = decodeURIComponent(ruta.slice("/api/agent/turno/".length));
+      const turno = HISTORIAL.find((t) => t.id === fila) ?? (fila.startsWith("len-") ? { ...HISTORIAL.at(-1)!, id: fila } : null);
+      return turno ? Response.json({ turno }) : Response.json({ error: "turno_no_encontrado" }, { status: 404 });
+    }
     if (ruta.startsWith("/api/assistants/am1/len-requests")) {
       // Every request to Len in the sample is done: his row is the page's last one.
       const filas = (new URL(ruta, "https://muestra.local").searchParams.get("filas") ?? "").split(",").filter(Boolean);

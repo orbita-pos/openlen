@@ -6,7 +6,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-const ORANGES = /#(FF8A1E|F26A0F|FFB23E|DD5210|B93F08|FFB25C|CF4808|C7460A)\b|255,\s*138,\s*30|242,\s*106,\s*15/i;
+// The brand sheet's gradient and the stats' bars too (seen orange in the sample, 16/11).
+const ORANGES = /#(FF8A1E|F26A0F|FFB23E|DD5210|B93F08|FFB25C|CF4808|C7460A|FF9C48|FA7A1F|F2640F|E8560A|C4460A|E85A0A|F7C4A0)\b|255,\s*138,\s*30|242,\s*106,\s*15/i;
 const read = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
 const withoutFallbacks = (css: string) => css.replace(/var\(--her-[a-z-]+,[^)]*\)/g, "");
 

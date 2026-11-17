@@ -35,6 +35,16 @@ describe("her color, as the app's (spec local 2026-11-16-movil-es-tu-asistente, 
     }
   });
 
+  it("🔴 her brand sheet: a gradient of her color, with the ink that reads on it", () => {
+    for (const c of ["#3b82f6", "#ffff00", "#000000"]) {
+      const v = herColorVars(c)!;
+      const t = tintOf(c)!;
+      expect(v["--her-sheet"]).toBe(`linear-gradient(180deg,${mix(t.tint, "#ffffff", 0.1)} 0%,${t.tint} 45%,${mix(t.tint, "#000000", 0.1)} 100%)`);
+      expect(v["--her-on"]).toBe(t.ink);
+      expect(v["--her-on-rgb"]).toBe(t.ink === "#1d1d1f" ? "29,29,31" : "244,244,245");
+    }
+  });
+
   it("not a color: nothing", () => {
     expect(herColorVars("blue")).toBeNull();
   });

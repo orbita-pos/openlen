@@ -51,7 +51,7 @@ a.nx-act { text-decoration: none; }
    empezaba claro bajo el borde oscuro y se notaba el corte. Se mete 3 px bajo
    la hoja: con el lienzo escalado y la hoja en fracciones de píxel, a tope
    quedaba una rayita blanca que parpadeaba al moverla. */
-.app-lienzo .lm-sheet::after { content: ""; position: absolute; left: 0; right: 0; top: calc(100% - 3px); height: 420px; background: #E8560A; }
+.app-lienzo .lm-sheet::after { content: ""; position: absolute; left: 0; right: 0; top: calc(100% - 3px); height: 420px; background: var(--her-tint-c, #E8560A); }
 :root[data-theme="dark"] .app-lienzo .lm-sheet::after { background: #070504; }
 /* El chat (pieza 2). La cabecera y el pie del prototipo dejan sitio para el
    iPhone (46 px arriba, 30 abajo); aquí, lo que pida el teléfono, como la barra. */

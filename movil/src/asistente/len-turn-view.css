@@ -1,6 +1,6 @@
 /* What Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §5.4.9): no composer — you talk only to her. */
 .app-len-turn .lenturn-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.app-len-turn .lenturn-body{display:grid;gap:10px}
+.app-len-turn .lenturn-body{display:grid;gap:10px;align-content:start}
 .app-len-turn .lenturn-asked{padding:10px 12px;border-radius:14px;background:var(--lm-soft)}
 .app-len-turn .lenturn-asked small{display:block;margin-bottom:4px;font:600 11.5px Inter,sans-serif;color:var(--lm-muted)}
 .app-len-turn .lenturn-asked p,.app-len-turn .lenturn-said{margin:0;font:14px/1.5 Inter,sans-serif}
