@@ -10,7 +10,9 @@ import { connectProject, projectsOfAssistant, titlesOf } from "@/lib/assistants/
 import { assistantById, oldAssistantSettings, saveAssistantMemory } from "@/lib/assistants/store";
 import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
-import { conAutorDeLaPeticion, quienDeLaSesion } from "@/lib/projects/autor-del-cambio";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { conAutorDeLaPeticion } from "@/lib/projects/autor-del-cambio";
 import { publishedHost } from "@/lib/publish/base-host";
 
 export const runtime = "nodejs";
@@ -19,9 +21,9 @@ export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store" } });
 
-/** Her person's assistant, or the response that refuses. */
-async function hers(id: string): Promise<{ personId: string; assistant: NonNullable<Awaited<ReturnType<typeof assistantById>>> } | Response> {
-  const personId = (await auth())?.user?.id;
+/** Her person's assistant, or the response that refuses. Who asks is resolved by the caller: the GET only with the
+ *  session, the POST with the session or the phone's key. */
+async function hers(personId: string | null | undefined, id: string): Promise<{ personId: string; assistant: NonNullable<Awaited<ReturnType<typeof assistantById>>> } | Response> {
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!assistantsEnabled()) return json({ error: "assistants_off" }, 404);
   const assistant = await assistantById(id);
@@ -30,7 +32,7 @@ async function hers(id: string): Promise<{ personId: string; assistant: NonNulla
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> {
-  const found = await hers((await params).id);
+  const found = await hers((await auth())?.user?.id, (await params).id);
   if (found instanceof Response) return found;
   const projects = await projectsOfAssistant(found.assistant.id);
   return json({
@@ -51,24 +53,32 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   });
 }
 
-export const POST = conAutorDeLaPeticion(quienDeLaSesion, async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
-  const found = await hers((await params).id);
-  if (found instanceof Response) return found;
-  const body = (await req.json().catch(() => null)) as { projectId?: unknown } | null;
-  const projectId = typeof body?.projectId === "string" ? body.projectId.slice(0, 100) : "";
-  const acceso = projectId ? await accesoAlProyecto(projectId, found.personId) : null;
-  if (!acceso) return json({ error: "not_found" }, 404);
-  if (acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
-  const done = await connectProject({ assistantId: found.assistant.id, projectId });
-  if (done !== "connected") return json({ error: done }, 409);
-  // What that project's assistant of today was taught joins her memory. Fail-soft: she is connected either way.
-  try {
-    const old = await oldAssistantSettings(projectId);
-    const title = (await titlesOf([projectId])).get(projectId) ?? projectId;
-    const memory = mergeOldAssistantMemory(found.assistant.memory, old, title, AGENT_MEMORY_MAX);
-    if (memory !== found.assistant.memory) await saveAssistantMemory(found.assistant.id, memory);
-  } catch (err) {
-    console.warn("[assistants] what the project's old assistant knew wasn't brought into her memory", err);
-  }
-  return json({ projectId }, 201);
-});
+/** With the session or the phone's key: «Que Lucía lo atienda» on the phone sends `onPage: false` — from there she
+ *  takes a project to pass its requests to Len, not to answer its visitors (Jesús 16/11, spec local
+ *  2026-11-16-movil-es-tu-asistente, §5.6). Without it, on — the web's rule. */
+export const POST = paraLaApp(conAutorDeLaPeticion(
+  (req: Request, _ctx: { params: Promise<{ id: string }> }) => usuarioDeLaPeticion(req),
+  async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
+    const found = await hers(await usuarioDeLaPeticion(req), (await params).id);
+    if (found instanceof Response) return found;
+    const body = (await req.json().catch(() => null)) as { projectId?: unknown; onPage?: unknown } | null;
+    const projectId = typeof body?.projectId === "string" ? body.projectId.slice(0, 100) : "";
+    const acceso = projectId ? await accesoAlProyecto(projectId, found.personId) : null;
+    if (!acceso) return json({ error: "not_found" }, 404);
+    if (acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
+    const done = await connectProject({ assistantId: found.assistant.id, projectId, ...(body?.onPage === false ? { onPage: false } : {}) });
+    if (done !== "connected") return json({ error: done }, 409);
+    // What that project's assistant of today was taught joins her memory. Fail-soft: she is connected either way.
+    try {
+      const old = await oldAssistantSettings(projectId);
+      const title = (await titlesOf([projectId])).get(projectId) ?? projectId;
+      const memory = mergeOldAssistantMemory(found.assistant.memory, old, title, AGENT_MEMORY_MAX);
+      if (memory !== found.assistant.memory) await saveAssistantMemory(found.assistant.id, memory);
+    } catch (err) {
+      console.warn("[assistants] what the project's old assistant knew wasn't brought into her memory", err);
+    }
+    return json({ projectId }, 201);
+  },
+));
+
+export const OPTIONS = respuestaPrevia;

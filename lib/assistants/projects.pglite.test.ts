@@ -74,6 +74,17 @@ describe("her projects", () => {
     ]);
   });
 
+  // 16/11/2026, Jesús: from the phone she takes a project to pass its requests to Len, not to answer its visitors —
+  // her bubble stays off (spec local 2026-11-16-movil-es-tu-asistente, §5.6). The web's rule above is unchanged.
+  it("🔴 connected from the phone, her bubble stays off", async () => {
+    expect(await projects.connectProject({ assistantId: lucia, projectId: "p3", onPage: false })).toBe("connected");
+    const mine = await projects.projectsOfAssistant(lucia);
+    expect(mine.map((p) => [p.projectId, p.onPage])).toEqual([
+      ["p1", true],
+      ["p3", false],
+    ]);
+  });
+
   it("🔴 a project has one assistant: connecting another is refused, also two at once", async () => {
     const bruno = await createAssistant({ personId: "u1", projectId: "p4", input: { name: "Bruno", look: { v: 1, shape: "drop", color: "#88aaff", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "formal" } });
     if (!bruno.ok) throw new Error("setup");

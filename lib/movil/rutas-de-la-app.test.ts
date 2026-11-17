@@ -21,7 +21,9 @@ describe("las rutas de la app", () => {
   // Her tab in Len móvil (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5).
   it("🔴 her routes are on the list", () => {
     const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
-    expect(listed.get("app/api/assistants/route.ts")).toEqual(["GET"]);
+    // Created and connected from the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.6, §5.8.3).
+    expect(listed.get("app/api/assistants/route.ts")).toEqual(["GET", "POST"]);
+    expect(listed.get("app/api/assistants/[id]/projects/route.ts")).toEqual(["POST"]);
     expect(listed.get("app/api/assistants/[id]/chat/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/assistants/[id]/visits/route.ts")).toEqual(["GET"]);
     // Phase 4E: seeing her conversations marks them read.

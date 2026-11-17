@@ -76,6 +76,12 @@ describe("POST /api/assistants/[id]/projects", () => {
     expect(m.connectProject).toHaveBeenCalledWith({ assistantId: "a1", projectId: "p2" });
   });
 
+  // 16/11, Jesús (spec local 2026-11-16-movil-es-tu-asistente, §5.6): from the phone she takes it with her bubble off.
+  it("🔴 «Que Lucía lo atienda» on the phone connects it with her bubble off", async () => {
+    expect((await post({ projectId: "p2", onPage: false })).status).toBe(201);
+    expect(m.connectProject).toHaveBeenCalledWith({ assistantId: "a1", projectId: "p2", onPage: false });
+  });
+
   it("🔴 a project where the person is a member is 403, another person's is 404", async () => {
     fijarAccesoDePrueba(() => ({ rol: "editor", duenoId: "u9" }));
     expect((await post({ projectId: "p2" })).status).toBe(403);
