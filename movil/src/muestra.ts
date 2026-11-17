@@ -58,7 +58,8 @@ const tareasDeMuestra = () => ({
 });
 
 const PROYECTOS = [{ id: "m1", title: "Panadería Luna", subdomain: "panaderia-luna", publishedAt: "2026-09-29T00:00:00Z", updatedAt: "2026-10-01T00:00:00Z" }];
-const ASISTENTE_DE_MUESTRA = { id: "am1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly" as const, projectId: "m1", projectIds: ["m1"] };
+// Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente): blue, so the sample shows the app taking her color.
+const ASISTENTE_DE_MUESTRA = { id: "am1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#3b82f6", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#3b82f6", tone: "friendly" as const, projectId: "m1", projectIds: ["m1"] };
 const HISTORIAL: StoredChatTurn[] = [
   { id: "t1", userText: "Hazme una página para mi panadería", assistantReasoning: "¡Ya quedó tu página!\n\nLe puse tus panes, un formulario para encargar pasteles y cómo llegar.", status: "applied", appliedAt: Date.now() - 26 * HORA,
     actions: [{ tool: "present", status: "done", summary: "menu-otono.pdf", delivered: [ENTREGA] }] },
@@ -134,6 +135,36 @@ function turnoDeMentira(prompt: string, foto?: string, turnId?: string, goal?: "
   return new Response(cuerpo, { headers: { "content-type": "text/event-stream" } });
 }
 
+// HER CHAT IN THE SAMPLE: one request she already passed to Len (his row t2, done), and what you say to her next.
+const SU_HISTORIAL: StoredChatTurn[] = [
+  { id: "e1", userText: "Pon esta foto en la portada", assistantReasoning: "Se lo paso a Len.", status: "applied", appliedAt: Date.now() - 2 * HORA - 60_000,
+    actions: [{ tool: "ask_len", status: "done", summary: "Pon esta foto en la portada", lenRequest: { filaId: "t2", projectId: "m1" } }] },
+];
+
+/** Her turn in the sample: she passes it to Len, and Len's card is done at once (his row is the page's last). */
+function turnoDeElla(prompt: string, turnId?: string): Response {
+  const filaDeLen = `len-${SU_HISTORIAL.length + 1}`;
+  const accion = { tool: "ask_len", status: "done" as const, summary: prompt.slice(0, 80), lenRequest: { filaId: filaDeLen, projectId: "m1" } };
+  const eventos: [string, unknown, number][] = [
+    ["turno", { turnoId: "muestra-ella" }, 60],
+    ["action", accion, 700],
+    ["text", { text: "Se lo paso a Len." }, 300],
+    ["done", { turns: 1, toolCalls: 1 }, 100],
+  ];
+  const enc = new TextEncoder();
+  const cuerpo = new ReadableStream<Uint8Array>({
+    async start(c) {
+      for (const [nombre, datos, ms] of eventos) {
+        await espera(ms);
+        c.enqueue(enc.encode(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`));
+      }
+      SU_HISTORIAL.push({ id: turnId ?? `e${SU_HISTORIAL.length + 1}`, userText: prompt, assistantReasoning: "Se lo paso a Len.", status: "applied", appliedAt: Date.now(), actions: [accion] });
+      c.close();
+    },
+  });
+  return new Response(cuerpo, { headers: { "content-type": "text/event-stream" } });
+}
+
 export const clienteDeMuestra: ClienteDeOpenLen = {
   async pedir(ruta, init) {
     if (ruta.startsWith("/api/movil/equipo")) {
@@ -162,8 +193,13 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
       return Response.json({ ok: true });
     }
     // The person's own assistant's tab (phase 5): one assistant, Lucía, at home in the bakery.
-    if (ruta === "/api/assistants") return Response.json({ assistants: [ASISTENTE_DE_MUESTRA] });
-    if (ruta === "/api/assistants/am1/chat") return Response.json({ chatHistory: [] });
+    if (ruta === "/api/assistants") return Response.json({ enabled: true, assistants: [ASISTENTE_DE_MUESTRA] });
+    if (ruta === "/api/assistants/am1/chat") return Response.json({ chatHistory: SU_HISTORIAL });
+    if (ruta.startsWith("/api/assistants/am1/len-requests")) {
+      // Every request to Len in the sample is done: his row is the page's last one.
+      const filas = (new URL(ruta, "https://muestra.local").searchParams.get("filas") ?? "").split(",").filter(Boolean);
+      return Response.json({ requests: filas.map((filaId) => ({ filaId, status: "done", turn: { ...(HISTORIAL.find((t) => t.id === filaId) ?? HISTORIAL.at(-1)!), id: filaId } })) });
+    }
     if (ruta === "/api/assistants/am1/visits") {
       const at = new Date(Date.now() - 3 * HORA).toISOString();
       return Response.json({ visits: [{ id: "vm1", projectId: "m1", projectTitle: "Panadería Luna", startedAt: at, lastAt: at, messageCount: 2, handedOff: false, lines: [{ role: "visitor", text: "¿Tienen pan sin gluten?", at }, { role: "assistant", text: "Sí, los jueves.", at }] }] });
@@ -191,7 +227,8 @@ export const clienteDeMuestra: ClienteDeOpenLen = {
     if (ruta === "/api/agent/cancelar") return Response.json({ ok: true });
     if (ruta.startsWith("/api/voz/visitas")) return Response.json(VISITAS);
     if (ruta === "/api/agent") {
-      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown }; attachedFiles?: unknown; turnId?: unknown; goal?: "create" | "resume" };
+      const b = JSON.parse(String(init?.body ?? "{}")) as { prompt?: unknown; attachedImage?: { url?: unknown }; attachedFiles?: unknown; turnId?: unknown; goal?: "create" | "resume"; assistantId?: unknown };
+      if (b.assistantId === "am1") return turnoDeElla(String(b.prompt ?? ""), typeof b.turnId === "string" ? b.turnId : undefined);
       return turnoDeMentira(
         String(b.prompt ?? ""),
         typeof b.attachedImage?.url === "string" ? b.attachedImage.url : undefined,
