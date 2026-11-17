@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LOST_AFTER_MS, noticeText, readyNotices, type AskLenNotice } from "./notices";
+import { HEARD_KEPT_MS, LOST_AFTER_MS, noticeText, pruneHeard, readyNotices, type AskLenNotice } from "./notices";
 
 const NOW = new Date("2026-11-07T12:00:00.000Z");
 const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
@@ -17,6 +17,17 @@ describe("the outcome of an ask_len request, back to the assistant", () => {
       ["n2", false],
       ["n4", true],
     ]);
+  });
+
+  it("🔴 a heard note is never heard twice", () => {
+    expect(readyNotices([{ ...done, heardAt: ago(1_000) }, { ...stale, heardAt: ago(1_000) }], NOW)).toEqual([]);
+  });
+
+  it("heard notes go after seven days; unheard ones stay however old", () => {
+    const old = { ...done, id: "old", heardAt: ago(HEARD_KEPT_MS + 1) };
+    const recent = { ...done, id: "recent", heardAt: ago(HEARD_KEPT_MS - 60_000) };
+    const unheard = { ...fresh, id: "unheard", at: ago(30 * 24 * 3_600_000) };
+    expect(pruneHeard([old, recent, unheard], NOW).map((n) => n.id)).toEqual(["recent", "unheard"]);
   });
 
   it("says how each ended, with the request and Len's closing message", () => {

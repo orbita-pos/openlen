@@ -11,7 +11,7 @@ import type { AssistantSettings } from "@/lib/projects/types";
 import { assistantConversationKey } from "./conversation";
 import type { FigureLook } from "@/lib/figure/look";
 import { assistantSlug, cleanAssistantName, type AssistantInput } from "./names";
-import { readyNotices, type AskLenNotice, type ReadyNotice } from "./notices";
+import { pruneHeard, readyNotices, type AskLenNotice, type ReadyNotice } from "./notices";
 
 export type AssistantRow = typeof schema.assistants.$inferSelect;
 
@@ -201,7 +201,8 @@ export async function saveAssistantMemory(id: string, text: string): Promise<voi
 }
 
 // HOW ITS ask_len REQUESTS END (lib/assistants/notices.ts): appended when passed, settled when Len's turn ends, handed
-// to its next request and removed once heard — DeepSeek's «marked delivered once».
+// to its next request and marked heard once — DeepSeek's «marked delivered once». A heard note stays a week for the
+// phone's card (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5).
 
 /** Read-modify-write under the row's lock: two settlements never overwrite each other. */
 async function withNotices(id: string, change: (notices: AskLenNotice[]) => AskLenNotice[]): Promise<void> {
@@ -213,7 +214,7 @@ async function withNotices(id: string, change: (notices: AskLenNotice[]) => AskL
 }
 
 export async function addAssistantNotice(id: string, notice: AskLenNotice): Promise<void> {
-  await withNotices(id, (all) => [...all, notice]);
+  await withNotices(id, (all) => [...pruneHeard(all, new Date()), notice]);
 }
 
 export async function settleAssistantNotice(id: string, noticeId: string, patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>): Promise<void> {
@@ -225,7 +226,15 @@ export async function readyAssistantNotices(id: string, now: Date): Promise<Read
   return readyNotices(row?.notices ?? [], now);
 }
 
-export async function removeAssistantNotices(id: string, ids: readonly string[]): Promise<void> {
+export async function markAssistantNoticesHeard(id: string, ids: readonly string[], at: Date): Promise<void> {
   if (ids.length === 0) return;
-  await withNotices(id, (all) => all.filter((n) => !ids.includes(n.id)));
+  const heardAt = at.toISOString();
+  await withNotices(id, (all) => all.map((n) => (ids.includes(n.id) && !n.heardAt ? { ...n, heardAt } : n)));
+}
+
+/** Her notes for these rows of Len's, heard or not: how each request ended, for the phone. */
+export async function assistantNoticesByFila(id: string, filaIds: readonly string[]): Promise<AskLenNotice[]> {
+  if (filaIds.length === 0) return [];
+  const [row] = await db.select({ notices: a.notices }).from(a).where(eq(a.id, id)).limit(1);
+  return (row?.notices ?? []).filter((n) => n.filaId !== undefined && filaIds.includes(n.filaId));
 }
