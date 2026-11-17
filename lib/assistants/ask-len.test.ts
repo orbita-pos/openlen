@@ -42,6 +42,65 @@ describe("ask_len", () => {
     expect(launch).not.toHaveBeenCalled();
   });
 
+  describe("the owner's attachments and a request while Len works (spec local 2026-11-16-movil-es-tu-asistente, §5.4)", () => {
+    const PHOTO = { url: "https://openlen.com/u/a.jpg" };
+    const PDF = { url: "https://openlen.com/u/m.pdf", name: "m.pdf", size: 9 };
+    const withAttachments = (images: readonly { url: string }[], files: readonly typeof PDF[] = []) =>
+      ({ ...ASSISTANT_SESSION, ownerAttachments: { images, files } }) as unknown as AgentSession;
+
+    it("🔴 the owner's photo and files reach Len with the request", async () => {
+      const launch = vi.fn();
+      await runAskLen(withAttachments([PHOTO], [PDF]), { request: "pon esta foto arriba" }, launch);
+      expect(launch.mock.calls[0]![0].extraBody).toEqual({ attachedImages: [PHOTO], attachedFiles: [PDF] });
+    });
+
+    it("a photo kept as a path of her home's folder only goes to her home", async () => {
+      const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }, { id: "p2", title: "Café" }] }, ownerAttachments: { images: [{ url: "/img/a.webp" }, PHOTO], files: [] } } as unknown as AgentSession;
+      const launch = vi.fn();
+      await runAskLen(session, { request: "pon esta foto", project: "p2" }, launch);
+      expect(launch.mock.calls[0]![0].extraBody).toEqual({ attachedImages: [PHOTO], attachedFiles: [] });
+      await runAskLen(session, { request: "pon esta foto", project: "p1" }, launch);
+      expect(launch.mock.calls[1]![0].extraBody).toEqual({ attachedImages: [{ url: "/img/a.webp" }, PHOTO], attachedFiles: [] });
+    });
+
+    it("without attachments the request carries no extra body", async () => {
+      const launch = vi.fn();
+      await runAskLen(ASSISTANT_SESSION, { request: "botón verde" }, launch);
+      expect(launch.mock.calls[0]![0].extraBody).toBeUndefined();
+    });
+
+    it("🔴 with Len working on her request there, a new one corrects it and launches nothing", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      const steer = vi.fn(() => true);
+      const out = await runAskLen(ASSISTANT_SESSION, { request: "mejor azul" }, launch, notes, steer);
+      expect(notes.runningFor).toHaveBeenCalledWith("a1", "p1");
+      expect(steer).toHaveBeenCalledWith("f1", "u1", expect.stringContaining("mejor azul"));
+      expect(launch).not.toHaveBeenCalled();
+      expect(notes.queued).not.toHaveBeenCalled();
+      expect(out.response).toMatchObject({ ok: true, steered: true });
+      expect(out.lenRequest).toEqual({ filaId: "f1", projectId: "p1" });
+    });
+
+    it("🔴 a second request while the first is still queued is queued too, not lost", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      const out = await runAskLen(ASSISTANT_SESSION, { request: "y el título" }, launch, notes, () => false);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(notes.queued).toHaveBeenCalledTimes(1);
+      expect(out.response).toMatchObject({ ok: true, queued: true });
+    });
+
+    it("a request with a photo never becomes a correction", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      const steer = vi.fn(() => true);
+      await runAskLen(withAttachments([PHOTO]), { request: "pon esta foto" }, launch, notes, steer);
+      expect(steer).not.toHaveBeenCalled();
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("🔴 the card and the note carry Len's row and the project it went to", async () => {
     const launch = vi.fn();
     const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };

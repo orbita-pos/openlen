@@ -5,6 +5,7 @@
 // where it came from (`AssistantRequestOrigin`, «De Lucía»).
 import { randomUUID } from "node:crypto";
 
+import { dirigir, turnoDeLaFila } from "@/lib/agent/direcciones";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { AssistantRequestOrigin } from "@/lib/projects/types";
 
@@ -46,6 +47,8 @@ export interface AssistantRequestTurn {
   readonly reply: (text: string, cards?: unknown, finalText?: string) => Promise<void>;
   readonly fail: (fallo: { code?: string } | null, cut: boolean) => Promise<void>;
   readonly onStart: () => Promise<void>;
+  /** More of the turn's body: the owner's photos and files (spec local 2026-11-16-movil-es-tu-asistente, §5.4.7). */
+  readonly extraBody?: Readonly<Record<string, unknown>>;
 }
 
 export type LaunchAssistantRequest = (p: AssistantRequestTurn) => void;
@@ -54,13 +57,34 @@ export type LaunchAssistantRequest = (p: AssistantRequestTurn) => void;
 export interface AskLenNotes {
   queued(assistantId: string, notice: AskLenNotice): Promise<void>;
   settle(assistantId: string, noticeId: string, patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>): Promise<void>;
+  /** Len's row of her newest request to this project still unsettled (spec local 2026-11-16-movil-es-tu-asistente,
+   *  §5.4.8): a new request corrects it while it runs. Absent = never. */
+  runningFor?(assistantId: string, projectId: string): Promise<string | null>;
 }
 
 const NO_NOTES: AskLenNotes = { queued: async () => {}, settle: async () => {} };
 
 async function storeNotes(): Promise<AskLenNotes> {
-  const { addAssistantNotice, settleAssistantNotice } = await import("./store");
-  return { queued: addAssistantNotice, settle: settleAssistantNotice };
+  const { addAssistantNotice, runningAssistantRequest, settleAssistantNotice } = await import("./store");
+  return { queued: addAssistantNotice, settle: settleAssistantNotice, runningFor: runningAssistantRequest };
+}
+
+/** Steers Len's live turn on this row, as typing to Len while he works does (`dirigir`); false when it isn't running. */
+export type SteerLen = (filaId: string, userId: string, text: string) => boolean;
+
+const steerLiveTurn: SteerLen = (filaId, userId, text) => {
+  const turno = turnoDeLaFila(filaId, userId);
+  return turno !== null && dirigir(turno, userId, text) === "ok";
+};
+
+/** The owner's photos and files for Len's turn in `projectId`: an address of her home's folder (`/img/a.webp`) only
+ *  means something in her home, so elsewhere only the http(s) ones go. Nothing to send → undefined. */
+function attachmentsFor(session: AgentSession, projectId: string): Readonly<Record<string, unknown>> | undefined {
+  const owner = session.ownerAttachments;
+  if (!owner) return undefined;
+  const images = owner.images.filter((i) => /^https?:\/\//i.test(i.url) || projectId === session.projectId);
+  if (images.length === 0 && owner.files.length === 0) return undefined;
+  return { attachedImages: images, attachedFiles: owner.files };
 }
 
 /** The owner's own message rides verbatim beside the assistant's request: the assistant reads text others wrote (a
@@ -73,7 +97,7 @@ function framingOf(name: string, request: string, ownerMessage: string | null): 
   ].join("\n\n");
 }
 
-export async function runAskLen(session: AgentSession, args: Record<string, unknown>, launch?: LaunchAssistantRequest, notes?: AskLenNotes): Promise<ToolOutcome> {
+export async function runAskLen(session: AgentSession, args: Record<string, unknown>, launch?: LaunchAssistantRequest, notes?: AskLenNotes, steer: SteerLen = steerLiveTurn): Promise<ToolOutcome> {
   const assistant = session.assistant;
   if (!assistant) return { response: { ok: false, error: "not_available", message: `${ASK_LEN} is the person's own assistant's tool.` } };
   const request = typeof args.request === "string" ? args.request.trim() : "";
@@ -104,6 +128,25 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   // How it ends comes back to the assistant with its next request (lib/assistants/notices.ts). Kept softly: a note
   // that can't be written never stops the request. An injected launch without notes keeps none (tests).
   const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
+  const summary = request.length > 80 ? `${request.slice(0, 79)}…` : request;
+  const extraBody = attachmentsFor(session, target.id);
+  // Len already working on a request she passed here: this one reaches him as a correction to it, as typing to Len
+  // while he works does (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). Not with photos or files: a correction
+  // carries only text, so those go as a request of their own.
+  if (!extraBody) {
+    const running = await keep.runningFor?.(assistant.id, target.id).catch(() => null);
+    if (running && steer(running, session.userId, framingOf(assistant.name, request, session.mensajeDelUsuario ?? null))) {
+      return {
+        response: {
+          ok: true,
+          steered: true,
+          tool_result: "Len was already working on a request you passed him in this project; this reached him as a correction to it.",
+        },
+        action: { tool: ASK_LEN, ok: true, summary },
+        lenRequest: { filaId: running, projectId: target.id },
+      };
+    }
+  }
   const noticeId = randomUUID();
   // Len's row: the note and her card both name it, so the phone can follow his turn (spec local
   // 2026-11-16-movil-es-tu-asistente, §5.4).
@@ -122,6 +165,7 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     timeZone: session.zonaHoraria ?? "UTC",
     locale: session.uiLocale ?? "en",
     filaId,
+    ...(extraBody ? { extraBody } : {}),
     onStart: async () => {},
     reply: async (text, _cards, finalText) => {
       await settle({ status: "done", closing: (finalText ?? text).slice(0, CLOSING_MAX) });
@@ -138,7 +182,7 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
         ? `Len has the request in «${where}» and will do it in that project's chat, where your owner sees it.`
         : "Len has the request and will do it in the project's chat, where your owner sees it.",
     },
-    action: { tool: ASK_LEN, ok: true, summary: request.length > 80 ? `${request.slice(0, 79)}…` : request },
+    action: { tool: ASK_LEN, ok: true, summary },
     lenRequest: { filaId, projectId: target.id },
   };
 }
