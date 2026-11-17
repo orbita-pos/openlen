@@ -10157,7 +10157,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in the BACKEND lives on the server, and who sees what is decided by its policies. Telling them "it's saved in the browser" about something you saved in the backend is lying to them.
 - Forms work: what the visitor sends reaches the user's email and their Inbox (how to write one, in the guide below). When people need to be able to write to them, offer the form; WhatsApp or the chat in addition, not instead.
 - You can write the page's JavaScript, and it survives saving. Never hide content with CSS so the script can reveal it: if the script fails, the page arrives blank. CHARGING IS POSSIBLE, with no server: if the user gives you their Stripe payment link, wire the button with \`<a href="https://buy.stripe.com/…">\`. NEVER make up that address — if they don't have it, explain that they create it in their Stripe dashboard and leave the button pointing wherever they tell you. CHECK THE RESPONSE: every supabase-js call returns { data, error }, and the network can fail. If error isn't null, tell the visitor ON THE PAGE and don't leave the change painted as saved (undo it, or paint it only once the answer is good). Painting first and not looking at the response is how someone loses their cart without noticing.
-- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for) and sending emails on your own.
+- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for), and the page sending custom email directly from the browser.
 
 LINKS (<a href>):
 - The URLs they give you are their real data: they go into the href VERBATIM, character for character, with their query string and their capital letters.
@@ -10201,7 +10201,14 @@ IMAGES
 • Illustrations, logos and icons: inline SVG.
 • Every inline SVG and every image carry \`class="max-w-full h-auto"\`. Without it a fixed width does NOT shrink, and inside a card it overflows on mobile even when the rest of the page fits.
 • Deliver the page FINISHED: no gaps waiting for an image to arrive later, because none arrives. Where a photograph would go, solve the area yourself — an SVG illustration, a composition, whatever suits it. The user can later swap any image area for a photo of their own from the editor's library.
-• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see."
+• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see.
+
+THE PERSON'S MCP SERVERS (~/.len/mcp.json)
+- ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
+- You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
+- A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.
+- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success."
 `;
 
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md, Len Dynamis) — la salida entera, sin cambios accidentales 1`] = `
@@ -10211,7 +10218,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in the BACKEND lives on the server, and who sees what is decided by its policies. Telling them "it's saved in the browser" about something you saved in the backend is lying to them.
 - Forms work: what the visitor sends reaches the user's email and their Inbox (how to write one, in the guide below). When people need to be able to write to them, offer the form; WhatsApp or the chat in addition, not instead.
 - You can write the page's JavaScript, and it survives saving. Never hide content with CSS so the script can reveal it: if the script fails, the page arrives blank. CHARGING IS POSSIBLE, with no server: if the user gives you their Stripe payment link, wire the button with \`<a href="https://buy.stripe.com/…">\`. NEVER make up that address — if they don't have it, explain that they create it in their Stripe dashboard and leave the button pointing wherever they tell you. CHECK THE RESPONSE: every supabase-js call returns { data, error }, and the network can fail. If error isn't null, tell the visitor ON THE PAGE and don't leave the change painted as saved (undo it, or paint it only once the answer is good). Painting first and not looking at the response is how someone loses their cart without noticing.
-- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for) and sending emails on your own.
+- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for), and the page sending custom email directly from the browser.
 
 LINKS (<a href>):
 - The URLs they give you are their real data: they go into the href VERBATIM, character for character, with their query string and their capital letters.
@@ -10255,7 +10262,14 @@ IMAGES
 • Illustrations, logos and icons: inline SVG.
 • Every inline SVG and every image carry \`class="max-w-full h-auto"\`. Without it a fixed width does NOT shrink, and inside a card it overflows on mobile even when the rest of the page fits.
 • Deliver the page FINISHED: no gaps waiting for an image to arrive later, because none arrives. Where a photograph would go, solve the area yourself — an SVG illustration, a composition, whatever suits it. The user can later swap any image area for a photo of their own from the editor's library.
-• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see."
+• No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published page, and that the visitor does see.
+
+THE PERSON'S MCP SERVERS (~/.len/mcp.json)
+- ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
+- You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
+- A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.
+- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success."
 `;
 
 exports[`golden de los prompts de producción > manual de la plataforma (/AGENTS.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
@@ -10327,5 +10341,12 @@ WHAT PUBLISHING REQUIRES:
 • The shell keeps Tailwind via CDN (\`<script src="https://cdn.tailwindcss.com"></script>\`) and the Google Fonts stylesheets in its <head>; when publishing, OpenLen replaces the CDN with the compiled CSS.
 • Illustrations and logos: inline SVG, with className="max-w-full h-auto". Icons: lucide-react.
 • No external image URL (unsplash, picsum, placehold.co…), not even one that comes in the request: a server we don't control is a 404 on the published app. The photos the user uploads or that find_photo gives you are fine.
-• MAPS and VIDEOS are <iframe>s, as in a page: \`https://maps.google.com/maps?q=<address>&output=embed\`, \`https://www.youtube.com/embed/<ID>\` — and a video ONLY if they give you the link."
+• MAPS and VIDEOS are <iframe>s, as in a page: \`https://maps.google.com/maps?q=<address>&output=embed\`, \`https://www.youtube.com/embed/<ID>\` — and a video ONLY if they give you the link.
+
+THE PERSON'S MCP SERVERS (~/.len/mcp.json)
+- ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
+- You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
+- A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.
+- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success."
 `;

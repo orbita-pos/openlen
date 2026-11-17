@@ -548,7 +548,18 @@ describe("the manual and ~/.len/mcp.json", () => {
     expect(manual).toMatch(/approv/);
   });
 
+  it("explains how to enable sending email from chat when a connector is missing", () => {
+    const manual = buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "1", OPENLEN_FUNCTIONS: "0" });
+    expect(manual).toContain("If no email-sending tool is available in this chat");
+    expect(manual).toContain("open OpenLen in a browser");
+    expect(manual).toContain("Herramientas → Conectores");
+    expect(manual).toContain("use its status in this turn to explain the next step");
+    expect(manual).toContain("Say the email was sent only after the sending tool confirms success.");
+  });
+
   it("says nothing of it with OPENLEN_MCP=0", () => {
-    expect(buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "0" })).not.toContain("~/.len/mcp.json");
+    const manual = buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "0" });
+    expect(manual).not.toContain("~/.len/mcp.json");
+    expect(manual).not.toContain("Herramientas → Conectores");
   });
 });
