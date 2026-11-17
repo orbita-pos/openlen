@@ -264,3 +264,25 @@ it("recupera los archivos adjuntos del historial sin perder sus nombres", () => 
   const e=hiloDesdeElHistorial([fila],Date.now()).find(e=>e.tipo==="tu");
   expect(e && e.tipo==="tu" && e.archivos).toEqual([archivo]);
 });
+
+// Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.4): each request she passed to Len is a card.
+describe("her requests to Len in her thread", () => {
+  const pedido = (filaId: string, projectId = "p1") => ({ tool: "ask_len", status: "done" as const, summary: "botón verde", lenRequest: { filaId, projectId } });
+  it("her ask_len actions become one Len card per row", () => {
+    const h = hiloDesdeElHistorial([turno({ id: "t1", userText: "pon el botón verde", assistantReasoning: "Se lo paso a Len.", actions: [pedido("f1"), pedido("f1"), pedido("f2", "p2")] })], Date.now());
+    const card = h.find((e) => e.tipo === "lenPedidos");
+    expect(card && card.tipo === "lenPedidos" && card.refs).toEqual([{ filaId: "f1", projectId: "p1" }, { filaId: "f2", projectId: "p2" }]);
+  });
+  it("a turn with no request to Len has no card", () => {
+    expect(tipos(hiloDesdeElHistorial([turno({ id: "t1", userText: "hola", assistantReasoning: "Hola." })], Date.now()))).not.toContain("lenPedidos");
+  });
+  it("a live ask_len action shows its card before the turn ends", () => {
+    const v = conEvento(turnoNuevo("t2"), ev("action", { tool: "ask_len", status: "done", summary: "botón verde", lenRequest: { filaId: "f9", projectId: "p1" } }));
+    const card = elementosDelTurno(v, Date.now()).find((e) => e.tipo === "lenPedidos");
+    expect(card && card.tipo === "lenPedidos" && card.refs).toEqual([{ filaId: "f9", projectId: "p1" }]);
+  });
+  it("a malformed request is no card", () => {
+    const v = conEvento(turnoNuevo("t2"), ev("action", { tool: "ask_len", status: "done", summary: "x", lenRequest: { filaId: 3 } }));
+    expect(tipos(elementosDelTurno(v, Date.now()))).not.toContain("lenPedidos");
+  });
+});

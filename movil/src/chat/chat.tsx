@@ -24,6 +24,9 @@ import { useSeguirChat } from "./use-seguir-chat";
 import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
+import { useLenRequests } from "../asistente/use-len-requests";
+import { LenRequestCard } from "../asistente/len-request-card";
+import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import { AvisosDeLen } from "./avisos";
 import { TarjetasDeHerramientas } from "../herramientas/tool-cards";
 
@@ -61,9 +64,21 @@ interface Props {
   /** Her chat on the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.5): the project on the screen, whose event
    *  and tool cards show here, as in Len's chat. Her own `projectId` is her home. */
   cardsProjectId?: string | null;
+  /** Her chat (spec local 2026-11-16-movil-es-tu-asistente, §5.4): Len's cards — what they follow and where they lead. */
+  lenCards?: {
+    readonly assistantId: string;
+    readonly projectTitle: (projectId: string) => string;
+    readonly onSettled: (ref: LenRequestRef) => void;
+    readonly onCompare: (ref: LenRequestRef) => void;
+    readonly onPublish: (ref: LenRequestRef) => void;
+    readonly onOpen?: (ref: LenRequestRef) => void;
+  };
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente, cardsProjectId }: Props) {
+/** No one to tell: a chat without Len cards. */
+const SIN_AVISO = () => {};
+
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente, cardsProjectId, lenCards }: Props) {
   // Whose cards: Len's chat, its project's; her chat, the project on the phone's screen (none: no cards).
   const proyectoDeLasTarjetas = asistente ? cardsProjectId ?? null : projectId;
   const t = useTranslations("movil.chat");
@@ -73,6 +88,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const ta = useTranslations("movil.adjuntos");
   const [texto, setTexto] = useState("");
   const subagentes = useSubagentes(cliente, projectId, chat.elementos);
+  const pedidosALen = useLenRequests({ cliente, assistantId: lenCards?.assistantId ?? null, elementos: chat.elementos, onSettled: lenCards?.onSettled ?? SIN_AVISO });
   // La foto elegida espera arriba del campo (como WhatsApp) hasta que la
   // mandas con tu mensaje (Jesús, 01/10: mandarla al elegirla «no le gustará
   // a la gente»).
@@ -179,6 +195,10 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const filas = chat.elementos.map((e, i) => {
     if (e.tipo === "subagentes") return <div className="ch-row is-len is-cont" key={e.clave} data-clave={e.clave}>
       <SubagentesLineas runs={subagentes.porFila.get(e.fila) ?? []} parar={subagentes.parar} />
+    </div>;
+    if (e.tipo === "lenPedidos") return <div className="ch-row is-len is-cont" key={e.clave} data-clave={e.clave}>
+      {e.refs.map((r) => <LenRequestCard key={r.filaId} view={pedidosALen.byFila.get(r.filaId)} lenRef={r} projectTitle={lenCards?.projectTitle(r.projectId) ?? ""} name={asistente?.name ?? ""}
+        onStop={(turno) => void pedidosALen.stop(turno)} onCompare={() => lenCards?.onCompare(r)} onPublish={() => lenCards?.onPublish(r)} onOpen={() => lenCards?.onOpen?.(r)} />)}
     </div>;
     if (e.tipo === "origen") return <div className="ch-day" key={e.clave}>{t("subagentes.origen")}</div>;
     if (e.tipo === "dia") {

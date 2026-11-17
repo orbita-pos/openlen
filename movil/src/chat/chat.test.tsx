@@ -21,6 +21,10 @@ vi.mock("../llamada/tarjetas", () => ({ TarjetaDeLaApp: (p: Record<string, unkno
 const tarjetasDelProyecto = vi.hoisted(() => ({ avisos: null as Record<string, unknown> | null, herramientas: null as Record<string, unknown> | null }));
 vi.mock("./avisos", () => ({ AvisosDeLen: (p: Record<string, unknown>) => { tarjetasDelProyecto.avisos = p; return null; } }));
 vi.mock("../herramientas/tool-cards", () => ({ TarjetasDeHerramientas: (p: Record<string, unknown>) => { tarjetasDelProyecto.herramientas = p; return null; } }));
+// Her Len cards follow their own route (use-len-requests.test.tsx): here, only that her chat shows them.
+const lenCards = vi.hoisted(() => ({ hook: null as Record<string, unknown> | null, card: [] as Record<string, unknown>[] }));
+vi.mock("../asistente/use-len-requests", () => ({ useLenRequests: (o: Record<string, unknown>) => { lenCards.hook = o; return { byFila: new Map([["f1", { filaId: "f1", status: "done" }]]), stop: vi.fn() }; } }));
+vi.mock("../asistente/len-request-card", () => ({ LenRequestCard: (p: Record<string, unknown>) => { lenCards.card.push(p); return <div data-len-card={(p.lenRef as { filaId: string }).filaId} />; } }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root, host: HTMLDivElement;
 const cerrar = vi.fn();
@@ -49,6 +53,19 @@ it("her chat shows the event and tool cards of the project on screen", () => {
  act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" cardsProjectId="p2" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} asistente={{ name: "Lucía", color: "#3b82f6" }} />));
  expect(tarjetasVistas().avisos?.projectId).toBe("p2");
  expect(tarjetasVistas().herramientas?.projectId).toBe("p2");
+});
+
+it("🔴 her chat shows a Len card for each request she passed, following its row", () => {
+ lenCards.card = [];
+ const onCompare = vi.fn();
+ const chat = { elementos: [{ clave: "t1:lenPedidos", t: 1, tipo: "lenPedidos", refs: [{ filaId: "f1", projectId: "p2" }] }], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" cardsProjectId="p2" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} asistente={{ name: "Lucía", color: "#3b82f6" }}
+   lenCards={{ assistantId: "a1", projectTitle: (id) => (id === "p2" ? "Café" : ""), onSettled: vi.fn(), onCompare, onPublish: vi.fn() }} />));
+ expect(host.querySelector('[data-len-card="f1"]')).not.toBeNull();
+ expect(lenCards.hook).toMatchObject({ assistantId: "a1" });
+ expect(lenCards.card[0]).toMatchObject({ projectTitle: "Café", name: "Lucía", view: { filaId: "f1", status: "done" } });
+ act(() => (lenCards.card[0]!.onCompare as () => void)());
+ expect(onCompare).toHaveBeenCalledWith({ filaId: "f1", projectId: "p2" });
 });
 
 it("her chat with no project on screen shows no project cards", () => {
