@@ -28,6 +28,9 @@ import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
 import { AssistantTab } from "../asistente/assistant-tab";
 import { LenTurnView } from "../asistente/len-turn-view";
+import { useLenRequests } from "../asistente/use-len-requests";
+import { pasosDelTrabajo } from "../entrega/progreso";
+import type { ElementoDelHilo } from "../chat/hilo";
 import { leerSuChat, listarAsistentes, readAssistants, serveProject } from "../api/asistente";
 import { projectStatusOf } from "../asistente/project-status";
 import { appModeOf, dismissWelcome, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
@@ -65,6 +68,7 @@ const ICONO_DEL_TAMANO: Record<Tamano, NombreDeIcono> = { cel: "dvCel", tab: "dv
 // Una sola lista vacía: con `?? []` en cada render, el chat creería que la
 // conversación cambió cada vez y tiraría lo que acabas de mandar.
 const SIN_HISTORIAL: StoredChatTurn[] = [];
+const SIN_ELEMENTOS: ElementoDelHilo[] = [];
 
 export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: ClienteDeOpenLen; idioma: Idioma; onSalir: () => void }) {
   const t = useTranslations("movil.principal");
@@ -107,6 +111,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.1): assistants on at all, the one chosen on
   // this phone, and whether the welcome was dismissed.
   const [asistentesOn, setAsistentesOn] = useState(true);
+  // Read at least once (final review, I6): until then, no welcome.
+  const [asistentesLeidas, setAsistentesLeidas] = useState(false);
   const [elegida, setElegida] = useState<string | null>(readChosen);
   const [bienvenidaCerrada, setBienvenidaCerrada] = useState(readWelcomeDismissed);
   const [asistenteAbierta, setAsistenteAbierta] = useState<{ asistente: AssistantListItem; parte?: ParteDeLaAsistente; tarjeta?: string | null; n: number } | null>(null);
@@ -149,12 +155,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       if (!alive) return;
       setAsistentes(x.assistants);
       setAsistentesOn(x.enabled);
+      setAsistentesLeidas(true);
     }, () => {});
     return () => {
       alive = false;
     };
   }, [cliente, recarga]);
-  const modo = appModeOf({ enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista ?? [], welcomeDismissed: bienvenidaCerrada });
+  const modo = appModeOf({ loaded: asistentesLeidas, enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista ?? [], welcomeDismissed: bienvenidaCerrada });
   const suColor = modo.kind === "assistant" ? modo.assistant.color : null;
   // The app takes her color (§5.2); with no assistant, and on leaving this screen (signing out), Len's orange again.
   useEffect(() => {
@@ -327,7 +334,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const yaNacio = useCallback((nueva: string) => {
     saveChosen(nueva);
     setElegida(nueva);
-    void readAssistants(cliente).then((l) => { setAsistentes(l.assistants); setAsistentesOn(l.enabled); }, () => {});
+    // She exists now: the welcome closes even if reading her back fails (final review, I6); the next read shows her.
+    setBienvenidaCerrada(true);
+    void readAssistants(cliente).then((l) => { setAsistentes(l.assistants); setAsistentesOn(l.enabled); setAsistentesLeidas(true); }, () => {});
   }, [cliente]);
   const juntoAlProyecto = (p: ProyectoEnLista) => {
     if (!ella) return null;
@@ -399,6 +408,23 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     ...(ella ? { assistantId: ella.id, ...(id ? { viewingProjectId: id } : {}) } : {}),
   });
   const dichoElla = ella ? loQueDijoLen(suHistorial) : null;
+  // HER LEN CARDS, followed here and not in her chat (final review, I2): the sheet over the page needs them too — a Len
+  // turn her ask_len started after this page loaded is Len working on it, and the sheet says so with his steps.
+  const pedidosALen = useLenRequests({
+    cliente,
+    assistantId: ella?.id ?? null,
+    elementos: (chatDeElla.elementos as ElementoDelHilo[] | undefined) ?? SIN_ELEMENTOS,
+    onSettled: (r) => { if (r.projectId === idActual.current) recargar(); },
+  });
+  const lenAqui = ella
+    ? ((chatDeElla.elementos as ElementoDelHilo[] | undefined) ?? SIN_ELEMENTOS)
+        .flatMap((e) => (e.tipo === "lenPedidos" ? e.refs : []))
+        .filter((r) => r.projectId === id)
+        .map((r) => pedidosALen.byFila.get(r.filaId))
+        .find((v) => v?.status === "running" || v?.status === "queued")
+    : undefined;
+  const lenTrabajaAqui = chat.trabajando || lenAqui !== undefined;
+  const pasosDeLenAqui = chat.trabajando ? chat.progreso : pasosDelTrabajo(lenAqui?.turn?.actions ?? []);
   const equipo = useEquipo({
     cliente, projectId: id, idioma, activo: panel === "equipo",
     alPedirLen: texto => { setPanel(null); if (!ella) setChatAbierto(true); chat.mandar(texto); },
@@ -503,13 +529,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
                 : <Cara estado={chat.trabajando ? "pensando" : "reposo"} className="lm-who-face" />}
               <div className="lm-who-t">
                 <b>{ella ? ella.name : "Len"}</b>
-                {/* In her app, Len's work on the page on screen shows here too (§5.4.6). */}
-                <span className={chat.trabajando ? "lm-live" : undefined}>{chat.trabajando ? (ella ? tas("lenTrabajando") : t("trabajando")) : t("estado")}</span>
+                {/* In her app, Len's work on the page on screen shows here too — his own turns and hers (§5.4). */}
+                <span className={(ella ? lenTrabajaAqui : chat.trabajando) ? "lm-live" : undefined}>{ella ? (lenTrabajaAqui ? tas("lenTrabajando") : t("estado")) : chat.trabajando ? t("trabajando") : t("estado")}</span>
               </div>
             </div>
             <div id="len-sheet-body" className="lm-body" inert={hojaMin}>
               <p className="lm-msg">{(ella ? dichoElla?.texto : dicho?.texto) || t("sinMensaje")}</p>
-              <Progreso pasos={chat.progreso} trabajando={chat.trabajando} />
+              <Progreso pasos={ella ? pasosDeLenAqui : chat.progreso} trabajando={ella ? lenTrabajaAqui : chat.trabajando} />
               <div className="lm-actions">
                 {/* No call with her in this version (§5.7): talking by voice to her is a work of its own. */}
                 {!ella && (
@@ -557,10 +583,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         cliente={cliente}
         projectId={ella ? ella.projectId : id}
         {...(ella ? { cardsProjectId: id, asistente: { name: ella.name, color: ella.color, look: ella.look }, lenCards: {
-          assistantId: ella.id,
+          byFila: pedidosALen.byFila,
+          onStop: (turno: string) => void pedidosALen.stop(turno),
           projectTitle: (pid: string) => lista?.find((x) => x.id === pid)?.title ?? "",
-          // Len finished on the page on screen: reread it, and its delivery shows (§5.4.3).
-          onSettled: (r: LenRequestRef) => { if (r.projectId === idActual.current) recargar(); },
           onCompare: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "comparar"),
           onPublish: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "gestion"),
           onOpen: (r: LenRequestRef) => abrirTurnoDeLen(r.filaId, r.projectId),

@@ -71,6 +71,17 @@ describe("her Len cards follow his turns (spec local 2026-11-16-movil-es-tu-asis
     expect(onSettled).not.toHaveBeenCalled();
   });
 
+  it("🔴 more than 20 requests in her thread: the newest 20 are asked for (final review, C1)", async () => {
+    m.read.mockResolvedValue([]);
+    const many: ElementoDelHilo[] = [{ clave: "t:lenPedidos", t: 1, tipo: "lenPedidos", refs: Array.from({ length: 25 }, (_, i) => ({ filaId: `f${i + 1}`, projectId: "p1" })) }];
+    function Many() {
+      result = useLenRequests({ cliente, assistantId: "a1", elementos: many, onSettled });
+      return null;
+    }
+    await act(async () => root.render(<Many />));
+    expect(m.read.mock.calls[0]![2]).toEqual(Array.from({ length: 20 }, (_, i) => `f${i + 6}`));
+  });
+
   it("«Parar» pauses Len's live turn and reads again", async () => {
     m.read.mockResolvedValue([{ ...view("running"), turnoId: "t1" }]);
     m.pause.mockResolvedValue({ ok: true });

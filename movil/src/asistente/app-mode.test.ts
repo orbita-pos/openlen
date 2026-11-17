@@ -12,7 +12,7 @@ const MARTA = assistant("a2", "Marta");
 const LUCIA = assistant("a1", "Lucía");
 const MINE: ProyectoEnLista = { id: "p1", title: "Pan", subdomain: null, publishedAt: null, updatedAt: "2026-11-16" };
 const SHARED: ProyectoEnLista = { ...MINE, id: "p9", compartido: { rol: "editor" } };
-const base = { enabled: true, assistants: [] as AssistantListItem[], chosenId: null as string | null, projects: [MINE], welcomeDismissed: false };
+const base = { loaded: true, enabled: true, assistants: [] as AssistantListItem[], chosenId: null as string | null, projects: [MINE], welcomeDismissed: false };
 
 afterEach(() => localStorage.clear());
 
@@ -31,6 +31,11 @@ describe("which assistant the app is (spec local 2026-11-16-movil-es-tu-asistent
 
   it("🔴 a saved assistant deleted on the web falls back to the newest", () => {
     expect(appModeOf({ ...base, assistants: [MARTA, LUCIA], chosenId: "gone" })).toEqual({ kind: "assistant", assistant: MARTA });
+  });
+
+  // Final review, I6: until her person's assistants are known, an empty list is not «none» — never the welcome.
+  it("🔴 assistants not read yet (or the read failed): today's app, never the welcome", () => {
+    expect(appModeOf({ ...base, loaded: false })).toEqual({ kind: "len", invite: false });
   });
 
   it("none yet, with a project of their own: the welcome", () => {

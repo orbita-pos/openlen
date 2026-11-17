@@ -34,11 +34,11 @@ vi.mock("../herramientas/tool-screen", () => ({
   ),
 }));
 // Len's hook watches the project on screen; hers talks to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3).
-const chats = vi.hoisted(() => ({ lenTrabajando: false, deElla: null as Record<string, unknown> | null }));
+const chats = vi.hoisted(() => ({ lenTrabajando: false, deElla: null as Record<string, unknown> | null, elementosDeElla: [] as unknown[] }));
 vi.mock("../chat/use-chat", () => ({
   useChat: (o: Record<string, unknown>) => {
     if (o.assistantId) chats.deElla = o;
-    return { trabajando: o.assistantId ? false : chats.lenTrabajando, progreso: [] };
+    return { trabajando: o.assistantId ? false : chats.lenTrabajando, progreso: [], ...(o.assistantId ? { elementos: chats.elementosDeElla } : {}) };
   },
 }));
 
@@ -477,6 +477,7 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     chatProps.len = null;
     chats.lenTrabajando = false;
     chats.deElla = null;
+    chats.elementosDeElla = [];
   });
   async function paint(asistentes: unknown[] = [LUCIA]) {
     const pedir = vi.fn(async (ruta: string) =>
@@ -518,6 +519,35 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(hoja().textContent).toContain("lenTrabajando");
   });
 
+  // Final review, I2: a Len turn her ask_len started after the page loaded is Len working on this page — the sheet says so.
+  it("🔴 Len working on her request for this page: her sheet says so, with his steps", async () => {
+    chats.elementosDeElla = [{ clave: "e1:lenPedidos", t: 1, tipo: "lenPedidos", refs: [{ filaId: "f1", projectId: "p1" }] }];
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta === "/api/assistants"
+            ? Response.json({ enabled: true, assistants: [LUCIA] })
+            : ruta.startsWith("/api/assistants/a1/len-requests")
+              ? Response.json({ requests: [{ filaId: "f1", status: "running", turn: { id: "f1", userText: "", assistantReasoning: "", status: "applied", enCurso: true, actions: [{ tool: "Edit", status: "running", summary: "" }] } }] })
+              : ruta.startsWith("/api/assistants/a1/chat")
+                ? Response.json({ chatHistory: [] })
+                : ruta.startsWith("/api/tools?")
+                  ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                  : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    await act(async () => {});
+    expect(hoja().textContent).toContain("lenTrabajando");
+    const cards = chatProps.ella?.lenCards as { byFila: ReadonlyMap<string, { status: string }> };
+    expect(cards.byFila.get("f1")?.status).toBe("running");
+  });
+
   it("no «Tu Len» and no call with her: Len's face isn't hers", async () => {
     await paint();
     await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
@@ -525,17 +555,45 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(host.querySelector("[data-llamada]")).toBeNull();
   });
 
-  it("🔴 her chat's Len cards: titled by project, and one ending on this page reloads it", async () => {
-    const { pedir } = await paint();
-    const cards = chatProps.ella?.lenCards as { assistantId: string; projectTitle: (id: string) => string; onSettled: (r: { filaId: string; projectId: string }) => void };
-    expect(cards.assistantId).toBe("a1");
+  it("her chat's Len cards are titled by their project", async () => {
+    await paint();
+    const cards = chatProps.ella?.lenCards as { projectTitle: (id: string) => string };
     expect(cards.projectTitle("p1")).toBe("Página");
-    const reads = () => pedir.mock.calls.filter(([r]) => r === "/api/projects/p1").length;
-    const before = reads();
-    await act(async () => cards.onSettled({ filaId: "f1", projectId: "p1" }));
-    expect(reads()).toBe(before + 1);
-    await act(async () => cards.onSettled({ filaId: "f2", projectId: "p9" }));
-    expect(reads()).toBe(before + 1);
+  });
+
+  it("🔴 a Len card of this page that ends reloads the page (its delivery shows); one of another page doesn't", async () => {
+    vi.useFakeTimers();
+    try {
+      chats.elementosDeElla = [{ clave: "e1:lenPedidos", t: 1, tipo: "lenPedidos", refs: [{ filaId: "f1", projectId: "p1" }, { filaId: "f2", projectId: "p9" }] }];
+      let lecturas = 0;
+      const pedir = vi.fn(async (ruta: string) =>
+        ruta === "/api/projects"
+          ? Response.json({ projects: [proyecto] })
+          : ruta.endsWith("/preview")
+            ? Response.json({ enabled: true, token: "vista" })
+            : ruta === "/api/assistants"
+              ? Response.json({ enabled: true, assistants: [LUCIA] })
+              : ruta.startsWith("/api/assistants/a1/len-requests")
+                ? Response.json({ requests: lecturas++ === 0 ? [{ filaId: "f1", status: "running" }, { filaId: "f2", status: "running" }] : [{ filaId: "f1", status: "done" }, { filaId: "f2", status: "running" }] })
+                : ruta.startsWith("/api/assistants/a1/chat")
+                  ? Response.json({ chatHistory: [] })
+                  : ruta.startsWith("/api/tools?")
+                    ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                    : Response.json({ project: proyecto }),
+      );
+      host = document.createElement("div");
+      document.body.append(host);
+      root = createRoot(host);
+      await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+      await act(async () => {});
+      const reads = () => pedir.mock.calls.filter(([r]) => r === "/api/projects/p1").length;
+      const before = reads();
+      await act(async () => vi.advanceTimersByTime(4000));
+      await act(async () => {});
+      expect(reads()).toBe(before + 1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("🔴 «Ver lo que hizo Len» on a card opens what he did, never his chat", async () => {
@@ -653,6 +711,52 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
       expect(invitar).toBeDefined();
       await act(async () => invitar!.click());
       expect(host.querySelector('[data-welcome="p1"]')).not.toBeNull();
+    });
+
+    // Final review, I6.
+    it("🔴 while her person's assistants can't be read, no welcome: today's app", async () => {
+      const pedir = vi.fn(async (ruta: string) =>
+        ruta === "/api/projects"
+          ? Response.json({ projects: [proyecto] })
+          : ruta.endsWith("/preview")
+            ? Response.json({ enabled: true, token: "vista" })
+            : ruta === "/api/assistants"
+              ? new Response("boom", { status: 500 })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ project: proyecto }),
+      );
+      host = document.createElement("div");
+      document.body.append(host);
+      root = createRoot(host);
+      await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+      await act(async () => {});
+      expect(host.querySelector("[data-welcome]")).toBeNull();
+      expect(hoja().querySelector(".lm-who-t b")?.textContent).toBe("Len");
+    });
+
+    it("🔴 created, the welcome closes even if reading her back fails", async () => {
+      let fail = false;
+      const pedir = vi.fn(async (ruta: string) =>
+        ruta === "/api/projects"
+          ? Response.json({ projects: [proyecto] })
+          : ruta.endsWith("/preview")
+            ? Response.json({ enabled: true, token: "vista" })
+            : ruta === "/api/assistants"
+              ? fail ? new Response("boom", { status: 500 }) : Response.json({ enabled: true, assistants: [] })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ project: proyecto }),
+      );
+      host = document.createElement("div");
+      document.body.append(host);
+      root = createRoot(host);
+      await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+      await act(async () => {});
+      expect(host.querySelector("[data-welcome]")).not.toBeNull();
+      fail = true;
+      await act(async () => bienvenida.props!.onCreated("a1"));
+      expect(host.querySelector("[data-welcome]")).toBeNull();
     });
 
     it("created, she is the app: chosen on this phone and read again", async () => {
