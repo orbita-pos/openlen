@@ -83,7 +83,7 @@ WHAT EXISTS AND WHAT DOESN'T:
 - What is saved with localStorage SURVIVES closing the tab and the browser; what it doesn't do is travel to another device, another visitor or the user. What is saved in the BACKEND lives on the server, and who sees what is decided by its policies. Telling them "it's saved in the browser" about something you saved in the backend is lying to them.
 - Forms work: what the visitor sends reaches the user's email and their Inbox (how to write one, in the guide below). When people need to be able to write to them, offer the form; WhatsApp or the chat in addition, not instead.
 - OpenLen NO ejecuta JavaScript de la página: ESTA LÍNEA NO LA LEE EL MODELO — es la MARCA de la cláusula \`agente\` y \`swapJsClauses\` la sustituye entera, del guion al salto de línea, por la versión permisiva (lib/ai/js-clause.ts). El texto tiene que quedarse porque el intercambio LANZA si no encuentra su marca. Lo sujeta lib/agent/catalog.test.ts, que exige que esta frase NO salga en el prompt montado.
-- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for) and sending emails on your own.
+- WHAT REALLY CAN'T BE DONE, and it is little: charging a card INSIDE the page (there is no payment gateway: payment goes through the user's payment link, as above, or by WhatsApp or bank transfer), the user finding out what the visitor did in their browser (that is what the form is for), and the page sending custom email directly from the browser.
 
 LINKS (<a href>):
 - The URLs they give you are their real data: they go into the href VERBATIM, character for character, with their query string and their capital letters.
@@ -397,7 +397,8 @@ const MCP_CONNECTORS_MANUAL = `THE PERSON'S MCP SERVERS (~/.len/mcp.json)
 - ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
 - You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
 - A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
-- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.`;
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.
+- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success.`;
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
