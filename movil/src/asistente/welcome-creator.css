@@ -22,3 +22,5 @@
 .welcome-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--lm-line)}
 .welcome-foot p{flex-basis:100%;margin:0;font:12.5px/1.4 Inter,sans-serif;color:var(--bad)}
 .welcome-foot .lm-btn{flex:1;min-height:48px}
+/* The welcome paints its own cream: its secondary button carries its own ink and ground, never the brand sheet's white. */
+.welcome-foot .lm-btn.lm-sec{background:var(--lm-panel);color:var(--lm-ink);border:1px solid var(--lm-line);box-shadow:none}

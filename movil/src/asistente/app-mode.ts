@@ -15,6 +15,9 @@ export type AppMode =
   | { readonly kind: "len"; readonly invite: boolean };
 
 export function appModeOf(o: {
+  /** Her person's assistants were read (final review, I6): until then — or if the read failed — an empty list is not
+   *  «none», and the welcome must not cover the app of someone who has one. */
+  readonly loaded: boolean;
   readonly enabled: boolean;
   /** Newest first, as `GET /api/assistants` gives them. */
   readonly assistants: readonly AssistantListItem[];
@@ -22,7 +25,7 @@ export function appModeOf(o: {
   readonly projects: readonly ProyectoEnLista[];
   readonly welcomeDismissed: boolean;
 }): AppMode {
-  if (!o.enabled) return { kind: "len", invite: false };
+  if (!o.loaded || !o.enabled) return { kind: "len", invite: false };
   const chosen = o.assistants.find((a) => a.id === o.chosenId) ?? o.assistants[0];
   if (chosen) return { kind: "assistant", assistant: chosen };
   const ownsOne = o.projects.some((p) => !p.compartido);

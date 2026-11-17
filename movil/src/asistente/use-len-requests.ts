@@ -13,6 +13,8 @@ import type { ElementoDelHilo } from "../chat/hilo";
 import { pausarEncargo } from "../gestion/api";
 
 const EVERY_MS = 4000;
+/** As many as the route reads at once (len-requests/route.ts): the newest, the ones still moving (final review, C1). */
+const MAX_FILAS = 20;
 const alive = (s: LenRequestView["status"] | undefined) => s === "queued" || s === "running";
 const live = (v: LenRequestView) => alive(v.status);
 
@@ -37,7 +39,7 @@ export function useLenRequests(o: {
   }, [assistantId]);
 
   useEffect(() => {
-    const list = (JSON.parse(key) as [string, string][]).map(([filaId, projectId]) => ({ filaId, projectId }));
+    const list = (JSON.parse(key) as [string, string][]).map(([filaId, projectId]) => ({ filaId, projectId })).slice(-MAX_FILAS);
     if (!assistantId || list.length === 0) {
       setState({ assistantId, byFila: new Map() });
       return;
