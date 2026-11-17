@@ -15,8 +15,18 @@ async function leer<T>(c: ClienteDeOpenLen, ruta: string, campo: string): Promis
 
 const suya = (id: string, tras = "") => `/api/assistants/${encodeURIComponent(id)}${tras}`;
 
+/** Her person's assistants, newest first, and whether assistants are on at all (spec local
+ *  2026-11-16-movil-es-tu-asistente, §5.1): off is today's app with Len. A server from before says nothing: on. Throws
+ *  on a failure. */
+export async function readAssistants(c: ClienteDeOpenLen): Promise<{ enabled: boolean; assistants: AssistantListItem[] }> {
+  const res = await c.pedir("/api/assistants");
+  const body = (await res.json().catch(() => null)) as { enabled?: unknown; assistants?: unknown } | null;
+  if (!res.ok || !body) throw new Error(String(res.status));
+  return { enabled: body.enabled !== false, assistants: Array.isArray(body.assistants) ? (body.assistants as AssistantListItem[]) : [] };
+}
+
 /** Her person's assistants, newest first; none (or assistants off on the server) is an empty list. Throws otherwise. */
-export const listarAsistentes = (c: ClienteDeOpenLen) => leer<AssistantListItem>(c, "/api/assistants", "assistants");
+export const listarAsistentes = (c: ClienteDeOpenLen) => readAssistants(c).then((r) => r.assistants);
 
 /** Whether the live figures are on (GET /api/figures, spec local 2026-11-10-figuras-del-asistente, §6): not knowing is
  *  off, and her figure stays flat. */
