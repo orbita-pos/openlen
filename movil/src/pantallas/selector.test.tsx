@@ -19,3 +19,13 @@ it("enfoca el selector, mantiene Tab dentro y permite cerrarlo con Escape", () =
  act(() => dialogo.dispatchEvent(new KeyboardEvent('keydown', { key:'Escape', bubbles:true, cancelable:true })));
  expect(cerrar).toHaveBeenCalledOnce();
 });
+
+// Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.6): beside each project, what it is to her.
+it("shows what each project is to her, beside it", () => {
+ previo = document.createElement("button"); document.body.append(previo);
+ host = document.createElement("div"); document.body.append(host); root = createRoot(host);
+ act(() => root.render(<Selector proyectos={[{ id: "p1", title: "Pan" } as never, { id: "p2", title: "Café" } as never]} actual="p1" onElegir={vi.fn()} onCerrar={vi.fn()} onSalir={vi.fn()}
+   junto={(p) => (p.id === "p2" ? <span data-libre="">libre</span> : null)} />));
+ expect(host.querySelector('[data-junto="p2"] [data-libre]')?.textContent).toBe("libre");
+ expect(host.querySelectorAll("[data-junto]")).toHaveLength(1);
+});

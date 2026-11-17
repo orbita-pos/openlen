@@ -151,3 +151,10 @@ a.nx-act { text-decoration: none; }
 .app-vacio-acciones{display:flex;flex-direction:column;gap:10px;margin-top:2px}
 .app-vacio-acciones button{min-height:44px;border:1px solid var(--c-line);border-radius:16px;padding:10px 16px;background:var(--c-field);color:var(--c-ink);font-weight:600;margin:0}
 .app-vacio-acciones .app-vacio-abrir{background:var(--c-me);color:var(--c-me-ink);border-color:transparent}
+
+/* A project and her (spec local 2026-11-16-movil-es-tu-asistente, §5.6): beside it in «Tus páginas», and in her sheet. */
+.app-selector-proyecto{display:grid;gap:6px}
+.app-selector-junto,.app-hoja-junto{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 4px}
+.app-selector-junto small,.app-hoja-junto small{font:12.5px/1.4 Inter,sans-serif;color:var(--lm-muted)}
+.app-selector-junto .lm-btn,.app-hoja-junto .lm-btn{min-height:44px}
+.app-hoja-junto{margin-top:10px}

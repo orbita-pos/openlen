@@ -42,6 +42,17 @@ export async function figurasEncendidas(c: ClienteDeOpenLen): Promise<boolean> {
 export const readLenRequests = (c: ClienteDeOpenLen, id: string, filas: readonly string[]) =>
   leer<LenRequestView>(c, suya(id, `/len-requests?filas=${filas.map(encodeURIComponent).join(",")}`), "requests");
 
+/** «Que Lucía lo atienda» (spec local 2026-11-16-movil-es-tu-asistente, §5.6): she takes one of your projects, with her
+ *  bubble off — from the phone she passes its requests to Len, she doesn't answer its visitors (Jesús, 16/11). */
+export async function serveProject(c: ClienteDeOpenLen, id: string, projectId: string): Promise<"served" | "has_assistant" | "error"> {
+  const res = await c
+    .pedir(suya(id, "/projects"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ projectId, onPage: false }) })
+    .catch(() => null);
+  if (res?.ok) return "served";
+  const body = (await res?.json().catch(() => null)) as { error?: unknown } | null;
+  return body?.error === "project_has_assistant" ? "has_assistant" : "error";
+}
+
 /** The first page of her conversation with her owner, in the shape of a project's `chatHistory`. */
 export const leerSuChat = (c: ClienteDeOpenLen, id: string) => leer<StoredChatTurn>(c, suya(id, "/chat"), "chatHistory");
 
