@@ -11,6 +11,7 @@ import { currentToolName } from "@/lib/agent/tool-renames";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import type { EventoSse } from "@/lib/len-bench/sse";
 import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
+import { lenRequestRefFrom, type LenRequestRef } from "@/lib/assistants/len-request-ref";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
 
@@ -27,6 +28,8 @@ export type ElementoDelHilo =
   | ({ clave: string; t: number; tipo: "voz"; url: string; barras: number[]; segundos: number; transcripcion: string | null; estado: EstadoLocal } & Enviado)
   | { clave: string; t: number; tipo: "len"; texto: string }
   | { clave: string; t: number; tipo: "subagentes"; fila: string; refs: readonly SubagentRef[] }
+  // Her requests to Len (spec local 2026-11-16-movil-es-tu-asistente, §5.4): one card per row of his, in her chat.
+  | { clave: string; t: number; tipo: "lenPedidos"; refs: readonly LenRequestRef[] }
   | { clave: string; t: number; tipo: "origen"; origen: "subagentes" }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
   | { clave: string; t: number; tipo: "fallo" }
@@ -70,6 +73,17 @@ export function parrafos(texto: string): string[] {
     .filter(Boolean);
 }
 
+/** What her `ask_len` calls passed to Len in a turn, one per row of his. */
+export function lenRequestRefsOf(actions: StoredChatTurn["actions"] | undefined): LenRequestRef[] {
+  const seen = new Set<string>();
+  return (actions ?? []).flatMap((a) => {
+    const ref = a.tool === "ask_len" ? lenRequestRefFrom(a.lenRequest) : null;
+    if (!ref || seen.has(ref.filaId)) return [];
+    seen.add(ref.filaId);
+    return [ref];
+  });
+}
+
 /** What `present` delivered in a turn's cards, only where its route serves it (`deliveredFrom`). */
 function deliveredOf(actions: StoredChatTurn["actions"] | undefined): DeliveredFile[] {
   return (actions ?? []).filter((a) => a.tool === "present").flatMap((a) => deliveredFrom(a.delivered) ?? []);
@@ -90,6 +104,8 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
     parrafos(turno.assistantReasoning).forEach((texto, i) => salida.push({ clave: `${turno.id}:len:${i}`, t, tipo: "len", texto }));
     const refs = subagentRefsOf(turno.actions);
     if (refs.length) salida.push({ clave: `${turno.id}:subagentes`, t, tipo: "subagentes", fila: turno.id, refs });
+    const pedidos = lenRequestRefsOf(turno.actions);
+    if (pedidos.length) salida.push({ clave: `${turno.id}:lenPedidos`, t, tipo: "lenPedidos", refs: pedidos });
     const entregado = deliveredOf(turno.actions);
     if (entregado.length) salida.push({ clave: `${turno.id}:entregado`, t, tipo: "entregado", archivos: entregado });
     if (turno.status === "error") salida.push({ clave: `${turno.id}:fallo`, t, tipo: "fallo" });
@@ -121,10 +137,12 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
       const status = d.status === "running" || d.status === "error" || d.status === "warning" ? d.status : "done";
       const entregado = d.tool === "present" ? deliveredFrom(d.delivered) : null;
       const ref = subagentRefFrom(d.subagent);
+      const pedido = d.tool === "ask_len" ? lenRequestRefFrom(d.lenRequest) : null;
       const accion: NonNullable<StoredChatTurn["actions"]>[number] = {
         tool: d.tool, status, summary: typeof d.summary === "string" ? d.summary : "",
         ...(entregado ? { delivered: entregado } : {}),
         ...(ref ? { subagent: ref } : {}),
+        ...(pedido ? { lenRequest: pedido } : {}),
         ...(Array.isArray(d.todos) ? { todos: d.todos.filter((x): x is { content: string; status: "pending" | "in_progress" | "completed" } => !!x && typeof x === "object" && typeof x.content === "string" && ["pending", "in_progress", "completed"].includes(x.status)) } : {}),
       };
       const acciones = [...(v.acciones ?? [])];
@@ -157,6 +175,8 @@ export function elementosDelTurno(v: TurnoEnVivo, t: number): ElementoDelHilo[] 
   const s: ElementoDelHilo[] = parrafos(v.texto).map((texto, i): ElementoDelHilo => ({ clave: `vivo:len:${i}`, t, tipo: "len", texto }));
   const refs = subagentRefsOf(v.acciones);
   if (refs.length && v.fila) s.push({ clave: "vivo:subagentes", t, tipo: "subagentes", fila: v.fila, refs });
+  const pedidos = lenRequestRefsOf(v.acciones);
+  if (pedidos.length) s.push({ clave: "vivo:lenPedidos", t, tipo: "lenPedidos", refs: pedidos });
   const entregado = deliveredOf(v.acciones);
   if (entregado.length) s.push({ clave: "vivo:entregado", t, tipo: "entregado", archivos: entregado });
   v.tarjetas.forEach((tarjeta, i) => s.push({ clave: `vivo:tarjeta:${i}`, t, tipo: "tarjeta", tarjeta }));

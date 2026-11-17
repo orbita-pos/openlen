@@ -1,0 +1,8 @@
+/* Len's card in her chat (spec local 2026-11-16-movil-es-tu-asistente, §5.4): Len's work, inside her conversation. */
+.lenreq{margin:4px 0 2px;padding:12px 14px;border-radius:18px;background:var(--c-len);color:var(--c-len-ink);box-shadow:var(--c-len-shadow);border-left:3px solid var(--len);display:grid;gap:8px;max-width:92%}
+.lenreq-st{margin:0;font:600 13.5px/1.4 Inter,sans-serif}
+.lenreq-live{color:var(--c-qr-ink)}
+.lenreq-dijo{margin:0;font:14px/1.45 Inter,sans-serif}
+.lenreq-acc{display:flex;flex-wrap:wrap;gap:8px}
+.lenreq-acc .lm-btn{min-height:44px;flex:1 1 auto}
+.lenreq-ver{justify-self:start;min-height:44px;border:0;background:none;color:var(--c-qr-ink);font:600 13px Inter,sans-serif;padding:0;text-decoration:underline;text-underline-offset:3px}

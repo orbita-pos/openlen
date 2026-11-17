@@ -517,6 +517,19 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(host.querySelector("[data-llamada]")).toBeNull();
   });
 
+  it("🔴 her chat's Len cards: titled by project, and one ending on this page reloads it", async () => {
+    const { pedir } = await paint();
+    const cards = chatProps.ella?.lenCards as { assistantId: string; projectTitle: (id: string) => string; onSettled: (r: { filaId: string; projectId: string }) => void };
+    expect(cards.assistantId).toBe("a1");
+    expect(cards.projectTitle("p1")).toBe("Página");
+    const reads = () => pedir.mock.calls.filter(([r]) => r === "/api/projects/p1").length;
+    const before = reads();
+    await act(async () => cards.onSettled({ filaId: "f1", projectId: "p1" }));
+    expect(reads()).toBe(before + 1);
+    await act(async () => cards.onSettled({ filaId: "f2", projectId: "p9" }));
+    expect(reads()).toBe(before + 1);
+  });
+
   it("her face in the bar opens her place", async () => {
     await paint();
     await act(async () => host.querySelector<HTMLButtonElement>(".ent-face-button")!.click());

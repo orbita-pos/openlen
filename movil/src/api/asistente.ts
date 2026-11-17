@@ -2,6 +2,7 @@
 // tab reads and does, over the routes that take the phone's key (app/api/assistants/**) — the same answers her place
 // on the web gets. Talking with her goes through `mandarALen` with her id (./chat.ts), as on the web.
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import type { LenRequestView } from "@/lib/assistants/len-requests";
 import type { AssistantListItem } from "@/lib/assistants/view";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
@@ -35,6 +36,11 @@ export async function figurasEncendidas(c: ClienteDeOpenLen): Promise<boolean> {
   const body = res?.ok ? ((await res.json().catch(() => null)) as { enabled?: unknown } | null) : null;
   return body?.enabled === true;
 }
+
+/** How each of her requests to Len is going (spec local 2026-11-16-movil-es-tu-asistente, §5.4): Len's row when it
+ *  exists, her note when it doesn't. Throws on a failure. */
+export const readLenRequests = (c: ClienteDeOpenLen, id: string, filas: readonly string[]) =>
+  leer<LenRequestView>(c, suya(id, `/len-requests?filas=${filas.map(encodeURIComponent).join(",")}`), "requests");
 
 /** The first page of her conversation with her owner, in the shape of a project's `chatHistory`. */
 export const leerSuChat = (c: ClienteDeOpenLen, id: string) => leer<StoredChatTurn>(c, suya(id, "/chat"), "chatHistory");

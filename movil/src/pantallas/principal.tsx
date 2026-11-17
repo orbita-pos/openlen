@@ -32,6 +32,7 @@ import { appModeOf, readChosen, readWelcomeDismissed, saveChosen } from "../asis
 import { applyHerColor } from "../asistente/color";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import type { AssistantListItem } from "@/lib/assistants/view";
+import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import { listarHerramientas, sePuedeAbrir, type HerramientasDeLaPersona } from "../api/herramientas";
 import { IconoDeHerramienta } from "../herramientas/tools-tab";
 import { PantallaHerramienta } from "../herramientas/tool-screen";
@@ -180,7 +181,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const paginaCargada = useRef<string | null>(null);
   // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
   // «chat» (spec local 2026-10-31-len-movil): a row of «Tareas» answered in the project's chat.
-  const panelDelAviso = useRef<{ id: string; panel: "equipo" | "gestion" | "chat" } | null>(null);
+  const panelDelAviso = useRef<{ id: string; panel: "equipo" | "gestion" | "chat" | "comparar" } | null>(null);
   useLayoutEffect(() => { idActual.current = id; paginaCargada.current = p?.id ?? null; }, [id, p]);
   useEffect(() => {
     const destino = panelDelAviso.current?.id === id ? panelDelAviso.current.panel : null;
@@ -302,6 +303,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
 
   const dicho = p ? loQueDijoLen(p.historial) : null;
 
+  /** «Antes / Ahora» and «Publicar» of a Len card: that project's panel, switching to it first if it isn't on screen. */
+  const abrirPanelDelProyecto = useCallback((projectId: string, destino: "comparar" | "gestion") => {
+    setChatAbierto(false);
+    if (projectId === idActual.current) { setPanel(destino); return; }
+    panelDelAviso.current = { id: projectId, panel: destino };
+    setId(projectId);
+  }, []);
   // Al acabar un turno (o volver de uno cortado): la conversación nueva y la
   // vista previa recargada, para que «Ver en tu página» enseñe el cambio.
   const recargar = useCallback(() => {
@@ -490,7 +498,14 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         chat={ella ? chatDeElla : chat}
         cliente={cliente}
         projectId={ella ? ella.projectId : id}
-        {...(ella ? { cardsProjectId: id, asistente: { name: ella.name, color: ella.color, look: ella.look } } : {})}
+        {...(ella ? { cardsProjectId: id, asistente: { name: ella.name, color: ella.color, look: ella.look }, lenCards: {
+          assistantId: ella.id,
+          projectTitle: (pid: string) => lista?.find((x) => x.id === pid)?.title ?? "",
+          // Len finished on the page on screen: reread it, and its delivery shows (§5.4.3).
+          onSettled: (r: LenRequestRef) => { if (r.projectId === idActual.current) recargar(); },
+          onCompare: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "comparar"),
+          onPublish: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "gestion"),
+        } } : {})}
         idioma={idioma}
         conPip={!ella && llamada && conPip}
         onCerrar={() => { setChatAbierto(false); setEnfocarEnChat(null); }}
