@@ -1,0 +1,24 @@
+/* Meet your assistant (spec local 2026-11-16-movil-es-tu-asistente, §5.1): full screen, her figure on a wash of her
+   color, what is chosen (it scrolls), and the two buttons always in sight. */
+.welcome{position:absolute;inset:0;z-index:80;display:flex;flex-direction:column;background:var(--lm-bg);color:var(--lm-ink);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+.welcome-hero{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 20px 16px;text-align:center}
+.welcome-hero h1{margin:0;font:700 22px/1.2 Inter,sans-serif}
+.welcome-hero p{margin:0;max-width:320px;font:14px/1.45 Inter,sans-serif;color:var(--lm-muted)}
+.welcome-surprise{min-height:44px;border:0;border-radius:999px;padding:8px 18px;font:600 13.5px Inter,sans-serif}
+.welcome-body{flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;display:grid;gap:16px;padding:4px 20px 20px;align-content:start}
+.welcome-label{display:grid;gap:6px;font:600 11.5px Inter,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--lm-muted)}
+.welcome-label input{min-height:44px;border:1px solid var(--lm-line);border-radius:12px;background:var(--lm-panel);color:var(--lm-ink);padding:0 12px;font:15px Inter,sans-serif;text-transform:none;letter-spacing:0}
+.welcome-label input[aria-invalid="true"]{border-color:var(--bad)}
+.welcome-set{border:0;margin:0;padding:0}
+.welcome-options,.welcome-colors,.welcome-tones{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.welcome-options button{display:grid;place-items:center;width:52px;height:52px;border:0;border-radius:14px;background:var(--lm-soft)}
+.welcome-options button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--len)}
+.welcome-colors button,.welcome-free{width:36px;height:36px;border:0;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.welcome-colors button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--lm-bg),0 0 0 4px var(--lm-ink)}
+.welcome-free{position:relative;overflow:hidden;background:conic-gradient(#ff5f5f,#ffc21a,#7ed321,#19c3b1,#2f8bff,#9b6cff,#ff5fa8,#ff5f5f)}
+.welcome-free input{position:absolute;inset:0;width:100%;height:100%;opacity:0}
+.welcome-tones button{flex:1;min-height:44px;border:0;border-radius:12px;background:var(--lm-soft);color:var(--lm-ink);font:500 13.5px Inter,sans-serif}
+.welcome-tones button[aria-pressed="true"]{background:var(--lm-ink);color:var(--lm-bg)}
+.welcome-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--lm-line)}
+.welcome-foot p{flex-basis:100%;margin:0;font:12.5px/1.4 Inter,sans-serif;color:var(--bad)}
+.welcome-foot .lm-btn{flex:1;min-height:48px}

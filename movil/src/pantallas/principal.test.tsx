@@ -13,6 +13,9 @@ const montajes = vi.hoisted(() => ({ n: 0 }));
 vi.mock("../asistente/assistant-tab", async () => { const { useEffect } = await import("react"); return { AssistantTab: (p: { asistente: { id: string }; parte?: string; tarjeta?: string | null; onHablar: () => void; onVerLen: (projectId: string) => void }) => <div data-assistant-tab={p.asistente.id} data-parte={p.parte ?? ""} data-tarjeta={p.tarjeta ?? ""}><button data-tab-hablar="" onClick={p.onHablar} /><button data-tab-ver-len="" onClick={() => p.onVerLen("p1")} /><Montado /></div> }; function Montado() { useEffect(() => { montajes.n++; }, []); return null; } });
 vi.mock("../viewer/phone-viewer", () => ({ PhoneViewer: ({ file }: { file: { name: string; preview?: string } }) => <div data-viewer={file.name} data-preview={file.preview ?? ""} /> }));
 vi.mock("../cara", () => ({ Cara: () => null }));
+// The welcome creator has its own test (../asistente/welcome-creator.test.tsx): here, when it shows and on what.
+const bienvenida = vi.hoisted(() => ({ props: null as null | { projectId: string; onCreated: (id: string) => void; onNotNow: () => void } }));
+vi.mock("../asistente/welcome-creator", () => ({ WelcomeCreator: (p: { projectId: string; onCreated: (id: string) => void; onNotNow: () => void }) => { bienvenida.props = p; return <div data-welcome={p.projectId} />; } }));
 // What Len did has its own test (../asistente/len-turn-view.test.tsx): here, which row opens.
 vi.mock("../asistente/len-turn-view", () => ({ LenTurnView: (p: { fila: string; projectTitle: string }) => <div data-len-turn={p.fila} data-len-turn-project={p.projectTitle} /> }));
 // Delivered has its own test: here, where «Ver en el chat» leads.
@@ -630,11 +633,59 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
   });
 
+  describe("meeting her (§5.1)", () => {
+    it("🔴 without assistants, the app opens the creator; «Ahora no» leaves today's app with an invitation", async () => {
+      await paint([]);
+      expect(host.querySelector('[data-welcome="p1"]')).not.toBeNull();
+      await act(async () => bienvenida.props!.onNotNow());
+      expect(host.querySelector("[data-welcome]")).toBeNull();
+      expect(localStorage.getItem("len-bienvenida")).toBe("1");
+      expect(hoja().querySelector(".lm-who-t b")?.textContent).toBe("Len");
+      const invitar = botonesDeLaHoja().find((b) => b.textContent === "conoceATuAsistente");
+      expect(invitar).toBeDefined();
+      await act(async () => invitar!.click());
+      expect(host.querySelector('[data-welcome="p1"]')).not.toBeNull();
+    });
+
+    it("created, she is the app: chosen on this phone and read again", async () => {
+      const { pedir } = await paint([]);
+      const reads = () => pedir.mock.calls.filter(([r]) => r === "/api/assistants").length;
+      const before = reads();
+      await act(async () => bienvenida.props!.onCreated("a1"));
+      expect(localStorage.getItem("len-asistente")).toBe("a1");
+      expect(reads()).toBe(before + 1);
+    });
+  });
+
   it("🔴 the app of today when she isn't there: Len's sheet, his call and his chat", async () => {
+    localStorage.setItem("len-bienvenida", "1");
     await paint([]);
     expect(hoja().querySelector(".lm-who-t b")?.textContent).toBe("Len");
     expect(botonesDeLaHoja().some((b) => b.textContent?.includes("llamar"))).toBe(true);
     expect(chatProps.len).not.toBeNull();
     expect(chatProps.ella).toBeNull();
   });
+});
+
+it("🔴 the creator's home is a project of yours, never a shared one", async () => {
+  const COMPARTIDO = { id: "p9", title: "De Ana", subdomain: null, publishedAt: null, updatedAt: "2026-11-10", compartido: { rol: "editor" }, chatHistory: [] };
+  const MIO = { id: "p1", title: "Pan", subdomain: null, publishedAt: null, updatedAt: "2026-11-01", chatHistory: [] };
+  localStorage.setItem("len-proyecto", "p9");
+  const pedir = vi.fn(async (ruta: string) =>
+    ruta === "/api/projects"
+      ? Response.json({ projects: [COMPARTIDO, MIO] })
+      : ruta.endsWith("/preview")
+        ? Response.json({ enabled: true, token: "vista" })
+        : ruta === "/api/assistants"
+          ? Response.json({ enabled: true, assistants: [] })
+          : ruta.startsWith("/api/tools?")
+            ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+            : Response.json({ project: ruta.endsWith("/p9") ? COMPARTIDO : MIO }),
+  );
+  host = document.createElement("div");
+  document.body.append(host);
+  root = createRoot(host);
+  await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+  await act(async () => {});
+  expect(host.querySelector("[data-welcome]")?.getAttribute("data-welcome")).toBe("p1");
 });

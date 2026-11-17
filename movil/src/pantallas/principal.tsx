@@ -30,7 +30,8 @@ import { AssistantTab } from "../asistente/assistant-tab";
 import { LenTurnView } from "../asistente/len-turn-view";
 import { leerSuChat, listarAsistentes, readAssistants, serveProject } from "../api/asistente";
 import { projectStatusOf } from "../asistente/project-status";
-import { appModeOf, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
+import { appModeOf, dismissWelcome, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
+import { WelcomeCreator } from "../asistente/welcome-creator";
 import { applyHerColor } from "../asistente/color";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import type { AssistantListItem } from "@/lib/assistants/view";
@@ -107,7 +108,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // this phone, and whether the welcome was dismissed.
   const [asistentesOn, setAsistentesOn] = useState(true);
   const [elegida, setElegida] = useState<string | null>(readChosen);
-  const [bienvenidaCerrada] = useState(readWelcomeDismissed);
+  const [bienvenidaCerrada, setBienvenidaCerrada] = useState(readWelcomeDismissed);
   const [asistenteAbierta, setAsistenteAbierta] = useState<{ asistente: AssistantListItem; parte?: ParteDeLaAsistente; tarjeta?: string | null; n: number } | null>(null);
   const aperturas = useRef(0);
   const abrirSuPestana = useCallback((asistente: AssistantListItem, donde: { parte?: ParteDeLaAsistente; tarjeta?: string | null } = {}) => {
@@ -321,6 +322,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     const l = await readAssistants(cliente).catch(() => null);
     if (l) { setAsistentes(l.assistants); setAsistentesOn(l.enabled); }
   }, [cliente, ella]);
+  // The welcome (§5.1): her home is the project on screen if it is yours, or your newest.
+  const casaDeLaBienvenida = (lista ?? []).find((x) => x.id === id && !x.compartido)?.id ?? (lista ?? []).find((x) => !x.compartido)?.id ?? null;
+  const yaNacio = useCallback((nueva: string) => {
+    saveChosen(nueva);
+    setElegida(nueva);
+    void readAssistants(cliente).then((l) => { setAsistentes(l.assistants); setAsistentesOn(l.enabled); }, () => {});
+  }, [cliente]);
   const juntoAlProyecto = (p: ProyectoEnLista) => {
     if (!ella) return null;
     const estado = projectStatusOf(p, ella, asistentes);
@@ -525,6 +533,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
                   </button>
                 ))}
               </div>
+              {/* No assistant yet, the welcome dismissed (§5.1): today's app, and an invitation to meet her. */}
+              {modo.kind === "len" && modo.invite && (
+                <button type="button" className="lm-btn lm-sec app-invitar" onClick={() => setBienvenidaCerrada(false)}>{tas("conoceATuAsistente")}</button>
+              )}
               {/* The page on screen isn't hers (§5.6): what she can do about it, in her sheet too. */}
               {(() => {
                 const enPantalla = ella ? lista.find((x) => x.id === id) : undefined;
@@ -595,6 +607,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "turnoDeLen" && turnoDeLen ? <LenTurnView key={turnoDeLen.fila} cliente={cliente} fila={turnoDeLen.fila} projectTitle={lista?.find((x) => x.id === turnoDeLen.projectId)?.title ?? ""} onClose={() => setPanel(null)} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
+      {modo.kind === "welcome" && casaDeLaBienvenida && (
+        <WelcomeCreator cliente={cliente} projectId={casaDeLaBienvenida} idioma={idioma} onCreated={yaNacio} onNotNow={() => { dismissWelcome(); setBienvenidaCerrada(true); }} />
+      )}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}
 
       {llamada && !ella && (
