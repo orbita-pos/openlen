@@ -342,16 +342,26 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     setBienvenidaCerrada(true);
     void readAssistants(cliente).then((l) => { setAsistentes(l.assistants); setAsistentesOn(l.enabled); setAsistentesLeidas(true); }, () => {});
   }, [cliente]);
-  const juntoAlProyecto = (p: ProyectoEnLista) => {
+  const asistenciaDelProyecto = (p: ProyectoEnLista) => {
     if (!ella) return null;
     const estado = projectStatusOf(p, ella, asistentes);
-    if (estado.kind === "hers") return null;
-    if (estado.kind === "notYours") return <small>{tas("soloParaVer")}</small>;
+    const descripcion = estado.kind === "hers" || estado.kind === "other"
+      ? tas("loAtiende", { name: estado.kind === "hers" ? ella.name : estado.assistant.name })
+      : tas(estado.kind === "notYours" ? "soloParaVer" : "sinAsistente");
+    return { estado, descripcion };
+  };
+  const juntoAlProyecto = (p: ProyectoEnLista) => {
+    if (!ella) return null;
+    const info = asistenciaDelProyecto(p);
+    if (!info || info.estado.kind === "hers") return null;
+    const { estado, descripcion } = info;
+    if (estado.kind === "notYours") return <small>{descripcion}</small>;
     if (estado.kind === "other") {
       const otra = estado.assistant;
-      return <><small>{tas("loAtiende", { name: otra.name })}</small><button type="button" className="lm-btn lm-sec" onClick={() => { saveChosen(otra.id); setElegida(otra.id); }}>{tas("cambiarA", { name: otra.name })}</button></>;
+      return <><small>{descripcion}</small><button type="button" className="lm-btn lm-sec" onClick={() => { saveChosen(otra.id); setElegida(otra.id); }}>{tas("cambiarA", { name: otra.name })}</button></>;
     }
     return <>
+      <small>{descripcion}</small>
       <button type="button" className="lm-btn lm-sec" disabled={atendiendo === p.id} onClick={() => void queLoAtienda(p.id)}>{tas("queLoAtienda", { name: ella.name })}</button>
       {noSePudo === p.id && <small role="alert">{tas("noSePudo")}</small>}
     </>;
@@ -502,11 +512,11 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           </div>
         </div>
 
-        {/* Tus páginas ocupan el sitio de la hoja (dentro de la capa: fuera,
+        {/* Tus proyectos ocupan el sitio de la hoja (dentro de la capa: fuera,
             su z-index la deja debajo de la app). Como en el prototipo, una
             sola hoja que cambia de contenido. */}
         {selector ? (
-          <Selector proyectos={lista} actual={id} junto={juntoAlProyecto} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} top={<>
+          <Selector proyectos={lista} actual={id} descripcion={(p) => asistenciaDelProyecto(p)?.descripcion} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} atajos={<>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
             {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}

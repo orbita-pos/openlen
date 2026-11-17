@@ -124,7 +124,6 @@ a.nx-act { text-decoration: none; }
 .app-vista-estado{position:absolute;top:calc(var(--app-barra) + 28px);left:24px;right:24px;display:flex;align-items:center;flex-direction:column;gap:14px;text-align:center;color:var(--lm-ink)}
 .app-vista-estado p{font-size:15px;line-height:1.5;margin:0}
 .app-vista-estado button{min-height:44px;padding:10px 20px;border-radius:16px;border:1px solid var(--lm-line);background:var(--lm-soft);color:inherit}
-.app-selector .lm-actions button{overflow-wrap:anywhere;white-space:normal}
 .app-selector .lm-grab,.app-main-sheet .lm-grab{position:relative;width:64px;height:44px;margin:-10px auto 0;background:transparent;border-radius:12px}
 .app-selector .lm-grab::before,.app-main-sheet .lm-grab::before{content:"";position:absolute;width:40px;height:5px;left:12px;top:16px;background:var(--m-faint);border-radius:3px}
 .app-lienzo .lm-dvbtn,.app-lienzo .ent-face-button{width:44px;height:44px;display:grid;place-items:center}
@@ -152,9 +151,132 @@ a.nx-act { text-decoration: none; }
 .app-vacio-acciones button{min-height:44px;border:1px solid var(--c-line);border-radius:16px;padding:10px 16px;background:var(--c-field);color:var(--c-ink);font-weight:600;margin:0}
 .app-vacio-acciones .app-vacio-abrir{background:var(--c-me);color:var(--c-me-ink);border-color:transparent}
 
-/* A project and her (spec local 2026-11-16-movil-es-tu-asistente, §5.6): beside it in «Tus páginas», and in her sheet. */
-.app-selector-proyecto{display:grid;gap:6px}
-.app-selector-junto,.app-hoja-junto{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 4px}
-.app-selector-junto small,.app-hoja-junto small{font:12.5px/1.4 Inter,sans-serif;color:var(--m-dim)}
-.app-selector-junto .lm-btn,.app-hoja-junto .lm-btn{min-height:44px}
-.app-hoja-junto{margin-top:10px}
+/* El selector conserva el color de la asistente en el proyecto abierto. */
+.app-selector {
+  --selector-ink: #202228;
+  --selector-muted: #626672;
+  --selector-divider: #E7E9ED;
+  --selector-soft: #F3F4F6;
+  --selector-accent: var(--her-deep, #A43A13);
+  --selector-selected: rgba(var(--her-rgb, 255, 138, 30), .09);
+  --m-faint: #BCC0C8;
+  --m-ink: var(--selector-ink);
+  --m-glass: var(--selector-soft);
+  color: var(--selector-ink);
+  background: #FFF;
+  box-shadow: 0 -12px 40px rgba(19, 25, 38, .18);
+}
+:root[data-theme="dark"] .app-selector {
+  --selector-ink: #F4F5F7;
+  --selector-muted: #ABB0BB;
+  --selector-divider: #30323A;
+  --selector-soft: #23252B;
+  --selector-accent: var(--her-light, #FFAC72);
+  --selector-selected: rgba(var(--her-rgb, 255, 138, 30), .17);
+  --m-faint: #636874;
+  background: #16171B;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, .35);
+}
+.app-selector-titulo {
+  flex-shrink: 0;
+  margin: 0 4px 10px;
+  font: 680 24px/1.2 Inter, sans-serif;
+  letter-spacing: -.035em;
+}
+.app-selector .lm-body { padding: 3px 4px 4px; }
+.app-selector-lista { list-style: none; margin: 0; padding: 0; }
+.app-selector-lista li + li { border-top: 1px solid var(--selector-divider); }
+.app-selector-fila {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 24px;
+  align-items: center;
+  width: 100%;
+  min-height: 62px;
+  gap: 11px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.app-selector-fila:active { background: var(--selector-soft); }
+.app-selector-fila[aria-current="page"] { background: var(--selector-selected); }
+.app-selector-icono, .app-selector-indicador { display: grid; place-items: center; }
+.app-selector-icono {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--selector-soft);
+  color: var(--selector-muted);
+}
+.app-selector-icono svg { width: 19px; height: 19px; }
+.app-selector-indicador { color: var(--selector-muted); }
+.app-selector-indicador svg { width: 15px; height: 15px; transform: scaleX(-1); }
+.app-selector-fila[aria-current="page"] :is(.app-selector-icono, .app-selector-indicador) { color: var(--selector-accent); }
+.app-selector-fila[aria-current="page"] .app-selector-indicador svg { transform: none; }
+.app-selector-texto {
+  display: grid;
+  gap: 3px;
+  font: 650 15px/1.25 Inter, sans-serif;
+  overflow-wrap: anywhere;
+}
+.app-selector-texto small { color: var(--selector-muted); font: 500 12.5px/1.25 Inter, sans-serif; }
+.app-selector-atajos, .app-selector-cuenta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+.app-selector-atajos {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding-top: 14px;
+  border-top: 1px solid var(--selector-divider);
+}
+.app-selector :is(.app-selector-atajos, .app-selector-cuenta) .lm-btn {
+  height: auto;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.app-selector-atajos .lm-btn { grid-column: span 2; }
+.app-selector-atajos .lm-btn[data-asistente] {
+  grid-column: span 3;
+  border: 1px solid var(--selector-divider);
+  background: transparent;
+}
+.app-selector-atajos .lm-btn[aria-current="true"] { color: var(--selector-accent); }
+.app-selector-cuenta .lm-btn { background: transparent; color: var(--selector-muted); }
+.app-selector-cuenta .len-avisos { grid-column: 1 / -1; margin: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .app-lienzo .app-selector { animation: none; transition: none; }
+}
+
+.app-hoja-junto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 12px;
+  padding: 6px 7px 6px 13px;
+  border-radius: 14px;
+  color: var(--lm-ink);
+  background: var(--lm-panel);
+}
+.app-hoja-junto small { font: 600 13px/1.35 Inter, sans-serif; overflow-wrap: anywhere; }
+.app-hoja-junto small:only-child, .app-hoja-junto [role="alert"] { grid-column: 1 / -1; }
+.app-hoja-junto small:only-child { padding: 8px 0; }
+.app-hoja-junto .lm-btn {
+  height: auto;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 9px;
+  background: var(--lm-soft);
+  color: inherit;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

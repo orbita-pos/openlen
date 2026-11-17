@@ -167,7 +167,7 @@ it("sin páginas ofrece actualizar y descubre las creadas al volver a la app", a
  expect(host.textContent).toContain('Mi primera página');
 });
 
-// «Entregado» and «Tareas» (spec local 2026-10-31-len-movil, §5.3–5.4): two entries in the selector, above the projects.
+// «Entregado» y «Tareas» siguen accesibles desde el selector.
 it("the selector opens Delivered and Tasks", async () => {
  const proyecto = { id:"p1", title:"Página", subdomain:null, publishedAt:null, updatedAt:"2026-10-29", chatHistory:[] };
  const pedir = vi.fn(async (ruta: string) => ruta === "/api/projects" ? Response.json({projects:[proyecto]}) : ruta.endsWith("/preview") ? Response.json({enabled:true,token:"vista"}) : ruta === "/api/movil/tasks" ? Response.json({needsYou:[],working:[],scheduled:[],resolved:[]}) : ruta.startsWith("/api/movil/delivered") ? Response.json({items:[]}) : Response.json({project:proyecto}));
@@ -176,7 +176,7 @@ it("the selector opens Delivered and Tasks", async () => {
  await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
  const botones = [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].map(b => b.textContent);
  expect(botones.indexOf("entregado")).toBeGreaterThanOrEqual(0);
- expect(botones.indexOf("tareas")).toBeLessThan(botones.indexOf("Página"));
+ expect(botones.indexOf("tareas")).toBeGreaterThan(botones.indexOf("Página"));
  await act(async () => [...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].find(b => b.textContent === "tareas")!.click());
  expect(host.querySelector("#tareas-titulo")).not.toBeNull();
  expect(pedir).toHaveBeenCalledWith("/api/movil/tasks");
@@ -698,7 +698,9 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
                     ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
                     : ruta === "/api/projects/p2"
                       ? Response.json({ project: { ...CAFE, chatHistory: [] } })
-                      : Response.json({ project: proyecto }),
+                      : ruta === "/api/projects/p9"
+                        ? Response.json({ project: { ...TIENDA, chatHistory: [] } })
+                        : Response.json({ project: proyecto }),
       );
       host = document.createElement("div");
       document.body.append(host);
@@ -708,11 +710,15 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
       await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
       return pedir;
     }
-    const enElSelector = () => [...host.querySelectorAll<HTMLElement>(".app-selector [data-junto]")];
+    const fila = (id: string) => host.querySelector<HTMLButtonElement>(`.app-selector-lista [data-proyecto="${id}"] button`)!;
 
-    it("🔴 «Que Lucía lo atienda» connects the project with her bubble off", async () => {
+    it("abrir un proyecto no cambia su asistente y la asignación se hace desde su hoja", async () => {
       const pedir = await paintMany([LUCIA]);
-      const boton = enElSelector().find((e) => e.dataset.junto === "p2")!.querySelector("button")!;
+      expect(fila("p2").textContent).toContain("sinAsistente");
+      expect(host.querySelector(".app-selector")?.textContent).not.toContain("queLoAtienda");
+      await act(async () => fila("p2").click());
+      expect(pedir.mock.calls.some(([r, i]) => r === "/api/assistants/a1/projects" && i?.method === "POST")).toBe(false);
+      const boton = host.querySelector<HTMLButtonElement>('[data-junto-hoja="p2"] button')!;
       expect(boton.textContent).toBe("queLoAtienda");
       await act(async () => boton.click());
       const post = pedir.mock.calls.find(([r, i]) => r === "/api/assistants/a1/projects" && (i as RequestInit | undefined)?.method === "POST");
@@ -720,18 +726,22 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
       expect(pedir.mock.calls.filter(([r]) => r === "/api/assistants").length).toBeGreaterThan(1);
     });
 
-    it("a project of another assistant offers to switch to her", async () => {
+    it("muestra quién atiende el proyecto y permite cambiar de asistente desde su hoja", async () => {
       const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta", projectId: "p2", projectIds: ["p2"] };
       await paintMany([LUCIA, MARTA]);
-      const junto = enElSelector().find((e) => e.dataset.junto === "p2")!;
-      expect(junto.textContent).toContain("loAtiende");
-      await act(async () => junto.querySelector("button")!.click());
+      expect(fila("p2").textContent).toContain("loAtiende");
+      await act(async () => fila("p2").click());
+      const cambiar = host.querySelector<HTMLButtonElement>('[data-junto-hoja="p2"] button')!;
+      expect(cambiar.textContent).toBe("cambiarA");
+      await act(async () => cambiar.click());
       expect(localStorage.getItem("len-asistente")).toBe("a2");
     });
 
     it("someone else's project is only to look at", async () => {
       await paintMany([LUCIA]);
-      const junto = enElSelector().find((e) => e.dataset.junto === "p9")!;
+      expect(fila("p9").textContent).toContain("soloParaVer");
+      await act(async () => fila("p9").click());
+      const junto = host.querySelector<HTMLElement>('[data-junto-hoja="p9"]')!;
       expect(junto.textContent).toBe("soloParaVer");
       expect(junto.querySelector("button")).toBeNull();
     });
@@ -744,9 +754,9 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
       expect(enLaHoja?.querySelector("button")?.textContent).toBe("queLoAtienda");
     });
 
-    it("hers needs nothing beside it", async () => {
+    it("identifica también los proyectos que ya atiende la asistente actual", async () => {
       await paintMany([LUCIA]);
-      expect(enElSelector().some((e) => e.dataset.junto === "p1")).toBe(false);
+      expect(fila("p1").textContent).toContain("loAtiende");
     });
   });
 

@@ -20,12 +20,17 @@ it("enfoca el selector, mantiene Tab dentro y permite cerrarlo con Escape", () =
  expect(cerrar).toHaveBeenCalledOnce();
 });
 
-// Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.6): beside each project, what it is to her.
-it("shows what each project is to her, beside it", () => {
+it("permite abrir cada proyecto desde una fila que también muestra quién lo atiende", () => {
  previo = document.createElement("button"); document.body.append(previo);
  host = document.createElement("div"); document.body.append(host); root = createRoot(host);
- act(() => root.render(<Selector proyectos={[{ id: "p1", title: "Pan" } as never, { id: "p2", title: "Café" } as never]} actual="p1" onElegir={vi.fn()} onCerrar={vi.fn()} onSalir={vi.fn()}
-   junto={(p) => (p.id === "p2" ? <span data-libre="">libre</span> : null)} />));
- expect(host.querySelector('[data-junto="p2"] [data-libre]')?.textContent).toBe("libre");
- expect(host.querySelectorAll("[data-junto]")).toHaveLength(1);
+ const elegir = vi.fn();
+ act(() => root.render(<Selector proyectos={[{ id: "p1", title: "Pan" } as never, { id: "p2", title: "Café" } as never]} actual="p1" onElegir={elegir} onCerrar={vi.fn()} onSalir={vi.fn()}
+   descripcion={(p) => p.id === "p1" ? "Lo atiende Lucía" : "Sin asistente"} />));
+ const filas = host.querySelectorAll<HTMLButtonElement>(".app-selector-lista button");
+ expect(filas).toHaveLength(2);
+ expect(filas[0]?.getAttribute("aria-current")).toBe("page");
+ expect(filas[0]?.textContent).toContain("Lo atiende Lucía");
+ expect(filas[1]?.textContent).toContain("Sin asistente");
+ act(() => filas[1]?.click());
+ expect(elegir).toHaveBeenCalledWith("p2");
 });
