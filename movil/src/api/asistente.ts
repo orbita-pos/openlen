@@ -3,6 +3,8 @@
 // on the web gets. Talking with her goes through `mandarALen` with her id (./chat.ts), as on the web.
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
+import type { AssistantTone } from "@/lib/assistants/names";
+import type { FigureLook } from "@/lib/figure/look";
 import type { AssistantListItem } from "@/lib/assistants/view";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
@@ -51,6 +53,20 @@ export async function serveProject(c: ClienteDeOpenLen, id: string, projectId: s
   if (res?.ok) return "served";
   const body = (await res?.json().catch(() => null)) as { error?: unknown } | null;
   return body?.error === "project_has_assistant" ? "has_assistant" : "error";
+}
+
+/** «Listo» in the phone's welcome (spec local 2026-11-16-movil-es-tu-asistente, §5.1): she is born on `projectId`, her
+ *  home, with her bubble off. A refusal says which field (`field`) or why (`error`). */
+export async function createAssistantFromPhone(
+  c: ClienteDeOpenLen,
+  body: { projectId: string; name: string; look: FigureLook; tone: AssistantTone; locale: string },
+): Promise<{ ok: true; id: string } | { ok: false; field?: string; error?: string }> {
+  const res = await c
+    .pedir("/api/assistants", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...body, onPage: false }) })
+    .catch(() => null);
+  const json = (await res?.json().catch(() => null)) as { id?: unknown; field?: unknown; error?: unknown } | null;
+  if (res?.ok && typeof json?.id === "string") return { ok: true, id: json.id };
+  return { ok: false, ...(typeof json?.field === "string" ? { field: json.field } : {}), ...(typeof json?.error === "string" ? { error: json.error } : {}) };
 }
 
 /** The first page of her conversation with her owner, in the shape of a project's `chatHistory`. */
