@@ -1,25 +1,28 @@
-/* Copiado de brand/len-movil/index.html (la referencia aprobada). No se edita aquí: los ajustes de la app van en app.css. */
+/* Copiado de brand/len-movil/index.html (la referencia aprobada). No se edita aquí: los ajustes de la app van en app.css.
+   Salvo una cosa, a propósito (16/11, spec local 2026-11-16-movil-es-tu-asistente, §5.2): la app es de tu asistente y
+   toma su color. El naranja de Len queda sólo como respaldo de las variables `--her-*` (movil/src/asistente/color.ts):
+   sin asistente, o antes de entrar, la app vuelve a ser naranja. Un naranja suelto aquí se quedaría naranja. */
 /* ── tokens ─────────────────────────────────────────────────────────────
    Len es NARANJA y la app es alegre: crema de fondo, rosa y amarillo de
    acento (a lo dots). Todo sigue el tema, la llamada también. Sobre el
    naranja el texto va en tinta oscura: el blanco no se lee (2,3:1).
    La página del usuario (.lp) tiene sus colores y no cambia.            */
 :root{
-  --len:#FF8A1E; --len-a:#FFB23E; --len-c:#F26A0F; --on-len:#2B1405;
-  --pink:#FF7FB0; --sun:#FFD84D; --pink-soft:#FFE4EF; --sun-soft:#FFF4CC; --peach-soft:#FFEBD9;
+  --len:var(--her-tint,#FF8A1E); --len-a:var(--her-tint-a,#FFB23E); --len-c:var(--her-tint-c,#F26A0F); --on-len:var(--her-ink,#2B1405);
+  --pink:#FF7FB0; --sun:#FFD84D; --pink-soft:#FFE4EF; --sun-soft:#FFF4CC; --peach-soft:var(--her-soft,#FFEBD9);
   --ok:#1FA967; --bad:#E5484D; --gold:#FFC53D; --drop:#5DB2FF; --wa:#128C4A;
   --desk:#F8EFE6; --desk-ink:#2B1A10; --desk-muted:#85705F; --desk-line:#EEDDCD; --desk-panel:#FFFFFF;
-  --lm-bg:#FFF8F0; --lm-panel:#FFFFFF; --lm-ink:#2B1A10; --lm-muted:#85705F; --lm-line:#F2E1D1; --lm-soft:#FFF0E2;
+  --lm-bg:var(--her-paper,#FFF8F0); --lm-panel:#FFFFFF; --lm-ink:#2B1A10; --lm-muted:#85705F; --lm-line:#F2E1D1; --lm-soft:var(--her-soft,#FFF0E2);
   --ao:.6; --marker:rgba(255,216,77,.9);
-  --glass:#FFFBF5; --eye:#2B1405; --card:#FFFFFF; --card-line:#EFDCCB; --fill-2:#F6E4D4; --muted:#85705F; --ink:#2B1A10; --bg:#FFF8F0;
+  --glass:#FFFBF5; --eye:#2B1405; --card:#FFFFFF; --card-line:#EFDCCB; --fill-2:#F6E4D4; --muted:#85705F; --ink:#2B1A10; --bg:var(--her-paper,#FFF8F0);
   color-scheme:light;
 }
 :root[data-theme="dark"]{
   --desk:#0E0805; --desk-ink:#FFF1E6; --desk-muted:#B09A8A; --desk-line:#2E2019; --desk-panel:#18100B;
-  --lm-bg:#140C08; --lm-panel:#1E140E; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-line:#33241B; --lm-soft:#2A1B12;
-  --pink-soft:rgba(255,127,176,.16); --sun-soft:rgba(255,216,77,.12); --peach-soft:rgba(255,138,30,.15);
-  --ao:.34; --marker:rgba(255,138,30,.42);
-  --glass:#2A1A10; --eye:#FFFFFF; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
+  --lm-bg:var(--her-paper-dark,#140C08); --lm-panel:#1E140E; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-line:#33241B; --lm-soft:var(--her-soft-dark,#2A1B12);
+  --pink-soft:rgba(255,127,176,.16); --sun-soft:rgba(255,216,77,.12); --peach-soft:rgba(var(--her-rgb,255,138,30),.15);
+  --ao:.34; --marker:rgba(var(--her-rgb,255,138,30),.42);
+  --glass:#2A1A10; --eye:#FFFFFF; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:var(--her-paper-dark,#140C08);
   --bad:#FF6B6B;
   --hp:#F3E8E0; --shade-rim:rgba(255,255,255,.5);
   color-scheme:dark;
@@ -60,7 +63,7 @@ svg{display:block}
 .lm-scenes button{display:grid;grid-template-columns:28px 1fr;align-items:center;text-align:left;border:1px solid var(--desk-line);background:var(--desk-panel);border-radius:12px;padding:8px 12px;cursor:pointer;font-weight:500}
 .lm-scenes small{grid-column:2;color:var(--desk-muted);font-weight:400;font-size:12px;line-height:1.3}
 .lm-scenes kbd{font:11px ui-monospace,Menlo,Consolas,monospace;color:var(--desk-muted);border:1px solid var(--desk-line);border-radius:5px;width:19px;text-align:center;grid-row:span 2}
-.lm-scenes button[aria-pressed="true"]{border-color:var(--len);box-shadow:0 0 0 3px rgba(255,138,30,.14)}
+.lm-scenes button[aria-pressed="true"]{border-color:var(--len);box-shadow:0 0 0 3px rgba(var(--her-rgb,255,138,30),.14)}
 .lm-toggles button{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--desk-line);background:var(--desk-panel);border-radius:12px;padding:8px 12px;cursor:pointer}
 .lm-toggles b{font-weight:600}
 .lm-foot{color:var(--desk-muted);font-size:12.5px;margin:16px 0 0}
@@ -142,11 +145,11 @@ svg{display:block}
   --m-bg:radial-gradient(110% 55% at 28% 0%,rgba(255,238,220,.62),rgba(255,238,220,0) 62%),linear-gradient(180deg,#FF9C48 0%,#FA7A1F 36%,#F2640F 70%,#E8560A 100%);
   --m-ink:#fff; --m-dim:rgba(255,255,255,.82); --m-faint:rgba(255,255,255,.42); --m-ring:rgba(255,255,255,.8);
   --m-glass:rgba(255,255,255,.2); --m-solid:#fff; --m-solid-ink:#C4460A;
-  --m-key-bg:#fff; --m-key:#B93F08; --m-card:#fff; --m-card-ink:#2B1A10;
+  --m-key-bg:#fff; --m-key:var(--her-deep,#B93F08); --m-card:#fff; --m-card-ink:#2B1A10;
   --m-on:#fff; --m-on-ink:#2B1405;
   --m-prop:#fff; --m-err:#F4C9AE; --m-shadow:rgba(140,40,0,.2);
   --m-halo:conic-gradient(from 20deg,#FFD54A,#FF8FB8,#FFC53D,#FF7AA8,#FFD54A); --m-halo-o:.42; /* amarillo y rosa: en blanco, al latir con cada palabra parecía el flash de una cámara */
-  --m-a1:#FFD2A6; --m-a2:#FF5E3A; --m-a3:#FFB23E; --ao:.5;
+  --m-a1:var(--her-soft,#FFD2A6); --m-a2:var(--her-tint-c,#FF5E3A); --m-a3:var(--len-a); --ao:.5;
   --m-r1:#fff; --m-r2:#fff; --m-r3:#FFE4CC;
   --lm-panel:#fff; --lm-ink:#2B1A10; --lm-muted:#9A5A2E; --lm-line:transparent; --lm-soft:#FFE9D6;
   --eye:#2B1405; --glass:rgba(255,255,255,.24); --card:#fff; --card-line:#FFE0C8; --fill-2:#FBE3D0; --muted:#A0826E; --ink:#2B1A10; --bg:#fff;
@@ -159,7 +162,7 @@ svg{display:block}
   --m-on:#FFF1E6; --m-on-ink:#2B1405;
   --m-prop:var(--len); --m-err:#8C7F78; --m-shadow:transparent;
   --m-halo:conic-gradient(from 20deg,var(--len),var(--pink),var(--sun),var(--len-a),var(--len)); --m-halo-o:.3;
-  --m-a1:#FF8A1E; --m-a2:#FF4F7B; --m-a3:#F26A0F; --ao:.16;
+  --m-a1:var(--len); --m-a2:#FF4F7B; --m-a3:var(--len-c); --ao:.16;
   --m-r1:var(--len-a); --m-r2:var(--len); --m-r3:var(--len-c);
   --lm-panel:#24170F; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-line:#3D2A1E; --lm-soft:#2A1B12;
   --eye:#fff; --glass:#2A1A10; --card:#24170F; --card-line:#3D2A1E; --fill-2:#3D2A1E; --muted:#B09A8A; --ink:#FFF1E6; --bg:#140C08;
@@ -303,11 +306,11 @@ svg{display:block}
 .lm-ghost{position:absolute;z-index:62;pointer-events:none}
 .lm-xray{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
 .lm-xray-win{position:absolute;left:0;right:0;top:-180px;height:180px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 40%,#000 80%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 40%,#000 80%,transparent)}
-.lm-xray-grid{position:absolute;left:0;right:0;top:0;height:calc(180px + var(--d,1100px));background:repeating-linear-gradient(to right,rgba(255,138,30,.17) 0 1px,transparent 1px 28px),repeating-linear-gradient(to bottom,rgba(255,138,30,.17) 0 1px,transparent 1px 28px)}
+.lm-xray-grid{position:absolute;left:0;right:0;top:0;height:calc(180px + var(--d,1100px));background:repeating-linear-gradient(to right,rgba(var(--her-rgb,255,138,30),.17) 0 1px,transparent 1px 28px),repeating-linear-gradient(to bottom,rgba(var(--her-rgb,255,138,30),.17) 0 1px,transparent 1px 28px)}
 .lm-xray-line{position:absolute;left:0;right:0;top:-17px;height:34px;-webkit-mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent);mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent)}
 .lm-xray-line::before{content:"";position:absolute;left:0;right:0;top:50%;height:1.5px;background:#fff;box-shadow:0 0 9px 1.5px rgba(255,170,70,.95)}
-.lm-xray-line::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(255,138,30,.22) 45%,rgba(255,138,30,.3) 52%,transparent)}
-.lm-flash{position:absolute;inset:0;pointer-events:none;border-radius:53px;box-shadow:inset 0 0 0 2px #FF8A1E,inset 0 0 60px rgba(255,138,30,.2);opacity:0}
+.lm-xray-line::after{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,transparent,rgba(var(--her-rgb,255,138,30),.22) 45%,rgba(var(--her-rgb,255,138,30),.3) 52%,transparent)}
+.lm-flash{position:absolute;inset:0;pointer-events:none;border-radius:53px;box-shadow:inset 0 0 0 2px var(--len),inset 0 0 60px rgba(var(--her-rgb,255,138,30),.2);opacity:0}
 
 /* ── la app: Len trabajando ────────────────────────────────────────── */
 .lm-work{position:absolute;inset:0;padding:62px 30px 44px;display:flex;flex-direction:column;align-items:center}
@@ -339,7 +342,7 @@ svg{display:block}
 .lm-rev{display:flex;gap:16px;align-items:center}
 .lm-rev-ph{position:relative;flex:none;border-radius:12px;overflow:hidden}
 .lm-rev-ph .lm-thumb{border-radius:12px;box-shadow:0 0 0 1px var(--lm-line)}
-.lm-rev-scan{position:absolute;left:0;right:0;top:0;height:2px;background:var(--len);box-shadow:0 0 10px 2px rgba(255,138,30,.7);animation:lmScan 1.5s ease-in-out infinite alternate}
+.lm-rev-scan{position:absolute;left:0;right:0;top:0;height:2px;background:var(--len);box-shadow:0 0 10px 2px rgba(var(--her-rgb,255,138,30),.7);animation:lmScan 1.5s ease-in-out infinite alternate}
 @keyframes lmScan{to{transform:translateY(94px)}}
 .lm-checks{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .lm-checks li{display:flex;gap:8px;align-items:center;font:500 14px Inter,sans-serif;opacity:0;transform:translateX(-8px);transition:opacity .3s,transform .4s cubic-bezier(.3,1.4,.5,1)}
@@ -380,7 +383,7 @@ svg{display:block}
 .lm-dvbtn{width:34px;height:34px;flex:none;border-radius:50%;border:0;padding:0;background:var(--lm-soft);color:var(--lm-ink);display:grid;place-items:center;cursor:pointer;transition:background .25s,color .25s,box-shadow .2s,transform .12s}
 .lm-dvbtn svg{width:18px;height:18px}
 .lm-dvbtn.is-dv{background:var(--len);color:var(--on-len)}
-.lm-dvbtn.is-hover,.lm-dvmenu button.is-hover{box-shadow:0 0 0 3px rgba(255,138,30,.32)}
+.lm-dvbtn.is-hover,.lm-dvmenu button.is-hover{box-shadow:0 0 0 3px rgba(var(--her-rgb,255,138,30),.32)}
 .lm-dvbtn.is-press,.lm-dvmenu button.is-press{transform:scale(.92)}
 .lm-dvmenu{position:absolute;top:94px;right:12px;z-index:5;width:212px;padding:6px;border-radius:18px;background:var(--lm-panel);color:var(--lm-ink);box-shadow:0 0 0 1px var(--lm-line),0 22px 44px -14px rgba(60,25,10,.42);transform-origin:calc(100% - 22px) -8px;transform:scale(.86);opacity:0;visibility:hidden;transition:transform .3s cubic-bezier(.3,1.35,.5,1),opacity .18s,visibility 0s linear .3s}
 .lm-dvmenu.is-on{transform:none;opacity:1;visibility:visible;transition:transform .3s cubic-bezier(.3,1.35,.5,1),opacity .18s}
@@ -428,8 +431,8 @@ svg{display:block}
 .lm-cur.is-say .lm-cur-name{display:none}
 .lm-cur.is-say .lm-cur-say{display:block}
 .lm-cur-say .lm-w.is-key{border-radius:6px;padding:0 4px}
-.lm-cur-tap{position:absolute;z-index:81;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:2px solid var(--len);background:rgba(255,138,30,.2);pointer-events:none}
-.lm-cur-hl{position:absolute;z-index:79;left:0;top:0;width:0;height:0;border-radius:12px;box-shadow:0 0 0 2px var(--len),0 0 0 7px rgba(255,138,30,.2);background:rgba(255,138,30,.07);pointer-events:none;opacity:0;transition:opacity .25s,left .5s cubic-bezier(.3,1,.4,1),top .5s cubic-bezier(.3,1,.4,1),width .5s cubic-bezier(.3,1,.4,1),height .5s cubic-bezier(.3,1,.4,1)}
+.lm-cur-tap{position:absolute;z-index:81;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;border:2px solid var(--len);background:rgba(var(--her-rgb,255,138,30),.2);pointer-events:none}
+.lm-cur-hl{position:absolute;z-index:79;left:0;top:0;width:0;height:0;border-radius:12px;box-shadow:0 0 0 2px var(--len),0 0 0 7px rgba(var(--her-rgb,255,138,30),.2);background:rgba(var(--her-rgb,255,138,30),.07);pointer-events:none;opacity:0;transition:opacity .25s,left .5s cubic-bezier(.3,1,.4,1),top .5s cubic-bezier(.3,1,.4,1),width .5s cubic-bezier(.3,1,.4,1),height .5s cubic-bezier(.3,1,.4,1)}
 .lm-cur-hl.is-on{opacity:1}
 /* lo que Len te enseña EN la página: tu foto probada en su sitio, los toques de cada botón */
 .lp-heroimg{position:relative;overflow:hidden}
@@ -500,9 +503,9 @@ svg{display:block}
   --c-bg:linear-gradient(180deg,#FFF8F2 0%,#FFEFE3 100%); --c-bg-solid:#FFF6EE;
   --c-ink:#2B1A10; --c-dim:#8A7465; --c-line:rgba(120,60,20,.13);
   --c-len:#FFFFFF; --c-len-ink:#2B1A10; --c-len-shadow:0 1px 1.5px rgba(90,40,10,.06),0 8px 22px -14px rgba(90,40,10,.35);
-  --c-me:linear-gradient(160deg,#F26A0F 0%,#DD5210 100%); --c-me-ink:#fff;
+  --c-me:var(--her-me,linear-gradient(160deg,#F26A0F 0%,#DD5210 100%)); --c-me-ink:var(--her-ink,#fff);
   --c-top:color-mix(in srgb,#FFF8F2 80%,transparent); --c-field:#FFFFFF; --c-chip:#FFFFFF;
-  --c-qr:#F26A0F; --c-qr-ink:#B93F08; --c-qr-bg:rgba(242,106,15,.06);
+  --c-qr:var(--len-c); --c-qr-ink:var(--her-deep,#B93F08); --c-qr-bg:rgba(var(--her-rgb,242,106,15),.06);
   --lm-panel:#fff; --lm-ink:#2B1A10; --lm-muted:#8A7465; --lm-line:transparent; --lm-soft:#FFEEE2;
   color:var(--c-ink);background:var(--c-bg)}
 :root[data-theme="dark"] .lm-chat,:root[data-theme="dark"] .lm-stats{
@@ -510,7 +513,7 @@ svg{display:block}
   --c-ink:#FFF1E6; --c-dim:#A89282; --c-line:rgba(255,241,230,.1);
   --c-len:#211610; --c-len-ink:#FFF1E6; --c-len-shadow:none;
   --c-top:color-mix(in srgb,#0F0A07 82%,transparent); --c-field:#1C130D; --c-chip:#1C130D;
-  --c-qr:var(--len); --c-qr-ink:#FFB25C; --c-qr-bg:rgba(255,138,30,.08);
+  --c-qr:var(--len); --c-qr-ink:var(--her-light,#FFB25C); --c-qr-bg:rgba(var(--her-rgb,255,138,30),.08);
   --lm-panel:#2A1C14; --lm-ink:#FFF1E6; --lm-muted:#B09A8A; --lm-soft:#2A1B12}
 .lm-layer.lm-chat{opacity:1;transform:translateX(100%);transition:transform .42s cubic-bezier(.2,.85,.25,1),visibility 0s linear .42s}
 .lm-layer.lm-chat.is-on{transform:none;transition:transform .42s cubic-bezier(.2,.85,.25,1)}
@@ -523,7 +526,7 @@ svg{display:block}
    la línea de estado sólo aparece cuando hay algo que decir (trabajando, o con una pregunta) */
 .ch-who{display:grid;justify-items:center;min-width:0}
 .ch-face{width:44px;height:44px;cursor:pointer}
-.ch-name{position:relative;margin-top:-7px;padding:2px 11px;border-radius:999px;background:var(--c-me);color:#fff;font:700 12px/1.35 Inter,sans-serif;box-shadow:0 0 0 2.5px var(--c-bg-solid)}
+.ch-name{position:relative;margin-top:-7px;padding:2px 11px;border-radius:999px;background:var(--c-me);color:var(--c-me-ink);font:700 12px/1.35 Inter,sans-serif;box-shadow:0 0 0 2.5px var(--c-bg-solid)}
 .ch-st{max-width:250px;max-height:0;opacity:0;font-size:11.5px;line-height:14px;color:var(--c-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:max-height .3s ease,opacity .3s ease,margin-top .3s ease}
 .ch-st.is-on{max-height:16px;opacity:1;margin-top:3px}
 .ch-live{animation:chPulse 1.4s ease-in-out infinite}
@@ -562,12 +565,12 @@ svg{display:block}
 .ch-photo img{display:block;width:180px;height:132px;object-fit:cover}
 /* la nota de voz, mía: dentro de la burbuja naranja */
 .ch-b.lm-vn{display:flex;align-items:center;gap:10px;padding:7px 14px 7px 7px}
-.lm-vn-play{width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:#DD5210;display:grid;place-items:center;cursor:pointer;flex:none}
+.lm-vn-play{width:32px;height:32px;border-radius:50%;border:0;background:#fff;color:var(--her-deep,#DD5210);display:grid;place-items:center;cursor:pointer;flex:none}
 .lm-vn-play svg{width:14px;height:14px}
 .lm-vn-bars{display:flex;align-items:center;gap:2px;height:28px}
-.lm-vn-bars i{width:3px;border-radius:2px;background:#fff;opacity:.45;transition:opacity .15s}
+.lm-vn-bars i{width:3px;border-radius:2px;background:var(--c-me-ink);opacity:.45;transition:opacity .15s}
 .lm-vn-bars i.is-on{opacity:1}
-.lm-vn-d{font-size:12.5px;color:rgba(255,255,255,.88);font-variant-numeric:tabular-nums}
+.lm-vn-d{font-size:12.5px;color:var(--c-me-ink);opacity:.88;font-variant-numeric:tabular-nums}
 /* las tarjetas de Len: Antes/Ahora, las fotos que descartó, su página */
 .ch-card{border-radius:20px;border-bottom-left-radius:6px;padding:8px;display:grid;gap:8px}
 .ch-card-act{height:40px;border:0;border-radius:14px;background:var(--lm-soft);color:var(--c-len-ink);font:600 14px Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
@@ -593,7 +596,7 @@ svg{display:block}
    Una sola serie, un solo naranja: la barra de hoy va más clara porque el
    día no ha acabado (no es que bajara). El texto nunca va en naranja. */
 .lm-screen{--bar:#E85A0A;--bar-soft:#F7C4A0;--up-bg:rgba(31,169,103,.14);--up-ink:#137A48;--wa-ic:#128C4A}
-:root[data-theme="dark"] .lm-screen{--bar:#FF8A1E;--bar-soft:rgba(255,138,30,.4);--up-bg:rgba(31,169,103,.2);--up-ink:#6FDDA6;--wa-ic:#4ADE80}
+:root[data-theme="dark"] .lm-screen{--bar:var(--len);--bar-soft:rgba(var(--her-rgb,255,138,30),.4);--up-bg:rgba(31,169,103,.2);--up-ink:#6FDDA6;--wa-ic:#4ADE80}
 .nx{width:350px;border-radius:22px;background:var(--lm-panel);color:var(--lm-ink);padding:13px 15px 13px;box-shadow:0 0 0 1px var(--lm-line),0 18px 36px -20px rgba(90,40,10,.5);text-align:left}
 .nx-cap{font:600 11px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--lm-muted)}
 .nx-hero{display:flex;align-items:center;gap:9px;margin-top:3px}
@@ -715,9 +718,9 @@ svg{display:block}
 .lm-field input{width:100%;height:100%;border:0;background:transparent;padding:0 16px;font:16px Inter,sans-serif;color:var(--c-ink);outline:none}
 .lm-field input::placeholder{color:var(--c-dim)}
 .lm-link{border:0;background:none;padding:0;color:var(--c-ink);text-decoration:underline;text-decoration-color:var(--len);text-decoration-thickness:2px;text-underline-offset:3px;font:600 13px Inter,sans-serif;cursor:pointer}
-.lm-chat .lm-mic{width:44px;height:44px;background:var(--c-me);color:#fff}
+.lm-chat .lm-mic{width:44px;height:44px;background:var(--c-me);color:var(--c-me-ink)}
 .lm-chat .lm-mic svg{width:20px;height:20px}
-.lm-chat .lm-mic.is-rec{box-shadow:0 0 0 8px rgba(242,106,15,.18)}
+.lm-chat .lm-mic.is-rec{box-shadow:0 0 0 8px rgba(var(--her-rgb,242,106,15),.18)}
 .lm-rec{position:absolute;inset:0;display:none;align-items:center;gap:9px;padding:0 16px}
 .lm-field.is-rec .lm-rec{display:flex}
 .lm-field.is-rec input{visibility:hidden}
@@ -743,7 +746,7 @@ svg{display:block}
 .lk-hero{position:absolute;left:50%;top:170px;width:156px;height:156px;margin-left:-78px;touch-action:pan-y;cursor:pointer}
 .lk-hero .lm-halo{inset:-34px}
 .lk-floor{position:absolute;left:50%;bottom:-16px;width:112px;height:16px;margin-left:-56px;border-radius:50%;background:radial-gradient(closest-side,rgba(110,35,0,.3),rgba(110,35,0,0))}
-:root[data-theme="dark"] .lk-floor{background:radial-gradient(closest-side,rgba(255,138,30,.22),rgba(255,138,30,0))}
+:root[data-theme="dark"] .lk-floor{background:radial-gradient(closest-side,rgba(var(--her-rgb,255,138,30),.22),rgba(var(--her-rgb,255,138,30),0))}
 .lk-arrow{position:absolute;top:226px;width:44px;height:44px;border-radius:50%;border:0;background:var(--m-glass);color:var(--m-ink);display:grid;place-items:center;cursor:pointer;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);transition:transform .15s}
 .lk-arrow:active{transform:scale(.92)}
 .lk-arrow svg{width:20px;height:20px}
@@ -868,4 +871,4 @@ svg{display:block}
   .lp-visit .lp-map{height:300px}
   .lp-foot{padding:28px 80px}
 }
-@keyframes lpHit{0%{box-shadow:0 0 0 0 rgba(255,138,30,0)}18%,72%{box-shadow:0 0 0 3px #FF8A1E,0 0 0 9px rgba(255,138,30,.18)}100%{box-shadow:0 0 0 0 rgba(255,138,30,0)}}
+@keyframes lpHit{0%{box-shadow:0 0 0 0 rgba(var(--her-rgb,255,138,30),0)}18%,72%{box-shadow:0 0 0 3px var(--len),0 0 0 9px rgba(var(--her-rgb,255,138,30),.18)}100%{box-shadow:0 0 0 0 rgba(var(--her-rgb,255,138,30),0)}}

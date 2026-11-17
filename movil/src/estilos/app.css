@@ -134,7 +134,7 @@ a.nx-act { text-decoration: none; }
 
 /* La tinta de la marca mantiene contraste sobre todo el degradado naranja. */
 :root:not([data-theme="dark"]) .app-lienzo .lm-m{--m-ink:#2B1405;--m-dim:#2B1405;--m-faint:rgba(43,20,5,.25);--m-ring:rgba(43,20,5,.4)}
-.app-lienzo .lm-chat{--c-me:linear-gradient(160deg,#CF4808 0%,#C7460A 100%)}
+.app-lienzo .lm-chat{--c-me:var(--her-me,linear-gradient(160deg,#CF4808 0%,#C7460A 100%))}
 :root:not([data-theme="dark"]) .app-lienzo .lm-chat{--c-dim:#756050}
 .app-lienzo .ent-progreso li[data-estado="error"]{color:var(--m-ink)}
 
