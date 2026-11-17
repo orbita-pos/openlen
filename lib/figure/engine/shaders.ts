@@ -59,7 +59,9 @@ void main() {
     if (dot(n, p) < 0.0) n = -n;
   }
 
-  float h = uLayers > 1.0 ? float(gl_InstanceID) / (uLayers - 1.0) : 0.0;
+  // Never a division by one layer less behind a ?: — a Mali GPU works out both sides of a ?:, and with one layer
+  // (the eyes, what she wears, the shadow) the division by zero took the piece away (Jesús's Galaxy A07, 17/11).
+  float h = float(gl_InstanceID) / max(uLayers - 1.0, 1.0);
   float h2 = h * h;
   vec3 wn = uRot * (uPartRot * n);
   vec3 w = uRot * ((uPos + uPartRot * p) * uStretch);
