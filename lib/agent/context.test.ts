@@ -85,6 +85,15 @@ describe("buildAgentContext", () => {
     expect(s).toContain("talk about the DESIGN, not the address");
   });
 
+  it("her turn from the phone names the project on screen right after the hour; without it, nothing changes", () => {
+    const now = new Date("2026-11-16T12:00:00.000Z");
+    const line = "Your owner is looking at «Café» (p2) on their phone. A request that names no project goes to it.";
+    const s = buildAgentContext({ state: {}, now, timeContext: "THE HOUR", assistantViewing: line });
+    expect(s).toContain(`THE HOUR\n\n${line}\n\n`);
+    expect(buildAgentContext({ state: {}, now, timeContext: "THE HOUR" })).toBe(buildAgentContext({ state: {}, now, timeContext: "THE HOUR", assistantViewing: null }));
+    expect(buildAgentContext({ state: {}, now, timeContext: "THE HOUR" })).not.toContain("looking at");
+  });
+
   it("omits the attached-image block when attachedImage is absent", () => {
     const s = buildAgentContext({ state: {} });
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER");

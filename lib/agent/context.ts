@@ -316,6 +316,9 @@ export function buildAgentContext(args: {
   zona?: string;
   /** DeepSeek's time context (`lib/agent/time-context.ts`): the hour, right after TODAY IS. Absent = as before. */
   timeContext?: string | null;
+  /** Her turn from the phone: the project on the owner's screen (`lib/assistants/viewing.ts`), right after the hour.
+   *  Absent = as before. */
+  assistantViewing?: string | null;
   /** El idioma de la interfaz del usuario (`es`, `pt`…), el que manda el panel. */
   idioma?: string;
   /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): si la persona lee
@@ -434,7 +437,7 @@ export function buildAgentContext(args: {
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${args.assistantViewing ? `${args.assistantViewing}\n\n` : ""}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
 }
 
 
@@ -478,6 +481,8 @@ export interface BuildAgentMessagesArgs {
   zona?: string;
   /** See buildAgentContext.timeContext. */
   timeContext?: string | null;
+  /** See buildAgentContext.assistantViewing. */
+  assistantViewing?: string | null;
   /** El idioma de la interfaz (ver buildAgentContext.idioma). */
   idioma?: string;
   /** Si lee en un teléfono (ver buildAgentContext.dispositivo). */
@@ -586,6 +591,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     equipo: args.equipo,
     zona: args.zona,
     timeContext: args.timeContext,
+    assistantViewing: args.assistantViewing,
     idioma: args.idioma,
     dispositivo: args.dispositivo,
     writingLanguage: args.writingLanguage,
