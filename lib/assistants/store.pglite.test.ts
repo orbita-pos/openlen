@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, runningAssistantRequest, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 let pg: PGlite;
@@ -134,6 +134,20 @@ describe("assistants store", () => {
     expect(await readyAssistantNotices(id, now)).toEqual([]);
     const found = await assistantNoticesByFila(id, ["f1"]);
     expect(found.map((n) => [n.id, n.status, n.reason, n.heardAt])).toEqual([["n1", "failed", "no_credits", now.toISOString()]]);
+  });
+
+  it("finds Len's row of her newest request to a project still unsettled", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    const id = r.assistant.id;
+    const at = new Date().toISOString();
+    await addAssistantNotice(id, { id: "n1", request: "a", status: "done", at, filaId: "f1", projectId: "p1" });
+    await addAssistantNotice(id, { id: "n2", request: "b", status: "queued", at, filaId: "f2", projectId: "p1" });
+    await addAssistantNotice(id, { id: "n3", request: "c", status: "queued", at, filaId: "f3", projectId: "p2" });
+    await addAssistantNotice(id, { id: "n4", request: "d", status: "queued", at, filaId: "f4", projectId: "p1" });
+    expect(await runningAssistantRequest(id, "p1")).toBe("f4");
+    expect(await runningAssistantRequest(id, "p2")).toBe("f3");
+    expect(await runningAssistantRequest(id, "p9")).toBeNull();
   });
 
   it("adding a note lets go of the ones heard over a week ago", async () => {

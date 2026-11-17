@@ -232,6 +232,14 @@ export async function markAssistantNoticesHeard(id: string, ids: readonly string
   await withNotices(id, (all) => all.map((n) => (ids.includes(n.id) && !n.heardAt ? { ...n, heardAt } : n)));
 }
 
+/** Len's row of her newest request to this project not yet settled, or null: a new request corrects it while it runs
+ *  (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). */
+export async function runningAssistantRequest(id: string, projectId: string): Promise<string | null> {
+  const [row] = await db.select({ notices: a.notices }).from(a).where(eq(a.id, id)).limit(1);
+  const unsettled = (row?.notices ?? []).filter((n) => n.status === "queued" && n.projectId === projectId && n.filaId);
+  return unsettled.at(-1)?.filaId ?? null;
+}
+
 /** Her notes for these rows of Len's, heard or not: how each request ended, for the phone. */
 export async function assistantNoticesByFila(id: string, filaIds: readonly string[]): Promise<AskLenNotice[]> {
   if (filaIds.length === 0) return [];

@@ -5328,6 +5328,20 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await pedir({ viewingProjectId: "p2" }));
       expect(sent().assistantViewing ?? null).toBeNull();
     });
+
+    it("🔴 the owner's photo and files ride her session, for the request she passes to Len", async () => {
+      served();
+      await readEvents(await pedir({ assistantId: "a1", attachedImage: { url: "https://openlen.com/u/a.jpg" }, attachedFiles: [{ url: "https://openlen.com/u/m.pdf", name: "m.pdf", size: 9 }] }));
+      const s = (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ ownerAttachments?: { images: { url: string }[]; files: { name: string }[] } }])[0];
+      expect(s.ownerAttachments?.images.map((i) => i.url)).toEqual(["https://openlen.com/u/a.jpg"]);
+      expect(s.ownerAttachments?.files.map((f) => f.name)).toEqual(["m.pdf"]);
+    });
+
+    it("without attachments her session carries none", async () => {
+      served();
+      await readEvents(await pedir({ assistantId: "a1" }));
+      expect((mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ ownerAttachments?: unknown }])[0].ownerAttachments).toBeUndefined();
+    });
   });
 
   // Phase 4: she knows each project she serves — what it published, read-only — and passes requests to the right one.

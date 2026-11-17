@@ -1396,6 +1396,12 @@ export interface AgentSession {
      *  she serves it. Absent outside the phone. */
     readonly viewing?: import("@/lib/assistants/viewing").ViewingProject;
   };
+  /** Her turn: the photos and files of the owner's message, for the Len turn her `ask_len` starts (spec local
+   *  2026-11-16-movil-es-tu-asistente, §5.4.7). Absent for Len, and when the message had none. */
+  ownerAttachments?: {
+    readonly images: readonly import("@/lib/projects/chat-photos").ChatPhoto[];
+    readonly files: readonly import("@/lib/projects/chat-files").AttachedFile[];
+  };
   /** Who holds the project's box in this session when it is not the turn: a subagent's run id (spec local
    *  2026-11-01-subagentes-de-len, §4.8). Its `turnId` stays the launching turn's, for undo. */
   terminalHolderId?: string;

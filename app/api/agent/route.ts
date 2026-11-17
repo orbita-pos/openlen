@@ -1658,6 +1658,8 @@ async function correrTurno(
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
           },
+          // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).
+          ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),
         }
       : {}),
   };
