@@ -28,7 +28,8 @@ import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
 import { AssistantTab } from "../asistente/assistant-tab";
 import { LenTurnView } from "../asistente/len-turn-view";
-import { leerSuChat, listarAsistentes, readAssistants } from "../api/asistente";
+import { leerSuChat, listarAsistentes, readAssistants, serveProject } from "../api/asistente";
+import { projectStatusOf } from "../asistente/project-status";
 import { appModeOf, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
 import { applyHerColor } from "../asistente/color";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
@@ -306,6 +307,34 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
 
   const dicho = p ? loQueDijoLen(p.historial) : null;
 
+  // A project she doesn't serve (§5.6): she takes it (bubble off), or another assistant of yours has it, or it's not
+  // yours. The list of assistants is read again after she takes one.
+  const [atendiendo, setAtendiendo] = useState<string | null>(null);
+  const [noSePudo, setNoSePudo] = useState<string | null>(null);
+  const queLoAtienda = useCallback(async (projectId: string) => {
+    if (!ella) return;
+    setAtendiendo(projectId);
+    setNoSePudo(null);
+    const r = await serveProject(cliente, ella.id, projectId);
+    setAtendiendo(null);
+    if (r === "error") { setNoSePudo(projectId); return; }
+    const l = await readAssistants(cliente).catch(() => null);
+    if (l) { setAsistentes(l.assistants); setAsistentesOn(l.enabled); }
+  }, [cliente, ella]);
+  const juntoAlProyecto = (p: ProyectoEnLista) => {
+    if (!ella) return null;
+    const estado = projectStatusOf(p, ella, asistentes);
+    if (estado.kind === "hers") return null;
+    if (estado.kind === "notYours") return <small>{tas("soloParaVer")}</small>;
+    if (estado.kind === "other") {
+      const otra = estado.assistant;
+      return <><small>{tas("loAtiende", { name: otra.name })}</small><button type="button" className="lm-btn lm-sec" onClick={() => { saveChosen(otra.id); setElegida(otra.id); }}>{tas("cambiarA", { name: otra.name })}</button></>;
+    }
+    return <>
+      <button type="button" className="lm-btn lm-sec" disabled={atendiendo === p.id} onClick={() => void queLoAtienda(p.id)}>{tas("queLoAtienda", { name: ella.name })}</button>
+      {noSePudo === p.id && <small role="alert">{tas("noSePudo")}</small>}
+    </>;
+  };
   /** What Len did in one of his turns: its panel, over that project (switching to it first if it isn't on screen). */
   const abrirTurnoDeLen = useCallback((fila: string, projectId: string) => {
     setTurnoDeLen({ fila, projectId });
@@ -440,7 +469,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             su z-index la deja debajo de la app). Como en el prototipo, una
             sola hoja que cambia de contenido. */}
         {selector ? (
-          <Selector proyectos={lista} actual={id} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} top={<>
+          <Selector proyectos={lista} actual={id} junto={juntoAlProyecto} onElegir={(x) => { setId(x); setSelector(false); }} onCerrar={() => setSelector(false)} onSalir={onSalir} top={<>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
             {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}
@@ -496,6 +525,12 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
                   </button>
                 ))}
               </div>
+              {/* The page on screen isn't hers (§5.6): what she can do about it, in her sheet too. */}
+              {(() => {
+                const enPantalla = ella ? lista.find((x) => x.id === id) : undefined;
+                const extra = enPantalla ? juntoAlProyecto(enPantalla) : null;
+                return extra ? <div className="app-hoja-junto" data-junto-hoja={id}>{extra}</div> : null;
+              })()}
               {avisos.recibido && <ControlAvisos avisos={avisos} />}
             </div>
           </div>

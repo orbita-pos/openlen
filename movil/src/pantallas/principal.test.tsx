@@ -553,6 +553,77 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     expect(chatProps.len).toBeNull();
   });
 
+  describe("a project she doesn't serve (§5.6)", () => {
+    const CAFE = { id: "p2", title: "Café", subdomain: null, publishedAt: null, updatedAt: "2026-11-08" };
+    const TIENDA = { id: "p9", title: "Tienda", subdomain: null, publishedAt: null, updatedAt: "2026-11-07", compartido: { rol: "editor" } };
+    async function paintMany(asistentes: unknown[]) {
+      const pedir = vi.fn(async (ruta: string, init?: RequestInit) =>
+        ruta === "/api/projects"
+          ? Response.json({ projects: [proyecto, CAFE, TIENDA] })
+          : ruta.endsWith("/preview")
+            ? Response.json({ enabled: true, token: "vista" })
+            : ruta === "/api/assistants"
+              ? Response.json({ enabled: true, assistants: asistentes })
+              : ruta === "/api/assistants/a1/projects" && init?.method === "POST"
+                ? Response.json({ projectId: "p2" }, { status: 201 })
+                : ruta.startsWith("/api/assistants/a1/chat")
+                  ? Response.json({ chatHistory: [] })
+                  : ruta.startsWith("/api/tools?")
+                    ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                    : ruta === "/api/projects/p2"
+                      ? Response.json({ project: { ...CAFE, chatHistory: [] } })
+                      : Response.json({ project: proyecto }),
+      );
+      host = document.createElement("div");
+      document.body.append(host);
+      root = createRoot(host);
+      await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+      await act(async () => {});
+      await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+      return pedir;
+    }
+    const enElSelector = () => [...host.querySelectorAll<HTMLElement>(".app-selector [data-junto]")];
+
+    it("🔴 «Que Lucía lo atienda» connects the project with her bubble off", async () => {
+      const pedir = await paintMany([LUCIA]);
+      const boton = enElSelector().find((e) => e.dataset.junto === "p2")!.querySelector("button")!;
+      expect(boton.textContent).toBe("queLoAtienda");
+      await act(async () => boton.click());
+      const post = pedir.mock.calls.find(([r, i]) => r === "/api/assistants/a1/projects" && (i as RequestInit | undefined)?.method === "POST");
+      expect(JSON.parse(String((post![1] as RequestInit).body))).toEqual({ projectId: "p2", onPage: false });
+      expect(pedir.mock.calls.filter(([r]) => r === "/api/assistants").length).toBeGreaterThan(1);
+    });
+
+    it("a project of another assistant offers to switch to her", async () => {
+      const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta", projectId: "p2", projectIds: ["p2"] };
+      await paintMany([LUCIA, MARTA]);
+      const junto = enElSelector().find((e) => e.dataset.junto === "p2")!;
+      expect(junto.textContent).toContain("loAtiende");
+      await act(async () => junto.querySelector("button")!.click());
+      expect(localStorage.getItem("len-asistente")).toBe("a2");
+    });
+
+    it("someone else's project is only to look at", async () => {
+      await paintMany([LUCIA]);
+      const junto = enElSelector().find((e) => e.dataset.junto === "p9")!;
+      expect(junto.textContent).toBe("soloParaVer");
+      expect(junto.querySelector("button")).toBeNull();
+    });
+
+    it("🔴 the sheet over a project she doesn't serve offers to take it", async () => {
+      localStorage.setItem("len-proyecto", "p2");
+      await paintMany([LUCIA]);
+      await act(async () => host.querySelector<HTMLButtonElement>(".app-selector .lm-grab")?.click());
+      const enLaHoja = host.querySelector<HTMLElement>('.app-main-sheet [data-junto-hoja="p2"]');
+      expect(enLaHoja?.querySelector("button")?.textContent).toBe("queLoAtienda");
+    });
+
+    it("hers needs nothing beside it", async () => {
+      await paintMany([LUCIA]);
+      expect(enElSelector().some((e) => e.dataset.junto === "p1")).toBe(false);
+    });
+  });
+
   it("her face in the bar opens her place", async () => {
     await paint();
     await act(async () => host.querySelector<HTMLButtonElement>(".ent-face-button")!.click());

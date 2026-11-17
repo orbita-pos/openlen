@@ -7,8 +7,10 @@ import { aplicarTema, temaGuardado, type Tema } from "../tema";
 import { devolverFoco } from "../foco";
 import { useDeslizar } from "../deslizar";
 
-export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, children }: {
+export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, children, junto }: {
   proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void; children?: ReactNode;
+  /** What a project is to her, beside it (spec local 2026-11-16-movil-es-tu-asistente, §5.6); null = nothing. */
+  junto?: (p: ProyectoEnLista) => ReactNode;
   /** Above the projects: «Entregado» and «Tareas», across all of them (spec local 2026-10-31-len-movil). */
   top?: ReactNode;
 }) {
@@ -40,11 +42,15 @@ export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, 
         <p className="lm-msg">{t("tusPaginas")}</p>
         <div className="lm-actions" style={{ display: "grid", gap: 8 }}>
           {top}
-          {proyectos.map((p) => (
-            <button key={p.id} type="button" className={`lm-btn ${p.id === actual ? "lm-pri" : "lm-sec"}`} aria-current={p.id === actual ? "page" : undefined} onClick={() => onElegir(p.id)}>
-              <span>{p.title}</span>
-            </button>
-          ))}
+          {proyectos.map((p) => {
+            const extra = junto?.(p) ?? null;
+            const boton = (
+              <button key={p.id} type="button" className={`lm-btn ${p.id === actual ? "lm-pri" : "lm-sec"}`} aria-current={p.id === actual ? "page" : undefined} onClick={() => onElegir(p.id)}>
+                <span>{p.title}</span>
+              </button>
+            );
+            return extra ? <div key={p.id} className="app-selector-proyecto">{boton}<div className="app-selector-junto" data-junto={p.id}>{extra}</div></div> : boton;
+          })}
           <button type="button" className="lm-btn lm-sec" onClick={cambiarTema}>{tema === "dark" ? t("modoClaro") : t("modoOscuro")}</button>
           {children}
           <button type="button" className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button>
