@@ -22,17 +22,27 @@ export function lenRequestView(o: {
   readonly filaId: string;
   readonly note: AskLenNotice | null;
   readonly turn: StoredChatTurn | null;
+  /** Her owner's live turn on this row: «Parar». */
   readonly liveTurnoId: string | null;
+  /** Some turn in this process runs this row (hers, or a member's): an «en curso» row without one was cut by a restart. */
+  readonly rowAlive: boolean;
   readonly now: Date;
 }): LenRequestView {
   const { filaId, note, turn, liveTurnoId } = o;
   const live = liveTurnoId ? { turnoId: liveTurnoId } : {};
   if (turn) {
-    if (turn.enCurso) return { filaId, status: "running", turn, ...live };
+    if (turn.enCurso) {
+      // A row «en curso» that no turn runs was left by a restart (final review, I1): it ends here, never «running» forever.
+      if (!liveTurnoId && !o.rowAlive) return { filaId, status: "failed", reason: "interrupted", turn };
+      return { filaId, status: "running", turn, ...live };
+    }
     return { filaId, status: turn.status === "error" ? "failed" : "done", turn };
   }
   if (liveTurnoId) return { filaId, status: "running", turnoId: liveTurnoId };
   if (note?.status === "failed") return { filaId, status: "failed", ...(note.reason ? { reason: note.reason } : {}) };
-  if (note?.status === "queued" && o.now.getTime() - new Date(note.at).getTime() > LOST_AFTER_MS) return { filaId, status: "lost" };
-  return { filaId, status: "queued" };
+  if (note?.status === "done") return { filaId, status: "done" };
+  if (note?.status === "queued") return o.now.getTime() - new Date(note.at).getTime() > LOST_AFTER_MS ? { filaId, status: "lost" } : { filaId, status: "queued" };
+  // Every request writes its note before Len's turn is launched: no row, no note and no live turn means its note was
+  // pruned, a week after she heard it (final review, I1). It is over — never «in line» again, never polled forever.
+  return { filaId, status: "lost" };
 }

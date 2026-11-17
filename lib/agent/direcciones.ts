@@ -40,6 +40,9 @@ interface TurnoAbierto {
   /** En cola: si el usuario escribe dos veces antes de la siguiente vuelta, se
    *  leen las dos, en orden. Perder la primera sería peor que juntarlas. */
   readonly pendientes: string[];
+  /** The fallbacks of corrections that must not be lost (her `ask_len`, spec local 2026-11-16-movil-es-tu-asistente,
+   *  §5.4.8): if the turn closes with them unread, each runs with its text. Read with the rest, they are dropped. */
+  readonly respaldos?: { readonly texto: string; readonly alCerrarSinLeer: (texto: string) => void }[];
   /** Para el cancelar EXPLÍCITO (`cancelar`). Desde 2.1 cerrar la conexión ya
    *  no corta el turno, así que ésta es la única forma de pararlo. */
   readonly abortar?: () => void;
@@ -151,6 +154,8 @@ export function dirigir(
   turnoId: string,
   userId: string,
   texto: string,
+  /** A correction that must not be lost: `alCerrarSinLeer` runs with it if the turn closes before reading it. */
+  o: { readonly alCerrarSinLeer?: (texto: string) => void } = {},
 ): ResultadoDirigir {
   const limpio = texto.trim().slice(0, MAX_DIRECCION);
   if (!limpio) return "vacio";
@@ -158,6 +163,11 @@ export function dirigir(
   if (!turno) return "no_existe";
   if (turno.userId !== userId) return "ajeno";
   turno.pendientes.push(limpio);
+  if (o.alCerrarSinLeer) {
+    const lista = turno.respaldos ?? [];
+    lista.push({ texto: limpio, alCerrarSinLeer: o.alCerrarSinLeer });
+    abiertos.set(turnoId, { ...turno, respaldos: lista });
+  }
   return "ok";
 }
 
@@ -179,6 +189,8 @@ export function leerDireccion(turnoId: string): string | null {
   if (!turno || turno.pendientes.length === 0) return null;
   const juntas = turno.pendientes.join("\n");
   turno.pendientes.length = 0;
+  // Read: nothing of it is lost any more.
+  turno.respaldos?.splice(0);
   return juntas;
 }
 
@@ -346,10 +358,19 @@ export function filaEnMarcha(filaId: string): boolean {
 
 /** El turno terminó. Se llama SIEMPRE, también cuando revienta. */
 export function cerrarTurno(turnoId: string): void {
+  const turno = abiertos.get(turnoId);
   // Una pregunta que seguía esperando se suelta: su herramienta cierra el turno
   // como cuando nadie contesta.
-  abiertos.get(turnoId)?.pregunta.resolver?.(null);
+  turno?.pregunta.resolver?.(null);
   abiertos.delete(turnoId);
+  // A correction accepted after the loop's last look, that must not be lost: it goes on through its fallback.
+  for (const r of turno?.respaldos ?? []) {
+    try {
+      r.alCerrarSinLeer(r.texto);
+    } catch (err) {
+      console.warn("[direcciones] an unread correction's fallback failed", err);
+    }
+  }
 }
 
 // PIEZA 8 DE LEN 2.5 · LA RONDA QUE SIGUE A UNA FILA. Al cerrar una ronda del

@@ -34,11 +34,23 @@ describe("ask_len", () => {
     expect(launch.mock.calls[0]![0].projectId).toBe("p2");
   });
 
+  // Final review, I4 (spec §5.6): looking at a project she doesn't serve, a request with no project named can't go to her
+  // only one by default — that would change a page the owner isn't looking at.
+  it("🔴 looking at a project she doesn't serve, an unnamed request is refused even when she serves only one", async () => {
+    const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }], viewing: { id: "p9", title: "", served: false } } } as AgentSession;
+    const launch = vi.fn();
+    const out = await runAskLen(session, { request: "botón verde" }, launch);
+    expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
+    expect(launch).not.toHaveBeenCalled();
+    await runAskLen(session, { request: "botón verde", project: "p1" }, launch);
+    expect(launch).toHaveBeenCalledTimes(1);
+  });
+
   it("a project she doesn't serve on the phone is not a default", async () => {
     const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }, { id: "p2", title: "Café" }], viewing: { id: "p9", title: "Tienda", served: false } } } as AgentSession;
     const launch = vi.fn();
     const out = await runAskLen(session, { request: "botón verde" }, launch);
-    expect(out.response).toMatchObject({ ok: false, error: "which_project" });
+    expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
     expect(launch).not.toHaveBeenCalled();
   });
 
@@ -75,7 +87,7 @@ describe("ask_len", () => {
       const steer = vi.fn(() => true);
       const out = await runAskLen(ASSISTANT_SESSION, { request: "mejor azul" }, launch, notes, steer);
       expect(notes.runningFor).toHaveBeenCalledWith("a1", "p1");
-      expect(steer).toHaveBeenCalledWith("f1", "u1", expect.stringContaining("mejor azul"));
+      expect(steer).toHaveBeenCalledWith("f1", "u1", expect.stringContaining("mejor azul"), expect.any(Function));
       expect(launch).not.toHaveBeenCalled();
       expect(notes.queued).not.toHaveBeenCalled();
       expect(out.response).toMatchObject({ ok: true, steered: true });
@@ -89,6 +101,31 @@ describe("ask_len", () => {
       expect(launch).toHaveBeenCalledTimes(1);
       expect(notes.queued).toHaveBeenCalledTimes(1);
       expect(out.response).toMatchObject({ ok: true, queued: true });
+    });
+
+    // Final review, I3: accepted after Len's last look, a correction would be dropped while her result says it reached him.
+    it("🔴 a correction Len never read goes to him as a request of its own", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      let unread: ((t: string) => void) | undefined;
+      await runAskLen(ASSISTANT_SESSION, { request: "mejor azul" }, launch, notes, (_f, _u, _t, onUnread) => { unread = onUnread; return true; });
+      expect(launch).not.toHaveBeenCalled();
+      unread!("the framed correction");
+      await vi.waitFor(() => expect(launch).toHaveBeenCalledTimes(1));
+      expect(launch.mock.calls[0]![0]).toMatchObject({ texto: "mejor azul", projectId: "p1" });
+      expect(notes.queued).toHaveBeenCalledTimes(1);
+    });
+
+    // Re-graded from the review's minors: a correction is cut at 2,000 characters, and a long owner's message would push
+    // the request out of it. Too long to steer, it goes as a request of its own.
+    it("🔴 a correction too long to steer whole goes as a request of its own", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      const steer = vi.fn(() => true);
+      const session = { ...ASSISTANT_SESSION, mensajeDelUsuario: "x".repeat(2100) } as AgentSession;
+      await runAskLen(session, { request: "mejor azul" }, launch, notes, steer);
+      expect(steer).not.toHaveBeenCalled();
+      expect(launch).toHaveBeenCalledTimes(1);
     });
 
     it("a request with a photo never becomes a correction", async () => {

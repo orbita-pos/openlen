@@ -10,6 +10,8 @@ export interface ViewingProject {
 }
 
 export function viewingLine(v: ViewingProject): string {
+  // Someone else's project, shared with the owner: she learns it isn't hers, never its name (final review, I4).
+  if (!v.served && !v.title) return "Your owner is looking at a project you don't serve on their phone: you can't pass requests for it to Len.";
   return v.served
     ? `Your owner is looking at «${v.title}» (${v.id}) on their phone. A request that names no project goes to it.`
     : `Your owner is looking at «${v.title}» on their phone, a project you don't serve: you can't pass requests for it to Len. Their phone shows them a button to let you serve it.`;
