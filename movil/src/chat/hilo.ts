@@ -117,7 +117,15 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
 /** Len cerró su último turno preguntándote algo y aún no le contestas. */
 export function terminaEnPregunta(turnos: StoredChatTurn[]): boolean {
   const u = [...turnos].reverse().find(t => t.tipo !== "persona");
-  return !!u && !u.enCurso && (u.actions ?? []).some((a) => currentToolName(a.tool) === ASK_USER_QUESTION && a.status === "done" && !a.respuesta && !a.dismissed);
+  return !!u && !u.enCurso && pendingQuestionOf(u) !== null;
+}
+
+type Accion = NonNullable<StoredChatTurn["actions"]>[number];
+/** The question a closed turn of Len's ended on, still unanswered (its card: `preguntas`, or the old `pregunta`
+ *  text) — or null. On the phone the answer is the next message to Len (it opens his next turn). */
+export function pendingQuestionOf(turn: StoredChatTurn): Accion | null {
+  if (turn.enCurso) return null;
+  return (turn.actions ?? []).findLast((a) => currentToolName(a.tool) === ASK_USER_QUESTION && a.status === "done" && !a.respuesta && !a.dismissed) ?? null;
 }
 
 export function turnoNuevo(fila: string | null = null): TurnoEnVivo {

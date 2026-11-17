@@ -76,6 +76,12 @@ describe("POST /api/assistants/[id]/projects", () => {
     expect(m.connectProject).toHaveBeenCalledWith({ assistantId: "a1", projectId: "p2" });
   });
 
+  // Deferred minor of the final review: the author wrapper and the handler each resolved the caller.
+  it("🔴 who asks is resolved once per request", async () => {
+    expect((await post({ projectId: "p2" })).status).toBe(201);
+    expect(m.auth).toHaveBeenCalledTimes(1);
+  });
+
   // 16/11, Jesús (spec local 2026-11-16-movil-es-tu-asistente, §5.6): from the phone she takes it with her bubble off.
   it("🔴 «Que Lucía lo atienda» on the phone connects it with her bubble off", async () => {
     expect((await post({ projectId: "p2", onPage: false })).status).toBe(201);

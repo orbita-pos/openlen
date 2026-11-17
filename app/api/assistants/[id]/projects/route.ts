@@ -12,7 +12,7 @@ import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
-import { conAutorDeLaPeticion } from "@/lib/projects/autor-del-cambio";
+import { autorDelCambio, conAutorDeLaPeticion } from "@/lib/projects/autor-del-cambio";
 import { publishedHost } from "@/lib/publish/base-host";
 
 export const runtime = "nodejs";
@@ -59,7 +59,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 export const POST = paraLaApp(conAutorDeLaPeticion(
   (req: Request, _ctx: { params: Promise<{ id: string }> }) => usuarioDeLaPeticion(req),
   async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
-    const found = await hers(await usuarioDeLaPeticion(req), (await params).id);
+    // Who asks was resolved once, by the author wrapper: the handler reads it there instead of asking again.
+    const found = await hers(autorDelCambio(), (await params).id);
     if (found instanceof Response) return found;
     const body = (await req.json().catch(() => null)) as { projectId?: unknown; onPage?: unknown } | null;
     const projectId = typeof body?.projectId === "string" ? body.projectId.slice(0, 100) : "";

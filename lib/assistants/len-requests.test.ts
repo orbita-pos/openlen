@@ -26,6 +26,19 @@ describe("how a request to Len is going, for her card on the phone", () => {
     expect(lenRequestView({ filaId: "f", note: null, turn: t, liveTurnoId: null, rowAlive: false, now: NOW })).toMatchObject({ status: "failed", turn: t });
   });
 
+  // Deferred minor of the final review: a stopped turn read «Len terminó».
+  it("🔴 a turn stopped with ■ (cut, or closed before changing anything): stopped, never «done»", () => {
+    const cut = turn({ cortado: true, endReason: "cancelled" });
+    expect(lenRequestView({ filaId: "f", note: null, turn: cut, liveTurnoId: null, rowAlive: false, now: NOW })).toEqual({ filaId: "f", status: "stopped", turn: cut });
+    const early = turn({ status: "error", endReason: "cancelled" });
+    expect(lenRequestView({ filaId: "f", note: null, turn: early, liveTurnoId: null, rowAlive: false, now: NOW }).status).toBe("stopped");
+  });
+
+  it("🔴 a turn cut by a restart, or by any other reason: failed with it, never «done»", () => {
+    const cut = turn({ cortado: true, endReason: "interrupted" });
+    expect(lenRequestView({ filaId: "f", note: null, turn: cut, liveTurnoId: null, rowAlive: false, now: NOW })).toEqual({ filaId: "f", status: "failed", reason: "interrupted", turn: cut });
+  });
+
   it("a finished row wins over a note still marked queued", () => {
     expect(lenRequestView({ filaId: "f", note: note({}), turn: turn({}), liveTurnoId: null, rowAlive: false, now: NOW }).status).toBe("done");
   });
