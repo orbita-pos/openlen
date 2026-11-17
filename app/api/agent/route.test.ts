@@ -5159,6 +5159,28 @@ describe("POST /api/agent — the person's own assistant", () => {
     }
   });
 
+  it.each(["", "mira esta foto"])("le entrega la captura a la asistente y guarda el texto original (%j)", async (prompt) => {
+    const url = "https://u/captura.jpg";
+    const foto = { mimeType: "image/jpeg", dataBase64: "AAAA" };
+    mocks.conseguirFotos.mockResolvedValueOnce(new Map([[url, foto]]));
+    const res = await pedir({ assistantId: "a1", prompt, attachedImage: { url } });
+    expect(res.status).toBe(200);
+    await readEvents(res);
+    expect(mocks.buildAgentMessages).toHaveBeenCalledWith(expect.objectContaining({ prompt, attachedImages: [{ url, visible: true }] }));
+    expect(loopArgs().messages.at(-1)).toMatchObject({ role: "user", images: [foto] });
+    expect(mocks.abrirFilaDelTurno).toHaveBeenCalledWith(
+      "p1",
+      expect.objectContaining({ userText: prompt, attachedImage: { url } }),
+      "assistant:a1",
+    );
+  });
+
+  it("rechaza un mensaje sin texto cuando tampoco hay una imagen válida", async () => {
+    const res = await pedir({ assistantId: "a1", prompt: "", attachedImage: { url: "javascript:alert(1)" } });
+    expect(res.status).toBe(400);
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
   it("🔴 deleted while it answered, its turn writes no row: its conversation went with it", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "text", text: "Ayer vinieron 12 personas." });

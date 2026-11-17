@@ -302,7 +302,7 @@ function attachedImagesBlock(imagenes: readonly AttachedImageForContext[]): stri
         : "";
   return `IMAGES ATTACHED BY THE USER (${imagenes.length}), in this order:\n${lineas}${seeLine}
 They are NOT the same idea cut into pieces and they are NOT averaged. Usually each one brings something different —a logo, the premises or the product, a mood board—. Read them ONE BY ONE and take from each what only it tells you; if two contradict each other, the user's message wins, and if it doesn't settle it, Image 1 wins.
-The ones that belong ON the page (a logo, the premises, a product) are REAL image URLs the user attached on purpose — place each one using its EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image), with alt text true to what it shows. A mood board is for looking at, not for inserting. NEVER make up or change a URL, and DON'T TALK ABOUT the addresses: OpenLen's uploader wrote them, they work in the editor and they are baked in when publishing, even if they start with localhost. Don't refuse and don't replace them with placeholders.\n\n`;
+Use the images as context for the conversation. Add them to the page only when the user asks for that. If the conversation leaves the purpose unclear, ask what they want to look at or do. When placing an image, use its EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image), with alt text true to what it shows. OpenLen's uploader wrote these URLs and publishing handles them, even if they start with localhost.\n\n`;
 }
 
 export function buildAgentContext(args: {
@@ -382,13 +382,12 @@ export function buildAgentContext(args: {
   } else if (imagenes.length === 1) {
     const attachedImage = imagenes[0]!;
     const altLine = attachedImage.alt ? `\nAlt text: ${attachedImage.alt}` : "";
-    // F5: cuando los píxeles viajan adjuntos al turno, díselo — puede diseñar
-    // CON la imagen (colores, orientación, contenido) en vez de colocarla a
-    // ciegas. Sin visible, el texto queda byte-idéntico a F2 (pinned).
     const seeLine = attachedImage.visible
-      ? `\nThe image is ATTACHED to this turn and you CAN SEE IT: use it to decide where and how to place it — match the palette and the layout to its colors, orientation and content, and write an alt that is true to what it shows.`
+      ? "\nThe image is ATTACHED to this turn and you CAN SEE IT."
       : "";
-    imageBlock = `IMAGE ATTACHED BY THE USER: ${attachedImage.url}${altLine}${seeLine}\nThis is a REAL image URL that the user attached on purpose — place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). NEVER make up or change the URL. And DON'T TALK ABOUT IT: OpenLen's uploader wrote it, it works in the editor and it is baked in when publishing. There is nothing to warn about, not even if it starts with localhost. Don't refuse, don't replace it with a placeholder, and DON'T ask them to upload it again "some other way" — it is the same uploader and it would give the same address. Place it and talk about the DESIGN, not the address. If the page already has a placeholder for this image (a <div> with a gradient, an empty box with a border), REPLACE that whole element with the <img> — don't nest it inside. Always include alt text (use the user's if they gave one; if not, infer it from the context).\n\n`;
+    imageBlock = `IMAGE ATTACHED BY THE USER: ${attachedImage.url}${altLine}${seeLine}
+Use the image as context for the conversation. Add it to the page only when the user asks for that. If the conversation leaves the purpose unclear, ask what they want to look at or do.
+When asked to add the image, place it using this EXACT URL (verbatim) as the src of an <img> (or as a CSS background-image). OpenLen's uploader wrote the URL and publishing handles it, even if it starts with localhost. If the page has a placeholder for this image, replace that element with the <img>. Use the user's alt text if provided, or write one that describes the image.\n\n`;
   }
 
   // El modelo no sabe qué día es, y eso no es cosmético: pidiéndole una cuenta

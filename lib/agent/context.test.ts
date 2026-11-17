@@ -47,6 +47,8 @@ describe("buildAgentContext", () => {
     expect(s).toContain("IMAGE ATTACHED BY THE USER");
     expect(s).toContain("https://images.openlen.com/foo.webp");
     expect(s).toContain("Foto de taco");
+    expect(s).toContain("Use the image as context for the conversation.");
+    expect(s).toContain("Add it to the page only when the user asks for that.");
     // Se coloca cambiando un `src` en el fichero. Mandarlo a una herramienta
     // retirada (`editar_atributos`) es mandarlo a una llamada que falla, y desde
     // F4 tampoco nombra Edit: en el brazo «sólo terminal» se escribe con bash.
@@ -74,15 +76,9 @@ describe("buildAgentContext", () => {
       attachedImages: [{ url: "http://localhost:3000/api/projects/p1/assets/casa.png" }],
     });
     expect(s).toContain("http://localhost:3000/api/projects/p1/assets/casa.png");
-    expect(s).toContain("DON'T TALK ABOUT IT");
-    expect(s).toContain("localhost");
-    // Las tres cosas que hacía y que hay que impedir: negarse, poner un
-    // placeholder en su lugar, y mandarle a subirla «de otra forma».
-    expect(s).toContain("Don't refuse");
-    expect(s).toContain("don't replace it with a placeholder");
-    expect(s).toContain("it is the same uploader and it would give the same address");
-    // Y lo que sí tiene que hacer en su lugar.
-    expect(s).toContain("talk about the DESIGN, not the address");
+    expect(s).toContain("OpenLen's uploader wrote the URL and publishing handles it, even if it starts with localhost.");
+    expect(s).toContain("place it using this EXACT URL");
+    expect(s).toContain("replace that element with the <img>");
   });
 
   it("her turn from the phone names the project on screen right after the hour; without it, nothing changes", () => {
@@ -114,6 +110,8 @@ describe("buildAgentContext", () => {
     expect(s).toContain("Image 2: https://images.openlen.com/local.jpg");
     expect(s).toContain("you CAN SEE THEM");
     expect(s).toContain("they are NOT averaged");
+    expect(s).toContain("Use the images as context for the conversation.");
+    expect(s).toContain("Add them to the page only when the user asks for that.");
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER:");
   });
 
