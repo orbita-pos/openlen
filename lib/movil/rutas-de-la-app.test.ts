@@ -28,6 +28,8 @@ describe("las rutas de la app", () => {
     expect(listed.get("app/api/assistants/[id]/visits/read/route.ts")).toEqual(["POST"]);
     expect(listed.get("app/api/assistants/[id]/requests/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/assistants/[id]/requests/[cardId]/route.ts")).toEqual(["POST"]);
+    // Her chat's Len cards (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5).
+    expect(listed.get("app/api/assistants/[id]/len-requests/route.ts")).toEqual(["GET"]);
   });
 
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {
