@@ -1,0 +1,45 @@
+/* HER CHAT, CLEAN (Jesús 16/11, with Dots-like references): a white page with a soft glow of her color behind her
+   figure, her name plain under it, her messages in a light gray bubble and yours in her color, Len's cards as one of
+   her messages with underlined links, and one rounded field to write in. Only her chat: Len's keeps his cream and
+   orange. Selectors carry `.app-lienzo` so they win over app.css whatever order the sheets load in. */
+.app-lienzo .lm-chat.is-ella{
+  --c-bg:#FFFFFF; --c-bg-solid:#FFFFFF;
+  --c-ink:#1C1C1E; --c-dim:#6E6E73; --c-line:rgba(0,0,0,.08);
+  --c-len:#F0F0F2; --c-len-ink:#1C1C1E; --c-len-shadow:none;
+  --c-top:#FFFFFF; --c-field:#FFFFFF; --c-chip:transparent;
+  --lm-panel:#FFFFFF; --lm-ink:#1C1C1E; --lm-muted:#6E6E73; --lm-soft:#F0F0F2;
+  --her-glow:rgba(var(--her-rgb,59,130,246),.26);
+  background:var(--c-bg)}
+:root:not([data-theme="dark"]) .app-lienzo .lm-chat.is-ella{--c-dim:#6E6E73}
+:root[data-theme="dark"] .app-lienzo .lm-chat.is-ella{
+  --c-bg:#0E0E10; --c-bg-solid:#0E0E10;
+  --c-ink:#F5F5F7; --c-dim:#A1A1A6; --c-line:rgba(255,255,255,.1);
+  --c-len:#1F1F23; --c-len-ink:#F5F5F7;
+  --c-top:#0E0E10; --c-field:#1A1A1D;
+  --lm-panel:#1F1F23; --lm-ink:#F5F5F7; --lm-muted:#A1A1A6; --lm-soft:#1F1F23;
+  --her-glow:rgba(var(--her-rgb,59,130,246),.22)}
+
+/* The top: her figure big and centered on a glow of her color, her name under it, what she's doing under that. */
+.app-lienzo .lm-chat.is-ella .ch-top{padding-bottom:12px;border-bottom:0;-webkit-backdrop-filter:none;backdrop-filter:none;
+  background:radial-gradient(46% 62% at 50% 46%,var(--her-glow),transparent 72%),var(--c-bg-solid)}
+.app-lienzo .lm-chat.is-ella .ch-face{width:60px;height:60px}
+.app-lienzo .lm-chat.is-ella .ch-name{margin-top:4px;padding:0;background:none;box-shadow:none;color:var(--c-ink);font:650 14.5px/1.3 Inter,sans-serif}
+.app-lienzo .lm-chat.is-ella .ch-st{font-size:12px;color:var(--c-dim)}
+
+/* The conversation: rounded bubbles, gray hers and yours in her color, a little air between turns. */
+.app-lienzo .lm-chat.is-ella .ch-log{padding-left:16px;padding-right:16px}
+.app-lienzo .lm-chat.is-ella .ch-row{max-width:82%;margin-top:10px}
+.app-lienzo .lm-chat.is-ella .ch-row.is-cont{margin-top:4px}
+.app-lienzo .lm-chat.is-ella .ch-b{padding:9px 14px;border-radius:20px;font-size:15.5px;line-height:1.42}
+.app-lienzo .lm-chat.is-ella .is-me .ch-b{font-weight:450}
+.app-lienzo .lm-chat.is-ella .ch-day{margin:10px 0 2px;font:500 12px Inter,sans-serif}
+.app-lienzo .lm-chat.is-ella .ch-rcpt{font-size:11.5px}
+
+/* One field to write in: + on its left, the mic/send button in her color on its right, all in one pill. */
+.app-lienzo .lm-chat.is-ella .ch-foot{background:linear-gradient(to top,var(--c-bg-solid) 78%,transparent)}
+.app-lienzo .lm-chat.is-ella .lm-comp{gap:2px;align-items:flex-end;padding:4px;border-radius:26px;background:var(--c-field);
+  box-shadow:0 0 0 1px var(--c-line),0 12px 28px -20px rgba(0,0,0,.45)}
+.app-lienzo .lm-chat.is-ella .lm-field{background:transparent;box-shadow:none}
+.app-lienzo .lm-chat.is-ella .lm-field textarea{padding-left:6px;padding-right:6px}
+.app-lienzo .lm-chat.is-ella .ch-plus{background:transparent;box-shadow:none;color:var(--c-dim)}
+.app-lienzo .lm-chat.is-ella .lm-mic{width:44px;height:44px}

@@ -25,6 +25,7 @@ import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
 import { LenRequestCard } from "../asistente/len-request-card";
+import "../asistente/her-chat.css";
 import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
 import { AvisosDeLen } from "./avisos";
@@ -245,7 +246,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   });
 
   return (
-    <section ref={deslizar} className={`lm-layer lm-chat${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto} inert={!abierto} role="dialog" aria-label={asistente?.name ?? "Len"} aria-modal={abierto || undefined} onKeyDown={e => {
+    <section ref={deslizar} className={`lm-layer lm-chat${asistente ? " is-ella" : ""}${abierto ? " is-on" : ""}${conPip ? " has-pip" : ""}${adjunta || archivos.length ? " con-adjunta" : ""}${errorAdjunto ? " con-adjuntos-error" : ""}`} aria-hidden={!abierto} inert={!abierto} role="dialog" aria-label={asistente?.name ?? "Len"} aria-modal={abierto || undefined} onKeyDown={e => {
       if (e.nativeEvent.isComposing) return;
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onCerrar(); }
       if (e.key === "Tab") {
@@ -259,7 +260,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
           <Icono nombre="back" />
         </button>
         <div className="ch-who">
-          {asistente ? <span className="ch-face ch-face-asistente"><AssistantFigure look={lookOfRow(asistente)} size={44} /></span> : <Cara estado={cara} className="ch-face" />}
+          {asistente ? <span className="ch-face ch-face-asistente"><AssistantFigure look={lookOfRow(asistente)} size={60} /></span> : <Cara estado={cara} className="ch-face" />}
           <b className="ch-name">{asistente?.name ?? "Len"}</b>
           <span className={`ch-st${linea ? " is-on" : ""}${chat.trabajando ? " ch-live" : ""}`}>{linea}</span>
         </div>

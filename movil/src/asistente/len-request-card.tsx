@@ -42,6 +42,13 @@ export function LenRequestCard(p: {
       </div>
     );
   }
+  // What you can do with it, as one row of links under what Len said (the clean look of a message, not a form).
+  const links: { key: string; label: string; onClick: () => void; main?: boolean }[] = [
+    ...(status === "running" && v?.turnoId ? [{ key: "stop", label: t("parar"), onClick: () => p.onStop(v.turnoId!) }] : []),
+    ...(question ? [{ key: "answer", label: t("contestar"), onClick: p.onOpen, main: true }] : []),
+    ...(changed ? [{ key: "compare", label: t("antesAhora"), onClick: p.onCompare }, { key: "publish", label: t("publicar"), onClick: p.onPublish, main: true }] : []),
+    ...(turn && !question ? [{ key: "open", label: t("verLoQueHizo"), onClick: p.onOpen }] : []),
+  ];
   return (
     <div className="lenreq" data-len-request={p.lenRef.filaId} data-status={status}>
       {status === "queued" && <p className="lenreq-st">{t("lenEnCola")}</p>}
@@ -49,11 +56,6 @@ export function LenRequestCard(p: {
         <>
           <p className="lenreq-st lenreq-live">{t("lenTrabajandoEn", { project: p.projectTitle })}</p>
           <Progreso pasos={pasosDelTrabajo(turn?.actions ?? [])} trabajando />
-          {v?.turnoId && (
-            <div className="lenreq-acc">
-              <button type="button" className="lm-btn lm-sec" onClick={() => p.onStop(v.turnoId!)}>{t("parar")}</button>
-            </div>
-          )}
         </>
       )}
       {status === "done" && (
@@ -61,17 +63,6 @@ export function LenRequestCard(p: {
           <p className="lenreq-st">{question ? t("lenPregunta") : t("lenTermino")}</p>
           {said && <p className="lenreq-dijo">{said}</p>}
           {asked && <p className="lenreq-dijo lenreq-pregunta">{asked}</p>}
-          {question && (
-            <div className="lenreq-acc">
-              <button type="button" className="lm-btn lm-pri" onClick={p.onOpen}>{t("contestar")}</button>
-            </div>
-          )}
-          {changed && (
-            <div className="lenreq-acc">
-              <button type="button" className="lm-btn lm-sec" onClick={p.onCompare}>{t("antesAhora")}</button>
-              <button type="button" className="lm-btn lm-pri" onClick={p.onPublish}>{t("publicar")}</button>
-            </div>
-          )}
         </>
       )}
       {status === "stopped" && (
@@ -84,8 +75,12 @@ export function LenRequestCard(p: {
         <p className="lenreq-st" role="alert">{v?.reason === "no_credits" ? t("sinCreditos") : t("lenNoPudo")}</p>
       )}
       {status === "lost" && <p className="lenreq-st" role="alert">{t("lenSePerdio", { name: p.name })}</p>}
-      {turn && !question && (
-        <button type="button" className="lenreq-ver" onClick={p.onOpen}>{t("verLoQueHizo")}</button>
+      {links.length > 0 && (
+        <div className="lenreq-acc">
+          {links.map((l) => (
+            <button key={l.key} type="button" className={`lenreq-link${l.main ? " is-main" : ""}`} onClick={l.onClick}>{l.label}</button>
+          ))}
+        </div>
       )}
     </div>
   );
