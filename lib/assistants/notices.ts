@@ -19,6 +19,10 @@ export interface AskLenNotice {
   readonly reason?: string;
   /** The project it went to, by name, when she serves more than one (phase 4). */
   readonly project?: string;
+  /** Len's row and the project's id (spec local 2026-11-16-movil-es-tu-asistente): the phone's card reads how it ended.
+   *  Absent on notes written before. */
+  readonly filaId?: string;
+  readonly projectId?: string;
 }
 
 export type ReadyNotice = AskLenNotice & { readonly lost?: true };

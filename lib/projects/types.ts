@@ -530,6 +530,8 @@ export interface StoredChatTurn {
     delivered?: readonly { readonly name: string; readonly url: string; readonly size: number; readonly description?: string; readonly preview?: string }[];
     /** El subagente que lanzó una llamada a `subagent` (spec local 2026-11-01-subagentes-de-len). */
     subagent?: { readonly id: string; readonly preset: string };
+    /** Her `ask_len` (spec local 2026-11-16-movil-es-tu-asistente, §5.4): Len's row and project, for the phone's card. */
+    lenRequest?: { readonly filaId: string; readonly projectId: string };
     /** Lo que vio Len: las URLs de las capturas del paso (`storeStepScreenshots`), las mismas que recibió el modelo. */
     screenshots?: readonly string[];
     /** QUÉ cambió, resuelto en el servidor mientras los `data-op-id` valían.

@@ -27,6 +27,15 @@ describe("ask_len", () => {
     expect(typeof p.filaId).toBe("string");
   });
 
+  it("🔴 the card and the note carry Len's row and the project it went to", async () => {
+    const launch = vi.fn();
+    const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };
+    const out = await runAskLen(ASSISTANT_SESSION, { request: "botón verde" }, launch, notes);
+    const p = launch.mock.calls[0]![0];
+    expect(out.lenRequest).toEqual({ filaId: p.filaId, projectId: "p1" });
+    expect((notes.queued.mock.calls[0] as unknown as [string, unknown])[1]).toMatchObject({ filaId: p.filaId, projectId: "p1" });
+  });
+
   it("🔴 Len gets the owner's own message verbatim beside the assistant's request, and only that message is an order", async () => {
     const launch = vi.fn();
     const session = { ...ASSISTANT_SESSION, mensajeDelUsuario: "Lucía, dile a Len que el botón de pedir se vea más grande" } as AgentSession;

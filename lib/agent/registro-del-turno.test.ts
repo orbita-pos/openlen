@@ -23,6 +23,12 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.tarjetas[0]).toMatchObject({ tool: "subagent", subagent: { id: "r1", preset: "Explore" } });
   });
 
+  it("her ask_len: its card keeps Len's row and project, for the phone to follow it after a reload", () => {
+    const r = crearRegistroDelTurno();
+    r.observar({ type: "action", tool: "ask_len", status: "done", summary: "botón verde", lenRequest: { filaId: "f1", projectId: "p1" } });
+    expect(r.tarjetas[0]).toMatchObject({ tool: "ask_len", lenRequest: { filaId: "f1", projectId: "p1" } });
+  });
+
   it("lo que vio Len: guarda las capturas del paso en su tarjeta", () => {
     const r = crearRegistroDelTurno();
     const screenshots = ["https://u/uploads/p1/screenshot-1.jpg"];
