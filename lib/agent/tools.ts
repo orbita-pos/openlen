@@ -1443,6 +1443,8 @@ export interface ToolOutcome {
   delivered?: readonly DeliveredFile[];
   /** The run a `subagent` call started (spec local 2026-11-01-subagentes-de-len): its card finds it again after a reload. */
   subagent?: { readonly id: string; readonly preset: string };
+  /** What her `ask_len` passed (spec local 2026-11-16-movil-es-tu-asistente, §5.4): Len's row and project, for her card. */
+  lenRequest?: import("@/lib/assistants/len-request-ref").LenRequestRef;
   /** LOTE 7-8 · el dueño DESCARTÓ la pregunta para hablar (el `ASK_CANCELLED`
    *  de DeepSeek). El modelo lee el error de `response`; la tarjeta NO es un
    *  fallo (DeepSeek la pinta `ok`) y el bucle cierra el turno tras la tanda,

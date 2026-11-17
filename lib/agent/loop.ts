@@ -174,6 +174,8 @@ export type AgentStreamEvent =
       delivered?: readonly DeliveredFile[];
       /** The run a `subagent` call started: the chat's card follows it, also after a reload. */
       subagent?: { readonly id: string; readonly preset: string };
+      /** Her `ask_len`: Len's row and project, the card the phone follows (spec local 2026-11-16-movil-es-tu-asistente). */
+      lenRequest?: { readonly filaId: string; readonly projectId: string };
       /** What Len saw: the URLs of this step's screenshots, the same images the model got (`storeScreenshots`). */
       screenshots?: readonly string[];
     }
@@ -2088,6 +2090,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
           ...(outcome.delivered?.length ? { delivered: outcome.delivered } : {}),
           // And the run a `subagent` call started: the card's only way back to it.
           ...(outcome.subagent ? { subagent: outcome.subagent } : {}),
+          // And the row of Len's turn her `ask_len` started: the phone's card follows it.
+          ...(outcome.lenRequest ? { lenRequest: outcome.lenRequest } : {}),
           // Y lo que vio: sin esto la captura sólo la ve el modelo.
           ...(screenshots.length ? { screenshots } : {}),
         });

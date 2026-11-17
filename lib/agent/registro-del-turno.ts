@@ -143,6 +143,8 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
           ...(ev.delivered?.length ? { delivered: ev.delivered.map((f) => ({ ...f })) } : {}),
           // Y EL SUBAGENTE que lanzó (spec local 2026-11-01-subagentes-de-len): su tarjeta lo vuelve a encontrar al recargar.
           ...(ev.subagent ? { subagent: { id: ev.subagent.id, preset: ev.subagent.preset } } : {}),
+          // And her `ask_len`'s request to Len (spec local 2026-11-16-movil-es-tu-asistente): the phone's card finds it after a reload.
+          ...(ev.lenRequest ? { lenRequest: { filaId: ev.lenRequest.filaId, projectId: ev.lenRequest.projectId } } : {}),
           // Y LO QUE VIO LEN: las capturas del paso, que sólo el modelo veía.
           ...(ev.screenshots?.length ? { screenshots: [...ev.screenshots] } : {}),
           // Y EL VISUAL de `show_widget` (spec local 2026-10-16-len-inline-visuals),

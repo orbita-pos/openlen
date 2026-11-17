@@ -103,7 +103,12 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   // that can't be written never stops the request. An injected launch without notes keeps none (tests).
   const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
   const noticeId = randomUUID();
-  await keep.queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString(), ...(where ? { project: where } : {}) }).catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
+  // Len's row: the note and her card both name it, so the phone can follow his turn (spec local
+  // 2026-11-16-movil-es-tu-asistente, §5.4).
+  const filaId = randomUUID();
+  await keep
+    .queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString(), filaId, projectId: target.id, ...(where ? { project: where } : {}) })
+    .catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
   const settle = (patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>) =>
     keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
   go({
@@ -114,7 +119,7 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
     origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name },
     timeZone: session.zonaHoraria ?? "UTC",
     locale: session.uiLocale ?? "en",
-    filaId: randomUUID(),
+    filaId,
     onStart: async () => {},
     reply: async (text, _cards, finalText) => {
       await settle({ status: "done", closing: (finalText ?? text).slice(0, CLOSING_MAX) });
@@ -132,5 +137,6 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
         : "Len has the request and will do it in the project's chat, where your owner sees it.",
     },
     action: { tool: ASK_LEN, ok: true, summary: request.length > 80 ? `${request.slice(0, 79)}…` : request },
+    lenRequest: { filaId, projectId: target.id },
   };
 }
