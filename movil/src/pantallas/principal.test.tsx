@@ -1,6 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { tintOf } from "@/lib/figure/tint";
 import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -342,6 +343,22 @@ describe("her tab in the selector", () => {
     expect(b).toBeDefined();
     await act(async () => b!.click());
     expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
+  });
+
+  // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.1, §5.2): another one is chosen here.
+  it("🔴 choosing another assistant in «Tus páginas» paints the app her color and keeps her on this phone", async () => {
+    const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta", color: "#3b82f6", look: { ...LUCIA.look, color: "#3b82f6" } };
+    const { botones } = await paint([LUCIA, MARTA]);
+    expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe(tintOf("#f4a48b")!.tint);
+    await act(async () => botones().find((x) => x.textContent === "Marta")!.click());
+    expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe(tintOf("#3b82f6")!.tint);
+    expect(localStorage.getItem("len-asistente")).toBe("a2");
+    expect(host.querySelector('[data-assistant-tab="a2"]')).toBeNull();
+  });
+
+  it("with no assistant, the app keeps Len's orange", async () => {
+    await paint([]);
+    expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe("");
   });
 
   it("no assistant (or assistants off): no button", async () => {

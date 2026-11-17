@@ -4,7 +4,11 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 export class SinRed extends Error {}
 
-export interface ProyectoEnLista { id: string; title: string; subdomain: string | null; publishedAt: string | null; updatedAt: string }
+export interface ProyectoEnLista {
+  id: string; title: string; subdomain: string | null; publishedAt: string | null; updatedAt: string;
+  /** Another person's project, shared with you (`GET /api/projects`): absent on your own. */
+  compartido?: { rol: "editor" | "lector" };
+}
 export interface ProyectoAbierto { id: string; title: string; subdomain: string | null; publicado: boolean; historial: StoredChatTurn[] }
 
 async function json<T>(p: Promise<Response>): Promise<T> {

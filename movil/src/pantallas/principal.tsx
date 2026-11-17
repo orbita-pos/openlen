@@ -25,7 +25,9 @@ import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
 import { AssistantTab } from "../asistente/assistant-tab";
-import { leerSuChat, listarAsistentes } from "../api/asistente";
+import { leerSuChat, listarAsistentes, readAssistants } from "../api/asistente";
+import { appModeOf, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
+import { applyHerColor } from "../asistente/color";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import type { AssistantListItem } from "@/lib/assistants/view";
 import { listarHerramientas, sePuedeAbrir, type HerramientasDeLaPersona } from "../api/herramientas";
@@ -93,6 +95,11 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // The person's own assistants (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): one button each, with her name,
   // beside «Entregado» and «Tareas»; none (or assistants off on the server) → no button. The open one, and on what part.
   const [asistentes, setAsistentes] = useState<readonly AssistantListItem[]>([]);
+  // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.1): assistants on at all, the one chosen on
+  // this phone, and whether the welcome was dismissed.
+  const [asistentesOn, setAsistentesOn] = useState(true);
+  const [elegida, setElegida] = useState<string | null>(readChosen);
+  const [bienvenidaCerrada] = useState(readWelcomeDismissed);
   const [asistenteAbierta, setAsistenteAbierta] = useState<{ asistente: AssistantListItem; parte?: ParteDeLaAsistente; tarjeta?: string | null; n: number } | null>(null);
   const aperturas = useRef(0);
   const abrirSuPestana = useCallback((asistente: AssistantListItem, donde: { parte?: ParteDeLaAsistente; tarjeta?: string | null } = {}) => {
@@ -142,11 +149,22 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   }, [cliente, idioma, recarga]);
   useEffect(() => {
     let alive = true;
-    listarAsistentes(cliente).then((x) => alive && setAsistentes(x), () => {});
+    readAssistants(cliente).then((x) => {
+      if (!alive) return;
+      setAsistentes(x.assistants);
+      setAsistentesOn(x.enabled);
+    }, () => {});
     return () => {
       alive = false;
     };
   }, [cliente, recarga]);
+  const modo = appModeOf({ enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista ?? [], welcomeDismissed: bienvenidaCerrada });
+  const suColor = modo.kind === "assistant" ? modo.assistant.color : null;
+  // The app takes her color (§5.2); with no assistant, and on leaving this screen (signing out), Len's orange again.
+  useEffect(() => {
+    applyHerColor(suColor);
+    return () => applyHerColor(null);
+  }, [suColor]);
   const idActual = useRef(id);
   const paginaCargada = useRef<string | null>(null);
   // El panel que pidió un aviso (una mención → Equipo; Len Watch → Gestión) para el proyecto que abre.
@@ -392,7 +410,15 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
             {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}
-            {asistentes.map((a) => <button key={a.id} type="button" className="lm-btn lm-sec" data-asistente={a.id} onClick={() => { setSelector(false); abrirSuPestana(a); }}>{a.name}</button>)}
+            {/* The app's assistant opens her place; another one becomes the app's (§5.1). */}
+            {asistentes.map((a) => {
+              const esLaDeLaApp = modo.kind === "assistant" && modo.assistant.id === a.id;
+              return <button key={a.id} type="button" className="lm-btn lm-sec" data-asistente={a.id} aria-current={esLaDeLaApp ? "true" : undefined} onClick={() => {
+                if (esLaDeLaApp) { setSelector(false); abrirSuPestana(a); return; }
+                saveChosen(a.id);
+                setElegida(a.id);
+              }}>{a.name}</button>;
+            })}
           </>}>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("look"); }}>{te("tuLen")}</button>
             <ControlAvisos avisos={avisos} />
