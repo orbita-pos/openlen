@@ -62,6 +62,14 @@ describe("POST /api/assistants", () => {
     expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: LOOK, tone: "friendly" }, memory: "" });
   });
 
+  // 16/11, Jesús (spec local 2026-11-16-movil-es-tu-asistente, §5.6): born from the phone, her bubble is off.
+  it("🔴 the phone's welcome creates her with her bubble off; without onPage: false, as the web always did", async () => {
+    await post({ ...BODY, onPage: false });
+    expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ onPage: false }));
+    await post({ ...BODY, onPage: "no" });
+    expect(m.createAssistant.mock.lastCall?.[0]).not.toHaveProperty("onPage");
+  });
+
   it("🔴 the morning summary is created on only when the creator ticked it, in the page's language", async () => {
     await post({ ...BODY, morningSummary: true, locale: "es" });
     expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ morningSummary: true, locale: "es" }));
@@ -141,9 +149,20 @@ describe("GET /api/assistants", () => {
     m.assistantsOf.mockResolvedValueOnce([LUCIA]);
     const res = await GET(new Request("http://localhost/api/assistants"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
+    expect(await res.json()).toEqual({ enabled: true, assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
     expect(m.projectIdsOf).toHaveBeenCalledWith(["a1"]);
     expect(m.assistantsOf).toHaveBeenCalledWith("u1");
+  });
+
+  it("with assistants off, the phone can tell off from none yet", async () => {
+    const before = process.env.OPENLEN_ASSISTANT;
+    process.env.OPENLEN_ASSISTANT = "0";
+    try {
+      expect(await (await GET(new Request("http://localhost/api/assistants"))).json()).toEqual({ assistants: [], enabled: false });
+    } finally {
+      if (before === undefined) delete process.env.OPENLEN_ASSISTANT;
+      else process.env.OPENLEN_ASSISTANT = before;
+    }
   });
 });
 

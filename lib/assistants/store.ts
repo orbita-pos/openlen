@@ -35,6 +35,9 @@ export async function createAssistant(o: {
   input: AssistantInput;
   /** Its memory to start with: what today's assistant of the project was taught (lib/assistants/knowledge.ts). */
   memory?: string;
+  /** Her bubble on the page: on, unless born from the phone (Jesús 16/11, spec local 2026-11-16-movil-es-tu-asistente,
+   *  §5.6). Absent = on, the web's rule of 11/11. */
+  onPage?: boolean;
   /** The morning summary, ticked in the creator (phase 4D, spec §6.9), and the language it was ticked in. */
   morningSummary?: boolean;
   locale?: string;
@@ -65,8 +68,9 @@ export async function createAssistant(o: {
       }
       try {
         // Born on the page (11/11, Jesús: «encendido de una»): she is created from Len's card, where the owner asked for
-        // an assistant for this page. The next publish bakes her bubble; until then her place says so.
-        await tx.insert(schema.assistantProjects).values({ projectId: o.projectId, assistantId: row!.id, onPage: true });
+        // an assistant for this page. The next publish bakes her bubble; until then her place says so. Born from the
+        // phone, off (16/11): there she is made to pass requests to Len, not to answer the page's visitors.
+        await tx.insert(schema.assistantProjects).values({ projectId: o.projectId, assistantId: row!.id, onPage: o.onPage ?? true });
       } catch (err) {
         if (isUniqueViolation(err)) throw new Refused("project_has_assistant");
         throw err;

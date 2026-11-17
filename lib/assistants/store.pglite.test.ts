@@ -161,6 +161,17 @@ describe("assistants store", () => {
     expect((await assistantById(id))?.notices.map((n) => n.id)).toEqual(["new"]);
   });
 
+  it("🔴 born from the phone, her bubble is off; from the web it stays on (Jesús 11/11 and 16/11)", async () => {
+    const phone = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA, onPage: false });
+    const web = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Ana" } });
+    if (!phone.ok || !web.ok) throw new Error("not created");
+    const rows = await pg.query<{ projectId: string; onPage: boolean }>(`select "projectId", "onPage" from "assistantProjects" order by "projectId"`);
+    expect(rows.rows.map((r) => [r.projectId, r.onPage])).toEqual([
+      ["p1", false],
+      ["p2", true],
+    ]);
+  });
+
   it("lists the newest first", async () => {
     await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
     await new Promise((r) => setTimeout(r, 5));

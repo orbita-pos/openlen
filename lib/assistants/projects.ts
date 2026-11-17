@@ -87,9 +87,15 @@ export async function pageHtmlOf(projectId: string): Promise<string | null> {
 
 /** The route checked that the project is her person's own. A project with an assistant keeps it. On the page at once,
  *  as when she is created (11/11, Jesús: «encendido de una»): the one door here is Len's card, «Usar a Lucía aquí». */
-export async function connectProject(o: { readonly assistantId: string; readonly projectId: string }): Promise<"connected" | "project_has_assistant"> {
+export async function connectProject(o: {
+  readonly assistantId: string;
+  readonly projectId: string;
+  /** Her bubble on the page: on, unless connected from the phone (Jesús 16/11, spec local
+   *  2026-11-16-movil-es-tu-asistente, §5.6). Absent = on. */
+  readonly onPage?: boolean;
+}): Promise<"connected" | "project_has_assistant"> {
   try {
-    await db.insert(ap).values({ projectId: o.projectId, assistantId: o.assistantId, onPage: true });
+    await db.insert(ap).values({ projectId: o.projectId, assistantId: o.assistantId, onPage: o.onPage ?? true });
     return "connected";
   } catch (err) {
     if (isUniqueViolation(err)) return "project_has_assistant";
