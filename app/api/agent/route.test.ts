@@ -303,6 +303,7 @@ vi.mock("@/lib/assistants/store", () => assistantStore);
 // Phase 4: the projects she serves, read for her turn.
 const assistantProjects = vi.hoisted(() => ({
   projectsOfAssistant: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
+  titlesOf: vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, `Title of ${id}`]))),
 }));
 vi.mock("@/lib/assistants/projects", () => assistantProjects);
 vi.mock("@/lib/projects/chat", () => ({
@@ -5284,6 +5285,49 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(enviado.memoryMessage).not.toContain("Somos una pastelería.");
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ leidos: Map<string, { instantanea: string }> }];
     expect(session.leidos.get("/home/user/.assistant/MEMORY.md")?.instantanea).toBe("Jueves: pasteles sin gluten.");
+  });
+
+  // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.3): her turn knows the project on the phone.
+  describe("the project on her owner's phone", () => {
+    const served = () => {
+      const at = new Date("2026-11-09T12:00:00Z");
+      assistantProjects.projectsOfAssistant.mockResolvedValueOnce([
+        { projectId: "p1", title: "Pan", subdomain: null, isHome: true, onPage: true, knowledge: null, knowledgeAt: null, bakedAt: null, publicData: [], connectedAt: at },
+        { projectId: "p2", title: "Café", subdomain: null, isHome: false, onPage: false, knowledge: null, knowledgeAt: null, bakedAt: null, publicData: [], connectedAt: at },
+      ]);
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Read", { file_path: "/index.html" });
+        return cierre();
+      });
+    };
+    const sent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ assistantViewing?: string | null }])[0];
+    const session = () => (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { viewing?: unknown } }])[0];
+
+    it("one she serves: her session and her turn's context name it", async () => {
+      served();
+      await readEvents(await pedir({ assistantId: "a1", viewingProjectId: "p2" }));
+      expect(session().assistant?.viewing).toEqual({ id: "p2", title: "Café", served: true });
+      expect(sent().assistantViewing).toBe("Your owner is looking at «Café» (p2) on their phone. A request that names no project goes to it.");
+    });
+
+    it("one of the owner's she doesn't serve: named as not hers", async () => {
+      served();
+      await readEvents(await pedir({ assistantId: "a1", viewingProjectId: "p9" }));
+      expect(session().assistant?.viewing).toEqual({ id: "p9", title: "Title of p9", served: false });
+      expect(sent().assistantViewing).toContain("a project you don't serve");
+    });
+
+    it("without it, her turn is as before", async () => {
+      served();
+      await readEvents(await pedir({ assistantId: "a1" }));
+      expect(session().assistant?.viewing).toBeUndefined();
+      expect(sent().assistantViewing ?? null).toBeNull();
+    });
+
+    it("Len's own turn ignores it", async () => {
+      await readEvents(await pedir({ viewingProjectId: "p2" }));
+      expect(sent().assistantViewing ?? null).toBeNull();
+    });
   });
 
   // Phase 4: she knows each project she serves — what it published, read-only — and passes requests to the right one.

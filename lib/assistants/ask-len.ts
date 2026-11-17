@@ -83,7 +83,9 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   // Which project (phase 4): hers only, and the one the request names when she serves more than one.
   const served = assistant.projects?.length ? assistant.projects : [{ id: session.projectId, title: "" }];
   const named = typeof args.project === "string" ? args.project.trim() : "";
-  const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : undefined;
+  // Named, or the only one, or (spec local 2026-11-16-movil-es-tu-asistente, §5.3) the one on her owner's phone.
+  const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
+  const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : onPhone;
   if (named && !target) return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve: see ~/.assistant/PROJECTS.md." } };
   if (!target) {
     return {

@@ -27,6 +27,21 @@ describe("ask_len", () => {
     expect(typeof p.filaId).toBe("string");
   });
 
+  it("goes to the project on the owner's phone when she serves several and none is named", async () => {
+    const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }, { id: "p2", title: "Café" }], viewing: { id: "p2", title: "Café", served: true } } } as AgentSession;
+    const launch = vi.fn();
+    await runAskLen(session, { request: "botón verde" }, launch);
+    expect(launch.mock.calls[0]![0].projectId).toBe("p2");
+  });
+
+  it("a project she doesn't serve on the phone is not a default", async () => {
+    const session = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pan" }, { id: "p2", title: "Café" }], viewing: { id: "p9", title: "Tienda", served: false } } } as AgentSession;
+    const launch = vi.fn();
+    const out = await runAskLen(session, { request: "botón verde" }, launch);
+    expect(out.response).toMatchObject({ ok: false, error: "which_project" });
+    expect(launch).not.toHaveBeenCalled();
+  });
+
   it("🔴 the card and the note carry Len's row and the project it went to", async () => {
     const launch = vi.fn();
     const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };

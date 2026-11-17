@@ -15,7 +15,8 @@ import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { projectsOfAssistant, type ServedProject } from "@/lib/assistants/projects";
+import { projectsOfAssistant, titlesOf, type ServedProject } from "@/lib/assistants/projects";
+import { viewingLine, type ViewingProject } from "@/lib/assistants/viewing";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
 import { assistantById, markAssistantNoticesHeard, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
@@ -411,7 +412,21 @@ type CuerpoDelTurno = {
   dispositivo?: unknown;
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): the turn runs as it, in its conversation. */
   assistantId?: unknown;
+  /** Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.3): the project on the owner's phone, with
+   *  `assistantId` only. */
+  viewingProjectId?: unknown;
 };
+
+/** The project on her owner's phone: hers (`served`), or the owner's own she doesn't serve; anything else, nothing. */
+async function projectOnThePhone(raw: unknown, served: readonly ServedProject[], personId: string): Promise<ViewingProject | null> {
+  if (typeof raw !== "string" || !raw || raw.length > 100) return null;
+  const hers = served.find((p) => p.projectId === raw);
+  if (hers) return { id: raw, title: hers.title?.trim() || raw, served: true };
+  const acceso = await accesoAlProyecto(raw, personId).catch(() => null);
+  if (acceso?.rol !== "dueno") return null;
+  const title = (await titlesOf([raw]).catch(() => new Map<string, string | null>())).get(raw)?.trim() || raw;
+  return { id: raw, title, served: false };
+}
 
 /** La ronda de un encargo que abre el conductor (pieza 8). Nunca sale del cuerpo. */
 type RondaDelEncargo = { goalId: string; revision: number; round: number; artifactMessageId?: string };
@@ -517,6 +532,8 @@ async function correrTurno(
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
   /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
   const proyectosDelAsistente: ServedProject[] = asistente ? await projectsOfAssistant(asistente.id).catch(() => []) : [];
+  /** The project on her owner's phone (spec local 2026-11-16-movil-es-tu-asistente, §5.3) — fail-soft. */
+  const proyectoEnElTelefono: ViewingProject | null = asistente ? await projectOnThePhone(body?.viewingProjectId, proyectosDelAsistente, quien).catch(() => null) : null;
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
   const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
@@ -1396,6 +1413,8 @@ async function correrTurno(
     realTerminal,
     zona: zonaDelTurno,
     timeContext: timeContextDelTurno,
+    // Her turn from the phone: the project on the owner's screen, right after the hour (only when sent).
+    ...(proyectoEnElTelefono ? { assistantViewing: viewingLine(proyectoEnElTelefono) } : {}),
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
@@ -1633,7 +1652,12 @@ async function correrTurno(
     ...(asistente
       ? {
           readOnly: true as const,
-          assistant: { id: asistente.id, name: asistente.name, projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })) },
+          assistant: {
+            id: asistente.id,
+            name: asistente.name,
+            projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
+            ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
+          },
         }
       : {}),
   };
