@@ -5,7 +5,8 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { LOST_AFTER_MS, type AskLenNotice } from "./notices";
 
-export type LenRequestStatus = "queued" | "running" | "done" | "failed" | "lost";
+/** `stopped`: someone pressed ■ (Len's turn ended `cancelled`), so it neither finished nor failed. */
+export type LenRequestStatus = "queued" | "running" | "done" | "stopped" | "failed" | "lost";
 
 export interface LenRequestView {
   readonly filaId: string;
@@ -36,6 +37,9 @@ export function lenRequestView(o: {
       if (!liveTurnoId && !o.rowAlive) return { filaId, status: "failed", reason: "interrupted", turn };
       return { filaId, status: "running", turn, ...live };
     }
+    // Stopped with ■, or cut halfway (a restart, a cap): never «Len terminó» (deferred minor of the final review).
+    if (turn.endReason === "cancelled") return { filaId, status: "stopped", turn };
+    if (turn.cortado) return { filaId, status: "failed", ...(turn.endReason ? { reason: turn.endReason } : {}), turn };
     return { filaId, status: turn.status === "error" ? "failed" : "done", turn };
   }
   if (liveTurnoId) return { filaId, status: "running", turnoId: liveTurnoId };

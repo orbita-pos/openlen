@@ -1,13 +1,14 @@
 // LEN'S CARD IN HER CHAT (spec local 2026-11-16-movil-es-tu-asistente, §5.4): what she passed to Len, as it goes — in
-// line, Len working (his steps, «Parar»), done (what he said last, «Antes / Ahora», «Publicar»), couldn't, or lost. One
-// chat: you see Len's work here, and you talk only to her.
+// line, Len working (his steps, «Parar»), done (what he said last; «Antes / Ahora» and «Publicar» only if he changed
+// the page), asking you something («Contestar»), stopped, couldn't, or lost. One chat: you see Len's work here, and you
+// talk only to her.
 import { useTranslations } from "use-intl";
 
 import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
 
-import { parrafos } from "../chat/hilo";
-import { Progreso } from "../entrega/entrega";
+import { parrafos, pendingQuestionOf } from "../chat/hilo";
+import { esEntrega, Progreso } from "../entrega/entrega";
 import { pasosDelTrabajo } from "../entrega/progreso";
 import "./len-request-card.css";
 
@@ -16,6 +17,8 @@ export function LenRequestCard(p: {
   lenRef: LenRequestRef;
   /** The project it went to, by name. */
   projectTitle: string;
+  /** Its project is no longer in your list (deleted, or no longer shared): nothing to open. */
+  gone?: boolean;
   /** Hers: «ask her again». */
   name: string;
   onStop: (turnoId: string) => void;
@@ -26,14 +29,26 @@ export function LenRequestCard(p: {
   const t = useTranslations("movil.asistente");
   const v = p.view;
   const status = v?.status ?? "queued";
-  const said = status === "done" ? parrafos(v?.turn?.assistantReasoning ?? "").at(-1) ?? "" : "";
+  const turn = v?.turn;
+  const question = status === "done" && turn ? pendingQuestionOf(turn) : null;
+  const asked = question ? (question.preguntas?.[0]?.question ?? question.pregunta ?? "") : "";
+  const said = status === "done" || status === "stopped" ? parrafos(turn?.assistantReasoning ?? "").at(-1) ?? "" : "";
+  // What a delivery is everywhere on the phone (Entregado): applied, a change to the page, not cut, not a question.
+  const changed = status === "done" && esEntrega(turn);
+  if (p.gone) {
+    return (
+      <div className="lenreq" data-len-request={p.lenRef.filaId} data-status="gone">
+        <p className="lenreq-st">{t("proyectoNoEsta")}</p>
+      </div>
+    );
+  }
   return (
     <div className="lenreq" data-len-request={p.lenRef.filaId} data-status={status}>
       {status === "queued" && <p className="lenreq-st">{t("lenEnCola")}</p>}
       {status === "running" && (
         <>
           <p className="lenreq-st lenreq-live">{t("lenTrabajandoEn", { project: p.projectTitle })}</p>
-          <Progreso pasos={pasosDelTrabajo(v?.turn?.actions ?? [])} trabajando />
+          <Progreso pasos={pasosDelTrabajo(turn?.actions ?? [])} trabajando />
           {v?.turnoId && (
             <div className="lenreq-acc">
               <button type="button" className="lm-btn lm-sec" onClick={() => p.onStop(v.turnoId!)}>{t("parar")}</button>
@@ -43,19 +58,33 @@ export function LenRequestCard(p: {
       )}
       {status === "done" && (
         <>
-          <p className="lenreq-st">{t("lenTermino")}</p>
+          <p className="lenreq-st">{question ? t("lenPregunta") : t("lenTermino")}</p>
           {said && <p className="lenreq-dijo">{said}</p>}
-          <div className="lenreq-acc">
-            <button type="button" className="lm-btn lm-sec" onClick={p.onCompare}>{t("antesAhora")}</button>
-            <button type="button" className="lm-btn lm-pri" onClick={p.onPublish}>{t("publicar")}</button>
-          </div>
+          {asked && <p className="lenreq-dijo lenreq-pregunta">{asked}</p>}
+          {question && (
+            <div className="lenreq-acc">
+              <button type="button" className="lm-btn lm-pri" onClick={p.onOpen}>{t("contestar")}</button>
+            </div>
+          )}
+          {changed && (
+            <div className="lenreq-acc">
+              <button type="button" className="lm-btn lm-sec" onClick={p.onCompare}>{t("antesAhora")}</button>
+              <button type="button" className="lm-btn lm-pri" onClick={p.onPublish}>{t("publicar")}</button>
+            </div>
+          )}
+        </>
+      )}
+      {status === "stopped" && (
+        <>
+          <p className="lenreq-st">{t("lenSeDetuvo")}</p>
+          {said && <p className="lenreq-dijo">{said}</p>}
         </>
       )}
       {status === "failed" && (
         <p className="lenreq-st" role="alert">{v?.reason === "no_credits" ? t("sinCreditos") : t("lenNoPudo")}</p>
       )}
       {status === "lost" && <p className="lenreq-st" role="alert">{t("lenSePerdio", { name: p.name })}</p>}
-      {v?.turn && (
+      {turn && !question && (
         <button type="button" className="lenreq-ver" onClick={p.onOpen}>{t("verLoQueHizo")}</button>
       )}
     </div>

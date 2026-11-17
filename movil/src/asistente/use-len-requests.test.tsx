@@ -82,6 +82,27 @@ describe("her Len cards follow his turns (spec local 2026-11-16-movil-es-tu-asis
     expect(m.read.mock.calls[0]![2]).toEqual(Array.from({ length: 20 }, (_, i) => `f${i + 6}`));
   });
 
+  // Deferred minor of the final review: every poll asked again for cards already over, and got their whole turns back.
+  it("🔴 once a card is over it is not asked for again: the next looks ask only for the ones still moving", async () => {
+    const two: ElementoDelHilo[] = [{ clave: "t:lenPedidos", t: 1, tipo: "lenPedidos", refs: [REF, { filaId: "f2", projectId: "p1" }] }];
+    function Two() {
+      result = useLenRequests({ cliente, assistantId: "a1", elementos: two, onSettled });
+      return null;
+    }
+    m.read
+      .mockResolvedValueOnce([view("done"), { filaId: "f2", status: "running" }])
+      .mockResolvedValueOnce([{ filaId: "f2", status: "done" }]);
+    await act(async () => root.render(<Two />));
+    expect(m.read.mock.calls[0]![2]).toEqual(["f1", "f2"]);
+    await act(async () => vi.advanceTimersByTime(4000));
+    expect(m.read.mock.calls[1]![2]).toEqual(["f2"]);
+    // What was already known stays on its card.
+    expect(result.byFila.get("f1")?.status).toBe("done");
+    expect(result.byFila.get("f2")?.status).toBe("done");
+    await act(async () => vi.advanceTimersByTime(12000));
+    expect(m.read).toHaveBeenCalledTimes(2);
+  });
+
   it("«Parar» pauses Len's live turn and reads again", async () => {
     m.read.mockResolvedValue([{ ...view("running"), turnoId: "t1" }]);
     m.pause.mockResolvedValue({ ok: true });

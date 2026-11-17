@@ -7,7 +7,7 @@ import type { LenRequestView } from "@/lib/assistants/len-requests";
 import { LenRequestCard } from "./len-request-card";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, string>) => (v ? `${k}:${Object.values(v).join(",")}` : k) }));
-vi.mock("../entrega/entrega", () => ({ Progreso: ({ pasos }: { pasos: unknown[] }) => <div data-pasos={pasos.length} /> }));
+vi.mock("../entrega/entrega", async (original) => ({ ...(await original<typeof import("../entrega/entrega")>()), Progreso: ({ pasos }: { pasos: unknown[] }) => <div data-pasos={pasos.length} /> }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const REF = { filaId: "f1", projectId: "p1" };
@@ -60,6 +60,42 @@ describe("Len's card in her chat (spec local 2026-11-16-movil-es-tu-asistente, �
     expect(on.compare).toHaveBeenCalled();
     expect(on.publish).toHaveBeenCalled();
     expect(buttons).toContain("verLoQueHizo");
+  });
+
+  // Deferred minors of the final review: «Publicar» with nothing to publish, «terminó» for a stopped turn.
+  it("🔴 done without changing the page: what he said, and nothing to compare or publish", () => {
+    const { text, buttons } = paint({ filaId: "f1", status: "done", turn: { id: "f1", userText: "", assistantReasoning: "Esta semana entraron 312 personas.", status: "applied", noDocChange: true } });
+    expect(text).toContain("lenTermino");
+    expect(text).toContain("Esta semana entraron 312 personas.");
+    expect(buttons).not.toContain("antesAhora");
+    expect(buttons).not.toContain("publicar");
+  });
+
+  it("🔴 done on a question: Len asks it here, and «Contestar» opens his turn to answer", () => {
+    const asked = { tool: "ask_user_question", status: "done" as const, summary: "", preguntas: [{ id: "q1", question: "¿Azul o verde?", options: [{ label: "Azul" }, { label: "Verde" }] }] };
+    const { text, buttons } = paint({ filaId: "f1", status: "done", turn: { id: "f1", userText: "", assistantReasoning: "Antes de cambiarlo:", status: "applied", actions: [asked] } });
+    expect(text).toContain("lenPregunta");
+    expect(text).toContain("¿Azul o verde?");
+    expect(buttons).not.toContain("publicar");
+    expect(buttons).not.toContain("antesAhora");
+    act(() => [...host.querySelectorAll("button")].find((b) => b.textContent === "contestar")!.click());
+    expect(on.open).toHaveBeenCalled();
+  });
+
+  it("🔴 stopped: Len stopped, never «terminó», and nothing to publish", () => {
+    const { text, buttons } = paint({ filaId: "f1", status: "stopped", turn: { id: "f1", userText: "", assistantReasoning: "Empecé a cambiar", status: "applied", cortado: true, endReason: "cancelled" } });
+    expect(text).toContain("lenSeDetuvo");
+    expect(text).not.toContain("lenTermino");
+    expect(buttons).not.toContain("publicar");
+    expect(buttons).toContain("verLoQueHizo");
+  });
+
+  it("🔴 its project is gone: it says so, and offers nothing to open", () => {
+    act(() =>
+      root.render(<LenRequestCard view={{ filaId: "f1", status: "done", turn: { id: "f1", userText: "", assistantReasoning: "Listo.", status: "applied" } }} lenRef={REF} projectTitle="" gone name="Lucía" onStop={on.stop} onCompare={on.compare} onPublish={on.publish} onOpen={on.open} />),
+    );
+    expect(host.textContent).toContain("proyectoNoEsta");
+    expect(host.querySelectorAll("button")).toHaveLength(0);
   });
 
   it("failed for lack of credits says so; failed otherwise, that he couldn't", () => {

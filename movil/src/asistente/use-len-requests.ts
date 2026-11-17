@@ -33,9 +33,12 @@ export function useLenRequests(o: {
   useEffect(() => { onSettled.current = o.onSettled; });
   // What each row was last seen as: a row only settles once, and only if it was seen alive.
   const seen = useRef(new Map<string, LenRequestView["status"]>());
+  // The cards already over, as they ended: never asked for again (deferred minor of the final review).
+  const over = useRef(new Map<string, LenRequestView>());
 
   useEffect(() => {
     seen.current = new Map();
+    over.current = new Map();
   }, [assistantId]);
 
   useEffect(() => {
@@ -46,9 +49,21 @@ export function useLenRequests(o: {
     }
     let gone = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const show = (fresh: readonly LenRequestView[]) => {
+      const ended = list.flatMap((r) => {
+        const v = over.current.get(r.filaId);
+        return v ? [[r.filaId, v] as const] : [];
+      });
+      setState({ assistantId, byFila: new Map([...ended, ...fresh.map((v) => [v.filaId, v] as const)]) });
+    };
     const read = async () => {
+      const ask = list.filter((r) => !over.current.has(r.filaId)).map((r) => r.filaId);
+      if (ask.length === 0) {
+        show([]);
+        return;
+      }
       try {
-        const views = await readLenRequests(cliente, assistantId, list.map((r) => r.filaId));
+        const views = await readLenRequests(cliente, assistantId, ask);
         if (gone) return;
         for (const v of views) {
           const before = seen.current.get(v.filaId);
@@ -57,8 +72,9 @@ export function useLenRequests(o: {
             if (ref) onSettled.current(ref);
           }
           seen.current.set(v.filaId, v.status);
+          if (!live(v)) over.current.set(v.filaId, v);
         }
-        setState({ assistantId, byFila: new Map(views.map((v) => [v.filaId, v])) });
+        show(views);
         if (views.some(live)) timer = setTimeout(() => void read(), EVERY_MS);
       } catch {
         if (!gone) timer = setTimeout(() => void read(), EVERY_MS);
