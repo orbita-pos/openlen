@@ -13,8 +13,8 @@ let chat: Chat;
 const cliente = { pedir: vi.fn(), avisarAlCerrar: vi.fn() };
 const historia: [] = [];
 const recargar = vi.fn();
-function Pantalla({ id, historial = historia }: { id: string; historial?: StoredChatTurn[] }) {
-  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeFotoSola: "Foto", textoDeArchivoSolo: "Revisa el archivo" });
+function Pantalla({ id, historial = historia, assistantId, viewingProjectId }: { id: string; historial?: StoredChatTurn[]; assistantId?: string; viewingProjectId?: string }) {
+  chat = useChat({ cliente, base: "https://example.com", projectId: id, idioma: "es", historial, alCambiarLaPagina: recargar, textoDeFotoSola: "Foto", textoDeArchivoSolo: "Revisa el archivo", ...(assistantId ? { assistantId } : {}), ...(viewingProjectId ? { viewingProjectId } : {}) });
   return null;
 }
 beforeEach(() => {
@@ -23,6 +23,12 @@ beforeEach(() => {
   root = createRoot(host);
 });
 afterEach(() => act(() => root.unmount()));
+it("sends the project on screen with each message to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3)", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="p1" assistantId="a1" viewingProjectId="p2" />));
+  await act(async () => chat.mandar("botón verde"));
+  expect(m.mandar).toHaveBeenCalledWith(cliente, expect.objectContaining({ projectId: "p1", assistantId: "a1", viewingProjectId: "p2" }), expect.any(Function));
+});
 it("crear un encargo envía el objetivo con goal y lo pone en el hilo", async () => {
   m.mandar.mockResolvedValue("terminado");
   await act(async () => root.render(<Pantalla id="a" />));

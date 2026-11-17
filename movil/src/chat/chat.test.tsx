@@ -18,8 +18,9 @@ vi.mock("./use-nota", () => ({ useNota: () => ({ niveles: [], segundos: 0 }) }))
 const tarjetaProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
 vi.mock("../llamada/tarjetas", () => ({ TarjetaDeLaApp: (p: Record<string, unknown>) => { tarjetaProps.ultimo = p; return null; } }));
 // An event task's cards poll their own route; they have their own test (avisos.test.tsx).
-vi.mock("./avisos", () => ({ AvisosDeLen: () => null }));
-vi.mock("../herramientas/tool-cards", () => ({ TarjetasDeHerramientas: () => null }));
+const tarjetasDelProyecto = vi.hoisted(() => ({ avisos: null as Record<string, unknown> | null, herramientas: null as Record<string, unknown> | null }));
+vi.mock("./avisos", () => ({ AvisosDeLen: (p: Record<string, unknown>) => { tarjetasDelProyecto.avisos = p; return null; } }));
+vi.mock("../herramientas/tool-cards", () => ({ TarjetasDeHerramientas: (p: Record<string, unknown>) => { tarjetasDelProyecto.herramientas = p; return null; } }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root, host: HTMLDivElement;
 const cerrar = vi.fn();
@@ -38,6 +39,25 @@ function pintar(elementos: ElementoDelHilo[], trabajando = false, turnoId: strin
  act(() => root.render(<PantallaChat abierto={abierto} chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} enfocar={enfocar?.clave} onEnfocado={enfocar?.alEnfocar} />));
  return host.querySelector<HTMLDivElement>(".ch-log")!;
 }
+// Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.5): the event and tool cards of the project on
+// the phone's screen show in HER chat, which lives in her home project.
+const tarjetasVistas = (): { avisos: Record<string, unknown> | null; herramientas: Record<string, unknown> | null } => tarjetasDelProyecto;
+it("her chat shows the event and tool cards of the project on screen", () => {
+ tarjetasDelProyecto.avisos = null;
+ tarjetasDelProyecto.herramientas = null;
+ const chat = { elementos: [], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" cardsProjectId="p2" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} asistente={{ name: "Lucía", color: "#3b82f6" }} />));
+ expect(tarjetasVistas().avisos?.projectId).toBe("p2");
+ expect(tarjetasVistas().herramientas?.projectId).toBe("p2");
+});
+
+it("her chat with no project on screen shows no project cards", () => {
+ tarjetasDelProyecto.avisos = null;
+ const chat = { elementos: [], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} asistente={{ name: "Lucía", color: "#3b82f6" }} />));
+ expect(tarjetasVistas().avisos).toBeNull();
+});
+
 // Herramientas, fase 5 (§4.4, §4.14): lo que manda una herramienta con `sendPrompt` llena el cuadro, como el
 // `pendingDraft` de la web; lo envía la persona, nunca la app.
 it("el borrador de una herramienta sustituye el texto del cuadro y no se envía nada", () => {

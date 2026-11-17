@@ -17,15 +17,22 @@ const hoja = vi.hoisted(() => ({ alMedir: null as null | ((visibleEncogida: numb
 vi.mock("../hoja-deslizable", () => ({ useHojaDeslizable: (o: { alMedir?: (v: number) => void }) => { hoja.alMedir = o.alMedir ?? null; return null; } }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
 vi.mock("../llamada/llamada", () => ({ Llamada: ({ projectId }: { projectId: string }) => <div data-llamada={projectId} /> }));
-const chatProps: { ultimo: Record<string, unknown> | null } = { ultimo: null };
-vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => { chatProps.ultimo = p; return null; } }));
+const chatProps: { ultimo: Record<string, unknown> | null; ella: Record<string, unknown> | null; len: Record<string, unknown> | null } = { ultimo: null, ella: null, len: null };
+vi.mock("../chat/chat", () => ({ PantallaChat: (p: Record<string, unknown>) => { chatProps.ultimo = p; if (p.asistente) chatProps.ella = p; else chatProps.len = p; return null; } }));
 // The tool's screen is its own test's (tool-screen.test.tsx): here, which tool opened, where, and its `sendPrompt`.
 vi.mock("../herramientas/tool-screen", () => ({
   PantallaHerramienta: ({ tool, proyecto, onPrompt, onCerrar }: { tool: { id: string }; proyecto: { id: string } | null; onPrompt: ((d: string) => void) | null; onCerrar: () => void }) => (
     <div data-herr-abierta={tool.id} data-proyecto={proyecto?.id ?? ""}>{onPrompt && <button data-herr-prompt="" onClick={() => onPrompt("> hola\n\n— Reservas\n")} />}<button data-herr-cerrar="" onClick={onCerrar} /></div>
   ),
 }));
-vi.mock("../chat/use-chat", () => ({ useChat: () => ({ trabajando: false }) }));
+// Len's hook watches the project on screen; hers talks to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3).
+const chats = vi.hoisted(() => ({ lenTrabajando: false, deElla: null as Record<string, unknown> | null }));
+vi.mock("../chat/use-chat", () => ({
+  useChat: (o: Record<string, unknown>) => {
+    if (o.assistantId) chats.deElla = o;
+    return { trabajando: o.assistantId ? false : chats.lenTrabajando, progreso: [] };
+  },
+}));
 
 let root: Root;
 let host: HTMLDivElement;
@@ -412,15 +419,16 @@ describe("her chat and her notices", () => {
   }
   const suChat = () => (chatProps.ultimo?.asistente ? chatProps.ultimo : null);
 
-  it("🔴 «Hablar» opens her chat over her tab, outside the panel, and reads her conversation", async () => {
+  // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.7): «Hablar» closes her tab and opens THE chat.
+  it("🔴 «Hablar» closes her tab and opens her chat, the main screen's one, and reads her conversation", async () => {
+    // Closing a panel asks whether motion is reduced (panel-animado.tsx).
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
     const { pedir } = await paint();
     await act(async () => aviso.asistente!("a1", { parte: "conversaciones", tarjeta: null }));
     await act(async () => host.querySelector<HTMLButtonElement>("[data-tab-hablar]")!.click());
     await act(async () => {});
-    expect(suChat()).toMatchObject({ abierto: true, projectId: "p1", asistente: { name: "Lucía", color: "#f4a48b", look: { shape: "drop", color: "#f4a48b" } } });
-    expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
-    expect(host.querySelector(".app-panel-motion .app-su-chat")).toBeNull();
-    expect(host.querySelector(".app-su-chat")).not.toBeNull();
+    expect(suChat()).toMatchObject({ abierto: true, projectId: "p1", cardsProjectId: "p1", asistente: { name: "Lucía", color: "#f4a48b", look: { shape: "drop", color: "#f4a48b" } } });
+    expect(host.querySelector('[data-assistant-tab="a1"]')).toBeNull();
     expect(pedir).toHaveBeenCalledWith("/api/assistants/a1/chat");
   });
 
@@ -449,6 +457,77 @@ describe("her chat and her notices", () => {
     await act(async () => aviso.asistente!("a-borrada", { parte: "hablar", tarjeta: null }));
     await act(async () => {});
     expect(host.querySelector('[data-assistant-tab="a-borrada"]')).not.toBeNull();
-    expect(suChat()).toBeNull();
+    expect(suChat()?.abierto ?? false).toBe(false);
+  });
+});
+
+describe("Len móvil is her app: her sheet and her chat over your page (spec local 2026-11-16-movil-es-tu-asistente, §5.3)", () => {
+  const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
+  const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
+  beforeEach(() => {
+    chatProps.ella = null;
+    chatProps.len = null;
+    chats.lenTrabajando = false;
+    chats.deElla = null;
+  });
+  async function paint(asistentes: unknown[] = [LUCIA]) {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta === "/api/assistants"
+            ? Response.json({ enabled: true, assistants: asistentes })
+            : ruta === "/api/assistants/a1/chat"
+              ? Response.json({ chatHistory: [] })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ project: proyecto }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    return { pedir };
+  }
+  const hoja = () => host.querySelector<HTMLElement>(".app-main-sheet")!;
+  const botonesDeLaHoja = () => [...hoja().querySelectorAll<HTMLButtonElement>("button")];
+
+  it("🔴 one chat: the sheet is hers, with no call, and asking for a change opens a chat named Lucía", async () => {
+    await paint();
+    expect(hoja().querySelector(".lm-who-t b")?.textContent).toBe("Lucía");
+    expect(botonesDeLaHoja().some((b) => b.textContent?.includes("llamar"))).toBe(false);
+    await act(async () => botonesDeLaHoja().find((b) => b.textContent?.includes("pedirCambio"))!.click());
+    expect(chatProps.ella).toMatchObject({ abierto: true, projectId: "p1", cardsProjectId: "p1", asistente: { name: "Lucía" } });
+    expect(chatProps.len).toBeNull();
+    expect(chats.deElla).toMatchObject({ assistantId: "a1", projectId: "p1", viewingProjectId: "p1" });
+  });
+
+  it("while Len works on the page, her sheet says so", async () => {
+    chats.lenTrabajando = true;
+    await paint();
+    expect(hoja().textContent).toContain("lenTrabajando");
+  });
+
+  it("no «Tu Len» and no call with her: Len's face isn't hers", async () => {
+    await paint();
+    await act(async () => host.querySelector<HTMLButtonElement>(".lm-bar-t")!.click());
+    expect([...host.querySelectorAll<HTMLButtonElement>(".app-selector button")].some((b) => b.textContent === "tuLen")).toBe(false);
+    expect(host.querySelector("[data-llamada]")).toBeNull();
+  });
+
+  it("her face in the bar opens her place", async () => {
+    await paint();
+    await act(async () => host.querySelector<HTMLButtonElement>(".ent-face-button")!.click());
+    expect(host.querySelector('[data-assistant-tab="a1"]')).not.toBeNull();
+  });
+
+  it("🔴 the app of today when she isn't there: Len's sheet, his call and his chat", async () => {
+    await paint([]);
+    expect(hoja().querySelector(".lm-who-t b")?.textContent).toBe("Len");
+    expect(botonesDeLaHoja().some((b) => b.textContent?.includes("llamar"))).toBe(true);
+    expect(chatProps.len).not.toBeNull();
+    expect(chatProps.ella).toBeNull();
   });
 });

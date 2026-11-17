@@ -46,6 +46,9 @@ export interface OpcionesDelChat {
   textoDeArchivoSolo: string;
   /** Talking with the person's own assistant instead of Len (phase 5): every message carries her id. */
   assistantId?: string;
+  /** With her: the project on the phone's screen, sent with each message (spec local 2026-11-16-movil-es-tu-asistente,
+   *  §5.3). */
+  viewingProjectId?: string;
 }
 
 let contador = 0;
@@ -109,12 +112,12 @@ export function useChat(o: OpcionesDelChat) {
   }, [o.historial, limpiarAdjuntos]);
 
   const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume", documentos?: readonly ArchivoAdjunto[]): Promise<boolean> => {
-    const { cliente, projectId, assistantId } = op.current;
+    const { cliente, projectId, assistantId, viewingProjectId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
     vivoRef.current = turnoNuevo(fila);
     setVivo(vivoRef.current);
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId } : {}) }, (e) => {
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}) } : {}) }, (e) => {
       if (actual !== epoca.current) return;
       setVivo((v) => (v ? conEvento(v, e) : v));
       if (e.nombre === "turno" && typeof (e.datos as { turnoId?: unknown } | null)?.turnoId === "string") {

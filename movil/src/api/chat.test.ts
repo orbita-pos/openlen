@@ -49,6 +49,14 @@ describe("mandarALen", () => {
     expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body)).turnId).toBe("f1");
   });
 
+  it("a message to her names the project on the phone's screen (spec local 2026-11-16-movil-es-tu-asistente, §5.3)", async () => {
+    const { c, pedir } = cliente(async () => trozos(""));
+    await mandarALen(c, { projectId: "p1", prompt: "botón verde", assistantId: "a1", viewingProjectId: "p2" }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toMatchObject({ projectId: "p1", assistantId: "a1", viewingProjectId: "p2" });
+    await mandarALen(c, { projectId: "p1", prompt: "x" }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[1]![1]!.body)).viewingProjectId).toBeUndefined();
+  });
+
   it("con foto, va como attachedImage", async () => {
     const { c, pedir } = cliente(async () => trozos(""));
     await mandarALen(c, { projectId: "p1", prompt: "x", foto: "https://x/f.jpg" }, () => {});
