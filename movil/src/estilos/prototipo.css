@@ -142,9 +142,9 @@ svg{display:block}
    principal, --m-card lo que va en tarjeta (mis burbujas, el campo de texto).
    .lm-m sólo trae las variables (la cara que vuela la usa); .lm-marca pinta. */
 .lm-m{
-  --m-bg:radial-gradient(110% 55% at 28% 0%,rgba(255,238,220,.62),rgba(255,238,220,0) 62%),linear-gradient(180deg,#FF9C48 0%,#FA7A1F 36%,#F2640F 70%,#E8560A 100%);
-  --m-ink:#fff; --m-dim:rgba(255,255,255,.82); --m-faint:rgba(255,255,255,.42); --m-ring:rgba(255,255,255,.8);
-  --m-glass:rgba(255,255,255,.2); --m-solid:#fff; --m-solid-ink:#C4460A;
+  --m-bg:radial-gradient(110% 55% at 28% 0%,rgba(255,238,220,.62),rgba(255,238,220,0) 62%),var(--her-sheet,linear-gradient(180deg,#FF9C48 0%,#FA7A1F 36%,#F2640F 70%,#E8560A 100%));
+  --m-ink:var(--her-on,#fff); --m-dim:rgba(var(--her-on-rgb,255,255,255),.82); --m-faint:rgba(var(--her-on-rgb,255,255,255),.42); --m-ring:rgba(var(--her-on-rgb,255,255,255),.8);
+  --m-glass:rgba(var(--her-on-rgb,255,255,255),.2); --m-solid:#fff; --m-solid-ink:var(--her-deep,#C4460A);
   --m-key-bg:#fff; --m-key:var(--her-deep,#B93F08); --m-card:#fff; --m-card-ink:#2B1A10;
   --m-on:#fff; --m-on-ink:#2B1405;
   --m-prop:#fff; --m-err:#F4C9AE; --m-shadow:rgba(140,40,0,.2);
@@ -595,7 +595,7 @@ svg{display:block}
    el chat. Los datos tienen la forma de lib/analytics/queries.ts (Insights).
    Una sola serie, un solo naranja: la barra de hoy va más clara porque el
    día no ha acabado (no es que bajara). El texto nunca va en naranja. */
-.lm-screen{--bar:#E85A0A;--bar-soft:#F7C4A0;--up-bg:rgba(31,169,103,.14);--up-ink:#137A48;--wa-ic:#128C4A}
+.lm-screen{--bar:var(--her-tint-c,#E85A0A);--bar-soft:var(--her-soft,#F7C4A0);--up-bg:rgba(31,169,103,.14);--up-ink:#137A48;--wa-ic:#128C4A}
 :root[data-theme="dark"] .lm-screen{--bar:var(--len);--bar-soft:rgba(var(--her-rgb,255,138,30),.4);--up-bg:rgba(31,169,103,.2);--up-ink:#6FDDA6;--wa-ic:#4ADE80}
 .nx{width:350px;border-radius:22px;background:var(--lm-panel);color:var(--lm-ink);padding:13px 15px 13px;box-shadow:0 0 0 1px var(--lm-line),0 18px 36px -20px rgba(90,40,10,.5);text-align:left}
 .nx-cap{font:600 11px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--lm-muted)}
