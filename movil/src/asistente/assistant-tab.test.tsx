@@ -28,7 +28,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarjeta?: string | null; cards?: unknown[]; onHablar?: () => void; onVerLen?: (projectId: string) => void } = {}) {
+async function paint(o: { parte?: "hablar" | "conversaciones" | "pedidos"; tarjeta?: string | null; cards?: unknown[]; onHablar?: () => void; onVerLen?: (projectId: string, fila: string | null) => void } = {}) {
   vi.mocked(leerSusVisitas).mockResolvedValue([VISIT] as never);
   vi.mocked(leerSusPedidos).mockResolvedValue((o.cards ?? [CARD]) as never);
   vi.mocked(tocarPedido).mockResolvedValue({ ok: true });
@@ -167,7 +167,15 @@ describe("AssistantTab", () => {
     const onVerLen = vi.fn();
     const host = await paint({ parte: "pedidos", cards: [{ ...CARD, status: "accepted" }], onVerLen });
     await click(host.querySelector("[data-pedido-ver-len]"));
-    expect(onVerLen).toHaveBeenCalledWith("p2");
+    expect(onVerLen).toHaveBeenCalledWith("p2", null);
+  });
+
+  // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.5): «Ver a Len» leads to what Len did.
+  it("«Ver a Len» on an accepted request passes its row", async () => {
+    const onVerLen = vi.fn();
+    const host = await paint({ parte: "pedidos", cards: [{ ...CARD, status: "accepted", acceptedRowId: "f9" }], onVerLen });
+    await click(host.querySelector("[data-pedido-ver-len]"));
+    expect(onVerLen).toHaveBeenCalledWith("p2", "f9");
   });
 
   it("🔴 a request notice's card is highlighted and brought into view", async () => {

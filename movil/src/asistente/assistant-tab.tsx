@@ -39,6 +39,8 @@ interface Pedido {
   /** Why Len's turn couldn't start (`no_credits`, …): the card waits again. */
   readonly failure?: string | null;
   readonly projectTitle?: string | null;
+  /** Len's row, once the request was passed to him (spec local 2026-11-16-movil-es-tu-asistente, §5.5). */
+  readonly acceptedRowId?: string | null;
 }
 
 export function AssistantTab({
@@ -64,8 +66,8 @@ export function AssistantTab({
   onCerrar: () => void;
   /** Opens her chat (the main screen's). */
   onHablar: () => void;
-  /** Len's chat in the project a request was passed to. */
-  onVerLen: (projectId: string) => void;
+  /** What Len did with a request passed to him (in her app, his turn to read; in Len's, his chat). */
+  onVerLen: (projectId: string, fila: string | null) => void;
 }) {
   const t = useTranslations("movil.asistente");
   // Opened by a notice of one deleted since (principal.tsx), there is no name: «your assistant» (no gender, as the web's).
@@ -201,7 +203,7 @@ export function AssistantTab({
                         <>
                           <small>{p.status === "accepted" ? t("own.requests.done") : t("own.requests.dismissed")}</small>
                           {p.status === "accepted" && (
-                            <button type="button" className="lm-btn lm-sec" data-pedido-ver-len="" onClick={() => onVerLen(p.projectId)}>
+                            <button type="button" className="lm-btn lm-sec" data-pedido-ver-len="" onClick={() => onVerLen(p.projectId, p.acceptedRowId ?? null)}>
                               {t("own.requests.openChat")}
                             </button>
                           )}
