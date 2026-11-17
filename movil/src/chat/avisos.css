@@ -15,7 +15,7 @@
 .ch-aviso-botones button { min-height: 44px; padding: 0 18px; border-radius: 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .ch-aviso-botones button:disabled { opacity: .5; }
 .ch-aviso-botones button:focus-visible { outline: 2px solid var(--c-qr); outline-offset: 2px; }
-.ch-aviso-hazlo { border: 0; background: var(--c-me); color: #fff; }
+.ch-aviso-hazlo { border: 0; background: var(--c-me); color: var(--c-me-ink); }
 .ch-aviso-ahora-no { border: 1px solid var(--c-line); background: transparent; color: var(--c-ink); }
 .ch-aviso-botones { flex-wrap: wrap; }
 .ch-aviso-accion { display: grid; gap: 4px; margin-top: 4px; padding: 8px 10px; border: 1px solid var(--c-line); border-radius: 12px; font-size: 13px; }
