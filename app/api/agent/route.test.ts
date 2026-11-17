@@ -297,7 +297,7 @@ vi.mock("@/lib/agent/capture-storage", () => ({ storeStepScreenshots: mocks.stor
 const assistantStore = vi.hoisted(() => ({
   assistantById: vi.fn(async (_id: string): Promise<Record<string, unknown> | null> => null),
   readyAssistantNotices: vi.fn(async (_id: string, _now: Date): Promise<Record<string, unknown>[]> => []),
-  removeAssistantNotices: vi.fn(async (_id: string, _ids: readonly string[]) => {}),
+  markAssistantNoticesHeard: vi.fn(async (_id: string, _ids: readonly string[], _at: Date) => {}),
 }));
 vi.mock("@/lib/assistants/store", () => assistantStore);
 // Phase 4: the projects she serves, read for her turn.
@@ -5245,7 +5245,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
   });
 
-  it("🔴 hears how its ask_len requests ended with its next request, once, and they are removed once heard", async () => {
+  it("🔴 hears how its ask_len requests ended with its next request, once, and they are marked heard (kept for the phone)", async () => {
     assistantStore.readyAssistantNotices.mockResolvedValueOnce([{ id: "n1", request: "botón más grande", status: "done", at: "2026-11-07T00:00:00.000Z", closing: "Listo." }]);
     let first: readonly string[] = [];
     let second: readonly string[] = ["x"];
@@ -5257,7 +5257,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     expect(first).toEqual(["Len finished the request you passed him: «botón más grande».\n\nHis closing message:\nListo."]);
     expect(second).toEqual([]);
-    expect(assistantStore.removeAssistantNotices).toHaveBeenCalledWith("a1", ["n1"]);
+    expect(assistantStore.markAssistantNoticesHeard).toHaveBeenCalledWith("a1", ["n1"], expect.any(Date));
   });
 
   it("the server's closing row goes to the assistant's conversation too", async () => {

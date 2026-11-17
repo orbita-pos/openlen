@@ -17,7 +17,7 @@ import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { projectsOfAssistant, type ServedProject } from "@/lib/assistants/projects";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
-import { assistantById, readyAssistantNotices, removeAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
+import { assistantById, markAssistantNoticesHeard, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
@@ -2401,13 +2401,14 @@ async function correrTurno(
           // Only this turn's jobs: the box may be shared with subagents (spec local 2026-11-01-subagentes-de-len).
           lateNotices: async () => (agentSession.terminal instanceof TurnSandbox ? agentSession.terminal.finishedBackground(holderOf(agentSession)) : []),
           // THE PERSON'S OWN ASSISTANT: how its ask_len requests ended, each as its own user message before its next
-          // call, as DeepSeek's settlement notices; removed once handed (DeepSeek's «marked delivered once»).
+          // call, as DeepSeek's settlement notices; marked heard once handed (DeepSeek's «marked delivered once»), and kept a
+          // week for the phone's card (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5).
           ...(asistente
             ? {
                 takeAgentNotices: () => {
                   const handed = avisosDelAsistente.splice(0);
                   if (handed.length > 0) {
-                    void removeAssistantNotices(asistente.id, handed.map((n) => n.id)).catch((err: unknown) => console.warn("[assistants] heard notices weren't removed", err));
+                    void markAssistantNoticesHeard(asistente.id, handed.map((n) => n.id), new Date()).catch((err: unknown) => console.warn("[assistants] heard notices weren't marked", err));
                   }
                   return handed.map(noticeText);
                 },

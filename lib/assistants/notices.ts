@@ -23,6 +23,9 @@ export interface AskLenNotice {
    *  Absent on notes written before. */
   readonly filaId?: string;
   readonly projectId?: string;
+  /** When she heard it, ISO (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5): kept, not removed, so the phone's card
+   *  can still tell how it ended; she never hears it again. */
+  readonly heardAt?: string;
 }
 
 export type ReadyNotice = AskLenNotice & { readonly lost?: true };
@@ -32,9 +35,18 @@ export const LOST_AFTER_MS = 3_600_000;
 /** As much of Len's closing message as a notice carries. */
 export const CLOSING_MAX = 2_000;
 
-/** The ones the assistant should hear now, oldest first. */
+/** How long a heard note stays for the phone. */
+export const HEARD_KEPT_MS = 7 * 24 * 3_600_000;
+
+/** Without the notes heard more than `HEARD_KEPT_MS` ago; unheard ones stay, however old. */
+export function pruneHeard(all: readonly AskLenNotice[], now: Date): AskLenNotice[] {
+  return all.filter((n) => !n.heardAt || now.getTime() - new Date(n.heardAt).getTime() <= HEARD_KEPT_MS);
+}
+
+/** The ones the assistant should hear now, oldest first; a heard one never again. */
 export function readyNotices(all: readonly AskLenNotice[], now: Date): ReadyNotice[] {
   return all.flatMap((n): ReadyNotice[] => {
+    if (n.heardAt) return [];
     if (n.status !== "queued") return [n];
     return now.getTime() - new Date(n.at).getTime() > LOST_AFTER_MS ? [{ ...n, lost: true }] : [];
   });

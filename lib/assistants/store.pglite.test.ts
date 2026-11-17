@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, readyAssistantNotices, removeAssistantNotices, renameAssistant, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 let pg: PGlite;
@@ -108,7 +108,7 @@ describe("assistants store", () => {
     expect((await assistantById(r.assistant.id))?.memory).toBe("Jueves: pasteles sin gluten.");
   });
 
-  it("keeps how its ask_len requests end, hands the ready ones, and forgets them once heard", async () => {
+  it("keeps how its ask_len requests end, hands the ready ones, and never hands a heard one again", async () => {
     const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
     if (!r.ok) throw new Error("not created");
     const id = r.assistant.id;
@@ -118,9 +118,33 @@ describe("assistants store", () => {
     expect(await readyAssistantNotices(id, new Date())).toEqual([]);
     await settleAssistantNotice(id, "n1", { status: "done", closing: "Listo." });
     expect((await readyAssistantNotices(id, new Date())).map((n) => [n.id, n.status, n.closing])).toEqual([["n1", "done", "Listo."]]);
-    await removeAssistantNotices(id, ["n1"]);
+    await markAssistantNoticesHeard(id, ["n1"], new Date());
     expect(await readyAssistantNotices(id, new Date())).toEqual([]);
-    expect((await assistantById(id))?.notices.map((n) => n.id)).toEqual(["n2"]);
+    expect((await assistantById(id))?.notices.map((n) => n.id)).toEqual(["n1", "n2"]);
+  });
+
+  it("🔴 marking heard keeps the note for the phone and out of her next turn", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    const id = r.assistant.id;
+    const now = new Date();
+    await addAssistantNotice(id, { id: "n1", request: "botón verde", status: "failed", reason: "no_credits", at: now.toISOString(), filaId: "f1", projectId: "p1" });
+    await addAssistantNotice(id, { id: "n2", request: "título", status: "queued", at: now.toISOString(), filaId: "f2", projectId: "p1" });
+    await markAssistantNoticesHeard(id, ["n1"], now);
+    expect(await readyAssistantNotices(id, now)).toEqual([]);
+    const found = await assistantNoticesByFila(id, ["f1"]);
+    expect(found.map((n) => [n.id, n.status, n.reason, n.heardAt])).toEqual([["n1", "failed", "no_credits", now.toISOString()]]);
+  });
+
+  it("adding a note lets go of the ones heard over a week ago", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    const id = r.assistant.id;
+    const longAgo = new Date(Date.now() - 8 * 24 * 3_600_000);
+    await addAssistantNotice(id, { id: "old", request: "x", status: "done", at: longAgo.toISOString() });
+    await markAssistantNoticesHeard(id, ["old"], longAgo);
+    await addAssistantNotice(id, { id: "new", request: "y", status: "queued", at: new Date().toISOString() });
+    expect((await assistantById(id))?.notices.map((n) => n.id)).toEqual(["new"]);
   });
 
   it("lists the newest first", async () => {
