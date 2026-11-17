@@ -37,13 +37,29 @@ export interface Tint {
 }
 
 /** `null` when it is not a color: the chat then keeps its own. */
+/** How many 5 % steps toward black her color may take to carry white text: a quarter. */
+const WHITE_TEXT_MAX_STEPS = 5;
+
+/** `color` moved away from `ink` in 5 % steps until `ink` reads on it at 4.5:1 (20 steps at most). */
+function towardInk(color: string, ink: string): { tint: string; steps: number } {
+  let tint = color;
+  let steps = 0;
+  while (contrast(tint, ink) < 4.5 && steps < 20) {
+    steps++;
+    tint = mix(color, ink === DARK ? "#ffffff" : "#000000", steps * 0.05);
+  }
+  return { tint, steps };
+}
+
 export function tintOf(color: string): Tint | null {
   if (!HEX.test(color)) return null;
   const hers = color.toLowerCase();
-  const ink = contrast(hers, DARK) >= contrast(hers, LIGHT) ? DARK : LIGHT;
-  // A middle tone (a gray, a mid blue) reads with neither ink: it moves away from its ink, only as far as it has to.
-  let tint = hers;
-  for (let step = 1; contrast(tint, ink) < 4.5 && step <= 20; step++) tint = mix(hers, ink === DARK ? "#ffffff" : "#000000", step * 0.05);
+  // White text whenever her color takes it with a quarter of darkening at most — a mid blue, Len's orange, a pink —,
+  // as the chats she is drawn from do (Jesús 16/11); a light color (a yellow, a light green) keeps dark text.
+  const darkened = towardInk(hers, LIGHT);
+  const ink = darkened.steps <= WHITE_TEXT_MAX_STEPS || contrast(hers, LIGHT) > contrast(hers, DARK) ? LIGHT : DARK;
+  // The color moves away from its ink, only as far as it has to, so the text reads at 4.5:1.
+  const tint = ink === LIGHT ? darkened.tint : towardInk(hers, DARK).tint;
   let edge = tint;
   for (let step = 1; contrast(tint, edge) < 1.3 && step <= 20; step++) edge = mix(tint, ink, step * 0.04);
   return { tint, ink, edge, soft: mix(hers, "#ffffff", 0.86), softDark: mix(hers, "#000000", 0.78) };

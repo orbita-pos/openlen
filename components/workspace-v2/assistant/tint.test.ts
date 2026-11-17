@@ -39,6 +39,18 @@ describe("tintOf", () => {
     expect(tintOf("#1d1d1f")!.ink).toBe("#f4f4f5");
   });
 
+  // Jesús 16/11, with Dots-like references: a mid blue takes white text, a light green black.
+  it("🔴 white text on a mid color, darkened only as much as it needs (up to a quarter); black on a light one", () => {
+    for (const color of ["#3b82f6", "#f26a0f", "#ec4899", "#8b5cf6"]) {
+      const t = tintOf(color)!;
+      expect(t.ink, color).toBe("#f4f4f5");
+      expect(contrast(t.tint, t.ink), color).toBeGreaterThanOrEqual(4.5);
+      // Still her color: a quarter darker at most (Len's orange, the furthest of these, moves 1.66:1).
+      expect(contrast(t.tint, color), color).toBeLessThan(1.8);
+    }
+    for (const color of ["#22c55e", "#facc15", "#7dd3fc"]) expect(tintOf(color)!.ink, color).toBe("#1d1d1f");
+  });
+
   it("her header's background is her color, mostly paper: dark text reads on the light one, light on the dark", () => {
     for (const color of FIGURE_COLORS) {
       const t = tintOf(color)!;
