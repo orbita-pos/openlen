@@ -5,7 +5,7 @@
 // where it came from (`AssistantRequestOrigin`, «De Lucía»).
 import { randomUUID } from "node:crypto";
 
-import { dirigir, turnoDeLaFila } from "@/lib/agent/direcciones";
+import { dirigir, MAX_DIRECCION, turnoDeLaFila } from "@/lib/agent/direcciones";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { AssistantRequestOrigin } from "@/lib/projects/types";
 
@@ -69,12 +69,13 @@ async function storeNotes(): Promise<AskLenNotes> {
   return { queued: addAssistantNotice, settle: settleAssistantNotice, runningFor: runningAssistantRequest };
 }
 
-/** Steers Len's live turn on this row, as typing to Len while he works does (`dirigir`); false when it isn't running. */
-export type SteerLen = (filaId: string, userId: string, text: string) => boolean;
+/** Steers Len's live turn on this row, as typing to Len while he works does (`dirigir`); false when it isn't running.
+ *  `onUnread` runs if the turn closes before reading it (final review, I3): the request then goes on its own. */
+export type SteerLen = (filaId: string, userId: string, text: string, onUnread: (text: string) => void) => boolean;
 
-const steerLiveTurn: SteerLen = (filaId, userId, text) => {
+const steerLiveTurn: SteerLen = (filaId, userId, text, onUnread) => {
   const turno = turnoDeLaFila(filaId, userId);
-  return turno !== null && dirigir(turno, userId, text) === "ok";
+  return turno !== null && dirigir(turno, userId, text, { alCerrarSinLeer: onUnread }) === "ok";
 };
 
 /** The owner's photos and files for Len's turn in `projectId`: an address of her home's folder (`/img/a.webp`) only
@@ -107,7 +108,18 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   // Which project (phase 4): hers only, and the one the request names when she serves more than one.
   const served = assistant.projects?.length ? assistant.projects : [{ id: session.projectId, title: "" }];
   const named = typeof args.project === "string" ? args.project.trim() : "";
-  // Named, or the only one, or (spec local 2026-11-16-movil-es-tu-asistente, §5.3) the one on her owner's phone.
+  // Looking on the phone at a project she doesn't serve (spec local 2026-11-16-movil-es-tu-asistente, §5.6): a request
+  // that names none can't go to one of hers by default — it would change a page the owner isn't looking at.
+  if (!named && assistant.viewing && !assistant.viewing.served) {
+    return {
+      response: {
+        ok: false,
+        error: "not_your_project",
+        message: "Your owner is looking at a project you don't serve: you can't pass requests for it to Len. If they meant one of yours, pass its id in project; otherwise tell them their phone shows a button to let you serve it.",
+      },
+    };
+  }
+  // Named, or the only one, or (§5.3) the one on her owner's phone.
   const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
   const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : onPhone;
   if (named && !target) return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve: see ~/.assistant/PROJECTS.md." } };
@@ -130,12 +142,46 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
   const summary = request.length > 80 ? `${request.slice(0, 79)}…` : request;
   const extraBody = attachmentsFor(session, target.id);
+  const framing = framingOf(assistant.name, request, session.mensajeDelUsuario ?? null);
+  /** The request as a Len turn of its own, in the project's queue; its note says how it ends. Returns Len's row. */
+  const queue = async (): Promise<string> => {
+    const noticeId = randomUUID();
+    // Len's row: the note and her card both name it, so the phone can follow his turn (spec local
+    // 2026-11-16-movil-es-tu-asistente, §5.4).
+    const filaId = randomUUID();
+    await keep
+      .queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString(), filaId, projectId: target.id, ...(where ? { project: where } : {}) })
+      .catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
+    const settle = (patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>) =>
+      keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
+    go({
+      userId: session.userId,
+      projectId: target.id,
+      texto: request,
+      framing,
+      origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name },
+      timeZone: session.zonaHoraria ?? "UTC",
+      locale: session.uiLocale ?? "en",
+      filaId,
+      ...(extraBody ? { extraBody } : {}),
+      onStart: async () => {},
+      reply: async (text, _cards, finalText) => {
+        await settle({ status: "done", closing: (finalText ?? text).slice(0, CLOSING_MAX) });
+      },
+      fail: async (fallo) => {
+        await settle({ status: "failed", reason: fallo?.code ?? "the turn did not run" });
+      },
+    });
+    return filaId;
+  };
   // Len already working on a request she passed here: this one reaches him as a correction to it, as typing to Len
-  // while he works does (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). Not with photos or files: a correction
-  // carries only text, so those go as a request of their own.
-  if (!extraBody) {
+  // while he works does (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). Not with photos or files (a correction
+  // carries only text), nor when it wouldn't fit whole in one: those go as a request of their own. And if Len's turn
+  // closes before reading it, it goes as one too (final review, I3) — never lost while her result says it arrived.
+  if (!extraBody && framing.length <= MAX_DIRECCION) {
     const running = await keep.runningFor?.(assistant.id, target.id).catch(() => null);
-    if (running && steer(running, session.userId, framingOf(assistant.name, request, session.mensajeDelUsuario ?? null))) {
+    const onUnread = () => void queue().catch((err: unknown) => console.warn("[assistants] an unread correction couldn't be queued", err));
+    if (running && steer(running, session.userId, framing, onUnread)) {
       return {
         response: {
           ok: true,
@@ -147,33 +193,7 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
       };
     }
   }
-  const noticeId = randomUUID();
-  // Len's row: the note and her card both name it, so the phone can follow his turn (spec local
-  // 2026-11-16-movil-es-tu-asistente, §5.4).
-  const filaId = randomUUID();
-  await keep
-    .queued(assistant.id, { id: noticeId, request, status: "queued", at: new Date().toISOString(), filaId, projectId: target.id, ...(where ? { project: where } : {}) })
-    .catch((err: unknown) => console.warn("[assistants] the request's note wasn't kept", err));
-  const settle = (patch: Partial<Pick<AskLenNotice, "status" | "closing" | "reason">>) =>
-    keep.settle(assistant.id, noticeId, patch).catch((err: unknown) => console.warn("[assistants] the request's outcome wasn't kept", err));
-  go({
-    userId: session.userId,
-    projectId: target.id,
-    texto: request,
-    framing: framingOf(assistant.name, request, session.mensajeDelUsuario ?? null),
-    origin: { kind: "assistant", assistantId: assistant.id, assistantName: assistant.name },
-    timeZone: session.zonaHoraria ?? "UTC",
-    locale: session.uiLocale ?? "en",
-    filaId,
-    ...(extraBody ? { extraBody } : {}),
-    onStart: async () => {},
-    reply: async (text, _cards, finalText) => {
-      await settle({ status: "done", closing: (finalText ?? text).slice(0, CLOSING_MAX) });
-    },
-    fail: async (fallo) => {
-      await settle({ status: "failed", reason: fallo?.code ?? "the turn did not run" });
-    },
-  });
+  const filaId = await queue();
   return {
     response: {
       ok: true,

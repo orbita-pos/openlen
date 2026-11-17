@@ -323,3 +323,34 @@ describe("el encargo en el almacén", () => {
     expect(siguienteDeLaFila("f1")).toBeNull();
   });
 });
+
+// Her ask_len corrects a running Len turn (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). A correction accepted
+// after the loop's last look would be dropped by `cerrarTurno` — while her tool result says it reached Len (final
+// review, I3): one that carries a fallback gets it when its turn closes unread.
+describe("a correction that must not be lost", () => {
+  beforeEach(() => _vaciarTodo());
+
+  it("🔴 accepted but never read: its fallback runs when the turn closes", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "f1" });
+    const fallback = vi.fn();
+    expect(dirigir("t1", "u1", "mejor azul", { alCerrarSinLeer: fallback })).toBe("ok");
+    cerrarTurno("t1");
+    expect(fallback).toHaveBeenCalledWith("mejor azul");
+  });
+
+  it("read by the loop: no fallback", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "f1" });
+    const fallback = vi.fn();
+    dirigir("t1", "u1", "mejor azul", { alCerrarSinLeer: fallback });
+    expect(leerDireccion("t1")).toBe("mejor azul");
+    cerrarTurno("t1");
+    expect(fallback).not.toHaveBeenCalled();
+  });
+
+  it("a fallback that throws doesn't stop the turn from closing", () => {
+    abrirTurno("t1", "u1", Date.now(), { filaId: "f1" });
+    dirigir("t1", "u1", "x", { alCerrarSinLeer: () => { throw new Error("boom"); } });
+    expect(() => cerrarTurno("t1")).not.toThrow();
+    expect(turnoDeLaFila("f1", "u1")).toBeNull();
+  });
+});

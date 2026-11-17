@@ -5317,6 +5317,30 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(sent().assistantViewing).toContain("a project you don't serve");
     });
 
+    it("🔴 someone else's project shared with the owner: named as not hers, without its title", async () => {
+      served();
+      fijarAccesoDePrueba((projectId, u) => (projectId === "p9" ? { rol: "editor", duenoId: "otra" } : { rol: "dueno", duenoId: u }));
+      try {
+        await readEvents(await pedir({ assistantId: "a1", viewingProjectId: "p9" }));
+      } finally {
+        fijarAccesoDePrueba(null);
+      }
+      expect(session().assistant?.viewing).toEqual({ id: "p9", title: "", served: false });
+      expect(sent().assistantViewing).toContain("a project you don't serve");
+      expect(sent().assistantViewing).not.toContain("Title of p9");
+    });
+
+    it("a project the owner can't even see: nothing", async () => {
+      served();
+      fijarAccesoDePrueba((projectId, u) => (projectId === "p9" ? null : { rol: "dueno", duenoId: u }));
+      try {
+        await readEvents(await pedir({ assistantId: "a1", viewingProjectId: "p9" }));
+      } finally {
+        fijarAccesoDePrueba(null);
+      }
+      expect(session().assistant?.viewing).toBeUndefined();
+    });
+
     it("without it, her turn is as before", async () => {
       served();
       await readEvents(await pedir({ assistantId: "a1" }));

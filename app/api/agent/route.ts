@@ -417,13 +417,16 @@ type CuerpoDelTurno = {
   viewingProjectId?: unknown;
 };
 
-/** The project on her owner's phone: hers (`served`), or the owner's own she doesn't serve; anything else, nothing. */
+/** The project on her owner's phone: hers (`served`); the owner's own she doesn't serve, by name; someone else's shared
+ *  with the owner, nameless (final review, I4: she must know it isn't hers, never what it is called); one the owner
+ *  can't see, nothing. */
 async function projectOnThePhone(raw: unknown, served: readonly ServedProject[], personId: string): Promise<ViewingProject | null> {
   if (typeof raw !== "string" || !raw || raw.length > 100) return null;
   const hers = served.find((p) => p.projectId === raw);
   if (hers) return { id: raw, title: hers.title?.trim() || raw, served: true };
   const acceso = await accesoAlProyecto(raw, personId).catch(() => null);
-  if (acceso?.rol !== "dueno") return null;
+  if (!acceso) return null;
+  if (acceso.rol !== "dueno") return { id: raw, title: "", served: false };
   const title = (await titlesOf([raw]).catch(() => new Map<string, string | null>())).get(raw)?.trim() || raw;
   return { id: raw, title, served: false };
 }
