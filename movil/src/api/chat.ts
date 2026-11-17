@@ -12,7 +12,8 @@ export async function mandarALen(
   c: ClienteDeOpenLen,
   /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
   /** `assistantId`: a message to the person's own assistant, not Len (phase 5; the project is her home). */
-  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string },
+  /** `viewingProjectId`: with her, the project on the phone's screen (spec local 2026-11-16-movil-es-tu-asistente, §5.3). */
+  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string; viewingProjectId?: string },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -25,6 +26,7 @@ export async function mandarALen(
         prompt: cuerpo.prompt,
         ...(cuerpo.goal ? { goal: cuerpo.goal } : {}),
         ...(cuerpo.assistantId ? { assistantId: cuerpo.assistantId } : {}),
+        ...(cuerpo.assistantId && cuerpo.viewingProjectId ? { viewingProjectId: cuerpo.viewingProjectId } : {}),
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),

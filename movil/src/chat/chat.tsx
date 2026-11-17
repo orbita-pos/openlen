@@ -58,9 +58,14 @@ interface Props {
   /** Talking with the person's own assistant, not Len (phase 5): her name and colour in the header, and none of Len's
    *  own (the call, Equipo, his event and tool cards). */
   asistente?: { readonly name: string; readonly color: string; readonly look?: unknown };
+  /** Her chat on the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.5): the project on the screen, whose event
+   *  and tool cards show here, as in Len's chat. Her own `projectId` is her home. */
+  cardsProjectId?: string | null;
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente, cardsProjectId }: Props) {
+  // Whose cards: Len's chat, its project's; her chat, the project on the phone's screen (none: no cards).
+  const proyectoDeLasTarjetas = asistente ? cardsProjectId ?? null : projectId;
   const t = useTranslations("movil.chat");
   const tp = useTranslations("movil.principal");
   const tl = useTranslations("movil.llamada");
@@ -249,10 +254,10 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
 
       <div className="ch-historial">
       {/* «Len que avisa» (spec local 2026-11-03-len-que-avisa, §8): an event task's cards, over the conversation. */}
-      {!asistente && <AvisosDeLen cliente={cliente} projectId={projectId} abierto={abierto} resaltar={resaltarAviso ?? null} />}
-      {!asistente && <TarjetasDeHerramientas
+      {proyectoDeLasTarjetas && <AvisosDeLen cliente={cliente} projectId={proyectoDeLasTarjetas} abierto={abierto} resaltar={resaltarAviso ?? null} />}
+      {proyectoDeLasTarjetas && <TarjetasDeHerramientas
         cliente={cliente}
-        projectId={projectId}
+        projectId={proyectoDeLasTarjetas}
         abierto={abierto}
         idioma={idioma}
         onAbrirHerramienta={(id) => onAbrirHerramienta?.(id)}
