@@ -105,6 +105,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | "asistente" | "turnoDeLen" | null>(null);
   // What Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §5.4.9): in her app, where his chat used to lead.
   const [turnoDeLen, setTurnoDeLen] = useState<{ fila: string; projectId: string } | null>(null);
+  // «Antes / Ahora» of a Len card: that card's turn (null: the page's latest change, the sheet's shortcut).
+  const [comparando, setComparando] = useState<string | null>(null);
   // The person's own assistants (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): one button each, with her name,
   // beside «Entregado» and «Tareas»; none (or assistants off on the server) → no button. The open one, and on what part.
   const [asistentes, setAsistentes] = useState<readonly AssistantListItem[]>([]);
@@ -199,11 +201,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     const destino = panelDelAviso.current?.id === id ? panelDelAviso.current.panel : null;
     setPanel(destino && destino !== "chat" ? destino : null); panelDelAviso.current = null; setChatAbierto(destino === "chat"); setLlamada(false); setConPip(false);
   }, [id]);
-  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo" | "gestion" | "chat") => {
+  const abrirAviso = useCallback((destino: string, panelDestino?: "equipo" | "gestion" | "chat" | "comparar" | "turnoDeLen") => {
     // El controlador ya verificó identidad y acceso. Releer la lista conserva
     // también sus títulos y evita abrir proyectos que ya no estén disponibles.
     void listarProyectos(cliente).then((ps) => {
-      if (!ps.some((x) => x.id === destino)) return;
+      // Gone (deleted, no longer shared): you stay where you are, and the list read says so — a Len card of it shows
+      // it (deferred minor of the final review: it used to switch to it and stay on «Cargando»).
+      if (!ps.some((x) => x.id === destino)) { setLista(ps); return; }
       if (panelDestino) {
         if (idActual.current !== destino) panelDelAviso.current = { id: destino, panel: panelDestino };
         else if (panelDestino === "chat") { setPanel(null); setChatAbierto(true); }
@@ -355,18 +359,16 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   /** What Len did in one of his turns: its panel, over that project (switching to it first if it isn't on screen). */
   const abrirTurnoDeLen = useCallback((fila: string, projectId: string) => {
     setTurnoDeLen({ fila, projectId });
-    setChatAbierto(false);
-    if (projectId === idActual.current) { setPanel("turnoDeLen"); return; }
-    panelDelAviso.current = { id: projectId, panel: "turnoDeLen" };
-    abrirAviso(projectId);
+    if (projectId === idActual.current) { setChatAbierto(false); setPanel("turnoDeLen"); return; }
+    abrirAviso(projectId, "turnoDeLen");
   }, [abrirAviso]);
-  /** «Antes / Ahora» and «Publicar» of a Len card: that project's panel, switching to it first if it isn't on screen. */
-  const abrirPanelDelProyecto = useCallback((projectId: string, destino: "comparar" | "gestion") => {
-    setChatAbierto(false);
-    if (projectId === idActual.current) { setPanel(destino); return; }
-    panelDelAviso.current = { id: projectId, panel: destino };
-    setId(projectId);
-  }, []);
+  /** «Antes / Ahora» (of that card's turn) and «Publicar» of a Len card: that project's panel, switching to it first if
+   *  it isn't on screen — and only if it is still in your list. */
+  const abrirPanelDelProyecto = useCallback((projectId: string, destino: "comparar" | "gestion", fila?: string) => {
+    setComparando(destino === "comparar" ? fila ?? null : null);
+    if (projectId === idActual.current) { setChatAbierto(false); setPanel(destino); return; }
+    abrirAviso(projectId, destino);
+  }, [abrirAviso]);
   // Al acabar un turno (o volver de uno cortado): la conversación nueva y la
   // vista previa recargada, para que «Ver en tu página» enseñe el cambio.
   const recargar = useCallback(() => {
@@ -424,6 +426,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         .find((v) => v?.status === "running" || v?.status === "queued")
     : undefined;
   const lenTrabajaAqui = chat.trabajando || lenAqui !== undefined;
+  // In her app Len's own chat is out of sight: a turn of his on this page (a goal, an «@Len») that ended on a question
+  // shows in her sheet, with «Contestar» (deferred minor of the final review).
+  const preguntaDeLen = ella && !lenTrabajaAqui && chat.pregunta ? ultimoTurnoDeLen(p?.historial ?? []) : undefined;
   const pasosDeLenAqui = chat.trabajando ? chat.progreso : pasosDelTrabajo(lenAqui?.turn?.actions ?? []);
   const equipo = useEquipo({
     cliente, projectId: id, idioma, activo: panel === "equipo",
@@ -530,13 +535,16 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               <div className="lm-who-t">
                 <b>{ella ? ella.name : "Len"}</b>
                 {/* In her app, Len's work on the page on screen shows here too — his own turns and hers (§5.4). */}
-                <span className={(ella ? lenTrabajaAqui : chat.trabajando) ? "lm-live" : undefined}>{ella ? (lenTrabajaAqui ? tas("lenTrabajando") : t("estado")) : chat.trabajando ? t("trabajando") : t("estado")}</span>
+                <span className={(ella ? lenTrabajaAqui : chat.trabajando) ? "lm-live" : undefined}>{ella ? (lenTrabajaAqui ? tas("lenTrabajando") : preguntaDeLen ? tas("lenPregunta") : t("estado")) : chat.trabajando ? t("trabajando") : t("estado")}</span>
               </div>
             </div>
             <div id="len-sheet-body" className="lm-body" inert={hojaMin}>
               <p className="lm-msg">{(ella ? dichoElla?.texto : dicho?.texto) || t("sinMensaje")}</p>
               <Progreso pasos={ella ? pasosDeLenAqui : chat.progreso} trabajando={ella ? lenTrabajaAqui : chat.trabajando} />
               <div className="lm-actions">
+                {preguntaDeLen && id && (
+                  <button type="button" className="lm-btn lm-sec" onClick={() => abrirTurnoDeLen(preguntaDeLen.id, id)}>{tas("contestar")}</button>
+                )}
                 {/* No call with her in this version (§5.7): talking by voice to her is a work of its own. */}
                 {!ella && (
                   <button type="button" className="lm-btn lm-pri" onClick={() => setLlamada(true)}>
@@ -551,7 +559,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
               </div>
               <div className="ent-shortcuts">
                 <button type="button" onClick={() => setPanel("gestion")}>{te("gestionar")}</button>
-                <button type="button" onClick={() => setPanel("comparar")}>{te("comparar")}</button>
+                <button type="button" onClick={() => { setComparando(null); setPanel("comparar"); }}>{te("comparar")}</button>
                 <button type="button" onClick={() => setPanel("equipo")}>{tq("titulo")}</button>
                 {id && herramientas && herramientas !== "off" && herramientas.paid && herramientas.tools.filter((x) => x.placement === "project" && sePuedeAbrir(x)).map((x) => (
                   <button key={x.id} type="button" className="herr-atajo" data-tool-shortcut={x.id} onClick={() => setHerramientaAbierta({ tool: x, proyecto: { id, title: p?.title ?? lista?.find((y) => y.id === id)?.title ?? "" } })}>
@@ -586,7 +594,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           byFila: pedidosALen.byFila,
           onStop: (turno: string) => void pedidosALen.stop(turno),
           projectTitle: (pid: string) => lista?.find((x) => x.id === pid)?.title ?? "",
-          onCompare: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "comparar"),
+          projectGone: (pid: string) => !!lista && !lista.some((x) => x.id === pid),
+          onCompare: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "comparar", r.filaId),
           onPublish: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "gestion"),
           onOpen: (r: LenRequestRef) => abrirTurnoDeLen(r.filaId, r.projectId),
         } } : {})}
@@ -623,13 +632,16 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
         {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, m) => { setPanel(null); if (!ella) setChatAbierto(true); void chat.mandarEncargo(texto, m); }} />
           : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
-          : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} page={ultimoTurnoDeLen(p?.historial ?? [])?.page} onCerrar={() => setPanel(null)} />
+          : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} {...(comparando ? { fila: comparando } : { page: ultimoTurnoDeLen(p?.historial ?? [])?.page })} onCerrar={() => setPanel(null)} />
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); if (ella) { abrirTurnoDeLen(turno, destino); return; } setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
           : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} />
           : panel === "asistente" && asistenteAbierta ? <AssistantTab key={`${asistenteAbierta.asistente.id}:${asistenteAbierta.n}`} cubierta={!!ella && chatAbierto} cliente={cliente} asistente={asistenteAbierta.asistente} parte={asistenteAbierta.parte} tarjeta={asistenteAbierta.tarjeta ?? null} idioma={idioma} onCerrar={() => setPanel(null)} onHablar={() => hablarCon(asistenteAbierta.asistente)} onVerLen={(proyecto, fila) => { setPanel(null); if (ella && fila) { abrirTurnoDeLen(fila, proyecto); return; } abrirAviso(proyecto, ella ? undefined : "chat"); }} />
-          : panel === "turnoDeLen" && turnoDeLen ? <LenTurnView key={turnoDeLen.fila} cliente={cliente} fila={turnoDeLen.fila} projectTitle={lista?.find((x) => x.id === turnoDeLen.projectId)?.title ?? ""} onClose={() => setPanel(null)} /> : null}
+          : panel === "turnoDeLen" && turnoDeLen ? <LenTurnView key={turnoDeLen.fila} cliente={cliente} fila={turnoDeLen.fila} projectTitle={lista?.find((x) => x.id === turnoDeLen.projectId)?.title ?? ""} onClose={() => setPanel(null)}
+              // Answering a question Len ended on: the next message to Len on that page, as the phone always answered
+              // him — his next turn, which her sheet shows working (deferred minor of the final review).
+              {...(turnoDeLen.projectId === id ? { onAnswer: (texto: string) => { setPanel(null); chat.mandar(texto); } } : {})} /> : null}
       </PanelAnimado>
       {p && <EntregaVisual key={id} projectId={id} turno={ultimoTurnoDeLen(p.historial)} onVer={() => { setChatAbierto(false); setHojaMin(true); }} />}
       {modo.kind === "welcome" && casaDeLaBienvenida && (

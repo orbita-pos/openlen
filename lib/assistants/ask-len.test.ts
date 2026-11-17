@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { _vaciarTodo, abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import type { AgentSession } from "@/lib/agent/tools";
 
 import { ASK_LEN, ASK_LEN_DECLARATION, runAskLen } from "./ask-len";
@@ -92,6 +93,30 @@ describe("ask_len", () => {
       expect(notes.queued).not.toHaveBeenCalled();
       expect(out.response).toMatchObject({ ok: true, steered: true });
       expect(out.lenRequest).toEqual({ filaId: "f1", projectId: "p1" });
+    });
+
+    // Deferred minor of the final review: the tests above stub `steer`; this one drives the real one through the turn
+    // registry Len's live turns use (lib/agent/direcciones.ts).
+    it("🔴 with the real turn registry: Len's live turn reads the correction; one he never reads goes as its own request", async () => {
+      _vaciarTodo();
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      abrirTurno("t1", "u1", Date.now(), { filaId: "f1", projectId: "p1" });
+      expect((await runAskLen(ASSISTANT_SESSION, { request: "mejor azul" }, launch, notes)).response).toMatchObject({ ok: true, steered: true });
+      expect(leerDireccion("t1")).toContain("mejor azul");
+      cerrarTurno("t1");
+      expect(launch).not.toHaveBeenCalled();
+
+      abrirTurno("t2", "u1", Date.now(), { filaId: "f1", projectId: "p1" });
+      await runAskLen(ASSISTANT_SESSION, { request: "y el título en rojo" }, launch, notes);
+      cerrarTurno("t2");
+      await vi.waitFor(() => expect(launch).toHaveBeenCalledTimes(1));
+      expect(launch.mock.calls[0]![0]).toMatchObject({ texto: "y el título en rojo", projectId: "p1" });
+
+      // No live turn for the row any more: nothing to correct, so it goes in line.
+      expect((await runAskLen(ASSISTANT_SESSION, { request: "y el pie" }, launch, notes)).response).toMatchObject({ ok: true, queued: true });
+      expect(launch).toHaveBeenCalledTimes(2);
+      _vaciarTodo();
     });
 
     it("🔴 a second request while the first is still queued is queued too, not lost", async () => {

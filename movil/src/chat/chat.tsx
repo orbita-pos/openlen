@@ -70,6 +70,8 @@ interface Props {
     readonly byFila: ReadonlyMap<string, LenRequestView>;
     readonly onStop: (turnoId: string) => void;
     readonly projectTitle: (projectId: string) => string;
+    /** No longer in your list (deleted, no longer shared): its card offers nothing to open. */
+    readonly projectGone?: (projectId: string) => boolean;
     readonly onCompare: (ref: LenRequestRef) => void;
     readonly onPublish: (ref: LenRequestRef) => void;
     readonly onOpen?: (ref: LenRequestRef) => void;
@@ -194,7 +196,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       <SubagentesLineas runs={subagentes.porFila.get(e.fila) ?? []} parar={subagentes.parar} />
     </div>;
     if (e.tipo === "lenPedidos") return <div className="ch-row is-len is-cont" key={e.clave} data-clave={e.clave}>
-      {e.refs.map((r) => <LenRequestCard key={r.filaId} view={lenCards?.byFila.get(r.filaId)} lenRef={r} projectTitle={lenCards?.projectTitle(r.projectId) ?? ""} name={asistente?.name ?? ""}
+      {e.refs.map((r) => <LenRequestCard key={r.filaId} view={lenCards?.byFila.get(r.filaId)} lenRef={r} projectTitle={lenCards?.projectTitle(r.projectId) ?? ""} gone={lenCards?.projectGone?.(r.projectId) ?? false} name={asistente?.name ?? ""}
         onStop={(turno) => lenCards?.onStop(turno)} onCompare={() => lenCards?.onCompare(r)} onPublish={() => lenCards?.onPublish(r)} onOpen={() => lenCards?.onOpen?.(r)} />)}
     </div>;
     if (e.tipo === "origen") return <div className="ch-day" key={e.clave}>{t("subagentes.origen")}</div>;

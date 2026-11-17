@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const m = vi.hoisted(() => ({ user: vi.fn(), acceso: vi.fn(), proyecto: vi.fn(), versiones: vi.fn(), html: vi.fn() }));
+const m = vi.hoisted(() => ({ user: vi.fn(), acceso: vi.fn(), proyecto: vi.fn(), versiones: vi.fn(), html: vi.fn(), cambios: vi.fn() }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: m.user }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: m.acceso }));
 vi.mock("@/lib/projects", () => ({ getProject: m.proyecto }));
 vi.mock("@/lib/projects/versions", () => ({ listVersions: m.versiones, getVersionHtml: m.html }));
+vi.mock("@/lib/projects/deshacer-turno", () => ({ cambiosDe: m.cambios }));
 import { GET } from "./route";
 const req = () => new Request("https://openlen.com/api/movil/entrega?project=p1", { headers: { origin: "https://localhost" } });
 beforeEach(() => {
@@ -32,6 +33,27 @@ describe("entrega móvil", () => {
     m.versiones.mockResolvedValue([{ id: "v1", page: "contacto" }]);
     expect((await (await GET(req())).json()).comparacion).toBeNull();
     expect(m.html).not.toHaveBeenCalled();
+  });
+  // Deferred minor of the final review: a Len card's «Antes / Ahora» showed the page's latest change, not its turn's.
+  it("🔴 con la fila de una tarjeta, compara lo que cambió ESE turno, nunca la última versión", async () => {
+    m.cambios.mockResolvedValue({ deshecho: false, cambios: [
+      { ruta: "/contacto/index.html", antes: "<p>C antes</p>", despues: "<p>C ahora</p>", deshacible: true },
+      { ruta: "/index.html", antes: "<p>Turno antes</p>", despues: "<p>Turno ahora</p>", deshacible: true },
+      { ruta: "/src/App.tsx", antes: "a", despues: "b", deshacible: true },
+    ] });
+    const j = await (await GET(new Request("https://openlen.com/api/movil/entrega?project=p1&fila=f1"))).json();
+    expect(m.cambios).toHaveBeenCalledWith("p1", "f1");
+    expect(j.comparacion.page).toBeNull();
+    expect(j.comparacion.antes.html).toBe("<p>Turno antes</p>");
+    expect(j.comparacion.ahora.html).toBe("<p>Turno ahora</p>");
+    expect(m.versiones).not.toHaveBeenCalled();
+  });
+  it("🔴 un turno que no cambió ninguna página (o ya no se guarda): no hay comparación", async () => {
+    m.cambios.mockResolvedValue({ deshecho: false, cambios: [{ ruta: "/index.html", antes: null, despues: "<p>Nueva</p>", deshacible: true }] });
+    expect((await (await GET(new Request("https://openlen.com/api/movil/entrega?project=p1&fila=f1"))).json()).comparacion).toBeNull();
+    m.cambios.mockResolvedValue(null);
+    expect((await (await GET(new Request("https://openlen.com/api/movil/entrega?project=p1&fila=f1"))).json()).comparacion).toBeNull();
+    expect(m.versiones).not.toHaveBeenCalled();
   });
   it("sin sesión no lee el proyecto", async () => {
     m.user.mockResolvedValue(null);

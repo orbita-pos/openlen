@@ -17,7 +17,7 @@ vi.mock("../cara", () => ({ Cara: () => null }));
 const bienvenida = vi.hoisted(() => ({ props: null as null | { projectId: string; onCreated: (id: string) => void; onNotNow: () => void } }));
 vi.mock("../asistente/welcome-creator", () => ({ WelcomeCreator: (p: { projectId: string; onCreated: (id: string) => void; onNotNow: () => void }) => { bienvenida.props = p; return <div data-welcome={p.projectId} />; } }));
 // What Len did has its own test (../asistente/len-turn-view.test.tsx): here, which row opens.
-vi.mock("../asistente/len-turn-view", () => ({ LenTurnView: (p: { fila: string; projectTitle: string }) => <div data-len-turn={p.fila} data-len-turn-project={p.projectTitle} /> }));
+vi.mock("../asistente/len-turn-view", () => ({ LenTurnView: (p: { fila: string; projectTitle: string; onAnswer?: (text: string) => void }) => <div data-len-turn={p.fila} data-len-turn-project={p.projectTitle}>{p.onAnswer && <button data-len-turn-answer="" onClick={() => p.onAnswer!("Azul")} />}</div> }));
 // Delivered has its own test: here, where «Ver en el chat» leads.
 const entregado = vi.hoisted(() => ({ irAlChat: null as null | ((projectId: string, turno: string) => void) }));
 vi.mock("../overview/delivered-tab", () => ({ DeliveredTab: (p: { onIrAlChat: (projectId: string, turno: string) => void }) => { entregado.irAlChat = p.onIrAlChat; return <div data-delivered-tab="" />; } }));
@@ -34,11 +34,15 @@ vi.mock("../herramientas/tool-screen", () => ({
   ),
 }));
 // Len's hook watches the project on screen; hers talks to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3).
-const chats = vi.hoisted(() => ({ lenTrabajando: false, deElla: null as Record<string, unknown> | null, elementosDeElla: [] as unknown[] }));
+const chats = vi.hoisted(() => ({ lenTrabajando: false, lenPregunta: false, mandarALen: null as null | ((t: string) => void), deElla: null as Record<string, unknown> | null, elementosDeElla: [] as unknown[] }));
 vi.mock("../chat/use-chat", () => ({
   useChat: (o: Record<string, unknown>) => {
     if (o.assistantId) chats.deElla = o;
-    return { trabajando: o.assistantId ? false : chats.lenTrabajando, progreso: [], ...(o.assistantId ? { elementos: chats.elementosDeElla } : {}) };
+    return {
+      trabajando: o.assistantId ? false : chats.lenTrabajando,
+      progreso: [],
+      ...(o.assistantId ? { elementos: chats.elementosDeElla } : { pregunta: chats.lenPregunta, mandar: (t: string) => chats.mandarALen?.(t) }),
+    };
   },
 }));
 
@@ -476,6 +480,8 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     chatProps.ella = null;
     chatProps.len = null;
     chats.lenTrabajando = false;
+    chats.lenPregunta = false;
+    chats.mandarALen = null;
     chats.deElla = null;
     chats.elementosDeElla = [];
   });
@@ -602,6 +608,65 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
     await act(async () => cards.onOpen({ filaId: "f1", projectId: "p1" }));
     expect(host.querySelector('[data-len-turn="f1"]')?.getAttribute("data-len-turn-project")).toBe("Página");
     expect(chatProps.len).toBeNull();
+  });
+
+  // Deferred minors of the final review: «Antes / Ahora» of a card, a card of a deleted project, Len's question.
+  it("🔴 «Antes / Ahora» on a card compares what that card's turn changed", async () => {
+    const { pedir } = await paint();
+    const cards = chatProps.ella?.lenCards as { onCompare: (r: { filaId: string; projectId: string }) => void };
+    await act(async () => cards.onCompare({ filaId: "f1", projectId: "p1" }));
+    await act(async () => {});
+    expect(pedir).toHaveBeenCalledWith("/api/movil/entrega?project=p1&fila=f1");
+  });
+
+  it("🔴 a card of a project no longer in your list: it says so, and opening it leaves you where you are", async () => {
+    const { pedir } = await paint();
+    const cards = () => chatProps.ella?.lenCards as { projectGone: (id: string) => boolean; onCompare: (r: { filaId: string; projectId: string }) => void };
+    expect(cards().projectGone("p1")).toBe(false);
+    expect(cards().projectGone("p9")).toBe(true);
+    await act(async () => cards().onCompare({ filaId: "f2", projectId: "p9" }));
+    await act(async () => {});
+    expect(pedir.mock.calls.some(([r]) => String(r).includes("p9"))).toBe(false);
+    expect(host.querySelector(".app-main-sheet")).not.toBeNull();
+  });
+
+  it("🔴 answering Len's question from what he did sends it to Len, and closes it", async () => {
+    await paint();
+    const enviado = vi.fn();
+    chats.mandarALen = enviado;
+    const cards = chatProps.ella?.lenCards as { onOpen: (r: { filaId: string; projectId: string }) => void };
+    await act(async () => cards.onOpen({ filaId: "f1", projectId: "p1" }));
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-len-turn-answer]")!.click());
+    expect(enviado).toHaveBeenCalledWith("Azul");
+    expect(host.querySelector("[data-len-turn]")).toBeNull();
+    expect(chatProps.len).toBeNull();
+  });
+
+  it("🔴 Len's own turn on this page ended on a question: her sheet says so, and «Contestar» opens it", async () => {
+    chats.lenPregunta = true;
+    const asked = { tool: "ask_user_question", status: "done", summary: "", preguntas: [{ id: "q", question: "¿Azul?" }] };
+    const conPregunta = { ...proyecto, chatHistory: [{ id: "f5", userText: "encargo", assistantReasoning: "Una duda:", status: "applied", actions: [asked] }] };
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [proyecto] })
+        : ruta.endsWith("/preview")
+          ? Response.json({ enabled: true, token: "vista" })
+          : ruta === "/api/assistants"
+            ? Response.json({ enabled: true, assistants: [LUCIA] })
+            : ruta.startsWith("/api/assistants/a1/chat")
+              ? Response.json({ chatHistory: [] })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ project: conPregunta }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    expect(hoja().textContent).toContain("lenPregunta");
+    await act(async () => botonesDeLaHoja().find((b) => b.textContent === "contestar")!.click());
+    expect(host.querySelector('[data-len-turn="f5"]')).not.toBeNull();
   });
 
   it("🔴 «Ver en el chat» from Entregado opens what Len did, not Len's chat", async () => {

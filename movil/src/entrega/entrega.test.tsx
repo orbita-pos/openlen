@@ -64,3 +64,13 @@ it("muestra documentos distintos en iframes aislados y nunca inventa un antes", 
   expect(host.querySelector("iframe")).toBeNull();
   expect(host.textContent).toContain("sinAntes");
 });
+it("🔴 de una tarjeta de Len: pide lo que cambió ESE turno, y la página que dice la respuesta", async () => {
+  const host = document.createElement("div"); root = createRoot(host);
+  const pedir = vi.fn().mockResolvedValue(Response.json({ comparacion: { page: "menu", antes: { html: "<p>Antes</p>" }, ahora: { html: "<p>Ahora</p>" } } }));
+  await act(async () => root!.render(<Comparacion cliente={{ pedir, avisarAlCerrar: vi.fn() }} projectId="a" fila="f1" onCerrar={() => {}} />));
+  expect(pedir).toHaveBeenCalledWith("/api/movil/entrega?project=a&fila=f1");
+  expect(host.querySelectorAll("iframe")).toHaveLength(2);
+  expect(host.textContent).toContain("/menu");
+  expect(host.textContent).not.toContain("ultimoCambio");
+  expect(host.querySelector("time")).toBeNull();
+});
