@@ -8,17 +8,18 @@ import { describe, expect, it } from "vitest";
 
 const read = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
 const rule = (css: string, selector: string) => {
-  const at = css.indexOf(selector + "{");
+  const compacto = css.indexOf(selector + "{");
+  const at = compacto >= 0 ? compacto : css.indexOf(selector + " {");
   if (at < 0) return null;
   return css.slice(at, css.indexOf("}", at) + 1);
 };
 
 describe("text over her color", () => {
-  it("🔴 what a project is to her, beside it on her sheet, is in the sheet's ink", () => {
-    const r = rule(read("movil/src/estilos/app.css"), ".app-selector-junto small,.app-hoja-junto small");
+  it("la asignación del proyecto tiene un fondo propio y texto legible", () => {
+    const r = rule(read("movil/src/estilos/app.css"), ".app-hoja-junto");
     expect(r).not.toBeNull();
-    expect(r).toContain("var(--m-dim)");
-    expect(r).not.toContain("--lm-muted");
+    expect(r).toContain("color: var(--lm-ink)");
+    expect(r).toContain("background: var(--lm-panel)");
   });
 
   it("🔴 the welcome's «Ahora no» carries its own ink and ground, never the sheet's white", () => {

@@ -6,13 +6,13 @@ import type { ProyectoEnLista } from "../api/proyectos";
 import { aplicarTema, temaGuardado, type Tema } from "../tema";
 import { devolverFoco } from "../foco";
 import { useDeslizar } from "../deslizar";
+import { Icono } from "../iconos";
 
-export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, children, junto }: {
+export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, atajos, children, descripcion }: {
   proyectos: ProyectoEnLista[]; actual: string | null; onElegir: (id: string) => void; onCerrar: () => void; onSalir: () => void; children?: ReactNode;
-  /** What a project is to her, beside it (spec local 2026-11-16-movil-es-tu-asistente, §5.6); null = nothing. */
-  junto?: (p: ProyectoEnLista) => ReactNode;
-  /** Above the projects: «Entregado» and «Tareas», across all of them (spec local 2026-10-31-len-movil). */
-  top?: ReactNode;
+  descripcion?: (p: ProyectoEnLista) => string | undefined;
+  /** Access to tools and the overview across projects. */
+  atajos?: ReactNode;
 }) {
   const t = useTranslations("movil.principal");
   const [tema, setTema] = useState<Tema>(temaGuardado);
@@ -29,7 +29,7 @@ export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, 
     setTema(otro);
   };
   return (
-    <div ref={el => { dialogo.current = el; return deslizar?.(el); }} className="lm-sheet lm-m lm-marca is-on app-selector" data-kind="listo" role="dialog" aria-modal="true" aria-label={t("tusPaginas")} onKeyDown={e => {
+    <div ref={el => { dialogo.current = el; return deslizar?.(el); }} className="lm-sheet is-on app-selector" data-kind="listo" role="dialog" aria-modal="true" aria-labelledby="selector-proyectos-titulo" onKeyDown={e => {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onCerrar(); }
       if (e.key === "Tab") {
         const bs = [...(dialogo.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])];
@@ -38,19 +38,28 @@ export function Selector({ proyectos, actual, onElegir, onCerrar, onSalir, top, 
       }
     }}>
       <button type="button" className="lm-grab" onClick={onCerrar} aria-label={t("encoger")} />
+      <h2 id="selector-proyectos-titulo" className="app-selector-titulo">{t("tusProyectos")}</h2>
       <div className="lm-body">
-        <p className="lm-msg">{t("tusPaginas")}</p>
-        <div className="lm-actions" style={{ display: "grid", gap: 8 }}>
-          {top}
+        <ul className="app-selector-lista" role="list">
           {proyectos.map((p) => {
-            const extra = junto?.(p) ?? null;
-            const boton = (
-              <button key={p.id} type="button" className={`lm-btn ${p.id === actual ? "lm-pri" : "lm-sec"}`} aria-current={p.id === actual ? "page" : undefined} onClick={() => onElegir(p.id)}>
-                <span>{p.title}</span>
-              </button>
+            const activo = p.id === actual;
+            const detalle = descripcion?.(p);
+            return (
+              <li key={p.id} data-proyecto={p.id}>
+                <button type="button" className="app-selector-fila" aria-current={activo ? "page" : undefined} onClick={() => onElegir(p.id)}>
+                  <span className="app-selector-icono"><Icono nombre="proyecto" /></span>
+                  <span className="app-selector-texto">
+                    <span>{p.title}</span>
+                    {detalle && <small>{detalle}</small>}
+                  </span>
+                  <span className="app-selector-indicador"><Icono nombre={activo ? "check" : "back"} /></span>
+                </button>
+              </li>
             );
-            return extra ? <div key={p.id} className="app-selector-proyecto">{boton}<div className="app-selector-junto" data-junto={p.id}>{extra}</div></div> : boton;
           })}
+        </ul>
+        {atajos && <div className="app-selector-atajos">{atajos}</div>}
+        <div className="app-selector-cuenta">
           <button type="button" className="lm-btn lm-sec" onClick={cambiarTema}>{tema === "dark" ? t("modoClaro") : t("modoOscuro")}</button>
           {children}
           <button type="button" className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button>

@@ -16,6 +16,7 @@ export const ICONO = {
   bellOff: `<svg viewBox="0 0 24 24" ${S2}><path d="M8.7 3.7A6 6 0 0 1 18 8.5c0 3 .7 4.9 1.5 6M6.3 6.6C6.1 7.2 6 7.8 6 8.5c0 5-2 6.5-2 6.5h11M10.3 19a2 2 0 0 0 3.4 0M3 3l18 18"/></svg>`,
   img: `<svg viewBox="0 0 24 24" ${S2}><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>`,
   globe: `<svg viewBox="0 0 24 24" ${S2}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`,
+  proyecto: `<svg viewBox="0 0 24 24" ${S2}><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9h17M7.5 13h5M7.5 16h8"/></svg>`,
   arrowR: `<svg viewBox="0 0 24 24" ${S2}><path d="M5 12h14M13 6l6 6-6 6"/></svg>`,
   back: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.4"><path d="M15 5l-7 7 7 7"/></svg>`,
   plus: `<svg viewBox="0 0 24 24" ${S2} stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>`,
