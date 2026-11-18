@@ -12,13 +12,13 @@
 // longer the flow's is refused (`issuer_changed`) before a code is sent anywhere.
 //
 // Nothing here logs or returns a token, code, verifier or secret; errors from remote servers are redacted and cut short.
-import { auth, AuthorizationServerMismatchError, computeScopeUnion, discoverOAuthServerInfo, type OAuthClientProvider, type OAuthDiscoveryState, type StoredOAuthClientInformation } from "@modelcontextprotocol/client";
+import { auth, AuthorizationServerMismatchError, computeScopeUnion, type OAuthClientProvider, type OAuthDiscoveryState, type StoredOAuthClientInformation } from "@modelcontextprotocol/client";
 
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "../config";
 import type { ServerState, StoredConfig } from "../store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "../templates";
 import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal } from "./clients";
-import { entryClient, shortError, storableClient, type OAuthDeps } from "./provider";
+import { discoverAuthServer, entryClient, shortError, storableClient, type OAuthDeps } from "./provider";
 
 export type StartDeps = OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> };
 export type FinishDeps = StartDeps & { mount(personId: string, name: string): Promise<ServerState | null> };
@@ -39,10 +39,11 @@ function approvedEntry(stored: StoredConfig, serverName: string): { entry: McpSe
 
 type Discovered = { ok: true; state: OAuthDiscoveryState; issuer: string } | { ok: false; error: string };
 
-/** The authorization server of `entry`, as its metadata states it. Its `issuer` is what everything is bound to. */
+/** The authorization server of `entry` (its `oauth.authServerMetadataUrl`, or discovery), as its metadata states it.
+ *  Its `issuer` is what everything is bound to. */
 async function discover(entry: McpServerEntry, d: OAuthDeps, redact: (t: string) => string): Promise<Discovered> {
   try {
-    const info = await discoverOAuthServerInfo(entry.url, { fetchFn: d.fetch });
+    const info = await discoverAuthServer(entry, d);
     const issuer = info.authorizationServerMetadata?.issuer;
     if (!issuer) return { ok: false, error: "the authorization server publishes no metadata" };
     return { ok: true, state: info, issuer };

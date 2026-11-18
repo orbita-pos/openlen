@@ -7,12 +7,19 @@
 //
 // Never registers a client: without one stored, or the entry's, there is nothing to connect with yet. Nothing here
 // logs or returns a token, code or verifier.
+//
+// Where the authorization server is (§5.1, Claude Code's `oauth.authServerMetadataUrl`): an entry that names its metadata
+// URL is taken at its word — that document, fetched with the deps' fetch, is the metadata, and RFC 9728 → RFC 8414
+// discovery never runs for it. The issuer is still whatever that document states, and every issuer check still applies.
 import {
   computeScopeUnion,
+  discoverOAuthServerInfo,
   InsufficientScopeError,
   UnauthorizedError,
   type OAuthClientInformationContext,
+  type AuthorizationServerMetadata,
   type OAuthClientProvider,
+  type OAuthDiscoveryState,
   type StoredOAuthClientInformation,
   type StoredOAuthTokens,
 } from "@modelcontextprotocol/client";
@@ -75,6 +82,44 @@ export function shortError(text: string, redact: (t: string) => string = (t) => 
   return one.length > MAX_ERROR ? `${one.slice(0, MAX_ERROR - 1)}…` : one;
 }
 
+const MAX_METADATA_BYTES = 64 * 1024;
+
+/** The metadata document at an entry's `oauth.authServerMetadataUrl`. Checked for what the flow uses — an issuer, the
+ *  two endpoints, `code` among the response types —, never followed through a redirect. */
+async function fetchAuthServerMetadata(url: string, fetchFn: typeof fetch): Promise<AuthorizationServerMetadata> {
+  const r = await fetchFn(url, { headers: { Accept: "application/json" }, redirect: "manual" });
+  if (!r.ok) {
+    await r.body?.cancel().catch(() => {});
+    throw new Error(`HTTP ${r.status} loading the authorization server metadata from oauth.authServerMetadataUrl`);
+  }
+  const text = await r.text();
+  if (text.length > MAX_METADATA_BYTES) throw new Error("the authorization server metadata is too large");
+  let doc: unknown;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    throw new Error("the authorization server metadata is not JSON");
+  }
+  const m = doc as Record<string, unknown> | null;
+  const str = (k: string) => typeof m?.[k] === "string" && (m[k] as string).length > 0;
+  if (!m || typeof m !== "object" || !str("issuer") || !str("authorization_endpoint") || !str("token_endpoint")) {
+    throw new Error("the authorization server metadata lacks issuer, authorization_endpoint or token_endpoint");
+  }
+  if (!Array.isArray(m.response_types_supported) || !m.response_types_supported.includes("code")) {
+    throw new Error("the authorization server metadata does not support the code response type");
+  }
+  return m as unknown as AuthorizationServerMetadata;
+}
+
+/** The authorization server of `entry`: its `oauth.authServerMetadataUrl` when it names one, else RFC 9728 → RFC 8414
+ *  discovery from the server URL (the SDK's). */
+export async function discoverAuthServer(entry: McpServerEntry, d: Pick<OAuthDeps, "fetch">): Promise<OAuthDiscoveryState> {
+  const manual = entry.oauth?.authServerMetadataUrl;
+  if (!manual) return discoverOAuthServerInfo(entry.url, { fetchFn: d.fetch });
+  const metadata = await fetchAuthServerMetadata(manual, d.fetch);
+  return { authorizationServerUrl: metadata.issuer, authorizationServerMetadata: metadata };
+}
+
 /** The client the entry names (with its secret resolved now, so a rotated value is used at once) or OpenLen's own for
  *  this issuer — steps 2 and 3 of §5.2 —, a refusal, or null. */
 export async function entryClient(personId: string, entry: McpServerEntry, issuer: string, d: OAuthDeps): Promise<StoredOAuthClientInformation | ClientRefusal | null> {
@@ -108,6 +153,8 @@ export function connectionProvider(personId: string, serverName: string, entry: 
     get clientMetadata() {
       return clientMetadata(d.siteUrl);
     },
+    // Only an entry that names its metadata URL hands the SDK a discovery; the rest discover as the SDK does.
+    ...(entry.oauth?.authServerMetadataUrl && { discoveryState: () => discoverAuthServer(entry, d) }),
     async clientInformation(ctx?: OAuthClientInformationContext) {
       if (!ctx) return undefined;
       issuer = ctx.issuer;

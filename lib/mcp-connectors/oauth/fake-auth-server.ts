@@ -66,6 +66,14 @@ export interface FakeAuthServer {
   requiredScope: string | null;
   /** Advertise `client_id_metadata_document_supported`. */
   cimd: boolean;
+  /** RFC 9207: send `iss` on the way back and advertise `authorization_response_iss_parameter_supported`. Many
+   *  authorization servers do neither. */
+  sendIss: boolean;
+  /** Serve the authorization server's metadata only at this path (an entry's `oauth.authServerMetadataUrl`), and not at
+   *  the well-known paths. */
+  metadataAt: string | null;
+  /** The path (and query) of every request the fake received, in order. */
+  readonly requests: string[];
   /** Plays the person at `/authorize`: follows the URL by hand and reads the redirect back to OpenLen. */
   authorize(url: string): Promise<{ code: string | null; state: string | null; iss: string | null; error: string | null }>;
   close(): Promise<void>;
@@ -133,11 +141,12 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
   async function handle(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
+    server.requests.push(`${path}${url.search}`);
 
     if (path.startsWith("/.well-known/oauth-protected-resource")) {
       return json({ resource: `${base}/mcp`, authorization_servers: [issuer()] });
     }
-    if (path === `/.well-known/oauth-authorization-server${issuerPath}`) {
+    if (server.metadataAt === null ? path === `/.well-known/oauth-authorization-server${issuerPath}` : path === server.metadataAt) {
       const i = issuer();
       return json({
         issuer: i,
@@ -149,7 +158,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
         grant_types_supported: ["authorization_code", "refresh_token"],
         code_challenge_methods_supported: ["S256"],
         token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
-        authorization_response_iss_parameter_supported: true,
+        ...(server.sendIss && { authorization_response_iss_parameter_supported: true }),
         ...(server.cimd && { client_id_metadata_document_supported: true }),
       });
     }
@@ -175,7 +184,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
       const back = new URL(redirectUri);
       back.searchParams.set("code", code);
       if (p.get("state")) back.searchParams.set("state", p.get("state")!);
-      back.searchParams.set("iss", issuer());
+      if (server.sendIss) back.searchParams.set("iss", issuer());
       return new Response(null, { status: 302, headers: { location: back.toString() } });
     }
 
@@ -272,6 +281,9 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     rejectRefresh: false,
     requiredScope: null,
     cimd: false,
+    sendIss: true,
+    metadataAt: null,
+    requests: [],
     async authorize(authorizationUrl: string) {
       const r = await routed(authorizationUrl, { redirect: "manual" });
       const location = r.headers.get("location");
