@@ -82,7 +82,9 @@ export async function approve(personId: string, name: string, fingerprint: strin
 
 export async function readServerStates(personId: string): Promise<ServerState[]> {
   const rows = await db.select().from(s).where(eq(s.personId, personId));
-  return rows.map(({ personId: _p, ...r }) => ({ ...r, tools: r.tools ?? [] }));
+  // The column now admits "needs-auth" (spec local 2026-11-17-oauth-de-conectores-mcp); nothing writes it until
+  // `ServerState` learns it (task 5 of that plan), so this narrowing is exact for now and goes with that change.
+  return rows.map(({ personId: _p, ...r }) => ({ ...r, status: r.status as ServerState["status"], tools: r.tools ?? [] }));
 }
 
 export async function saveServerState(personId: string, st: ServerState): Promise<void> {
