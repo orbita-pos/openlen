@@ -3,12 +3,17 @@
 // management routes and the tests (which mock this module) agree.
 import "server-only";
 
+import { siteOrigin } from "@/lib/mcp/config";
+
 import { openMcp } from "./client";
 import { credentialNames, resolveCredentials, setCredential } from "./credentials";
 import { createGuardedFetch } from "./fetch";
 import type { LenFileDeps } from "./len-file";
 import type { ManageDeps } from "./manage";
 import { mountServer, type MountDeps } from "./mount";
+import { oauthEnabled } from "./oauth/enabled";
+import type { OAuthDeps } from "./oauth/provider";
+import * as oauthStore from "./oauth/store";
 import { deleteServerState, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
 import type { CallDeps, TurnDeps } from "./turn";
 
@@ -26,6 +31,13 @@ export function realCallDeps(): CallDeps {
   return { resolveCredentials, open: openMcp, fetch: guardedFetch, markStale, modelTakesImages: true };
 }
 
+/** OAuth of the connectors (spec local 2026-11-17-oauth-de-conectores-mcp): the person's own rows, every request through
+ *  the GUARDED fetch (https, no redirects, a public IP pinned — never a plain `fetch`), OpenLen's own site for the return
+ *  address and the client metadata document, and the person's keys for an entry's client secret. */
+export function realOAuthDeps(): OAuthDeps {
+  return { store: oauthStore, fetch: guardedFetch, siteUrl: siteOrigin(), resolveCredentials, now: () => new Date() };
+}
+
 export function realMountDeps(): MountDeps {
   return {
     readConfig: readMcpConfig,
@@ -35,6 +47,8 @@ export function realMountDeps(): MountDeps {
     open: openMcp,
     fetch: guardedFetch,
     now: () => new Date(),
+    // With `OPENLEN_MCP_OAUTH=0` there are no OAuth deps at all: a server that answers 401 is `failed`, as before.
+    ...(oauthEnabled() && { oauth: realOAuthDeps() }),
   };
 }
 

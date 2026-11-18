@@ -3534,7 +3534,7 @@ export const personMcpServerState = pgTable(
     // What a `needs-auth` server tells the person and Len (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4, §5.5):
     // the authorization server it asked for, why it needs signing in again, and the scope it asked for. Null otherwise.
     authIssuer: text("authIssuer"),
-    authReason: text("authReason"),
+    authReason: text("authReason").$type<import("@/lib/mcp-connectors/oauth/provider").SignInReason>(),
     authScope: text("authScope"),
   },
   (t) => [primaryKey({ columns: [t.personId, t.serverName] })],

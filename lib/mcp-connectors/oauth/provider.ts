@@ -185,15 +185,29 @@ export function storableClient(info: StoredOAuthClientInformation): StoredOAuthC
 }
 
 export interface ConnectionProvider extends OAuthClientProvider {
-  /** The sign-in an error from connecting stands for, or null when it is some other failure. */
+  /** The sign-in an error from connecting, listing or calling stands for, or null when it is some other failure. */
   signInNeededBy(err: unknown): Promise<NeedsSignIn | null>;
+}
+
+/** The one place a failed connection becomes «needs a sign-in» (§5.4 steps 1 and 4): at connecting, in the middle of a
+ *  session (a 401 or a 403 `insufficient_scope` from `listTools` or a call) and in a turn. No provider — a server with
+ *  its own `Authorization` header, or OAuth off — never turns an error into a sign-in; and a provider that can't tell
+ *  (its own store failing) leaves the error as it was. */
+export async function asNeedsSignIn(provider: ConnectionProvider | undefined, err: unknown): Promise<NeedsSignIn | null> {
+  if (!provider) return null;
+  return provider.signInNeededBy(err).catch(() => null);
 }
 
 /** The provider for connecting to `serverName` in a mount or a turn (§5.4 steps 1 and 4). */
 export function connectionProvider(personId: string, serverName: string, entry: McpServerEntry, d: OAuthDeps): ConnectionProvider {
   let issuer: string | null = null;
   let lapsed = false;
-  const needs = () => new NeedsSignIn(lapsed ? "lapsed" : "first", issuer, null);
+  // A person who had signed in before (a token is stored, or it was just dropped) signs in AGAIN; one who never did
+  // signs in for the first time. `row` is what the caller just read, when it did.
+  const needs = async (row?: OAuthConnection | null) => {
+    const stored = row === undefined ? await d.store.loadConnection(personId, serverName, entry.url, issuer) : row;
+    return new NeedsSignIn(lapsed || stored?.tokens ? "lapsed" : "first", issuer ?? stored?.issuer ?? null, null);
+  };
   const provider: ConnectionProvider = {
     // The SDK needs a return address to treat this as the authorization-code client it is; it never gets to use it.
     get redirectUrl() {
@@ -213,7 +227,7 @@ export function connectionProvider(personId: string, serverName: string, entry: 
       const stored = await d.store.loadConnection(personId, serverName, entry.url, ctx.issuer);
       if (stored) return stored.clientInfo;
       // Registering a client is part of signing in, never of connecting.
-      throw needs();
+      throw await needs(null);
     },
     async tokens(ctx?: OAuthClientInformationContext) {
       // Without ctx it is the per-request read for this very server URL: the row's issuer is the one.
@@ -225,8 +239,8 @@ export function connectionProvider(personId: string, serverName: string, entry: 
       if (!at) throw new Error("tokens without an issuer are never saved");
       await d.store.saveTokens(personId, serverName, entry.url, at, tokens);
     },
-    redirectToAuthorization() {
-      throw needs();
+    async redirectToAuthorization() {
+      throw await needs();
     },
     saveCodeVerifier() {},
     codeVerifier() {
