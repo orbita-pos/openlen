@@ -4,8 +4,9 @@
 // /KEY|PASSWORD|SECRET|TOKEN/i, applied to the header NAME, plus Authorization, Proxy-Authorization and Cookie) only
 // takes `${credential:NAME}` references around fixed words, and `findSecret` runs over the url and every value. Pure.
 // The optional `oauth` block (spec local 2026-11-17-oauth-de-conectores-mcp, §5.1) has Claude Code's field names and
-// rules; its `clientSecret` follows the sensitive-header rule (only a reference), and the whole block is part of the
-// entry's fingerprint, so changing it asks for the «Conectar» card again.
+// rules; its `clientSecret` is exactly one `${credential:NAME}` reference (it goes to the token endpoint as is), the two
+// URL fields get `findSecret` too, and the whole block is part of the entry's fingerprint, so changing it asks for the
+// «Conectar» card again.
 import { createHash } from "node:crypto";
 
 import { findSecret } from "@/lib/agent/memory/secrets";
@@ -49,6 +50,9 @@ const STDIO_FIELDS = new Set(["command", "args", "env", "cwd"]);
 const SENSITIVE_HEADER_NAME = /KEY|PASSWORD|SECRET|TOKEN/i;
 const SENSITIVE_HEADERS = new Set(["authorization", "proxy-authorization", "cookie"]);
 const FIXED_WORDS = /^[A-Za-z :=;,-]*$/;
+/** The oauth client secret: exactly one reference and nothing else. */
+const WHOLE_CREDENTIAL_REF = /^\$\{credential:[A-Z0-9_]{1,64}\}$/;
+const URL_WITH_KEY = (kind: string) => `it looks like it holds a ${kind}; a URL here can't carry a key`;
 
 type Parsed = { ok: true; config: McpConfig } | { ok: false; error: string };
 const refuse = (error: string): Parsed => ({ ok: false, error });
@@ -63,7 +67,7 @@ function timeout(v: unknown, field: string, fallback: number): number | string {
   return v;
 }
 
-/** A value that only takes `${credential:NAME}` references around fixed words (a sensitive header, the oauth client secret). */
+/** A value that only takes `${credential:NAME}` references around fixed words (a sensitive header). */
 function onlyReferences(v: string): boolean {
   const refs = v.match(CREDENTIAL_REF) ?? [];
   return refs.length > 0 && FIXED_WORDS.test(v.replace(CREDENTIAL_REF, ""));
@@ -96,15 +100,26 @@ function oauthOf(at: string, raw: unknown): McpOAuthConfig | string {
     if (!referencesWellFormed(secret)) return `${field}: malformed credential reference (use \${credential:NAME}, NAME in A-Z, 0-9 and _)`;
     const found = findSecret(secret);
     if (found) return `${field}: it looks like it holds a ${found}; write the key as \${credential:NAME}`;
-    if (!onlyReferences(secret)) return `${field}: write the secret as \${credential:NAME}; the person types its value in OpenLen`;
+    // Not the sensitive-header rule: the secret goes to the token endpoint as is, so nothing may surround the reference.
+    if (!WHOLE_CREDENTIAL_REF.test(secret)) return `${field}: write the secret as \${credential:NAME}; the person types its value in OpenLen`;
   }
-  if (o.authServerMetadataUrl !== undefined && !isHttpsUrl(o.authServerMetadataUrl)) return `${at}.authServerMetadataUrl: must use https://`;
+  const metadataUrl = o.authServerMetadataUrl;
+  if (metadataUrl !== undefined) {
+    const field = `${at}.authServerMetadataUrl`;
+    if (!isHttpsUrl(metadataUrl)) return `${field}: must use https://`;
+    const found = findSecret(metadataUrl as string);
+    if (found) return `${field}: ${URL_WITH_KEY(found)}`;
+  }
   const issuers = o.authorizationServer;
   if (issuers !== undefined) {
     const field = `${at}.authorizationServer`;
     if (!Array.isArray(issuers) || issuers.length === 0) return `${field}: must be a non-empty list of https:// URLs`;
     const i = issuers.findIndex((u) => !isHttpsUrl(u));
     if (i >= 0) return `${field}[${i}]: must use https://`;
+    for (const [k, u] of issuers.entries()) {
+      const found = findSecret(u as string);
+      if (found) return `${field}[${k}]: ${URL_WITH_KEY(found)}`;
+    }
   }
   if (o.clientId === undefined && (secret !== undefined || o.authServerMetadataUrl !== undefined || issuers !== undefined)) {
     return `${at}.clientId: clientId is required when clientSecret/authServerMetadataUrl/authorizationServer is set`;
