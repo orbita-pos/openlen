@@ -72,6 +72,9 @@ export interface FakeAuthServer {
   /** Serve the authorization server's metadata only at this path (an entry's `oauth.authServerMetadataUrl`), and not at
    *  the well-known paths. */
   metadataAt: string | null;
+  /** Answer the metadata request with this instead (given the document the fake would serve): broken or hostile
+   *  metadata. */
+  serveMetadata: ((standard: Record<string, unknown>) => Response) | null;
   /** The path (and query) of every request the fake received, in order. */
   readonly requests: string[];
   /** Plays the person at `/authorize`: follows the URL by hand and reads the redirect back to OpenLen. */
@@ -148,7 +151,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     }
     if (server.metadataAt === null ? path === `/.well-known/oauth-authorization-server${issuerPath}` : path === server.metadataAt) {
       const i = issuer();
-      return json({
+      const standard = {
         issuer: i,
         authorization_endpoint: `${i}/authorize`,
         token_endpoint: `${i}/token`,
@@ -160,7 +163,8 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
         token_endpoint_auth_methods_supported: ["none", "client_secret_post", "client_secret_basic"],
         ...(server.sendIss && { authorization_response_iss_parameter_supported: true }),
         ...(server.cimd && { client_id_metadata_document_supported: true }),
-      });
+      };
+      return server.serveMetadata ? server.serveMetadata(standard) : json(standard);
     }
     if (path.startsWith("/.well-known/")) return new Response("not found", { status: 404 });
 
@@ -283,6 +287,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     cimd: false,
     sendIss: true,
     metadataAt: null,
+    serveMetadata: null,
     requests: [],
     async authorize(authorizationUrl: string) {
       const r = await routed(authorizationUrl, { redirect: "manual" });

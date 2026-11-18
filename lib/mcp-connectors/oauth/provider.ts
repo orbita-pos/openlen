@@ -82,30 +82,79 @@ export function shortError(text: string, redact: (t: string) => string = (t) => 
   return one.length > MAX_ERROR ? `${one.slice(0, MAX_ERROR - 1)}…` : one;
 }
 
+/** The most of a metadata document that is read: the body is read as a stream and the read stops (and fails) past it. */
 const MAX_METADATA_BYTES = 64 * 1024;
 
-/** The metadata document at an entry's `oauth.authServerMetadataUrl`. Checked for what the flow uses — an issuer, the
- *  two endpoints, `code` among the response types —, never followed through a redirect. */
+/** RFC 8414 fields that must be https URLs when present; the first two always are. */
+const REQUIRED_ENDPOINTS = ["authorization_endpoint", "token_endpoint"] as const;
+const OPTIONAL_ENDPOINTS = ["registration_endpoint", "revocation_endpoint"] as const;
+/** The `*_supported` fields the flow reads that are flags; every other `*_supported` field it reads is a list. */
+const FLAGS = ["client_id_metadata_document_supported", "authorization_response_iss_parameter_supported"] as const;
+const LISTS = [
+  "response_types_supported",
+  "grant_types_supported",
+  "code_challenge_methods_supported",
+  "token_endpoint_auth_methods_supported",
+  "scopes_supported",
+  "revocation_endpoint_auth_methods_supported",
+] as const;
+
+function isHttps(v: unknown): boolean {
+  if (typeof v !== "string") return false;
+  try {
+    return new URL(v).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/** The body, read as a stream and cut off past `max` bytes: a huge document is never held whole. */
+async function readCapped(r: Response, max: number): Promise<string> {
+  const reader = r.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel().catch(() => {});
+      throw new Error("the authorization server metadata is too large");
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
+/** The metadata document at an entry's `oauth.authServerMetadataUrl`: untrusted JSON, checked at least as strictly as
+ *  the SDK's own schema checks discovered metadata for what the flow uses — https issuer and endpoints (an
+ *  `authorization_endpoint` is a URL the person's browser opens: never `javascript:` or `data:`), lists of strings,
+ *  booleans for the flags, `code` among the response types. Never followed through a redirect. */
 async function fetchAuthServerMetadata(url: string, fetchFn: typeof fetch): Promise<AuthorizationServerMetadata> {
   const r = await fetchFn(url, { headers: { Accept: "application/json" }, redirect: "manual" });
   if (!r.ok) {
     await r.body?.cancel().catch(() => {});
     throw new Error(`HTTP ${r.status} loading the authorization server metadata from oauth.authServerMetadataUrl`);
   }
-  const text = await r.text();
-  if (text.length > MAX_METADATA_BYTES) throw new Error("the authorization server metadata is too large");
+  const text = await readCapped(r, MAX_METADATA_BYTES);
   let doc: unknown;
   try {
     doc = JSON.parse(text);
   } catch {
     throw new Error("the authorization server metadata is not JSON");
   }
-  const m = doc as Record<string, unknown> | null;
-  const str = (k: string) => typeof m?.[k] === "string" && (m[k] as string).length > 0;
-  if (!m || typeof m !== "object" || !str("issuer") || !str("authorization_endpoint") || !str("token_endpoint")) {
-    throw new Error("the authorization server metadata lacks issuer, authorization_endpoint or token_endpoint");
+  if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("the authorization server metadata is not an object");
+  const m = doc as Record<string, unknown>;
+  if (!isHttps(m.issuer)) throw new Error("the authorization server metadata has no https issuer");
+  for (const k of REQUIRED_ENDPOINTS) if (!isHttps(m[k])) throw new Error(`the authorization server metadata's ${k} is not an https URL`);
+  for (const k of OPTIONAL_ENDPOINTS) if (m[k] !== undefined && !isHttps(m[k])) throw new Error(`the authorization server metadata's ${k} is not an https URL`);
+  for (const k of LISTS) {
+    const v = m[k];
+    if (v !== undefined && !(Array.isArray(v) && v.every((x) => typeof x === "string"))) throw new Error(`the authorization server metadata's ${k} is not a list of strings`);
   }
-  if (!Array.isArray(m.response_types_supported) || !m.response_types_supported.includes("code")) {
+  for (const k of FLAGS) if (m[k] !== undefined && typeof m[k] !== "boolean") throw new Error(`the authorization server metadata's ${k} is not true or false`);
+  if (!(m.response_types_supported as string[] | undefined)?.includes("code")) {
     throw new Error("the authorization server metadata does not support the code response type");
   }
   return m as unknown as AuthorizationServerMetadata;
