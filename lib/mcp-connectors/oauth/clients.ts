@@ -24,9 +24,19 @@ const CLIENT_METADATA_PATH = "/oauth/mcp-client.json";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** `https://openlen.com/` and `https://openlen.com` name the same site; the paths below start with their own slash. */
-function origin(siteUrl: string): string {
+/** `https://openlen.com/` and `https://openlen.com` are the same site, and the two paths above start with a slash of
+ *  their own: the site URL loses its trailing slashes so the join never doubles one. Only for OpenLen's own URL — an
+ *  issuer is an identity and is never tidied. */
+function trimSlashes(siteUrl: string): string {
   return siteUrl.replace(/\/+$/, "");
+}
+
+/** Why the entry's own client can't be used right now. `detail` is safe to show: an issuer, or a credential NAME —
+ *  never a value. */
+export type ClientRefusal = { readonly refused: "missing_secret" | "issuer_not_allowed"; readonly detail: string };
+
+export function isClientRefusal(x: StoredOAuthClientInformation | ClientRefusal | null): x is ClientRefusal {
+  return x !== null && typeof x === "object" && "refused" in x;
 }
 
 /** OpenLen's own client for an issuer: Google's, with both variables set; nothing for any other issuer. */
@@ -42,37 +52,47 @@ export function openLenClientFor(issuer: string, env: Env = process.env): { clie
  * The client OpenLen has ready for a server before asking the provider for one: the entry's own `oauth.clientId` (with
  * its `clientSecret` — a `${credential:NAME}` reference — resolved from `secrets`, the person's credential values by
  * NAME), else OpenLen's client for that issuer, else null (the SDK carries on with the metadata document and dynamic
- * registration). The entry's client wins whatever the issuer is.
+ * registration).
  *
- * An entry that names a secret whose value the person has not typed yet answers null, and NOT the next step: a
- * confidential client sent without its secret fails at the token endpoint with an error that blames the provider, and
- * quietly standing in OpenLen's client would sign the person in as somebody they didn't configure. The caller finds
- * the missing credential with `resolveEntry`, which names it.
+ * An entry that names a client names it for good, so two things are a REFUSAL, never a null and never the next step:
+ *  - `issuer_not_allowed`: the entry lists the issuers its client is for (`oauth.authorizationServer`, which config.ts
+ *    requires whenever a secret is set — Claude Code's rule) and `issuer` is not exactly one of them. The issuer comes
+ *    from the metadata the MCP server points at, so a server that is not what the person configured could name its own
+ *    authorization server to collect the client's secret; the secret is never even read in that case.
+ *  - `missing_secret`: the secret's value hasn't been typed yet (`detail` is the credential NAME). A confidential
+ *    client sent without its secret fails at the token endpoint with an error that blames the provider, and a null
+ *    would let the SDK register OpenLen's client with CIMD or dynamic registration as if the entry named none.
+ * In both, OpenLen's own client for that issuer must not stand in either. The issuer is checked first.
  */
 export function preRegisteredClient(
   entry: McpServerEntry,
   issuer: string,
   secrets: ReadonlyMap<string, string>,
   env: Env = process.env,
-): StoredOAuthClientInformation | null {
+): StoredOAuthClientInformation | ClientRefusal | null {
   const own = entry.oauth;
   if (own?.clientId) {
+    if (own.authorizationServer && !own.authorizationServer.includes(issuer)) {
+      return { refused: "issuer_not_allowed", detail: `${issuer} is not in oauth.authorizationServer` };
+    }
     if (own.clientSecret === undefined) return { client_id: own.clientId };
+    // config.ts guarantees exactly one reference. If a malformed entry ever got here, `detail` still must not echo the
+    // text (it could be a literal secret): it names the field instead.
     const name = credentialRefs(own.clientSecret)[0];
     const secret = name === undefined ? undefined : secrets.get(name);
-    return secret ? { client_id: own.clientId, client_secret: secret } : null;
+    return secret ? { client_id: own.clientId, client_secret: secret } : { refused: "missing_secret", detail: name ?? "oauth.clientSecret" };
   }
   return openLenClientFor(issuer, env);
 }
 
 /** Where the provider sends the person back (and the one address registered with it). */
 export function callbackUrl(siteUrl: string): string {
-  return `${origin(siteUrl)}${CALLBACK_PATH}`;
+  return `${trimSlashes(siteUrl)}${CALLBACK_PATH}`;
 }
 
 /** The URL of OpenLen's Client ID Metadata Document: a provider that supports it takes this as the client's id. */
 export function clientMetadataUrl(siteUrl: string): string {
-  return `${origin(siteUrl)}${CLIENT_METADATA_PATH}`;
+  return `${trimSlashes(siteUrl)}${CLIENT_METADATA_PATH}`;
 }
 
 /** What OpenLen says about itself for the metadata document and dynamic registration: a public client, with PKCE. */

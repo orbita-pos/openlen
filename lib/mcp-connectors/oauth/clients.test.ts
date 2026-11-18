@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { McpServerEntry } from "../config";
-import { callbackUrl, clientMetadata, clientMetadataUrl, openLenClientFor, preRegisteredClient } from "./clients";
+import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal, openLenClientFor, preRegisteredClient } from "./clients";
 import { oauthEnabled } from "./enabled";
 
 const GOOGLE = "https://accounts.google.com";
@@ -75,20 +75,83 @@ describe("preRegisteredClient", () => {
     expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({ client_id: "mine" });
   });
 
-  it("uses the entry's clientId whatever the issuer is", () => {
-    const e = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: ["https://auth.example.com"] });
-    const secrets = new Map([["CAL_SECRET", "s3cret"]]);
-    expect(preRegisteredClient(e, "https://other-issuer.example", secrets, {})).toEqual({ client_id: "mine", client_secret: "s3cret" });
+  it("uses the entry's clientId whatever the issuer is, when the entry doesn't list the issuers it is for", () => {
+    const e = entry({ clientId: "mine" });
+    expect(preRegisteredClient(e, "https://other-issuer.example", NO_SECRETS, {})).toEqual({ client_id: "mine" });
+  });
+
+  describe("the issuers the client is for (oauth.authorizationServer)", () => {
+    const LISTED = "https://auth.example.com";
+
+    it("accepts an issuer inside the list, with or without a secret", () => {
+      const secrets = new Map([["CAL_SECRET", "s3cret"]]);
+      const confidential = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [LISTED, GOOGLE] });
+      expect(preRegisteredClient(confidential, LISTED, secrets, {})).toEqual({ client_id: "mine", client_secret: "s3cret" });
+      expect(preRegisteredClient(confidential, GOOGLE, secrets, {})).toEqual({ client_id: "mine", client_secret: "s3cret" });
+      const open = entry({ clientId: "mine", authorizationServer: [LISTED] });
+      expect(preRegisteredClient(open, LISTED, NO_SECRETS, {})).toEqual({ client_id: "mine" });
+    });
+
+    it("refuses an issuer outside the list for a client with a secret, and doesn't hand the secret over", () => {
+      const e = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [LISTED] });
+      const secrets = new Map([["CAL_SECRET", "s3cret-value-123"]]);
+      const result = preRegisteredClient(e, "https://evil.example", secrets, GOOGLE_ENV);
+      expect(result).toEqual({ refused: "issuer_not_allowed", detail: "https://evil.example is not in oauth.authorizationServer" });
+      expect(JSON.stringify(result)).not.toContain("s3cret-value-123");
+    });
+
+    it("refuses an issuer outside the list for a public client too", () => {
+      const e = entry({ clientId: "mine", authorizationServer: [LISTED] });
+      expect(preRegisteredClient(e, "https://evil.example", NO_SECRETS, {})).toEqual({
+        refused: "issuer_not_allowed",
+        detail: "https://evil.example is not in oauth.authorizationServer",
+      });
+    });
+
+    it("compares exactly, as an issuer is an identity (no trailing slash, scheme, case or prefix tolerance)", () => {
+      const e = entry({ clientId: "mine", authorizationServer: [LISTED] });
+      for (const issuer of [`${LISTED}/`, "http://auth.example.com", `${LISTED}/tenant`, "https://AUTH.example.com", "https://auth.example.com.evil.example"]) {
+        expect(preRegisteredClient(e, issuer, NO_SECRETS, {})).toMatchObject({ refused: "issuer_not_allowed" });
+      }
+    });
+
+    it("never stands OpenLen's client in for a refused issuer", () => {
+      const e = entry({ clientId: "mine", authorizationServer: [LISTED] });
+      expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV)).toMatchObject({ refused: "issuer_not_allowed" });
+    });
+
+    it("checks the issuer before the secret: a refused issuer says so even when the secret is missing", () => {
+      const e = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [LISTED] });
+      expect(preRegisteredClient(e, "https://evil.example", NO_SECRETS, {})).toMatchObject({ refused: "issuer_not_allowed" });
+    });
   });
 
   // A confidential client with its secret missing would be sent to the token endpoint as a public one and fail there
-  // with an error that blames the provider. The caller reports the missing credential by name instead, so no step
-  // below this one may quietly stand in for it — not even OpenLen's own client for Google.
-  it("is null when the entry's secret has no value, and never falls back to another client", () => {
+  // with an error that blames the provider, and a bare null would let the SDK carry on with CIMD or dynamic
+  // registration as if the entry named no client. So it is a refusal that names the credential, and no step below this
+  // one stands in for it — not even OpenLen's own client for Google.
+  describe("a secret the person hasn't typed yet", () => {
     const e = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [GOOGLE] });
-    expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
-    expect(preRegisteredClient(e, GOOGLE, new Map([["OTHER", "x"]]), GOOGLE_ENV)).toBeNull();
-    expect(preRegisteredClient(e, GOOGLE, new Map([["CAL_SECRET", ""]]), GOOGLE_ENV)).toBeNull();
+
+    it("is refused, naming the credential", () => {
+      expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({ refused: "missing_secret", detail: "CAL_SECRET" });
+    });
+
+    it("is refused when the map only has other credentials, or an empty value", () => {
+      expect(preRegisteredClient(e, GOOGLE, new Map([["OTHER", "x"]]), GOOGLE_ENV)).toEqual({ refused: "missing_secret", detail: "CAL_SECRET" });
+      expect(preRegisteredClient(e, GOOGLE, new Map([["CAL_SECRET", ""]]), GOOGLE_ENV)).toEqual({ refused: "missing_secret", detail: "CAL_SECRET" });
+    });
+
+    it("never carries another credential's value in its detail", () => {
+      const result = preRegisteredClient(e, GOOGLE, new Map([["OTHER", "other-secret-value-456"]]), GOOGLE_ENV);
+      expect(isClientRefusal(result)).toBe(true);
+      expect(JSON.stringify(result)).not.toContain("other-secret-value-456");
+    });
+
+    it("is refused without an authorizationServer list too", () => {
+      const open = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}" });
+      expect(preRegisteredClient(open, "https://auth.example.com", NO_SECRETS, {})).toEqual({ refused: "missing_secret", detail: "CAL_SECRET" });
+    });
   });
 
   it("is OpenLen's client for that issuer when the entry names none", () => {
@@ -104,6 +167,16 @@ describe("preRegisteredClient", () => {
     expect(preRegisteredClient(entry(), GOOGLE, NO_SECRETS, {})).toBeNull();
     expect(preRegisteredClient(entry(), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
     expect(preRegisteredClient(entry({ scope: "x" }), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
+  });
+});
+
+describe("isClientRefusal", () => {
+  it("tells a refusal from a client and from nothing", () => {
+    expect(isClientRefusal({ refused: "missing_secret", detail: "CAL_SECRET" })).toBe(true);
+    expect(isClientRefusal({ refused: "issuer_not_allowed", detail: "x" })).toBe(true);
+    expect(isClientRefusal({ client_id: "mine" })).toBe(false);
+    expect(isClientRefusal({ client_id: "mine", client_secret: "s" })).toBe(false);
+    expect(isClientRefusal(null)).toBe(false);
   });
 });
 
