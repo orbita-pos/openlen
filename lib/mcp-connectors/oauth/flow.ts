@@ -28,6 +28,12 @@ export type FinishResult =
   | { ok: true; server: string }
   | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "issuer_changed" | "exchange_failed"; server?: string };
 
+class AuthorizationEndpointNotHttps extends Error {
+  constructor() {
+    super("the authorization endpoint is not https");
+  }
+}
+
 /** The entry as the person approved it, or null (removed, edited since, or never approved). */
 function approvedEntry(stored: StoredConfig, serverName: string): { entry: McpServerEntry; fingerprint: string } | null {
   const parsed = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
@@ -70,6 +76,7 @@ function flowProvider(
     discoveryState: () => discovery,
     async clientInformation(ctx) {
       // The SDK resolved the issuer from the discovery handed to it; anything else is not this flow's server.
+      // Defence in depth: behind the discovery comparison (`found.issuer !== flow.issuer`) this can't fire today.
       if (!ctx || ctx.issuer !== issuer) throw new AuthorizationServerMismatchError(issuer, ctx?.issuer ?? "");
       if (own) return { ...own, issuer };
       return (await d.store.loadConnection(personId, serverName, entry.url, issuer))?.clientInfo;
@@ -130,6 +137,8 @@ export async function startSignIn(personId: string, serverName: string, d: Start
     // made here, with both, and its `state` goes into the URL the SDK built.
     async redirectToAuthorization(url) {
       if (verifier === undefined) throw new Error("no code verifier yet");
+      // The person's browser opens this URL: whatever the metadata said, it is https or nothing (and no flow is made).
+      if (url.protocol !== "https:") throw new AuthorizationEndpointNotHttps();
       const state = await d.store.createFlow({ personId, serverName, fingerprint, issuer, codeVerifier: verifier, scope: url.searchParams.get("scope"), now: d.now() });
       url.searchParams.set("state", state);
       authorizationUrl = url;
@@ -142,6 +151,7 @@ export async function startSignIn(personId: string, serverName: string, d: Start
     if (result !== "REDIRECT" || !authorizationUrl) return { ok: false, reason: "unreachable", error: "the authorization server did not ask the person to sign in" };
     return { ok: true, authorizationUrl: authorizationUrl.toString() };
   } catch (err) {
+    if (err instanceof AuthorizationEndpointNotHttps) return { ok: false, reason: "unreachable", error: err.message };
     return { ok: false, reason: "unreachable", error: shortError(err instanceof Error ? err.message : String(err), redact) };
   }
 }

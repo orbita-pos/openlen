@@ -369,3 +369,80 @@ describe("an entry's oauth.authServerMetadataUrl", () => {
     expect(await startSignIn("p1", "cal", deps())).toMatchObject({ ok: false, reason: "unreachable" });
   });
 });
+
+describe("hostile or broken authorization server metadata", () => {
+  const METADATA_PATH = "/custom/as-metadata.json";
+  const flows = async () => (await pg.query(`SELECT 1 FROM "personMcpOAuthFlows"`)).rows.length;
+  const jsonBody = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+
+  describe("at an entry's oauth.authServerMetadataUrl", () => {
+    beforeEach(() => {
+      fake.metadataAt = METADATA_PATH;
+      fake.addClient("own-client");
+      setServer({ oauth: { clientId: "own-client", authServerMetadataUrl: `${fake.base}${METADATA_PATH}` } });
+    });
+
+    const refusedWith = async (serve: (m: Record<string, unknown>) => Response, error: RegExp) => {
+      fake.serveMetadata = serve;
+      const r = await startSignIn("p1", "cal", deps());
+      expect(r).toMatchObject({ ok: false, reason: "unreachable" });
+      expect(r.ok ? "" : r.error).toMatch(error);
+      expect(await flows()).toBe(0);
+    };
+
+    it("a javascript: authorization_endpoint is unreachable, and no URL comes back", async () => {
+      await refusedWith((m) => jsonBody({ ...m, authorization_endpoint: "javascript:alert(document.domain)//" }), /authorization_endpoint is not an https URL/);
+    });
+
+    it("a data: or http: endpoint is refused too", async () => {
+      await refusedWith((m) => jsonBody({ ...m, token_endpoint: "data:text/plain,x" }), /token_endpoint is not an https URL/);
+      await refusedWith((m) => jsonBody({ ...m, registration_endpoint: "http://mcp.fake.test/register" }), /registration_endpoint is not an https URL/);
+      await refusedWith((m) => jsonBody({ ...m, revocation_endpoint: "not a url" }), /revocation_endpoint is not an https URL/);
+      await refusedWith((m) => jsonBody({ ...m, issuer: "http://mcp.fake.test/as1" }), /no https issuer/);
+    });
+
+    it("bad JSON is refused", async () => {
+      await refusedWith(() => new Response("{not json", { headers: { "content-type": "application/json" } }), /not JSON/);
+      await refusedWith(() => jsonBody(["an", "array"]), /not an object/);
+    });
+
+    it("missing token_endpoint is refused", async () => {
+      await refusedWith(({ token_endpoint: _gone, ...m }) => jsonBody(m), /token_endpoint is not an https URL/);
+    });
+
+    it("no code in response_types_supported is refused", async () => {
+      await refusedWith((m) => jsonBody({ ...m, response_types_supported: ["token"] }), /code response type/);
+    });
+
+    it("lists that aren't lists of strings, and flags that aren't booleans, are refused", async () => {
+      await refusedWith((m) => jsonBody({ ...m, grant_types_supported: "authorization_code" }), /grant_types_supported is not a list of strings/);
+      await refusedWith((m) => jsonBody({ ...m, code_challenge_methods_supported: [1] }), /code_challenge_methods_supported is not a list of strings/);
+      await refusedWith((m) => jsonBody({ ...m, client_id_metadata_document_supported: "yes" }), /client_id_metadata_document_supported is not true or false/);
+    });
+
+    it("a redirect is never followed", async () => {
+      await refusedWith(() => new Response(null, { status: 302, headers: { location: `${fake.base}/.well-known/oauth-authorization-server/as1` } }), /HTTP 302/);
+      expect(fake.requests.filter((p) => p.startsWith("/.well-known/oauth-authorization-server"))).toEqual([]);
+    });
+
+    it("an oversize body is refused", async () => {
+      await refusedWith((m) => jsonBody({ ...m, padding: "x".repeat(70 * 1024) }), /too large/);
+    });
+  });
+
+  describe("found by the SDK's discovery", () => {
+    it("an http authorization_endpoint never comes back as the URL to open", async () => {
+      fake.serveMetadata = (m) => jsonBody({ ...m, authorization_endpoint: "http://mcp.fake.test/as1/authorize" });
+      expect(await startSignIn("p1", "cal", deps())).toEqual({ ok: false, reason: "unreachable", error: "the authorization endpoint is not https" });
+      expect(await flows()).toBe(0);
+    });
+
+    it("a javascript: authorization_endpoint is unreachable", async () => {
+      fake.serveMetadata = (m) => jsonBody({ ...m, authorization_endpoint: "javascript:alert(document.domain)//" });
+      const r = await startSignIn("p1", "cal", deps());
+      expect(r).toMatchObject({ ok: false, reason: "unreachable" });
+      expect(JSON.stringify(r)).not.toContain('"authorizationUrl"');
+      expect(await flows()).toBe(0);
+    });
+  });
+});
