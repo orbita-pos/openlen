@@ -231,12 +231,29 @@ describe("the way back", () => {
     expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, "p1", deps())).toEqual({ ok: false, reason: "changed", server: "cal" });
   });
 
-  it("issuer changed", async () => {
+  it("issuer changed, named by the iss on the way back (RFC 9207)", async () => {
     const url = await start();
     fake.setIssuer("/as2");
     const back = await fake.authorize(url);
     expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
     expect(fake.tokenRequests).toHaveLength(0);
+  });
+
+  it("issuer changed, with no iss on the way back: discovering again refuses it before the exchange", async () => {
+    // Many authorization servers neither send `iss` nor advertise it: then discovering again is the mix-up defence.
+    fake.sendIss = false;
+    const url = await start();
+    fake.setIssuer("/as2");
+    const back = await fake.authorize(url);
+    expect(back.iss).toBeNull();
+    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    expect(fake.tokenRequests).toHaveLength(0);
+  });
+
+  it("a server that sends no iss signs in", async () => {
+    fake.sendIss = false;
+    const back = await fake.authorize(await start());
+    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toEqual({ ok: true, server: "cal" });
   });
 
   it("an iss on the way back that isn't the flow's issuer is refused before the exchange (RFC 9207)", async () => {
@@ -307,5 +324,48 @@ describe("connecting with a token", () => {
     const r = await startSignIn("p1", "cal", deps(), { scope: "a b" });
     if (!r.ok) throw new Error(r.error);
     expect(new URL(r.authorizationUrl).searchParams.get("scope")).toBe("a b");
+  });
+});
+
+describe("an entry's oauth.authServerMetadataUrl", () => {
+  const METADATA_PATH = "/custom/as-metadata.json";
+  const wellKnownAsked = () => fake.requests.filter((p) => p.includes("/.well-known/oauth-authorization-server") || p.includes("/.well-known/openid-configuration"));
+
+  beforeEach(() => {
+    fake.metadataAt = METADATA_PATH;
+    fake.addClient("own-client");
+    setServer({ oauth: { clientId: "own-client", authServerMetadataUrl: `${fake.base}${METADATA_PATH}` } });
+  });
+
+  it("is the authorization server's metadata, and the well-known paths are never asked", async () => {
+    expect(await signIn()).toEqual({ ok: true, server: "cal" });
+    expect(fake.requests).toContain(METADATA_PATH);
+    expect(wellKnownAsked()).toEqual([]);
+    expect((await stored())?.tokens?.access_token).toMatch(/^at_/);
+  });
+
+  it("refreshing when connecting reads it too", async () => {
+    fake.expiresIn = 1;
+    await signIn();
+    clock = new Date(NOW.getTime() + 2000);
+    const c = await connect();
+    await c.close();
+    expect(fake.tokenRequests.at(-1)?.get("grant_type")).toBe("refresh_token");
+    expect(wellKnownAsked()).toEqual([]);
+  });
+
+  it("the issuer is still what that metadata states, and a change is refused", async () => {
+    fake.sendIss = false;
+    const url = new URL(await start());
+    expect(`${url.origin}${url.pathname}`).toBe(`${fake.issuer}/authorize`);
+    fake.setIssuer("/as2");
+    const back = await fake.authorize(url.toString());
+    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    expect(fake.tokenRequests).toHaveLength(0);
+  });
+
+  it("metadata that isn't there is unreachable", async () => {
+    setServer({ oauth: { clientId: "own-client", authServerMetadataUrl: `${fake.base}/nowhere.json` } });
+    expect(await startSignIn("p1", "cal", deps())).toMatchObject({ ok: false, reason: "unreachable" });
   });
 });
