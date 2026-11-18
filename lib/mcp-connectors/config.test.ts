@@ -202,6 +202,14 @@ describe("oauth block", () => {
     expect(errorOf(calWith({ clientId: "id", clientSecret: "", authorizationServer: google }))).toBe(only);
   });
 
+  it("🔴 clientSecret is exactly one reference: it goes to the token endpoint as is, with nothing around it", () => {
+    const only = "servers.cal.oauth.clientSecret: write the secret as ${credential:NAME}; the person types its value in OpenLen";
+    for (const secret of ["Bearer ${credential:X}", "abc${credential:X}", "${credential:A}${credential:B}", "${credential:X} ", " ${credential:X}", "${credential:X}-", "${credential:A} ${credential:B}"]) {
+      expect(errorOf(calWith({ clientId: "id", clientSecret: secret, authorizationServer: google })), JSON.stringify(secret)).toBe(only);
+    }
+    expect(parseCal({ clientId: "id", clientSecret: "${credential:CAL_SECRET_2}", authorizationServer: google }).oauth?.clientSecret).toBe("${credential:CAL_SECRET_2}");
+  });
+
   it("clientSecret refuses a malformed reference and a key that looks real", () => {
     expect(errorOf(calWith({ clientId: "id", clientSecret: "${credential:lower}", authorizationServer: google }))).toMatch(
       /^servers\.cal\.oauth\.clientSecret: malformed credential reference/,
@@ -227,6 +235,16 @@ describe("oauth block", () => {
       `${at}[1]: must use https://`,
     );
     expect(errorOf(calWith({ clientId: "id", authorizationServer: [7] }))).toBe(`${at}[0]: must use https://`);
+  });
+
+  it("the two URL fields can't carry a key either (findSecret runs over them)", () => {
+    const key = "sk-ant-abcdefghijklmnopqrstuvwxyz";
+    expect(errorOf(calWith({ clientId: "id", authServerMetadataUrl: `https://accounts.google.com/.well-known/openid-configuration?key=${key}` }))).toBe(
+      "servers.cal.oauth.authServerMetadataUrl: it looks like it holds a API key; a URL here can't carry a key",
+    );
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: ["https://accounts.google.com", `https://issuer.example.com/?k=${key}`] }))).toBe(
+      "servers.cal.oauth.authorizationServer[1]: it looks like it holds a API key; a URL here can't carry a key",
+    );
   });
 
   it("a plain string field must be a non-empty string", () => {
