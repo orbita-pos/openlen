@@ -27,6 +27,9 @@ function setup(servers: Record<string, Record<string, unknown>>, approvedNames: 
     stale: false,
     failures: 0,
     attemptedAt: null,
+    authIssuer: null,
+    authReason: null,
+    authScope: null,
     ...s,
   }));
   const d: TurnDeps = { readConfig: async () => ({ text, approved, version: 3 }), readStates: async () => full, now: () => NOW };

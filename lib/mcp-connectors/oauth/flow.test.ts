@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
 
+import type { MountDeps } from "../mount";
+import type { ServerState } from "../store";
+
 process.env.NEXTAUTH_SECRET ??= "test-secret-for-oauth-flow";
 
 const base = vi.hoisted(() => ({ db: null as unknown }));
@@ -27,6 +30,7 @@ const store = await import("./store");
 const { finishSignIn, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
+const { mountServer } = await import("../mount");
 const { entryFingerprint, parseMcpConfig } = await import("../config");
 const { startFakeAuthServer } = await import("./fake-auth-server");
 type FakeAuthServer = Awaited<ReturnType<typeof startFakeAuthServer>>;
@@ -444,5 +448,105 @@ describe("hostile or broken authorization server metadata", () => {
       expect(JSON.stringify(r)).not.toContain('"authorizationUrl"');
       expect(await flows()).toBe(0);
     });
+  });
+});
+
+// Mounting (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4 steps 1 and 4; mount.ts): the whole road, with the real
+// provider, the real store and the fake MCP server — what lands in the person's server state.
+describe("mounting a server that signs in", () => {
+  let states: ServerState[];
+
+  const mountDeps = (open: MountDeps["open"] = openMcp): MountDeps => ({
+    readConfig: async () => config,
+    readStates: async () => states,
+    async saveState(_personId, s) {
+      states = [...states.filter((x) => x.serverName !== s.serverName), s];
+    },
+    async resolveCredentials() {
+      return new Map();
+    },
+    open,
+    fetch: fake.fetch,
+    now: () => clock,
+    oauth: deps(),
+  });
+  const state = () => states.find((s) => s.serverName === "cal");
+  /** A connection that goes bad once it is open (the clock moves, the server changes its mind) and before the list. */
+  const openThenBreak = (breakIt: () => void): MountDeps["open"] => async (target, opts) => {
+    const c = await openMcp(target, opts);
+    breakIt();
+    return c;
+  };
+
+  beforeEach(() => {
+    states = [];
+  });
+
+  it("🔴 a 401 with no token is needs-auth first, naming the issuer, and it isn't a failure", async () => {
+    expect(await mountServer("p1", "cal", mountDeps())).toMatchObject({
+      status: "needs-auth",
+      authReason: "first",
+      authIssuer: fake.issuer,
+      authScope: null,
+      error: "needs authentication",
+      failures: 0,
+      tools: [],
+    });
+    expect(fake.registrations).toHaveLength(0);
+  });
+
+  it("once signed in it connects, lists and clears the sign-in it asked for", async () => {
+    await mountServer("p1", "cal", mountDeps());
+    expect(state()?.status).toBe("needs-auth");
+    await signIn();
+    expect(await mountServer("p1", "cal", mountDeps())).toMatchObject({ status: "connected", error: null, authReason: null, authIssuer: null, authScope: null });
+    expect(state()?.tools.map((t) => t.rawName)).toEqual(["ping"]);
+  });
+
+  it("🔴 the sign-in is the speaker's: another person mounting the same entry still needs to sign in", async () => {
+    await signIn();
+    expect(await mountServer("p2", "cal", mountDeps())).toMatchObject({ status: "needs-auth", authReason: "first" });
+  });
+
+  it("an expired token the server refuses to refresh is needs-auth lapsed, and keeps the list it had", async () => {
+    fake.expiresIn = 1;
+    await signIn();
+    await mountServer("p1", "cal", mountDeps());
+    expect(state()?.status).toBe("connected");
+    clock = new Date(NOW.getTime() + 2000);
+    fake.rejectRefresh = true;
+    expect(await mountServer("p1", "cal", mountDeps())).toMatchObject({ status: "needs-auth", authReason: "lapsed", authIssuer: fake.issuer, error: "needs you to sign in again", failures: 0 });
+    expect(state()?.tools.map((t) => t.rawName)).toEqual(["ping"]);
+  });
+
+  it("🔴 a token that stops working in the middle of the session (the list is asked for after connecting) is needs-auth lapsed", async () => {
+    fake.expiresIn = 1;
+    await signIn();
+    const open = openThenBreak(() => {
+      clock = new Date(NOW.getTime() + 2000);
+      fake.rejectRefresh = true;
+    });
+    expect(await mountServer("p1", "cal", mountDeps(open))).toMatchObject({ status: "needs-auth", authReason: "lapsed", authIssuer: fake.issuer, failures: 0 });
+  });
+
+  it("🔴 a 403 insufficient_scope in the middle of the session asks for the union of what it had and what is wanted", async () => {
+    setServer({ oauth: { scope: "a" } });
+    await signIn();
+    const open = openThenBreak(() => {
+      fake.requiredScope = "b";
+    });
+    expect(await mountServer("p1", "cal", mountDeps(open))).toMatchObject({
+      status: "needs-auth",
+      authReason: "scope",
+      authScope: "a b",
+      authIssuer: fake.issuer,
+      error: "needs additional permissions (scope: a b)",
+      failures: 0,
+    });
+  });
+
+  it("🔴 with OAuth off (no oauth deps) the same 401 is a failure, as before", async () => {
+    const { oauth: _off, ...off } = mountDeps();
+    expect(await mountServer("p1", "cal", off)).toMatchObject({ status: "failed", failures: 1, authReason: null, authIssuer: null });
   });
 });

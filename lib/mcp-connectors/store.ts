@@ -9,6 +9,7 @@ import { db, schema } from "@/lib/db";
 
 import { EMPTY_MCP_CONFIG } from "./config";
 import type { ReviewedTool } from "./names";
+import type { SignInReason } from "./oauth/provider";
 
 const c = schema.personMcpConfigs;
 const s = schema.personMcpServerState;
@@ -20,12 +21,17 @@ export interface ServerState {
   readonly instructions: string;
   readonly hasResources: boolean;
   readonly listedAt: Date | null;
-  readonly status: "connected" | "failed" | "waiting-credentials";
+  readonly status: "connected" | "failed" | "waiting-credentials" | "needs-auth";
   readonly error: string | null;
   readonly stale: boolean;
   /** Consecutive failed mounts (DeepSeek's attempt budget); a success resets it, missing keys don't count. */
   readonly failures: number;
   readonly attemptedAt: Date | null;
+  // What a `needs-auth` server asks of the person (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4, §5.5): the
+  // authorization server it named, why it needs a sign-in, and the scope it asked for. All null in any other status.
+  readonly authIssuer: string | null;
+  readonly authReason: SignInReason | null;
+  readonly authScope: string | null;
 }
 
 export interface StoredConfig {
@@ -82,13 +88,13 @@ export async function approve(personId: string, name: string, fingerprint: strin
 
 export async function readServerStates(personId: string): Promise<ServerState[]> {
   const rows = await db.select().from(s).where(eq(s.personId, personId));
-  // The column now admits "needs-auth" (spec local 2026-11-17-oauth-de-conectores-mcp); nothing writes it until
-  // `ServerState` learns it (task 5 of that plan), so this narrowing is exact for now and goes with that change.
-  return rows.map(({ personId: _p, ...r }) => ({ ...r, status: r.status as ServerState["status"], tools: r.tools ?? [] }));
+  return rows.map(({ personId: _p, ...r }) => ({ ...r, tools: r.tools ?? [] }));
 }
 
 export async function saveServerState(personId: string, st: ServerState): Promise<void> {
-  const row = { ...st, tools: [...st.tools] };
+  // The upsert only sets the keys it is given: the auth columns are always written (null when there is nothing to
+  // say), so a server that comes back to `connected` never keeps the sign-in it used to ask for.
+  const row = { ...st, tools: [...st.tools], authIssuer: st.authIssuer ?? null, authReason: st.authReason ?? null, authScope: st.authScope ?? null };
   await db
     .insert(s)
     .values({ personId, ...row })

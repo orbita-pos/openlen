@@ -45,6 +45,9 @@ const state = (serverName: string, over: Partial<Parameters<typeof saveServerSta
   stale: false,
   failures: 0,
   attemptedAt: null,
+  authIssuer: null,
+  authReason: null,
+  authScope: null,
   ...over,
 });
 
@@ -93,6 +96,27 @@ describe("server states", () => {
     const at = new Date("2026-11-06T12:00:00Z");
     await saveServerState("p1", state("a", { status: "failed", failures: 3, attemptedAt: at }));
     expect((await readServerStates("p1"))[0]).toMatchObject({ failures: 3, attemptedAt: at });
+  });
+
+  it("a needs-auth state keeps its issuer, reason and scope", async () => {
+    await saveServerState("p1", state("a", { status: "needs-auth", error: "needs additional permissions (scope: a b)", authIssuer: "https://accounts.example", authReason: "scope", authScope: "a b" }));
+    expect((await readServerStates("p1"))[0]).toMatchObject({ status: "needs-auth", authIssuer: "https://accounts.example", authReason: "scope", authScope: "a b" });
+  });
+
+  it("🔴 a server that comes back clears the sign-in it asked for (the upsert writes the auth columns every time)", async () => {
+    await saveServerState("p1", state("a", { status: "needs-auth", authIssuer: "https://accounts.example", authReason: "lapsed", authScope: "a" }));
+    await saveServerState("p1", state("a"));
+    expect((await readServerStates("p1"))[0]).toMatchObject({ status: "connected", authIssuer: null, authReason: null, authScope: null });
+    await saveServerState("p1", state("a", { status: "needs-auth", authIssuer: "https://accounts.example", authReason: "first", authScope: null }));
+    await saveServerState("p1", state("a", { status: "failed", failures: 1 }));
+    expect((await readServerStates("p1"))[0]).toMatchObject({ status: "failed", authIssuer: null, authReason: null, authScope: null });
+  });
+
+  it("a state written without the auth keys (an older caller) still clears them", async () => {
+    await saveServerState("p1", state("a", { status: "needs-auth", authIssuer: "https://accounts.example", authReason: "first" }));
+    const { authIssuer: _i, authReason: _r, authScope: _s, ...old } = state("a");
+    await saveServerState("p1", old as Parameters<typeof saveServerState>[1]);
+    expect((await readServerStates("p1"))[0]).toMatchObject({ authIssuer: null, authReason: null, authScope: null });
   });
 
   it("markStale flags and delete removes", async () => {

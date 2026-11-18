@@ -7,7 +7,7 @@ import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/cli
 
 import type { McpCallResult, McpTool } from "@/lib/tools/mcp/client";
 
-import type { ConnectionProvider } from "./oauth/provider";
+import { asNeedsSignIn, type ConnectionProvider } from "./oauth/provider";
 
 export interface McpConnection {
   readonly serverInfo: { readonly name: string; readonly version: string };
@@ -60,7 +60,7 @@ export async function openMcp(
     await bounded(client.connect(transport, { timeout: opts.timeoutMs, signal: opts.signal }), opts.timeoutMs, "connecting", opts.signal);
   } catch (err) {
     await client.close().catch(() => {});
-    throw (auth && (await auth.signInNeededBy(err).catch(() => null))) ?? err;
+    throw (await asNeedsSignIn(auth, err)) ?? err;
   }
   const caps = client.getServerCapabilities() ?? {};
   const info = client.getServerVersion();
