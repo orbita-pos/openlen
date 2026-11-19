@@ -4768,6 +4768,30 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(launcherArgs()[0]).toMatchObject({ personId: "u1", planMode: false });
   });
 
+  // The child is told its <original_task> is authoritative: it must be what the person typed, and only a turn a
+  // person started has one (lib/agent/subagents/run.ts).
+  it("🔴 the launcher gets what the person typed as the original task", async () => {
+    await readEvents(await POST(peticion("  pon el título en azul  ")));
+    expect((launcherArgs()[0] as unknown as { originalTask?: string }).originalTask).toBe("pon el título en azul");
+  });
+
+  it("🔴 a turn the server started (a code thread, a scheduled run, the subagents' notices) carries no original task", async () => {
+    mocks.hiloDelProyecto.mockResolvedValue({ id: "h1" });
+    const hilo = { hiloId: "h1", ruta: "/src/App.jsx", linea: 3, contexto: "[Requested from a comment thread]" };
+    await readEvents(await corredor()("ana", { projectId: "p1", prompt: "@Len pon el título en azul", turnId: "11111111-1111-4111-8111-111111111111" }, { url: "http://x/api/projects/p1/hilos", signal: new AbortController().signal }, { hilo }));
+    expect(mocks.createSubagentLauncher).toHaveBeenCalled();
+    expect(launcherArgs()[0]).not.toHaveProperty("originalTask");
+    mocks.createSubagentLauncher.mockClear();
+    const origin = { kind: "scheduled" as const, taskId: "t1", title: "PDF", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "Make the PDF", turnId: "44444444-4444-4444-8444-444444444441" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "[SCHEDULE REMINDER]\nMake the PDF", origin, onReply: vi.fn(async () => {}) } }));
+    expect(mocks.createSubagentLauncher).toHaveBeenCalled();
+    expect(launcherArgs()[0]).not.toHaveProperty("originalTask");
+    mocks.createSubagentLauncher.mockClear();
+    await readEvents(await corredor()("u1", { projectId: "p1", prompt: "", turnId: "66666666-6666-4666-8666-666666666661" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "Background subagent r1 finished.", origin: { kind: "subagents" as const, ids: ["r1"] }, onReply: vi.fn(async () => {}) } }));
+    expect(mocks.createSubagentLauncher).toHaveBeenCalled();
+    expect(launcherArgs()[0]).not.toHaveProperty("originalTask");
+  });
+
   it("passes a custom type's effort as the child's turn pin", async () => {
     await pedir();
     const io = launcherArgs()[1] as unknown as import("@/lib/agent/subagents/run").RunnerIO;
