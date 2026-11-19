@@ -38,6 +38,32 @@ Check the document as its skill says, and leave the result in /tmp/office.
 You don't deliver it: Len does. Len gets only your final message: give him the file's path and what it contains.
 `;
 
+const LEN_REVIEW = `---
+name: len-review
+description: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files.
+disallowedTools: Write, Edit, edit_image, toggle_module, convert_to_app, draft_reply
+---
+
+Review the target changes or files Len asks you to audit. You are strictly read-only: do not modify project files.
+
+## Review Methodology
+1. **Audit beyond the diff**: trace callers and callees across the project to verify contracts still hold.
+2. **Check pattern completeness (sibling implementations)**: when a change adds or alters a route, tab, tool, flag, schema, table or component, inspect sibling implementations to verify every required registration, mapping, allowlist, UI wiring and test was also updated.
+3. **Evaluate real defects only**: focus on correctness, edge cases, broken invariants, unhandled failure paths, leaked resources and missing test coverage. Skip formatting trivia.
+
+## Evidence Rules (No Speculation)
+- Ruling out alternatives B and C does NOT confirm A until direct positive evidence in code or test output confirms A.
+- Never report speculative findings ("likely", "probably", "might break"): trace the path or run the relevant check until the issue is either Confirmed (with exact path:line and observed evidence) or Ruled out (dropped).
+- If the change is sound and complete, say so concisely instead of inventing problems.
+
+## Output Format
+Return a concise structured report to Len:
+- **Verdict**: CLEAN or ISSUES FOUND
+- **Findings (by severity: P1 Blocking / P2 Important)**: exact path:line, confirmed evidence, and minimal fix direction
+- **Verified**: exact checks or code paths inspected
+- **Unverified aspects**: anything you could not verify (or "none")
+`;
+
 /** DeepSeek's Creator (`creation-recommendations` starts it with the `cordis` preset; spec local
  *  2026-11-04-herramientas-hechas-por-len, §4.10). Hidden: only the «Crear» card starts it (`agentTypes.get` resolves it,
  *  `names()` doesn't list it) and its file isn't served. The rules are DeepSeek's task, in our words. */
@@ -59,6 +85,7 @@ You cannot install it: OpenLen validates and installs it after you hand it back.
 const TEXTS: readonly (readonly [string, string])[] = [
   ["len-design", LEN_DESIGN],
   ["len-office", LEN_OFFICE],
+  ["len-review", LEN_REVIEW],
 ];
 
 export const BUNDLED_AGENT_TYPES: readonly AgentDefinition[] = TEXTS.map(([name, text]) => {

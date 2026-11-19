@@ -2,6 +2,7 @@ import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import type { SealedArtifactInput } from "../../types";
 import { compileArtifactHtml } from "../dashboard/compile";
+import { lintMotionSources } from "./lint";
 import { motionManifest } from "./manifest";
 let runtime:Promise<string>|undefined;
 /** GSAP's default force3D "auto" writes translate3d while a tween runs and a 2D transform at rest, so Chromium
@@ -16,5 +17,6 @@ export async function buildMotion(input:SealedArtifactInput,options:{checkOnly?:
   const gsap=options.checkOnly?"":await(runtime??=readFile(createRequire(import.meta.url).resolve("gsap/dist/gsap.min.js"),"utf8").then(source=>`${source}\n${FRAME_IS_A_FUNCTION_OF_TIME}`).catch(error=>{runtime=undefined;throw error;}));
   // Preserve GSAP's license notice in the self-contained exported source.
   const html=await compileArtifactHtml(input,manifest.entry,manifest.datasetIds.map(id=>input.datasets.find(d=>d.id===id)!),gsap);
-  return {html,manifest};
+  const lint=lintMotionSources(input.revision.files,manifest.durationSeconds);
+  return {html,manifest,lint};
 }
