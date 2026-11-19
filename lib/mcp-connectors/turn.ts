@@ -11,7 +11,8 @@ import type { McpConnection, openMcp } from "./client";
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "./config";
 import { directoryFor, type DirectoryEntry } from "./directory";
 import { MOUNT_MAX_ATTEMPTS, serversToMount } from "./mount";
-import { asNeedsSignIn, connectionProvider, NeedsSignIn, type ConnectionProvider, type OAuthDeps, type SignInReason } from "./oauth/provider";
+import { asNeedsSignIn, connectionProvider, NeedsSignIn, shortError, type ConnectionProvider, type OAuthDeps, type SignInReason } from "./oauth/provider";
+import { cleanScope } from "./oauth/remote-text";
 import { projectCallResult, renderResource } from "./project";
 import type { ServerState, StoredConfig } from "./store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "./templates";
@@ -53,7 +54,7 @@ export function authenticateDescription(
   if (reason === "lapsed") {
     return `The "${server}" connector is installed, but its sign-in has stopped working, so its tools are unavailable. Call this tool only when the user's request needs this connector (even if they didn't name it explicitly). It tries the connection again. If the connector still needs a sign-in, the call fails, and the person is shown a "Connect" button to sign in again. Then tell them in one short sentence that ${server} needs them to sign in again, carry on with whatever does not need it, and do not call this tool again until they send another message. Do not ask the user for authorization codes, tokens, or URLs.`;
   }
-  const why = reason === "scope" ? `needs additional permissions (scope: "${scope ?? ""}")` : "requires authentication";
+  const why = reason === "scope" ? `needs additional permissions (scope: "${cleanScope(scope) ?? ""}")` : "requires authentication";
   return `The "${server}" MCP server (streamable-http at ${host}) is installed but ${why}. Call this tool when the user's request needs it: the person is shown a "Connect" button to sign in at ${issuerHost}. Once they finish in their browser, the server's real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.`;
 }
 
@@ -120,6 +121,9 @@ export interface TurnConnectors {
   readonly toMount: readonly string[];
 }
 
+/** A server's error as the model reads it: what the server said, on one short line — whatever an older build stored. */
+const errorOf = (state: ServerState): string => shortError(state.error ?? "unknown error");
+
 const EMPTY: TurnConnectors = { declarations: [], routes: new Map(), serverNames: [], active: new Map(), resourceServers: [], contextText: "", toMount: [] };
 const bytesOf = (s: string) => new TextEncoder().encode(s).byteLength;
 
@@ -161,7 +165,7 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
         reason === "lapsed"
           ? "needs sign-in again"
           : reason === "scope"
-            ? `needs additional permissions (scope: "${state.authScope ?? ""}")`
+            ? `needs additional permissions (scope: "${cleanScope(state.authScope) ?? ""}")`
             : "needs sign-in";
       lines.push(`- ${name}: ${why} (call mcp__${name}__${AUTHENTICATE_TOOL})`);
       needsAuth.push({ name, entry, state });
@@ -169,11 +173,11 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
       lines.push(`- ${name}: waiting-credentials: ${credentialRefsOf(entry).join(", ")}`);
     // DeepSeek: after its attempt budget the server's tools are removed until the configuration is reloaded.
     else if (state?.status === "failed" && state.fingerprint === fp && state.failures >= MOUNT_MAX_ATTEMPTS)
-      lines.push(`- ${name}: failed ${state.failures} times in a row (${state.error ?? "unknown error"}); it stopped retrying until the person saves or approves it again on the Herramientas page`);
-    else if (!state || state.fingerprint !== fp || !state.listedAt) lines.push(state?.status === "failed" && state.fingerprint === fp ? `- ${name}: failed: ${state.error ?? "unknown error"}` : `- ${name}: not listed yet`);
+      lines.push(`- ${name}: failed ${state.failures} times in a row (${errorOf(state)}); it stopped retrying until the person saves or approves it again on the Herramientas page`);
+    else if (!state || state.fingerprint !== fp || !state.listedAt) lines.push(state?.status === "failed" && state.fingerprint === fp ? `- ${name}: failed: ${errorOf(state)}` : `- ${name}: not listed yet`);
     else {
       ready.push({ name, entry, state });
-      if (state.status === "failed") lines.push(`- ${name}: failed: ${state.error ?? "unknown error"} (its last list is still declared)`);
+      if (state.status === "failed") lines.push(`- ${name}: failed: ${errorOf(state)} (its last list is still declared)`);
       if (state.status === "waiting-credentials") lines.push(`- ${name}: waiting-credentials: ${credentialRefsOf(entry).join(", ")}`);
     }
   }

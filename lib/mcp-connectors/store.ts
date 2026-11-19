@@ -10,6 +10,7 @@ import { db, schema } from "@/lib/db";
 import { EMPTY_MCP_CONFIG } from "./config";
 import type { ReviewedTool } from "./names";
 import type { SignInReason } from "./oauth/provider";
+import { cleanIssuer, cleanScope } from "./oauth/remote-text";
 
 const c = schema.personMcpConfigs;
 const s = schema.personMcpServerState;
@@ -109,9 +110,12 @@ export async function markNeedsAuth(
   personId: string,
   serverName: string,
   reason: SignInReason,
-  issuer: string | null,
-  scope: string | null,
+  issuerAsked: string | null,
+  scopeAsked: string | null,
 ): Promise<void> {
+  // What the server said, in bounds before it is stored: the model reads it back.
+  const issuer = cleanIssuer(issuerAsked);
+  const scope = cleanScope(scopeAsked);
   const error =
     reason === "scope"
       ? scope

@@ -13,6 +13,7 @@ import { entryFingerprint, parseMcpConfig, type McpConfig, type McpServerEntry }
 import type { McpConnection, openMcp } from "./client";
 import { reviewTools } from "./names";
 import { asNeedsSignIn, connectionProvider, shortError, type ConnectionProvider, type NeedsSignIn, type OAuthDeps } from "./oauth/provider";
+import { cleanIssuer, cleanScope } from "./oauth/remote-text";
 import type { ServerState, StoredConfig } from "./store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "./templates";
 
@@ -80,7 +81,9 @@ export async function mountServer(personId: string, name: string, d: MountDeps):
   // The sign-in columns are only for `needs-auth`: every other state writes them null, so a server that comes back clears them.
   const noSignIn = { authIssuer: null, authReason: null, authScope: null } as const;
   const now = d.now();
-  const save = async (s: ServerState) => {
+  // Whatever a server said is stored as one short line (the redaction already ran): the model reads it back in its context.
+  const save = async (state: ServerState) => {
+    const s = state.error === null ? state : { ...state, error: shortError(state.error) };
     await d.saveState(personId, s);
     return s;
   };
@@ -98,9 +101,9 @@ export async function mountServer(personId: string, name: string, d: MountDeps):
       stale: false,
       failures: prev?.failures ?? 0,
       attemptedAt: now,
-      authIssuer: needs.issuer,
+      authIssuer: cleanIssuer(needs.issuer),
       authReason: needs.reason,
-      authScope: needs.scope,
+      authScope: cleanScope(needs.scope),
     });
   const opened = await openEntry(personId, name, entry, d);
   if (!opened.ok) {

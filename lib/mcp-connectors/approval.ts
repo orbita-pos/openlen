@@ -36,6 +36,7 @@ export async function approveServer(
 
 export type { McpApprovalCard } from "./approval-card";
 import type { McpApprovalCard } from "./approval-card";
+import { cleanIssuer } from "./oauth/remote-text";
 
 export function hostOf(url: string): string {
   try {
@@ -47,7 +48,8 @@ export function hostOf(url: string): string {
 
 /** The hostname where the person signs in: the authorization server discovered on mount, else what the entry names, else the server's own host. */
 export function issuerHostOf(entry: McpServerEntry, authIssuer: string | null = null): string {
-  return hostOf(authIssuer ?? entry.oauth?.authorizationServer?.[0] ?? entry.oauth?.authServerMetadataUrl ?? entry.url);
+  // What the server named is a server's own word: only an https URL is ever turned into a host to show (remote-text.ts).
+  return hostOf(cleanIssuer(authIssuer) ?? entry.oauth?.authorizationServer?.[0] ?? entry.oauth?.authServerMetadataUrl ?? entry.url);
 }
 
 /** Entries the person approved as they are: their fingerprint is still the approved one. */
