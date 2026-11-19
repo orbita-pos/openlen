@@ -21,6 +21,7 @@ import { SCHEDULE_TOOL_NAMES } from "@/lib/agent/schedule-tools";
 import { PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
+import { SUGGEST_CONNECTORS_TOOL } from "@/lib/mcp-connectors/tool-names";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 
@@ -67,6 +68,10 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   PROPOSE_ACTION,
   // So is the card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
   CREATE_ASSISTANT,
+  // And the Connect card for a curated connector (spec local 2026-11-17-oauth-de-conectores-mcp, §5.5, §6): a child's
+  // events never reach the person, so a card it left would be shown to nobody. (`mcp__<server>__authenticate` is out by
+  // its prefix, like every connector tool: `isToolOperation`.)
+  SUGGEST_CONNECTORS_TOOL,
 ]);
 
 /** The artifact tools that only read. */
