@@ -87,13 +87,19 @@ describe("la capacidad de esfuerzo la dice el modelo", () => {
   // campo sólo pone un TECHO, y con `high` adaptativo (H5) `xhigh` pensaba
   // MENOS que `high` y `max` era `high` con otro nombre. El porqué entero, en
   // `DIAL_MEDIDO`.
-  it("un modelo MEDIDO ofrece hasta su tope comprobado — V4.1 Flash, hasta `high`", () => {
-    const c = capacidadDeEsfuerzo(MEDIDO);
-    expect(c.medido).toBe(true);
-    expect(c.niveles).toEqual(["low", "medium", "high"]);
-    expect(c.niveles).not.toContain("xhigh");
-    expect(c.niveles).not.toContain("max");
-    expect(c.defecto).toBe("high");
+  it("un modelo MEDIDO ofrece hasta su tope comprobado — V4.1 Flash y 1017, hasta `high`", () => {
+    for (const id of [
+      MEDIDO,
+      "accounts/fireworks/models/deepseek-v4p1-flash-1017",
+      "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    ]) {
+      const c = capacidadDeEsfuerzo(id);
+      expect(c.medido, id).toBe(true);
+      expect(c.niveles, id).toEqual(["low", "medium", "high"]);
+      expect(c.niveles, id).not.toContain("xhigh");
+      expect(c.niveles, id).not.toContain("max");
+      expect(c.defecto, id).toBe("high");
+    }
   });
 
   // 🔴 NUESTRA RESERVA. Es la mitad que importa: sin ella un modelo nuevo

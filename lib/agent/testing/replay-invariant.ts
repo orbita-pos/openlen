@@ -132,9 +132,9 @@ export function withReplayInvariant(run: typeof runAgentLoop, o: { readonly allo
     const result = await run({
       ...args,
       storeScreenshots,
-      openStream: (messages) => {
+      openStream: (messages, opts) => {
         if (messages.at(-1)?.content !== COMPACTION_INSTRUCTION) requests.push({ messages: structuredClone(messages), compactionsBefore: compactions });
-        return args.openStream(messages);
+        return opts ? args.openStream(messages, opts) : args.openStream(messages);
       },
       emit: (ev) => {
         if (ev.type === "compaction") {

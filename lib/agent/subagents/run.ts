@@ -109,7 +109,7 @@ export interface LaunchContext {
 
 /** The brain a child talks to: Len's (`createAgentBrain`), with the child's tools. */
 export interface SubagentBrain {
-  openStream(messages: Message[]): AsyncIterable<import("@/lib/ai-gateway").StreamEvent>;
+  openStream(messages: Message[], opts?: { readonly effortUnlock?: "high" }): AsyncIterable<import("@/lib/ai-gateway").StreamEvent>;
   closeOut(messages: Message[]): AsyncIterable<import("@/lib/ai-gateway").StreamEvent>;
   readonly modelId: string;
   lastProvider(): LedgerUse["provider"];
@@ -438,7 +438,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         tools,
         ...(spec.allowed ? { allowed: spec.allowed } : {}),
         // A fork's request is Len's as he sends it: his cache. (Lever off: with the plan section in message 0.)
-        openStream: (m) => {
+        openStream: (m, streamOpts) => {
           const request = spec.forked && !planInHistory ? withPlanSection(m, ctx.planMode) : m;
           if (definition?.maxTurns !== null && definition?.maxTurns !== undefined && calls >= definition.maxTurns) {
             turnLimitReached = true;
@@ -446,7 +446,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
             return b.closeOut([...request, { role: "user", content: TURN_LIMIT_MESSAGE }]);
           }
           calls++;
-          return b.openStream(request);
+          return streamOpts ? b.openStream(request, streamOpts) : b.openStream(request);
         },
         closeOut: (m) => b.closeOut(spec.forked && !planInHistory ? withPlanSection(m, ctx.planMode) : m),
         signal: abort.signal,

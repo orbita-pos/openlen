@@ -2587,11 +2587,14 @@ async function correrTurno(
           // reintentos de verdad, también a mitad de stream, los hace el BUCLE
           // (`lib/agent/retry-policy.ts`, como DeepSeek). Cada evento del modelo
           // rearma el reloj de silencio.
-          openStream: (msgs) => {
+          openStream: (msgs, streamOpts) => {
             // Pieza 7: el prompt del modo plan, con el estado de AHORA. Lo añade el bucle a su conversación
             // cuando el modo cambia (`systemUpdate`); con la palanca apagada, entra y sale del mensaje 0 aquí.
             const conModo = planEnElHistorial ? msgs : withPlanSection(msgs, planActivo);
-            const s = conSenales(streamWithRetry(() => brain.openStream(conModo), { signal: upstreamAbort.signal }), reloj.vivo);
+            const s = conSenales(
+              streamWithRetry(() => (streamOpts ? brain.openStream(conModo, streamOpts) : brain.openStream(conModo)), { signal: upstreamAbort.signal }),
+              reloj.vivo,
+            );
             // `envuelve` deja pasar cada evento tal cual y se queda una copia:
             // no cambia el orden, ni el contenido, ni el momento en que llega.
             return grabadora ? grabadora.envuelve(s) : s;

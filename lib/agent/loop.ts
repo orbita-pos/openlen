@@ -239,7 +239,7 @@ export interface AgentLoopArgs {
   tools: Record<string, unknown>[];
   /** Abre un stream de modelo para un set de mensajes. El route inyecta el
    *  GeminiProvider real; los tests inyectan streams guionados. */
-  openStream(messages: Message[]): AsyncIterable<StreamEvent>;
+  openStream(messages: Message[], opts?: { readonly effortUnlock?: "high" }): AsyncIterable<StreamEvent>;
   /** El ■ del turno: corta la espera entre reintentos (el stream ya lo corta
    *  su propio `fetch`). Lo pasa la ruta (`upstreamAbort.signal`). */
   signal?: AbortSignal;
@@ -995,6 +995,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   const ownArchived: Message[] = [];
   /** A2 de Len 3.1: el aviso de llamadas repetidas de DeepSeek (`repeat-reminder.ts`). */
   const repeticiones = createRepeatReminder();
+  /** Plan Ruta 98 % (P4b): 1-step effort unlock (low/medium -> high adaptive) after a real stall. */
+  let unlockEffortNextStep = false;
+  let consecutiveStallSteps = 0;
   // El aviso de turno callado de Claude Code: 5 pasos sin decirle nada a la persona.
   const silencio = createSilentTurnReminder();
   // A3 · el reloj del turno, el de Claude Code: empieza con el mensaje del dueño
@@ -1489,6 +1492,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (direccion) {
       messages.push(steerMessage(direccion));
       repeticiones.reset();
+      unlockEffortNextStep = false;
+      consecutiveStallSteps = 0;
       silencio.reset();
       relojDesde = ahora();
       args.emit({ type: "direccion", texto: direccion });
@@ -1565,6 +1570,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // fallo sin código (un 400) es nuestro y sale como siempre. El ■ durante la
     // espera corta sin otro intento. `turns` no se vuelve a sumar.
     const yaHablabaAntesDelIntento: boolean = algunaVueltaYaDijoAlgo;
+    const stepEffortUnlock = unlockEffortNextStep ? ("high" as const) : undefined;
+    unlockEffortNextStep = false;
     /** Lo estimado de los intentos fallidos de este paso en el proveedor
      *  actual: si el cerebro lo deja, se perdona (`forgivenUsage`). */
     const estimadoSinUso = { inputTokens: 0, outputTokens: 0, cachedTokens: 0, thinkingTokens: 0 };
@@ -1596,7 +1603,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       const promptOfNow = args.systemUpdate?.(messages) ?? null;
       if (promptOfNow) messages.push(promptOfNow);
       const peticionDelIntento = estimateTokens(messages);
-      for await (const ev of args.openStream(messages)) {
+      for await (const ev of stepEffortUnlock ? args.openStream(messages, { effortUnlock: stepEffortUnlock }) : args.openStream(messages)) {
         if (ev.type === "text_delta") generadoEnElIntento += ev.text.length;
         else if (ev.type === "reasoning") pensadoEnElIntento += ev.text.length;
         else if (ev.type === "function_call_delta") argumentosEnVivo += ev.argsDelta.length;
@@ -1836,6 +1843,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         if (turnText.trim()) messages.push(delAsistente(turnText));
         messages.push(steerMessage(tardia));
         repeticiones.reset();
+        unlockEffortNextStep = false;
+        consecutiveStallSteps = 0;
         silencio.reset();
         relojDesde = ahora();
         args.emit({ type: "direccion", texto: tardia });
@@ -2356,6 +2365,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
     // Pieza 8: y detrás, lo que las herramientas dejaron para este paso (el
     // cierre de un encargo), como el `deferContext` de DeepSeek.
+    const hasErrorDiag = diagnosticosDeLaTanda.some((d) => d.gravedad === "Error");
     const medido = await medirYRedactar();
     // Y LAS CAPTURAS, en este mismo mensaje y con su rótulo: el modelo las mira
     // él, sin nadie que se las describa (como la skill `verify` de Claude Code:
@@ -2364,6 +2374,23 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // Where they were stored, when every one was: what the row keeps of them, so the next turn sends the
     // same pictures and what this one sent still matches (`Message.screenshots`).
     const direcciones = capturas.every((c) => c.urls?.length === c.images.length) ? capturas.flatMap((c) => c.urls ?? []) : [];
+    const repeatNotices = repeticiones.observe(
+      functionResponses.map((r, i) => ({ name: calls[i]?.name ?? r.name, args: calls[i]?.args, response: r.response })),
+    );
+    const allCallsFailed =
+      functionResponses.length > 0 && functionResponses.every((r) => r.response.ok === false || r.response.isError === true);
+    if (repeatNotices.length > 0) {
+      unlockEffortNextStep = true;
+      consecutiveStallSteps = 0;
+    } else if (hasErrorDiag || allCallsFailed) {
+      consecutiveStallSteps += 1;
+      if (consecutiveStallSteps >= 2) {
+        unlockEffortNextStep = true;
+        consecutiveStallSteps = 0;
+      }
+    } else {
+      consecutiveStallSteps = 0;
+    }
     messages.push({
       role: "user",
       // El aviso del corte, el último: es lo que decide el paso siguiente.
@@ -2374,7 +2401,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
         // El recordatorio de la lista, el de Claude Code: cada 10 pasos sin `todo_write`.
         offersTodoWrite ? (todoReminder(messages, currentTodos) ?? "") : "",
         // Y el de las llamadas repetidas, el de DeepSeek: detrás de los resultados, sin bloquear nada.
-        ...repeticiones.observe(functionResponses.map((r, i) => ({ name: calls[i]?.name ?? r.name, args: calls[i]?.args, response: r.response }))),
+        ...repeatNotices,
         // Y el tiempo que lleva el turno, como Claude Code (A3).
         elapsedTimeReminder(ahora() - relojDesde),
         // Y si lleva 5 pasos sin decirle nada a la persona, el aviso de turno callado.
@@ -2398,6 +2425,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     if (pendiente) {
       messages.push(steerMessage(pendiente));
       repeticiones.reset();
+      unlockEffortNextStep = false;
+      consecutiveStallSteps = 0;
       silencio.reset();
       relojDesde = ahora();
       args.emit({ type: "direccion", texto: pendiente });
