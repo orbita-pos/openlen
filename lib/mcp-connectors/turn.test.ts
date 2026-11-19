@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { McpConnection } from "./client";
 import { entryFingerprint, parseMcpConfig } from "./config";
+import { NeedsSignIn } from "./oauth/provider";
 import type { ServerState } from "./store";
 import { connectorsForTurn, mergeMcpDeclarations, RESOURCE_TOOL_NAMES, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
 
@@ -297,5 +298,249 @@ describe("TurnConnections", () => {
     await tc.call("mcp__ok__search", {});
     await tc.closeAll();
     expect(conn.closedCount()).toBe(1);
+  });
+});
+
+// spec local 2026-11-17-oauth-de-conectores-mcp, §5.5: a person with no server that needs a sign-in gets the same bytes
+// as before OAuth existed. The snapshot was written by the code BEFORE `authenticate` (task 6), and must never move.
+describe("🔴 nothing changes without OAuth servers", () => {
+  it("declarations and context, byte for byte", async () => {
+    const { d } = setup({ ok: entry("https://ok.example.com/mcp"), pend: entry("https://p.example.com/mcp"), wait: entry("https://w.example.com/mcp"), docs: entry("https://d.example.com/mcp") }, ["ok", "wait", "docs"], [
+      { serverName: "ok", tools: [tool("ok", "b"), tool("ok", "a")], instructions: "Search before you write." },
+      { serverName: "docs", tools: [tool("docs", "read")], hasResources: true, status: "failed", error: "boom" },
+      { serverName: "wait", status: "waiting-credentials", error: "missing: TOK", listedAt: null },
+    ]);
+    const t = await connectorsForTurn("p1", d);
+    expect(JSON.stringify(t.declarations)).toMatchSnapshot();
+    expect(t.contextText).toMatchSnapshot();
+  });
+});
+
+const oauthEntry = (url = "https://calendarmcp.googleapis.com/mcp/v1") => ({
+  transport: "streamable-http",
+  url,
+  oauth: { scope: "https://www.googleapis.com/auth/calendar" },
+});
+
+describe("mcp__<server>__authenticate", () => {
+  it("needs-auth declares only authenticate, even when a previous tool list and resources were stored", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [
+      {
+        serverName: "cal",
+        status: "needs-auth",
+        authReason: "first",
+        authIssuer: "https://accounts.google.com",
+        tools: [tool("cal", "list_events"), tool("cal", "create_event")],
+        hasResources: true,
+        instructions: "Old instructions that should not show while signed out.",
+      },
+    ]);
+    const t = await connectorsForTurn("p1", d);
+    expect(t.declarations.map((x) => x.name)).toEqual(["mcp__cal__authenticate"]);
+    expect([...t.routes.keys()]).toEqual(["mcp__cal__authenticate"]);
+    expect(t.resourceServers).toEqual([]);
+    expect(t.contextText).not.toContain("Old instructions");
+  });
+
+  it("the authenticate texts and context lines match the three reasons byte for byte", async () => {
+    const first = await connectorsForTurn(
+      "p1",
+      setup({ cal: oauthEntry() }, ["cal"], [
+        { serverName: "cal", status: "needs-auth", authReason: "first", authIssuer: "https://accounts.google.com", listedAt: null },
+      ]).d,
+    );
+    expect(first.declarations[0]).toEqual({
+      name: "mcp__cal__authenticate",
+      description:
+        'The "cal" MCP server (streamable-http at calendarmcp.googleapis.com) is installed but requires authentication. Call this tool when the user\'s request needs it: the person is shown a "Connect" button to sign in at accounts.google.com. Once they finish in their browser, the server\'s real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.',
+      parameters: obj,
+    });
+    expect(first.contextText).toContain("- cal: needs sign-in (call mcp__cal__authenticate)");
+
+    const lapsed = await connectorsForTurn(
+      "p1",
+      setup({ cal: oauthEntry() }, ["cal"], [
+        { serverName: "cal", status: "needs-auth", authReason: "lapsed", authIssuer: "https://accounts.google.com" },
+      ]).d,
+    );
+    expect(lapsed.declarations[0]).toEqual({
+      name: "mcp__cal__authenticate",
+      description:
+        'The "cal" connector is installed, but its sign-in has stopped working, so its tools are unavailable. Call this tool only when the user\'s request needs this connector (even if they didn\'t name it explicitly). It tries the connection again. If the connector still needs a sign-in, the call fails, and the person is shown a "Connect" button to sign in again. Then tell them in one short sentence that cal needs them to sign in again, carry on with whatever does not need it, and do not call this tool again until they send another message. Do not ask the user for authorization codes, tokens, or URLs.',
+      parameters: obj,
+    });
+    expect(lapsed.contextText).toContain("- cal: needs sign-in again (call mcp__cal__authenticate)");
+
+    const scope = await connectorsForTurn(
+      "p1",
+      setup({ cal: oauthEntry() }, ["cal"], [
+        {
+          serverName: "cal",
+          status: "needs-auth",
+          authReason: "scope",
+          authIssuer: "https://accounts.google.com",
+          authScope: "calendar.readonly calendar.events",
+        },
+      ]).d,
+    );
+    expect(scope.declarations[0]).toEqual({
+      name: "mcp__cal__authenticate",
+      description:
+        'The "cal" MCP server (streamable-http at calendarmcp.googleapis.com) is installed but needs additional permissions (scope: "calendar.readonly calendar.events"). Call this tool when the user\'s request needs it: the person is shown a "Connect" button to sign in at accounts.google.com. Once they finish in their browser, the server\'s real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.',
+      parameters: obj,
+    });
+    expect(scope.contextText).toContain('- cal: needs additional permissions (scope: "calendar.readonly calendar.events") (call mcp__cal__authenticate)');
+  });
+
+  it("once per turn: a second call is refused with Claude Code's message", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [
+      { serverName: "cal", status: "needs-auth", authReason: "first", authIssuer: "https://accounts.google.com", listedAt: null },
+    ]);
+    const turn = await connectorsForTurn("p1", d);
+    let mounts = 0;
+    const tc = new TurnConnections(
+      "p1",
+      turn,
+      {
+        resolveCredentials: async () => new Map(),
+        open: async () => connection().c,
+        fetch: (async () => new Response()) as typeof fetch,
+        markStale: async () => {},
+        mount: async () => {
+          mounts++;
+          return null;
+        },
+        modelTakesImages: true,
+      },
+      { attended: true },
+    );
+    const first = await tc.call("mcp__cal__authenticate", {});
+    expect(first.mcpApproval?.oauth).toEqual({ issuerHost: "accounts.google.com", reason: "first" });
+    const second = await tc.call("mcp__cal__authenticate", {});
+    expect(second.response).toEqual({
+      isError: true,
+      content: [{ type: "text", text: 'The "cal" connector was already tried in this turn.' }],
+    });
+    expect(second.mcpApproval).toBeUndefined();
+    expect(mounts).toBe(1);
+  });
+
+  it("if mounting succeeds when authenticate is called, it reports connected without a card", async () => {
+    const { d, fp } = setup({ cal: oauthEntry() }, ["cal"], [
+      { serverName: "cal", status: "needs-auth", authReason: "lapsed", authIssuer: "https://accounts.google.com" },
+    ]);
+    const turn = await connectorsForTurn("p1", d);
+    const tc = new TurnConnections(
+      "p1",
+      turn,
+      {
+        resolveCredentials: async () => new Map(),
+        open: async () => connection().c,
+        fetch: (async () => new Response()) as typeof fetch,
+        markStale: async () => {},
+        mount: async () => ({
+          serverName: "cal",
+          fingerprint: fp("cal"),
+          tools: [tool("cal", "list_events")],
+          instructions: "",
+          hasResources: false,
+          listedAt: NOW,
+          status: "connected",
+          error: null,
+          stale: false,
+          failures: 0,
+          attemptedAt: NOW,
+          authIssuer: null,
+          authReason: null,
+          authScope: null,
+        }),
+        modelTakesImages: true,
+      },
+      { attended: true },
+    );
+    const out = await tc.call("mcp__cal__authenticate", {});
+    expect(out.mcpApproval).toBeUndefined();
+    expect(out.response).toEqual({
+      content: [{ type: "text", text: 'The "cal" connector is connected again. Its tools are available from the person\'s next message.' }],
+    });
+  });
+
+  it("attended leaves the card, unattended does not", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [
+      { serverName: "cal", status: "needs-auth", authReason: "first", authIssuer: "https://accounts.google.com", listedAt: null },
+    ]);
+    const turn = await connectorsForTurn("p1", d);
+    const deps: CallDeps = {
+      resolveCredentials: async () => new Map(),
+      open: async () => connection().c,
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      mount: async () => null,
+      modelTakesImages: true,
+    };
+    const attended = await new TurnConnections("p1", turn, deps, { attended: true }).call("mcp__cal__authenticate", {});
+    expect(attended.mcpApproval?.oauth).toEqual({ issuerHost: "accounts.google.com", reason: "first" });
+    expect(attended.response).toEqual({
+      content: [
+        {
+          type: "text",
+          text: 'The person is shown a "Connect" button for cal. Tell them in one short sentence, and carry on with whatever does not need cal.',
+        },
+      ],
+    });
+
+    const unattended = await new TurnConnections("p1", turn, deps, { attended: false }).call("mcp__cal__authenticate", {});
+    expect(unattended.mcpApproval).toBeUndefined();
+    expect(unattended.response).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "Nobody can sign in right now (this turn runs without the person). Tell them in one short sentence that cal needs them to connect it in OpenLen, and carry on with whatever does not need cal.",
+        },
+      ],
+    });
+  });
+
+  it("🔴 invalid_grant mid-turn returns the lapsed text and marks the server needs-auth once (Review Focus 2)", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [{ serverName: "cal", tools: [tool("cal", "list_events")], status: "connected" }]);
+    const turn = await connectorsForTurn("p1", d);
+    const marked: unknown[] = [];
+    let opens = 0;
+    const tc = new TurnConnections("p1", turn, {
+      resolveCredentials: async () => new Map(),
+      open: async () => {
+        opens++;
+        throw new NeedsSignIn("lapsed", "https://accounts.google.com", null);
+      },
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      markNeedsAuth: async (p, s, reason, issuer, scope) => {
+        marked.push({ p, s, reason, issuer, scope });
+      },
+      modelTakesImages: true,
+    });
+    const first = await tc.call("mcp__cal__list_events", {});
+    const second = await tc.call("mcp__cal__list_events", {});
+    const expectedText =
+      'The "cal" connector is installed, but its sign-in has stopped working, so its tools are unavailable. Call this tool only when the user\'s request needs this connector (even if they didn\'t name it explicitly). It tries the connection again. If the connector still needs a sign-in, the call fails, and the person is shown a "Connect" button to sign in again. Then tell them in one short sentence that cal needs them to sign in again, carry on with whatever does not need it, and do not call this tool again until they send another message. Do not ask the user for authorization codes, tokens, or URLs.';
+    expect(first.response).toEqual({ isError: true, content: [{ type: "text", text: expectedText }] });
+    expect(second.response).toEqual({ isError: true, content: [{ type: "text", text: expectedText }] });
+    expect(opens).toBe(1);
+    expect(marked).toEqual([{ p: "p1", s: "cal", reason: "lapsed", issuer: "https://accounts.google.com", scope: null }]);
+  });
+
+  it("🔴 a member's connectors are the member's: the owner never sees or uses them (Review Focus 5)", async () => {
+    const memberSetup = setup({ cal: oauthEntry() }, ["cal"], [{ serverName: "cal", tools: [tool("cal", "list_events")], status: "connected" }]);
+    const emptySetup = setup({}, [], []);
+    const byPerson: TurnDeps = {
+      readConfig: async (p) => (p === "miembro" ? memberSetup.d.readConfig(p) : emptySetup.d.readConfig(p)),
+      readStates: async (p) => (p === "miembro" ? memberSetup.d.readStates(p) : emptySetup.d.readStates(p)),
+      now: () => NOW,
+    };
+    const memberTurn = await connectorsForTurn("miembro", byPerson);
+    const ownerTurn = await connectorsForTurn("dueno", byPerson);
+    expect(memberTurn.declarations.map((x) => x.name)).toEqual(["mcp__cal__list_events"]);
+    expect(ownerTurn.declarations).toEqual([]);
+    expect(ownerTurn.contextText).toBe("");
   });
 });

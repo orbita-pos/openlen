@@ -45,6 +45,11 @@ export function hostOf(url: string): string {
   }
 }
 
+/** The hostname where the person signs in: the authorization server discovered on mount, else what the entry names, else the server's own host. */
+export function issuerHostOf(entry: McpServerEntry, authIssuer: string | null = null): string {
+  return hostOf(authIssuer ?? entry.oauth?.authorizationServer?.[0] ?? entry.oauth?.authServerMetadataUrl ?? entry.url);
+}
+
 /** Entries the person approved as they are: their fingerprint is still the approved one. */
 function approvedEntries(config: McpConfig, approved: Readonly<Record<string, string>>): [string, McpServerEntry][] {
   return Object.entries(config.servers).filter(([n, e]) => approved[n] === entryFingerprint(e));
@@ -76,5 +81,6 @@ export function buildApprovalCard(
       firstTime: set && !citing.includes(host),
     };
   });
-  return { server, host, headerNames: Object.keys(entry.headers).sort(), credentials, fingerprint: entryFingerprint(entry), version };
+  const oauth = entry.oauth ? { issuerHost: issuerHostOf(entry), reason: "first" as const } : undefined;
+  return { server, host, headerNames: Object.keys(entry.headers).sort(), credentials, fingerprint: entryFingerprint(entry), version, ...(oauth ? { oauth } : {}) };
 }

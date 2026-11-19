@@ -9,6 +9,8 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, v?: Record<string, unknown>) => (v ? `${key} ${JSON.stringify(v)}` : key),
 }));
 
+import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
+
 import { McpApprovalCardView } from "./mcp-approval-card";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -37,7 +39,7 @@ const CARD = {
   version: 7,
 };
 
-async function render(card = CARD) {
+async function render(card: McpApprovalCard = CARD) {
   root = createRoot(document.body.appendChild(document.createElement("div")));
   await act(async () => root!.render(<McpApprovalCardView card={card} />));
 }
@@ -93,5 +95,90 @@ describe("McpApprovalCardView", () => {
     await act(async () => button("mcpApproval.no").click());
     expect(fetchMock).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain("mcpApproval.dismissed");
+  });
+
+  it("the card names where you sign in (first, lapsed, scope)", async () => {
+    await render({
+      ...CARD,
+      credentials: [],
+      version: 0,
+      oauth: { issuerHost: "accounts.google.com", reason: "first" },
+    });
+    expect(document.body.textContent).toContain('mcpApproval.signInAt {"issuer":"accounts.google.com"}');
+
+    await render({
+      ...CARD,
+      credentials: [],
+      version: 0,
+      oauth: { issuerHost: "accounts.google.com", reason: "lapsed" },
+    });
+    expect(document.body.textContent).toContain('mcpApproval.signInAgainAt {"issuer":"accounts.google.com"}');
+
+    await render({
+      ...CARD,
+      credentials: [],
+      version: 0,
+      oauth: { issuerHost: "accounts.google.com", reason: "scope" },
+    });
+    expect(document.body.textContent).toContain('mcpApproval.morePermissionsAt {"issuer":"accounts.google.com"}');
+  });
+
+  it("🔴 a card for a new OAuth server is one tap: opens the window synchronously, approves, and starts OAuth", async () => {
+    const popup = { closed: false, location: { href: "about:blank" }, close() { this.closed = true; } };
+    const openSpy = vi.fn(() => popup);
+    window.open = openSpy as unknown as typeof window.open;
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ state: { status: "needs-auth", tools: 0 } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" })));
+
+    await render({
+      server: "cal",
+      host: "calendarmcp.googleapis.com",
+      headerNames: [],
+      credentials: [],
+      fingerprint: "fp-cal",
+      version: 4,
+      oauth: { issuerHost: "accounts.google.com", reason: "first" },
+    });
+
+    await act(async () => {
+      button("mcpApproval.connect").click();
+      // Synchronously inside the click handler, before fetch resolves:
+      expect(openSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/mcp-connectors/cal/approve", "/api/mcp-connectors/cal/oauth"]);
+    expect(popup.location.href).toBe("https://accounts.google.com/o/oauth2/v2/auth?state=s1");
+
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          data: { type: "openlen:mcp-oauth", server: "cal", ok: true },
+        }),
+      );
+    });
+    expect(document.body.textContent).toContain("mcpApproval.oauthConnected");
+  });
+
+  it("start fails closes the window and says why", async () => {
+    const popup = { closed: false, location: { href: "about:blank" }, close() { this.closed = true; } };
+    window.open = vi.fn(() => popup) as unknown as typeof window.open;
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "no_client", detail: "set oauth.clientId in mcp.json" }), { status: 422 }));
+
+    await render({
+      server: "cal",
+      host: "calendarmcp.googleapis.com",
+      headerNames: [],
+      credentials: [],
+      fingerprint: "fp-cal",
+      version: 0,
+      oauth: { issuerHost: "accounts.google.com", reason: "first" },
+    });
+
+    await act(async () => {
+      button("mcpApproval.connect").click();
+    });
+    expect(popup.closed).toBe(true);
+    expect(document.body.textContent).toContain('mcpApproval.failed {"error":"set oauth.clientId in mcp.json"}');
   });
 });
