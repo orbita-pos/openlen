@@ -2,38 +2,13 @@
 // remote OAuth MCP servers that `suggest_connectors` offers when the person has none installed for what they asked.
 // Google Calendar is offered only to someone who can finish the flow: `OPENLEN_MCP_GOOGLE_CLIENT_ID` must be set, and
 // while `OPENLEN_MCP_GOOGLE_TEST_USERS` is set, the person's email must be in it.
-import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig, type McpOAuthConfig } from "./config";
+import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig } from "./config";
+import { DIRECTORY, GOOGLE_ISSUER, type DirectoryEntry } from "./directory-entries";
 import { oauthEnabled } from "./oauth/enabled";
 import { startSignIn, type StartDeps, type StartResult } from "./oauth/flow";
 import type { StoredConfig } from "./store";
 
-export interface DirectoryEntry {
-  readonly id: string;
-  readonly name: string;
-  readonly what: string;
-  readonly server: string;
-  readonly issuer: string;
-  readonly entry: {
-    readonly transport: "streamable-http";
-    readonly url: string;
-    readonly oauth: McpOAuthConfig;
-  };
-}
-
-export const DIRECTORY: readonly DirectoryEntry[] = [
-  {
-    id: "google-calendar",
-    name: "Google Calendar",
-    what: "Read and add events in the person's Google Calendar",
-    server: "google-calendar",
-    issuer: "https://accounts.google.com",
-    entry: {
-      transport: "streamable-http",
-      url: "https://calendarmcp.googleapis.com/mcp/v1",
-      oauth: { scope: "https://www.googleapis.com/auth/calendar" },
-    },
-  },
-];
+export { DIRECTORY, type DirectoryEntry } from "./directory-entries";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -42,7 +17,7 @@ export function directoryFor(personEmail: string | null, config: McpConfig, env:
   const configuredUrls = new Set(Object.values(config.servers).map((e) => e.url));
   return DIRECTORY.filter((d) => {
     if (configuredUrls.has(d.entry.url)) return false;
-    if (d.issuer === "https://accounts.google.com") {
+    if (d.issuer === GOOGLE_ISSUER) {
       if (!env.OPENLEN_MCP_GOOGLE_CLIENT_ID?.trim()) return false;
       const testList = env.OPENLEN_MCP_GOOGLE_TEST_USERS?.trim();
       if (testList) {

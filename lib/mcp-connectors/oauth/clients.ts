@@ -2,17 +2,16 @@
 //
 // The order is the SDK's, with one step added in third place: (1) the client already stored for that person, server and
 // issuer — the provider's job, not this module's —, (2) the `oauth.clientId` the entry names, (3) OpenLen's own client
-// for that issuer (a table in code: Google's, which is what claude.ai does too), (4) OpenLen's Client ID Metadata
+// for that issuer AT THE SERVER THE DIRECTORY OFFERS FOR IT (Google's, which is what claude.ai does too; never for a
+// server somebody else chose, whatever authorization server it names), (4) OpenLen's Client ID Metadata
 // Document and (5) dynamic registration — both the SDK's, which carries on when `preRegisteredClient` answers null —,
 // and (6) none, which the caller reports as needing `oauth.clientId`. This file answers steps 2 and 3 and says what
 // OpenLen tells the provider about itself (the metadata for steps 4 and 5, the return address, the document's URL).
 import type { OAuthClientMetadata, StoredOAuthClientInformation } from "@modelcontextprotocol/client";
 
 import type { McpServerEntry } from "../config";
+import { GOOGLE_ISSUER, isDirectoryServer } from "../directory-entries";
 import { credentialRefs } from "../templates";
-
-/** The one issuer OpenLen has a client of its own for. Compared exactly: an issuer is an identity, not a URL to tidy. */
-const GOOGLE_ISSUER = "https://accounts.google.com";
 
 /** What the person sees on the provider's consent screen. */
 const CLIENT_NAME = "OpenLen";
@@ -39,9 +38,14 @@ export function isClientRefusal(x: StoredOAuthClientInformation | ClientRefusal 
   return x !== null && typeof x === "object" && "refused" in x;
 }
 
-/** OpenLen's own client for an issuer: Google's, with both variables set; nothing for any other issuer. */
-export function openLenClientFor(issuer: string, env: Env = process.env): { client_id: string; client_secret: string } | null {
-  if (issuer !== GOOGLE_ISSUER) return null;
+/**
+ * OpenLen's own client for an issuer at a server: Google's, with both variables set, and ONLY when `serverUrl` is exactly
+ * the URL of a directory entry that lists `issuer` as its authorization server (directory-entries.ts). The issuer comes
+ * from metadata the MCP server points at, so a server nobody curated could name Google and be signed in with a client
+ * the person's consent screen calls «OpenLen» — and receive the token. Nothing for any other pair.
+ */
+export function openLenClientFor(issuer: string, serverUrl: string, env: Env = process.env): { client_id: string; client_secret: string } | null {
+  if (issuer !== GOOGLE_ISSUER || !isDirectoryServer(serverUrl, issuer)) return null;
   const clientId = env.OPENLEN_MCP_GOOGLE_CLIENT_ID;
   const clientSecret = env.OPENLEN_MCP_GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) return null;
@@ -82,7 +86,7 @@ export function preRegisteredClient(
     const secret = name === undefined ? undefined : secrets.get(name);
     return secret ? { client_id: own.clientId, client_secret: secret } : { refused: "missing_secret", detail: name ?? "oauth.clientSecret" };
   }
-  return openLenClientFor(issuer, env);
+  return openLenClientFor(issuer, entry.url, env);
 }
 
 /** Where the provider sends the person back (and the one address registered with it). */
