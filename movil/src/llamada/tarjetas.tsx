@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
+import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 import { publishedHost } from "@/lib/publish/base-host";
 import { postInstallAfterSecurity, type PublishOutcome } from "@/lib/workspace-v2/publish-request";
 import { Icono } from "../iconos";
+import { plataforma } from "../sesion/plataforma";
 import { barrasDeVisitas } from "./barras";
 
 const DIA = (iso: string, idioma: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(idioma, { weekday: "short" }).replace(".", "");
@@ -248,10 +250,114 @@ function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { client
   );
 }
 
+function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpApprovalCard }) {
+  const t = useTranslations("movil.herramientas");
+  const [estado, setEstado] = useState<"listo" | "abriendo" | "esperando" | "conectado" | "error">("listo");
+  const [motivo, setMotivo] = useState("");
+  const [servidor, setServidor] = useState(card.server);
+
+  useEffect(() => {
+    if (estado !== "esperando") return;
+    let vigente = true;
+    const comprobar = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      void cliente
+        .pedir("/api/mcp-connectors")
+        .then((r) => (r.ok ? (r.json() as Promise<{ servers?: { name: string; status: string }[] }>) : null))
+        .then((body) => {
+          if (!vigente || !body?.servers) return;
+          if (body.servers.some((s) => s.name === servidor && s.status === "connected")) {
+            setEstado("conectado");
+          }
+        })
+        .catch(() => {});
+    };
+    window.addEventListener("focus", comprobar);
+    document.addEventListener("visibilitychange", comprobar);
+    return () => {
+      vigente = false;
+      window.removeEventListener("focus", comprobar);
+      document.removeEventListener("visibilitychange", comprobar);
+    };
+  }, [estado, cliente, servidor]);
+
+  const conectar = async () => {
+    setEstado("abriendo");
+    setMotivo("");
+    try {
+      let nombre = card.server;
+      let res: Response;
+      if (card.suggest) {
+        res = await cliente.pedir(`/api/mcp-connectors/directory/${encodeURIComponent(card.suggest.id)}`, { method: "POST" });
+      } else {
+        if (card.version > 0) {
+          const appRes = await cliente.pedir(`/api/mcp-connectors/${encodeURIComponent(card.server)}/approve`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ fingerprint: card.fingerprint, version: card.version, credentials: {} }),
+          });
+          if (!appRes.ok) {
+            const b = (await appRes.json().catch(() => ({}))) as { error?: string };
+            setMotivo(b.error ?? String(appRes.status));
+            setEstado("error");
+            return;
+          }
+        }
+        res = await cliente.pedir(`/api/mcp-connectors/${encodeURIComponent(card.server)}/oauth`, { method: "POST" });
+      }
+      const body = (await res.json().catch(() => ({}))) as { server?: string; authorizationUrl?: string; detail?: string; error?: string };
+      if (!res.ok || typeof body.authorizationUrl !== "string") {
+        setMotivo(body.detail ?? body.error ?? String(res.status));
+        setEstado("error");
+        return;
+      }
+      if (typeof body.server === "string" && body.server) {
+        nombre = body.server;
+        setServidor(nombre);
+      }
+      await plataforma.abrirNavegador(body.authorizationUrl);
+      setEstado("esperando");
+    } catch (err) {
+      setMotivo(err instanceof Error ? err.message : String(err));
+      setEstado("error");
+    }
+  };
+
+  return (
+    <div className="nx" data-tarjeta-conectar-mcp={card.server}>
+      <div className="nx-cap">
+        {card.suggest ? t("mcpApproval.suggestTitle", { name: card.suggest.name, host: card.suggest.host }) : t("mcpApproval.title", { server: card.server, host: card.host })}
+      </div>
+      {estado === "conectado" ? (
+        <div className="nx-what">{t("mcpApproval.oauthConnected")}</div>
+      ) : (
+        <>
+          {card.oauth ? (
+            <div className="nx-what">
+              {card.oauth.reason === "lapsed"
+                ? t("mcpApproval.signInAgainAt", { issuer: card.oauth.issuerHost })
+                : card.oauth.reason === "scope"
+                  ? t("mcpApproval.morePermissionsAt", { issuer: card.oauth.issuerHost })
+                  : t("mcpApproval.signInAt", { issuer: card.oauth.issuerHost })}
+            </div>
+          ) : null}
+          {estado === "error" && <div className="nx-vs" role="alert">{t("mcpApproval.failed", { error: motivo })}</div>}
+          <div className="nx-acts">
+            <button type="button" className="nx-act" disabled={estado === "abriendo"} onClick={() => void conectar()}>
+              {t("mcpApproval.connect")}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function TarjetaDeLaApp({ x, cliente, projectId, idioma, onInstalada }: { x: TarjetaDeLlamada; cliente: ClienteDeOpenLen; projectId: string; idioma: string; onInstalada?: () => void }) {
   if (x.tipo === "visitas") return <Visitas cliente={cliente} projectId={projectId} idioma={idioma} />;
   if (x.tipo === "respuesta") return <Borrador cliente={cliente} r={x.respuesta} />;
   if (x.tipo === "publicar") return <Publicar cliente={cliente} projectId={projectId} confirm={x.confirm} />;
   if (x.tipo === "instalar") return <Instalar cliente={cliente} projectId={projectId} idioma={idioma} confirm={x.confirm} onInstalada={onInstalada} />;
+  if (x.tipo === "conectarMcp") return <ConectarMcp cliente={cliente} card={x.card} />;
   return <div className="nx"><div className="nx-what" style={{ whiteSpace: "pre-wrap" }}>{x.texto}</div></div>;
 }

@@ -1,7 +1,9 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
+vi.mock("../sesion/plataforma", () => ({ plataforma: { abrirNavegador: vi.fn() } }));
 import { TarjetaDeLaApp } from "./tarjetas";
+import { plataforma } from "../sesion/plataforma";
 vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root, host: HTMLDivElement;
@@ -134,4 +136,40 @@ it("mientras instala, sin revisión de por medio, dice «Instalando…»", async
   await pulsar("installCard.install");
   expect(host.querySelector('[role="status"]')?.textContent).toContain("toolCard.installing");
   await act(async () => resolver(Response.json({ installation: { id: "i1" } })));
+});
+
+// OAuth de los conectores MCP en el teléfono (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1): el toque pide la URL
+// con la llave de la app y la abre en el navegador del sistema; al volver al primer plano, pide el estado del servidor
+// (`GET /api/mcp-connectors`) y pasa a «Conectado».
+it("«Conectar» un conector MCP abre la URL en el navegador del sistema y al recuperar el foco dice «Conectado»", async () => {
+  iniciar();
+  const abrirSpy = vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const pedir = vi.fn(async (ruta: string, init?: RequestInit) => {
+    if (ruta === "/api/mcp-connectors/cal/oauth" && init?.method === "POST") {
+      return Response.json({ authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" });
+    }
+    if (ruta === "/api/mcp-connectors") {
+      return Response.json({ available: true, version: 1, servers: [{ name: "cal", status: "connected", tools: 5 }], credentials: [] });
+    }
+    return new Response(null, { status: 404 });
+  });
+  const card = {
+    server: "cal",
+    host: "calendarmcp.googleapis.com",
+    headerNames: [],
+    credentials: [],
+    fingerprint: "fp-cal",
+    version: 0,
+    oauth: { issuerHost: "accounts.google.com", reason: "first" as const },
+  };
+  await act(async () => root.render(<TarjetaDeLaApp x={{ tipo: "conectarMcp", card } as never} cliente={{ pedir, avisarAlCerrar: vi.fn() }} projectId="p1" idioma="es" />));
+  await pulsar("mcpApproval.connect");
+  expect(pedir).toHaveBeenCalledWith("/api/mcp-connectors/cal/oauth", expect.objectContaining({ method: "POST" }));
+  expect(abrirSpy).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/v2/auth?state=s1");
+
+  await act(async () => {
+    window.dispatchEvent(new Event("focus"));
+  });
+  expect(pedir).toHaveBeenCalledWith("/api/mcp-connectors");
+  expect(host.textContent).toContain("mcpApproval.oauthConnected");
 });
