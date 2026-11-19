@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
 import { McpApprovalCardView } from "../chat/mcp-approval-card";
+import { openSignIn } from "../chat/open-sign-in";
 
 interface ServerRow {
   name: string;
@@ -16,10 +17,11 @@ interface ServerRow {
   url: string;
   enabled: boolean;
   approved: boolean;
-  status: "connected" | "pending" | "waiting-credentials" | "failed" | "never-listed";
+  status: "connected" | "pending" | "waiting-credentials" | "needs-auth" | "failed" | "never-listed";
   tools: number;
   headers: string[];
   error?: string;
+  oauth?: boolean;
   approval?: McpApprovalCard;
 }
 interface View {
@@ -70,9 +72,22 @@ export function ConnectorsSection() {
         ? t("tools.connectors.status.pending")
         : s.status === "waiting-credentials"
           ? t("tools.connectors.status.waiting", { names: (s.error ?? "").replace(/^missing: /, "") })
-          : s.status === "failed"
-            ? t("tools.connectors.status.failed", { error: s.error ?? "" })
-            : t("tools.connectors.status.neverListed");
+          : s.status === "needs-auth"
+            ? t("tools.connectors.status.needsAuth")
+            : s.status === "failed"
+              ? t("tools.connectors.status.failed", { error: s.error ?? "" })
+              : t("tools.connectors.status.neverListed");
+
+  async function connectOAuth(name: string) {
+    const res = await openSignIn(name);
+    if (res === "connected") await load();
+    else if (typeof res === "object") setProbes((p) => ({ ...p, [name]: { ok: false, error: res.error } }));
+  }
+
+  async function disconnectOAuth(name: string) {
+    await send(`/api/mcp-connectors/${encodeURIComponent(name)}/oauth`, "DELETE");
+    await load();
+  }
 
   async function probe(name: string) {
     const { body } = await send(`/api/mcp-connectors/${encodeURIComponent(name)}/probe`, "POST");
@@ -131,6 +146,16 @@ export function ConnectorsSection() {
               </div>
               {s.approved ? (
                 <>
+                  {s.status === "needs-auth" ? (
+                    <button type="button" className="text-[12px] font-medium fg" onClick={() => void connectOAuth(s.name)}>
+                      {t("tools.connectors.connect")}
+                    </button>
+                  ) : null}
+                  {s.status === "connected" && s.oauth ? (
+                    <button type="button" className="text-[12px] fg" onClick={() => void disconnectOAuth(s.name)}>
+                      {t("tools.connectors.disconnect")}
+                    </button>
+                  ) : null}
                   <button type="button" className="text-[12px] fg" onClick={() => void probe(s.name)}>
                     {t("tools.connectors.probe")}
                   </button>

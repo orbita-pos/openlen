@@ -719,7 +719,12 @@
     "failed": "Não foi possível conectar: {error}",
     "changed": "Mudou nesse meio-tempo: veja de novo em Ferramentas",
     "dismissed": "Não conectado. Você pode aprovar depois em Ferramentas.",
-    "firstTime": "Sua chave {name} nunca foi enviada para {host}: aprove só se confiar nesse servidor"
+    "firstTime": "Sua chave {name} nunca foi enviada para {host}: aprove só se confiar nesse servidor",
+    "signInAt": "Inicie sessão em {issuer}",
+    "signInAgainAt": "Inicie sessão novamente em {issuer}",
+    "morePermissionsAt": "Pede mais permissões em {issuer}",
+    "oauthConnected": "Conectado",
+    "suggestTitle": "Conectar {name} ({host})"
   },
   "ownAssistant": {
     "card": {

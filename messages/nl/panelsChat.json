@@ -719,7 +719,12 @@
     "failed": "Kon niet verbinden: {error}",
     "changed": "Het is intussen veranderd: bekijk het opnieuw in Tools",
     "dismissed": "Niet verbonden. Je kunt het later goedkeuren in Tools.",
-    "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt"
+    "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt",
+    "signInAt": "Inloggen bij {issuer}",
+    "signInAgainAt": "Opnieuw inloggen bij {issuer}",
+    "morePermissionsAt": "Vraagt meer rechten bij {issuer}",
+    "oauthConnected": "Verbonden",
+    "suggestTitle": "{name} ({host}) verbinden"
   },
   "ownAssistant": {
     "card": {

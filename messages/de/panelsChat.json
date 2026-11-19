@@ -719,7 +719,12 @@
     "failed": "Verbindung fehlgeschlagen: {error}",
     "changed": "Es hat sich inzwischen geändert: sieh es dir unter Tools noch einmal an",
     "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben.",
-    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust"
+    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust",
+    "signInAt": "Bei {issuer} anmelden",
+    "signInAgainAt": "Erneut bei {issuer} anmelden",
+    "morePermissionsAt": "Benötigt weitere Berechtigungen bei {issuer}",
+    "oauthConnected": "Verbunden",
+    "suggestTitle": "{name} ({host}) verbinden"
   },
   "ownAssistant": {
     "card": {

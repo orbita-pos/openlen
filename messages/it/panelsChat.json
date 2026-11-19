@@ -719,7 +719,12 @@
     "failed": "Impossibile collegarsi: {error}",
     "changed": "È cambiato nel frattempo: ricontrollalo in Strumenti",
     "dismissed": "Non collegato. Puoi approvarlo più tardi in Strumenti.",
-    "firstTime": "La tua chiave {name} non è mai stata inviata a {host}: approva solo se ti fidi di quel server"
+    "firstTime": "La tua chiave {name} non è mai stata inviata a {host}: approva solo se ti fidi di quel server",
+    "signInAt": "Accedi su {issuer}",
+    "signInAgainAt": "Accedi di nuovo su {issuer}",
+    "morePermissionsAt": "Richiede più autorizzazioni su {issuer}",
+    "oauthConnected": "Connesso",
+    "suggestTitle": "Connetti {name} ({host})"
   },
   "ownAssistant": {
     "card": {

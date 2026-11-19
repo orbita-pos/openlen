@@ -719,7 +719,12 @@
     "failed": "Couldn't connect: {error}",
     "changed": "It changed in the meantime: look at it again in Tools",
     "dismissed": "Not connected. You can approve it later in Tools.",
-    "firstTime": "Your key {name} has never been sent to {host}: approve only if you trust that server"
+    "firstTime": "Your key {name} has never been sent to {host}: approve only if you trust that server",
+    "signInAt": "Sign in at {issuer}",
+    "signInAgainAt": "Sign in again at {issuer}",
+    "morePermissionsAt": "Needs more permissions at {issuer}",
+    "oauthConnected": "Connected",
+    "suggestTitle": "Connect {name} ({host})"
   },
   "ownAssistant": {
     "card": {

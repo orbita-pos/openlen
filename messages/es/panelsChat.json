@@ -719,7 +719,12 @@
     "failed": "No se pudo conectar: {error}",
     "changed": "Cambió mientras tanto: vuelve a mirarlo en Herramientas",
     "dismissed": "No se conecta. Puedes aprobarlo luego en Herramientas.",
-    "firstTime": "Tu clave {name} nunca se ha enviado a {host}: apruébalo solo si confías en ese servidor"
+    "firstTime": "Tu clave {name} nunca se ha enviado a {host}: apruébalo solo si confías en ese servidor",
+    "signInAt": "Inicia sesión en {issuer}",
+    "signInAgainAt": "Inicia sesión otra vez en {issuer}",
+    "morePermissionsAt": "Pide más permisos en {issuer}",
+    "oauthConnected": "Conectado",
+    "suggestTitle": "Conectar {name} ({host})"
   },
   "ownAssistant": {
     "card": {

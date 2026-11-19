@@ -817,7 +817,8 @@
         "pending": "あなたの承認待ち",
         "waiting": "{names} がありません",
         "failed": "失敗: {error}",
-        "neverListed": "まだ一覧化されていません"
+        "neverListed": "まだ一覧化されていません",
+        "needsAuth": "サインインが必要"
       },
       "probe": "テスト",
       "probeOk": "応答あり: {tools}",
@@ -836,7 +837,9 @@
       "cancel": "キャンセル",
       "keys": "キー",
       "keySet": "{date} に設定",
-      "changeKey": "変更"
+      "changeKey": "変更",
+      "connect": "接続",
+      "disconnect": "切断"
     }
   }
 }
