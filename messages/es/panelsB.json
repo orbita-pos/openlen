@@ -143,6 +143,8 @@
       "booked": "Reservaron",
       "approx": "Aproximado · por navegador en una sesión",
       "untracked": "{count} sin rastrear"
-    }
+    },
+    "testAb": "Probar con A/B",
+    "abInstruction": "Crea una prueba A/B con create_ab_variant para probar esta mejora sin cambiar todavía la página publicada: {instruction}"
   }
 }

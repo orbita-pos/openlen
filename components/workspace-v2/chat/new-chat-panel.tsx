@@ -64,6 +64,7 @@ import type { LatestTurn } from "@/lib/workspace-v2/app-birth";
 import { LenWatchBanner } from "../len-watch/len-watch-banner";
 import { EventCards } from "./event-cards";
 import { AssistantRequestCards } from "./assistant-request-cards";
+import { AbDecisionCards } from "./ab-decision-cards";
 import { useToolCards } from "../tools/use-tool-cards";
 import type { AssistantView } from "@/lib/assistants/view";
 import { activityOf } from "../assistant/activity";
@@ -550,6 +551,8 @@ function AgentChatView({
       {!plegado && !assistant && <EventCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
       {/* What her visitors asked for and she couldn't do (spec local 2026-11-06-asistente-propio, §4.6.1): only in Len's chat. */}
       {!plegado && !assistant && <AssistantRequestCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} onFollowTurn={seguirTurnoDelHilo} />}
+      {/* Edge A/B Testing (Plan 3): drafts to compare/launch and ready verdicts directly in Len's chat. */}
+      {!plegado && !assistant && <AbDecisionCards projectId={projectId} soloLectura={soloLectura} busy={chat.busy} />}
       {/* Plegado se oculta, no se desmonta: así conserva el scroll y sus
           tarjetas (el Deshacer y el «comparar» viven en memoria). */}
       <div

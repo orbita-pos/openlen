@@ -24,4 +24,30 @@ describe("summaryTexts", () => {
       expect(t.push, l).not.toMatch(/ownAssistant|\{/);
     }
   });
+
+  it("includes an A/B winner prompt cleanly even when yesterday had zero visits", () => {
+    const abReady = [
+      {
+        experimentId: "ab_1",
+        projectId: "p1",
+        projectTitle: "Panadería",
+        name: "Botón principal",
+        status: "winner_ready" as const,
+        winnerVariant: "b" as const,
+        rateA: 0.04,
+        rateB: 0.052,
+        liftPct: 31,
+        totalViews: 840,
+        probability: 0.97,
+      },
+    ];
+    for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+      const onlyAb = summaryTexts(l, "Lucía", { talkedWith: 0, contacts: 0, requests: 0, abReady }, "https://openlen.com/es/assistant/lucia");
+      expect(onlyAb.push.length, l).toBeLessThan(200);
+      expect(onlyAb.push, l).not.toMatch(/ownAssistant|\{/);
+      expect(onlyAb.push, l).toContain("31");
+      const combined = summaryTexts(l, "Lucía", { talkedWith: 5, contacts: 1, requests: 0, abReady }, "https://openlen.com/es/assistant/lucia");
+      expect(combined.push.length, l).toBeLessThan(200);
+    }
+  });
 });

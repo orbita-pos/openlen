@@ -5,6 +5,9 @@
 // what she noted she couldn't do (assistantRequests).
 import { and, count, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
+import { abTestingEnabled } from "@/lib/ab/enabled";
+import { pendingDecisionsForProjects } from "@/lib/ab/store";
+import type { AbReadySummary } from "@/lib/ab/types";
 import { db, schema } from "@/lib/db";
 
 export { dayBounds } from "./day";
@@ -13,6 +16,7 @@ export interface SummaryCounts {
   readonly talkedWith: number;
   readonly contacts: number;
   readonly requests: number;
+  readonly abReady?: readonly AbReadySummary[];
 }
 
 export async function countYesterday(assistantId: string, projectIds: readonly string[], start: Date, end: Date): Promise<SummaryCounts> {
@@ -38,5 +42,15 @@ export async function countYesterday(assistantId: string, projectIds: readonly s
     .from(r)
     .where(and(eq(r.assistantId, assistantId), gte(r.at, start), lt(r.at, end)));
 
-  return { talkedWith, contacts: Number(forms?.n ?? 0), requests: Number(requests?.n ?? 0) };
+  const abReady =
+    abTestingEnabled() && projectIds.length > 0
+      ? await pendingDecisionsForProjects(projectIds).catch(() => [])
+      : [];
+
+  return {
+    talkedWith,
+    contacts: Number(forms?.n ?? 0),
+    requests: Number(requests?.n ?? 0),
+    ...(abReady.length > 0 ? { abReady } : {}),
+  };
 }

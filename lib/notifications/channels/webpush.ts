@@ -7,7 +7,7 @@ import { domainNoticePush, quotaNoticePush } from "@/lib/project-email/notices";
 import { lenTurnPush } from "../len-turn-push";
 import { asleepPush } from "@/lib/assistants/visitor/asleep-messages";
 import { summaryPush } from "@/lib/assistants/summary/notice";
-import type { AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
+import type { AbResultEvent, AppAiCapEvent, EmailDomainEvent, EmailQuotaEvent, FunctionsQuotaEvent, LenAvisoEvent, LenTurnoEvent, LenWatchEvent, NotificationChannel, NotificationEvent } from "../types";
 
 // ── VAPID setup ────────────────────────────────────────────────────────────────
 // Called lazily on first use so Next.js build / dev without keys don't crash.
@@ -127,6 +127,14 @@ export function lenWatchPush(event: LenWatchEvent): PushPayload {
   return { title: event.title, body: event.body, url: urlDelChat(event.projectId) };
 }
 
+/** EDGE A/B TESTING (Plan 3): verdict or harm auto-stop push. Opens her place if she serves it, else project chat. */
+export function abResultPush(event: AbResultEvent): PushPayload {
+  const url = event.assistantSlug
+    ? `/${event.locale}/assistant/${encodeURIComponent(event.assistantSlug)}?tab=requests&ab=${encodeURIComponent(event.experimentId)}`
+    : `${urlDelChat(event.projectId)}&ab=${encodeURIComponent(event.experimentId)}`;
+  return { title: event.title, body: event.push, url };
+}
+
 /** Al fichero del hilo, en la lente «Código» (`?codigo=` lo abre `/new`). */
 export function urlDelHilo(projectId: string, ruta: string): string {
   return `/new?project=${encodeURIComponent(projectId)}&codigo=${encodeURIComponent(ruta)}`;
@@ -168,6 +176,8 @@ export const webPushChannel: NotificationChannel = {
                     ? asleepPush(event)
                   : event.type === "assistant_summary"
                     ? summaryPush(event)
+                  : event.type === "ab_result"
+                    ? abResultPush(event)
                   : {
                   title: event.senderName,
                   body: event.preview,

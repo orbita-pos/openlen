@@ -25,3 +25,8 @@
 .app-asistente .asist-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .app-asistente .asist-aviso { color: var(--lm-bad, #c2410c); }
 .app-asistente .asist-de-visitante { text-align: right; }
+.app-asistente .asist-ab-nombre { font-size: 0.9em; opacity: 0.85; }
+.app-asistente .asist-ab-metricas { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 0.88em; }
+.app-asistente .asist-ab-metricas div { display: flex; justify-content: space-between; gap: 8px; }
+.app-asistente .asist-ab-acciones { flex-wrap: wrap; }
+.app-asistente .asist-ab-ok { color: var(--lm-ok, #15803d); font-weight: 500; }

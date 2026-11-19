@@ -74,6 +74,17 @@ export function AssistantHome({
   // Her color for the whole place, and for what it draws outside its root (its sheets).
   const tint = useMemo(() => tintStyle(look.color) as CSSProperties, [look.color]);
   const [seen, setSeen] = useState<ReadonlySet<Tab>>(new Set(["talk"]));
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("tab");
+      if (q === "requests" || q === "conversations") {
+        setTab(q);
+        setSeen((s) => (s.has(q) ? s : new Set([...s, q])));
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
   const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
   const [menuOpen, setMenuOpen] = useState(false);
   // Her page beside her chat. Put away, it stays away on this device until it is asked for again. Not known until the

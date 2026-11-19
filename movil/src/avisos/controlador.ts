@@ -6,8 +6,9 @@ export type EstadoAvisos = {
 };
 type Permiso = "granted" | "denied" | "prompt";
 /** `len_aviso`: an event task's card (spec local 2026-11-03-len-que-avisa, §8). `len_turno` and `assistant_summary`
- *  matter only with the person's own assistant's id (phase 5): her turn and her morning summary. */
-type Tipo = "mencion" | "len_watch" | "len_aviso" | "len_turno" | "assistant_summary";
+ *  matter only with the person's own assistant's id (phase 5): her turn and her morning summary.
+ *  `ab_result`: an Edge A/B Testing verdict or harm auto-stop (Plan 3). */
+type Tipo = "mencion" | "len_watch" | "len_aviso" | "len_turno" | "assistant_summary" | "ab_result";
 /** Which part of her tab a notice of hers opens (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5). */
 export type ParteDeLaAsistente = "hablar" | "conversaciones" | "pedidos";
 export interface EventosAvisos {
@@ -60,13 +61,13 @@ export function crearControlDeAvisos(d: {
     const entrega = new RegExp(`^/api/projects/${b.projectId}/deliveries/[A-Za-z0-9_-]{1,100}/[0-9a-f]{8}-[^/?#]{1,300}$`);
     const abrir = typeof b.abrir === "string" && entrega.test(b.abrir) ? b.abrir : null;
     // A card's id only as an id: anything else opens the chat without one.
-    const tarjeta = b.type === "len_aviso" ? (typeof b.tarjeta === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.tarjeta) ? b.tarjeta : null) : undefined;
+    const tarjeta = b.type === "len_aviso" || b.type === "ab_result" ? (typeof b.tarjeta === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.tarjeta) ? b.tarjeta : null) : undefined;
     // The person's own assistant's id, only as an id (phase 5): anything else is a push as before.
     const asistente = typeof b.asistente === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(b.asistente) ? b.asistente : null;
     return {
       projectId: b.projectId,
       recipientUserId: b.recipientUserId,
-      ...(b.type === "mencion" || b.type === "len_watch" || b.type === "len_aviso" || b.type === "len_turno" || b.type === "assistant_summary" ? { type: b.type } : {}),
+      ...(b.type === "mencion" || b.type === "len_watch" || b.type === "len_aviso" || b.type === "len_turno" || b.type === "assistant_summary" || b.type === "ab_result" ? { type: b.type } : {}),
       ...(abrir ? { abrir } : {}),
       ...(tarjeta !== undefined ? { tarjeta } : {}),
       ...(asistente ? { asistente } : {}),
@@ -84,8 +85,8 @@ export function crearControlDeAvisos(d: {
         if (b.abrir && d.onAbrirEntregado) d.onAbrirEntregado(b.projectId, b.abrir);
         // The person's own assistant's (phase 5): her tab, on the part the notice is about.
         else if (b.asistente && d.onAbrirAsistente) {
-          const parte: ParteDeLaAsistente = b.type === "len_aviso" ? "pedidos" : b.type === "assistant_summary" ? "conversaciones" : "hablar";
-          d.onAbrirAsistente(b.asistente, { parte, tarjeta: b.type === "len_aviso" ? (b.tarjeta ?? null) : null });
+          const parte: ParteDeLaAsistente = b.type === "len_aviso" || b.type === "ab_result" ? "pedidos" : b.type === "assistant_summary" ? "conversaciones" : "hablar";
+          d.onAbrirAsistente(b.asistente, { parte, tarjeta: b.type === "len_aviso" || b.type === "ab_result" ? (b.tarjeta ?? null) : null });
         } else if (b.type === "mencion") d.onAbrirProyecto(b.projectId, "equipo");
         // LEN WATCH: Gestión has where the fix stands, its button and the switches.
         else if (b.type === "len_watch") d.onAbrirProyecto(b.projectId, "gestion");

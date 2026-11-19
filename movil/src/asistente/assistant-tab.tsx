@@ -9,12 +9,14 @@ import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { LiveFigure } from "@/components/workspace-v2/assistant/live-figure";
+import type { AbExperimentView } from "@/lib/ab/types";
 import { tintOf } from "@/lib/figure/tint";
 import type { AssistantListItem } from "@/lib/assistants/view";
 import { lookOfRow } from "@/lib/assistants/look";
 
 import { useAtras } from "../atras";
-import { figurasEncendidas, leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
+import { figurasEncendidas, leerPruebasAb, leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
+import { MobileAbDecisionCard } from "./ab-decision-card";
 import type { ParteDeLaAsistente } from "../avisos/controlador";
 import "../gestion/gestion.css";
 import "../overview/overview.css";
@@ -75,6 +77,7 @@ export function AssistantTab({
   const [vista, setVista] = useState<"conversaciones" | "pedidos">(parte === "pedidos" ? "pedidos" : "conversaciones");
   const [visitas, setVisitas] = useState<readonly Visita[] | null>(null);
   const [pedidos, setPedidos] = useState<readonly Pedido[] | null>(null);
+  const [pruebasAb, setPruebasAb] = useState<readonly AbExperimentView[]>([]);
   const [falla, setFalla] = useState<"noEsta" | "error" | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [rechazado, setRechazado] = useState<string | null>(null);
@@ -83,11 +86,16 @@ export function AssistantTab({
 
   const fallo = useCallback((e: unknown) => setFalla(e instanceof Error && e.message === "404" ? "noEsta" : "error"), []);
   const recargarPedidos = useCallback(() => leerSusPedidos<Pedido>(cliente, asistente.id).then(setPedidos, fallo), [cliente, asistente.id, fallo]);
+  const recargarPruebasAb = useCallback(
+    () => leerPruebasAb(cliente, asistente.id).then(setPruebasAb, () => setPruebasAb([])),
+    [cliente, asistente.id],
+  );
   useEffect(() => {
     setFalla(null);
     void leerSusVisitas<Visita>(cliente, asistente.id).then(setVisitas, fallo);
     void recargarPedidos();
-  }, [cliente, asistente.id, intento, recargarPedidos, fallo]);
+    void recargarPruebasAb();
+  }, [cliente, asistente.id, intento, recargarPedidos, recargarPruebasAb, fallo]);
 
   // Phase 4E: her conversations on screen are read, as on the web — so `list_messages` in her chat counts what's new.
   // Opened on «Pedidos», or under her chat (a notice of her turn), they aren't on screen until «Conversaciones» is tapped.
@@ -180,7 +188,18 @@ export function AssistantTab({
               </ul>
             ) : (
               <ul className="asist-lista">
-                {ordenados?.length === 0 && <li className="asist-vacio">{t("own.requests.empty", { name })}</li>}
+                {pruebasAb.map((exp) => (
+                  <MobileAbDecisionCard
+                    key={exp.id}
+                    cliente={cliente}
+                    experiment={exp}
+                    assistantName={name}
+                    idioma={idioma}
+                    resaltado={exp.id === tarjeta}
+                    onActualizado={() => void recargarPruebasAb()}
+                  />
+                ))}
+                {ordenados?.length === 0 && pruebasAb.length === 0 && <li className="asist-vacio">{t("own.requests.empty", { name })}</li>}
                 {ordenados?.map((p) => {
                   const resaltado = p.id === tarjeta;
                   const aviso = rechazado === p.id ? t("own.requests.failed") : p.status === "pending" && p.failure ? (p.failure === "no_credits" ? t("own.requests.noCredits") : t("own.requests.failed")) : null;
