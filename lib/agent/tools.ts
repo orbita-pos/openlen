@@ -524,7 +524,7 @@ export interface AgentDeps {
     toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
     /** `installed: true`: the installed tool's private host. */
     installedUrl?: string;
-  }): Promise<{ informe: string; images?: readonly InlineImage[] }>;
+  }): Promise<{ informe: string; images?: readonly InlineImage[]; noChange?: boolean }>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
    *  la clave donde supabase-js la busca. `null` si no hay backend al que entrar. */
@@ -2303,7 +2303,13 @@ async function toolUsarPagina(
   // Las llamadas a las funciones del borrador durante la visita: su error, en SU fichero.
   const llamadas = await (deps.edgeFunctionCalls?.(session.projectId, desde) ?? Promise.resolve(null)).catch(() => null);
   return {
-    response: { ok: true, visit: visto.informe, ...keepScreenshots(session, visto.images), ...(llamadas ? { edge_function_calls: llamadas } : {}) },
+    response: {
+      ok: true,
+      visit: visto.informe,
+      ...keepScreenshots(session, visto.images),
+      ...(llamadas ? { edge_function_calls: llamadas } : {}),
+      ...(visto.noChange && !llamadas ? { no_change: true } : {}),
+    },
     ...(visto.images?.length ? { images: visto.images } : {}),
   };
 }

@@ -243,6 +243,10 @@ export const GOAL_GUIDANCE =
   "consecutive goal rounds, and report that concrete condition in blocked_reason; difficulty, uncertainty, " +
   "or useful remaining work is not blocked.";
 
+const LATER_ROUND_DISCIPLINE =
+  " Keep track of any unverified checks or unresolved issues from earlier rounds: never treat an open issue as closed just because a later round stopped mentioning it — close it only with direct tool evidence." +
+  " If the same failure recurs twice, do not repeat the same fix strategy: note what failed and try a structurally different approach.";
+
 /** El mensaje de una ronda (`renderGoalRoundPrompt`), con «project». Queda en la conversación. */
 export function goalRoundPrompt(goal: Pick<GoalSnapshot, "objective" | "maxGoalRounds">, round: number): string {
   return (
@@ -254,8 +258,9 @@ export function goalRoundPrompt(goal: Pick<GoalSnapshot, "objective" | "maxGoalR
     "earlier narration is still current. Make concrete progress and verify the result. Before " +
     "claiming completion, gather evidence that the whole objective is achieved, read the current " +
     "goal, and mark it complete. If work remains, leave the goal active for the next round. Follow " +
-    "the configured goal-tool policy before reporting a blocker.\n" +
-    "</goal_round>"
+    "the configured goal-tool policy before reporting a blocker." +
+    (round >= 2 ? LATER_ROUND_DISCIPLINE : "") +
+    "\n</goal_round>"
   );
 }
 

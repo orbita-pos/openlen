@@ -35,6 +35,25 @@ export function screenshotLimits(env: Env = process.env): { kept: number; quantu
 }
 
 const DROPPED_NOTE = "(The screenshots that were here were dropped to keep the turn light: take a new one if you need to look again.)";
+const SUMMARY_MAX_CHARS = 220;
+
+/** Extracts a short deterministic factual gist from dropped browser tool responses so facts survive pixel eviction. */
+function droppedObservationSummary(responses: Carrier["functionResponses"]): string | null {
+  if (!responses?.length) return null;
+  for (const r of responses) {
+    if (r.name !== "use_page" && r.name !== "view_page") continue;
+    const visit = typeof r.response?.visit === "string" ? r.response.visit : typeof r.response?.summary === "string" ? r.response.summary : "";
+    if (!visit) continue;
+    const lines = visit
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => /^\d+\.\s/.test(l) || l.startsWith("JavaScript errors in the visit:"));
+    const gist = lines.join(" | ").replace(/\s+/g, " ").trim();
+    if (!gist) continue;
+    return `Observed before screenshots were dropped: ${gist.length <= SUMMARY_MAX_CHARS ? gist : `${gist.slice(0, SUMMARY_MAX_CHARS)}…`}`;
+  }
+  return null;
+}
 
 export interface BatchScreenshots {
   readonly tool: string;
@@ -75,7 +94,12 @@ function screenshotsOf(m: Carrier): number {
 export function dropScreenshots<M extends Carrier>(m: M): M {
   if (m.screenshotsDropped !== undefined) return m;
   const { images: _pixels, screenshots: _addresses, ...rest } = m;
-  return { ...rest, content: [m.content, DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n"), screenshotsDropped: screenshotsOf(m) } as M;
+  const summary = droppedObservationSummary(m.functionResponses);
+  return {
+    ...rest,
+    content: [m.content, summary ?? "", DROPPED_NOTE].filter((x) => x.length > 0).join("\n\n"),
+    screenshotsDropped: screenshotsOf(m),
+  } as M;
 }
 
 /**

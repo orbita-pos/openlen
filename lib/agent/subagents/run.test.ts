@@ -898,6 +898,9 @@ describe("childMessages: what the child reads", () => {
     const general = text(childMessages(TURN_ARGS, "general-purpose", "x"));
     expect(general.some((c) => c.includes("PROJECT MEMORY"))).toBe(true);
     expect(general.some((c) => c.includes("PERSONAL NOTES"))).toBe(true);
+    // A1: full-context subagents receive the verbatim user turn prompt in <original_task>.
+    expect(general.at(-1)).toContain("<original_task>\nLen's own message\n</original_task>");
+    expect(general.at(-1)).toContain("state separately what you directly verified");
   });
 });
 
