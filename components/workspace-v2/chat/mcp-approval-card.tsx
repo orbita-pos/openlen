@@ -100,10 +100,10 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       {card.oauth ? (
         <p className="mt-1 fg-muted">
           {card.oauth.reason === "lapsed"
-            ? t("mcpApproval.signInAgainAt", { issuer: card.oauth.issuerHost })
+            ? t("mcpApproval.signInAgainAt", { issuer: card.oauth.issuerHost ?? card.host })
             : card.oauth.reason === "scope"
-              ? t("mcpApproval.morePermissionsAt", { issuer: card.oauth.issuerHost })
-              : t("mcpApproval.signInAt", { issuer: card.oauth.issuerHost })}
+              ? t("mcpApproval.morePermissionsAt", { issuer: card.oauth.issuerHost ?? card.host })
+              : t("mcpApproval.signInAt", { issuer: card.oauth.issuerHost ?? card.host })}
         </p>
       ) : null}
       {card.credentials.map((c) => (

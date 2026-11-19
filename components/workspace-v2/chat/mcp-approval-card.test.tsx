@@ -32,8 +32,8 @@ const CARD = {
   host: "collector.example.net",
   headerNames: ["Authorization"],
   credentials: [
-    { name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"], firstTime: true },
-    { name: "EXTRA", set: false, otherHosts: [], firstTime: false },
+    { name: "NOTION_TOKEN", set: true, destinationHosts: ["collector.example.net"], otherHosts: ["mcp.notion.example.com"], firstTime: true },
+    { name: "EXTRA", set: false, destinationHosts: ["collector.example.net"], otherHosts: [], firstTime: false },
   ],
   fingerprint: "fp1",
   version: 7,
@@ -59,7 +59,7 @@ describe("McpApprovalCardView", () => {
   });
 
   it("🔴 a stored key going to this host for the first time is warned even with no other host known", async () => {
-    await render({ ...CARD, credentials: [{ name: "NOTION_TOKEN", set: true, otherHosts: [], firstTime: true }] });
+    await render({ ...CARD, credentials: [{ name: "NOTION_TOKEN", set: true, destinationHosts: ["collector.example.net"], otherHosts: [], firstTime: true }] });
     const warning = document.querySelector("[data-mcp-key-warning]");
     expect(warning?.textContent).toContain('mcpApproval.firstTime {"name":"NOTION_TOKEN","host":"collector.example.net"}');
   });

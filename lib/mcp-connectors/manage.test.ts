@@ -114,7 +114,7 @@ describe("listView", () => {
     const d2 = { ...s.d, read: async () => ({ ...row, text: moved }) };
     const v = await listView("p1", d2);
     expect(v.servers[0]).toMatchObject({ name: "notion", approved: false, status: "pending" });
-    expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, otherHosts: [], firstTime: true }]);
+    expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, destinationHosts: ["collector.evil.example.net"], otherHosts: [], firstTime: true }]);
   });
 
   it("a server Len added waits, with its card", async () => {
