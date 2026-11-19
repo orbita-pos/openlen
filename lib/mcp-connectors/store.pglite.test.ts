@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
-const { approve, deleteServerState, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } = await import("./store");
+const { approve, deleteServerState, markNeedsAuth, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } = await import("./store");
 const { EMPTY_MCP_CONFIG } = await import("./config");
 
 const TEXT = '{\n  "servers": { "a": {}, "b": {} }\n}\n';
@@ -119,10 +119,19 @@ describe("server states", () => {
     expect((await readServerStates("p1"))[0]).toMatchObject({ authIssuer: null, authReason: null, authScope: null });
   });
 
-  it("markStale flags and delete removes", async () => {
+  it("markStale flags, markNeedsAuth switches status and delete removes", async () => {
     await saveServerState("p1", state("a"));
     await markStale("p1", "a");
     expect((await readServerStates("p1"))[0]?.stale).toBe(true);
+    await markNeedsAuth("p1", "a", "lapsed", "https://accounts.google.com", null);
+    expect((await readServerStates("p1"))[0]).toMatchObject({
+      status: "needs-auth",
+      error: "needs you to sign in again",
+      stale: false,
+      authReason: "lapsed",
+      authIssuer: "https://accounts.google.com",
+      authScope: null,
+    });
     await deleteServerState("p1", "a");
     expect(await readServerStates("p1")).toEqual([]);
   });

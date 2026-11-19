@@ -1064,6 +1064,52 @@ describe("runAgentLoop", () => {
     expect(events.filter((e) => e.type === "action" && e.tool === "mcp__empleados__add_employee").at(-1)).toMatchObject({ status: "error" });
   });
 
+  // An OAuth connector that needs a sign-in (spec local 2026-11-17-oauth-de-conectores-mcp, §5.5, §9): calling
+  // `mcp__<server>__authenticate` emits the Connect card for the UI while the model sees only the short prompt-free text,
+  // never a token, code or authorization URL (and the replay invariant holds).
+  it("mcp__<server>__authenticate emits mcp_approval with oauth and never sends a token or URL to the model", async () => {
+    const card = {
+      server: "cal",
+      host: "calendarmcp.googleapis.com",
+      headerNames: [],
+      credentials: [],
+      fingerprint: "fp-cal",
+      version: 0,
+      oauth: { issuerHost: "accounts.google.com", reason: "first" as const },
+    };
+    const events: AgentStreamEvent[] = [];
+    const callsSeen: Message[][] = [];
+    const stream = scripted(
+      [{ type: "function_call", name: "mcp__cal__authenticate", args: {} }, done],
+      [{ type: "text_delta", text: "Pulsa Conectar para abrir tu calendario." }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "agéndame una cita mañana" }],
+      tools: [{ name: "mcp__cal__authenticate", description: "Authenticate cal", parameters: { type: "object", properties: {} } }],
+      openStream: (messages) => {
+        callsSeen.push([...messages]);
+        return stream(messages);
+      },
+      runTool: async () => ({
+        response: {
+          content: [
+            {
+              type: "text",
+              text: 'The person is shown a "Connect" button for cal. Tell them in one short sentence, and carry on with whatever does not need cal.',
+            },
+          ],
+        },
+        mcpApproval: card,
+      }),
+      emit: (e) => events.push(e),
+    });
+    expect(events.filter((e) => e.type === "mcp_approval")).toEqual([{ type: "mcp_approval", card }]);
+    const secondCall = JSON.stringify(callsSeen[1]);
+    expect(secondCall).toContain('The person is shown a \\"Connect\\" button for cal.');
+    expect(secondCall).not.toContain("accounts.google.com");
+    expect(secondCall).not.toContain("fp-cal");
+  });
+
   // «Instalar» a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card mechanism, its own waiting state.
   it("an install confirm emits its card and feeds the model a fixed waiting state with the tool", async () => {
     const events: AgentStreamEvent[] = [];
