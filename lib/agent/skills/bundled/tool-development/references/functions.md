@@ -94,3 +94,6 @@ Deno.serve((req) => {
 1. In this project (the draft), call the function with `curl` from your terminal at the address the platform manual gives for this project's Edge Functions (`…/functions/v1/mcp`): POST `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}`, then `tools/list` and a `tools/call`, with the headers `content-type: application/json` and `accept: application/json, text/event-stream`.
 2. Install it with `publish`. Installing asks the server for its tools once: an operation the model provider couldn't take is left out and the answer names it — fix it and install again.
 3. From your next turn you have `mcp__<serverName>__<operation>`: call one, then do the same from the screen and compare.
+
+### App-only UI operations (MCP Apps visibility)
+If an operation is only for the tool's own UI (e.g. table pagination, quick filter refresh) and Len does not need to call it, annotate its tool metadata with `_meta: { ui: { visibility: ["app"] } }`. OpenLen keeps it callable from the tool's screen while omitting it from Len's `mcp__*` catalog.

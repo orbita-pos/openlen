@@ -41,12 +41,15 @@ export function VisualFrame({
   widget,
   final,
   onPrompt,
+  onContext,
   isolated = false,
 }: {
   widget: ReplyWidget;
   final: boolean;
   /** Absent for whoever can't write in the chat: the visual can't send then. */
   onPrompt?: (text: string) => void;
+  /** Silent context attached for the person's next message (updateModelContext, MCP Apps SEP-1865). */
+  onContext?: (text: string) => void;
   /** Code someone else could steer (a visitor of the owner's assistant, phase 2B of the spec local
    *  2026-11-06-asistente-propio): never on the visuals origin next to the owner's own visuals — a closed srcdoc with a
    *  null origin, no links, and taken down if it navigates its own frame. */
@@ -69,6 +72,8 @@ export function VisualFrame({
   const clickedAt = useRef(0);
   const onPromptRef = useRef(onPrompt);
   onPromptRef.current = onPrompt;
+  const onContextRef = useRef(onContext);
+  onContextRef.current = onContext;
 
   const post = (message: ParentToFrame) => {
     ref.current?.contentWindow?.postMessage(message, frameOrigin ?? "*");
@@ -92,6 +97,8 @@ export function VisualFrame({
           clickedAt.current = 0;
           send(d.text);
         }
+      } else if (d.kind === "ol-visual:context") {
+        if (!isolated) onContextRef.current?.(d.text.trim().slice(0, 1500));
       }
     }
     window.addEventListener("message", onMessage);

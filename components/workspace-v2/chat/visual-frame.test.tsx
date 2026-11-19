@@ -144,4 +144,16 @@ describe("VisualFrame", () => {
     expect(mount({ final: false }).host.textContent).toContain("Contando visitas");
     expect(mount({ final: false, widget: { ...widget, loadingMessages: [] } }).host.textContent).toContain("visualLoading");
   });
+
+  it("A5 · forwards ol-visual:context to onContext in chat mode and ignores it when isolated", () => {
+    const onContext = vi.fn();
+    const m = mount({ onContext });
+    m.fromFrame({ kind: "ol-visual:context", text: "  Selected: Marzo  " });
+    expect(onContext).toHaveBeenCalledWith("Selected: Marzo");
+
+    const onIsolatedContext = vi.fn();
+    const iso = mount({ isolated: true, onContext: onIsolatedContext });
+    iso.fromFrame({ kind: "ol-visual:context", text: "Should be ignored" }, "null");
+    expect(onIsolatedContext).not.toHaveBeenCalled();
+  });
 });

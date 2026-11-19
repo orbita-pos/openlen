@@ -76,6 +76,27 @@ describe("operationsFor", () => {
     const names = (await operationsFor("u1", deps(), new Set(["empleados"]))).declarations.map((x) => x.name);
     expect(names).toEqual(["mcp__calc__add", "mcp__empleados_2__add_employee", "mcp__empleados_2__list_employees"]);
   });
+
+  it("A5 · omits app-only MCP operations (visibility: ['app']) from Len's catalog", async () => {
+    const d = deps({
+      releaseMcp: vi.fn(async (sha: string) =>
+        sha === "sha-1"
+          ? {
+              serverName: "empleados",
+              function: "mcp",
+              tools: [
+                op("add_employee"),
+                { ...op("paginate_table"), visibility: ["app"] as const },
+                { ...op("list_employees"), visibility: ["model", "app"] as const },
+              ],
+            }
+          : null,
+      ),
+    });
+    const out = await operationsFor("u1", d);
+    expect(out.declarations.map((x) => x.name)).toEqual(["mcp__empleados__add_employee", "mcp__empleados__list_employees"]);
+    expect(out.routes.has("mcp__empleados__paginate_table")).toBe(false);
+  });
 });
 
 describe("callOperation", () => {

@@ -101,13 +101,15 @@ describe("the frame runtime", () => {
     expect(f.posted).toContainEqual({ kind: "ol-visual:link", href: "https://example.com/x" });
   });
 
-  it("sendPrompt and openLink post to the chat", () => {
+  it("sendPrompt, updateModelContext and openLink post to the chat", () => {
     const f = frame();
-    const w = f.win as unknown as { sendPrompt: (t: string) => void; openLink: (u: string) => void };
+    const w = f.win as unknown as { sendPrompt: (t: string) => void; updateModelContext: (t: string) => void; openLink: (u: string) => void };
     w.sendPrompt("¿y en marzo?");
+    w.updateModelContext("Selected row: Marzo ($1,200)");
     w.openLink("https://example.com/y");
     return f.tick().then(() => {
       expect(f.posted).toContainEqual({ kind: "ol-visual:prompt", text: "¿y en marzo?" });
+      expect(f.posted).toContainEqual({ kind: "ol-visual:context", text: "Selected row: Marzo ($1,200)" });
       expect(f.posted).toContainEqual({ kind: "ol-visual:link", href: "https://example.com/y" });
     });
   });
