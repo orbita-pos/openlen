@@ -1390,6 +1390,12 @@ async function correrTurno(
       : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
     skillsInvocadas,
   );
+  // WHAT THE PERSON TYPED, for a subagent's <original_task> (lib/agent/subagents/run.ts): their own words, never
+  // `argsDelTurno.prompt`, which is this composite (team context, thread, skill bodies, round framing). A turn the
+  // server starts — a goal round (`ronda` also covers a goal the owner just created or resumed, whose `prompt` is
+  // already the round's), a scheduled task, a code thread, Len by email, Len Watch, the subagents' notices — has no
+  // one's words, so it carries none. With a team, the same escape as in the message: only the server writes marks.
+  const palabrasDeLaPersona = ronda || opts.round || opts.hilo || opts.email || opts.scheduled || prompt === "" ? undefined : compartido ? neutralizarMarcas(prompt) : prompt;
   // LEN READS THE TIME (spec local 2026-10-29-tareas-programadas, §7.3): DeepSeek's time context.
   // Without a zone from the browser or saved, the reading says so instead of guessing one.
   const ahoraDelTurno = new Date();
@@ -2310,6 +2316,7 @@ async function correrTurno(
                   return planActivo;
                 },
                 turnArgs: argsDelTurno,
+                ...(palabrasDeLaPersona !== undefined ? { originalTask: palabrasDeLaPersona } : {}),
                 lenSystemPrompt: built.systemPrompt,
                 // What a fork inherits: the request up to the person's message (Len's system prompt and the
                 // completed turns), copied before the loop appends the turn in flight — and without this turn's

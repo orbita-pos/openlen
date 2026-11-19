@@ -88,6 +88,10 @@ export interface LaunchContext {
   readonly planMode: boolean;
   /** The launching turn's message pieces: the child's are built from them (`childMessages`). */
   readonly turnArgs: BuildAgentMessagesArgs;
+  /** What the person typed this turn, in their own words — never `turnArgs.prompt`, which is the route's composite
+   *  (team context, thread, skill bodies, round framing). Absent when no person wrote the turn (a goal round, a
+   *  scheduled task, a code thread, Len by email, Len Watch, the subagents' notices): there is nothing to carry. */
+  readonly originalTask?: string;
   /** Len's system prompt this turn: a woken child's is rebuilt from it (a fork's is it, byte for byte). */
   readonly lenSystemPrompt: string;
   /** Len's request up to, not including, this turn's message: the completed turns a fork inherits (DeepSeek's
@@ -177,20 +181,36 @@ export const TURN_LIMIT_MESSAGE = "You have reached this agent's turn limit. Do 
 const WORKTREE_FAILED = "The subagent's own copy of the project could not be made, so it did not start.";
 const PROGRESS_EVERY_MS = 5_000;
 
-const ORIGINAL_TASK_MAX_CHARS = 4_000;
+/** A long original task keeps its head and its tail: the constraints are as likely to close the message as to open it. */
+const ORIGINAL_TASK_HEAD_CHARS = 2_000;
+const ORIGINAL_TASK_TAIL_CHARS = 2_000;
 const VERIFICATION_REPORT_GUIDANCE =
   "In your report to the parent, state separately what you directly verified (with command or tool output), what remains unverified, and any failed approach to avoid repeating.";
 
-/** Propagates the user's verbatim current-turn prompt to full-context subagents (not Explore/Plan/creator)
- *  so paraphrasing in the parent's delegation prompt never silently drops user constraints. */
-function withOriginalTask(turnPrompt: string | undefined, type: ChildType, taskPrompt: string): string {
+/** The person's words as the fence holds them: a closing tag inside them is text (escaped, whatever its case or
+ *  spacing), so nothing they wrote can end the fence and speak as the parent; and a long one is cut in the middle. */
+function fencedOriginalTask(raw: string): string {
+  const safe = raw.replace(/<(\s*\/\s*original_task)/gi, "&lt;$1");
+  if (safe.length <= ORIGINAL_TASK_HEAD_CHARS + ORIGINAL_TASK_TAIL_CHARS) return safe;
+  // A cut between the two halves of a surrogate pair would send the provider half a character.
+  let head = safe.slice(0, ORIGINAL_TASK_HEAD_CHARS);
+  if (/[\ud800-\udbff]$/.test(head)) head = head.slice(0, -1);
+  let tail = safe.slice(safe.length - ORIGINAL_TASK_TAIL_CHARS);
+  if (/^[\udc00-\udfff]/.test(tail)) tail = tail.slice(1);
+  return `${head}\n[… ${safe.length - head.length - tail.length} characters omitted …]\n${tail}`;
+}
+
+/** Propagates what the person typed this turn to full-context subagents (not Explore/Plan/creator) so paraphrasing
+ *  in the parent's delegation prompt never silently drops their constraints. `originalTask` is only ever the
+ *  person's own text (`LaunchContext.originalTask`): without it, no fence is written at all. */
+function withOriginalTask(originalTask: string | undefined, type: ChildType, taskPrompt: string): string {
   if (omitsLenMdFor(type)) return taskPrompt;
   if (type.kind === "custom" && type.type.agent.name === "creator") return taskPrompt;
-  const raw = typeof turnPrompt === "string" ? turnPrompt.trim() : "";
+  const raw = typeof originalTask === "string" ? originalTask.trim() : "";
   const body =
     !raw || raw === taskPrompt.trim()
       ? taskPrompt
-      : `<original_task>\n${raw.length <= ORIGINAL_TASK_MAX_CHARS ? raw : `${raw.slice(0, ORIGINAL_TASK_MAX_CHARS)}…`}\n</original_task>\n` +
+      : `<original_task>\n${fencedOriginalTask(raw)}\n</original_task>\n` +
         "The parent's delegated task below may paraphrase the user's request; <original_task> is authoritative for user requirements and constraints.\n\n" +
         taskPrompt;
   return `${body}\n\n${VERIFICATION_REPORT_GUIDANCE}`;
@@ -198,13 +218,13 @@ function withOriginalTask(turnPrompt: string | undefined, type: ChildType, taskP
 
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
  *  DeepSeek's return guidance (it reports to `len`); Explore and Plan without LEN.md and the person's notes
- *  (Claude Code's `omitClaudeMd`). */
-export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: SubagentPreset | ChildType, prompt: string): Message[] {
+ *  (Claude Code's `omitClaudeMd`). `originalTask`: what the person typed, when a person started the turn. */
+export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: SubagentPreset | ChildType, prompt: string, originalTask?: string): Message[] {
   const type: ChildType = typeof preset === "string" ? { kind: "builtin", preset } : preset;
   const built = buildAgentMessages({
     ...turnArgs,
     history: [],
-    prompt: withContinuableReturnGuidance(withOriginalTask(turnArgs.prompt, type, prompt)),
+    prompt: withContinuableReturnGuidance(withOriginalTask(originalTask, type, prompt)),
     attachedImages: [],
     attachedFiles: undefined,
     seleccion: null,
@@ -754,7 +774,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
     const row = (await io.store.runOfCurrentConversation(ctx.projectId, id).catch(() => null)) ?? first;
     const transcript = (row.transcript as Message[] | null) ?? [];
     // A run saved before its task was kept in its transcript (phase 1 kept only its own messages, which open with its
-    // first answer), or cut before its first save: its task goes first, as it started.
+    // first answer), or cut before its first save: its task goes first, as it started. Without an <original_task>: what
+    // the person typed when it started is gone, and the waking turn's words are not it.
     const head = !row.forked && transcript[0]?.role !== "user" ? preload(type, childMessages(ctx.turnArgs, type, row.prompt)).slice(1) : [];
     const spec: ChildSpec = {
       id,
@@ -858,7 +879,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
         type,
         forked: false,
         planMode: ctx.planMode,
-        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt)).map((m, i, all) =>
+        messages: preload(type, childMessages(ctx.turnArgs, type, o.prompt, ctx.originalTask)).map((m, i, all) =>
           i === all.length - 1 ? withLine(o.fromSkill ? { ...m, runningSkill: o.fromSkill } : m, w ?? null) : m,
         ),
         // Delivered to its caller (DeepSeek's `delivery: "caller"`): it reports only through its output, so it has no
