@@ -7,8 +7,8 @@
 //   capacitor://localhost — la app empaquetada en iPhone (para después)
 export const ORIGENES_DE_LA_APP: readonly string[] = ["http://localhost:5173", "https://localhost", "capacitor://localhost"];
 
-export function cabecerasCors(req: Request): Record<string, string> {
-  const origen = req.headers.get("origin");
+export function cabecerasCors(req?: Request): Record<string, string> {
+  const origen = req?.headers?.get("origin");
   if (!origen || !ORIGENES_DE_LA_APP.includes(origen)) return {};
   return {
     "access-control-allow-origin": origen,
@@ -31,10 +31,10 @@ export function conCors(req: Request, res: Response): Response {
 
 // Dos firmas: un manejador que sólo recibe la petición queda igual de llamable
 // (`GET(req)`), y uno con contexto (`{ params }`) lo conserva tipado.
-export function paraLaApp(h: (req: Request) => Promise<Response>): (req: Request) => Promise<Response>;
+export function paraLaApp(h: (req: Request) => Promise<Response>): (req?: Request) => Promise<Response>;
 export function paraLaApp<C>(h: (req: Request, ctx: C) => Promise<Response>): (req: Request, ctx: C) => Promise<Response>;
-export function paraLaApp<C>(h: (req: Request, ctx?: C) => Promise<Response>): (req: Request, ctx?: C) => Promise<Response> {
-  return async (req, ctx) => conCors(req, await h(req, ctx));
+export function paraLaApp<C>(h: (req: Request, ctx?: C) => Promise<Response>): (req?: Request, ctx?: C) => Promise<Response> {
+  return async (req = new Request("http://x"), ctx) => conCors(req, await h(req, ctx));
 }
 
 export function respuestaPrevia(req: Request): Response {
