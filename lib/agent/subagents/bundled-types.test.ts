@@ -7,9 +7,9 @@ import { BUNDLED_AGENT_TYPES, CREATOR_AGENT_TYPE, bundledAgentFiles } from "./bu
 import { childTypeOf } from "./presets";
 
 describe("OpenLen's own subagent types", () => {
-  it("both parse and are OpenLen's names", () => {
+  it("all parse and are OpenLen's names", () => {
     expect(BUNDLED_AGENT_TYPES.map((a) => a.name)).toEqual([...OPENLEN_AGENT_TYPES]);
-    expect([...OPENLEN_AGENT_TYPES]).toEqual(["len-design", "len-office"]);
+    expect([...OPENLEN_AGENT_TYPES]).toEqual(["len-design", "len-office", "len-review"]);
   });
 
   it("len-office preloads office and brand", () => {
@@ -21,9 +21,16 @@ describe("OpenLen's own subagent types", () => {
     expect(BUNDLED_AGENT_TYPES.find((a) => a.name === "len-design")!.skills).toEqual(["brand"]);
   });
 
+  it("len-review is read-only (disallows mutating tools) and enforces sibling completeness and evidence rules", () => {
+    const review = BUNDLED_AGENT_TYPES.find((a) => a.name === "len-review")!;
+    expect(review.disallowedTools).toEqual(expect.arrayContaining(["Write", "Edit", "edit_image"]));
+    expect(review.body).toContain("sibling implementations");
+    expect(review.body).toContain("Ruling out alternatives B and C does NOT confirm A");
+  });
+
   it("their files are served at /.openlen/agents", () => {
     const files = bundledAgentFiles();
-    expect(Object.keys(files)).toEqual(["/.openlen/agents/len-design.md", "/.openlen/agents/len-office.md"]);
+    expect(Object.keys(files)).toEqual(["/.openlen/agents/len-design.md", "/.openlen/agents/len-office.md", "/.openlen/agents/len-review.md"]);
     for (const [path, text] of Object.entries(files)) {
       const name = path.slice("/.openlen/agents/".length, -".md".length);
       expect(parseAgentFile(text, name).ok, path).toBe(true);

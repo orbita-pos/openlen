@@ -15,11 +15,11 @@ describe("custom agent types", () => {
     expect(types.refused.every((x) => x.error.length > 0)).toBe(true);
   });
   it("names built-ins first, then custom types sorted by name", () => {
-    expect(resolveAgentTypes({ project: [stored("zebra"), stored("alpha")], personal: [] }).names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "alpha", "zebra"]);
+    expect(resolveAgentTypes({ project: [stored("zebra"), stored("alpha")], personal: [] }).names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "alpha", "zebra"]);
   });
   it("OpenLen's types come after Claude Code's and before the custom ones", () => {
     const types = resolveAgentTypes({ project: [stored("reviewer")], personal: [] });
-    expect(types.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "reviewer"]);
+    expect(types.names()).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "reviewer"]);
     expect(types.get("len-office")?.scope).toBe("bundled");
     expect(types.custom.map((t) => t.agent.name)).toEqual(["reviewer"]);
   });

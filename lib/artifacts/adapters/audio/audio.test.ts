@@ -33,3 +33,12 @@ it("never retries an ambiguous speech call and rejects non-audio, oversized or i
   const rejected=openaiArtifactSpeechTransport({apiKey:"test",model:"gpt-4o-mini-tts-2025-12-15",fetch:async()=>new Response("private provider body",{status:400})});
   expect(await rejected({text:"Hola",voice:"coral"},new AbortController().signal)).toMatchObject({outcome:"failed",code:"audio_provider_error"});
 });
+it("A4 · builds Voiceover Carve EQ + sidechain duck filters for narration over music",async()=>{
+  const {buildVoiceoverDuckFilters}=await import("../../../../tools/artifact-renderer/audio.mjs");
+  const filters=buildVoiceoverDuckFilters(["a0"],["a1"]);
+  expect(filters).toHaveLength(4);
+  expect(filters[2]).toContain("equalizer=f=400");
+  expect(filters[2]).toContain("equalizer=f=1000");
+  expect(filters[2]).toContain("equalizer=f=1600");
+  expect(filters[3]).toContain("sidechaincompress=");
+});
