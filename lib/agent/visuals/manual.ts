@@ -89,6 +89,7 @@ An HTML visual starts with <h2 class="sr-only"> and one sentence that says what 
 
 ## Talking to the chat
 - sendPrompt(text) sends text to you as a message from the person. It only works as the answer to their click, once per click. Use it for a next step that needs you to think ("Compare with last month"); filtering, sorting and recalculating happen in the visual's own JavaScript.
+- updateModelContext(text) attaches the person's current selection or filter summary silently for their next message without starting a new turn (pass "" to clear). Use it when the person picks rows, options or parameters they may ask about next.
 - Links (<a href="https://…">) and openLink(url) ask the person to confirm, then open in a new tab. The visual never navigates.
 
 ## Don't
@@ -144,6 +145,10 @@ const BUBBLE_EDITS: readonly (readonly [string, string])[] = [
   ],
   ["## Talking to the chat", "## Talking to the bubble"],
   ["sendPrompt(text) sends text to you as a message from the person.", "sendPrompt(text) sends text to you as a message from the visitor."],
+  [
+    "\n- updateModelContext(text) attaches the person's current selection or filter summary silently for their next message without starting a new turn (pass \"\" to clear). Use it when the person picks rows, options or parameters they may ask about next.",
+    "",
+  ],
   [
     "- Links (<a href=\"https://…\">) and openLink(url) ask the person to confirm, then open in a new tab. The visual never navigates.",
     "- Links (<a href>) and openLink(url) go only to this business's own site — a path like /reservas or an anchor like #pedir — and open in the same page. A link to another site does nothing.",

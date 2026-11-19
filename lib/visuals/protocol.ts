@@ -12,7 +12,8 @@ export type FrameToParent =
   | { readonly kind: "ol-visual:ready" }
   | { readonly kind: "ol-visual:height"; readonly height: number }
   | { readonly kind: "ol-visual:link"; readonly href: string }
-  | { readonly kind: "ol-visual:prompt"; readonly text: string };
+  | { readonly kind: "ol-visual:prompt"; readonly text: string }
+  | { readonly kind: "ol-visual:context"; readonly text: string };
 
 export function isFrameToParent(value: unknown): value is FrameToParent {
   if (!value || typeof value !== "object") return false;
@@ -25,6 +26,7 @@ export function isFrameToParent(value: unknown): value is FrameToParent {
     case "ol-visual:link":
       return typeof v.href === "string";
     case "ol-visual:prompt":
+    case "ol-visual:context":
       return typeof v.text === "string";
     default:
       return false;

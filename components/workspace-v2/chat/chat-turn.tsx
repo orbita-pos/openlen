@@ -298,6 +298,7 @@ export function LenTurn({
   esApp = false,
   goalRunsOn = false,
   onContinue,
+  onVisualContext,
   speaker,
 }: {
   /** Who answers when it isn't Len: the person's own assistant, its name and its figure (spec local
@@ -332,6 +333,8 @@ export function LenTurn({
   goalRunsOn?: boolean;
   /** «Sí, sigue con…» de la lista de progreso: manda ese mensaje. Sin él, no hay botón. */
   onContinue?: (text: string) => void;
+  /** Silent context reported by an inline visual via updateModelContext(text). */
+  onVisualContext?: (text: string) => void;
 }) {
   const t = useTranslations("panelsChat");
   // LAS RUTAS DE ESTE TURNO ABREN SU FICHERO (la #9): las de sus pasos y las que
@@ -403,14 +406,14 @@ export function LenTurn({
         // the light theme's bubble and ground are ~1.1:1. Its time goes under it.
         <div className="flex max-w-[88%] flex-col items-start gap-1 self-start">
           <div data-her-bubble="" className="rounded-[16px_16px_16px_4px] border bd bg-elev px-3 py-2">
-            <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+            <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} {...(onVisualContext ? { onContext: onVisualContext } : {})} />
           </div>
           <span data-her-time="" className="pl-1 text-[11px] fg-faint">
             {when}
           </span>
         </div>
       ) : (
-        <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} />
+        <LenReply turn={turn} text={text} streaming={streaming} paths={paths} onOpenFile={openFile} {...(onContinue ? { onPrompt: onContinue } : {})} {...(onVisualContext ? { onContext: onVisualContext } : {})} />
       )}
       {/* LOS ENTREGABLES DEL TURNO: una tarjeta por pieza, como Claude enseña un artefacto en la conversación. */}
       <ArtifactTurnCards actions={turn.actions} />

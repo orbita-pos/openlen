@@ -75,6 +75,7 @@ describe("la sección del prompt", () => {
     expect(planPrompt(PLAN, false)).toBe("You are Len.");
     expect(isPlanPrompt(PLAN)).toBe(true);
     expect(isPlanPrompt("You are Len.")).toBe(false);
+    expect(PLAN_POLICY).toContain('Re-plan if:');
   });
 
   // Como DeepSeek (in-history system prompt replacement): el prompt que manda es el ÚLTIMO mensaje de

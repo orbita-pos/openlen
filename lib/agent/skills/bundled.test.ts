@@ -34,6 +34,8 @@ describe("bundled skills", () => {
       "dataviz",
       "deep-research",
       "frontend-design",
+      "grill-me",
+      "learn",
       "office",
       "office-docx",
       "office-export-pdf",

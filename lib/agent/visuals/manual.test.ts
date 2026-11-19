@@ -71,11 +71,12 @@ describe("buildVisualsManual — the surface", () => {
   const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
   it("the chat's manual is byte for byte today's", () => {
-    // Pinned from the unchanged file on 08/11, before the bubble's surface existed.
-    expect(sha(buildVisualsManual([...VISUAL_MODULES], "desktop"))).toBe("e8ac9d18b7322fa94814315ffc2f6011fc37fd12558294f43ec3853d33751e49");
-    expect(sha(buildVisualsManual([], "unknown"))).toBe("2bed2eab7afd2c2e45598746b8e17c3a2bc07a0a948ce795e7d1916e057aa95f");
-    expect(sha(buildVisualsManual(["chart"], "mobile"))).toBe("07091accb79842db703951ce5ead6aab9840cd8832ccf8656de51ea31ca32d75");
+    // Pinned after A5 added updateModelContext(text) to chat visuals (still omitted in bubble).
+    expect(sha(buildVisualsManual([...VISUAL_MODULES], "desktop"))).toBe("b2a1a07075004600f387d9daa6937f3f4b57b9e88978af13bb28fa6dd9be26ba");
+    expect(sha(buildVisualsManual([], "unknown"))).toBe("da764280378aca16284abea083dcaeab611cbbde8098dd5ccfea54db63ee871e");
+    expect(sha(buildVisualsManual(["chart"], "mobile"))).toBe("d50d2e486f97a372f9a726dc4e13f6bd6f2ec032c4fac6a15907db5c67e66fbd");
     expect(buildVisualsManual(["chart"], "mobile", "chat")).toBe(buildVisualsManual(["chart"], "mobile"));
+    expect(buildVisualsManual([], "desktop", "chat")).toContain("updateModelContext(text)");
   });
 
   it("the bubble's manual speaks of the business's bubble and its color", () => {
@@ -91,6 +92,7 @@ describe("buildVisualsManual — the surface", () => {
     // Final review I5: the bubble holds a visual to about 450px and scrolls past it.
     expect(m).toContain("up to about 450px");
     expect(m).not.toContain("grows to fit it");
+    expect(m).not.toContain("updateModelContext");
   });
 
   it("🔴 every bubble edit still finds its text: the chat's manual can't change under the bubble unnoticed", () => {

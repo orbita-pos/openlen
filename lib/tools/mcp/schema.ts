@@ -4,13 +4,15 @@
 // once prefixed (`mcp__<serverName>__<name>`, `^[a-zA-Z0-9_-]{1,64}$`), a JSON Schema whose root is an object, without
 // `$ref` (the provider wants it inline) and of a sane size — and what fails is left out with a problem naming it. Pure.
 
-import type { McpTool } from "./client";
+import type { McpTool, McpToolVisibility } from "./client";
 
 /** An operation as stored with the installed version, ready to be declared to Len. */
 export interface StoredOperation {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: Record<string, unknown>;
+  /** Optional MCP Apps visibility (SEP-1865); omitted means visible to both model and app UI. */
+  readonly visibility?: readonly McpToolVisibility[];
 }
 
 export const MCP_MAX_TOOLS = 32;
@@ -89,8 +91,14 @@ export function checkTools(serverName: string, tools: readonly McpTool[]): { too
       continue;
     }
     const description = [tool.title, tool.description].filter((s): s is string => typeof s === "string" && s.trim() !== "").join(" — ") || tool.name;
+    const visibility = tool.visibility?.filter((v): v is McpToolVisibility => v === "model" || v === "app");
     seen.add(tool.name);
-    ok.push({ name: tool.name, description: description.slice(0, MCP_DESCRIPTION_MAX), inputSchema: schema });
+    ok.push({
+      name: tool.name,
+      description: description.slice(0, MCP_DESCRIPTION_MAX),
+      inputSchema: schema,
+      ...(visibility && visibility.length > 0 ? { visibility: [...new Set(visibility)] } : {}),
+    });
   }
   return { tools: ok, problems };
 }

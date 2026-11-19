@@ -2540,34 +2540,40 @@ export function useAgentChat({
    * es el cuadrado y llama a `handleCancel`. Vale igual para un turno que
    * sigue en el servidor (Len 2.1).
    */
-  const submit = useCallback(() => {
-    if (sending || reenganche) {
-      const texto = draft.trim();
-      const turnoId = turnoIdRef.current;
-      if (!texto || !turnoId) return;
-      // NO SE LIMPIA POR ADELANTADO. La primera version limpiaba la caja
-      // y devolvia el texto desde un `.catch` — pero `.catch` solo salta
-      // con un fallo de RED: un 404 (el turno acabo entre tu clic y la
-      // peticion) se resuelve bien, el catch no corre, y tu correccion
-      // desaparecia sin decir nada. Justo lo que el comentario presumia
-      // de evitar.
-      //
-      // Se limpia SOLO cuando el servidor confirma. Si algo falla, el
-      // texto se queda donde estaba: verlo seguir ahi es el aviso.
-      void fetch("/api/agent/dirigir", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ turnoId, texto }),
-      })
-        .then((r) => {
-          // Y solo si no has seguido escribiendo mientras iba.
-          if (r.ok) setDraft((d) => (d.trim() === texto ? "" : d));
+  const submit = useCallback(
+    (extraContext?: string) => {
+      const ctx = typeof extraContext === "string" ? extraContext.trim() : "";
+      const withContext = (raw: string) => (ctx && raw.trim() ? `${raw.trim()}\n\n[Widget context: ${ctx}]` : raw);
+      if (sending || reenganche) {
+        const texto = withContext(draft.trim());
+        const turnoId = turnoIdRef.current;
+        if (!texto || !turnoId) return;
+        const originalDraft = draft.trim();
+        // NO SE LIMPIA POR ADELANTADO. La primera version limpiaba la caja
+        // y devolvia el texto desde un `.catch` — pero `.catch` solo salta
+        // con un fallo de RED: un 404 (el turno acabo entre tu clic y la
+        // peticion) se resuelve bien, el catch no corre, y tu correccion
+        // desaparecia sin decir nada. Justo lo que el comentario presumia
+        // de evitar.
+        //
+        // Se limpia SOLO cuando el servidor confirma. Si algo falla, el
+        // texto se queda donde estaba: verlo seguir ahi es el aviso.
+        void fetch("/api/agent/dirigir", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ turnoId, texto }),
         })
-        .catch(() => {});
-      return;
-    }
-    void send(draft, undefined, { comentarios });
-  }, [comentarios, draft, reenganche, send, sending]);
+          .then((r) => {
+            // Y solo si no has seguido escribiendo mientras iba.
+            if (r.ok) setDraft((d) => (d.trim() === originalDraft ? "" : d));
+          })
+          .catch(() => {});
+        return;
+      }
+      void send(withContext(draft), undefined, { comentarios });
+    },
+    [comentarios, draft, reenganche, send, sending],
+  );
 
   /** LA LISTA DE PROGRESO (spec local 2026-10-15): «Sí, sigue con…» manda ese
    *  texto como un mensaje normal del dueño. Con un turno en vuelo no hace nada:

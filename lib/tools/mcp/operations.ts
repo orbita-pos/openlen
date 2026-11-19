@@ -83,6 +83,8 @@ export async function operationsFor(
     servers.set(mcp.serverName, taken + 1);
     const server = taken === 0 ? mcp.serverName : `${mcp.serverName}_${taken + 1}`;
     for (const tool of mcp.tools) {
+      // MCP Apps (SEP-1865): app-only UI operations stay out of Len's tool catalog.
+      if (tool.visibility && tool.visibility.length > 0 && !tool.visibility.includes("model")) continue;
       const name = operationToolName(server, tool.name);
       if (name.length > PROVIDER_NAME_MAX || routes.has(name)) continue;
       const declaration = { name, description: tool.description, parameters: tool.inputSchema };

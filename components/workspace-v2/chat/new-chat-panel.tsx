@@ -471,12 +471,15 @@ function AgentChatView({
       setEnviandoEquipo(false);
     }
   };
+  const [visualContext, setVisualContext] = useState("");
   const enviar = async () => {
     if (equipo.compartido) {
       if (!permitido(destino, equipo.puedeLen)) return;
       if (await enviarAlEquipo()) return;
     }
-    chat.submit();
+    const ctx = visualContext.trim();
+    if (ctx) setVisualContext("");
+    chat.submit(ctx || undefined);
   };
   // Los mensajes entre personas no son turnos: la pregunta de Len la contesta
   // su turno siguiente, no lo que se digan dos personas en medio.
@@ -603,7 +606,7 @@ function AgentChatView({
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
-                {...(soloLectura ? {} : { onContinue: chat.continueWith })}
+                {...(soloLectura ? {} : { onContinue: chat.continueWith, onVisualContext: setVisualContext })}
                 esApp={esApp}
                 {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={18} /> } } : {})}
               />
@@ -631,6 +634,22 @@ function AgentChatView({
             onResume={chat.resumeGoal}
             onClear={() => void chat.clearGoal()}
           />
+        )}
+        {visualContext.trim().length > 0 && !soloLectura && (
+          <div
+            data-testid="visual-context-chip"
+            className="mb-1.5 flex items-center gap-2 rounded-lg border bd bg-elev px-2.5 py-1 text-[12px] fg-muted"
+          >
+            <span className="min-w-0 flex-1 truncate">{visualContext}</span>
+            <button
+              type="button"
+              onClick={() => setVisualContext("")}
+              className="shrink-0 rounded px-1 text-[12px] fg-faint hover:bg-hover hover:fg"
+              aria-label="Clear visual context"
+            >
+              ×
+            </button>
+          </div>
         )}
         {soloLectura && !equipo.compartido ? (
           <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">

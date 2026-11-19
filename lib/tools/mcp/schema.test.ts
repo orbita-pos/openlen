@@ -75,4 +75,14 @@ describe("checkTools — the schema's structure", () => {
     expect(r.tools.map((t) => t.name)).toEqual(["e"]);
     expect(r.problems).toHaveLength(4);
   });
+
+  it("A5 · preserves SEP-1865 MCP Apps visibility when provided", () => {
+    const r = checkTools("calc", [
+      { name: "ui_refresh", description: "Refresh table", inputSchema: { type: "object" }, visibility: ["app"] },
+      { name: "add", description: "Add", inputSchema: { type: "object" } },
+    ]);
+    expect(r.problems).toEqual([]);
+    expect(r.tools[0]!.visibility).toEqual(["app"]);
+    expect(r.tools[1]!.visibility).toBeUndefined();
+  });
 });

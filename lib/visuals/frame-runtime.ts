@@ -132,6 +132,9 @@ export const FRAME_RUNTIME_JS = `(function () {
   window.sendPrompt = function (text) {
     if (typeof text === "string" && text.trim()) post({ kind: "ol-visual:prompt", text: text.slice(0, 2000) });
   };
+  window.updateModelContext = function (text) {
+    post({ kind: "ol-visual:context", text: typeof text === "string" ? text.trim().slice(0, 1500) : "" });
+  };
   window.openLink = function (url) {
     post({ kind: "ol-visual:link", href: String(url) });
   };
