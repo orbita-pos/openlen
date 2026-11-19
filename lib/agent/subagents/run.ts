@@ -177,6 +177,25 @@ export const TURN_LIMIT_MESSAGE = "You have reached this agent's turn limit. Do 
 const WORKTREE_FAILED = "The subagent's own copy of the project could not be made, so it did not start.";
 const PROGRESS_EVERY_MS = 5_000;
 
+const ORIGINAL_TASK_MAX_CHARS = 4_000;
+const VERIFICATION_REPORT_GUIDANCE =
+  "In your report to the parent, state separately what you directly verified (with command or tool output), what remains unverified, and any failed approach to avoid repeating.";
+
+/** Propagates the user's verbatim current-turn prompt to full-context subagents (not Explore/Plan/creator)
+ *  so paraphrasing in the parent's delegation prompt never silently drops user constraints. */
+function withOriginalTask(turnPrompt: string | undefined, type: ChildType, taskPrompt: string): string {
+  if (omitsLenMdFor(type)) return taskPrompt;
+  if (type.kind === "custom" && type.type.agent.name === "creator") return taskPrompt;
+  const raw = typeof turnPrompt === "string" ? turnPrompt.trim() : "";
+  const body =
+    !raw || raw === taskPrompt.trim()
+      ? taskPrompt
+      : `<original_task>\n${raw.length <= ORIGINAL_TASK_MAX_CHARS ? raw : `${raw.slice(0, ORIGINAL_TASK_MAX_CHARS)}…`}\n</original_task>\n` +
+        "The parent's delegated task below may paraphrase the user's request; <original_task> is authoritative for user requirements and constraints.\n\n" +
+        taskPrompt;
+  return `${body}\n\n${VERIFICATION_REPORT_GUIDANCE}`;
+}
+
 /** The child's messages: the launching turn's pieces with no history and its task as the request, closed by
  *  DeepSeek's return guidance (it reports to `len`); Explore and Plan without LEN.md and the person's notes
  *  (Claude Code's `omitClaudeMd`). */
@@ -185,7 +204,7 @@ export function childMessages(turnArgs: BuildAgentMessagesArgs, preset: Subagent
   const built = buildAgentMessages({
     ...turnArgs,
     history: [],
-    prompt: withContinuableReturnGuidance(prompt),
+    prompt: withContinuableReturnGuidance(withOriginalTask(turnArgs.prompt, type, prompt)),
     attachedImages: [],
     attachedFiles: undefined,
     seleccion: null,

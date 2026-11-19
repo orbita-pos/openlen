@@ -1365,7 +1365,7 @@ async function loadVersion(tab: OpenTab, html: string, opciones: OpenTab["opcion
  * servidor de desarrollo— y se dice. Sin `tab` (y con `signedInAs`, que abre y
  * cierra su sesión del backend), cada visita abre y cierra la suya.
  */
-export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string; images?: InlineImage[] }> {
+export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {}): Promise<{ informe: string; images?: InlineImage[]; noChange?: boolean }> {
   // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.8 step 6): its own host, as the person
   // sees it, with the bridge in installed mode — its own data is real; `update` is refused.
   if (p.installedUrl && p.toolBridge) {
@@ -1378,8 +1378,8 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
   if (!p.tab || p.signedInAs) {
     const tab = await openTab(internals, p.signedInAs);
     try {
-      const { informe, images } = await visitTab(tab, p, internals, { persistent: false, recovered: false });
-      return { informe, ...(images ? { images } : {}) };
+      const { informe, images, noChange } = await visitTab(tab, p, internals, { persistent: false, recovered: false });
+      return { informe, ...(images ? { images } : {}), ...(noChange ? { noChange } : {}) };
     } finally {
       await closeOpenTab(tab);
     }
@@ -1393,7 +1393,7 @@ export async function usarPagina(p: VisitaParams, internals: VisitaInternals = {
   return turn;
 }
 
-async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internals: VisitaInternals): Promise<{ informe: string; images?: InlineImage[] }> {
+async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internals: VisitaInternals): Promise<{ informe: string; images?: InlineImage[]; noChange?: boolean }> {
   if (holder.timer) clearTimeout(holder.timer);
   holder.timer = null;
   let tab = holder.current as OpenTab | null;
@@ -1417,7 +1417,7 @@ async function visitInHolder(holder: BrowserTabHolder, p: VisitaParams, internal
       holder.current = null;
       await closeOpenTab(tab);
     }
-    return { informe: r.informe, ...(r.images ? { images: r.images } : {}) };
+    return { informe: r.informe, ...(r.images ? { images: r.images } : {}), ...(r.noChange ? { noChange: r.noChange } : {}) };
   } catch (e) {
     // No se pudo abrir o cargar: la pestaña no queda a medias para la siguiente.
     holder.current = null;
@@ -1594,7 +1594,7 @@ async function visitTab(
   p: VisitaParams,
   internals: VisitaInternals,
   o: { readonly persistent: boolean; readonly recovered: boolean; readonly closedIdle?: boolean },
-): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean }> {
+): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean; noChange?: boolean }> {
   // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): `window.openlen` first in its <head>, served by
   // the platform under /openlen/, and answered in Node in draft mode — never writing production.
   const medible = documentoMedible(p.html, p.vista ?? null);
@@ -1692,6 +1692,8 @@ async function visitTab(
   let stuck = false;
 
   let hechos = 0;
+  let interactiveSteps = 0;
+  let anyObservedChange = false;
   for (const [i, paso] of p.pasos.entries()) {
     const encabezado = `${i + 1}. ${describirPaso(paso)}`;
     hechos = i + 1;
@@ -1725,6 +1727,7 @@ async function visitTab(
       for (const c of await esperarPaso(page, paso.wait, plazo)) lineas.push(`   · ${c}`);
       continue;
     }
+    interactiveSteps += 1;
     const accion = await actuar(page, paso, cambiantes);
     if (!accion.ok) {
       lineas.push(`${encabezado} → ${accion.hecho}`);
@@ -1790,6 +1793,7 @@ async function visitTab(
     // With a canvas or a video in view, the text can't say «nothing changed»: it says to look instead, as
     // Claude's, DeepSeek's and Kimi's agents look. What nobody listens to is still a fact, and is said.
     const lienzos = nadaPropio ? await lienzosALaVista(page) : [];
+    if (!nadaPropio || lienzos.length > 0) anyObservedChange = true;
     if (nadaPropio) {
       const salvo = cambios.length > 0 ? " (only what changes by itself changed)" : "";
       if (lienzos.length > 0) detalle.push(avisoDeLienzos(lienzos));
@@ -1841,5 +1845,6 @@ async function visitTab(
       : `JavaScript errors in the visit: ${unicos.slice(0, 5).map((e) => q(e, 200)).join("; ")}${unicos.length > 5 ? ` (and ${unicos.length - 5} more)` : ""}.`,
   );
   lineas.push(...notas);
-  return { informe: lineas.join("\n"), ...(images.length > 0 ? { images } : {}), stuck };
+  const noChange = interactiveSteps > 0 && !anyObservedChange;
+  return { informe: lineas.join("\n"), ...(images.length > 0 ? { images } : {}), stuck, ...(noChange ? { noChange } : {}) };
 }

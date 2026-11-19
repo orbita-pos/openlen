@@ -146,10 +146,14 @@ describe("el pliegue de la conversación", () => {
 
 describe("los textos de DeepSeek", () => {
   it("el mensaje de ronda, con «project»", () => {
+    const r1 = goalRoundPrompt(nuevo(), 1);
+    expect(r1).not.toContain("never treat an open issue as closed");
     const texto = goalRoundPrompt(nuevo(), 3);
     expect(texto.startsWith('<goal_round>\nObjective: "la tienda entera"\nRound: 3/256\n\n')).toBe(true);
     expect(texto).toContain("Treat the current project, tool results, and durable session state as authoritative");
     expect(texto).toContain("Before claiming completion, gather evidence that the whole objective is achieved");
+    expect(texto).toContain("never treat an open issue as closed just because a later round stopped mentioning it");
+    expect(texto).toContain("If the same failure recurs twice, do not repeat the same fix strategy");
     expect(texto.endsWith("</goal_round>")).toBe(true);
   });
 

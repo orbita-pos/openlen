@@ -109,4 +109,30 @@ describe("screenshots in the conversation", () => {
     expect(out.slice(0, 20).every((m) => m.screenshots === undefined)).toBe(true);
     expect(out.slice(20).every((m) => m.screenshots?.length === 1)).toBe(true);
   });
+
+  it("A2 · keeps a short deterministic observation summary when dropping screenshots from use_page", () => {
+    const messages = looks(41);
+    messages[1] = {
+      role: "user",
+      content: "Screenshots below, in order: image 1 from use_page. Look at them yourself.",
+      functionResponses: [
+        {
+          name: "use_page",
+          response: {
+            ok: true,
+            visit: "Visit to / as a new visitor.\n1. click «Guardar» → clicked\n   · nothing changed\nJavaScript errors in the visit: none.",
+          },
+        },
+      ],
+      images: [img("1")],
+    };
+    keepRecentScreenshots(messages);
+    expect(messages[1]!.content).toContain("Observed before screenshots were dropped:");
+    expect(messages[1]!.content).toContain("1. click «Guardar» → clicked");
+    expect(messages[1]!.content).toContain("JavaScript errors in the visit: none.");
+    // Idempotent on second application.
+    const once = messages[1]!.content;
+    keepRecentScreenshots(messages);
+    expect(messages[1]!.content).toBe(once);
+  });
 });

@@ -40,4 +40,41 @@ describe("createRepeatReminder (DeepSeek's repeat-tool-reminder + the alternatin
     r.reset();
     expect(r.observe([call("Read"), call("Read")])).toEqual([]);
   });
+
+  it("A2 · 3 and 5 consecutive use_page calls with no_change or failure emit a check-in reminder even with distinct args", () => {
+    const r = createRepeatReminder();
+    const step = (click: string, extra: Record<string, unknown> = { no_change: true }) => ({
+      name: "use_page",
+      args: { steps: [{ click }] },
+      response: { ok: true, ...extra },
+    });
+    expect(r.observe([step("Enviar")])).toEqual([]);
+    expect(r.observe([step("Guardar")])).toEqual([]);
+    const third = r.observe([step("Confirmar")]);
+    expect(third).toHaveLength(1);
+    expect(third[0]).toContain("use_page calls produced no observable change");
+    expect(r.observe([step("Aceptar")])).toEqual([]);
+    expect(r.observe([{ name: "use_page", args: { steps: [{ click: "X" }] }, response: { ok: false, error: "boom" } }])).toHaveLength(1);
+    // An Edit resets the streak.
+    expect(r.observe([call("Edit", { file_path: "/index.html" })])).toEqual([]);
+    expect(r.observe([step("A"), step("B")])).toEqual([]);
+    // A use_page with a real change also resets the streak.
+    expect(r.observe([step("C", {})])).toEqual([]);
+    expect(r.observe([step("D"), step("E")])).toEqual([]);
+  });
+
+  it("A2 · repeated Reads of already-read files with no edits emit a circling reminder and Edit/bash resets it", () => {
+    const r = createRepeatReminder();
+    // Initial reads of two files do not trigger circling.
+    expect(r.observe([call("Read", { file_path: "/a.ts" }), call("Read", { file_path: "/b.ts" })])).toEqual([]);
+    // Re-reading alternating already-read files without editing triggers at 3.
+    expect(r.observe([call("Read", { file_path: "/a.ts" })])).toEqual([]);
+    expect(r.observe([call("Read", { file_path: "/b.ts" })])).toEqual([]);
+    const third = r.observe([call("Read", { file_path: "/a.ts" })]);
+    expect(third).toHaveLength(1);
+    expect(third[0]).toContain("re-reading files you already read with no edits in between");
+    // Editing /a.ts invalidates its cached read scope and resets the streak.
+    expect(r.observe([call("Edit", { file_path: "/a.ts" })])).toEqual([]);
+    expect(r.observe([call("Read", { file_path: "/a.ts" })])).toEqual([]);
+  });
 });
