@@ -12,6 +12,7 @@ import {
 } from "@/lib/html-engine";
 import type { FormConfig } from "@/lib/projects/types";
 import { cidExpr } from "@/lib/analytics/cid";
+import { parseAbTag } from "@/lib/analytics/ab-tag";
 import { parse } from "node-html-parser";
 import {
   FORM_ID_ATTR,
@@ -38,7 +39,7 @@ function injectFormCidStamp(html: string): string {
   if (html.includes(CID_STAMP_MARKER)) return html;
   // Only when the Rust pass actually wired a form to our submit endpoint.
   if (!html.includes("/api/f/")) return html;
-  const script = `<script ${CID_STAMP_MARKER}>(function(){try{var c=${cidExpr()};if(!c)return;var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(f.querySelector('input[name=_openlen_cid]'))continue;var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}}catch(e){}})();</script>`;
+  const script = `<script ${CID_STAMP_MARKER}>(function(){try{var c=${cidExpr()},ab=null;try{ab=sessionStorage.getItem("ol_ab")||null;if(!ab&&document.cookie){var m=document.cookie.match(/(?:^|;\\s*)ol_ab_([a-z0-9_-]{4,40})=(a|b)(?:;|$)/i);if(m)ab=(m[1]+":"+m[2]).toLowerCase();}}catch(_){}var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(c&&!f.querySelector('input[name=_openlen_cid]')){var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}if(ab&&!f.querySelector('input[name=_openlen_ab]')){var a=document.createElement('input');a.type='hidden';a.name='_openlen_ab';a.value=ab;f.appendChild(a)}}}catch(e){}})();</script>`;
   const idx = html.lastIndexOf("</body>");
   return idx === -1 ? html + script : html.slice(0, idx) + script + html.slice(idx);
 }
@@ -59,6 +60,7 @@ export function wirePublishedForms(
   subdomain: string,
   formConfigs?: Record<string, FormConfig>,
   page?: string | null,
+  abTag?: string | null,
 ): string {
   const action =
     `${submitBase()}/api/f/${subdomain}` +
@@ -98,7 +100,32 @@ export function wirePublishedForms(
     }),
   );
   const wired = rustWirePublishedForms(html, action, configs);
-  return injectFormCidStamp(injectFormIdField(wired));
+  const withIds = injectFormIdField(wired);
+  const withAb = injectFormAbField(withIds, parseAbTag(abTag));
+  return injectFormCidStamp(withAb);
+}
+
+/** Static hidden `_openlen_ab` input baked into every OpenLen-wired `<form>`
+ *  during an active A/B experiment so cross-origin POSTs to openlen.com/api/f/<sub>
+ *  carry variant attribution even without JS or third-party cookies. */
+function injectFormAbField(html: string, abTag: string | null): string {
+  if (!abTag || !html.includes("/api/f/")) return html;
+  try {
+    const dom = parse(html);
+    let added = 0;
+    for (const form of dom.querySelectorAll("form")) {
+      if (!(form.getAttribute("action") ?? "").includes("/api/f/")) continue;
+      if (form.querySelector('input[name="_openlen_ab"]')) continue;
+      form.insertAdjacentHTML(
+        "beforeend",
+        `<input type="hidden" name="_openlen_ab" value="${abTag}">`,
+      );
+      added++;
+    }
+    return added === 0 ? html : dom.toString();
+  } catch {
+    return html;
+  }
 }
 
 /**

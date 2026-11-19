@@ -7,6 +7,7 @@ import { checkAndConsume, getClientIp, ipLimitKey } from "@/lib/limits";
 import { sendLeadNotificationEmail } from "@/lib/email";
 import { normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
 import { parseCid } from "@/lib/analytics/cid";
+import { parseAbTag } from "@/lib/analytics/ab-tag";
 import { FORM_ID_FIELD } from "@/lib/publish/form-identity";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export async function POST(
   // lib/publish/form-identity.ts.
   let formId: string | null = null;
   let cid: string | undefined;
+  let ab: string | undefined;
   for (const [key, value] of form.entries()) {
     if (key === "_openlen_hp") continue;
     if (key === "_openlen_form") {
@@ -121,6 +123,12 @@ export async function POST(
       // Session visitor id (JS-stamped hidden input) — links this lead to its
       // view for funnel attribution. Validated; absent on a native no-JS POST.
       cid = parseCid(value) ?? undefined;
+      continue;
+    }
+    if (key === "_openlen_ab") {
+      // Active A/B experiment variant tag baked statically into published forms
+      // (or stamped on secondary pages). Validated against strict grammar.
+      ab = parseAbTag(value) ?? undefined;
       continue;
     }
     if (typeof value !== "string") continue; // v1: no file uploads
@@ -154,6 +162,7 @@ export async function POST(
         // surface it so multi-page sites can triage by source page.
         page,
         cid,
+        ...(ab ? { ab } : {}),
       },
       // Which form: an event task watches one (spec local 2026-11-03-len-que-avisa, §7.2).
       formId: formKeyOf({ formId, formIndex, page }),

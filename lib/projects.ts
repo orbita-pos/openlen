@@ -813,11 +813,19 @@ interface PublishParams {
    *  worktree copy's; everything else (ownership, subdomain, backend, Stripe, releases, published hashes) the
    *  project's. The project's draft is never written. */
   sourcesFrom?: string;
+  /** Explicit Control sources (e.g. `projectPublishedSources` when launching an A/B experiment or restoring Control A
+   *  without pulling unpublished draft edits). */
+  sourcesOverride?: { data: ProjectData; folder: Record<string, string> };
+  /** Edge A/B testing (Plan 3): bake Control A + Variant B + `ab.json` atomically into the release. */
+  abExperiment?: import("@/lib/publish/filesystem").AbPublishSpec;
+  /** Extra release SHAs protected from `pruneOldReleases` (e.g. `controlReleaseSha`). */
+  protectReleaseShas?: readonly string[];
 }
 interface PublishResult {
   subdomain: string;
   url: string;
   publishedAt: Date;
+  sha?: string;
   /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode and what the release carries live. */
   stripe?: { created: import("@/lib/stripe/twins/engine").TwinsPlanCounts; swaps: number; chargesEnabled: boolean | null };
 }
@@ -875,7 +883,10 @@ export async function publishProject(
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
   // is never written (see `persistLanguages` below).
   let branchFolder: Record<string, string> | null = null;
-  if (params.sourcesFrom) {
+  if (params.sourcesOverride) {
+    project.data = params.sourcesOverride.data;
+    branchFolder = params.sourcesOverride.folder;
+  } else if (params.sourcesFrom) {
     const { copySources } = await import("@/lib/len-watch/worktree");
     const src = await copySources(params.sourcesFrom);
     project.data = src.data;
@@ -1146,6 +1157,8 @@ export async function publishProject(
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
       // lo que permite decirle al dueño qué idioma se cayó.
       localesPedidos: app ? [] : targets,
+      ...(params.abExperiment ? { abExperiment: params.abExperiment } : {}),
+      ...(params.protectReleaseShas?.length ? { protectReleaseShas: params.protectReleaseShas } : {}),
       buildLocaleDocs:
         !app && targets.length > 0
           ? (finalHtml) =>
@@ -1260,9 +1273,15 @@ export async function publishProject(
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
 
-  // 5b'. LEN WATCH (spec local 2026-10-30-len-watch, §5.5): what just went live, kept as a commit off the
-  // branches so a fix can be cut from it. Fail-soft inside; not awaited by the response's critical path.
-  if (project.data && (await import("@/lib/len-watch/enabled")).lenWatchEnabled()) {
+  // 5b'. LEN WATCH + EDGE A/B TESTING: what just went live, kept as a commit off the
+  // branches so a fix or A/B Variant B can be cut from it. Skipped when publishing an active
+  // A/B experiment (so Control A stays the clean published baseline).
+  if (
+    project.data &&
+    !params.abExperiment &&
+    ((await import("@/lib/len-watch/enabled")).lenWatchEnabled() ||
+      (await import("@/lib/ab/enabled")).abTestingEnabled())
+  ) {
     const { recordPublishedSources } = await import("@/lib/len-watch/published-sources");
     void recordPublishedSources({ projectId: params.projectId, ownerId: params.userId, data: project.data, folder: projectFiles });
   }
@@ -1271,7 +1290,7 @@ export async function publishProject(
   // (phase 2A) — whether or not her bubble is on it (phase 4: she talks about each of her person's projects). With her on
   // the page, this publish baked her bubble.
   const suya = ella ?? (assistantsEnabled() ? await assistantOfProject(params.projectId).catch(() => null) : null);
-  if (suya && project.data) {
+  if (suya && project.data && !params.abExperiment) {
     await rememberWhatWasPublished(params.projectId, project.data, new Date(), { save: saveKnowledge, switchOldOff: switchOldAssistantOff, publicData: publicDataOf }, { onPage: Boolean(ella) });
   }
 
@@ -1358,6 +1377,7 @@ export async function publishProject(
     subdomain: v.value,
     url: `https://${v.value}.${publishBaseHost()}`,
     publishedAt: now,
+    sha: publishResult.sha,
     ...(stripe
       ? { stripe: { created: { ...stripe.preview.plan.create }, swaps: stripe.preview.plan.swaps, chargesEnabled: stripe.preview.plan.chargesEnabled } }
       : {}),

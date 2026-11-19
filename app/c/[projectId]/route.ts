@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { db, schema } from "@/lib/db";
 import { isBot, normalizeCountry, parseUserAgent } from "@/lib/analytics/parse";
 import { parseCid, parseSource } from "@/lib/analytics/cid";
+import { parseAbTag } from "@/lib/analytics/ab-tag";
 import { lenWatchEnabled } from "@/lib/len-watch/enabled";
 import { parseWatchReport } from "@/lib/len-watch/report";
 import {
@@ -118,6 +119,7 @@ export async function POST(
     p?: unknown;
     cid?: unknown;
     s?: unknown;
+    ab?: unknown;
   };
   // LEN WATCH (spec local 2026-10-30-len-watch): the page stayed blank for this visitor. Not an
   // analytics row: the scrubbed report goes to the ingester, which confirms it in our own browser.
@@ -134,7 +136,15 @@ export async function POST(
   }
 
   const type =
-    data.t === "v" ? "view" : data.t === "c" ? "click" : data.t === "o" ? "order" : null;
+    data.t === "v"
+      ? "view"
+      : data.t === "c"
+        ? "click"
+        : data.t === "cta"
+          ? "cta"
+          : data.t === "o"
+            ? "order"
+            : null;
   if (!type) return new Response(null, { status: 204 });
 
   const ua = req.headers.get("user-agent") ?? "";
@@ -153,9 +163,11 @@ export async function POST(
     await db.insert(schema.pageEvents).values({
       projectId,
       type,
-      href: type === "click" ? truncateString(data.h, MAX_HREF) : null,
+      href: type === "click" || type === "cta" ? truncateString(data.h, MAX_HREF) : null,
       linkLabel:
-        type === "click" || type === "order" ? truncateString(data.l, MAX_LABEL) : null,
+        type === "click" || type === "cta" || type === "order"
+          ? truncateString(data.l, MAX_LABEL)
+          : null,
       referrer: truncateString(data.r, MAX_REFERRER),
       country,
       device,
@@ -166,6 +178,7 @@ export async function POST(
       // (sent on the view beacon only). Both untrusted → validated.
       cid: parseCid(data.cid),
       source: parseSource(data.s),
+      ab: parseAbTag(data.ab),
     });
   } catch {
     // FK violation (unknown projectId), DB hiccup, anything — silently drop.
