@@ -1,0 +1,22 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`🔴 nothing changes without OAuth servers > declarations and context, byte for byte 1`] = `"[{"name":"mcp__docs__read","description":"read","parameters":{"type":"object","properties":{}}},{"name":"mcp__ok__a","description":"a","parameters":{"type":"object","properties":{}}},{"name":"mcp__ok__b","description":"b","parameters":{"type":"object","properties":{}}},{"name":"list_mcp_resources","description":"List the resources (documents, records) one of the person's MCP servers offers.","parameters":{"type":"object","properties":{"server":{"type":"string","description":"One of the person's MCP server names, as listed in the turn's context."},"cursor":{"type":"string","description":"The nextCursor of an earlier page, passed unchanged."}},"required":["server"]}},{"name":"list_mcp_resource_templates","description":"List the resource URI templates one of the person's MCP servers offers.","parameters":{"type":"object","properties":{"server":{"type":"string","description":"One of the person's MCP server names, as listed in the turn's context."},"cursor":{"type":"string","description":"The nextCursor of an earlier page, passed unchanged."}},"required":["server"]}},{"name":"read_mcp_resource","description":"Read one resource of one of the person's MCP servers by its URI.","parameters":{"type":"object","properties":{"server":{"type":"string","description":"One of the person's MCP server names, as listed in the turn's context."},"uri":{"type":"string","description":"The resource's URI, as listed or expanded from a template."}},"required":["server","uri"]}}]"`;
+
+exports[`🔴 nothing changes without OAuth servers > declarations and context, byte for byte 2`] = `
+"<system-reminder>
+The person's MCP servers (their ~/.len/mcp.json):
+Use list_mcp_resources, list_mcp_resource_templates, or read_mcp_resource with one of these names as the server argument: ["docs"].
+
+## MCP server: ok
+Search before you write.
+
+MCP servers in ~/.len/mcp.json that you can't use yet:
+
+- docs: failed: boom (its last list is still declared)
+
+- pend: pending approval (the person approves it in a card or on the Herramientas page)
+
+- wait: waiting-credentials: TOK
+</system-reminder>
+"
+`;

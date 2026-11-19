@@ -105,6 +105,27 @@ export async function markStale(personId: string, serverName: string): Promise<v
   await db.update(s).set({ stale: true }).where(and(eq(s.personId, personId), eq(s.serverName, serverName)));
 }
 
+export async function markNeedsAuth(
+  personId: string,
+  serverName: string,
+  reason: SignInReason,
+  issuer: string | null,
+  scope: string | null,
+): Promise<void> {
+  const error =
+    reason === "scope"
+      ? scope
+        ? `needs additional permissions (scope: ${scope})`
+        : "needs additional permissions"
+      : reason === "lapsed"
+        ? "needs you to sign in again"
+        : "needs authentication";
+  await db
+    .update(s)
+    .set({ status: "needs-auth", error, stale: false, authReason: reason, authIssuer: issuer, authScope: scope })
+    .where(and(eq(s.personId, personId), eq(s.serverName, serverName)));
+}
+
 export async function deleteServerState(personId: string, serverName: string): Promise<void> {
   await db.delete(s).where(and(eq(s.personId, personId), eq(s.serverName, serverName)));
 }
