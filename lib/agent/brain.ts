@@ -94,8 +94,16 @@ export interface BrainCall {
   readonly wire: WireBody | null;
 }
 
+/** Plan Ruta 98 % (P4b): one-step effort unlock when the loop detects a real stall
+ *  (repeat-reminder or consecutive error steps). Unlocks `low`/`medium` to adaptive
+ *  `high` for one call; never downgrades `high` or overrides Dynamis / operator pin.
+ *  Verified live on DeepInfra (2026-11-18): preserves 99.5% KV prefix cache hit. */
+export interface OpenStreamOptions {
+  readonly effortUnlock?: "high";
+}
+
 export interface AgentBrain {
-  readonly openStream: (messages: Message[]) => AsyncIterable<StreamEvent>;
+  readonly openStream: (messages: Message[], opts?: OpenStreamOptions) => AsyncIterable<StreamEvent>;
   /** Herramientas APAGADAS: el loop lo usa sólo para cerrar el turno con un
    *  resumen cuando se agotó el presupuesto de pasos. */
   readonly closeOut: (messages: Message[]) => AsyncIterable<StreamEvent>;
@@ -533,13 +541,24 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     }
   }
 
-  const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number) =>
+  const viaFireworks = (messages: Message[], withTools: boolean, maxOutputTokens: number, streamOpts?: OpenStreamOptions) =>
     ((): ReturnType<typeof asAgentStream> => {
       // LAS FOTOS VAN DENTRO DE SU MENSAJE (`Message.images`) y viajan en todas
       // las vueltas, como una imagen pegada en Claude Code. Quién corre la
       // vuelta lo decide la política: con un agente que ve, él mismo.
       const operation = operacionDeLaVuelta(messages.some((m) => m.images?.length));
       if (operation !== "agent_turn") mirado = true;
+      // Plan Ruta 98 % (P4b): auto-unlock `low`/`medium` -> `high` adaptive for one
+      // step when the loop hits a stall. Never overrides Dynamis, operator pin, or `high`/`auto`.
+      const pasoEsfuerzo: EsfuerzoAgente | null =
+        streamOpts?.effortUnlock === "high" &&
+        operation === "agent_turn" &&
+        esfuerzo !== null &&
+        !effortWord &&
+        operatorEffort(env.OPENLEN_AGENT_EFFORT) === null &&
+        (esfuerzo === "low" || esfuerzo === "medium")
+          ? "high"
+          : esfuerzo;
       return asAgentStream(
       routed(
         {
@@ -565,7 +584,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
           // fotos va al papel con visión (agente que no ve), ese papel mantiene
           // el valor de la tabla, no el elegido por el usuario para el Agente.
           ...(operation === "agent_turn"
-            ? { esfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
+            ? { esfuerzo: pasoEsfuerzo, ...(effortWord ? { reasoningEffortWord: effortWord } : {}) }
             : {}),
         },
         withTools ? "loop" : "closeOut",
@@ -590,7 +609,7 @@ export function createAgentBrain(options: AgentBrainOptions): AgentBrain {
     // prompt (por el canal de `request.images`, que la pega al último mensaje
     // de usuario y no puede ir junto a resultados de herramientas). Con A va
     // dentro de tu mensaje y ese problema no existe.
-    openStream: (messages) => viaFireworks(messages, true, loopCeiling),
+    openStream: (messages, streamOpts) => viaFireworks(messages, true, loopCeiling, streamOpts),
     closeOut: (messages) => viaFireworks(messages, false, closeOutCeiling),
     providersUsed: () => [...uses.values()].map((row) => ({ ...row })),
     billingAdjustment: () => ({ minus: { ...forgiven }, extraCached }),

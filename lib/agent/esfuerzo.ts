@@ -149,13 +149,20 @@ export function presupuestoDeEsfuerzo(
  *  igual o menos. Que el campo se ACEPTE no es que el nivel HAGA algo: lo único
  *  medido que hace el dial en este modelo es pensar menos (`low`, `medium`).
  *
- *  La 1017 (el papel `agent` desde el 2026-10-21) NO tiene sonda propia, así
- *  que corre con la reserva de abajo: los mismos tres niveles, con `high` por
- *  defecto, sólo que `medido: false`. Entra aquí cuando alguien se la pase. */
+ *  La 1017 (`deepseek-v4p1-flash-1017` / `DeepSeek-V4.1-Flash-1017`, el papel
+ *  `agent` desde el 2026-10-21): sonda en vivo en DeepInfra el 2026-11-18
+ *  (n=2 por nivel en problema de razonamiento, `max_tokens=4096`): `low`
+ *  1.770/1.823 tokens, `medium` 1.895/3.061, `high` adaptativo sin techo
+ *  (960/4.096), y el salto `medium → high → medium` en medio de un turno
+ *  mantiene 99,5 % de caché de prefijo KV (19.072/19.169 tokens cacheados).
+ *  El tope sigue siendo `high` para alinear DeepInfra y el respaldo Fireworks
+ *  (donde `xhigh`=1024 recortaría por debajo del adaptativo). */
 const DIAL_MEDIDO: Readonly<
   Record<string, { readonly defecto: NivelEsfuerzo; readonly tope: NivelEsfuerzo }>
 > = {
   "accounts/fireworks/models/deepseek-v4p1-flash": { defecto: "high", tope: "high" },
+  "accounts/fireworks/models/deepseek-v4p1-flash-1017": { defecto: "high", tope: "high" },
+  "deepseek-ai/DeepSeek-V4.1-Flash-1017": { defecto: "high", tope: "high" },
 };
 
 /** NUESTRA reserva para un modelo sin sonda: los tres de en medio, con el

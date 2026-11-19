@@ -350,3 +350,27 @@ describe("el razonamiento es señal de vida para el reloj de silencio", () => {
     expect(callado).toHaveBeenCalled();
   });
 });
+
+describe("Plan Ruta 98 % (P4b): one-step effort unlock (low/medium → high)", () => {
+  it("unlocks low/medium to high for one step and returns to the user's effort afterwards", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, esfuerzoDelTurno: "medium" });
+    await drain(brain.openStream([USER]));
+    await drain(brain.openStream([USER], { effortUnlock: "high" }));
+    await drain(brain.openStream([USER]));
+    expect(fireworksStream.mock.calls.map((c) => c[0].esfuerzo)).toEqual(["medium", "high", "medium"]);
+  });
+
+  it("never overrides OPENLEN_AGENT_EFFORT operator pin, auto/high, or Dynamis", async () => {
+    const pinned = createAgentBrain({ tools: TOOLS, requestId: "p1", env: { OPENLEN_AGENT_EFFORT: "low" } });
+    await drain(pinned.openStream([USER], { effortUnlock: "high" }));
+    expect(fireworksStream.mock.calls[0][0].esfuerzo).toBe("low");
+
+    const autoBrain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {} });
+    await drain(autoBrain.openStream([USER], { effortUnlock: "high" }));
+    expect(fireworksStream.mock.calls[1][0].esfuerzo).toBe("auto");
+
+    const dynamis = createAgentBrain({ tools: TOOLS, requestId: "p1", env: {}, mode: "dynamis", esfuerzoDelTurno: "low" });
+    await drain(dynamis.openStream([USER], { effortUnlock: "high" }));
+    expect(fireworksStream.mock.calls[2][0].reasoningEffortWord).toBe("max");
+  });
+});

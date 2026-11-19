@@ -4819,3 +4819,50 @@ describe("the subagents' notices in the loop", () => {
     expect(r.finalText).toBe("Hecho con lo del subagente.");
   });
 });
+
+describe("Plan Ruta 98 % (P4b): auto-unlock effort after stall", () => {
+  it("passes { effortUnlock: 'high' } for 1 step after repeat-reminder fires, then returns to normal", async () => {
+    const optsSeen: Array<{ readonly effortUnlock?: "high" } | undefined> = [];
+    const sameCall: StreamEvent[] = [{ type: "function_call", name: "Read", args: { file_path: "/a.html" } }, done];
+    const guion = scripted(sameCall, sameCall, sameCall, [{ type: "function_call", name: "Read", args: { file_path: "/b.html" } }, done], [{ type: "text_delta", text: "Listo." }, done]);
+    await runAgentLoop({
+      messages: [{ role: "user", content: "x" }],
+      tools: [],
+      openStream: (m, opts) => {
+        optsSeen.push(opts);
+        return guion(m);
+      },
+      runTool: async () => ({ response: { ok: true, tool_result: "ok" } }),
+      emit: () => {},
+    });
+    // Steps 1..3: normal; Step 4 (after 3rd identical Read triggered repeat-reminder): unlocked; Step 5: back to normal.
+    expect(optsSeen).toEqual([undefined, undefined, undefined, { effortUnlock: "high" }, undefined]);
+  });
+
+  it("passes { effortUnlock: 'high' } for 1 step after 2 consecutive error/compile-error steps", async () => {
+    const optsSeen: Array<{ readonly effortUnlock?: "high" } | undefined> = [];
+    const guion = scripted(
+      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "a", new_string: "b" } }, done],
+      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "b", new_string: "c" } }, done],
+      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "c", new_string: "d" } }, done],
+      [{ type: "text_delta", text: "Fixed." }, done],
+    );
+    let step = 0;
+    await runAgentLoop({
+      messages: [{ role: "user", content: "fix" }],
+      tools: [],
+      openStream: (m, opts) => {
+        optsSeen.push(opts);
+        return guion(m);
+      },
+      runTool: async () => {
+        step += 1;
+        return step <= 2
+          ? { response: { ok: true }, diagnosticos: [{ ruta: "/a.ts", linea: 1, columna: 1, gravedad: "Error", mensaje: "syntax error", codigo: "compila" }] }
+          : { response: { ok: true } };
+      },
+      emit: () => {},
+    });
+    expect(optsSeen).toEqual([undefined, undefined, { effortUnlock: "high" }, undefined]);
+  });
+});
