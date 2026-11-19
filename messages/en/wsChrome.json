@@ -817,7 +817,8 @@
         "pending": "waiting for your approval",
         "waiting": "missing {names}",
         "failed": "failed: {error}",
-        "neverListed": "not listed yet"
+        "neverListed": "not listed yet",
+        "needsAuth": "needs sign-in"
       },
       "probe": "Test",
       "probeOk": "Answers: {tools}",
@@ -836,7 +837,9 @@
       "cancel": "Cancel",
       "keys": "Keys",
       "keySet": "set on {date}",
-      "changeKey": "Change"
+      "changeKey": "Change",
+      "connect": "Connect",
+      "disconnect": "Disconnect"
     }
   }
 }

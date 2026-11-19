@@ -817,7 +817,8 @@
         "pending": "wartet auf deine Freigabe",
         "waiting": "es fehlt {names}",
         "failed": "fehlgeschlagen: {error}",
-        "neverListed": "noch nicht gelistet"
+        "neverListed": "noch nicht gelistet",
+        "needsAuth": "Anmeldung erforderlich"
       },
       "probe": "Testen",
       "probeOk": "Antwortet: {tools}",
@@ -836,7 +837,9 @@
       "cancel": "Abbrechen",
       "keys": "Schlüssel",
       "keySet": "gesetzt am {date}",
-      "changeKey": "Ändern"
+      "changeKey": "Ändern",
+      "connect": "Verbinden",
+      "disconnect": "Trennen"
     }
   }
 }

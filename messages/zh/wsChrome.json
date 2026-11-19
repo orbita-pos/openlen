@@ -817,7 +817,8 @@
         "pending": "等待你的批准",
         "waiting": "缺少 {names}",
         "failed": "失败：{error}",
-        "neverListed": "尚未列出"
+        "neverListed": "尚未列出",
+        "needsAuth": "需要登录"
       },
       "probe": "测试",
       "probeOk": "有响应：{tools}",
@@ -836,7 +837,9 @@
       "cancel": "取消",
       "keys": "密钥",
       "keySet": "设置于 {date}",
-      "changeKey": "更改"
+      "changeKey": "更改",
+      "connect": "连接",
+      "disconnect": "断开连接"
     }
   }
 }

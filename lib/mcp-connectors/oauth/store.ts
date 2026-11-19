@@ -118,6 +118,12 @@ export async function dropConnection(personId: string, serverName: string): Prom
   return rows[0] ? readConnection(rows[0]) : null;
 }
 
+/** Server names of the person that have an active OAuth token stored (for the «Desconectar» button on the Herramientas page). */
+export async function listConnectedServers(personId: string): Promise<ReadonlySet<string>> {
+  const rows = await db.select({ serverName: o.serverName, serverUrl: o.serverUrl, issuer: o.issuer, clientInfo: o.clientInfo, tokens: o.tokens }).from(o).where(eq(o.personId, personId));
+  return new Set(rows.filter((r) => readConnection(r)?.tokens !== null).map((r) => r.serverName));
+}
+
 /** Starts a sign-in and returns its `state`: 32 random bytes, base64url, good once and for ten minutes from `now`. */
 export async function createFlow(flow: {
   personId: string;

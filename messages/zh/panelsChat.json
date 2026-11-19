@@ -719,7 +719,12 @@
     "failed": "无法连接：{error}",
     "changed": "期间已有变化：请在“工具”中重新查看",
     "dismissed": "未连接。你可以稍后在“工具”中批准。",
-    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
+    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准",
+    "signInAt": "在 {issuer} 登录",
+    "signInAgainAt": "在 {issuer} 重新登录",
+    "morePermissionsAt": "在 {issuer} 需要更多权限",
+    "oauthConnected": "已连接",
+    "suggestTitle": "连接 {name} ({host})"
   },
   "ownAssistant": {
     "card": {

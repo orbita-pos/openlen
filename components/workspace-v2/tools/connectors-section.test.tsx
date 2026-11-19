@@ -96,4 +96,23 @@ describe("ConnectorsSection", () => {
     expect(document.body.textContent).not.toContain("shpat_secret");
     expect((document.body.innerHTML.match(/shpat_secret/g) ?? []).length).toBe(0);
   });
+
+  it("needs-auth shows Connect and connected with OAuth shows Disconnect (calling DELETE /oauth)", async () => {
+    const viewWithOAuth = {
+      ...VIEW,
+      servers: [
+        { name: "cal-pending", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "needs-auth", tools: 0, headers: [], oauth: true },
+        { name: "cal-live", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "connected", tools: 6, headers: [], oauth: true },
+      ],
+    };
+    fetchMock.mockResolvedValueOnce(ok(viewWithOAuth)).mockResolvedValueOnce(ok({ ok: true })).mockResolvedValueOnce(ok(viewWithOAuth));
+    await render();
+    const pendingRow = document.querySelector('[data-connector="cal-pending"]')!;
+    const liveRow = document.querySelector('[data-connector="cal-live"]')!;
+    expect(button("tools.connectors.connect", pendingRow)).toBeTruthy();
+    const disconnectBtn = button("tools.connectors.disconnect", liveRow);
+    expect(disconnectBtn).toBeTruthy();
+    await act(async () => disconnectBtn.click());
+    expect(fetchMock.mock.calls[1]).toEqual(["/api/mcp-connectors/cal-live/oauth", expect.objectContaining({ method: "DELETE" })]);
+  });
 });

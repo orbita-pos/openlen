@@ -21,9 +21,11 @@ export interface ManageDeps {
   setCredential(personId: string, name: string, value: string): Promise<void>;
   installedServerNames(personId: string): Promise<ReadonlySet<string>>;
   mount(personId: string, name: string): Promise<ServerState | null>;
+  dropOAuth?(personId: string, name: string, entry?: McpServerEntry): Promise<unknown>;
+  oauthServers?(personId: string): Promise<ReadonlySet<string>>;
 }
 
-export type ServerStatus = "connected" | "pending" | "waiting-credentials" | "failed" | "never-listed";
+export type ServerStatus = "connected" | "pending" | "waiting-credentials" | "needs-auth" | "failed" | "never-listed";
 
 export interface ServerView {
   readonly name: string;
@@ -37,6 +39,7 @@ export interface ServerView {
   readonly headers: readonly string[];
   readonly error?: string;
   readonly listedAt?: string;
+  readonly oauth?: boolean;
   /** For a server Len added or changed that the person hasn't approved: the card to approve it. */
   readonly approval?: McpApprovalCard;
 }
@@ -52,18 +55,21 @@ function configOf(stored: StoredConfig): McpConfig {
   return parsed.ok ? parsed.config : { servers: {} };
 }
 
-export function serverView(name: string, entry: McpServerEntry, approved: boolean, state: ServerState | undefined): Omit<ServerView, "approval"> {
+export function serverView(name: string, entry: McpServerEntry, approved: boolean, state: ServerState | undefined, hasOAuth = false): Omit<ServerView, "approval"> {
   const fp = entryFingerprint(entry);
   const current = state && state.fingerprint === fp ? state : undefined;
   const status: ServerStatus = !approved
     ? "pending"
     : current?.status === "waiting-credentials"
       ? "waiting-credentials"
-      : current?.status === "failed"
-        ? "failed"
-        : current?.listedAt
-          ? "connected"
-          : "never-listed";
+      : current?.status === "needs-auth"
+        ? "needs-auth"
+        : current?.status === "failed"
+          ? "failed"
+          : current?.listedAt
+            ? "connected"
+            : "never-listed";
+  const oauth = current?.status === "needs-auth" || Boolean(entry.oauth) || hasOAuth;
   return {
     name,
     host: hostOf(entry.url),
@@ -75,11 +81,17 @@ export function serverView(name: string, entry: McpServerEntry, approved: boolea
     headers: Object.keys(entry.headers).sort(),
     ...(current?.error ? { error: current.error } : {}),
     ...(current?.listedAt ? { listedAt: current.listedAt.toISOString() } : {}),
+    ...(oauth ? { oauth: true } : {}),
   };
 }
 
 export async function listView(personId: string, d: ManageDeps): Promise<ConnectorsView> {
-  const [stored, states, creds] = await Promise.all([d.read(personId), d.readStates(personId), d.credentialNames(personId)]);
+  const [stored, states, creds, oauthSet] = await Promise.all([
+    d.read(personId),
+    d.readStates(personId),
+    d.credentialNames(personId),
+    d.oauthServers ? d.oauthServers(personId).catch(() => new Set<string>()) : Promise.resolve(new Set<string>()),
+  ]);
   const config = configOf(stored);
   const stateOf = new Map(states.map((s) => [s.serverName, s]));
   const set = new Set(creds.map((c) => c.name));
@@ -87,7 +99,7 @@ export async function listView(personId: string, d: ManageDeps): Promise<Connect
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, entry]) => {
       const approved = stored.approved[name] === entryFingerprint(entry);
-      const view = serverView(name, entry, approved, stateOf.get(name));
+      const view = serverView(name, entry, approved, stateOf.get(name), oauthSet.has(name));
       return approved ? view : { ...view, approval: buildApprovalCard(name, entry, config, stored.approved, set, stored.version) };
     });
   return { version: stored.version, servers, credentials: creds.map((c) => ({ name: c.name, updatedAt: c.updatedAt.toISOString() })) };
@@ -140,9 +152,11 @@ export async function removeEntry(personId: string, name: string, version: numbe
   const stored = await d.read(personId);
   if (stored.version !== version) return { ok: false, status: 409, error: "changed" };
   const config = configOf(stored);
+  const removed = config.servers[name];
   const servers = Object.fromEntries(Object.entries(config.servers).filter(([n]) => n !== name));
   const written = await d.write(personId, serializeMcpConfig({ servers }), version, {}, Object.keys(servers));
   if (!written.ok) return { ok: false, status: 409, error: "changed" };
   await d.deleteState(personId, name);
+  await d.dropOAuth?.(personId, name, removed);
   return { ok: true };
 }

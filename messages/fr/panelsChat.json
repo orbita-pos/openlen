@@ -719,7 +719,12 @@
     "failed": "Connexion impossible : {error}",
     "changed": "Cela a changé entre-temps : revoyez-le dans Outils",
     "dismissed": "Non connecté. Vous pourrez l'approuver plus tard dans Outils.",
-    "firstTime": "Votre clé {name} n'a jamais été envoyée à {host} : n'approuvez que si vous faites confiance à ce serveur"
+    "firstTime": "Votre clé {name} n'a jamais été envoyée à {host} : n'approuvez que si vous faites confiance à ce serveur",
+    "signInAt": "Connectez-vous sur {issuer}",
+    "signInAgainAt": "Reconnectez-vous sur {issuer}",
+    "morePermissionsAt": "Demande plus d'autorisations sur {issuer}",
+    "oauthConnected": "Connecté",
+    "suggestTitle": "Connecter {name} ({host})"
   },
   "ownAssistant": {
     "card": {
