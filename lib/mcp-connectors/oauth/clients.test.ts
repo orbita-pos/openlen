@@ -7,13 +7,15 @@ import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal, openLe
 import { oauthEnabled } from "./enabled";
 
 const GOOGLE = "https://accounts.google.com";
+/** The one server OpenLen's Google client is for: the curated directory's Google Calendar (directory-entries.ts). */
+const GCAL_URL = "https://calendarmcp.googleapis.com/mcp/v1";
 const GOOGLE_ENV = { OPENLEN_MCP_GOOGLE_CLIENT_ID: "openlen-google-id", OPENLEN_MCP_GOOGLE_CLIENT_SECRET: "openlen-google-secret" };
 const NO_SECRETS: ReadonlyMap<string, string> = new Map();
 
-function entry(oauth?: McpServerEntry["oauth"]): McpServerEntry {
+function entry(oauth?: McpServerEntry["oauth"], url = "https://calendar.example/mcp"): McpServerEntry {
   return {
     transport: "streamable-http",
-    url: "https://calendar.example/mcp",
+    url,
     headers: {},
     ...(oauth && { oauth }),
     enabled: true,
@@ -38,23 +40,33 @@ describe("oauthEnabled", () => {
 });
 
 describe("openLenClientFor", () => {
-  it("is Google's client for Google's issuer, when both variables are set", () => {
-    expect(openLenClientFor(GOOGLE, GOOGLE_ENV)).toEqual({ client_id: "openlen-google-id", client_secret: "openlen-google-secret" });
+  it("is Google's client for Google's issuer at the directory's own Google Calendar URL, when both variables are set", () => {
+    expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV)).toEqual({ client_id: "openlen-google-id", client_secret: "openlen-google-secret" });
   });
 
   it("is null without the variables, or with one of them empty", () => {
-    expect(openLenClientFor(GOOGLE, {})).toBeNull();
-    expect(openLenClientFor(GOOGLE, { OPENLEN_MCP_GOOGLE_CLIENT_ID: "id" })).toBeNull();
-    expect(openLenClientFor(GOOGLE, { OPENLEN_MCP_GOOGLE_CLIENT_SECRET: "secret" })).toBeNull();
-    expect(openLenClientFor(GOOGLE, { ...GOOGLE_ENV, OPENLEN_MCP_GOOGLE_CLIENT_ID: "" })).toBeNull();
-    expect(openLenClientFor(GOOGLE, { ...GOOGLE_ENV, OPENLEN_MCP_GOOGLE_CLIENT_SECRET: "" })).toBeNull();
+    expect(openLenClientFor(GOOGLE, GCAL_URL, {})).toBeNull();
+    expect(openLenClientFor(GOOGLE, GCAL_URL, { OPENLEN_MCP_GOOGLE_CLIENT_ID: "id" })).toBeNull();
+    expect(openLenClientFor(GOOGLE, GCAL_URL, { OPENLEN_MCP_GOOGLE_CLIENT_SECRET: "secret" })).toBeNull();
+    expect(openLenClientFor(GOOGLE, GCAL_URL, { ...GOOGLE_ENV, OPENLEN_MCP_GOOGLE_CLIENT_ID: "" })).toBeNull();
+    expect(openLenClientFor(GOOGLE, GCAL_URL, { ...GOOGLE_ENV, OPENLEN_MCP_GOOGLE_CLIENT_SECRET: "" })).toBeNull();
   });
 
-  it("is null for any other issuer, and for Google's only exactly spelled", () => {
-    expect(openLenClientFor("https://auth.example.com", GOOGLE_ENV)).toBeNull();
-    expect(openLenClientFor("https://accounts.google.com/", GOOGLE_ENV)).toBeNull();
-    expect(openLenClientFor("http://accounts.google.com", GOOGLE_ENV)).toBeNull();
-    expect(openLenClientFor("https://evil.example/https://accounts.google.com", GOOGLE_ENV)).toBeNull();
+  it("is null for any other issuer at the directory's URL, and for Google's only exactly spelled", () => {
+    expect(openLenClientFor("https://auth.example.com", GCAL_URL, GOOGLE_ENV)).toBeNull();
+    expect(openLenClientFor("https://accounts.google.com/", GCAL_URL, GOOGLE_ENV)).toBeNull();
+    expect(openLenClientFor("http://accounts.google.com", GCAL_URL, GOOGLE_ENV)).toBeNull();
+    expect(openLenClientFor("https://evil.example/https://accounts.google.com", GCAL_URL, GOOGLE_ENV)).toBeNull();
+  });
+
+  // OA1: Google's client is OpenLen's, shown as «OpenLen» on Google's consent screen. A server nobody curated that
+  // merely names Google as its authorization server would collect the person's token with it.
+  it("is null for Google's issuer at any server that is not the directory's, whatever the URL looks like", () => {
+    expect(openLenClientFor(GOOGLE, "https://evil.example/mcp", GOOGLE_ENV)).toBeNull();
+    expect(openLenClientFor(GOOGLE, "https://calendar.example/mcp", GOOGLE_ENV)).toBeNull();
+    for (const url of [`${GCAL_URL}/`, `${GCAL_URL}?x=1`, "http://calendarmcp.googleapis.com/mcp/v1", "https://CALENDARMCP.googleapis.com/mcp/v1", "https://calendarmcp.googleapis.com/mcp/v1/extra", "https://calendarmcp.googleapis.com.evil.example/mcp/v1", ""]) {
+      expect(openLenClientFor(GOOGLE, url, GOOGLE_ENV), url).toBeNull();
+    }
   });
 });
 
@@ -154,19 +166,27 @@ describe("preRegisteredClient", () => {
     });
   });
 
-  it("is OpenLen's client for that issuer when the entry names none", () => {
-    expect(preRegisteredClient(entry(), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({ client_id: "openlen-google-id", client_secret: "openlen-google-secret" });
+  it("is OpenLen's client for that issuer when the entry is the directory's server and names none", () => {
+    expect(preRegisteredClient(entry(undefined, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({ client_id: "openlen-google-id", client_secret: "openlen-google-secret" });
     // An oauth block that only tunes the scope doesn't name a client either.
-    expect(preRegisteredClient(entry({ scope: "calendar.readonly" }), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({
+    expect(preRegisteredClient(entry({ scope: "calendar.readonly" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({
       client_id: "openlen-google-id",
       client_secret: "openlen-google-secret",
     });
   });
 
   it("is null when nobody has a client for that issuer (the SDK goes on with CIMD and dynamic registration)", () => {
-    expect(preRegisteredClient(entry(), GOOGLE, NO_SECRETS, {})).toBeNull();
-    expect(preRegisteredClient(entry(), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
-    expect(preRegisteredClient(entry({ scope: "x" }), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(entry(undefined, GCAL_URL), GOOGLE, NO_SECRETS, {})).toBeNull();
+    expect(preRegisteredClient(entry(undefined, GCAL_URL), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(entry({ scope: "x" }, GCAL_URL), "https://auth.example.com", NO_SECRETS, GOOGLE_ENV)).toBeNull();
+  });
+
+  // OA1: a prompt-injected Len writes an entry for its own server (or the directory's URL with its own scope); the
+  // person taps the card; Google's consent says «OpenLen». OpenLen's client must not be handed to a server of Len's
+  // choosing, even when that server's authorization server is Google.
+  it("never hands OpenLen's Google client to a server that is not the directory's, even with Google as its issuer", () => {
+    expect(preRegisteredClient(entry(undefined, "https://evil.example/mcp"), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(entry({ scope: "https://mail.google.com/" }, "https://evil.example/mcp"), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
   });
 });
 
