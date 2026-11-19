@@ -252,6 +252,9 @@ export interface AgentLoopArgs {
   spill?: { maxInlineTokens: number; save(path: string, text: string): Promise<boolean> };
   // ⚰️ `planModeActive` (pieza 7) sólo apagaba la insistencia en modo plan; se
   // fue con ella el 2026-10-17. El modo plan lo sigue llevando la ruta.
+  /** La sesión no puede escribir (un subagente de sólo lectura, el asistente de la persona): el aviso de «deja de
+   *  releer y edita» no se le manda, porque editar no es suyo. */
+  readOnly?: boolean;
   /** La página en la que trabaja el turno ahora (`session.page`), para pintar
    *  un `Write` que todavía no ha dicho su ruta (`write-preview.ts`). */
   activePage?: () => string | null;
@@ -994,7 +997,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   // lo compactado es sólo lo que se le manda al modelo.
   const ownArchived: Message[] = [];
   /** A2 de Len 3.1: el aviso de llamadas repetidas de DeepSeek (`repeat-reminder.ts`). */
-  const repeticiones = createRepeatReminder();
+  const repeticiones = createRepeatReminder(undefined, { readOnly: args.readOnly === true });
   /** Plan Ruta 98 % (P4b): 1-step effort unlock (low/medium -> high adaptive) after a real stall. */
   let unlockEffortNextStep = false;
   let consecutiveStallSteps = 0;
@@ -1128,6 +1131,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       saveRecovery: args.compaction.saveRecovery,
     });
     if (!outcome.changed) return false;
+    // Lo que había leído ya no está delante del modelo (podado o resumido): releerlo no es dar vueltas, así que las
+    // cuentas de llamadas repetidas y de relecturas empiezan de cero.
+    repeticiones.reset();
     ownArchived.push(...messages.slice(ownStart));
     messages.splice(0, messages.length, ...outcome.messages);
     // A11 · lo que estaba leyendo vuelve detrás del resumen, y detrás las skills

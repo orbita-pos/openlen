@@ -2413,6 +2413,8 @@ async function correrTurno(
           : await runAgentLoop({
           messages,
           tools,
+          // The person's own assistant cannot write: the loop does not tell it to stop reading and edit.
+          ...(asistente ? { readOnly: true as const } : {}),
           ...(stepRecorder ? { onStepTools: stepRecorder.onStepTools } : {}),
           // Lo que lleva visto, para la fila en curso (ver `readLiveTranscript`).
           liveTranscript: (read) => {

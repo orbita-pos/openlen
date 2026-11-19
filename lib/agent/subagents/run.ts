@@ -456,6 +456,8 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       result = await runSubagent({
         messages: initial,
         tools,
+        // A child that cannot write is not told to stop reading and edit.
+        ...(session.readOnly === true ? { readOnly: true as const } : {}),
         ...(spec.allowed ? { allowed: spec.allowed } : {}),
         // A fork's request is Len's as he sends it: his cache. (Lever off: with the plan section in message 0.)
         openStream: (m, streamOpts) => {

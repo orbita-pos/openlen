@@ -4271,6 +4271,65 @@ describe("the repeated-call reminder", () => {
   });
 });
 
+// A3 · the «you are re-reading» reminder must not fire on what the loop itself made unknown or impossible.
+describe("the re-reading reminder: when it does not apply", () => {
+  const REREAD = "You are re-reading files you already read with no edits in between";
+  const inputUse = (n: number): StreamEvent => ({ type: "usage", inputTokens: n, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 });
+  const readCall = (file: string): StreamEvent => ({ type: "function_call", name: "Read", args: { file_path: file } });
+  const FILES = ["/a.ts", "/b.ts", "/c.ts", "/d.ts"];
+  const reminders = (r: AgentLoopResult) => (r.transcripcion ?? []).filter((m) => m.content.includes(REREAD)).length;
+  const base = {
+    tools: [{ name: "Read" }],
+    runTool: async () => ({ response: { ok: true, tool_result: "x" } }),
+    emit: () => {},
+  };
+  /** Four files read at once, then two of them again: one more re-read is the third. */
+  const circling: StreamEvent[][] = [
+    [...FILES.map(readCall), inputUse(1), done],
+    [readCall("/a.ts"), inputUse(1), done],
+    [readCall("/b.ts"), inputUse(1), done],
+  ];
+
+  it("control arm: the third re-read gets the reminder", async () => {
+    const r = await runAgentLoop({
+      ...base, messages: [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "mira" }],
+      openStream: scripted(...circling, [readCall("/c.ts"), inputUse(1), done], [{ type: "text_delta", text: "ok" }, done]),
+    });
+    expect(reminders(r)).toBe(1);
+  });
+
+  it("🔴 a compaction in the middle of the turn forgets what was read: the next re-read is a first read", async () => {
+    const vistos: Message[][] = [];
+    const guion = scripted(
+      ...circling.slice(0, 2),
+      // The step before the compaction reports a context far above the threshold.
+      [readCall("/b.ts"), inputUse(5_000), done],
+      [{ type: "text_delta", text: "## Primary Request and Intent\n- lee" }, inputUse(1), done],
+      [readCall("/c.ts"), inputUse(1), done],
+      [{ type: "text_delta", text: "ok" }, done],
+    );
+    const r = await runAgentLoop({
+      ...base, messages: [{ role: "system", content: "s" }, { role: "user", content: "manual" }, { role: "user", content: "mira" }],
+      compaction: { policy: { thresholdTokens: 400, retainTokens: 20 }, firstIndex: 2 },
+      openStream: (m) => { vistos.push(structuredClone(m)); return guion(m); },
+    });
+    // It did compact between the reads, so the test is about what it claims to be.
+    expect(vistos.some((m) => m.at(-1)?.content.includes("You are now acting as a compaction engine"))).toBe(true);
+    expect(reminders(r)).toBe(0);
+  });
+
+  it("🔴 a read-only session is never told to move on to editing", async () => {
+    const run = (readOnly: boolean) =>
+      runAgentLoop({
+        ...base, messages: [{ role: "user", content: "mira" }],
+        ...(readOnly ? { readOnly: true as const } : {}),
+        openStream: scripted(...circling, [readCall("/c.ts"), inputUse(1), done], [{ type: "text_delta", text: "ok" }, done]),
+      });
+    expect(reminders(await run(false))).toBe(1);
+    expect(reminders(await run(true))).toBe(0);
+  });
+});
+
 describe("sobreQue: el resumen de la tarjeta de cada llamada", () => {
   it("pieza 5: la tarjeta de buscar en charlas pasadas enseña lo que se busca", () => {
     expect(sobreQue({ query: "horario de la tienda" })).toBe("horario de la tienda");
