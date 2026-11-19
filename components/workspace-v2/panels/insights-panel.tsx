@@ -7,11 +7,13 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart3 } from "../icons";
 import { Sparkline } from "../insights-sparkline";
+import { AbExperimentCard } from "../ab/ab-experiment-card";
 import { PageCoach, FunnelBar } from "./page-coach";
+import type { AbExperimentView } from "@/lib/ab/types";
 import type {
   Funnel,
   Insights,
@@ -40,13 +42,37 @@ export function InsightsPanel({
   const [range, setRange] = useState<InsightsRange>("7d");
   const [data, setData] = useState<Insights | null>(null);
   const [funnel, setFunnel] = useState<Funnel | null>(null);
+  const [abEnabled, setAbEnabled] = useState(false);
+  const [abActive, setAbActive] = useState<AbExperimentView | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const reloadAb = useCallback(async (pid: string) => {
+    try {
+      const res = await fetch(`/api/projects/${encodeURIComponent(pid)}/ab`);
+      if (!res.ok) return;
+      const body = (await res.json()) as {
+        enabled?: boolean;
+        active?: AbExperimentView | null;
+        experiments?: AbExperimentView[];
+      };
+      setAbEnabled(Boolean(body.enabled));
+      const fallbackCard =
+        body.active ??
+        body.experiments?.find((e) => e.bringState === "conflict" || e.status === "paused_harm") ??
+        null;
+      setAbActive(fallbackCard);
+    } catch {
+      // Soft fail.
+    }
+  }, []);
 
   useEffect(() => {
     if (!currentProjectId) {
       setData(null);
       setFunnel(null);
+      setAbEnabled(false);
+      setAbActive(null);
       return;
     }
     let cancelled = false;
@@ -64,6 +90,7 @@ export function InsightsPanel({
       fetch(`/api/projects/${currentProjectId}/funnel?range=${range}`)
         .then((r) => (r.ok ? (r.json() as Promise<Funnel>) : null))
         .catch(() => null),
+      reloadAb(currentProjectId),
     ])
       .then(([ins, fun]) => {
         if (cancelled) return;
@@ -79,7 +106,7 @@ export function InsightsPanel({
     return () => {
       cancelled = true;
     };
-  }, [currentProjectId, range]);
+  }, [currentProjectId, range, reloadAb]);
 
   if (!currentProjectId) {
     return <NoProject />;
@@ -106,9 +133,17 @@ export function InsightsPanel({
         </div>
       )}
       <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-3 pb-3">
+        {abActive && (
+          <div className="mb-3">
+            <AbExperimentCard
+              experiment={abActive}
+              onUpdated={() => void reloadAb(currentProjectId)}
+            />
+          </div>
+        )}
         {funnel && (
           <div className="space-y-3 mb-3">
-            <PageCoach funnel={funnel} onApplyTip={onApplyTip} />
+            <PageCoach funnel={funnel} onApplyTip={onApplyTip} abEnabled={abEnabled && !abActive} />
             {funnel.saw > 0 && <FunnelBar funnel={funnel} />}
           </div>
         )}

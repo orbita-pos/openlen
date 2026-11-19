@@ -133,7 +133,9 @@
       "booked": "Booked",
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
-    }
+    },
+    "testAb": "A/Bで試す",
+    "abInstruction": "公開中のページをまだ変えずにこの改善を検証するため、create_ab_variant でA/Bテストを作成してください: {instruction}"
   },
   "toast": {
     "restored": "{label} に復元しました",

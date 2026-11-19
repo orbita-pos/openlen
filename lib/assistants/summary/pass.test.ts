@@ -69,4 +69,33 @@ describe("summaryPass", () => {
     const d = deps({ candidates: async () => [LUCIA, ana], projectIdsOf: vi.fn(async (id: string) => (id === "a1" ? Promise.reject(new Error("db")) : ["p3"])) });
     expect(await summaryPass(d, AT_8)).toBe(1);
   });
+
+  it("sends the morning summary when only a ready A/B verdict is waiting", async () => {
+    const d = deps({
+      count: vi.fn(async () => ({
+        talkedWith: 0,
+        contacts: 0,
+        requests: 0,
+        abReady: [
+          {
+            experimentId: "ab_1",
+            projectId: "p1",
+            projectTitle: "Tienda",
+            name: "Hero CTA",
+            status: "winner_ready" as const,
+            winnerVariant: "b" as const,
+            rateA: 0.04,
+            rateB: 0.053,
+            liftPct: 31,
+            totalViews: 900,
+            probability: 0.97,
+          },
+        ],
+      })),
+    });
+    expect(await summaryPass(d, AT_8)).toBe(1);
+    const [event] = (d.notify as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(event.push).toContain("31%");
+    expect(event.push).not.toContain("Ayer .");
+  });
 });
