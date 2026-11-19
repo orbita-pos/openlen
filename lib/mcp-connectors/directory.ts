@@ -43,6 +43,9 @@ export interface DirectoryInstallDeps extends StartDeps {
     presentNames: readonly string[],
   ): Promise<{ ok: true; version: number } | { ok: false; reason: "conflict" }>;
   installedServerNames(personId: string): Promise<ReadonlySet<string>>;
+  /** The person's email, which the test-user list is checked against (directoryFor). */
+  personEmail(personId: string): Promise<string | null>;
+  readonly env?: Env;
 }
 
 function pickServerName(base: string, existing: ReadonlySet<string>): string {
@@ -54,6 +57,17 @@ function pickServerName(base: string, existing: ReadonlySet<string>): string {
   return `${base}-${Date.now()}`;
 }
 
+/**
+ * The person's tap on a suggestion card (spec §6, §10.3, §10.5): write the directory's entry, approve it, and start the
+ * sign-in. Three things the tap never does:
+ *  - install for someone the directory doesn't offer the entry to (their email, the deployment's client id): the entry
+ *    doesn't exist for them, so it is a 404. The eligibility is checked against an EMPTY file — whether the person
+ *    already has the server is a different question, answered below;
+ *  - approve an entry that merely sits at the directory's URL. Len writes mcp.json, and an entry at Google's URL with a
+ *    client or endpoints of its own is not what the card showed: only an entry whose fingerprint is exactly the
+ *    directory's is approved and reused; otherwise the directory's own entry is written under another name beside it;
+ *  - rewrite a file it can't read: a mcp.json that doesn't parse is the person's, and stays as it is.
+ */
 export async function installAndStartFromDirectory(
   personId: string,
   id: string,
@@ -61,16 +75,21 @@ export async function installAndStartFromDirectory(
 ): Promise<{ ok: true; server: string; authorizationUrl: string } | { ok: false; status: 400 | 404 | 409 | 422 | 502; error: string; detail?: string }> {
   const dir = DIRECTORY.find((x) => x.id === id);
   if (!dir) return { ok: false, status: 404, error: "not_found" };
+  const email = await d.personEmail(personId).catch(() => null);
+  if (!directoryFor(email, { servers: {} }, d.env).some((x) => x.id === id)) return { ok: false, status: 404, error: "not_found" };
   const [stored, reserved] = await Promise.all([d.readConfig(personId), d.installedServerNames(personId)]);
   const current = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
-  const existingServers = current.ok ? current.config.servers : {};
-  const already = Object.entries(existingServers).find(([, e]) => e.url === dir.entry.url);
+  if (!current.ok) return { ok: false, status: 409, error: "config_unreadable", detail: current.error };
+  const existingServers = current.config.servers;
+  const canonical = parseMcpConfig(JSON.stringify({ servers: { [dir.server]: dir.entry } }), { reservedServerNames: new Set() });
+  if (!canonical.ok) return { ok: false, status: 400, error: canonical.error };
+  const canonicalFingerprint = entryFingerprint(canonical.config.servers[dir.server]!);
+  const already = Object.entries(existingServers).find(([, e]) => entryFingerprint(e) === canonicalFingerprint);
   let serverName: string;
   if (already) {
     serverName = already[0];
-    const fp = entryFingerprint(already[1]);
-    if (stored.approved[serverName] !== fp) {
-      const written = await d.writeConfig(personId, stored.text, stored.version, { [serverName]: fp }, Object.keys(existingServers));
+    if (stored.approved[serverName] !== canonicalFingerprint) {
+      const written = await d.writeConfig(personId, stored.text, stored.version, { [serverName]: canonicalFingerprint }, Object.keys(existingServers));
       if (!written.ok) return { ok: false, status: 409, error: "changed" };
     }
   } else {
@@ -82,7 +101,8 @@ export async function installAndStartFromDirectory(
         [serverName]: dir.entry,
       },
     };
-    const parsed = parseMcpConfig(`${JSON.stringify(raw, null, 2)}\n`, { reservedServerNames: reserved });
+    const parsed = parseMcpConfig(`${JSON.stringify(raw, null, 2)}
+`, { reservedServerNames: reserved });
     if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
     const entry = parsed.config.servers[serverName]!;
     const written = await d.writeConfig(personId, serializeMcpConfig(parsed.config), stored.version, { [serverName]: entryFingerprint(entry) }, Object.keys(parsed.config.servers));
