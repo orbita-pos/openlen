@@ -41,6 +41,7 @@ You don't deliver it: Len does. Len gets only your final message: give him the f
 const LEN_REVIEW = `---
 name: len-review
 description: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files.
+readOnly: true
 disallowedTools: Write, Edit, MultiEdit, edit_image, toggle_module, convert_to_app, draft_reply
 ---
 

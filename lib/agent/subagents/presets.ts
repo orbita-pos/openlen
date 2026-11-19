@@ -145,8 +145,11 @@ export function childTypeOf(name: string, types: AgentTypeSet): ChildType | null
   return type ? { kind: "custom", type } : null;
 }
 
+/** Explore and Plan, a type whose file says `readOnly: true` (OpenLen's `len-review`), or any child in plan mode. The
+ *  session, the tools it is offered and the isolation rule all ask this, so a prompt that says «read-only» is never the
+ *  only thing that makes it so. */
 export function isReadOnlyFor(type: ChildType, planMode: boolean): boolean {
-  return type.kind === "builtin" ? isReadOnly(type.preset, planMode) : planMode;
+  return type.kind === "builtin" ? isReadOnly(type.preset, planMode) : planMode || type.type.agent.readOnly;
 }
 
 export function omitsLenMdFor(type: ChildType): boolean {
@@ -156,9 +159,10 @@ export function omitsLenMdFor(type: ChildType): boolean {
 export function childToolsFor(all: readonly Record<string, unknown>[], type: ChildType, planMode: boolean): Record<string, unknown>[] {
   if (type.kind === "builtin") return childToolDeclarations(all, type.preset, planMode);
   const a = type.type.agent;
+  const readOnly = isReadOnlyFor(type, planMode);
   return all.filter((d) => {
     const name = String(d.name);
-    return !OUT_FOR_EVERY_CHILD.has(name) && !isToolOperation(name) && !(planMode && OUT_FOR_READ_ONLY.has(name)) &&
+    return !OUT_FOR_EVERY_CHILD.has(name) && !isToolOperation(name) && !(readOnly && OUT_FOR_READ_ONLY.has(name)) &&
       (a.tools === null || a.tools.includes(name)) && !a.disallowedTools.includes(name);
   });
 }

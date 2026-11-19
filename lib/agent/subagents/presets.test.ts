@@ -5,6 +5,7 @@ import {
   SUBAGENT_PRESETS,
   childSystemPrompt,
   childToolDeclarations,
+  OUT_FOR_READ_ONLY,
   isReadOnly,
   omitsLenMd,
   type SubagentPreset,
@@ -118,5 +119,44 @@ describe("custom child types", () => {
     const prompt = p.childSystemPromptFor("LEN\n- guide", type, "guide");
     expect(prompt).toContain("LEN\n\nSUBAGENT — REVIEWER:\nCustom instructions.");
     expect(prompt.endsWith(DELEGATION_SCOPE_STATEMENT)).toBe(true);
+  });
+});
+
+// A BUNDLED TYPE THAT ONLY READS (len-review): the server decides, never the prompt. Like Explore and Plan, it loses
+// every tool that writes, and its session is read-only, so Write, Edit, git/gh/supabase/stripe writes and what a
+// command changes are refused (lib/agent/terminal/read-only-commands.ts).
+describe("a bundled read-only type (len-review)", () => {
+  const everything = [...OUT_FOR_READ_ONLY, "Read", "Grep", "Glob", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"].map((name) => ({ name }));
+
+  it("🔴 is read-only without plan mode, and general-purpose types around it are not", async () => {
+    const p = await import("./presets");
+    const { NO_AGENT_TYPES } = await import("./agent-registry");
+    expect(p.isReadOnlyFor(p.childTypeOf("len-review", NO_AGENT_TYPES)!, false)).toBe(true);
+    expect(p.isReadOnlyFor(p.childTypeOf("len-design", NO_AGENT_TYPES)!, false)).toBe(false);
+    expect(p.isReadOnlyFor(p.childTypeOf("len-office", NO_AGENT_TYPES)!, false)).toBe(false);
+  });
+
+  it("🔴 is not offered any tool that writes (the artifact writes included), exactly like Explore", async () => {
+    const p = await import("./presets");
+    const { NO_AGENT_TYPES } = await import("./agent-registry");
+    const given = p.childToolsFor(everything, p.childTypeOf("len-review", NO_AGENT_TYPES)!, false).map((d) => d.name);
+    for (const out of OUT_FOR_READ_ONLY) expect(given, String(out)).not.toContain(out);
+    expect(given).toEqual(expect.arrayContaining(["Read", "Grep", "Glob", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"]));
+  });
+
+  it("a custom type is read-only only when its own file says so", async () => {
+    const p = await import("./presets");
+    const { resolveAgentTypes } = await import("./agent-registry");
+    const types = resolveAgentTypes({
+      project: [
+        { name: "auditor", text: "---\nname: auditor\ndescription: Audits\nreadOnly: true\n---\nOnly look.", updatedAt: new Date(0) },
+        { name: "builder", text: "---\nname: builder\ndescription: Builds\n---\nBuild it.", updatedAt: new Date(0) },
+      ],
+      personal: [],
+    });
+    expect(p.isReadOnlyFor(p.childTypeOf("auditor", types)!, false)).toBe(true);
+    expect(p.childToolsFor(everything, p.childTypeOf("auditor", types)!, false).map((d) => d.name)).not.toContain("create_artifact");
+    expect(p.isReadOnlyFor(p.childTypeOf("builder", types)!, false)).toBe(false);
+    expect(p.childToolsFor(everything, p.childTypeOf("builder", types)!, false).map((d) => d.name)).toContain("create_artifact");
   });
 });
