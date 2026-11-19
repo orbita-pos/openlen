@@ -1069,6 +1069,20 @@ describe("launching custom types", () => {
     expect(s.sessions.at(-1)!.readOnly).toBe(true);
     expect(s.brainTools.at(-1)!.map((d) => d.name)).not.toContain("create_artifact");
   });
+  // «Move on to editing» means nothing to a child that cannot edit (Explore, Plan, len-review, plan mode).
+  it("🔴 a read-only child is never told to stop re-reading and edit; a child that can write is", async () => {
+    const files = ["/a.ts", "/b.ts", "/c.ts", "/d.ts"];
+    const circling = [...files, "/a.ts", "/b.ts", "/c.ts"].map((file_path) => llama("Read", { file_path }));
+    const heard = async (preset: string) => {
+      forgetAllSubagents();
+      const s = setup({ scripts: [...circling, dice("ok")] });
+      await s.launcher.launch({ description: "a", prompt: "b", preset: preset as never });
+      await s.settled("r1");
+      return s.g.seen.at(-1)!.some((m) => String(m.content).includes("re-reading files you already read"));
+    };
+    expect(await heard("general-purpose")).toBe(true);
+    for (const preset of ["Explore", "Plan", "len-review"]) expect(await heard(preset), preset).toBe(false);
+  });
   it("a deleted type cannot be restored as general-purpose", async () => {
     const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [dice("ok")] });
     await s.launcher.launch({ description: "Review", prompt: "Check.", preset: "reviewer" as never });

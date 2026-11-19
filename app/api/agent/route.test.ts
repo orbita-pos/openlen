@@ -5239,6 +5239,13 @@ describe("POST /api/agent — the person's own assistant", () => {
     }
   });
 
+  it("🔴 its loop knows it cannot write (no «stop reading and edit» reminder), and Len's own does not", async () => {
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect((loopArgs() as { readOnly?: boolean }).readOnly).toBe(true);
+    await readEvents(await pedir({}));
+    expect((loopArgs() as { readOnly?: boolean }).readOnly).toBeUndefined();
+  });
+
   it("BRAZO DE CONTROL: still there when it ends, its turn writes its row in its own conversation", async () => {
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       args.emit({ type: "text", text: "Ayer vinieron 12 personas." });

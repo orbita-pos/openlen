@@ -89,11 +89,26 @@ interface Call {
 export interface RepeatReminder {
   /** One batch of executed calls, in order, with their answers; returns the reminders to deliver. */
   observe(batch: readonly { readonly name: string; readonly args?: Record<string, unknown>; readonly response: Record<string, unknown> }[]): string[];
-  /** A message from the user changes the context: repetition across it is not a loop. */
+  /** A message from the user changes the context, and so does a compaction that pruned or summarized what the model
+   *  had read: repetition across it is not a loop. */
   reset(): void;
 }
 
-const MUTATING_TOOLS = new Set(["Edit", "MultiEdit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app"]);
+const MUTATING_TOOLS = new Set([
+  "Edit", "MultiEdit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app",
+  // They change the project without saying which file, or through a child that may write: nothing read before them
+  // is known to still be what Read would answer.
+  "undo_last_change", "create_artifact", "render_artifact", "cancel_artifact_job", "subagent", "subagent_fork",
+]);
+/** Of those, the ones whose arguments name the one file they changed; the rest (`edit_image` rewrites every file that
+ *  holds the picture) may have changed any. */
+const NAMES_ITS_FILE = new Set(["Edit", "MultiEdit", "Write"]);
+
+export interface RepeatReminderOptions {
+  /** The session cannot write (Explore, Plan, a read-only type, the person's own assistant): re-reading is how it
+   *  works, so the reminder that tells it to move on to editing is never sent. */
+  readonly readOnly?: boolean;
+}
 
 function readScopeKey(args: Record<string, unknown> | undefined): string | null {
   if (!args || typeof args.file_path !== "string" || args.file_path.trim() === "") return null;
@@ -102,7 +117,7 @@ function readScopeKey(args: Record<string, unknown> | undefined): string | null 
   return `${args.file_path}#${offset}:${limit}`;
 }
 
-export function createRepeatReminder(thresholds: readonly number[] = REPEAT_THRESHOLDS): RepeatReminder {
+export function createRepeatReminder(thresholds: readonly number[] = REPEAT_THRESHOLDS, options: RepeatReminderOptions = {}): RepeatReminder {
   const hits = new Set(thresholds);
   const noChangeHits = new Set(NO_CHANGE_THRESHOLDS);
   const rereadHits = new Set(REREAD_THRESHOLDS);
@@ -127,7 +142,7 @@ export function createRepeatReminder(thresholds: readonly number[] = REPEAT_THRE
         if (MUTATING_TOOLS.has(name) && ok) {
           usePageNoChangeStreak = 0;
           rereadStreak = 0;
-          if (name === "bash") {
+          if (!NAMES_ITS_FILE.has(name)) {
             readScopes.clear();
           } else if (typeof args?.file_path === "string") {
             const prefix = `${args.file_path}#`;
@@ -170,7 +185,7 @@ export function createRepeatReminder(thresholds: readonly number[] = REPEAT_THRE
 
         // Additive check 2 (A2): circling on repeated Reads of already-read files with no edits in between.
         // Skip consecutive identical Reads (identical > 1): DeepSeek's identical-call detector already owns those.
-        if (name === "Read" && ok) {
+        if (name === "Read" && ok && options.readOnly !== true) {
           const scope = readScopeKey(args);
           if (scope !== null) {
             if (readScopes.has(scope)) {

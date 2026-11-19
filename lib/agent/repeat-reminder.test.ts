@@ -78,3 +78,66 @@ describe("createRepeatReminder (DeepSeek's repeat-tool-reminder + the alternatin
     expect(r.observe([call("Read", { file_path: "/a.ts" })])).toEqual([]);
   });
 });
+
+// A3 · the reminders' false positives: what changes the project without a file path, and who cannot edit at all.
+describe("createRepeatReminder · what counts as a change, and who it speaks to", () => {
+  const FILES = ["/a.ts", "/b.ts", "/c.ts", "/d.ts"];
+  const read = (r: ReturnType<typeof createRepeatReminder>, file: string) => r.observe([call("Read", { file_path: file })]);
+  /** Four files read once each, then two of them re-read: a streak of 2, one more re-read from the reminder. */
+  const circling = (r: ReturnType<typeof createRepeatReminder>) => {
+    r.observe(FILES.map((f) => call("Read", { file_path: f })));
+    read(r, "/a.ts");
+    read(r, "/b.ts");
+  };
+  const rereads = (r: ReturnType<typeof createRepeatReminder>) => read(r, "/c.ts");
+  const noChange = (click: string) => ({ name: "use_page", args: { steps: [{ click }] }, response: { ok: true, no_change: true } });
+
+  // Every one of them can change what Read would now answer, whatever its own arguments say.
+  const ALSO_MUTATING = ["undo_last_change", "create_artifact", "render_artifact", "cancel_artifact_job", "subagent", "subagent_fork"];
+
+  it("🔴 the tools that change the project without naming a file break the circling streaks and forget what was read", () => {
+    for (const tool of ALSO_MUTATING) {
+      const r = createRepeatReminder();
+      circling(r);
+      expect(r.observe([call(tool, { description: "x" })]), tool).toEqual([]);
+      // Without it the next re-read would be the third; after it, /c.ts is a first read again.
+      expect(rereads(r), tool).toEqual([]);
+
+      const p = createRepeatReminder();
+      p.observe([noChange("A"), noChange("B")]);
+      p.observe([call(tool, { description: "x" })]);
+      expect(p.observe([noChange("C")]), tool).toEqual([]);
+    }
+  });
+
+  it("a failed one changed nothing, so it breaks nothing", () => {
+    const r = createRepeatReminder();
+    circling(r);
+    r.observe([{ name: "render_artifact", args: { revision: 1 }, response: { ok: false, error: "boom" } }]);
+    expect(rereads(r)).toHaveLength(1);
+  });
+
+  it("🔴 those names are real tools of Len's", async () => {
+    const { ARTIFACT_TOOLS } = await import("@/lib/artifacts/tools");
+    const { SUBAGENT_TOOL, SUBAGENT_FORK_TOOL } = await import("./subagents/enabled");
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const real = new Set<string>([...ARTIFACT_TOOLS, SUBAGENT_TOOL, SUBAGENT_FORK_TOOL]);
+    const catalog = readFileSync(join(__dirname, "catalog.ts"), "utf8");
+    expect(catalog).toContain('name: "undo_last_change"');
+    for (const tool of ALSO_MUTATING.filter((t) => t !== "undo_last_change")) expect(real.has(tool), tool).toBe(true);
+  });
+
+  it("🔴 a reader that cannot edit is never told to move on to editing; the other reminders still reach it", () => {
+    const reader = createRepeatReminder(undefined, { readOnly: true });
+    circling(reader);
+    for (const f of [...FILES, ...FILES]) expect(read(reader, f)).toEqual([]);
+    // Identical calls are the other detector's, and still say so.
+    const same = Array.from({ length: 3 }, () => reader.observe([call("Grep", { pattern: "x" })]));
+    expect(same.flat()).toHaveLength(1);
+    // And a writer in the same situation is told (the control arm).
+    const writer = createRepeatReminder(undefined, { readOnly: false });
+    circling(writer);
+    expect(rereads(writer)).toHaveLength(1);
+  });
+});
