@@ -9,10 +9,13 @@ import { useState } from "react";
 
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
+import { openSignIn } from "./open-sign-in";
+
 type State =
   | { kind: "idle" }
   | { kind: "connecting" }
   | { kind: "connected"; tools: number }
+  | { kind: "oauth-connected" }
   | { kind: "failed"; error: string }
   | { kind: "changed" }
   | { kind: "dismissed" }
@@ -25,9 +28,54 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
   const [values, setValues] = useState<Record<string, string>>({});
 
   async function connect() {
+    const credentials = Object.fromEntries(missing.map((c) => [c.name, values[c.name] ?? ""]).filter(([, v]) => v));
+    if (card.suggest || card.oauth) {
+      let sawChanged = false;
+      // Open the popup synchronously on the click before any state update or await.
+      const signIn = openSignIn(card.server, {
+        ...(card.suggest
+          ? {
+              start: async () => {
+                const res = await fetch(`/api/mcp-connectors/directory/${encodeURIComponent(card.suggest!.id)}`, { method: "POST" });
+                const body = (await res.json().catch(() => ({}))) as { authorizationUrl?: string; detail?: string; error?: string };
+                if (!res.ok || typeof body.authorizationUrl !== "string") {
+                  throw new Error(body.detail ?? body.error ?? String(res.status));
+                }
+                return body.authorizationUrl;
+              },
+            }
+          : card.version > 0
+            ? {
+                approve: async () => {
+                  const res = await fetch(`/api/mcp-connectors/${encodeURIComponent(card.server)}/approve`, {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ fingerprint: card.fingerprint, version: card.version, credentials }),
+                  });
+                  const body = (await res.json().catch(() => ({}))) as { error?: string };
+                  if (res.status === 409) {
+                    sawChanged = true;
+                    setState({ kind: "changed" });
+                    return false;
+                  }
+                  if (!res.ok) throw new Error(body.error ?? String(res.status));
+                  setValues({});
+                  return true;
+                },
+              }
+            : {}),
+      });
+      setState({ kind: "connecting" });
+      const res = await signIn;
+      if (res === "connected") return setState({ kind: "oauth-connected" });
+      if (res === "closed") {
+        if (!sawChanged) setState({ kind: "idle" });
+        return;
+      }
+      return setState({ kind: "failed", error: res.error });
+    }
     setState({ kind: "connecting" });
     try {
-      const credentials = Object.fromEntries(missing.map((c) => [c.name, values[c.name] ?? ""]).filter(([, v]) => v));
       const res = await fetch(`/api/mcp-connectors/${encodeURIComponent(card.server)}/approve`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -46,7 +94,18 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
 
   return (
     <div className="mt-2 rounded-lg border bd bg-elev px-3 py-2.5 text-[13px]" data-mcp-approval={card.server}>
-      <p className="font-semibold fg">{t("mcpApproval.title", { server: card.server, host: card.host })}</p>
+      <p className="font-semibold fg">
+        {card.suggest ? t("mcpApproval.suggestTitle", { name: card.suggest.name, host: card.suggest.host }) : t("mcpApproval.title", { server: card.server, host: card.host })}
+      </p>
+      {card.oauth ? (
+        <p className="mt-1 fg-muted">
+          {card.oauth.reason === "lapsed"
+            ? t("mcpApproval.signInAgainAt", { issuer: card.oauth.issuerHost })
+            : card.oauth.reason === "scope"
+              ? t("mcpApproval.morePermissionsAt", { issuer: card.oauth.issuerHost })
+              : t("mcpApproval.signInAt", { issuer: card.oauth.issuerHost })}
+        </p>
+      ) : null}
       {card.credentials.map((c) => (
         <div key={c.name} className="mt-1">
           <p className="fg-muted">{t("mcpApproval.sends", { name: c.name, host: card.host })}</p>
@@ -92,6 +151,7 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
         </>
       ) : null}
       {state.kind === "connected" ? <p className="mt-1 fg">{t("mcpApproval.connected", { tools: state.tools })}</p> : null}
+      {state.kind === "oauth-connected" ? <p className="mt-1 fg">{t("mcpApproval.oauthConnected")}</p> : null}
       {state.kind === "failed" ? <p className="mt-1 text-red-600">{t("mcpApproval.failed", { error: state.error })}</p> : null}
       {state.kind === "changed" ? <p className="mt-1 fg-muted">{t("mcpApproval.changed")}</p> : null}
       {state.kind === "dismissed" ? <p className="mt-1 fg-muted">{t("mcpApproval.dismissed")}</p> : null}

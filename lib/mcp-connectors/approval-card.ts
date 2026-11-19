@@ -10,10 +10,15 @@ export interface McpApprovalCard {
   readonly fingerprint: string;
   /** The config version the card was drawn from: the tap approves only if the file is still there. */
   readonly version: number;
+  /** An OAuth sign-in the tap opens (spec local 2026-11-17-oauth-de-conectores-mcp, §5.5, §10.2, §10.5). */
+  readonly oauth?: { readonly issuerHost: string; readonly reason: "first" | "lapsed" | "scope" };
+  /** A connector from the curated directory (`suggest_connectors`, spec local 2026-11-17-oauth-de-conectores-mcp, §6). */
+  readonly suggest?: { readonly id: string; readonly name: string; readonly host: string };
 }
 
 const str = (v: unknown): v is string => typeof v === "string";
 const strs = (v: unknown): v is string[] => Array.isArray(v) && v.every(str);
+const REASONS = new Set(["first", "lapsed", "scope"]);
 
 export function mcpApprovalFrom(raw: unknown): McpApprovalCard | null {
   if (!raw || typeof raw !== "object") return null;
@@ -24,5 +29,24 @@ export function mcpApprovalFrom(raw: unknown): McpApprovalCard | null {
     const x = (k ?? {}) as Record<string, unknown>;
     return str(x.name) && typeof x.set === "boolean" && strs(x.otherHosts) ? [{ name: x.name, set: x.set, otherHosts: x.otherHosts, firstTime: x.firstTime === true }] : [];
   });
-  return { server: c.server, host: c.host, headerNames: c.headerNames, credentials, fingerprint: c.fingerprint, version: c.version };
+  const o = c.oauth && typeof c.oauth === "object" ? (c.oauth as Record<string, unknown>) : null;
+  const oauth =
+    o && str(o.issuerHost) && o.issuerHost.length > 0 && str(o.reason) && REASONS.has(o.reason)
+      ? { issuerHost: o.issuerHost, reason: o.reason as "first" | "lapsed" | "scope" }
+      : undefined;
+  const s = c.suggest && typeof c.suggest === "object" ? (c.suggest as Record<string, unknown>) : null;
+  const suggest =
+    s && str(s.id) && s.id.length > 0 && str(s.name) && s.name.length > 0 && str(s.host) && s.host.length > 0
+      ? { id: s.id, name: s.name, host: s.host }
+      : undefined;
+  return {
+    server: c.server,
+    host: c.host,
+    headerNames: c.headerNames,
+    credentials,
+    fingerprint: c.fingerprint,
+    version: c.version,
+    ...(oauth ? { oauth } : {}),
+    ...(suggest ? { suggest } : {}),
+  };
 }
