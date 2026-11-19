@@ -27,6 +27,7 @@ import {
 import type { McpServerEntry } from "../config";
 import { credentialRefs } from "../templates";
 import { callbackUrl, clientMetadata, isClientRefusal, preRegisteredClient, type ClientRefusal } from "./clients";
+import { cleanIssuer, cleanScope } from "./remote-text";
 import type { OAuthConnection, OAuthFlow } from "./store";
 
 /** What the provider and the flow use of store.ts — an interface, so tests can hand the real one or a fake. */
@@ -54,15 +55,20 @@ export interface OAuthDeps {
 export type SignInReason = "first" | "lapsed" | "scope";
 
 /** The server wants the person to sign in (again, or with more permissions). `issuer` and `scope` are what «Conectar»
- *  names and asks for; both come from the servers, so they are shown, never followed. */
+ *  names and asks for; both come from the servers, so they are shown, never followed — and kept in bounds from here on
+ *  (remote-text.ts): an issuer that isn't an https URL is null, a scope is one short line of scope tokens. */
 export class NeedsSignIn extends Error {
+  readonly issuer: string | null;
+  readonly scope: string | null;
   constructor(
     readonly reason: SignInReason,
-    readonly issuer: string | null,
-    readonly scope: string | null,
+    issuer: string | null,
+    scope: string | null,
   ) {
     super(reason === "scope" ? "needs additional permissions" : reason === "lapsed" ? "needs you to sign in again" : "needs authentication");
     this.name = "NeedsSignIn";
+    this.issuer = cleanIssuer(issuer);
+    this.scope = cleanScope(scope);
   }
 }
 
