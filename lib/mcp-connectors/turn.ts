@@ -16,9 +16,9 @@ import { cleanScope } from "./oauth/remote-text";
 import { projectCallResult, renderResource } from "./project";
 import type { ServerState, StoredConfig } from "./store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "./templates";
+import { AUTHENTICATE_TOOL, SUGGEST_CONNECTORS_TOOL } from "./tool-names";
 
-export const AUTHENTICATE_TOOL = "authenticate";
-export const SUGGEST_CONNECTORS_TOOL = "suggest_connectors";
+export { AUTHENTICATE_TOOL, SUGGEST_CONNECTORS_TOOL };
 export const RESOURCE_TOOL_NAMES = ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"] as const;
 export const CONNECTOR_TOOLS_MAX = 128;
 export const CONNECTOR_DECLARATIONS_MAX_BYTES = 256 * 1024;
