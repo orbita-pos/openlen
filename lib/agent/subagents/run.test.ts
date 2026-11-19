@@ -1059,9 +1059,8 @@ describe("launching custom types", () => {
     await s.settled("r1");
     expect(s.sessions[0].readOnly).toBe(true);
     // What OpenLen answers in the terminal reads the session's flag: a git commit from this child is refused.
-    const git = guardReadOnly(s.sessions[0].readOnly === true, "git", async () => ({ stdout: "committed", stderr: "", exitCode: 0 }));
-    expect(await git(["commit", "-am", "x"])).toEqual({ stdout: "", stderr: `${READ_ONLY_REFUSAL}
-`, exitCode: 1 });
+    const git = guardReadOnly(s.sessions[0].readOnly === true, "git", async (_args: readonly string[]) => ({ stdout: "committed", stderr: "", exitCode: 0 }));
+    expect(await git(["commit", "-am", "x"])).toEqual({ stdout: "", stderr: `${READ_ONLY_REFUSAL}\n`, exitCode: 1 });
     expect(s.brainTools[0].map((d) => d.name)).toEqual(["Read", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"]);
     // The run keeps its type's scope when it is woken: the session stays read-only with Len out of plan mode.
     await s.launcher.send({ id: "r1", message: "Look again." });
