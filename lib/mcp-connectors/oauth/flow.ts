@@ -218,3 +218,50 @@ export async function finishSignIn(
   await d.mount(flow.personId, server).catch(() => null);
   return { ok: true, server };
 }
+
+/**
+ * «Desconectar» (or removing the entry from mcp.json, §5.4 step 5): drop the stored connection and best-effort revoke
+ * its tokens (RFC 7009) if the authorization server advertises `revocation_endpoint`. A failed revocation never blocks.
+ */
+export async function dropSignIn(
+  personId: string,
+  serverName: string,
+  d: OAuthDeps & { readConfig?(personId: string): Promise<StoredConfig> },
+  entryHint?: McpServerEntry,
+): Promise<{ dropped: boolean; issuer: string | null }> {
+  const removed = await d.store.dropConnection(personId, serverName);
+  if (!removed) return { dropped: false, issuer: null };
+  if (removed.tokens) {
+    try {
+      const entry =
+        entryHint ??
+        (d.readConfig ? approvedEntry(await d.readConfig(personId), serverName)?.entry : undefined) ??
+        ({ transport: "streamable-http", url: removed.serverUrl, headers: {}, enabled: true } as McpServerEntry);
+      const found = await discover(entry, d, (t) => t);
+      const endpoint =
+        found.ok && found.issuer === removed.issuer
+          ? (found.state.authorizationServerMetadata as { revocation_endpoint?: string } | undefined)?.revocation_endpoint
+          : undefined;
+      if (endpoint) {
+        const own = await entryClient(personId, entry, removed.issuer, d);
+        const client = !isClientRefusal(own) && own ? own : removed.clientInfo;
+        const secret = (client as { client_secret?: string }).client_secret;
+        const tokens = [removed.tokens.refresh_token, removed.tokens.access_token].filter((t): t is string => typeof t === "string" && t.length > 0);
+        for (const token of tokens) {
+          const form = new URLSearchParams({ token, client_id: client.client_id, ...(secret ? { client_secret: secret } : {}) });
+          await d
+            .fetch(endpoint, {
+              method: "POST",
+              headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: form.toString(),
+              redirect: "manual",
+            })
+            .catch(() => null);
+        }
+      }
+    } catch {
+      // Best-effort RFC 7009: never blocks disconnecting.
+    }
+  }
+  return { dropped: true, issuer: removed.issuer };
+}
