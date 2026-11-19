@@ -1,0 +1,43 @@
+// POST /api/projects/[id]/ab/[expId]/bring — retry 3-way merge of promoted Variant B into draft.
+import { AbLifecycleError, retryBringWinner } from "@/lib/ab/lifecycle";
+import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { exigirAcceso } from "@/lib/projects/acceso";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+export const POST = paraLaApp(async (
+  req: Request,
+  { params }: { params: Promise<{ id: string; expId: string }> },
+): Promise<Response> => {
+  const userId = await usuarioDeLaPeticion(req);
+  if (!userId) return json({ error: "unauthorized" }, 401);
+  const { id, expId } = await params;
+  const acceso = await exigirAcceso(id, userId, "editar");
+  if (acceso instanceof Response) return acceso;
+
+  try {
+    const result = await retryBringWinner({
+      projectId: id,
+      experimentId: expId,
+      ownerId: acceso.duenoId,
+      actorId: userId,
+    });
+    return json({ ok: true, ...result }, 200);
+  } catch (err) {
+    if (err instanceof AbLifecycleError) {
+      return json({ error: err.code, message: err.message, ...(err.extra ?? {}) }, err.status);
+    }
+    return json({ error: "bring_failed" }, 500);
+  }
+});
+
+export const OPTIONS = respuestaPrevia;
