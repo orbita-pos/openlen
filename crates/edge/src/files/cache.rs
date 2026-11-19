@@ -1,3 +1,8 @@
+/// Cache-Control header for HTML responses participating in an active A/B
+/// experiment. Forces Cloudflare (`respect_origin`) and shared caches to never
+/// store or mix variants across visitors.
+pub const AB_HTML_CACHE_CONTROL: &str = "private, no-store";
+
 /// Cache-Control header value for a given file extension.
 ///
 /// Three tiers:
