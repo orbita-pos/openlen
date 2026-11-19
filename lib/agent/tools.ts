@@ -153,6 +153,7 @@ import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
+import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
   SESSION_EVENT_READ,
@@ -3241,6 +3242,9 @@ async function ejecutarHerramienta(
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
         return await runCreateAssistant(session, args);
+      // Edge A/B testing: isolated Variant B draft on branch `ab/<id>` (Plan 3).
+      case CREATE_AB_VARIANT:
+        return await runCreateAbVariant(session, args);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
