@@ -29,7 +29,9 @@ import { isFunctionsInputPath } from "@/lib/functions/project-files";
 import { typesAndLintAfterWrite } from "@/lib/agent/types-and-lint";
 import type { Diagnostico } from "@/lib/agent/diagnosticos";
 import { ejecutarRead, noExiste, normalizarFinales, type Leidos } from "@/lib/agent/ficheros/read";
+import { collectPathRules } from "@/lib/agent/ficheros/path-rules";
 import { coercerEntradaEdit, planearEdit, type PlanDeEdit } from "@/lib/agent/ficheros/edit";
+import { coercerEntradaMultiEdit, planearMultiEdit } from "@/lib/agent/ficheros/multi-edit";
 import { coercerEntradaWrite, planearWrite } from "@/lib/agent/ficheros/write";
 import { ejecutarGrep, type EntradaGrep, type SitioBuscable } from "@/lib/agent/ficheros/grep";
 import { ejecutarGlob } from "@/lib/agent/ficheros/glob";
@@ -84,7 +86,7 @@ import { checkSlideSource } from "@/lib/artifacts/adapters/slides/subset";
 import { checkManifestSource } from "@/lib/artifacts/manifest-check";
 
 /** Los nombres, como en Claude Code: es lo que el modelo ya sabe usar. */
-export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "Write", "Grep", "Glob"] as const;
+export const HERRAMIENTAS_DE_FICHEROS = ["Read", "Edit", "MultiEdit", "Write", "Grep", "Glob"] as const;
 
 /** The turn's terminal for `Read` of a file only the box has: started like `bash` starts it, unless
  *  the terminal is off. A dynamic import: `bash`'s module brings the whole terminal. */
@@ -496,6 +498,10 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
     leidosDe(session),
   );
   const ruta = resolverRuta(file_path);
+  if (r.ok) {
+    const pathRules = collectPathRules(ruta, (session.appliedPathRules ??= new Set()), v.folder);
+    if (pathRules) return { response: respuesta(exito(`${r.texto}\n\n${pathRules}`)) };
+  }
   return { response: respuesta(r) };
 }
 
@@ -633,6 +639,22 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
   });
 }
 
+export async function toolMultiEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
+  const entrada = coercerEntradaMultiEdit(args);
+  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
+  const artifactError = await loadArtifactSource(deps, entrada.file_path);
+  if (artifactError) return artifactError;
+  if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
+  const row = await deps.loadProject(session.projectId, session.userId);
+  if (!row) return { response: respuesta(fallo("project not found")) };
+  const v = await virtualesDe(session, deps, row.userBrief);
+  const binarioE = punteroEn(v.folder, resolverRuta(entrada.file_path));
+  if (binarioE) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioE)))) };
+  const plan = planearMultiEdit(entrada, sitioDe(row.data, session, v), leidosDe(session));
+  const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)} (${entrada.edits.length} edits)`;
+  return await aplicarPlan(session, deps, row.data, v, plan, "MultiEdit", detalle);
+}
+
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const { entrada, nota } = coercerEntradaWrite(args);
   if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
@@ -646,7 +668,14 @@ export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Re
   if (binarioW) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioW)))) };
   const plan = planearWrite(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea && paginaDeRuta(plan.ruta) ? NEW_PAGE_MARK : ""}`;
-  return await aplicarPlan(session, deps, row.data, v, plan, "Write", detalle, nota);
+  const out = await aplicarPlan(session, deps, row.data, v, plan, "Write", detalle, nota);
+  if (plan.ok && plan.crea && out.response.ok === true && typeof out.response[CLAVE_TOOL_RESULT] === "string") {
+    const pathRules = collectPathRules(plan.ruta, (session.appliedPathRules ??= new Set()), v.folder);
+    if (pathRules) {
+      return { ...out, response: { ...out.response, [CLAVE_TOOL_RESULT]: `${out.response[CLAVE_TOOL_RESULT]}\n\n${pathRules}` } };
+    }
+  }
+  return out;
 }
 
 function recorte(s: string): string {
@@ -672,7 +701,7 @@ async function aplicarPlan(
   data: ProjectData,
   v: Virtuales,
   plan: PlanDeEdit,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   /** Sobre qué fichero y qué cambio. La tarjeta lo pone detrás de su etiqueta
    *  localizada («Editando la página»), así que no repite la herramienta; la
    *  versión sí la nombra, porque en el panel de Versiones no hay nada delante. */
@@ -822,7 +851,7 @@ async function guardarEnLaCarpeta(
   deps: AgentDeps,
   folder: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   detalle: string,
   /** El /index.html de ahora: en una app, el cascarón que la arranca. */
   cascaron: string,
@@ -929,7 +958,7 @@ async function guardarMemoria(
   deps: AgentDeps,
   memoria: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   const layer = memoryLayerOf(plan.ruta)!;
@@ -998,7 +1027,7 @@ async function guardarSkill(
   deps: AgentDeps,
   skills: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   const at = skillPathOf(plan.ruta);
@@ -1035,7 +1064,7 @@ async function guardarMcpConfig(
   session: AgentSession,
   deps: AgentDeps,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   const saved = await deps.mcpConfigStore!.save(personOf(session), plan.contenido);
@@ -1068,7 +1097,7 @@ async function guardarAgent(
   deps: AgentDeps,
   agents: ReadonlyMap<string, string>,
   plan: Extract<PlanDeEdit, { ok: true }>,
-  herramienta: "Edit" | "Write" | "bash",
+  herramienta: "Edit" | "MultiEdit" | "Write" | "bash",
   detalle: string,
 ): Promise<ToolOutcome> {
   // A built-in's name first: `Explore` is not a kebab-case name, and saying so would hide the real reason.

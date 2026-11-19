@@ -310,6 +310,32 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.ok(store.data.html!.includes("$300") && store.data.html!.includes("$1500"));
   });
 
+  it("MultiEdit aplica varios cambios atómicos en una llamada y no guarda nada si falla uno", async () => {
+    const { deps, store } = makeDeps({ html: HOME });
+    const session = makeSession();
+    await runAgentTool(session, deps, "Read", { file_path: "/index.html" });
+    const fail = await runAgentTool(session, deps, "MultiEdit", {
+      file_path: "/index.html",
+      edits: [
+        { old_string: "$250", new_string: "$310" },
+        { old_string: "NO_EXISTE_EN_EL_HTML", new_string: "x" },
+      ],
+    });
+    assert.equal(fail.response.ok, false);
+    assert.match(texto(fail), /edit #2 of 2/);
+    assert.equal(store.data.html, HOME, "fallo atómico: nada guardado");
+    const ok = await runAgentTool(session, deps, "MultiEdit", {
+      file_path: "/index.html",
+      edits: [
+        { old_string: "$250", new_string: "$310" },
+        { old_string: "$1200", new_string: "$1550" },
+      ],
+    });
+    assert.equal(ok.response.ok, true, texto(ok));
+    assert.equal(ok.action?.tool, "MultiEdit");
+    assert.ok(store.data.html!.includes("$310") && store.data.html!.includes("$1550"));
+  });
+
   it("editar otra página es otra ruta, sin mudarse: escribe en data.pages y dice cuál", async () => {
     const { deps, store } = makeDeps({ html: HOME, pages: { menu: { html: MENU } } });
     const session = makeSession();
@@ -1555,8 +1581,8 @@ describe("bash — la terminal de Len de punta a punta, con su hilo (las pruebas
     const session = makeSession();
     try {
       const seq = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "seq 1 9000; seq 9001 18000" }));
-      assert.match(texto(seq), /^<persisted-output>\nOutput too large \(\d+(\.\d)?KB\)\. Full output saved to: \/tmp\/tool-results\/1\.txt\n\nPreview \(first 2KB\):\n1\n2(?:\n|$)/);
-      assert.match(texto(seq), /<\/persisted-output>$/);
+      assert.match(texto(seq), /^<persisted-output>\nOutput too large \(\d+(\.\d)?KB\)\. Full output saved to: \/tmp\/tool-results\/1\.txt\n\nPreview \(head \+ tail, omitted \d+(\.\d)?KB\):\n1\n2(?:\n|$)/);
+      assert.match(texto(seq), /\n\.\.\.\n[\s\S]*\n18000\n\n<\/persisted-output>$/);
       const wc = await conTerminal(() => runAgentTool(session, deps, "bash", { command: "wc -l < /tmp/tool-results/1.txt" }));
       assert.match(texto(wc), /^18000$/);
       assert.equal(Object.keys(session.fotoDeLaTerminal ?? {}).some((r) => r.startsWith("/tmp")), false);

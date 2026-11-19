@@ -5,6 +5,7 @@
       "leer_estado": "Je project lezen",
       "Read": "De pagina lezen",
       "Edit": "De pagina bewerken",
+      "MultiEdit": "De pagina bewerken",
       "Write": "De pagina schrijven",
       "Grep": "Je site doorzoeken",
       "Glob": "Je pagina's opsommen",
@@ -80,6 +81,7 @@
     "toolApp": {
       "Read": "De code lezen",
       "Edit": "De code bewerken",
+      "MultiEdit": "De code bewerken",
       "Write": "Code schrijven",
       "Glob": "De bestanden opsommen",
       "view_page": "De app controleren",
@@ -167,6 +169,7 @@
     "toolArtifact": {
       "Read": "Leest een oplevering",
       "Edit": "Bewerkt een oplevering",
+      "MultiEdit": "Bewerkt een oplevering",
       "Write": "Schrijft een oplevering"
     }
   },

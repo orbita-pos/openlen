@@ -60,6 +60,7 @@
     "provider:probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/provider-probe.ts",
     "measure:cache-probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/measure/cache-probe.ts",
     "measure:wire-probe": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/measure/wire-probe.ts",
+    "measure:friction": "tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs scripts/measure/friction-report.ts",
     "integrations:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/integrations-migrate.ts",
     "billing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/billing-migrate.ts",
     "collections:drop": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/collections-drop.ts",

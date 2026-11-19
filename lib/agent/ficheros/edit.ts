@@ -52,7 +52,7 @@ export function coercerEntradaEdit(raw: Record<string, unknown>): EntradaEdit {
 }
 
 export const NOTA_ESTADO_AL_DIA = " (what you sent is exactly what was saved: no need to Read it again)";
-const NOTA_CAMBIADO_EN_DISCO =
+export const NOTA_CAMBIADO_EN_DISCO =
   " (note: the file had changed since your last Read of it. Your edit applied, but other parts differ from what you saw: Read it again before an edit that depends on what is around it.)";
 export const NO_LEIDO = "You have not read this file in this conversation. Read it before changing it.";
 export const CAMBIADO_DESDE_LA_LECTURA =

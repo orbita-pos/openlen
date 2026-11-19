@@ -76,6 +76,7 @@ const AVANCES: Record<string, string> = {
   Grep: "Len está leyendo la página.",
   Glob: "Len está leyendo la página.",
   Edit: "Len está cambiando la página.",
+  MultiEdit: "Len está cambiando la página.",
   Write: "Len está cambiando la página.",
   view_page: "Len está comprobando cómo quedó la página.",
   use_page: "Len está comprobando cómo quedó la página.",

@@ -5,6 +5,7 @@
       "leer_estado": "Reading your project",
       "Read": "Reading the page",
       "Edit": "Editing the page",
+      "MultiEdit": "Editing the page",
       "Write": "Writing the page",
       "Grep": "Searching your site",
       "Glob": "Listing your pages",
@@ -80,6 +81,7 @@
     "toolApp": {
       "Read": "Reading the code",
       "Edit": "Editing the code",
+      "MultiEdit": "Editing the code",
       "Write": "Writing code",
       "Glob": "Listing the files",
       "view_page": "Checking the app",
@@ -167,6 +169,7 @@
     "toolArtifact": {
       "Read": "Reading a deliverable",
       "Edit": "Editing a deliverable",
+      "MultiEdit": "Editing a deliverable",
       "Write": "Writing a deliverable"
     }
   },

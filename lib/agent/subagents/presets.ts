@@ -77,6 +77,7 @@ const ARTIFACT_READS: ReadonlySet<string> = new Set(["list_artifacts", "inspect_
 export const OUT_FOR_READ_ONLY: ReadonlySet<string> = new Set([
   "Write",
   "Edit",
+  "MultiEdit",
   "edit_image",
   "toggle_module",
   CONVERTIR_EN_APP,

@@ -47,7 +47,7 @@ describe("la palanca de la terminal", () => {
     expect(nombres(CON)).toContain(NOMBRE_BASH);
     expect(nombres(CON)).not.toContain("Grep");
     expect(nombres(CON)).not.toContain("Glob");
-    for (const n of ["Read", "Edit", "Write"]) expect(nombres(CON)).toContain(n);
+    for (const n of ["Read", "Edit", "MultiEdit", "Write"]) expect(nombres(CON)).toContain(n);
   });
 
   it("con ella, nada de lo que lee el modelo nombra una herramienta que no tiene; sin ella, sí (brazo de control)", () => {
@@ -98,7 +98,7 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
   it("en Dynamis: bash y nada más para los ficheros; lo demás se queda", () => {
     const n = nombresEn(CON, "dynamis");
     expect(n).toContain(NOMBRE_BASH);
-    for (const fuera of ["Read", "Edit", "Write", "Grep", "Glob"]) expect(n).not.toContain(fuera);
+    for (const fuera of ["Read", "Edit", "MultiEdit", "Write", "Grep", "Glob"]) expect(n).not.toContain(fuera);
     for (const queda of ["view_page", "use_page", "publish", "ask_user_question", "undo_last_change", "web_search", "web_fetch"]) expect(n).toContain(queda);
   });
 

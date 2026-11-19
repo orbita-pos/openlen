@@ -117,6 +117,7 @@ describe("buildFunctionDeclarations", () => {
       // busca con `grep` en `bash`, como Claude Code en Linux.
       "Read",
       "Edit",
+      "MultiEdit",
       "Write",
       "toggle_module",
       "view_page",

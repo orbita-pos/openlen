@@ -5,6 +5,7 @@
       "leer_estado": "Lendo seu projeto",
       "Read": "Lendo a página",
       "Edit": "Editando a página",
+      "MultiEdit": "Editando a página",
       "Write": "Escrevendo a página",
       "Grep": "Buscando no seu site",
       "Glob": "Listando suas páginas",
@@ -80,6 +81,7 @@
     "toolApp": {
       "Read": "Lendo o código",
       "Edit": "Editando o código",
+      "MultiEdit": "Editando o código",
       "Write": "Escrevendo código",
       "Glob": "Listando os arquivos",
       "view_page": "Verificando o app",
@@ -167,6 +169,7 @@
     "toolArtifact": {
       "Read": "Lendo um entregável",
       "Edit": "Editando um entregável",
+      "MultiEdit": "Editando um entregável",
       "Write": "Escrevendo um entregável"
     }
   },

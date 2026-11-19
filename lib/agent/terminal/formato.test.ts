@@ -25,13 +25,19 @@ describe("como Claude Code", () => {
     expect([1023, 2000, 46_285, 2 * 1024 * 1024].map(formatFileSize)).toEqual(["1023 bytes", "2KB", "45.2KB", "2MB"]);
   });
 
-  it("🔴 persistedOutput: el bloque, con la vista previa cortada en un salto de línea", () => {
-    const text = Array.from({ length: 5000 }, (_, i) => `linea ${i}`).join("\n");
+  it("🔴 persistedOutput: preserva principio y final (head + tail) cortados en saltos de línea", () => {
+    const text = Array.from({ length: 5000 }, (_, i) => `linea ${i}`).join("\n") + "\nERROR TS2345: Type 'string' is not assignable to type 'number'.";
     const b = persistedOutput({ path: "/tmp/tool-results/1.txt", text });
-    expect(b.startsWith(`<persisted-output>\nOutput too large (${formatFileSize(text.length)}). Full output saved to: /tmp/tool-results/1.txt\n\nPreview (first 2KB):\nlinea 0\n`)).toBe(true);
-    expect(b.endsWith("\n...\n</persisted-output>")).toBe(true);
-    const vista = b.split("Preview (first 2KB):\n")[1]!.split("\n...\n")[0]!;
-    expect(vista.length).toBeLessThanOrEqual(2000);
-    expect(text.startsWith(vista + "\n")).toBe(true);
+    expect(b.startsWith(`<persisted-output>\nOutput too large (${formatFileSize(text.length)}). Full output saved to: /tmp/tool-results/1.txt\n\nPreview (head + tail, omitted `)).toBe(true);
+    expect(b).toContain("linea 0\n");
+    expect(b).toContain("\n...\n");
+    expect(b).toContain("ERROR TS2345: Type 'string' is not assignable to type 'number'.");
+    expect(b.endsWith("\n</persisted-output>")).toBe(true);
+    const body = b.split("):\n")[1]!.slice(0, -"\n</persisted-output>".length);
+    const [head, tail] = body.split("\n...\n");
+    expect(head!.length).toBeLessThanOrEqual(1200);
+    expect(tail!.length).toBeLessThanOrEqual(1200);
+    expect(text.startsWith(head! + "\n")).toBe(true);
+    expect(text.endsWith(tail!)).toBe(true);
   });
 });

@@ -34,6 +34,7 @@ const STATION_OF: Readonly<Record<string, WorkshopStation>> = {
   // Writing the app.
   Write: "desk",
   Edit: "desk",
+  MultiEdit: "desk",
   edit_image: "desk",
   convert_to_app: "desk",
   undo_last_change: "desk",

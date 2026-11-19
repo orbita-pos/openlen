@@ -26,6 +26,8 @@ const READ = `Reads a file of this website and returns it with numbered lines. A
 
 const EDIT = `Changes a file of this website by replacing exact text. Read the file in this conversation first: an Edit to a file you have not read is refused.`;
 
+const MULTI_EDIT = `Applies multiple exact text replacements to one file atomically, in order: if any edit fails, nothing is saved. Read the file in this conversation first: a MultiEdit to a file you have not read is refused. Prefer MultiEdit over several Edit calls on the same file.`;
+
 const WRITE = `Creates a file of this website or replaces it whole; writing /<slug>/index.html creates that page. Keep it for a page the request needs and for full rewrites, and change part of a page with Edit. A file that already exists has to be read in this conversation first.`;
 
 const GREP = `Searches the text of this website's files with a regular expression: JavaScript syntax, with ripgrep's option names. By default it lists the files that match; output_mode "content" returns the matching lines.`;
@@ -79,6 +81,37 @@ export const DECLARACIONES_DE_FICHEROS: readonly Record<string, unknown>[] = [
         replace_all: { type: "BOOLEAN", description: "Change every copy of old_string instead of exactly one (default false)" },
       },
       required: ["file_path", "old_string", "new_string"],
+    },
+  },
+  {
+    name: "MultiEdit",
+    description: MULTI_EDIT,
+    parameters: {
+      type: "OBJECT",
+      properties: {
+        file_path: { type: "STRING", description: "Absolute path of the file to change" },
+        edits: {
+          type: "ARRAY",
+          description: "Ordered list of 1 to 20 replacements applied sequentially to the file. Each edit sees the result of the previous ones.",
+          items: {
+            type: "OBJECT",
+            properties: {
+              old_string: {
+                type: "STRING",
+                description:
+                  "The text that is in the file at this step, character for character, never with the line number and tab that Read puts before each line. It must appear only once, unless replace_all is true.",
+              },
+              new_string: {
+                type: "STRING",
+                description: "The text that takes its place (it must differ from old_string; empty deletes old_string)",
+              },
+              replace_all: { type: "BOOLEAN", description: "Change every copy of old_string instead of exactly one (default false)" },
+            },
+            required: ["old_string", "new_string"],
+          },
+        },
+      },
+      required: ["file_path", "edits"],
     },
   },
   {
