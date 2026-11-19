@@ -24,6 +24,9 @@ describe("OpenLen's own subagent types", () => {
   it("len-review is read-only (disallows mutating tools) and enforces sibling completeness and evidence rules", () => {
     const review = BUNDLED_AGENT_TYPES.find((a) => a.name === "len-review")!;
     expect(review.disallowedTools).toEqual(expect.arrayContaining(["Write", "Edit", "MultiEdit", "edit_image"]));
+    // 🔴 And read-only for the SERVER, not only for its prompt: the flag drops every writing tool and makes its session refuse.
+    expect(review.readOnly).toBe(true);
+    expect(BUNDLED_AGENT_TYPES.filter((a) => a.readOnly).map((a) => a.name)).toEqual(["len-review"]);
     expect(review.body).toContain("sibling implementations");
     expect(review.body).toContain("Ruling out alternatives B and C does NOT confirm A");
   });

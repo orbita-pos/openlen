@@ -7,6 +7,7 @@ import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { isolationLine, settlementNotice, type WorktreeOutcome } from "./notice";
 import { withPlanSection } from "@/lib/agent/plan-mode";
+import { guardReadOnly, READ_ONLY_REFUSAL } from "@/lib/agent/terminal/read-only-commands";
 
 import { forgetAllSubagents, isLive, liveCount, noticeTurnPending, reserve, sendToRun, stop, takeNotices } from "./registry";
 import { childMessages, createSubagentLauncher, type LaunchContext, type RunnerIO, type SubagentEvent } from "./run";
@@ -77,6 +78,8 @@ function setup(
     /** The database fails when a settled run is reopened. */
     reopenFails?: boolean;
     planMode?: boolean;
+    /** Len's tool declarations, by name (the usual ones otherwise). */
+    declarations?: string[];
     loopExtras?: RunnerIO["loopExtras"];
     /** What Read answers, by path ("1\tx" otherwise). */
     readResults?: Record<string, string>;
@@ -199,7 +202,7 @@ function setup(
     turnArgs: TURN_ARGS,
     lenSystemPrompt: "LEN SYSTEM PROMPT",
     forkSeed: o.forkSeed ?? [],
-    declarations: ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"].map((name) => ({ name })),
+    declarations: (o.declarations ?? ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"]).map((name) => ({ name })),
     deps: {} as AgentDeps,
     sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null, ...(o.tool ? { tool: true } : {}) },
     spend: createTurnSpend(o.spendCap ?? 10_000, () => lenSpent),
@@ -962,6 +965,23 @@ describe("launching custom types", () => {
     await fromReadOnly.launch({ description: "a", prompt: "b", preset: "general-purpose" });
     await s.settled("r1");
     expect(s.sessions[0].readOnly).toBe(true);
+  });
+  // 🔴 len-review says «strictly read-only» in its prompt; the server makes it so: a read-only session, and no tool that writes.
+  it("🔴 the bundled len-review child has a read-only session and none of the tools that write, with no plan mode", async () => {
+    const s = setup({ scripts: [llama("bash", { command: "sed -i s/a/b/ /index.html" }), dice("ok")], declarations: ["Read", "Edit", "Write", "bash", "skill", "send_message", "create_artifact", "render_artifact", "cancel_artifact_job", "list_artifacts", "inspect_artifact", "undo_last_change"] });
+    expect(await s.launcher.launch({ description: "Review", prompt: "Review the change.", preset: "len-review" as never })).toMatchObject({ ok: true });
+    await s.settled("r1");
+    expect(s.sessions[0].readOnly).toBe(true);
+    // What OpenLen answers in the terminal reads the session's flag: a git commit from this child is refused.
+    const git = guardReadOnly(s.sessions[0].readOnly === true, "git", async () => ({ stdout: "committed", stderr: "", exitCode: 0 }));
+    expect(await git(["commit", "-am", "x"])).toEqual({ stdout: "", stderr: `${READ_ONLY_REFUSAL}
+`, exitCode: 1 });
+    expect(s.brainTools[0].map((d) => d.name)).toEqual(["Read", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"]);
+    // The run keeps its type's scope when it is woken: the session stays read-only with Len out of plan mode.
+    await s.launcher.send({ id: "r1", message: "Look again." });
+    await s.settled("r1");
+    expect(s.sessions.at(-1)!.readOnly).toBe(true);
+    expect(s.brainTools.at(-1)!.map((d) => d.name)).not.toContain("create_artifact");
   });
   it("a deleted type cannot be restored as general-purpose", async () => {
     const s = setup({ agentTypes: customTypes("tools: Read"), scripts: [dice("ok")] });
