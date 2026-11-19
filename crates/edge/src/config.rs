@@ -37,6 +37,9 @@ const ENV_RATE_LIMIT_PER_IP_PER_MIN: &str = "OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_
 const ENV_RATE_LIMIT_PER_IP_PER_HOUR: &str = "OPENLEN_EDGE_RATE_LIMIT_PER_IP_PER_HOUR";
 const ENV_RATE_LIMIT_EXEMPT_PATHS: &str = "OPENLEN_EDGE_RATE_LIMIT_EXEMPT_PATHS";
 const ENV_RATE_LIMIT_TRUSTED_PROXIES: &str = "OPENLEN_EDGE_RATE_LIMIT_TRUSTED_PROXIES";
+const ENV_AB_ENABLED: &str = "OPENLEN_EDGE_AB_ENABLED";
+const ENV_AB_LOOPBACK_BIND: &str = "OPENLEN_EDGE_AB_LOOPBACK_BIND";
+const ENV_AB_MANIFEST_CACHE_MAX: &str = "OPENLEN_EDGE_AB_MANIFEST_CACHE_MAX";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -107,6 +110,7 @@ const DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR: u32 = 5000;
 /// volume; ACME HTTP-01 challenges must never be blocked or cert issuance
 /// fails.
 const DEFAULT_RATE_LIMIT_EXEMPT_PATHS: &str = "/c/,/.well-known/acme-challenge/";
+const DEFAULT_AB_MANIFEST_CACHE_MAX: u64 = 10_000;
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -190,6 +194,15 @@ pub struct EdgeConfig {
     /// Cloudflare IP ranges if the edge ever sits behind a less-trusted
     /// proxy chain.
     pub rate_limit_trusted_proxies: Vec<IpAddr>,
+    /// Master switch for edge A/B experiment routing (`ab.json`). Defaults
+    /// `false` during initial rollout; when `ab_loopback_bind` is configured
+    /// the loopback sidecar enables it automatically.
+    pub ab_enabled: bool,
+    /// Optional loopback HTTP listener (e.g. `127.0.0.1:8085`) for Caddy's
+    /// `@has_ab` sidecar delegation. Non-loopback binds are refused at startup.
+    pub ab_loopback_bind: Option<SocketAddr>,
+    /// Max entries in the per-release `ab.json` moka manifest cache.
+    pub ab_manifest_cache_max: u64,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -384,6 +397,20 @@ impl EdgeConfig {
             Ok(raw) => parse_ip_csv(ENV_RATE_LIMIT_TRUSTED_PROXIES, &raw)?,
             Err(_) => Vec::new(),
         };
+        let ab_loopback_bind = match env::var(ENV_AB_LOOPBACK_BIND) {
+            Ok(raw) => parse_optional_socketaddr(ENV_AB_LOOPBACK_BIND, &raw)?,
+            Err(_) => None,
+        };
+        let ab_enabled = match env::var(ENV_AB_ENABLED) {
+            Ok(raw) => parse_bool(ENV_AB_ENABLED, &raw)?,
+            Err(_) => ab_loopback_bind.is_some(),
+        };
+        let ab_manifest_cache_max = match env::var(ENV_AB_MANIFEST_CACHE_MAX) {
+            Ok(raw) => raw.parse::<u64>().with_context(|| {
+                format!("{ENV_AB_MANIFEST_CACHE_MAX}={raw} is not a positive integer")
+            })?,
+            Err(_) => DEFAULT_AB_MANIFEST_CACHE_MAX,
+        };
 
         Ok(Self {
             bind,
@@ -419,6 +446,9 @@ impl EdgeConfig {
             rate_limit_per_ip_per_hour,
             rate_limit_exempt_paths,
             rate_limit_trusted_proxies,
+            ab_enabled,
+            ab_loopback_bind,
+            ab_manifest_cache_max,
         })
     }
 
@@ -462,6 +492,9 @@ pub struct EdgeConfigBuilder {
     rate_limit_per_ip_per_hour: Option<u32>,
     rate_limit_exempt_paths: Option<Vec<String>>,
     rate_limit_trusted_proxies: Option<Vec<IpAddr>>,
+    ab_enabled: Option<bool>,
+    ab_loopback_bind: Option<Option<SocketAddr>>,
+    ab_manifest_cache_max: Option<u64>,
 }
 
 impl EdgeConfigBuilder {
@@ -630,6 +663,21 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn ab_enabled(mut self, enabled: bool) -> Self {
+        self.ab_enabled = Some(enabled);
+        self
+    }
+
+    pub fn ab_loopback_bind(mut self, addr: Option<SocketAddr>) -> Self {
+        self.ab_loopback_bind = Some(addr);
+        self
+    }
+
+    pub fn ab_manifest_cache_max(mut self, max: u64) -> Self {
+        self.ab_manifest_cache_max = Some(max);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -710,6 +758,13 @@ impl EdgeConfigBuilder {
                 .rate_limit_exempt_paths
                 .unwrap_or_else(|| parse_csv(DEFAULT_RATE_LIMIT_EXEMPT_PATHS)),
             rate_limit_trusted_proxies: self.rate_limit_trusted_proxies.unwrap_or_default(),
+            ab_loopback_bind: self.ab_loopback_bind.unwrap_or(None),
+            ab_enabled: self
+                .ab_enabled
+                .unwrap_or_else(|| self.ab_loopback_bind.flatten().is_some()),
+            ab_manifest_cache_max: self
+                .ab_manifest_cache_max
+                .unwrap_or(DEFAULT_AB_MANIFEST_CACHE_MAX),
         })
     }
 }

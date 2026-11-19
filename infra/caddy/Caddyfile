@@ -280,10 +280,28 @@ openlen.com, www.openlen.com {
 	}
 	header @flac Content-Type "audio/flac"
 
+	# Edge A/B testing sidecar (Plan 3): when the current release has `ab.json`,
+	# Caddy delegates HTML/page requests over loopback to `openlen-edge` (Rust),
+	# which sets `Cache-Control: private, no-store` + `Vary: Cookie` so Cloudflare
+	# never caches or mixes variants. Sites without `ab.json` (~99%) stay on
+	# direct disk serving with `s-maxage=3600`.
+	@has_ab {
+		file {
+			root /var/www/openlen/{labels.2}/current
+			try_files /ab.json
+		}
+		not header_regexp Host ^lienzo-
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
+	}
+
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.jsx *.tsx *.ts *.json *.webmanifest *.txt *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
 		not header_regexp Host ^lienzo-
+		not file {
+			root /var/www/openlen/{labels.2}/current
+			try_files /ab.json
+		}
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -569,6 +587,14 @@ openlen.com, www.openlen.com {
 	# leftover traffic reaches try_files. (Forms survived a bare try_files
 	# because they POST to the apex absolute URL; member auth + analytics
 	# beacons are same-host and cannot, so they need this.)
+	handle @has_ab {
+		reverse_proxy 127.0.0.1:8085 {
+			header_up Host {http.request.host}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+			header_up X-OpenLen-Sub {labels.2}
+		}
+	}
+
 	handle {
 		root * /var/www/openlen/{labels.2}/current
 		try_files {path} {path}/index.html /index.html

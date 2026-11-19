@@ -79,6 +79,12 @@ pub fn install_exporter(bind: SocketAddr) -> Result<PrometheusHandle> {
             RATE_LIMIT_DURATION_BUCKETS,
         )
         .context("registering rate-limit decision duration buckets")?;
+    builder = builder
+        .set_buckets_for_metric(
+            Matcher::Full("openlen_edge_ab_decision_duration_seconds".to_owned()),
+            RATE_LIMIT_DURATION_BUCKETS,
+        )
+        .context("registering A/B decision duration buckets")?;
 
     // `build()` gives us both the recorder + the HTTP listener future; we
     // install the recorder globally + spawn the future ourselves so the
@@ -201,6 +207,21 @@ fn register_descriptions() {
     describe_counter!(
         "openlen_edge_rate_limit_pg_hits_total",
         "Decisions that reached the Postgres limiter (always 0 while the edge runs memory-only)."
+    );
+
+    // Edge A/B testing (Plan 3)
+    describe_counter!(
+        "openlen_edge_ab_assignments_total",
+        "A/B variant assignments served by the edge, labeled by variant (a/b) and source (cookie/hash/bot/override)."
+    );
+    describe_counter!(
+        "openlen_edge_ab_manifest_cache_total",
+        "Per-release ab.json manifest cache outcomes — hit_active / hit_none / miss_active / miss_none / invalid."
+    );
+    describe_histogram!(
+        "openlen_edge_ab_decision_duration_seconds",
+        Unit::Seconds,
+        "Time spent evaluating an A/B manifest and assigning a variant at the edge."
     );
 }
 

@@ -1,3 +1,4 @@
+pub mod ab;
 pub mod config;
 pub mod files;
 pub mod lookup;
@@ -8,6 +9,10 @@ pub mod routing;
 pub mod server;
 pub mod tls;
 
+pub use ab::{
+    evaluate_manifest, evaluate_request, hash_variant, is_blocked_internal_path, parse_manifest,
+    AbDecision, AbExperiment, AbManifest, AbManifestCache, AssignSource, Variant,
+};
 pub use config::{EdgeConfig, EdgeConfigBuilder};
 pub use lookup::{
     build_lookup_from_config, run_internal_api, serve_internal_api, DomainLookup, InternalApiState,
@@ -22,8 +27,8 @@ pub use routing::{
     extract_subdomain, is_openlen_zone, looks_like_public_hostname, run_http_redirect,
 };
 pub use server::{
-    bind, bind_with_lookup, bind_with_lookup_and_layers, router, router_with_layers, AppState,
-    BoundServer, SERVER_HEADER_VALUE, VERSION,
+    ab_loopback_router, bind, bind_with_lookup, bind_with_lookup_and_layers, router,
+    router_with_layers, run_ab_loopback, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION,
 };
 pub use tls::{
     build_dynamic_config, cert_dir_for, load_persisted_certs, load_wildcard, read_cert_pair,

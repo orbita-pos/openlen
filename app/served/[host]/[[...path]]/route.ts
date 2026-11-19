@@ -1,6 +1,14 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { contentTypeFor as folderContentType, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import {
+  abResponseHeaders,
+  evaluateAbManifest,
+  isBlockedInternalAbPath,
+  readReleaseAbManifest,
+  resolveVariantBFile,
+  type AbServeDecision,
+} from "@/lib/ab/serve";
 import { lookupDomain } from "@/lib/custom-domains";
 import { NOT_FOUND_HTML } from "@/lib/publish/not-found-page";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
@@ -203,20 +211,59 @@ async function serve(
     return notFound(includeBody);
   }
 
-  const releaseSegments = await currentSegments(
-    path.join(PUBLISH_ROOT, found.subdomain),
-  );
+  const pathParts = params.path ?? [];
+  const urlPath = pathParts.length === 0 ? "/" : `/${pathParts.join("/")}`;
+  if (isBlockedInternalAbPath(urlPath)) return notFound(includeBody);
+
+  const subDir = path.join(PUBLISH_ROOT, found.subdomain);
+  const releaseSegments = await currentSegments(subDir);
+  const releaseDir = path.join(subDir, ...releaseSegments);
   const resolved = resolveFile(
     found.subdomain,
-    params.path ?? [],
+    pathParts,
     releaseSegments,
   );
   if (!resolved) return notFound(includeBody);
 
   // Containment check — never let a constructed path escape the publish root.
   const rootNorm = path.normalize(PUBLISH_ROOT) + path.sep;
-  const absNorm = path.normalize(resolved.absolutePath);
+  let absNorm = path.normalize(resolved.absolutePath);
   if (!absNorm.startsWith(rootNorm)) return notFound(includeBody);
+
+  // Edge A/B testing fallback for custom domains served through Next.js.
+  let abDecision: AbServeDecision | null = null;
+  if (pathParts[0] !== "assets") {
+    const manifest = await readReleaseAbManifest(releaseDir);
+    if (manifest) {
+      const reqUrl = new URL(req.url);
+      const clientIp =
+        req.headers.get("cf-connecting-ip")?.split(",")[0]?.trim() ||
+        req.headers.get("x-real-ip")?.split(",")[0]?.trim() ||
+        "unknown";
+      const d = evaluateAbManifest(manifest, {
+        urlPath,
+        searchParams: reqUrl.searchParams,
+        cookieHeader: req.headers.get("cookie"),
+        userAgent: req.headers.get("user-agent"),
+        acceptLanguage: req.headers.get("accept-language"),
+        clientIp,
+        secureCookie: reqUrl.protocol === "https:",
+      });
+      if (d) {
+        if (d.variantBPath) {
+          const bFile = await resolveVariantBFile(releaseDir, d.variantBPath, d.isPageRoute);
+          if (bFile && bFile.startsWith(rootNorm)) {
+            absNorm = bFile;
+            abDecision = d;
+          } else if (d.isPageRoute) {
+            abDecision = { ...d, variant: "a", variantBPath: null };
+          }
+        } else {
+          abDecision = d;
+        }
+      }
+    }
+  }
 
   let body: ArrayBuffer | null = null;
   let size: number;
@@ -242,6 +289,7 @@ async function serve(
     "Content-Length": String(size),
     "Cache-Control": resolved.cacheControl,
     ...SECURITY_HEADERS,
+    ...(abDecision ? abResponseHeaders(abDecision, size) : {}),
   };
 
   return new Response(includeBody ? body : null, { status: 200, headers });
