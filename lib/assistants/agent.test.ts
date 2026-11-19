@@ -96,6 +96,7 @@ describe("assistantTools over Len's real catalog", () => {
     `);
     expect(leftOutOf(null)).toMatchInlineSnapshot(`
       [
+        "MultiEdit",
         "toggle_module",
         "edit_image",
         "publish",
@@ -152,6 +153,7 @@ describe("assistantTools over Len's real catalog", () => {
     `);
     expect(leftOutOf(APP)).toMatchInlineSnapshot(`
       [
+        "MultiEdit",
         "toggle_module",
         "edit_image",
         "publish",

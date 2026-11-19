@@ -13,7 +13,7 @@ const porNombre = (n: string) => DECLARACIONES_DE_FICHEROS.find((d) => d.name ==
 
 describe("las cinco herramientas de ficheros, como Claude Code", () => {
   it("se llaman como en Claude Code", () => {
-    expect(DECLARACIONES_DE_FICHEROS.map((d) => d.name)).toEqual(["Read", "Edit", "Write", "Grep", "Glob"]);
+    expect(DECLARACIONES_DE_FICHEROS.map((d) => d.name)).toEqual(["Read", "Edit", "MultiEdit", "Write", "Grep", "Glob"]);
   });
 
   it("Read: file_path obligatorio, offset, limit y (26/10, para un PDF adjunto) pages, como Claude Code; y (05/11) el region de Kimi", () => {
@@ -36,6 +36,15 @@ describe("las cinco herramientas de ficheros, como Claude Code", () => {
     expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "old_string", "new_string", "replace_all"]);
     expect(d.parameters.required).toEqual(["file_path", "old_string", "new_string"]);
     expect(d.parameters.properties.replace_all!.type).toBe("BOOLEAN");
+  });
+
+  it("MultiEdit: file_path y edits (array de old_string, new_string, replace_all)", () => {
+    const d = porNombre("MultiEdit");
+    expect(Object.keys(d.parameters.properties)).toEqual(["file_path", "edits"]);
+    expect(d.parameters.required).toEqual(["file_path", "edits"]);
+    expect(d.parameters.properties.edits!.type).toBe("ARRAY");
+    expect(d.description).toContain("Read the file in this conversation first");
+    expect(d.description).toContain("atomically");
   });
 
   it("Write: file_path y content", () => {

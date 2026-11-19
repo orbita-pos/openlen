@@ -5,6 +5,7 @@
       "leer_estado": "Lettura del tuo progetto",
       "Read": "Lettura della pagina",
       "Edit": "Modifica della pagina",
+      "MultiEdit": "Modifica della pagina",
       "Write": "Scrittura della pagina",
       "Grep": "Ricerca nel tuo sito",
       "Glob": "Elenco delle tue pagine",
@@ -80,6 +81,7 @@
     "toolApp": {
       "Read": "Lettura del codice",
       "Edit": "Modifica del codice",
+      "MultiEdit": "Modifica del codice",
       "Write": "Scrittura del codice",
       "Glob": "Elenco dei file",
       "view_page": "Verifica dell'app",
@@ -167,6 +169,7 @@
     "toolArtifact": {
       "Read": "Lettura di un elaborato",
       "Edit": "Modifica di un elaborato",
+      "MultiEdit": "Modifica di un elaborato",
       "Write": "Scrittura di un elaborato"
     }
   },

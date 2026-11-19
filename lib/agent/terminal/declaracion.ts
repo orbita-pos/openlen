@@ -280,7 +280,7 @@ export function terminalOnly(mode: AgentMode, env: Readonly<Record<string, strin
 }
 
 /** Lo que quita Dynamis, además de Grep y Glob. */
-export const SUSTITUIDAS_EN_SOLO_TERMINAL: readonly string[] = ["Read", "Edit", "Write"];
+export const SUSTITUIDAS_EN_SOLO_TERMINAL: readonly string[] = ["Read", "Edit", "MultiEdit", "Write"];
 
 /**
  * Las frases del prompt, de `bash` y de /AGENTS.md que nombran Read, Edit o

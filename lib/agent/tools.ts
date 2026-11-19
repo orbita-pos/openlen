@@ -95,6 +95,7 @@ import {
   toolEdit,
   toolGlob,
   toolGrep,
+  toolMultiEdit,
   toolRead,
   toolWrite,
 } from "@/lib/agent/herramientas-de-ficheros";
@@ -1346,6 +1347,8 @@ export interface AgentSession {
    *  Code. Sin leer no se edita, y «cambió desde que lo leíste» se decide
    *  contra esto. Empieza vacío en cada turno (plans/len-2/ficheros-plan.md, B3). */
   leidos?: Leidos;
+  /** Plan Ruta 98 % (P2): just-in-time path rule ids already injected this turn (at most once each). */
+  appliedPathRules?: Set<string>;
   /** LEN 2.0 · las rutas escritas este turno, la más reciente primero: el
    *  «orden por fecha» de Grep y Glob (decisión B6). */
   escritos?: string[];
@@ -3193,6 +3196,7 @@ async function ejecutarHerramienta(
     const out = await {
       Read: toolRead,
       Edit: toolEdit,
+      MultiEdit: toolMultiEdit,
       Write: toolWrite,
       Grep: toolGrep,
       Glob: toolGlob,

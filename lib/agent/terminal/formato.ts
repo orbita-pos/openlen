@@ -33,19 +33,33 @@ export function formatFileSize(n: number): string {
   return `${(mb / 1024).toFixed(1).replace(/\.0$/, "")}GB`;
 }
 
-/** La vista previa: 2.000 caracteres, cortados en el último salto de línea si cae pasada la mitad. */
+/** La vista previa: hasta 2.000 caracteres al principio y 1.200 al final cuando se corta (Head + Tail). */
 const VISTA = 2000;
+const HEAD_CHARS = 1200;
+const TAIL_CHARS = 1200;
 
-/** El bloque que recibe el modelo cuando la salida se guardó entera en `path`. */
+/** El bloque que recibe el modelo cuando la salida se guardó entera en `path`.
+ *  Conserva principio Y final (Head + Tail) para que el error/resumen final de builds y tests
+ *  quede visible sin gastar una vuelta extra leyendo `/tmp/tool-results/`. */
 export function persistedOutput(o: { readonly path: string; readonly text: string }): string {
   const masDe = o.text.length > VISTA;
-  let vista = o.text;
-  if (masDe) {
-    const corte = o.text.slice(0, VISTA).lastIndexOf("\n");
-    vista = o.text.slice(0, corte > VISTA * 0.5 ? corte : VISTA);
+  if (!masDe) {
+    return (
+      `<persisted-output>\nOutput too large (${formatFileSize(o.text.length)}). Full output saved to: ${o.path}\n\n` +
+      `Preview (first ${formatFileSize(VISTA)}):\n${o.text}\n</persisted-output>`
+    );
   }
+  const corteHead = o.text.slice(0, HEAD_CHARS).lastIndexOf("\n");
+  const head = o.text.slice(0, corteHead > HEAD_CHARS * 0.5 ? corteHead : HEAD_CHARS);
+  const tailStartMin = Math.max(head.length, o.text.length - TAIL_CHARS);
+  const corteTail = o.text.indexOf("\n", tailStartMin);
+  const tail =
+    corteTail !== -1 && corteTail < o.text.length - 1 && o.text.length - (corteTail + 1) >= TAIL_CHARS * 0.4
+      ? o.text.slice(corteTail + 1)
+      : o.text.slice(tailStartMin);
+  const omitted = Math.max(0, o.text.length - head.length - tail.length);
   return (
     `<persisted-output>\nOutput too large (${formatFileSize(o.text.length)}). Full output saved to: ${o.path}\n\n` +
-    `Preview (first ${formatFileSize(VISTA)}):\n${vista}${masDe ? "\n...\n" : "\n"}</persisted-output>`
+    `Preview (head + tail, omitted ${formatFileSize(omitted)}):\n${head}\n...\n${tail}\n</persisted-output>`
   );
 }

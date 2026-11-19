@@ -67,7 +67,7 @@ export function createAbrirEnElCodigo(): AbrirEnElCodigo {
 export const abrirEnElCodigo = createAbrirEnElCodigo();
 
 /** Las herramientas cuya tarjeta empieza por la ruta del fichero (`herramientas-de-ficheros.ts`). */
-const CON_RUTA = new Set(["Read", "Edit", "Write"]);
+const CON_RUTA = new Set(["Read", "Edit", "MultiEdit", "Write"]);
 
 /**
  * La ruta de una tarjeta, o null. El resumen EMPIEZA por la ruta relativa:

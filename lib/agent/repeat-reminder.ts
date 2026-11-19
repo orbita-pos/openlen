@@ -93,7 +93,7 @@ export interface RepeatReminder {
   reset(): void;
 }
 
-const MUTATING_TOOLS = new Set(["Edit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app"]);
+const MUTATING_TOOLS = new Set(["Edit", "MultiEdit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app"]);
 
 function readScopeKey(args: Record<string, unknown> | undefined): string | null {
   if (!args || typeof args.file_path !== "string" || args.file_path.trim() === "") return null;

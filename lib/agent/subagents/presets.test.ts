@@ -11,7 +11,7 @@ import {
 } from "./presets";
 
 const all = [
-  "Read", "Edit", "Write", "Grep", "Glob", "bash", "view_page", "use_page", "skill", "web_search", "publish", "ask_user_question",
+  "Read", "Edit", "MultiEdit", "Write", "Grep", "Glob", "bash", "view_page", "use_page", "skill", "web_search", "publish", "ask_user_question",
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
   "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
@@ -45,12 +45,12 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
   });
 
   it("general-purpose writes and loads skills", () => {
-    expect(names("general-purpose")).toEqual(expect.arrayContaining(["Edit", "Write", "bash", "skill", "edit_image"]));
+    expect(names("general-purpose")).toEqual(expect.arrayContaining(["Edit", "MultiEdit", "Write", "bash", "skill", "edit_image"]));
   });
 
   it("Explore and Plan read, use the terminal and load skills, but write nothing", () => {
     for (const p of ["Explore", "Plan"] as const) {
-      for (const w of ["Edit", "Write", "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact"]) expect(names(p)).not.toContain(w);
+      for (const w of ["Edit", "MultiEdit", "Write", "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact"]) expect(names(p)).not.toContain(w);
       expect(names(p)).toEqual(expect.arrayContaining(["Read", "Grep", "bash", "skill", "view_page", "list_artifacts"]));
     }
   });

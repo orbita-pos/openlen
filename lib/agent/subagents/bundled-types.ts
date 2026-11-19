@@ -41,7 +41,7 @@ You don't deliver it: Len does. Len gets only your final message: give him the f
 const LEN_REVIEW = `---
 name: len-review
 description: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files.
-disallowedTools: Write, Edit, edit_image, toggle_module, convert_to_app, draft_reply
+disallowedTools: Write, Edit, MultiEdit, edit_image, toggle_module, convert_to_app, draft_reply
 ---
 
 Review the target changes or files Len asks you to audit. You are strictly read-only: do not modify project files.

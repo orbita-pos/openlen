@@ -51,6 +51,7 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   view_page: "reading",
   buscar_en_pagina: "reading",
   Edit: "editing",
+  MultiEdit: "editing",
   Write: "editing",
   editar_pagina: "editing",
   editar_texto: "editing",

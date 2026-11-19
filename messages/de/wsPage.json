@@ -5,6 +5,7 @@
       "leer_estado": "Projekt wird gelesen",
       "Read": "Seite wird gelesen",
       "Edit": "Seite wird bearbeitet",
+      "MultiEdit": "Seite wird bearbeitet",
       "Write": "Seite wird geschrieben",
       "Grep": "Website wird durchsucht",
       "Glob": "Seiten werden aufgelistet",
@@ -80,6 +81,7 @@
     "toolApp": {
       "Read": "Code wird gelesen",
       "Edit": "Code wird bearbeitet",
+      "MultiEdit": "Code wird bearbeitet",
       "Write": "Code wird geschrieben",
       "Glob": "Dateien werden aufgelistet",
       "view_page": "App wird geprüft",
@@ -167,6 +169,7 @@
     "toolArtifact": {
       "Read": "Liest ein Ergebnis",
       "Edit": "Bearbeitet ein Ergebnis",
+      "MultiEdit": "Bearbeitet ein Ergebnis",
       "Write": "Schreibt ein Ergebnis"
     }
   },

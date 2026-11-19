@@ -143,6 +143,7 @@ export const KNOWN_TOOLS = new Set([
   // etiqueta llana en su idioma.
   "Read",
   "Edit",
+  "MultiEdit",
   "Write",
   "Grep",
   "Glob",
