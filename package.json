@@ -118,6 +118,7 @@
     "len-email:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-email-migrate.ts",
     "scheduled-tasks:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/scheduled-tasks-migrate.ts",
     "len-watch:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/len-watch-migrate.ts",
+    "ab-testing:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/ab-testing-migrate.ts",
     "delivered-files:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/delivered-files-migrate.ts",
     "subagents:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/subagents-migrate.ts",
     "tools:migrate": "tsx --env-file=.env.local --tsconfig tsconfig.eval.json scripts/tools-migrate.ts",
