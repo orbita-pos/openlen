@@ -7,12 +7,15 @@
  * De `packages/goal/goal/src/index.ts` salen las reglas y los errores del
  * dominio, literales; de `tool-goal/src/index.ts`, la política (`guidance`) y la
  * salida de las herramientas; de `goal-round-driver/src/prompt.ts`, el mensaje de
- * ronda, y de `tool-goal/src/wrapup.ts`, los dos cierres. Tres adaptaciones, y
+ * ronda, y de `tool-goal/src/wrapup.ts`, los dos cierres. Cuatro adaptaciones, y
  * nada más: «project» donde dice «workspace» (aquí el trabajo es el proyecto);
  * «After a service restart» donde dice «After session resume or fork» (Len no
  * tiene sesiones bifurcadas: lo que desarma un encargo es reiniciar el servicio);
- * y «(pages, files, or other artifacts)» donde dice «(files, commits, or other
- * artifacts)» (Len no tiene commits).
+ * «(pages, files, or other artifacts)» donde dice «(files, commits, or other
+ * artifacts)» (Len no tiene commits); y, a partir de la ronda 2, dos frases de
+ * disciplina que NO son de DeepSeek (`LATER_ROUND_DISCIPLINE`: lo que ninguna
+ * ronda comprobó sigue abierto hasta que una herramienta lo cierre, y un fallo
+ * que se repite pide otra estrategia).
  *
  * Lo DURADERO (fase, revisión, rondas) viaja como la foto del modo plan: en la
  * transcripción de cada fila, y se pliega de la última. La ACTIVACIÓN es del
