@@ -47,7 +47,7 @@ export function suggestConnectorsDeclaration(entries: readonly DirectoryEntry[])
 export function authenticateDescription(
   server: string,
   host: string,
-  issuerHost: string,
+  issuerHost: string | null,
   reason: SignInReason,
   scope: string | null = null,
 ): string {
@@ -55,7 +55,7 @@ export function authenticateDescription(
     return `The "${server}" connector is installed, but its sign-in has stopped working, so its tools are unavailable. Call this tool only when the user's request needs this connector (even if they didn't name it explicitly). It tries the connection again. If the connector still needs a sign-in, the call fails, and the person is shown a "Connect" button to sign in again. Then tell them in one short sentence that ${server} needs them to sign in again, carry on with whatever does not need it, and do not call this tool again until they send another message. Do not ask the user for authorization codes, tokens, or URLs.`;
   }
   const why = reason === "scope" ? `needs additional permissions (scope: "${cleanScope(scope) ?? ""}")` : "requires authentication";
-  return `The "${server}" MCP server (streamable-http at ${host}) is installed but ${why}. Call this tool when the user's request needs it: the person is shown a "Connect" button to sign in at ${issuerHost}. Once they finish in their browser, the server's real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.`;
+  return `The "${server}" MCP server (streamable-http at ${host}) is installed but ${why}. Call this tool when the user's request needs it: the person is shown a "Connect" button to sign in${issuerHost ? ` at ${issuerHost}` : ""}. Once they finish in their browser, the server's real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.`;
 }
 
 const SERVER_ARG = { type: "string", description: "One of the person's MCP server names, as listed in the turn's context." };

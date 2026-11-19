@@ -536,6 +536,26 @@ describe("mcp__<server>__authenticate", () => {
     });
   });
 
+  // OA5: before the authorization server is known, the card and the tool say nothing about where the sign-in page is —
+  // they never name the MCP server's host as if it were.
+  it("🔴 without a known authorization server the card carries a null host and the text names none", async () => {
+    const { d } = setup({ cal: oauthEntry("https://calendar.example.com/mcp") }, ["cal"], [{ serverName: "cal", status: "needs-auth", authReason: "first", authIssuer: null, listedAt: null }]);
+    const turn = await connectorsForTurn("p1", d);
+    expect(turn.declarations[0]!.description).toBe(
+      'The "cal" MCP server (streamable-http at calendar.example.com) is installed but requires authentication. Call this tool when the user\'s request needs it: the person is shown a "Connect" button to sign in. Once they finish in their browser, the server\'s real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.',
+    );
+    const deps: CallDeps = {
+      resolveCredentials: async () => new Map(),
+      open: async () => connection().c,
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      mount: async () => null,
+      modelTakesImages: true,
+    };
+    const attended = await new TurnConnections("p1", turn, deps, { attended: true }).call("mcp__cal__authenticate", {});
+    expect(attended.mcpApproval?.oauth).toEqual({ issuerHost: null, reason: "first" });
+  });
+
   it("🔴 invalid_grant mid-turn returns the lapsed text and marks the server needs-auth once (Review Focus 2)", async () => {
     const { d } = setup({ cal: oauthEntry() }, ["cal"], [{ serverName: "cal", tools: [tool("cal", "list_events")], status: "connected" }]);
     const turn = await connectorsForTurn("p1", d);
