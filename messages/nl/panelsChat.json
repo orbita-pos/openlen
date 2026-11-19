@@ -746,6 +746,8 @@
       "accessory": "Accessoire",
       "surprise": "Verras me",
       "freeColor": "Andere kleur",
+      "accessoryColor": "Kleur van accessoire",
+      "defaultColor": "Origineel",
       "option": {
         "shape": {
           "drop": "Druppel",
@@ -755,19 +757,36 @@
           "ears": "Met oren",
           "heart": "Hart",
           "flower": "Bloem",
-          "triangle": "Driehoek"
+          "triangle": "Driehoek",
+          "star": "Ster",
+          "cloud": "Wolk",
+          "diamond": "Diamant",
+          "teardrop": "Waterdruppel",
+          "clover": "Klaver",
+          "cat": "Katje",
+          "bean": "Pinda"
         },
         "eyes": {
           "oval": "Ovaal",
           "round": "Rond",
           "dot": "Stipjes",
           "smile": "Lachend",
-          "sleepy": "Slaperig"
+          "sleepy": "Slaperig",
+          "wink": "Knipoog",
+          "sparkle": "Sprankelend",
+          "cheerful": "Vrolijk",
+          "calm": "Kalm",
+          "lash": "Met wimpers"
         },
         "eyewear": {
           "none": "Geen bril",
           "round": "Ronde bril",
-          "shades": "Zonnebril"
+          "shades": "Zonnebril",
+          "square": "Vierkante bril",
+          "heart": "Hartjesbril",
+          "star": "Sterrenbril",
+          "visor": "Vizier",
+          "catEye": "Cat-eye bril"
         },
         "accessory": {
           "none": "Geen accessoire",
@@ -776,7 +795,16 @@
           "bow": "Strik",
           "crown": "Kroon",
           "hat": "Hoed",
-          "headphones": "Koptelefoon"
+          "headphones": "Koptelefoon",
+          "halo": "Aureool",
+          "cap": "Pet",
+          "wizard": "Tovenaarshoed",
+          "flower": "Bloemetje",
+          "sprout": "Spruitje",
+          "horns": "Hoorntjes",
+          "chef": "Koksmuts",
+          "antenna": "Antenne",
+          "party": "Feesthoedje"
         }
       },
       "colors": {

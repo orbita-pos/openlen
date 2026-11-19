@@ -746,6 +746,8 @@
       "accessory": "액세서리",
       "surprise": "랜덤으로",
       "freeColor": "다른 색",
+      "accessoryColor": "액세서리 색",
+      "defaultColor": "기본",
       "option": {
         "shape": {
           "drop": "물방울",
@@ -755,19 +757,36 @@
           "ears": "귀 달린 모양",
           "heart": "하트",
           "flower": "꽃",
-          "triangle": "삼각형"
+          "triangle": "삼각형",
+          "star": "별",
+          "cloud": "구름",
+          "diamond": "다이아몬드",
+          "teardrop": "물방울 꼭지",
+          "clover": "클로버",
+          "cat": "고양이",
+          "bean": "땅콩"
         },
         "eyes": {
           "oval": "타원형",
           "round": "동그란 눈",
           "dot": "점",
           "smile": "웃는 눈",
-          "sleepy": "졸린 눈"
+          "sleepy": "졸린 눈",
+          "wink": "윙크",
+          "sparkle": "반짝이는 눈",
+          "cheerful": "신난 눈",
+          "calm": "차분한 눈",
+          "lash": "속눈썹"
         },
         "eyewear": {
           "none": "안경 없음",
           "round": "동그란 안경",
-          "shades": "선글라스"
+          "shades": "선글라스",
+          "square": "네모 안경",
+          "heart": "하트 안경",
+          "star": "별 안경",
+          "visor": "바이저",
+          "catEye": "캣아이 안경"
         },
         "accessory": {
           "none": "액세서리 없음",
@@ -776,7 +795,16 @@
           "bow": "리본",
           "crown": "왕관",
           "hat": "모자",
-          "headphones": "헤드폰"
+          "headphones": "헤드폰",
+          "halo": "천사 링",
+          "cap": "캡모자",
+          "wizard": "마법사 모자",
+          "flower": "작은 꽃",
+          "sprout": "새싹",
+          "horns": "작은 뿔",
+          "chef": "요리사 모자",
+          "antenna": "안테나",
+          "party": "파티 모자"
         }
       },
       "colors": {

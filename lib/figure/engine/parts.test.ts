@@ -23,14 +23,14 @@ describe("partsFor", () => {
     expect(of(partsFor(look({ eyes: "oval" })), "eyeHighlight")).toHaveLength(2);
   });
 
-  it("draws the five eyes differently", () => {
-    expect(new Set(FIGURE_EYES.map((eyes) => json(of(partsFor(look({ eyes })), "eye")))).size).toBe(5);
+  it("draws every eye style differently", () => {
+    expect(new Set(FIGURE_EYES.map((eyes) => json([...of(partsFor(look({ eyes })), "eye"), ...of(partsFor(look({ eyes })), "eyeHighlight")]))).size).toBe(FIGURE_EYES.length);
   });
 
-  it("gives only the eared shape two furry ears, mirrored", () => {
+  it("gives only the multi-piece shapes two furry side/ear pieces, mirrored", () => {
     for (const shape of FIGURE_SHAPES) {
       const ears = of(partsFor(look({ shape })), "ear");
-      if (shape !== "ears") expect(ears, shape).toHaveLength(0);
+      if (!["ears", "cat"].includes(shape)) expect(ears, shape).toHaveLength(0);
       else {
         expect(ears).toHaveLength(2);
         expect(ears.every((e) => e.kind === "fur")).toBe(true);
@@ -62,12 +62,13 @@ describe("partsFor", () => {
 
   it("gives every accessory its own pieces, colored only by accessoryColor", () => {
     expect(of(partsFor(look({ accessory: "none" })), "accessory")).toHaveLength(0);
-    const sets = FIGURE_ACCESSORIES.filter((a) => a !== "none").map((accessory) => {
+    const nonEmpty = FIGURE_ACCESSORIES.filter((a) => a !== "none");
+    const sets = nonEmpty.map((accessory) => {
       const pieces = of(partsFor(look({ accessory })), "accessory");
       expect(pieces.length, accessory).toBeGreaterThanOrEqual(1);
       return json(pieces);
     });
-    expect(new Set(sets).size).toBe(6);
+    expect(new Set(sets).size).toBe(nonEmpty.length);
 
     const plain = partsFor(look({ accessory: "beret" }));
     const tinted = partsFor(look({ accessory: "beret", accessoryColor: "#0000ff" }));
@@ -84,9 +85,10 @@ describe("partsFor", () => {
       }
   });
 
-  it("is symmetric left to right when it wears nothing", () => {
+  it("is symmetric left to right when it wears nothing (except wink)", () => {
     for (const shape of FIGURE_SHAPES)
-      for (const eyes of FIGURE_EYES)
+      for (const eyes of FIGURE_EYES) {
+        if (eyes === "wink") continue;
         for (const eyewear of FIGURE_EYEWEAR) {
           // The highlight is where the light comes from: on the same side of both eyes, on purpose.
           const parts = partsFor(look({ shape, eyes, eyewear })).filter((p) => p.role !== "eyeHighlight");
@@ -96,6 +98,7 @@ describe("partsFor", () => {
             expect(mirror, `${shape}/${eyes}/${eyewear} ${part.role}`).toBeDefined();
           }
         }
+      }
   });
 
   it("rests the accessory on that shape's head", () => {
@@ -138,13 +141,13 @@ describe("reachFor", () => {
 
 describe("shadowOf", () => {
   it("is where a hat-like accessory sits, and nothing for what casts none", () => {
-    for (const accessory of ["beret", "beanie", "crown", "hat"] as const) {
+    for (const accessory of ["beret", "beanie", "crown", "hat", "cap", "wizard", "chef", "party"] as const) {
       const shadow = shadowOf(look({ accessory }));
       expect(shadow, accessory).not.toBeNull();
       expect(shadow!.center[1]).toBeGreaterThan(anchorsFor(look({ accessory })).top[1] - 0.35);
       expect(Math.min(...shadow!.size)).toBeGreaterThan(0);
     }
-    for (const accessory of ["none", "bow", "headphones"] as const) expect(shadowOf(look({ accessory }))).toBeNull();
+    for (const accessory of ["none", "bow", "headphones", "halo", "flower", "sprout", "horns", "antenna"] as const) expect(shadowOf(look({ accessory }))).toBeNull();
     expect(shadowOf(undefined)).toBeNull();
   });
 });

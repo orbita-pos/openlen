@@ -5,7 +5,15 @@ import { flatFigureSvg } from "../flat";
 import { createFigure, type Figure, type FigureActivity } from "../engine/index";
 
 const ACTIVITIES: FigureActivity[] = ["ready", "listening", "thinking", "working", "talking", "asleep", "error"];
-const LABELS: Record<string, string> = { shape: "Forma", eyes: "Ojos", eyewear: "Gafas", accessory: "Accesorio", activity: "Actividad", color: "Color" };
+const LABELS: Record<string, string> = {
+  shape: "Forma",
+  eyes: "Ojos",
+  eyewear: "Gafas",
+  accessory: "Accesorio",
+  activity: "Actividad",
+  color: "Color",
+  accessoryColor: "Color accesorio",
+};
 const SMALL = [96, 72, 44];
 
 let look: FigureLook = { ...DEFAULT_LOOK };
@@ -82,7 +90,7 @@ function options(key: string, values: readonly string[], pick: (value: string) =
     const button = document.createElement("button");
     button.dataset.key = key;
     button.dataset.value = value;
-    if (key === "color") {
+    if (key === "color" || key === "accessoryColor") {
       button.className = "swatch";
       button.style.background = value;
       button.title = value;
@@ -99,12 +107,22 @@ function options(key: string, values: readonly string[], pick: (value: string) =
 
 for (const category of ["shape", "eyes", "eyewear", "accessory"] as FigureCategory[]) options(category, offered(category), (value) => (look = { ...look, [category]: value } as FigureLook));
 options("color", FIGURE_COLORS, (value) => (look = { ...look, color: value }));
+options("accessoryColor", FIGURE_COLORS, (value) => (look = { ...look, accessoryColor: value }));
 options("activity", ACTIVITIES, (value) => {
   activity = value as FigureActivity;
   for (const figure of figures) figure.setActivity(activity);
 });
 $("color").oninput = (event) => {
   look = { ...look, color: (event.target as HTMLInputElement).value };
+  refresh();
+};
+$("accessoryColor").oninput = (event) => {
+  look = { ...look, accessoryColor: (event.target as HTMLInputElement).value };
+  refresh();
+};
+$("clearAccessoryColor").onclick = () => {
+  const { accessoryColor: _, ...rest } = look;
+  look = rest;
   refresh();
 };
 $("surprise").onclick = () => {
@@ -126,8 +144,21 @@ refresh();
 
 // The contact sheet: every shape as the engine captures it, bare and dressed. What gets sent to Jesús.
 const DRESSED: Partial<FigureLook>[] = [
-  { accessory: "beret" }, { accessory: "headphones", eyes: "smile" }, { accessory: "crown", eyewear: "shades" }, { accessory: "hat", eyewear: "round" },
-  { accessory: "bow", eyes: "round" }, { accessory: "beanie", eyes: "sleepy" }, { accessory: "none", eyes: "dot", eyewear: "round" }, { accessory: "beret", eyes: "smile" },
+  { accessory: "chef", eyes: "wink" },
+  { accessory: "headphones", eyes: "cheerful", accessoryColor: "#ff5fa8" },
+  { accessory: "crown", eyewear: "shades" },
+  { accessory: "antenna", eyes: "sparkle" },
+  { accessory: "bow", eyes: "lash", accessoryColor: "#ff4d5e" },
+  { accessory: "party", eyes: "sparkle" },
+  { accessory: "flower", eyes: "dot", eyewear: "round" },
+  { accessory: "horns", eyewear: "catEye", accessoryColor: "#ff4d5e" },
+  { accessory: "halo", eyewear: "star" },
+  { accessory: "sprout", eyes: "calm" },
+  { accessory: "wizard", eyewear: "square", accessoryColor: "#9b6cff" },
+  { accessory: "cap", eyewear: "visor", accessoryColor: "#ff7a45" },
+  { accessory: "bow", eyewear: "heart", accessoryColor: "#ffc21a" },
+  { accessory: "beanie", eyewear: "square", eyes: "sparkle", accessoryColor: "#19c3b1" },
+  { accessory: "beret", eyes: "wink", accessoryColor: "#ff5fa8" },
 ];
 function sheet(): void {
   const canvas = document.createElement("canvas");
@@ -136,12 +167,12 @@ function sheet(): void {
   const figure = createFigure(canvas, look);
   const out = $("sheet") as HTMLCanvasElement;
   const SIZE = 160;
-  out.width = SIZE * 8;
+  out.width = SIZE * FIGURE_SHAPES.length;
   out.height = SIZE * 2;
   const pen = out.getContext("2d")!;
   pen.clearRect(0, 0, out.width, out.height);
   FIGURE_SHAPES.forEach((shape, i) => {
-    for (const [row, extra] of [[0, {}], [1, DRESSED[i]!]] as const) {
+    for (const [row, extra] of [[0, {}], [1, DRESSED[i % DRESSED.length]!]] as const) {
       figure?.setLook({ ...look, eyewear: "none", accessory: "none", eyes: "oval", shape, color: FIGURE_COLORS[i % FIGURE_COLORS.length]!, ...extra });
       const image = figure?.capture(SIZE);
       if (image) pen.putImageData(image, i * SIZE, row * SIZE);

@@ -22,10 +22,10 @@ const PARTS: readonly FigureCategory[] = ["shape", "eyes", "eyewear", "accessory
  *  The catalog can grow without Len knowing; teaching him a new entry is adding it here, once, knowingly. An id the
  *  catalog later retires still draws (lib/figure/look.ts), and one it no longer knows is dropped when he names it. */
 export const SUGGESTABLE: Readonly<Record<FigureCategory, readonly string[]>> = Object.freeze({
-  shape: Object.freeze(["drop", "round", "capsule", "cube", "ears", "heart", "flower", "triangle"]),
-  eyes: Object.freeze(["oval", "round", "dot", "smile", "sleepy"]),
-  eyewear: Object.freeze(["none", "round", "shades"]),
-  accessory: Object.freeze(["none", "beret", "beanie", "bow", "crown", "hat", "headphones"]),
+  shape: Object.freeze(["drop", "round", "capsule", "cube", "ears", "heart", "flower", "triangle", "star", "cloud", "diamond", "teardrop", "clover", "cat", "bean"]),
+  eyes: Object.freeze(["oval", "round", "dot", "smile", "sleepy", "wink", "sparkle", "cheerful", "calm", "lash"]),
+  eyewear: Object.freeze(["none", "round", "shades", "square", "heart", "star", "visor", "catEye"]),
+  accessory: Object.freeze(["none", "beret", "beanie", "bow", "crown", "hat", "headphones", "halo", "cap", "wizard", "flower", "sprout", "horns", "chef", "antenna", "party"]),
 });
 const part = (category: FigureCategory, description: string) => ({ type: "STRING", enum: [...SUGGESTABLE[category]], description });
 
@@ -34,17 +34,70 @@ const part = (category: FigureCategory, description: string) => ({ type: "STRING
  *  guide and Claude Code's own tool descriptions do, each choice says what it is. Kept with SUGGESTABLE, for the same
  *  reason: the cached prefix of his tools moves only when someone teaches him on purpose. */
 const WORDS: Readonly<Record<FigureCategory, Readonly<Record<string, string>>>> = {
-  shape: { drop: "a drop", round: "a ball", capsule: "a capsule", cube: "a soft cube", ears: "a ball with two round ears", heart: "a heart", flower: "a flower", triangle: "a soft triangle" },
-  eyes: { oval: "oval eyes", round: "round eyes", dot: "two small dot eyes", smile: "smiling eyes", sleepy: "sleepy, half-closed eyes" },
-  eyewear: { none: "no glasses", round: "round glasses", shades: "dark sunglasses" },
-  accessory: { none: "nothing on its head", beret: "a beret", beanie: "a knit beanie with a pompom", bow: "a bow", crown: "a gold crown", hat: "a short top hat with a brim", headphones: "headphones" },
+  shape: {
+    drop: "a drop",
+    round: "a ball",
+    capsule: "a capsule",
+    cube: "a soft cube",
+    ears: "a ball with two round ears",
+    heart: "a heart",
+    flower: "a flower",
+    triangle: "a soft triangle",
+    star: "a five-pointed star",
+    cloud: "a fluffy cloud",
+    diamond: "a soft diamond",
+    teardrop: "a pointed water droplet",
+    clover: "a four-leaf clover",
+    cat: "a kitty head with pointed ears",
+    bean: "a peanut shape",
+  },
+  eyes: {
+    oval: "oval eyes",
+    round: "round eyes",
+    dot: "two small dot eyes",
+    smile: "smiling eyes",
+    sleepy: "sleepy, half-closed eyes",
+    wink: "winking eyes",
+    sparkle: "sparkling eyes",
+    cheerful: "cheerful > < eyes",
+    calm: "calm horizontal eyes",
+    lash: "eyes with eyelashes",
+  },
+  eyewear: {
+    none: "no glasses",
+    round: "round glasses",
+    shades: "dark sunglasses",
+    square: "square glasses",
+    heart: "heart-shaped glasses",
+    star: "star-shaped glasses",
+    visor: "a futuristic cyber visor",
+    catEye: "cat-eye sunglasses",
+  },
+  accessory: {
+    none: "nothing on its head",
+    beret: "a beret",
+    beanie: "a knit beanie with a pompom",
+    bow: "a bow",
+    crown: "a gold crown",
+    hat: "a short top hat with a brim",
+    headphones: "headphones",
+    halo: "a floating gold halo",
+    cap: "a baseball cap",
+    wizard: "a pointed wizard hat",
+    flower: "a small flower on its head",
+    sprout: "a green leaf sprout",
+    horns: "two little horns",
+    chef: "a white chef's hat",
+    antenna: "a robot antenna",
+    party: "a party cone hat with a pompom",
+  },
 };
 /** In his declaration, only the choices whose id doesn't say what they look like. */
 const HINTS: Readonly<Partial<Record<FigureCategory, Readonly<Record<string, string>>>>> = {
-  shape: { round: "a ball", ears: "a ball with two round ears" },
-  eyes: { dot: "two small dots", smile: "closed, smiling arcs", sleepy: "half-closed" },
-  eyewear: { round: "round glasses", shades: "dark sunglasses" },
-  accessory: { beanie: "a knit cap with a pompom", hat: "a short top hat with a brim" },
+  shape: { round: "a ball", ears: "a ball with two round ears", teardrop: "a pointed water droplet", cat: "pointed kitty ears", bean: "a peanut shape" },
+  eyes: { dot: "two small dots", smile: "closed, smiling arcs", sleepy: "half-closed", wink: "one eye winking", sparkle: "big with bright glints", cheerful: "happy > < arcs", calm: "peaceful horizontal lines", lash: "with outer eyelashes" },
+  eyewear: { round: "round glasses", shades: "dark sunglasses", square: "square-framed glasses", heart: "heart-shaped glasses", star: "star-shaped glasses", visor: "a futuristic visor", catEye: "cat-eye sunglasses" },
+  accessory: { beanie: "a knit cap with a pompom", hat: "a short top hat with a brim", cap: "a baseball cap with a visor", wizard: "a pointed wizard hat", flower: "a little blossom", sprout: "a little leaf sprout", chef: "a white chef's toque", antenna: "a robot antenna", party: "a party cone hat" },
 };
 const listed = (category: FigureCategory) => SUGGESTABLE[category].map((id) => (HINTS[category]?.[id] ? `${id} (${HINTS[category]![id]})` : id)).join(", ");
 
@@ -64,7 +117,7 @@ export const CREATE_ASSISTANT_DECLARATION = {
       shape: part("shape", `Optional. The figure's body: ${listed("shape")}.`),
       eyes: part("eyes", `Optional. ${listed("eyes")}.`),
       eyewear: part("eyewear", `Optional. ${listed("eyewear")}. Left out, it wears none.`),
-      accessory: part("accessory", `Optional. What it wears on its head: ${listed("accessory")}. There is no chef's hat. Left out, it wears none.`),
+      accessory: part("accessory", `Optional. What it wears on its head: ${listed("accessory")}. Left out, it wears none.`),
       color: { type: "STRING", description: "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent." },
     },
   },

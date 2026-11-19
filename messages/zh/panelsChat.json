@@ -746,6 +746,8 @@
       "accessory": "配饰",
       "surprise": "随机一个",
       "freeColor": "其他颜色",
+      "accessoryColor": "配饰颜色",
+      "defaultColor": "默认",
       "option": {
         "shape": {
           "drop": "水滴",
@@ -755,19 +757,36 @@
           "ears": "带耳朵",
           "heart": "爱心",
           "flower": "花朵",
-          "triangle": "三角形"
+          "triangle": "三角形",
+          "star": "星星",
+          "cloud": "云朵",
+          "diamond": "菱形",
+          "teardrop": "露珠",
+          "clover": "四叶草",
+          "cat": "小猫",
+          "bean": "花生"
         },
         "eyes": {
           "oval": "椭圆",
           "round": "圆形",
           "dot": "圆点",
           "smile": "微笑",
-          "sleepy": "困倦"
+          "sleepy": "困倦",
+          "wink": "眨眼",
+          "sparkle": "闪亮",
+          "cheerful": "开心",
+          "calm": "平静",
+          "lash": "长睫毛"
         },
         "eyewear": {
           "none": "不戴眼镜",
           "round": "圆框眼镜",
-          "shades": "墨镜"
+          "shades": "墨镜",
+          "square": "方框眼镜",
+          "heart": "爱心眼镜",
+          "star": "星星眼镜",
+          "visor": "护目镜",
+          "catEye": "猫眼墨镜"
         },
         "accessory": {
           "none": "无配饰",
@@ -776,7 +795,16 @@
           "bow": "蝴蝶结",
           "crown": "皇冠",
           "hat": "帽子",
-          "headphones": "耳机"
+          "headphones": "耳机",
+          "halo": "光环",
+          "cap": "鸭舌帽",
+          "wizard": "巫师帽",
+          "flower": "小花",
+          "sprout": "小嫩芽",
+          "horns": "小角",
+          "chef": "厨师帽",
+          "antenna": "机器人天线",
+          "party": "派对帽"
         }
       },
       "colors": {

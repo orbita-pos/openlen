@@ -746,6 +746,8 @@
       "accessory": "Acessório",
       "surprise": "Surpreenda-me",
       "freeColor": "Outra cor",
+      "accessoryColor": "Cor do acessório",
+      "defaultColor": "Original",
       "option": {
         "shape": {
           "drop": "Gota",
@@ -755,19 +757,36 @@
           "ears": "Com orelhas",
           "heart": "Coração",
           "flower": "Flor",
-          "triangle": "Triângulo"
+          "triangle": "Triângulo",
+          "star": "Estrela",
+          "cloud": "Nuvem",
+          "diamond": "Diamante",
+          "teardrop": "Gota de água",
+          "clover": "Trevo",
+          "cat": "Gatinho",
+          "bean": "Amendoim"
         },
         "eyes": {
           "oval": "Ovais",
           "round": "Redondos",
           "dot": "Pontinhos",
           "smile": "Sorridentes",
-          "sleepy": "Sonolentos"
+          "sleepy": "Sonolentos",
+          "wink": "Piscadela",
+          "sparkle": "Brilhantes",
+          "cheerful": "Alegres",
+          "calm": "Serenos",
+          "lash": "Com cílios"
         },
         "eyewear": {
           "none": "Sem óculos",
           "round": "Óculos redondos",
-          "shades": "Óculos de sol"
+          "shades": "Óculos de sol",
+          "square": "Óculos quadrados",
+          "heart": "Óculos de coração",
+          "star": "Óculos de estrela",
+          "visor": "Viseira",
+          "catEye": "Óculos gatinho"
         },
         "accessory": {
           "none": "Sem acessório",
@@ -776,7 +795,16 @@
           "bow": "Laço",
           "crown": "Coroa",
           "hat": "Chapéu",
-          "headphones": "Fones de ouvido"
+          "headphones": "Fones de ouvido",
+          "halo": "Auréola",
+          "cap": "Boné",
+          "wizard": "Chapéu de mago",
+          "flower": "Florzinha",
+          "sprout": "Brotinho",
+          "horns": "Chifrinhos",
+          "chef": "Chapéu de chef",
+          "antenna": "Anteninha",
+          "party": "Chapéu de festa"
         }
       },
       "colors": {

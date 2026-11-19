@@ -746,6 +746,8 @@
       "accessory": "Accesorio",
       "surprise": "Sorpréndeme",
       "freeColor": "Otro color",
+      "accessoryColor": "Color del accesorio",
+      "defaultColor": "Original",
       "option": {
         "shape": {
           "drop": "Gota",
@@ -755,19 +757,36 @@
           "ears": "Con orejas",
           "heart": "Corazón",
           "flower": "Flor",
-          "triangle": "Triángulo"
+          "triangle": "Triángulo",
+          "star": "Estrella",
+          "cloud": "Nube",
+          "diamond": "Diamante",
+          "teardrop": "Gota de agua",
+          "clover": "Trébol",
+          "cat": "Gatito",
+          "bean": "Frijolito"
         },
         "eyes": {
           "oval": "Ovalados",
           "round": "Redondos",
           "dot": "Puntitos",
           "smile": "Sonrientes",
-          "sleepy": "Soñolientos"
+          "sleepy": "Soñolientos",
+          "wink": "Guiño",
+          "sparkle": "Brillantes",
+          "cheerful": "Alegres",
+          "calm": "Serenos",
+          "lash": "Con pestañas"
         },
         "eyewear": {
           "none": "Sin gafas",
           "round": "Gafas redondas",
-          "shades": "Gafas de sol"
+          "shades": "Gafas de sol",
+          "square": "Gafas cuadradas",
+          "heart": "Gafas de corazón",
+          "star": "Gafas de estrella",
+          "visor": "Visor",
+          "catEye": "Ojo de gato"
         },
         "accessory": {
           "none": "Sin accesorio",
@@ -776,7 +795,16 @@
           "bow": "Moño",
           "crown": "Corona",
           "hat": "Sombrero",
-          "headphones": "Audífonos"
+          "headphones": "Audífonos",
+          "halo": "Aureola",
+          "cap": "Gorra",
+          "wizard": "Sombrero de mago",
+          "flower": "Florecita",
+          "sprout": "Brotecito",
+          "horns": "Cuernitos",
+          "chef": "Gorro de chef",
+          "antenna": "Antenita",
+          "party": "Gorrito de fiesta"
         }
       },
       "colors": {
