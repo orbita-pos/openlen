@@ -563,6 +563,9 @@ export const formSubmissions = pgTable(
        *  its view in pageEvents for funnel + source attribution. Absent on a
        *  native no-JS POST (the hidden input is JS-populated) = "untracked". */
       cid?: string;
+      /** Active A/B experiment variant tag (`<expId>:<a|b>`) baked statically into
+       *  published forms or stamped from sessionStorage on secondary pages. */
+      ab?: string;
     }>(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
     // Visto POR FORMULARIO (plans/len-resultados/diseno.md §6). Un formulario
@@ -827,6 +830,9 @@ export const pageEvents = pgTable(
       utmCampaign?: string;
       ref?: string;
     }>(),
+    /** Active A/B experiment variant tag (`<expId>:<a|b>`, lib/analytics/ab-tag.ts).
+     *  Null when no experiment was active for the visitor. */
+    ab: text("ab"),
     ts: timestamp("ts", { mode: "date" }).notNull().defaultNow(),
   },
   (table) => [
@@ -3533,4 +3539,76 @@ export const personMcpServerState = pgTable(
     attemptedAt: timestamp("attemptedAt", { mode: "date", withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.personId, t.serverName] })],
+);
+
+// EDGE A/B TESTING (Plan 3). Keep in step with scripts/ab-testing-migrate-sql.ts.
+export const abExperiments = pgTable(
+  "abExperiments",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("projectId")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    assistantId: text("assistantId").references(() => assistants.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    hypothesis: text("hypothesis"),
+    targetPath: text("targetPath").notNull().default("/"),
+    includeLocales: boolean("includeLocales").notNull().default(false),
+    primaryMetric: text("primaryMetric")
+      .$type<import("@/lib/ab/types").AbPrimaryMetric>()
+      .notNull()
+      .default("conversion_any"),
+    splitBps: integer("splitBps").notNull().default(5000),
+    salt: text("salt").notNull(),
+    status: text("status")
+      .$type<import("@/lib/ab/types").AbExperimentStatus>()
+      .notNull()
+      .default("draft"),
+    decisionStatus: text("decisionStatus")
+      .$type<import("@/lib/ab/types").AbDecisionStatus>()
+      .notNull()
+      .default("none"),
+    copyProjectId: text("copyProjectId"),
+    branch: text("branch"),
+    baseCommitOid: text("baseCommitOid"),
+    variantBCommitOid: text("variantBCommitOid"),
+    bringState: text("bringState").$type<import("@/lib/ab/types").AbBringState>(),
+    controlReleaseSha: text("controlReleaseSha"),
+    experimentReleaseSha: text("experimentReleaseSha"),
+    promotedReleaseSha: text("promotedReleaseSha"),
+    winnerVariant: text("winnerVariant").$type<import("@/lib/ab/types").AbVariant>(),
+    metricsSnapshot: jsonb("metricsSnapshot").$type<import("@/lib/ab/types").AbMetricsSnapshot>(),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }),
+    minEndAt: timestamp("minEndAt", { mode: "date", withTimezone: true }),
+    snoozeUntil: timestamp("snoozeUntil", { mode: "date", withTimezone: true }),
+    endedAt: timestamp("endedAt", { mode: "date", withTimezone: true }),
+    evaluatedAt: timestamp("evaluatedAt", { mode: "date", withTimezone: true }),
+    notifiedAt: timestamp("notifiedAt", { mode: "date", withTimezone: true }),
+    decidedAt: timestamp("decidedAt", { mode: "date", withTimezone: true }),
+    decidedBy: text("decidedBy"),
+    createdBy: text("createdBy").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
+export const abExperimentDaily = pgTable(
+  "abExperimentDaily",
+  {
+    experimentId: text("experimentId")
+      .notNull()
+      .references(() => abExperiments.id, { onDelete: "cascade" }),
+    day: date("day").notNull(),
+    variant: text("variant").$type<import("@/lib/ab/types").AbVariant>().notNull(),
+    views: integer("views").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    conversions: integer("conversions").notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.experimentId, t.day, t.variant] })],
 );
