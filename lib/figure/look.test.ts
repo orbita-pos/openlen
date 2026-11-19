@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LOOK,
@@ -81,6 +83,20 @@ describe("the catalog", () => {
     expect(FIGURE_COLORS).toHaveLength(8);
     expect(new Set(FIGURE_COLORS).size).toBe(8);
     for (const c of FIGURE_COLORS) expect(c).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
+  it("names every offered option in all ten languages", () => {
+    const messagesRoot = path.join(process.cwd(), "messages");
+    const locales = fs.readdirSync(messagesRoot, { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name);
+    expect(locales.length).toBeGreaterThanOrEqual(10);
+    for (const locale of locales) {
+      const chat = JSON.parse(fs.readFileSync(path.join(messagesRoot, locale, "panelsChat.json"), "utf8")) as {
+        ownAssistant: { creator: { option: Record<FigureCategory, Record<string, string>> } };
+      };
+      for (const category of CATEGORIES) {
+        expect(Object.keys(chat.ownAssistant.creator.option[category]).sort(), `${locale}/${category}`).toEqual([...offered(category)].sort());
+      }
+    }
   });
 });
 

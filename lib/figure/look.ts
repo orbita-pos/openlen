@@ -5,10 +5,43 @@
 //
 // Pure and client-safe: no Node, no React.
 
-export const FIGURE_SHAPES = ["drop", "round", "capsule", "cube", "ears", "heart", "flower", "triangle"] as const;
-export const FIGURE_EYES = ["oval", "round", "dot", "smile", "sleepy"] as const;
-export const FIGURE_EYEWEAR = ["none", "round", "shades"] as const;
-export const FIGURE_ACCESSORIES = ["none", "beret", "beanie", "bow", "crown", "hat", "headphones"] as const;
+export const FIGURE_SHAPES = [
+  "drop",
+  "round",
+  "capsule",
+  "cube",
+  "ears",
+  "heart",
+  "flower",
+  "triangle",
+  "star",
+  "cloud",
+  "diamond",
+  "teardrop",
+  "clover",
+  "cat",
+  "bean",
+] as const;
+export const FIGURE_EYES = ["oval", "round", "dot", "smile", "sleepy", "wink", "sparkle", "cheerful", "calm", "lash"] as const;
+export const FIGURE_EYEWEAR = ["none", "round", "shades", "square", "heart", "star", "visor", "catEye"] as const;
+export const FIGURE_ACCESSORIES = [
+  "none",
+  "beret",
+  "beanie",
+  "bow",
+  "crown",
+  "hat",
+  "headphones",
+  "halo",
+  "cap",
+  "wizard",
+  "flower",
+  "sprout",
+  "horns",
+  "chef",
+  "antenna",
+  "party",
+] as const;
 
 export type FigureShape = (typeof FIGURE_SHAPES)[number];
 export type FigureEyes = (typeof FIGURE_EYES)[number];

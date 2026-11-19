@@ -49,7 +49,7 @@ describe("flatFigureSvg", () => {
       for (const stroke of strokes) expect(stroke, color).not.toBe(color);
     }
     // One outline around the whole body: a shape made of several pieces shows no line where they meet.
-    for (const shape of ["ears", "flower"] as const) {
+    for (const shape of ["ears", "flower", "clover", "cat"] as const) {
       const body = layer(flatFigureSvg({ ...DEFAULT_LOOK, shape }, 30), "body");
       const lastStroke = body.lastIndexOf(" stroke=");
       const firstPlain = body.search(/<(circle|path|rect)(?![^>]* stroke=)/);

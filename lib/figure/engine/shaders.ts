@@ -32,8 +32,8 @@ vec3 shape(vec3 d) {
   float n = uSilA.x;
   float r = pow(pow(abs(cos(th)), n) + pow(abs(sin(th)), n), -1.0 / n);
   r *= 1.0 + uSilA.z * cos(uSilA.y * (th - 1.5708));
-  float up = wrap(th - 1.5708), down = wrap(th + 1.5708);
-  r *= 1.0 - uSilA.w * exp(-up * up / 0.08);
+  float up = wrap(th - 1.5708), down = wrap(th + 1.5708), side = abs(up) - 1.05;
+  r *= 1.0 - max(uSilA.w, 0.0) * exp(-up * up / 0.08) + min(uSilA.w, 0.0) * smoothstep(0.55, 0.95, length(d.xy)) * exp(-side * side / 0.06);
   r *= 1.0 + uSilB.x * exp(-down * down / 0.12);
   vec3 p = vec3(d.xy * r, d.z);
   p.x *= 1.0 - uSilB.y * (1.0 - smoothstep(-1.0, 0.1, d.y));

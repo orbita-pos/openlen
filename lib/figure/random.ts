@@ -15,12 +15,14 @@ function generator(seed: number): () => number {
   };
 }
 
+const OPAQUE_EYEWEAR: readonly string[] = ["shades", "heart", "star", "visor", "catEye"];
+
 export function curatedLook(seed: number): FigureLook {
   const next = generator(seed);
   const pick = <T>(items: readonly T[]): T => items[Math.floor(next() * items.length)]!;
   const eyewear = pick(offered("eyewear"));
   // The one rule of "goes together": shades would hide a smile or sleepy eyes.
-  const eyes = pick(eyewear === "shades" ? offered("eyes").filter((e) => e !== "smile" && e !== "sleepy") : offered("eyes"));
+  const eyes = pick(OPAQUE_EYEWEAR.includes(eyewear) ? offered("eyes").filter((e) => e !== "smile" && e !== "sleepy") : offered("eyes"));
   return {
     v: 1,
     shape: pick(offered("shape")),

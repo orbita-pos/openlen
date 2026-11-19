@@ -60,6 +60,13 @@ const BODIES: Record<FigureShape, Body> = {
   heart: { scale: [1.05, 1, 0.8], silhouette: { ...ROUND, notchTop: 0.3, pointBottom: 0.1, taperBottom: 0.5 }, eyeY: 0.15 },
   flower: { scale: [0.95, 0.95, 0.8], silhouette: { ...ROUND, lobes: 6, lobeDepth: 0.13 }, eyeY: 0.08 },
   triangle: { scale: [1.05, 1, 0.85], silhouette: { ...ROUND, power: 2.5, taperTop: 0.6, squashBottom: 0.2 }, eyeY: -0.15 },
+  star: { scale: [0.95, 0.95, 0.8], silhouette: { ...ROUND, lobes: 5, lobeDepth: 0.16 }, eyeY: 0.06 },
+  cloud: { scale: [1.04, 0.92, 0.84], silhouette: { ...ROUND, notchTop: -0.22, squashBottom: 0.48, widenBottom: 0.14 }, eyeY: -0.02 },
+  diamond: { scale: [1.02, 1.02, 0.85], silhouette: { ...ROUND, power: 1.35 }, eyeY: 0.06 },
+  teardrop: { scale: [0.88, 1.02, 0.85], silhouette: { ...ROUND, taperTop: 0.56, widenBottom: 0.24, squashBottom: 0.16 }, eyeY: -0.1 },
+  clover: { scale: [0.98, 0.98, 0.82], silhouette: { ...ROUND, lobes: 4, lobeDepth: -0.15 }, eyeY: 0.06 },
+  cat: { scale: [0.94, 0.86, 0.86], silhouette: { ...ROUND, squashBottom: 0.12, widenBottom: 0.08 }, eyeY: 0.02 },
+  bean: { scale: [0.95, 0.82, 0.84], silhouette: { ...ROUND, power: 2.8, lobes: 2, lobeDepth: 0.28 }, eyeY: 0.24 },
 };
 
 const NONE: Vec3 = [0, 0, 0];
@@ -70,8 +77,8 @@ const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 function radius(s: Silhouette, th: number): number {
   let r = (Math.abs(Math.cos(th)) ** s.power + Math.abs(Math.sin(th)) ** s.power) ** (-1 / s.power);
   r *= 1 + s.lobeDepth * Math.cos(s.lobes * (th - Math.PI / 2));
-  const up = wrap(th - Math.PI / 2), down = wrap(th + Math.PI / 2);
-  r *= 1 - s.notchTop * Math.exp((-up * up) / 0.08);
+  const up = wrap(th - Math.PI / 2), down = wrap(th + Math.PI / 2), side = Math.abs(up) - 1.05;
+  r *= 1 - Math.max(s.notchTop, 0) * Math.exp((-up * up) / 0.08) + Math.min(s.notchTop, 0) * Math.exp((-side * side) / 0.06);
   r *= 1 + s.pointBottom * Math.exp((-down * down) / 0.12);
   return r;
 }
@@ -98,10 +105,35 @@ export function anchorsFor(look: unknown): { eyes: readonly [Vec3, Vec3]; top: V
 function eyes(kind: FigureEyes, at: readonly [Vec3, Vec3], ink: Vec3): Part[] {
   const parts: Part[] = [];
   for (const [x, y, z] of at) {
-    if (kind === "smile" || kind === "sleepy") {
-      // An arc: ∩ for a smile, ∪ and flatter for sleepy.
+    const side = Math.sign(x);
+    if (kind === "smile" || kind === "sleepy" || (kind === "wink" && side > 0)) {
+      // An arc: ∩ for a smile/wink, ∪ and flatter for sleepy.
       const sleepy = kind === "sleepy";
       parts.push({ role: "eye", mesh: "arc", kind: "solid", position: [x, y + (sleepy ? 0.03 : -0.04), z + 0.02], scale: sleepy ? [0.12, 0.07, 0.12] : [0.12, 0.12, 0.12], rotation: [0, 0, sleepy ? Math.PI : 0], color: ink, furLength: 0, tube: 0.26 });
+      continue;
+    }
+    if (kind === "cheerful") {
+      parts.push({ role: "eye", mesh: "arc", kind: "solid", position: [x, y, z + 0.02], scale: [0.11, 0.11, 0.11], rotation: [0, 0, side < 0 ? -Math.PI / 2 : Math.PI / 2], color: ink, furLength: 0, tube: 0.26 });
+      continue;
+    }
+    if (kind === "calm") {
+      parts.push({ role: "eye", mesh: "sphere", kind: "solid", position: [x, y, z + 0.02], scale: [0.135, 0.032, 0.04], rotation: NONE, color: ink, furLength: 0 });
+      continue;
+    }
+    if (kind === "sparkle") {
+      parts.push(
+        { role: "eye", mesh: "sphere", kind: "gloss", position: [x, y, z], scale: [0.15, 0.165, 0.06], rotation: NONE, color: ink, furLength: 0 },
+        { role: "eyeHighlight", mesh: "sphere", kind: "gloss", position: [x - 0.042, y + 0.06, z + 0.052], scale: [0.042, 0.042, 0.016], rotation: NONE, color: [1, 1, 1], furLength: 0 },
+        { role: "eyeHighlight", mesh: "sphere", kind: "gloss", position: [x + 0.045, y - 0.05, z + 0.052], scale: [0.024, 0.024, 0.014], rotation: NONE, color: [1, 1, 1], furLength: 0 },
+      );
+      continue;
+    }
+    if (kind === "lash") {
+      parts.push(
+        { role: "eye", mesh: "sphere", kind: "gloss", position: [x, y, z], scale: [0.11, 0.145, 0.055], rotation: NONE, color: ink, furLength: 0 },
+        { role: "eyeHighlight", mesh: "sphere", kind: "gloss", position: [x - 0.034, y + 0.055, z + 0.046], scale: [0.028, 0.028, 0.014], rotation: NONE, color: [1, 1, 1], furLength: 0 },
+        { role: "eyeHighlight", mesh: "sphere", kind: "solid", position: [x + 0.115 * side, y + 0.075, z + 0.02], scale: [0.055, 0.02, 0.02], rotation: [0, 0, 0.38 * side], color: ink, furLength: 0 },
+      );
       continue;
     }
     const scale: Vec3 = kind === "round" ? [0.13, 0.13, 0.055] : kind === "dot" ? [0.07, 0.07, 0.045] : [0.1, 0.145, 0.055];
@@ -121,7 +153,58 @@ function eyewear(kind: FigureEyewear, at: readonly [Vec3, Vec3], ink: Vec3): Par
     parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.02, z + 0.05], scale: [0.13, 0.016, 0.016], rotation: NONE, color: ink, furLength: 0 });
     return parts;
   }
+  if (kind === "square") {
+    for (const [x] of at) {
+      const s = Math.sign(x);
+      parts.push(
+        { role: "eyewear", mesh: "sphere", kind: "solid", position: [x, y + 0.16, z + 0.055], scale: [0.19, 0.022, 0.02], rotation: NONE, color: ink, furLength: 0 },
+        { role: "eyewear", mesh: "sphere", kind: "solid", position: [x, y - 0.16, z + 0.055], scale: [0.19, 0.022, 0.02], rotation: NONE, color: ink, furLength: 0 },
+        { role: "eyewear", mesh: "sphere", kind: "solid", position: [x + 0.18 * s, y, z + 0.055], scale: [0.022, 0.17, 0.02], rotation: NONE, color: ink, furLength: 0 },
+        { role: "eyewear", mesh: "sphere", kind: "solid", position: [x - 0.18 * s, y, z + 0.055], scale: [0.022, 0.17, 0.02], rotation: NONE, color: ink, furLength: 0 },
+      );
+    }
+    parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.03, z + 0.055], scale: [0.14, 0.022, 0.02], rotation: NONE, color: ink, furLength: 0 });
+    return parts;
+  }
+  if (kind === "heart") {
+    const ruby: Vec3 = [0.48, 0.06, 0.19];
+    const heartSil: Silhouette = { ...ROUND, notchTop: 0.35, pointBottom: 0.12, taperBottom: 0.55 };
+    for (const [x] of at) parts.push({ role: "eyewear", mesh: "sphere", kind: "gloss", position: [x, y, z + 0.06], scale: [0.24, 0.21, 0.045], rotation: NONE, color: ruby, furLength: 0, silhouette: heartSil });
+    parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.03, z + 0.06], scale: [0.14, 0.022, 0.02], rotation: NONE, color: ruby, furLength: 0 });
+    return parts;
+  }
+  if (kind === "star") {
+    const amber: Vec3 = [0.96, 0.62, 0.04];
+    const starSil: Silhouette = { ...ROUND, lobes: 5, lobeDepth: 0.2 };
+    for (const [x] of at) parts.push({ role: "eyewear", mesh: "sphere", kind: "gloss", position: [x, y, z + 0.06], scale: [0.23, 0.23, 0.045], rotation: NONE, color: amber, furLength: 0, silhouette: starSil });
+    parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.02, z + 0.06], scale: [0.14, 0.022, 0.02], rotation: NONE, color: amber, furLength: 0 });
+    return parts;
+  }
+  if (kind === "visor") {
+    const cyan: Vec3 = [0.12, 0.72, 0.92];
+    return [
+      { role: "eyewear", mesh: "sphere", kind: "gloss", position: [0, y, z + 0.065], scale: [0.58, 0.14, 0.05], rotation: NONE, color: cyan, furLength: 0, silhouette: { ...ROUND, power: 3.6 } },
+      { role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.13, z + 0.07], scale: [0.55, 0.022, 0.03], rotation: NONE, color: ink, furLength: 0 },
+    ];
+  }
   const lens: Vec3 = dark ? [0.05, 0.05, 0.07] : [0.12, 0.12, 0.15];
+  if (kind === "catEye") {
+    const catSil: Silhouette = { ...ROUND, power: 2.6, taperBottom: 0.3 };
+    for (const [x] of at)
+      parts.push({
+        role: "eyewear",
+        mesh: "sphere",
+        kind: "gloss",
+        position: [x, y + 0.02, z + 0.06],
+        scale: [0.24, 0.15, 0.045],
+        rotation: [0, 0, 0.28 * Math.sign(x)],
+        color: lens,
+        furLength: 0,
+        silhouette: catSil,
+      });
+    parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.03, z + 0.06], scale: [0.14, 0.022, 0.02], rotation: NONE, color: lens, furLength: 0 });
+    return parts;
+  }
   for (const [x] of at) parts.push({ role: "eyewear", mesh: "sphere", kind: "gloss", position: [x, y, z + 0.06], scale: [0.23, 0.18, 0.045], rotation: NONE, color: lens, furLength: 0 });
   parts.push({ role: "eyewear", mesh: "sphere", kind: "solid", position: [0, y + 0.04, z + 0.06], scale: [0.14, 0.022, 0.02], rotation: NONE, color: lens, furLength: 0 });
   return parts;
@@ -129,10 +212,28 @@ function eyewear(kind: FigureEyewear, at: readonly [Vec3, Vec3], ink: Vec3): Par
 
 const NEUTRAL: Vec3 = [0.15, 0.15, 0.17];
 const GOLD: Vec3 = [0.95, 0.76, 0.36];
+const LEAF: Vec3 = [0.2, 0.78, 0.35];
+const PETAL: Vec3 = [1, 0.94, 0.96];
+const CHEF: Vec3 = [0.96, 0.96, 0.98];
+const PARTY: Vec3 = [0.66, 0.33, 0.97];
+const CYAN: Vec3 = [0.12, 0.78, 0.96];
 
 function accessory(kind: FigureAccessory, l: FigureLook, top: Vec3, eye: Vec3): Part[] {
   if (kind === "none") return [];
-  const color = l.accessoryColor ? rgb(l.accessoryColor) : kind === "crown" ? GOLD : NEUTRAL;
+  const custom = l.accessoryColor ? rgb(l.accessoryColor) : null;
+  const color =
+    custom ??
+    (kind === "crown" || kind === "halo"
+      ? GOLD
+      : kind === "sprout"
+        ? LEAF
+        : kind === "flower"
+          ? PETAL
+          : kind === "chef"
+            ? CHEF
+            : kind === "party"
+              ? PARTY
+              : NEUTRAL);
   const y = top[1] + FUR * 0.3;
   const piece = (mesh: PartMesh, kindOf: PartKind, position: Vec3, scale: Vec3, rotation: Vec3 = NONE, more: Partial<Part> = {}): Part => ({ role: "accessory", mesh, kind: kindOf, position, scale, rotation, color, furLength: 0, ...more });
   switch (kind) {
@@ -172,6 +273,54 @@ function accessory(kind: FigureAccessory, l: FigureLook, top: Vec3, eye: Vec3): 
         piece("sphere", "solid", [reach, eye[1], 0], [0.1, 0.2, 0.17]),
       ];
     }
+    case "halo":
+      return [piece("torus", "gloss", [0, y + 0.22, 0], [0.46, 0.46, 0.46], [0, 1.32, 0], { tube: 0.13 })];
+    case "cap":
+      return [
+        piece("sphere", "fur", [0, y - 0.1, 0], [0.58, 0.36, 0.56], NONE, { furLength: 0.03 }),
+        piece("sphere", "solid", [0.22, y - 0.11, 0.32], [0.48, 0.045, 0.34], [0, 0.15, -0.06]),
+        piece("sphere", "solid", [0, y + 0.25, 0], [0.06, 0.04, 0.06]),
+      ];
+    case "wizard":
+      return [
+        piece("sphere", "solid", [0, y + 0.01, 0], [0.68, 0.045, 0.64]),
+        piece("cone", "solid", [0, y, 0], [0.38, 0.6, 0.38], [0, 0, -0.14]),
+      ];
+    case "flower":
+      return [
+        ...[0, 1, 2, 3, 4].map((i) => {
+          const a = (i * Math.PI * 2) / 5 - Math.PI / 2;
+          return piece("sphere", "solid", [0.34 + 0.14 * Math.cos(a), y + 0.06 + 0.14 * Math.sin(a), 0.22], [0.11, 0.11, 0.06]);
+        }),
+        piece("sphere", "gloss", [0.34, y + 0.06, 0.26], [0.09, 0.09, 0.06], NONE, { color: custom ?? GOLD }),
+      ];
+    case "sprout":
+      return [
+        piece("cylinder", "solid", [0, y - 0.02, 0], [0.035, 0.24, 0.035]),
+        piece("sphere", "solid", [-0.14, y + 0.24, 0], [0.16, 0.055, 0.09], [0, 0, 0.35]),
+        piece("sphere", "solid", [0.14, y + 0.25, 0], [0.16, 0.055, 0.09], [0, 0, -0.35]),
+      ];
+    case "horns":
+      return [
+        piece("cone", "gloss", [-0.36, y - 0.04, 0.04], [0.12, 0.32, 0.12], [0, 0, 0.38]),
+        piece("cone", "gloss", [0.36, y - 0.04, 0.04], [0.12, 0.32, 0.12], [0, 0, -0.38]),
+      ];
+    case "chef":
+      return [
+        piece("cylinder", "solid", [0, y - 0.03, 0], [0.36, 0.16, 0.36]),
+        piece("sphere", "fur", [0, y + 0.24, 0], [0.48, 0.26, 0.46], NONE, { furLength: 0.02, silhouette: { ...ROUND, lobes: 5, lobeDepth: 0.12 } }),
+      ];
+    case "antenna":
+      return [
+        piece("sphere", "solid", [0, y, 0], [0.14, 0.06, 0.14]),
+        piece("cylinder", "solid", [0, y + 0.04, 0], [0.032, 0.32, 0.032]),
+        piece("sphere", "gloss", [0, y + 0.4, 0], [0.11, 0.11, 0.11], NONE, { color: custom ?? CYAN }),
+      ];
+    case "party":
+      return [
+        piece("cone", "solid", [0, y - 0.03, 0], [0.28, 0.5, 0.28]),
+        piece("sphere", "fur", [0, y + 0.5, 0], [0.1, 0.1, 0.1], NONE, { furLength: 0.05, color: custom ?? GOLD }),
+      ];
   }
 }
 
@@ -186,7 +335,16 @@ export function reachFor(look: unknown): number {
 /** What a hat-like accessory shades: where it sits and how far its shadow reaches. Null for what casts none. */
 export function shadowOf(look: unknown): { center: Vec3; size: Vec3 } | null {
   const l = lookOrDefault(look);
-  const size: Partial<Record<FigureAccessory, Vec3>> = { beret: [0.62, 0.36, 1.6], beanie: [0.6, 0.6, 1.6], hat: [0.64, 0.3, 1.6], crown: [0.36, 0.26, 1.6] };
+  const size: Partial<Record<FigureAccessory, Vec3>> = {
+    beret: [0.62, 0.36, 1.6],
+    beanie: [0.6, 0.6, 1.6],
+    hat: [0.64, 0.3, 1.6],
+    crown: [0.36, 0.26, 1.6],
+    cap: [0.6, 0.38, 1.6],
+    wizard: [0.68, 0.32, 1.6],
+    chef: [0.5, 0.36, 1.6],
+    party: [0.3, 0.3, 1.6],
+  };
   const reach = size[l.accessory];
   if (!reach) return null;
   const anchors = anchorsFor(l);
@@ -209,5 +367,18 @@ export function partsFor(look: unknown): Part[] {
   const anchors = anchorsFor(l);
   const parts: Part[] = [{ role: "body", mesh: "sphere", kind: "fur", position: NONE, scale: body.scale, rotation: NONE, color, furLength: FUR, silhouette: body.silhouette }];
   if (l.shape === "ears") for (const side of [-1, 1]) parts.push({ role: "ear", mesh: "sphere", kind: "fur", position: [0.66 * side, 0.72, 0], scale: [0.3, 0.3, 0.24], rotation: NONE, color, furLength: FUR });
+  if (l.shape === "cat")
+    for (const side of [-1, 1])
+      parts.push({
+        role: "ear",
+        mesh: "sphere",
+        kind: "fur",
+        position: [0.58 * side, 0.72, 0],
+        scale: [0.28, 0.42, 0.22],
+        rotation: [0, 0, -0.34 * side],
+        color,
+        furLength: FUR,
+        silhouette: { ...ROUND, power: 2.2, taperTop: 0.66, squashBottom: 0.22 },
+      });
   return [...parts, ...eyes(l.eyes, anchors.eyes, ink), ...eyewear(l.eyewear, anchors.eyes, ink), ...accessory(l.accessory, l, anchors.top, anchors.eyes[0])];
 }

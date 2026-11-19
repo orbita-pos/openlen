@@ -746,6 +746,8 @@
       "accessory": "Accessorio",
       "surprise": "Sorprendimi",
       "freeColor": "Altro colore",
+      "accessoryColor": "Colore dell’accessorio",
+      "defaultColor": "Originale",
       "option": {
         "shape": {
           "drop": "Goccia",
@@ -755,19 +757,36 @@
           "ears": "Con orecchie",
           "heart": "Cuore",
           "flower": "Fiore",
-          "triangle": "Triangolo"
+          "triangle": "Triangolo",
+          "star": "Stella",
+          "cloud": "Nuvola",
+          "diamond": "Diamante",
+          "teardrop": "Goccia d’acqua",
+          "clover": "Quadrifoglio",
+          "cat": "Gattino",
+          "bean": "Arachide"
         },
         "eyes": {
           "oval": "Ovali",
           "round": "Rotondi",
           "dot": "Puntini",
           "smile": "Sorridenti",
-          "sleepy": "Assonnati"
+          "sleepy": "Assonnati",
+          "wink": "Occhiolino",
+          "sparkle": "Brillanti",
+          "cheerful": "Allegri",
+          "calm": "Sereni",
+          "lash": "Con ciglia"
         },
         "eyewear": {
           "none": "Senza occhiali",
           "round": "Occhiali rotondi",
-          "shades": "Occhiali da sole"
+          "shades": "Occhiali da sole",
+          "square": "Occhiali quadrati",
+          "heart": "Occhiali a cuore",
+          "star": "Occhiali a stella",
+          "visor": "Visiera",
+          "catEye": "Occhiali cat-eye"
         },
         "accessory": {
           "none": "Senza accessorio",
@@ -776,7 +795,16 @@
           "bow": "Fiocco",
           "crown": "Corona",
           "hat": "Cappello",
-          "headphones": "Cuffie"
+          "headphones": "Cuffie",
+          "halo": "Aureola",
+          "cap": "Cappellino",
+          "wizard": "Cappello da mago",
+          "flower": "Fiorellino",
+          "sprout": "Germoglio",
+          "horns": "Cornetti",
+          "chef": "Cappello da chef",
+          "antenna": "Antenna",
+          "party": "Cappellino da festa"
         }
       },
       "colors": {

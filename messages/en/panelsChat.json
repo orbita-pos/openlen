@@ -746,6 +746,8 @@
       "accessory": "Accessory",
       "surprise": "Surprise me",
       "freeColor": "Another color",
+      "accessoryColor": "Accessory color",
+      "defaultColor": "Original",
       "option": {
         "shape": {
           "drop": "Drop",
@@ -755,19 +757,36 @@
           "ears": "With ears",
           "heart": "Heart",
           "flower": "Flower",
-          "triangle": "Triangle"
+          "triangle": "Triangle",
+          "star": "Star",
+          "cloud": "Cloud",
+          "diamond": "Diamond",
+          "teardrop": "Teardrop",
+          "clover": "Clover",
+          "cat": "Kitty",
+          "bean": "Peanut"
         },
         "eyes": {
           "oval": "Oval",
           "round": "Round",
           "dot": "Dots",
           "smile": "Smiling",
-          "sleepy": "Sleepy"
+          "sleepy": "Sleepy",
+          "wink": "Wink",
+          "sparkle": "Sparkling",
+          "cheerful": "Cheerful",
+          "calm": "Calm",
+          "lash": "With eyelashes"
         },
         "eyewear": {
           "none": "No glasses",
           "round": "Round glasses",
-          "shades": "Sunglasses"
+          "shades": "Sunglasses",
+          "square": "Square glasses",
+          "heart": "Heart glasses",
+          "star": "Star glasses",
+          "visor": "Visor",
+          "catEye": "Cat-eye glasses"
         },
         "accessory": {
           "none": "No accessory",
@@ -776,7 +795,16 @@
           "bow": "Bow",
           "crown": "Crown",
           "hat": "Hat",
-          "headphones": "Headphones"
+          "headphones": "Headphones",
+          "halo": "Halo",
+          "cap": "Cap",
+          "wizard": "Wizard hat",
+          "flower": "Little flower",
+          "sprout": "Sprout",
+          "horns": "Little horns",
+          "chef": "Chef hat",
+          "antenna": "Robot antenna",
+          "party": "Party hat"
         }
       },
       "colors": {

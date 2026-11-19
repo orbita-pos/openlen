@@ -746,6 +746,8 @@
       "accessory": "Accessoire",
       "surprise": "Überrasch mich",
       "freeColor": "Andere Farbe",
+      "accessoryColor": "Farbe des Accessoires",
+      "defaultColor": "Original",
       "option": {
         "shape": {
           "drop": "Tropfen",
@@ -755,19 +757,36 @@
           "ears": "Mit Ohren",
           "heart": "Herz",
           "flower": "Blume",
-          "triangle": "Dreieck"
+          "triangle": "Dreieck",
+          "star": "Stern",
+          "cloud": "Wolke",
+          "diamond": "Diamant",
+          "teardrop": "Wassertropfen",
+          "clover": "Kleeblatt",
+          "cat": "Kätzchen",
+          "bean": "Erdnuss"
         },
         "eyes": {
           "oval": "Oval",
           "round": "Rund",
           "dot": "Punkte",
           "smile": "Lächelnd",
-          "sleepy": "Schläfrig"
+          "sleepy": "Schläfrig",
+          "wink": "Zwinkernd",
+          "sparkle": "Funkelnd",
+          "cheerful": "Fröhlich",
+          "calm": "Gelassen",
+          "lash": "Mit Wimpern"
         },
         "eyewear": {
           "none": "Keine Brille",
           "round": "Runde Brille",
-          "shades": "Sonnenbrille"
+          "shades": "Sonnenbrille",
+          "square": "Eckige Brille",
+          "heart": "Herzbrille",
+          "star": "Sternbrille",
+          "visor": "Visier",
+          "catEye": "Cat-Eye-Brille"
         },
         "accessory": {
           "none": "Kein Accessoire",
@@ -776,7 +795,16 @@
           "bow": "Schleife",
           "crown": "Krone",
           "hat": "Hut",
-          "headphones": "Kopfhörer"
+          "headphones": "Kopfhörer",
+          "halo": "Heiligenschein",
+          "cap": "Kappe",
+          "wizard": "Zauberhut",
+          "flower": "Blümchen",
+          "sprout": "Spross",
+          "horns": "Hörnchen",
+          "chef": "Kochmütze",
+          "antenna": "Antenne",
+          "party": "Partyhut"
         }
       },
       "colors": {

@@ -197,6 +197,55 @@ export function AssistantCreatorDialog({
               </label>
             </div>
           </fieldset>
+          {look.accessory !== "none" && (
+            <fieldset className="w-full" data-figure-accessory-color="">
+              <legend className={`mb-1.5 ${LABEL}`}>{t("ownAssistant.creator.accessoryColor")}</legend>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  data-assistant-accessory-color="default"
+                  aria-pressed={look.accessoryColor === undefined}
+                  onClick={() => pick({ accessoryColor: undefined })}
+                  className={`h-7 rounded-full px-2.5 text-[11.5px] font-medium transition ${look.accessoryColor === undefined ? "seg-active" : "bg-side fg-muted hover:bg-hover"}`}
+                >
+                  {t("ownAssistant.creator.defaultColor")}
+                </button>
+                {FIGURE_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    data-assistant-accessory-color={c}
+                    aria-pressed={look.accessoryColor === c}
+                    aria-label={t(`ownAssistant.creator.colors.${c.slice(1)}`)}
+                    title={t(`ownAssistant.creator.colors.${c.slice(1)}`)}
+                    onClick={() => pick({ accessoryColor: c })}
+                    className="h-7 w-7 rounded-full transition-transform hover:scale-110"
+                    style={{ background: c, boxShadow: look.accessoryColor === c ? `0 0 0 2px var(--bg-elev), 0 0 0 4px ${c}` : "inset 0 0 0 1px rgba(0,0,0,0.12)" }}
+                  />
+                ))}
+                <label
+                  className="relative h-7 w-7 cursor-pointer overflow-hidden rounded-full transition-transform hover:scale-110 focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--nc-accent-text)]"
+                  title={t("ownAssistant.creator.freeColor")}
+                  style={{
+                    background: "conic-gradient(#ff5f5f, #ffc21a, #7ed321, #19c3b1, #2f8bff, #9b6cff, #ff5fa8, #ff5f5f)",
+                    boxShadow:
+                      !look.accessoryColor || FIGURE_COLORS.includes(look.accessoryColor)
+                        ? "inset 0 0 0 1px rgba(0,0,0,0.12)"
+                        : `0 0 0 2px var(--bg-elev), 0 0 0 4px ${look.accessoryColor}`,
+                  }}
+                >
+                  <input
+                    type="color"
+                    data-assistant-accessory-free-color=""
+                    aria-label={t("ownAssistant.creator.freeColor")}
+                    value={look.accessoryColor ?? look.color}
+                    onChange={(e) => pick({ accessoryColor: e.target.value })}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </label>
+              </div>
+            </fieldset>
+          )}
           {!editing && (
             <>
               <fieldset className="w-full">

@@ -746,6 +746,8 @@
       "accessory": "アクセサリー",
       "surprise": "おまかせ",
       "freeColor": "ほかの色",
+      "accessoryColor": "アクセサリーの色",
+      "defaultColor": "元の色",
       "option": {
         "shape": {
           "drop": "しずく",
@@ -755,19 +757,36 @@
           "ears": "耳つき",
           "heart": "ハート",
           "flower": "花",
-          "triangle": "三角"
+          "triangle": "三角",
+          "star": "星",
+          "cloud": "雲",
+          "diamond": "ダイヤ",
+          "teardrop": "水滴",
+          "clover": "クローバー",
+          "cat": "ねこ",
+          "bean": "ピーナッツ"
         },
         "eyes": {
           "oval": "楕円",
           "round": "まる",
           "dot": "点",
           "smile": "にっこり",
-          "sleepy": "ねむそう"
+          "sleepy": "ねむそう",
+          "wink": "ウインク",
+          "sparkle": "キラキラ",
+          "cheerful": "わくわく",
+          "calm": "おだやか",
+          "lash": "まつげ"
         },
         "eyewear": {
           "none": "メガネなし",
           "round": "丸メガネ",
-          "shades": "サングラス"
+          "shades": "サングラス",
+          "square": "四角メガネ",
+          "heart": "ハートメガネ",
+          "star": "星メガネ",
+          "visor": "バイザー",
+          "catEye": "キャットアイ"
         },
         "accessory": {
           "none": "アクセサリーなし",
@@ -776,7 +795,16 @@
           "bow": "リボン",
           "crown": "王冠",
           "hat": "帽子",
-          "headphones": "ヘッドホン"
+          "headphones": "ヘッドホン",
+          "halo": "天使の輪",
+          "cap": "キャップ",
+          "wizard": "魔法使いの帽子",
+          "flower": "お花",
+          "sprout": "ふたば",
+          "horns": "つの",
+          "chef": "コック帽",
+          "antenna": "アンテナ",
+          "party": "パーティー帽"
         }
       },
       "colors": {
