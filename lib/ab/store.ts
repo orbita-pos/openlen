@@ -568,17 +568,25 @@ export function isTerminalStatus(s: AbExperimentStatus): boolean {
  *  keep-A that won the race. `null` = it wasn't ours to close. */
 export async function cancelLiveExperiment(id: string, actorId: string): Promise<AbExperimentRow | null> {
   const now = new Date();
+  return closeLiveExperiment(id, {
+    status: "cancelled",
+    decisionStatus: "resolved",
+    copyProjectId: null,
+    endedAt: now,
+    decidedAt: now,
+    decidedBy: actorId,
+  });
+}
+
+/** Closes a LIVE experiment nobody is deciding, with the patch the caller says (cancelled, or a promotion the reconcile pass
+ *  records). A compare-and-swap on both: still live, and no decision applying. `null` = it wasn't ours to close. */
+export async function closeLiveExperiment(
+  id: string,
+  patch: Partial<Omit<AbExperimentInsert, "id" | "projectId" | "createdAt">>,
+): Promise<AbExperimentRow | null> {
   const [row] = await db
     .update(schema.abExperiments)
-    .set({
-      status: "cancelled",
-      decisionStatus: "resolved",
-      copyProjectId: null,
-      endedAt: now,
-      decidedAt: now,
-      decidedBy: actorId,
-      updatedAt: now,
-    })
+    .set({ ...patch, updatedAt: new Date() })
     .where(
       and(
         eq(schema.abExperiments.id, id),

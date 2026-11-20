@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "O teste “{name}” terminou sem resultado: o tráfego foi dividido de forma desigual e não confio nos números. Qual versão devo manter?",
       "bringPendingNotice": "A variante B já está no ar. Falta trazê-la para o seu rascunho; até lá, a sua próxima publicação espera.",
       "bringQueued": "O Len está trabalhando na página; a variante B entra no seu rascunho quando ele terminar.",
-      "discardBring": "Descartar as mudanças da variante B"
+      "discardBring": "Descartar as mudanças da variante B",
+      "pushClosedBySystem": "O teste A/B “{name}” já não estava em andamento no seu site publicado, então foi encerrado. Sua página publicada não mudou.",
+      "pushPromotedBySystem": "A variante B de “{name}” foi ao ar como vencedora. Traga-a para o seu rascunho pelo cartão do teste A/B antes de publicar de novo."
     }
   }
 }

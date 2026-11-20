@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "Le test « {name} » s’est terminé sans résultat : le trafic était réparti de façon inégale, je ne me fie pas aux chiffres. Quelle version garder ?",
       "bringPendingNotice": "La variante B est en ligne. Elle doit encore entrer dans votre brouillon ; d’ici là, votre prochaine publication attend.",
       "bringQueued": "Len travaille sur la page ; la variante B entrera dans votre brouillon quand il aura fini.",
-      "discardBring": "Abandonner les changements de la variante B"
+      "discardBring": "Abandonner les changements de la variante B",
+      "pushClosedBySystem": "Le test A/B « {name} » ne tournait plus sur votre site publié, il a donc été clôturé. Votre page publiée n’a pas changé.",
+      "pushPromotedBySystem": "La variante B de « {name} » est en ligne comme gagnante. Intégrez-la à votre brouillon depuis la carte du test A/B avant de publier à nouveau."
     }
   }
 }

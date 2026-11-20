@@ -16,7 +16,7 @@ import { parseAbManifest } from "./serve";
 
 export type LiveAb =
   /** The live release carries this experiment: the edge is splitting it. */
-  | { readonly kind: "live"; readonly sha: string; readonly overrides: readonly string[] }
+  | { readonly kind: "live"; readonly sha: string; readonly overrides: readonly string[]; readonly splitBps: number }
   /** The live release carries no experiment (no manifest, or one that isn't a manifest), or there is no release at all. */
   | { readonly kind: "none"; readonly sha: string | null }
   /** The live release carries a manifest, but of other experiments only. */
@@ -52,7 +52,7 @@ export async function readLiveAb(subdomain: string, experimentId: string, io: Li
     const manifest = parseAbManifest(raw);
     if (!manifest) return { kind: "none", sha };
     const named = manifest.experiments.find((e) => e.id === experimentId);
-    return named ? { kind: "live", sha, overrides: [...named.overrides] } : { kind: "other", sha };
+    return named ? { kind: "live", sha, overrides: [...named.overrides], splitBps: named.splitBps } : { kind: "other", sha };
   } catch {
     return { kind: "unknown" };
   }

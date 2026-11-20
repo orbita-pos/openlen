@@ -76,7 +76,7 @@ export function abSummaryLine(locale: string, items: readonly AbReadySummary[], 
 export interface AbNotificationInput {
   readonly name: string;
   readonly assistantName?: string | null;
-  readonly verdict: "winner_b" | "winner_a" | "inconclusive" | "harm_stop";
+  readonly verdict: "winner_b" | "winner_a" | "inconclusive" | "harm_stop" | "closed_by_system" | "promoted_by_system";
   readonly liftPct: number;
   readonly probabilityPct: number;
   readonly url: string;
@@ -107,7 +107,11 @@ export function abNotificationTexts(
         ? t("pushWinnerA", { name, prob })
         : input.verdict === "harm_stop"
           ? t(input.restored === false ? "pushHarmStopNotRestored" : "pushHarmStop", { name })
-          : t(input.reason === "uneven_traffic" ? "pushUnevenTraffic" : "pushInconclusive", { name });
+          : input.verdict === "closed_by_system"
+            ? t("pushClosedBySystem", { name })
+            : input.verdict === "promoted_by_system"
+              ? t("pushPromotedBySystem", { name })
+              : t(input.reason === "uneven_traffic" ? "pushUnevenTraffic" : "pushInconclusive", { name });
   // The email has room for the whole name; the push (under 200 characters) loses letters of the name, never its question.
   const rawPush = pushFor(input.name);
   const push = pushFor(nameThatFits(input.name, pushFor));
@@ -117,7 +121,11 @@ export function abNotificationTexts(
     title,
     push,
     emailSubject: t("emailSubject", { name: input.name }),
-    // A harm stop is already decided: its email shows what happened, it doesn't ask for a decision.
-    emailText: t(input.verdict === "harm_stop" ? "emailTextInfo" : "emailText", { push: rawPush, url: input.url }),
+    // A harm stop, and what the system closed or recorded on its own, are already settled: the email shows what happened, it
+    // doesn't ask for a decision.
+    emailText: t(
+      input.verdict === "harm_stop" || input.verdict === "closed_by_system" || input.verdict === "promoted_by_system" ? "emailTextInfo" : "emailText",
+      { push: rawPush, url: input.url },
+    ),
   };
 }
