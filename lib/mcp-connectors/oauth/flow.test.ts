@@ -30,7 +30,8 @@ const store = await import("./store");
 const { REVOKE_TIMEOUT_MS, dropSignIn, finishSignIn, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
-const { mountServer } = await import("../mount");
+const { mountServer, serversToMount, retryDelayMs } = await import("../mount");
+const { connectorsForTurn } = await import("../turn");
 const { entryFingerprint, parseMcpConfig } = await import("../config");
 const { startFakeAuthServer } = await import("./fake-auth-server");
 type FakeAuthServer = Awaited<ReturnType<typeof startFakeAuthServer>>;
@@ -848,5 +849,111 @@ describe("mounting a server that signs in", () => {
   it("🔴 with OAuth off (no oauth deps) the same 401 is a failure, as before", async () => {
     const { oauth: _off, ...off } = mountDeps();
     expect(await mountServer("p1", "cal", off)).toMatchObject({ status: "failed", failures: 1, authReason: null, authIssuer: null });
+  });
+});
+
+// Final review, F1 (spec local 2026-11-17-oauth-de-conectores-mcp, §5.1): the SDK runs its OAuth on EVERY 401 and falls
+// back to the server's own origin as the issuer. A 401 is a sign-in only from a server that is OAuth's — an `oauth` block,
+// a connection of the person's, or a Bearer challenge with real metadata behind it —; any other is a failure, exactly the
+// one OAuth off gives, and a person with no OAuth server gets the very same declarations and context.
+describe("a 401 that isn't a sign-in", () => {
+  let states: ServerState[];
+
+  beforeEach(() => {
+    states = [];
+  });
+
+  const mountWith = (oauth: boolean): MountDeps => ({
+    readConfig: async () => config,
+    readStates: async () => states,
+    async saveState(_personId, s) {
+      states = [...states.filter((x) => x.serverName !== s.serverName), s];
+    },
+    async resolveCredentials(_personId, names) {
+      return new Map(names.filter((n) => creds.has(n)).map((n) => [n, creds.get(n)!] as [string, string]));
+    },
+    open: openMcp,
+    fetch: fake.fetch,
+    now: () => clock,
+    ...(oauth && { oauth: deps() }),
+  });
+
+  /** Mounts `cal` with OAuth on and then off, each from no state: both states and what a turn declares from each. */
+  async function onAndOff() {
+    states = [];
+    const on = await mountServer("p1", "cal", mountWith(true));
+    const statesOn = states;
+    states = [];
+    const off = await mountServer("p1", "cal", mountWith(false));
+    const statesOff = states;
+    const turn = (s: ServerState[]) => connectorsForTurn("p1", { readConfig: async () => config, readStates: async () => s, now: () => clock, env: {} });
+    return { on, off, statesOn, turnOn: await turn(statesOn), turnOff: await turn(statesOff) };
+  }
+
+  const wellKnownAsked = () => fake.requests.filter((p) => p.startsWith("/.well-known/"));
+
+  it("🔴 a server keyed by X-API-Key that refuses a wrong key is failed, word for word as with OAuth off: retried, no authenticate tool, the same declarations and context", async () => {
+    setServer({ headers: { "X-API-Key": "${credential:CAL_KEY}" } });
+    creds.set("CAL_KEY", "wrong");
+    fake.apiKey = "right";
+    fake.challenge = null;
+    fake.wellKnown = false;
+    const { on, off, statesOn, turnOn, turnOff } = await onAndOff();
+    expect(on).toMatchObject({ status: "failed", failures: 1, authReason: null, authIssuer: null, authScope: null });
+    expect(on?.error).toBeTruthy();
+    expect(on?.error).toBe(off?.error);
+    expect(JSON.stringify(turnOn.declarations)).toBe(JSON.stringify(turnOff.declarations));
+    expect(turnOn.contextText).toBe(turnOff.contextText);
+    expect(turnOn.needsAuth).toBeUndefined();
+    expect([...turnOn.routes.keys()].filter((k) => k.endsWith("__authenticate"))).toEqual([]);
+    // Retried as any failure is: once DeepSeek's delay has passed.
+    const parsed = parseMcpConfig(config.text, { reservedServerNames: new Set() });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const later = new Date(clock.getTime() + retryDelayMs(1));
+    expect(serversToMount(statesOn, parsed.config, config.approved, later)).toEqual(["cal"]);
+    // The SDK's OAuth stopped at its first question: nobody's well-known paths were asked.
+    expect(wellKnownAsked()).toEqual([]);
+  });
+
+  it("the same server with the right key connects with OAuth on, as it always did", async () => {
+    setServer({ headers: { "X-API-Key": "${credential:CAL_KEY}" } });
+    creds.set("CAL_KEY", "right");
+    fake.apiKey = "right";
+    fake.challenge = null;
+    expect(await mountServer("p1", "cal", mountWith(true))).toMatchObject({ status: "connected", error: null, authReason: null });
+  });
+
+  it("🔴 a Bearer 401 from a server that publishes no metadata anywhere is failed as with OAuth off, not a Connect card that leads nowhere", async () => {
+    fake.wellKnown = false;
+    const { on, off, turnOn, turnOff } = await onAndOff();
+    expect(on).toMatchObject({ status: "failed", failures: 1, authReason: null, authIssuer: null });
+    expect(on?.error).toBe(off?.error);
+    expect(turnOn.contextText).toBe(turnOff.contextText);
+    expect(turnOn.needsAuth).toBeUndefined();
+  });
+
+  it("🔴 a 401 that asks for no Bearer token is failed even where the host publishes metadata (spec §5.1)", async () => {
+    fake.challenge = null;
+    const { on, off, turnOn, turnOff } = await onAndOff();
+    expect(on).toMatchObject({ status: "failed", failures: 1, authReason: null });
+    expect(on?.error).toBe(off?.error);
+    expect(turnOn.contextText).toBe(turnOff.contextText);
+    expect(wellKnownAsked()).toEqual([]);
+  });
+
+  it("an `oauth` block makes that same 401 a sign-in: the person's file says the server signs in", async () => {
+    fake.challenge = null;
+    setServer({ oauth: {} });
+    expect(await mountServer("p1", "cal", mountWith(true))).toMatchObject({ status: "needs-auth", authReason: "first", authIssuer: fake.issuer, failures: 0 });
+  });
+
+  it("a connection the person has for the entry makes it a sign-in too: their token stopped working", async () => {
+    await signIn();
+    fake.challenge = null;
+    fake.expiresIn = 1;
+    await signIn();
+    clock = new Date(NOW.getTime() + 2000);
+    fake.rejectRefresh = true;
+    expect(await mountServer("p1", "cal", mountWith(true))).toMatchObject({ status: "needs-auth", authReason: "lapsed", authIssuer: fake.issuer });
   });
 });

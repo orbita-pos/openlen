@@ -11,6 +11,13 @@
 // Where the authorization server is (§5.1, Claude Code's `oauth.authServerMetadataUrl`): an entry that names its metadata
 // URL is taken at its word — that document, fetched with the deps' fetch, is the metadata, and RFC 9728 → RFC 8414
 // discovery never runs for it. The issuer is still whatever that document states, and every issuer check still applies.
+//
+// Which 401 is a sign-in (§5.1): the SDK runs its OAuth on EVERY 401, whatever the server asked for, and falls back to the
+// server's own origin as the issuer when nothing is published. A server keyed by `X-API-Key` that answers a wrong key with
+// 401 is not asking anyone to sign in. So a 401 is a sign-in only when the server is OAuth's by what OpenLen knows: the
+// entry has an `oauth` block, the person has a connection for this entry (or had one this connection dropped), or the 401
+// carried a `WWW-Authenticate: Bearer` (or `DPoP`) challenge AND real authorization-server metadata was discovered behind
+// it. Anything else is `NotASignIn`: the caller connects again without OAuth, exactly as with `OPENLEN_MCP_OAUTH=0`.
 import {
   computeScopeUnion,
   discoverOAuthServerInfo,
@@ -71,6 +78,24 @@ export class NeedsSignIn extends Error {
     this.issuer = cleanIssuer(issuer);
     this.scope = cleanScope(scope);
   }
+}
+
+/** A 401 from a server that isn't OAuth's (§5.1): no `oauth` block, no connection of the person's, and no Bearer challenge
+ *  with real authorization-server metadata behind it. Not a sign-in and not shown to anyone: `openMcp` connects again
+ *  without OAuth, so what the person and Len read is what they read with OAuth off. */
+export class NotASignIn extends Error {
+  constructor() {
+    super("the server answered 401 (Unauthorized) and asked for no OAuth sign-in");
+    this.name = "NotASignIn";
+  }
+}
+
+/** Whether a `WWW-Authenticate` header carries an OAuth challenge (RFC 6750 `Bearer`, RFC 9449 `DPoP`) — among several
+ *  challenges too. Quoted parameter values are read as values, never as schemes. */
+export function hasOAuthChallenge(header: string | null): boolean {
+  if (!header) return false;
+  const unquoted = header.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+  return /(?:^|,)\s*(?:bearer|dpop)(?=\s|,|$)/i.test(unquoted);
 }
 
 /** The entry names a client that can't be used now (clients.ts): the person fixes the entry or types the secret. */
@@ -205,6 +230,8 @@ export function storableClient(info: StoredOAuthClientInformation): StoredOAuthC
 export interface ConnectionProvider extends OAuthClientProvider {
   /** The sign-in an error from connecting, listing or calling stands for, or null when it is some other failure. */
   signInNeededBy(err: unknown): Promise<NeedsSignIn | null>;
+  /** The `WWW-Authenticate` of a 401 from the MCP server itself (`openMcp` hands it over before the SDK runs its OAuth). */
+  noteUnauthorized(wwwAuthenticate: string | null): void;
 }
 
 /** The one place a failed connection becomes «needs a sign-in» (§5.4 steps 1 and 4): at connecting, in the middle of a
@@ -223,6 +250,16 @@ export function connectionProvider(personId: string, serverName: string, entry: 
   const fingerprint = entryFingerprint(entry);
   let issuer: string | null = null;
   let lapsed = false;
+  /** A 401 of the MCP server asked for a Bearer (or DPoP) token. */
+  let challenged = false;
+  /** The SDK's discovery found real authorization-server metadata (not its fallback to the server's own origin). */
+  let discovered = false;
+  /** Is this server OAuth's by what OpenLen knows (the header above)? `afterDiscovery`: the discovery has run. */
+  const isOAuths = async (afterDiscovery: boolean): Promise<boolean> => {
+    if (entry.oauth || lapsed) return true;
+    if (challenged && (!afterDiscovery || discovered)) return true;
+    return (await d.store.loadConnection(personId, serverName, entry.url, null, fingerprint)) !== null;
+  };
   // A person who had signed in before (a token is stored, or it was just dropped) signs in AGAIN; one who never did
   // signs in for the first time. `row` is what the caller just read, when it did.
   const needs = async (row?: OAuthConnection | null) => {
@@ -237,8 +274,16 @@ export function connectionProvider(personId: string, serverName: string, entry: 
     get clientMetadata() {
       return clientMetadata(d.siteUrl);
     },
-    // Only an entry that names its metadata URL hands the SDK a discovery; the rest discover as the SDK does.
-    ...(entry.oauth?.authServerMetadataUrl && { discoveryState: () => discoverAuthServer(entry, d) }),
+    // The SDK's first question on a 401, before any discovery request leaves: a server that is plainly not OAuth's (no
+    // block, no connection, no Bearer challenge) is answered here, and nobody's well-known paths are asked. Only an entry
+    // that names its metadata URL hands the SDK a discovery; the rest discover as the SDK does.
+    async discoveryState() {
+      if (!(await isOAuths(false))) throw new NotASignIn();
+      return entry.oauth?.authServerMetadataUrl ? discoverAuthServer(entry, d) : undefined;
+    },
+    saveDiscoveryState(state: OAuthDiscoveryState) {
+      if (state.authorizationServerMetadata !== undefined) discovered = true;
+    },
     async clientInformation(ctx?: OAuthClientInformationContext) {
       if (!ctx) return undefined;
       issuer = ctx.issuer;
@@ -248,6 +293,7 @@ export function connectionProvider(personId: string, serverName: string, entry: 
       const stored = await d.store.loadConnection(personId, serverName, entry.url, ctx.issuer, fingerprint);
       if (stored) return stored.clientInfo;
       // Registering a client is part of signing in, never of connecting.
+      if (!(await isOAuths(true))) throw new NotASignIn();
       throw await needs(null);
     },
     async tokens(ctx?: OAuthClientInformationContext) {
@@ -261,6 +307,7 @@ export function connectionProvider(personId: string, serverName: string, entry: 
       await d.store.saveTokens(personId, serverName, entry.url, at, fingerprint, tokens);
     },
     async redirectToAuthorization() {
+      if (!(await isOAuths(true))) throw new NotASignIn();
       throw await needs();
     },
     saveCodeVerifier() {},
@@ -280,12 +327,18 @@ export function connectionProvider(personId: string, serverName: string, entry: 
     },
     async signInNeededBy(err: unknown) {
       if (err instanceof NeedsSignIn) return err;
+      if (err instanceof NotASignIn) return null;
+      // A 403 asking for more scope is a step-up of an OAuth sign-in: of a server that isn't OAuth's it is just a 403.
       if (InsufficientScopeError.isInstance(err)) {
+        if (!(await isOAuths(true))) return null;
         const had = await provider.tokens();
         return new NeedsSignIn("scope", had?.issuer ?? issuer, computeScopeUnion(had?.scope, err.requiredScope) ?? null);
       }
-      if (UnauthorizedError.isInstance(err)) return needs();
+      if (UnauthorizedError.isInstance(err)) return (await isOAuths(true)) ? needs() : null;
       return null;
+    },
+    noteUnauthorized(wwwAuthenticate: string | null) {
+      if (hasOAuthChallenge(wwwAuthenticate)) challenged = true;
     },
   };
   return provider;
