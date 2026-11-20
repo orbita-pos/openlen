@@ -16,6 +16,8 @@ const h = vi.hoisted(() => ({
   publishProject: vi.fn(),
   runSecurityGate: vi.fn(),
   commit: vi.fn(),
+  createWorktree: vi.fn(),
+  cleanup: vi.fn(),
 }));
 
 vi.mock("@/lib/db", async () => ({
@@ -33,16 +35,16 @@ vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: h.runS
 vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => undefined }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: vi.fn() }));
 vi.mock("@/lib/ab/worktree", () => ({
-  cleanupAbWorktree: vi.fn(async () => undefined),
+  cleanupAbWorktree: h.cleanup,
   commitAbWorktree: h.commit,
   copySources: async () => ({ data: { html: "<html>B</html>", pages: {} }, folder: {} }),
-  createAbWorktree: vi.fn(),
+  createAbWorktree: h.createWorktree,
   ensurePublishedSources: async () => h.published,
   mergeWinnerIntoDraft: vi.fn(),
   readPublishedFolder: async () => ({}),
 }));
 
-const { AbLifecycleError, launchAbExperiment } = await import("./lifecycle");
+const { AbLifecycleError, createAbDraft, launchAbExperiment } = await import("./lifecycle");
 const { getExperimentById, liveExperimentForProject } = await import("./store");
 
 let pglite: AbPglite;
@@ -62,6 +64,8 @@ beforeEach(async () => {
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
   h.runSecurityGate.mockResolvedValue({ fingerprint: null });
   h.commit.mockResolvedValue("tip-1");
+  h.cleanup.mockResolvedValue(undefined);
+  h.createWorktree.mockResolvedValue({ copyId: "copy-new", branch: "ab/new", base: "base-1" });
   h.publishProject.mockImplementation(async () => {
     await tick(); // a publish takes time: this is where the second launch would slip in
     return { sha: "release-experiment" };
@@ -70,7 +74,7 @@ beforeEach(async () => {
 });
 
 const draft = (id: string, targetPath: string) =>
-  insertExperiment(raw(), { id, status: "draft", targetPath, copyProjectId: `copy-${id}`, branch: `ab/${id}`, baseCommitOid: "base-1" });
+  insertExperiment(raw(), { id, status: "draft", targetPath, copyProjectId: `copy-${id}`, branch: `ab/${id}`, baseCommitOid: "base-1", controlReleaseSha: "rel-live" });
 
 describe("one live experiment per project, in the database (item 13)", () => {
   it("🔴 the index exists: two live experiments of a project can't be written, whatever the code checked", async () => {
@@ -121,5 +125,64 @@ describe("one live experiment per project, in the database (item 13)", () => {
     // and it can be launched again
     await expect(launch("ab_dddd0004")).resolves.toBeDefined();
     expect((await getExperimentById("ab_dddd0004"))!.status).toBe("running");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A DRAFT CUT FROM A VERSION THAT IS NO LONGER THE SITE (G1+G3 review, items 16 and 17): the launch refuses it — and the
+// refusal must leave a way forward. It used to leave the stale draft alive, which counts as active, so the re-cut the message
+// promised answered `already_active`.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("base_moved leaves a way forward (item 16)", () => {
+  it("🔴 the refusal cancels the stale draft and says so; Len can then cut the variant again for the same page", async () => {
+    await draft("ab_stale001", "/");
+    h.published = { commitOid: "base-2-published-since", data: { html: "<html>A2</html>" }, extraFiles: {} };
+    const err = await launch("ab_stale001").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AbLifecycleError);
+    expect(err).toMatchObject({ code: "base_moved", status: 409 });
+    expect((err as Error).message).toMatch(/discarded/i);
+    expect(h.publishProject).not.toHaveBeenCalled();
+    expect(await getExperimentById("ab_stale001")).toMatchObject({ status: "cancelled", copyProjectId: null });
+    expect(h.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-ab_stale001", branch: "ab/ab_stale001" });
+
+    // the re-cut the message promises: no already_active
+    await expect(createAbDraft({ projectId: "p1", ownerId: "u1", actorId: "u1", name: "Again" })).resolves.toMatchObject({ status: "draft", targetPath: "/" });
+  });
+
+  it("a draft of an experiment that was never cut against anything (no base recorded) is cancelled the same way", async () => {
+    await insertExperiment(raw(), { id: "ab_nobase01", status: "draft", copyProjectId: "copy-x", branch: "ab/ab_nobase01", baseCommitOid: null });
+    await expect(launch("ab_nobase01")).rejects.toMatchObject({ code: "base_moved" });
+    expect((await getExperimentById("ab_nobase01"))!.status).toBe("cancelled");
+  });
+
+  it("if the cancel itself fails, the launch still refuses with base_moved", async () => {
+    await draft("ab_stale002", "/");
+    h.published = { commitOid: "base-2", data: { html: "<html>A2</html>" }, extraFiles: {} };
+    h.cleanup.mockRejectedValue(new Error("db"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_stale002")).rejects.toMatchObject({ code: "base_moved", status: 409 });
+    error.mockRestore();
+  });
+});
+
+describe("the base check's backstop (item 17)", () => {
+  it("🔴 the same commit but a different published release than at the draft: someone published since — refused", async () => {
+    await raw().query(`UPDATE "projects" SET "publishedReleaseSha" = 'release-live-now' WHERE "id" = 'p1'`);
+    await insertExperiment(raw(), { id: "ab_sha00001", status: "draft", copyProjectId: "copy-s", branch: "ab/ab_sha00001", baseCommitOid: "base-1", controlReleaseSha: "release-of-the-draft-day" });
+    await expect(launch("ab_sha00001")).rejects.toMatchObject({ code: "base_moved", status: 409 });
+    expect(h.publishProject).not.toHaveBeenCalled();
+    expect((await getExperimentById("ab_sha00001"))!.status).toBe("cancelled");
+  });
+
+  it("an identical republish keeps the sha (content-addressed): nothing moved, it launches", async () => {
+    await raw().query(`UPDATE "projects" SET "publishedReleaseSha" = 'release-live-now' WHERE "id" = 'p1'`);
+    await insertExperiment(raw(), { id: "ab_sha00002", status: "draft", copyProjectId: "copy-s", branch: "ab/ab_sha00002", baseCommitOid: "base-1", controlReleaseSha: "release-live-now" });
+    await expect(launch("ab_sha00002")).resolves.toBeDefined();
+  });
+
+  it("a project with no recorded release at the draft and none now launches (nothing to compare)", async () => {
+    await raw().query(`UPDATE "projects" SET "publishedReleaseSha" = NULL WHERE "id" = 'p1'`);
+    await insertExperiment(raw(), { id: "ab_sha00003", status: "draft", copyProjectId: "copy-s", branch: "ab/ab_sha00003", baseCommitOid: "base-1", controlReleaseSha: null });
+    await expect(launch("ab_sha00003")).resolves.toBeDefined();
   });
 });
