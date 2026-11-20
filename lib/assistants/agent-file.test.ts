@@ -84,4 +84,19 @@ describe("agentPreloads", () => {
     const hidden = resolveSkills({ bundled: [skill("language-teacher", false), skill("b")], project: [], personal: [] });
     expect(agentPreloads(agent, new Set(), hidden).map((s) => s.skill.name)).toEqual(["b"]);
   });
+
+  // Review Focus 3 of delivery 2 (spec §6.6): Len wrote the agent with a skill he proposed on a card. Until the person
+  // saves it the agent runs without it; once saved — a personal skill of theirs — its next turn preloads it.
+  it("🔴 preloads a skill the person saved from the card, beside a bundled one, in the file's order", async () => {
+    m.listAgents.mockResolvedValue([stored("gardener", "---\nname: gardener\ndescription: Helps with my plants\nskills: plant-care, language-teacher\n---\n\nYou help with plants.\n")]);
+    const agent = (await loadAgentOf("u1", "gardener"))!;
+    const unsaved = resolveSkills({ bundled: [skill("language-teacher")], project: [], personal: [] });
+    expect(agentPreloads(agent, new Set(), unsaved).map((s) => s.skill.name)).toEqual(["language-teacher"]);
+    const saved = resolveSkills({
+      bundled: [skill("language-teacher")],
+      project: [],
+      personal: [stored("plant-care", "---\nname: plant-care\ndescription: Look after plants.\n---\n\nWater when the soil is dry.\n")],
+    });
+    expect(agentPreloads(agent, new Set(), saved).map((s) => s.skill.name)).toEqual(["plant-care", "language-teacher"]);
+  });
 });
