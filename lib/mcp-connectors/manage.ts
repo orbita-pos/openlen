@@ -2,7 +2,7 @@
 // status, add, edit, enable, disable, delete, probe — on the Herramientas page. What the person writes is validated like
 // what Len writes and is approved by writing it. What the page reads never carries a header value or a key: it gets
 // header NAMES, whether each key is set, and for a server Len added, the same «Conectar» card the chat shows.
-import { buildApprovalCard, hostOf, type McpApprovalCard } from "./approval";
+import { buildApprovalCard, hostOf, issuerHostOf, type McpApprovalCard, type SignInAsk } from "./approval";
 import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig, type McpServerEntry } from "./config";
 import { oauthEnabled } from "./oauth/enabled";
 import type { ServerState, StoredConfig } from "./store";
@@ -43,6 +43,8 @@ export interface ServerView {
   readonly error?: string;
   readonly listedAt?: string;
   readonly oauth?: boolean;
+  /** A server waiting for a sign-in: where (the host its mount found) and why — what «Conectar» names (final review F4). */
+  readonly signIn?: SignInAsk;
   /** For a server Len added or changed that the person hasn't approved: the card to approve it. */
   readonly approval?: McpApprovalCard;
 }
@@ -95,6 +97,7 @@ export function serverView(
     ...(current?.error ? { error: current.error } : {}),
     ...(current?.listedAt ? { listedAt: current.listedAt.toISOString() } : {}),
     ...(oauth ? { oauth: true } : {}),
+    ...(status === "needs-auth" && current ? { signIn: { issuerHost: issuerHostOf(entry, current.authIssuer), reason: current.authReason ?? "first" } } : {}),
   };
 }
 

@@ -8,7 +8,7 @@ import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
-import { showsDetail, signInErrorKey, signInHostFrom } from "@/components/workspace-v2/chat/sign-in-errors";
+import { showsDetail, signInAskFrom, signInErrorKey, signInHostFrom } from "@/components/workspace-v2/chat/sign-in-errors";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 import { publishedHost } from "@/lib/publish/base-host";
@@ -259,6 +259,10 @@ function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { client
 //
 // El toque le dice al servidor qué host de inicio de sesión nombró la tarjeta (revisión final F3, spec §10.2): si ahora es
 // otro, no empieza nada, la tarjeta nombra el nuevo y dice que la página cambió; el siguiente toque se compara con ése.
+//
+// Una tarjeta que pide aprobación mira la lista de conectores al aparecer y al volver la app al primer plano (revisión
+// final F4, §10.5): si la persona ya la aprobó en la web y el servidor resultó pedir inicio de sesión, la tarjeta pasa a
+// «Conectar» nombrando dónde; si ya conecta, lo dice. Aprobar sigue siendo sólo de la web.
 function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpApprovalCard }) {
   const t = useTranslations("movil.herramientas");
   const [estado, setEstado] = useState<"listo" | "abriendo" | "esperando" | "conectado" | "error">("listo");
@@ -267,7 +271,37 @@ function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpAp
   const [servidor, setServidor] = useState(card.server);
   // Dónde se inicia sesión, como lo nombra la tarjeta ahora: el servidor puede haber dicho que cambió (issuer_changed).
   const [oauth, setOauth] = useState(card.oauth);
-  const pideAprobacion = !card.suggest && card.version > 0;
+  // Aprobada en la web después de que llegara esta tarjeta (lo dice la lista de conectores).
+  const [aprobadaEnLaWeb, setAprobadaEnLaWeb] = useState(false);
+  const pideAprobacion = !card.suggest && card.version > 0 && !aprobadaEnLaWeb;
+
+  useEffect(() => {
+    if (!pideAprobacion) return;
+    let vigente = true;
+    const mirar = () => {
+      void cliente
+        .pedir("/api/mcp-connectors")
+        .then((r) => (r.ok ? (r.json() as Promise<{ servers?: { name: string; status: string; approved?: boolean; signIn?: unknown }[] }>) : null))
+        .then((body) => {
+          const s = vigente ? body?.servers?.find((x) => x.name === card.server) : undefined;
+          if (!s?.approved) return;
+          if (s.status === "connected") {
+            setAprobadaEnLaWeb(true);
+            setEstado("conectado");
+          } else if (s.status === "needs-auth") {
+            setAprobadaEnLaWeb(true);
+            setOauth(signInAskFrom(s.signIn));
+          }
+        })
+        .catch(() => {});
+    };
+    mirar();
+    const dejarDeOir = plataforma.alVolverAlPrimerPlano(mirar);
+    return () => {
+      vigente = false;
+      dejarDeOir();
+    };
+  }, [pideAprobacion, cliente, card.server]);
 
   useEffect(() => {
     if (estado !== "esperando") return;

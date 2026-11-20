@@ -14,8 +14,13 @@ export interface ApproveDeps {
   mount(personId: string, name: string): Promise<ServerState | null>;
 }
 
+/** Where a server that turned out to need a sign-in wants the person (spec local 2026-11-17-oauth-de-conectores-mcp,
+ *  §10.5): the host its mount found — what the card's «Conectar» names — and why. */
+export type SignInAsk = { readonly issuerHost: string | null; readonly reason: "first" | "lapsed" | "scope" };
+
 /** The person's tap: approve the entry exactly as the card showed it, store the keys typed in the card (only ones the
- *  entry cites), then mount it. Anything that moved in between refuses the whole tap. */
+ *  entry cites), then mount it. Anything that moved in between refuses the whole tap. A server whose mount asks for a
+ *  sign-in (one Len added without an `oauth` block, final review F4) answers where, so the card can offer it. */
 export async function approveServer(
   personId: string,
   name: string,
@@ -23,7 +28,7 @@ export async function approveServer(
   version: number,
   credentials: Readonly<Record<string, string>>,
   d: ApproveDeps,
-): Promise<{ ok: true; state: ServerState | null } | { ok: false; reason: "changed" | "unknown_credential" }> {
+): Promise<{ ok: true; state: ServerState | null; signIn?: SignInAsk } | { ok: false; reason: "changed" | "unknown_credential" }> {
   const stored = await d.read(personId);
   const parsed = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
   const entry = parsed.ok ? parsed.config.servers[name] : undefined;
@@ -32,7 +37,9 @@ export async function approveServer(
   if (Object.keys(credentials).some((k) => !refs.has(k))) return { ok: false, reason: "unknown_credential" };
   for (const [k, v] of Object.entries(credentials)) if (v) await d.setCredential(personId, k, v);
   if (!(await d.approve(personId, name, fingerprint, version))) return { ok: false, reason: "changed" };
-  return { ok: true, state: await d.mount(personId, name) };
+  const state = await d.mount(personId, name);
+  if (state?.status !== "needs-auth") return { ok: true, state };
+  return { ok: true, state, signIn: { issuerHost: issuerHostOf(entry, state.authIssuer), reason: state.authReason ?? "first" } };
 }
 
 export type { McpApprovalCard } from "./approval-card";

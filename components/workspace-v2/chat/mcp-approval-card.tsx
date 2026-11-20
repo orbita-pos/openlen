@@ -12,13 +12,18 @@
 //
 // The start checks the sign-in host this card named (final review F3, spec §10.2): when the server signs in elsewhere
 // now, the card names the new host and says the page changed, and the next tap is checked against that one.
+//
+// A server Len added without an `oauth` block may turn out to sign in only once it is approved (final review F4, §10.5):
+// the approval then answers where, and the card becomes a sign-in card with «Conectar» naming that host. That second
+// click opens the window (a window opened after an `await` is blocked by the browser). An approval inside the one-tap
+// sign-in whose mount already connects closes the window and says so.
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
 import { openSignIn, postStart, SignInError } from "./open-sign-in";
-import { showsDetail, signInErrorKey } from "./sign-in-errors";
+import { showsDetail, signInAskFrom, signInErrorKey } from "./sign-in-errors";
 
 type State =
   | { kind: "idle" }
@@ -64,6 +69,8 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
     const credentials = Object.fromEntries(missing.map((c) => [c.name, values[c.name] ?? ""]).filter(([, v]) => v));
     if (card.suggest || oauth) {
       let sawChanged = false;
+      // The approval's mount connected (a token was there already): nothing to sign in to.
+      let connectedOnApproval: number | null = null;
       // Open the popup synchronously on the click before any state update or await.
       const signIn = openSignIn(card.server, {
         // The host this card named is what the start checks (the directory's route checks its own).
@@ -78,7 +85,7 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
                     headers: { "content-type": "application/json" },
                     body: JSON.stringify({ fingerprint: card.fingerprint, version: card.version, credentials }),
                   });
-                  const body = (await res.json().catch(() => ({}))) as { error?: string };
+                  const body = (await res.json().catch(() => ({}))) as { error?: string; state?: { status?: string; tools?: number } | null };
                   if (res.status === 409) {
                     sawChanged = true;
                     setState({ kind: "changed" });
@@ -87,6 +94,10 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
                   if (!res.ok) throw new SignInError(body.error ?? String(res.status));
                   setValues({});
                   setApproved(true);
+                  if (body.state?.status === "connected") {
+                    connectedOnApproval = body.state.tools ?? 0;
+                    return false;
+                  }
                   return true;
                 },
               }
@@ -96,6 +107,7 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       const res = await signIn;
       if (res === "connected") return setState({ kind: "oauth-connected" });
       if (res === "closed") {
+        if (connectedOnApproval !== null) return setState({ kind: "connected", tools: connectedOnApproval });
         if (!sawChanged) setState({ kind: "idle" });
         return;
       }
@@ -112,11 +124,17 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ fingerprint: card.fingerprint, version: card.version, credentials }),
       });
-      const body = (await res.json().catch(() => ({}))) as { state?: { status?: string; tools?: number; error?: string | null } | null; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { state?: { status?: string; tools?: number; error?: string | null; signIn?: unknown } | null; error?: string };
       if (res.status === 409) return setState({ kind: "changed" });
       if (!res.ok) return setState({ kind: "error", text: body.error ?? String(res.status) });
       setValues({});
       if (body.state?.status === "connected") return setState({ kind: "connected", tools: body.state.tools ?? 0 });
+      if (body.state?.status === "needs-auth") {
+        // Approved, and it signs in: the card offers «Conectar» naming where. The click opens the window.
+        setApproved(true);
+        setOauth(signInAskFrom(body.state.signIn));
+        return setState({ kind: "idle" });
+      }
       setState({ kind: "failed", error: body.state?.error ?? body.state?.status ?? "" });
     } catch (err) {
       setState({ kind: "error", text: err instanceof Error ? err.message : String(err) });

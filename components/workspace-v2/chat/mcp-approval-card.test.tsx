@@ -243,6 +243,65 @@ describe("🔴 a sign-in page that moved", () => {
   });
 });
 
+// Final review, F4 (spec §10.5): a server Len added without an `oauth` block may sign in — the card can't know before it
+// is approved. The approval answers where, the card becomes a sign-in card, and its «Conectar» opens the window on that
+// second click (one opened after an await would be blocked).
+describe("🔴 an approved server that turns out to sign in", () => {
+  const LEN_ADDED: McpApprovalCard = {
+    server: "linear",
+    host: "mcp.linear.app",
+    headerNames: [],
+    credentials: [{ name: "EXTRA", set: false, destinationHosts: ["mcp.linear.app"], otherHosts: [], firstTime: false }],
+    fingerprint: "fp-linear",
+    version: 5,
+  };
+  const AUTH_URL = "https://linear.app/oauth/authorize?state=s1";
+  const fakePopup = () => ({ closed: false, opener: {} as unknown, location: { href: "about:blank" }, close() { this.closed = true; } });
+  const needsAuth = (signIn: unknown) => new Response(JSON.stringify({ state: { status: "needs-auth", tools: 0, error: "needs authentication", signIn } }));
+  const urls = () => fetchMock.mock.calls.map((c) => String(c[0]));
+
+  it("offers «Conectar» naming the host the mount found, never «Failed»; that click opens the window and starts without approving again", async () => {
+    const popup = fakePopup();
+    const openSpy = vi.fn(() => popup);
+    window.open = openSpy as unknown as typeof window.open;
+    fetchMock
+      .mockResolvedValueOnce(needsAuth({ issuerHost: "linear.app", reason: "first" }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ authorizationUrl: AUTH_URL })));
+    await render(LEN_ADDED);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain("mcpApproval.failed");
+    expect(document.querySelector("[data-mcp-sign-in]")?.textContent).toBe('mcpApproval.signInAt {"issuer":"linear.app"}');
+    expect(document.querySelectorAll("input")).toHaveLength(0);
+
+    await act(async () => {
+      button("mcpApproval.connect").click();
+      expect(openSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(urls()).toEqual(["/api/mcp-connectors/linear/approve", "/api/mcp-connectors/linear/oauth"]);
+    expect(JSON.parse(String((fetchMock.mock.calls[1]![1] as RequestInit).body))).toEqual({ issuerHost: "linear.app" });
+    expect(popup.location.href).toBe(AUTH_URL);
+  });
+
+  it("a host the answer doesn't name is the server's own sign-in page", async () => {
+    fetchMock.mockResolvedValueOnce(needsAuth({ issuerHost: "<b>x</b>", reason: "weird" }));
+    await render(LEN_ADDED);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(document.querySelector("[data-mcp-sign-in]")?.textContent).toBe("mcpApproval.signInOnServerPage");
+  });
+
+  it("an approval inside the one-tap sign-in whose mount already connects closes the window and says connected", async () => {
+    const popup = fakePopup();
+    window.open = vi.fn(() => popup) as unknown as typeof window.open;
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ state: { status: "connected", tools: 3 } })));
+    await render({ ...LEN_ADDED, credentials: [], oauth: { issuerHost: "linear.app", reason: "first" } });
+    await act(async () => button("mcpApproval.connect").click());
+    expect(popup.closed).toBe(true);
+    expect(urls()).toEqual(["/api/mcp-connectors/linear/approve"]);
+    expect(document.body.textContent).toContain('mcpApproval.connected {"tools":3}');
+  });
+});
+
 // Review fix OB1: the card says where each thing really goes. A client secret goes to the authorization server's token
 // endpoint, a header's key to the MCP server, and a sign-in that nobody knows the page of is said to be on the server's
 // own sign-in page — never on the MCP server's host, which is where the tools are.

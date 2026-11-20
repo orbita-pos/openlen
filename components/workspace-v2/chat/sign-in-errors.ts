@@ -54,6 +54,17 @@ export function signInHostFrom(v: unknown): string | null | undefined {
   return typeof v === "string" && HOST.test(v) ? v : undefined;
 }
 
+const ASK_REASONS: ReadonlySet<string> = new Set(["first", "lapsed", "scope"]);
+
+/** Where a server that turned out to need a sign-in wants the person, as the approval (or the connectors list) answers
+ *  it (final review F4, spec §10.5): a host that isn't one is «the server's own page», a reason nobody listed is a first
+ *  sign-in. */
+export function signInAskFrom(raw: unknown): { issuerHost: string | null; reason: "first" | "lapsed" | "scope" } {
+  const o = raw && typeof raw === "object" ? (raw as { issuerHost?: unknown; reason?: unknown }) : {};
+  const reason = typeof o.reason === "string" && ASK_REASONS.has(o.reason) ? (o.reason as "first" | "lapsed" | "scope") : "first";
+  return { issuerHost: signInHostFrom(o.issuerHost) ?? null, reason };
+}
+
 /** The codes whose server-side `detail` is worth showing under the sentence (a credential's name, what to set in the
  *  file): an English line from OpenLen's own server, already redacted and cut short. */
 const CODES_WITH_DETAIL: ReadonlySet<string> = new Set(["no_client", "unreachable", "config_unreadable"]);

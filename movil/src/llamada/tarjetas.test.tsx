@@ -211,12 +211,50 @@ it("mientras espera a que termines de iniciar sesión, lo dice", async () => {
 
 it("🔴 una tarjeta que pide aprobación (un servidor que escribió Len) no tiene botón en el teléfono: se aprueba en la web", async () => {
   iniciar();
-  const pedir = vi.fn();
+  const pedir = vi.fn(async () => servidores({ name: "cal", status: "pending" }));
   await conectar({ ...OAUTH_CARD, version: 7, credentials: [{ name: "KEY", set: false, destinationHosts: ["calendarmcp.googleapis.com"], otherHosts: [], firstTime: false }] }, pedir);
   expect(host.querySelector("button")).toBeNull();
   expect(host.textContent).toContain("aprobarEnLaWeb");
   expect(host.textContent).toContain("mcpApproval.title");
-  expect(pedir).not.toHaveBeenCalled();
+  // Sólo mira la lista (¿la aprobaron ya en la web?): nunca aprueba ni inicia nada desde aquí.
+  expect(pedir.mock.calls.every((c) => c[0] === "/api/mcp-connectors" && (c as unknown[])[1] === undefined)).toBe(true);
+});
+
+// Revisión final F4 (spec §10.5): aprobada en la web, el servidor resultó pedir inicio de sesión; la tarjeta del teléfono lo
+// ve al aparecer o al volver la app al primer plano y ofrece «Conectar», que inicia sesión con el host que encontró.
+it("🔴 aprobada en la web y pidiendo inicio de sesión, la tarjeta pasa a «Conectar» con el host que encontró el montaje", async () => {
+  iniciar();
+  vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const foco = alVolver();
+  let aprobada = false;
+  const cuerpos: unknown[] = [];
+  const pedir = vi.fn(async (ruta: string, init?: RequestInit) => {
+    if (ruta === "/api/mcp-connectors") {
+      return aprobada
+        ? Response.json({ available: true, servers: [{ name: "linear", approved: true, status: "needs-auth", signIn: { issuerHost: "linear.app", reason: "first" } }] })
+        : Response.json({ available: true, servers: [{ name: "linear", approved: false, status: "pending" }] });
+    }
+    cuerpos.push(JSON.parse(String(init?.body ?? "null")));
+    return Response.json({ authorizationUrl: "https://linear.app/oauth/authorize" });
+  });
+  await conectar({ server: "linear", host: "mcp.linear.app", headerNames: [], credentials: [], fingerprint: "fp", version: 5 }, pedir);
+  expect(host.textContent).toContain("aprobarEnLaWeb");
+  aprobada = true;
+  await act(async () => foco.volver());
+  expect(host.textContent).not.toContain("aprobarEnLaWeb");
+  expect(host.textContent).toContain("mcpApproval.signInAt");
+  await pulsar("mcpApproval.connect");
+  expect(pedir).toHaveBeenCalledWith("/api/mcp-connectors/linear/oauth", expect.objectContaining({ method: "POST" }));
+  expect(cuerpos).toEqual([{ issuerHost: "linear.app" }]);
+  expect(plataforma.abrirNavegador).toHaveBeenCalledWith("https://linear.app/oauth/authorize");
+});
+
+it("aprobada en la web y ya conectada, lo dice", async () => {
+  iniciar();
+  const pedir = vi.fn(async () => Response.json({ available: true, servers: [{ name: "linear", approved: true, status: "connected" }] }));
+  await conectar({ server: "linear", host: "mcp.linear.app", headerNames: [], credentials: [], fingerprint: "fp", version: 5 }, pedir);
+  expect(host.textContent).toContain("mcpApproval.oauthConnected");
+  expect(host.querySelector("button")).toBeNull();
 });
 
 it("las tarjetas de iniciar sesión (versión 0) y las del directorio conservan su botón", async () => {
