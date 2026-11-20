@@ -28,7 +28,7 @@ Write `~/.len/agents/<name>.md` with `Write`, in Claude Code's agent format. Eac
 name: english-teacher
 description: Teaches the person English by making them practise, at their level, with a plan and flashcards.
 skills: language-teacher
-initialPrompt: Greet the person in one line and start the placement interview from your language-teacher skill.
+initialPrompt: Hi! Let's start: find out my level.
 ---
 
 You are the person's English teacher. ...
@@ -37,7 +37,7 @@ You are the person's English teacher. ...
 - `name`: lowercase words joined by `-` (64 characters at most), the same as the file name. Take it from the job, not from what the person will call it: `english-teacher`, `running-coach`, `family-recipes`. Look in `~/.len/agents/` first: if that name is taken by another agent, add `-2`.
 - `description`: one line on what it is for.
 - `skills`: the job skill, or leave the key out when there is none.
-- `initialPrompt`: one line, sent as the person's first message to the agent the first time they open it. Write it as an instruction to the agent ("Greet the person in one line and ask what they want to cook this week").
+- `initialPrompt`: one line, sent the first time they open the agent as THEIR first message, and shown in the chat as theirs. So write it the way they would say it, in their language: "¡Hola! Empecemos: averigua mi nivel", "Ayúdame a planear las comidas de esta semana". The body says what the agent does with it.
 - No other keys. Never `tools` or `disallowedTools`.
 
 The body talks to the agent in the second person and never names it (its name comes from its face). Say:

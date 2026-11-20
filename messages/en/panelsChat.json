@@ -899,7 +899,9 @@
         "talking": "Writing…"
       },
       "settings": "Settings",
-      "figureSaved": "Figure saved"
+      "figureSaved": "Figure saved",
+      "change": "Change {name}",
+      "changeDraft": "I want to change {name}: "
     },
     "speaker": {
       "working": "{name} is working",

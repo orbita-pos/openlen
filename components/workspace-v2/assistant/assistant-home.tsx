@@ -10,11 +10,12 @@
 // Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
 // three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
 // pages) waits in a menu behind one button, so her place is her and the conversation.
-import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, type LucideIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, Wand2, type LucideIcon } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
 import type { AssistantView } from "@/lib/assistants/view";
+import { spaceHref } from "@/lib/space/href";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
@@ -50,6 +51,7 @@ export function AssistantHome({
   onPage,
   needsPublish,
   nothingToKnow,
+  startsWith = null,
 }: {
   assistant: AssistantView;
   projectHtml: string;
@@ -63,10 +65,16 @@ export function AssistantHome({
   needsPublish: boolean;
   /** Published with her, and nothing for her to know: no text, no public data. */
   nothingToKnow: boolean;
+  /** An agent's first message (spec local 2026-11-19-agentes-para-todos, §6.4): its file's `initialPrompt`, given only
+   *  while the conversation is empty (`firstMessageOf`), sent once as the person's first turn. */
+  startsWith?: string | null;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
+  const locale = useLocale();
   const [tab, setTab] = useState<Tab>("talk");
+  // Its first message goes out once: the panel hands it back when it is sent, and it is not given again.
+  const [opening, setOpening] = useState<string | null>(startsWith);
   // Her figure can be changed here (phase 6): her place wears the new one at once.
   const [look, setLook] = useState(assistant.look);
   const [creatorOpen, setCreatorOpen] = useState(false);
@@ -186,6 +194,18 @@ export function AssistantHome({
           >
             <RenameHer assistantId={assistant.id} name={assistant.name} onPage={onPage} />
             <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
+            {/* An agent with a file is changed by asking Len, in the person's space (spec local
+                2026-11-19-agentes-para-todos, §6.3): he rewrites its file; the agent never edits its own. */}
+            {assistant.agentType && (
+              <a
+                href={`/${locale}${spaceHref({ draft: t("ownAssistant.place.changeDraft", { name: assistant.name }) })}`}
+                data-change-agent=""
+                className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] fg transition-colors hover:bg-hover"
+              >
+                <Wand2 size={15} aria-hidden="true" className="fg-muted" />
+                {t("ownAssistant.place.change", { name: assistant.name })}
+              </a>
+            )}
             <div className="my-1 h-px bg-[var(--border)]" />
             <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
             <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
@@ -215,7 +235,18 @@ export function AssistantHome({
             {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
             <div className={tab === "talk" ? "flex min-h-0 flex-1" : "hidden"}>
               <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                <NewChatPanel flatProjectId={assistant.projectId} flatProjectHtml={projectHtml} onFlatHtmlUpdate={noCanvas} flatProjectChat={initialChat} assistant={her} figurePaused={creatorOpen || tab !== "talk"} centered />
+                <NewChatPanel
+                  flatProjectId={assistant.projectId}
+                  flatProjectHtml={projectHtml}
+                  onFlatHtmlUpdate={noCanvas}
+                  flatProjectChat={initialChat}
+                  assistant={her}
+                  figurePaused={creatorOpen || tab !== "talk"}
+                  centered
+                  pendingDraft={opening}
+                  pendingDraftAutoSend={opening !== null}
+                  onPendingDraftConsumed={() => setOpening(null)}
+                />
               </div>
               {/* Windows of 860 px or more, and only beside her chat: elsewhere it is not loaded. */}
               {pageShown && (

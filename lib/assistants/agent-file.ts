@@ -29,6 +29,13 @@ export async function agentTypeProblem(personId: string, agentType: string): Pro
   return parseAgentFile(text, agentType).ok ? null : "invalid";
 }
 
+/** What its place sends as the person's first turn: the file's `initialPrompt` — Claude Code's «auto-submitted as the first
+ *  user turn» — only while the conversation is empty; nothing for an assistant without a file, or with one that broke. */
+export async function firstMessageOf(personId: string, agentType: string | null, conversationTurns: number): Promise<string | null> {
+  if (!agentType || conversationTurns > 0) return null;
+  return (await loadAgentOf(personId, agentType))?.initialPrompt ?? null;
+}
+
 /** The skills its turn preloads: its `skills` in order, skipping the ones the conversation already loaded, the unknown
  *  and the ones the model may not invoke — as a subagent's preload does (`lib/agent/subagents/run.ts`). */
 export function agentPreloads(agent: AgentDefinition, loaded: ReadonlySet<string>, skills: SkillSet): ResolvedSkill[] {

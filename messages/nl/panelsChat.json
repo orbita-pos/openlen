@@ -899,7 +899,9 @@
         "talking": "Schrijft…"
       },
       "settings": "Instellingen",
-      "figureSaved": "Figuur opgeslagen"
+      "figureSaved": "Figuur opgeslagen",
+      "change": "{name} wijzigen",
+      "changeDraft": "Ik wil {name} wijzigen: "
     },
     "speaker": {
       "working": "{name} is bezig",

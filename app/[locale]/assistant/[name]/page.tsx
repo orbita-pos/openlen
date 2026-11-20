@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { AssistantHome } from "@/components/workspace-v2/assistant/assistant-home";
 import { permanentRedirect, redirect } from "@/i18n/navigation";
+import { firstMessageOf } from "@/lib/assistants/agent-file";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { slugFromParam } from "@/lib/assistants/names";
@@ -43,6 +44,9 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     assistantOnPage(assistant.homeProjectId).catch(() => null),
   ]);
   const state = onPageState(found, Boolean(project.data?.app));
+  // An agent's first message (spec local 2026-11-19-agentes-para-todos, §6.4): its file's initialPrompt, while the
+  // conversation is empty. A file that can't be read leaves the box waiting, as for any assistant.
+  const startsWith = await firstMessageOf(personId, assistant.agentType ?? null, chat.length).catch(() => null);
   return (
     <AssistantHome
       assistant={assistantView(assistant)}
@@ -53,6 +57,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
       onPage={state.onPage}
       needsPublish={state.needsPublish}
       nothingToKnow={state.nothingToKnow}
+      startsWith={startsWith}
     />
   );
 }

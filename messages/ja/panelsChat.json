@@ -899,7 +899,9 @@
         "talking": "入力中…"
       },
       "settings": "設定",
-      "figureSaved": "見た目を保存しました"
+      "figureSaved": "見た目を保存しました",
+      "change": "{name}を変更",
+      "changeDraft": "{name}をこう変えたい："
     },
     "speaker": {
       "working": "{name} が作業中",

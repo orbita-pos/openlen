@@ -899,7 +899,9 @@
         "talking": "작성 중…"
       },
       "settings": "설정",
-      "figureSaved": "모습을 저장했습니다"
+      "figureSaved": "모습을 저장했습니다",
+      "change": "{name} 바꾸기",
+      "changeDraft": "{name}을(를) 이렇게 바꾸고 싶어요: "
     },
     "speaker": {
       "working": "{name} · 작업 중",

@@ -16,6 +16,9 @@ export interface AssistantView {
   readonly projectId: string;
   /** Her morning summary is on (phase 4D, spec §6.9). */
   readonly morningSummary?: boolean;
+  /** The agent file Len wrote for it, `~/.len/agents/<name>.md` (spec local 2026-11-19-agentes-para-todos, §6.1); absent
+   *  for an assistant without one. Its name only: never what it says. */
+  readonly agentType?: string;
 }
 
 /** In the person's list: also the projects she serves (her home is `projectId`). */
@@ -23,7 +26,7 @@ export interface AssistantListItem extends AssistantView {
   readonly projectIds: readonly string[];
 }
 
-export function assistantView(a: { id: string; name: string; slug: string; look?: unknown; color: string; tone: string; homeProjectId: string; morningSummary?: boolean }): AssistantView {
+export function assistantView(a: { id: string; name: string; slug: string; look?: unknown; color: string; tone: string; homeProjectId: string; morningSummary?: boolean; agentType?: string | null }): AssistantView {
   const look = lookOfRow(a);
   return {
     id: a.id,
@@ -34,5 +37,6 @@ export function assistantView(a: { id: string; name: string; slug: string; look?
     tone: a.tone as AssistantTone,
     projectId: a.homeProjectId,
     ...(a.morningSummary !== undefined ? { morningSummary: a.morningSummary } : {}),
+    ...(a.agentType ? { agentType: a.agentType } : {}),
   };
 }

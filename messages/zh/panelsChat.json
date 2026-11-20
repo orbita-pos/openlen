@@ -899,7 +899,9 @@
         "talking": "输入中…"
       },
       "settings": "设置",
-      "figureSaved": "形象已保存"
+      "figureSaved": "形象已保存",
+      "change": "修改{name}",
+      "changeDraft": "我想这样修改{name}："
     },
     "speaker": {
       "working": "{name} 正在工作",

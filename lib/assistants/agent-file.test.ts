@@ -9,7 +9,7 @@ const m = vi.hoisted(() => ({ listAgents: vi.fn(async (): Promise<{ name: string
 vi.mock("@/lib/agent/subagents/agent-store", () => ({ listAgents: m.listAgents }));
 
 const { resolveSkills } = await import("@/lib/agent/skills/registry");
-const { agentPreloads, agentTypeProblem, loadAgentOf } = await import("./agent-file");
+const { agentPreloads, agentTypeProblem, firstMessageOf, loadAgentOf } = await import("./agent-file");
 
 const teacher = `---\nname: mr-smith\ndescription: My English teacher\nskills: language-teacher, b, missing\ninitialPrompt: Hola, empecemos con tu nivel\n---\n\nYou are Mr. Smith. Never give the answer first.\n`;
 const stored = (name: string, text: string) => ({ name, text, updatedAt: new Date("2026-11-19T00:00:00Z") });
@@ -43,6 +43,23 @@ describe("agentTypeProblem", () => {
     expect(await agentTypeProblem("u1", "broken")).toBe("invalid");
     expect(await agentTypeProblem("u1", "assistant")).toBe("reserved");
     expect(await agentTypeProblem("u1", "mr-smith")).toBeNull();
+  });
+});
+
+// Claude Code's `initialPrompt`: «auto-submitted as the first user turn» — only while its conversation is empty.
+describe("firstMessageOf", () => {
+  it("🔴 is the file's initialPrompt on an empty conversation, and nothing once it has turns", async () => {
+    expect(await firstMessageOf("u1", "mr-smith", 0)).toBe("Hola, empecemos con tu nivel");
+    expect(await firstMessageOf("u1", "mr-smith", 2)).toBeNull();
+  });
+
+  it("is nothing without a file, with one that is missing or broken, or one without an initialPrompt", async () => {
+    m.listAgents.mockResolvedValue([stored("quiet", "---\nname: quiet\ndescription: Says nothing first\n---\n\nYou help.\n"), stored("broken", "x")]);
+    expect(await firstMessageOf("u1", null, 0)).toBeNull();
+    expect(await firstMessageOf("u1", "nobody", 0)).toBeNull();
+    expect(await firstMessageOf("u1", "broken", 0)).toBeNull();
+    expect(await firstMessageOf("u1", "quiet", 0)).toBeNull();
+    expect(m.listAgents).toHaveBeenCalledTimes(3);
   });
 });
 
