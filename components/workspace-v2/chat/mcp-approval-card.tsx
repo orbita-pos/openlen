@@ -17,8 +17,12 @@
 // the approval then answers where, and the card becomes a sign-in card with «Conectar» naming that host. That second
 // click opens the window (a window opened after an `await` is blocked by the browser). An approval inside the one-tap
 // sign-in whose mount already connects closes the window and says so.
+//
+// The wait for the way back belongs to this card (R2): a new tap and the card going away abort it (`signal`), so nothing
+// keeps polling for a card that isn't there, and a success that comes after the person closed the window still shows
+// (`onLate`).
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
@@ -46,6 +50,9 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
   const [values, setValues] = useState<Record<string, string>>({});
   // Where the person signs in, as this card names it now: the start may have found it moved (issuer_changed).
   const [oauth, setOauth] = useState(card.oauth);
+  // The sign-in this card is waiting on, if any: gone with the card.
+  const waiting = useRef<AbortController | null>(null);
+  useEffect(() => () => waiting.current?.abort(), []);
 
   // Where the sign-in is. The server's own page when nobody knows its host: never the MCP server's, which is where the
   // tools are and not where the person signs in.
@@ -71,8 +78,15 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       let sawChanged = false;
       // The approval's mount connected (a token was there already): nothing to sign in to.
       let connectedOnApproval: number | null = null;
+      // A tap before this one is over (the window was closed, its wait still listening): the new one takes over.
+      waiting.current?.abort();
+      const controller = new AbortController();
+      waiting.current = controller;
       // Open the popup synchronously on the click before any state update or await.
       const signIn = openSignIn(card.server, {
+        signal: controller.signal,
+        // The person closed the window and the sign-in came through anyway.
+        onLate: () => setState({ kind: "oauth-connected" }),
         // The host this card named is what the start checks (the directory's route checks its own).
         ...(!card.suggest && oauth ? { issuerHost: oauth.issuerHost } : {}),
         ...(card.suggest
@@ -105,6 +119,8 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       });
       setState({ kind: "connecting" });
       const res = await signIn;
+      // A newer tap, or this card going away, took the wait over: whatever it left is theirs.
+      if (res === "aborted") return;
       if (res === "connected") return setState({ kind: "oauth-connected" });
       if (res === "closed") {
         if (connectedOnApproval !== null) return setState({ kind: "connected", tools: connectedOnApproval });

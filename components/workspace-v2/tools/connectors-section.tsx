@@ -4,7 +4,7 @@
 // person — each server with its status, «Probar», edit, switch off, delete, add — and the person's keys, by name only.
 // A server Len added waits with the same «Conectar» card the chat shows. A key typed here is sent once and never shown.
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
@@ -54,6 +54,9 @@ export function ConnectorsSection() {
   const [form, setForm] = useState<{ mode: "add" | "edit"; name: string; url: string; rows: HeaderRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keyEdit, setKeyEdit] = useState<{ name: string; value: string } | null>(null);
+  // The sign-in this page is waiting on, if any (R2): a new tap and the page going away abort it.
+  const waiting = useRef<AbortController | null>(null);
+  useEffect(() => () => waiting.current?.abort(), []);
 
   const load = useCallback(async () => {
     try {
@@ -84,7 +87,12 @@ export function ConnectorsSection() {
 
   async function connectOAuth(name: string) {
     setSignInErrors(({ [name]: _gone, ...rest }) => rest);
-    const res = await openSignIn(name);
+    waiting.current?.abort();
+    const controller = new AbortController();
+    waiting.current = controller;
+    // `onLate`: the person closed the window and the sign-in came through anyway.
+    const res = await openSignIn(name, { signal: controller.signal, onLate: () => void load() });
+    if (res === "aborted") return;
     // Whatever the window said, the list is read again: it may have closed with the connection already made.
     await load();
     if (typeof res === "object") setSignInErrors((e) => ({ ...e, [name]: { code: res.error, ...(res.detail ? { detail: res.detail } : {}) } }));

@@ -8,11 +8,16 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, v?: Record<string, unknown>) => (v ? `${key} ${JSON.stringify(v)}` : key),
 }));
 
-const signIn = vi.hoisted(() => ({ result: "connected" as "connected" | "closed" | { error: string; detail?: string }, calls: [] as string[] }));
+const signIn = vi.hoisted(() => ({
+  result: "connected" as "connected" | "closed" | "aborted" | { error: string; detail?: string },
+  calls: [] as string[],
+  opts: [] as { signal?: AbortSignal; onLate?: () => void }[],
+}));
 vi.mock("../chat/open-sign-in", async (orig) => ({
   ...(await orig<typeof import("../chat/open-sign-in")>()),
-  openSignIn: async (server: string) => {
+  openSignIn: async (server: string, opts: { signal?: AbortSignal; onLate?: () => void } = {}) => {
     signIn.calls.push(server);
+    signIn.opts.push(opts);
     return signIn.result;
   },
 }));
@@ -135,6 +140,7 @@ describe("ConnectorsSection", () => {
     const connect = async () => act(async () => button("tools.connectors.connect", document.querySelector('[data-connector="cal"]')!).click());
     beforeEach(() => {
       signIn.calls.length = 0;
+      signIn.opts.length = 0;
       fetchMock.mockImplementation(async () => ok(pending));
     });
 
@@ -175,6 +181,41 @@ describe("ConnectorsSection", () => {
       await connect();
       expect(document.body.textContent).toContain("mcpApproval.errors.noClient");
       expect(document.body.textContent).toContain("set oauth.clientId in mcp.json");
+    });
+
+    // R2: the wait belongs to this page. A newer tap and the page going away abort it, a wait a newer tap took over reads
+    // nothing, and a success that comes after the person closed the window reads the list again.
+    it("🔴 a wait a newer tap took over (aborted) answers nothing: the list is not read for it", async () => {
+      signIn.result = "aborted";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(fetchMock.mock.calls.length).toBe(before);
+    });
+
+    it("a sign-in that came through after the window was closed reads the list again (onLate)", async () => {
+      signIn.result = "closed";
+      await render();
+      await connect();
+      const before = fetchMock.mock.calls.length;
+      await act(async () => signIn.opts.at(-1)!.onLate!());
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+      expect(fetchMock.mock.calls.at(-1)![0]).toBe("/api/mcp-connectors");
+    });
+
+    it("🔴 a new tap aborts the wait before it, and the page going away aborts the last one", async () => {
+      signIn.result = "closed";
+      await render();
+      await connect();
+      const first = signIn.opts.at(-1)!.signal!;
+      expect(first.aborted).toBe(false);
+      await connect();
+      const second = signIn.opts.at(-1)!.signal!;
+      expect(first.aborted).toBe(true);
+      expect(second.aborted).toBe(false);
+      act(() => root!.unmount());
+      root = null;
+      expect(second.aborted).toBe(true);
     });
   });
 });
