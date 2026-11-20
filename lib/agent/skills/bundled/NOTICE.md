@@ -124,3 +124,12 @@ physical activity and sedentary behaviour* (2020) for how much activity adults a
 readiness questionnaire before exercise, as the PAR-Q+ does, with questions written in our own words (the PAR-Q+'s text
 is not reproduced). Its coaching shape — one question per turn, they try first, a log that changes the plan — follows
 `language-teacher`. Added on 2026-11-20.
+
+`personal-finance` is ours (spec local 2026-11-19-agentes-para-todos, §6.5): Anthropic's finance plugins are written for
+firms (month-end close, business ledgers, institutional workflows) and have nothing for one person's own money. Two facts
+come from Anthropic's `cash-flow-snapshot` skill (github.com/anthropics/knowledge-work-plugins at `0e0fcac`,
+`small-business/skills/cash-flow-snapshot/`, Apache License 2.0, the same license text as
+`LICENSES/anthropic-skills.Apache-2.0.txt`): never assume a starting balance, and a forecast is a range with its risks
+named, not one number. The `[VERIFY: …]` marker for a fact not checked is the convention of Anthropic's
+`claude-for-legal` (Apache-2.0). The rest — the budget, avalanche and snowball, the payoff formula, the emergency fund
+— is common knowledge written in our own words. Added on 2026-11-20.
