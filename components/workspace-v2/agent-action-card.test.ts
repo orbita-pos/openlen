@@ -55,6 +55,12 @@ describe("summaryLabel (F4-T8 i18n mapping)", () => {
     expect(out).not.toBe("");
   });
 
+  // Its summary is the proposals' JSON, drawn by the review card under Len's answer (spec local
+  // 2026-11-19-agentes-para-todos, §6.6): never shown as the step's text.
+  it("propose_skills shows no summary: its JSON is the card's", () => {
+    expect(summaryLabel(action("propose_skills", '{"proposals":[]}'), t)).toBe("");
+  });
+
   it("(d') trabajar_en_pagina real slug is verbatim, NOT the home label", () => {
     // The "principal"-as-a-real-slug edge case: only the "" sentinel means
     // home; a genuine slug (even one literally named "principal") passes

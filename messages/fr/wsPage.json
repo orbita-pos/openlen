@@ -67,6 +67,7 @@
       "create_goal": "Création de l'objectif",
       "update_goal": "Mise à jour de l'objectif",
       "create_assistant": "Création de votre assistant",
+      "propose_skills": "Proposition de skills",
       "ask_len": "Transmission à Len",
       "schedule_create": "Planification d'une tâche",
       "schedule_list": "Consultation des tâches planifiées",

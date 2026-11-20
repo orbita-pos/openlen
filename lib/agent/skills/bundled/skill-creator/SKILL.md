@@ -9,10 +9,10 @@ A skill is a set of instructions that loads only when a task needs it: the catal
 
 ## Where it goes
 
-- `/.len/skills/<name>/SKILL.md` — the project's: shared with everyone who works on this project. The default.
-- `~/.len/skills/<name>/SKILL.md` — the person's own: only for them, in every project. Use it when they say it is theirs ("my way", "for me").
+- `/.len/skills/<name>/SKILL.md` — the project's: shared with everyone who works on this project. The default. Write it with `Write` (or `Edit` to change one).
+- `~/.len/skills/<name>/SKILL.md` — the person's own: only for them, in every project (and what their own agents carry). Use it when they say it is theirs ("my way", "for me"). These are saved only from a review card: propose them with `propose_skills` (to change one of theirs, read it first and send your edits); writing the file does not save it.
 
-Write it with `Write` (or `Edit` to change one). A user skill is only its SKILL.md: no scripts or other files next to it. `/.openlen/skills` holds OpenLen's own skills, read-only, and their names are reserved.
+A user skill is only its SKILL.md: no scripts or other files next to it. `/.openlen/skills` holds OpenLen's own skills, read-only, and their names are reserved.
 
 ## What it looks like
 
@@ -36,4 +36,6 @@ Write the body as instructions to yourself: the facts and numbers the user gave,
 
 ## After writing it
 
-It is in the catalog from the next message, and the user can invoke it with `/<name>`. Tell them its name and what it will be used for. If the same rules were in `/LEN.md`, take them out of there so they live in one place.
+A project's skill is in the catalog from the next message, and the user can invoke it with `/<name>`. Tell them its name and what it will be used for. If the same rules were in `/LEN.md`, take them out of there so they live in one place.
+
+A skill of theirs proposed with `propose_skills` is in the catalog once they save it from the card: say what it is for and that the card under your answer saves it. Never say it is saved.

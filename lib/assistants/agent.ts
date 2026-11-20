@@ -24,6 +24,8 @@ import { OUT_FOR_READ_ONLY } from "@/lib/agent/subagents/presets";
 import { SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
+import { PROPOSE_SKILLS } from "@/lib/agent/skills/propose-tool";
+
 import { CREATE_ASSISTANT } from "./create-tool";
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 import type { AssistantTone } from "./names";
@@ -47,6 +49,8 @@ const BUILDS: ReadonlySet<string> = new Set([
   PROPOSE_ACTION,
   // An assistant doesn't make assistants: that card is Len's.
   CREATE_ASSISTANT,
+  // Nor proposes the person's skills: changing ~/.len/ is Len's job (spec local 2026-11-19-agentes-para-todos, §6.4).
+  PROPOSE_SKILLS,
   // An assistant never edits pages directly: she asks Len via ask_len to build Variant B.
   CREATE_AB_VARIANT,
 ]);

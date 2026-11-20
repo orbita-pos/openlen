@@ -1042,6 +1042,9 @@ async function guardarMemoria(
 
 export { MAX_SKILLS_PER_SCOPE };
 
+const PERSONAL_SKILLS_FROM_THE_CARD =
+  "The person's own skills (~/.len/skills/) are saved only from a review card: call propose_skills with the whole SKILL.md, or, to change one of theirs, read it and send your edits. Writing the file does not save it. The project's skills (/.len/skills/) are still written with Write.";
+
 /**
  * A USER SKILL IS SAVED (spec local 2026-10-26-len-skills, §4.2): only a SKILL.md that parses, never
  * with the name of one of OpenLen's (reserved, as Claude Code refuses a skill with a reserved name),
@@ -1057,6 +1060,10 @@ async function guardarSkill(
 ): Promise<ToolOutcome> {
   const at = skillPathOf(plan.ruta);
   if (!at) return { response: respuesta(fallo(ONLY_SKILL_MD)) };
+  // THE PERSON'S OWN SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329:
+  // its skill files on disk are a read-only cache and `propose_skills` is the way. Their own edit (the Code lens, their
+  // terminal) still saves; removing one stays Len's (`rm`), as OpenLen has no list of skills for them to delete from yet.
+  if (at.scope === "personal" && session.autor !== "usuario") return { response: respuesta(fallo(PERSONAL_SKILLS_FROM_THE_CARD)) };
   if (bundledSkillNames().has(at.name)) {
     return { response: respuesta(fallo(`"${at.name}" is reserved: it is one of OpenLen's own skills. Give yours another name.`)) };
   }

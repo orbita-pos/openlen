@@ -26,4 +26,5 @@ Use this skill when the owner wants to save a recurring preference, correction o
   1. Target path and whether it is an update or a new file.
   2. Why it belongs there (Rule vs Skill, project vs personal).
   3. The exact concise text or diff you plan to write.
-- Wait for confirmation, then apply only what the owner approved.
+- Wait for confirmation, then apply only what the owner approved: `/LEN.md` and a project skill (`/.len/skills/<name>/SKILL.md`) with `Write` or `Edit`.
+- A skill of their own (`~/.len/skills/<name>/SKILL.md`) is the exception: the card is the proposal. Call `propose_skills` with it (for one of theirs, read it first and send your edits) instead of showing the text and waiting; they save it from the card.

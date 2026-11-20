@@ -80,6 +80,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
 import { DECLARACION_PRESENT, PRESENT_TOOL } from "@/lib/agent/skills/present";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
+import { PROPOSE_SKILLS, PROPOSE_SKILLS_DECLARATION } from "@/lib/agent/skills/propose-tool";
 import { NO_AGENT_TYPES, type AgentTypeSet } from "@/lib/agent/subagents/agent-registry";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import { promptOfGame } from "./game-mode";
@@ -233,6 +234,7 @@ function declaracionesDelModo(
   if (!skillsEnabled(_env)) {
     fuera.add(SKILL_TOOL);
     fuera.add(PRESENT_TOOL);
+    fuera.add(PROPOSE_SKILLS);
   }
   // F1 (plans/len-agente-2026): con la terminal, `bash` entra y Grep y Glob salen.
   const conTerminal = terminalEncendida(_env);
@@ -576,6 +578,9 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     LIST_AGENTS_DECLARATION,
     // The card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
     CREATE_ASSISTANT_DECLARATION,
+    // The review card of the person's own skills (spec local 2026-11-19-agentes-para-todos, §6.6): Claude Code's
+    // propose_skills.
+    PROPOSE_SKILLS_DECLARATION,
     // Isolated A/B Variant B creation (Plan 3).
     CREATE_AB_VARIANT_DECLARATION,
     {

@@ -258,6 +258,8 @@ export const KNOWN_TOOLS = new Set([
   // The person's own assistant (spec local 2026-11-06-asistente-propio): Len creates her; she passes work to him.
   "create_assistant",
   "ask_len",
+  // The review card of the person's own skills (spec local 2026-11-19-agentes-para-todos, §6.6).
+  "propose_skills",
 ]);
 
 // F4-T8 i18n sweep: `summary` is otherwise an opaque identifier (a module
@@ -279,6 +281,8 @@ export function summaryLabel(action: AgentAction, t: ReturnType<typeof useTransl
   if (asksTheOwner(action.tool) && action.respuesta) return action.respuesta;
   // Its summary carries the figure Len suggested, for the card under his answer: nothing to read here.
   if (action.tool === "create_assistant") return "";
+  // Its summary carries the proposals, for the review card under his answer.
+  if (action.tool === "propose_skills") return "";
   if (action.tool === "trabajar_en_pagina" && action.summary === "") {
     return t("agent.action.home");
   }

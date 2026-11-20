@@ -39,6 +39,12 @@ describe("assistantTools", () => {
     }
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, §6.6): changing ~/.len/ is Len's job, and an
+  // agent never proposes the person's skills.
+  it("🔴 never proposes skills: that card is Len's", () => {
+    expect(names(assistantTools([...LEN, { name: "propose_skills" }]))).not.toContain("propose_skills");
+  });
+
   it("launches no subagents in phase 1: their notices would wake Len in the project chat", () => {
     expect(names(assistantTools(LEN))).not.toContain(SUBAGENT_TOOL);
   });
@@ -119,6 +125,7 @@ describe("assistantTools over Len's real catalog", () => {
         "interrupt_agent",
         "list_agents",
         "create_assistant",
+        "propose_skills",
         "undo_last_change",
         "convert_to_app",
         "draft_reply",
@@ -176,6 +183,7 @@ describe("assistantTools over Len's real catalog", () => {
         "interrupt_agent",
         "list_agents",
         "create_assistant",
+        "propose_skills",
         "undo_last_change",
         "draft_reply",
       ]

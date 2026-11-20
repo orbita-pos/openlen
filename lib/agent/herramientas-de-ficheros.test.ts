@@ -1172,6 +1172,44 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.ok(!estado.listed.includes("personal:dueno"));
   });
 
+  // PERSONAL SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329: its
+  // skill files on disk are a read-only cache, and writing one doesn't change the user's skills — propose_skills does.
+  it("🔴 Len's Write of ~/.len/skills/<name>/SKILL.md is refused, names propose_skills, and saves nothing", async () => {
+    const { deps, estado } = depsConSkills();
+    const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "~/.len/skills/mia/SKILL.md", content: SKILL.replace(/cotizar/g, "mia") });
+    assert.equal(out.response.ok, false);
+    assert.match(texto(out), /propose_skills/);
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("🔴 what Len's terminal writes there is refused too", async () => {
+    const { deps, estado } = depsConSkills();
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "escrito", ruta: "/home/user/.len/skills/mia/SKILL.md", contenido: SKILL.replace(/cotizar/g, "mia"), crea: true }], antes);
+    assert.match(g.notas.join("\n"), /propose_skills/);
+    assert.equal(estado.upserts.length, 0);
+  });
+
+  it("the person's own edit of their skill still saves (autor: usuario)", async () => {
+    const mia = SKILL.replace(/cotizar/g, "mia");
+    const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });
+    const s = { ...makeSession(), autor: "usuario" } as AgentSession;
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "escrito", ruta: "/home/user/.len/skills/mia/SKILL.md", contenido: mia.replace("size", "size and date"), crea: false }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.equal(estado.upserts.length, 1);
+  });
+
+  it("Len still removes one of the person's skills when they ask (rm)", async () => {
+    const { deps, estado } = depsConSkills({ personal: { u1: { mia: SKILL.replace(/cotizar/g, "mia") } } });
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/home/user/.len/skills/mia/SKILL.md" }], antes);
+    assert.equal(g.rechazado, false, g.notas.join("\n"));
+    assert.deepEqual(estado.removed, ["personal:u1:mia"]);
+  });
+
   it("rm of a skill deletes it", async () => {
     const { deps, estado } = depsConSkills({ project: { cotizar: SKILL } });
     const s = makeSession();

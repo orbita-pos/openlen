@@ -1564,6 +1564,84 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "propose_skills",
+    "description": "Shows the person a review card of skills of their own to save; it writes nothing. Their skills in ~/.len/skills/ are saved only from this card: writing those files does not save them. When they want a skill added or changed, the proposal is what you deliver: draft it however helps, then propose it, and never hand them a SKILL.md to save themselves. Call it once with all the proposals (at most 3) when they ask to turn a way of working into a skill of theirs, or when an agent of theirs needs a job skill that doesn't exist; not for a one-off task, and not again for a skill they already saw. To change one of their skills, read its ~/.len/skills/<name>/SKILL.md first and send only your changes as edits; the card shows the whole updated file. OpenLen's own skills can't be changed from the card: to adapt one, propose a new skill under a name of its own whose description says when to use it instead. A project's skills (/.len/skills/) are files of the project: write those with Write, not with this.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "proposals": {
+          "type": "ARRAY",
+          "description": "The skills to propose, 1 to 3.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING",
+                "description": "The skill's name: lowercase words joined by \\"-\\", at most 64 characters, never containing \\"claude\\" or \\"anthropic\\"."
+              },
+              "kind": {
+                "type": "STRING",
+                "enum": [
+                  "new",
+                  "improvement"
+                ],
+                "description": "new, or improvement of one of the person's own skills."
+              },
+              "target": {
+                "type": "STRING",
+                "description": "For an improvement: the name of the skill it changes (the same as name). Left out for a new one."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "One short sentence saying when to use the skill: under 200 characters is best, never over 1024, no angle brackets. It is what decides when the skill is used. For an improvement, keep the current one unless the change alters when it applies."
+              },
+              "evidence": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Optional: paths of your memory notes where this way of working was seen."
+              },
+              "edits": {
+                "type": "ARRAY",
+                "description": "For an improvement, instead of skillMd: your changes to its SKILL.md as it is now, applied in order. Each old_string must occur exactly once.",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "old_string": {
+                      "type": "STRING",
+                      "description": "The text to replace."
+                    },
+                    "new_string": {
+                      "type": "STRING",
+                      "description": "What goes in its place."
+                    }
+                  },
+                  "required": [
+                    "old_string",
+                    "new_string"
+                  ]
+                }
+              },
+              "skillMd": {
+                "type": "STRING",
+                "description": "For a new skill, or to rewrite one whole: the complete SKILL.md, its frontmatter between two --- lines and the instructions below. The saved file takes name and description from the fields above; other frontmatter keys are not kept."
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "proposals"
+      ]
+    }
+  },
+  {
     "name": "undo_last_change",
     "description": "Undoes YOUR last saved change to a page and keeps what the user edited by hand after it; if their edit touches the same thing as yours, it undoes nothing and tells you so. \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the page before editing it again.",
     "parameters": {
@@ -3162,6 +3240,84 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "propose_skills",
+    "description": "Shows the person a review card of skills of their own to save; it writes nothing. Their skills in ~/.len/skills/ are saved only from this card: writing those files does not save them. When they want a skill added or changed, the proposal is what you deliver: draft it however helps, then propose it, and never hand them a SKILL.md to save themselves. Call it once with all the proposals (at most 3) when they ask to turn a way of working into a skill of theirs, or when an agent of theirs needs a job skill that doesn't exist; not for a one-off task, and not again for a skill they already saw. To change one of their skills, read its ~/.len/skills/<name>/SKILL.md first and send only your changes as edits; the card shows the whole updated file. OpenLen's own skills can't be changed from the card: to adapt one, propose a new skill under a name of its own whose description says when to use it instead. A project's skills (/.len/skills/) are files of the project: write those with Write, not with this.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "proposals": {
+          "type": "ARRAY",
+          "description": "The skills to propose, 1 to 3.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING",
+                "description": "The skill's name: lowercase words joined by \\"-\\", at most 64 characters, never containing \\"claude\\" or \\"anthropic\\"."
+              },
+              "kind": {
+                "type": "STRING",
+                "enum": [
+                  "new",
+                  "improvement"
+                ],
+                "description": "new, or improvement of one of the person's own skills."
+              },
+              "target": {
+                "type": "STRING",
+                "description": "For an improvement: the name of the skill it changes (the same as name). Left out for a new one."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "One short sentence saying when to use the skill: under 200 characters is best, never over 1024, no angle brackets. It is what decides when the skill is used. For an improvement, keep the current one unless the change alters when it applies."
+              },
+              "evidence": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Optional: paths of your memory notes where this way of working was seen."
+              },
+              "edits": {
+                "type": "ARRAY",
+                "description": "For an improvement, instead of skillMd: your changes to its SKILL.md as it is now, applied in order. Each old_string must occur exactly once.",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "old_string": {
+                      "type": "STRING",
+                      "description": "The text to replace."
+                    },
+                    "new_string": {
+                      "type": "STRING",
+                      "description": "What goes in its place."
+                    }
+                  },
+                  "required": [
+                    "old_string",
+                    "new_string"
+                  ]
+                }
+              },
+              "skillMd": {
+                "type": "STRING",
+                "description": "For a new skill, or to rewrite one whole: the complete SKILL.md, its frontmatter between two --- lines and the instructions below. The saved file takes name and description from the fields above; other frontmatter keys are not kept."
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "proposals"
+      ]
+    }
+  },
+  {
     "name": "undo_last_change",
     "description": "Undoes your PREVIOUS turn whole: every file it changed goes back to how it was before it. If the user changed one of those files afterwards, it undoes nothing and tells you which, so their work is never lost; the database is not undone (a migration that was pushed stays: undoing it is a new migration). \\"Undo that\\" or \\"put it back the way it was\\" is this, NEVER editing backwards from memory. Afterwards, read the files before editing them again.",
     "parameters": {
@@ -4746,6 +4902,84 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
           "description": "Optional. The name of the agent file you wrote in ~/.len/agents/ for it (the agent-creation skill says how): what it is for, how it talks and the skills it carries. Write the file first; a file that is missing or doesn't parse is refused."
         }
       }
+    }
+  },
+  {
+    "name": "propose_skills",
+    "description": "Shows the person a review card of skills of their own to save; it writes nothing. Their skills in ~/.len/skills/ are saved only from this card: writing those files does not save them. When they want a skill added or changed, the proposal is what you deliver: draft it however helps, then propose it, and never hand them a SKILL.md to save themselves. Call it once with all the proposals (at most 3) when they ask to turn a way of working into a skill of theirs, or when an agent of theirs needs a job skill that doesn't exist; not for a one-off task, and not again for a skill they already saw. To change one of their skills, read its ~/.len/skills/<name>/SKILL.md first and send only your changes as edits; the card shows the whole updated file. OpenLen's own skills can't be changed from the card: to adapt one, propose a new skill under a name of its own whose description says when to use it instead. A project's skills (/.len/skills/) are files of the project: write those with Write, not with this.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "proposals": {
+          "type": "ARRAY",
+          "description": "The skills to propose, 1 to 3.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "name": {
+                "type": "STRING",
+                "description": "The skill's name: lowercase words joined by \\"-\\", at most 64 characters, never containing \\"claude\\" or \\"anthropic\\"."
+              },
+              "kind": {
+                "type": "STRING",
+                "enum": [
+                  "new",
+                  "improvement"
+                ],
+                "description": "new, or improvement of one of the person's own skills."
+              },
+              "target": {
+                "type": "STRING",
+                "description": "For an improvement: the name of the skill it changes (the same as name). Left out for a new one."
+              },
+              "description": {
+                "type": "STRING",
+                "description": "One short sentence saying when to use the skill: under 200 characters is best, never over 1024, no angle brackets. It is what decides when the skill is used. For an improvement, keep the current one unless the change alters when it applies."
+              },
+              "evidence": {
+                "type": "ARRAY",
+                "items": {
+                  "type": "STRING"
+                },
+                "description": "Optional: paths of your memory notes where this way of working was seen."
+              },
+              "edits": {
+                "type": "ARRAY",
+                "description": "For an improvement, instead of skillMd: your changes to its SKILL.md as it is now, applied in order. Each old_string must occur exactly once.",
+                "items": {
+                  "type": "OBJECT",
+                  "properties": {
+                    "old_string": {
+                      "type": "STRING",
+                      "description": "The text to replace."
+                    },
+                    "new_string": {
+                      "type": "STRING",
+                      "description": "What goes in its place."
+                    }
+                  },
+                  "required": [
+                    "old_string",
+                    "new_string"
+                  ]
+                }
+              },
+              "skillMd": {
+                "type": "STRING",
+                "description": "For a new skill, or to rewrite one whole: the complete SKILL.md, its frontmatter between two --- lines and the instructions below. The saved file takes name and description from the fields above; other frontmatter keys are not kept."
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "description"
+            ]
+          }
+        }
+      },
+      "required": [
+        "proposals"
+      ]
     }
   },
   {
@@ -6786,7 +7020,8 @@ Use this skill when the owner wants to save a recurring preference, correction o
   1. Target path and whether it is an update or a new file.
   2. Why it belongs there (Rule vs Skill, project vs personal).
   3. The exact concise text or diff you plan to write.
-- Wait for confirmation, then apply only what the owner approved.
+- Wait for confirmation, then apply only what the owner approved: \`/LEN.md\` and a project skill (\`/.len/skills/<name>/SKILL.md\`) with \`Write\` or \`Edit\`.
+- A skill of their own (\`~/.len/skills/<name>/SKILL.md\`) is the exception: the card is the proposal. Call \`propose_skills\` with it (for one of theirs, read it first and send your edits) instead of showing the text and waiting; they save it from the card.
 "
 `;
 
@@ -6819,7 +7054,8 @@ Use this skill when the owner wants to save a recurring preference, correction o
   1. Target path and whether it is an update or a new file.
   2. Why it belongs there (Rule vs Skill, project vs personal).
   3. The exact concise text or diff you plan to write.
-- Wait for confirmation, then apply only what the owner approved.
+- Wait for confirmation, then apply only what the owner approved: \`/LEN.md\` and a project skill (\`/.len/skills/<name>/SKILL.md\`) with \`Write\` or \`Edit\`.
+- A skill of their own (\`~/.len/skills/<name>/SKILL.md\`) is the exception: the card is the proposal. Call \`propose_skills\` with it (for one of theirs, read it first and send your edits) instead of showing the text and waiting; they save it from the card.
 "
 `;
 
@@ -9331,10 +9567,10 @@ A skill is a set of instructions that loads only when a task needs it: the catal
 
 ## Where it goes
 
-- \`/.len/skills/<name>/SKILL.md\` — the project's: shared with everyone who works on this project. The default.
-- \`~/.len/skills/<name>/SKILL.md\` — the person's own: only for them, in every project. Use it when they say it is theirs ("my way", "for me").
+- \`/.len/skills/<name>/SKILL.md\` — the project's: shared with everyone who works on this project. The default. Write it with \`Write\` (or \`Edit\` to change one).
+- \`~/.len/skills/<name>/SKILL.md\` — the person's own: only for them, in every project (and what their own agents carry). Use it when they say it is theirs ("my way", "for me"). These are saved only from a review card: propose them with \`propose_skills\` (to change one of theirs, read it first and send your edits); writing the file does not save it.
 
-Write it with \`Write\` (or \`Edit\` to change one). A user skill is only its SKILL.md: no scripts or other files next to it. \`/.openlen/skills\` holds OpenLen's own skills, read-only, and their names are reserved.
+A user skill is only its SKILL.md: no scripts or other files next to it. \`/.openlen/skills\` holds OpenLen's own skills, read-only, and their names are reserved.
 
 ## What it looks like
 
@@ -9358,7 +9594,9 @@ Write the body as instructions to yourself: the facts and numbers the user gave,
 
 ## After writing it
 
-It is in the catalog from the next message, and the user can invoke it with \`/<name>\`. Tell them its name and what it will be used for. If the same rules were in \`/LEN.md\`, take them out of there so they live in one place.
+A project's skill is in the catalog from the next message, and the user can invoke it with \`/<name>\`. Tell them its name and what it will be used for. If the same rules were in \`/LEN.md\`, take them out of there so they live in one place.
+
+A skill of theirs proposed with \`propose_skills\` is in the catalog once they save it from the card: say what it is for and that the card under your answer saves it. Never say it is saved.
 "
 `;
 
@@ -9374,10 +9612,10 @@ A skill is a set of instructions that loads only when a task needs it: the catal
 
 ## Where it goes
 
-- \`/.len/skills/<name>/SKILL.md\` — the project's: shared with everyone who works on this project. The default.
-- \`~/.len/skills/<name>/SKILL.md\` — the person's own: only for them, in every project. Use it when they say it is theirs ("my way", "for me").
+- \`/.len/skills/<name>/SKILL.md\` — the project's: shared with everyone who works on this project. The default. Write it with \`Write\` (or \`Edit\` to change one).
+- \`~/.len/skills/<name>/SKILL.md\` — the person's own: only for them, in every project (and what their own agents carry). Use it when they say it is theirs ("my way", "for me"). These are saved only from a review card: propose them with \`propose_skills\` (to change one of theirs, read it first and send your edits); writing the file does not save it.
 
-Write it with \`Write\` (or \`Edit\` to change one). A user skill is only its SKILL.md: no scripts or other files next to it. \`/.openlen/skills\` holds OpenLen's own skills, read-only, and their names are reserved.
+A user skill is only its SKILL.md: no scripts or other files next to it. \`/.openlen/skills\` holds OpenLen's own skills, read-only, and their names are reserved.
 
 ## What it looks like
 
@@ -9401,7 +9639,9 @@ Write the body as instructions to yourself: the facts and numbers the user gave,
 
 ## After writing it
 
-It is in the catalog from the next message, and the user can invoke it with \`/<name>\`. Tell them its name and what it will be used for. If the same rules were in \`/LEN.md\`, take them out of there so they live in one place.
+A project's skill is in the catalog from the next message, and the user can invoke it with \`/<name>\`. Tell them its name and what it will be used for. If the same rules were in \`/LEN.md\`, take them out of there so they live in one place.
+
+A skill of theirs proposed with \`propose_skills\` is in the catalog once they save it from the card: say what it is for and that the card under your answer saves it. Never say it is saved.
 "
 `;
 

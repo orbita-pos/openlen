@@ -153,6 +153,7 @@ import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
+import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
 import {
@@ -3284,6 +3285,11 @@ async function ejecutarHerramienta(
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
         return await runCreateAssistant(session, args);
+      // The review card of the person's own skills (lib/agent/skills/propose-tool.ts): render-only.
+      case PROPOSE_SKILLS: {
+        const store = deps.skillStore;
+        return await runProposeSkills(session, args, store ? { listPersonal: (personId) => store.list("personal", personId) } : undefined);
+      }
       // Edge A/B testing: isolated Variant B draft on branch `ab/<id>` (Plan 3).
       case CREATE_AB_VARIANT:
         return await runCreateAbVariant(session, args, deps);
