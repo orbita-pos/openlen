@@ -24,7 +24,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { isGenerationBriefLengthValid, trimGenerationBrief } from "@/lib/generation/brief-contract";
-import { kindFromParam, type NaceComoApp } from "@/components/workspace-v2/chat/nace-como";
+import { kindFromParam, type StartKind } from "@/components/workspace-v2/chat/nace-como";
 
 const KEY = "openlen:first-message-in-transit";
 
@@ -34,8 +34,8 @@ export const FIRST_MESSAGE_TTL_MS = 30 * 60_000;
 export interface FirstMessage {
   /** What the visitor wrote, trimmed. */
   readonly brief: string;
-  /** What the project is born as: the home's pill. */
-  readonly kind: "pagina" | NaceComoApp;
+  /** What the project is born as: the home's pill. An agent's goes to the person's space instead of /new. */
+  readonly kind: StartKind;
 }
 
 /** Leaves the ticket just before going to /new (or opening the sign-in dialog). `false` if the storage refused. */

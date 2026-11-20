@@ -71,7 +71,8 @@ import { AccountMenu } from "@/components/workspace-v2/account-menu";
 import { HeroLenMark } from "@/components/marketing/hero-len";
 import { PastePanel } from "@/components/workspace-v2/panels/paste-panel";
 import type { NaceComo } from "@/components/workspace-v2/tarjetas-nace-como";
-import { homeHref, KIND_PARAM, kindFromParam, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
+import { homeHref, KIND_PARAM, kindFromParam, naceComoApp, naceComoDisponible } from "@/components/workspace-v2/chat/nace-como";
+import { spaceRedirectOf } from "@/lib/space/href";
 import { ejecutarUndo } from "@/components/workspace-v2/panels/undo-turn";
 import { planDeDeshacerDelTaller } from "@/components/workspace-v2/deshacer-del-taller";
 import { SECTIONS, type Section } from "@/components/workspace-v2/mock-data";
@@ -572,6 +573,12 @@ function NewV2Inner() {
   // Por qué no se abrió el proyecto de la URL (N31). Sin esto, un 404 se quedaba
   // en «Cargando proyecto…» para siempre.
   const [projectLoadFailure, setProjectLoadFailure] = useState<ProjectLoadFailure | null>(null);
+  // Where to go instead when the project of the URL is the person's space (`spaceRedirectOf`): set by the loader,
+  // followed here, so the loader keeps no router of its own.
+  const [spaceRedirect, setSpaceRedirect] = useState<string | null>(null);
+  useEffect(() => {
+    if (spaceRedirect) router.replace(spaceRedirect);
+  }, [spaceRedirect, router]);
   // The active site page (null = home) and the document the canvas edits.
   // Everything that used to read loadedProject.html for DISPLAY reads
   // activeDoc; saves route into the matching slot via activeSitePageRef.
@@ -1062,7 +1069,7 @@ function NewV2Inner() {
       setPendingChatAttachments({
         images: subidas.images,
         ...(files.length > 0 ? { files } : {}),
-        ...(kind !== "pagina" ? { naceComo: kind, idioma: locale } : {}),
+        ...(naceComoApp(kind) ? { naceComo: kind, idioma: locale } : {}),
       });
       setPendingChatDraft(brief);
       setPendingChatAutoSend(true);
@@ -1351,6 +1358,7 @@ function NewV2Inner() {
                 app?: AppDeProyecto;
                 tool?: { bornAt: string };
                 game?: { bornAt: string };
+                space?: unknown;
               };
               rol?: "dueno" | "editor" | "lector";
               artifacts?: boolean;
@@ -1366,6 +1374,13 @@ function NewV2Inner() {
       // while this request was in flight — applying it now would resurrect a
       // project the user already left.
       if (projectParamRef.current !== id) return false;
+      // THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2) is never opened as a page: an old link, or
+      // Len's own chat naming it, lands on /space — before the workshop paints any of it.
+      const toSpace = spaceRedirectOf(p.data);
+      if (toSpace) {
+        setSpaceRedirect(toSpace);
+        return false;
+      }
       const filledCount = Array.isArray(p.data?.filledBlocks)
         ? p.data.filledBlocks.length
         : 0;

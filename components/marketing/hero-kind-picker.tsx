@@ -20,9 +20,10 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft, Wrench } from "lucide-react";
+import { Bot, Check, ChevronDown, Gamepad2, LayoutDashboard, PanelsTopLeft, Wrench } from "lucide-react";
 import { useMandoDesplegable } from "@/components/workspace-v2/use-mando-desplegable";
 import {
+  DibujoAgente,
   DibujoApp,
   DibujoHerramienta,
   DibujoJuego,
@@ -69,6 +70,7 @@ export function HeroKindPicker({
   onChange,
   conJuego = false,
   conHerramienta = false,
+  conAgente = false,
   herramientaBloqueada,
   disabled = false,
 }: {
@@ -79,6 +81,8 @@ export function HeroKindPicker({
   conJuego?: boolean;
   /** Tools are on (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): Herramienta is offered last. */
   conHerramienta?: boolean;
+  /** Agents are on (spec local 2026-11-19-agentes-para-todos, §6.3): Agente is offered after everything else. */
+  conAgente?: boolean;
   /** Why Herramienta can't be chosen (the Free plan): its line says so and it can't be picked. */
   herramientaBloqueada?: string;
   /** While the first message is being sent: the pill doesn't open. */
@@ -112,10 +116,20 @@ export function HeroKindPicker({
     ...(conHerramienta
       ? [{ id: "tool" as const, titulo: t("start.kind.tool"), linea: herramientaBloqueada ?? t("start.kind.toolHint"), dibujo: <DibujoHerramienta />, bloqueada: Boolean(herramientaBloqueada) }]
       : []),
+    ...(conAgente ? [{ id: "agent" as const, titulo: t("start.kind.agent"), linea: t("start.kind.agentHint"), dibujo: <DibujoAgente /> }] : []),
   ];
-  const Icono = value === "app" ? LayoutDashboard : value === "game" ? Gamepad2 : value === "tool" ? Wrench : PanelsTopLeft;
+  const Icono =
+    value === "app" ? LayoutDashboard : value === "game" ? Gamepad2 : value === "tool" ? Wrench : value === "agent" ? Bot : PanelsTopLeft;
   const nombre =
-    value === "app" ? t("start.kind.app") : value === "game" ? t("start.kind.game") : value === "tool" ? t("start.kind.tool") : t("start.kind.page");
+    value === "app"
+      ? t("start.kind.app")
+      : value === "game"
+        ? t("start.kind.game")
+        : value === "tool"
+          ? t("start.kind.tool")
+          : value === "agent"
+            ? t("start.kind.agent")
+            : t("start.kind.page");
 
   const elegir = (id: NaceComo) => {
     setOpen(false);

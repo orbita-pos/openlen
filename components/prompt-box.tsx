@@ -55,6 +55,8 @@ export interface KindChoice {
   onChange: (v: NaceComo) => void;
   conJuego: boolean;
   conHerramienta?: boolean;
+  /** Agente in the pill (spec local 2026-11-19-agentes-para-todos, §6.3). */
+  conAgente?: boolean;
   herramientaBloqueada?: string;
 }
 
@@ -561,6 +563,7 @@ export function PromptBox({
               onChange={kind.onChange}
               conJuego={kind.conJuego}
               conHerramienta={kind.conHerramienta ?? false}
+              conAgente={kind.conAgente ?? false}
               {...(kind.herramientaBloqueada ? { herramientaBloqueada: kind.herramientaBloqueada } : {})}
             />
           )}

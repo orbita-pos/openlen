@@ -1,6 +1,6 @@
 // La portada pide nacer como app por la URL: `/new?brief=…&kind=app`.
 import { describe, expect, it } from "vitest";
-import { camposDeNacer, kindFromParam, naceComoDisponible, newProjectHref } from "./nace-como";
+import { camposDeNacer, homeArrival, homeHref, kindFromParam, naceComoDisponible, newProjectHref } from "./nace-como";
 
 describe("el tipo que trae la URL de /new", () => {
   it("sólo `app` es app; lo demás, o nada, es página", () => {
@@ -48,6 +48,22 @@ describe("a game asked for while games are off (final review, 05/11)", () => {
     expect(naceComoDisponible("game", true)).toBe("game");
     expect(naceComoDisponible("app", false)).toBe("app");
     expect(naceComoDisponible("tool", false)).toBe("tool");
+  });
+});
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): Agente in the home's pill goes to the space,
+// never to /new, and is never a way a project is born.
+describe("an agent from the home", () => {
+  it("kind=agent is an agent, and its link from the home goes to the space with the brief", () => {
+    expect(kindFromParam("agent")).toBe("agent");
+    expect(newProjectHref("  un profe de inglés ", "agent")).toBe("/space?brief=un+profe+de+ingl%C3%A9s");
+  });
+  it("🔴 never asks the server to be born as anything", () => {
+    expect(camposDeNacer({ naceComo: "agent", idioma: "es" })).toEqual({});
+  });
+  it("a link back to the home's box carries it, and the box reads it", () => {
+    expect(homeHref("un profe", "agent")).toBe("/?brief=un+profe&kind=agent");
+    expect(homeArrival("?kind=agent")).toEqual({ brief: "", kind: "agent" });
   });
 });
 

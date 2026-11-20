@@ -23,6 +23,10 @@ describe("validateHandle", () => {
     expect(validateHandle("hey.there").ok).toBe(false);
     expect(validateHandle("con espacio").ok).toBe(false);
   });
+  it("reserves «space»: the person's space lives at /<locale>/space (spec local 2026-11-19-agentes-para-todos)", () => {
+    expect(validateHandle("space")).toEqual({ ok: false, reason: "reserved" });
+  });
+
   it("rejects reserved words", () => {
     expect(validateHandle("explore").ok).toBe(false);
     expect(validateHandle("admin").ok).toBe(false);

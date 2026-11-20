@@ -332,7 +332,22 @@
       "toolHint": "Len이 만든, OpenLen 안의 나만의 화면.",
       "toolHeadline": "어떤 도구가 필요하세요?",
       "toolSubtitle": "Len이 만들어 내 OpenLen에 남아요. 사이드바나 프로젝트 안에요.",
-      "toolPlaceholder": "오늘 예약을 보고 확정할 수 있는 것…"
+      "toolPlaceholder": "오늘 예약을 보고 확정할 수 있는 것…",
+      "agent": "에이전트",
+      "agentHint": "무엇이든 돕는 나만의 어시스턴트: 선생님, 트레이너, 요리사",
+      "agentPlaceholder": "에이전트가 무엇을 도와주면 좋을까요?",
+      "agentJobs": {
+        "language": "영어 선생님",
+        "languagePrompt": "내 수준에 맞춰 연습시켜 주는 영어 선생님 에이전트를 원해요",
+        "fitness": "트레이너",
+        "fitnessPrompt": "운동 계획을 짜 주고 꾸준히 하도록 도와주는 트레이너 에이전트를 원해요",
+        "finance": "재정",
+        "financePrompt": "예산, 저축, 빚 등 개인 재정을 도와주는 에이전트를 원해요",
+        "legal": "법률",
+        "legalPrompt": "계약서와 서류 절차를 쉬운 말로 이해하도록 도와주는 에이전트를 원해요",
+        "cooking": "요리",
+        "cookingPrompt": "있는 재료로 식단과 레시피를 계획해 주는 요리 에이전트를 원해요"
+      }
     },
     "closeMenu": "메뉴 닫기",
     "pasteTitle": "HTML 붙여넣기",
@@ -841,5 +856,9 @@
       "connect": "연결",
       "disconnect": "연결 해제"
     }
+  },
+  "space": {
+    "title": "내 공간",
+    "home": "홈으로 돌아가기"
   }
 }

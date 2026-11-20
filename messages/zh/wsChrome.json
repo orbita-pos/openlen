@@ -332,7 +332,22 @@
       "toolHint": "由 Len 制作、在 OpenLen 里属于你的一个界面。",
       "toolHeadline": "你需要什么工具？",
       "toolSubtitle": "Len 来做，它会留在你的 OpenLen 里：在侧边栏，或在你的项目里。",
-      "toolPlaceholder": "能查看并确认今天预订的东西…"
+      "toolPlaceholder": "能查看并确认今天预订的东西…",
+      "agent": "智能体",
+      "agentHint": "你自己的助手，什么都能帮：老师、教练、厨师",
+      "agentPlaceholder": "你想让你的智能体帮你做什么？",
+      "agentJobs": {
+        "language": "英语老师",
+        "languagePrompt": "我想要一个英语老师智能体，按我的水平让我练习",
+        "fitness": "教练",
+        "fitnessPrompt": "我想要一个教练智能体，帮我安排训练并让我坚持下去",
+        "finance": "理财",
+        "financePrompt": "我想要一个帮我管理个人财务的智能体：预算、储蓄和债务",
+        "legal": "法律",
+        "legalPrompt": "我想要一个用简单的话帮我看懂合同和手续的智能体",
+        "cooking": "烹饪",
+        "cookingPrompt": "我想要一个烹饪智能体，用我手头的食材帮我计划饭菜和菜谱"
+      }
     },
     "closeMenu": "关闭菜单",
     "pasteTitle": "粘贴 HTML",
@@ -841,5 +856,9 @@
       "connect": "连接",
       "disconnect": "断开连接"
     }
+  },
+  "space": {
+    "title": "你的空间",
+    "home": "返回首页"
   }
 }

@@ -13,6 +13,8 @@ export const RESERVED_HANDLES = new Set([
   "features",
   // The person's own assistant lives at /<locale>/assistant/<name> (spec local 2026-11-06-asistente-propio).
   "assistant",
+  // The person's space, where their agents live: /<locale>/space (spec local 2026-11-19-agentes-para-todos, §6.2).
+  "space",
 ]);
 
 export function normalizeHandle(raw: string): string {

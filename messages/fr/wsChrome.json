@@ -332,7 +332,22 @@
       "toolHint": "Un écran à vous dans OpenLen, fait par Len.",
       "toolHeadline": "De quel outil avez-vous besoin ?",
       "toolSubtitle": "Len le construit et il reste dans votre OpenLen : dans la barre latérale ou dans vos projets.",
-      "toolPlaceholder": "Quelque chose pour voir les réservations du jour et les confirmer…"
+      "toolPlaceholder": "Quelque chose pour voir les réservations du jour et les confirmer…",
+      "agent": "Agent",
+      "agentHint": "Votre propre assistant pour ce que vous voulez : un prof, un coach, un cuisinier",
+      "agentPlaceholder": "Pour quoi votre agent doit-il vous aider ?",
+      "agentJobs": {
+        "language": "Professeur d'anglais",
+        "languagePrompt": "Je veux un agent professeur d'anglais qui me fasse pratiquer à mon niveau",
+        "fitness": "Coach sportif",
+        "fitnessPrompt": "Je veux un agent coach qui prépare mes séances et m'aide à tenir",
+        "finance": "Finances",
+        "financePrompt": "Je veux un agent qui m'aide avec mes finances personnelles : budget, épargne et dettes",
+        "legal": "Juridique",
+        "legalPrompt": "Je veux un agent qui m'aide à comprendre les contrats et les démarches en mots simples",
+        "cooking": "Cuisine",
+        "cookingPrompt": "Je veux un agent de cuisine qui m'aide à prévoir les repas et les recettes avec ce que j'ai"
+      }
     },
     "closeMenu": "Fermer le menu",
     "pasteTitle": "Coller du HTML",
@@ -841,5 +856,9 @@
       "connect": "Connecter",
       "disconnect": "Déconnecter"
     }
+  },
+  "space": {
+    "title": "Votre espace",
+    "home": "Retour à l'accueil"
   }
 }

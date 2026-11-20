@@ -340,7 +340,22 @@
       "toolHint": "Een eigen scherm in OpenLen, gemaakt door Len.",
       "toolHeadline": "Welke tool heb je nodig?",
       "toolSubtitle": "Len bouwt hem en hij blijft in je OpenLen: in de zijbalk of in je projecten.",
-      "toolPlaceholder": "Iets om de reserveringen van vandaag te zien en te bevestigen…"
+      "toolPlaceholder": "Iets om de reserveringen van vandaag te zien en te bevestigen…",
+      "agent": "Agent",
+      "agentHint": "Je eigen assistent voor alles: een leraar, een coach, een kok",
+      "agentPlaceholder": "Waarmee moet je agent je helpen?",
+      "agentJobs": {
+        "language": "Leraar Engels",
+        "languagePrompt": "Ik wil een agent als leraar Engels die me op mijn niveau laat oefenen",
+        "fitness": "Coach",
+        "fitnessPrompt": "Ik wil een coach-agent die mijn trainingen plant en me helpt vol te houden",
+        "finance": "Financiën",
+        "financePrompt": "Ik wil een agent die me helpt met mijn persoonlijke financiën: budget, sparen en schulden",
+        "legal": "Juridisch",
+        "legalPrompt": "Ik wil een agent die me helpt contracten en formaliteiten in gewone woorden te begrijpen",
+        "cooking": "Koken",
+        "cookingPrompt": "Ik wil een kook-agent die me helpt maaltijden en recepten te plannen met wat ik heb"
+      }
     },
     "closeMenu": "Menu sluiten",
     "pasteTitle": "HTML plakken",
@@ -841,5 +856,9 @@
       "connect": "Verbinden",
       "disconnect": "Verbinding verbreken"
     }
+  },
+  "space": {
+    "title": "Jouw ruimte",
+    "home": "Terug naar home"
   }
 }

@@ -351,3 +351,61 @@ describe("the only box", () => {
     expect(window.location.search).toBe("");
   });
 });
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): Agente in the pill, five jobs under the box that
+// only fill it, and the send goes to the person's space, never to /new.
+describe("Agente in the home's pill", () => {
+  const mountWith = (agents: boolean) => {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    act(() => root.render(<HeroPromptInput agents={agents} />));
+    return el;
+  };
+  const openPill = (el: HTMLElement) =>
+    act(() => [...el.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="menu"]')].find((b) => b.textContent?.includes("start.kind.page"))!.click());
+  const agentOption = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]')].find((b) => b.textContent?.includes("start.kind.agentHint"));
+  const chooseAgent = (el: HTMLElement) => {
+    openPill(el);
+    act(() => agentOption(el)!.click());
+  };
+
+  it("with agents off it isn't offered, and no jobs show", () => {
+    const el = mountWith(false);
+    openPill(el);
+    expect(agentOption(el)).toBeUndefined();
+    expect(el.querySelector("[data-agent-jobs]")).toBeNull();
+  });
+
+  it("🔴 chosen, five jobs show under the box; one fills the box with its sentence and sends nothing", () => {
+    const el = mountWith(true);
+    expect(el.querySelector("[data-agent-jobs]")).toBeNull();
+    chooseAgent(el);
+    const jobs = [...el.querySelectorAll<HTMLButtonElement>("[data-agent-job]")];
+    expect(jobs.map((j) => j.getAttribute("data-agent-job"))).toEqual(["language", "fitness", "finance", "legal", "cooking"]);
+    act(() => jobs[0]!.click());
+    expect(el.querySelector<HTMLTextAreaElement>("#hero-prompt")!.value).toBe("start.kind.agentJobs.languagePrompt");
+    expect(push).not.toHaveBeenCalled();
+    expect(el.querySelector<HTMLTextAreaElement>("#hero-prompt")!.getAttribute("placeholder")).toBe("start.kind.agentPlaceholder");
+  });
+
+  it("🔴 sending goes to the space with the brief and leaves the ticket as an agent's", async () => {
+    const el = mountWith(true);
+    chooseAgent(el);
+    type(el, "Quiero un profesor de inglés");
+    await press(sendButton(el));
+    expect(push).toHaveBeenCalledWith("/space?brief=Quiero+un+profesor+de+ingl%C3%A9s");
+    expect(takeFirstMessage("Quiero un profesor de inglés")).toEqual({ brief: "Quiero un profesor de inglés", kind: "agent" });
+  });
+
+  it("a link that carried kind=agent fills the pill only where agents are on", () => {
+    window.history.replaceState(null, "", "/?kind=agent");
+    const off = mountWith(false);
+    expect(off.querySelector('button[aria-haspopup="menu"][aria-label$="start.kind.page"]')).not.toBeNull();
+    window.history.replaceState(null, "", "/?kind=agent");
+    const on = mountWith(true);
+    expect(on.querySelector('button[aria-haspopup="menu"][aria-label$="start.kind.agent"]')).not.toBeNull();
+  });
+});

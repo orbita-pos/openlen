@@ -16,7 +16,7 @@ vi.mock("next-intl", () => ({
 
 const roots: Root[] = [];
 const vistos: NaceComo[] = [];
-type Opts = { conJuego?: boolean; conHerramienta?: boolean; herramientaBloqueada?: string; disabled?: boolean };
+type Opts = { conJuego?: boolean; conHerramienta?: boolean; conAgente?: boolean; herramientaBloqueada?: string; disabled?: boolean };
 function Arnes(o: Opts) {
   const [v, setV] = useState<NaceComo>("pagina");
   return (
@@ -103,6 +103,20 @@ describe("Herramienta, and the pill while sending", () => {
     act(() => opciones(c)[3].click());
     expect(vistos).toEqual(["tool"]);
     expect(disparador(c).textContent).toContain("start.kind.tool");
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3).
+  it("🔴 offers Agente last, only with agents on, and choosing it makes the pill say Agente", () => {
+    const off = render({ conJuego: true, conHerramienta: true });
+    act(() => disparador(off).click());
+    expect(opciones(off).some((o) => o.textContent?.includes("start.kind.agentHint"))).toBe(false);
+    const on = render({ conJuego: true, conHerramienta: true, conAgente: true });
+    act(() => disparador(on).click());
+    const all = opciones(on);
+    expect(all.at(-1)!.textContent).toContain("start.kind.agentHint");
+    act(() => all.at(-1)!.click());
+    expect(vistos).toEqual(["agent"]);
+    expect(disparador(on).textContent).toContain("start.kind.agent");
   });
 
   it("🔴 on Free, Herramienta says why and can't be chosen", () => {

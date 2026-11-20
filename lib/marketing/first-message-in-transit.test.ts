@@ -21,6 +21,12 @@ describe("the first message sent from the home", () => {
     expect(takeFirstMessage(BRIEF, T0 + 5_000)).toEqual({ brief: BRIEF, kind: "app" });
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): the home's Agente sends to the space.
+  it("keeps an agent's kind, for the space to send it", () => {
+    leaveFirstMessage({ brief: BRIEF, kind: "agent" }, T0);
+    expect(takeFirstMessage(BRIEF, T0 + 5_000)).toEqual({ brief: BRIEF, kind: "agent" });
+  });
+
   it("is used once: reloading /new does not send it again", () => {
     leaveFirstMessage({ brief: BRIEF, kind: "pagina" }, T0);
     takeFirstMessage(BRIEF, T0);

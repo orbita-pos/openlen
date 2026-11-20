@@ -2,11 +2,17 @@
 // App del estado vacío (`tarjetas-nace-como.tsx`). Un sitio para la forma del
 // campo, que la usan dos: el borrador que se manda solo y el cuerpo del turno.
 
+import { spaceHref } from "@/lib/space/href";
+
 /** What is born as an app: an app, a tool (spec local 2026-11-04-herramientas-hechas-por-len) or a game (spec local
  *  2026-11-05-modo-juego-design). A page is born as always, with nothing. */
 export type NaceComoApp = "app" | "tool" | "game";
 
 const COMO_APP: readonly string[] = ["app", "tool", "game"] satisfies readonly NaceComoApp[];
+
+/** What the home's pill can choose: what a project is born as, or an agent of the person's own (spec local
+ *  2026-11-19-agentes-para-todos, §6.3) — which goes to their space and is never a way a project is born. */
+export type StartKind = "pagina" | NaceComoApp | "agent";
 
 /** Lo que pide nacer como app —o como herramienta, o como juego—: la tarjeta, y el idioma de la interfaz. */
 export interface PideNacer {
@@ -14,9 +20,10 @@ export interface PideNacer {
   readonly idioma?: string;
 }
 
-/** Los campos del cuerpo: `{ naceComo, idioma }` para una app, una herramienta o un juego, o nada si es una página. */
-export function camposDeNacer(o: PideNacer | null | undefined): PideNacer {
-  if (!o?.naceComo || !COMO_APP.includes(o.naceComo)) return {};
+/** Los campos del cuerpo: `{ naceComo, idioma }` para una app, una herramienta o un juego, o nada si es una página
+ *  (o un agente, que no nace como proyecto). */
+export function camposDeNacer(o: { readonly naceComo?: string; readonly idioma?: string } | null | undefined): PideNacer {
+  if (!o || !naceComoApp(o.naceComo)) return {};
   return { naceComo: o.naceComo, ...(o.idioma ? { idioma: o.idioma } : {}) };
 }
 
@@ -27,7 +34,7 @@ export function naceComoApp(v: string | null | undefined): v is NaceComoApp {
 
 /** What the start page can really be born as: a game asked for (a stale `kind=game` link) while the server says
  *  games are off (OPENLEN_GAMES=0) is a page, which is what the server makes of it. */
-export function naceComoDisponible<T extends "pagina" | NaceComoApp>(v: T, juegos: boolean): T | "pagina" {
+export function naceComoDisponible<T extends StartKind>(v: T, juegos: boolean): T | "pagina" {
   return v === "game" && !juegos ? "pagina" : v;
 }
 
@@ -38,13 +45,15 @@ export function naceComoDisponible<T extends "pagina" | NaceComoApp>(v: T, juego
 /** El parámetro de /new con el que la portada pide nacer como app. */
 export const KIND_PARAM = "kind";
 
-/** Lo que dice la URL: `app`, `tool` o `game`; lo demás, o nada, es una página. */
-export function kindFromParam(v: string | null): "pagina" | NaceComoApp {
-  return naceComoApp(v) ? v : "pagina";
+/** Lo que dice la URL: `app`, `tool`, `game` o `agent`; lo demás, o nada, es una página. */
+export function kindFromParam(v: string | null): StartKind {
+  return naceComoApp(v) ? v : v === "agent" ? "agent" : "pagina";
 }
 
-/** El enlace de la portada a /new: el brief escrito y, si no es una página, su `kind`. */
-export function newProjectHref(brief: string, kind: "pagina" | NaceComoApp): string {
+/** El enlace de la portada a /new: el brief escrito y, si no es una página, su `kind`. An agent goes to the person's
+ *  space instead, which sends the home's ticket as /new does. */
+export function newProjectHref(brief: string, kind: StartKind): string {
+  if (kind === "agent") return spaceHref({ brief: brief.trim() });
   const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
   return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }
@@ -52,7 +61,7 @@ export function newProjectHref(brief: string, kind: "pagina" | NaceComoApp): str
 /** The way back to the home's box, the ONLY box (Jesús, 06/11: «¿para qué tener 2 inputs?»): where /new sends a link
  *  that carries a brief or a kind the home didn't send — they only FILL the home's box (`homeArrival`), as they only
  *  filled /new's. Nothing to carry is plain `/`. */
-export function homeHref(brief: string | null, kind: "pagina" | NaceComoApp): string {
+export function homeHref(brief: string | null, kind: StartKind): string {
   const qs = new URLSearchParams();
   if (brief && brief.trim()) qs.set("brief", brief.trim());
   if (kind !== "pagina") qs.set(KIND_PARAM, kind);
@@ -61,7 +70,7 @@ export function homeHref(brief: string | null, kind: "pagina" | NaceComoApp): st
 }
 
 /** What a link to the home carries for its box (`?brief=`, `?kind=`): it fills, never sends. */
-export function homeArrival(search: string): { brief: string; kind: "pagina" | NaceComoApp } | null {
+export function homeArrival(search: string): { brief: string; kind: StartKind } | null {
   const qs = new URLSearchParams(search);
   const brief = qs.get("brief")?.trim() ?? "";
   const kind = kindFromParam(qs.get(KIND_PARAM));

@@ -8,8 +8,10 @@
 
 /** Con qué nace el proyecto en blanco. `"pagina"` es lo de siempre.
  *  TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.9 door 2): `"tool"`.
- *  THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): `"game"` too, before Herramienta. */
-export type NaceComo = "pagina" | "app" | "game" | "tool";
+ *  THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): `"game"` too, before Herramienta.
+ *  AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): `"agent"`, last — which no project is born as:
+ *  it goes to the person's space. */
+export type NaceComo = "pagina" | "app" | "game" | "tool" | "agent";
 
 // LOS DIBUJOS, en `currentColor`: la opción elegida los tiñe del acento y las
 // demás los dejan en gris, en claro y en oscuro sin una sola regla más. La
@@ -92,6 +94,21 @@ export function DibujoHerramienta() {
       <rect x="34" y="64" width="112" height="12" rx="3" fill="currentColor" opacity="0.14" />
       <rect x="128" y="31" width="14" height="6" rx="3" fill="currentColor" opacity="0.9" />
       <rect x="128" y="49" width="14" height="6" rx="3" fill="currentColor" opacity="0.35" />
+    </svg>
+  );
+}
+
+/** An agent of your own: its figure, and a conversation with it — its turn, then yours. */
+export function DibujoAgente() {
+  return (
+    <svg viewBox="0 0 160 84" className="block w-full h-auto" aria-hidden>
+      <circle cx="30" cy="42" r="20" fill="currentColor" opacity="0.85" />
+      <ellipse cx="23" cy="40" rx="3" ry="4.5" fill="white" opacity="0.95" />
+      <ellipse cx="37" cy="40" rx="3" ry="4.5" fill="white" opacity="0.95" />
+      <rect x="62" y="14" width="78" height="20" rx="10" fill="currentColor" opacity="0.18" />
+      <rect x="70" y="21" width="50" height="6" rx="3" fill="currentColor" opacity="0.45" />
+      <rect x="86" y="44" width="62" height="20" rx="10" fill="currentColor" opacity="0.75" />
+      <rect x="96" y="51" width="38" height="6" rx="3" fill="white" opacity="0.7" />
     </svg>
   );
 }

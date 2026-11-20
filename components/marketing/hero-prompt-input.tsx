@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/i18n/navigation";
 import { useSession } from "next-auth/react";
 import { ClipboardPaste, Sparkles, X } from "lucide-react";
+import { AgentJobChips } from "./agent-job-chips";
 import { useHeroLenReport } from "./hero-len";
 import { useHomeDropRef } from "./home-drop";
 import { useGhostTyping } from "./use-ghost-typing";
@@ -36,7 +37,7 @@ import { PromptBox, type PromptBoxPhoto } from "@/components/prompt-box";
 // with the ticket (`lib/marketing/files-in-transit.ts`), and «Pegar HTML» for a page, which opens /new's paste flow.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
+export function HeroPromptInput({ tools = false, agents = false }: { tools?: boolean; agents?: boolean } = {}) {
   const t = useTranslations("marketing");
   const tw = useTranslations("wsChrome");
   const router = useRouter();
@@ -75,12 +76,13 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
     const arrived = homeArrival(window.location.search);
     if (!arrived) return;
     if (arrived.brief) setValue(prepareGenerationBriefInput(arrived.brief).value);
-    if (arrived.kind !== "tool") setKind(arrived.kind);
+    // An agent from a link only where agents are on here (`agentsEnabled()`, read by the server).
+    if (arrived.kind !== "tool" && (arrived.kind !== "agent" || agents)) setKind(arrived.kind);
     const url = new URL(window.location.href);
     url.searchParams.delete("brief");
     url.searchParams.delete(KIND_PARAM);
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-  }, []);
+  }, [agents]);
 
   const signedIn = status === "authenticated";
   const seen = useRef(false);
@@ -116,14 +118,18 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
   }, [reportLen, activity, value, submitting, loginOpen, ghost.typing]);
 
   // The brief WRITTEN in /new's URL too: it fills /new's box if the ticket can't be read there. With another kind, `kind=`.
+  // An agent goes to the person's space (spec local 2026-11-19-agentes-para-todos, §6.3), which sends the same ticket.
   const target = newProjectHref(value, kind);
+  // What crosses with the ticket: the space takes the message alone in this delivery, so an agent's send leaves no
+  // photos or files behind for a later /new to pick up by mistake.
+  const carriesAttachments = kind !== "agent";
 
   const [leaving, setLeaving] = useState(false);
   const submit = async () => {
     if (submitting || leaving || status === "loading") return;
     // Photos don't fit in a URL: they cross in `sessionStorage`, left BEFORE navigating and BEFORE the sign-in
     // dialog — the signed-out visitor goes to /register and comes back, and they must still be there.
-    if (photos.length) dejarReferenciasEnTransito(photos);
+    if (photos.length && carriesAttachments) dejarReferenciasEnTransito(photos);
     // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
     // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
     leaveFirstMessage({ brief: value, kind });
@@ -131,7 +137,7 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
     // the message still goes.
     setLeaving(true);
     try {
-      await leaveFilesInTransit(files);
+      await leaveFilesInTransit(carriesAttachments ? files : []);
     } finally {
       setLeaving(false);
     }
@@ -187,6 +193,7 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
           onChange: setKind,
           conJuego: juegos,
           conHerramienta: tools,
+          conAgente: agents,
           ...(tools && !paid ? { herramientaBloqueada: tw("tools.planRequired") } : {}),
         }}
         placeholder={
@@ -196,7 +203,9 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
               ? tw("start.kind.gamePlaceholder")
               : kind === "tool"
                 ? tw("start.kind.toolPlaceholder")
-                : t("heroPrompt.placeholder")
+                : kind === "agent"
+                  ? tw("start.kind.agentPlaceholder")
+                  : t("heroPrompt.placeholder")
         }
         ghost={ghost.text || null}
         onActivity={onActivity}
@@ -207,7 +216,17 @@ export function HeroPromptInput({ tools = false }: { tools?: boolean } = {}) {
       />
 
       {/* No example chips under the box any more (Jesús, 06/11: «quitemos el example», for a cleaner home): the box
-          types its own examples while nobody touches it (`use-ghost-typing.ts`), which says the same thing quietly. */}
+          types its own examples while nobody touches it (`use-ghost-typing.ts`), which says the same thing quietly.
+          With Agente chosen, the five jobs show instead (spec local 2026-11-19-agentes-para-todos, §6.3): a tap only
+          fills the box. */}
+      {kind === "agent" && (
+        <AgentJobChips
+          onPick={(text) => {
+            setValue(prepareGenerationBriefInput(text).value);
+            document.getElementById("hero-prompt")?.focus();
+          }}
+        />
+      )}
       {loginOpen && (
         <SignInDialog
           next={target}
