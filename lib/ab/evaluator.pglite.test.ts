@@ -249,6 +249,31 @@ describe("a notice a deploy cut is sent by the next pass (item 22)", () => {
     expect(h.notify).toHaveBeenCalledTimes(2);
   });
 
+  it("🔴 a system close whose notice couldn't be queued is sent by the next pass (round 3, C), once; a person's own close is never announced", async () => {
+    h.liveAb = { kind: "none", sha: "rel-owner" };
+    await running("ab_eval0009");
+    // another experiment that a person closed: not the system's to announce
+    await insertExperiment(raw(), { id: "ab_eval0010", projectId: "p2", status: "cancelled", decisionStatus: "resolved", startedAt: new Date(NOW.getTime() - 3 * DAY), endedAt: new Date(NOW.getTime() - DAY) });
+    await raw().query(`UPDATE "abExperiments" SET "decidedBy" = 'u1' WHERE "id" = 'ab_eval0010'`);
+    // the queue is down for the whole pass: the reconcile's own try, and the sweep that follows it in the same pass
+    h.notify.mockRejectedValueOnce(new Error("queue down")).mockRejectedValueOnce(new Error("queue down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await evaluateRunningExperiments(await depsWith("winner_b"), NOW);
+    warn.mockRestore();
+    expect(await getExperimentById("ab_eval0009")).toMatchObject({ status: "cancelled", decidedBy: "system", notifiedAt: null });
+
+    h.liveAb = { kind: "live", sha: "x", overrides: [], splitBps: 5000 };
+    const later = new Date(NOW.getTime() + 30 * 60_000);
+    const stats = await evaluateRunningExperiments(await depsWith("collecting"), later);
+    expect(stats.notifiedDirectly).toBe(1);
+    expect(h.notify).toHaveBeenCalledTimes(3);
+    expect(h.notify.mock.calls[2]![1]).toBe("ab_result:ab_eval0009:closed_by_system");
+    expect((await getExperimentById("ab_eval0009"))!.notifiedAt).toEqual(later);
+    expect((await getExperimentById("ab_eval0010"))!.notifiedAt).toBeNull();
+    await evaluateRunningExperiments(await depsWith("collecting"), new Date(later.getTime() + 30 * 60_000));
+    expect(h.notify).toHaveBeenCalledTimes(3);
+  });
+
   it("🔴 the stale-lock sweep runs in the pass: a decision that died is given back before the experiment is looked at", async () => {
     await running("ab_eval0008", {
       status: "winner_ready",

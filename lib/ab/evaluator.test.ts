@@ -293,6 +293,19 @@ describe("notices are at least once (item 22)", () => {
     expect(deps.markNotified).toHaveBeenCalledWith("ab_9f3c2a1b", NOW);
   });
 
+  it("🔴 what the SYSTEM closed or recorded is swept too (round 3, C), with its own verdict — and the morning summary never delivers it", async () => {
+    const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true };
+    const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale: "en", assistant: morning };
+    const closed = makeExp({ id: "ab_sys00001", status: "cancelled", decisionStatus: "resolved", decidedBy: "system" });
+    const promoted = makeExp({ id: "ab_sys00002", status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", decidedBy: "system" });
+    const deps = makeDeps({ verdict: "collecting", exp: makeExp({ startedAt: null }), project: proj });
+    vi.mocked(deps.listUnannounced).mockResolvedValue([closed, promoted]);
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats.notifiedDirectly).toBe(2);
+    expect(vi.mocked(deps.notify).mock.calls.map(([, key]) => key)).toEqual(["ab_result:ab_sys00001:closed_by_system", "ab_result:ab_sys00002:promoted_by_system"]);
+    expect(vi.mocked(deps.markNotified).mock.calls.map(([id]) => id)).toEqual(["ab_sys00001", "ab_sys00002"]);
+  });
+
   it("the sweep leaves a winner to the morning summary, but a harm stop is always sent", async () => {
     const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true };
     const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale: "en", assistant: morning };

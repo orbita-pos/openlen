@@ -24,6 +24,7 @@ import type { AbMetricsSnapshot, AbStatsResult } from "./types";
 import type { AbEvaluationPatch, AbExperimentRow } from "./store";
 import type { ReconcileVerdict } from "./reconcile";
 import { abNotificationTexts } from "./texts";
+import { AB_SYSTEM_ACTOR } from "./types";
 
 export const EVALUATOR_INTERVAL_MS = 30 * 60_000;
 
@@ -135,7 +136,10 @@ async function announce(
 }
 
 /** What an experiment that already ended says, read from its row: harm stop, or the verdict its snapshot reached. */
-function verdictOfEnded(exp: AbExperimentRow): Announced {
+function verdictOfEnded(exp: AbExperimentRow): Told {
+  // What the reconcile pass did on its own (nobody decided it): its own notice.
+  if (exp.decidedBy === AB_SYSTEM_ACTOR && exp.status === "cancelled") return "closed_by_system";
+  if (exp.decidedBy === AB_SYSTEM_ACTOR && exp.status === "promoted_b") return "promoted_by_system";
   if (exp.status === "paused_harm") return "harm_stop";
   if (exp.status === "inconclusive") return "inconclusive";
   return exp.winnerVariant === "a" ? "winner_a" : "winner_b";
@@ -177,7 +181,9 @@ export async function evaluateRunningExperiments(
         const info = await deps.projectInfo(exp.projectId);
         if (!info) continue;
         const verdict = verdictOfEnded(exp);
-        if (verdict !== "harm_stop" && info.assistant?.morningSummary) continue;
+        // The morning summary delivers a winner or a no-result (it marks them told); a harm stop and what the system did on its
+        // own are never in it: they are sent here.
+        if ((verdict === "winner_b" || verdict === "winner_a" || verdict === "inconclusive") && info.assistant?.morningSummary) continue;
         const stats = exp.metricsSnapshot?.stats ?? { relativeLift: 0, probBBeatsA: 0, probABeatsB: 0, probHarm30: 0 };
         await announce(deps, info, exp, verdict, stats, { restored: verdict === "harm_stop" ? info.subdomain !== null : true }, now);
         notifiedDirectly++;
