@@ -2,8 +2,14 @@
  * JUST-IN-TIME PATH RULES (Plan Ruta 98 %, P2).
  *
  * Pure, deterministic glob-matched rules attached ONCE per turn at the end of a `Read`
- * result when Len touches high-risk paths (migrations, Edge Functions, package.json,
- * motion artifacts) or user-defined project rules under `/.len/rules/*.md`.
+ * result when Len touches high-risk paths (migrations, Edge Functions, the app's
+ * package.json, motion artifacts). They are the platform's own: the list below.
+ *
+ * ⚰️ Project rules under `/.len/rules/*.md` were retired (Ruta 98 review, 2026-11-19).
+ * They were never reachable: `/.len` is a hidden root of the folder (`folder.ts`,
+ * `HIDDEN_ROOTS`), so nothing could write a file there and no store holds one — the
+ * loader read a map that never had them. What a project wants Len to follow goes in
+ * its `/LEN.md`, which is loaded every conversation.
  *
  * Cache effect: zero on the cached prefix — rules ride inside the tool result that
  * triggered them and never mutate message 0 or the tool catalog.
@@ -15,10 +21,6 @@ export interface PathRule {
   readonly globs: readonly string[];
   readonly body: string;
 }
-
-export const PROJECT_RULES_DIR = "/.len/rules/";
-const MAX_CUSTOM_RULE_FILES = 10;
-const MAX_CUSTOM_RULE_CHARS = 2_000;
 
 export const BUILTIN_PATH_RULES: readonly PathRule[] = [
   {
@@ -41,7 +43,9 @@ export const BUILTIN_PATH_RULES: readonly PathRule[] = [
   },
   {
     id: "builtin:app-package-json",
-    globs: ["package.json"],
+    // The ROOT's manifest, as `folder.ts` treats it: a glob without a slash matches by file name at any depth, so
+    // the negation keeps /node_modules/x/package.json and /src/a/package.json out (it needs a folder before the name).
+    globs: ["package.json", "!**/*/package.json"],
     body:
       "App package.json rule:\n" +
       "- Use verified packages compatible with OpenLen's app catalog; avoid inventing unverified versions or native Node binaries that cannot run in the browser bundle.",
@@ -56,80 +60,12 @@ export const BUILTIN_PATH_RULES: readonly PathRule[] = [
   },
 ];
 
-/** Parses a `/.len/rules/<name>.md` file with simple YAML frontmatter (`paths:` list or comma-separated globs). */
-export function parseCustomRuleFile(filePath: string, raw: string): PathRule | null {
-  const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/.exec(raw.trimStart());
-  if (!m) return null;
-  const front = m[1]!;
-  const body = m[2]!.trim().slice(0, MAX_CUSTOM_RULE_CHARS);
-  if (!body) return null;
-
-  const globs: string[] = [];
-  const lines = front.split(/\r?\n/);
-  let inPathsList = false;
-  for (const line of lines) {
-    const inline = /^paths\s*:\s*(.+)$/.exec(line.trim());
-    if (inline) {
-      inPathsList = false;
-      const val = inline[1]!.trim();
-      if (val.startsWith("[") && val.endsWith("]")) {
-        for (const item of val.slice(1, -1).split(",")) {
-          const clean = item.trim().replace(/^['"]|['"]$/g, "").replace(/^\/+/, "");
-          if (clean) globs.push(clean);
-        }
-      } else {
-        for (const item of val.split(",")) {
-          const clean = item.trim().replace(/^['"]|['"]$/g, "").replace(/^\/+/, "");
-          if (clean) globs.push(clean);
-        }
-      }
-      continue;
-    }
-    if (/^paths\s*:\s*$/.test(line.trim())) {
-      inPathsList = true;
-      continue;
-    }
-    if (inPathsList) {
-      const bullet = /^\s*-\s+(.+)$/.exec(line);
-      if (bullet) {
-        const clean = bullet[1]!.trim().replace(/^['"]|['"]$/g, "").replace(/^\/+/, "");
-        if (clean) globs.push(clean);
-      } else if (line.trim() !== "") {
-        inPathsList = false;
-      }
-    }
-  }
-  if (globs.length === 0) return null;
-  return { id: `project:${filePath}`, globs, body };
-}
-
-export type ProjectFilesMap = ReadonlyMap<string, string> | Readonly<Record<string, string>>;
-
-/** Loads any valid project rules from `/.len/rules/*.md`. */
-export function customPathRulesFrom(files: ProjectFilesMap | undefined): PathRule[] {
-  if (!files) return [];
-  const entries = files instanceof Map ? [...files.entries()] : Object.entries(files);
-  const out: PathRule[] = [];
-  for (const [path, content] of entries.sort(([a], [b]) => a.localeCompare(b))) {
-    if (!path.startsWith(PROJECT_RULES_DIR) || !path.endsWith(".md")) continue;
-    if (out.length >= MAX_CUSTOM_RULE_FILES) break;
-    const rule = parseCustomRuleFile(path, content);
-    if (rule) out.push(rule);
-  }
-  return out;
-}
-
 /** Returns newly-matched path rules formatted in `<path-rules>` (mutating `seen` so each rule fires at most once per turn), or null. */
-export function collectPathRules(
-  absolutePath: string,
-  seen: Set<string>,
-  projectFiles?: ProjectFilesMap,
-): string | null {
+export function collectPathRules(absolutePath: string, seen: Set<string>): string | null {
   const rel = absolutePath.replace(/^\/+/, "");
-  if (!rel || rel.startsWith(".len/rules/")) return null;
-  const all = [...BUILTIN_PATH_RULES, ...customPathRulesFrom(projectFiles)];
+  if (!rel) return null;
   const matched: PathRule[] = [];
-  for (const rule of all) {
+  for (const rule of BUILTIN_PATH_RULES) {
     if (seen.has(rule.id)) continue;
     if (pasaLosGlobs(rel, rule.globs)) {
       seen.add(rule.id);
