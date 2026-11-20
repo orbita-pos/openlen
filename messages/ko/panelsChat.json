@@ -724,7 +724,29 @@
     "signInAgainAt": "{issuer}에서 다시 로그인",
     "morePermissionsAt": "{issuer}에서 추가 권한이 필요합니다",
     "oauthConnected": "연결됨",
-    "suggestTitle": "{name} ({host}) 연결"
+    "suggestTitle": "{name} ({host}) 연결",
+    "signInOnServerPage": "서버 자체의 로그인 페이지에서 로그인",
+    "signInAgainOnServerPage": "서버 자체의 로그인 페이지에서 다시 로그인",
+    "morePermissionsOnServerPage": "추가 권한이 필요합니다. 서버 자체의 로그인 페이지에서 요청합니다",
+    "sendsToSignIn": "내 키 {name}을(를) 서버의 로그인 페이지로 보냅니다",
+    "tryAgain": "다시 시도",
+    "openConnectors": "도구에서 커넥터 열기",
+    "errors": {
+      "popupBlocked": "브라우저가 로그인 창을 차단했습니다. OpenLen의 팝업을 허용한 뒤 다시 시도하세요.",
+      "unsafeUrl": "서버가 안전하지 않은 로그인 주소를 보내서 OpenLen이 열지 않았습니다.",
+      "notApproved": "이 커넥터는 아직 승인되지 않았습니다. 도구의 커넥터에서 승인하세요.",
+      "noClient": "OpenLen이 아직 이 서버에 로그인할 수 없습니다. 서버의 로그인 제공자에 등록된 앱이 필요합니다(mcp.json의 oauth.clientId).",
+      "unreachable": "서버의 로그인에 연결할 수 없었습니다. 잠시 후 다시 시도하세요.",
+      "expired": "로그인이 너무 오래 걸려 만료되었습니다. 다시 시도하세요.",
+      "lost": "그 로그인 링크는 더 이상 작동하지 않습니다. 다시 시도하세요.",
+      "issuerChanged": "이 커넥터를 승인할 때의 로그인 페이지가 아니어서 아무것도 연결되지 않았습니다.",
+      "exchangeFailed": "서버가 로그인을 마치지 못했습니다. 다시 시도하세요.",
+      "off": "커넥터 로그인이 꺼져 있습니다.",
+      "unauthorized": "OpenLen 세션이 끝났습니다. 페이지를 새로고침한 뒤 다시 시도하세요.",
+      "notAvailable": "그 커넥터는 사용할 수 없습니다.",
+      "configUnreadable": "커넥터 파일을 읽을 수 없습니다. 도구의 커넥터에서 고치세요.",
+      "failed": "로그인할 수 없었습니다. 다시 시도하세요."
+    }
   },
   "ownAssistant": {
     "card": {

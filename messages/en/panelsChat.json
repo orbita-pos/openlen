@@ -724,7 +724,29 @@
     "signInAgainAt": "Sign in again at {issuer}",
     "morePermissionsAt": "Needs more permissions at {issuer}",
     "oauthConnected": "Connected",
-    "suggestTitle": "Connect {name} ({host})"
+    "suggestTitle": "Connect {name} ({host})",
+    "signInOnServerPage": "Sign in on the server's own sign-in page",
+    "signInAgainOnServerPage": "Sign in again on the server's own sign-in page",
+    "morePermissionsOnServerPage": "Needs more permissions, asked for on the server's own sign-in page",
+    "sendsToSignIn": "It will send your key {name} to the server's sign-in page",
+    "tryAgain": "Try again",
+    "openConnectors": "Open Connectors in Tools",
+    "errors": {
+      "popupBlocked": "Your browser blocked the sign-in window. Allow pop-ups for OpenLen and try again.",
+      "unsafeUrl": "The server sent a sign-in address that isn't secure, so OpenLen didn't open it.",
+      "notApproved": "This connector isn't approved yet. Approve it in Tools, under Connectors.",
+      "noClient": "OpenLen can't sign in to this server yet: it needs an app registered with the server's sign-in provider (oauth.clientId in mcp.json).",
+      "unreachable": "The server's sign-in couldn't be reached. Try again in a moment.",
+      "expired": "The sign-in took too long and expired. Try again.",
+      "lost": "That sign-in link doesn't work any more. Try again.",
+      "issuerChanged": "The sign-in page isn't the one this connector was approved for, so nothing was connected.",
+      "exchangeFailed": "The server didn't finish the sign-in. Try again.",
+      "off": "Signing in to connectors is switched off.",
+      "unauthorized": "Your OpenLen session ended. Reload the page and try again.",
+      "notAvailable": "That connector isn't available.",
+      "configUnreadable": "Your connectors file can't be read. Fix it in Tools, under Connectors.",
+      "failed": "Couldn't sign in. Try again."
+    }
   },
   "ownAssistant": {
     "card": {

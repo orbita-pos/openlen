@@ -724,7 +724,29 @@
     "signInAgainAt": "{issuer} で再サインイン",
     "morePermissionsAt": "{issuer} で追加の権限が必要です",
     "oauthConnected": "接続済み",
-    "suggestTitle": "{name} ({host}) を接続"
+    "suggestTitle": "{name} ({host}) を接続",
+    "signInOnServerPage": "サーバー自身のサインインページでサインイン",
+    "signInAgainOnServerPage": "サーバー自身のサインインページで再サインイン",
+    "morePermissionsOnServerPage": "追加の権限が必要です（サーバー自身のサインインページで求められます）",
+    "sendsToSignIn": "あなたのキー {name} をサーバーのサインインページに送信します",
+    "tryAgain": "もう一度試す",
+    "openConnectors": "ツールのコネクタを開く",
+    "errors": {
+      "popupBlocked": "ブラウザがサインインのウィンドウをブロックしました。OpenLen のポップアップを許可して、もう一度お試しください。",
+      "unsafeUrl": "サーバーが安全でないサインインのアドレスを返したため、OpenLen は開きませんでした。",
+      "notApproved": "このコネクタはまだ承認されていません。ツールのコネクタで承認してください。",
+      "noClient": "OpenLen はまだこのサーバーにサインインできません。サーバーのサインイン提供元に登録されたアプリが必要です（mcp.json の oauth.clientId）。",
+      "unreachable": "サーバーのサインインに接続できませんでした。しばらくしてからもう一度お試しください。",
+      "expired": "サインインに時間がかかりすぎて期限切れになりました。もう一度お試しください。",
+      "lost": "そのサインインのリンクはもう使えません。もう一度お試しください。",
+      "issuerChanged": "このコネクタを承認したときのサインインページではないため、何も接続されませんでした。",
+      "exchangeFailed": "サーバーがサインインを完了しませんでした。もう一度お試しください。",
+      "off": "コネクタへのサインインはオフになっています。",
+      "unauthorized": "OpenLen のセッションが終了しました。ページを再読み込みして、もう一度お試しください。",
+      "notAvailable": "そのコネクタは利用できません。",
+      "configUnreadable": "コネクタのファイルを読み取れません。ツールのコネクタで修正してください。",
+      "failed": "サインインできませんでした。もう一度お試しください。"
+    }
   },
   "ownAssistant": {
     "card": {

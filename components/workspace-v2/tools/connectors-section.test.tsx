@@ -8,6 +8,15 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, v?: Record<string, unknown>) => (v ? `${key} ${JSON.stringify(v)}` : key),
 }));
 
+const signIn = vi.hoisted(() => ({ result: "connected" as "connected" | "closed" | { error: string; detail?: string }, calls: [] as string[] }));
+vi.mock("../chat/open-sign-in", async (orig) => ({
+  ...(await orig<typeof import("../chat/open-sign-in")>()),
+  openSignIn: async (server: string) => {
+    signIn.calls.push(server);
+    return signIn.result;
+  },
+}));
+
 import { ConnectorsSection } from "./connectors-section";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -114,5 +123,58 @@ describe("ConnectorsSection", () => {
     expect(disconnectBtn).toBeTruthy();
     await act(async () => disconnectBtn.click());
     expect(fetchMock.mock.calls[1]).toEqual(["/api/mcp-connectors/cal-live/oauth", expect.objectContaining({ method: "DELETE" })]);
+  });
+
+  // Review fix OB3/OB2: the window may close with the connection already made (the way back was cut), so the list is read
+  // again whatever the window said; and a sign-in that failed says why in words, never a code.
+  describe("the «Connect» button", () => {
+    const pending = {
+      ...VIEW,
+      servers: [{ name: "cal", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "needs-auth", tools: 0, headers: [], oauth: true }],
+    };
+    const connect = async () => act(async () => button("tools.connectors.connect", document.querySelector('[data-connector="cal"]')!).click());
+    beforeEach(() => {
+      signIn.calls.length = 0;
+      fetchMock.mockImplementation(async () => ok(pending));
+    });
+
+    it("🔴 reads the list again when the window closed with no word", async () => {
+      signIn.result = "closed";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(signIn.calls).toEqual(["cal"]);
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+      expect(fetchMock.mock.calls.at(-1)![0]).toBe("/api/mcp-connectors");
+    });
+
+    it("reads the list again when it connected", async () => {
+      signIn.result = "connected";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+    });
+
+    it("🔴 says in words why it failed, and never shows the code", async () => {
+      signIn.result = { error: "popup_blocked" };
+      await render();
+      await connect();
+      const row = document.querySelector('[data-connector="cal"]')!;
+      expect(row.textContent).toContain("mcpApproval.errors.popupBlocked");
+      expect(row.textContent).not.toContain("popup_blocked");
+    });
+
+    it("an unknown code is the generic sentence, and a useful detail comes with it", async () => {
+      signIn.result = { error: "weird_123" };
+      await render();
+      await connect();
+      expect(document.body.textContent).toContain("mcpApproval.errors.failed");
+      expect(document.body.textContent).not.toContain("weird_123");
+      signIn.result = { error: "no_client", detail: "set oauth.clientId in mcp.json" };
+      await connect();
+      expect(document.body.textContent).toContain("mcpApproval.errors.noClient");
+      expect(document.body.textContent).toContain("set oauth.clientId in mcp.json");
+    });
   });
 });

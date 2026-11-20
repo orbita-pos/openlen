@@ -1,6 +1,9 @@
 // THE «CONECTAR» CARD (spec local 2026-11-06-conectores-mcp, §5.3): a server Len added to ~/.len/mcp.json waits for the
 // person. The card names the host and every key it would send, warns in red when a key already goes to another host,
 // asks for the keys that are missing, and approves exactly what it was drawn from.
+import fs from "node:fs";
+import path from "node:path";
+
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +15,7 @@ vi.mock("next-intl", () => ({
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
 import { McpApprovalCardView } from "./mcp-approval-card";
+import { SIGN_IN_ERROR_KEYS, signInErrorKey } from "./sign-in-errors";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | null = null;
@@ -25,6 +29,7 @@ afterEach(() => {
   root = null;
   document.body.innerHTML = "";
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 const CARD = {
@@ -179,6 +184,211 @@ describe("McpApprovalCardView", () => {
       button("mcpApproval.connect").click();
     });
     expect(popup.closed).toBe(true);
-    expect(document.body.textContent).toContain('mcpApproval.failed {"error":"set oauth.clientId in mcp.json"}');
+    expect(document.body.textContent).toContain("mcpApproval.errors.noClient");
+    expect(document.body.textContent).toContain("set oauth.clientId in mcp.json");
+  });
+});
+
+// Review fix OB1: the card says where each thing really goes. A client secret goes to the authorization server's token
+// endpoint, a header's key to the MCP server, and a sign-in that nobody knows the page of is said to be on the server's
+// own sign-in page — never on the MCP server's host, which is where the tools are.
+describe("🔴 the card names the host a key and a sign-in really go to", () => {
+  const OAUTH_CARD: McpApprovalCard = {
+    server: "cal",
+    host: "calendarmcp.googleapis.com",
+    headerNames: [],
+    credentials: [],
+    fingerprint: "fp-cal",
+    version: 0,
+    oauth: { issuerHost: "accounts.google.com", reason: "first" },
+  };
+  const line = (selector: string) => document.querySelector(selector)?.textContent ?? "";
+
+  it("a client secret is sent to the authorization server's hosts, not to the MCP host", async () => {
+    await render({
+      ...OAUTH_CARD,
+      credentials: [{ name: "CLIENT_SECRET", set: true, destinationHosts: ["auth.example.com", "login.example.com"], otherHosts: [], firstTime: true }],
+    });
+    const sends = line("[data-mcp-sends]");
+    expect(sends).toContain('mcpApproval.sends {"name":"CLIENT_SECRET","host":"auth.example.com, login.example.com"}');
+    expect(sends).not.toContain("calendarmcp.googleapis.com");
+    // The first-time warning names the same hosts (the server computed it for them).
+    expect(line("[data-mcp-key-warning]")).toContain('"host":"auth.example.com, login.example.com"');
+    expect(line("[data-mcp-key-warning]")).not.toContain("calendarmcp.googleapis.com");
+  });
+
+  it("the «used elsewhere» warning is the server's measure for that credential", async () => {
+    await render({
+      ...OAUTH_CARD,
+      credentials: [{ name: "CLIENT_SECRET", set: true, destinationHosts: ["auth.example.com"], otherHosts: ["old.example.org"], firstTime: true }],
+    });
+    expect(line("[data-mcp-key-warning]")).toContain('mcpApproval.usedElsewhere {"name":"CLIENT_SECRET","hosts":"old.example.org"}');
+  });
+
+  it("a key whose hosts the card doesn't know, on an OAuth card, is not said to go to the MCP host", async () => {
+    await render({ ...OAUTH_CARD, credentials: [{ name: "CLIENT_SECRET", set: true, destinationHosts: [], otherHosts: [], firstTime: false }] });
+    expect(line("[data-mcp-sends]")).toContain('mcpApproval.sendsToSignIn {"name":"CLIENT_SECRET"}');
+    expect(line("[data-mcp-sends]")).not.toContain("calendarmcp.googleapis.com");
+  });
+
+  it("an older card with no destination hosts and no sign-in still names the MCP host, as it did", async () => {
+    await render({ ...CARD, credentials: [{ name: "NOTION_TOKEN", set: true, destinationHosts: [], otherHosts: [], firstTime: false }] });
+    expect(line("[data-mcp-sends]")).toContain('mcpApproval.sends {"name":"NOTION_TOKEN","host":"collector.example.net"}');
+  });
+
+  it("without a known sign-in host, it says the server's own sign-in page and never the MCP host", async () => {
+    const expected = { first: "mcpApproval.signInOnServerPage", lapsed: "mcpApproval.signInAgainOnServerPage", scope: "mcpApproval.morePermissionsOnServerPage" } as const;
+    for (const reason of ["first", "lapsed", "scope"] as const) {
+      await render({ ...OAUTH_CARD, oauth: { issuerHost: null, reason } });
+      const text = line("[data-mcp-sign-in]");
+      expect(text).toBe(expected[reason]);
+      expect(text).not.toContain("calendarmcp.googleapis.com");
+      act(() => root!.unmount());
+      root = null;
+    }
+  });
+
+  it("a remote string is drawn as text, never as markup", async () => {
+    const hostile = "<img src=x onerror=document.title=1>";
+    await render({
+      ...OAUTH_CARD,
+      oauth: { issuerHost: hostile, reason: "first" },
+      credentials: [{ name: "K", set: true, destinationHosts: [hostile], otherHosts: [hostile], firstTime: false }],
+    });
+    expect(document.querySelector("img")).toBeNull();
+    expect(document.body.textContent).toContain(hostile);
+  });
+});
+
+// Review fix OB2: approving bumps the file's version, so a retry that approved again would answer «changed». The card
+// remembers that the approval went through; a failed sign-in leaves a button to try again and says why in words.
+describe("🔴 trying again after a sign-in that didn't finish", () => {
+  const NEEDS_APPROVAL: McpApprovalCard = {
+    server: "cal",
+    host: "calendarmcp.googleapis.com",
+    headerNames: [],
+    credentials: [{ name: "EXTRA", set: false, destinationHosts: ["calendarmcp.googleapis.com"], otherHosts: [], firstTime: false }],
+    fingerprint: "fp-cal",
+    version: 4,
+    oauth: { issuerHost: "accounts.google.com", reason: "first" },
+  };
+  const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth?state=s1";
+  const fakePopup = () => ({ closed: false, opener: {} as unknown, location: { href: "about:blank" }, close() { this.closed = true; } });
+  const approveOk = () => new Response(JSON.stringify({ state: { status: "needs-auth", tools: 0 } }));
+  const startOk = () => new Response(JSON.stringify({ authorizationUrl: AUTH_URL }));
+  const servers = (...rows: { name: string; status: string }[]) => new Response(JSON.stringify({ available: true, servers: rows }));
+  const urls = () => fetchMock.mock.calls.map((c) => String(c[0]));
+
+  it("closing the window after the approval went through retries without approving again", async () => {
+    vi.useFakeTimers();
+    const popup = fakePopup();
+    window.open = vi.fn(() => popup) as unknown as typeof window.open;
+    fetchMock.mockImplementation(async (url: string) =>
+      url.endsWith("/approve") ? approveOk() : url.endsWith("/oauth") ? startOk() : servers({ name: "cal", status: "needs-auth" }),
+    );
+    await render(NEEDS_APPROVAL);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(urls()).toEqual(["/api/mcp-connectors/cal/approve", "/api/mcp-connectors/cal/oauth"]);
+
+    popup.closed = true; // the person closed the window before finishing
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    // Back to a tap that can be made again, and the key field it already sent is gone.
+    expect(document.querySelectorAll("input")).toHaveLength(0);
+    popup.closed = false;
+    await act(async () => button("mcpApproval.connect").click());
+    expect(urls().filter((u) => u.endsWith("/approve"))).toHaveLength(1);
+    expect(urls().filter((u) => u.endsWith("/oauth"))).toHaveLength(2);
+    expect(document.body.textContent).not.toContain("mcpApproval.changed");
+  });
+
+  it("a blocked window says so in words, keeps «Try again» and points at Tools", async () => {
+    window.open = vi.fn(() => null) as unknown as typeof window.open;
+    await render(NEEDS_APPROVAL);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain("mcpApproval.errors.popupBlocked");
+    expect(document.body.textContent).not.toContain("popup_blocked");
+    expect(button("mcpApproval.tryAgain")).toBeTruthy();
+    const link = document.querySelector<HTMLAnchorElement>("[data-mcp-open-connectors]");
+    expect(link?.getAttribute("href")).toBe("/new?view=tools");
+    expect(link?.textContent).toBe("mcpApproval.openConnectors");
+  });
+
+  it("a start that fails after the approval keeps it: «Try again» goes straight to the start", async () => {
+    const popup = fakePopup();
+    window.open = vi.fn(() => popup) as unknown as typeof window.open;
+    fetchMock
+      .mockResolvedValueOnce(approveOk())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "no_client", detail: "set oauth.clientId in mcp.json" }), { status: 422 }))
+      .mockResolvedValueOnce(startOk());
+    await render(NEEDS_APPROVAL);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(popup.closed).toBe(true);
+    expect(document.body.textContent).toContain("mcpApproval.errors.noClient");
+    expect(document.body.textContent).toContain("set oauth.clientId in mcp.json");
+    expect(document.body.textContent).not.toContain("no_client");
+    expect(document.querySelectorAll("input")).toHaveLength(0);
+
+    popup.closed = false;
+    await act(async () => button("mcpApproval.tryAgain").click());
+    expect(urls()).toEqual(["/api/mcp-connectors/cal/approve", "/api/mcp-connectors/cal/oauth", "/api/mcp-connectors/cal/oauth"]);
+    expect(popup.location.href).toBe(AUTH_URL);
+  });
+
+  it("a code it doesn't know is never shown: the generic sentence stands in", async () => {
+    window.open = vi.fn(() => fakePopup()) as unknown as typeof window.open;
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "weird_code_123" }), { status: 500 }));
+    await render({ ...NEEDS_APPROVAL, version: 0, credentials: [] });
+    await act(async () => button("mcpApproval.connect").click());
+    expect(document.body.textContent).toContain("mcpApproval.errors.failed");
+    expect(document.body.textContent).not.toContain("weird_code_123");
+  });
+
+  it("a mount that fails (no OAuth) points at Tools too, and shows what the server said", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ state: { status: "failed", error: "HTTP 500" } })));
+    await render({ ...CARD, credentials: [] });
+    await act(async () => button("mcpApproval.connect").click());
+    expect(document.body.textContent).toContain('mcpApproval.failed {"error":"HTTP 500"}');
+    expect(document.querySelector("[data-mcp-open-connectors]")).not.toBeNull();
+  });
+});
+
+// Every code a sign-in can end with has a sentence in the person's language (never the code itself).
+describe("signInErrorKey", () => {
+  const LOCALES = ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"];
+  const messages = (locale: string) =>
+    JSON.parse(fs.readFileSync(path.join(process.cwd(), "messages", locale, "panelsChat.json"), "utf8")) as { mcpApproval: Record<string, string> & { errors: Record<string, string> } };
+
+  it("maps every code the start, the way back and the popup can produce", () => {
+    const codes = [
+      "popup_blocked", "sign_in_url_refused", "not_approved", "no_client", "unreachable", "expired", "used", "unknown",
+      "issuer_changed", "exchange_failed", "off", "unauthorized", "not_found", "config_unreadable",
+    ];
+    for (const code of codes) expect(signInErrorKey(code), code).not.toBe("failed");
+    expect(signInErrorKey("whatever")).toBe("failed");
+    expect(signInErrorKey("500")).toBe("failed");
+    expect(signInErrorKey("")).toBe("failed");
+  });
+
+  it("has a translation of each sentence in all ten languages, with no placeholder left in it", () => {
+    for (const locale of LOCALES) {
+      const errors = messages(locale).mcpApproval.errors;
+      for (const key of SIGN_IN_ERROR_KEYS) {
+        expect(typeof errors[key] === "string" && errors[key]!.trim().length > 0, `${locale}.${key}`).toBe(true);
+        expect(errors[key], `${locale}.${key}`).not.toMatch(/[{}]/);
+      }
+    }
+  });
+
+  it("has the card's new texts in all ten languages", () => {
+    for (const locale of LOCALES) {
+      const m = messages(locale).mcpApproval;
+      for (const key of ["signInOnServerPage", "signInAgainOnServerPage", "morePermissionsOnServerPage", "sendsToSignIn", "tryAgain", "openConnectors"]) {
+        expect(typeof m[key] === "string" && m[key]!.trim().length > 0, `${locale}.${key}`).toBe(true);
+      }
+      expect(m.sendsToSignIn, locale).toContain("{name}");
+    }
   });
 });
