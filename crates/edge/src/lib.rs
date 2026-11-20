@@ -7,6 +7,7 @@ pub mod observability;
 pub mod proxy;
 pub mod routing;
 pub mod server;
+pub mod sidecar;
 pub mod tls;
 
 pub use ab::{
@@ -30,6 +31,7 @@ pub use server::{
     ab_loopback_router, bind, bind_with_lookup, bind_with_lookup_and_layers, router,
     router_with_layers, run_ab_loopback, AppState, BoundServer, SERVER_HEADER_VALUE, VERSION,
 };
+pub use sidecar::{run_ab_sidecar, shutdown_signal, DEFAULT_SIDECAR_BIND};
 pub use tls::{
     build_dynamic_config, cert_dir_for, load_persisted_certs, load_wildcard, read_cert_pair,
     run_renewal_loop, save_cert, watch_wildcard, AcmeClient, AcmeIssuer, DynamicCertResolver,

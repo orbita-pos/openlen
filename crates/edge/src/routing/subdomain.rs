@@ -6,6 +6,10 @@ static SUBDOMAIN_RE: Lazy<Regex> = Lazy::new(|| {
         .expect("subdomain regex compiles")
 });
 
+static LABEL_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$").expect("label regex compiles")
+});
+
 /// Public-hostname (RFC 1123) regex. Used to gate custom-domain lookups so a
 /// bogus Host header doesn't cause a Postgres roundtrip.
 ///
@@ -40,6 +44,17 @@ pub fn extract_subdomain(host: &str) -> Option<String> {
         .and_then(|c| c.name("sub").map(|m| m.as_str().to_owned()))
 }
 
+/// Like [`extract_subdomain`], for whichever zones the site may live under (`openlen.app`,
+/// `openlen.com`: the configured publish hosts). `demo.openlen.app` is the site `demo` as much as
+/// `demo.openlen.com` is; the apex, a nested name and another zone are not.
+pub fn extract_subdomain_in(host: &str, zones: &[String]) -> Option<String> {
+    let host_lc = host.split(':').next()?.to_ascii_lowercase();
+    zones.iter().find_map(|zone| {
+        let label = host_lc.strip_suffix(&format!(".{}", zone.trim_start_matches('.')))?;
+        LABEL_RE.is_match(label).then(|| label.to_owned())
+    })
+}
+
 /// True if `host_no_port_lc` is part of the `openlen.com` zone (apex or any
 /// subdomain). Used by `decide_route` to keep nested hosts like
 /// `a.b.openlen.com` as 404s instead of treating them as a candidate custom
@@ -70,6 +85,26 @@ pub fn looks_like_public_hostname(host_no_port_lc: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn extracts_the_site_under_every_configured_publish_host() {
+        let zones = vec!["openlen.app".to_owned(), "openlen.com".to_owned()];
+        let sub = |h: &str| extract_subdomain_in(h, &zones);
+        assert_eq!(sub("demo.openlen.app").as_deref(), Some("demo"));
+        assert_eq!(sub("Demo.OpenLen.APP:443").as_deref(), Some("demo"));
+        assert_eq!(sub("my-site.openlen.com").as_deref(), Some("my-site"));
+        assert_eq!(sub("a.openlen.app").as_deref(), Some("a"));
+        assert!(sub("openlen.app").is_none());
+        assert!(sub("a.b.openlen.app").is_none());
+        assert!(sub("-bad.openlen.app").is_none());
+        assert!(sub("bad-.openlen.app").is_none());
+        assert!(sub("demo.openlen.dev").is_none());
+        assert!(sub("demoopenlen.app").is_none());
+        assert!(sub(&format!("{}.openlen.app", "a".repeat(64))).is_none());
+        // The old behaviour is unchanged: `extract_subdomain` knows only .com.
+        assert!(extract_subdomain("demo.openlen.app").is_none());
+        assert_eq!(extract_subdomain_in("demo.openlen.app", &[]), None);
+    }
 
     #[test]
     fn matches_simple_subdomain() {
