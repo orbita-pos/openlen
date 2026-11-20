@@ -579,8 +579,17 @@ const SERVE_PATH_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHA
 /// A FILE on an experiment's site, in sidecar mode: the answer is only WHICH file Caddy serves,
 /// never the bytes. 204 plus `X-OpenLen-Serve: <absolute path in the release>` (Variant B's file
 /// when the visitor is in B and B ships it, control's otherwise) and `X-OpenLen-AB: <id>:<variant>`
-/// for a file the manifest lists in `overrides`; 204 with nothing for any other file, which Caddy
-/// serves as it serves every site. Caddy stamps the file `no-store` when the header is there.
+/// for a file an experiment lists in its `overrides`; 204 with nothing for any other file, which
+/// Caddy serves as it serves every site. Caddy stamps the file `no-store` when the header is there.
+///
+/// ONE-REQUEST WINDOW, accepted and documented (infra/AB_TESTING_RUNBOOK.md, "Known limits"): the
+/// decision is made against the release `<sub>/current` names when it is read (resolved once, like
+/// the manifest), but Caddy serves the file through `<sub>/current` a moment later — its `root` is
+/// `current`, not the resolved directory, and that cannot be changed from here. A publish that swaps
+/// `current` in between can hand ONE request B's path against the next release (a 404 for a file
+/// that release does not carry) or the next release's file. It lasts about one request per swap, and
+/// the next request is right. (`app/served` closes the same window: it reads control, the manifest
+/// and B from one resolved directory.)
 async fn decide_file(
     state: &AppState,
     peer: SocketAddr,

@@ -4,7 +4,7 @@
 // en openlen.com, y hasta el 2026-10-04 servía ahí la página publicada: su
 // JavaScript corría en el origen de la APP, con la sesión de quien abriera
 // `https://openlen.com/served/<dominio>/`.
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,7 @@ const raiz = vi.hoisted(() => {
 const mocks = vi.hoisted(() => ({ lookupDomain: vi.fn() }));
 vi.mock("@/lib/custom-domains", () => ({ lookupDomain: mocks.lookupDomain }));
 
+import { releaseAbManifests } from "@/lib/ab/serve";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { GET, HEAD } from "./route";
 
@@ -152,9 +153,10 @@ describe("/served/<host>/ — A/B", () => {
         prefixB: "openlen/ab/ab_9f3c2a1b/b",
         overrideParam: "_ol_ab",
         expiresAt: null,
+        // Inside the experiment, as the publisher writes it.
+        overrides: ["/css/site.css", "/img/hero.png"],
       },
     ],
-    overrides: ["/css/site.css", "/img/hero.png"],
   };
   const release = () => path.join(raiz, "demo", "current");
   const escribe = (rel: string, contenido: string) => {
@@ -284,5 +286,41 @@ describe("/served/<host>/ — A/B", () => {
   it("el parámetro de QA manda un fichero a B también", async () => {
     const res = await pideRuta("/css/site.css", { query: "?_ol_ab=b" });
     expect(await res.text()).toBe("body{color:blue}");
+  });
+});
+
+// Una publicación cambia `current` de golpe. Lo que la ruta sirve de UNA petición tiene que salir de
+// UNA release: la que leyó su manifiesto, no la que apunte `current` cuando toque leer el fichero.
+describe("/served/<host>/ — un cambio de release a mitad de petición", () => {
+  it("el control sale de la misma release que el manifiesto y B, aunque `current` cambie entre una lectura y otra", async () => {
+    mocks.lookupDomain.mockResolvedValue({ projectId: "p2", subdomain: "swap", verified: true });
+    const sub = path.join(raiz, "swap");
+    const [r1, r2] = ["r1", "r2"].map((r) => path.join(sub, "releases", r));
+    for (const [dir, nombre] of [[r1, "R1"], [r2, "R2"]] as const) {
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(path.join(dir, "index.html"), `<h1>${nombre}</h1>`);
+    }
+    const link = path.join(sub, "current");
+    rmSync(link, { recursive: true, force: true });
+    symlinkSync(r1, link, "junction");
+
+    // Justo después de que la ruta lea el manifiesto de la release que `current` nombraba, se publica otra.
+    const real = releaseAbManifests.get.bind(releaseAbManifests);
+    const espia = vi.spyOn(releaseAbManifests, "get").mockImplementation(async (dir: string) => {
+      const respuesta = await real(dir);
+      rmSync(link, { recursive: true, force: true });
+      symlinkSync(r2, link, "junction");
+      return respuesta;
+    });
+    try {
+      const res = await GET(new Request(`https://${DOMINIO}/`, { headers: { host: DOMINIO } }), {
+        params: Promise.resolve({ host: DOMINIO, path: [] }),
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("<h1>R1</h1>");
+    } finally {
+      espia.mockRestore();
+      rmSync(link, { recursive: true, force: true });
+    }
   });
 });

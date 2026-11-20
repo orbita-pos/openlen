@@ -186,6 +186,17 @@ function resolveFile(
   };
 }
 
+let publishRootReal: Promise<string> | null = null;
+
+/** True when `p` is inside the publish root, whether that root is written with or without a symlink in
+ *  it (a release directory is resolved with `realpath`, the root as configured need not be). */
+async function isInsidePublishRoot(p: string): Promise<boolean> {
+  const norm = path.normalize(p);
+  if (norm.startsWith(path.normalize(PUBLISH_ROOT) + path.sep)) return true;
+  publishRootReal ??= realpath(PUBLISH_ROOT).catch(() => PUBLISH_ROOT);
+  return norm.startsWith(path.normalize(await publishRootReal) + path.sep);
+}
+
 /** Whether the visitor came over https. Behind Caddy, Node sees plain http on every request, so the
  *  protocol of `req.url` says nothing: Caddy's X-Forwarded-Proto (the first value) does; without it,
  *  the scheme the site is configured with (`NEXT_PUBLIC_SITE_URL`, https in production), and last
@@ -245,10 +256,23 @@ async function serve(
   // Edge A/B testing fallback for custom domains served through Next.js.
   let abDecision: AbServeDecision | null = null;
   let servedFromBTree = false;
+  // The release directory the request is served from, once it is resolved (below).
+  let releaseReal = releaseDir;
   if (pathParts[0] !== "assets") {
-    // The manifest comes from the RESOLVED release (cached per release), and Variant B's files are
-    // read from that same directory.
+    // ONE release per request. `current` is swapped in one move by a publish, so the manifest, Variant
+    // B's files AND control's file are all read from the directory `current` named at this moment
+    // (resolved once, cached per release) — never through `current` again, which a publish may have
+    // pointed at the next release by the time the file is read.
     const { manifest, dir: abDir } = await releaseAbManifests.get(releaseDir);
+    const releaseNorm = path.normalize(releaseDir);
+    if (
+      abDir !== releaseNorm &&
+      (absNorm === releaseNorm || absNorm.startsWith(releaseNorm + path.sep)) &&
+      (await isInsidePublishRoot(abDir))
+    ) {
+      absNorm = path.join(abDir, path.relative(releaseNorm, absNorm));
+      releaseReal = abDir;
+    }
     if (manifest) {
       const reqUrl = new URL(req.url);
       const clientIp =
@@ -267,7 +291,7 @@ async function serve(
       if (d) {
         if (d.variantBPath) {
           const bFile = await resolveVariantBFile(abDir, d.variantBPath, d.isPageRoute);
-          if (bFile && bFile.startsWith(rootNorm)) {
+          if (bFile && (await isInsidePublishRoot(bFile))) {
             absNorm = bFile;
             servedFromBTree = true;
             abDecision = d;
@@ -289,7 +313,7 @@ async function serve(
   if (!servedFromBTree) {
     const [realFile, realRelease] = await Promise.all([
       realpath(absNorm).catch(() => absNorm),
-      realpath(releaseDir).catch(() => releaseDir),
+      releaseReal !== releaseDir ? releaseReal : realpath(releaseDir).catch(() => releaseDir),
     ]);
     if (isInternalAbFile(realRelease, realFile)) return notFound(includeBody);
   }
