@@ -123,6 +123,28 @@ describe("evaluateAbStats", () => {
     expect(res.winner).toBeNull();
   });
 
+  it("🔴 an SRM-blocked experiment doesn't wait for ever: at the end of ITS time it is inconclusive, for uneven traffic (item 24)", () => {
+    const skewed = { viewsA: 680, conversionsA: 30, viewsB: 320, conversionsB: 35, splitBps: 5000 };
+    const early = evaluateAbStats({ ...skewed, durationHours: 20 * 24 });
+    expect(early.verdict).toBe("srm_blocked");
+    expect(early.reason).toBeUndefined();
+
+    const over = evaluateAbStats({ ...skewed, durationHours: 21 * 24 + 1 });
+    expect(over.verdict).toBe("inconclusive");
+    expect(over.reason).toBe("uneven_traffic");
+    expect(over.winner).toBeNull();
+
+    // «Seguir probando» moved ITS limit: still blocked until then.
+    expect(evaluateAbStats({ ...skewed, durationHours: 22 * 24, maxDurationDays: 28 }).verdict).toBe("srm_blocked");
+    expect(evaluateAbStats({ ...skewed, durationHours: 28 * 24 + 1, maxDurationDays: 28 }).reason).toBe("uneven_traffic");
+  });
+
+  it("an inconclusive tie says nothing about uneven traffic", () => {
+    const tie = evaluateAbStats({ viewsA: 500, conversionsA: 25, viewsB: 500, conversionsB: 26, splitBps: 5000, durationHours: 21 * 24 + 1 });
+    expect(tie.verdict).toBe("inconclusive");
+    expect(tie.reason).toBeUndefined();
+  });
+
   it("declares inconclusive after 21 days when variants tie", () => {
     const res = evaluateAbStats({
       viewsA: 500,

@@ -82,7 +82,7 @@ async function announce(
   info: EvaluatorProjectInfo,
   exp: AbExperimentRow,
   verdict: Announced,
-  stats: Pick<AbStatsResult, "relativeLift" | "probBBeatsA" | "probABeatsB" | "probHarm30">,
+  stats: Pick<AbStatsResult, "relativeLift" | "probBBeatsA" | "probABeatsB" | "probHarm30" | "reason">,
   extra: { readonly restored?: boolean },
   now: Date,
 ): Promise<void> {
@@ -106,6 +106,7 @@ async function announce(
     probabilityPct: Math.round(prob * 100),
     url,
     ...(extra.restored === false ? { restored: false } : {}),
+    ...(stats.reason ? { reason: stats.reason } : {}),
   });
   await deps.notify(
     {

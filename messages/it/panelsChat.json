@@ -1004,7 +1004,9 @@
       "decidedByConflict": "Un altro membro o dispositivo ha già deciso questo test.",
       "pausedHarmNotice": "Fermato automaticamente per proteggere le conversioni; l’originale è al 100%.",
       "pushHarmStopNotRestored": "Ho fermato “{name}” perché la variante B riduceva le conversioni. Il tuo sito non è pubblicato, quindi non c’era nulla online da ripristinare.",
-      "emailTextInfo": "{push}\n\nVedi cosa è successo: {url}"
+      "emailTextInfo": "{push}\n\nVedi cosa è successo: {url}",
+      "pushUnevenTraffic": "“{name}” si è chiuso senza risultato: il traffico è stato diviso in modo sbilanciato tra le due versioni, quindi i numeri non sono affidabili. Scegli quale versione tenere.",
+      "summaryUnevenTraffic": "Il test “{name}” si è chiuso senza risultato: il traffico era sbilanciato e non mi fido dei numeri. Quale versione tengo?"
     }
   }
 }

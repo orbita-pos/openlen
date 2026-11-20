@@ -9,7 +9,7 @@
 //   peeking false positives when evaluated every 30 minutes over 21 days.
 // - Sample Ratio Mismatch (chi-square 1 df, p < 0.001) blocks auto-winner on skew.
 
-import type { AbStatsResult, AbVariant, AbVerdict } from "./types";
+import type { AbInconclusiveReason, AbStatsResult, AbVariant, AbVerdict } from "./types";
 
 export const PRIOR_ALPHA = 1;
 export const PRIOR_BETA = 19;
@@ -296,9 +296,17 @@ export function evaluateAbStats(input: EvaluateAbStatsInput): AbStatsResult {
 
   let verdict: AbVerdict = "collecting";
   let winner: AbVariant | null = null;
+  let reason: AbInconclusiveReason | undefined;
 
   if (srmWarning) {
-    verdict = "srm_blocked";
+    // No winner can be declared on a split that isn't the one asked for — but the experiment doesn't wait for ever: at the
+    // end of ITS time it closes as «no result, uneven traffic», and the owner is told (review item 24).
+    if (durationHours >= maxHours) {
+      verdict = "inconclusive";
+      reason = "uneven_traffic";
+    } else {
+      verdict = "srm_blocked";
+    }
   } else if (
     nA >= HARM_MIN_VIEWS_PER_VARIANT &&
     nB >= HARM_MIN_VIEWS_PER_VARIANT &&
@@ -354,5 +362,6 @@ export function evaluateAbStats(input: EvaluateAbStatsInput): AbStatsResult {
     srmChi2,
     srmWarning,
     durationHours,
+    ...(reason ? { reason } : {}),
   };
 }

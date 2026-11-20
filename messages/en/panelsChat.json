@@ -1004,7 +1004,9 @@
       "decidedByConflict": "Another teammate or device already decided this test.",
       "pausedHarmNotice": "Auto-stopped to protect conversions; the original is serving 100% of traffic.",
       "pushHarmStopNotRestored": "Stopped “{name}” because Variant B dropped conversions. Your site isn't published, so there was nothing live to put back.",
-      "emailTextInfo": "{push}\n\nSee what happened: {url}"
+      "emailTextInfo": "{push}\n\nSee what happened: {url}",
+      "pushUnevenTraffic": "“{name}” ended with no result: traffic was split unevenly between the two versions, so the numbers can't be trusted. Choose which version to keep.",
+      "summaryUnevenTraffic": "The “{name}” test ended with no result — traffic was split unevenly, so I can't trust the numbers. Which version should stay?"
     }
   }
 }

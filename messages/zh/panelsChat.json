@@ -1004,7 +1004,9 @@
       "decidedByConflict": "其他成员或设备已决定此测试。",
       "pausedHarmNotice": "已自动停止以保护转化；当前 100% 访问原版。",
       "pushHarmStopNotRestored": "由于版本 B 转化明显下降，已自动停止“{name}”。你的网站尚未发布，因此没有需要恢复的线上内容。",
-      "emailTextInfo": "{push}\n\n查看发生了什么：{url}"
+      "emailTextInfo": "{push}\n\n查看发生了什么：{url}",
+      "pushUnevenTraffic": "“{name}”未得出结果：两个版本的流量分配不均，数据不可信。请选择要保留的版本。",
+      "summaryUnevenTraffic": "“{name}”测试未得出结果——流量分配不均，我无法信任这些数据。该保留哪个版本？"
     }
   }
 }

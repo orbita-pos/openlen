@@ -288,8 +288,56 @@ describe("notices are at least once (item 22)", () => {
   });
 });
 
+describe("an experiment that never got an even split ends, and the owner is told (item 24)", () => {
+  it("🔴 inconclusive for uneven traffic: it becomes a pending decision and the notice says why", async () => {
+    const deps = makeDeps({ verdict: "inconclusive" });
+    vi.mocked(deps.computeMetrics).mockResolvedValue({
+      ...makeSnapshot("inconclusive"),
+      stats: { ...makeSnapshot("inconclusive").stats, srmWarning: true, reason: "uneven_traffic" },
+    });
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats).toMatchObject({ inconclusive: 1, notifiedDirectly: 1 });
+    expect(deps.saveSnapshot).toHaveBeenCalledWith("ab_9f3c2a1b", expect.objectContaining({ status: "inconclusive", decisionStatus: "pending" }));
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.verdict).toBe("inconclusive");
+    expect(event.push).toMatch(/unevenly/);
+  });
+
+  it("an ordinary inconclusive keeps its ordinary text", async () => {
+    const deps = makeDeps({ verdict: "inconclusive" });
+    await evaluateRunningExperiments(deps, NOW);
+    expect(vi.mocked(deps.notify).mock.calls[0]![0].push).toMatch(/no clear winner/);
+  });
+});
+
 describe("abNotificationTexts & abSummaryLine across all 10 locales", () => {
   const LOCALES = ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"];
+
+  it("🔴 the uneven-traffic ending has its own text in every locale, push and morning summary", () => {
+    for (const locale of LOCALES) {
+      const res = abNotificationTexts(locale, { name: "Hero CTA", verdict: "inconclusive", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x", reason: "uneven_traffic" });
+      const plain = abNotificationTexts(locale, { name: "Hero CTA", verdict: "inconclusive", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x" });
+      expect(res.push, locale).not.toBe(plain.push);
+      expect(res.push, locale).toContain("Hero CTA");
+      expect(res.push, locale).not.toMatch(/ownAssistant|\{/);
+      const line = abSummaryLine(locale, [{ experimentId: "ab_1", projectId: "p1", projectTitle: "T", name: "Hero CTA", status: "inconclusive", winnerVariant: null, rateA: 0.04, rateB: 0.04, liftPct: 0, totalViews: 900, probability: 0.5, reason: "uneven_traffic" }]);
+      expect(line, locale).toContain("Hero CTA");
+      expect(line, locale).not.toMatch(/ownAssistant|\{/);
+    }
+  });
+
+  it("🔴 the harm stop that found no site to restore says so in every locale, and its email only informs", () => {
+    for (const locale of LOCALES) {
+      const base = { name: "Hero CTA", verdict: "harm_stop" as const, liftPct: -50, probabilityPct: 97, url: "https://openlen.com/x" };
+      const restored = abNotificationTexts(locale, base);
+      const notRestored = abNotificationTexts(locale, { ...base, restored: false });
+      expect(notRestored.push, locale).not.toBe(restored.push);
+      expect(notRestored.push, locale).not.toMatch(/ownAssistant|\{/);
+      expect(notRestored.emailText, locale).toContain("https://openlen.com/x");
+      const decide = abNotificationTexts(locale, { ...base, verdict: "winner_b" });
+      expect(restored.emailText, locale).not.toBe(decide.emailText.replace(decide.push, restored.push));
+    }
+  });
 
   it("renders valid, under-200-char pushes with zero leaked placeholders for every verdict and locale", () => {
     for (const locale of LOCALES) {

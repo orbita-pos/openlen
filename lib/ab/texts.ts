@@ -13,7 +13,7 @@ import nl from "@/messages/nl/panelsChat.json";
 import pt from "@/messages/pt/panelsChat.json";
 import zh from "@/messages/zh/panelsChat.json";
 import { idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
-import type { AbReadySummary } from "./types";
+import type { AbInconclusiveReason, AbReadySummary } from "./types";
 
 const MESSAGES = { de, en, es, fr, it, ja, ko, nl, pt, zh } as const;
 
@@ -50,7 +50,7 @@ export function abSummaryLine(locale: string, items: readonly AbReadySummary[]):
       ? t("summaryWinnerB", { name: primary.name, lift, prob })
       : primary.status === "winner_ready" && primary.winnerVariant === "a"
         ? t("summaryWinnerA", { name: primary.name, prob })
-        : t("summaryInconclusive", { name: primary.name });
+        : t(primary.reason === "uneven_traffic" ? "summaryUnevenTraffic" : "summaryInconclusive", { name: primary.name });
   if (items.length === 1) return first;
   return t("summaryMore", { first, count: items.length - 1 });
 }
@@ -64,6 +64,8 @@ export interface AbNotificationInput {
   readonly url: string;
   /** Harm stop only: false = there was no published site to put the original back on (the text must not say it was). */
   readonly restored?: boolean;
+  /** An inconclusive one with a known cause: it says so instead of «no clear winner». */
+  readonly reason?: AbInconclusiveReason;
 }
 
 /** Standalone push + email copy used when harm_stop triggers or when the project has no morning summary. */
@@ -87,7 +89,7 @@ export function abNotificationTexts(
         ? t("pushWinnerA", { name: input.name, prob })
         : input.verdict === "harm_stop"
           ? t(input.restored === false ? "pushHarmStopNotRestored" : "pushHarmStop", { name: input.name })
-          : t("pushInconclusive", { name: input.name });
+          : t(input.reason === "uneven_traffic" ? "pushUnevenTraffic" : "pushInconclusive", { name: input.name });
   const push = clampPush(rawPush);
   const title = input.assistantName?.trim() || t("badge");
   return {

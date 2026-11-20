@@ -1004,7 +1004,9 @@
       "decidedByConflict": "他のメンバーまたは端末ですでに決定済みです。",
       "pausedHarmNotice": "コンバージョン保護のため自動停止しました。オリジナルが100%配信されています。",
       "pushHarmStopNotRestored": "バリアントBの成果が大きく低下したため「{name}」を自動停止しました。サイトは公開されていないため、元に戻す対象はありませんでした。",
-      "emailTextInfo": "{push}\n\n何が起きたかを見る: {url}"
+      "emailTextInfo": "{push}\n\n何が起きたかを見る: {url}",
+      "pushUnevenTraffic": "「{name}」は結果なしで終了しました。2つのバージョンへのトラフィックが偏っていたため、数値は信頼できません。残すバージョンを選んでください。",
+      "summaryUnevenTraffic": "「{name}」のテストは結果なしで終了しました。トラフィックの配分が偏っていて数値を信頼できません。どちらを残しますか？"
     }
   }
 }

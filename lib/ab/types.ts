@@ -25,6 +25,10 @@ export type AbVerdict =
   | "inconclusive"
   | "srm_blocked";
 
+/** Why an experiment ended with no verdict: `uneven_traffic` = the split never matched its target (sample ratio mismatch) up to
+ *  the end of its time, so its numbers can't be trusted. */
+export type AbInconclusiveReason = "uneven_traffic";
+
 export type AbBringState = "pending" | "brought" | "conflict" | "declined";
 
 export type AbDecideAction = "promote_b" | "keep_a" | "extend";
@@ -64,6 +68,8 @@ export interface AbStatsResult {
   readonly srmChi2: number;
   readonly srmWarning: boolean;
   readonly durationHours: number;
+  /** Set with an `inconclusive` verdict that has a known cause. Absent = it simply ran out of time with a tie. */
+  readonly reason?: AbInconclusiveReason;
 }
 
 export interface AbMetricsSnapshot {
@@ -133,4 +139,6 @@ export interface AbReadySummary {
   readonly liftPct: number;
   readonly totalViews: number;
   readonly probability: number;
+  /** An `inconclusive` one whose split never matched its target: it says so instead of «no clear winner». */
+  readonly reason?: AbInconclusiveReason;
 }
