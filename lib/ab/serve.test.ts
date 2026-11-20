@@ -3,7 +3,7 @@
 //   - Bit-for-bit parity with Rust `crates/edge/src/ab/assign.rs`
 //   - Bot isolation (Control A, no cookies)
 //   - Sticky cookie + QA query override (`?_ol_ab=a|b` + `X-Robots-Tag: noindex`)
-//   - Internal path blocking (`/ab.json`, `/_ab/*`)
+//   - Internal path blocking (`/openlen/ab.json`, `/openlen/ab/*`)
 //   - Strict Variant B file resolution without fallback to Control A
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -18,6 +18,7 @@ import {
   isBlockedInternalAbPath,
   isEdgeBot,
   parseAbManifest,
+  readReleaseAbManifest,
   resolveVariantBFile,
 } from "./serve";
 
@@ -34,7 +35,7 @@ const MANIFEST = parseAbManifest(
         locales: ["es", "fr"],
         splitBps: 5000,
         salt: "3f9a1c8e7b2d4012",
-        prefixB: "_ab/ab_9f3c2a1b/b",
+        prefixB: "openlen/ab/ab_9f3c2a1b/b",
         overrideParam: "_ol_ab",
         expiresAt: null,
       },
@@ -89,12 +90,17 @@ describe("lib/ab/serve", () => {
   });
 
   it("blocks /ab.json and /_ab/* internal paths regardless of casing", () => {
-    expect(isBlockedInternalAbPath("/ab.json")).toBe(true);
-    expect(isBlockedInternalAbPath("/AB.JSON")).toBe(true);
-    expect(isBlockedInternalAbPath("/_ab")).toBe(true);
-    expect(isBlockedInternalAbPath("/_ab/ab_9f3c2a1b/b/index.html")).toBe(true);
+    expect(isBlockedInternalAbPath("/openlen/ab.json")).toBe(true);
+    expect(isBlockedInternalAbPath("/OPENLEN/AB.JSON")).toBe(true);
+    expect(isBlockedInternalAbPath("/openlen/ab")).toBe(true);
+    expect(isBlockedInternalAbPath("/openlen/ab/ab_9f3c2a1b/b/index.html")).toBe(true);
     expect(isBlockedInternalAbPath("/")).toBe(false);
     expect(isBlockedInternalAbPath("/pricing")).toBe(false);
+    // Other files of the reserved `openlen/` root keep being served.
+    expect(isBlockedInternalAbPath("/openlen/figure-0a1b2c3d.js")).toBe(false);
+    // The pre-move layout is an ordinary path now.
+    expect(isBlockedInternalAbPath("/ab.json")).toBe(false);
+    expect(isBlockedInternalAbPath("/_ab/x")).toBe(false);
   });
 
   it("always sends Control A without Set-Cookie to crawlers, social bots, and headless tools", () => {
@@ -148,7 +154,7 @@ describe("lib/ab/serve", () => {
     expect(sticky?.variant).toBe("b");
     expect(sticky?.source).toBe("cookie");
     expect(sticky?.setCookie).toBeNull();
-    expect(sticky?.variantBPath).toBe("/_ab/ab_9f3c2a1b/b/es");
+    expect(sticky?.variantBPath).toBe("/openlen/ab/ab_9f3c2a1b/b/es");
 
     const firstVisit = evaluateAbManifest(MANIFEST, {
       urlPath: "/",
@@ -185,7 +191,7 @@ describe("lib/ab/serve", () => {
               targetPath: "/",
               splitBps: 5000,
               salt: "abc",
-              prefixB: "_ab/../etc/passwd",
+              prefixB: "openlen/ab/../etc/passwd",
             },
           ],
         }),
@@ -196,22 +202,60 @@ describe("lib/ab/serve", () => {
   it("resolves Variant B files strictly inside releaseDir without falling back to Control A", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "openlen-ab-serve-"));
     try {
-      await mkdir(path.join(dir, "_ab", "ab_9f3c2a1b", "b", "es"), { recursive: true });
+      const bTree = path.join(dir, "openlen", "ab", "ab_9f3c2a1b", "b");
+      await mkdir(path.join(bTree, "es"), { recursive: true });
       await writeFile(path.join(dir, "index.html"), "<h1>Control</h1>");
-      await writeFile(path.join(dir, "_ab", "ab_9f3c2a1b", "b", "index.html"), "<h1>B</h1>");
-      await writeFile(path.join(dir, "_ab", "ab_9f3c2a1b", "b", "es", "index.html"), "<h1>B ES</h1>");
+      await writeFile(path.join(bTree, "index.html"), "<h1>B</h1>");
+      await writeFile(path.join(bTree, "es", "index.html"), "<h1>B ES</h1>");
 
-      const foundHome = await resolveVariantBFile(dir, "/_ab/ab_9f3c2a1b/b/index.html", true);
-      expect(foundHome).toBe(path.join(dir, "_ab", "ab_9f3c2a1b", "b", "index.html"));
+      const foundHome = await resolveVariantBFile(dir, "/openlen/ab/ab_9f3c2a1b/b/index.html", true);
+      expect(foundHome).toBe(path.join(bTree, "index.html"));
 
-      const foundEs = await resolveVariantBFile(dir, "/_ab/ab_9f3c2a1b/b/es", true);
-      expect(foundEs).toBe(path.join(dir, "_ab", "ab_9f3c2a1b", "b", "es", "index.html"));
+      const foundEs = await resolveVariantBFile(dir, "/openlen/ab/ab_9f3c2a1b/b/es", true);
+      expect(foundEs).toBe(path.join(bTree, "es", "index.html"));
 
-      const missing = await resolveVariantBFile(dir, "/_ab/ab_9f3c2a1b/b/fr", true);
+      const missing = await resolveVariantBFile(dir, "/openlen/ab/ab_9f3c2a1b/b/fr", true);
       expect(missing).toBeNull();
 
-      const escapeAttempt = await resolveVariantBFile(dir, "/_ab/../../index.html", true);
+      const escapeAttempt = await resolveVariantBFile(dir, "/openlen/ab/../../index.html", true);
       expect(escapeAttempt).toBeNull();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("lib/ab/serve — the manifest lives under the reserved openlen/ root", () => {
+  const base = {
+    id: "ab_12345678",
+    cookieName: "ol_ab_12345678",
+    targetPath: "/",
+    splitBps: 5000,
+    salt: "abcd",
+  };
+  const withPrefix = (prefixB: string) =>
+    parseAbManifest(JSON.stringify({ version: 1, experiments: [{ ...base, prefixB }] }));
+
+  it("accepts only openlen/ab/<id>/… as Variant B's prefix", () => {
+    expect(withPrefix("openlen/ab/ab_12345678/b")).not.toBeNull();
+    expect(withPrefix("_ab/ab_12345678/b")).toBeNull();
+    expect(withPrefix("openlen/figure/b")).toBeNull();
+    expect(withPrefix("openlen/ab")).toBeNull();
+    expect(withPrefix("img/ab/b")).toBeNull();
+  });
+
+  it("reads <release>/openlen/ab.json, and no longer <release>/ab.json", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "openlen-ab-layout-"));
+    try {
+      const doc = JSON.stringify({
+        version: 1,
+        experiments: [{ ...base, prefixB: "openlen/ab/ab_12345678/b" }],
+      });
+      await writeFile(path.join(dir, "ab.json"), doc);
+      expect(await readReleaseAbManifest(dir)).toBeNull();
+      await mkdir(path.join(dir, "openlen"), { recursive: true });
+      await writeFile(path.join(dir, "openlen", "ab.json"), doc);
+      expect((await readReleaseAbManifest(dir))?.experiments).toHaveLength(1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

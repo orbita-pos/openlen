@@ -18,6 +18,10 @@ import type { AbManifest, AbManifestExperiment, AbVariant } from "./types";
 
 export const AB_HTML_CACHE_CONTROL = "private, no-store";
 
+/** Where a release keeps its experiment manifest. `openlen/` is a reserved root of the
+ *  folder (lib/agent/ficheros/folder.ts), so no file of the owner can sit there. */
+export const AB_MANIFEST_REL = "openlen/ab.json";
+
 const EXP_ID_RE = /^[a-z0-9][a-z0-9_-]{3,39}$/;
 const COOKIE_NAME_RE = /^[A-Za-z0-9_-]{4,64}$/;
 const LOCALE_RE = /^[a-z]{2}(?:-[a-z0-9]{2,4})?$/;
@@ -47,7 +51,7 @@ export function isEdgeBot(ua: string): boolean {
 
 export function isBlockedInternalAbPath(urlPath: string): boolean {
   const lower = urlPath.replace(/^\/+/, "").toLowerCase();
-  return lower === "ab.json" || lower === "_ab" || lower.startsWith("_ab/");
+  return lower === "openlen/ab.json" || lower === "openlen/ab" || lower.startsWith("openlen/ab/");
 }
 
 export function normalizeMatchPath(raw: string): string {
@@ -67,7 +71,8 @@ function isSafePrefix(prefix: string): boolean {
   if (!prefix || prefix.startsWith("/") || prefix.endsWith("/")) return false;
   if (prefix.includes("\\") || prefix.includes("\0")) return false;
   const parts = prefix.split("/");
-  if (parts[0] !== "_ab") return false;
+  // openlen/ab/<id>/…: the reserved root, ab and at least one more segment.
+  if (parts.length < 3 || parts[0] !== "openlen" || parts[1] !== "ab") return false;
   return parts.every((seg) => seg.length > 0 && seg !== "." && seg !== "..");
 }
 
@@ -291,9 +296,9 @@ export function evaluateAbManifest(
   };
 }
 
-/** Read and validate `<releaseDir>/ab.json`, returning null if missing or invalid. */
+/** Read and validate `<releaseDir>/openlen/ab.json`, returning null if missing or invalid. */
 export async function readReleaseAbManifest(releaseDir: string): Promise<AbManifest | null> {
-  const filePath = path.join(releaseDir, "ab.json");
+  const filePath = path.join(releaseDir, AB_MANIFEST_REL);
   try {
     const s = await stat(filePath);
     if (!s.isFile() || s.size > MAX_MANIFEST_BYTES) return null;
@@ -312,6 +317,8 @@ export async function resolveVariantBFile(
 ): Promise<string | null> {
   const normRoot = path.normalize(releaseDir) + path.sep;
   const rel = variantBPath.replace(/^\/+/, "");
+  // A dot segment would walk out of the B tree (into the control files, or out of the release).
+  if (rel.split("/").some((seg) => seg === "." || seg === "..")) return null;
   const candidates = [path.join(releaseDir, rel)];
   if (isPageRoute && !rel.endsWith(".html") && !rel.endsWith(".htm")) {
     candidates.push(path.join(releaseDir, rel, "index.html"));

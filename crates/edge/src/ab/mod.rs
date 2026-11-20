@@ -1,9 +1,9 @@
 //! Edge A/B testing engine (`crates/edge/src/ab/`).
 //!
-//! Reads per-release `<publish_root>/<sub>/current/ab.json` via a release-keyed
+//! Reads per-release `<publish_root>/<sub>/current/openlen/ab.json` via a release-keyed
 //! `moka` cache (0 ms invalidation on atomic symlink rotation, zero Postgres
 //! queries on the hot path) and resolves traffic deterministically between
-//! Control A and Variant B (`_ab/<expId>/b/...`).
+//! Control A and Variant B (`openlen/ab/<expId>/b/...`).
 
 pub mod assign;
 pub mod bot;
