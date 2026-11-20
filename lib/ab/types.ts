@@ -65,6 +65,8 @@ export interface AbStatsResult {
   readonly liftCiLow: number;
   readonly liftCiHigh: number;
   readonly alwaysValidP: number;
+  /** The harm brake's own always-valid p-value (one-sided, B worse than A). Absent in snapshots from before it existed. */
+  readonly harmAlwaysValidP?: number;
   readonly srmChi2: number;
   readonly srmWarning: boolean;
   readonly durationHours: number;
