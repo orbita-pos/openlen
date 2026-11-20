@@ -73,8 +73,8 @@ beforeEach(() => {
     salt: "salt",
     includeLocales: false,
     baseCommitOid: "base-1",
-    // What the draft day stored: NOT what to fall back to.
-    controlReleaseSha: "release-of-the-draft-day",
+    // What was live when the draft was cut: the same release as now (nothing was published since).
+    controlReleaseSha: "release-live-now",
   };
   h.live = null;
   h.project = { title: "Panadería", subdomain: "pan", publishedReleaseSha: "release-live-now", data: { html: "<html>A</html>" } };
@@ -96,7 +96,9 @@ describe("launch re-baselines (item 12)", () => {
     expect(h.publishProject).not.toHaveBeenCalled();
     expect(h.runSecurityGate).not.toHaveBeenCalled();
     expect(h.commitAbWorktree).not.toHaveBeenCalled();
-    expect(h.updateExperiment).not.toHaveBeenCalled();
+    // the only write is the stale draft's cancellation (item 16: it must not stay alive as «active»)
+    expect(h.updateExperiment).toHaveBeenCalledTimes(1);
+    expect(h.updateExperiment.mock.calls[0]![1]).toMatchObject({ status: "cancelled" });
   });
 
   it("an experiment with no recorded base can't be proven to match: it is refused the same way", async () => {

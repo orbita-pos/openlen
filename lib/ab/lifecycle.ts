@@ -274,10 +274,21 @@ export async function launchAbExperiment(p: {
   if (!control) {
     throw new AbLifecycleError("not_published", "Published baseline missing.", 400);
   }
-  if (!exp.baseCommitOid || exp.baseCommitOid !== control.published.commitOid) {
+  // Two witnesses that the site moved: the commit the draft was cut from is no longer the published one, or the live RELEASE
+  // isn't the one that was live at the draft (content-addressed: a republish of identical content keeps its sha, so that
+  // is no move). Either way the draft is stale: it is cancelled — a stale draft counts as active and would answer the
+  // re-cut with `already_active` — and the owner is told so (G1+G3 review, items 16 and 17).
+  const siteMoved =
+    !exp.baseCommitOid ||
+    exp.baseCommitOid !== control.published.commitOid ||
+    (exp.controlReleaseSha ?? null) !== (project.publishedReleaseSha ?? null);
+  if (siteMoved) {
+    await cancelAbDraft({ projectId: p.projectId, experimentId: exp.id }).catch((err: unknown) => {
+      console.error("[ab] couldn't cancel the stale draft", exp.id, err);
+    });
     throw new AbLifecycleError(
       "base_moved",
-      "The site was published since this variant was drafted, so Variant B is built on an older version than the one that is live now. Ask Len to create the variant again from the current page.",
+      "The site was published since this variant was drafted, so Variant B is built on an older version than the one that is live now. The draft was discarded: ask Len to create the variant again from the current page.",
       409,
     );
   }
