@@ -392,8 +392,10 @@ describe("a closed experiment whose split is still live (round 3, B)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const stats = await run();
     expect(h.publishProject).toHaveBeenCalledTimes(1);
-    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", userId: "u1", subdomain: "pan1", abLive: "ending", sourcesOverride: { data: { html: "<html>A</html>" } } });
+    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", userId: "u1", subdomain: "pan1", sourcesOverride: { data: { html: "<html>A</html>" } } });
     expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abExperiment");
+    // 🔴 round 4, F: no `abLive` policy — the closed experiment needs no «ending», and the bottom door must stay on for any other
+    expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abLive");
     expect(h.purge).toHaveBeenCalled();
     expect(warn.mock.calls.flat().join(" ")).toMatch(/ab_ghost0001/);
     warn.mockRestore();
@@ -403,13 +405,77 @@ describe("a closed experiment whose split is still live (round 3, B)", () => {
     expect(h.tell).not.toHaveBeenCalled();
   });
 
-  it("a promoted winner whose split came back is put right by rolling back to the release the promotion published", async () => {
+  it("a promoted winner whose split came back is put right by rolling back to the release the promotion published — when nothing was published since", async () => {
     await closed("ab_ghost0002", "promoted_b", { bringState: "brought" });
-    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted' WHERE "id" = 'ab_ghost0002'`);
+    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted', "decidedAt" = $1 WHERE "id" = 'ab_ghost0002'`, [new Date(NOW.getTime() - DAY)]);
+    h.published = { ...h.published, publishedAt: new Date(NOW.getTime() - DAY - 1000) }; // the promotion's own publish
     h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
     await run();
     expect(h.rollback).toHaveBeenCalledWith("pan1", "rel-promoted");
     expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("🔴 round 4, G: promote, then the owner PUBLISHES, then a stale re-emit swaps its split in: the take-down keeps the owner's publish (the published sources are republished, no rollback)", async () => {
+    await closed("ab_ghost0006", "promoted_b", { bringState: "brought" });
+    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted', "decidedAt" = $1 WHERE "id" = 'ab_ghost0006'`, [new Date(NOW.getTime() - DAY)]);
+    // the owner published O after the promotion: the published sources are newer than the decision
+    h.published = { commitOid: "pub-owner", data: { html: "<html>OWNER PUBLISH</html>" }, extraFiles: {}, publishedAt: new Date(NOW.getTime() - 3_600_000) };
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    await run();
+    expect(h.rollback).not.toHaveBeenCalled();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ sourcesOverride: { data: { html: "<html>OWNER PUBLISH</html>" } } });
+  });
+
+  it("a promoted row with no decision time to compare against, or whose published sources carry no time, republishes the sources instead of guessing", async () => {
+    await closed("ab_ghost0007", "promoted_b", { bringState: "brought", endedAt: null });
+    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted', "decidedAt" = $1 WHERE "id" = 'ab_ghost0007'`, [new Date(NOW.getTime() - DAY)]);
+    h.published = { commitOid: "pub-1", data: { html: "<html>A</html>" }, extraFiles: {} }; // no publishedAt
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    await run();
+    expect(h.rollback).not.toHaveBeenCalled();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 round 4, F: a NEW experiment is live on the project: the take-down publishes nothing and rolls nothing back — its own launch replaces the stale split", async () => {
+    await closed("ab_ghost0008", "kept_a", { projectId: "p1" });
+    await insertExperiment(raw(), { id: "ab_newlive01", projectId: "p1", status: "running", startedAt: NOW, targetPath: "/pricing" });
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stats = await run();
+    expect(warn.mock.calls.flat().join(" ")).toMatch(/ab_ghost0008/);
+    warn.mockRestore();
+    expect(h.publishProject).not.toHaveBeenCalled();
+    expect(h.rollback).not.toHaveBeenCalled();
+    expect(stats.splitsTakenDown).toBe(0);
+    expect((await getExperimentById("ab_newlive01"))!.status).toBe("running");
+  });
+
+  it("🔴 round 4, F (promoted): the rollback is behind the same check — a live experiment means no rollback", async () => {
+    await closed("ab_ghost0009", "promoted_b", { projectId: "p1", bringState: "brought" });
+    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted', "decidedAt" = $1 WHERE "id" = 'ab_ghost0009'`, [new Date(NOW.getTime() - DAY)]);
+    h.published = { ...h.published, publishedAt: new Date(NOW.getTime() - DAY - 1000) };
+    await insertExperiment(raw(), { id: "ab_newlive02", projectId: "p1", status: "running", startedAt: NOW, targetPath: "/pricing" });
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await run();
+    warn.mockRestore();
+    expect(h.rollback).not.toHaveBeenCalled();
+    expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("🔴 round 4, F: an experiment launched BETWEEN the check and the publish is refused by the bottom door, and that is not a failure", async () => {
+    const { AbExperimentRunningError } = await import("./errors");
+    await closed("ab_ghost0010", "kept_a");
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    h.publishProject.mockRejectedValueOnce(new AbExperimentRunningError("ab_newlive03", "Pricing test", "/pricing"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stats = await run();
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+    warn.mockRestore();
+    expect(stats.splitsTakenDown).toBe(0);
   });
 
   it("🔴 nothing happens when the manifest doesn't name it, can't be read, or the row was closed more than a week ago", async () => {

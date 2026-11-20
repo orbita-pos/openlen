@@ -401,8 +401,9 @@ describe("a re-emit that swaps a split over a decision that closed during it (ro
     await recordAndPurgeReemit({ id: "ab_swap0001", targetPath: "/", includeLocales: false }, "pan1", { sha: "rel-reemit", abOverrides: ["/css/b.css"] }, [], "u1");
     error.mockRestore();
     expect(h.publishProject).toHaveBeenCalledTimes(1);
-    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", subdomain: "pan1", abLive: "ending" });
+    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", subdomain: "pan1" });
     expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abExperiment");
+    expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abLive"); // the bottom door stays on (round 4, F)
     // the row is what the decision made it
     expect(await getExperimentById("ab_swap0001")).toMatchObject({ status: "kept_a" });
   });
