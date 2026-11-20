@@ -38,6 +38,7 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
+import { abTestingEnabled } from "@/lib/ab/enabled";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { rehomeAssistantsOf } from "@/lib/assistants/projects";
@@ -820,6 +821,10 @@ interface PublishParams {
   abExperiment?: import("@/lib/publish/filesystem").AbPublishSpec;
   /** Extra release SHAs protected from `pruneOldReleases` (e.g. `controlReleaseSha`). */
   protectReleaseShas?: readonly string[];
+  /** What to do when the project has a LIVE A/B experiment and this publish carries none (review item 13): a system
+   *  republish passes `keep` (the split is re-emitted with the new control); the experiment's own decision, and the
+   *  owner's «Stop and publish», pass `ending`; absent = refused (`AbExperimentRunningError`). Moot with the flag off. */
+  abLive?: import("@/lib/ab/publish-guard").AbPublishPolicy;
 }
 interface PublishResult {
   subdomain: string;
@@ -828,6 +833,11 @@ interface PublishResult {
   sha?: string;
   /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode and what the release carries live. */
   stripe?: { created: import("@/lib/stripe/twins/engine").TwinsPlanCounts; swaps: number; chargesEnabled: boolean | null };
+}
+
+/** The Edge Functions' sources inside an in-memory folder (the part of `/supabase/` the engine reads). */
+function functionFilesOf(folder: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(folder).filter(([path]) => path.startsWith("/supabase/")));
 }
 
 export async function publishProject(
@@ -878,6 +888,28 @@ export async function publishProject(
   if ((project.data as { tool?: unknown } | null)?.tool) {
     const { ProjectIsToolError } = await import("@/lib/tools/errors");
     throw new ProjectIsToolError();
+  }
+  // A LIVE A/B EXPERIMENT (review item 13): a release without its manifest would end the split in silence. Every caller
+  // meets this door, so it is decided here — before an address is claimed or anything is written. A system republish
+  // keeps the experiment (same Variant B, Control = the published sources); the experiment's own decision and the
+  // owner's «Stop and publish» go through; anyone else is refused. With the flag off nothing is even looked up.
+  let reemitted: import("@/lib/ab/live-publish").LiveAbPublish | null = null;
+  if (abTestingEnabled()) {
+    const { resolveAbPublish } = await import("@/lib/ab/publish-guard");
+    reemitted = await resolveAbPublish({
+      projectId: params.projectId,
+      ownerId: params.userId,
+      ...(params.abLive ? { policy: params.abLive } : {}),
+      carriesExperiment: Boolean(params.abExperiment),
+    });
+    if (reemitted) {
+      params = {
+        ...params,
+        sourcesOverride: reemitted.sourcesOverride,
+        abExperiment: reemitted.abExperiment,
+        protectReleaseShas: reemitted.protectReleaseShas,
+      };
+    }
   }
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
@@ -932,6 +964,9 @@ export async function publishProject(
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
     ...(twinsSoFar.size > 0 ? { swap: (t: string) => swapTwins(t, twinsSoFar) } : {}),
     ...(params.sourcesFrom ? { sourcesFrom: params.sourcesFrom } : {}),
+    // Explicit sources (an A/B launch or re-emit, a control restore) carry THEIR functions: the draft's must not go to
+    // production under a page that doesn't match them (review item 18).
+    ...(params.sourcesOverride ? { files: functionFilesOf(params.sourcesOverride.folder) } : {}),
   });
 
   // Born-complete the <head> at publish too, so even legacy projects (and
@@ -1034,7 +1069,8 @@ export async function publishProject(
         // escribía en cada publicación para guardar los almacenes declarados;
         // se retiraron el 2026-10-04.)
         // 🔴 Never for a Len Watch branch: `project.data` is the copy's, and this would write it over the draft.
-        ...(project.data && persistLanguages && !params.sourcesFrom
+        // Nor for explicit sources (`sourcesOverride`): they are the PUBLISHED version, and this would write it over the draft.
+        ...(project.data && persistLanguages && !params.sourcesFrom && !params.sourcesOverride
           ? { data: { ...project.data, settings: ajustesPublicados } }
           : {}),
       })
@@ -1273,6 +1309,14 @@ export async function publishProject(
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
 
+  // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now.
+  if (reemitted) {
+    const { updateExperiment } = await import("@/lib/ab/store");
+    await updateExperiment(reemitted.experiment.id, { experimentReleaseSha: publishResult.sha }).catch((err: unknown) => {
+      console.error("[publish] couldn't record the re-emitted experiment release", reemitted?.experiment.id, err);
+    });
+  }
+
   // 5b'. LEN WATCH + EDGE A/B TESTING: what just went live, kept as a commit off the
   // branches so a fix or A/B Variant B can be cut from it. Skipped when publishing an active
   // A/B experiment (so Control A stays the clean published baseline).
@@ -1425,6 +1469,8 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
   if (!row) throw new ProjectNotFoundError();
   // Safe to call even when not published — just a no-op.
   if (!row.subdomain) return;
+  // Taking the site down would end a live A/B experiment (review item 13): decide the test first.
+  if (abTestingEnabled()) await (await import("@/lib/ab/publish-guard")).assertNoLiveExperiment(params.projectId);
 
   const sub = row.subdomain;
   const subpagePaths = pageEdgePaths(row.data);
@@ -1510,6 +1556,8 @@ export async function rollbackProject(
   const row = rows[0];
   if (!row) throw new ProjectNotFoundError();
   if (!row.subdomain) throw new ReleaseUnavailableError();
+  // Going back to an older release ends a live A/B experiment too (review item 13).
+  if (abTestingEnabled()) await (await import("@/lib/ab/publish-guard")).assertNoLiveExperiment(params.projectId);
 
   let html: string;
   try {

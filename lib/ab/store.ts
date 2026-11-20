@@ -266,3 +266,30 @@ export function normalizePrimaryMetric(raw: unknown): AbPrimaryMetric {
 export function isTerminalStatus(s: AbExperimentStatus): boolean {
   return s === "promoted_b" || s === "kept_a" || s === "cancelled" || s === "paused_harm";
 }
+
+/** The owner stopped a LIVE experiment by publishing over it (review item 14): cancelled, resolved, its copy detached.
+ *  Conditional on it still being live and on no decision being applied, so it never overwrites a promote or a
+ *  keep-A that won the race. `null` = it wasn't ours to close. */
+export async function cancelLiveExperiment(id: string, actorId: string): Promise<AbExperimentRow | null> {
+  const now = new Date();
+  const [row] = await db
+    .update(schema.abExperiments)
+    .set({
+      status: "cancelled",
+      decisionStatus: "resolved",
+      copyProjectId: null,
+      endedAt: now,
+      decidedAt: now,
+      decidedBy: actorId,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        inArray(schema.abExperiments.status, [...AB_LIVE_STATUSES]),
+        or(eq(schema.abExperiments.decisionStatus, "pending"), eq(schema.abExperiments.decisionStatus, "none")),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}

@@ -48,6 +48,8 @@ export async function POST(req: Request) {
         userId: row.userId,
         subdomain: row.subdomain,
         skipFlightCheck: true,
+        // A running A/B experiment survives a system republish (re-emitted with the new control).
+        abLive: "keep",
       });
       republished.push(row.id);
     } catch (err) {

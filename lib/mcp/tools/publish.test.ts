@@ -198,3 +198,28 @@ describe("publish — la revisión de seguridad (spec local 2026-10-15)", () => 
     expect(m.markPublished).toHaveBeenCalledWith("p1", "c".repeat(64));
   });
 });
+
+// A live A/B experiment (review item 13): publishing or unpublishing from MCP would end it in silence. The door
+// (`publishProject` / `unpublishProject`) refuses; the tool says so and the approval is not spent.
+describe("a live A/B experiment", () => {
+  it("🔴 publish: the refusal is told as `ab_experiment_running`, and the approval is not consumed", async () => {
+    const { AbExperimentRunningError } = await import("@/lib/ab/errors");
+    m.openProject.mockResolvedValue(owner("cafe"));
+    m.checkApproval.mockResolvedValue("ok");
+    m.publishProject.mockRejectedValue(new AbExperimentRunningError("ab_1234abcd", "Direct hero", "/"));
+    const r = await publishTool.run({ project_id: "p1", subdomain: "cafe", approval_id: "AP1" }, caller);
+    expect(text(r)).toContain("ab_experiment_running");
+    expect(text(r)).toContain("Direct hero");
+    expect(m.markApprovalUsed).not.toHaveBeenCalled();
+  });
+
+  it("🔴 unpublish: the same", async () => {
+    const { AbExperimentRunningError } = await import("@/lib/ab/errors");
+    m.openProject.mockResolvedValue(owner("cafe"));
+    m.checkApproval.mockResolvedValue("ok");
+    m.unpublishProject.mockRejectedValue(new AbExperimentRunningError("ab_1234abcd", "Direct hero", "/"));
+    const r = await unpublishTool.run({ project_id: "p1", approval_id: "AP1" }, caller);
+    expect(text(r)).toContain("ab_experiment_running");
+    expect(m.markApprovalUsed).not.toHaveBeenCalled();
+  });
+});

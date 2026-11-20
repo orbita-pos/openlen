@@ -5,6 +5,7 @@
 import { ProjectIsToolError } from "@/lib/tools/errors";
 import "server-only";
 
+import { AbExperimentRunningError } from "@/lib/ab/errors";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { dataChangesErrorBody } from "@/lib/backend/data-changes";
 import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
@@ -32,7 +33,8 @@ export interface GatedPublishInput {
   sourcesFrom?: string;
   /** «Publicar igual» over a Len Watch fix that isn't in the draft yet: that incident, not asked again. */
   acceptLenWatchFix?: string;
-  /** Owner explicitly confirmed stopping an active A/B experiment to publish the draft. */
+  /** The owner confirmed stopping a live A/B experiment to publish the draft («Stop and publish»). Only a person's. The
+   *  experiment is closed AFTER the publish went through, never before (review item 14). */
   stopActiveAb?: boolean;
 }
 
@@ -75,46 +77,23 @@ export async function runSecurityGate(i: {
 }
 
 export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPublishResult> {
-  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
-  // branch isn't in the draft would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
-  if (i.source === "person") {
-    const { abTestingEnabled } = await import("@/lib/ab/enabled");
-    if (abTestingEnabled()) {
-      const abStore = await import("@/lib/ab/store");
-      const activeAb = await abStore.liveExperimentForProject(i.projectId).catch(() => null);
-      if (activeAb && !i.stopActiveAb) {
-        return {
-          status: 428,
-          body: {
-            error: "ab_experiment_running",
-            experimentId: activeAb.id,
-            name: activeAb.name,
-            targetPath: activeAb.targetPath,
-          },
-        };
-      }
-      if (activeAb && i.stopActiveAb) {
-        const abWt = await import("@/lib/ab/worktree");
-        await abWt
-          .cleanupAbWorktree({
-            parentId: i.projectId,
-            copyProjectId: activeAb.copyProjectId,
-            branch: activeAb.branch,
-          })
-          .catch(() => undefined);
-        await abStore
-          .updateExperiment(activeAb.id, {
-            status: "cancelled",
-            decisionStatus: "resolved",
-            copyProjectId: null,
-            endedAt: new Date(),
-            decidedAt: new Date(),
-            decidedBy: i.actorId,
-          })
-          .catch(() => undefined);
-      }
+  // A LIVE A/B EXPERIMENT (review items 13, 14). The owner is asked first (428); the answer `stopActiveAb` publishes as the
+  // end of the experiment, which is closed only once the publish succeeded. Every other source meets the door itself in
+  // `publishProject`, which refuses (409 below); the experiment's own promote is the end of it.
+  const { abTestingEnabled } = await import("@/lib/ab/enabled");
+  let stopping: import("@/lib/ab/store").AbExperimentRow | null = null;
+  if (i.source === "person" && abTestingEnabled()) {
+    const live = await (await import("@/lib/ab/store")).liveExperimentForProject(i.projectId);
+    if (live && !i.stopActiveAb) {
+      return { status: 428, body: { error: "ab_experiment_running", experimentId: live.id, name: live.name, targetPath: live.targetPath } };
     }
+    if (live) stopping = live;
+  }
+  const abLive = stopping || i.source === "ab_promote" ? ({ abLive: "ending" } as const) : {};
 
+  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
+  // branch isn't in the draft yet would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
+  if (i.source === "person") {
     const bring = await import("@/lib/len-watch/bring");
     const pending = await bring.pendingFix(i.projectId).catch((err: unknown) => {
       console.warn("[publish] couldn't tell whether a Len Watch fix is pending; publishing", err);
@@ -148,8 +127,12 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
         dataChanges: i.sourcesFrom ? { mode: "skip" } : { mode: "owner", confirmFingerprint: i.confirmFingerprint, copyDraftData: i.copyDraftData },
         functions: { skipMissingSecrets: i.skipMissingSecrets === true },
         ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}),
+        ...abLive,
       }),
     );
+    // The owner stopped the test by publishing over it: it is over now that the publish went through — and not before,
+    // so a publish that fails leaves the split live and untouched (review item 14).
+    if (stopping) await (await import("@/lib/ab/publish-guard")).endExperimentAfterPublish(stopping, i.actorId);
     // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
     // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
     if (seguridad.fingerprint) {
@@ -170,6 +153,8 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
     if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
     if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
+    // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
+    if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };
     // Una app web que no compila no se publica (spec local 2026-10-07-apps):
     // se dice qué fichero y qué línea, para el dueño y para Len.
     if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };

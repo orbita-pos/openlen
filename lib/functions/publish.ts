@@ -20,7 +20,7 @@ import {
 
 export async function prepareFunctionsForPublish(
   projectId: string,
-  o: { readonly mode: "owner" | "system"; readonly skipMissingSecrets: boolean; readonly swap?: (text: string) => string; readonly sourcesFrom?: string },
+  o: { readonly mode: "owner" | "system"; readonly skipMissingSecrets: boolean; readonly swap?: (text: string) => string; readonly sourcesFrom?: string; readonly files?: Readonly<Record<string, string>> },
 ): Promise<{ deploy(swap?: (text: string) => string): Promise<void>; readonly functions: readonly string[] } | null> {
   const deps = realDeployDeps();
   if (!deps) return null;

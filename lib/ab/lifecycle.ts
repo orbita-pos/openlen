@@ -478,6 +478,8 @@ async function restoreControlLive(
       skipFlightCheck: true,
       dataChanges: { mode: "skip" },
       sourcesOverride: { data: controlSrc.data, folder: controlFolder },
+      // Restoring Control IS the end of the experiment: the door must not refuse it.
+      abLive: "ending",
     });
     await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
   }
