@@ -145,3 +145,101 @@ describe("con un experimento, vive bajo la raíz reservada `openlen/`", () => {
     assert.ok(enActual("abvacio", `openlen/ab/${EXP}/b/index.html`));
   });
 });
+
+// The language variants (review item 17). A document carries an experiment tag only if the edge BUCKETS it. Control's
+// language pages used to inherit `exp:a` from the home they are translated from even when they are not in the
+// experiment — inflating A's views — and a B visitor who switched language was re-tagged as A.
+describe("los idiomas y la etiqueta del experimento", () => {
+  const TAGGED = new RegExp(`var AB="${EXP}:(a|b)"`);
+  /** A stand-in for the translation: the same document, its heading changed — scripts and forms ride along as in the real one. */
+  const traducir = (rompeB = false) => async (html: string) => {
+    if (rompeB && html.includes("Variante B")) throw new Error("la traducción de B falló");
+    return [{ locale: "en", html: html.replace(/<h1>(.*?)<\/h1>/, "<h1>$1 EN</h1>") }];
+  };
+  const conLocalizacion = async (run: () => Promise<void>) => {
+    process.env.OPENLEN_LOCALIZE = "1";
+    try {
+      await run();
+    } finally {
+      process.env.OPENLEN_LOCALIZE = "0";
+    }
+  };
+
+  it("🔴 un idioma que NO está en el experimento no lleva la etiqueta de A (ni el campo de formulario), y B no trae idiomas", async () => {
+    await conLocalizacion(async () => {
+      await publishToDir({
+        subdomain: "abidiomas1",
+        html: DOC("Control"),
+        projectId: "proj-ab-3",
+        sourceLang: "es",
+        buildLocaleDocs: traducir(),
+        abExperiment: spec({ includeLocales: false }),
+      });
+    });
+    assert.match(actual("abidiomas1", "index.html"), new RegExp(`var AB="${EXP}:a"`), "la raíz sí está en el experimento");
+    const en = actual("abidiomas1", "en/index.html");
+    assert.match(en, /<h1>Control EN<\/h1>/);
+    assert.match(en, /var P="proj-ab-3"/, "sigue llevando su analítica de siempre");
+    assert.ok(!TAGGED.test(en), "el idioma no se etiqueta como A");
+    assert.ok(!en.includes("_openlen_ab"), "ni el formulario");
+    assert.ok(!enActual("abidiomas1", `openlen/ab/${EXP}/b/en/index.html`));
+    const e = JSON.parse(actual("abidiomas1", "openlen/ab.json")).experiments[0];
+    assert.equal(e.includeLocales, false);
+    assert.deepEqual(e.locales, []);
+  });
+
+  it("🔴 con idiomas en el experimento, el de control lleva A y el de B lleva B (los dos están sembrados por el borde)", async () => {
+    await conLocalizacion(async () => {
+      await publishToDir({
+        subdomain: "abidiomas2",
+        html: DOC("Control"),
+        projectId: "proj-ab-3",
+        sourceLang: "es",
+        buildLocaleDocs: traducir(),
+        abExperiment: spec({ includeLocales: true }),
+      });
+    });
+    assert.match(actual("abidiomas2", "en/index.html"), new RegExp(`var AB="${EXP}:a"`));
+    assert.match(actual("abidiomas2", `openlen/ab/${EXP}/b/en/index.html`), new RegExp(`var AB="${EXP}:b"`));
+    const e = JSON.parse(actual("abidiomas2", "openlen/ab.json")).experiments[0];
+    assert.equal(e.includeLocales, true);
+    assert.deepEqual(e.locales, ["en"]);
+  });
+
+  it("🔴 se pidieron idiomas en el experimento pero B no pudo traducirse: el manifiesto no los incluye, y el de control tampoco lleva etiqueta", async () => {
+    await conLocalizacion(async () => {
+      await publishToDir({
+        subdomain: "abidiomas3",
+        html: DOC("Control"),
+        projectId: "proj-ab-3",
+        sourceLang: "es",
+        buildLocaleDocs: traducir(true),
+        abExperiment: spec({ includeLocales: true }),
+      });
+    });
+    const e = JSON.parse(actual("abidiomas3", "openlen/ab.json")).experiments[0];
+    assert.equal(e.includeLocales, false);
+    assert.ok(!TAGGED.test(actual("abidiomas3", "en/index.html")), "el borde no reparte ese idioma: no se etiqueta");
+    assert.match(actual("abidiomas3", "en/index.html"), /<h1>Control EN<\/h1>/);
+  });
+
+  it("un experimento sobre una subpágina no toca los idiomas de la home", async () => {
+    await conLocalizacion(async () => {
+      await publishToDir({
+        subdomain: "abidiomas4",
+        html: DOC("Control"),
+        projectId: "proj-ab-3",
+        sourceLang: "es",
+        pages: [{ slug: "menu", html: DOC("Menú") }],
+        buildLocaleDocs: traducir(),
+        abExperiment: spec({
+          targetPath: "/menu",
+          variantB: { html: DOC("Home B"), pages: [{ slug: "menu", html: DOC("Menú B") }], files: [] },
+        }),
+      });
+    });
+    assert.ok(!TAGGED.test(actual("abidiomas4", "index.html")));
+    assert.ok(!TAGGED.test(actual("abidiomas4", "en/index.html")));
+    assert.match(actual("abidiomas4", "menu/index.html"), new RegExp(`var AB="${EXP}:a"`));
+  });
+});
