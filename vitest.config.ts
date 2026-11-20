@@ -670,6 +670,9 @@ export default defineConfig({
       "lib/tools/**/*.test.ts",
       // The person's own assistant (spec local 2026-11-06-asistente-propio).
       "lib/assistants/**/*.test.ts",
+      // Agents for everyone: the person's space (spec local 2026-11-19-agentes-para-todos). LISTA BLANCA.
+      "lib/space/**/*.test.ts",
+      "app/api/space/**/*.test.ts",
       // Edge A/B Testing + Assistant Loop (Plan 3). LISTA BLANCA.
       "lib/ab/**/*.test.ts",
       "app/api/tools/**/*.test.ts",

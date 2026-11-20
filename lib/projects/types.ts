@@ -177,6 +177,7 @@ export type VisualEngineProjectMetadata =
 import type { PruebaGuardada } from "@/lib/agent/pruebas-de-la-pagina";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import type { GameOfProject } from "@/lib/games/types";
+import type { SpaceOfProject } from "@/lib/space/types";
 import type { ToolOfProject } from "@/lib/tools/types";
 
 /**
@@ -204,6 +205,9 @@ export interface ProjectData {
   /** Present = the project is a GAME (spec local 2026-11-05-modo-juego-design, §8.1): an app whose turns carry
    *  Len's game posture. */
   game?: GameOfProject;
+  /** Present = the person's SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): the hidden home of their agents,
+   *  never listed, published, converted, shared or attended by visitors (`lib/space/`). */
+  space?: SpaceOfProject;
   /** Non-HTML project settings (form config, …). Absent on older rows. */
   settings?: ProjectSettings;
   /** Multi-page: extra pages keyed by slug. Absent/empty = classic
