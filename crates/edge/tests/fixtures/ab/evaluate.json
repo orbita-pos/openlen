@@ -1,0 +1,4104 @@
+{
+  "_doc": "Shared by crates/edge (assign.rs/manifest.rs tests) and lib/ab/serve.test.ts. manifest is an object (stringified), or {raw}. request.path is an already-resolved URL path; query has no leading '?'; ua/lang/cookie are header values (non-ASCII = present but unreadable); nowMs is Unix ms. expect is null (no experiment decision, incl. no manifest) or a subset of the decision. Regenerate with gen-evaluate.cjs (node, from the repo root) if the contract changes.",
+  "cases": [
+    {
+      "name": "first visit lands in B by hash and mints a Secure cookie",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/index.html",
+        "setCookie": "ol_ab_9f3c2a1b=b; Path=/; Max-Age=2592000; SameSite=Lax; Secure"
+      }
+    },
+    {
+      "name": "first visit lands in A by hash",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Safari/605.1",
+        "lang": "en-US,en;q=0.9",
+        "ip": "198.51.100.42",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": "ol_ab_9f3c2a1b=a; Path=/; Max-Age=2592000; SameSite=Lax; Secure"
+      }
+    },
+    {
+      "name": "a plain-http request mints the cookie without Secure",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": false,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "setCookie": "ol_ab_9f3c2a1b=b; Path=/; Max-Age=2592000; SameSite=Lax"
+      }
+    },
+    {
+      "name": "sticky cookie b wins over the hash",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "foo=1; ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Safari/605.1",
+        "lang": "en-US,en;q=0.9",
+        "ip": "198.51.100.42",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/index.html",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "sticky cookie a wins over the hash",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=a",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "the cookie value is case-insensitive",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=B",
+        "ua": "Mozilla/5.0 Safari/605.1",
+        "lang": "en-US,en;q=0.9",
+        "ip": "198.51.100.42",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a cookie with another value is ignored",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=zzz",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "the first cookie of that name wins",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=a; ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a bot gets control and no cookie",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Googlebot/2.1",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "bot",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "an empty user agent is a bot",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "bot",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "override b beats the bot and the cookie, mints nothing",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab=b",
+        "cookie": "ol_ab_9f3c2a1b=a",
+        "ua": "Googlebot/2.1",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/index.html",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "override is case-insensitive",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab=A",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true,
+        "variantBPath": null
+      }
+    },
+    {
+      "name": "an unknown override value is ignored",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab=x",
+        "cookie": "ol_ab_9f3c2a1b=a",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "the override key is percent-decoded",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_%61b=b",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true
+      }
+    },
+    {
+      "name": "the override value is percent-decoded",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "x=1&_ol_ab=%62",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true
+      }
+    },
+    {
+      "name": "a plus in the value is a space, so not an override",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab=+b",
+        "cookie": "ol_ab_9f3c2a1b=a",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "the first occurrence of the parameter wins (a bare key is an empty value)",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab&_ol_ab=b",
+        "cookie": "ol_ab_9f3c2a1b=a",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a custom override parameter name",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "preview_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "preview_ab=b&_ol_ab=a",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true
+      }
+    },
+    {
+      "name": "an invalid override parameter name falls back to the default",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "x",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "_ol_ab=b",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": true,
+        "isOverride": true
+      }
+    },
+    {
+      "name": "a locale of the target is covered",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/es",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/es"
+      }
+    },
+    {
+      "name": "a trailing slash is the same page",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/es/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/es"
+      }
+    },
+    {
+      "name": "index.html is the home",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/index.html",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/index.html"
+      }
+    },
+    {
+      "name": "a percent-encoded path is judged decoded",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/%65s",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/es"
+      }
+    },
+    {
+      "name": "dot segments are removed before judging",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/x/../es",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/es"
+      }
+    },
+    {
+      "name": "a locale that is not listed is outside",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/de",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "another page is outside",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/about",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a nested page is outside when only the home is the target",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/es/about",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a non-home target",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/pricing/",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/pricing/index.html",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/pricing"
+      }
+    },
+    {
+      "name": "the home is outside a non-home target",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "locales are lower-cased and filtered in the manifest",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "ES",
+              "bad_locale",
+              7,
+              "fr-CA"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/fr-ca",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/fr-ca"
+      }
+    },
+    {
+      "name": "includeLocales that is not literally true counts as false",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": "yes",
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/es",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "an overridden file goes to B for a B cookie",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "an overridden file is control (decided, so no-store) for everyone else",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "the override parameter sends a file to B",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "_ol_ab=b",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "override",
+        "isPageRoute": false,
+        "isOverride": true,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "override a beats a B cookie on a file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "_ol_ab=a",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "override",
+        "isPageRoute": false,
+        "isOverride": true,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "an unknown override value on a file falls back to the cookie",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "_ol_ab=x",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "an entry without a leading slash is normalized",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/js/app.js",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/js/app.js",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "a file that B does not override is not decided",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/other.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a file with a space in its name",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/fonts/a%20b.woff2",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/fonts/a b.woff2",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "file paths are case-sensitive",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/CSS/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a dotfile is a file, never a page",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/.well-known/x",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a bare dotfile is a file, never a page",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/.hidden",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a path ending in a dot is a file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/foo.",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "an unknown extension is a file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/data.v2",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a dotted directory with a clean last segment is a page (outside the target)",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/v1.2/pricing",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "an overridden file of an expired experiment is not decided",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a manifest with no overrides decides no file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "junk overrides are dropped, the rest kept",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          7,
+          null,
+          "/../etc/passwd",
+          "/a/./b.css",
+          "/css/site.css",
+          {
+            "x": 1
+          }
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "expiresAt in the past ends the experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "expiresAt in the future keeps it",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-12-31T23:59:59Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "expiresAt with a positive offset is shifted (still in the future)",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-06-01T01:00:00+02:00"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780266600000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "expiresAt with a positive offset is shifted (just passed)",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-06-01T01:00:00+02:00"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780268400000
+      },
+      "expect": null
+    },
+    {
+      "name": "expiresAt with a negative offset",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-05-31T20:00:00-04:00"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780271999000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "expiresAt is a boundary: now >= expiresAt ends it",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-06-01T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "expiresAt with fractional seconds",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-06-01T00:00:00.500Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a bare date is invalid: the experiment is ignored",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "lower-case t/z is invalid: the experiment is ignored",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01t00:00:00z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a space instead of T is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01 00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a missing zone is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01T00:00:00"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "February 30 is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-02-30T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "hour 24 is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01T24:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "second 60 is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-01-01T00:00:60Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "an empty string is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": ""
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a number is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": 1893456000000
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "February 29 of a leap year is valid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2028-02-29T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "February 29 of a common year is invalid",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2027-02-29T00:00:00Z"
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "the first experiment expired, the second still runs",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-01-01T00:00:00Z"
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_22222222",
+        "variant": "a",
+        "source": "hash"
+      }
+    },
+    {
+      "name": "a splitBps that is not a number skips that experiment only",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": "50",
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a fractional splitBps skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000.5,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a splitBps over 10000 skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10001,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a negative splitBps skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": -1,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a missing salt skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "an oversized salt skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a bad id skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "AB",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a bad cookie name skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "no",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a prefix outside openlen/ab/ skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "_ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a prefix with a dot segment skips that experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/../b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          },
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "an experiment that is not an object is skipped",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          7,
+          null,
+          "x",
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a manifest whose only experiment is malformed is no manifest",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": "x",
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "splitBps 0 sends everyone to A",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 0,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "setCookie": "ol_ab_9f3c2a1b=a; Path=/; Max-Age=2592000; SameSite=Lax; Secure"
+      }
+    },
+    {
+      "name": "splitBps 10000 sends everyone to B",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Safari/605.1",
+        "lang": "en-US,en;q=0.9",
+        "ip": "198.51.100.42",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "setCookie": "ol_ab_9f3c2a1b=b; Path=/; Max-Age=2592000; SameSite=Lax; Secure"
+      }
+    },
+    {
+      "name": "splitBps given as 5000.0 is an integer",
+      "manifest": {
+        "raw": "{\"version\":1,\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"splitBps\":5000.0,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\"}]}"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a version other than 1 is no manifest",
+      "manifest": {
+        "raw": "{\"version\":2,\"experiments\":[]}"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "version 1.0 is version 1",
+      "manifest": {
+        "raw": "{\"version\":1.0,\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"splitBps\":5000,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\"}]}"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "not JSON is no manifest",
+      "manifest": {
+        "raw": "not-json"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a JSON array is no manifest",
+      "manifest": {
+        "raw": "[]"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "experiments that is not an array is no manifest",
+      "manifest": {
+        "raw": "{\"version\":1,\"experiments\":{}}"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "a non-ASCII user agent is unreadable, so it is treated as a bot",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 (ñandú) Chrome/131",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "bot",
+        "isPageRoute": true,
+        "isOverride": false,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "a non-ASCII cookie is unreadable, so it is ignored",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=a; other=ñ",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    },
+    {
+      "name": "a non-ASCII accept-language is hashed as empty",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "overrides": [
+          "/css/site.css",
+          "/img/hero.png",
+          "js/app.js",
+          "/fonts/a b.woff2"
+        ],
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null
+          }
+        ]
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "ñ",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false
+      }
+    }
+  ]
+}

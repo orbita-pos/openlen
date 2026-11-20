@@ -73,7 +73,7 @@ export interface AbMetricsSnapshot {
   readonly computedAt: string;
 }
 
-/** Manifest written atomically as `<release>/openlen/ab.json` and read by Rust `crates/edge` and TS fallback. */
+/** Manifest written atomically as `<release>/ab.json` and read by Rust `crates/edge` and TS fallback. */
 export interface AbManifestExperiment {
   readonly id: string;
   readonly cookieName: string;
