@@ -73,7 +73,7 @@ export interface AbMetricsSnapshot {
   readonly computedAt: string;
 }
 
-/** Manifest written atomically as `<release>/ab.json` and read by Rust `crates/edge` and TS fallback. */
+/** Manifest written atomically as `<release>/openlen/ab.json` (lib/ab/layout.ts) and read by Rust `crates/edge` and TS fallback. */
 export interface AbManifestExperiment {
   readonly id: string;
   readonly cookieName: string;
@@ -86,6 +86,9 @@ export interface AbManifestExperiment {
   readonly prefixB: string;
   readonly overrideParam: string;
   readonly expiresAt: string | null;
+  /** The asset URL paths (leading slash, non-page files) whose bytes differ between B and control: the edge routes
+   *  only these to B and marks them no-store. Absent (a manifest from before) = none. */
+  readonly overrides?: readonly string[];
 }
 
 export interface AbManifest {

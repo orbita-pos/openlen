@@ -10,6 +10,8 @@
 // must be reciprocal on every page), x-default pointing at the root, and a
 // fixed bottom-right language switcher.
 
+import { AB_RELEASE_DIR } from "@/lib/ab/layout";
+
 export interface ClusterMember {
   /** BCP-47 primary code — "es", "fr". */
   lang: string;
@@ -113,6 +115,7 @@ export function buildRobots(
   baseUrl: string,
   opts?: { readonly disallowAb?: boolean },
 ): string {
-  const disallow = opts?.disallowAb ? "Disallow: /_ab/\n" : "";
+  // The experiment's tree lives under the reserved `openlen/` root (lib/ab/layout.ts): keep crawlers out of Variant B's copy.
+  const disallow = opts?.disallowAb ? `Disallow: /${AB_RELEASE_DIR}/ab/\n` : "";
   return `User-agent: *\nAllow: /\n${disallow}\nSitemap: ${baseUrl}/sitemap.xml\n`;
 }
