@@ -74,6 +74,7 @@ import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
 import { foldLoadedSkills } from "@/lib/agent/skills/tool";
 import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
+import { withVisualContext } from "@/lib/agent/visuals/model-context";
 import { isFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
@@ -410,6 +411,9 @@ type CuerpoDelTurno = {
   idioma?: unknown;
   /** LOS VISUALES: si la persona lee en un teléfono (`mobile`) o no (`desktop`). */
   dispositivo?: unknown;
+  /** What a visual on the person's screen reported with updateModelContext for THIS message (MCP Apps, SEP-1865). Data
+   *  from code that may be showing a visitor's words: never part of `prompt`. See `withVisualContext`. */
+  visualContext?: unknown;
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): the turn runs as it, in its conversation. */
   assistantId?: unknown;
   /** Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.3): the project on the owner's phone, with
@@ -1384,10 +1388,16 @@ async function correrTurno(
   // A scheduled task: the model reads DeepSeek's `[SCHEDULE REMINDER]` message, which carries the
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
   // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
+  //
+  // WHAT A VISUAL REPORTED (updateModelContext): data, after the person's message and before any skill, in its fence
+  // (`withVisualContext`). It comes from its own field of the body and is never part of `prompt`, which is what the
+  // `/name` scan above, the chat's row and the person's language read; it travels in `textoEnviado`, so the row keeps it
+  // as `sentText` and the history rebuilds it byte for byte. Only a turn a person at a screen started carries one.
+  const contextoVisual = opts.round || opts.hilo || opts.email || programadaDelTurno ? undefined : body?.visualContext;
   const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
-      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`,
+      : withVisualContext(`${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`, contextoVisual),
     skillsInvocadas,
   );
   // WHAT THE PERSON TYPED, for a subagent's <original_task> (lib/agent/subagents/run.ts): their own words, never
