@@ -1023,8 +1023,40 @@ export async function publishToDir(
     const pathHere = slug ? `/${slug}` : "/";
     return pathHere === abTargetPath ? formatAbTag(abSpec.id, variant) : null;
   };
-  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, abTagFor(null, "a"));
+  // EDGE A/B TESTING, home target: Variant B's home (and, when the experiment includes languages, its language pages) is
+  // baked and localized BEFORE control's language pages are derived, because whether those are part of the experiment
+  // depends on whether B has any (review item 17): the manifest says `includeLocales` only if B's language pages exist.
+  let abHome: { html: string; locales: Array<{ locale: string; html: string }> } | null = null;
+  if (abSpec && abTargetPath === "/") {
+    const bSanitized = gateReservedMarker(stripOpIds(abSpec.variantB.html));
+    if (bSanitized.html === null) {
+      throw new Error("publishToDir: refusing to write A/B Variant B containing data-slot-path");
+    }
+    const bBakeCtx: BakeDocumentCtx = {
+      ...bakeCtx,
+      fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
+    };
+    const bHtml = await bakeDocument(bSanitized.html, bBakeCtx, null, formatAbTag(abSpec.id, "b"));
+    let bLocales: Array<{ locale: string; html: string }> = [];
+    if (abSpec.includeLocales && params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0") {
+      try {
+        bLocales = (await params.buildLocaleDocs(bHtml)).filter((d) => /^[a-z]{2,5}$/.test(d.locale));
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[publishToDir] Variant B localization failed; using root only", err);
+      }
+    }
+    abHome = { html: bHtml, locales: bLocales };
+  }
 
+  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, abTagFor(null, "a"));
+  // Only a document the edge buckets carries an experiment tag. Control's language pages are in the experiment only when
+  // B has its own (then the edge sends a visitor's cookie variant to `/<locale>/`); otherwise they are plain pages, and
+  // translating the TAGGED home would stamp every view of them as A — and re-tag a B visitor who switched language.
+  const localeSourceHtml =
+    abHome && abHome.locales.length === 0 && params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0"
+      ? await bakeDocument(publishHtml, bakeCtx, null, null)
+      : migratedHtml;
 
   // Speak Every Language: translated locale variants of the final baked
   // page, written as /<locale>/index.html inside the same release. Soft-
@@ -1032,7 +1064,7 @@ export async function publishToDir(
   let localeDocs: Array<{ locale: string; html: string }> = [];
   if (params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0") {
     try {
-      localeDocs = (await params.buildLocaleDocs(migratedHtml)).filter((d) =>
+      localeDocs = (await params.buildLocaleDocs(localeSourceHtml)).filter((d) =>
         /^[a-z]{2,5}$/.test(d.locale),
       );
     } catch (err) {
@@ -1200,32 +1232,9 @@ export async function publishToDir(
     const abOverrides: string[] = [];
     const variantBLocaleCodes: string[] = [];
 
-    if (abTargetPath === "/") {
-      const bSanitized = gateReservedMarker(stripOpIds(abSpec.variantB.html));
-      if (bSanitized.html === null) {
-        throw new Error("publishToDir: refusing to write A/B Variant B containing data-slot-path");
-      }
-      const bBakeCtx: BakeDocumentCtx = {
-        ...bakeCtx,
-        fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
-      };
-      let bHtml = await bakeDocument(bSanitized.html, bBakeCtx, null, formatAbTag(abSpec.id, "b"));
-      let bLocales: Array<{ locale: string; html: string }> = [];
-      if (
-        abSpec.includeLocales &&
-        params.buildLocaleDocs &&
-        process.env.OPENLEN_LOCALIZE !== "0"
-      ) {
-        try {
-          bLocales = (await params.buildLocaleDocs(bHtml)).filter((d) =>
-            /^[a-z]{2,5}$/.test(d.locale),
-          );
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn("[publishToDir] Variant B localization failed; using root only", err);
-        }
-      }
-      bHtml = annotateLanguageCluster(bHtml, { baseUrl, selfPath: "/", cluster });
+    if (abTargetPath === "/" && abHome) {
+      const bLocales = abHome.locales;
+      let bHtml = annotateLanguageCluster(abHome.html, { baseUrl, selfPath: "/", cluster });
       bHtml = optOutOfEmailObfuscation(seal(bHtml, `/${prefixB}/`));
       abVariantFiles.push({ path: `${prefixB}/index.html`, content: bHtml });
 
