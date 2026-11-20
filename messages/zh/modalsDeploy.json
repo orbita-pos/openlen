@@ -102,5 +102,16 @@
     "name": "测试：{name}",
     "stopAndPublish": "停止并发布",
     "cancel": "取消"
+  },
+  "abBringPending": {
+    "title": "变体 B 还没有进入你的草稿",
+    "body": "A/B 测试的胜出版本已上线，但尚未合并到你的草稿。现在发布会让草稿在没有它的情况下上线，并撤销它。",
+    "bring": "合并后发布",
+    "bringing": "合并中…",
+    "discard": "放弃并发布",
+    "cancel": "取消",
+    "queued": "Len 正在处理页面。他完成后，变体 B 会进入你的草稿。",
+    "conflict": "它与你的修改冲突。请让 Len 手动合并，或放弃它。",
+    "failed": "没成功，请再试一次。"
   }
 }

@@ -1006,7 +1006,10 @@
       "pushHarmStopNotRestored": "Ik heb “{name}” gestopt omdat variant B veel minder converteerde. Je site is niet gepubliceerd, dus er was niets live om terug te zetten.",
       "emailTextInfo": "{push}\n\nBekijk wat er gebeurd is: {url}",
       "pushUnevenTraffic": "“{name}” eindigde zonder resultaat: het verkeer was ongelijk verdeeld over de twee versies, dus de cijfers zijn niet betrouwbaar. Kies welke versie blijft.",
-      "summaryUnevenTraffic": "De test “{name}” eindigde zonder resultaat: het verkeer was ongelijk verdeeld en ik vertrouw de cijfers niet. Welke versie blijft?"
+      "summaryUnevenTraffic": "De test “{name}” eindigde zonder resultaat: het verkeer was ongelijk verdeeld en ik vertrouw de cijfers niet. Welke versie blijft?",
+      "bringPendingNotice": "Variant B staat live. Hij moet nog in je concept worden overgenomen; tot dan wacht je volgende publicatie.",
+      "bringQueued": "Len werkt aan de pagina; variant B komt in je concept zodra hij klaar is.",
+      "discardBring": "Wijzigingen van variant B weggooien"
     }
   }
 }

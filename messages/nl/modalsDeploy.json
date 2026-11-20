@@ -102,5 +102,16 @@
     "name": "Test: {name}",
     "stopAndPublish": "Stoppen en publiceren",
     "cancel": "Annuleren"
+  },
+  "abBringPending": {
+    "title": "Variant B zit nog niet in je concept",
+    "body": "De winnaar van de A/B-test staat live, maar is nog niet in je concept overgenomen. Als je nu publiceert, gaat je concept zonder die versie live en maak je haar ongedaan.",
+    "bring": "Overnemen en publiceren",
+    "bringing": "Overnemen…",
+    "discard": "Weggooien en publiceren",
+    "cancel": "Annuleren",
+    "queued": "Len werkt aan de pagina. Variant B komt in je concept zodra hij klaar is.",
+    "conflict": "Het botste met je wijzigingen. Vraag Len het met de hand samen te voegen, of gooi het weg.",
+    "failed": "Dat lukte niet. Probeer het opnieuw."
   }
 }

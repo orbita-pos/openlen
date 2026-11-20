@@ -1,5 +1,7 @@
-// POST /api/projects/[id]/ab/[expId]/bring — retry 3-way merge of promoted Variant B into draft.
-import { AbLifecycleError, retryBringWinner } from "@/lib/ab/lifecycle";
+// POST /api/projects/[id]/ab/[expId]/bring — retry 3-way merge of promoted Variant B into draft
+// (`{ action: "retry" }`, the default), or give its changes up (`{ action: "discard" }`): the draft stays as it is,
+// production stays as it is, and the owner's next publish stops waiting (review item 26).
+import { AbLifecycleError, discardWinnerBring, retryBringWinner } from "@/lib/ab/lifecycle";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -24,7 +26,16 @@ export const POST = paraLaApp(async (
   const acceso = await exigirAcceso(id, userId, "editar");
   if (acceso instanceof Response) return acceso;
 
+  const action = await req
+    .json()
+    .then((b: unknown) => (b && typeof b === "object" && (b as { action?: unknown }).action === "discard" ? "discard" : "retry"))
+    .catch(() => "retry");
+
   try {
+    if (action === "discard") {
+      const experiment = await discardWinnerBring({ projectId: id, experimentId: expId });
+      return json({ ok: true, status: "discarded", experiment }, 200);
+    }
     const result = await retryBringWinner({
       projectId: id,
       experimentId: expId,

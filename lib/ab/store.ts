@@ -10,6 +10,7 @@ import { HARM_NOTICE_DAYS } from "./cards";
 import {
   AB_ACTIVE_STATUSES,
   AB_LIVE_STATUSES,
+  type AbBringState,
   type AbDecisionStatus,
   type AbExperimentStatus,
   type AbExperimentView,
@@ -157,6 +158,46 @@ export async function updateExperiment(
     .update(schema.abExperiments)
     .set({ ...patch, updatedAt: new Date() })
     .where(eq(schema.abExperiments.id, id))
+    .returning();
+  return row ?? null;
+}
+
+/** A promoted Variant B that isn't in the owner's draft yet — merge pending (a Len turn was live) or clashed with their
+ *  edits — and that they haven't discarded. Their next publish would send the draft WITHOUT it, undoing the promotion:
+ *  it waits for them to bring it in or discard it (the pattern of Len Watch's `pendingFix`, review item 26). */
+export async function pendingBringForProject(projectId: string): Promise<AbExperimentRow | null> {
+  const [row] = await db
+    .select()
+    .from(schema.abExperiments)
+    .where(
+      and(
+        eq(schema.abExperiments.projectId, projectId),
+        eq(schema.abExperiments.status, "promoted_b"),
+        inArray(schema.abExperiments.bringState, ["pending", "conflict"]),
+      ),
+    )
+    .orderBy(desc(schema.abExperiments.decidedAt))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Moves a promoted experiment's `bringState` only if it is still in one of `from` (a background bring and a person's
+ *  button can race: the loser changes nothing). `null` = it didn't move. */
+export async function transitionBringState(
+  id: string,
+  from: readonly AbBringState[],
+  patch: Partial<Pick<AbExperimentInsert, "bringState" | "copyProjectId">>,
+): Promise<AbExperimentRow | null> {
+  const [row] = await db
+    .update(schema.abExperiments)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "promoted_b"),
+        inArray(schema.abExperiments.bringState, [...from]),
+      ),
+    )
     .returning();
   return row ?? null;
 }

@@ -17,6 +17,11 @@ export function isRecentHarmStop(
   return Number.isFinite(ended) && now - ended <= HARM_NOTICE_DAYS * DAY_MS;
 }
 
+/** A promoted Variant B that isn't in the owner's draft yet (it clashed, or Len was working): their next publish waits. */
+export function isUnbroughtWinner(e: Pick<AbExperimentView, "status" | "bringState">): boolean {
+  return e.status === "promoted_b" && (e.bringState === "conflict" || e.bringState === "pending");
+}
+
 /** What the chat shows above the composer: a draft to launch, a decision waiting, a conflict to bring in, a recent harm
  *  stop, and the experiment a link points at (`?ab=<id>`). */
 export function visibleAbCards(
@@ -28,7 +33,7 @@ export function visibleAbCards(
     (e) =>
       e.status === "draft" ||
       ((e.status === "winner_ready" || e.status === "inconclusive") && e.decisionStatus === "pending") ||
-      e.bringState === "conflict" ||
+      isUnbroughtWinner(e) ||
       isRecentHarmStop(e, now) ||
       (o.highlight != null && e.id === o.highlight),
   );

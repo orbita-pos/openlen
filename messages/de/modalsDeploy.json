@@ -102,5 +102,16 @@
     "name": "Test: {name}",
     "stopAndPublish": "Stoppen und veröffentlichen",
     "cancel": "Abbrechen"
+  },
+  "abBringPending": {
+    "title": "Variante B ist noch nicht in deinem Entwurf",
+    "body": "Die Gewinner-Variante des A/B-Tests ist live, wurde aber noch nicht in deinen Entwurf übernommen. Wenn du jetzt veröffentlichst, geht dein Entwurf ohne sie raus und macht sie rückgängig.",
+    "bring": "Übernehmen, dann veröffentlichen",
+    "bringing": "Wird übernommen…",
+    "discard": "Verwerfen und veröffentlichen",
+    "cancel": "Abbrechen",
+    "queued": "Len arbeitet an der Seite. Variante B kommt in deinen Entwurf, sobald er fertig ist.",
+    "conflict": "Sie kollidiert mit deinen Änderungen. Bitte Len, sie von Hand zusammenzuführen, oder verwirf sie.",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal."
   }
 }

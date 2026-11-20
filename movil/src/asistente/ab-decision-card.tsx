@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import { isUnbroughtWinner } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
 import { decidirPruebaAb } from "../api/asistente";
 
@@ -111,9 +112,9 @@ export function MobileAbDecisionCard({
         </div>
       )}
       {actual.status === "paused_harm" && <p className="asist-aviso">{t("own.ab.pausedHarmNotice")}</p>}
-      {actual.bringState === "conflict" && (
+      {isUnbroughtWinner(actual) && (
         <p role="alert" className="asist-aviso">
-          {t("own.ab.conflictNotice")}
+          {actual.bringState === "pending" ? t("own.ab.bringPendingNotice") : t("own.ab.conflictNotice")}
         </p>
       )}
       {listo && <p className="asist-ab-ok">{listo}</p>}

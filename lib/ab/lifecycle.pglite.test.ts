@@ -14,6 +14,9 @@ const h = vi.hoisted(() => ({
   publishThroughGates: vi.fn(),
   publishProject: vi.fn(),
   rollbackToSha: vi.fn(),
+  merge: vi.fn(),
+  cleanup: vi.fn(),
+  waitForLen: vi.fn(),
   failNextUpdate: false,
 }));
 
@@ -32,14 +35,15 @@ vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(
 vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => undefined }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: h.rollbackToSha }));
 vi.mock("@/lib/ab/worktree", () => ({
-  cleanupAbWorktree: vi.fn(async () => undefined),
+  cleanupAbWorktree: h.cleanup,
   commitAbWorktree: vi.fn(),
   copySources: vi.fn(),
   createAbWorktree: vi.fn(),
   ensurePublishedSources: async () => h.published,
-  mergeWinnerIntoDraft: vi.fn(),
+  mergeWinnerIntoDraft: h.merge,
   readPublishedFolder: async () => ({}),
 }));
+vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({ esperarALen: h.waitForLen }));
 // The real store, except that the test can make ONE write fail.
 vi.mock("@/lib/ab/store", async (orig) => {
   const real = await orig<typeof import("@/lib/ab/store")>();
@@ -55,8 +59,8 @@ vi.mock("@/lib/ab/store", async (orig) => {
   };
 });
 
-const { extendExperiment, keepControlA, promoteVariantB } = await import("./lifecycle");
-const { claimExperimentDecision, releaseStaleDecisionLocks, getExperimentById } = await import("./store");
+const { discardWinnerBring, extendExperiment, keepControlA, promoteVariantB, retryBringWinner } = await import("./lifecycle");
+const { claimExperimentDecision, releaseStaleDecisionLocks, getExperimentById, pendingBringForProject } = await import("./store");
 const { computeExperimentMetrics, metricsInputOf } = await import("./metrics");
 const { evaluateAbStats, maxDurationDaysOf } = await import("./stats");
 
@@ -74,6 +78,8 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.clearAllMocks();
   h.failNextUpdate = false;
+  h.cleanup.mockResolvedValue(undefined);
+  h.waitForLen.mockResolvedValue(false); // Len's turn never ends in a test: the background retry never fires
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
   await resetAbRows(raw());
 });
@@ -190,5 +196,133 @@ describe("the decision lock (item 20)", () => {
     expect((await getExperimentById("ab_stale002"))!.decisionStatus).toBe("none");
     expect((await getExperimentById("ab_stale003"))!.decisionStatus).toBe("pending"); // no memory: derived from its status
     expect((await getExperimentById("ab_fresh001"))!.decisionStatus).toBe("applying");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A PROMOTED WINNER THAT DOESN'T FIT THE DRAFT (review item 26). B is live the moment the publish went through: that is
+// recorded first, and bringing it into the owner's draft — which can clash, or wait for Len — never undoes it.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+const winnerReady = (id: string, o: Record<string, unknown> = {}) =>
+  insertExperiment(raw(), {
+    id,
+    status: "winner_ready",
+    decisionStatus: "pending",
+    winnerVariant: "b",
+    copyProjectId: "copy-1",
+    branch: `ab/${id}`,
+    baseCommitOid: "base-1",
+    startedAt: new Date(Date.now() - 4 * DAY),
+    ...o,
+  });
+const promote = (id: string) => promoteVariantB({ projectId: "p1", experimentId: id, ownerId: "u1", actorId: "u1" });
+
+describe("promote, then bring into the draft (item 26)", () => {
+  beforeEach(() => {
+    h.publishThroughGates.mockResolvedValue({ status: 200, body: { sha: "rel-promoted" } });
+  });
+
+  it("a clean merge: promoted, brought, the copy AND the branch are deleted, nothing waits", async () => {
+    await winnerReady("ab_prom0001");
+    h.merge.mockResolvedValue({ kind: "brought" });
+    const r = await promote("ab_prom0001");
+    expect(r.bringState).toBe("brought");
+    expect(await getExperimentById("ab_prom0001")).toMatchObject({ status: "promoted_b", decisionStatus: "resolved", bringState: "brought", copyProjectId: null, promotedReleaseSha: "rel-promoted" });
+    expect(h.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-1", branch: "ab/ab_prom0001" });
+    expect(await pendingBringForProject("p1")).toBeNull();
+  });
+
+  it("🔴 a conflict: the experiment records bringState conflict, keeps its branch, and the owner's next publish is held", async () => {
+    await winnerReady("ab_prom0002");
+    h.merge.mockResolvedValue({ kind: "conflict", paths: ["/index.html"] });
+    const r = await promote("ab_prom0002");
+    expect(r).toMatchObject({ bringState: "conflict", conflictPaths: ["/index.html"] });
+    expect(await getExperimentById("ab_prom0002")).toMatchObject({ status: "promoted_b", bringState: "conflict", copyProjectId: null, branch: "ab/ab_prom0002" });
+    // the copy goes, the branch stays (Len or the owner finishes it)
+    expect(h.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-1", branch: null });
+    expect((await pendingBringForProject("p1"))?.id).toBe("ab_prom0002");
+  });
+
+  it("🔴 a Len turn is live: the merge isn't tried, the winner is recorded as pending, and a retry is scheduled for when the turn ends", async () => {
+    await winnerReady("ab_prom0003");
+    h.merge.mockResolvedValue({ kind: "busy" });
+    const r = await promote("ab_prom0003");
+    expect(r.bringState).toBe("pending");
+    expect(await getExperimentById("ab_prom0003")).toMatchObject({ status: "promoted_b", bringState: "pending" });
+    expect((await pendingBringForProject("p1"))?.id).toBe("ab_prom0003");
+    await vi.waitFor(() => expect(h.waitForLen).toHaveBeenCalledWith("p1"));
+  });
+
+  it("🔴 a merge that THROWS doesn't undo the promotion: B is live, the decision stands, the bring stays pending", async () => {
+    await winnerReady("ab_prom0004");
+    h.merge.mockRejectedValue(new Error("guard exploded"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await promote("ab_prom0004");
+    error.mockRestore();
+    expect(r.bringState).toBe("pending");
+    expect(await getExperimentById("ab_prom0004")).toMatchObject({ status: "promoted_b", decisionStatus: "resolved", bringState: "pending", decisionPrevStatus: null });
+  });
+
+  it("a publish that fails records nothing: the experiment is still a decision waiting", async () => {
+    await winnerReady("ab_prom0005");
+    h.publishThroughGates.mockResolvedValue({ status: 428, body: { error: "security_findings" } });
+    await expect(promote("ab_prom0005")).rejects.toMatchObject({ code: "security_blocked" });
+    expect(await getExperimentById("ab_prom0005")).toMatchObject({ status: "winner_ready", decisionStatus: "pending", bringState: null });
+    expect(h.merge).not.toHaveBeenCalled();
+  });
+});
+
+describe("«Bring into draft» and «Don't bring it in» (item 26)", () => {
+  const conflicted = (id: string, o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", bringState: "conflict", branch: `ab/${id}`, baseCommitOid: "base-1", ...o });
+  const bring = (id: string) => retryBringWinner({ projectId: "p1", experimentId: id, ownerId: "u1", actorId: "u1" });
+
+  it("🔴 bring refuses anything that isn't a PROMOTED winner with an open bring", async () => {
+    await insertExperiment(raw(), { id: "ab_ring0001", status: "running", branch: "ab/ab_ring0001", baseCommitOid: "base-1", startedAt: new Date() });
+    await expect(bring("ab_ring0001")).rejects.toMatchObject({ code: "invalid_state", status: 409 });
+    await insertExperiment(raw(), { id: "ab_ring0002", projectId: "p2", status: "promoted_b", decisionStatus: "resolved", bringState: "brought", branch: "ab/ab_ring0002", baseCommitOid: "base-1" });
+    await expect(retryBringWinner({ projectId: "p2", experimentId: "ab_ring0002", ownerId: "u1", actorId: "u1" })).rejects.toMatchObject({ code: "invalid_state", status: 409 });
+    expect(h.merge).not.toHaveBeenCalled();
+  });
+
+  it("a retry that now merges cleanly brings it in, deletes the branch and releases the publish", async () => {
+    await conflicted("ab_ring0003");
+    h.merge.mockResolvedValue({ kind: "brought" });
+    await expect(bring("ab_ring0003")).resolves.toEqual({ status: "brought" });
+    expect(await getExperimentById("ab_ring0003")).toMatchObject({ bringState: "brought" });
+    expect(h.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: null, branch: "ab/ab_ring0003" });
+    expect(await pendingBringForProject("p1")).toBeNull();
+  });
+
+  it("a retry that still clashes stays a conflict; one that meets a live Len turn is queued", async () => {
+    await conflicted("ab_ring0004");
+    h.merge.mockResolvedValueOnce({ kind: "conflict", paths: ["/a.css"] });
+    await expect(bring("ab_ring0004")).resolves.toEqual({ status: "conflict", paths: ["/a.css"] });
+    h.merge.mockResolvedValueOnce({ kind: "busy" });
+    await expect(bring("ab_ring0004")).resolves.toEqual({ status: "queued" });
+    expect((await getExperimentById("ab_ring0004"))!.bringState).toBe("conflict");
+  });
+
+  it("🔴 discard: the branch is deleted, production isn't touched, and the owner's publish no longer waits", async () => {
+    await conflicted("ab_ring0005");
+    expect((await pendingBringForProject("p1"))?.id).toBe("ab_ring0005");
+    const view = await discardWinnerBring({ projectId: "p1", experimentId: "ab_ring0005" });
+    expect(view.bringState).toBe("declined");
+    expect(h.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: null, branch: "ab/ab_ring0005" });
+    expect(h.publishProject).not.toHaveBeenCalled();
+    expect(h.publishThroughGates).not.toHaveBeenCalled();
+    expect(h.rollbackToSha).not.toHaveBeenCalled();
+    expect(await getExperimentById("ab_ring0005")).toMatchObject({ status: "promoted_b", bringState: "declined" });
+    expect(await pendingBringForProject("p1")).toBeNull();
+    // and it can't be brought any more
+    await expect(bring("ab_ring0005")).rejects.toMatchObject({ code: "invalid_state" });
+  });
+
+  it("discard refuses what isn't a promoted winner with an open bring", async () => {
+    await insertExperiment(raw(), { id: "ab_ring0006", status: "winner_ready", decisionStatus: "pending", startedAt: new Date() });
+    await expect(discardWinnerBring({ projectId: "p1", experimentId: "ab_ring0006" })).rejects.toMatchObject({ code: "invalid_state" });
+    await insertExperiment(raw(), { id: "ab_ring0007", projectId: "p2", status: "promoted_b", decisionStatus: "resolved", bringState: "brought" });
+    await expect(discardWinnerBring({ projectId: "p2", experimentId: "ab_ring0007" })).rejects.toMatchObject({ code: "invalid_state" });
+    await expect(discardWinnerBring({ projectId: "p1", experimentId: "ab_nope0000" })).rejects.toMatchObject({ code: "not_found" });
   });
 });

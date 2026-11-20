@@ -10,6 +10,7 @@ import type { Finding, ReviewView } from "@/lib/security-review/types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 import { MissingSecrets } from "./missing-secrets";
+import { AbBringPending } from "./ab/bring-pending";
 import { AbExperimentRunning } from "./ab/experiment-running";
 import { LenWatchFixPending } from "./len-watch/fix-pending";
 import { SecurityPanel } from "./security-findings";
@@ -57,6 +58,7 @@ type CardState =
   | { kind: "len_watch_fix_pending"; incidentId: string }
   // Un experimento A/B en marcha que publicar detendría (revisión del 19/11, puntos 13 y 14): decide el dueño.
   | { kind: "ab_experiment_running"; name: string }
+  | { kind: "ab_bring_pending"; experimentId: string; name: string }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -174,6 +176,10 @@ export function AgentConfirmCard({
       if (outcome.kind === "ab_experiment_running") {
         detenerPrueba.current = false;
         setState({ kind: "ab_experiment_running", name: outcome.name });
+        return;
+      }
+      if (outcome.kind === "ab_bring_pending") {
+        setState({ kind: "ab_bring_pending", experimentId: outcome.experimentId, name: outcome.name });
         return;
       }
       if (outcome.kind === "len_watch_fix_pending") {
@@ -359,6 +365,19 @@ export function AgentConfirmCard({
             busy={busy}
             onPublishAgain={() => void handlePublish()}
             onPublishAnyway={() => void handlePublish({ acceptLenWatchFix: state.incidentId })}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+
+      {state.kind === "ab_bring_pending" && (
+        <div className="mt-2">
+          <AbBringPending
+            projectId={projectId}
+            experimentId={state.experimentId}
+            name={state.name}
+            busy={busy}
+            onPublishAgain={() => void handlePublish()}
             onCancel={handleCancel}
           />
         </div>

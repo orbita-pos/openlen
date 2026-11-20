@@ -1006,7 +1006,10 @@
       "pushHarmStopNotRestored": "Ho fermato “{name}” perché la variante B riduceva le conversioni. Il tuo sito non è pubblicato, quindi non c’era nulla online da ripristinare.",
       "emailTextInfo": "{push}\n\nVedi cosa è successo: {url}",
       "pushUnevenTraffic": "“{name}” si è chiuso senza risultato: il traffico è stato diviso in modo sbilanciato tra le due versioni, quindi i numeri non sono affidabili. Scegli quale versione tenere.",
-      "summaryUnevenTraffic": "Il test “{name}” si è chiuso senza risultato: il traffico era sbilanciato e non mi fido dei numeri. Quale versione tengo?"
+      "summaryUnevenTraffic": "Il test “{name}” si è chiuso senza risultato: il traffico era sbilanciato e non mi fido dei numeri. Quale versione tengo?",
+      "bringPendingNotice": "La variante B è online. Deve ancora entrare nella tua bozza; fino ad allora la tua prossima pubblicazione aspetta.",
+      "bringQueued": "Len sta lavorando sulla pagina; la variante B entrerà nella tua bozza quando avrà finito.",
+      "discardBring": "Scarta le modifiche della variante B"
     }
   }
 }

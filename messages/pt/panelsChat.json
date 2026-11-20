@@ -1006,7 +1006,10 @@
       "pushHarmStopNotRestored": "Pausei “{name}” porque a variante B derrubou as conversões. Seu site não está publicado, então não havia nada no ar para restaurar.",
       "emailTextInfo": "{push}\n\nVeja o que aconteceu: {url}",
       "pushUnevenTraffic": "“{name}” terminou sem resultado: o tráfego foi dividido de forma desigual entre as duas versões, então os números não são confiáveis. Escolha qual versão manter.",
-      "summaryUnevenTraffic": "O teste “{name}” terminou sem resultado: o tráfego foi dividido de forma desigual e não confio nos números. Qual versão devo manter?"
+      "summaryUnevenTraffic": "O teste “{name}” terminou sem resultado: o tráfego foi dividido de forma desigual e não confio nos números. Qual versão devo manter?",
+      "bringPendingNotice": "A variante B já está no ar. Falta trazê-la para o seu rascunho; até lá, a sua próxima publicação espera.",
+      "bringQueued": "O Len está trabalhando na página; a variante B entra no seu rascunho quando ele terminar.",
+      "discardBring": "Descartar as mudanças da variante B"
     }
   }
 }
