@@ -8,11 +8,17 @@ import { RUTAS_DE_LA_APP } from "./rutas-de-la-app";
 
 const leer = (f: string) => fs.readFileSync(path.join(process.cwd(), f), "utf8");
 
+// Who reads the phone's key. A route takes it by calling `usuarioDeLaPeticion` itself or through one of the helpers that
+// calls it for the route (`whoMay` — Len Watch's, `readDeliveredFile` — the deliveries'): a wrapper must not let a route
+// escape the guard (G4+G5 review, minor 8). A NEW helper that wraps it joins this list.
+const TAKES_THE_KEY = /usuarioDeLaPeticion|\bwhoMay\b|\breadDeliveredFile\b/;
+const TAKES_THE_KEY_CALL = /usuarioDeLaPeticion\(req\)|\bwhoMay\(req\b|\breadDeliveredFile\(req\b/;
+
 describe("las rutas de la app", () => {
   for (const r of RUTAS_DE_LA_APP) {
     it(`${r.fichero}: ${r.metodos.join(", ")} con la llave, CORS y OPTIONS`, () => {
       const src = leer(r.fichero);
-      if (!r.fichero.endsWith("movil/llave/route.ts")) expect(src).toContain("usuarioDeLaPeticion(req)");
+      if (!r.fichero.endsWith("movil/llave/route.ts")) expect(src).toMatch(TAKES_THE_KEY_CALL);
       for (const m of r.metodos) expect(src).toMatch(new RegExp(`export const ${m} = paraLaApp\\(`));
       expect(src).toMatch(/export const OPTIONS = respuestaPrevia;/);
     });
@@ -57,8 +63,6 @@ describe("las rutas de la app", () => {
     "app/api/projects/[id]/event-cards/[cardId]/route.ts",
     "app/api/projects/[id]/event-cards/route.ts",
     "app/api/projects/[id]/security-review/route.ts",
-    "app/api/tools/[id]/restore/route.ts",
-    "app/api/tools/[id]/route.ts",
   ];
 
   const routesUsingTheKey = (): string[] => {
@@ -67,7 +71,7 @@ describe("las rutas de la app", () => {
       for (const e of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
         const rel = `${dir}/${e.name}`;
         if (e.isDirectory()) walk(rel);
-        else if (/^route\.tsx?$/.test(e.name) && leer(rel).includes("usuarioDeLaPeticion")) out.push(rel);
+        else if (/^route\.tsx?$/.test(e.name) && TAKES_THE_KEY.test(leer(rel))) out.push(rel);
       }
     };
     walk("app/api");
@@ -98,6 +102,27 @@ describe("las rutas de la app", () => {
       expect(src, f).not.toMatch(/export const OPTIONS/);
       expect(src, f).toContain("await auth()");
       expect(listed.has(f), f).toBe(false);
+    }
+  });
+
+  // Len Watch on the phone (Gestión → Publicar): its state and switches, «Fix with Len», Approve and «Traer el arreglo».
+  it("🔴 the Len Watch routes the phone calls are on the list (they take the key through `whoMay`)", () => {
+    const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
+    expect(listed.get("app/api/projects/[id]/len-watch/route.ts")).toEqual(["GET", "PUT"]);
+    expect(listed.get("app/api/projects/[id]/len-watch/fix/route.ts")).toEqual(["POST"]);
+    expect(listed.get("app/api/projects/[id]/len-watch/approve/route.ts")).toEqual(["POST"]);
+    expect(listed.get("app/api/projects/[id]/len-watch/bring/route.ts")).toEqual(["POST"]);
+  });
+
+  // Managing an installed tool — switching it, removing it, restoring it — is the Herramientas page's, on the web: the phone
+  // only uses tools (G4+G5 review, minor 8: these two took the key without the phone ever calling them).
+  it("🔴 managing an installed tool is web-session only: no phone key, no app CORS", () => {
+    for (const f of ["app/api/tools/[id]/route.ts", "app/api/tools/[id]/restore/route.ts"]) {
+      const src = leer(f);
+      expect(src, f).not.toMatch(TAKES_THE_KEY);
+      expect(src, f).not.toContain("paraLaApp");
+      expect(src, f).not.toMatch(/export const OPTIONS/);
+      expect(src, f).toContain("await auth()");
     }
   });
 
