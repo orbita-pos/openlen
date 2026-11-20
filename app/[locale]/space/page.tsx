@@ -3,6 +3,7 @@
 // one-use ticket (`?brief=`), and «Cambiar a <nombre>» with a draft to fill (`?draft=`). Private: the session decides
 // whose; the space is found or born here, as the assistant's place loads her home.
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { auth } from "@/auth";
 import { SpaceHome } from "@/components/workspace-v2/space/space-home";
@@ -16,6 +17,13 @@ import "@/app/[locale]/new/tokens.css";
 export const dynamic = "force-dynamic";
 
 const one = (v: string | string[] | undefined): string | null => (typeof v === "string" && v.trim() ? v : null);
+
+/** «Tu espacio» in the tab, in the person's language (it showed the site's generic English title). */
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "wsChrome" });
+  return { title: t("space.title") };
+}
 
 export default async function SpacePage({
   params,
