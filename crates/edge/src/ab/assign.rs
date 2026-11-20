@@ -124,18 +124,53 @@ pub fn read_cookie<'a>(cookie_header: Option<&'a str>, name: &str) -> Option<&'a
     None
 }
 
-/// Parse a named query parameter from a raw query string (without leading `?`).
-pub fn read_query_param<'a>(query: Option<&'a str>, name: &str) -> Option<&'a str> {
+/// `application/x-www-form-urlencoded` decoding of one key or value (`+` is a space, `%XX` bytes,
+/// invalid UTF-8 replaced): what `URLSearchParams` does in `lib/ab/serve.ts`.
+fn decode_form_component(raw: &str) -> String {
+    let spaced = raw.replace('+', " ");
+    percent_decode_str(&spaced).decode_utf8_lossy().into_owned()
+}
+
+/// Parse a named query parameter from a raw query string (without leading `?`), decoded like
+/// `URLSearchParams.get`: keys and values are form-decoded, the FIRST occurrence wins, a key
+/// without `=` is present with an empty value, empty parts (`&&`) are skipped.
+pub fn read_query_param(query: Option<&str>, name: &str) -> Option<String> {
     let raw = query?;
     for part in raw.split('&') {
-        let Some((k, v)) = part.split_once('=') else {
+        if part.is_empty() {
             continue;
-        };
-        if k == name {
-            return Some(v);
+        }
+        let (k, v) = part.split_once('=').unwrap_or((part, ""));
+        if decode_form_component(k) == name {
+            return Some(decode_form_component(v));
         }
     }
     None
+}
+
+/// The resolved URL path, case kept: percent-decoded once, `\` and `/` as separators, empty and `.`
+/// segments dropped, `..` popping its parent, a NUL cutting its segment; always with a leading `/`,
+/// never a trailing one. The path every decision is made on, in `lib/ab/serve.ts` too.
+pub fn canonical_path(url_path: &str) -> String {
+    let decoded = percent_decode_str(url_path).decode_utf8_lossy();
+    let mut out: Vec<&str> = Vec::new();
+    for seg in decoded.split(['/', '\\']) {
+        let seg = seg.split('\0').next().unwrap_or("");
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            other => out.push(other),
+        }
+    }
+    format!("/{}", out.join("/"))
+}
+
+/// True for a path whose last segment has an extension other than `.html`/`.htm`: a file, not a
+/// page. A dotfile (`/.well-known/x`, `/.hidden`) is a file too.
+pub fn is_asset_path(url_path: &str) -> bool {
+    path_has_non_html_extension(&canonical_path(url_path))
 }
 
 /// Bucket (0..10_000) of a visitor, identical to TypeScript `hashBucket`.
@@ -222,8 +257,13 @@ fn build_variant_b_url(prefix_b: &str, url_path: &str) -> String {
 
 /// Evaluate an incoming request against a validated `AbManifest`.
 ///
-/// Returns `None` when the request path is outside every active experiment (so
-/// the caller serves Control A with standard CDN cache headers untouched).
+/// Returns `None` when the request is outside every active experiment (so the caller serves
+/// control with its standard headers untouched). `url_path` may be raw: it is resolved first.
+///
+/// A PAGE of an experiment is bucketed (override, bot, sticky cookie, hash). A FILE is decided
+/// only when the manifest lists it in `overrides` — B ships different bytes for it — and then for
+/// EVERY visitor, control included: the caller marks the answer `no-store`, or Cloudflare would
+/// cache one variant's bytes under the shared URL for the other's visitors.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_manifest(
     manifest: &AbManifest,
@@ -236,41 +276,34 @@ pub fn evaluate_manifest(
     secure_cookie: bool,
     now: DateTime<Utc>,
 ) -> Option<AbDecision> {
-    let is_asset = path_has_non_html_extension(url_path);
+    let path = canonical_path(url_path);
 
-    if is_asset {
-        // Folder assets (e.g. /css/site.css, /js/app.js) only route to Variant B
-        // if the visitor already carries a Variant B sticky cookie (or override)
-        // for a live experiment; the caller falls back to Control A if B didn't
-        // override that asset.
-        for exp in &manifest.experiments {
-            if exp.is_expired(now) {
-                continue;
-            }
-            let override_v = read_query_param(query, &exp.override_param);
-            let cookie_v = read_cookie(cookie_header, &exp.cookie_name);
-            let wants_b = matches!(override_v, Some("b" | "B"))
-                || (override_v.is_none() && matches!(cookie_v, Some("b" | "B")));
-            if wants_b {
-                return Some(AbDecision {
-                    experiment_id: exp.id.clone(),
-                    variant: Variant::B,
-                    source: if override_v.is_some() {
-                        AssignSource::Override
-                    } else {
-                        AssignSource::Cookie
-                    },
-                    variant_b_path: Some(build_variant_b_url(&exp.prefix_b, url_path)),
-                    set_cookie: None,
-                    is_override: override_v.is_some(),
-                    is_page_route: false,
-                });
-            }
+    if path_has_non_html_extension(&path) {
+        if !manifest.overrides_file(&path) {
+            return None;
         }
-        return None;
+        let exp = manifest.experiments.iter().find(|e| !e.is_expired(now))?;
+        let ov = read_query_param(query, &exp.override_param).map(|v| v.to_ascii_lowercase());
+        let cv = read_cookie(cookie_header, &exp.cookie_name).map(str::to_ascii_lowercase);
+        let (variant, source) = match (ov.as_deref(), cv.as_deref()) {
+            (Some("b"), _) => (Variant::B, AssignSource::Override),
+            (Some("a"), _) => (Variant::A, AssignSource::Override),
+            (_, Some("b")) => (Variant::B, AssignSource::Cookie),
+            _ => (Variant::A, AssignSource::Cookie),
+        };
+        return Some(AbDecision {
+            experiment_id: exp.id.clone(),
+            variant,
+            source,
+            variant_b_path: (variant == Variant::B)
+                .then(|| build_variant_b_url(&exp.prefix_b, &path)),
+            set_cookie: None,
+            is_override: source == AssignSource::Override,
+            is_page_route: false,
+        });
     }
 
-    let normalized = normalize_match_path(url_path);
+    let normalized = normalize_match_path(&path);
     let exp = manifest
         .experiments
         .iter()
@@ -373,6 +406,7 @@ mod tests {
                 override_param: "_ol_ab".into(),
                 expires_at: None,
             }],
+            overrides: Vec::new(),
         }
     }
 

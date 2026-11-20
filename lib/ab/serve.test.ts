@@ -318,3 +318,62 @@ describe("lib/ab/serve — internal files are blocked on the RESOLVED path", () 
     expect(isInternalAbFile(nested, path.join(nested, "index.html"))).toBe(false);
   });
 });
+
+// The same JSON file the Rust edge runs (crates/edge/src/ab/fixtures_test.rs): a case that passes
+// there and fails here is a split between the edge and the custom-domain fallback.
+describe("lib/ab/serve — the shared evaluate fixtures (parity with the Rust edge)", () => {
+  type Case = {
+    name: string;
+    manifest: unknown;
+    request: {
+      path: string;
+      query: string;
+      cookie: string | null;
+      ua: string;
+      lang: string;
+      ip: string;
+      secure: boolean;
+      nowMs: number;
+    };
+    expect: Record<string, unknown> | null;
+  };
+  const doc = JSON.parse(
+    readFileSync(
+      path.join(process.cwd(), "crates", "edge", "tests", "fixtures", "ab", "evaluate.json"),
+      "utf8",
+    ),
+  ) as { cases: Case[] };
+
+  it("has the fixtures", () => {
+    expect(doc.cases.length).toBeGreaterThanOrEqual(80);
+  });
+
+  for (const c of doc.cases) {
+    it(c.name, () => {
+      const m = c.manifest as { raw?: string };
+      const manifest = parseAbManifest(typeof m.raw === "string" ? m.raw : JSON.stringify(c.manifest));
+      const r = c.request;
+      const got = manifest
+        ? evaluateAbManifest(manifest, {
+            urlPath: r.path,
+            searchParams: new URLSearchParams(r.query),
+            cookieHeader: r.cookie,
+            userAgent: r.ua,
+            acceptLanguage: r.lang,
+            clientIp: r.ip,
+            secureCookie: r.secure,
+            nowMs: r.nowMs,
+          })
+        : null;
+      if (c.expect === null) {
+        expect(got).toBeNull();
+        return;
+      }
+      expect(got).not.toBeNull();
+      const actual: Record<string, unknown> = { ...got };
+      for (const [key, want] of Object.entries(c.expect)) {
+        expect(actual[key], key).toEqual(want);
+      }
+    });
+  }
+});

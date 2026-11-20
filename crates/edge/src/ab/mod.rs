@@ -10,6 +10,9 @@ pub mod bot;
 pub mod cache;
 pub mod manifest;
 
+#[cfg(test)]
+mod fixtures_test;
+
 use std::net::SocketAddr;
 use std::path::Path;
 use std::time::Instant;
@@ -39,6 +42,28 @@ fn client_ip_from_headers(headers: &HeaderMap, peer: SocketAddr) -> String {
     peer.ip().to_string()
 }
 
+/// What the A/B decision reads from a request's headers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RequestFacts {
+    pub user_agent: String,
+    pub accept_language: String,
+    pub cookie: Option<String>,
+    pub client_ip: String,
+}
+
+/// The facts of a request. A header that is present but not readable (any byte outside visible ASCII
+/// and tab, e.g. a UTF-8 'ñ') is treated the same on the edge and in `lib/ab/serve.ts`: the user
+/// agent as empty (so a bot), the accept-language as empty, the cookie as absent.
+pub fn facts_from_headers(headers: &HeaderMap, peer: SocketAddr) -> RequestFacts {
+    let readable = |name| headers.get(name).and_then(|v| v.to_str().ok());
+    RequestFacts {
+        user_agent: readable(header::USER_AGENT).unwrap_or("").to_owned(),
+        accept_language: readable(header::ACCEPT_LANGUAGE).unwrap_or("").to_owned(),
+        cookie: readable(header::COOKIE).map(str::to_owned),
+        client_ip: client_ip_from_headers(headers, peer),
+    }
+}
+
 /// Evaluate A/B routing for a subdomain request against `publish_root`.
 /// Returns `(decision, resolved_release_dir)`.
 #[allow(clippy::too_many_arguments)]
@@ -58,27 +83,16 @@ pub async fn evaluate_request(
         return (None, release_dir);
     };
 
-    let ua = headers
-        .get(header::USER_AGENT)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    let accept_lang = headers
-        .get(header::ACCEPT_LANGUAGE)
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    let cookie = headers
-        .get(header::COOKIE)
-        .and_then(|v| v.to_str().ok());
-    let ip = client_ip_from_headers(headers, peer);
+    let facts = facts_from_headers(headers, peer);
 
     let decision = evaluate_manifest(
         &manifest,
         url_path,
         query,
-        cookie,
-        ua,
-        accept_lang,
-        &ip,
+        facts.cookie.as_deref(),
+        &facts.user_agent,
+        &facts.accept_language,
+        &facts.client_ip,
         secure_cookie,
         Utc::now(),
     );
