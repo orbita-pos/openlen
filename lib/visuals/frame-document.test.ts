@@ -93,9 +93,10 @@ describe("the closed frame", () => {
   });
 
   it("Len's frame is byte for byte today's", () => {
-    // Pinned from the unchanged file on 08/11, before the closed frame existed.
-    expect(sha(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }))).toBe("18143c42aa467f31536af410830ce3926785d9682391a2c1a3c937e68f942fd1");
-    expect(sha(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false }))).toBe("9334ba46caa82a60ff8bfd6e62138d50348abd3b050bd774c379a6302ca5f95a");
+    // Pinned from the unchanged file on 08/11, before the closed frame existed; re-pinned when window.updateModelContext
+    // joined the runtime (e9d580696) — the only change in these bytes (the CSP, third line, is the one of 08/11).
+    expect(sha(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }))).toBe("12a078cc94b7116038bfda633b47247a271c74417839740d543b841e5efaf6b0");
+    expect(sha(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false }))).toBe("d895c3d24cb09e79646fca9dee41e246a8f4701e089f29d46fd410d3c97302e6");
     expect(sha(visualFrameCsp("https://openlen.com"))).toBe("0c404282b62471a5771b6b057f9588dd52c61783438a93e226829a0fe1984e60");
   });
 });
