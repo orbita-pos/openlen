@@ -51,15 +51,18 @@ export function hostOf(url: string): string {
  *  the tools are, not where the sign-in page is, and a card that said so would name the wrong site. What the server named
  *  is a server's own word: only an https URL is ever turned into a host to show (remote-text.ts). */
 export function issuerHostOf(entry: McpServerEntry, authIssuer: string | null = null): string | null {
-  const named = cleanIssuer(authIssuer) ?? entry.oauth?.authorizationServer?.[0] ?? entry.oauth?.authServerMetadataUrl ?? null;
+  // An entry that names its metadata document takes its endpoints from it: that document's host is where the sign-in is
+  // (its issuer is served from its own origin, provider.ts), whatever else the entry or the server says.
+  const named = entry.oauth?.authServerMetadataUrl ?? cleanIssuer(authIssuer) ?? entry.oauth?.authorizationServer?.[0] ?? null;
   return named === null ? null : hostOf(named);
 }
 
-/** Where an entry's client secret goes: to the authorization server's token endpoint — the hosts of its
- *  `oauth.authorizationServer` issuers, else of its `oauth.authServerMetadataUrl` — never to the MCP server. */
+/** Where an entry's client secret goes: to the authorization server's token endpoint — the host of its
+ *  `oauth.authServerMetadataUrl` when it names one (that document lists the endpoints), else the hosts of its
+ *  `oauth.authorizationServer` issuers — never to the MCP server. */
 function authorizationHostsOf(entry: McpServerEntry): string[] {
   const o = entry.oauth;
-  const hosts = o?.authorizationServer?.map(hostOf) ?? (o?.authServerMetadataUrl ? [hostOf(o.authServerMetadataUrl)] : []);
+  const hosts = o?.authServerMetadataUrl ? [hostOf(o.authServerMetadataUrl)] : (o?.authorizationServer?.map(hostOf) ?? []);
   return [...new Set(hosts)];
 }
 

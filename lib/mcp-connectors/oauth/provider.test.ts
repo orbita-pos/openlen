@@ -6,7 +6,7 @@
 import { InsufficientScopeError, UnauthorizedError } from "@modelcontextprotocol/client";
 import { describe, expect, it } from "vitest";
 
-import type { McpServerEntry } from "../config";
+import { entryFingerprint, type McpServerEntry } from "../config";
 import { asNeedsSignIn, connectionProvider, NeedsSignIn, type OAuthDeps } from "./provider";
 import type { OAuthConnection } from "./store";
 
@@ -14,15 +14,16 @@ const ISSUER = "https://accounts.example";
 const ENTRY: McpServerEntry = { transport: "streamable-http", url: "https://mcp.example.com/mcp", headers: {}, enabled: true, startupTimeoutMs: 30_000, toolCallTimeoutMs: 60_000 };
 const CLIENT = { client_id: "cid", redirect_uris: ["https://openlen.test/api/mcp-connectors/oauth/callback"] };
 
-function setup(connection: OAuthConnection | null) {
+function setup(connection: OAuthConnection | null, entry: McpServerEntry = ENTRY) {
   const nothing = async () => {
     throw new Error("not used here");
   };
   const dropped: string[] = [];
   const oauth: OAuthDeps = {
     store: {
-      async loadConnection() {
-        return connection;
+      // Like the real store: only the connection signed in with the entry of the fingerprint asked for.
+      async loadConnection(_p, _n, serverUrl, _issuer, fingerprint) {
+        return connection && connection.serverUrl === serverUrl && connection.fingerprint === fingerprint ? connection : null;
       },
       saveClientInfo: nothing,
       saveTokens: nothing,
@@ -41,11 +42,33 @@ function setup(connection: OAuthConnection | null) {
     resolveCredentials: async () => new Map(),
     now: () => new Date("2026-11-17T10:00:00Z"),
   };
-  return { provider: connectionProvider("p1", "cal", ENTRY, oauth), dropped };
+  return { provider: connectionProvider("p1", "cal", entry, oauth), dropped };
 }
 
-const SIGNED_IN: OAuthConnection = { serverUrl: ENTRY.url, issuer: ISSUER, clientInfo: CLIENT, tokens: { access_token: "at", token_type: "Bearer", issuer: ISSUER } };
+const SIGNED_IN: OAuthConnection = {
+  serverUrl: ENTRY.url,
+  issuer: ISSUER,
+  fingerprint: entryFingerprint(ENTRY),
+  clientInfo: CLIENT,
+  tokens: { access_token: "at", token_type: "Bearer", issuer: ISSUER },
+};
 const CLIENT_ONLY: OAuthConnection = { ...SIGNED_IN, tokens: null };
+
+describe("the entry a connection belongs to", () => {
+  // Review fix, round 1: an edit that adds a client or a metadata URL of its own is another entry. It finds no tokens (so the
+  // next refresh can't carry the person's to the endpoints it names) and asks for a first sign-in.
+  const EDITED: McpServerEntry = { ...ENTRY, oauth: { clientId: "x", authServerMetadataUrl: "https://evil.example/m" } };
+
+  it("🔴 uses the stored tokens only with the entry they were signed in with", async () => {
+    expect(await setup(SIGNED_IN).provider.tokens()).toMatchObject({ access_token: "at" });
+    expect(await setup(SIGNED_IN, EDITED).provider.tokens()).toBeUndefined();
+  });
+
+  it("🔴 an edited entry asks for a FIRST sign-in, never a refresh of the old tokens", async () => {
+    const { provider } = setup(SIGNED_IN, EDITED);
+    expect(await provider.signInNeededBy(new UnauthorizedError("401"))).toMatchObject({ reason: "first" });
+  });
+});
 
 describe("the reason a sign-in is needed", () => {
   it("a person who never signed in is asked for a first sign-in, with no issuer until one is known", async () => {

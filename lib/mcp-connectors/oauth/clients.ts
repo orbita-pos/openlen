@@ -10,7 +10,7 @@
 import type { OAuthClientMetadata, StoredOAuthClientInformation } from "@modelcontextprotocol/client";
 
 import type { McpServerEntry } from "../config";
-import { GOOGLE_ISSUER, isDirectoryServer } from "../directory-entries";
+import { directoryEntryFor, GOOGLE_ISSUER } from "../directory-entries";
 import { credentialRefs } from "../templates";
 
 /** What the person sees on the provider's consent screen. */
@@ -38,14 +38,30 @@ export function isClientRefusal(x: StoredOAuthClientInformation | ClientRefusal 
   return x !== null && typeof x === "object" && "refused" in x;
 }
 
+/** The scope tokens of a space-separated scope. */
+const scopeTokens = (scope: string | undefined): string[] => (scope ?? "").split(/\s+/).filter(Boolean);
+
 /**
  * OpenLen's own client for an issuer at a server: Google's, with both variables set, and ONLY when `serverUrl` is exactly
  * the URL of a directory entry that lists `issuer` as its authorization server (directory-entries.ts). The issuer comes
  * from metadata the MCP server points at, so a server nobody curated could name Google and be signed in with a client
  * the person's consent screen calls «OpenLen» — and receive the token. Nothing for any other pair.
+ *
+ * And only for the scopes the directory offers: that consent screen says «OpenLen» whatever is asked, so an entry written
+ * at the directory's URL with `https://mail.google.com/` must not get this client. `requested` (the entry's
+ * `oauth.scope`) must be within the directory entry's scope plus `stepUp`, the scope the server itself asked for in a
+ * step-up; no `requested` is the server's own default.
  */
-export function openLenClientFor(issuer: string, serverUrl: string, env: Env = process.env): { client_id: string; client_secret: string } | null {
-  if (issuer !== GOOGLE_ISSUER || !isDirectoryServer(serverUrl, issuer)) return null;
+export function openLenClientFor(
+  issuer: string,
+  serverUrl: string,
+  env: Env = process.env,
+  scopes: { readonly requested?: string | undefined; readonly stepUp?: string | undefined } = {},
+): { client_id: string; client_secret: string } | null {
+  const offered = directoryEntryFor(serverUrl, issuer);
+  if (issuer !== GOOGLE_ISSUER || !offered) return null;
+  const allowed = new Set([...scopeTokens(offered.entry.oauth.scope), ...scopeTokens(scopes.stepUp)]);
+  if (!scopeTokens(scopes.requested).every((t) => allowed.has(t))) return null;
   const clientId = env.OPENLEN_MCP_GOOGLE_CLIENT_ID;
   const clientSecret = env.OPENLEN_MCP_GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) return null;
@@ -73,6 +89,7 @@ export function preRegisteredClient(
   issuer: string,
   secrets: ReadonlyMap<string, string>,
   env: Env = process.env,
+  stepUpScope?: string,
 ): StoredOAuthClientInformation | ClientRefusal | null {
   const own = entry.oauth;
   if (own?.clientId) {
@@ -86,7 +103,7 @@ export function preRegisteredClient(
     const secret = name === undefined ? undefined : secrets.get(name);
     return secret ? { client_id: own.clientId, client_secret: secret } : { refused: "missing_secret", detail: name ?? "oauth.clientSecret" };
   }
-  return openLenClientFor(issuer, entry.url, env);
+  return openLenClientFor(issuer, entry.url, env, { requested: own?.scope, stepUp: stepUpScope });
 }
 
 /** Where the provider sends the person back (and the one address registered with it). */

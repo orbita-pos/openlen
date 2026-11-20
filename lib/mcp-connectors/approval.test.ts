@@ -30,6 +30,18 @@ describe("issuerHostOf", () => {
     expect(issuerHostOf(entryOf({ url: "https://calendar.example.com/mcp", oauth: { clientId: "id", authServerMetadataUrl: "https://auth.example.org/.well-known/x" } }))).toBe("auth.example.org");
   });
 
+  // Review fix, round 1: the entry's metadata document is where the endpoints come from (and its issuer must be served from
+  // its own origin), so that is the host to name — never an authorizationServer the document might not be.
+  it("🔴 names the host of the entry's metadata URL when it has one, over its issuers list and over what was discovered", () => {
+    const e = entryOf({
+      url: "https://calendar.example.com/mcp",
+      oauth: { clientId: "id", authServerMetadataUrl: "https://auth.example.org/.well-known/openid-configuration", authorizationServer: [GOOGLE] },
+    });
+    expect(issuerHostOf(e)).toBe("auth.example.org");
+    expect(issuerHostOf(e, GOOGLE)).toBe("auth.example.org");
+    expect(issuerHostOf(e, "https://auth.example.org/tenant")).toBe("auth.example.org");
+  });
+
   // OA5: the MCP server's host is where the tools are, not where the person signs in. When nobody knows yet, say so.
   it("🔴 is null, never the MCP server's own host, when the authorization server isn't known yet", () => {
     expect(issuerHostOf(entry)).toBeNull();
@@ -61,6 +73,23 @@ describe("buildApprovalCard", () => {
       const config = configOf({ cal: secretEntry });
       const card = buildApprovalCard("cal", config.servers.cal!, config, {}, new Set(["CAL_SECRET"]), 1);
       expect(card.credentials).toEqual([{ name: "CAL_SECRET", set: true, destinationHosts: ["accounts.google.com"], otherHosts: [], firstTime: true }]);
+    });
+
+    it("🔴 with a metadata URL, the client secret goes to its host, not to the issuers the entry lists", () => {
+      const config = configOf({
+        cal: {
+          url: "https://calendar.example.com/mcp",
+          oauth: {
+            clientId: "id",
+            clientSecret: "${credential:CAL_SECRET}",
+            authServerMetadataUrl: "https://auth.example.org/.well-known/openid-configuration",
+            authorizationServer: [GOOGLE],
+          },
+        },
+      });
+      const card = buildApprovalCard("cal", config.servers.cal!, config, {}, new Set(["CAL_SECRET"]), 1);
+      expect(card.credentials[0]).toMatchObject({ destinationHosts: ["auth.example.org"], otherHosts: [], firstTime: true });
+      expect(card.oauth).toEqual({ issuerHost: "auth.example.org", reason: "first" });
     });
 
     it("a header key goes to the MCP server's host", () => {

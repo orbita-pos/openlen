@@ -109,8 +109,7 @@ export async function installAndStartFromDirectory(
         [serverName]: dir.entry,
       },
     };
-    const parsed = parseMcpConfig(`${JSON.stringify(raw, null, 2)}
-`, { reservedServerNames: reserved });
+    const parsed = parseMcpConfig(`${JSON.stringify(raw, null, 2)}\n`, { reservedServerNames: reserved });
     if (!parsed.ok) return { ok: false, status: 400, error: parsed.error };
     const entry = parsed.config.servers[serverName]!;
     const written = await d.writeConfig(personId, serializeMcpConfig(parsed.config), stored.version, { [serverName]: entryFingerprint(entry) }, Object.keys(parsed.config.servers));

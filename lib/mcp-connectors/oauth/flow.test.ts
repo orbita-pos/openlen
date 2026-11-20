@@ -27,7 +27,7 @@ vi.mock("@/lib/db", async () => {
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
 const store = await import("./store");
-const { dropSignIn, finishSignIn, startSignIn } = await import("./flow");
+const { REVOKE_TIMEOUT_MS, dropSignIn, finishSignIn, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
 const { mountServer } = await import("../mount");
@@ -109,7 +109,7 @@ async function signIn() {
 }
 
 const connect = () => openMcp({ url: fake.mcpUrl, headers: {} }, { fetch: fake.fetch, timeoutMs: 5000, authProvider: connectionProvider("p1", "cal", entryNow(), deps()) });
-const stored = () => store.loadConnection("p1", "cal", fake.mcpUrl, fake.issuer);
+const stored = () => store.loadConnection("p1", "cal", fake.mcpUrl, fake.issuer, entryFingerprint(entryNow()));
 
 describe("signing in", () => {
   it("start then finish connects", async () => {
@@ -192,15 +192,6 @@ describe("signing in", () => {
 // Disconnecting (spec §5.4 step 5): the person's connection is deleted FIRST — nothing that follows can keep it — and
 // revoking the tokens at the provider (RFC 7009) is a courtesy done in the background, bounded and never raising.
 describe("dropping a sign-in", () => {
-  const sleeper = (revokeDelay: Promise<unknown>): typeof fetch =>
-    (async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (String(input instanceof Request ? input.url : input).endsWith("/revoke")) {
-        await revokeDelay;
-        return new Response(null, { status: 200 });
-      }
-      return fake.fetch(input, init);
-    }) as typeof fetch;
-
   it("deletes the connection and revokes the refresh and the access token", async () => {
     await signIn();
     const tokens = (await stored())!.tokens!;
@@ -248,6 +239,97 @@ describe("dropping a sign-in", () => {
     expect(await stored()).toBeNull();
   });
 
+  // Review fix, round 1 (CRITICAL; the reviewer's probe): the entry handed to a drop is a hint from whoever removed or edited
+  // it, never the connection's own. Revoking follows the metadata of an entry whose fingerprint is the one the person signed in
+  // with — else the server's own RFC 9728 discovery — so a hostile entry can't make the tokens leave for its endpoints.
+  describe("revoking only through the entry the connection was signed in with", () => {
+    const GOOGLE = "https://accounts.google.com";
+    const GCAL = "https://calendarmcp.googleapis.com/mcp/v1";
+    const SIGNED_WITH = "fp-entry-signed-in-with";
+    const hostileHint = {
+      transport: "streamable-http",
+      url: GCAL,
+      headers: {},
+      enabled: true,
+      startupTimeoutMs: 30_000,
+      toolCallTimeoutMs: 60_000,
+      oauth: { clientId: "x", authServerMetadataUrl: "https://evil.example/meta" },
+    } as const;
+
+    it("🔴 a hint with another fingerprint is never followed: not its metadata URL, not its revocation endpoint", async () => {
+      const fetched: string[] = [];
+      const posted: string[] = [];
+      const fakeStore = {
+        dropConnection: async () => ({
+          serverUrl: GCAL,
+          issuer: GOOGLE,
+          fingerprint: SIGNED_WITH,
+          clientInfo: { client_id: "openlen-google-id" },
+          tokens: { access_token: "ya29.PERSONS_ACCESS", refresh_token: "1//PERSONS_REFRESH", token_type: "Bearer" },
+        }),
+      } as unknown as ReturnType<typeof deps>["store"];
+      const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        fetched.push(url);
+        if (url === "https://evil.example/meta") {
+          return new Response(
+            JSON.stringify({
+              issuer: GOOGLE,
+              authorization_endpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+              token_endpoint: "https://evil.example/token",
+              revocation_endpoint: "https://evil.example/revoke",
+              response_types_supported: ["code"],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          );
+        }
+        if (init?.method === "POST") posted.push(`${url} ${String(init.body)}`);
+        return new Response("not found", { status: 404 });
+      }) as typeof fetch;
+      const r = await dropSignIn("p1", "google-calendar", { ...deps(), store: fakeStore, fetch: fetchFn }, hostileHint as never);
+      expect(r.dropped).toBe(true);
+      await r.revocation;
+      expect(fetched.filter((u) => u.includes("evil.example"))).toEqual([]);
+      expect(posted.filter((p) => p.includes("PERSONS"))).toEqual([]);
+    });
+
+    it("🔴 with the real store: the same hint after a real sign-in revokes through the server's own discovery, and nothing leaves for the hint", async () => {
+      await signIn();
+      const tokens = (await stored())!.tokens!;
+      const seen: string[] = [];
+      const watching = { ...deps(), fetch: ((input: RequestInfo | URL, init?: RequestInit) => (seen.push(String(input instanceof Request ? input.url : input)), fake.fetch(input, init))) as typeof fetch };
+      const hint = { ...entryNow(), oauth: { clientId: "x", authServerMetadataUrl: "https://evil.example/meta" } };
+      await (await dropSignIn("p1", "cal", watching, hint)).revocation;
+      expect(seen.filter((u) => u.includes("evil.example"))).toEqual([]);
+      expect(fake.revoked).toEqual([tokens.refresh_token, tokens.access_token]);
+    });
+
+    it("🔴 an edited entry in the person's file is not the connection's entry either: a drop without a hint revokes through the server's own discovery", async () => {
+      await signIn();
+      const tokens = (await stored())!.tokens!;
+      setServer({ oauth: { clientId: "x", authServerMetadataUrl: "https://evil.example/meta" } });
+      const seen: string[] = [];
+      const watching = { ...deps(), fetch: ((input: RequestInfo | URL, init?: RequestInit) => (seen.push(String(input instanceof Request ? input.url : input)), fake.fetch(input, init))) as typeof fetch };
+      await (await dropSignIn("p1", "cal", watching)).revocation;
+      expect(seen.filter((u) => u.includes("evil.example"))).toEqual([]);
+      expect(fake.revoked).toEqual([tokens.refresh_token, tokens.access_token]);
+    });
+
+    it("the connection's own entry (the hint with the same fingerprint) is followed, a manual metadata URL included", async () => {
+      fake.metadataAt = "/custom/as-metadata.json";
+      fake.addClient("own-client");
+      setServer({ oauth: { clientId: "own-client", authServerMetadataUrl: `${fake.base}/custom/as-metadata.json` } });
+      await signIn();
+      const tokens = (await stored())!.tokens!;
+      const seen: string[] = [];
+      const watching = { ...deps(), fetch: ((input: RequestInfo | URL, init?: RequestInit) => (seen.push(String(input instanceof Request ? input.url : input)), fake.fetch(input, init))) as typeof fetch };
+      await (await dropSignIn("p1", "cal", watching, entryNow())).revocation;
+      expect(seen.some((u) => u.endsWith("/custom/as-metadata.json"))).toBe(true);
+      expect(seen.filter((u) => u.includes(".well-known"))).toEqual([]);
+      expect(fake.revoked).toEqual([tokens.refresh_token, tokens.access_token]);
+    });
+  });
+
   it("a connection with no tokens is deleted and nothing is revoked", async () => {
     await start();
     const r = await dropSignIn("p1", "cal", deps());
@@ -263,29 +345,43 @@ describe("dropping a sign-in", () => {
     expect(fake.revoked).toEqual([]);
   });
 
-  it("🔴 a slow revocation doesn't hold the drop up, and what it was given can be abandoned after five seconds", async () => {
+  // The bound is native (`AbortSignal.timeout`), which fake timers don't drive: the test takes its place, pins the value it is
+  // asked for, and plays out the five seconds by aborting the signal the request was given.
+  it("🔴 a slow revocation doesn't hold the drop up, and is abandoned after REVOKE_TIMEOUT_MS", async () => {
     await signIn();
-    let release: () => void = () => {};
-    const seen: (AbortSignal | null | undefined)[] = [];
-    const slow = sleeper(new Promise<void>((resolve) => (release = resolve)));
-    const d = {
-      ...deps(),
-      fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
-        seen.push(init?.signal);
-        return slow(input, init);
-      }) as typeof fetch,
-    };
-    const r = await dropSignIn("p1", "cal", d);
-    expect(r.dropped).toBe(true);
-    expect(await stored()).toBeNull();
-    // Every request of the background job carries a signal that is not aborted yet: the timeout, as a bound.
-    expect(seen.length).toBeGreaterThan(0);
-    for (const signal of seen) {
-      expect(signal).toBeInstanceOf(AbortSignal);
-      expect(signal!.aborted).toBe(false);
+    expect(REVOKE_TIMEOUT_MS).toBe(5_000);
+    const asked: number[] = [];
+    const fiveSeconds = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation((ms: number) => {
+      asked.push(ms);
+      return fiveSeconds.signal;
+    });
+    try {
+      // The revocation endpoint never answers, but its request honours the signal it was given.
+      const hung = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (!String(input instanceof Request ? input.url : input).endsWith("/revoke")) return fake.fetch(input, init);
+        return new Promise<Response>((_resolve, reject) => {
+          // Like a real fetch: an aborted signal fails the request now, and an open one when it aborts.
+          if (init?.signal?.aborted) reject(new Error("aborted"));
+          else init?.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        });
+      }) as typeof fetch;
+      const r = await dropSignIn("p1", "cal", { ...deps(), fetch: hung });
+      expect(r.dropped).toBe(true);
+      expect(await stored()).toBeNull();
+      let over = false;
+      void r.revocation.then(() => {
+        over = true;
+      });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(over).toBe(false); // still waiting on the endpoint, and nobody waits for it
+      expect(asked).toEqual([REVOKE_TIMEOUT_MS]);
+      fiveSeconds.abort(); // the five seconds go by
+      await r.revocation;
+      expect(over).toBe(true);
+    } finally {
+      timeout.mockRestore();
     }
-    release();
-    await r.revocation;
   });
 
   it("a failing revocation (a refused connection, a 500) never raises", async () => {
@@ -436,7 +532,7 @@ describe("connecting with a token", () => {
     const err = await connect().catch((e: unknown) => e);
     expect(err).toBeInstanceOf(NeedsSignIn);
     expect(err).toMatchObject({ reason: "lapsed" });
-    const row = await store.loadConnection("p1", "cal", fake.mcpUrl, null);
+    const row = await store.loadConnection("p1", "cal", fake.mcpUrl, null, entryFingerprint(entryNow()));
     expect(row).not.toBeNull();
     expect(row?.tokens).toBeNull();
   });
@@ -531,6 +627,24 @@ describe("hostile or broken authorization server metadata", () => {
       await refusedWith((m) => jsonBody({ ...m, registration_endpoint: "http://mcp.fake.test/register" }), /registration_endpoint is not an https URL/);
       await refusedWith((m) => jsonBody({ ...m, revocation_endpoint: "not a url" }), /revocation_endpoint is not an https URL/);
       await refusedWith((m) => jsonBody({ ...m, issuer: "http://mcp.fake.test/as1" }), /no https issuer/);
+    });
+
+    // The reviewer's probe: a document at the person's metadata URL (evil.example) that says its issuer is Google's, with its
+    // own token and revocation endpoints. A person's connection is bound to an issuer; a document that names Google's must
+    // be served by Google, or whoever hosts it is not the issuer it claims to be.
+    it("🔴 an issuer on another origin than the metadata URL is refused: a document can't claim an issuer it isn't served from", async () => {
+      await refusedWith(
+        (m) => jsonBody({ ...m, issuer: "https://accounts.google.com", token_endpoint: "https://evil.example/token", revocation_endpoint: "https://evil.example/revoke" }),
+        /issuer.*(same origin|origin).*authServerMetadataUrl/,
+      );
+      await refusedWith((m) => jsonBody({ ...m, issuer: "https://mcp.fake.test.evil.example/as1" }), /origin/);
+      await refusedWith((m) => jsonBody({ ...m, issuer: "https://other.fake.test/as1" }), /origin/);
+    });
+
+    it("an issuer on the metadata URL's own origin is fine, whatever its path (the document is served by its issuer)", async () => {
+      fake.serveMetadata = (m) => jsonBody({ ...m, issuer: `${fake.base}/tenant/9` });
+      const r = await startSignIn("p1", "cal", deps());
+      expect(r.ok).toBe(true);
     });
 
     it("bad JSON is refused", async () => {
@@ -634,6 +748,64 @@ describe("mounting a server that signs in", () => {
   it("🔴 the sign-in is the speaker's: another person mounting the same entry still needs to sign in", async () => {
     await signIn();
     expect(await mountServer("p2", "cal", mountDeps())).toMatchObject({ status: "needs-auth", authReason: "first" });
+  });
+
+  // Review fix, round 1 (the reviewer's second probe): a connection belongs to the entry the person signed in with. An edit
+  // of the same URL that adds a client and a metadata URL of its own — claiming Google's issuer or not — is another entry.
+  describe("an entry edited after the person signed in", () => {
+    /** Every request that leaves, with what it carried: nothing may carry the person's tokens to a host the edit names. */
+    const recording = () => {
+      const sent: { url: string; authorization: string | null; body: string }[] = [];
+      const recordingFetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req = input instanceof Request ? input : null;
+        sent.push({
+          url: String(req ? req.url : input),
+          authorization: new Headers(init?.headers ?? req?.headers).get("authorization"),
+          body: String(init?.body ?? ""),
+        });
+        return fake.fetch(input, init);
+      }) as typeof fetch;
+      return { sent, recordingFetch };
+    };
+
+    it("🔴 finds no tokens: a first sign-in, and the old tokens are neither sent nor refreshed", async () => {
+      await signIn();
+      const tokens = (await stored())!.tokens!;
+      const refreshesBefore = fake.tokenRequests.length;
+      setServer({ headers: { "X-Edited": "1" } });
+      const { sent, recordingFetch } = recording();
+      const d = { ...mountDeps(), fetch: recordingFetch, oauth: { ...deps(), fetch: recordingFetch } };
+      expect(await mountServer("p1", "cal", d)).toMatchObject({ status: "needs-auth", authReason: "first" });
+      expect(fake.tokenRequests).toHaveLength(refreshesBefore);
+      expect(JSON.stringify(sent)).not.toContain(tokens.access_token);
+      expect(JSON.stringify(sent)).not.toContain(tokens.refresh_token!);
+    });
+
+    it("🔴 an edit with a client and a metadata URL of its own never gets the tokens, wherever its endpoints are", async () => {
+      fake.expiresIn = 1;
+      await signIn();
+      const tokens = (await stored())!.tokens!;
+      clock = new Date(NOW.getTime() + 2000); // expired: a refresh would be the next thing to happen
+      const refreshesBefore = fake.tokenRequests.length;
+      setServer({ oauth: { clientId: "x", authServerMetadataUrl: "https://evil.example/meta" } });
+      const { sent, recordingFetch } = recording();
+      const d = { ...mountDeps(), fetch: recordingFetch, oauth: { ...deps(), fetch: recordingFetch } };
+      expect((await mountServer("p1", "cal", d))?.status).not.toBe("connected");
+      expect(fake.tokenRequests).toHaveLength(refreshesBefore);
+      expect(JSON.stringify(sent)).not.toContain(tokens.access_token);
+      expect(JSON.stringify(sent)).not.toContain(tokens.refresh_token!);
+      expect(sent.filter((r) => r.url.includes("evil.example") && (r.authorization || r.body))).toEqual([]);
+    });
+
+    it("signing in again with the edited entry replaces the connection, and the old entry's tokens are gone", async () => {
+      await signIn();
+      const before = (await stored())!.tokens!;
+      setServer({ headers: { "X-Edited": "1" } });
+      expect(await stored()).toBeNull(); // the connection of the entry as it was is not the edited entry's
+      expect(await signIn()).toEqual({ ok: true, server: "cal" });
+      const after = (await stored())!.tokens!;
+      expect(after.access_token).not.toBe(before.access_token);
+    });
   });
 
   it("an expired token the server refuses to refresh is needs-auth lapsed, and keeps the list it had", async () => {

@@ -37,7 +37,7 @@ export const DIRECTORY: readonly DirectoryEntry[] = [
   },
 ];
 
-/** Does a directory entry offer `serverUrl` with `issuer` as its authorization server? Both exact strings. */
-export function isDirectoryServer(serverUrl: string, issuer: string): boolean {
-  return DIRECTORY.some((d) => d.entry.url === serverUrl && d.issuer === issuer);
+/** The directory entry that offers `serverUrl` with `issuer` as its authorization server, if any. Both exact strings. */
+export function directoryEntryFor(serverUrl: string, issuer: string): DirectoryEntry | undefined {
+  return DIRECTORY.find((d) => d.entry.url === serverUrl && d.issuer === issuer);
 }
