@@ -939,7 +939,13 @@
       "failed": "Não deu certo. Tente de novo.",
       "close": "Fechar",
       "publishToKnow": "{name} vai conhecê-lo na próxima publicação.",
-      "busy": "{name} está respondendo: tente de novo quando terminar."
+      "busy": "{name} está respondendo: tente de novo quando terminar.",
+      "attend": "Atender uma página",
+      "attendNone": "Você não tem outras páginas para atender.",
+      "attendReplace": "{current} atende essa página. Trocar por {name}?",
+      "attendReplaceYes": "Trocar",
+      "attendKeep": "Deixar assim",
+      "attendBusy": "{current} está respondendo lá agora. Tente de novo em um momento."
     },
     "summary": {
       "switch": "Resumo da manhã",

@@ -12,13 +12,17 @@ const m = vi.hoisted(() => ({
   saveAssistantMemory: vi.fn(async () => {}),
   projectsOfAssistant: vi.fn(async (): Promise<unknown[]> => []),
   connectProject: vi.fn(async (): Promise<string> => "connected"),
+  replaceOnProject: vi.fn(async (): Promise<string> => "connected"),
+  assistantOfProject: vi.fn(async (): Promise<unknown> => null),
+  ensureSpace: vi.fn(async () => "space-1"),
   disconnectProject: vi.fn(async (): Promise<string> => "disconnected"),
   titlesOf: vi.fn(async (): Promise<Map<string, string | null>> => new Map([["p2", "Canela Tienda"]])),
   setOnPage: vi.fn(async () => true),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ assistantById: m.assistantById, oldAssistantSettings: m.oldAssistantSettings, saveAssistantMemory: m.saveAssistantMemory }));
-vi.mock("@/lib/assistants/projects", () => ({ projectsOfAssistant: m.projectsOfAssistant, connectProject: m.connectProject, disconnectProject: m.disconnectProject, titlesOf: m.titlesOf }));
+vi.mock("@/lib/assistants/store", () => ({ assistantById: m.assistantById, assistantOfProject: m.assistantOfProject, oldAssistantSettings: m.oldAssistantSettings, saveAssistantMemory: m.saveAssistantMemory }));
+vi.mock("@/lib/assistants/projects", () => ({ projectsOfAssistant: m.projectsOfAssistant, connectProject: m.connectProject, replaceOnProject: m.replaceOnProject, disconnectProject: m.disconnectProject, titlesOf: m.titlesOf }));
+vi.mock("@/lib/space/store", () => ({ ensureSpace: m.ensureSpace }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 
@@ -103,6 +107,40 @@ describe("POST /api/assistants/[id]/projects", () => {
     expect(res.status).toBe(409);
     expect(await res.json()).toEqual({ error: "project_has_assistant" });
     expect(m.saveAssistantMemory).not.toHaveBeenCalled();
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.7): one agent per page, put there by the person.
+  describe("putting an agent on a page", () => {
+    it("🔴 a taken page says who attends it, for the person to choose", async () => {
+      m.connectProject.mockResolvedValueOnce("project_has_assistant");
+      m.assistantOfProject.mockResolvedValueOnce({ name: "Bruno", slug: "bruno" });
+      const res = await post({ projectId: "p2" });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: "project_has_assistant", current: { name: "Bruno", slug: "bruno" } });
+    });
+
+    it("🔴 with replace, she takes the page in place of the one it had, her bubble on", async () => {
+      const res = await post({ projectId: "p2", replace: true });
+      expect(res.status).toBe(201);
+      expect(m.ensureSpace).toHaveBeenCalledWith("u1");
+      expect(m.replaceOnProject).toHaveBeenCalledWith({ assistantId: "a1", projectId: "p2", onPage: true, spaceId: "space-1" });
+      expect(m.connectProject).not.toHaveBeenCalled();
+    });
+
+    it("replacing while the one there is answering at home is 409 busy", async () => {
+      m.replaceOnProject.mockResolvedValueOnce("busy");
+      const res = await post({ projectId: "p2", replace: true });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: "busy" });
+    });
+
+    it("🔴 the space is not a page: 400", async () => {
+      m.connectProject.mockResolvedValueOnce("space_not_a_page");
+      const res = await post({ projectId: "space-1" });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "space_not_a_page" });
+      expect(m.saveAssistantMemory).not.toHaveBeenCalled();
+    });
   });
 
   it("connecting brings that project's old assistant into her memory, within its cap", async () => {

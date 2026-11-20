@@ -52,6 +52,7 @@ export function AssistantHome({
   needsPublish,
   nothingToKnow,
   startsWith = null,
+  inSpace = false,
 }: {
   assistant: AssistantView;
   projectHtml: string;
@@ -68,6 +69,9 @@ export function AssistantHome({
   /** An agent's first message (spec local 2026-11-19-agentes-para-todos, §6.4): its file's `initialPrompt`, given only
    *  while the conversation is empty (`firstMessageOf`), sent once as the person's first turn. */
   startsWith?: string | null;
+  /** She lives in the person's space (spec local 2026-11-19-agentes-para-todos, §6.2): her home is no page — none beside
+   *  her chat, no switch for it; her pages are the ones she attends. */
+  inSpace?: boolean;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
@@ -126,7 +130,7 @@ export function AssistantHome({
       }
       return !open;
     });
-  const pageShown = wide && pageOpen === true && tab === "talk";
+  const pageShown = !inSpace && wide && pageOpen === true && tab === "talk";
   const menuButton = useRef<HTMLButtonElement | null>(null);
   const menu = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -153,7 +157,7 @@ export function AssistantHome({
         <div className="h-11 shrink-0" data-her-bar="" />
         <div ref={menu} className="absolute right-3 top-3 z-20 flex flex-col items-end gap-2">
           <div className="flex items-center gap-1">
-            {tab === "talk" && wide && (
+            {tab === "talk" && wide && !inSpace && (
               <button
                 type="button"
                 data-her-page-toggle=""
@@ -208,7 +212,7 @@ export function AssistantHome({
             )}
             <div className="my-1 h-px bg-[var(--border)]" />
             <MorningSummarySwitch assistantId={assistant.id} initial={assistant.morningSummary === true} />
-            <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} />
+            <HerProjects assistantId={assistant.id} name={assistant.name} homeOnPage={onPage} homeNeedsPublish={needsPublish} homeNothingToKnow={nothingToKnow} inSpace={inSpace} />
           </div>
         </div>
         <div className="flex min-h-0 flex-1">

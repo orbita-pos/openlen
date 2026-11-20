@@ -147,6 +147,69 @@ describe("her projects", () => {
 });
 
 // Final review I1: an unpublished project kept feeding her — to other pages' visitors and to her owner.
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.7): an agent lives in the person's space and
+// attends a page only because the person put it there — one agent per page.
+describe("an agent of the space and the pages it attends", () => {
+  let smith: string;
+  beforeEach(async () => {
+    await pg.query(`insert into "projects" ("id", "userId", "title", "data") values ('space', 'u1', null, '{"space":{"bornAt":"2026-11-19T00:00:00.000Z"}}')`);
+    const r = await createAssistant({
+      personId: "u1",
+      homeProjectId: "space",
+      served: null,
+      input: { name: "Mr. Smith", look: { v: 1, shape: "round", color: "#19c3b1", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" },
+      agentType: "english-teacher",
+    });
+    if (!r.ok) throw new Error("setup");
+    smith = r.assistant.id;
+  });
+  const served = async (id: string) => (await projects.projectsOfAssistant(id)).map((p) => [p.projectId, p.onPage]);
+
+  it("🔴 the space is never a page to attend", async () => {
+    expect(await projects.connectProject({ assistantId: smith, projectId: "space" })).toBe("space_not_a_page");
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "space", onPage: true, spaceId: "space" })).toBe("space_not_a_page");
+    expect(await served(smith)).toEqual([]);
+  });
+
+  it("🔴 it can stop attending its only page: its home is the space, not that page", async () => {
+    expect(await projects.connectProject({ assistantId: smith, projectId: "p3" })).toBe("connected");
+    expect(await projects.disconnectProject(smith, "p3")).toBe("disconnected");
+    expect((await assistantById(smith))!.homeProjectId).toBe("space");
+    expect(await served(smith)).toEqual([]);
+  });
+
+  it("🔴 put on a page an old assistant lives on, that one goes home to the space with her conversation", async () => {
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "p1", onPage: true, spaceId: "space" })).toBe("connected");
+    expect(await served(smith)).toEqual([["p1", true]]);
+    expect((await assistantById(lucia))!.homeProjectId).toBe("space");
+    expect(await herRows("space")).toEqual(["m1", "m2"]);
+    expect(await served(lucia)).toEqual([]);
+    // Len's rows never move.
+    expect((await pg.query(`select "projectId" from "projectChatMessages" where "id" = 'len1'`)).rows).toEqual([{ projectId: "p1" }]);
+  });
+
+  it("put on a page another one only attends, that one just leaves it", async () => {
+    await projects.connectProject({ assistantId: lucia, projectId: "p3" });
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "p3", onPage: false, spaceId: "space" })).toBe("connected");
+    expect(await served(smith)).toEqual([["p3", false]]);
+    expect((await assistantById(lucia))!.homeProjectId).toBe("p1");
+    expect(await served(lucia)).toEqual([["p1", true]]);
+  });
+
+  it("🔴 while the old one is answering at home, the page waits", async () => {
+    await pg.query(`update "projectChatMessages" set "status" = 'en_curso' where "id" = 'm2'`);
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "p1", onPage: true, spaceId: "space" })).toBe("busy");
+    expect(await served(smith)).toEqual([]);
+    expect((await assistantById(lucia))!.homeProjectId).toBe("p1");
+  });
+
+  it("a free page is simply taken, and its own page stays its own", async () => {
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "p2", onPage: true, spaceId: "space" })).toBe("connected");
+    expect(await projects.replaceOnProject({ assistantId: smith, projectId: "p2", onPage: true, spaceId: "space" })).toBe("connected");
+    expect(await served(smith)).toEqual([["p2", true]]);
+  });
+});
+
 describe("when a project she serves is unpublished", () => {
   it("🔴 she forgets what it published, and her bubble there", async () => {
     await projects.connectProject({ assistantId: lucia, projectId: "p2" });

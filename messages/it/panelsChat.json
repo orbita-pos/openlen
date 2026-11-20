@@ -939,7 +939,13 @@
       "failed": "Non è stato possibile. Riprova.",
       "close": "Chiudi",
       "publishToKnow": "{name} lo conoscerà alla prossima pubblicazione.",
-      "busy": "{name} sta rispondendo: riprova quando ha finito."
+      "busy": "{name} sta rispondendo: riprova quando ha finito.",
+      "attend": "Seguire una pagina",
+      "attendNone": "Non hai altre pagine da fargli seguire.",
+      "attendReplace": "{current} segue quella pagina. Sostituirlo con {name}?",
+      "attendReplaceYes": "Sostituisci",
+      "attendKeep": "Lascia così",
+      "attendBusy": "{current} sta rispondendo lì in questo momento. Riprova tra poco."
     },
     "summary": {
       "switch": "Riepilogo del mattino",

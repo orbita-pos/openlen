@@ -939,7 +939,13 @@
       "failed": "할 수 없었어요. 다시 시도하세요.",
       "close": "닫기",
       "publishToKnow": "다음에 게시하면 {name}가 내용을 알게 돼요.",
-      "busy": "{name}가 답하는 중이에요. 끝난 뒤 다시 시도하세요."
+      "busy": "{name}가 답하는 중이에요. 끝난 뒤 다시 시도하세요.",
+      "attend": "페이지 맡기기",
+      "attendNone": "맡길 다른 페이지가 없어요.",
+      "attendReplace": "{current}이(가) 그 페이지를 맡고 있어요. {name}(으)로 바꿀까요?",
+      "attendReplaceYes": "바꾸기",
+      "attendKeep": "그대로 두기",
+      "attendBusy": "{current}이(가) 지금 그 페이지에서 응답하는 중이에요. 잠시 후 다시 시도해 주세요."
     },
     "summary": {
       "switch": "아침 요약",

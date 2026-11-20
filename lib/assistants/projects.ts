@@ -11,6 +11,7 @@ import { db, schema } from "@/lib/db";
 import type { PublicTable } from "@/lib/db/schema";
 
 import { ESTADO_EN_CURSO } from "@/lib/projects/stored-turn";
+import { isSpaceData } from "@/lib/space/types";
 
 import { assistantConversationKey } from "./conversation";
 import { isUniqueViolation } from "./store";
@@ -85,6 +86,12 @@ export async function pageHtmlOf(projectId: string): Promise<string | null> {
   return typeof html === "string" ? html : null;
 }
 
+/** Whether the project is its person's space (spec local 2026-11-19-agentes-para-todos, §6.2): never a page to attend. */
+async function isSpace(q: Tx | typeof db, projectId: string): Promise<boolean> {
+  const [row] = await q.select({ data: p.data }).from(p).where(eq(p.id, projectId)).limit(1);
+  return isSpaceData(row?.data as { space?: unknown } | null | undefined);
+}
+
 /** The route checked that the project is her person's own. A project with an assistant keeps it. On the page at once,
  *  as when she is created (11/11, Jesús: «encendido de una»): the one door here is Len's card, «Usar a Lucía aquí». */
 export async function connectProject(o: {
@@ -93,7 +100,8 @@ export async function connectProject(o: {
   /** Her bubble on the page: on, unless connected from the phone (Jesús 16/11, spec local
    *  2026-11-16-movil-es-tu-asistente, §5.6). Absent = on. */
   readonly onPage?: boolean;
-}): Promise<"connected" | "project_has_assistant"> {
+}): Promise<"connected" | "project_has_assistant" | "space_not_a_page"> {
+  if (await isSpace(db, o.projectId)) return "space_not_a_page";
   try {
     await db.insert(ap).values({ projectId: o.projectId, assistantId: o.assistantId, onPage: o.onPage ?? true });
     return "connected";
@@ -121,31 +129,70 @@ async function oldestOther(tx: Tx, assistantId: string, except: string): Promise
   return row?.projectId ?? null;
 }
 
-/** Takes her off a project. Off her home, her home moves first. Her visits and requests of that project stay, for her
- *  person to read. Under her row's lock, so two removals at once can't leave her with none. */
+/** Whether a turn of hers is running in this project. A turn closes its row by the project it started in: moved mid-turn,
+ *  the row would stay «en curso» for good in her new home (final review M1). Her home waits until she is done. */
+async function answeringAt(tx: Tx, assistantId: string, projectId: string): Promise<boolean> {
+  const m = schema.projectChatMessages;
+  const [answering] = await tx
+    .select({ id: m.id })
+    .from(m)
+    .where(and(eq(m.projectId, projectId), eq(m.conversation, assistantConversationKey(assistantId)), eq(m.status, ESTADO_EN_CURSO)))
+    .limit(1);
+  return Boolean(answering);
+}
+
+/** Takes her off a project. Off her home, her home moves first; off her last, she would be lost, unless her home is
+ *  elsewhere — an agent of the person's space attends pages without living on any (spec local
+ *  2026-11-19-agentes-para-todos, §6.7). Her visits and requests of that project stay, for her person to read. Under her
+ *  row's lock, so two removals at once can't leave her with none. */
 export async function disconnectProject(assistantId: string, projectId: string): Promise<"disconnected" | "only_project" | "not_connected" | "busy"> {
   return db.transaction(async (tx) => {
     const [her] = await tx.select({ home: a.homeProjectId }).from(a).where(eq(a.id, assistantId)).for("update");
     if (!her) return "not_connected";
     const [connected] = await tx.select({ projectId: ap.projectId }).from(ap).where(and(eq(ap.assistantId, assistantId), eq(ap.projectId, projectId)));
     if (!connected) return "not_connected";
-    const other = await oldestOther(tx, assistantId, projectId);
-    if (!other) return "only_project";
     if (her.home === projectId) {
-      // A turn of hers closes its row by the project it started in: moved mid-turn, the row would stay «en curso» for good
-      // in her new home (final review M1). Her home waits until she is done.
-      const m = schema.projectChatMessages;
-      const [answering] = await tx
-        .select({ id: m.id })
-        .from(m)
-        .where(and(eq(m.projectId, projectId), eq(m.conversation, assistantConversationKey(assistantId)), eq(m.status, ESTADO_EN_CURSO)))
-        .limit(1);
-      if (answering) return "busy";
+      const other = await oldestOther(tx, assistantId, projectId);
+      if (!other) return "only_project";
+      if (await answeringAt(tx, assistantId, projectId)) return "busy";
       await moveHome(tx, assistantId, projectId, other);
     }
     await tx.delete(ap).where(and(eq(ap.assistantId, assistantId), eq(ap.projectId, projectId)));
     return "disconnected";
   });
+}
+
+/** «Atender una página» (spec local 2026-11-19-agentes-para-todos, §6.7): the person puts her on one of their pages in
+ *  place of the assistant it had — one per page. That one leaves it; if it was her HOME (an assistant of before, born on
+ *  that page), her home and her conversation with her owner move to the person's space first, so she is never lost with
+ *  it — not while she is answering there. In one transaction, under the page's row. */
+export async function replaceOnProject(o: {
+  readonly assistantId: string;
+  readonly projectId: string;
+  readonly onPage: boolean;
+  readonly spaceId: string;
+}): Promise<"connected" | "busy" | "space_not_a_page" | "project_has_assistant"> {
+  try {
+    return await db.transaction(async (tx) => {
+      if (await isSpace(tx, o.projectId)) return "space_not_a_page";
+      const [current] = await tx.select({ assistantId: ap.assistantId }).from(ap).where(eq(ap.projectId, o.projectId)).for("update");
+      if (current?.assistantId === o.assistantId) return "connected";
+      if (current) {
+        const [old] = await tx.select({ home: a.homeProjectId }).from(a).where(eq(a.id, current.assistantId)).for("update");
+        if (old?.home === o.projectId) {
+          if (await answeringAt(tx, current.assistantId, o.projectId)) return "busy";
+          await moveHome(tx, current.assistantId, o.projectId, o.spaceId);
+        }
+        await tx.delete(ap).where(and(eq(ap.assistantId, current.assistantId), eq(ap.projectId, o.projectId)));
+      }
+      await tx.insert(ap).values({ projectId: o.projectId, assistantId: o.assistantId, onPage: o.onPage });
+      return "connected";
+    });
+  } catch (err) {
+    // Another one was put on that free page at the same moment: it has it now.
+    if (isUniqueViolation(err)) return "project_has_assistant";
+    throw err;
+  }
 }
 
 /** Before a project is deleted: every assistant whose home it is and who serves another moves there; one with no other

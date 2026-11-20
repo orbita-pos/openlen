@@ -939,7 +939,13 @@
       "failed": "没能完成，请重试。",
       "close": "关闭",
       "publishToKnow": "下次发布后 {name} 才会了解它。",
-      "busy": "{name} 正在回答：等回答完成后再试。"
+      "busy": "{name} 正在回答：等回答完成后再试。",
+      "attend": "负责一个页面",
+      "attendNone": "你没有其他可交给它的页面。",
+      "attendReplace": "{current}正在负责这个页面。换成{name}吗？",
+      "attendReplaceYes": "更换",
+      "attendKeep": "保持不变",
+      "attendBusy": "{current}正在那个页面上回复。请稍后再试。"
     },
     "summary": {
       "switch": "早间摘要",

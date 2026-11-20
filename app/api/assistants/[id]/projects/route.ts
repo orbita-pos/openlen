@@ -6,8 +6,10 @@ import { auth } from "@/auth";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { mergeOldAssistantMemory } from "@/lib/assistants/knowledge";
-import { connectProject, projectsOfAssistant, titlesOf } from "@/lib/assistants/projects";
-import { assistantById, oldAssistantSettings, saveAssistantMemory } from "@/lib/assistants/store";
+import { connectProject, projectsOfAssistant, replaceOnProject, titlesOf } from "@/lib/assistants/projects";
+import { assistantById, assistantOfProject, oldAssistantSettings, saveAssistantMemory } from "@/lib/assistants/store";
+import { agentsEnabled } from "@/lib/space/enabled";
+import { ensureSpace } from "@/lib/space/store";
 import { onPageState } from "@/lib/assistants/visitor/on-page";
 import { accesoAlProyecto } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -62,12 +64,23 @@ export const POST = paraLaApp(conAutorDeLaPeticion(
     // Who asks was resolved once, by the author wrapper: the handler reads it there instead of asking again.
     const found = await hers(autorDelCambio(), (await params).id);
     if (found instanceof Response) return found;
-    const body = (await req.json().catch(() => null)) as { projectId?: unknown; onPage?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as { projectId?: unknown; onPage?: unknown; replace?: unknown } | null;
     const projectId = typeof body?.projectId === "string" ? body.projectId.slice(0, 100) : "";
     const acceso = projectId ? await accesoAlProyecto(projectId, found.personId) : null;
     if (!acceso) return json({ error: "not_found" }, 404);
     if (acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
-    const done = await connectProject({ assistantId: found.assistant.id, projectId, ...(body?.onPage === false ? { onPage: false } : {}) });
+    // «Atender una página» (spec local 2026-11-19-agentes-para-todos, §6.7): the person chose to put her there in place of
+    // the one it has — which, if it lived on that page, moves to their space. Only with agents on: the space is theirs.
+    const done =
+      body?.replace === true && agentsEnabled()
+        ? await replaceOnProject({ assistantId: found.assistant.id, projectId, onPage: body.onPage !== false, spaceId: await ensureSpace(found.personId) })
+        : await connectProject({ assistantId: found.assistant.id, projectId, ...(body?.onPage === false ? { onPage: false } : {}) });
+    if (done === "space_not_a_page") return json({ error: done }, 400);
+    if (done === "project_has_assistant") {
+      // Who has it, for the person to choose whether to put her there instead.
+      const current = await assistantOfProject(projectId).catch(() => null);
+      return json({ error: done, ...(current ? { current: { name: current.name, slug: current.slug } } : {}) }, 409);
+    }
     if (done !== "connected") return json({ error: done }, 409);
     // What that project's assistant of today was taught joins her memory. Fail-soft: she is connected either way.
     try {

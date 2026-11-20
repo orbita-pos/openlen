@@ -939,7 +939,13 @@
       "failed": "Dat lukte niet. Probeer het opnieuw.",
       "close": "Sluiten",
       "publishToKnow": "{name} kent het na de volgende publicatie.",
-      "busy": "{name} is aan het antwoorden: probeer het opnieuw als dat klaar is."
+      "busy": "{name} is aan het antwoorden: probeer het opnieuw als dat klaar is.",
+      "attend": "Een pagina bedienen",
+      "attendNone": "Je hebt geen andere pagina's om te laten bedienen.",
+      "attendReplace": "{current} bedient die pagina. Vervangen door {name}?",
+      "attendReplaceYes": "Vervangen",
+      "attendKeep": "Zo laten",
+      "attendBusy": "{current} antwoordt daar nu. Probeer het zo opnieuw."
     },
     "summary": {
       "switch": "Ochtendoverzicht",

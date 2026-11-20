@@ -939,7 +939,13 @@
       "failed": "できませんでした。もう一度お試しください。",
       "close": "閉じる",
       "publishToKnow": "次に公開すると {name} が内容を把握します。",
-      "busy": "{name} が回答中です。終わってからもう一度お試しください。"
+      "busy": "{name} が回答中です。終わってからもう一度お試しください。",
+      "attend": "ページを担当させる",
+      "attendNone": "担当させられるページがほかにありません。",
+      "attendReplace": "{current}がそのページを担当しています。{name}に替えますか？",
+      "attendReplaceYes": "替える",
+      "attendKeep": "そのままにする",
+      "attendBusy": "{current}が今そのページで応答中です。少ししてからもう一度お試しください。"
     },
     "summary": {
       "switch": "朝のまとめ",

@@ -939,7 +939,13 @@
       "failed": "Ça n’a pas marché. Réessayez.",
       "close": "Fermer",
       "publishToKnow": "{name} le connaîtra à sa prochaine publication.",
-      "busy": "{name} est en train de répondre : réessayez quand ce sera fini."
+      "busy": "{name} est en train de répondre : réessayez quand ce sera fini.",
+      "attend": "S'occuper d'une page",
+      "attendNone": "Vous n'avez pas d'autre page à lui confier.",
+      "attendReplace": "{current} s'occupe de cette page. La confier à {name} ?",
+      "attendReplaceYes": "Changer",
+      "attendKeep": "Laisser ainsi",
+      "attendBusy": "{current} répond en ce moment sur cette page. Réessayez dans un instant."
     },
     "summary": {
       "switch": "Résumé du matin",

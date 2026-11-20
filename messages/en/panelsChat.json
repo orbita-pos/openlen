@@ -939,7 +939,13 @@
       "failed": "That didn't work. Try again.",
       "close": "Close",
       "publishToKnow": "{name} will know it after its next publish.",
-      "busy": "{name} is answering: try again when the answer is done."
+      "busy": "{name} is answering: try again when the answer is done.",
+      "attend": "Attend a page",
+      "attendNone": "No other pages of yours to attend.",
+      "attendReplace": "{current} attends that page. Put {name} there instead?",
+      "attendReplaceYes": "Change",
+      "attendKeep": "Leave it",
+      "attendBusy": "{current} is answering there right now. Try again in a moment."
     },
     "summary": {
       "switch": "Morning summary",
