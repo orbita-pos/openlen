@@ -36,6 +36,7 @@ import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { AB_COOKIE_PREFIX, AB_OVERRIDE_PARAM, formatAbTag } from "@/lib/analytics/ab-tag";
+import { AB_MANIFEST_PATH, abVariantPrefix } from "@/lib/ab/layout";
 import type { AbManifest } from "@/lib/ab/types";
 import { lenWatchEnabled } from "@/lib/len-watch/enabled";
 import { injectWatchSnippet } from "@/lib/len-watch/snippet";
@@ -227,8 +228,9 @@ export interface PublishParams {
   /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
    *  the auth card / dashboard — mode:"account" — with no protected doc behind
    *  it). Wears the same detected accent as the gate stubs. */
-  /** Edge A/B testing (Plan 3): bake Control A + Variant B under `_ab/<id>/b/`
-   *  plus `<release>/ab.json` atomically in a single content-addressed release. */
+  /** Edge A/B testing (Plan 3): bake Control A + Variant B under `openlen/ab/<id>/b/`
+   *  plus `<release>/openlen/ab.json` atomically in a single content-addressed release. `openlen/` is a reserved
+   *  root (no project file can live there), so the experiment can never collide with the owner's files. */
   abExperiment?: AbPublishSpec;
   /** Additional release SHAs that `pruneOldReleases` must never delete (e.g.
    *  `controlReleaseSha` while an A/B experiment is running). */
@@ -1187,12 +1189,15 @@ export async function publishToDir(
   const own = new Set(folder.map((f) => f.path));
   const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
 
-  // Edge A/B testing (Plan 3): bake Variant B under `_ab/<id>/b/` with the
+  // Edge A/B testing (Plan 3): bake Variant B under `openlen/ab/<id>/b/` with the
   // SAME canonical selfPath as Control A (SEO safe), plus modified folder files
-  // and `ab.json` manifest read by Rust `crates/edge` and TS fallback.
+  // and the `openlen/ab.json` manifest read by Rust `crates/edge` and TS fallback.
   if (abSpec && abTargetPath) {
-    const prefixB = `_ab/${abSpec.id}/b`;
+    const prefixB = abVariantPrefix(abSpec.id);
     const abVariantFiles: Array<{ path: string; content: string }> = [];
+    // The asset paths (URLs, with the leading slash) whose bytes in B differ from control's: the edge routes only these
+    // to B and marks them no-store (everything else is served by the static file server).
+    const abOverrides: string[] = [];
     const variantBLocaleCodes: string[] = [];
 
     if (abTargetPath === "/") {
@@ -1221,7 +1226,7 @@ export async function publishToDir(
         }
       }
       bHtml = annotateLanguageCluster(bHtml, { baseUrl, selfPath: "/", cluster });
-      bHtml = optOutOfEmailObfuscation(seal(bHtml, `/_ab/${abSpec.id}/b/`));
+      bHtml = optOutOfEmailObfuscation(seal(bHtml, `/${prefixB}/`));
       abVariantFiles.push({ path: `${prefixB}/index.html`, content: bHtml });
 
       for (const d of bLocales) {
@@ -1232,7 +1237,7 @@ export async function publishToDir(
               selfPath: `/${d.locale}/`,
               cluster,
             }),
-            `/_ab/${abSpec.id}/b/${d.locale}`,
+            `/${prefixB}/${d.locale}`,
           ),
         );
         abVariantFiles.push({ path: `${prefixB}/${d.locale}/index.html`, content: localized });
@@ -1265,7 +1270,7 @@ export async function publishToDir(
         selfPath: `/${targetSlug}/`,
         cluster: [{ lang: sourceLang, path: `/${targetSlug}/` }],
       });
-      bDoc = optOutOfEmailObfuscation(seal(bDoc, `/_ab/${abSpec.id}/b/${targetSlug}`));
+      bDoc = optOutOfEmailObfuscation(seal(bDoc, `/${prefixB}/${targetSlug}`));
       abVariantFiles.push({ path: `${prefixB}/${targetSlug}/index.html`, content: bDoc });
     }
 
@@ -1296,6 +1301,7 @@ export async function publishToDir(
         }
         if (controlByPath.get(bf.path) !== bf.content) {
           abVariantFiles.push({ path: `${prefixB}/${bf.path}`, content: bf.content });
+          abOverrides.push(`/${bf.path}`);
         }
       }
     }
@@ -1317,10 +1323,11 @@ export async function publishToDir(
           prefixB,
           overrideParam: AB_OVERRIDE_PARAM,
           expiresAt: abSpec.expiresAt ?? null,
+          overrides: abOverrides.sort(),
         },
       ],
     };
-    tree.push({ path: "ab.json", content: JSON.stringify(manifest) });
+    tree.push({ path: AB_MANIFEST_PATH, content: JSON.stringify(manifest) });
   }
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
   // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
