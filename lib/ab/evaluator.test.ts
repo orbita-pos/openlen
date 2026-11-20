@@ -335,6 +335,23 @@ describe("an experiment that never got an even split ends, and the owner is told
 describe("abNotificationTexts & abSummaryLine across all 10 locales", () => {
   const LOCALES = ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"];
 
+  it("🔴 a long experiment name is cut in the push, never the question after it — in every locale and every verdict", () => {
+    const long = "Probando un titular larguísimo ".repeat(10).trim();
+    for (const locale of LOCALES) {
+      for (const verdict of ["winner_b", "winner_a", "inconclusive", "harm_stop"] as const) {
+        const short = abNotificationTexts(locale, { name: "Hero", verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
+        const res = abNotificationTexts(locale, { name: long, verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
+        expect(res.push.length, `${locale}:${verdict}`).toBeLessThan(200);
+        // the tail of the sentence (what comes after the name) is what the short version has, whole
+        const tailOf = (s: string) => s.slice(s.indexOf("Hero") + "Hero".length);
+        expect(res.push.endsWith(tailOf(short.push)), `${locale}:${verdict}: ${res.push}`).toBe(true);
+        expect(res.push, `${locale}:${verdict}`).toContain("…");
+        // the email keeps the whole name
+        expect(res.emailText, locale).toContain(long);
+      }
+    }
+  });
+
   it("🔴 the uneven-traffic ending has its own text in every locale, push and morning summary", () => {
     for (const locale of LOCALES) {
       const res = abNotificationTexts(locale, { name: "Hero CTA", verdict: "inconclusive", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x", reason: "uneven_traffic" });

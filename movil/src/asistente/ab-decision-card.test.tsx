@@ -112,6 +112,23 @@ describe("MobileAbDecisionCard", () => {
     expect(host.querySelector("[data-ab-extend]")).toBeNull();
   });
 
+  it("🔴 resyncs when the list reloads: a verdict that changed shows, not the copy the card was born with (item 29)", async () => {
+    const host = document.createElement("ul");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const draw = (exp: AbExperimentView) =>
+      act(async () => {
+        root.render(<MobileAbDecisionCard cliente={{} as never} experiment={exp} assistantName="Lucía" idioma="es" resaltado={false} onActualizado={vi.fn()} />);
+      });
+    await draw(EXP);
+    expect(host.textContent).toContain("own.ab.winnerBTitle");
+    expect(host.querySelector("[data-ab-promote-b]")).not.toBeNull();
+    await draw({ ...EXP, status: "promoted_b", decisionStatus: "resolved", bringState: "brought" });
+    expect(host.textContent).not.toContain("own.ab.winnerBTitle");
+    expect(host.querySelector("[data-ab-promote-b]")).toBeNull();
+  });
+
   it("shows conflict message when another device decided first (409)", async () => {
     vi.mocked(decidirPruebaAb).mockResolvedValueOnce({
       ok: false,

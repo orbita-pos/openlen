@@ -21,8 +21,25 @@ type Translate = (key: string, values?: Record<string, string | number>) => stri
 
 const PUSH_MAX = 199;
 
-function clampPush(text: string): string {
-  return text.length > PUSH_MAX ? `${text.slice(0, PUSH_MAX - 1)}…` : text;
+/** `name` cut to at most `max` characters (code points, with an ellipsis); whole if it already fits. */
+export function cutName(name: string, max: number): string {
+  const chars = Array.from(name);
+  return chars.length <= max ? name : `${chars.slice(0, Math.max(1, max - 1)).join("")}…`;
+}
+
+/** The name to put in a push so that `build(name)` fits: a push that is too long loses letters of the NAME, never the end of
+ *  the sentence — the end is the question the owner has to answer (review item 29). If even a one-letter name doesn't fit
+ *  (the template alone is long), the name is as short as it gets and the sentence stays whole. */
+export function nameThatFits(name: string, build: (name: string) => string, max: number = PUSH_MAX): string {
+  if (build(name).length <= max) return name;
+  const over = build(name).length - max;
+  // One pass computes the cut; the loop below only corrects for ellipsis and multi-unit characters.
+  let keep = Math.max(1, Array.from(name).length - over);
+  for (; keep > 1; keep--) {
+    const candidate = cutName(name, keep);
+    if (build(candidate).length <= max) return candidate;
+  }
+  return cutName(name, 1);
 }
 
 function translatorFor(locale: string): { locale: string; t: Translate } {
@@ -36,7 +53,7 @@ function translatorFor(locale: string): { locale: string; t: Translate } {
 }
 
 /** Concise one-line A/B decision prompt appended to Tu Asistente's 8 a.m. morning summary. */
-export function abSummaryLine(locale: string, items: readonly AbReadySummary[]): string {
+export function abSummaryLine(locale: string, items: readonly AbReadySummary[], nameMax: number = Infinity): string {
   if (items.length === 0) return "";
   const { t } = translatorFor(locale);
   const primary =
@@ -45,12 +62,13 @@ export function abSummaryLine(locale: string, items: readonly AbReadySummary[]):
     items[0]!;
   const prob = Math.round(primary.probability * 100);
   const lift = Math.max(0, Math.round(Math.abs(primary.liftPct)));
+  const name = cutName(primary.name, nameMax);
   const first =
     primary.status === "winner_ready" && primary.winnerVariant === "b"
-      ? t("summaryWinnerB", { name: primary.name, lift, prob })
+      ? t("summaryWinnerB", { name, lift, prob })
       : primary.status === "winner_ready" && primary.winnerVariant === "a"
-        ? t("summaryWinnerA", { name: primary.name, prob })
-        : t(primary.reason === "uneven_traffic" ? "summaryUnevenTraffic" : "summaryInconclusive", { name: primary.name });
+        ? t("summaryWinnerA", { name, prob })
+        : t(primary.reason === "uneven_traffic" ? "summaryUnevenTraffic" : "summaryInconclusive", { name });
   if (items.length === 1) return first;
   return t("summaryMore", { first, count: items.length - 1 });
 }
@@ -82,15 +100,17 @@ export function abNotificationTexts(
   const { locale: l, t } = translatorFor(locale);
   const lift = Math.max(0, Math.round(Math.abs(input.liftPct)));
   const prob = Math.max(0, Math.min(100, Math.round(input.probabilityPct)));
-  const rawPush =
+  const pushFor = (name: string): string =>
     input.verdict === "winner_b"
-      ? t("pushWinnerB", { name: input.name, lift, prob })
+      ? t("pushWinnerB", { name, lift, prob })
       : input.verdict === "winner_a"
-        ? t("pushWinnerA", { name: input.name, prob })
+        ? t("pushWinnerA", { name, prob })
         : input.verdict === "harm_stop"
-          ? t(input.restored === false ? "pushHarmStopNotRestored" : "pushHarmStop", { name: input.name })
-          : t(input.reason === "uneven_traffic" ? "pushUnevenTraffic" : "pushInconclusive", { name: input.name });
-  const push = clampPush(rawPush);
+          ? t(input.restored === false ? "pushHarmStopNotRestored" : "pushHarmStop", { name })
+          : t(input.reason === "uneven_traffic" ? "pushUnevenTraffic" : "pushInconclusive", { name });
+  // The email has room for the whole name; the push (under 200 characters) loses letters of the name, never its question.
+  const rawPush = pushFor(input.name);
+  const push = pushFor(nameThatFits(input.name, pushFor));
   const title = input.assistantName?.trim() || t("badge");
   return {
     locale: l,

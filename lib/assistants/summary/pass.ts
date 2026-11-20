@@ -35,6 +35,8 @@ export interface SummaryDeps {
   projectIdsOf(assistantId: string): Promise<readonly string[]>;
   count(assistantId: string, projectIds: readonly string[], start: Date, end: Date): Promise<SummaryCounts>;
   notify(event: AssistantSummaryEvent, dedupeKey: string): Promise<void>;
+  /** The A/B decisions the summary just said are marked told, so tomorrow's doesn't repeat them (review item 29). */
+  markAbTold?(experimentIds: readonly string[], at: Date): Promise<void>;
   readonly siteUrl: string;
 }
 
@@ -56,6 +58,12 @@ export async function summaryPass(d: SummaryDeps, now: Date): Promise<number> {
         `assistant_summary:${a.id}:${day.today}`,
       );
       sent++;
+      // Marked only AFTER it was queued, and only the ones it said: a failure here means they are said again tomorrow, never lost.
+      if (c.abReady && c.abReady.length > 0) {
+        await d.markAbTold?.(c.abReady.map((x) => x.experimentId), now).catch((err: unknown) => {
+          console.warn(`[assistant-summary] couldn't mark ${a.id}'s A/B decisions as told`, err);
+        });
+      }
     } catch (err) {
       console.warn(`[assistant-summary] ${a.id}'s summary failed`, err);
     }
@@ -90,6 +98,10 @@ async function defaultDeps(): Promise<SummaryDeps> {
     projectIdsOf: async (id) => (await projectIdsOf([id])).get(id) ?? [],
     count: countYesterday,
     notify: (event, key) => scheduleNotification(event, key),
+    markAbTold: async (ids, at) => {
+      const { markExperimentNotified } = await import("@/lib/ab/store");
+      for (const id of ids) await markExperimentNotified(id, at);
+    },
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com",
   };
 }

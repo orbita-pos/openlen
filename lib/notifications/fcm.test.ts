@@ -22,6 +22,15 @@ describe("FCM sin servicios externos", () => {
     expect(mensajeFcm({ ...evento, abrir }, "t").message.data).toEqual({ type: "len_turno", projectId: "proyecto-1", recipientUserId: "ana", abrir });
     expect(Object.keys(mensajeFcm(evento, "t").message.data)).toEqual(["type", "projectId", "recipientUserId"]);
   });
+  it("🔴 an A/B verdict is its own notification per EXPERIMENT: it never replaces her summary or another test's verdict (item 29)", () => {
+    const ab = { type: "ab_result", projectId: "p1", recipientUserId: "ana", experimentId: "ab_aaaa1111", locale: "es", verdict: "winner_b", title: "Lucía", push: "Ganó la B", emailSubject: "s", emailText: "t" } as const;
+    const tag = (e: Parameters<typeof mensajeFcm>[0]) => mensajeFcm(e, "t").message.android.notification.tag;
+    expect(tag(ab)).toBe("ab-ab_aaaa1111");
+    expect(tag({ ...ab, assistantId: "a1", assistantSlug: "lucia" })).toBe("ab-ab_aaaa1111");
+    expect(tag({ ...ab, experimentId: "ab_bbbb2222" })).not.toBe(tag(ab));
+    // …and not the tag her summary of the same project uses.
+    expect(tag({ type: "assistant_summary", projectId: "p1", recipientUserId: "ana", assistantId: "a1", assistantName: "Lucía", assistantSlug: "lucia", locale: "es", title: "Lucía", push: "x", emailSubject: "s", emailText: "t" })).toBe("assistant-p1");
+  });
   it("🔴 the person's own assistant's turn is titled with its name and never replaces Len's notification", () => {
     const m = mensajeFcm({ ...evento, asistente: { id: "a1", name: "Lucía", slug: "lucía" } }, "t").message;
     expect(m.notification.title).toBe("Lucía");

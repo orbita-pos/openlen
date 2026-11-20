@@ -4,6 +4,7 @@ import { z } from "zod";
 import { AbLifecycleError, launchAbExperiment } from "@/lib/ab/lifecycle";
 import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { publishErrorResult } from "@/lib/projects/publish-through-gates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -61,6 +62,11 @@ export async function POST(
     if (err instanceof AbLifecycleError) {
       return json({ error: err.code, message: err.message, ...(err.extra ?? {}) }, err.status);
     }
+    // The publish inside the launch fails like any publish: a missing function secret, Functions that don't compile or
+    // deploy, Stripe's two accounts, a migration — each has its own code the owner (and Len) can act on (review item 29).
+    const mapped = publishErrorResult(err);
+    if (mapped) return json(mapped.body, mapped.status);
+    console.error("[ab] launch failed", err);
     return json({ error: "launch_failed" }, 500);
   }
 }

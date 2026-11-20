@@ -320,6 +320,9 @@ export async function pendingDecisionsForProjects(
         inArray(schema.abExperiments.projectId, [...projectIds]),
         eq(schema.abExperiments.decisionStatus, "pending"),
         inArray(schema.abExperiments.status, ["winner_ready", "inconclusive"]),
+        // TOLD ONCE: the summary lists a decision only until it has said it (it marks it with `notifiedAt` after sending);
+        // before, a verdict nobody answered was repeated every single morning (review item 29). The card stays on screen.
+        isNull(schema.abExperiments.notifiedAt),
       ),
     )
     .orderBy(desc(schema.abExperiments.evaluatedAt));

@@ -5,7 +5,7 @@
 // confidence/lift, SRM warning, and one-click decision actions with conflict recovery.
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, Check, FlaskConical, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, FlaskConical, Sparkles, X } from "lucide-react";
 
 import { isUnbroughtWinner } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
@@ -20,12 +20,15 @@ export function AbDecisionCard({
   highlight = false,
   assistantName,
   onUpdated,
+  onDismiss,
 }: {
   experiment: AbExperimentView;
   readonly?: boolean;
   highlight?: boolean;
   assistantName?: string | null;
   onUpdated?: (updated: AbExperimentView) => void;
+  /** A test the harm brake stopped is informational and stays for 14 days: whoever read it can put it away. */
+  onDismiss?: () => void;
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -199,6 +202,18 @@ export function AbDecisionCard({
           <span className="ml-auto shrink-0 rounded-full bg-app px-1.5 py-0.5 text-[10px] font-medium fg-muted tabular-nums">
             {t("ownAssistant.ab.confidence", { prob: probPct })}
           </span>
+        )}
+        {current.status === "paused_harm" && onDismiss && (
+          <button
+            type="button"
+            data-ab-dismiss=""
+            aria-label={t("ownAssistant.ab.close")}
+            title={t("ownAssistant.ab.close")}
+            onClick={onDismiss}
+            className="ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md fg-faint hover:bg-hover hover:fg"
+          >
+            <X size={12} />
+          </button>
         )}
       </div>
 
