@@ -56,14 +56,10 @@ export function isEdgeBot(ua: string): boolean {
  *  empty and `.` segments dropped, `..` popping its parent, a NUL cutting its segment, lower-cased
  *  (the filesystem may not care about case). Mirrors Rust `resolved_segments`. */
 function resolvedSegments(urlPath: string): string[] {
-  let decoded = urlPath;
-  try {
-    decoded = decodeURIComponent(urlPath);
-  } catch {
-    // A malformed sequence is judged as written: it cannot name a file either.
-  }
+  // Lossy, like Rust: a malformed sequence elsewhere in the path must not stop the rest from being
+  // decoded (decodeURIComponent throws on it, and an undecoded /openlen/%61b.json would slip by).
   const out: string[] = [];
-  for (const raw of decoded.split(/[/\\]/)) {
+  for (const raw of percentDecodeLossy(urlPath).split(/[/\\]/)) {
     const seg = raw.split("\0")[0] ?? "";
     if (seg === "" || seg === ".") continue;
     if (seg === "..") {

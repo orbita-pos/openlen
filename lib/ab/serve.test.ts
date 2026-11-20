@@ -278,6 +278,9 @@ describe("lib/ab/serve — internal files are blocked on the RESOLVED path", () 
       "/openlen/ab/../ab/x",
       "/openlen\\ab.json",
       "/openlen/ab.json%00.png",
+      // A malformed sequence further along must not hide the rest of the decoding.
+      "/openlen/%61b.json/%E0%A4%A",
+      "/openlen/%zz/../%61b.json",
     ]) {
       expect(isBlockedInternalAbPath(p), `${p} must be blocked`).toBe(true);
     }
@@ -302,8 +305,9 @@ describe("lib/ab/serve — internal files are blocked on the RESOLVED path", () 
     }
   });
 
-  it("a malformed percent sequence does not throw (it is judged as written)", () => {
+  it("a malformed percent sequence does not throw, and a file that is not the manifest stays free", () => {
     expect(isBlockedInternalAbPath("/openlen/ab.json%E0%A4%A")).toBe(false);
+    // A different directory (`openlen/<junk>/ab.json`), not the manifest.
     expect(isBlockedInternalAbPath("/openlen/%E0%A4%A/ab.json")).toBe(false);
   });
 

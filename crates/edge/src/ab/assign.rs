@@ -447,6 +447,9 @@ mod tests {
             "/openlen/ab/../ab/x",
             r"/openlen\ab.json",
             "/openlen/ab.json%00.png",
+            // A malformed sequence further along must not hide the rest of the decoding.
+            "/openlen/%61b.json/%E0%A4%A",
+            "/openlen/%zz/../%61b.json",
         ] {
             assert!(is_blocked_internal_path(path), "{path} must be blocked");
         }
