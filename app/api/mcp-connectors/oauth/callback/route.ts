@@ -5,28 +5,26 @@
 //    it. No session, or another person's: nothing is exchanged, the flow is spent, and the page says to open it again
 //    from the OpenLen tab where it was started.
 //  - Phone (the app's key; the system browser usually has no session): the code is exchanged but the tokens are HELD, not
-//    a connection, and the page asks the person to confirm the OpenLen account (its email, masked) and the server, with a
+//    a connection, and the page asks the person to confirm the OpenLen account (its whole email) and the server, with a
 //    one-time token in its form (`POST /api/mcp-connectors/oauth/confirm`). The same person's session skips the question;
-//    another person's is refused.
+//    another person's is refused. The page is offered only for an account whose email is VERIFIED (R1): OpenLen accounts
+//    work before their email is verified, so anyone could register the victim's own address and have the victim confirm
+//    «connect to <their address>». An unverified account gets nothing exchanged and nothing held, and the page says to
+//    finish from a browser signed in to OpenLen (or to verify the email first).
 // Then the result page tells the workspace (way-back-page.ts) and closes itself, or says the person can return to
 // OpenLen. Never echoes `code`, `state`, a token or any provider string.
 import { auth } from "@/auth";
 import { mountServer } from "@/lib/mcp-connectors/mount";
+import { accountOf } from "@/lib/mcp-connectors/oauth/account";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { finishSignIn, rememberNewIssuer } from "@/lib/mcp-connectors/oauth/flow";
 import { SIGN_IN_CHANNEL } from "@/lib/mcp-connectors/oauth/sign-in-channel";
-import { confirmPage, COPY, localeFrom, maskEmail, resultPage } from "@/lib/mcp-connectors/oauth/way-back-page";
+import { confirmPage, COPY, localeFrom, resultPage } from "@/lib/mcp-connectors/oauth/way-back-page";
 import { realMountDeps, realOAuthDeps } from "@/lib/mcp-connectors/real";
 import { markNeedsAuth, readMcpConfig, readServerStates } from "@/lib/mcp-connectors/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** The email of the account a phone sign-in would go to, for the confirm page (masked there). */
-async function emailOf(personId: string): Promise<string | null> {
-  const { personEmail } = await import("@/lib/tools/store");
-  return personEmail(personId).catch(() => null);
-}
 
 export async function GET(req: Request): Promise<Response> {
   const locale = localeFrom(req.headers.get("cookie"));
@@ -45,9 +43,10 @@ export async function GET(req: Request): Promise<Response> {
       ...realOAuthDeps(),
       readConfig: readMcpConfig,
       mount: (p, n) => mountServer(p, n, realMountDeps()),
+      accountOf,
     },
   );
-  if (r.ok === "confirm") return confirmPage(locale, r.server, maskEmail(await emailOf(r.personId)), r.confirmToken);
+  if (r.ok === "confirm") return confirmPage(locale, r.server, r.email, r.confirmToken);
   if (r.ok) return resultPage(locale, copy.ok, { type: SIGN_IN_CHANNEL, server: r.server, ok: true }, 200);
   if (r.reason === "denied") return resultPage(locale, copy.denied, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: "denied" }, 200);
   if (r.reason === "issuer_changed") {
@@ -57,5 +56,6 @@ export async function GET(req: Request): Promise<Response> {
   }
   if (r.reason === "wrong_browser") return resultPage(locale, copy.wrongBrowser, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 403);
   if (r.reason === "other_account") return resultPage(locale, copy.otherAccount, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 403);
+  if (r.reason === "email_unverified") return resultPage(locale, copy.emailUnverified, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 403);
   return resultPage(locale, copy.failed, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 400);
 }

@@ -13,8 +13,8 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const fake = vi.hoisted(() => ({
   finishResult: { ok: true, server: "cal" } as
     | { ok: true; server: string }
-    | { ok: "confirm"; server: string; personId: string; confirmToken: string }
-    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account"; server?: string }
+    | { ok: "confirm"; server: string; personId: string; email: string; confirmToken: string }
+    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account" | "email_unverified"; server?: string }
     | { ok: false; reason: "issuer_changed"; server: string; personId: string; issuer: string | null; issuerHost: string | null },
   finishedWith: [] as unknown[],
   remembered: [] as unknown[],
@@ -32,8 +32,8 @@ vi.mock("@/lib/mcp-connectors/store", () => ({
 vi.mock("@/lib/mcp-connectors/mount", () => ({
   mountServer: async () => null,
 }));
-vi.mock("@/lib/tools/store", () => ({
-  personEmail: async (personId: string) => (personId === "u1" ? "jesus@example.com" : ""),
+vi.mock("@/lib/mcp-connectors/oauth/account", () => ({
+  accountOf: async () => null,
 }));
 vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
   finishSignIn: async (q: unknown, sessionPersonId: string | null) => {
@@ -122,9 +122,9 @@ describe("🔴 who the way back is for", () => {
     expect(html).toContain('"reason":"wrong_browser"');
   });
 
-  it("a phone sign-in held for the person's yes: the account (masked) and the server, and a form with the one-time token only", async () => {
+  it("a phone sign-in held for the person's yes: the account (its whole email) and the server, and a form with the one-time token only", async () => {
     vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
-    fake.finishResult = { ok: "confirm", server: "cal", personId: "u1", confirmToken: "tok_ONE_TIME_123" };
+    fake.finishResult = { ok: "confirm", server: "cal", personId: "u1", email: "jesus@example.com", confirmToken: "tok_ONE_TIME_123" };
     const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=STATE_SECRET&code=CODE_SECRET&iss=https://accounts.google.com", { headers: { cookie: "NEXT_LOCALE=en" } }));
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
@@ -133,8 +133,8 @@ describe("🔴 who the way back is for", () => {
     expect(res.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(res.headers.get("x-frame-options")).toBe("DENY");
     const html = await res.text();
-    expect(html).toContain("j***@example.com");
-    expect(html).not.toContain("jesus@example.com");
+    expect(html).toContain("jesus@example.com");
+    expect(html).not.toContain("j***@");
     expect(html).toContain("“cal”");
     expect(html).toContain('<form method="post" action="/api/mcp-connectors/oauth/confirm">');
     expect(html).toContain('<input type="hidden" name="token" value="tok_ONE_TIME_123">');
@@ -145,6 +145,20 @@ describe("🔴 who the way back is for", () => {
     expect(html).not.toContain("CODE_SECRET");
     expect(html).not.toContain("<script");
     expect(html.match(/<input/g)).toHaveLength(1);
+  });
+
+  it("🔴 a phone sign-in whose account never verified its email: 403, no form, says to finish it where they are signed in", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    fake.finishResult = { ok: false, reason: "email_unverified", server: "cal" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=STATE_SECRET&code=CODE_SECRET", { headers: { cookie: "NEXT_LOCALE=en" } }));
+    expect(res.status).toBe(403);
+    const html = await res.text();
+    expect(html).toContain("finish this sign-in from a browser where you&#39;re signed in to OpenLen");
+    expect(html).toContain("verify your email");
+    expect(html).toContain('"reason":"email_unverified"');
+    expect(html).not.toContain("<form");
+    expect(html).not.toContain("STATE_SECRET");
+    expect(html).not.toContain("CODE_SECRET");
   });
 
   it("a phone sign-in under another person's session: 403, says it is another account's", async () => {
