@@ -85,4 +85,14 @@ describe("checkTools — the schema's structure", () => {
     expect(r.tools[0]!.visibility).toEqual(["app"]);
     expect(r.tools[1]!.visibility).toBeUndefined();
   });
+
+  it("🔴 keeps what the server declared even when it hides the tool from the model: empty and a typo stay arrays", () => {
+    const r = checkTools("calc", [
+      { name: "empty", inputSchema: { type: "object" }, visibility: [] },
+      { name: "typo", inputSchema: { type: "object" }, visibility: ["App"] },
+      { name: "both", inputSchema: { type: "object" }, visibility: ["model", "app"] },
+    ]);
+    expect(r.problems).toEqual([]);
+    expect(r.tools.map((t) => t.visibility)).toEqual([[], ["App"], ["model", "app"]]);
+  });
 });

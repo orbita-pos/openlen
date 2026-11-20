@@ -64,3 +64,27 @@ describe("reviewTools", () => {
     expect(r.tools[0]?.rawName).toBe("a.b");
   });
 });
+
+// MCP Apps (SEP-1865): a tool the server marks for its own UI is not for Len. The same rule as an installed tool's
+// operations (lib/tools/mcp/visibility.ts): hidden iff `_meta.ui.visibility` is an array that doesn't name "model".
+describe("reviewTools and app-only tools", () => {
+  const listed = (name: string, visibility?: readonly string[]) => ({ name, inputSchema: obj, ...(visibility ? { visibility } : {}) });
+
+  it("🔴 app-only, empty and mistyped visibilities are left out — no declaration, no route to build from", () => {
+    const r = reviewTools("ui", [listed("app_only", ["app"]), listed("empty", []), listed("typo", ["App"]), listed("both", ["model", "app"]), listed("model_only", ["model"]), listed("absent")]);
+    expect(r.tools.map((t) => t.rawName)).toEqual(["both", "model_only", "absent"]);
+    expect(r.problems).toEqual([]);
+  });
+
+  it("reads the raw tool's _meta too, for a tool that comes without being normalized first", () => {
+    const rawTool = (name: string, visibility: unknown) => ({ name, inputSchema: obj, _meta: { ui: { visibility } } }) as never;
+    const r = reviewTools("ui", [rawTool("a", ["app"]), rawTool("b", ["model"]), rawTool("c", "app")]);
+    expect(r.tools.map((t) => t.rawName)).toEqual(["b", "c"]);
+  });
+
+  it("a duplicate name still refuses the whole list, hidden or not", () => {
+    const r = reviewTools("ui", [listed("same", ["app"]), listed("same")]);
+    expect(r.tools).toEqual([]);
+    expect(r.problems).toEqual(['duplicate tool name "same": the list was refused']);
+  });
+});

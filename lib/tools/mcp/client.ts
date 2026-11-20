@@ -5,17 +5,18 @@
 // The transport is injected (`McpSend`): OpenLen calls the tool's Edge Function in-process, through the functions gateway.
 // Every exchange is bounded — a server that hangs or answers megabytes ends as an `McpError`, never a stuck turn.
 
-export type McpSend = (body: string, headers: Record<string, string>) => Promise<Response>;
+import { declaredVisibility } from "./visibility";
 
-export type McpToolVisibility = "model" | "app";
+export type McpSend = (body: string, headers: Record<string, string>) => Promise<Response>;
 
 export interface McpTool {
   readonly name: string;
   readonly title?: string;
   readonly description?: string;
   readonly inputSchema: Record<string, unknown>;
-  /** SEP-1865 MCP Apps visibility (`_meta.ui.visibility`): when present without `"model"`, hidden from Len's catalog. */
-  readonly visibility?: readonly McpToolVisibility[];
+  /** What the server declared in `_meta.ui.visibility` (SEP-1865), as written — `[]` and a typo included, because the rule
+   *  that hides a tool from Len (`modelMaySee`, visibility.ts) needs them. Absent when it declared no list. */
+  readonly visibility?: readonly string[];
 }
 
 /** MCP's own `CallToolResult`: what Len reads back. */
@@ -170,10 +171,7 @@ export function mcpSession(
           const tool = record(t);
           const inputSchema = record(tool?.inputSchema);
           if (!tool || typeof tool.name !== "string" || !inputSchema) continue;
-          const meta = record(tool._meta);
-          const ui = record(meta?.ui);
-          const rawVis = Array.isArray(ui?.visibility) ? ui.visibility.filter((v): v is McpToolVisibility => v === "model" || v === "app") : [];
-          const visibility = rawVis.length > 0 ? [...new Set(rawVis)] : undefined;
+          const visibility = declaredVisibility(tool);
           tools.push({
             name: tool.name,
             ...(typeof tool.title === "string" ? { title: tool.title } : {}),

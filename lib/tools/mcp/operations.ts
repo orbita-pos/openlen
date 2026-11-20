@@ -16,6 +16,7 @@ import { McpError, mcpSession, type McpSend } from "./client";
 import type { ReleaseMcp } from "./discover";
 import { toolsEnabled } from "../enabled";
 import { operationToolName } from "./schema";
+import { modelMaySee } from "./visibility";
 
 export interface OperationRoute {
   readonly installationId: string;
@@ -83,8 +84,9 @@ export async function operationsFor(
     servers.set(mcp.serverName, taken + 1);
     const server = taken === 0 ? mcp.serverName : `${mcp.serverName}_${taken + 1}`;
     for (const tool of mcp.tools) {
-      // MCP Apps (SEP-1865): app-only UI operations stay out of Len's tool catalog.
-      if (tool.visibility && tool.visibility.length > 0 && !tool.visibility.includes("model")) continue;
+      // MCP Apps (SEP-1865): an operation the server kept for its own UI never becomes a tool of Len's — neither the
+      // declaration nor the route to call it.
+      if (!modelMaySee(tool)) continue;
       const name = operationToolName(server, tool.name);
       if (name.length > PROVIDER_NAME_MAX || routes.has(name)) continue;
       const declaration = { name, description: tool.description, parameters: tool.inputSchema };
