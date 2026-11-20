@@ -22,6 +22,7 @@ import { abTestingEnabled } from "./enabled";
 import type { AbResultEvent } from "@/lib/notifications/types";
 import type { AbMetricsSnapshot, AbStatsResult } from "./types";
 import type { AbEvaluationPatch, AbExperimentRow } from "./store";
+import type { ReconcileVerdict } from "./reconcile";
 import { abNotificationTexts } from "./texts";
 
 export const EVALUATOR_INTERVAL_MS = 30 * 60_000;
@@ -45,6 +46,9 @@ export interface EvaluatorProjectInfo {
 export interface EvaluatorDeps {
   /** Gives back the locks of decisions that died (an `applying` older than ten minutes); returns their ids. */
   releaseStaleLocks(now: Date): Promise<readonly string[]>;
+  /** The reconcile pass (`./reconcile`): settles the rows the live release disagrees with, BEFORE anything is judged. Settles
+   *  its experiments one by one and never throws for one of them. */
+  reconcileLive?(now: Date): Promise<void>;
   listRunning(): Promise<readonly AbExperimentRow[]>;
   /** Experiments that ended in a verdict (winner, inconclusive, harm stop) and were never announced. */
   listUnannounced(): Promise<readonly AbExperimentRow[]>;
@@ -76,6 +80,7 @@ export interface EvaluatorRunStats {
 }
 
 type Announced = "winner_b" | "winner_a" | "inconclusive" | "harm_stop";
+type Told = Announced | ReconcileVerdict;
 
 /** Queues the notice for an experiment that reached a verdict and, once it IS queued, marks it told. A queue that fails
  *  throws: `notifiedAt` stays null and the next pass sends it. */
@@ -83,7 +88,7 @@ async function announce(
   deps: EvaluatorDeps,
   info: EvaluatorProjectInfo,
   exp: AbExperimentRow,
-  verdict: Announced,
+  verdict: Told,
   stats: Pick<AbStatsResult, "relativeLift" | "probBBeatsA" | "probABeatsB" | "probHarm30" | "reason">,
   extra: { readonly restored?: boolean },
   now: Date,
@@ -153,6 +158,15 @@ export async function evaluateRunningExperiments(
     if (released.length > 0) console.warn(`[ab-evaluator] gave back ${released.length} stale decision lock(s)`, released);
   } catch (err) {
     console.warn("[ab-evaluator] couldn't sweep stale decision locks", err);
+  }
+
+  // 0b. THE RECONCILE PASS (review of G4+G5, ruling 5): what the live release says about every live experiment, before any of
+  //     them is judged — a split that isn't live any more is closed, a launch that never finished is settled, a promotion whose
+  //     recording was lost is recorded. A failure here never stops the pass.
+  try {
+    await deps.reconcileLive?.(now);
+  } catch (err) {
+    console.warn("[ab-evaluator] the reconcile pass failed", err);
   }
 
   // 1. The notices a deploy cut between the verdict and the queue (review item 22). Before the loop, so a notice the loop
@@ -263,8 +277,18 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
     import("@/lib/len-watch/owner"),
   ]);
 
-  return {
+  const deps: EvaluatorDeps = {
     releaseStaleLocks: (now) => releaseStaleDecisionLocks(now),
+    reconcileLive: async (now) => {
+      const { reconcileLiveExperiments, defaultReconcileDeps } = await import("./reconcile");
+      await reconcileLiveExperiments(
+        defaultReconcileDeps({
+          projectInfo: (projectId) => deps.projectInfo(projectId),
+          tell: (project, exp, verdict, at) => announce(deps, project, exp, verdict, NO_STATS, {}, at),
+        }),
+        now,
+      );
+    },
     listRunning: listRunningExperiments,
     listUnannounced: listUnannouncedResults,
     projectInfo: async (projectId) => {
@@ -315,7 +339,11 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
     markNotified: markExperimentNotified,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com",
   };
+  return deps;
 }
+
+/** The numbers a notice that isn't about a result (the system closed or recorded something) has: none. */
+const NO_STATS = { relativeLift: 0, probBBeatsA: 0, probABeatsB: 0, probHarm30: 0 };
 
 let started: { stop(): void } | null = null;
 

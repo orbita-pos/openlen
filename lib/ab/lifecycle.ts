@@ -71,7 +71,7 @@ export class AbLifecycleError extends Error {
 
 /** The experiment's copy and branch are deleted AFTER its end was recorded, and a cleanup that fails must not undo the end:
  *  the row says what the site is, a leftover copy is only clutter (review: record the end first, clean up best-effort). */
-async function cleanupBestEffort(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void> {
+export async function cleanupBestEffort(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void> {
   try {
     await cleanupAbWorktree(p);
   } catch (err) {
@@ -410,7 +410,7 @@ export async function launchAbExperiment(p: {
 
 /** What bringing a promoted Variant B into the owner's draft came to: `brought` (it is in; `nothing` = there was nothing to
  *  bring), `conflict` (it clashed with their edits; the branch stays), `pending` (a Len turn is live: later). */
-type BringOutcome =
+export type BringOutcome =
   | { readonly state: "brought"; readonly kind: "brought" | "nothing" }
   | { readonly state: "conflict"; readonly paths: readonly string[] }
   | { readonly state: "pending" };
@@ -552,12 +552,30 @@ export async function promoteVariantB(p: {
     held.stop();
   }
 
+  const { outcome, settled } = await finishPromotion(recorded, subdomain, languages, p.ownerId, p.actorId);
+  return {
+    experiment: toExperimentView(settled ?? recorded, title),
+    bringState: outcome.state,
+    ...(outcome.state === "conflict" ? { conflictPaths: outcome.paths } : {}),
+  };
+}
+
+/** What follows a promotion that is RECORDED, whoever recorded it (the owner's click, or the reconcile pass that found B live
+ *  with no record): the edge is purged and B is brought into the owner's draft. Whatever happens here, B is already live and
+ *  recorded — nothing in this tail undoes it or throws. */
+export async function finishPromotion(
+  recorded: AbExperimentRow,
+  subdomain: string,
+  languages: readonly string[],
+  ownerId: string,
+  actorId: string,
+): Promise<{ readonly outcome: BringOutcome; readonly settled: AbExperimentRow | null }> {
   await purgeExperimentEdge(subdomain, recorded, languages);
 
-  // Three-way merge Variant B into owner's draft. Whatever happens here, B is already live.
+  // Three-way merge Variant B into owner's draft.
   let outcome: BringOutcome = { state: "pending" };
   try {
-    outcome = await tryBringIntoDraft(recorded, p.ownerId, p.actorId);
+    outcome = await tryBringIntoDraft(recorded, ownerId, actorId);
   } catch (err) {
     console.error("[ab] bringing the promoted winner into the draft failed; it stays pending", recorded.id, err);
   }
@@ -568,13 +586,8 @@ export async function promoteVariantB(p: {
   } catch (err) {
     console.error("[ab] settling the promoted winner's bring failed; it stays as it was", recorded.id, err);
   }
-  if (outcome.state === "pending") bringWhenLenIsDone(recorded, p.ownerId, p.actorId);
-
-  return {
-    experiment: toExperimentView(settled ?? recorded, title),
-    bringState: outcome.state,
-    ...(outcome.state === "conflict" ? { conflictPaths: outcome.paths } : {}),
-  };
+  if (outcome.state === "pending") bringWhenLenIsDone(recorded, ownerId, actorId);
+  return { outcome, settled };
 }
 
 /** Restore clean Control A at 100% (no ab.json), purge Cloudflare. `true` = a release without the experiment is live now

@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "Il test “{name}” si è chiuso senza risultato: il traffico era sbilanciato e non mi fido dei numeri. Quale versione tengo?",
       "bringPendingNotice": "La variante B è online. Deve ancora entrare nella tua bozza; fino ad allora la tua prossima pubblicazione aspetta.",
       "bringQueued": "Len sta lavorando sulla pagina; la variante B entrerà nella tua bozza quando avrà finito.",
-      "discardBring": "Scarta le modifiche della variante B"
+      "discardBring": "Scarta le modifiche della variante B",
+      "pushClosedBySystem": "Il test A/B «{name}» non era più in corso sul tuo sito pubblicato, quindi è stato chiuso. La tua pagina pubblicata non è cambiata.",
+      "pushPromotedBySystem": "La variante B di «{name}» è online come vincitrice. Portala nella tua bozza dalla scheda del test A/B prima di pubblicare di nuovo."
     }
   }
 }

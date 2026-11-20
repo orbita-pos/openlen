@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   notify: vi.fn(),
   purge: vi.fn(),
   ownerLocale: "en",
+  liveAb: { kind: "live", sha: "x", overrides: [], splitBps: 5000 } as Record<string, unknown>,
   publishProject: vi.fn(),
   rollbackToSha: vi.fn(),
   published: null as Record<string, unknown> | null,
@@ -31,7 +32,7 @@ vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: h.notify }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: async () => ({ locale: h.ownerLocale }) }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
-vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: async () => ({ kind: "none", sha: "x" }) }));
+vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: async () => h.liveAb }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: vi.fn() }));
@@ -109,6 +110,7 @@ beforeEach(async () => {
   h.purge.mockReset();
   h.purge.mockResolvedValue(undefined);
   h.ownerLocale = "en";
+  h.liveAb = { kind: "live", sha: "x", overrides: [], splitBps: 5000 };
   h.rollbackToSha.mockResolvedValue(undefined);
   await resetAbRows(raw());
 });
@@ -196,6 +198,22 @@ describe("a person who is deciding wins (item 21)", () => {
     expect(stats).toMatchObject({ winners: 1, notifiedDirectly: 1 });
     expect(order).toEqual(["notify", "marked"]);
     expect(await getExperimentById("ab_eval0006")).toMatchObject({ status: "winner_ready", decisionStatus: "pending", winnerVariant: "b", notifiedAt: NOW });
+  });
+});
+
+describe("the reconcile pass is wired into the pass (ruling 5)", () => {
+  it("🔴 a started experiment whose live release doesn't carry its split is closed BEFORE it is judged, and the owner gets one notice, in their language", async () => {
+    h.ownerLocale = "es";
+    h.liveAb = { kind: "none", sha: "rel-owner" };
+    await running("ab_reco0001");
+    const deps = await depsWith("winner_b");
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(await getExperimentById("ab_reco0001")).toMatchObject({ status: "cancelled", decisionStatus: "resolved", decidedBy: "system" });
+    // it wasn't judged: no snapshot was computed for it, no winner was announced
+    expect(stats).toMatchObject({ evaluated: 0, winners: 0 });
+    expect(h.notify).toHaveBeenCalledTimes(1);
+    expect(h.notify.mock.calls[0]![0]).toMatchObject({ type: "ab_result", verdict: "closed_by_system", locale: "es", recipientUserId: "u1" });
+    expect(h.publishProject).not.toHaveBeenCalled();
   });
 });
 

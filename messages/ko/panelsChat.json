@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "‘{name}’ 테스트가 결과 없이 끝났어요. 트래픽이 고르지 않게 나뉘어 수치를 믿을 수 없어요. 어떤 버전을 남길까요?",
       "bringPendingNotice": "변형 B는 게시되어 있어요. 아직 초안에 가져와야 하며, 그때까지 다음 게시는 대기해요.",
       "bringQueued": "Len이 페이지를 작업 중이에요. 끝나면 변형 B가 초안에 들어와요.",
-      "discardBring": "변형 B의 변경 버리기"
+      "discardBring": "변형 B의 변경 버리기",
+      "pushClosedBySystem": "A/B 테스트 “{name}”이(가) 게시된 사이트에서 더 이상 실행되지 않아 종료했어요. 게시된 페이지는 바뀌지 않았어요.",
+      "pushPromotedBySystem": "“{name}”의 B안이 승자로 게시되었어요. 다시 게시하기 전에 A/B 테스트 카드에서 초안으로 가져오세요."
     }
   }
 }

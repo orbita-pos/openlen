@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "Der Test „{name}“ endete ohne Ergebnis – der Traffic war ungleich verteilt, ich traue den Zahlen nicht. Welche Version soll bleiben?",
       "bringPendingNotice": "Variante B ist live. Sie muss noch in deinen Entwurf übernommen werden – bis dahin wartet deine nächste Veröffentlichung.",
       "bringQueued": "Len arbeitet an der Seite; Variante B kommt in deinen Entwurf, sobald er fertig ist.",
-      "discardBring": "Änderungen von Variante B verwerfen"
+      "discardBring": "Änderungen von Variante B verwerfen",
+      "pushClosedBySystem": "Der A/B-Test „{name}“ lief auf deiner veröffentlichten Seite nicht mehr und wurde deshalb beendet. Deine veröffentlichte Seite wurde nicht verändert.",
+      "pushPromotedBySystem": "Variante B von „{name}“ ist als Gewinnerin live gegangen. Übernimm sie über die Karte des A/B-Tests in deinen Entwurf, bevor du wieder veröffentlichst."
     }
   }
 }

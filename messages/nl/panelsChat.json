@@ -1009,7 +1009,9 @@
       "summaryUnevenTraffic": "De test “{name}” eindigde zonder resultaat: het verkeer was ongelijk verdeeld en ik vertrouw de cijfers niet. Welke versie blijft?",
       "bringPendingNotice": "Variant B staat live. Hij moet nog in je concept worden overgenomen; tot dan wacht je volgende publicatie.",
       "bringQueued": "Len werkt aan de pagina; variant B komt in je concept zodra hij klaar is.",
-      "discardBring": "Wijzigingen van variant B weggooien"
+      "discardBring": "Wijzigingen van variant B weggooien",
+      "pushClosedBySystem": "De A/B-test “{name}” draaide niet meer op je gepubliceerde site en is daarom gesloten. Je gepubliceerde pagina is niet veranderd.",
+      "pushPromotedBySystem": "Variant B van “{name}” is als winnaar live gegaan. Haal hem vanaf de kaart van de A/B-test in je concept voordat je opnieuw publiceert."
     }
   }
 }

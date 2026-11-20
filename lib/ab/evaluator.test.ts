@@ -206,6 +206,31 @@ describe("evaluateRunningExperiments", () => {
   });
 });
 
+describe("the reconcile pass runs first (ruling 5)", () => {
+  it("🔴 it runs BEFORE the running experiments are listed or judged", async () => {
+    const deps = makeDeps({ verdict: "collecting" });
+    const order: string[] = [];
+    (deps.listRunning as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("list-running");
+      return [makeExp()];
+    });
+    (deps as { reconcileLive?: unknown }).reconcileLive = vi.fn(async () => void order.push("reconcile"));
+    await evaluateRunningExperiments(deps, NOW);
+    expect(order).toEqual(["reconcile", "list-running"]);
+  });
+
+  it("a reconcile that throws doesn't stop the pass: the rest is evaluated as usual", async () => {
+    const deps = makeDeps({ verdict: "winner_b" });
+    (deps as { reconcileLive?: unknown }).reconcileLive = vi.fn(async () => {
+      throw new Error("the release couldn't be read");
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    warn.mockRestore();
+    expect(stats.winners).toBe(1);
+  });
+});
+
 describe("the evaluator never overwrites a person (item 21)", () => {
   it("🔴 an experiment whose decision is being applied is not touched at all", async () => {
     const deps = makeDeps({ verdict: "winner_b", exp: makeExp({ decisionStatus: "applying" }) });
@@ -340,7 +365,7 @@ describe("abNotificationTexts & abSummaryLine across all 10 locales", () => {
   it("🔴 a long experiment name is cut in the push, never the question after it — in every locale and every verdict", () => {
     const long = "Probando un titular larguísimo ".repeat(10).trim();
     for (const locale of LOCALES) {
-      for (const verdict of ["winner_b", "winner_a", "inconclusive", "harm_stop"] as const) {
+      for (const verdict of ["winner_b", "winner_a", "inconclusive", "harm_stop", "closed_by_system", "promoted_by_system"] as const) {
         const short = abNotificationTexts(locale, { name: "Hero", verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
         const res = abNotificationTexts(locale, { name: long, verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
         expect(res.push.length, `${locale}:${verdict}`).toBeLessThan(200);
@@ -351,6 +376,23 @@ describe("abNotificationTexts & abSummaryLine across all 10 locales", () => {
         // the email keeps the whole name
         expect(res.emailText, locale).toContain(long);
       }
+    }
+  });
+
+  it("🔴 what the system closed or recorded on its own has its own text in every locale, and its email only informs", () => {
+    for (const locale of LOCALES) {
+      const base = { name: "Hero CTA", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x" };
+      const closed = abNotificationTexts(locale, { ...base, verdict: "closed_by_system" });
+      const promoted = abNotificationTexts(locale, { ...base, verdict: "promoted_by_system" });
+      for (const res of [closed, promoted]) {
+        expect(res.push, locale).toContain("Hero CTA");
+        expect(res.push, locale).not.toMatch(/ownAssistant|{|pushClosedBySystem|pushPromotedBySystem/);
+        expect(res.emailText, locale).toContain("https://openlen.com/x");
+      }
+      expect(closed.push, locale).not.toBe(promoted.push);
+      // the email of a decided thing shows what happened; it doesn't ask «Open to decide»
+      const decide = abNotificationTexts(locale, { ...base, verdict: "winner_b" });
+      expect(closed.emailText, locale).not.toBe(decide.emailText.replace(decide.push, closed.push));
     }
   });
 
