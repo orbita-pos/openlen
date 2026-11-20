@@ -7,11 +7,14 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BarChart3 } from "../icons";
 import { Sparkline } from "../insights-sparkline";
 import { AbExperimentCard } from "../ab/ab-experiment-card";
+import { AbDecisionCard } from "../ab/ab-decision-card";
+import { isRecentHarmStop, isUnbroughtWinner } from "@/lib/ab/cards";
+import { dismissAb, readDismissedAb } from "@/lib/workspace-v2/ab-dismissed";
 import { PageCoach, FunnelBar } from "./page-coach";
 import type { AbExperimentView } from "@/lib/ab/types";
 import type {
@@ -47,6 +50,13 @@ export function InsightsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // The project the panel shows RIGHT NOW: an A/B answer that lands after the person switched projects is not theirs to draw.
+  const shownProject = useRef<string | null | undefined>(currentProjectId);
+  shownProject.current = currentProjectId;
+  // The harm cards this person put away (per browser).
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => setDismissed(readDismissedAb()), []);
+
   const reloadAb = useCallback(async (pid: string) => {
     try {
       const res = await fetch(`/api/projects/${encodeURIComponent(pid)}/ab`);
@@ -56,10 +66,12 @@ export function InsightsPanel({
         active?: AbExperimentView | null;
         experiments?: AbExperimentView[];
       };
+      if (shownProject.current !== pid) return;
       setAbEnabled(Boolean(body.enabled));
+      // The pinned card: the live test, else a winner still to bring in, else a recent harm stop (unless it was put away).
       const fallbackCard =
         body.active ??
-        body.experiments?.find((e) => e.bringState === "conflict" || e.status === "paused_harm") ??
+        body.experiments?.find((e) => isUnbroughtWinner(e) || (isRecentHarmStop(e) && !readDismissedAb().has(e.id))) ??
         null;
       setAbActive(fallbackCard);
     } catch {
@@ -133,12 +145,20 @@ export function InsightsPanel({
         </div>
       )}
       <div className="flex-1 min-h-0 overflow-y-auto nice-scroll px-3 pb-3">
-        {abActive && (
+        {abActive && !(abActive.status === "paused_harm" && dismissed.has(abActive.id)) && (
           <div className="mb-3">
-            <AbExperimentCard
-              experiment={abActive}
-              onUpdated={() => void reloadAb(currentProjectId)}
-            />
+            {abActive.status === "paused_harm" ? (
+              <AbDecisionCard
+                experiment={abActive}
+                onUpdated={() => void reloadAb(currentProjectId)}
+                onDismiss={() => setDismissed((d) => dismissAb(abActive.id, d))}
+              />
+            ) : (
+              <AbExperimentCard
+                experiment={abActive}
+                onUpdated={() => void reloadAb(currentProjectId)}
+              />
+            )}
           </div>
         )}
         {funnel && (

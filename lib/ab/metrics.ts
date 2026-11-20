@@ -7,7 +7,8 @@ import { sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { formatAbTag } from "@/lib/analytics/ab-tag";
-import { evaluateAbStats } from "./stats";
+import type { AbExperimentRow } from "./store";
+import { evaluateAbStats, maxDurationDaysOf } from "./stats";
 import type {
   AbMetricsSnapshot,
   AbPrimaryMetric,
@@ -136,6 +137,25 @@ async function aggregateVariant(
 
   const conversions = Number(anyRes.rows[0]?.total_convs ?? formConvs);
   return { views, clicks, conversions };
+}
+
+/** What the metrics of a stored experiment are computed from — the window (`startedAt`..`endedAt`) and ITS hard stop (a
+ *  «Seguir probando» moves both). One place, so the evaluator, the list and the tests can't each build it differently. */
+export function metricsInputOf(
+  row: Pick<
+    AbExperimentRow,
+    "id" | "projectId" | "primaryMetric" | "splitBps" | "startedAt" | "endedAt" | "maxEndAt"
+  > & { readonly startedAt: Date },
+): ComputeMetricsInput {
+  return {
+    experimentId: row.id,
+    projectId: row.projectId,
+    primaryMetric: row.primaryMetric,
+    splitBps: row.splitBps,
+    startedAt: row.startedAt,
+    endedAt: row.endedAt,
+    maxDurationDays: maxDurationDaysOf(row),
+  };
 }
 
 function toCounts(raw: RawVariantAggregate): AbVariantCounts {

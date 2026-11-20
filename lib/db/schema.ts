@@ -3627,11 +3627,19 @@ export const abExperiments = pgTable(
       .$type<import("@/lib/ab/types").AbDecisionStatus>()
       .notNull()
       .default("none"),
+    /** What `decisionStatus` was when a decision claimed it (`applying`): a failed or interrupted decision gives it back. */
+    decisionPrevStatus: text("decisionPrevStatus").$type<import("@/lib/ab/types").AbDecisionStatus>(),
+    /** The claim's own token: the decision that holds it refreshes `decisionLockedAt` with it and writes its close fenced on it,
+     *  so a lock the sweep gave back (and someone else took) can't be written over by the decision that lost it. */
+    decisionLockToken: text("decisionLockToken"),
+    /** When the current `applying` claim was made, refreshed every minute while it runs: one not refreshed for ten minutes is
+     *  a decision that died. */
+    decisionLockedAt: timestamp("decisionLockedAt", { mode: "date", withTimezone: true }),
     copyProjectId: text("copyProjectId"),
     branch: text("branch"),
     baseCommitOid: text("baseCommitOid"),
     variantBCommitOid: text("variantBCommitOid"),
-    bringState: text("bringState").$type<import("@/lib/ab/types").AbBringState>(),
+    bringState: text("bringState").$type<import("@/lib/ab/types").AbBringRowState>(),
     controlReleaseSha: text("controlReleaseSha"),
     experimentReleaseSha: text("experimentReleaseSha"),
     promotedReleaseSha: text("promotedReleaseSha"),
@@ -3640,6 +3648,11 @@ export const abExperiments = pgTable(
     startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }),
     minEndAt: timestamp("minEndAt", { mode: "date", withTimezone: true }),
     snoozeUntil: timestamp("snoozeUntil", { mode: "date", withTimezone: true }),
+    /** The asset paths Variant B overrides (the manifest's `overrides`): the edge cache keeps them up to 30 days, so every end of
+     *  the experiment purges them (edge review). Set at the launch and by a re-emit. */
+    overridePaths: jsonb("overridePaths").$type<string[]>(),
+    /** THIS experiment's hard stop, when «Seguir probando» moved it past the global 21 days; null = the default. */
+    maxEndAt: timestamp("maxEndAt", { mode: "date", withTimezone: true }),
     endedAt: timestamp("endedAt", { mode: "date", withTimezone: true }),
     evaluatedAt: timestamp("evaluatedAt", { mode: "date", withTimezone: true }),
     notifiedAt: timestamp("notifiedAt", { mode: "date", withTimezone: true }),
@@ -3653,6 +3666,16 @@ export const abExperiments = pgTable(
       .notNull()
       .defaultNow(),
   },
+  (t) => [
+    // Both partial unique indexes are created by scripts/ab-testing-migrate-sql.ts: one live/draft experiment per page, and
+    // ONE live experiment per project (the release carries one manifest).
+    uniqueIndex("abExperiments_active_target_idx")
+      .on(t.projectId, t.targetPath)
+      .where(sqlOp`"status" in ('draft', 'running', 'winner_ready', 'inconclusive')`),
+    uniqueIndex("abExperiments_one_live_per_project_idx")
+      .on(t.projectId)
+      .where(sqlOp`"status" in ('running', 'winner_ready', 'inconclusive')`),
+  ],
 );
 
 export const abExperimentDaily = pgTable(

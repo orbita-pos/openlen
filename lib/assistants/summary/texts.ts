@@ -34,9 +34,29 @@ export function summaryTexts(locale: string, name: string, c: SummaryCounts, url
     ...(c.contacts > 0 ? [t("contacts", { count: c.contacts })] : []),
     ...(c.requests > 0 ? [t("requests", { count: c.requests })] : []),
   ];
-  const abLine = c.abReady && c.abReady.length > 0 ? abSummaryLine(l, c.abReady) : "";
+  const abReady = c.abReady ?? [];
   const yesterdayLine = parts.length > 0 ? t("push", { list: new Intl.ListFormat(l, { type: "conjunction" }).format(parts) }) : "";
-  const line = yesterdayLine && abLine ? `${yesterdayLine} ${abLine}` : yesterdayLine || abLine;
-  const push = line.length > PUSH_MAX ? `${line.slice(0, PUSH_MAX - 1)}…` : line;
-  return { title: name, push, emailSubject: t("emailSubject", { name }), emailText: t("emailText", { push, name, url }) };
+  const joined = (nameMax: number): string => {
+    const abLine = abReady.length > 0 ? abSummaryLine(l, abReady, nameMax) : "";
+    return yesterdayLine && abLine ? `${yesterdayLine} ${abLine}` : yesterdayLine || abLine;
+  };
+  const full = joined(Infinity);
+  let push = full;
+  if (push.length > PUSH_MAX) {
+    if (abReady.length === 0) {
+      // Only counts: a statement, cut at the end like always.
+      push = `${full.slice(0, PUSH_MAX - 1)}…`;
+    } else {
+      // An A/B decision is a QUESTION: what gets shortened is the experiment's NAME (review item 29), never the end of it.
+      // If the question and yesterday's counts don't fit together, the question goes alone.
+      const names = [40, 30, 24, 18, 12, 8, 5, 3, 1];
+      push = names.map(joined).find((x) => x.length <= PUSH_MAX) ?? "";
+      if (!push) {
+        const alone = (max: number) => abSummaryLine(l, abReady, max);
+        push = [Infinity, ...names].map(alone).find((x) => x.length <= PUSH_MAX) ?? alone(1);
+      }
+    }
+  }
+  // The email carries it whole.
+  return { title: name, push, emailSubject: t("emailSubject", { name }), emailText: t("emailText", { push: full, name, url }) };
 }

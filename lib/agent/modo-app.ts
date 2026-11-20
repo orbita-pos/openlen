@@ -31,6 +31,7 @@
 import { MAX_FILE_BYTES, MAX_PROJECT_BYTES } from "@/lib/files/limits";
 import type { AppDeProyecto } from "@/lib/projects/types";
 import { CONVERTIR_EN_APP, LA_PAGINA_QUE_CRECE, laPaginaQueCrece } from "@/lib/agent/convertir-en-app";
+import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 import { catalogo, dependenciaDe } from "@/lib/apps/dependencias";
 import { appFileNames } from "@/lib/apps/esqueleto";
 import { MIN_PACKAGE_AGE_DAYS, MIN_VERSION_AGE_DAYS } from "@/lib/apps/npm/gate";
@@ -313,8 +314,9 @@ function bashDeLaApp(descripcion: string): string {
 }
 
 export function declaracionesDeLaApp(declaraciones: readonly Record<string, unknown>[]): Record<string, unknown>[] {
-  // `convert_to_app` es de una página: una app ya lo es.
-  return declaraciones.filter((d) => d.name !== CONVERTIR_EN_APP).map((d) => {
+  // `convert_to_app` es de una página: una app ya lo es. Y `create_ab_variant` también: las pruebas A/B son de páginas
+  // estáticas, y declarada en una app (o un juego, o una herramienta) sólo sabría fallar.
+  return declaraciones.filter((d) => d.name !== CONVERTIR_EN_APP && d.name !== CREATE_AB_VARIANT).map((d) => {
     const parametros = d.parameters as { properties?: Record<string, unknown>; required?: string[] } | undefined;
     const sinFilePath = () => {
       const { file_path: _fuera, ...resto } = parametros?.properties ?? {};

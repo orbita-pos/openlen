@@ -32,9 +32,12 @@ export async function prepareLiveRelease(
     /** Where the functions' sources are, when not in `projectId`: a Len Watch branch's copy (spec local
      *  2026-10-30-len-watch, §5.5). Where they deploy stays `projectId`'s. */
     readonly sourcesFrom?: string;
+    /** The functions' sources themselves, when they are in memory and not in any project: the PUBLISHED version of an
+     *  A/B launch or re-emit (review item 18). Wins over `sourcesFrom`. */
+    readonly files?: Readonly<Record<string, string>>;
   },
 ): Promise<LiveRelease> {
-  const files = await deps.loadFiles(o.sourcesFrom ?? projectId);
+  const files = o.files ? { ...o.files } : await deps.loadFiles(o.sourcesFrom ?? projectId);
   const b = await deps.bundle(files, FUNCTIONS_CATALOG_CURRENT, "production");
   if (!b) throw new FunctionsBundlerUnavailableError();
   if (!b.ok) throw new FunctionsDoNotCompileError(b.errors);

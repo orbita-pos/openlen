@@ -25,7 +25,18 @@ export type AbVerdict =
   | "inconclusive"
   | "srm_blocked";
 
+/** Why an experiment ended with no verdict: `uneven_traffic` = the split never matched its target (sample ratio mismatch) up to
+ *  the end of its time, so its numbers can't be trusted. */
+export type AbInconclusiveReason = "uneven_traffic";
+
+/** `decidedBy` of what the SYSTEM closed or recorded on its own (the reconcile pass): no person decided it. */
+export const AB_SYSTEM_ACTOR = "system";
+
 export type AbBringState = "pending" | "brought" | "conflict" | "declined";
+
+/** What the column can hold: `bringing` is the claim a bring takes before it merges (a discard that arrives meanwhile is refused;
+ *  a claim older than `BRING_CLAIM_STALE_MS` is a process that died). Clients never see it: the view says `pending`. */
+export type AbBringRowState = AbBringState | "bringing";
 
 export type AbDecideAction = "promote_b" | "keep_a" | "extend";
 
@@ -61,9 +72,13 @@ export interface AbStatsResult {
   readonly liftCiLow: number;
   readonly liftCiHigh: number;
   readonly alwaysValidP: number;
+  /** The harm brake's own always-valid p-value (one-sided, B worse than A). Absent in snapshots from before it existed. */
+  readonly harmAlwaysValidP?: number;
   readonly srmChi2: number;
   readonly srmWarning: boolean;
   readonly durationHours: number;
+  /** Set with an `inconclusive` verdict that has a known cause. Absent = it simply ran out of time with a tie. */
+  readonly reason?: AbInconclusiveReason;
 }
 
 export interface AbMetricsSnapshot {
@@ -73,7 +88,7 @@ export interface AbMetricsSnapshot {
   readonly computedAt: string;
 }
 
-/** Manifest written atomically as `<release>/ab.json` and read by Rust `crates/edge` and TS fallback. */
+/** Manifest written atomically as `<release>/openlen/ab.json` (lib/ab/layout.ts) and read by Rust `crates/edge` and TS fallback. */
 export interface AbManifestExperiment {
   readonly id: string;
   readonly cookieName: string;
@@ -86,6 +101,9 @@ export interface AbManifestExperiment {
   readonly prefixB: string;
   readonly overrideParam: string;
   readonly expiresAt: string | null;
+  /** The asset URL paths (leading slash, non-page files) whose bytes differ between B and control: the edge routes
+   *  only these to B and marks them no-store. Absent (a manifest from before) = none. */
+  readonly overrides?: readonly string[];
 }
 
 export interface AbManifest {
@@ -130,4 +148,6 @@ export interface AbReadySummary {
   readonly liftPct: number;
   readonly totalViews: number;
   readonly probability: number;
+  /** An `inconclusive` one whose split never matched its target: it says so instead of «no clear winner». */
+  readonly reason?: AbInconclusiveReason;
 }

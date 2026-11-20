@@ -1012,7 +1012,16 @@
       "close": "关闭",
       "collectingHint": "正在收集真实访客数据（{views} 次访问，至少 72 小时）。",
       "decidedByConflict": "其他成员或设备已决定此测试。",
-      "pausedHarmNotice": "已自动停止以保护转化；当前 100% 访问原版。"
+      "pausedHarmNotice": "已自动停止以保护转化；当前 100% 访问原版。",
+      "pushHarmStopNotRestored": "由于版本 B 转化明显下降，已自动停止“{name}”。你的网站尚未发布，因此没有需要恢复的线上内容。",
+      "emailTextInfo": "{push}\n\n查看发生了什么：{url}",
+      "pushUnevenTraffic": "“{name}”未得出结果：两个版本的流量分配不均，数据不可信。请选择要保留的版本。",
+      "summaryUnevenTraffic": "“{name}”测试未得出结果——流量分配不均，我无法信任这些数据。该保留哪个版本？",
+      "bringPendingNotice": "变体 B 已上线，但还需要合并到你的草稿；在此之前，你的下一次发布会等待。",
+      "bringQueued": "Len 正在处理页面；他完成后，变体 B 会进入你的草稿。",
+      "discardBring": "放弃变体 B 的更改",
+      "pushClosedBySystem": "A/B 测试“{name}”已不再在你已发布的网站上运行，因此已将其关闭。你已发布的页面没有任何改动。",
+      "pushPromotedBySystem": "“{name}”的变体 B 已作为获胜版本上线。再次发布之前，请先在 A/B 测试卡片中把它合并到你的草稿。"
     }
   }
 }

@@ -33,6 +33,14 @@
  *     …/publish (sólo a la dirección que ya tiene: elegir otra es del dueño; y
  *     «Publicar igual» con hallazgos de seguridad, que queda apuntado con su nombre),
  *     …/security-review (POST/GET: la revisión que el diálogo de publicar enseña),
+ *     …/ab (POST: crear la variante), …/ab/[expId]/launch|decide|bring (lanzar la prueba A/B,
+ *     decidirla —dejar la B, quedarse con la A, seguir probando— y traer la B al borrador o
+ *     descartarla; sólo con la sesión de la web, el teléfono sólo decide);
+ *     …/ab (GET: la lista de pruebas la ve cualquier miembro, pero las CIFRAS de los
+ *     visitantes sólo el dueño y el editor: un lector la recibe sin métricas) y
+ *     …/ab/[expId]/preview (ver: compara las dos versiones),
+ *     /api/assistants/[id]/ab-decisions (sus tarjetas, sólo de los proyectos donde quien
+ *     pide hoy puede editar: el acceso se vuelve a comprobar en cada petición),
  *     /api/agent (sin encargos, sin los datos de los visitantes, y contra el
  *     tope del proyecto: `lib/projects/miembros.ts`)
  *   SÓLO EL DUEÑO (sin cambios)

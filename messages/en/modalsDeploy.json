@@ -95,5 +95,28 @@
       "queued": "Len is working on the project: we'll bring it in as soon as he's done.",
       "failed": "The fix couldn't be brought in. Try again."
     }
+  },
+  "abRunning": {
+    "title": "An A/B test is running",
+    "body": "An A/B test is running on this page. Publishing stops it. Stop and publish?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Stop and publish",
+    "cancel": "Cancel"
+  },
+  "abBringPending": {
+    "title": "Variant B isn't in your draft yet",
+    "body": "The winner of the A/B test is live, but it hasn't been brought into your draft. Publishing now would send your draft without it and undo it.",
+    "bring": "Bring in, then publish",
+    "bringing": "Bringing in…",
+    "discard": "Discard and publish",
+    "cancel": "Cancel",
+    "queued": "Len is working on the page. Variant B will come into your draft when he finishes.",
+    "conflict": "It clashed with your edits. Ask Len to merge it by hand, or discard it.",
+    "failed": "That didn't work. Try again."
+  },
+  "abDecisionInProgress": {
+    "title": "A decision on the A/B test is being applied",
+    "body": "Someone — or the system — is applying a decision on this page's A/B test right now. Publishing in the middle could undo it. Try again in a minute.",
+    "ok": "OK"
   }
 }

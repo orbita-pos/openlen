@@ -6,11 +6,15 @@
 // the exact same one-click decision experience.
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { visibleAbCards } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
+import { dismissAb, readDismissedAb } from "@/lib/workspace-v2/ab-dismissed";
 import { AbExperimentCard } from "../ab/ab-experiment-card";
 import { AbDecisionCard } from "../ab/ab-decision-card";
+import { useAbAvailable } from "../use-ab-available";
 
-const POLL_MS = 60_000;
+/** One look every five minutes: the evaluator's verdicts come every 30, and a person's decision refreshes the cards itself. */
+export const AB_POLL_MS = 5 * 60_000;
 
 function readAbQueryParam(): string | null {
   if (typeof window === "undefined") return null;
@@ -31,8 +35,12 @@ export function AbDecisionCards({
   busy: boolean;
 }) {
   const highlight = readAbQueryParam();
-  const [enabled, setEnabled] = useState(false);
+  // Asked once (GET /api/ab): with A/B testing off nothing below runs — no request per project, no timer.
+  const available = useAbAvailable();
   const [experiments, setExperiments] = useState<readonly AbExperimentView[]>([]);
+  // The harm cards this person put away (per browser).
+  const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => setDismissed(readDismissedAb()), []);
 
   const load = useCallback(async () => {
     try {
@@ -42,18 +50,19 @@ export function AbDecisionCards({
         enabled?: boolean;
         experiments?: AbExperimentView[];
       };
-      setEnabled(Boolean(body.enabled));
-      setExperiments(body.experiments ?? []);
+      setExperiments(body.enabled ? (body.experiments ?? []) : []);
     } catch {
       // Soft fail; next poll retries.
     }
   }, [projectId]);
 
   useEffect(() => {
+    if (!available) return;
+    setExperiments([]);
     void load();
-    const timer = setInterval(() => void load(), POLL_MS);
+    const timer = setInterval(() => void load(), AB_POLL_MS);
     return () => clearInterval(timer);
-  }, [load]);
+  }, [available, load]);
 
   // Refresh after a Len turn finishes (e.g., Len just ran `create_ab_variant`).
   const wasBusy = useRef(busy);
@@ -62,15 +71,10 @@ export function AbDecisionCards({
     wasBusy.current = busy;
   }, [busy, load]);
 
-  if (!enabled) return null;
+  if (!available) return null;
 
-  const visible = experiments.filter(
-    (e) =>
-      e.status === "draft" ||
-      ((e.status === "winner_ready" || e.status === "inconclusive") &&
-        e.decisionStatus === "pending") ||
-      e.bringState === "conflict" ||
-      (highlight !== null && e.id === highlight),
+  const visible = visibleAbCards(experiments, { highlight }).filter(
+    (e) => !(e.status === "paused_harm" && dismissed.has(e.id) && e.id !== highlight),
   );
 
   if (visible.length === 0) return null;
@@ -87,6 +91,7 @@ export function AbDecisionCards({
             readonly={soloLectura}
             highlight={highlight === exp.id}
             onUpdated={() => void load()}
+            onDismiss={() => setDismissed((d) => dismissAb(exp.id, d))}
           />
         ),
       )}

@@ -23,6 +23,11 @@ function makeExp(patch: Partial<AbExperimentRow> = {}): AbExperimentRow {
     salt: "salt",
     status: "running",
     decisionStatus: "none",
+    decisionPrevStatus: null,
+    decisionLockedAt: null,
+    decisionLockToken: null,
+    maxEndAt: null,
+    overridePaths: null,
     copyProjectId: "copy1",
     branch: "ab/ab_9f3c2a1b",
     baseCommitOid: "oid0",
@@ -83,16 +88,20 @@ function makeDeps(opts: {
     ownerId: "u1",
     title: "Cafetería Sol",
     subdomain: "cafesol",
+    locale: "en",
     assistant: null,
   };
   return {
+    releaseStaleLocks: vi.fn(async () => []),
     listRunning: vi.fn(async () => [exp]),
+    listUnannounced: vi.fn(async () => []),
     projectInfo: vi.fn(async () => proj),
     computeMetrics: vi.fn(async () => makeSnapshot(opts.verdict ?? "winner_b")),
-    saveSnapshot: vi.fn(async () => {}),
+    saveSnapshot: vi.fn(async () => true),
     upsertDaily: vi.fn(async () => {}),
-    autoStopForHarm: vi.fn(async () => {}),
+    autoStopForHarm: vi.fn(async () => ({ restored: true })),
     notify: vi.fn(async () => {}),
+    markNotified: vi.fn(async () => {}),
     siteUrl: "https://openlen.com",
   };
 }
@@ -117,6 +126,9 @@ describe("evaluateRunningExperiments", () => {
     expect(event.type).toBe("ab_result");
     expect(event.verdict).toBe("winner_b");
     expect(key).toBe("ab_result:ab_9f3c2a1b:winner_b");
+    // The snapshot write never claims it was told: only the queue does, afterwards.
+    expect(vi.mocked(deps.saveSnapshot).mock.calls[0]![1]).not.toHaveProperty("notifiedAt");
+    expect(deps.markNotified).toHaveBeenCalledWith("ab_9f3c2a1b", NOW);
   });
 
   it("defers winner notification to the 8 a.m. morning summary when the assistant has morningSummary enabled", async () => {
@@ -127,12 +139,12 @@ describe("evaluateRunningExperiments", () => {
         ownerId: "u1",
         title: "Cafetería Sol",
         subdomain: "cafesol",
+        locale: "es",
         assistant: {
           id: "a1",
           name: "Lucía",
           slug: "lucia",
           morningSummary: true,
-          summaryLocale: "es",
         },
       },
     });
@@ -140,6 +152,8 @@ describe("evaluateRunningExperiments", () => {
     expect(stats.winners).toBe(1);
     expect(stats.notifiedDirectly).toBe(0);
     expect(deps.notify).not.toHaveBeenCalled();
+    // The summary says it, and marks it told: the evaluator marks nothing it didn't send.
+    expect(deps.markNotified).not.toHaveBeenCalled();
     expect(deps.saveSnapshot).toHaveBeenCalledWith(
       "ab_9f3c2a1b",
       expect.objectContaining({ status: "winner_ready", decisionStatus: "pending" }),
@@ -155,12 +169,12 @@ describe("evaluateRunningExperiments", () => {
         ownerId: "u1",
         title: "Cafetería Sol",
         subdomain: "cafesol",
+        locale: "es",
         assistant: {
           id: "a1",
           name: "Lucía",
           slug: "lucia",
           morningSummary: true,
-          summaryLocale: "es",
         },
       },
     });
@@ -168,10 +182,12 @@ describe("evaluateRunningExperiments", () => {
     expect(stats.harmStopped).toBe(1);
     expect(stats.notifiedDirectly).toBe(1);
     expect(deps.autoStopForHarm).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(deps.autoStopForHarm).mock.calls[0]!.slice(1, 3)).toEqual(["u1", "cafesol"]);
     expect(deps.notify).toHaveBeenCalledTimes(1);
     const [event] = vi.mocked(deps.notify).mock.calls[0]!;
     expect(event.verdict).toBe("harm_stop");
     expect(event.assistantId).toBe("a1");
+    expect(event.emailText).not.toMatch(/un clic|one click/i);
   });
 
   it("respects snoozeUntil for non-harm verdicts while still refreshing snapshot", async () => {
@@ -190,8 +206,234 @@ describe("evaluateRunningExperiments", () => {
   });
 });
 
+describe("the reconcile pass runs first (ruling 5)", () => {
+  it("🔴 it runs BEFORE the running experiments are listed or judged", async () => {
+    const deps = makeDeps({ verdict: "collecting" });
+    const order: string[] = [];
+    (deps.listRunning as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("list-running");
+      return [makeExp()];
+    });
+    (deps as { reconcileLive?: unknown }).reconcileLive = vi.fn(async () => void order.push("reconcile"));
+    await evaluateRunningExperiments(deps, NOW);
+    expect(order).toEqual(["reconcile", "list-running"]);
+  });
+
+  it("a reconcile that throws doesn't stop the pass: the rest is evaluated as usual", async () => {
+    const deps = makeDeps({ verdict: "winner_b" });
+    (deps as { reconcileLive?: unknown }).reconcileLive = vi.fn(async () => {
+      throw new Error("the release couldn't be read");
+    });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    warn.mockRestore();
+    expect(stats.winners).toBe(1);
+  });
+});
+
+describe("the evaluator never overwrites a person (item 21)", () => {
+  it("🔴 an experiment whose decision is being applied is not touched at all", async () => {
+    const deps = makeDeps({ verdict: "winner_b", exp: makeExp({ decisionStatus: "applying" }) });
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats.evaluated).toBe(0);
+    expect(deps.computeMetrics).not.toHaveBeenCalled();
+    expect(deps.saveSnapshot).not.toHaveBeenCalled();
+    expect(deps.autoStopForHarm).not.toHaveBeenCalled();
+    expect(deps.notify).not.toHaveBeenCalled();
+  });
+
+  it("🔴 a verdict write that doesn't land (a person claimed the decision meanwhile) changes nothing and tells nobody", async () => {
+    const deps = makeDeps({ verdict: "winner_b" });
+    vi.mocked(deps.saveSnapshot).mockResolvedValue(false);
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats).toMatchObject({ winners: 0, inconclusive: 0, notifiedDirectly: 0 });
+    expect(deps.notify).not.toHaveBeenCalled();
+    expect(deps.markNotified).not.toHaveBeenCalled();
+  });
+
+  it("🔴 the harm brake claims the decision first: when it can't (a person is deciding) nothing is published, saved or announced", async () => {
+    const deps = makeDeps({ verdict: "harm_stop" });
+    vi.mocked(deps.autoStopForHarm).mockResolvedValue(null);
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats.harmStopped).toBe(0);
+    expect(deps.saveSnapshot).not.toHaveBeenCalled();
+    expect(deps.notify).not.toHaveBeenCalled();
+  });
+
+  it("sweeps the stale decision locks first, and a sweep that fails doesn't stop the pass", async () => {
+    const deps = makeDeps({ verdict: "collecting" });
+    vi.mocked(deps.releaseStaleLocks).mockRejectedValue(new Error("db"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(evaluateRunningExperiments(deps, NOW)).resolves.toMatchObject({ evaluated: 1 });
+    warn.mockRestore();
+    expect(deps.releaseStaleLocks).toHaveBeenCalledWith(NOW);
+  });
+});
+
+describe("notices are at least once (item 22)", () => {
+  it("🔴 notifiedAt is set only after the notice was queued: a queue that fails leaves it unset", async () => {
+    const deps = makeDeps({ verdict: "winner_b" });
+    vi.mocked(deps.notify).mockRejectedValue(new Error("queue down"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await evaluateRunningExperiments(deps, NOW);
+    warn.mockRestore();
+    expect(deps.saveSnapshot).toHaveBeenCalledWith("ab_9f3c2a1b", expect.objectContaining({ status: "winner_ready" }));
+    expect(deps.markNotified).not.toHaveBeenCalled();
+  });
+
+  it("🔴 the next pass sends what a deploy cut between the verdict and the queue (final status, never notified)", async () => {
+    const cut = makeExp({ status: "winner_ready", decisionStatus: "pending", winnerVariant: "b", metricsSnapshot: makeSnapshot("winner_b") });
+    const deps = makeDeps({ verdict: "collecting", exp: makeExp({ startedAt: null }) });
+    vi.mocked(deps.listUnannounced).mockResolvedValue([cut]);
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats.notifiedDirectly).toBe(1);
+    const [event, key] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.verdict).toBe("winner_b");
+    expect(key).toBe("ab_result:ab_9f3c2a1b:winner_b");
+    expect(deps.markNotified).toHaveBeenCalledWith("ab_9f3c2a1b", NOW);
+  });
+
+  it("🔴 what the SYSTEM closed or recorded is swept too (round 3, C), with its own verdict — and the morning summary never delivers it", async () => {
+    const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true };
+    const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale: "en", assistant: morning };
+    const closed = makeExp({ id: "ab_sys00001", status: "cancelled", decisionStatus: "resolved", decidedBy: "system" });
+    const promoted = makeExp({ id: "ab_sys00002", status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", decidedBy: "system" });
+    const deps = makeDeps({ verdict: "collecting", exp: makeExp({ startedAt: null }), project: proj });
+    vi.mocked(deps.listUnannounced).mockResolvedValue([closed, promoted]);
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats.notifiedDirectly).toBe(2);
+    expect(vi.mocked(deps.notify).mock.calls.map(([, key]) => key)).toEqual(["ab_result:ab_sys00001:closed_by_system", "ab_result:ab_sys00002:promoted_by_system"]);
+    expect(vi.mocked(deps.markNotified).mock.calls.map(([id]) => id)).toEqual(["ab_sys00001", "ab_sys00002"]);
+  });
+
+  it("the sweep leaves a winner to the morning summary, but a harm stop is always sent", async () => {
+    const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true };
+    const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale: "en", assistant: morning };
+    const winner = makeExp({ status: "winner_ready", decisionStatus: "pending", winnerVariant: "b", metricsSnapshot: makeSnapshot("winner_b") });
+    const harm = makeExp({ id: "ab_harm0001", status: "paused_harm", decisionStatus: "resolved", winnerVariant: "a", metricsSnapshot: makeSnapshot("harm_stop") });
+    const deps = makeDeps({ verdict: "collecting", exp: makeExp({ startedAt: null }), project: proj });
+    vi.mocked(deps.listUnannounced).mockResolvedValue([winner, harm]);
+    await evaluateRunningExperiments(deps, NOW);
+    expect(deps.notify).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(deps.notify).mock.calls[0]![0].experimentId).toBe("ab_harm0001");
+  });
+
+  it("🔴 the harm notice says the original was put back only if it was: no site address → another text", async () => {
+    const deps = makeDeps({ verdict: "harm_stop", project: { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: null, locale: "en", assistant: null } });
+    vi.mocked(deps.autoStopForHarm).mockResolvedValue({ restored: false });
+    await evaluateRunningExperiments(deps, NOW);
+    expect(vi.mocked(deps.autoStopForHarm).mock.calls[0]![2]).toBeNull();
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.push).toMatch(/isn't published/);
+    expect(event.push).not.toMatch(/restored the original/);
+  });
+});
+
+describe("the notices speak the owner's language (item 29)", () => {
+  const info = (locale: string, assistant: EvaluatorProjectInfo["assistant"] = null): EvaluatorProjectInfo => ({ id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale, assistant });
+
+  it("🔴 the text and the link use the OWNER's locale, not the assistant's summary locale or English", async () => {
+    const deps = makeDeps({ verdict: "winner_b", project: info("es") });
+    await evaluateRunningExperiments(deps, NOW);
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.locale).toBe("es");
+    expect(event.push).toMatch(/convirtió/);
+    expect(event.emailText).toContain("https://openlen.com/es/new?project=p1");
+  });
+
+  it("with an assistant the link is her place, in the owner's language too", async () => {
+    const deps = makeDeps({ verdict: "harm_stop", project: info("ja", { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true }) });
+    await evaluateRunningExperiments(deps, NOW);
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.locale).toBe("ja");
+    expect(event.emailText).toContain("https://openlen.com/ja/assistant/lucia");
+  });
+});
+
+describe("an experiment that never got an even split ends, and the owner is told (item 24)", () => {
+  it("🔴 inconclusive for uneven traffic: it becomes a pending decision and the notice says why", async () => {
+    const deps = makeDeps({ verdict: "inconclusive" });
+    vi.mocked(deps.computeMetrics).mockResolvedValue({
+      ...makeSnapshot("inconclusive"),
+      stats: { ...makeSnapshot("inconclusive").stats, srmWarning: true, reason: "uneven_traffic" },
+    });
+    const stats = await evaluateRunningExperiments(deps, NOW);
+    expect(stats).toMatchObject({ inconclusive: 1, notifiedDirectly: 1 });
+    expect(deps.saveSnapshot).toHaveBeenCalledWith("ab_9f3c2a1b", expect.objectContaining({ status: "inconclusive", decisionStatus: "pending" }));
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.verdict).toBe("inconclusive");
+    expect(event.push).toMatch(/unevenly/);
+  });
+
+  it("an ordinary inconclusive keeps its ordinary text", async () => {
+    const deps = makeDeps({ verdict: "inconclusive" });
+    await evaluateRunningExperiments(deps, NOW);
+    expect(vi.mocked(deps.notify).mock.calls[0]![0].push).toMatch(/no clear winner/);
+  });
+});
+
 describe("abNotificationTexts & abSummaryLine across all 10 locales", () => {
   const LOCALES = ["de", "en", "es", "fr", "it", "ja", "ko", "nl", "pt", "zh"];
+
+  it("🔴 a long experiment name is cut in the push, never the question after it — in every locale and every verdict", () => {
+    const long = "Probando un titular larguísimo ".repeat(10).trim();
+    for (const locale of LOCALES) {
+      for (const verdict of ["winner_b", "winner_a", "inconclusive", "harm_stop", "closed_by_system", "promoted_by_system"] as const) {
+        const short = abNotificationTexts(locale, { name: "Hero", verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
+        const res = abNotificationTexts(locale, { name: long, verdict, liftPct: 31, probabilityPct: 97, url: "https://openlen.com/x" });
+        expect(res.push.length, `${locale}:${verdict}`).toBeLessThan(200);
+        // the tail of the sentence (what comes after the name) is what the short version has, whole
+        const tailOf = (s: string) => s.slice(s.indexOf("Hero") + "Hero".length);
+        expect(res.push.endsWith(tailOf(short.push)), `${locale}:${verdict}: ${res.push}`).toBe(true);
+        expect(res.push, `${locale}:${verdict}`).toContain("…");
+        // the email keeps the whole name
+        expect(res.emailText, locale).toContain(long);
+      }
+    }
+  });
+
+  it("🔴 what the system closed or recorded on its own has its own text in every locale, and its email only informs", () => {
+    for (const locale of LOCALES) {
+      const base = { name: "Hero CTA", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x" };
+      const closed = abNotificationTexts(locale, { ...base, verdict: "closed_by_system" });
+      const promoted = abNotificationTexts(locale, { ...base, verdict: "promoted_by_system" });
+      for (const res of [closed, promoted]) {
+        expect(res.push, locale).toContain("Hero CTA");
+        expect(res.push, locale).not.toMatch(/ownAssistant|{|pushClosedBySystem|pushPromotedBySystem/);
+        expect(res.emailText, locale).toContain("https://openlen.com/x");
+      }
+      expect(closed.push, locale).not.toBe(promoted.push);
+      // the email of a decided thing shows what happened; it doesn't ask «Open to decide»
+      const decide = abNotificationTexts(locale, { ...base, verdict: "winner_b" });
+      expect(closed.emailText, locale).not.toBe(decide.emailText.replace(decide.push, closed.push));
+    }
+  });
+
+  it("🔴 the uneven-traffic ending has its own text in every locale, push and morning summary", () => {
+    for (const locale of LOCALES) {
+      const res = abNotificationTexts(locale, { name: "Hero CTA", verdict: "inconclusive", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x", reason: "uneven_traffic" });
+      const plain = abNotificationTexts(locale, { name: "Hero CTA", verdict: "inconclusive", liftPct: 0, probabilityPct: 0, url: "https://openlen.com/x" });
+      expect(res.push, locale).not.toBe(plain.push);
+      expect(res.push, locale).toContain("Hero CTA");
+      expect(res.push, locale).not.toMatch(/ownAssistant|\{/);
+      const line = abSummaryLine(locale, [{ experimentId: "ab_1", projectId: "p1", projectTitle: "T", name: "Hero CTA", status: "inconclusive", winnerVariant: null, rateA: 0.04, rateB: 0.04, liftPct: 0, totalViews: 900, probability: 0.5, reason: "uneven_traffic" }]);
+      expect(line, locale).toContain("Hero CTA");
+      expect(line, locale).not.toMatch(/ownAssistant|\{/);
+    }
+  });
+
+  it("🔴 the harm stop that found no site to restore says so in every locale, and its email only informs", () => {
+    for (const locale of LOCALES) {
+      const base = { name: "Hero CTA", verdict: "harm_stop" as const, liftPct: -50, probabilityPct: 97, url: "https://openlen.com/x" };
+      const restored = abNotificationTexts(locale, base);
+      const notRestored = abNotificationTexts(locale, { ...base, restored: false });
+      expect(notRestored.push, locale).not.toBe(restored.push);
+      expect(notRestored.push, locale).not.toMatch(/ownAssistant|\{/);
+      expect(notRestored.emailText, locale).toContain("https://openlen.com/x");
+      const decide = abNotificationTexts(locale, { ...base, verdict: "winner_b" });
+      expect(restored.emailText, locale).not.toBe(decide.emailText.replace(decide.push, restored.push));
+    }
+  });
 
   it("renders valid, under-200-char pushes with zero leaked placeholders for every verdict and locale", () => {
     for (const locale of LOCALES) {

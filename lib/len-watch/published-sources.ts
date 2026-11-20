@@ -64,6 +64,8 @@ export interface PublishedSources {
    *  settings (forms, chat, analytics) count as unpublished changes too. A worktree is born from it. */
   readonly data: ProjectData;
   readonly extraFiles: Record<string, string>;
+  /** When what is kept here was published (the A/B take-down compares it with a decision's time). */
+  readonly publishedAt?: Date;
 }
 
 /** After a publish: what it published, kept. Fail-soft — a publish never fails for this. */
@@ -86,5 +88,5 @@ export async function readPublishedSources(projectId: string): Promise<Published
   const [{ eq }, { db, schema }] = await Promise.all([import("drizzle-orm"), import("@/lib/db")]);
   const [row] = await db.select().from(schema.projectPublishedSources).where(eq(schema.projectPublishedSources.projectId, projectId)).limit(1);
   if (!row) return null;
-  return { commitOid: row.commitOid, data: row.data, extraFiles: row.extraFiles ?? {} };
+  return { commitOid: row.commitOid, data: row.data, extraFiles: row.extraFiles ?? {}, publishedAt: row.publishedAt };
 }

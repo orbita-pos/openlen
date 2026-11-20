@@ -29,6 +29,20 @@ describe("los textos de la app", () => {
       expect(claves(leer(i)).sort()).toEqual(es);
     });
   }
+  // The Publish screen reads the web's own A/B texts (modalsDeploy.abRunning / abBringPending) through textos.tsx.
+  it("🔴 the phone's publish screen has the web's A/B texts in all 10 languages, and textos.tsx loads them", () => {
+    const fuente = fs.readFileSync(path.join(process.cwd(), "movil/src/textos.tsx"), "utf8");
+    expect(fuente).toContain("modalsDeploy");
+    expect(fuente).toContain('abRunning: sub(modalsDeploy.default, "abRunning")');
+    expect(fuente).toContain('abBringPending: sub(modalsDeploy.default, "abBringPending")');
+    expect(fuente).toContain('abDecisionInProgress: sub(modalsDeploy.default, "abDecisionInProgress")');
+    for (const i of IDIOMAS) {
+      const m = JSON.parse(fs.readFileSync(path.join(process.cwd(), "messages", i, "modalsDeploy.json"), "utf8")) as Record<string, Record<string, string>>;
+      for (const k of ["title", "body", "name", "stopAndPublish", "cancel"]) expect(m.abRunning?.[k], `${i}.abRunning.${k}`).toBeTruthy();
+      for (const k of ["title", "body", "cancel"]) expect(m.abBringPending?.[k], `${i}.abBringPending.${k}`).toBeTruthy();
+      for (const k of ["title", "body", "ok"]) expect(m.abDecisionInProgress?.[k], `${i}.abDecisionInProgress.${k}`).toBeTruthy();
+    }
+  });
   it("el chat tiene sus textos", () => {
     expect(es).toContain("chat.pedirCambio");
     expect(es).toContain("chat.avance.trabajando");

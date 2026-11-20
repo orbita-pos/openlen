@@ -1012,7 +1012,16 @@
       "close": "Chiudi",
       "collectingHint": "Raccolta dati reali ({views} visite, minimo 72 ore).",
       "decidedByConflict": "Un altro membro o dispositivo ha già deciso questo test.",
-      "pausedHarmNotice": "Fermato automaticamente per proteggere le conversioni; l’originale è al 100%."
+      "pausedHarmNotice": "Fermato automaticamente per proteggere le conversioni; l’originale è al 100%.",
+      "pushHarmStopNotRestored": "Ho fermato “{name}” perché la variante B riduceva le conversioni. Il tuo sito non è pubblicato, quindi non c’era nulla online da ripristinare.",
+      "emailTextInfo": "{push}\n\nVedi cosa è successo: {url}",
+      "pushUnevenTraffic": "“{name}” si è chiuso senza risultato: il traffico è stato diviso in modo sbilanciato tra le due versioni, quindi i numeri non sono affidabili. Scegli quale versione tenere.",
+      "summaryUnevenTraffic": "Il test “{name}” si è chiuso senza risultato: il traffico era sbilanciato e non mi fido dei numeri. Quale versione tengo?",
+      "bringPendingNotice": "La variante B è online. Deve ancora entrare nella tua bozza; fino ad allora la tua prossima pubblicazione aspetta.",
+      "bringQueued": "Len sta lavorando sulla pagina; la variante B entrerà nella tua bozza quando avrà finito.",
+      "discardBring": "Scarta le modifiche della variante B",
+      "pushClosedBySystem": "Il test A/B «{name}» non era più in corso sul tuo sito pubblicato, quindi è stato chiuso. La tua pagina pubblicata non è cambiata.",
+      "pushPromotedBySystem": "La variante B di «{name}» è online come vincitrice. Portala nella tua bozza dalla scheda del test A/B prima di pubblicare di nuovo."
     }
   }
 }

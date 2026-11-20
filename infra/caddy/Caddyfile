@@ -280,28 +280,64 @@ openlen.com, www.openlen.com {
 	}
 	header @flac Content-Type "audio/flac"
 
-	# Edge A/B testing sidecar (Plan 3): when the current release has `ab.json`,
-	# Caddy delegates HTML/page requests over loopback to `openlen-edge` (Rust),
-	# which sets `Cache-Control: private, no-store` + `Vary: Cookie` so Cloudflare
-	# never caches or mixes variants. Sites without `ab.json` (~99%) stay on
-	# direct disk serving with `s-maxage=3600`.
-	@has_ab {
+	# ── A/B testing (lib/ab, crates/edge, infra/AB_TESTING_RUNBOOK.md) ───────────────────────────
+	# A release with an experiment carries `openlen/ab.json` (the manifest) and Variant B's files
+	# under `openlen/ab/<id>/b/` — `openlen/` is a reserved root, no file of the owner sits there.
+	# Only a site that has `openlen/ab.json` is touched; every other site (~99 %) never reaches the
+	# sidecar (openlen-edge --ab-sidecar, loopback :8085). On an experiment site:
+	#   @ab_page  a page (no extension, or .html/.htm): the sidecar buckets the visitor, mints the
+	#             sticky cookie and SERVES A or B, `private, no-store`;
+	#   @ab_asset any other file: the sidecar only DECIDES (its manifest lists, per experiment, `overrides`, the
+	#             files whose bytes differ between B and control). Not overridden → Caddy serves it
+	#             as for any site (Range, 304, its normal Cache-Control). Overridden → Caddy serves
+	#             the variant's file — still its own file server, so Range and 304 work — but
+	#             `no-store` for EVERYONE, control included: Cloudflare caches by URL, and one
+	#             variant's bytes cached under the shared URL would reach the other's visitors.
+	# (Caddy cannot read the manifest, and measured 2.11.4: `try_files` takes no glob, so it cannot
+	# probe `openlen/ab/*/b/<path>` either. Hence the decision is the sidecar's.)
+	# The page shape mirrors `path_has_non_html_extension` in crates/edge.
+	@ab_page {
 		file {
 			root /var/www/openlen/{labels.2}/current
-			try_files /ab.json
+			try_files /openlen/ab.json
 		}
+		path_regexp ab_page_shape `(?i)^/$|^/(?:[^/]*/)*(?:[^/.]+|[^/]*\.html?)/?$`
+		not header_regexp Host ^lienzo-
+		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
+		# `openlen/` holds no pages (the figure engine, the experiment's own files): never delegated, or
+		# `/openlen/figure-x` would leave with two Cache-Control, one of them immutable.
+		not path /openlen/*
+	}
+	@ab_asset {
+		file {
+			root /var/www/openlen/{labels.2}/current
+			try_files /openlen/ab.json
+		}
+		not path_regexp ab_asset_shape `(?i)^/$|^/(?:[^/]*/)*(?:[^/.]+|[^/]*\.html?)/?$`
 		not header_regexp Host ^lienzo-
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
 	}
+	# A page the sidecar answers carries ITS Cache-Control and cookies, so @doc below skips it: a
+	# `header` + `reverse_proxy` pair DUPLICATES a header (two contradictory Cache-Control, measured
+	# with Caddy 2.11.4). The other header matchers (@assets, @carpeta and the Content-Type ones) name
+	# a file extension, which a page — no extension, or .html/.htm — never has, so they cannot match
+	# one (lib/ab/caddy-ab.test.ts pins that); a decided FILE is served by Caddy and its Cache-Control
+	# is set again, explicitly, in `handle @ab_probed`. The two variables also tell the failover
+	# (handle_errors) what was delegated.
+	vars @ab_page ab_delegated sidecar
+	vars @ab_asset ab_probe sidecar
+	@ab_delegated expression {http.vars.ab_delegated} == "sidecar"
+	@ab_probed expression {http.vars.ab_probe} == "sidecar"
+
+	# The experiment's own files are never a visitor's. Caddy's `path` matcher compares the decoded,
+	# cleaned path; the sidecar judges the resolved one again (the second lock).
+	@ab_internal path /openlen/ab.json /openlen/ab.json/ /openlen/ab /openlen/ab/*
 
 	@doc {
 		not path *.css *.js *.jpg *.jpeg *.png *.gif *.webp *.svg *.ico *.woff *.woff2 *.avif *.mjs *.jsx *.tsx *.ts *.json *.webmanifest *.txt *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
 		not header_regexp Host ^lienzo-
-		not file {
-			root /var/www/openlen/{labels.2}/current
-			try_files /ab.json
-		}
+		not expression {http.vars.ab_delegated} == "sidecar"
 	}
 	header @doc Cache-Control "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
 
@@ -587,11 +623,78 @@ openlen.com, www.openlen.com {
 	# leftover traffic reaches try_files. (Forms survived a bare try_files
 	# because they POST to the apex absolute URL; member auth + analytics
 	# beacons are same-host and cannot, so they need this.)
-	handle @has_ab {
+	handle @ab_internal {
+		error 404
+	}
+
+	# A/B testing: the sidecar. 🔴 It FAILS OPEN. A sidecar that is down, hung or slow must cost an
+	# experiment, never the site: dial 300 ms, answer 3 s, and one failure takes it out of rotation
+	# for 10 s so the requests behind it do not each wait for the timeout. Whatever Caddy cannot get
+	# from it ends in the `handle_errors` below, which serves CONTROL from disk (measured with Caddy
+	# 2.11.4: without this, a dead sidecar was a 502 on every page of every site with an experiment).
+	# A page: the sidecar's answer is the response — unless it is an error (4xx or 5xx): a sidecar that
+	# cannot read the release answers 404 (or 400 for a path that is not UTF-8), and master answers
+	# those paths with the SPA index and a 200, so control from disk, same try_files, takes over.
+	handle @ab_delegated {
 		reverse_proxy 127.0.0.1:8085 {
 			header_up Host {http.request.host}
 			header_up CF-Connecting-IP {vars.cf_client_ip}
 			header_up X-OpenLen-Sub {labels.2}
+			transport http {
+				dial_timeout 300ms
+				response_header_timeout 3s
+			}
+			fail_duration 10s
+			max_fails 1
+			@ab_page_bad status 4xx 5xx
+			handle_response @ab_page_bad {
+				header Cache-Control "private, no-store"
+				root * /var/www/openlen/{labels.2}/current
+				try_files {path} {path}/index.html /index.html
+				file_server
+			}
+		}
+	}
+
+	# A file of an experiment site: the sidecar only answers WHICH file (header `X-OpenLen-Serve`,
+	# an absolute path inside the release: the variant's, or control's) and Caddy serves it, so Range,
+	# 304 and the streaming stay Caddy's. No such header → not overridden → served as for any site.
+	# Overridden: no-store and Vary: Cookie, the same for every visitor (see @ab_asset above).
+	handle @ab_probed {
+		reverse_proxy 127.0.0.1:8085 {
+			header_up Host {http.request.host}
+			header_up CF-Connecting-IP {vars.cf_client_ip}
+			header_up X-OpenLen-Sub {labels.2}
+			transport http {
+				dial_timeout 300ms
+				response_header_timeout 3s
+			}
+			fail_duration 10s
+			max_fails 1
+			@ab_serve header X-Openlen-Serve *
+			handle_response @ab_serve {
+				header Cache-Control "no-store"
+				header Vary "Cookie"
+				header X-OpenLen-AB "{rp.header.X-Openlen-Ab}"
+				rewrite * {rp.header.X-Openlen-Serve}
+				root * /var/www/openlen/{labels.2}/current
+				file_server
+			}
+			# The sidecar failed (5xx) on a file it may have meant to decide: control, not stored — Caddy's
+			# normal caching for an overridden file would let Cloudflare keep control's bytes under the URL.
+			@ab_file_5xx status 5xx
+			handle_response @ab_file_5xx {
+				header Cache-Control "private, no-store"
+				root * /var/www/openlen/{labels.2}/current
+				try_files {path} {path}/index.html /index.html
+				file_server
+			}
+			@ab_pass status 2xx 3xx 4xx 5xx
+			handle_response @ab_pass {
+				root * /var/www/openlen/{labels.2}/current
+				try_files {path} {path}/index.html /index.html
+				file_server
+			}
 		}
 	}
 
@@ -609,6 +712,56 @@ openlen.com, www.openlen.com {
 	# lands on index.html); only their missing assets do, which is fine —
 	# the status code is still 404.
 	handle_errors {
+		# A/B FAIL-OPEN (see `handle @ab_delegated`): the sidecar did not answer, so serve CONTROL
+		# from disk exactly as the static branch does — the same try_files, the same security
+		# headers and types, compressed — except Cache-Control: for a page or an overridden asset the
+		# experiment owns, Cloudflare must not keep control under the shared URL for an hour while
+		# visitors who belong to B are asking for it, so it is no-store. 502/503/504 only, and only
+		# for what was delegated: an error of Next behind /c/* or /api/f/* is never answered with a page.
+		@ab_failover expression {http.error.status_code} in [502, 503, 504] && ({http.vars.ab_delegated} == "sidecar" || {http.vars.ab_probe} == "sidecar")
+		handle @ab_failover {
+			header {
+				Strict-Transport-Security "max-age=31536000; includeSubDomains"
+				X-Content-Type-Options "nosniff"
+				X-Frame-Options "SAMEORIGIN"
+				Referrer-Policy "strict-origin-when-cross-origin"
+				Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
+			}
+			header Cache-Control "private, no-store"
+			@ab_fuentes path *.jsx *.tsx *.ts
+			header @ab_fuentes Content-Type "text/javascript; charset=utf-8"
+			@ab_webmanifest path *.webmanifest
+			header @ab_webmanifest Content-Type "application/manifest+json"
+			@ab_markdown path *.md
+			header @ab_markdown Content-Type "text/markdown; charset=utf-8"
+			@ab_glb path *.glb
+			header @ab_glb Content-Type "model/gltf-binary"
+			@ab_gltf path *.gltf
+			header @ab_gltf Content-Type "model/gltf+json"
+			@ab_bin path *.bin
+			header @ab_bin Content-Type "application/octet-stream"
+			@ab_hdr path *.hdr
+			header @ab_hdr Content-Type "image/vnd.radiance"
+			@ab_opus path *.opus
+			header @ab_opus Content-Type "audio/ogg"
+			@ab_flac path *.flac
+			header @ab_flac Content-Type "audio/flac"
+			encode zstd gzip
+			root * /var/www/openlen/{labels.2}/current
+			try_files {path} {path}/index.html /index.html
+			# In an error context file_server answers with the error's own status (502/503/504): `status 200`
+			# sends the page as a page. That also makes a 206 or a 304 impossible, so the request's Range and
+			# conditional headers are dropped: the full file goes out, which is legal. (Only while the sidecar
+			# is down; Safari plays no video without Range, and that is the cost of this degraded mode.)
+			request_header -Range
+			request_header -If-Range
+			request_header -If-None-Match
+			request_header -If-Modified-Since
+			file_server {
+				status 200
+			}
+		}
+
 		@notfound expression {http.error.status_code} == 404
 		handle @notfound {
 			root * /var/www/openlen/_system

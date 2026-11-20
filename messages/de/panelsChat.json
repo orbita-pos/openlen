@@ -1012,7 +1012,16 @@
       "close": "Schließen",
       "collectingHint": "Sammelt echte Besucherdaten ({views} Aufrufe, mind. 72 Std.).",
       "decidedByConflict": "Ein anderes Teammitglied oder Gerät hat diesen Test bereits entschieden.",
-      "pausedHarmNotice": "Automatisch gestoppt zum Schutz deiner Conversions; das Original läuft wieder zu 100%."
+      "pausedHarmNotice": "Automatisch gestoppt zum Schutz deiner Conversions; das Original läuft wieder zu 100%.",
+      "pushHarmStopNotRestored": "„{name}“ wurde gestoppt, da Variante B deutlich schlechter konvertierte. Deine Seite ist nicht veröffentlicht, es war also nichts Live-Geschaltetes wiederherzustellen.",
+      "emailTextInfo": "{push}\n\nSieh nach, was passiert ist: {url}",
+      "pushUnevenTraffic": "„{name}“ endete ohne Ergebnis: Der Traffic wurde ungleich auf die beiden Versionen verteilt, die Zahlen sind daher nicht verlässlich. Wähle, welche Version bleibt.",
+      "summaryUnevenTraffic": "Der Test „{name}“ endete ohne Ergebnis – der Traffic war ungleich verteilt, ich traue den Zahlen nicht. Welche Version soll bleiben?",
+      "bringPendingNotice": "Variante B ist live. Sie muss noch in deinen Entwurf übernommen werden – bis dahin wartet deine nächste Veröffentlichung.",
+      "bringQueued": "Len arbeitet an der Seite; Variante B kommt in deinen Entwurf, sobald er fertig ist.",
+      "discardBring": "Änderungen von Variante B verwerfen",
+      "pushClosedBySystem": "Der A/B-Test „{name}“ lief auf deiner veröffentlichten Seite nicht mehr und wurde deshalb beendet. Deine veröffentlichte Seite wurde nicht verändert.",
+      "pushPromotedBySystem": "Variante B von „{name}“ ist als Gewinnerin live gegangen. Übernimm sie über die Karte des A/B-Tests in deinen Entwurf, bevor du wieder veröffentlichst."
     }
   }
 }

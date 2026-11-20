@@ -95,5 +95,28 @@
       "queued": "Len arbeitet gerade am Projekt: Wir übernehmen sie, sobald er fertig ist.",
       "failed": "Die Korrektur konnte nicht übernommen werden. Versuch es noch einmal."
     }
+  },
+  "abRunning": {
+    "title": "Ein A/B-Test läuft",
+    "body": "Auf dieser Seite läuft ein A/B-Test. Beim Veröffentlichen wird er gestoppt. Stoppen und veröffentlichen?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Stoppen und veröffentlichen",
+    "cancel": "Abbrechen"
+  },
+  "abBringPending": {
+    "title": "Variante B ist noch nicht in deinem Entwurf",
+    "body": "Die Gewinner-Variante des A/B-Tests ist live, wurde aber noch nicht in deinen Entwurf übernommen. Wenn du jetzt veröffentlichst, geht dein Entwurf ohne sie raus und macht sie rückgängig.",
+    "bring": "Übernehmen, dann veröffentlichen",
+    "bringing": "Wird übernommen…",
+    "discard": "Verwerfen und veröffentlichen",
+    "cancel": "Abbrechen",
+    "queued": "Len arbeitet an der Seite. Variante B kommt in deinen Entwurf, sobald er fertig ist.",
+    "conflict": "Sie kollidiert mit deinen Änderungen. Bitte Len, sie von Hand zusammenzuführen, oder verwirf sie.",
+    "failed": "Das hat nicht geklappt. Versuch es noch einmal."
+  },
+  "abDecisionInProgress": {
+    "title": "Eine Entscheidung zum A/B-Test wird gerade angewendet",
+    "body": "Jemand – oder das System – wendet gerade eine Entscheidung zum A/B-Test dieser Seite an. Eine Veröffentlichung mittendrin könnte sie rückgängig machen. Versuch es in einer Minute noch einmal.",
+    "ok": "Verstanden"
   }
 }

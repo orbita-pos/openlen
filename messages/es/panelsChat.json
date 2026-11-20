@@ -1012,7 +1012,16 @@
       "close": "Cerrar",
       "collectingHint": "Recolectando datos reales ({views} visitas, mínimo 72 h).",
       "decidedByConflict": "Otro miembro o dispositivo ya decidió esta prueba.",
-      "pausedHarmNotice": "Detenida automáticamente para proteger tus conversiones; la original sigue al 100%."
+      "pausedHarmNotice": "Detenida automáticamente para proteger tus conversiones; la original sigue al 100%.",
+      "pushHarmStopNotRestored": "Detuve «{name}» porque la variante B convirtió mucho menos. Tu sitio no está publicado, así que no había nada en línea que restaurar.",
+      "emailTextInfo": "{push}\n\nMira qué pasó: {url}",
+      "pushUnevenTraffic": "«{name}» terminó sin resultado: el tráfico se repartió de forma desigual entre las dos versiones y los números no son fiables. Decide qué versión dejar.",
+      "summaryUnevenTraffic": "La prueba «{name}» terminó sin resultado: el tráfico se repartió de forma desigual y no me fío de los números, ¿qué versión dejo?",
+      "bringPendingNotice": "La variante B ya está publicada. Falta traerla a tu borrador; hasta entonces, tu próxima publicación espera.",
+      "bringQueued": "Len está trabajando en la página; la variante B entrará en tu borrador cuando termine.",
+      "discardBring": "Descartar los cambios de la variante B",
+      "pushClosedBySystem": "La prueba A/B «{name}» ya no estaba en marcha en tu sitio publicado, así que se cerró. Tu página publicada no cambió.",
+      "pushPromotedBySystem": "La variante B de «{name}» quedó publicada como ganadora. Tráela a tu borrador desde la tarjeta de la prueba A/B antes de volver a publicar."
     }
   }
 }

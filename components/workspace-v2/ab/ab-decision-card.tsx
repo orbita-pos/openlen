@@ -5,8 +5,9 @@
 // confidence/lift, SRM warning, and one-click decision actions with conflict recovery.
 import { useEffect, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, Check, FlaskConical, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, FlaskConical, Sparkles, X } from "lucide-react";
 
+import { isUnbroughtWinner } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
 
 function formatPct(rate: number): string {
@@ -19,12 +20,15 @@ export function AbDecisionCard({
   highlight = false,
   assistantName,
   onUpdated,
+  onDismiss,
 }: {
   experiment: AbExperimentView;
   readonly?: boolean;
   highlight?: boolean;
   assistantName?: string | null;
   onUpdated?: (updated: AbExperimentView) => void;
+  /** A test the harm brake stopped is informational and stays for 14 days: whoever read it can put it away. */
+  onDismiss?: () => void;
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
@@ -130,9 +134,34 @@ export function AbDecisionCard({
         const next: AbExperimentView = { ...current, bringState: "brought" };
         setCurrent(next);
         onUpdated?.(next);
+      } else if (body?.status === "queued") {
+        setDoneMsg(t("ownAssistant.ab.bringQueued"));
       } else {
         setErrorMsg(t("ownAssistant.ab.conflictNotice"));
       }
+    } catch {
+      setErrorMsg(t("ownAssistant.ab.failed"));
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  // «Don't bring it in»: the owner keeps their draft, production keeps B, and their next publish stops waiting.
+  const discardBring = async () => {
+    setBusyAction("discard");
+    setErrorMsg(null);
+    try {
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(current.projectId)}/ab/${encodeURIComponent(current.id)}/bring`,
+        { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "discard" }) },
+      );
+      if (!res.ok) {
+        setErrorMsg(t("ownAssistant.ab.failed"));
+        return;
+      }
+      const next: AbExperimentView = { ...current, bringState: "declined" };
+      setCurrent(next);
+      onUpdated?.(next);
     } catch {
       setErrorMsg(t("ownAssistant.ab.failed"));
     } finally {
@@ -173,6 +202,18 @@ export function AbDecisionCard({
           <span className="ml-auto shrink-0 rounded-full bg-app px-1.5 py-0.5 text-[10px] font-medium fg-muted tabular-nums">
             {t("ownAssistant.ab.confidence", { prob: probPct })}
           </span>
+        )}
+        {current.status === "paused_harm" && onDismiss && (
+          <button
+            type="button"
+            data-ab-dismiss=""
+            aria-label={t("ownAssistant.ab.close")}
+            title={t("ownAssistant.ab.close")}
+            onClick={onDismiss}
+            className="ml-auto inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md fg-faint hover:bg-hover hover:fg"
+          >
+            <X size={12} />
+          </button>
         )}
       </div>
 
@@ -254,18 +295,30 @@ export function AbDecisionCard({
         </p>
       )}
 
-      {current.bringState === "conflict" && (
-        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-800 dark:text-amber-200">
-          <p>{t("ownAssistant.ab.conflictNotice")}</p>
+      {isUnbroughtWinner(current) && (
+        <div className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-800 dark:text-amber-200" data-ab-bring={current.bringState}>
+          <p>{current.bringState === "pending" ? t("ownAssistant.ab.bringPendingNotice") : t("ownAssistant.ab.conflictNotice")}</p>
           {!readonly && (
-            <button
-              type="button"
-              disabled={busyAction !== null}
-              onClick={() => void retryBring()}
-              className="mt-1.5 inline-flex h-6 items-center rounded-md border bd bg-elev px-2 text-[11px] font-medium fg hover:bg-hover disabled:opacity-50"
-            >
-              {busyAction === "bring" ? t("ownAssistant.ab.applying") : t("ownAssistant.ab.retryMerge")}
-            </button>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                data-ab-bring-retry=""
+                disabled={busyAction !== null}
+                onClick={() => void retryBring()}
+                className="inline-flex h-6 items-center rounded-md border bd bg-elev px-2 text-[11px] font-medium fg hover:bg-hover disabled:opacity-50"
+              >
+                {busyAction === "bring" ? t("ownAssistant.ab.applying") : t("ownAssistant.ab.retryMerge")}
+              </button>
+              <button
+                type="button"
+                data-ab-bring-discard=""
+                disabled={busyAction !== null}
+                onClick={() => void discardBring()}
+                className="inline-flex h-6 items-center rounded-md px-2 text-[11px] font-medium fg-muted hover:bg-hover disabled:opacity-50"
+              >
+                {busyAction === "discard" ? t("ownAssistant.ab.applying") : t("ownAssistant.ab.discardBring")}
+              </button>
+            </div>
           )}
         </div>
       )}

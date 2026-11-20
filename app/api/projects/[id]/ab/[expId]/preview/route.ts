@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getExperimentById } from "@/lib/ab/store";
 import { copySources, ensurePublishedSources } from "@/lib/ab/worktree";
 import { db, schema } from "@/lib/db";
-import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
@@ -17,7 +17,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string; expId: string }> },
 ): Promise<Response> {
-  const userId = await usuarioDeLaPeticion(req);
+  // Web session only (review item 27): the comparator is the workspace's; no phone key.
+  const userId = (await auth())?.user?.id;
   if (!userId) return new Response("Unauthorized", { status: 401 });
   const { id, expId } = await params;
   const acceso = await exigirAcceso(id, userId, "ver");
@@ -30,14 +31,15 @@ export async function GET(
   const variant = url.searchParams.get("variant") === "b" ? "b" : "a";
 
   let html = "";
-  if (variant === "b" && exp.copyProjectId) {
-    const src = await copySources(exp.copyProjectId).catch(() => null);
-    if (src) {
-      html =
-        exp.targetPath === "/"
-          ? src.data.html
-          : (src.data.pages?.[exp.targetPath.slice(1)]?.html ?? src.data.html);
-    }
+  if (variant === "b") {
+    // No copy left (the experiment ended and its worktree was cleaned): there is no Variant B to show — never Control A
+    // under B's name (review item 29).
+    const src = exp.copyProjectId ? await copySources(exp.copyProjectId).catch(() => null) : null;
+    if (!src) return new Response("Not found", { status: 404 });
+    html =
+      exp.targetPath === "/"
+        ? src.data.html
+        : (src.data.pages?.[exp.targetPath.slice(1)]?.html ?? src.data.html);
   } else {
     const control = await ensurePublishedSources(id, acceso.duenoId).catch(() => null);
     if (control) {

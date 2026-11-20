@@ -36,6 +36,7 @@ import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { AB_COOKIE_PREFIX, AB_OVERRIDE_PARAM, formatAbTag } from "@/lib/analytics/ab-tag";
+import { AB_MANIFEST_PATH, abVariantPrefix } from "@/lib/ab/layout";
 import type { AbManifest } from "@/lib/ab/types";
 import { lenWatchEnabled } from "@/lib/len-watch/enabled";
 import { injectWatchSnippet } from "@/lib/len-watch/snippet";
@@ -227,8 +228,9 @@ export interface PublishParams {
   /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
    *  the auth card / dashboard — mode:"account" — with no protected doc behind
    *  it). Wears the same detected accent as the gate stubs. */
-  /** Edge A/B testing (Plan 3): bake Control A + Variant B under `_ab/<id>/b/`
-   *  plus `<release>/ab.json` atomically in a single content-addressed release. */
+  /** Edge A/B testing (Plan 3): bake Control A + Variant B under `openlen/ab/<id>/b/`
+   *  plus `<release>/openlen/ab.json` atomically in a single content-addressed release. `openlen/` is a reserved
+   *  root (no project file can live there), so the experiment can never collide with the owner's files. */
   abExperiment?: AbPublishSpec;
   /** Additional release SHAs that `pruneOldReleases` must never delete (e.g.
    *  `controlReleaseSha` while an A/B experiment is running). */
@@ -862,6 +864,8 @@ export interface PublishResult {
   localesFallidos: string[];
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
+  /** With an experiment: the asset paths (leading slash) Variant B overrides — what the edge must be purged of. */
+  abOverrides?: readonly string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
   /** Documentos que salieron SIN su CSP sellada, por etiqueta ("/", "es",
    *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
@@ -1021,8 +1025,40 @@ export async function publishToDir(
     const pathHere = slug ? `/${slug}` : "/";
     return pathHere === abTargetPath ? formatAbTag(abSpec.id, variant) : null;
   };
-  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, abTagFor(null, "a"));
+  // EDGE A/B TESTING, home target: Variant B's home (and, when the experiment includes languages, its language pages) is
+  // baked and localized BEFORE control's language pages are derived, because whether those are part of the experiment
+  // depends on whether B has any (review item 17): the manifest says `includeLocales` only if B's language pages exist.
+  let abHome: { html: string; locales: Array<{ locale: string; html: string }> } | null = null;
+  if (abSpec && abTargetPath === "/") {
+    const bSanitized = gateReservedMarker(stripOpIds(abSpec.variantB.html));
+    if (bSanitized.html === null) {
+      throw new Error("publishToDir: refusing to write A/B Variant B containing data-slot-path");
+    }
+    const bBakeCtx: BakeDocumentCtx = {
+      ...bakeCtx,
+      fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
+    };
+    const bHtml = await bakeDocument(bSanitized.html, bBakeCtx, null, formatAbTag(abSpec.id, "b"));
+    let bLocales: Array<{ locale: string; html: string }> = [];
+    if (abSpec.includeLocales && params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0") {
+      try {
+        bLocales = (await params.buildLocaleDocs(bHtml)).filter((d) => /^[a-z]{2,5}$/.test(d.locale));
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.warn("[publishToDir] Variant B localization failed; using root only", err);
+      }
+    }
+    abHome = { html: bHtml, locales: bLocales };
+  }
 
+  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, abTagFor(null, "a"));
+  // Only a document the edge buckets carries an experiment tag. Control's language pages are in the experiment only when
+  // B has its own (then the edge sends a visitor's cookie variant to `/<locale>/`); otherwise they are plain pages, and
+  // translating the TAGGED home would stamp every view of them as A — and re-tag a B visitor who switched language.
+  const localeSourceHtml =
+    abHome && abHome.locales.length === 0 && params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0"
+      ? await bakeDocument(publishHtml, bakeCtx, null, null)
+      : migratedHtml;
 
   // Speak Every Language: translated locale variants of the final baked
   // page, written as /<locale>/index.html inside the same release. Soft-
@@ -1030,7 +1066,7 @@ export async function publishToDir(
   let localeDocs: Array<{ locale: string; html: string }> = [];
   if (params.buildLocaleDocs && process.env.OPENLEN_LOCALIZE !== "0") {
     try {
-      localeDocs = (await params.buildLocaleDocs(migratedHtml)).filter((d) =>
+      localeDocs = (await params.buildLocaleDocs(localeSourceHtml)).filter((d) =>
         /^[a-z]{2,5}$/.test(d.locale),
       );
     } catch (err) {
@@ -1187,41 +1223,22 @@ export async function publishToDir(
   const own = new Set(folder.map((f) => f.path));
   const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
 
-  // Edge A/B testing (Plan 3): bake Variant B under `_ab/<id>/b/` with the
+  // Edge A/B testing (Plan 3): bake Variant B under `openlen/ab/<id>/b/` with the
   // SAME canonical selfPath as Control A (SEO safe), plus modified folder files
-  // and `ab.json` manifest read by Rust `crates/edge` and TS fallback.
+  // and the `openlen/ab.json` manifest read by Rust `crates/edge` and TS fallback.
+  let abOverridesOut: readonly string[] | undefined;
   if (abSpec && abTargetPath) {
-    const prefixB = `_ab/${abSpec.id}/b`;
+    const prefixB = abVariantPrefix(abSpec.id);
     const abVariantFiles: Array<{ path: string; content: string }> = [];
+    // The asset paths (URLs, with the leading slash) whose bytes in B differ from control's: the edge routes only these
+    // to B and marks them no-store (everything else is served by the static file server).
+    const abOverrides: string[] = [];
     const variantBLocaleCodes: string[] = [];
 
-    if (abTargetPath === "/") {
-      const bSanitized = gateReservedMarker(stripOpIds(abSpec.variantB.html));
-      if (bSanitized.html === null) {
-        throw new Error("publishToDir: refusing to write A/B Variant B containing data-slot-path");
-      }
-      const bBakeCtx: BakeDocumentCtx = {
-        ...bakeCtx,
-        fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
-      };
-      let bHtml = await bakeDocument(bSanitized.html, bBakeCtx, null, formatAbTag(abSpec.id, "b"));
-      let bLocales: Array<{ locale: string; html: string }> = [];
-      if (
-        abSpec.includeLocales &&
-        params.buildLocaleDocs &&
-        process.env.OPENLEN_LOCALIZE !== "0"
-      ) {
-        try {
-          bLocales = (await params.buildLocaleDocs(bHtml)).filter((d) =>
-            /^[a-z]{2,5}$/.test(d.locale),
-          );
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.warn("[publishToDir] Variant B localization failed; using root only", err);
-        }
-      }
-      bHtml = annotateLanguageCluster(bHtml, { baseUrl, selfPath: "/", cluster });
-      bHtml = optOutOfEmailObfuscation(seal(bHtml, `/_ab/${abSpec.id}/b/`));
+    if (abTargetPath === "/" && abHome) {
+      const bLocales = abHome.locales;
+      let bHtml = annotateLanguageCluster(abHome.html, { baseUrl, selfPath: "/", cluster });
+      bHtml = optOutOfEmailObfuscation(seal(bHtml, `/${prefixB}/`));
       abVariantFiles.push({ path: `${prefixB}/index.html`, content: bHtml });
 
       for (const d of bLocales) {
@@ -1232,7 +1249,7 @@ export async function publishToDir(
               selfPath: `/${d.locale}/`,
               cluster,
             }),
-            `/_ab/${abSpec.id}/b/${d.locale}`,
+            `/${prefixB}/${d.locale}`,
           ),
         );
         abVariantFiles.push({ path: `${prefixB}/${d.locale}/index.html`, content: localized });
@@ -1265,7 +1282,7 @@ export async function publishToDir(
         selfPath: `/${targetSlug}/`,
         cluster: [{ lang: sourceLang, path: `/${targetSlug}/` }],
       });
-      bDoc = optOutOfEmailObfuscation(seal(bDoc, `/_ab/${abSpec.id}/b/${targetSlug}`));
+      bDoc = optOutOfEmailObfuscation(seal(bDoc, `/${prefixB}/${targetSlug}`));
       abVariantFiles.push({ path: `${prefixB}/${targetSlug}/index.html`, content: bDoc });
     }
 
@@ -1296,10 +1313,12 @@ export async function publishToDir(
         }
         if (controlByPath.get(bf.path) !== bf.content) {
           abVariantFiles.push({ path: `${prefixB}/${bf.path}`, content: bf.content });
+          abOverrides.push(`/${bf.path}`);
         }
       }
     }
 
+    abOverridesOut = [...abOverrides].sort();
     for (const f of abVariantFiles) tree.push(f);
     const contentSha = computeShaFiles(tree);
     const manifest: AbManifest = {
@@ -1317,10 +1336,11 @@ export async function publishToDir(
           prefixB,
           overrideParam: AB_OVERRIDE_PARAM,
           expiresAt: abSpec.expiresAt ?? null,
+          overrides: abOverrides.sort(),
         },
       ],
     };
-    tree.push({ path: "ab.json", content: JSON.stringify(manifest) });
+    tree.push({ path: AB_MANIFEST_PATH, content: JSON.stringify(manifest) });
   }
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
   // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
@@ -1408,6 +1428,7 @@ export async function publishToDir(
       (code) => !localeDocs.some((d) => d.locale === code),
     ),
     pages: pageDocs.map((p) => p.slug),
+    ...(abOverridesOut ? { abOverrides: abOverridesOut } : {}),
   };
 }
 

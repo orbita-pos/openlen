@@ -1012,7 +1012,16 @@
       "close": "Close",
       "collectingHint": "Collecting real visitor data ({views} views, 72h minimum).",
       "decidedByConflict": "Another teammate or device already decided this test.",
-      "pausedHarmNotice": "Auto-stopped to protect conversions; the original is serving 100% of traffic."
+      "pausedHarmNotice": "Auto-stopped to protect conversions; the original is serving 100% of traffic.",
+      "pushHarmStopNotRestored": "Stopped “{name}” because Variant B dropped conversions. Your site isn't published, so there was nothing live to put back.",
+      "emailTextInfo": "{push}\n\nSee what happened: {url}",
+      "pushUnevenTraffic": "“{name}” ended with no result: traffic was split unevenly between the two versions, so the numbers can't be trusted. Choose which version to keep.",
+      "summaryUnevenTraffic": "The “{name}” test ended with no result — traffic was split unevenly, so I can't trust the numbers. Which version should stay?",
+      "bringPendingNotice": "Variant B is live. It still has to come into your draft — until then your next publish waits.",
+      "bringQueued": "Len is working on the page; Variant B will come into your draft when he finishes.",
+      "discardBring": "Discard Variant B's changes",
+      "pushClosedBySystem": "The A/B test “{name}” had stopped running on your live site, so it was closed. Your live page was not changed.",
+      "pushPromotedBySystem": "Variant B of “{name}” went live as the winner. Bring it into your draft from the A/B card before you publish again."
     }
   }
 }

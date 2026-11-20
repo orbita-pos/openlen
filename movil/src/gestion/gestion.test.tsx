@@ -111,3 +111,68 @@ it("el arreglo de Len Watch que falta en el borrador: «Traer el arreglo» lo tr
   expect(rutas[1]!.body).toEqual({ incidentId: "i1" });
   expect(rutas[2]!.body).not.toHaveProperty("acceptLenWatchFix");
 });
+// A running A/B test that publishing would stop (review items 13, 14): the phone asks, like the web's dialog, and only the
+// confirm resends the publish with `stopActiveAb: true`. The texts are the web's own (`modalsDeploy.abRunning`).
+it("🔴 una prueba A/B en marcha: pregunta, y sólo «Detener y publicar» reenvía con stopActiveAb", async () => {
+  const posts: Record<string, unknown>[] = [];
+  let primera = true;
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async (r, init) => {
+    if (r.endsWith("/publish")) {
+      posts.push(JSON.parse(String(init?.body)));
+      if (primera) { primera = false; return Response.json({ error: "ab_experiment_running", experimentId: "ab_1", name: "Hero principal", targetPath: "/" }, { status: 428 }); }
+      return Response.json({ url: "https://pan.openlen.app", publishedAt: "2026-11-19T12:00:00Z" });
+    }
+    return Response.json({ project });
+  } });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("title");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("body");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("name");
+  expect(posts).toHaveLength(1);
+  expect(posts[0]).not.toHaveProperty("stopActiveAb");
+  // no checkbox: the confirm IS this button
+  expect(host.querySelector('input[type="checkbox"]')).toBeNull();
+  await act(async () => boton("stopAndPublish").click());
+  expect(posts).toHaveLength(2);
+  expect(posts[1]).toHaveProperty("stopActiveAb", true);
+  // it isn't remembered for the next publish: the next one asks again
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  expect(posts[2]).not.toHaveProperty("stopActiveAb");
+});
+it("una prueba A/B en marcha: «Cancelar» no publica nada más", async () => {
+  const posts: unknown[] = [];
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async (r, init) => {
+    if (r.endsWith("/publish")) { posts.push(JSON.parse(String(init?.body))); return Response.json({ error: "ab_experiment_running", experimentId: "ab_1", name: "Hero", targetPath: "/" }, { status: 409 }); }
+    return Response.json({ project });
+  } });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  await act(async () => boton("cancel").click());
+  expect(posts).toHaveLength(1);
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+it("🔴 un ganador de la prueba A/B aún sin traer al borrador: lo dice, y no ofrece publicar igual", async () => {
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async r => r.endsWith("/publish")
+    ? Response.json({ error: "ab_bring_pending", experimentId: "ab_1", name: "Hero", bringState: "conflict" }, { status: 428 })
+    : Response.json({ project }) });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  const alerta = host.querySelector('[role="alert"]')?.textContent ?? "";
+  expect(alerta).toContain("title");
+  expect(alerta).toContain("body");
+  expect(alerta).not.toContain("publicarIgual");
+});
+
+it("🔴 «Detener y publicar» que encuentra una decisión en curso: lo dice, no publica nada, y se cierra", async () => {
+  const posts: unknown[] = [];
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async (r, init) => {
+    if (r.endsWith("/publish")) { posts.push(JSON.parse(String(init?.body))); return Response.json({ error: "ab_decision_in_progress", experimentId: "ab_1", name: "Hero" }, { status: 409 }); }
+    return Response.json({ project });
+  } });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  const alerta = host.querySelector('[role="alert"]')?.textContent ?? "";
+  expect(alerta).toContain("title");
+  expect(alerta).toContain("body");
+  expect(alerta).not.toContain("publicarIgual");
+  expect(posts).toHaveLength(1);
+  await act(async () => boton("ok").click());
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});

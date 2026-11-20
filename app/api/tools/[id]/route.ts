@@ -3,8 +3,7 @@
 // tool that doesn't exist. Removing keeps the row and the project, so «Restaurar» can bring it back.
 import { z } from "zod";
 
-import { usuarioDeLaPeticion } from "@/lib/movil/quien";
-import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { auth } from "@/auth";
 import { toolsEnabled } from "@/lib/tools/enabled";
 import { markRemoved, setEnabled } from "@/lib/tools/store";
 
@@ -18,8 +17,9 @@ const Body = z.object({ enabled: z.boolean() });
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export const PATCH = paraLaApp(async (req: Request, { params }: Ctx): Promise<Response> => {
-  const userId = await usuarioDeLaPeticion(req);
+// Only the workspace's browser session: the phone uses tools, it never manages them (the Herramientas page is the web's).
+export async function PATCH(req: Request, { params }: Ctx): Promise<Response> {
+  const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   if (!toolsEnabled()) return json({ error: "tools_off" }, 404);
   const { id } = await params;
@@ -27,15 +27,13 @@ export const PATCH = paraLaApp(async (req: Request, { params }: Ctx): Promise<Re
   if (!parsed.success) return json({ error: "invalid" }, 400);
   if (!(await setEnabled(id, userId, parsed.data.enabled))) return json({ error: "not_found" }, 404);
   return json({ ok: true, enabled: parsed.data.enabled });
-});
+}
 
-export const DELETE = paraLaApp(async (req: Request, { params }: Ctx): Promise<Response> => {
-  const userId = await usuarioDeLaPeticion(req);
+export async function DELETE(_req: Request, { params }: Ctx): Promise<Response> {
+  const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   if (!toolsEnabled()) return json({ error: "tools_off" }, 404);
   const { id } = await params;
   if (!(await markRemoved(id, userId))) return json({ error: "not_found" }, 404);
   return json({ ok: true });
-});
-
-export const OPTIONS = respuestaPrevia;
+}

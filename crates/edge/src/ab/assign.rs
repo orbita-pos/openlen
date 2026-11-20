@@ -2,10 +2,13 @@
 //!
 //! Parity contract with TypeScript `lib/ab/serve.ts`:
 //!   SHA-256("{salt}:{exp_id}:{client_ip}:{ua}:{accept_lang}")
-//!   bucket = u16::from_be_bytes([digest[0], digest[1]]) % 10_000
+//!   bucket = u32::from_be_bytes(digest[0..4]) % 10_000
 //!   variant = if bucket < split_bps { B } else { A }
 
+use std::path::{Component, Path};
+
 use chrono::{DateTime, Utc};
+use percent_encoding::percent_decode_str;
 use sha2::{Digest, Sha256};
 
 use super::bot::is_bot;
@@ -51,7 +54,7 @@ pub struct AbDecision {
     pub variant: Variant,
     pub source: AssignSource,
     /// Path to try on disk when serving Variant B (relative to release dir,
-    /// starting with `/_ab/<id>/b/...`). `None` when serving Control A.
+    /// starting with `/openlen/ab/<id>/b/...`). `None` when serving Control A.
     pub variant_b_path: Option<String>,
     /// `Set-Cookie` header value when a new sticky assignment was minted.
     pub set_cookie: Option<String>,
@@ -61,12 +64,49 @@ pub struct AbDecision {
     pub is_page_route: bool,
 }
 
-/// True if `url_path` tries to directly address `/ab.json` or `/_ab` / `/_ab/*`.
-/// The edge must ALWAYS return 404 for these paths.
+/// The segments of the path the file resolver would walk: percent-decoded once (like
+/// `files::resolve`), `\` as a separator, empty and `.` segments dropped, `..` popping its
+/// parent, a NUL cutting its segment, and lower-cased (the filesystem may not care about case).
+fn resolved_segments(url_path: &str) -> Vec<String> {
+    let decoded = percent_decode_str(url_path).decode_utf8_lossy();
+    let mut out: Vec<String> = Vec::new();
+    for seg in decoded.split(['/', '\\']) {
+        let seg = seg.split('\0').next().unwrap_or("");
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            other => out.push(other.to_ascii_lowercase()),
+        }
+    }
+    out
+}
+
+/// True if `url_path` addresses the experiment's own files once it is RESOLVED (decoded,
+/// dot segments removed, trailing and doubled slashes gone): `/openlen/ab.json` or
+/// `/openlen/ab` / `/openlen/ab/*`. The edge must ALWAYS return 404 for these. Other files of
+/// the reserved `openlen/` root (e.g. the bubble's `figure-<sha>.js`) are served as usual.
 pub fn is_blocked_internal_path(url_path: &str) -> bool {
-    let trimmed = url_path.trim_start_matches('/');
-    let lower = trimmed.to_ascii_lowercase();
-    lower == "ab.json" || lower == "_ab" || lower.starts_with("_ab/")
+    let segs = resolved_segments(url_path);
+    segs.len() >= 2 && segs[0] == "openlen" && (segs[1] == "ab.json" || segs[1] == "ab")
+}
+
+/// True when `file` (canonical) is the experiment manifest or lives under the experiment's
+/// own tree, inside the canonical release dir `release_root`.
+pub fn is_internal_ab_file(release_root: &Path, file: &Path) -> bool {
+    let Ok(rel) = file.strip_prefix(release_root) else {
+        return false;
+    };
+    let mut parts = rel.components().filter_map(|c| match c {
+        Component::Normal(p) => p.to_str(),
+        _ => None,
+    });
+    let (Some(first), Some(second)) = (parts.next(), parts.next()) else {
+        return false;
+    };
+    first.eq_ignore_ascii_case("openlen")
+        && (second.eq_ignore_ascii_case("ab.json") || second.eq_ignore_ascii_case("ab"))
 }
 
 /// Parse a named cookie from a raw `Cookie` header string.
@@ -84,18 +124,77 @@ pub fn read_cookie<'a>(cookie_header: Option<&'a str>, name: &str) -> Option<&'a
     None
 }
 
-/// Parse a named query parameter from a raw query string (without leading `?`).
-pub fn read_query_param<'a>(query: Option<&'a str>, name: &str) -> Option<&'a str> {
+/// `application/x-www-form-urlencoded` decoding of one key or value (`+` is a space, `%XX` bytes,
+/// invalid UTF-8 replaced): what `URLSearchParams` does in `lib/ab/serve.ts`.
+fn decode_form_component(raw: &str) -> String {
+    let spaced = raw.replace('+', " ");
+    percent_decode_str(&spaced).decode_utf8_lossy().into_owned()
+}
+
+/// Parse a named query parameter from a raw query string (without leading `?`), decoded like
+/// `URLSearchParams.get`: keys and values are form-decoded, the FIRST occurrence wins, a key
+/// without `=` is present with an empty value, empty parts (`&&`) are skipped.
+pub fn read_query_param(query: Option<&str>, name: &str) -> Option<String> {
     let raw = query?;
     for part in raw.split('&') {
-        let Some((k, v)) = part.split_once('=') else {
+        if part.is_empty() {
             continue;
-        };
-        if k == name {
-            return Some(v);
+        }
+        let (k, v) = part.split_once('=').unwrap_or((part, ""));
+        if decode_form_component(k) == name {
+            return Some(decode_form_component(v));
         }
     }
     None
+}
+
+/// The resolved URL path, case kept: percent-decoded once, `\` and `/` as separators, empty and `.`
+/// segments dropped, `..` popping its parent, a NUL cutting its segment; always with a leading `/`,
+/// never a trailing one. The path every decision is made on, in `lib/ab/serve.ts` too.
+pub fn canonical_path(url_path: &str) -> String {
+    let decoded = percent_decode_str(url_path).decode_utf8_lossy();
+    let mut out: Vec<&str> = Vec::new();
+    for seg in decoded.split(['/', '\\']) {
+        let seg = seg.split('\0').next().unwrap_or("");
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            other => out.push(other),
+        }
+    }
+    format!("/{}", out.join("/"))
+}
+
+/// True for a path whose last segment has an extension other than `.html`/`.htm`: a file, not a
+/// page. A dotfile (`/.well-known/x`, `/.hidden`) is a file too.
+pub fn is_asset_path(url_path: &str) -> bool {
+    path_has_non_html_extension(&canonical_path(url_path))
+}
+
+/// Bucket (0..10_000) of a visitor, identical to TypeScript `hashBucket`.
+pub fn hash_bucket(
+    salt: &str,
+    exp_id: &str,
+    client_ip: &str,
+    user_agent: &str,
+    accept_language: &str,
+) -> u16 {
+    let mut hasher = Sha256::new();
+    hasher.update(salt.as_bytes());
+    hasher.update(b":");
+    hasher.update(exp_id.as_bytes());
+    hasher.update(b":");
+    hasher.update(client_ip.as_bytes());
+    hasher.update(b":");
+    hasher.update(user_agent.as_bytes());
+    hasher.update(b":");
+    hasher.update(accept_language.as_bytes());
+    let digest = hasher.finalize();
+    // u32, not u16: 65_536 is not a multiple of 10_000, so a u16 would favour buckets
+    // 0..5_535 and send 53.4 % of a 50/50 to B (the bias of a u32 is 2e-6).
+    (u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]) % 10_000) as u16
 }
 
 /// Pure deterministic hash assignment identical to TypeScript `hashVariant`.
@@ -113,19 +212,7 @@ pub fn hash_variant(
     if split_bps >= 10_000 {
         return Variant::B;
     }
-    let mut hasher = Sha256::new();
-    hasher.update(salt.as_bytes());
-    hasher.update(b":");
-    hasher.update(exp_id.as_bytes());
-    hasher.update(b":");
-    hasher.update(client_ip.as_bytes());
-    hasher.update(b":");
-    hasher.update(user_agent.as_bytes());
-    hasher.update(b":");
-    hasher.update(accept_language.as_bytes());
-    let digest = hasher.finalize();
-    let bucket = u16::from_be_bytes([digest[0], digest[1]]) % 10_000;
-    if bucket < split_bps {
+    if hash_bucket(salt, exp_id, client_ip, user_agent, accept_language) < split_bps {
         Variant::B
     } else {
         Variant::A
@@ -170,8 +257,14 @@ fn build_variant_b_url(prefix_b: &str, url_path: &str) -> String {
 
 /// Evaluate an incoming request against a validated `AbManifest`.
 ///
-/// Returns `None` when the request path is outside every active experiment (so
-/// the caller serves Control A with standard CDN cache headers untouched).
+/// Returns `None` when the request is outside every active experiment (so the caller serves
+/// control with its standard headers untouched). `url_path` may be raw: it is resolved first.
+///
+/// A PAGE of an experiment is bucketed (override, bot, sticky cookie, hash). A FILE is decided
+/// only when a live experiment lists it in its `overrides` — B ships different bytes for it — and
+/// then by THAT experiment (its cookie, its override parameter, its `prefix_b`), for EVERY visitor,
+/// control included: the caller marks the answer `no-store`, or Cloudflare would cache one
+/// variant's bytes under the shared URL for the other's visitors.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_manifest(
     manifest: &AbManifest,
@@ -184,41 +277,34 @@ pub fn evaluate_manifest(
     secure_cookie: bool,
     now: DateTime<Utc>,
 ) -> Option<AbDecision> {
-    let is_asset = path_has_non_html_extension(url_path);
+    let path = canonical_path(url_path);
 
-    if is_asset {
-        // Folder assets (e.g. /css/site.css, /js/app.js) only route to Variant B
-        // if the visitor already carries a Variant B sticky cookie (or override)
-        // for a live experiment; the caller falls back to Control A if B didn't
-        // override that asset.
-        for exp in &manifest.experiments {
-            if exp.is_expired(now) {
-                continue;
-            }
-            let override_v = read_query_param(query, &exp.override_param);
-            let cookie_v = read_cookie(cookie_header, &exp.cookie_name);
-            let wants_b = matches!(override_v, Some("b" | "B"))
-                || (override_v.is_none() && matches!(cookie_v, Some("b" | "B")));
-            if wants_b {
-                return Some(AbDecision {
-                    experiment_id: exp.id.clone(),
-                    variant: Variant::B,
-                    source: if override_v.is_some() {
-                        AssignSource::Override
-                    } else {
-                        AssignSource::Cookie
-                    },
-                    variant_b_path: Some(build_variant_b_url(&exp.prefix_b, url_path)),
-                    set_cookie: None,
-                    is_override: override_v.is_some(),
-                    is_page_route: false,
-                });
-            }
-        }
-        return None;
+    if path_has_non_html_extension(&path) {
+        let exp = manifest
+            .experiments
+            .iter()
+            .find(|e| !e.is_expired(now) && e.overrides_file(&path))?;
+        let ov = read_query_param(query, &exp.override_param).map(|v| v.to_ascii_lowercase());
+        let cv = read_cookie(cookie_header, &exp.cookie_name).map(str::to_ascii_lowercase);
+        let (variant, source) = match (ov.as_deref(), cv.as_deref()) {
+            (Some("b"), _) => (Variant::B, AssignSource::Override),
+            (Some("a"), _) => (Variant::A, AssignSource::Override),
+            (_, Some("b")) => (Variant::B, AssignSource::Cookie),
+            _ => (Variant::A, AssignSource::Cookie),
+        };
+        return Some(AbDecision {
+            experiment_id: exp.id.clone(),
+            variant,
+            source,
+            variant_b_path: (variant == Variant::B)
+                .then(|| build_variant_b_url(&exp.prefix_b, &path)),
+            set_cookie: None,
+            is_override: source == AssignSource::Override,
+            is_page_route: false,
+        });
     }
 
-    let normalized = normalize_match_path(url_path);
+    let normalized = normalize_match_path(&path);
     let exp = manifest
         .experiments
         .iter()
@@ -317,44 +403,129 @@ mod tests {
                 locales: vec!["es".into(), "fr".into()],
                 split_bps: 5000,
                 salt: "3f9a1c8e7b2d4012".into(),
-                prefix_b: "_ab/ab_9f3c2a1b/b".into(),
+                prefix_b: "openlen/ab/ab_9f3c2a1b/b".into(),
                 override_param: "_ol_ab".into(),
                 expires_at: None,
+                overrides: Vec::new(),
             }],
         }
     }
 
     #[test]
     fn blocks_internal_ab_paths() {
-        assert!(is_blocked_internal_path("/ab.json"));
-        assert!(is_blocked_internal_path("/AB.JSON"));
-        assert!(is_blocked_internal_path("/_ab"));
-        assert!(is_blocked_internal_path("/_ab/ab_9f3c2a1b/b/index.html"));
+        assert!(is_blocked_internal_path("/openlen/ab.json"));
+        assert!(is_blocked_internal_path("/OPENLEN/AB.JSON"));
+        assert!(is_blocked_internal_path("/openlen/ab"));
+        assert!(is_blocked_internal_path("/openlen/ab/ab_9f3c2a1b/b/index.html"));
         assert!(!is_blocked_internal_path("/about"));
         assert!(!is_blocked_internal_path("/"));
+        // Other files of the reserved `openlen/` root keep being served.
+        assert!(!is_blocked_internal_path("/openlen/figure-0a1b2c3d.js"));
+        // The pre-move layout is an ordinary path now.
+        assert!(!is_blocked_internal_path("/ab.json"));
+        assert!(!is_blocked_internal_path("/_ab/x"));
     }
 
     #[test]
-    fn hash_distribution_is_balanced_around_50_50() {
-        let mut b_count = 0usize;
-        for i in 0..10_000u32 {
-            let ip = format!("203.0.{}.{}", (i / 256) % 256, i % 256);
-            let v = hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                &ip,
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                5000,
-            );
-            if v == Variant::B {
-                b_count += 1;
-            }
+    fn blocks_the_internal_files_on_the_resolved_path_not_the_raw_one() {
+        // The filter used to look at the raw path: each of these reaches the manifest or
+        // Variant B's tree after the file resolver decodes and normalizes it.
+        for path in [
+            "/openlen/ab.json/",
+            "/openlen/%61b.json",
+            "/openlen/%61B.JSON",
+            "/openlen/./ab.json",
+            "/openlen//ab.json",
+            "//openlen/ab.json",
+            "/foo/../openlen/ab.json",
+            "/openlen/ab%2Ejson",
+            "/openlen%2Fab.json",
+            "/openlen/ab/",
+            "/openlen/%61b",
+            "/openlen/%61b/ab_9f3c2a1b/b/index.html",
+            "/openlen/./ab/ab_9f3c2a1b/b/index.html",
+            "/OpEnLeN/Ab/ab_9f3c2a1b/b/index.html",
+            "/openlen/ab/../ab/x",
+            r"/openlen\ab.json",
+            "/openlen/ab.json%00.png",
+            // A malformed sequence further along must not hide the rest of the decoding.
+            "/openlen/%61b.json/%E0%A4%A",
+            "/openlen/%zz/../%61b.json",
+        ] {
+            assert!(is_blocked_internal_path(path), "{path} must be blocked");
         }
-        assert!(
-            (4700..=5300).contains(&b_count),
-            "expected ~5000 B assignments, got {b_count}"
-        );
+        for path in [
+            "/",
+            "/about",
+            "/abc.json",
+            "/openlen",
+            "/openlen/",
+            "/openlen/abc",
+            "/openlen/ab.jsonx",
+            "/openlen/ab.json.map",
+            "/openlen/figure-0a1b2c3d.js",
+            "/x/openlen/ab.json",
+            "/openlen/../about",
+            "/ab/openlen/ab.json",
+        ] {
+            assert!(!is_blocked_internal_path(path), "{path} must NOT be blocked");
+        }
+    }
+
+    #[test]
+    fn a_resolved_file_is_internal_only_inside_this_releases_openlen_ab() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let release = dir.path().join("releases").join("aaaa11112222");
+        std::fs::create_dir_all(release.join("openlen/ab/ab_1/b")).unwrap();
+        std::fs::write(release.join("openlen/ab.json"), "{}").unwrap();
+        std::fs::write(release.join("openlen/ab/ab_1/b/index.html"), "b").unwrap();
+        std::fs::write(release.join("openlen/figure-0a1b2c3d.js"), "f").unwrap();
+        std::fs::write(release.join("index.html"), "a").unwrap();
+        let root = release.canonicalize().unwrap();
+        let file = |rel: &str| release.join(rel).canonicalize().unwrap();
+        assert!(is_internal_ab_file(&root, &file("openlen/ab.json")));
+        assert!(is_internal_ab_file(&root, &file("openlen/ab/ab_1/b/index.html")));
+        assert!(!is_internal_ab_file(&root, &file("openlen/figure-0a1b2c3d.js")));
+        assert!(!is_internal_ab_file(&root, &file("index.html")));
+        // A site that is itself called `ab` (publish root /…/openlen/ab/…) is not blocked.
+        let nested = dir.path().join("openlen").join("ab").join("current");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(nested.join("index.html"), "x").unwrap();
+        let nested_root = nested.canonicalize().unwrap();
+        assert!(!is_internal_ab_file(&nested_root, &nested.join("index.html").canonicalize().unwrap()));
+    }
+
+    /// Deterministic visitors: 200k distinct IPs, one browser. Same generator as the TS test.
+    fn sample_bucket(i: u32) -> u16 {
+        let ip = format!("10.{}.{}.{}", (i >> 16) & 255, (i >> 8) & 255, i & 255);
+        hash_bucket("3f9a1c8e7b2d4012", "ab_9f3c2a1b", &ip, "UA", "en")
+    }
+
+    #[test]
+    fn buckets_are_uniform_so_every_split_gets_its_share() {
+        // The bucket is the first 4 bytes as a u32 modulo 10_000 (bias: 2e-6). A u16 modulo
+        // 10_000 (the first version) sent 53.4 % of a 50/50 to B and tripped the sample-ratio
+        // guard at ~2,300 visits; 200k visitors pin the exact expectation instead of a lucky band.
+        const N: u32 = 200_000;
+        let buckets: Vec<u16> = (0..N).map(sample_bucket).collect();
+        for split in [1000u32, 2500, 5000, 7500, 9000] {
+            let in_b = buckets.iter().filter(|b| u32::from(**b) < split).count() as f64;
+            let share = in_b / f64::from(N);
+            let expected = f64::from(split) / 10_000.0;
+            assert!(
+                (share - expected).abs() <= 0.005,
+                "split {split}: expected {expected} +/- 0.005 of {N} visitors, got {share}"
+            );
+        }
+    }
+
+    #[test]
+    fn hash_variant_applies_the_bucket_to_the_split() {
+        let b = hash_bucket("s", "ab_12345678", "1.2.3.4", "UA", "en");
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", b), Variant::A);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", b + 1), Variant::B);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", 0), Variant::A);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", 10_000), Variant::B);
     }
 
     #[test]
@@ -389,7 +560,7 @@ mod tests {
         assert!(ov.set_cookie.is_none());
         assert_eq!(
             ov.variant_b_path.as_deref(),
-            Some("/_ab/ab_9f3c2a1b/b/index.html")
+            Some("/openlen/ab/ab_9f3c2a1b/b/index.html")
         );
 
         // Sticky cookie preserves variant without minting a new cookie
@@ -410,7 +581,7 @@ mod tests {
         assert!(sticky.set_cookie.is_none());
         assert_eq!(
             sticky.variant_b_path.as_deref(),
-            Some("/_ab/ab_9f3c2a1b/b/es")
+            Some("/openlen/ab/ab_9f3c2a1b/b/es")
         );
 
         // Route outside targetPath returns None
@@ -422,58 +593,26 @@ mod tests {
 
     #[test]
     fn shared_parity_vectors_match_typescript() {
-        // Golden SHA-256 vectors verified bit-for-bit against `lib/ab/serve.test.ts`.
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                5000
-            ),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                3785
-            ),
-            Variant::A
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                3786
-            ),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "198.51.100.42",
-                "Mozilla/5.0 Safari/605.1",
-                "en-US,en;q=0.9",
-                5000
-            ),
-            Variant::A
-        );
-        assert_eq!(
-            hash_variant("salt0", "ab_deadbeef", "10.0.0.1", "UA", "fr", 5000),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant("salt1", "ab_00112233", "192.0.2.5", "UA2", "de", 5000),
-            Variant::A
-        );
+        // Golden vectors shared with `lib/ab/serve.test.ts` (one JSON file, read by both).
+        let doc: serde_json::Value =
+            serde_json::from_str(include_str!("../../tests/fixtures/ab/hash-vectors.json"))
+                .expect("hash-vectors.json");
+        let vectors = doc["vectors"].as_array().expect("vectors");
+        assert!(vectors.len() >= 10);
+        for v in vectors {
+            let s = |k: &str| v[k].as_str().expect(k).to_owned();
+            let (salt, exp_id, ip, ua, lang) = (s("salt"), s("expId"), s("ip"), s("ua"), s("lang"));
+            let bucket = v["bucket"].as_u64().expect("bucket") as u16;
+            assert_eq!(hash_bucket(&salt, &exp_id, &ip, &ua, &lang), bucket, "{v}");
+            // A visitor is in B iff bucket < split: the boundary is exact.
+            assert_eq!(hash_variant(&salt, &exp_id, &ip, &ua, &lang, bucket), Variant::A, "{v}");
+            if bucket < 9_999 {
+                assert_eq!(
+                    hash_variant(&salt, &exp_id, &ip, &ua, &lang, bucket + 1),
+                    Variant::B,
+                    "{v}"
+                );
+            }
+        }
     }
 }

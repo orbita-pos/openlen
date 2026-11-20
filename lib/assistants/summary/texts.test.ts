@@ -25,6 +25,29 @@ describe("summaryTexts", () => {
     }
   });
 
+  it("🔴 a long A/B name is cut in the push — its question is never — and the email carries the whole line (item 29)", () => {
+    const long = "Probando un titular larguísimo ".repeat(10).trim();
+    const abReady = [{ experimentId: "ab_1", projectId: "p1", projectTitle: "Panadería", name: long, status: "winner_ready" as const, winnerVariant: "b" as const, rateA: 0.04, rateB: 0.052, liftPct: 31, totalViews: 840, probability: 0.97 }];
+    const reference = [{ ...abReady[0]!, name: "Hero" }];
+    for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+      for (const counts of [{ talkedWith: 0, contacts: 0, requests: 0 }, { talkedWith: 14, contacts: 3, requests: 2 }]) {
+        const t = summaryTexts(l, "Lucía", { ...counts, abReady }, "https://openlen.com/x");
+        const ref = summaryTexts(l, "Lucía", { ...counts, abReady: reference }, "https://openlen.com/x");
+        expect(t.push.length, l).toBeLessThan(200);
+        expect(t.push, l).toContain("…");
+        // what follows the name is whole: the push ends the way the short one does
+        const tail = ref.push.slice(ref.push.indexOf("Hero") + 4);
+        expect(t.push.endsWith(tail), `${l}: ${t.push}`).toBe(true);
+        expect(t.emailText, l).toContain(long);
+      }
+    }
+  });
+
+  it("only counts that are too long are still cut at the end, like before", () => {
+    const t = summaryTexts("es", "Lucía", { talkedWith: 99999, contacts: 99999, requests: 99999 }, "u");
+    expect(t.push.length).toBeLessThan(200);
+  });
+
   it("includes an A/B winner prompt cleanly even when yesterday had zero visits", () => {
     const abReady = [
       {

@@ -175,7 +175,8 @@ export interface AbResultEvent {
   assistantId?: string;
   assistantSlug?: string;
   locale: string;
-  verdict: "winner_b" | "winner_a" | "inconclusive" | "harm_stop";
+  /** `closed_by_system` / `promoted_by_system`: what the reconcile pass did on its own (the live release no longer carried the split). */
+  verdict: "winner_b" | "winner_a" | "inconclusive" | "harm_stop" | "closed_by_system" | "promoted_by_system";
   title: string;
   push: string;
   emailSubject: string;

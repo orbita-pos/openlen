@@ -95,5 +95,28 @@
       "queued": "Len sta lavorando al progetto: la portiamo appena finisce.",
       "failed": "Non è stato possibile portare la correzione. Riprova."
     }
+  },
+  "abRunning": {
+    "title": "Un test A/B è in corso",
+    "body": "Su questa pagina è in corso un test A/B. Pubblicare lo interrompe. Interrompere e pubblicare?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Interrompi e pubblica",
+    "cancel": "Annulla"
+  },
+  "abBringPending": {
+    "title": "La variante B non è ancora nella tua bozza",
+    "body": "La vincitrice del test A/B è online, ma non è stata portata nella tua bozza. Se pubblichi ora, la bozza uscirebbe senza di lei e la annullerebbe.",
+    "bring": "Portala e pubblica",
+    "bringing": "Sto portando…",
+    "discard": "Scartala e pubblica",
+    "cancel": "Annulla",
+    "queued": "Len sta lavorando sulla pagina. La variante B entrerà nella tua bozza quando avrà finito.",
+    "conflict": "È in conflitto con le tue modifiche. Chiedi a Len di unirla a mano, oppure scartala.",
+    "failed": "Non ha funzionato. Riprova."
+  },
+  "abDecisionInProgress": {
+    "title": "Una decisione sul test A/B è in corso",
+    "body": "Qualcuno — o il sistema — sta applicando adesso una decisione sul test A/B di questa pagina. Pubblicare nel mezzo potrebbe annullarla. Riprova tra un minuto.",
+    "ok": "Ho capito"
   }
 }

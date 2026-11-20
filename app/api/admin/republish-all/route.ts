@@ -1,6 +1,7 @@
 import { and, isNotNull } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth/admin-only";
 import { db, schema } from "@/lib/db";
+import { AbRepublishSkipped } from "@/lib/ab/errors";
 import { DataChangesNeedOwnerError } from "@/lib/backend/data-changes";
 import { FunctionsNeedOwnerError } from "@/lib/functions/publish-errors";
 import { publishProject } from "@/lib/projects";
@@ -37,6 +38,8 @@ interface SweepRun {
   /** Con cambios de tablas sin publicar en el borrador: los publica el dueño
    *  (spec local 2026-10-09), así que se saltan sin tocar nada. */
   skippedPendingTableChanges: string[];
+  /** With an A/B decision being applied or a promoted winner not yet in the draft: the sweep leaves them alone this time. */
+  skippedAb: string[];
 }
 
 let sweepRunning = false;
@@ -53,6 +56,8 @@ async function runSweep(
         userId: row.userId,
         subdomain: row.subdomain,
         skipFlightCheck: true,
+        // A running A/B experiment survives a system republish (re-emitted with the new control).
+        abLive: "keep",
       });
       run.ok += 1;
       // eslint-disable-next-line no-console
@@ -63,6 +68,12 @@ async function runSweep(
         run.skippedPendingTableChanges.push(row.subdomain);
         // eslint-disable-next-line no-console
         console.log(`[republish-all] − ${row.subdomain}: cambios de tablas pendientes, los publica el dueño`);
+        continue;
+      }
+      if (err instanceof AbRepublishSkipped) {
+        run.skippedAb.push(row.subdomain);
+        // eslint-disable-next-line no-console
+        console.log(`[republish-all] − ${row.subdomain}: ${err.message}`);
         continue;
       }
       run.failed += 1;
@@ -119,6 +130,7 @@ export async function POST(): Promise<Response> {
     ok: 0,
     failed: 0,
     skippedPendingTableChanges: [],
+    skippedAb: [],
     failures: [],
   };
   sweepRunning = true;

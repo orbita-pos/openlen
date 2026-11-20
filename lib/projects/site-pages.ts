@@ -22,8 +22,6 @@ const RESERVED_SLUGS = new Set<string>([
   "uploads",
   "index",
   "_system",
-  "_ab",
-  "ab.json",
   "404",
   "f",
   "sitemap.xml",

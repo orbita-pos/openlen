@@ -95,5 +95,28 @@
       "queued": "Len travaille sur le projet : nous l'apporterons dès qu'il aura fini.",
       "failed": "Impossible d'apporter la correction. Réessayez."
     }
+  },
+  "abRunning": {
+    "title": "Un test A/B est en cours",
+    "body": "Un test A/B est en cours sur cette page. Publier l'arrête. L'arrêter et publier ?",
+    "name": "Test : {name}",
+    "stopAndPublish": "Arrêter et publier",
+    "cancel": "Annuler"
+  },
+  "abBringPending": {
+    "title": "La variante B n’est pas encore dans votre brouillon",
+    "body": "La gagnante du test A/B est en ligne, mais elle n’a pas été reprise dans votre brouillon. Publier maintenant enverrait votre brouillon sans elle et l’annulerait.",
+    "bring": "La reprendre, puis publier",
+    "bringing": "Reprise en cours…",
+    "discard": "L’abandonner et publier",
+    "cancel": "Annuler",
+    "queued": "Len travaille sur la page. La variante B entrera dans votre brouillon quand il aura fini.",
+    "conflict": "Elle entre en conflit avec vos modifications. Demandez à Len de la fusionner à la main, ou abandonnez-la.",
+    "failed": "Ça n’a pas marché. Réessayez."
+  },
+  "abDecisionInProgress": {
+    "title": "Une décision sur le test A/B est en cours d’application",
+    "body": "Quelqu’un — ou le système — applique en ce moment une décision sur le test A/B de cette page. Publier en plein milieu pourrait l’annuler. Réessayez dans une minute.",
+    "ok": "Compris"
   }
 }

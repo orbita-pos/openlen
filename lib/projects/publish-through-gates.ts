@@ -6,6 +6,7 @@ import { ProjectIsSpaceError } from "@/lib/space/errors";
 import { ProjectIsToolError } from "@/lib/tools/errors";
 import "server-only";
 
+import { AbBringPendingError, AbExperimentRunningError } from "@/lib/ab/errors";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { dataChangesErrorBody } from "@/lib/backend/data-changes";
 import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
@@ -33,7 +34,8 @@ export interface GatedPublishInput {
   sourcesFrom?: string;
   /** «Publicar igual» over a Len Watch fix that isn't in the draft yet: that incident, not asked again. */
   acceptLenWatchFix?: string;
-  /** Owner explicitly confirmed stopping an active A/B experiment to publish the draft. */
+  /** The owner confirmed stopping a live A/B experiment to publish the draft («Stop and publish»). Only a person's. The
+   *  experiment is closed AFTER the publish went through, never before (review item 14). */
   stopActiveAb?: boolean;
 }
 
@@ -76,46 +78,50 @@ export async function runSecurityGate(i: {
 }
 
 export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPublishResult> {
-  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
-  // branch isn't in the draft would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
-  if (i.source === "person") {
-    const { abTestingEnabled } = await import("@/lib/ab/enabled");
-    if (abTestingEnabled()) {
-      const abStore = await import("@/lib/ab/store");
-      const activeAb = await abStore.liveExperimentForProject(i.projectId).catch(() => null);
-      if (activeAb && !i.stopActiveAb) {
-        return {
-          status: 428,
-          body: {
-            error: "ab_experiment_running",
-            experimentId: activeAb.id,
-            name: activeAb.name,
-            targetPath: activeAb.targetPath,
-          },
-        };
-      }
-      if (activeAb && i.stopActiveAb) {
-        const abWt = await import("@/lib/ab/worktree");
-        await abWt
-          .cleanupAbWorktree({
-            parentId: i.projectId,
-            copyProjectId: activeAb.copyProjectId,
-            branch: activeAb.branch,
-          })
-          .catch(() => undefined);
-        await abStore
-          .updateExperiment(activeAb.id, {
-            status: "cancelled",
-            decisionStatus: "resolved",
-            copyProjectId: null,
-            endedAt: new Date(),
-            decidedAt: new Date(),
-            decidedBy: i.actorId,
-          })
-          .catch(() => undefined);
-      }
+  // A LIVE A/B EXPERIMENT (review items 13, 14). The owner is asked first (428); the answer `stopActiveAb` publishes as the
+  // end of the experiment, which is closed only once the publish succeeded. Every other source meets the door itself in
+  // `publishProject`, which refuses (409 below); the experiment's own promote is the end of it.
+  const { abTestingEnabled } = await import("@/lib/ab/enabled");
+  let stopping: import("@/lib/ab/store").AbExperimentRow | null = null;
+  if (i.source === "person" && abTestingEnabled()) {
+    // The A/B tables are read for the owner's publish only. If they can't be (the database, a migration not run yet), the
+    // answer is a clean 503 with its own code — never a raw 500 «publish_failed» from deep in a lookup — and nothing is
+    // published: not knowing whether a test is running is not a reason to end it (G1+G3 review, item 22).
+    const unavailable = (err: unknown): GatedPublishResult => {
+      // eslint-disable-next-line no-console
+      console.error("[publish] couldn't read the A/B experiments", err);
+      return { status: 503, body: { error: "ab_unavailable" } };
+    };
+    const abStore = await import("@/lib/ab/store");
+    let live: Awaited<ReturnType<typeof abStore.liveExperimentForProject>>;
+    try {
+      live = await abStore.liveExperimentForProject(i.projectId);
+    } catch (err) {
+      return unavailable(err);
     }
+    if (live && !i.stopActiveAb) {
+      return { status: 428, body: { error: "ab_experiment_running", experimentId: live.id, name: live.name, targetPath: live.targetPath } };
+    }
+    if (live) stopping = live;
+    // A promoted Variant B that isn't in the draft yet (it clashed with their edits, or waits for Len): publishing the draft
+    // now would send the page WITHOUT it and undo the promotion. It waits for them to bring it in or discard it (review item 26).
+    let unbrought: Awaited<ReturnType<typeof abStore.pendingBringForProject>>;
+    try {
+      unbrought = await abStore.pendingBringForProject(i.projectId);
+    } catch (err) {
+      return unavailable(err);
+    }
+    if (unbrought) {
+      return { status: 428, body: { error: "ab_bring_pending", experimentId: unbrought.id, name: unbrought.name, bringState: unbrought.bringState } };
+    }
+  }
+  const abLive = stopping || i.source === "ab_promote" ? ({ abLive: "ending" } as const) : {};
+  /** «Stop and publish» holds the experiment's decision lock for the whole publish (see below). */
+  let held: import("@/lib/ab/decision-lock").HeldDecision | null = null;
 
+  // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
+  // branch isn't in the draft yet would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
+  if (i.source === "person") {
     const bring = await import("@/lib/len-watch/bring");
     const pending = await bring.pendingFix(i.projectId).catch((err: unknown) => {
       console.warn("[publish] couldn't tell whether a Len Watch fix is pending; publishing", err);
@@ -137,6 +143,27 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   });
   if ("stop" in seguridad) return seguridad.stop;
 
+  // «STOP AND PUBLISH» TAKES THE DECISION FIRST (review: writers outside the claim). The owner's publish swaps the live release;
+  // while the harm brake or another decision holds the lock, a swap in between would be rolled back over, or would undo theirs,
+  // and the owner never told. So it claims the experiment like any decision does — and if it can't, it says so.
+  if (stopping) {
+    try {
+      const claimed = await (await import("@/lib/ab/store")).claimExperimentDecision(stopping.id, i.projectId);
+      if (!claimed) {
+        return {
+          status: 409,
+          body: { error: "ab_decision_in_progress", experimentId: stopping.id, name: stopping.name },
+        };
+      }
+      stopping = claimed;
+      held = (await import("@/lib/ab/decision-lock")).holdDecision(claimed);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[publish] couldn't claim the A/B experiment to stop it", err);
+      return { status: 503, body: { error: "ab_unavailable" } };
+    }
+  }
+
   try {
     // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
     const result = await conAutor(i.actorId, () =>
@@ -149,8 +176,12 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
         dataChanges: i.sourcesFrom ? { mode: "skip" } : { mode: "owner", confirmFingerprint: i.confirmFingerprint, copyDraftData: i.copyDraftData },
         functions: { skipMissingSecrets: i.skipMissingSecrets === true },
         ...(i.sourcesFrom ? { sourcesFrom: i.sourcesFrom } : {}),
+        ...abLive,
       }),
     );
+    // The owner stopped the test by publishing over it: it is over now that the publish went through — and not before,
+    // so a publish that fails leaves the split live and untouched (review item 14).
+    if (stopping) await (await import("@/lib/ab/publish-guard")).endExperimentAfterPublish(stopping, i.actorId);
     // Lo publicado es la base de la siguiente revisión (como la rama base de un PR):
     // ésa mira sólo el diff desde aquí. Si no se puede apuntar, la publicación vale igual.
     if (seguridad.fingerprint) {
@@ -166,28 +197,45 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     }
     return { status: 200, body: result as unknown as Record<string, unknown> };
   } catch (err) {
-    if (err instanceof SubdomainInvalidError) return { status: 400, body: { error: err.reason } };
-    if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
-    if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
-    if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
-    if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
-    if (err instanceof ProjectIsSpaceError) return { status: 409, body: { error: "space_never_publishes" } };
-    // Una app web que no compila no se publica (spec local 2026-10-07-apps):
-    // se dice qué fichero y qué línea, para el dueño y para Len.
-    if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
-    // Los datos (spec local 2026-10-09): una migración que falla en producción,
-    // o lo destructivo sin confirmar.
-    const dataError = dataChangesErrorBody(err);
-    if (dataError) return dataError;
-    // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
-    const stripeError = stripePublishErrorBody(err);
-    if (stripeError) return stripeError;
-    // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
-    // o su despliegue falló (la página no cambió).
-    const fnError = functionsPublishErrorBody(err);
-    if (fnError) return fnError;
+    // The publish failed: the experiment is as it was, and the lock goes back as it was (fenced on its own token).
+    await held?.release();
+    const mapped = publishErrorResult(err);
+    if (mapped) return mapped;
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);
     return { status: 500, body: { error: "publish_failed" } };
+  } finally {
+    held?.stop();
   }
+}
+
+/** The publish's own errors as the answer a route gives (status and body): the subdomain, the data, Stripe, the Edge Functions,
+ *  an app that doesn't compile, a live experiment. `null` = not one of ours, the caller decides (a 500). The publish route and
+ *  the A/B launch both answer through it, so a launch that stops at a missing secret says so instead of «launch_failed». */
+export function publishErrorResult(err: unknown): GatedPublishResult | null {
+  if (err instanceof SubdomainInvalidError) return { status: 400, body: { error: err.reason } };
+  if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
+  if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
+  if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
+  if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
+  if (err instanceof ProjectIsSpaceError) return { status: 409, body: { error: "space_never_publishes" } };
+  // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
+  if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };
+  // A promoted winner not in the draft yet (review): the door refuses a publish from the draft; the person resolves it.
+  if (err instanceof AbBringPendingError) return { status: 428, body: err.body };
+  // Una app web que no compila no se publica (spec local 2026-10-07-apps):
+  // se dice qué fichero y qué línea, para el dueño y para Len.
+  if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
+  // Los datos (spec local 2026-10-09): una migración que falla en producción,
+  // o lo destructivo sin confirmar.
+  const dataError = dataChangesErrorBody(err);
+  if (dataError) return dataError;
+  // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
+  const stripeError = stripePublishErrorBody(err);
+  if (stripeError) return stripeError;
+  // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
+  // o su despliegue falló (la página no cambió).
+  const fnError = functionsPublishErrorBody(err);
+  if (fnError) return fnError;
+  return null;
 }

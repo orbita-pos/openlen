@@ -10,6 +10,9 @@ import type { Finding, ReviewView } from "@/lib/security-review/types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm } from "./data-changes-notice";
 import { MissingSecrets } from "./missing-secrets";
+import { AbBringPending } from "./ab/bring-pending";
+import { AbDecisionInProgress } from "./ab/decision-in-progress";
+import { AbExperimentRunning } from "./ab/experiment-running";
 import { LenWatchFixPending } from "./len-watch/fix-pending";
 import { SecurityPanel } from "./security-findings";
 import { stripeKindsToCopy, type StripeForCard } from "@/lib/stripe/card";
@@ -54,6 +57,10 @@ type CardState =
   | { kind: "security_findings"; view: ReviewView }
   // Len Watch (spec local 2026-10-30-len-watch, §5.5): el arreglo que publicó aún no está en el borrador.
   | { kind: "len_watch_fix_pending"; incidentId: string }
+  // Un experimento A/B en marcha que publicar detendría (revisión del 19/11, puntos 13 y 14): decide el dueño.
+  | { kind: "ab_experiment_running"; name: string }
+  | { kind: "ab_bring_pending"; experimentId: string; name: string }
+  | { kind: "ab_decision_in_progress" }
   | { kind: "error"; text: string };
 
 const BASE_HOST = PUBLISHED_BASE_HOST;
@@ -92,6 +99,7 @@ export function AgentConfirmCard({
   const saltarSecretos = useRef(false);
   const aceptarSeguridad = useRef<string | null>(null);
   const aceptarArreglo = useRef<string | null>(null);
+  const detenerPrueba = useRef(false);
   const locale = useLocale();
   const tSecurity = useTranslations("modalsDomain.security");
   // Primera publicación con base de datos: la casilla de copiar los de prueba.
@@ -101,7 +109,7 @@ export function AgentConfirmCard({
 
   const inert = state.kind === "published" || state.kind === "cancelled";
 
-  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string } = {}) => {
+  const handlePublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string; stopActiveAb?: boolean } = {}) => {
     if (busy || inert) return;
     const { subdominio, idiomas, republicar } = confirm;
 
@@ -143,6 +151,7 @@ export function AgentConfirmCard({
     if (o.skipMissingSecrets) saltarSecretos.current = true;
     if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
     if (o.acceptLenWatchFix) aceptarArreglo.current = o.acceptLenWatchFix;
+    if (o.stopActiveAb) detenerPrueba.current = true;
     setState({ kind: "publishing" });
     try {
       // `languages` is only sent when the agent actually chose some: the
@@ -162,9 +171,24 @@ export function AgentConfirmCard({
           locale,
           ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
           ...(aceptarArreglo.current ? { acceptLenWatchFix: aceptarArreglo.current } : {}),
+          ...(detenerPrueba.current ? { stopActiveAb: true } : {}),
         },
         () => setState({ kind: "publishing" }),
       );
+      if (outcome.kind === "ab_experiment_running") {
+        detenerPrueba.current = false;
+        setState({ kind: "ab_experiment_running", name: outcome.name });
+        return;
+      }
+      if (outcome.kind === "ab_bring_pending") {
+        setState({ kind: "ab_bring_pending", experimentId: outcome.experimentId, name: outcome.name });
+        return;
+      }
+      if (outcome.kind === "ab_decision_in_progress") {
+        detenerPrueba.current = false;
+        setState({ kind: "ab_decision_in_progress" });
+        return;
+      }
       if (outcome.kind === "len_watch_fix_pending") {
         setState({ kind: "len_watch_fix_pending", incidentId: outcome.incidentId });
         return;
@@ -350,6 +374,31 @@ export function AgentConfirmCard({
             onPublishAnyway={() => void handlePublish({ acceptLenWatchFix: state.incidentId })}
             onCancel={handleCancel}
           />
+        </div>
+      )}
+
+      {state.kind === "ab_decision_in_progress" && (
+        <div className="mt-2">
+          <AbDecisionInProgress onClose={handleCancel} />
+        </div>
+      )}
+
+      {state.kind === "ab_bring_pending" && (
+        <div className="mt-2">
+          <AbBringPending
+            projectId={projectId}
+            experimentId={state.experimentId}
+            name={state.name}
+            busy={busy}
+            onPublishAgain={() => void handlePublish()}
+            onCancel={handleCancel}
+          />
+        </div>
+      )}
+
+      {state.kind === "ab_experiment_running" && (
+        <div className="mt-2">
+          <AbExperimentRunning name={state.name} busy={busy} onStopAndPublish={() => void handlePublish({ stopActiveAb: true })} onCancel={handleCancel} />
         </div>
       )}
 

@@ -3,6 +3,11 @@
 /// store or mix variants across visitors.
 pub const AB_HTML_CACHE_CONTROL: &str = "private, no-store";
 
+/// Cache-Control header for a FILE an experiment decides per visitor (Variant B ships other bytes
+/// for it), served to EVERY visitor, control included. Cloudflare caches by URL, so one variant's
+/// bytes cached under the shared URL would reach the other's visitors.
+pub const AB_FILE_CACHE_CONTROL: &str = "no-store";
+
 /// Cache-Control header value for a given file extension.
 ///
 /// Three tiers:
@@ -16,7 +21,9 @@ pub const AB_HTML_CACHE_CONTROL: &str = "private, no-store";
 ///   JSON, robots.txt, sitemap.xml, etc. against a published deploy.
 pub fn cache_control_for(extension: Option<&str>) -> &'static str {
     match extension.map(str::to_ascii_lowercase).as_deref() {
-        Some("html") | Some("htm") => "max-age=60, s-maxage=3600, stale-while-revalidate=86400",
+        Some("html") | Some("htm") => {
+            "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400"
+        }
         Some("css") | Some("js") | Some("mjs") | Some("woff") | Some("woff2") | Some("ttf")
         | Some("otf") | Some("eot") | Some("png") | Some("jpg") | Some("jpeg") | Some("gif")
         | Some("webp") | Some("svg") | Some("ico") | Some("avif") | Some("mp4") | Some("webm")

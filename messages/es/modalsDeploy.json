@@ -95,5 +95,28 @@
       "queued": "Len está trabajando en el proyecto: lo traemos en cuanto termine.",
       "failed": "No se pudo traer el arreglo. Inténtalo otra vez."
     }
+  },
+  "abRunning": {
+    "title": "Hay una prueba A/B en marcha",
+    "body": "Hay una prueba A/B en marcha en esta página. Publicar la detiene. ¿Detenerla y publicar?",
+    "name": "Prueba: {name}",
+    "stopAndPublish": "Detener y publicar",
+    "cancel": "Cancelar"
+  },
+  "abBringPending": {
+    "title": "La variante B aún no está en tu borrador",
+    "body": "La ganadora de la prueba A/B ya está publicada, pero no se ha traído a tu borrador. Si publicas ahora, tu borrador saldría sin ella y la desharía.",
+    "bring": "Traerla y publicar",
+    "bringing": "Trayendo…",
+    "discard": "Descartarla y publicar",
+    "cancel": "Cancelar",
+    "queued": "Len está trabajando en la página. La variante B entrará en tu borrador cuando termine.",
+    "conflict": "Chocó con tus cambios. Pídele a Len que la mezcle a mano, o descártala.",
+    "failed": "No se pudo. Inténtalo de nuevo."
+  },
+  "abDecisionInProgress": {
+    "title": "Se está aplicando una decisión sobre la prueba A/B",
+    "body": "Alguien —o el sistema— está aplicando ahora una decisión sobre la prueba A/B de esta página. Publicar a la mitad podría deshacerla. Inténtalo de nuevo en un minuto.",
+    "ok": "Entendido"
   }
 }

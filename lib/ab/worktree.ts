@@ -82,6 +82,17 @@ export async function readPublishedFolder(
   return folder;
 }
 
+/** Every file of a commit, as text, by absolute path: what a commit of this project's repository held. Throws when the commit
+ *  or one of its objects can't be read. Variant B's launch commit is read this way when a republish re-emits the split. */
+export async function readFilesAtCommit(projectId: string, commitOid: string): Promise<Record<string, string>> {
+  const repo = new Repository(postgresStore(projectId));
+  const tree = await repo.files((await repo.commit(commitOid)).tree);
+  await repo.objects([...tree.values()]);
+  const out: Record<string, string> = {};
+  for (const [repoPath, oid] of tree) out[toAbsolute(repoPath)] = await repo.text(oid);
+  return out;
+}
+
 /** Create an isolated hidden worktree project cut from `projectPublishedSources`
  *  on branch `ab/<experimentId>`. Serialized per project via `oneAtATime`. */
 export async function createAbWorktree(p: {
@@ -169,10 +180,14 @@ export async function cleanupAbWorktree(p: {
 export type AbBringResult =
   | { readonly kind: "brought" }
   | { readonly kind: "nothing" }
+  /** A Len turn is live in the project: it would be editing the very files being merged, so nothing was touched. */
+  | { readonly kind: "busy" }
   | { readonly kind: "conflict"; readonly paths: readonly string[] };
 
 /** Three-way merge Variant B's branch (`base` -> `tip`) into the owner's draft
- *  without touching unrelated in-progress edits. Never leaves conflict markers. */
+ *  without touching unrelated in-progress edits. Never leaves conflict markers. While Len has a turn live in the project
+ *  it merges NOTHING (`busy`): two writers on the same files is what the draft's compare-and-swap exists to catch, and
+ *  a merge that loses that race half-applies (review item 26). Like Len Watch's «Traer el arreglo», the caller waits. */
 export async function mergeWinnerIntoDraft(p: {
   projectId: string;
   ownerId: string;
@@ -180,6 +195,8 @@ export async function mergeWinnerIntoDraft(p: {
   baseCommitOid: string;
   branch: string;
 }): Promise<AbBringResult> {
+  const { hayTurnoVivoEnElProyecto } = await import("@/lib/agent/direcciones");
+  if (hayTurnoVivoEnElProyecto(p.projectId)) return { kind: "busy" };
   const tip = await branchTip(p.projectId, p.branch);
   if (!tip) return { kind: "nothing" };
 

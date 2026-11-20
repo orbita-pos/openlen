@@ -1,9 +1,10 @@
 // Mobile touch decision card for Edge A/B Testing (Plan 3) inside Tu Asistente → «Pedidos».
 // Shares all translated copy with the web via `movil.asistente` (`own.ab.*`).
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import { isUnbroughtWinner } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
 import { decidirPruebaAb } from "../api/asistente";
 
@@ -31,6 +32,8 @@ export function MobileAbDecisionCard({
   const [aviso, setAviso] = useState<string | null>(null);
   const [listo, setListo] = useState<string | null>(null);
   const [actual, setActual] = useState<AbExperimentView>(experiment);
+  // The list reloads (every visit to the tab, every decision): a card that kept its first copy would show a stale verdict.
+  useEffect(() => setActual(experiment), [experiment]);
 
   const metrics = actual.metrics;
   const stats = metrics?.stats;
@@ -110,9 +113,10 @@ export function MobileAbDecisionCard({
           </div>
         </div>
       )}
-      {actual.bringState === "conflict" && (
+      {actual.status === "paused_harm" && <p className="asist-aviso">{t("own.ab.pausedHarmNotice")}</p>}
+      {isUnbroughtWinner(actual) && (
         <p role="alert" className="asist-aviso">
-          {t("own.ab.conflictNotice")}
+          {actual.bringState === "pending" ? t("own.ab.bringPendingNotice") : t("own.ab.conflictNotice")}
         </p>
       )}
       {listo && <p className="asist-ab-ok">{listo}</p>}

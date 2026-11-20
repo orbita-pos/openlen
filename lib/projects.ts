@@ -38,6 +38,8 @@ import {
   sitePagesFingerprintInput,
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
+import { abTestingEnabled } from "@/lib/ab/enabled";
+import { prebakeVariantB } from "@/lib/ab/prebake";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { rehomeAssistantsOf } from "@/lib/assistants/projects";
@@ -850,14 +852,25 @@ interface PublishParams {
   abExperiment?: import("@/lib/publish/filesystem").AbPublishSpec;
   /** Extra release SHAs protected from `pruneOldReleases` (e.g. `controlReleaseSha`). */
   protectReleaseShas?: readonly string[];
+  /** What to do when the project has a LIVE A/B experiment and this publish carries none (review item 13): a system
+   *  republish passes `keep` (the split is re-emitted with the new control); the experiment's own decision, and the
+   *  owner's «Stop and publish», pass `ending`; absent = refused (`AbExperimentRunningError`). Moot with the flag off. */
+  abLive?: import("@/lib/ab/publish-guard").AbPublishPolicy;
 }
 interface PublishResult {
   subdomain: string;
   url: string;
   publishedAt: Date;
   sha?: string;
+  /** With an A/B experiment: the asset paths Variant B overrides (the launch records them; every end purges them). */
+  abOverrides?: readonly string[];
   /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode and what the release carries live. */
   stripe?: { created: import("@/lib/stripe/twins/engine").TwinsPlanCounts; swaps: number; chargesEnabled: boolean | null };
+}
+
+/** The Edge Functions' sources inside an in-memory folder (the part of `/supabase/` the engine reads). */
+function functionFilesOf(folder: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(Object.entries(folder).filter(([path]) => path.startsWith("/supabase/")));
 }
 
 export async function publishProject(
@@ -914,6 +927,34 @@ export async function publishProject(
     const { ProjectIsSpaceError } = await import("@/lib/space/errors");
     throw new ProjectIsSpaceError();
   }
+  // A LIVE A/B EXPERIMENT (review item 13): a release without its manifest would end the split in silence. Every caller
+  // meets this door, so it is decided here — before an address is claimed or anything is written. A system republish
+  // keeps the experiment (same Variant B, Control = the published sources); the experiment's own decision and the
+  // owner's «Stop and publish» go through; anyone else is refused. With the flag off nothing is even looked up.
+  let reemitted: import("@/lib/ab/live-publish").LiveAbPublish | null = null;
+  if (abTestingEnabled()) {
+    const { resolveAbPublish } = await import("@/lib/ab/publish-guard");
+    reemitted = await resolveAbPublish({
+      projectId: params.projectId,
+      ownerId: params.userId,
+      ...(params.abLive ? { policy: params.abLive } : {}),
+      carriesExperiment: Boolean(params.abExperiment),
+    });
+    if (reemitted) {
+      params = {
+        ...params,
+        sourcesOverride: reemitted.sourcesOverride,
+        abExperiment: reemitted.abExperiment,
+        protectReleaseShas: reemitted.protectReleaseShas,
+      };
+    }
+  }
+  // A PROMOTED WINNER NOT IN THE DRAFT YET (review): a publish FROM THE DRAFT — no sources of its own — would undo the promotion.
+  // Asked here, at the bottom, so every door meets it (the web route, MCP, Len's card, the system sweeps).
+  if (abTestingEnabled() && !params.sourcesOverride && !params.sourcesFrom && !params.abExperiment) {
+    const { assertNoUnbroughtWinner } = await import("@/lib/ab/publish-guard");
+    await assertNoUnbroughtWinner({ projectId: params.projectId, system: params.abLive === "keep" });
+  }
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
   // is never written (see `persistLanguages` below).
@@ -967,6 +1008,9 @@ export async function publishProject(
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
     ...(twinsSoFar.size > 0 ? { swap: (t: string) => swapTwins(t, twinsSoFar) } : {}),
     ...(params.sourcesFrom ? { sourcesFrom: params.sourcesFrom } : {}),
+    // Explicit sources (an A/B launch or re-emit, a control restore) carry THEIR functions: the draft's must not go to
+    // production under a page that doesn't match them (review item 18).
+    ...(params.sourcesOverride ? { files: functionFilesOf(params.sourcesOverride.folder) } : {}),
   });
 
   // Born-complete the <head> at publish too, so even legacy projects (and
@@ -1030,7 +1074,20 @@ export async function publishProject(
   const stripe = await stripeModule.prepareStripeForPublish(params.projectId, {
     mode: ownerOrSystem,
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
-    texts: [html, ...splitPagesForPublish(project.data).publicPages.map((p) => p.html), ...Object.values(projectFiles)],
+    // Variant B is published too, and it can use a price, a product or a payment link that control doesn't: its documents
+    // are read for Stripe references like control's, or what only B uses would ship in test mode (G1+G3 review).
+    texts: [
+      html,
+      ...splitPagesForPublish(project.data).publicPages.map((p) => p.html),
+      ...Object.values(projectFiles),
+      ...(params.abExperiment
+        ? [
+            params.abExperiment.variantB.html,
+            ...(params.abExperiment.variantB.pages ?? []).map((p) => p.html),
+            ...(params.abExperiment.variantB.files ?? []).map((f) => f.content),
+          ]
+        : []),
+    ],
     liveFunctions: funciones?.functions ?? [],
   });
 
@@ -1069,7 +1126,8 @@ export async function publishProject(
         // escribía en cada publicación para guardar los almacenes declarados;
         // se retiraron el 2026-10-04.)
         // 🔴 Never for a Len Watch branch: `project.data` is the copy's, and this would write it over the draft.
-        ...(project.data && persistLanguages && !params.sourcesFrom
+        // Nor for explicit sources (`sourcesOverride`): they are the PUBLISHED version, and this would write it over the draft.
+        ...(project.data && persistLanguages && !params.sourcesFrom && !params.sourcesOverride
           ? { data: { ...project.data, settings: ajustesPublicados } }
           : {}),
       })
@@ -1130,6 +1188,7 @@ export async function publishProject(
     html: string;
     written: boolean;
     locales: string[];
+    abOverrides?: readonly string[];
   };
   // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble, and what
   // she knows is what this publish writes (below, after it succeeds).
@@ -1192,7 +1251,10 @@ export async function publishProject(
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
       // lo que permite decirle al dueño qué idioma se cayó.
       localesPedidos: app ? [] : targets,
-      ...(params.abExperiment ? { abExperiment: params.abExperiment } : {}),
+      // Variant B takes the same pre-bake steps as control above: the head pass and Stripe's live ids (review item 16).
+      ...(params.abExperiment
+        ? { abExperiment: await prebakeVariantB(params.abExperiment, { title: project.title, baseUrl: `https://${v.value}.${publishBaseHost()}`, toLive }) }
+        : {}),
       ...(params.protectReleaseShas?.length ? { protectReleaseShas: params.protectReleaseShas } : {}),
       buildLocaleDocs:
         !app && targets.length > 0
@@ -1308,6 +1370,13 @@ export async function publishProject(
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
 
+  // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now, and the overrides it
+  // added are purged like the launch's (never throws: the release is live).
+  if (reemitted) {
+    const { recordAndPurgeReemit } = await import("@/lib/ab/reemit");
+    await recordAndPurgeReemit(reemitted.experiment, v.value, publishResult, publishResult.locales, params.userId);
+  }
+
   // 5b'. LEN WATCH + EDGE A/B TESTING: what just went live, kept as a commit off the
   // branches so a fix or A/B Variant B can be cut from it. Skipped when publishing an active
   // A/B experiment (so Control A stays the clean published baseline).
@@ -1413,6 +1482,7 @@ export async function publishProject(
     url: `https://${v.value}.${publishBaseHost()}`,
     publishedAt: now,
     sha: publishResult.sha,
+    ...(publishResult.abOverrides ? { abOverrides: publishResult.abOverrides } : {}),
     ...(stripe
       ? { stripe: { created: { ...stripe.preview.plan.create }, swaps: stripe.preview.plan.swaps, chargesEnabled: stripe.preview.plan.chargesEnabled } }
       : {}),
@@ -1460,6 +1530,8 @@ export async function unpublishProject(params: UnpublishParams): Promise<void> {
   if (!row) throw new ProjectNotFoundError();
   // Safe to call even when not published — just a no-op.
   if (!row.subdomain) return;
+  // Taking the site down would end a live A/B experiment (review item 13): decide the test first.
+  if (abTestingEnabled()) await (await import("@/lib/ab/publish-guard")).assertNoLiveExperiment(params.projectId);
 
   const sub = row.subdomain;
   const subpagePaths = pageEdgePaths(row.data);
@@ -1545,6 +1617,8 @@ export async function rollbackProject(
   const row = rows[0];
   if (!row) throw new ProjectNotFoundError();
   if (!row.subdomain) throw new ReleaseUnavailableError();
+  // Going back to an older release ends a live A/B experiment too (review item 13).
+  if (abTestingEnabled()) await (await import("@/lib/ab/publish-guard")).assertNoLiveExperiment(params.projectId);
 
   let html: string;
   try {

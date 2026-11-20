@@ -3,7 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
-vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
+vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/tools/enabled", () => ({ toolsEnabled: vi.fn(() => true) }));
 vi.mock("@/lib/tools/store", () => ({
   setEnabled: vi.fn(),
@@ -13,7 +13,8 @@ vi.mock("@/lib/tools/store", () => ({
   readRelease: vi.fn(),
 }));
 
-const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
+const { auth } = await import("@/auth");
+const signedIn = (id: string | null) => vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(id ? { user: { id } } : null);
 const { toolsEnabled } = await import("@/lib/tools/enabled");
 const store = await import("@/lib/tools/store");
 const { PATCH, DELETE } = await import("./route");
@@ -24,7 +25,7 @@ const ROW = { id: "i1", personId: "u1", releaseSha: "sha1", iconPath: "/icon.svg
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(usuarioDeLaPeticion).mockResolvedValue("u1");
+  signedIn("u1");
   vi.mocked(toolsEnabled).mockReturnValue(true);
   vi.mocked(store.setEnabled).mockResolvedValue(true);
   vi.mocked(store.markRemoved).mockResolvedValue(true);
@@ -47,10 +48,20 @@ describe("PATCH /api/tools/[id]", () => {
     expect((await PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ enabled: "no" }) }), ctx)).status).toBe(400);
   });
   it("without a person: 401; with tools off: 404", async () => {
-    vi.mocked(usuarioDeLaPeticion).mockResolvedValueOnce(null);
+    signedIn(null);
     expect((await PATCH(new Request("http://x", { method: "PATCH", body: "{}" }), ctx)).status).toBe(401);
+    signedIn("u1");
     vi.mocked(toolsEnabled).mockReturnValue(false);
     expect((await PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ enabled: true }) }), ctx)).status).toBe(404);
+  });
+  it("🔴 the phone's key doesn't open it: management is the web's, and a request with no session is 401 whatever it carries", async () => {
+    signedIn(null);
+    const req = new Request("http://x", { method: "PATCH", headers: { authorization: "Bearer phone-key" }, body: JSON.stringify({ enabled: true }) });
+    expect((await PATCH(req, ctx)).status).toBe(401);
+    expect((await DELETE(new Request("http://x", { method: "DELETE", headers: { authorization: "Bearer phone-key" } }), ctx)).status).toBe(401);
+    expect((await RESTORE(new Request("http://x", { method: "POST", headers: { authorization: "Bearer phone-key" } }), ctx)).status).toBe(401);
+    expect(store.setEnabled).not.toHaveBeenCalled();
+    expect(store.markRemoved).not.toHaveBeenCalled();
   });
 });
 

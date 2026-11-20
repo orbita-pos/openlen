@@ -45,6 +45,12 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/scheduled-tasks/route.ts", metodos: ["GET"] },
   { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/route.ts", metodos: ["PATCH", "DELETE"] },
   { fichero: "app/api/projects/[id]/scheduled-tasks/[taskId]/pause/route.ts", metodos: ["POST"] },
+  // Len Watch en Gestión → Publicar (spec local 2026-10-30-len-watch, §5.7): su estado y sus interruptores, «Arreglar con Len»,
+  // Aprobar y «Traer el arreglo». Toman la llave por `whoMay` (lib/len-watch/api.ts).
+  { fichero: "app/api/projects/[id]/len-watch/route.ts", metodos: ["GET", "PUT"] },
+  { fichero: "app/api/projects/[id]/len-watch/fix/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/projects/[id]/len-watch/approve/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/projects/[id]/len-watch/bring/route.ts", metodos: ["POST"] },
   { fichero: "app/api/movil/delivered/route.ts", metodos: ["GET"] },
   { fichero: "app/api/movil/tasks/route.ts", metodos: ["GET"] },
   // Las herramientas en el teléfono (spec local 2026-11-04-herramientas-hechas-por-len, §4.14): las usa, no las

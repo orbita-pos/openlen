@@ -2,9 +2,9 @@
 import { z } from "zod";
 
 import { AbLifecycleError, launchAbExperiment } from "@/lib/ab/lifecycle";
-import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { publishErrorResult } from "@/lib/projects/publish-through-gates";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,11 +24,12 @@ function json(body: unknown, status: number): Response {
   });
 }
 
-export const POST = paraLaApp(async (
+// Web session only (review item 27): the phone doesn't launch tests, so no phone key and no CORS.
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string; expId: string }> },
-): Promise<Response> => {
-  const userId = await usuarioDeLaPeticion(req);
+): Promise<Response> {
+  const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id, expId } = await params;
   const acceso = await exigirAcceso(id, userId, "editar");
@@ -61,8 +62,11 @@ export const POST = paraLaApp(async (
     if (err instanceof AbLifecycleError) {
       return json({ error: err.code, message: err.message, ...(err.extra ?? {}) }, err.status);
     }
+    // The publish inside the launch fails like any publish: a missing function secret, Functions that don't compile or
+    // deploy, Stripe's two accounts, a migration — each has its own code the owner (and Len) can act on (review item 29).
+    const mapped = publishErrorResult(err);
+    if (mapped) return json(mapped.body, mapped.status);
+    console.error("[ab] launch failed", err);
     return json({ error: "launch_failed" }, 500);
   }
-});
-
-export const OPTIONS = respuestaPrevia;
+}

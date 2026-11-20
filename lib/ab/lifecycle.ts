@@ -11,30 +11,38 @@ import { db, schema } from "@/lib/db";
 import { readPublishedSources } from "@/lib/len-watch/published-sources";
 import { publishProject } from "@/lib/projects";
 import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-through-gates";
-import { splitPagesForPublish } from "@/lib/projects/site-pages";
-import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { rollbackToSha } from "@/lib/publish/filesystem";
+import { holdDecision, holdLaunchClaim } from "./decision-lock";
 import { abTestingEnabled } from "./enabled";
+import { AbExperimentRunningError } from "./errors";
+import { assertNoLiveExperiment } from "./publish-guard";
+import { purgeExperimentEdge } from "./edge-purge";
+import { readLiveAb } from "./live-manifest";
+import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
+  claimBring,
   claimExperimentDecision,
+  claimLaunch,
   createExperimentRow,
+  finalizeLaunch,
   getExperimentById,
+  liveExperimentForProject,
   normalizePrimaryMetric,
+  releaseLaunch,
   normalizeTargetPath,
-  releaseDecisionLock,
   toExperimentView,
+  transitionBringState,
   updateExperiment,
   type AbExperimentRow,
 } from "./store";
-import { MIN_DURATION_HOURS } from "./stats";
-import type { AbExperimentView, AbPrimaryMetric } from "./types";
+import { MIN_DURATION_HOURS, maxDurationDaysOf } from "./stats";
+import type { AbExperimentView, AbMetricsSnapshot, AbPrimaryMetric } from "./types";
 import {
   cleanupAbWorktree,
   commitAbWorktree,
   copySources,
   createAbWorktree,
-  ensurePublishedSources,
   mergeWinnerIntoDraft,
   readPublishedFolder,
 } from "./worktree";
@@ -50,7 +58,11 @@ export class AbLifecycleError extends Error {
       | "invalid_state"
       | "security_blocked"
       | "decision_conflict"
-      | "missing_target_page",
+      | "missing_target_page"
+      // The site was published after the draft was cut: Variant B is built on a base that is no longer the site.
+      | "base_moved"
+      // Another experiment of the project is live (the release carries one manifest).
+      | "ab_already_running",
     message: string,
     public readonly status: number,
     public readonly extra?: Record<string, unknown>,
@@ -60,20 +72,22 @@ export class AbLifecycleError extends Error {
   }
 }
 
+/** The experiment's copy and branch are deleted AFTER its end was recorded, and a cleanup that fails must not undo the end:
+ *  the row says what the site is, a leftover copy is only clutter (review: record the end first, clean up best-effort). */
+export async function cleanupBestEffort(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void> {
+  try {
+    await cleanupAbWorktree(p);
+  } catch (err) {
+    console.error("[ab] couldn't clean up an ended experiment's worktree (it is only clutter now)", p.copyProjectId, err);
+  }
+}
+
 function newExperimentId(): string {
   return `ab_${randomBytes(4).toString("hex")}`;
 }
 
 function newSalt(): string {
   return randomBytes(8).toString("hex");
-}
-
-function edgePathsForTarget(targetPath: string, locales: readonly string[]): string[] {
-  const paths = targetPath === "/" ? ["/", "/index.html"] : [targetPath, `${targetPath}/`];
-  if (targetPath === "/") {
-    for (const loc of locales) paths.push(`/${loc}`, `/${loc}/`);
-  }
-  return paths;
 }
 
 /** Create a new draft A/B experiment + isolated `ab/<id>` worktree cloned from
@@ -239,6 +253,44 @@ export async function launchAbExperiment(p: {
     throw new AbLifecycleError("not_published", "Project is not published.", 400);
   }
 
+  // One live experiment per project: the release carries ONE manifest, so a second launch would end the first
+  // (review item 15). Drafts don't count.
+  const running = await liveExperimentForProject(p.projectId);
+  if (running && running.id !== exp.id) {
+    throw new AbLifecycleError(
+      "ab_already_running",
+      `Another A/B test (${running.name}) is running on this site. Decide it (keep A, promote B) before launching a new one.`,
+      409,
+      { runningExperimentId: running.id },
+    );
+  }
+
+  // 0. Re-baseline (review item 12). The draft was cut from the version published that day (`baseCommitOid`); if the
+  //    site was published since, Control would be the new version but Variant B is built on the old one, and promoting
+  //    it — or «keeping A» — would undo that publication. Nothing is published: Len cuts the variant again.
+  const control = await loadControlSources(p.projectId, p.ownerId);
+  if (!control) {
+    throw new AbLifecycleError("not_published", "Published baseline missing.", 400);
+  }
+  // Two witnesses that the site moved: the commit the draft was cut from is no longer the published one, or the live RELEASE
+  // isn't the one that was live at the draft (content-addressed: a republish of identical content keeps its sha, so that
+  // is no move). Either way the draft is stale: it is cancelled — a stale draft counts as active and would answer the
+  // re-cut with `already_active` — and the owner is told so (G1+G3 review, items 16 and 17).
+  const siteMoved =
+    !exp.baseCommitOid ||
+    exp.baseCommitOid !== control.published.commitOid ||
+    (exp.controlReleaseSha ?? null) !== (project.publishedReleaseSha ?? null);
+  if (siteMoved) {
+    await cancelAbDraft({ projectId: p.projectId, experimentId: exp.id }).catch((err: unknown) => {
+      console.error("[ab] couldn't cancel the stale draft", exp.id, err);
+    });
+    throw new AbLifecycleError(
+      "base_moved",
+      "The site was published since this variant was drafted, so Variant B is built on an older version than the one that is live now. The draft was discarded: ask Len to create the variant again from the current page.",
+      409,
+    );
+  }
+
   // 1. Run security gate on Variant B's worktree copy before shipping.
   const security = await runSecurityGate({
     projectId: p.projectId,
@@ -259,72 +311,187 @@ export async function launchAbExperiment(p: {
   // 2. Commit any uncommitted Len edits on branch `ab/<expId>`.
   const tipOid = await commitAbWorktree(exp.copyProjectId, p.ownerId, exp.id);
 
-  // 3. Load clean Control A baseline + Variant B sources.
-  const controlSrc = await ensurePublishedSources(p.projectId, p.ownerId);
-  if (!controlSrc) {
-    throw new AbLifecycleError("not_published", "Published baseline missing.", 400);
-  }
+  // 3. Variant B's sources (Control's were loaded above).
   const variantBSrc = await copySources(exp.copyProjectId);
-  const { publicPages: bPages } = splitPagesForPublish(variantBSrc.data);
   const splitBps =
     typeof p.splitBps === "number" && Number.isInteger(p.splitBps)
       ? Math.min(9000, Math.max(1000, p.splitBps))
       : exp.splitBps;
 
-  const controlReleaseSha = exp.controlReleaseSha ?? project.publishedReleaseSha ?? null;
+  // The release to fall back on when the experiment ends is the one live AT LAUNCH — never the one stored when the
+  // draft was made (item 12): going back to that one would undo every publication in between.
+  const controlReleaseSha = project.publishedReleaseSha ?? null;
 
-  const controlFolder = await readPublishedFolder(p.projectId, controlSrc);
+  // 3b. TAKE THE PROJECT'S ONE LIVE SLOT before writing anything: the check above is a read, and two launches at the same
+  //     instant both pass it. The unique index decides; the loser publishes nothing (review: one live experiment per project).
+  //     The claim is `running` with no start yet: nobody can decide it (`claimExperimentDecision` needs a start) and the
+  //     evaluator doesn't judge it until the launch finishes — or the reconcile pass settles it from the live release.
+  const claimed = await claimLaunch(exp.id);
+  if (claimed === "taken") {
+    throw new AbLifecycleError(
+      "ab_already_running",
+      "Another A/B test of this site started a moment ago. Decide it (keep A, promote B) before launching a new one.",
+      409,
+    );
+  }
+  if (claimed === "moved") {
+    throw new AbLifecycleError("invalid_state", `Experiment ${exp.id} is no longer a draft.`, 409);
+  }
 
-  // 4. Publish atomic release containing Control A + `_ab/<id>/b/` + `ab.json`.
-  const pub = await publishProject({
-    projectId: p.projectId,
-    userId: p.ownerId,
-    subdomain: project.subdomain,
-    skipFlightCheck: true,
-    dataChanges: { mode: "skip" },
-    sourcesOverride: { data: controlSrc.data, folder: controlFolder },
-    protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
-    abExperiment: {
-      id: exp.id,
-      targetPath: exp.targetPath,
+  // The claim is a LEASE (round 3, A): a launch publishes Control AND B and can outlast any fixed time, so it refreshes the lease's
+  // clock every minute while it runs, and everything that settles the claim is fenced on its token. The reconcile pass measures the
+  // clock; a relaunch of this row is a new claim (a new token) that this launch can't touch.
+  const lease = holdLaunchClaim(claimed);
+  const fence = { token: lease.token };
+  try {
+    // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
+    let pub: { readonly sha?: string; readonly abOverrides?: readonly string[] };
+    try {
+      pub = await publishProject({
+        projectId: p.projectId,
+        userId: p.ownerId,
+        subdomain: project.subdomain,
+        skipFlightCheck: true,
+        dataChanges: { mode: "skip" },
+        sourcesOverride: { data: control.data, folder: control.folder },
+        protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
+        abExperiment: abSpecOf(exp, variantBSrc, splitBps),
+      });
+    } catch (err) {
+      // A publish can throw AFTER its release was swapped in (a step past the swap). What the live release says decides: if it
+      // carries this experiment the split IS live and the row finishes the launch; if it doesn't, the slot goes back to the draft;
+      // if it can't be read now, the slot stays claimed and the reconcile pass settles it from the release (never guess).
+      const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
+      if (live.kind === "live") {
+        console.error("[ab] the launch's publish threw AFTER its release went live; finishing the launch", exp.id, err);
+        pub = { sha: live.sha, abOverrides: live.overrides };
+      } else if (live.kind === "unknown") {
+        console.error("[ab] the launch's publish threw and the live release can't be read; the slot stays claimed for the reconcile pass", exp.id, err);
+        throw err;
+      } else {
+        await releaseLaunch(exp.id, fence).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
+        throw err;
+      }
+    }
+
+    // 5. Purge what the edge kept of the old page: the target (and its languages), and every asset Variant B overrides.
+    const overridePaths = pub.abOverrides ? [...pub.abOverrides] : [];
+    await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
+
+    // 6. The final write is a compare-and-swap on the launch's own claim (its token). If it changes nothing, the claim is no longer
+    //    this launch's: re-read the row. `running` with THIS release means the reconcile pass already finished the launch from the
+    //    release — accept it, tear nothing down. Otherwise, take the split down only if it is THIS launch's release that is live
+    //    (Control is published again) — a release someone else published since, or one that can't be read, is not ours to touch.
+    const now = new Date();
+    const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
+    const updated = await finalizeLaunch(exp.id, fence, {
+      status: "running",
+      decisionStatus: "none",
       splitBps,
-      salt: exp.salt,
-      includeLocales: exp.includeLocales,
-      variantB: {
-        html: variantBSrc.data.html,
-        pages: bPages,
-        files: Object.entries(variantBSrc.folder).map(([filePath, content]) => ({
-          path: filePath,
-          content,
-        })),
-      },
-    },
+      variantBCommitOid: tipOid,
+      controlReleaseSha,
+      experimentReleaseSha: pub.sha ?? null,
+      overridePaths,
+      startedAt: now,
+      minEndAt,
+    });
+    if (!updated) {
+      const settled = await getExperimentById(exp.id).catch(() => null);
+      if (settled && settled.status === "running" && settled.startedAt && pub.sha && settled.experimentReleaseSha === pub.sha) {
+        console.warn("[ab] the launch's final write missed because the reconcile pass already finished the launch from the release; accepting it", exp.id);
+        return toExperimentView(settled, project.title);
+      }
+      const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
+      const ours = live.kind === "live" && (!pub.sha || live.sha === pub.sha);
+      if (ours) {
+        console.error("[ab] the launch's final write changed nothing: the claim was settled meanwhile; republishing Control", exp.id);
+        try {
+          await publishProject({
+            projectId: p.projectId,
+            userId: p.ownerId,
+            subdomain: project.subdomain,
+            skipFlightCheck: true,
+            dataChanges: { mode: "skip" },
+            sourcesOverride: { data: control.data, folder: control.folder },
+            // Taking the split down IS the end of the experiment: the door must not refuse it.
+            abLive: "ending",
+          });
+          await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
+        } catch (err) {
+          console.error("[ab] couldn't republish Control after a launch that was settled meanwhile", exp.id, err);
+        }
+      } else {
+        console.error(
+          `[ab] the launch's final write changed nothing and the live release isn't this launch's (${live.kind}); taking nothing down`,
+          exp.id,
+        );
+      }
+      throw new AbLifecycleError("decision_conflict", "The test was settled while it was launching, so it did not start.", 409);
+    }
+
+    return toExperimentView(updated, project.title);
+  } finally {
+    lease.stop();
+  }
+}
+
+/** What bringing a promoted Variant B into the owner's draft came to: `brought` (it is in; `nothing` = there was nothing to
+ *  bring), `conflict` (it clashed with their edits; the branch stays), `pending` (a Len turn is live: later). */
+export type BringOutcome =
+  | { readonly state: "brought"; readonly kind: "brought" | "nothing" }
+  | { readonly state: "conflict"; readonly paths: readonly string[] }
+  | { readonly state: "pending" };
+
+async function tryBringIntoDraft(exp: AbExperimentRow, ownerId: string, actorId: string): Promise<BringOutcome> {
+  if (!exp.baseCommitOid || !exp.branch) return { state: "brought", kind: "nothing" };
+  const merged = await mergeWinnerIntoDraft({
+    projectId: exp.projectId,
+    ownerId,
+    actorId,
+    baseCommitOid: exp.baseCommitOid,
+    branch: exp.branch,
   });
+  if (merged.kind === "busy") return { state: "pending" };
+  if (merged.kind === "conflict") return { state: "conflict", paths: merged.paths };
+  return { state: "brought", kind: merged.kind };
+}
 
-  // 5. Purge previous cached Control HTML from Cloudflare PoPs immediately.
-  const langs = controlSrc.data.settings?.languages ?? [];
-  await purgeSubdomain(project.subdomain, edgePathsForTarget(exp.targetPath, langs)).catch(
-    () => undefined,
-  );
-
-  const now = new Date();
-  const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
-  const updated = await updateExperiment(exp.id, {
-    status: "running",
-    decisionStatus: "none",
-    splitBps,
-    variantBCommitOid: tipOid,
-    controlReleaseSha,
-    experimentReleaseSha: pub.sha ?? null,
-    startedAt: now,
-    minEndAt,
+/** Writes down how the bring ended, only if nobody settled it meanwhile (a person's button and the background wait can
+ *  race): `brought` deletes the branch too; `conflict` keeps it (Len or the owner finishes it, or discards it). */
+async function settleBring(exp: AbExperimentRow, outcome: BringOutcome): Promise<AbExperimentRow | null> {
+  if (outcome.state === "pending") return null;
+  const moved = await transitionBringState(exp.id, ["pending", "conflict", "bringing"], {
+    bringState: outcome.state,
+    copyProjectId: null,
   });
+  if (!moved) return null;
+  await cleanupAbWorktree({
+    parentId: exp.projectId,
+    copyProjectId: exp.copyProjectId,
+    branch: outcome.state === "brought" ? exp.branch : null,
+  });
+  return moved;
+}
 
-  return toExperimentView(updated ?? exp, project.title);
+/** A merge that had to wait for Len's live turn is tried again when it ends (up to half an hour, like «Traer el
+ *  arreglo»); if nobody asked meanwhile. A restart loses the wait: the card's button and the publish gate still hold it. */
+function bringWhenLenIsDone(exp: AbExperimentRow, ownerId: string, actorId: string): void {
+  void (async () => {
+    const { esperarALen } = await import("@/lib/agent/turnos-desde-el-servidor");
+    if (!(await esperarALen(exp.projectId))) return;
+    await retryBringWinner({ projectId: exp.projectId, experimentId: exp.id, ownerId, actorId });
+  })().catch((err: unknown) => {
+    console.warn("[ab] the winner couldn't be brought into the draft after Len's turn", exp.id, err);
+  });
 }
 
 /** Promote Variant B to 100% production (clean release without ab.json → restores
- *  Cloudflare s-maxage=3600), purge CF, and 3-way merge B into the owner's draft. */
+ *  Cloudflare s-maxage=3600), purge CF, and 3-way merge B into the owner's draft.
+ *
+ *  Once B is published the decision is MADE: it is recorded right then, and what is left — bringing B into the owner's
+ *  draft — never undoes it. That second step can clash (`conflict`), wait for Len's live turn (`pending`) or fail; the
+ *  owner's next publish waits until they bring it in or discard it, because it would otherwise send the draft without B
+ *  (review item 26). */
 export async function promoteVariantB(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -333,7 +500,7 @@ export async function promoteVariantB(p: {
   readonly locale?: string;
 }): Promise<{
   readonly experiment: AbExperimentView;
-  readonly bringState: "brought" | "conflict";
+  readonly bringState: "brought" | "conflict" | "pending";
   readonly conflictPaths?: readonly string[];
 }> {
   const locked = await claimExperimentDecision(p.experimentId, p.projectId);
@@ -344,17 +511,25 @@ export async function promoteVariantB(p: {
       409,
     );
   }
+  const held = holdDecision(locked);
 
+  let title: string | undefined;
+  let subdomain = "";
+  let languages: readonly string[] = [];
+  let recorded: AbExperimentRow;
   try {
     const [project] = await db
-      .select({ title: schema.projects.title, subdomain: schema.projects.subdomain })
+      .select({ title: schema.projects.title, subdomain: schema.projects.subdomain, data: schema.projects.data })
       .from(schema.projects)
       .where(eq(schema.projects.id, p.projectId))
       .limit(1);
+    title = project?.title;
+    languages = project?.data?.settings?.languages ?? [];
 
     if (!project?.subdomain || !locked.copyProjectId) {
       throw new AbLifecycleError("invalid_state", "Missing subdomain or Variant B worktree.", 409);
     }
+    subdomain = project.subdomain;
 
     const gated = await publishThroughGates({
       projectId: p.projectId,
@@ -375,74 +550,106 @@ export async function promoteVariantB(p: {
     }
 
     const promotedSha = typeof gated.body.sha === "string" ? gated.body.sha : null;
-    await purgeSubdomain(project.subdomain, ["/", "/index.html", locked.targetPath]).catch(
-      () => undefined,
-    );
-
-    // Three-way merge Variant B into owner's draft.
-    let bringState: "brought" | "conflict" = "brought";
-    let conflictPaths: readonly string[] | undefined;
-    if (locked.baseCommitOid && locked.branch) {
-      const merged = await mergeWinnerIntoDraft({
-        projectId: p.projectId,
-        ownerId: p.ownerId,
-        actorId: p.actorId,
-        baseCommitOid: locked.baseCommitOid,
-        branch: locked.branch,
-      });
-      if (merged.kind === "conflict") {
-        bringState = "conflict";
-        conflictPaths = merged.paths;
-      }
-    }
-
-    // If merge succeeded cleanly, tear down worktree + branch; on conflict, keep
-    // the branch alive so Len can finish merging when requested.
-    if (bringState === "brought") {
-      await cleanupAbWorktree({
-        parentId: p.projectId,
-        copyProjectId: locked.copyProjectId,
-        branch: locked.branch,
-      });
-    } else if (locked.copyProjectId) {
-      await cleanupAbWorktree({
-        parentId: p.projectId,
-        copyProjectId: locked.copyProjectId,
-        branch: null,
-      });
-    }
-
     const now = new Date();
-    const updated = await updateExperiment(locked.id, {
+    // B is live: the decision is recorded NOW (and the lock is over), the copy and the branch stay until B is in the draft.
+    // The write is fenced on this decision's own lock: if the sweep gave it away meanwhile, nothing is overwritten and the
+    // reconcile pass records what the release says.
+    const closed = await held.close({
       status: "promoted_b",
       decisionStatus: "resolved",
-      bringState,
+      bringState: "pending",
       promotedReleaseSha: promotedSha,
       winnerVariant: "b",
       endedAt: locked.endedAt ?? now,
       decidedAt: now,
       decidedBy: p.actorId,
-      ...(bringState === "brought" ? { copyProjectId: null } : { copyProjectId: null }),
     });
-
-    return {
-      experiment: toExperimentView(updated ?? locked, project.title),
-      bringState,
-      ...(conflictPaths ? { conflictPaths } : {}),
-    };
+    if (!closed) {
+      throw new AbLifecycleError(
+        "decision_conflict",
+        "Variant B went live, but this decision lost its lock before it could be recorded; the system will record it.",
+        409,
+      );
+    }
+    recorded = closed;
   } catch (err) {
-    await releaseDecisionLock(locked.id, locked.decisionStatus === "pending" ? "pending" : "none");
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
+
+  const { outcome, settled } = await finishPromotion(recorded, subdomain, languages, p.ownerId, p.actorId);
+  return {
+    experiment: toExperimentView(settled ?? recorded, title),
+    bringState: outcome.state,
+    ...(outcome.state === "conflict" ? { conflictPaths: outcome.paths } : {}),
+  };
 }
 
-/** Restore clean Control A at 100% (no ab.json), purge Cloudflare, clean up worktree. */
+/** What follows a promotion that is RECORDED, whoever recorded it (the owner's click, or the reconcile pass that found B live
+ *  with no record): the edge is purged and B is brought into the owner's draft. Whatever happens here, B is already live and
+ *  recorded — nothing in this tail undoes it or throws. */
+export async function finishPromotion(
+  recorded: AbExperimentRow,
+  subdomain: string,
+  languages: readonly string[],
+  ownerId: string,
+  actorId: string,
+): Promise<{ readonly outcome: BringOutcome; readonly settled: AbExperimentRow | null }> {
+  await purgeExperimentEdge(subdomain, recorded, languages);
+
+  // CLAIM the bring before merging, like the owner's retry does (round 3, E): the dialog shows «Don't bring it in» as soon as the
+  // row is `promoted_b`, and a discard that lands while this tail merges would leave B in a draft whose bring was declined. A lost
+  // claim means a discard (or another bring) won: stop quietly — nothing is merged and nothing waits for Len.
+  const claimed = await claimBring(recorded.id).catch((err: unknown) => {
+    console.error("[ab] couldn't claim the promoted winner's bring", recorded.id, err);
+    return null;
+  });
+  if (!claimed) {
+    return { outcome: { state: "pending" }, settled: await getExperimentById(recorded.id).catch(() => null) };
+  }
+
+  // Three-way merge Variant B into owner's draft.
+  let outcome: BringOutcome = { state: "pending" };
+  try {
+    outcome = await tryBringIntoDraft(claimed, ownerId, actorId);
+  } catch (err) {
+    console.error("[ab] bringing the promoted winner into the draft failed; it stays pending", recorded.id, err);
+  }
+  // A cleanup error settling the bring must not turn a successful promotion into a 500: B is live and recorded.
+  let settled: AbExperimentRow | null = null;
+  try {
+    if (outcome.state === "pending") {
+      // Not merged (a live Len turn, or the merge threw): the row goes back to a bring that is still waiting.
+      settled = await transitionBringState(claimed.id, ["bringing"], { bringState: "pending" });
+    } else {
+      settled = await settleBring(claimed, outcome);
+    }
+  } catch (err) {
+    console.error("[ab] settling the promoted winner's bring failed; it stays as it was", recorded.id, err);
+  }
+  if (outcome.state === "pending") bringWhenLenIsDone(claimed, ownerId, actorId);
+  return { outcome, settled };
+}
+
+/** Restore clean Control A at 100% (no ab.json), purge Cloudflare. `true` = a release without the experiment is live now
+ *  (rolled back to Control's, or published again from its sources); `false` = there was nothing to restore it from. */
 async function restoreControlLive(
   exp: AbExperimentRow,
   ownerId: string,
   subdomain: string,
-): Promise<void> {
-  if (exp.controlReleaseSha) {
+): Promise<boolean> {
+  // The rollback goes back to the release saved at launch — right only while the live release is still the experiment's. If
+  // something else was published since, going back would undo it: the published SOURCES are republished instead (below).
+  const [live] = await db
+    .select({ sha: schema.projects.publishedReleaseSha, data: schema.projects.data })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, exp.projectId))
+    .limit(1);
+  const publishedSince = Boolean(exp.experimentReleaseSha) && (live?.sha ?? null) !== exp.experimentReleaseSha;
+  const languages = live?.data?.settings?.languages ?? [];
+  if (exp.controlReleaseSha && !publishedSince) {
     try {
       await rollbackToSha(subdomain, exp.controlReleaseSha);
       await db
@@ -450,8 +657,8 @@ async function restoreControlLive(
         .set({ publishedReleaseSha: exp.controlReleaseSha, updatedAt: new Date() })
         .where(eq(schema.projects.id, exp.projectId))
         .catch(() => undefined);
-      await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
-      return;
+      await purgeExperimentEdge(subdomain, exp, languages);
+      return true;
     } catch {
       // Control release dir was pruned or missing on disk — fall through to clean republish.
     }
@@ -466,9 +673,76 @@ async function restoreControlLive(
       skipFlightCheck: true,
       dataChanges: { mode: "skip" },
       sourcesOverride: { data: controlSrc.data, folder: controlFolder },
+      // Restoring Control IS the end of the experiment: the door must not refuse it.
+      abLive: "ending",
     });
-    await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
+    await purgeExperimentEdge(subdomain, exp, languages);
+    return true;
   }
+  return false;
+}
+
+/** TAKES DOWN A SPLIT THAT OUTLIVED ITS ROW (round 3, B): a system re-emit swapped a split release over a decision that closed
+ *  while it was publishing, or the like. The row is closed and stays what it is; the live release has no business carrying the
+ *  experiment. A promoted winner goes back to the release its promotion published (exact, and it doesn't depend on the published
+ *  sources having been recorded yet); anything else republishes the PUBLISHED sources with the split gone (`abLive: "ending"`: taking
+ *  the split down IS the end of the experiment, the door must not refuse it). Purges the edge. `false` = there was nothing to put back. */
+export async function takeSplitDown(exp: AbExperimentRow, ownerId: string, subdomain: string): Promise<boolean> {
+  // A NEW experiment live on the project (round 4, F): its split is the release's now, or will be as soon as its launch publishes —
+  // and that release replaces the stale one anyway. Taking the old split down would overwrite the new one, so it is left to that
+  // experiment's own lifecycle. The check is also the bottom door's (below: no `abLive` policy, so the door refuses while anything is live).
+  try {
+    await assertNoLiveExperiment(exp.projectId);
+  } catch (err) {
+    if (err instanceof AbExperimentRunningError) {
+      console.warn(`[ab] the split of ${exp.id} (ended as ${exp.status}) is still live, but ${err.experimentId} is live now: leaving it to that experiment's own release`);
+      return false;
+    }
+    throw err;
+  }
+  const [project] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, exp.projectId)).limit(1);
+  const languages = project?.data?.settings?.languages ?? [];
+  const published = await readPublishedSources(exp.projectId);
+  // A promoted winner goes back to the release its promotion published — but ONLY while nothing was published since (round 4, G):
+  // the published sources are no newer than the decision. A later owner publish is in them, and a rollback would drop it, on the live
+  // site and in `publishedReleaseSha`. No sources recorded at all = nothing newer to lose; sources with no time to compare = don't guess.
+  const decidedAt = exp.decidedAt ?? exp.endedAt;
+  const nothingPublishedSince = !published || Boolean(published.publishedAt && decidedAt && published.publishedAt.getTime() <= decidedAt.getTime());
+  if (exp.status === "promoted_b" && exp.promotedReleaseSha && nothingPublishedSince) {
+    try {
+      await rollbackToSha(subdomain, exp.promotedReleaseSha);
+      await db
+        .update(schema.projects)
+        .set({ publishedReleaseSha: exp.promotedReleaseSha, updatedAt: new Date() })
+        .where(eq(schema.projects.id, exp.projectId))
+        .catch(() => undefined);
+      await purgeExperimentEdge(subdomain, exp, languages);
+      return true;
+    } catch {
+      // The promotion's release was pruned or is gone: fall through to the published sources.
+    }
+  }
+  if (!published) return false;
+  try {
+    await publishProject({
+      projectId: exp.projectId,
+      userId: ownerId,
+      subdomain,
+      skipFlightCheck: true,
+      dataChanges: { mode: "skip" },
+      sourcesOverride: { data: published.data, folder: await readPublishedFolder(exp.projectId, published) },
+      // No `abLive` policy (round 4, F): the closed experiment needs no «ending», and with none the bottom door refuses while ANY
+      // experiment is live — one that launched since the check above is not overwritten.
+    });
+  } catch (err) {
+    if (err instanceof AbExperimentRunningError) {
+      console.warn(`[ab] the take-down of ${exp.id} was refused: ${err.experimentId} launched meanwhile; leaving it to that experiment's own release`);
+      return false;
+    }
+    throw err;
+  }
+  await purgeExperimentEdge(subdomain, exp, languages);
+  return true;
 }
 
 /** Owner chooses «Quedarme con la original» (keep Control A). */
@@ -486,6 +760,7 @@ export async function keepControlA(p: {
       409,
     );
   }
+  const held = holdDecision(locked);
 
   try {
     const [project] = await db
@@ -495,16 +770,16 @@ export async function keepControlA(p: {
       .limit(1);
 
     if (project?.subdomain) {
-      await restoreControlLive(locked, p.ownerId, project.subdomain);
+      // A published project whose Control can't be put back is NOT «kept»: the split is still live. It fails, like the harm brake.
+      const restored = await restoreControlLive(locked, p.ownerId, project.subdomain);
+      if (!restored) {
+        throw new AbLifecycleError("invalid_state", "Control can't be restored: nothing to restore it from.", 409);
+      }
     }
-    await cleanupAbWorktree({
-      parentId: p.projectId,
-      copyProjectId: locked.copyProjectId,
-      branch: locked.branch,
-    });
 
+    // The end is RECORDED first (fenced on this decision's lock); the copy and the branch are cleaned up after, best-effort.
     const now = new Date();
-    const updated = await updateExperiment(locked.id, {
+    const updated = await held.close({
       status: "kept_a",
       decisionStatus: "resolved",
       winnerVariant: "a",
@@ -513,14 +788,27 @@ export async function keepControlA(p: {
       decidedAt: now,
       decidedBy: p.actorId,
     });
-    return toExperimentView(updated ?? locked, project?.title);
+    if (!updated) {
+      throw new AbLifecycleError(
+        "decision_conflict",
+        "Your original is live again, but this decision lost its lock before it could be recorded; the system will record it.",
+        409,
+      );
+    }
+    await cleanupBestEffort({ parentId: p.projectId, copyProjectId: locked.copyProjectId, branch: locked.branch });
+    return toExperimentView(updated, project?.title);
   } catch (err) {
-    await releaseDecisionLock(locked.id, locked.decisionStatus === "pending" ? "pending" : "none");
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
 }
 
-/** Owner chooses «Seguir probando»: extend for +7 days. */
+/** Owner chooses «Seguir probando»: keep testing. It really continues (review item 19): the experiment goes back to
+ *  `running`, its window REOPENS (`endedAt` cleared — the metrics stop at it) and ITS hard stop moves out to the end of
+ *  the extension if that is later than the one it had (`maxEndAt`; the global 21 days would end a run that is already on
+ *  day 22 at the next pass). Verdicts are held back until the extension is over (`snoozeUntil`). */
 export async function extendExperiment(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -535,42 +823,87 @@ export async function extendExperiment(p: {
       409,
     );
   }
-  const days = Math.min(14, Math.max(1, p.extraDays ?? 7));
-  const targetDate = new Date(Date.now() + days * 24 * 3_600_000);
-  const updated = await updateExperiment(locked.id, {
-    status: "running",
-    decisionStatus: "none",
-    minEndAt: targetDate,
-    snoozeUntil: targetDate,
-    decidedBy: p.actorId,
-  });
-  return toExperimentView(updated ?? locked);
+  const held = holdDecision(locked);
+  try {
+    const days = Math.min(14, Math.max(1, p.extraDays ?? 7));
+    const targetDate = new Date(Date.now() + days * 24 * 3_600_000);
+    const currentStop = locked.startedAt
+      ? locked.startedAt.getTime() + maxDurationDaysOf(locked) * 24 * 3_600_000
+      : 0;
+    const updated = await held.close({
+      status: "running",
+      decisionStatus: "none",
+      endedAt: null,
+      winnerVariant: null,
+      // A new verdict will be announced as a new notice.
+      notifiedAt: null,
+      minEndAt: targetDate,
+      snoozeUntil: targetDate,
+      maxEndAt: new Date(Math.max(currentStop, targetDate.getTime())),
+      decidedBy: p.actorId,
+    });
+    if (!updated) {
+      throw new AbLifecycleError("decision_conflict", "The test was decided by someone else while it was being extended.", 409);
+    }
+    return toExperimentView(updated);
+  } catch (err) {
+    await held.release();
+    throw err;
+  } finally {
+    held.stop();
+  }
 }
 
-/** Auto-stop guardrail when evaluator detects severe harm (>30% drop at >=95% confidence). */
+/** Auto-stop guardrail when the evaluator detects harm (review items 21, 22). It CLAIMS the decision first, the same claim
+ *  a person's decision takes: if a person is already deciding (or someone decided), it does nothing and returns `null` —
+ *  never a second publish racing the first. With the claim, it puts Control back (`restored`: false only when the project
+ *  has no address, so there was nothing live to put back), closes the row as `paused_harm` with the metrics that caused it,
+ *  and gives the lock back if anything fails so the next pass tries again. A published project whose original can't be
+ *  restored is NOT closed: the split is still live. */
 export async function autoStopExperimentForHarm(
   exp: AbExperimentRow,
   ownerId: string,
-  subdomain: string,
-): Promise<AbExperimentRow | null> {
-  await restoreControlLive(exp, ownerId, subdomain);
-  await cleanupAbWorktree({
-    parentId: exp.projectId,
-    copyProjectId: exp.copyProjectId,
-    branch: exp.branch,
-  });
-  const now = new Date();
-  return updateExperiment(exp.id, {
-    status: "paused_harm",
-    decisionStatus: "resolved",
-    winnerVariant: "a",
-    copyProjectId: null,
-    endedAt: now,
-    notifiedAt: now,
-  });
+  subdomain: string | null,
+  snapshot: AbMetricsSnapshot,
+  now: Date = new Date(),
+): Promise<{ readonly restored: boolean } | null> {
+  const locked = await claimExperimentDecision(exp.id, exp.projectId);
+  if (!locked) return null;
+  const held = holdDecision(locked);
+  try {
+    let restored = false;
+    if (subdomain) {
+      restored = await restoreControlLive(locked, ownerId, subdomain);
+      if (!restored) {
+        throw new AbLifecycleError("invalid_state", "Control can't be restored: nothing to restore it from.", 409);
+      }
+    }
+    // Recorded first (fenced on this decision's lock), cleaned up after, best-effort: a cleanup that throws after Control
+    // was restored must not give the lock back and leave a live-looking row over a release with no split.
+    const closed = await held.close({
+      status: "paused_harm",
+      decisionStatus: "resolved",
+      winnerVariant: "a",
+      copyProjectId: null,
+      metricsSnapshot: snapshot,
+      evaluatedAt: now,
+      endedAt: now,
+      decidedAt: now,
+    });
+    if (!closed) {
+      throw new AbLifecycleError("decision_conflict", "The harm stop lost its lock before it could be recorded.", 409);
+    }
+    await cleanupBestEffort({ parentId: locked.projectId, copyProjectId: locked.copyProjectId, branch: locked.branch });
+    return { restored };
+  } catch (err) {
+    await held.release();
+    throw err;
+  } finally {
+    held.stop();
+  }
 }
 
-/** Retry three-way merge after a conflict or cancel a draft experiment cleanly. */
+/** Cancel a draft experiment cleanly: its copy and branch are deleted. */
 export async function cancelAbDraft(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -596,28 +929,73 @@ export async function cancelAbDraft(p: {
   return toExperimentView(updated ?? exp);
 }
 
+/** Re-tries bringing a promoted Variant B into the owner's draft: the button of the conflict card, and the wait that
+ *  follows a Len turn. Only a PROMOTED experiment whose bring is still open (`pending` or `conflict`) can be brought:
+ *  anything else has no branch worth merging, or already had it (review item 26). With a Len turn live it answers
+ *  `queued` and tries again when the turn ends. */
 export async function retryBringWinner(p: {
   readonly projectId: string;
   readonly experimentId: string;
   readonly ownerId: string;
   readonly actorId: string;
-}): Promise<{ readonly status: "brought" | "conflict" | "nothing"; readonly paths?: readonly string[] }> {
+}): Promise<{
+  readonly status: "brought" | "conflict" | "nothing" | "queued";
+  readonly paths?: readonly string[];
+}> {
   const exp = await getExperimentById(p.experimentId);
   if (!exp || exp.projectId !== p.projectId || !exp.baseCommitOid || !exp.branch) {
     throw new AbLifecycleError("not_found", "Experiment branch not found", 404);
   }
-  const merged = await mergeWinnerIntoDraft({
-    projectId: p.projectId,
-    ownerId: p.ownerId,
-    actorId: p.actorId,
-    baseCommitOid: exp.baseCommitOid,
-    branch: exp.branch,
-  });
-  if (merged.kind === "conflict") {
-    await updateExperiment(exp.id, { bringState: "conflict" });
-    return { status: "conflict", paths: merged.paths };
+  if (exp.status !== "promoted_b") {
+    throw new AbLifecycleError("invalid_state", "Only a promoted Variant B can be brought into the draft.", 409);
   }
-  await updateExperiment(exp.id, { bringState: "brought" });
-  await cleanupAbWorktree({ parentId: p.projectId, copyProjectId: null, branch: exp.branch });
-  return { status: merged.kind };
+  // CLAIM the bring before merging: a discard that comes first leaves nothing to claim (so nothing is merged into a draft whose
+  // bring was declined), and one that comes meanwhile is refused. Two brings at once: one merges.
+  const claimed = await claimBring(exp.id);
+  if (!claimed) {
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, discarded, or is being brought in right now.", 409);
+  }
+  // What it was before the claim (a stale «bringing» was somebody's waiting bring): where it goes back to if nothing settles it.
+  const before = exp.bringState === "conflict" ? "conflict" : "pending";
+  let outcome: BringOutcome;
+  try {
+    outcome = await tryBringIntoDraft(claimed, p.ownerId, p.actorId);
+  } catch (err) {
+    // Never leave the row on «bringing»: it goes back as a bring that is still waiting.
+    await transitionBringState(exp.id, ["bringing"], { bringState: before }).catch((e: unknown) => console.error("[ab] couldn't give a bring's claim back", exp.id, e));
+    throw err;
+  }
+  if (outcome.state === "pending") {
+    await transitionBringState(exp.id, ["bringing"], { bringState: before });
+    bringWhenLenIsDone(claimed, p.ownerId, p.actorId);
+    return { status: "queued" };
+  }
+  if (outcome.state === "conflict") {
+    await transitionBringState(exp.id, ["bringing"], { bringState: "conflict" });
+    return { status: "conflict", paths: outcome.paths };
+  }
+  await settleBring(claimed, outcome);
+  return { status: outcome.kind };
+}
+
+/** «Don't bring it in»: the owner keeps their draft as it is and gives up Variant B's changes in it. Production stays as
+ *  it is — B is live — and the branch is deleted. After this their next publish no longer waits (and WILL publish the draft
+ *  without B: that is the choice they just made). */
+export async function discardWinnerBring(p: {
+  readonly projectId: string;
+  readonly experimentId: string;
+}): Promise<AbExperimentView> {
+  const exp = await getExperimentById(p.experimentId);
+  if (!exp || exp.projectId !== p.projectId) {
+    throw new AbLifecycleError("not_found", "Experiment not found", 404);
+  }
+  if (exp.status !== "promoted_b") {
+    throw new AbLifecycleError("invalid_state", "Only a promoted Variant B has changes to discard.", 409);
+  }
+  const moved = await transitionBringState(exp.id, ["pending", "conflict"], { bringState: "declined", copyProjectId: null });
+  if (!moved) {
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in or discarded, or is being brought in right now.", 409);
+  }
+  await cleanupAbWorktree({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch });
+  return toExperimentView(moved);
 }
