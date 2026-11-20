@@ -110,6 +110,7 @@ export function MobileAbDecisionCard({
           </div>
         </div>
       )}
+      {actual.status === "paused_harm" && <p className="asist-aviso">{t("own.ab.pausedHarmNotice")}</p>}
       {actual.bringState === "conflict" && (
         <p role="alert" className="asist-aviso">
           {t("own.ab.conflictNotice")}

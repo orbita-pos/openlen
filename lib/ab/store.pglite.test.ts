@@ -26,6 +26,7 @@ const {
   claimExperimentDecision,
   createExperimentRow,
   pendingDecisionsForProjects,
+  pendingExperimentViewsForProjects,
   updateExperiment,
 } = await import("./store");
 const { computeExperimentMetrics, upsertExperimentDailySnapshot } = await import("./metrics");
@@ -139,6 +140,26 @@ describe("lib/ab/store & metrics (PGlite)", () => {
     // Pending decisions query no longer lists an applying row.
     const pending = await pendingDecisionsForProjects(["p1"]);
     expect(pending).toHaveLength(0);
+  });
+
+  it("🔴 the screens' cards list the decisions waiting AND the experiments stopped for harm in the last 14 days (item 23)", async () => {
+    await pg().query(`INSERT INTO "projects" ("id", "userId", "title") VALUES ('p2','u1','Tienda'), ('p3','u1','Blog'), ('p4','u1','Otro');`);
+    const now = new Date("2026-11-19T12:00:00Z");
+    const ago = (days: number) => new Date(now.getTime() - days * 86_400_000);
+    const mk = (id: string, projectId: string, patch: Partial<Parameters<typeof createExperimentRow>[0]>) =>
+      createExperimentRow({ id, projectId, name: id, targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "running", decisionStatus: "none", ...patch });
+    await mk("ab_pending1", "p1", { status: "winner_ready", decisionStatus: "pending", evaluatedAt: ago(1) });
+    await mk("ab_harmnew1", "p2", { status: "paused_harm", decisionStatus: "resolved", endedAt: ago(3), evaluatedAt: ago(3) });
+    await mk("ab_harmold1", "p3", { status: "paused_harm", decisionStatus: "resolved", endedAt: ago(20), evaluatedAt: ago(20) });
+    await mk("ab_running1", "p4", { status: "running", decisionStatus: "none" });
+
+    const views = await pendingExperimentViewsForProjects(["p1", "p2", "p3", "p4"], now);
+    expect(views.map((v) => [v.id, v.status, v.decisionStatus])).toEqual([
+      ["ab_pending1", "winner_ready", "pending"],
+      ["ab_harmnew1", "paused_harm", "resolved"],
+    ]);
+    // The morning summary still talks only of what needs a decision.
+    expect((await pendingDecisionsForProjects(["p1", "p2", "p3", "p4"])).map((x) => x.experimentId)).toEqual(["ab_pending1"]);
   });
 
   it("computeExperimentMetrics deduplicates repeat reloads and attributes forms + CTA clicks cleanly", async () => {
