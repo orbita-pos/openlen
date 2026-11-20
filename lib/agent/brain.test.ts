@@ -373,4 +373,12 @@ describe("Plan Ruta 98 % (P4b): one-step effort unlock (low/medium → high)", (
     await drain(dynamis.openStream([USER], { effortUnlock: "high" }));
     expect(fireworksStream.mock.calls[2][0].reasoningEffortWord).toBe("max");
   });
+
+  it("the operator pin wins over the person's effort at every step, unlocked or not", async () => {
+    const brain = createAgentBrain({ tools: TOOLS, requestId: "p1", env: { OPENLEN_AGENT_EFFORT: "medium" }, esfuerzoDelTurno: "low" });
+    await drain(brain.openStream([USER]));
+    await drain(brain.openStream([USER], { effortUnlock: "high" }));
+    await drain(brain.openStream([USER]));
+    expect(fireworksStream.mock.calls.map((c) => c[0].esfuerzo)).toEqual(["medium", "medium", "medium"]);
+  });
 });

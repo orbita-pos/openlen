@@ -975,6 +975,11 @@ export const TOOL_OUTCOME_UNKNOWN =
 export const TOOL_NOT_STARTED =
   "The tool call was interrupted before the Harness recorded it as started. Retry it if it is still needed.";
 
+/** Plan Ruta 98 % (P4b), reviewed: how many steps of ONE turn may go out with the effort unlocked after a stall. The
+ *  unlock is a request parameter, not a message, so the cache prefix is untouched; the cap keeps a model that is
+ *  genuinely stuck from running the whole turn at `high`. The operator's pin (`OPENLEN_AGENT_EFFORT`) wins in the brain. */
+export const MAX_EFFORT_UNLOCKS_PER_TURN = 2;
+
 interface PendingCall {
   name: string;
   args: Record<string, unknown>;
@@ -1001,6 +1006,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
   /** Plan Ruta 98 % (P4b): 1-step effort unlock (low/medium -> high adaptive) after a real stall. */
   let unlockEffortNextStep = false;
   let consecutiveStallSteps = 0;
+  /** Steps of this turn that went out unlocked: capped at `MAX_EFFORT_UNLOCKS_PER_TURN`. */
+  let effortUnlocksUsed = 0;
   // El aviso de turno callado de Claude Code: 5 pasos sin decirle nada a la persona.
   const silencio = createSilentTurnReminder();
   // A3 · el reloj del turno, el de Claude Code: empieza con el mensaje del dueño
@@ -1237,7 +1244,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
    * lleva las respuestas de las herramientas, y ese campo era `""` antes de que
    * esto existiera: una tanda sana tiene que dejar el mensaje byte a byte igual.
    */
-  const medirYRedactar = async (): Promise<string> => {
+  const medirYRedactar = async (): Promise<{ readonly texto: string; readonly nuevos: readonly Diagnostico[] }> => {
     // Lo de las escrituras ya es NUEVO por construcción (se mide contra el
     // fichero de antes): sólo se quita lo ya entregado.
     // Y lo que llegó tarde, que ya viene sin lo entregado (con su propia
@@ -1245,7 +1252,8 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     const nuevos: Diagnostico[] = [...entregados.nuevos(diagnosticosDeLaTanda), ...(args.lateDiagnostics?.() ?? [])];
     diagnosticosDeLaTanda = [];
     const avisos = (await args.lateNotices?.().catch(() => [])) ?? [];
-    return [redactarDiagnosticos(nuevos) ?? "", ...avisos].filter((p) => p !== "").join("\n\n");
+    // `nuevos` también sale, para quien necesite saber qué le llegó de nuevo al modelo en este paso (el atasco).
+    return { texto: [redactarDiagnosticos(nuevos) ?? "", ...avisos].filter((p) => p !== "").join("\n\n"), nuevos };
   };
 
   /** Ver `AgentLoopResult.rechazos`. */
@@ -1577,6 +1585,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // espera corta sin otro intento. `turns` no se vuelve a sumar.
     const yaHablabaAntesDelIntento: boolean = algunaVueltaYaDijoAlgo;
     const stepEffortUnlock = unlockEffortNextStep ? ("high" as const) : undefined;
+    if (stepEffortUnlock) effortUnlocksUsed += 1;
     unlockEffortNextStep = false;
     /** Lo estimado de los intentos fallidos de este paso en el proveedor
      *  actual: si el cerebro lo deja, se perdona (`forgivenUsage`). */
@@ -2371,8 +2380,9 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // paso —el que iba a dar de todas formas—: cero llamadas nuevas.
     // Pieza 8: y detrás, lo que las herramientas dejaron para este paso (el
     // cierre de un encargo), como el `deferContext` de DeepSeek.
-    const hasErrorDiag = diagnosticosDeLaTanda.some((d) => d.gravedad === "Error");
-    const medido = await medirYRedactar();
+    const { texto: medido, nuevos: diagnosticosNuevos } = await medirYRedactar();
+    // Un atasco es un error NUEVO para el modelo: el que ya se le entregó y la escritura vuelve a dejar no lo es.
+    const hasErrorDiag = diagnosticosNuevos.some((d) => d.gravedad === "Error");
     // Y LAS CAPTURAS, en este mismo mensaje y con su rótulo: el modelo las mira
     // él, sin nadie que se las describa (como la skill `verify` de Claude Code:
     // la captura es la prueba). Las viejas pierden los píxeles.
@@ -2385,13 +2395,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     );
     const allCallsFailed =
       functionResponses.length > 0 && functionResponses.every((r) => r.response.ok === false || r.response.isError === true);
+    // The unlock changes the request's effort, never its messages, and goes out at most
+    // `MAX_EFFORT_UNLOCKS_PER_TURN` times per turn (the operator's pin, in the brain, still wins over it).
+    const canUnlock = effortUnlocksUsed < MAX_EFFORT_UNLOCKS_PER_TURN;
     if (repeatNotices.length > 0) {
-      unlockEffortNextStep = true;
+      unlockEffortNextStep = canUnlock;
       consecutiveStallSteps = 0;
     } else if (hasErrorDiag || allCallsFailed) {
       consecutiveStallSteps += 1;
       if (consecutiveStallSteps >= 2) {
-        unlockEffortNextStep = true;
+        unlockEffortNextStep = canUnlock;
         consecutiveStallSteps = 0;
       }
     } else {
