@@ -724,7 +724,29 @@
     "signInAgainAt": "Accedi di nuovo su {issuer}",
     "morePermissionsAt": "Richiede più autorizzazioni su {issuer}",
     "oauthConnected": "Connesso",
-    "suggestTitle": "Connetti {name} ({host})"
+    "suggestTitle": "Connetti {name} ({host})",
+    "signInOnServerPage": "Accedi sulla pagina di accesso del server stesso",
+    "signInAgainOnServerPage": "Accedi di nuovo sulla pagina di accesso del server stesso",
+    "morePermissionsOnServerPage": "Servono più permessi, richiesti sulla pagina di accesso del server stesso",
+    "sendsToSignIn": "Invierà la tua chiave {name} alla pagina di accesso del server",
+    "tryAgain": "Riprova",
+    "openConnectors": "Apri Connettori in Strumenti",
+    "errors": {
+      "popupBlocked": "Il browser ha bloccato la finestra di accesso. Consenti i popup per OpenLen e riprova.",
+      "unsafeUrl": "Il server ha inviato un indirizzo di accesso non sicuro, quindi OpenLen non l'ha aperto.",
+      "notApproved": "Questo connettore non è ancora approvato. Approvalo in Strumenti, sotto Connettori.",
+      "noClient": "OpenLen non può ancora accedere a questo server: serve un'app registrata presso il provider di accesso del server (oauth.clientId in mcp.json).",
+      "unreachable": "Non è stato possibile raggiungere l'accesso del server. Riprova tra un momento.",
+      "expired": "L'accesso ha richiesto troppo tempo ed è scaduto. Riprova.",
+      "lost": "Quel link di accesso non funziona più. Riprova.",
+      "issuerChanged": "La pagina di accesso non è quella per cui questo connettore è stato approvato, quindi non è stato collegato nulla.",
+      "exchangeFailed": "Il server non ha completato l'accesso. Riprova.",
+      "off": "L'accesso ai connettori è disattivato.",
+      "unauthorized": "La tua sessione di OpenLen è terminata. Ricarica la pagina e riprova.",
+      "notAvailable": "Quel connettore non è disponibile.",
+      "configUnreadable": "Il tuo file dei connettori non è leggibile. Correggilo in Strumenti, sotto Connettori.",
+      "failed": "Impossibile accedere. Riprova."
+    }
   },
   "ownAssistant": {
     "card": {

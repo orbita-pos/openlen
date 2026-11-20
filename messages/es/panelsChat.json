@@ -724,7 +724,29 @@
     "signInAgainAt": "Inicia sesión otra vez en {issuer}",
     "morePermissionsAt": "Pide más permisos en {issuer}",
     "oauthConnected": "Conectado",
-    "suggestTitle": "Conectar {name} ({host})"
+    "suggestTitle": "Conectar {name} ({host})",
+    "signInOnServerPage": "Inicia sesión en la página de inicio de sesión del propio servidor",
+    "signInAgainOnServerPage": "Inicia sesión otra vez en la página de inicio de sesión del propio servidor",
+    "morePermissionsOnServerPage": "Pide más permisos, en la página de inicio de sesión del propio servidor",
+    "sendsToSignIn": "Enviará tu clave {name} a la página de inicio de sesión del servidor",
+    "tryAgain": "Reintentar",
+    "openConnectors": "Abrir Conectores en Herramientas",
+    "errors": {
+      "popupBlocked": "Tu navegador bloqueó la ventana de inicio de sesión. Permite las ventanas emergentes para OpenLen y vuelve a intentarlo.",
+      "unsafeUrl": "El servidor envió una dirección de inicio de sesión que no es segura, así que OpenLen no la abrió.",
+      "notApproved": "Este conector aún no está aprobado. Apruébalo en Herramientas, en Conectores.",
+      "noClient": "OpenLen aún no puede iniciar sesión en este servidor: necesita una aplicación registrada en el proveedor de inicio de sesión del servidor (oauth.clientId en mcp.json).",
+      "unreachable": "No se pudo llegar al inicio de sesión del servidor. Inténtalo de nuevo en un momento.",
+      "expired": "El inicio de sesión tardó demasiado y caducó. Vuelve a intentarlo.",
+      "lost": "Ese enlace de inicio de sesión ya no sirve. Vuelve a intentarlo.",
+      "issuerChanged": "La página de inicio de sesión no es aquella para la que se aprobó este conector, así que no se conectó nada.",
+      "exchangeFailed": "El servidor no terminó el inicio de sesión. Vuelve a intentarlo.",
+      "off": "El inicio de sesión en los conectores está desactivado.",
+      "unauthorized": "Tu sesión de OpenLen terminó. Recarga la página y vuelve a intentarlo.",
+      "notAvailable": "Ese conector no está disponible.",
+      "configUnreadable": "No se puede leer tu archivo de conectores. Arréglalo en Herramientas, en Conectores.",
+      "failed": "No se pudo iniciar sesión. Vuelve a intentarlo."
+    }
   },
   "ownAssistant": {
     "card": {

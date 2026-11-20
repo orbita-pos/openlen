@@ -724,7 +724,29 @@
     "signInAgainAt": "Reconnectez-vous sur {issuer}",
     "morePermissionsAt": "Demande plus d'autorisations sur {issuer}",
     "oauthConnected": "Connecté",
-    "suggestTitle": "Connecter {name} ({host})"
+    "suggestTitle": "Connecter {name} ({host})",
+    "signInOnServerPage": "Connectez-vous sur la page de connexion du serveur lui-même",
+    "signInAgainOnServerPage": "Reconnectez-vous sur la page de connexion du serveur lui-même",
+    "morePermissionsOnServerPage": "Demande plus d'autorisations, sur la page de connexion du serveur lui-même",
+    "sendsToSignIn": "Votre clé {name} sera envoyée à la page de connexion du serveur",
+    "tryAgain": "Réessayer",
+    "openConnectors": "Ouvrir Connecteurs dans Outils",
+    "errors": {
+      "popupBlocked": "Votre navigateur a bloqué la fenêtre de connexion. Autorisez les fenêtres contextuelles pour OpenLen, puis réessayez.",
+      "unsafeUrl": "Le serveur a envoyé une adresse de connexion non sécurisée, donc OpenLen ne l'a pas ouverte.",
+      "notApproved": "Ce connecteur n'est pas encore approuvé. Approuvez-le dans Outils, sous Connecteurs.",
+      "noClient": "OpenLen ne peut pas encore se connecter à ce serveur : il lui faut une application enregistrée auprès du fournisseur de connexion du serveur (oauth.clientId dans mcp.json).",
+      "unreachable": "Impossible de joindre la connexion du serveur. Réessayez dans un instant.",
+      "expired": "La connexion a pris trop de temps et a expiré. Réessayez.",
+      "lost": "Ce lien de connexion ne fonctionne plus. Réessayez.",
+      "issuerChanged": "La page de connexion n'est pas celle pour laquelle ce connecteur a été approuvé, donc rien n'a été connecté.",
+      "exchangeFailed": "Le serveur n'a pas terminé la connexion. Réessayez.",
+      "off": "La connexion aux connecteurs est désactivée.",
+      "unauthorized": "Votre session OpenLen est terminée. Rechargez la page, puis réessayez.",
+      "notAvailable": "Ce connecteur n'est pas disponible.",
+      "configUnreadable": "Votre fichier de connecteurs est illisible. Corrigez-le dans Outils, sous Connecteurs.",
+      "failed": "Connexion impossible. Réessayez."
+    }
   },
   "ownAssistant": {
     "card": {

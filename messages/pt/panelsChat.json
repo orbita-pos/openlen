@@ -724,7 +724,29 @@
     "signInAgainAt": "Inicie sessão novamente em {issuer}",
     "morePermissionsAt": "Pede mais permissões em {issuer}",
     "oauthConnected": "Conectado",
-    "suggestTitle": "Conectar {name} ({host})"
+    "suggestTitle": "Conectar {name} ({host})",
+    "signInOnServerPage": "Inicie sessão na página de início de sessão do próprio servidor",
+    "signInAgainOnServerPage": "Inicie sessão de novo na página de início de sessão do próprio servidor",
+    "morePermissionsOnServerPage": "Pede mais permissões, na página de início de sessão do próprio servidor",
+    "sendsToSignIn": "Enviará sua chave {name} para a página de início de sessão do servidor",
+    "tryAgain": "Tentar de novo",
+    "openConnectors": "Abrir Conectores em Ferramentas",
+    "errors": {
+      "popupBlocked": "O navegador bloqueou a janela de início de sessão. Permita as janelas pop-up para o OpenLen e tente de novo.",
+      "unsafeUrl": "O servidor enviou um endereço de início de sessão que não é seguro, por isso o OpenLen não o abriu.",
+      "notApproved": "Este conector ainda não foi aprovado. Aprove-o em Ferramentas, em Conectores.",
+      "noClient": "O OpenLen ainda não consegue iniciar sessão neste servidor: precisa de uma aplicação registada no fornecedor de início de sessão do servidor (oauth.clientId em mcp.json).",
+      "unreachable": "Não foi possível chegar ao início de sessão do servidor. Tente de novo daqui a pouco.",
+      "expired": "O início de sessão demorou demasiado e expirou. Tente de novo.",
+      "lost": "Esse link de início de sessão já não funciona. Tente de novo.",
+      "issuerChanged": "A página de início de sessão não é aquela para a qual este conector foi aprovado, por isso nada foi conectado.",
+      "exchangeFailed": "O servidor não concluiu o início de sessão. Tente de novo.",
+      "off": "O início de sessão nos conectores está desativado.",
+      "unauthorized": "A sua sessão do OpenLen terminou. Recarregue a página e tente de novo.",
+      "notAvailable": "Esse conector não está disponível.",
+      "configUnreadable": "Não é possível ler o seu ficheiro de conectores. Corrija-o em Ferramentas, em Conectores.",
+      "failed": "Não foi possível iniciar sessão. Tente de novo."
+    }
   },
   "ownAssistant": {
     "card": {

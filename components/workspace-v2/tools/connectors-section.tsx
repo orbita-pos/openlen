@@ -10,6 +10,7 @@ import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
 import { McpApprovalCardView } from "../chat/mcp-approval-card";
 import { openSignIn } from "../chat/open-sign-in";
+import { showsDetail, signInErrorKey } from "../chat/sign-in-errors";
 
 interface ServerRow {
   name: string;
@@ -45,8 +46,11 @@ const send = async (url: string, method: string, body?: unknown) => {
 
 export function ConnectorsSection() {
   const t = useTranslations("wsChrome");
+  // A sign-in that failed says why in the person's language (`mcpApproval.errors`, shared with the chat's card).
+  const tc = useTranslations("panelsChat");
   const [view, setView] = useState<View | null>(null);
   const [probes, setProbes] = useState<Record<string, Probe>>({});
+  const [signInErrors, setSignInErrors] = useState<Record<string, { code: string; detail?: string }>>({});
   const [form, setForm] = useState<{ mode: "add" | "edit"; name: string; url: string; rows: HeaderRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keyEdit, setKeyEdit] = useState<{ name: string; value: string } | null>(null);
@@ -79,9 +83,11 @@ export function ConnectorsSection() {
               : t("tools.connectors.status.neverListed");
 
   async function connectOAuth(name: string) {
+    setSignInErrors(({ [name]: _gone, ...rest }) => rest);
     const res = await openSignIn(name);
-    if (res === "connected") await load();
-    else if (typeof res === "object") setProbes((p) => ({ ...p, [name]: { ok: false, error: res.error } }));
+    // Whatever the window said, the list is read again: it may have closed with the connection already made.
+    await load();
+    if (typeof res === "object") setSignInErrors((e) => ({ ...e, [name]: { code: res.error, ...(res.detail ? { detail: res.detail } : {}) } }));
   }
 
   async function disconnectOAuth(name: string) {
@@ -177,6 +183,12 @@ export function ConnectorsSection() {
                   ? t("tools.connectors.probeOk", { tools: (probes[s.name] as { tools: string[] }).tools.join(", ") })
                   : t("tools.connectors.probeFailed", { error: (probes[s.name] as { error: string }).error })}
               </p>
+            ) : null}
+            {signInErrors[s.name] ? (
+              <div className="mt-1 text-[12px] text-red-600" role="alert" data-connector-sign-in-error="">
+                <p>{tc(`mcpApproval.errors.${signInErrorKey(signInErrors[s.name]!.code)}`)}</p>
+                {signInErrors[s.name]!.detail && showsDetail(signInErrors[s.name]!.code) ? <p className="fg-muted">{signInErrors[s.name]!.detail}</p> : null}
+              </div>
             ) : null}
             {s.approval ? <McpApprovalCardView card={s.approval} /> : null}
           </li>

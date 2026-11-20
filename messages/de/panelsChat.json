@@ -724,7 +724,29 @@
     "signInAgainAt": "Erneut bei {issuer} anmelden",
     "morePermissionsAt": "Benötigt weitere Berechtigungen bei {issuer}",
     "oauthConnected": "Verbunden",
-    "suggestTitle": "{name} ({host}) verbinden"
+    "suggestTitle": "{name} ({host}) verbinden",
+    "signInOnServerPage": "Melde dich auf der eigenen Anmeldeseite des Servers an",
+    "signInAgainOnServerPage": "Melde dich erneut auf der eigenen Anmeldeseite des Servers an",
+    "morePermissionsOnServerPage": "Braucht mehr Berechtigungen, abgefragt auf der eigenen Anmeldeseite des Servers",
+    "sendsToSignIn": "Dein Schlüssel {name} wird an die Anmeldeseite des Servers gesendet",
+    "tryAgain": "Erneut versuchen",
+    "openConnectors": "Konnektoren in Tools öffnen",
+    "errors": {
+      "popupBlocked": "Dein Browser hat das Anmeldefenster blockiert. Erlaube Pop-ups für OpenLen und versuche es erneut.",
+      "unsafeUrl": "Der Server hat eine Anmeldeadresse geschickt, die nicht sicher ist, deshalb hat OpenLen sie nicht geöffnet.",
+      "notApproved": "Dieser Konnektor ist noch nicht genehmigt. Genehmige ihn unter Tools bei den Konnektoren.",
+      "noClient": "OpenLen kann sich bei diesem Server noch nicht anmelden: Es braucht eine App, die beim Anmeldeanbieter des Servers registriert ist (oauth.clientId in mcp.json).",
+      "unreachable": "Die Anmeldung des Servers war nicht erreichbar. Versuche es gleich noch einmal.",
+      "expired": "Die Anmeldung hat zu lange gedauert und ist abgelaufen. Versuche es erneut.",
+      "lost": "Dieser Anmeldelink funktioniert nicht mehr. Versuche es erneut.",
+      "issuerChanged": "Die Anmeldeseite ist nicht die, für die dieser Konnektor genehmigt wurde, daher wurde nichts verbunden.",
+      "exchangeFailed": "Der Server hat die Anmeldung nicht abgeschlossen. Versuche es erneut.",
+      "off": "Die Anmeldung bei Konnektoren ist ausgeschaltet.",
+      "unauthorized": "Deine OpenLen-Sitzung ist beendet. Lade die Seite neu und versuche es erneut.",
+      "notAvailable": "Dieser Konnektor ist nicht verfügbar.",
+      "configUnreadable": "Deine Konnektoren-Datei kann nicht gelesen werden. Korrigiere sie unter Tools bei den Konnektoren.",
+      "failed": "Anmeldung nicht möglich. Versuche es erneut."
+    }
   },
   "ownAssistant": {
     "card": {
