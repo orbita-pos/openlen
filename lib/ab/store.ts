@@ -202,6 +202,45 @@ export async function transitionBringState(
   return row ?? null;
 }
 
+/** Postgres' unique_violation, however the driver wraps it (node-postgres, PGlite, drizzle's query error with a `cause`). */
+export function isUniqueViolation(err: unknown): boolean {
+  for (let e: unknown = err, depth = 0; e && typeof e === "object" && depth < 4; e = (e as { cause?: unknown }).cause, depth++) {
+    if ((e as { code?: unknown }).code === "23505") return true;
+  }
+  return false;
+}
+
+/** The launch takes its place BEFORE it publishes: the draft becomes `running` (with no start yet) under the one-live-per-
+ *  project index, so of two launches at the same instant one gets the project and the other is refused — without having
+ *  written a release. `"taken"` = another experiment of the project is live; `"moved"` = this one was no longer a draft. */
+export async function claimLaunch(id: string): Promise<AbExperimentRow | "taken" | "moved"> {
+  try {
+    const [row] = await db
+      .update(schema.abExperiments)
+      .set({ status: "running", updatedAt: new Date() })
+      .where(and(eq(schema.abExperiments.id, id), eq(schema.abExperiments.status, "draft")))
+      .returning();
+    return row ?? "moved";
+  } catch (err) {
+    if (isUniqueViolation(err)) return "taken";
+    throw err;
+  }
+}
+
+/** A publish that failed after the claim: the experiment is a draft again, and the project has no live one. */
+export async function releaseLaunch(id: string): Promise<void> {
+  await db
+    .update(schema.abExperiments)
+    .set({ status: "draft", startedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "running"),
+        isNull(schema.abExperiments.startedAt),
+      ),
+    );
+}
+
 /** What the evaluator may write about an experiment it just evaluated. */
 export type AbEvaluationPatch = Partial<
   Pick<

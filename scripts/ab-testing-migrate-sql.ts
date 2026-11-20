@@ -49,6 +49,11 @@ export const CREATE_AB_TESTING: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "abExperiments_active_target_idx"
     ON "abExperiments" ("projectId", "targetPath")
     WHERE "status" IN ('draft', 'running', 'winner_ready', 'inconclusive');`,
+  // At most one LIVE experiment per project: the release carries one manifest, and the launch's «is another one live?» is a
+  // read that two launches at the same instant both pass. The database holds the line; the launch takes it before it publishes.
+  `CREATE UNIQUE INDEX IF NOT EXISTS "abExperiments_one_live_per_project_idx"
+    ON "abExperiments" ("projectId")
+    WHERE "status" IN ('running', 'winner_ready', 'inconclusive');`,
   `CREATE INDEX IF NOT EXISTS "abExperiments_running_idx"
     ON "abExperiments" ("status", "evaluatedAt")
     WHERE "status" = 'running';`,

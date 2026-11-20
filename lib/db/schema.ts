@@ -3653,6 +3653,16 @@ export const abExperiments = pgTable(
       .notNull()
       .defaultNow(),
   },
+  (t) => [
+    // Both partial unique indexes are created by scripts/ab-testing-migrate-sql.ts: one live/draft experiment per page, and
+    // ONE live experiment per project (the release carries one manifest).
+    uniqueIndex("abExperiments_active_target_idx")
+      .on(t.projectId, t.targetPath)
+      .where(sqlOp`"status" in ('draft', 'running', 'winner_ready', 'inconclusive')`),
+    uniqueIndex("abExperiments_one_live_per_project_idx")
+      .on(t.projectId)
+      .where(sqlOp`"status" in ('running', 'winner_ready', 'inconclusive')`),
+  ],
 );
 
 export const abExperimentDaily = pgTable(
