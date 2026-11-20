@@ -1,12 +1,15 @@
 // THE WAY BACK FROM THE OAUTH PROVIDER (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4 step 3, §10.1): trusts the
 // `state` (the session is only a cross-check when present: on the phone's browser there is none), exchanges the code,
-// mounts the server, and serves a minimal HTML page that notifies `window.opener` and closes itself — or tells the
-// person they can return to OpenLen. Never echoes `code`, `state`, a token or any provider string.
+// mounts the server, and serves a minimal HTML page that tells the workspace — on a same-origin `BroadcastChannel`, and
+// with `postMessage` to `window.opener` as a fallback: the window was cut off from its opener on purpose, and a
+// provider's Cross-Origin-Opener-Policy would do it anyway — and closes itself, or tells the person they can return to
+// OpenLen. Never echoes `code`, `state`, a token or any provider string.
 import { auth } from "@/auth";
 import { mountServer } from "@/lib/mcp-connectors/mount";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { finishSignIn } from "@/lib/mcp-connectors/oauth/flow";
 import { realMountDeps, realOAuthDeps } from "@/lib/mcp-connectors/real";
+import { SIGN_IN_CHANNEL } from "@/lib/mcp-connectors/oauth/sign-in-channel";
 import { readMcpConfig } from "@/lib/mcp-connectors/store";
 
 export const runtime = "nodejs";
@@ -33,7 +36,7 @@ function localeFrom(cookieHeader: string | null): Locale {
   return (code in COPY ? code : "es") as Locale;
 }
 
-function page(locale: Locale, heading: string, payload: { type: "openlen:mcp-oauth"; server: string | null; ok: boolean; reason?: string }, status: number): Response {
+function page(locale: Locale, heading: string, payload: { type: typeof SIGN_IN_CHANNEL; server: string | null; ok: boolean; reason?: string }, status: number): Response {
   const copy = COPY[locale];
   const jsonPayload = JSON.stringify(payload).replace(/</g, "\\u003c");
   const html = `<!doctype html>
@@ -46,10 +49,25 @@ function page(locale: Locale, heading: string, payload: { type: "openlen:mcp-oau
 <body>
 <p>${heading} ${copy.back}</p>
 <script>
-try {
-  if (window.opener) window.opener.postMessage(${jsonPayload}, location.origin);
-  window.close();
-} catch {}
+(function () {
+  var payload = ${jsonPayload};
+  try {
+    if (typeof BroadcastChannel !== "undefined") {
+      var channel = new BroadcastChannel("${SIGN_IN_CHANNEL}");
+      channel.postMessage(payload);
+      channel.close();
+    }
+  } catch (e) {}
+  try {
+    if (window.opener) window.opener.postMessage(payload, location.origin);
+  } catch (e) {}
+  // After the message is on its way, not before.
+  setTimeout(function () {
+    try {
+      window.close();
+    } catch (e) {}
+  }, 150);
+})();
 </script>
 </body>
 </html>`;
@@ -67,7 +85,7 @@ try {
 export async function GET(req: Request): Promise<Response> {
   const locale = localeFrom(req.headers.get("cookie"));
   const copy = COPY[locale];
-  if (!oauthEnabled()) return page(locale, copy.failed, { type: "openlen:mcp-oauth", server: null, ok: false, reason: "off" }, 404);
+  if (!oauthEnabled()) return page(locale, copy.failed, { type: SIGN_IN_CHANNEL, server: null, ok: false, reason: "off" }, 404);
   const url = new URL(req.url);
   const state = url.searchParams.get("state") ?? "";
   const code = url.searchParams.get("code") ?? undefined;
@@ -83,7 +101,7 @@ export async function GET(req: Request): Promise<Response> {
       mount: (p, n) => mountServer(p, n, realMountDeps()),
     },
   );
-  if (r.ok) return page(locale, copy.ok, { type: "openlen:mcp-oauth", server: r.server, ok: true }, 200);
-  if (r.reason === "denied") return page(locale, copy.denied, { type: "openlen:mcp-oauth", server: r.server ?? null, ok: false, reason: "denied" }, 200);
-  return page(locale, copy.failed, { type: "openlen:mcp-oauth", server: r.server ?? null, ok: false, reason: r.reason }, 400);
+  if (r.ok) return page(locale, copy.ok, { type: SIGN_IN_CHANNEL, server: r.server, ok: true }, 200);
+  if (r.reason === "denied") return page(locale, copy.denied, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: "denied" }, 200);
+  return page(locale, copy.failed, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 400);
 }
