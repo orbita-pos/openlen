@@ -4,6 +4,7 @@
 // header NAMES, whether each key is set, and for a server Len added, the same «Conectar» card the chat shows.
 import { buildApprovalCard, hostOf, type McpApprovalCard } from "./approval";
 import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig, type McpServerEntry } from "./config";
+import { oauthEnabled } from "./oauth/enabled";
 import type { ServerState, StoredConfig } from "./store";
 
 export interface ManageDeps {
@@ -23,6 +24,8 @@ export interface ManageDeps {
   mount(personId: string, name: string): Promise<ServerState | null>;
   dropOAuth?(personId: string, name: string, entry?: McpServerEntry): Promise<unknown>;
   oauthServers?(personId: string): Promise<ReadonlySet<string>>;
+  /** The switches (`OPENLEN_MCP_OAUTH`): the process's own when absent. */
+  readonly env?: Readonly<Record<string, string | undefined>>;
 }
 
 export type ServerStatus = "connected" | "pending" | "waiting-credentials" | "needs-auth" | "failed" | "never-listed";
@@ -55,9 +58,19 @@ function configOf(stored: StoredConfig): McpConfig {
   return parsed.ok ? parsed.config : { servers: {} };
 }
 
-export function serverView(name: string, entry: McpServerEntry, approved: boolean, state: ServerState | undefined, hasOAuth = false): Omit<ServerView, "approval"> {
+export function serverView(
+  name: string,
+  entry: McpServerEntry,
+  approved: boolean,
+  state: ServerState | undefined,
+  hasOAuth = false,
+  /** `OPENLEN_MCP_OAUTH=0` (spec local 2026-11-17-oauth-de-conectores-mcp, §8): no Connect and no Disconnect — those
+   *  routes would only say «off» —, and a server left waiting for a sign-in is the failure it was before. */
+  oauthOn = oauthEnabled(),
+): Omit<ServerView, "approval"> {
   const fp = entryFingerprint(entry);
-  const current = state && state.fingerprint === fp ? state : undefined;
+  const own = state && state.fingerprint === fp ? state : undefined;
+  const current = own && !oauthOn && own.status === "needs-auth" ? { ...own, status: "failed" as const } : own;
   const status: ServerStatus = !approved
     ? "pending"
     : current?.status === "waiting-credentials"
@@ -69,7 +82,7 @@ export function serverView(name: string, entry: McpServerEntry, approved: boolea
           : current?.listedAt
             ? "connected"
             : "never-listed";
-  const oauth = current?.status === "needs-auth" || Boolean(entry.oauth) || hasOAuth;
+  const oauth = oauthOn && (current?.status === "needs-auth" || Boolean(entry.oauth) || hasOAuth);
   return {
     name,
     host: hostOf(entry.url),
@@ -99,8 +112,8 @@ export async function listView(personId: string, d: ManageDeps): Promise<Connect
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([name, entry]) => {
       const approved = stored.approved[name] === entryFingerprint(entry);
-      const view = serverView(name, entry, approved, stateOf.get(name), oauthSet.has(name));
-      return approved ? view : { ...view, approval: buildApprovalCard(name, entry, config, stored.approved, set, stored.version) };
+      const view = serverView(name, entry, approved, stateOf.get(name), oauthSet.has(name), oauthEnabled(d.env));
+      return approved ? view : { ...view, approval: buildApprovalCard(name, entry, config, stored.approved, set, stored.version, undefined, d.env) };
     });
   return { version: stored.version, servers, credentials: creds.map((c) => ({ name: c.name, updatedAt: c.updatedAt.toISOString() })) };
 }

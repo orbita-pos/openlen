@@ -3,7 +3,8 @@
 // and it opens a connection only on its first call to a server, closing everything when the turn ends. With servers, it
 // also gets DeepSeek's three shared resource tools and a reminder in the turn's context (never the shared conversation:
 // these are the person's) with DeepSeek's resource sentence, each server's instructions and a line for each server that
-// isn't connected.
+// isn't connected. With `OPENLEN_MCP_OAUTH=0` (spec local 2026-11-17-oauth-de-conectores-mcp, §8) a server a mount left in
+// `needs-auth` is read as the failed one it was before OAuth: declared, described and retried like any failure.
 import type { ToolOutcome } from "@/lib/agent/tools";
 
 import { hostOf, issuerHostOf, type McpApprovalCard } from "./approval";
@@ -11,6 +12,7 @@ import type { McpConnection, openMcp } from "./client";
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "./config";
 import { directoryFor, directoryForAnyone, type DirectoryEntry } from "./directory";
 import { MOUNT_MAX_ATTEMPTS, serversToMount } from "./mount";
+import { oauthEnabled } from "./oauth/enabled";
 import { asNeedsSignIn, connectionProvider, NeedsSignIn, shortError, type ConnectionProvider, type OAuthDeps, type SignInReason } from "./oauth/provider";
 import { cleanScope } from "./oauth/remote-text";
 import { projectCallResult, renderResource } from "./project";
@@ -159,8 +161,10 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
       toMount: [],
     };
   }
+  const oauthOn = oauthEnabled(d.env);
   const states = await d.readStates(personId);
-  const stateOf = new Map(states.map((s) => [s.serverName, s]));
+  // With OAuth off nothing signs in: a row left waiting for a sign-in is the failure a 401 was before (F2).
+  const stateOf = new Map(states.map((s) => [s.serverName, !oauthOn && s.status === "needs-auth" ? { ...s, status: "failed" as const } : s]));
   const lines: string[] = [];
   const ready: { name: string; entry: McpServerEntry; state: ServerState }[] = [];
   const needsAuth: { name: string; entry: McpServerEntry; state: ServerState }[] = [];
@@ -259,7 +263,7 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
     ...(needsAuth.length > 0 && { needsAuth: new Map(needsAuth.map((r) => [r.name, r.state])) }),
     ...(directory.length > 0 && { directory }),
     contextText: text.length > 0 ? `<system-reminder>\nThe person's MCP servers (their ~/.len/mcp.json):\n${text.join("\n\n")}\n</system-reminder>\n` : "",
-    toMount: serversToMount(states, config, stored.approved, d.now()),
+    toMount: serversToMount(states, config, stored.approved, d.now(), oauthOn),
   };
 }
 

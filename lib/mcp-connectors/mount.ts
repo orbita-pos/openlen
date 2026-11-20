@@ -174,8 +174,15 @@ export function retryDelayMs(failures: number): number {
 }
 
 /** Which approved, enabled servers a turn should have mounted outside it: never listed, changed, stale or old — and a
- *  failing one only once its retry delay has passed, never after its attempt budget is spent. */
-export function serversToMount(states: readonly ServerState[], config: McpConfig, approved: Readonly<Record<string, string>>, now: Date): string[] {
+ *  failing one only once its retry delay has passed, never after its attempt budget is spent. `oauth` false
+ *  (`OPENLEN_MCP_OAUTH=0`): a server left in `needs-auth` is the failure it was before OAuth, retried by that budget. */
+export function serversToMount(
+  states: readonly ServerState[],
+  config: McpConfig,
+  approved: Readonly<Record<string, string>>,
+  now: Date,
+  oauth = true,
+): string[] {
   const byName = new Map(states.map((s) => [s.serverName, s]));
   return Object.entries(config.servers)
     .filter(([name, e]) => {
@@ -184,7 +191,7 @@ export function serversToMount(states: readonly ServerState[], config: McpConfig
       if (approved[name] !== fp) return false;
       const s = byName.get(name);
       if (!s || s.fingerprint !== fp) return true;
-      if (s.status === "failed") {
+      if (s.status === "failed" || (s.status === "needs-auth" && !oauth)) {
         if (s.failures >= MOUNT_MAX_ATTEMPTS) return false;
         return !s.attemptedAt || now.getTime() - s.attemptedAt.getTime() >= retryDelayMs(s.failures);
       }

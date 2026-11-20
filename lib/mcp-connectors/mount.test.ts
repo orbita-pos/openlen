@@ -476,4 +476,14 @@ describe("serversToMount with a sign-in pending", () => {
   it("an edited entry is mounted again", () => {
     expect(serversToMount([needing({ fingerprint: "older" })], config, { cal: CAL_FP }, NOW)).toEqual(["cal"]);
   });
+
+  // Final review, F2: with OPENLEN_MCP_OAUTH=0 a 401 is a failure again, and so is a row left waiting for a sign-in.
+  it("🔴 with OAuth off a needs-auth row is retried by the attempt budget, as a failed one", () => {
+    const off = false;
+    const justTried = needing({ failures: 2, attemptedAt: new Date(NOW.getTime() - 100) });
+    expect(serversToMount([justTried], config, { cal: CAL_FP }, NOW, off)).toEqual([]);
+    expect(serversToMount([needing({ failures: 2, attemptedAt: new Date(NOW.getTime() - 60_000) })], config, { cal: CAL_FP }, NOW, off)).toEqual(["cal"]);
+    expect(serversToMount([needing({ failures: MOUNT_MAX_ATTEMPTS, attemptedAt: null })], config, { cal: CAL_FP }, NOW, off)).toEqual([]);
+    expect(serversToMount([needing({ failures: 2, attemptedAt: new Date(NOW.getTime() - 60_000) })], config, { cal: CAL_FP }, NOW, true)).toEqual([]);
+  });
 });

@@ -328,6 +328,48 @@ const oauthEntry = (url = "https://calendarmcp.googleapis.com/mcp/v1") => ({
 const MID_TURN_TEXT =
   "The \"cal\" connector's sign-in has stopped working, so its tools are unavailable. The person will be offered a \"Connect\" button to sign in again on their next message. Tell them in one short sentence that cal needs them to sign in again, carry on with whatever does not need it, and do not call the cal tools again in this turn. Do not ask the user for authorization codes, tokens, or URLs.";
 
+// Final review, F2 (spec local 2026-11-17-oauth-de-conectores-mcp, §8): `OPENLEN_MCP_OAUTH=0` brings back what a 401 was
+// before OAuth, also for a row a mount left in `needs-auth` while it was on: declared like a failed one, retried by the
+// attempt budget, and never the authenticate stub or its context line.
+describe("with OPENLEN_MCP_OAUTH=0 a server left in needs-auth is a failed one", () => {
+  const OFF = { OPENLEN_MCP_OAUTH: "0" };
+  const needing: Partial<ServerState> = {
+    serverName: "cal",
+    status: "needs-auth",
+    authReason: "lapsed",
+    authIssuer: "https://accounts.google.com",
+    error: "needs you to sign in again",
+    tools: [tool("cal", "list_events")],
+    instructions: "Use list_events.",
+    attemptedAt: new Date(NOW.getTime() - 60_000),
+  };
+
+  it("🔴 declared and described byte for byte as the same row stored as failed: no authenticate stub", async () => {
+    const asIs = setup({ cal: oauthEntry() }, ["cal"], [needing]);
+    const asFailed = setup({ cal: oauthEntry() }, ["cal"], [{ ...needing, status: "failed" }]);
+    const off = await connectorsForTurn("p1", { ...asIs.d, env: OFF });
+    const failed = await connectorsForTurn("p1", { ...asFailed.d, env: OFF });
+    expect(JSON.stringify(off.declarations)).toBe(JSON.stringify(failed.declarations));
+    expect(off.contextText).toBe(failed.contextText);
+    expect(off.declarations.map((x) => x.name)).toEqual(["mcp__cal__list_events"]);
+    expect(off.contextText).not.toContain("authenticate");
+    expect(off.needsAuth).toBeUndefined();
+    expect([...off.routes.keys()]).toEqual(["mcp__cal__list_events"]);
+  });
+
+  it("🔴 it is mounted again by the attempt budget, as a failed one", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [needing]);
+    expect((await connectorsForTurn("p1", { ...d, env: OFF })).toMount).toEqual(["cal"]);
+    expect((await connectorsForTurn("p1", { ...d, env: {} })).toMount).toEqual([]);
+  });
+
+  it("with the switch on the same row still declares only authenticate", async () => {
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [needing]);
+    const on = await connectorsForTurn("p1", { ...d, env: {} });
+    expect(on.declarations.map((x) => x.name)).toEqual(["mcp__cal__authenticate"]);
+  });
+});
+
 describe("mcp__<server>__authenticate", () => {
   it("needs-auth declares only authenticate, even when a previous tool list and resources were stored", async () => {
     const { d } = setup({ cal: oauthEntry() }, ["cal"], [

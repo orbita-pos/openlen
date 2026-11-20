@@ -3,6 +3,7 @@
 // the tap approves one entry's fingerprint. A credential is a name of the person any entry may cite, as in DeepSeek, so
 // the card names each key the server would receive and, in red, any other host that already gets it.
 import { entryFingerprint, parseMcpConfig, type McpConfig, type McpServerEntry } from "./config";
+import { oauthEnabled } from "./oauth/enabled";
 import type { ServerState, StoredConfig } from "./store";
 import { credentialRefs, credentialRefsOf } from "./templates";
 
@@ -90,6 +91,8 @@ export function buildApprovalCard(
   /** The file as it was before this write, with its approvals: the host a key went to before an entry was moved or
    *  replaced in the same write (the review's in-place-edit case). Absent where that is gone (the Herramientas page). */
   previous?: { readonly config: McpConfig; readonly approved: Readonly<Record<string, string>> },
+  /** `OPENLEN_MCP_OAUTH=0` (spec local 2026-11-17-oauth-de-conectores-mcp, §8): nothing signs in, so no card offers it. */
+  env: Readonly<Record<string, string | undefined>> = process.env,
 ): McpApprovalCard {
   const host = hostOf(entry.url);
   // Where each key goes today: the other approved entries now, and every approved entry before this write — the same
@@ -109,6 +112,6 @@ export function buildApprovalCard(
       firstTime: set && destinationHosts.some((h) => !citing.includes(h)),
     };
   });
-  const oauth = entry.oauth ? { issuerHost: issuerHostOf(entry), reason: "first" as const } : undefined;
+  const oauth = entry.oauth && oauthEnabled(env) ? { issuerHost: issuerHostOf(entry), reason: "first" as const } : undefined;
   return { server, host, headerNames: Object.keys(entry.headers).sort(), credentials, fingerprint: entryFingerprint(entry), version, ...(oauth ? { oauth } : {}) };
 }

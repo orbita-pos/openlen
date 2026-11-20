@@ -133,6 +133,35 @@ describe("listView", () => {
     expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, destinationHosts: ["collector.evil.example.net"], otherHosts: [], firstTime: true }]);
   });
 
+  // Final review, F2: with OPENLEN_MCP_OAUTH=0 the page offers no Connect and no Disconnect: the routes would say «off».
+  it("🔴 with OPENLEN_MCP_OAUTH=0 a server left in needs-auth shows as failed, with no sign-in", async () => {
+    const text = JSON.stringify({ servers: { cal: { transport: "streamable-http", url: URL1, oauth: { scope: "s" } } } });
+    const parsed = parseMcpConfig(text, { reservedServerNames: new Set() });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const fingerprint = entryFingerprint(parsed.config.servers.cal!);
+    const state: ServerState = {
+      serverName: "cal",
+      fingerprint,
+      tools: [],
+      instructions: "",
+      hasResources: false,
+      listedAt: null,
+      status: "needs-auth",
+      error: "needs authentication",
+      stale: false,
+      failures: 0,
+      attemptedAt: null,
+      authIssuer: "https://accounts.google.com",
+      authReason: "first",
+      authScope: null,
+    };
+    const s = deps({ text, approved: { cal: fingerprint }, version: 2 }, [state]);
+    expect((await listView("p1", { ...s.d, env: {} })).servers[0]).toMatchObject({ status: "needs-auth", oauth: true });
+    const off = (await listView("p1", { ...s.d, env: { OPENLEN_MCP_OAUTH: "0" }, oauthServers: async () => new Set(["cal"]) })).servers[0];
+    expect(off).toMatchObject({ status: "failed", error: "needs authentication" });
+    expect(off?.oauth).toBeUndefined();
+  });
+
   it("a server Len added waits, with its card", async () => {
     const text = JSON.stringify({ servers: { linear: { transport: "streamable-http", url: "https://mcp.linear.example.com/mcp", headers: { Authorization: "Bearer ${credential:LINEAR}" } } } });
     const s = deps({ text, version: 4 });

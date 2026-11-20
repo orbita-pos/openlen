@@ -65,6 +65,14 @@ describe("buildApprovalCard", () => {
     expect(buildApprovalCard("cal", unnamed, { servers: { cal: unnamed } }, {}, new Set(), 1).oauth).toEqual({ issuerHost: null, reason: "first" });
   });
 
+  // Final review, F2: with OPENLEN_MCP_OAUTH=0 nothing signs in, so the card never offers it (the popup would only say «off»).
+  it("🔴 with OPENLEN_MCP_OAUTH=0 the card carries no sign-in", () => {
+    const named = entryOf({ url: "https://calendar.example.com/mcp", oauth: { clientId: "id", authorizationServer: [GOOGLE] } });
+    const card = buildApprovalCard("cal", named, { servers: { cal: named } }, {}, new Set(), 1, undefined, { OPENLEN_MCP_OAUTH: "0" });
+    expect(card.oauth).toBeUndefined();
+    expect(buildApprovalCard("cal", named, { servers: { cal: named } }, {}, new Set(), 1, undefined, {}).oauth).toEqual({ issuerHost: "accounts.google.com", reason: "first" });
+  });
+
   describe("where each key goes", () => {
     const secretEntry = { url: "https://calendar.example.com/mcp", oauth: { clientId: "id", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [GOOGLE] } };
 
