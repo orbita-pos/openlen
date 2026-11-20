@@ -32,7 +32,8 @@ function toWellFormedText(text: string): string {
  *  (`sentText`, a jsonb row, and Postgres refuses a lone surrogate there) and sent to the provider, so it never holds
  *  half of a character: one that arrives alone is replaced, and the cut at the cap steps back over an emoji it would split. */
 export function cleanVisualContext(raw: unknown): string {
-  return typeof raw === "string" ? utf16SafePrefix(toWellFormedText(raw).trim(), VISUAL_CONTEXT_MAX_CHARS) : "";
+  // Cut first, then well-form: a frame can post megabytes, and the well-forming walk should only see the kept part.
+  return typeof raw === "string" ? toWellFormedText(utf16SafePrefix(raw.trim(), VISUAL_CONTEXT_MAX_CHARS)).trim() : "";
 }
 
 /** `message`, then the report in its fence. No report: `message`, byte for byte. */
