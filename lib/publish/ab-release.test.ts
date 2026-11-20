@@ -138,6 +138,34 @@ describe("con un experimento, vive bajo la raíz reservada `openlen/`", () => {
     assert.match(actual("abvivo", "robots.txt"), /Disallow: \/openlen\/ab\/\n/);
   });
 
+  // THE SEAM WITH THE EDGE: the manifest the publisher writes is read by the edge's own parser (the TS mirror of
+  // crates/edge, which runs the same shared fixtures). The two halves were built in separate branches and once
+  // disagreed on where `overrides` lives — this reads a REAL release, so they can't drift apart again.
+  it("🔴 the edge reads the published manifest: B's page and B's changed asset are decided, an unchanged asset is not", async () => {
+    const { readReleaseAbManifest, evaluateAbManifest, resolveVariantBFile } = await import("@/lib/ab/serve");
+    const release = releaseViva("abvivo");
+    const manifest = await readReleaseAbManifest(release);
+    assert.ok(manifest, "the edge accepts the manifest the publisher wrote");
+    assert.deepEqual(manifest.experiments[0].overrides, ["/css/site.css", "/js/nuevo.js"]);
+
+    const asB = { cookieHeader: `ol_ab_${EXP}=b`, userAgent: "Mozilla/5.0 (Windows NT 10.0) Chrome/120" };
+    const page = evaluateAbManifest(manifest, { urlPath: "/", ...asB });
+    assert.equal(page?.variant, "b");
+    const pageFile = await resolveVariantBFile(release, page!.variantBPath!, true);
+    assert.ok(pageFile && readFileSync(pageFile, "utf8").includes("Variante B"));
+
+    const css = evaluateAbManifest(manifest, { urlPath: "/css/site.css", ...asB });
+    assert.equal(css?.variant, "b");
+    const cssFile = await resolveVariantBFile(release, css!.variantBPath!, false);
+    assert.ok(cssFile);
+    assert.equal(readFileSync(cssFile, "utf8"), "b{}");
+
+    // Control's visitor of a changed asset is decided too (served control, never stored by a CDN)…
+    assert.equal(evaluateAbManifest(manifest, { urlPath: "/css/site.css", cookieHeader: `ol_ab_${EXP}=a` })?.variant, "a");
+    // …and an asset B doesn't change is not the experiment's business.
+    assert.equal(evaluateAbManifest(manifest, { urlPath: "/js/igual.js", ...asB }), null);
+  });
+
   it("sin assets distintos, `overrides` va vacío (y el manifiesto sigue siendo válido)", async () => {
     await publishToDir({ subdomain: "abvacio", html: DOC("Control"), abExperiment: spec() });
     const e = JSON.parse(actual("abvacio", "openlen/ab.json")).experiments[0];
