@@ -22,6 +22,9 @@ export function Gestion(props: Props) { return <Contenido key={props.projectId} 
 
 function Contenido({ cliente, projectId, idioma, trabajando, turnoId, onCerrar, onCambio, onEncargo }: Props) {
   const t = useTranslations("movil.gestion");
+  // The web's own words for a running A/B test and for a promoted winner not yet in the draft (modalsDeploy, via textos.tsx).
+  const tAb = useTranslations("movil.gestion.abRunning");
+  const tBring = useTranslations("movil.gestion.abBringPending");
   const [seccion, setSeccion] = useState<Seccion>("publicar");
   const [proyecto, setProyecto] = useState<ProyectoGestion | null>(null);
   const [nombre, setNombre] = useState("");
@@ -72,8 +75,11 @@ function Contenido({ cliente, projectId, idioma, trabajando, turnoId, onCerrar, 
   }
   async function publicarAhora(extra: ConfirmacionPublicar = {}) {
     setAceptado(false);
-    const permisos = { ...confirmaciones, ...extra };
-    setConfirmaciones(permisos);
+    // «Detener y publicar» is for THIS publish only: remembering it would stop the next test without asking.
+    const { stopActiveAb, ...duraderos } = extra;
+    const acumulados = { ...confirmaciones, ...duraderos };
+    setConfirmaciones(acumulados);
+    const permisos: ConfirmacionPublicar = { ...acumulados, ...(stopActiveAb ? { stopActiveAb: true } : {}) };
     await accion(async () => {
       if (nombre !== proyecto?.subdomain) {
         const disponible = await comprobarNombre(cliente, nombre);
@@ -122,6 +128,9 @@ function Contenido({ cliente, projectId, idioma, trabajando, turnoId, onCerrar, 
   if (problema?.codigo === "secrets_required") permiso = { skipMissingSecrets: true };
   const arregloPendiente = problema?.codigo === "len_watch_fix_pending" && typeof problema.datos.incidentId === "string" ? problema.datos.incidentId : null;
   if (arregloPendiente) permiso = { acceptLenWatchFix: arregloPendiente };
+  // A/B (review items 13, 14, 26): a running test that publishing would stop is asked; a promoted winner not in the draft yet is told.
+  const pruebaEnMarcha = problema?.codigo === "ab_experiment_running";
+  const pruebaSinTraer = problema?.codigo === "ab_bring_pending";
   const goal = proyecto?.goal;
   const puedeEditar = proyecto?.rol !== "lector";
   const dueno = proyecto?.rol === "dueno";
@@ -155,7 +164,9 @@ function Contenido({ cliente, projectId, idioma, trabajando, turnoId, onCerrar, 
       </>}
       {proyecto && seccion === "numeros" && <><h2>{t("numeros")}</h2><p>{t("semana")}</p>{cargandoVisitas && <p role="status">{t("cargando")}</p>}{visitas && <><div className="gestion-numeros">{([ [visitas.vistas, "visitas"], [visitas.personas, "personas"], [visitas.hoy, "hoy"] ] as const).map(([n,k]) => <div key={k}><strong title={new Intl.NumberFormat(idioma).format(n)} aria-label={new Intl.NumberFormat(idioma).format(n)}>{new Intl.NumberFormat(idioma, n >= 10000 ? { notation: "compact", maximumFractionDigits: 1 } : {}).formatToParts(n).map((parte, i) => <span key={i} className={parte.type === "compact" ? "gestion-unidad" : undefined}>{parte.value}</span>)}</strong><span>{t(k)}</span></div>)}</div>{visitas.vistas === 0 && <p>{t("sinVisitas")}</p>}{visitas.porDia.length > 0 && <table><thead><tr><th>{t("dia")}</th><th>{t("visitas")}</th></tr></thead><tbody>{visitas.porDia.map(d => <tr key={d.dia}><td>{new Intl.DateTimeFormat(idioma, { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(d.dia))}</td><td>{d.vistas}</td></tr>)}</tbody></table>}</>}<button disabled={cargandoVisitas} onClick={() => { setError(null); setRevision(n => n + 1); }}>{t("refrescar")}</button></>}
       {proyecto && seccion === "encargos" && <><h2>{t("encargos")}</h2><p>{t("encargoAyuda")}</p>{goal ? <article className="gestion-encargo"><span className="gestion-estado">{t(goal.phase === "active" && goal.activation === "disarmed" && !trabajando ? "paused" : goal.phase)}</span><h3>{goal.objective}</h3><p>{t("rondas", { n: goal.roundsStarted, max: goal.maxGoalRounds })}</p>{goal.blockedReason && <p>{goal.blockedReason.message}</p>}{dueno && <div className="gestion-acciones">{trabajando ? <button disabled={ocupado || !turnoId} onClick={() => void accion(async () => { if(turnoId) { await pausarEncargo(cliente, turnoId); if(vivo.current) setAviso(t("pausando")); } })}>{t("pausar")}</button> : goal.phase !== "complete" && <button disabled={ocupado} onClick={() => onEncargo(goal.objective, "resume")}>{t("reanudar")}</button>}<button disabled={ocupado || trabajando} onClick={() => void accion(async () => { await quitarEncargo(cliente, projectId); if (vivo.current) { setProyecto(p => p && ({ ...p, goal: null })); onCambio(); } })}>{t("quitar")}</button></div>}</article> : <p>{t("sinEncargo")}</p>}{dueno && (!goal || goal.phase === "complete") && <form onSubmit={e => { e.preventDefault(); if(objetivo.trim() && !trabajando) onEncargo(objetivo.trim(), "create"); }}><label htmlFor="gestion-objetivo">{t("objetivo")}</label><textarea id="gestion-objetivo" value={objetivo} onChange={e => setObjetivo(e.target.value)} rows={4} maxLength={8000} placeholder={t("ejemplo")} /><button className="gestion-principal" disabled={!objetivo.trim() || trabajando || ocupado}>{t("enviar")}</button></form>}</>}
-      {error && <div className="gestion-error" role="alert"><strong>{t(problema?.codigo === "security_review_pending" ? "revision" : arregloPendiente ? "arregloPendiente" : permiso ? "confirmarAviso" : "error")}</strong>{arregloPendiente && <button disabled={ocupado} onClick={() => void traerArreglo(arregloPendiente)}>{t("traerArreglo")}</button>}{detalles.length > 0 && <ul>{detalles.map((d, i) => <li key={i}>{textoDelDetalle(d)}</li>)}</ul>}{permiso && <><label className="gestion-consentir"><input type="checkbox" checked={aceptado} onChange={e => setAceptado(e.target.checked)} />{t("aceptarRiesgo")}</label><button disabled={!aceptado || ocupado} onClick={() => void publicarAhora(permiso!)}>{t("publicarIgual")}</button></>}{problema?.codigo === "security_review_pending" && <button disabled={ocupado} onClick={() => void publicarAhora()}>{t("reintentar")}</button>}{!proyecto && <button onClick={() => setRevision(n => n + 1)}>{t("reintentar")}</button>}</div>}
+      {error && pruebaEnMarcha && <div className="gestion-error" role="alert" data-ab-experiment-running><strong>{tAb("title")}</strong><p>{tAb("body")}</p>{typeof problema?.datos.name === "string" && problema.datos.name && <p>{tAb("name", { name: problema.datos.name })}</p>}<button disabled={ocupado} onClick={() => void publicarAhora({ stopActiveAb: true })}>{tAb("stopAndPublish")}</button><button disabled={ocupado} onClick={() => setError(null)}>{tAb("cancel")}</button></div>}
+      {error && pruebaSinTraer && <div className="gestion-error" role="alert" data-ab-bring-pending><strong>{tBring("title")}</strong><p>{tBring("body")}</p><button onClick={() => setError(null)}>{tBring("cancel")}</button></div>}
+      {error && !pruebaEnMarcha && !pruebaSinTraer && <div className="gestion-error" role="alert"><strong>{t(problema?.codigo === "security_review_pending" ? "revision" : arregloPendiente ? "arregloPendiente" : permiso ? "confirmarAviso" : "error")}</strong>{arregloPendiente && <button disabled={ocupado} onClick={() => void traerArreglo(arregloPendiente)}>{t("traerArreglo")}</button>}{detalles.length > 0 && <ul>{detalles.map((d, i) => <li key={i}>{textoDelDetalle(d)}</li>)}</ul>}{permiso && <><label className="gestion-consentir"><input type="checkbox" checked={aceptado} onChange={e => setAceptado(e.target.checked)} />{t("aceptarRiesgo")}</label><button disabled={!aceptado || ocupado} onClick={() => void publicarAhora(permiso!)}>{t("publicarIgual")}</button></>}{problema?.codigo === "security_review_pending" && <button disabled={ocupado} onClick={() => void publicarAhora()}>{t("reintentar")}</button>}{!proyecto && <button onClick={() => setRevision(n => n + 1)}>{t("reintentar")}</button>}</div>}
       {(aviso || ocupado) && <p role="status">{aviso || t("espera")}</p>}
     </div>
   </section>;
