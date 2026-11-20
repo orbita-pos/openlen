@@ -2,7 +2,7 @@
 // openlen.com (salvo republicar en el mismo subdominio desde la misma conexión
 // que ya tuvo una), y por las MISMAS funciones que el botón Publicar.
 import * as z from "zod4";
-import { AbExperimentRunningError } from "@/lib/ab/errors";
+import { AbBringPendingError, AbExperimentRunningError } from "@/lib/ab/errors";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { DataChangesNeedOwnerError, dataChangesErrorBody } from "@/lib/backend/data-changes";
 import {
@@ -69,6 +69,8 @@ function publishError(err: unknown, projectId: string): ToolResult {
   if (err instanceof ProjectNotFoundError) return toolError("not_found", "The project no longer exists.");
   // A live A/B experiment (review item 13): publishing from here would end it. Only the owner stops it, from OpenLen.
   if (err instanceof AbExperimentRunningError) return toolError("ab_experiment_running", err.message);
+  // A promoted A/B winner that isn't in the draft yet: publishing the draft would undo it. The owner resolves it in OpenLen.
+  if (err instanceof AbBringPendingError) return toolError("ab_bring_pending", err.message);
   if (err instanceof AppNoCompilaError) {
     return toolError(
       "app_does_not_compile",

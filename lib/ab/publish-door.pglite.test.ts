@@ -51,7 +51,7 @@ vi.mock("@/lib/publish/filesystem", async (orig) => ({
 
 const { publishProject, unpublishProject, rollbackProject } = await import("@/lib/projects");
 const { ProjectIsToolError } = await import("@/lib/tools/errors");
-const { AbExperimentRunningError } = await import("@/lib/ab/errors");
+const { AbBringPendingError, AbExperimentRunningError, AbRepublishSkipped } = await import("@/lib/ab/errors");
 
 const pg = () => base.db as ReturnType<typeof drizzle>;
 let raw: PGlite;
@@ -250,5 +250,52 @@ describe("explicit sources are treated like a branch's (review item 18)", () => 
     await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", languages: ["fr"] })).rejects.toThrow(/STOP-AFTER-CLAIM/);
     const [row] = await pg().select({ data: schema.projects.data }).from(schema.projects).where(await import("drizzle-orm").then((d) => d.eq(schema.projects.id, "p1")));
     expect((row?.data as { settings: { languages: string[] } }).settings.languages).toEqual(["fr"]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE BRING GATE LIVES IN THE BOTTOM DOOR (review): every publish from the draft, whoever makes it, meets it.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("a promoted winner that isn't in the draft yet", () => {
+  const promoted = (bringState: string) =>
+    raw.query(`INSERT INTO "abExperiments" ("id","projectId","name","targetPath","salt","status","decisionStatus","bringState","createdBy","startedAt","decidedAt")
+      VALUES ('ab_promo0001','p1','Hero test','/','salt','promoted_b','resolved','${bringState}','u1', now(), now())`);
+
+  beforeEach(() => vi.stubEnv("OPENLEN_AB_TESTING", "1"));
+
+  it("🔴 a publish from the draft (web route, MCP, Len's card all end here) is refused, before an address is claimed", async () => {
+    await promoted("conflict");
+    const err = await publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AbBringPendingError);
+    expect(err).toMatchObject({ experimentId: "ab_promo0001", bringState: "conflict" });
+    expect(m.prepareFunctions).not.toHaveBeenCalled();
+    expect(m.publishToDir).not.toHaveBeenCalled();
+    await raw.query(`UPDATE "abExperiments" SET "bringState" = 'pending'`);
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" })).rejects.toBeInstanceOf(AbBringPendingError);
+  });
+
+  it("🔴 a SYSTEM sweep (abLive keep) skips the project instead of publishing the draft over the promotion", async () => {
+    await promoted("pending");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", abLive: "keep" })).rejects.toBeInstanceOf(AbRepublishSkipped);
+    warn.mockRestore();
+    expect(m.publishToDir).not.toHaveBeenCalled();
+  });
+
+  it("a publish with sources of its own (the experiment's promote, a restore of Control, a Len Watch branch) is not a publish from the draft: it goes through", async () => {
+    await promoted("conflict");
+    const sources = { data: { html: "<html>PUBLISHED</html>", settings: {} }, folder: {} };
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", sourcesOverride: sources })).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", sourcesOverride: sources, abLive: "ending" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
+  });
+
+  it("once it is brought in, discarded, or when nothing is promoted, the draft publishes; with the flag off the gate isn't even asked", async () => {
+    await promoted("brought");
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    await raw.query(`UPDATE "abExperiments" SET "bringState" = 'declined'`);
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    await raw.query(`UPDATE "abExperiments" SET "bringState" = 'conflict'`);
+    vi.stubEnv("OPENLEN_AB_TESTING", "0");
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
   });
 });

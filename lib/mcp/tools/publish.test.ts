@@ -213,6 +213,17 @@ describe("a live A/B experiment", () => {
     expect(m.markApprovalUsed).not.toHaveBeenCalled();
   });
 
+  it("🔴 publish from the draft while the promoted winner isn't in it: told as `ab_bring_pending` with how to resolve it, and the approval is not consumed", async () => {
+    const { AbBringPendingError } = await import("@/lib/ab/errors");
+    m.openProject.mockResolvedValue(owner("cafe"));
+    m.checkApproval.mockResolvedValue("ok");
+    m.publishProject.mockRejectedValue(new AbBringPendingError("ab_promo0001", "Hero test", "conflict"));
+    const r = await publishTool.run({ project_id: "p1", subdomain: "cafe", approval_id: "AP1" }, caller);
+    expect(text(r)).toContain("ab_bring_pending");
+    expect(text(r)).toMatch(/Bring into draft/);
+    expect(m.markApprovalUsed).not.toHaveBeenCalled();
+  });
+
   it("🔴 unpublish: the same", async () => {
     const { AbExperimentRunningError } = await import("@/lib/ab/errors");
     m.openProject.mockResolvedValue(owner("cafe"));
