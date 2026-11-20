@@ -586,7 +586,7 @@ export async function deleteProject(
   // If the project was published, the wildcard dir lives outside the DB —
   // best-effort wipe it before deleting the row.
   const existing = await db
-    .select({ subdomain: schema.projects.subdomain })
+    .select({ subdomain: schema.projects.subdomain, isSpace: sqlOp<boolean>`(${schema.projects.data}->'space') is not null` })
     .from(schema.projects)
     .where(
       and(
@@ -597,8 +597,8 @@ export async function deleteProject(
     .limit(1);
   const sub = existing[0]?.subdomain;
   // THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): not while an agent lives in it — deleting it
-  // would take their agents and their conversations with it.
-  if (existing[0] && (await spaceHasAgents(projectId))) {
+  // would take their agents and their conversations with it. Asked only of a space: any other project costs no query.
+  if (existing[0]?.isSpace && (await spaceHasAgents(projectId))) {
     const { SpaceHasAgentsError } = await import("@/lib/space/errors");
     throw new SpaceHasAgentsError();
   }

@@ -279,6 +279,18 @@ describe("ask_len", () => {
       expect(launch).not.toHaveBeenCalled();
     });
 
+    // Final review, finding 2: the phone's guard comes first — «add a form here» while looking at a page it doesn't attend
+    // is about THAT page, never a new project.
+    it("🔴 on the phone, looking at a page it doesn't attend, a request is refused, not sent to a new project", async () => {
+      const launch = vi.fn();
+      const newProject = vi.fn(async () => "fresh");
+      const session = { ...inSpace(), assistant: { ...inSpace().assistant!, viewing: { id: "p9", title: "Tienda", served: false } } } as AgentSession;
+      const out = await runAskLen(session, { request: "pon un formulario de contacto aquí" }, launch, undefined, undefined, newProject);
+      expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
+      expect(newProject).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    });
+
     it("an agent that attends one page takes it there, as before", async () => {
       const launch = vi.fn();
       const newProject = vi.fn(async () => "fresh");

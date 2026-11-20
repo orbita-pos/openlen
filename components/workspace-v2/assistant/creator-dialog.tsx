@@ -40,14 +40,14 @@ export function AssistantCreatorDialog({
   editing,
   onSaved,
   agentType = null,
-  fromSpace = false,
+  noPage = false,
 }: {
   open: boolean;
   projectId: string;
   /** The agent file Len wrote for it (spec local 2026-11-19-agentes-para-todos, §6.3). */
   agentType?: string | null;
-  /** Asked for in the person's space: it attends no page, so none is sent. */
-  fromSpace?: boolean;
+  /** It attends no page — asked in the person's space, or on a page that keeps its own assistant — so none is sent. */
+  noPage?: boolean;
   onClose: () => void;
   onCreated: (created: { id: string; slug: string; name: string }) => void;
   /** The look it opens with: what Len suggested. Without it, one that goes well together, by chance. */
@@ -82,7 +82,7 @@ export function AssistantCreatorDialog({
         : await fetch("/api/assistants", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ ...(fromSpace ? {} : { projectId }), name, look, tone, morningSummary, locale, ...(agentType ? { agentType } : {}) }),
+            body: JSON.stringify({ ...(noPage ? {} : { projectId }), name, look, tone, morningSummary, locale, ...(agentType ? { agentType } : {}) }),
           });
       const body = (await res.json().catch(() => ({}))) as { id?: string; slug?: string; field?: string; error?: string };
       if (editing && res.ok) {

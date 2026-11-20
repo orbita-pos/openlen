@@ -1386,6 +1386,16 @@ describe("edit_image", () => {
 });
 
 describe("publish", () => {
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.2), final review finding 6: nothing is published
+  // from the person's space — Len hears it first, and no card he could never make work shows.
+  it("🔴 in the person's space it is refused before any card", async () => {
+    const { deps } = makeDeps({ subdomain: null });
+    const out = await runAgentTool({ ...makeSession(), space: true }, deps, "publish", {});
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "space_not_a_page");
+    assert.equal(out.confirm, undefined);
+  });
+
   it("🔴 EDGE FUNCTIONS: unas funciones que no compilan para producción se le dicen a Len, sin tarjeta", async () => {
     const { deps } = makeDeps({ subdomain: "tacos-guero", publishedAt: new Date() });
     const out = await runAgentTool(

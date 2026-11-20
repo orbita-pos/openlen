@@ -7,7 +7,7 @@ import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { mergeOldAssistantMemory } from "@/lib/assistants/knowledge";
 import { connectProject, projectsOfAssistant, replaceOnProject, titlesOf } from "@/lib/assistants/projects";
-import { assistantById, assistantOfProject, oldAssistantSettings, saveAssistantMemory } from "@/lib/assistants/store";
+import { assistantById, assistantOfProject, oldAssistantSettings, saveAssistantCustomerNote, saveAssistantMemory } from "@/lib/assistants/store";
 import { agentsEnabled } from "@/lib/space/enabled";
 import { ensureSpace } from "@/lib/space/store";
 import { onPageState } from "@/lib/assistants/visitor/on-page";
@@ -71,8 +71,9 @@ export const POST = paraLaApp(conAutorDeLaPeticion(
     if (acceso.rol !== "dueno") return json({ error: "solo_dueno" }, 403);
     // «Atender una página» (spec local 2026-11-19-agentes-para-todos, §6.7): the person chose to put her there in place of
     // the one it has — which, if it lived on that page, moves to their space. Only with agents on: the space is theirs.
+    if (body?.replace === true && !agentsEnabled()) return json({ error: "agents_off" }, 404);
     const done =
-      body?.replace === true && agentsEnabled()
+      body?.replace === true
         ? await replaceOnProject({ assistantId: found.assistant.id, projectId, onPage: body.onPage !== false, spaceId: await ensureSpace(found.personId) })
         : await connectProject({ assistantId: found.assistant.id, projectId, ...(body?.onPage === false ? { onPage: false } : {}) });
     if (done === "space_not_a_page") return json({ error: done }, 400);
@@ -82,12 +83,19 @@ export const POST = paraLaApp(conAutorDeLaPeticion(
       return json({ error: done, ...(current ? { current: { name: current.name, slug: current.slug } } : {}) }, 409);
     }
     if (done !== "connected") return json({ error: done }, 409);
-    // What that project's assistant of today was taught joins her memory. Fail-soft: she is connected either way.
+    // What that project's assistant of today was taught joins her memory — or, for an agent with a file, its note for
+    // visitors, which is what it answers them from (spec local 2026-11-19-agentes-para-todos, §6.7). Fail-soft: she is
+    // connected either way.
     try {
       const old = await oldAssistantSettings(projectId);
       const title = (await titlesOf([projectId])).get(projectId) ?? projectId;
-      const memory = mergeOldAssistantMemory(found.assistant.memory, old, title, AGENT_MEMORY_MAX);
-      if (memory !== found.assistant.memory) await saveAssistantMemory(found.assistant.id, memory);
+      if (found.assistant.agentType) {
+        const note = mergeOldAssistantMemory(found.assistant.customerNote, old, title, AGENT_MEMORY_MAX);
+        if (note !== found.assistant.customerNote) await saveAssistantCustomerNote(found.assistant.id, note);
+      } else {
+        const memory = mergeOldAssistantMemory(found.assistant.memory, old, title, AGENT_MEMORY_MAX);
+        if (memory !== found.assistant.memory) await saveAssistantMemory(found.assistant.id, memory);
+      }
     } catch (err) {
       console.warn("[assistants] what the project's old assistant knew wasn't brought into her memory", err);
     }

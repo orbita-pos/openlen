@@ -75,7 +75,7 @@ describe("the creator", () => {
   // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): an agent Len wrote in the person's space.
   it("🔴 from the person's space it sends its agent file and no page", async () => {
     fetchMock.mockReturnValueOnce(json({ id: "a2", slug: "mr-smith" }, 201));
-    mount(<AssistantCreatorDialog open projectId="space-1" agentType="mr-smith" fromSpace onClose={() => {}} onCreated={() => {}} />);
+    mount(<AssistantCreatorDialog open projectId="space-1" agentType="mr-smith" noPage onClose={() => {}} onCreated={() => {}} />);
     type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Mr. Smith");
     await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
     await flush();
@@ -319,7 +319,9 @@ describe("the card Len leaves", () => {
   // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): the card for an agent file Len just wrote.
   describe("for an agent Len wrote", () => {
     const LOOK = '"v":1,"shape":"round","color":"#19c3b1","eyes":"oval","eyewear":"none","accessory":"none"';
-    const inSpace = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"agent":"english-teacher","fromSpace":true}` }];
+    const inSpace = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"agent":"english-teacher","noPage":true}` }];
+    // Final review, finding 1: a card from the space without a file creates too — never «Coach is ready».
+    const inSpaceNoFile = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"noPage":true}` }];
     const onPage = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"agent":"english-teacher"}` }];
     // An agent of the space with no page of its own lists the space as where it lives.
     const COACH = { id: "a7", name: "Coach", slug: "coach", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "space-1", projectIds: ["space-1"] };
@@ -327,6 +329,15 @@ describe("the card Len leaves", () => {
     it("🔴 only creates it: another agent is never offered for it, nor taken for the space's own", async () => {
       fetchMock.mockReturnValue(json({ assistants: [COACH] }));
       const host = mount(<AssistantCreateCard actions={inSpace} projectId="space-1" />);
+      await flush();
+      expect(host.querySelector("[data-assistant-talk]")).toBeNull();
+      expect(host.querySelector("[data-assistant-use]")).toBeNull();
+      expect(host.querySelector("[data-assistant-create]")!.textContent).toBe("ownAssistant.card.create");
+    });
+
+    it("🔴 in the space without a file, it only creates too: no agent of the space is «ready» there", async () => {
+      fetchMock.mockReturnValue(json({ assistants: [COACH] }));
+      const host = mount(<AssistantCreateCard actions={inSpaceNoFile} projectId="space-1" />);
       await flush();
       expect(host.querySelector("[data-assistant-talk]")).toBeNull();
       expect(host.querySelector("[data-assistant-use]")).toBeNull();

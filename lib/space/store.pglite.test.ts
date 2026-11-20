@@ -59,6 +59,15 @@ describe("ensureSpace", () => {
   it("each person has their own", async () => {
     expect(await ensureSpace("u1")).not.toBe(await ensureSpace("u2"));
   });
+
+  // Final review, finding 3: an isolated subagent works in a hidden copy of the project (lib/agent/subagents/worktree.ts)
+  // that keeps its `data` — the space's mark included. The copy is not a second space.
+  it("🔴 a subagent's hidden copy of the space is not a second space", async () => {
+    const space = await ensureSpace("u1");
+    await pg.query(`insert into "projects" ("id", "userId", "title", "brief", "data", "parentProjectId") select 'copy-1', "userId", "title", '', "data", "id" from "projects" where "id" = $1`, [space]);
+    expect(await spaceIdOf("u1")).toBe(space);
+    expect(await ensureSpace("u1")).toBe(space);
+  });
 });
 
 describe("spaceIdOf", () => {

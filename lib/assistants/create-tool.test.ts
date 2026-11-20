@@ -50,11 +50,29 @@ describe("create_assistant", () => {
       expect(out.action).toBeUndefined();
     });
 
-    it("the card carries the file, and says it comes from the person's space", async () => {
+    it("the card carries the file, and from the person's space it creates it with no page", async () => {
       const out = await runCreateAssistant({ ...LEN, space: true } as AgentSession, { agent: "mr-smith" }, withFile(null));
       expect(out.response).toMatchObject({ ok: true, card: "assistant_create" });
-      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: "mr-smith", fromSpace: true });
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: "mr-smith", noPage: true });
       expect(suggestedLookOf(out.action!.summary)).toBeDefined();
+    });
+
+    // Final review, finding 4: on a page that keeps its own assistant, the agent is still made — in the space, attending
+    // no page — and Len says how to put it there.
+    it("🔴 on a page that has its assistant, the agent's card still shows: it is made with no page, and Len says how to put it there", async () => {
+      const out = await runCreateAssistant(LEN, { agent: "mr-smith" }, { ...withFile(null), assistantOfProject: async () => LUCIA as never });
+      expect(out.response).toMatchObject({ ok: true, card: "assistant_create" });
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: "mr-smith", noPage: true });
+      const said = String((out.response as { tool_result: string }).tool_result);
+      expect(said).toContain("Lucía");
+      expect(said).toContain("Atender una página");
+    });
+
+    it("🔴 with agents off, a file is refused: there is no space to keep it", async () => {
+      vi.stubEnv("OPENLEN_AGENTS", "0");
+      const out = await runCreateAssistant(LEN, { agent: "mr-smith" }, withFile(null));
+      expect(out.response).toMatchObject({ ok: false, error: "agents_off" });
+      expect(out.action).toBeUndefined();
     });
 
     it("🔴 a new agent's card only creates it: Len is not told to offer the person's others", async () => {
@@ -69,7 +87,15 @@ describe("create_assistant", () => {
 
     it("without a file, or from a page, the card is as before", async () => {
       const out = await runCreateAssistant(LEN, {}, withFile(null));
-      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: null, fromSpace: false });
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: null, noPage: false });
+    });
+
+    // Final review, finding 1: in the space, «use Lucía here» would name the space as a page.
+    it("🔴 in the space, a card without a file creates with no page and offers none of theirs", async () => {
+      const out = await runCreateAssistant({ ...LEN, space: true } as AgentSession, {}, { ...withFile(null), assistantsOf: async () => [LUCIA as never] });
+      expect(out.response).not.toHaveProperty("existing");
+      expect(String((out.response as { tool_result: string }).tool_result)).not.toContain("Lucía");
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: null, noPage: true });
     });
   });
 

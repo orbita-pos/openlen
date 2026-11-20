@@ -34,6 +34,9 @@ interface CreateCommon {
   input: AssistantInput;
   /** Its memory to start with: what today's assistant of the project was taught (lib/assistants/knowledge.ts). */
   memory?: string;
+  /** For an agent with a file, that goes in its note for visitors instead (~/.assistant/CUSTOMERS.md): it answers them
+   *  from there, never from its memory (spec local 2026-11-19-agentes-para-todos, §6.7). */
+  customerNote?: string;
   /** The morning summary, ticked in the creator (phase 4D, spec §6.9), and the language it was ticked in. */
   morningSummary?: boolean;
   locale?: string;
@@ -79,6 +82,7 @@ export async function createAssistant(
             color: o.input.look.color,
             shape: o.input.look.shape,
             ...(o.memory ? { memory: o.memory } : {}),
+            ...(o.customerNote ? { customerNote: o.customerNote } : {}),
             ...(o.morningSummary ? { morningSummary: true, summaryLocale: o.locale ?? null } : {}),
           })
           .returning();

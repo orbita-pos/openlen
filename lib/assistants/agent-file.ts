@@ -29,6 +29,17 @@ export async function agentTypeProblem(personId: string, agentType: string): Pro
   return parseAgentFile(text, agentType).ok ? null : "invalid";
 }
 
+/** Assistants whose file this process already said is missing or broken (Review Focus 2: «log once»). */
+const warned = new Set<string>();
+
+/** Says once per process that an assistant's file is missing or broken: its turns run as the plain assistant. */
+export function warnBrokenAgentFile(assistantId: string, agentType: string): void {
+  const key = `${assistantId}:${agentType}`;
+  if (warned.has(key)) return;
+  warned.add(key);
+  console.warn(`[assistants] ${assistantId}'s agent file ${agentType} is missing or broken: it runs as the plain assistant`);
+}
+
 /** What its place sends as the person's first turn: the file's `initialPrompt` — Claude Code's «auto-submitted as the first
  *  user turn» — only while the conversation is empty; nothing for an assistant without a file, or with one that broke. */
 export async function firstMessageOf(personId: string, agentType: string | null, conversationTurns: number): Promise<string | null> {

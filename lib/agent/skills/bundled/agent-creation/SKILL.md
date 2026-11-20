@@ -51,7 +51,7 @@ Never put credentials or the person's private data in the file.
 ## 4. Hand them the card
 Call `create_assistant` with `agent: "<name>"` and a suggested look that fits the job. The person names it and adjusts its figure in the creator, which creates it and takes them to its place. Then say in one line what you made and that the card creates it. Don't paste the file.
 
-Created from the space, the agent serves no page. Asked for inside a project, it still lives in the space and also serves that page: the card does both.
+Created from the space, the agent serves no page. Asked for inside a project, it still lives in the space and also serves that page: the card does both. If that page already has its assistant, the card creates the agent without the page; the result says so, and the person can put it there from its place («Atender una página»).
 
 ## 5. Changing an agent later
 When the person asks to change one of their agents ("make it stricter", "teach me French too"):

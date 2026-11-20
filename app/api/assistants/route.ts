@@ -67,7 +67,10 @@ async function createInTheSpace(
     if (problem) return json({ error: `agent_${problem}` }, 400);
   }
   const served = projectId ? { projectId, onPage: body?.onPage !== false } : null;
-  return createAssistant({ personId, homeProjectId: space, served, input, ...memory, ...summary, agentType });
+  // An agent with a file answers the page's visitors from its note for them, never from its memory: what the page's old
+  // assistant knew starts that note instead.
+  const known = agentType ? (memory.memory ? { customerNote: memory.memory } : {}) : memory;
+  return createAssistant({ personId, homeProjectId: space, served, input, ...known, ...summary, agentType });
 }
 
 /** Hers, with the session or the phone's key (phase 5: her tab in Len móvil lists them). */

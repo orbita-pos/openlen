@@ -17,6 +17,7 @@ import { assistantOnPage } from "@/lib/assistants/visitor/store";
 import { getProject } from "@/lib/projects";
 import { getChatMessages } from "@/lib/projects/chat";
 import { publishedHost } from "@/lib/publish/base-host";
+import { agentsEnabled } from "@/lib/space/enabled";
 import { isSpaceData } from "@/lib/space/types";
 import "@/app/[locale]/new/tokens.css";
 
@@ -60,6 +61,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
       nothingToKnow={state.nothingToKnow}
       startsWith={startsWith}
       inSpace={isSpaceData(project.data)}
+      agents={agentsEnabled()}
     />
   );
 }

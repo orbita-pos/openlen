@@ -10,6 +10,7 @@ const m = vi.hoisted(() => ({
   assistantById: vi.fn(async (): Promise<unknown> => null),
   oldAssistantSettings: vi.fn(async (): Promise<unknown> => undefined),
   saveAssistantMemory: vi.fn(async () => {}),
+  saveAssistantCustomerNote: vi.fn(async () => {}),
   projectsOfAssistant: vi.fn(async (): Promise<unknown[]> => []),
   connectProject: vi.fn(async (): Promise<string> => "connected"),
   replaceOnProject: vi.fn(async (): Promise<string> => "connected"),
@@ -20,7 +21,7 @@ const m = vi.hoisted(() => ({
   setOnPage: vi.fn(async () => true),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
-vi.mock("@/lib/assistants/store", () => ({ assistantById: m.assistantById, assistantOfProject: m.assistantOfProject, oldAssistantSettings: m.oldAssistantSettings, saveAssistantMemory: m.saveAssistantMemory }));
+vi.mock("@/lib/assistants/store", () => ({ assistantById: m.assistantById, assistantOfProject: m.assistantOfProject, oldAssistantSettings: m.oldAssistantSettings, saveAssistantMemory: m.saveAssistantMemory, saveAssistantCustomerNote: m.saveAssistantCustomerNote }));
 vi.mock("@/lib/assistants/projects", () => ({ projectsOfAssistant: m.projectsOfAssistant, connectProject: m.connectProject, replaceOnProject: m.replaceOnProject, disconnectProject: m.disconnectProject, titlesOf: m.titlesOf }));
 vi.mock("@/lib/space/store", () => ({ ensureSpace: m.ensureSpace }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage }));
@@ -127,6 +128,16 @@ describe("POST /api/assistants/[id]/projects", () => {
       expect(m.connectProject).not.toHaveBeenCalled();
     });
 
+    // Final review, finding 7: a plain connect would answer 409 with `current` again, and the panel would ask forever.
+    it("🔴 with agents off, replace says so instead of asking again", async () => {
+      vi.stubEnv("OPENLEN_AGENTS", "0");
+      const res = await post({ projectId: "p2", replace: true });
+      expect(res.status).toBe(404);
+      expect(await res.json()).toEqual({ error: "agents_off" });
+      expect(m.connectProject).not.toHaveBeenCalled();
+      expect(m.replaceOnProject).not.toHaveBeenCalled();
+    });
+
     it("replacing while the one there is answering at home is 409 busy", async () => {
       m.replaceOnProject.mockResolvedValueOnce("busy");
       const res = await post({ projectId: "p2", replace: true });
@@ -156,6 +167,18 @@ describe("POST /api/assistants/[id]/projects", () => {
     m.saveAssistantMemory.mockClear();
     expect((await post({ projectId: "p3" })).status).toBe(201);
     expect(m.saveAssistantMemory).not.toHaveBeenCalled();
+  });
+
+  // Final review, finding 5: an agent with a file answers visitors from its note for them, never from its memory.
+  it("🔴 an agent with a file gets them in its note for visitors, and its memory is left alone", async () => {
+    m.assistantById.mockResolvedValue({ ...LUCIA, agentType: "mr-smith", customerNote: "Clases los martes." });
+    m.oldAssistantSettings.mockResolvedValueOnce({ enabled: true, facts: "En la tienda, envíos los viernes." });
+    expect((await post({ projectId: "p2" })).status).toBe(201);
+    expect(m.saveAssistantMemory).not.toHaveBeenCalled();
+    const [id, note] = m.saveAssistantCustomerNote.mock.calls[0] as unknown as [string, string];
+    expect(id).toBe("a1");
+    expect(note.startsWith("Clases los martes.")).toBe(true);
+    expect(note).toContain("En la tienda, envíos los viernes.");
   });
 });
 

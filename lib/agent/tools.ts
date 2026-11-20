@@ -2622,6 +2622,17 @@ async function toolPublicar(
   deps: AgentDeps,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): nothing is published from it. Len hears it here,
+  // before any card — the publish route would refuse it anyway, after its gates.
+  if (session.space) {
+    return {
+      response: {
+        ok: false,
+        error: "space_not_a_page",
+        message: "This is the person's space, where their agents live: nothing is published from it. A page, an app or a tool goes in a project of its own — tell them to start it from the home.",
+      },
+    };
+  }
   // A TOOL INSTALLS (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): the same card, another action.
   if (session.tool) {
     const { toolInstalar } = await import("./tool-install");

@@ -53,6 +53,7 @@ export function AssistantHome({
   nothingToKnow,
   startsWith = null,
   inSpace = false,
+  agents = false,
 }: {
   assistant: AssistantView;
   projectHtml: string;
@@ -72,6 +73,8 @@ export function AssistantHome({
   /** She lives in the person's space (spec local 2026-11-19-agentes-para-todos, §6.2): her home is no page — none beside
    *  her chat, no switch for it; her pages are the ones she attends. */
   inSpace?: boolean;
+  /** Agents are on (`agentsEnabled()`): the person's space, where an agent is changed, answers. */
+  agents?: boolean;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
@@ -200,7 +203,7 @@ export function AssistantHome({
             <ChangeFigure assistant={her} onPage={onPage} onChanged={setLook} onOpenChange={setCreatorOpen} />
             {/* An agent with a file is changed by asking Len, in the person's space (spec local
                 2026-11-19-agentes-para-todos, §6.3): he rewrites its file; the agent never edits its own. */}
-            {assistant.agentType && (
+            {assistant.agentType && agents && (
               <a
                 href={`/${locale}${spaceHref({ draft: t("ownAssistant.place.changeDraft", { name: assistant.name }) })}`}
                 data-change-agent=""

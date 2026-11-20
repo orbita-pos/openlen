@@ -125,7 +125,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
 
 /** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): one per person. Apart from CREATE_ASSISTANTS
  *  because it is an index on `projects`, which the assistants' tests build without `data`; `assistants:migrate` runs
- *  both. */
+ *  both. A subagent's hidden copy (`parentProjectId`, lib/agent/subagents/worktree.ts) keeps the space's `data` and is
+ *  not a second space — as `spaceIdOf` reads it. */
 export const CREATE_SPACE: readonly string[] = [
-  `CREATE UNIQUE INDEX IF NOT EXISTS "projects_one_space_idx" ON "projects" ("userId") WHERE ("data"->'space') IS NOT NULL;`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "projects_one_space_idx" ON "projects" ("userId") WHERE ("data"->'space') IS NOT NULL AND "parentProjectId" IS NULL;`,
 ];

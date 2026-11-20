@@ -125,6 +125,16 @@ describe("POST /api/assistants", () => {
     expect(m.oldAssistantSettings).toHaveBeenCalledWith("p1");
   });
 
+  // Final review, finding 5: an agent with a file answers visitors from its note for them (~/.assistant/CUSTOMERS.md),
+  // never from its memory — what the page's old assistant knew goes there.
+  it("🔴 an agent with a file created on such a page starts its note for visitors with them, not its memory", async () => {
+    m.oldAssistantSettings.mockResolvedValueOnce({ enabled: true, facts: "Envíos sólo en Guadalajara." });
+    expect((await post({ ...BODY, agentType: "mr-smith" })).status).toBe(201);
+    const [arg] = m.createAssistant.mock.calls[0] as unknown as [{ memory?: string; customerNote?: string }];
+    expect(arg.customerNote).toContain("Envíos sólo en Guadalajara.");
+    expect(arg).not.toHaveProperty("memory");
+  });
+
   it("refuses an editor of the project", async () => {
     fijarAccesoDePrueba(() => ({ rol: "editor", duenoId: "u9" }));
     expect((await post(BODY)).status).toBe(403);

@@ -25,9 +25,11 @@ export function AssistantCreateCard({ actions, projectId }: { actions: readonly 
   return <Card projectId={projectId} suggested={suggestedLookOf(last)} agent={suggestedAgentOf(last)} />;
 }
 
-const serves = (a: AssistantListItem, projectId: string) => a.projectId === projectId || (a.projectIds ?? []).includes(projectId);
+// The pages she attends: an assistant of before always attends her home; an agent's home is the person's space, which it
+// never attends (spec local 2026-11-19-agentes-para-todos, §6.2). A list from before without them: her home.
+const serves = (a: AssistantListItem, projectId: string) => (a.projectIds ?? [a.projectId]).includes(projectId);
 
-function Card({ projectId, suggested, agent }: { projectId: string; suggested: FigureLook | undefined; agent: { agent: string | null; fromSpace: boolean } }) {
+function Card({ projectId, suggested, agent }: { projectId: string; suggested: FigureLook | undefined; agent: { agent: string | null; noPage: boolean } }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [mine, setMine] = useState<AssistantView | null | undefined>(undefined);
@@ -37,9 +39,9 @@ function Card({ projectId, suggested, agent }: { projectId: string; suggested: F
   const [failed, setFailed] = useState<string | null>(null);
   // Created or used here from this card: she is on the page at once (11/11), and visitors see her after a publish.
   const [added, setAdded] = useState(false);
-  // An agent file Len just wrote (spec local 2026-11-19-agentes-para-todos, §6.3) is a new agent: the card only creates
-  // it. None of the person's others stands for it, and in the space every agent lives there without serving it.
-  const fresh = agent.agent !== null;
+  // An agent file Len just wrote (spec local 2026-11-19-agentes-para-todos, §6.3) is a new agent, and a card created with
+  // no page (in the space, or on a page that keeps its own) has no page to use one on: then the card only creates.
+  const fresh = agent.agent !== null || agent.noPage;
 
   useEffect(() => {
     if (fresh) {
@@ -84,7 +86,7 @@ function Card({ projectId, suggested, agent }: { projectId: string; suggested: F
           <AssistantFigure look={mine.look} size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium fg">{t("ownAssistant.card.ready", { name: mine.name })}</p>
-            {added && !agent.fromSpace && (
+            {added && !agent.noPage && (
               <p className="text-[11.5px] leading-snug fg-faint" data-assistant-card-hint="">
                 {t("ownAssistant.place.onPageHint")}
               </p>
@@ -131,7 +133,7 @@ function Card({ projectId, suggested, agent }: { projectId: string; suggested: F
             open={creating}
             projectId={projectId}
             agentType={agent.agent}
-            fromSpace={agent.fromSpace}
+            noPage={agent.noPage}
             {...(suggested ? { initial: suggested } : {})}
             onClose={() => setCreating(false)}
             onCreated={(c) => {

@@ -175,15 +175,24 @@ export async function replaceOnProject(o: {
   try {
     return await db.transaction(async (tx) => {
       if (await isSpace(tx, o.projectId)) return "space_not_a_page";
-      const [current] = await tx.select({ assistantId: ap.assistantId }).from(ap).where(eq(ap.projectId, o.projectId)).for("update");
-      if (current?.assistantId === o.assistantId) return "connected";
-      if (current) {
-        const [old] = await tx.select({ home: a.homeProjectId }).from(a).where(eq(a.id, current.assistantId)).for("update");
-        if (old?.home === o.projectId) {
-          if (await answeringAt(tx, current.assistantId, o.projectId)) return "busy";
-          await moveHome(tx, current.assistantId, o.projectId, o.spaceId);
+      const [seen] = await tx.select({ assistantId: ap.assistantId }).from(ap).where(eq(ap.projectId, o.projectId));
+      if (seen?.assistantId === o.assistantId) return "connected";
+      if (seen) {
+        // Locked in disconnectProject's order — the assistant's row, then the page's — so the two at once wait for each
+        // other instead of deadlocking; then the page is read again under its lock.
+        const [old] = await tx.select({ home: a.homeProjectId }).from(a).where(eq(a.id, seen.assistantId)).for("update");
+        const [current] = await tx.select({ assistantId: ap.assistantId }).from(ap).where(eq(ap.projectId, o.projectId)).for("update");
+        if (current?.assistantId === o.assistantId) return "connected";
+        // Another one took it while this waited: the person asks again with what is there now.
+        if (current && current.assistantId !== seen.assistantId) return "busy";
+        // Still hers (if she left meanwhile, the page is simply free).
+        if (current) {
+          if (old?.home === o.projectId) {
+            if (await answeringAt(tx, current.assistantId, o.projectId)) return "busy";
+            await moveHome(tx, current.assistantId, o.projectId, o.spaceId);
+          }
+          await tx.delete(ap).where(and(eq(ap.assistantId, current.assistantId), eq(ap.projectId, o.projectId)));
         }
-        await tx.delete(ap).where(and(eq(ap.assistantId, current.assistantId), eq(ap.projectId, o.projectId)));
       }
       await tx.insert(ap).values({ projectId: o.projectId, assistantId: o.assistantId, onPage: o.onPage });
       return "connected";

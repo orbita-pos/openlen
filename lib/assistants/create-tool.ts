@@ -9,6 +9,7 @@
 import { personOf } from "@/lib/agent/person";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { DEFAULT_LOOK, checkLook, type FigureCategory, type FigureLook } from "@/lib/figure/look";
+import { agentsEnabled } from "@/lib/space/enabled";
 
 import { assistantsEnabled } from "./enabled";
 import type { AssistantRow } from "./store";
@@ -179,30 +180,37 @@ export async function runCreateAssistant(session: AgentSession, args: Record<str
   if (session.assistant) return { response: { ok: false, error: "not_available", message: "Only Len offers a new assistant." } };
   if (!assistantsEnabled()) return { response: { ok: false, error: "assistants_off", message: "Assistants are turned off right now." } };
   const d = deps ?? (await storeDeps());
-  // The agent file Len wrote (spec local 2026-11-19-agentes-para-todos, §6.3): the person's, checked before any card.
+  // The agent file Len wrote (spec local 2026-11-19-agentes-para-todos, §6.3): the person's, checked before any card. It
+  // lives in their space, so with agents off there is nowhere to keep it.
   const agent = typeof args.agent === "string" && args.agent.trim() ? args.agent.trim() : null;
   if (agent) {
+    if (!agentsEnabled()) return { response: { ok: false, error: "agents_off", message: "Agents of their own are turned off right now: offer the card without agent." } };
     const problem = await d.agentTypeProblem(personOf(session), agent);
     if (problem) {
       return { response: { ok: false, error: `agent_${problem}`, message: `~/.len/agents/${agent}.md is ${problem === "missing" ? "not there: write it first" : problem === "reserved" ? "a reserved name: pick another" : "not a valid agent file: read it, fix it, and call again"}.` } };
     }
   }
   const existing = await d.assistantOfProject(session.projectId);
-  if (existing) {
+  if (existing && !agent) {
     return { response: { ok: false, error: "project_has_assistant", assistant: { name: existing.name, slug: existing.slug }, message: `This project already has its assistant, ${existing.name}.` } };
   }
+  // The card creates it attending no page: asked in the person's space, which is no page, or — for an agent file — on a
+  // page that keeps its own assistant; the person puts it there later, from its place.
+  const noPage = session.space === true || Boolean(existing);
   // The session's user is the project's owner (a member never gets this tool): their own assistants, elsewhere. An agent
-  // file is a new agent: the card only creates it, so none of them is offered for it.
-  const theirs = agent ? [] : (await d.assistantsOf(session.userId)).map((a) => ({ name: a.name, slug: a.slug }));
+  // file is a new agent, and the space is no page to use one on: then the card only creates.
+  const theirs = agent || session.space ? [] : (await d.assistantsOf(session.userId)).map((a) => ({ name: a.name, slug: a.slug }));
   const look = await suggestedLook(args, session.projectId, d);
   // What the card shows, said back as it is — like Claude Code's Edit answering with what the file now says — so what he
   // tells the owner is what they see (11/11: he described a «gorro de panadero» over a top hat, and glasses he never chose).
   const opens = `If a new one is created, the card opens with its figure as ${lookInWords(look)}. If you mention the figure, say exactly that; the owner can change any part on the card.`;
-  const tool_result = theirs.length
-    ? `The owner already has ${theirs.map((a) => a.name).join(", ")}. Ask them whether to use ${theirs.length > 1 ? "one of them" : theirs[0]!.name} here too or create another: the card under your answer offers both. ${opens}`
-    : `The owner now sees the card to create their assistant: they pick its name and its look there. ${opens}`;
+  const tool_result = existing
+    ? `This page already has its assistant, ${existing.name}, so the card creates this agent in the owner's space without attending this page. To put it here instead, they open its place and use «Atender una página», which asks before replacing ${existing.name}. ${opens}`
+    : theirs.length
+      ? `The owner already has ${theirs.map((a) => a.name).join(", ")}. Ask them whether to use ${theirs.length > 1 ? "one of them" : theirs[0]!.name} here too or create another: the card under your answer offers both. ${opens}`
+      : `The owner now sees the card to create their assistant: they pick its name and its look there. ${opens}`;
   return {
     response: { ok: true, card: "assistant_create", ...(theirs.length ? { existing: theirs } : {}), tool_result },
-    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(look, { agent, fromSpace: session.space === true }) },
+    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(look, { agent, noPage }) },
   };
 }

@@ -9,7 +9,7 @@ const m = vi.hoisted(() => ({ listAgents: vi.fn(async (): Promise<{ name: string
 vi.mock("@/lib/agent/subagents/agent-store", () => ({ listAgents: m.listAgents }));
 
 const { resolveSkills } = await import("@/lib/agent/skills/registry");
-const { agentPreloads, agentTypeProblem, firstMessageOf, loadAgentOf } = await import("./agent-file");
+const { agentPreloads, agentTypeProblem, firstMessageOf, loadAgentOf, warnBrokenAgentFile } = await import("./agent-file");
 
 const teacher = `---\nname: mr-smith\ndescription: My English teacher\nskills: language-teacher, b, missing\ninitialPrompt: Hola, empecemos con tu nivel\n---\n\nYou are Mr. Smith. Never give the answer first.\n`;
 const stored = (name: string, text: string) => ({ name, text, updatedAt: new Date("2026-11-19T00:00:00Z") });
@@ -60,6 +60,18 @@ describe("firstMessageOf", () => {
     expect(await firstMessageOf("u1", "broken", 0)).toBeNull();
     expect(await firstMessageOf("u1", "quiet", 0)).toBeNull();
     expect(m.listAgents).toHaveBeenCalledTimes(3);
+  });
+});
+
+// Review Focus 2 and the final review's finding 8: a broken file is said once, not on every turn.
+describe("warnBrokenAgentFile", () => {
+  it("logs once per assistant and file", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    warnBrokenAgentFile("a9", "mr-smith");
+    warnBrokenAgentFile("a9", "mr-smith");
+    warnBrokenAgentFile("a9", "coach");
+    expect(warn).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
   });
 });
 

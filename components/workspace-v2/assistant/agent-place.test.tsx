@@ -38,13 +38,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
   panel.consumed = null;
 });
-function mount(assistant: typeof SMITH | typeof LUCIA, startsWith: string | null = null) {
+function mount(assistant: typeof SMITH | typeof LUCIA, startsWith: string | null = null, agents = true) {
   const host = document.createElement("div");
   document.body.appendChild(host);
   const root = createRoot(host);
   roots.push(root);
   act(() =>
-    root.render(<AssistantHome assistant={assistant} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} startsWith={startsWith} />),
+    root.render(
+      <AssistantHome assistant={assistant} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} startsWith={startsWith} agents={agents} />,
+    ),
   );
   return host;
 }
@@ -77,6 +79,12 @@ describe("changing an agent", () => {
 
   it("an assistant without a file has no such entry: there is no file for Len to change", () => {
     const host = mount(LUCIA);
+    expect(host.querySelector("[data-change-agent]")).toBeNull();
+  });
+
+  // Final review, finding 7: with agents off, /space answers 404.
+  it("🔴 with agents off it isn't there: the space it leads to is off too", () => {
+    const host = mount(SMITH, null, false);
     expect(host.querySelector("[data-change-agent]")).toBeNull();
   });
 });

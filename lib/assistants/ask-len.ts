@@ -118,16 +118,9 @@ export async function runAskLen(
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
   const named = typeof args.project === "string" ? args.project.trim() : "";
-  // FROM THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.4): Len never builds there. Attending no page,
-  // a request that names none starts Len in a project of the person's own — their blank one, or a new one.
-  if (assistant.inSpace && !assistant.projects?.length && !named) {
-    return passToLen(session, request, { id: await newProject(session.userId), title: "" }, "a new project", launch, notes, steer);
-  }
-  // Which project (phase 4): hers only, and the one the request names when she serves more than one. In the person's
-  // space her home is never one of them.
-  const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
   // Looking on the phone at a project she doesn't serve (spec local 2026-11-16-movil-es-tu-asistente, §5.6): a request
-  // that names none can't go to one of hers by default — it would change a page the owner isn't looking at.
+  // that names none can't go to one of hers by default — it would change a page the owner isn't looking at. First, before
+  // the space's new project below: «add a form here» is about the page on the phone, never a new one.
   if (!named && assistant.viewing && !assistant.viewing.served) {
     return {
       response: {
@@ -137,6 +130,14 @@ export async function runAskLen(
       },
     };
   }
+  // FROM THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.4): Len never builds there. Attending no page,
+  // a request that names none starts Len in a project of the person's own — their blank one, or a new one.
+  if (assistant.inSpace && !assistant.projects?.length && !named) {
+    return passToLen(session, request, { id: await newProject(session.userId), title: "" }, "a new project", launch, notes, steer);
+  }
+  // Which project (phase 4): hers only, and the one the request names when she serves more than one. In the person's
+  // space her home is never one of them.
+  const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
   // Named, or the only one, or (§5.3) the one on her owner's phone.
   const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
   const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : onPhone;

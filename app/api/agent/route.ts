@@ -11,7 +11,7 @@ import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
-import { agentPreloads, loadAgentOf } from "@/lib/assistants/agent-file";
+import { agentPreloads, loadAgentOf, warnBrokenAgentFile } from "@/lib/assistants/agent-file";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -557,7 +557,7 @@ async function correrTurno(
   const agenteDelAsistente = asistente?.agentType
     ? await loadAgentOf(asistente.personId, asistente.agentType).catch(() => null)
     : null;
-  if (asistente?.agentType && !agenteDelAsistente) console.warn(`[assistants] ${asistente.id}'s agent file ${asistente.agentType} is missing or broken: it runs as the plain assistant`);
+  if (asistente?.agentType && !agenteDelAsistente) warnBrokenAgentFile(asistente.id, asistente.agentType);
   /** Where this turn's rows live: Len's conversation (nothing) or the assistant's. Len's calls stay byte for byte. */
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
   /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
