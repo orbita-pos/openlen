@@ -11,15 +11,16 @@ import { db, schema } from "@/lib/db";
 import { readPublishedSources } from "@/lib/len-watch/published-sources";
 import { publishProject } from "@/lib/projects";
 import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-through-gates";
-import { splitPagesForPublish } from "@/lib/projects/site-pages";
 import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { rollbackToSha } from "@/lib/publish/filesystem";
 import { abTestingEnabled } from "./enabled";
+import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
   claimExperimentDecision,
   createExperimentRow,
   getExperimentById,
+  liveExperimentForProject,
   normalizePrimaryMetric,
   normalizeTargetPath,
   releaseDecisionLock,
@@ -34,7 +35,6 @@ import {
   commitAbWorktree,
   copySources,
   createAbWorktree,
-  ensurePublishedSources,
   mergeWinnerIntoDraft,
   readPublishedFolder,
 } from "./worktree";
@@ -50,7 +50,11 @@ export class AbLifecycleError extends Error {
       | "invalid_state"
       | "security_blocked"
       | "decision_conflict"
-      | "missing_target_page",
+      | "missing_target_page"
+      // The site was published after the draft was cut: Variant B is built on a base that is no longer the site.
+      | "base_moved"
+      // Another experiment of the project is live (the release carries one manifest).
+      | "ab_already_running",
     message: string,
     public readonly status: number,
     public readonly extra?: Record<string, unknown>,
@@ -239,6 +243,33 @@ export async function launchAbExperiment(p: {
     throw new AbLifecycleError("not_published", "Project is not published.", 400);
   }
 
+  // One live experiment per project: the release carries ONE manifest, so a second launch would end the first
+  // (review item 15). Drafts don't count.
+  const running = await liveExperimentForProject(p.projectId);
+  if (running && running.id !== exp.id) {
+    throw new AbLifecycleError(
+      "ab_already_running",
+      `Another A/B test (${running.name}) is running on this site. Decide it (keep A, promote B) before launching a new one.`,
+      409,
+      { runningExperimentId: running.id },
+    );
+  }
+
+  // 0. Re-baseline (review item 12). The draft was cut from the version published that day (`baseCommitOid`); if the
+  //    site was published since, Control would be the new version but Variant B is built on the old one, and promoting
+  //    it — or «keeping A» — would undo that publication. Nothing is published: Len cuts the variant again.
+  const control = await loadControlSources(p.projectId, p.ownerId);
+  if (!control) {
+    throw new AbLifecycleError("not_published", "Published baseline missing.", 400);
+  }
+  if (!exp.baseCommitOid || exp.baseCommitOid !== control.published.commitOid) {
+    throw new AbLifecycleError(
+      "base_moved",
+      "The site was published since this variant was drafted, so Variant B is built on an older version than the one that is live now. Ask Len to create the variant again from the current page.",
+      409,
+    );
+  }
+
   // 1. Run security gate on Variant B's worktree copy before shipping.
   const security = await runSecurityGate({
     projectId: p.projectId,
@@ -259,50 +290,31 @@ export async function launchAbExperiment(p: {
   // 2. Commit any uncommitted Len edits on branch `ab/<expId>`.
   const tipOid = await commitAbWorktree(exp.copyProjectId, p.ownerId, exp.id);
 
-  // 3. Load clean Control A baseline + Variant B sources.
-  const controlSrc = await ensurePublishedSources(p.projectId, p.ownerId);
-  if (!controlSrc) {
-    throw new AbLifecycleError("not_published", "Published baseline missing.", 400);
-  }
+  // 3. Variant B's sources (Control's were loaded above).
   const variantBSrc = await copySources(exp.copyProjectId);
-  const { publicPages: bPages } = splitPagesForPublish(variantBSrc.data);
   const splitBps =
     typeof p.splitBps === "number" && Number.isInteger(p.splitBps)
       ? Math.min(9000, Math.max(1000, p.splitBps))
       : exp.splitBps;
 
-  const controlReleaseSha = exp.controlReleaseSha ?? project.publishedReleaseSha ?? null;
+  // The release to fall back on when the experiment ends is the one live AT LAUNCH — never the one stored when the
+  // draft was made (item 12): going back to that one would undo every publication in between.
+  const controlReleaseSha = project.publishedReleaseSha ?? null;
 
-  const controlFolder = await readPublishedFolder(p.projectId, controlSrc);
-
-  // 4. Publish atomic release containing Control A + `_ab/<id>/b/` + `ab.json`.
+  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
   const pub = await publishProject({
     projectId: p.projectId,
     userId: p.ownerId,
     subdomain: project.subdomain,
     skipFlightCheck: true,
     dataChanges: { mode: "skip" },
-    sourcesOverride: { data: controlSrc.data, folder: controlFolder },
+    sourcesOverride: { data: control.data, folder: control.folder },
     protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
-    abExperiment: {
-      id: exp.id,
-      targetPath: exp.targetPath,
-      splitBps,
-      salt: exp.salt,
-      includeLocales: exp.includeLocales,
-      variantB: {
-        html: variantBSrc.data.html,
-        pages: bPages,
-        files: Object.entries(variantBSrc.folder).map(([filePath, content]) => ({
-          path: filePath,
-          content,
-        })),
-      },
-    },
+    abExperiment: abSpecOf(exp, variantBSrc, splitBps),
   });
 
   // 5. Purge previous cached Control HTML from Cloudflare PoPs immediately.
-  const langs = controlSrc.data.settings?.languages ?? [];
+  const langs = control.data.settings?.languages ?? [];
   await purgeSubdomain(project.subdomain, edgePathsForTarget(exp.targetPath, langs)).catch(
     () => undefined,
   );
