@@ -6,23 +6,26 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...rest}>
       {children}
     </a>
   ),
+  useRouter: () => router,
 }));
 vi.mock("../toast", () => ({ ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 // Len's chat panel is a mark that says what it was given.
 vi.mock("../chat/new-chat-panel", () => ({
-  NewChatPanel: (p: { flatProjectId: string; pendingDraft?: string | null; pendingDraftAutoSend?: boolean; centered?: boolean; flatProjectChat?: unknown[] }) => (
+  NewChatPanel: (p: { flatProjectId: string; pendingDraft?: string | null; pendingDraftAutoSend?: boolean; centered?: boolean; flatProjectChat?: unknown[]; disclaimer?: string }) => (
     <i
       data-chat={p.flatProjectId}
       data-draft={p.pendingDraft ?? ""}
       data-auto={String(Boolean(p.pendingDraftAutoSend))}
       data-centered={String(Boolean(p.centered))}
       data-turns={String(p.flatProjectChat?.length ?? 0)}
+      data-disclaimer={p.disclaimer ?? ""}
     />
   ),
 }));
@@ -35,7 +38,10 @@ import { SpaceHome } from "./space-home";
 
 const BRIEF = "Quiero un profesor de inglés";
 const roots: Root[] = [];
-beforeEach(() => window.history.replaceState(null, "", "/es/space"));
+beforeEach(() => {
+  window.history.replaceState(null, "", "/es/space");
+  router.replace.mockReset();
+});
 afterEach(() => {
   roots.splice(0).forEach((r) => act(() => r.unmount()));
   document.body.innerHTML = "";
@@ -59,6 +65,14 @@ describe("the space", () => {
     expect(chat(el).dataset.centered).toBe("true");
     expect(chat(el).dataset.draft).toBe("");
     expect(el.querySelector<HTMLAnchorElement>("[data-space-home]")!.getAttribute("href")).toBe("/");
+    // Nothing to clean from a bare address.
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  // Walked with a real turn (20/11): the line under the box spoke of a page to publish, and the space has none.
+  it("🔴 the line under Len's box is the space's, not a page's", () => {
+    const el = mount({});
+    expect(chat(el).dataset.disclaimer).toBe("space.disclaimer");
   });
 
   it("🔴 sends the home's ticket once, as the person's own send, and spends it", () => {
@@ -68,8 +82,9 @@ describe("the space", () => {
     expect(chat(el).dataset.draft).toBe(BRIEF);
     expect(chat(el).dataset.auto).toBe("true");
     expect(takeFirstMessage(BRIEF)).toBeNull();
-    // The address loses it: a reload doesn't write it again.
-    expect(window.location.search).toBe("");
+    // The address loses it through the router, so a refresh after the turn doesn't bring it back (walked 20/11), and a
+    // reload doesn't write it again.
+    expect(router.replace).toHaveBeenCalledWith("/space", { scroll: false });
   });
 
   it("🔴 without the ticket — a link from elsewhere, a reload — the brief only fills the box", () => {
@@ -89,6 +104,6 @@ describe("the space", () => {
     const el = mount({ draft: "Cambiar a Coach" });
     expect(chat(el).dataset.draft).toBe("Cambiar a Coach");
     expect(chat(el).dataset.auto).toBe("false");
-    expect(window.location.search).toBe("");
+    expect(router.replace).toHaveBeenCalledWith("/space", { scroll: false });
   });
 });

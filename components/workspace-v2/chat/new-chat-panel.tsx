@@ -115,6 +115,9 @@ export interface NewChatPanelProps {
   assistant?: AssistantView;
   /** Something else is the screen's one live figure now (the creator, open over her place): hers waits. */
   figurePaused?: boolean;
+  /** The line under Len's box, where his own speaks of a page to publish and there is none (the person's space, spec
+   *  local 2026-11-19-agentes-para-todos, §6.2). An assistant's place keeps hers. */
+  disclaimer?: string;
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -190,6 +193,7 @@ function AgentChatView({
   onOpenPublish,
   assistant,
   figurePaused,
+  disclaimer,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -695,7 +699,9 @@ function AgentChatView({
                   disclaimer: t("ownAssistant.speaker.disclaimer", { name: assistant.name }),
                   effortLabel: t("ownAssistant.composer.effort", { name: assistant.name }),
                 }
-              : {})}
+              : disclaimer
+                ? { disclaimer }
+                : {})}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),

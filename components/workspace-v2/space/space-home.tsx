@@ -7,13 +7,14 @@
 // WHAT ARRIVES: the home's Agente comes with the one-use ticket (`lib/marketing/first-message-in-transit.ts`) for the
 // brief in the address, and that is THE send — the person already pressed it on the home. Anything else only fills the
 // box: a brief without its ticket (a link from elsewhere, a reload), a page's ticket, or a draft («Cambiar a <nombre>»).
-// Either way the address loses them, so a reload writes nothing again.
+// Either way the address loses them, through the router, so a reload writes nothing again.
 import { ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { spaceHref } from "@/lib/space/href";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
@@ -49,6 +50,7 @@ export function SpaceHome({
 }) {
   const t = useTranslations("wsChrome");
   const tc = useTranslations("common");
+  const router = useRouter();
   const [start, setStart] = useState<Start | null>(null);
   // Read once: the ticket is spent on the first read, and a second effect run (React's development double-run) must
   // not turn the send into a fill.
@@ -57,17 +59,10 @@ export function SpaceHome({
     if (read.current) return;
     read.current = true;
     setStart(startOf(arrivalBrief, draft));
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("brief") || url.searchParams.has("draft")) {
-        url.searchParams.delete("brief");
-        url.searchParams.delete("draft");
-        window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
-      }
-    } catch {
-      // An address that can't be rewritten only means a reload fills the box again.
-    }
-  }, [arrivalBrief, draft]);
+    // Through the router, not history.replaceState: the refresh after Len's turn put the old address back (walked with
+    // a real turn, 20/11), and a reload then filled the box with the brief again.
+    if (arrivalBrief || draft) router.replace(spaceHref(), { scroll: false });
+  }, [arrivalBrief, draft, router]);
 
   return (
     <ToastProvider dismissLabel={tc("close")}>
@@ -95,6 +90,7 @@ export function SpaceHome({
             pendingDraft={start?.text ?? null}
             pendingDraftAutoSend={start?.send === true}
             onPendingDraftConsumed={() => setStart(null)}
+            disclaimer={t("space.disclaimer")}
           />
         </div>
         </div>

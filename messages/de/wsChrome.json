@@ -859,6 +859,7 @@
   },
   "space": {
     "title": "Dein Bereich",
-    "home": "Zur Startseite"
+    "home": "Zur Startseite",
+    "disclaimer": "Len kann sich irren. Prüfe die Antworten."
   }
 }

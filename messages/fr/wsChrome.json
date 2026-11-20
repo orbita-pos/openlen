@@ -859,6 +859,7 @@
   },
   "space": {
     "title": "Votre espace",
-    "home": "Retour à l'accueil"
+    "home": "Retour à l'accueil",
+    "disclaimer": "Len peut se tromper. Vérifiez ses réponses."
   }
 }

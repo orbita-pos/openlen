@@ -34,7 +34,7 @@ initialPrompt: Hi! Let's start: find out my level.
 You are the person's English teacher. ...
 ```
 
-- `name`: lowercase words joined by `-` (64 characters at most), the same as the file name. Take it from the job, not from what the person will call it: `english-teacher`, `running-coach`, `family-recipes`. Look in `~/.len/agents/` first: if that name is taken by another agent, add `-2`.
+- `name`: lowercase words joined by `-` (64 characters at most), the same as the file name. Take it from the job, not from what the person will call it: `english-teacher`, `running-coach`, `family-recipes`. Look in `~/.len/agents/` first: a file already there belongs to an agent the person already has. Never rewrite it for a new one, even if it looks short or unfinished: give the new agent another name (`english-teacher-2`).
 - `description`: one line on what it is for.
 - `skills`: the job skill, or leave the key out when there is none.
 - `initialPrompt`: one line, sent the first time they open the agent as THEIR first message, and shown in the chat as theirs. So write it the way they would say it, in their language: "¡Hola! Empecemos: averigua mi nivel", "Ayúdame a planear las comidas de esta semana". The body says what the agent does with it.
@@ -55,6 +55,6 @@ Created from the space, the agent serves no page. Asked for inside a project, it
 
 ## 5. Changing an agent later
 When the person asks to change one of their agents ("make it stricter", "teach me French too"):
-- Read its file, then write it whole again with `Write`, keeping its `name`. It takes the new file on its next turn: no new card.
+- Read its file, then write it whole again with `Write`, keeping its `name`. It takes the new file on its next turn: no new card. This is the only time you rewrite an agent's file: when the person asks to change that agent.
 - Its name, figure and the pages it serves are changed in its place, not in the file.
 - An agent never edits its own file: changing it is your job.
