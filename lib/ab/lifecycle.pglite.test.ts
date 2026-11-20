@@ -393,6 +393,21 @@ describe("promote's own tail claims the bring too (round 3, E)", () => {
   });
 });
 
+describe("a re-emit that swaps a split over a decision that closed during it (round 3, B)", () => {
+  it("🔴 the keep A closed while the re-emit was publishing: the re-emit's record misses, and the split comes down right away", async () => {
+    await insertExperiment(raw(), { id: "ab_swap0001", status: "kept_a", decisionStatus: "resolved", startedAt: new Date(Date.now() - 4 * DAY), endedAt: new Date(), controlReleaseSha: "rel-c" });
+    const { recordAndPurgeReemit } = await import("./reemit");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await recordAndPurgeReemit({ id: "ab_swap0001", targetPath: "/", includeLocales: false }, "pan1", { sha: "rel-reemit", abOverrides: ["/css/b.css"] }, [], "u1");
+    error.mockRestore();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", subdomain: "pan1", abLive: "ending" });
+    expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abExperiment");
+    // the row is what the decision made it
+    expect(await getExperimentById("ab_swap0001")).toMatchObject({ status: "kept_a" });
+  });
+});
+
 describe("a bring and a discard racing (review of G4+G5, minor 10)", () => {
   const open = (id: string, state = "pending", o: Record<string, unknown> = {}) =>
     insertExperiment(raw(), { id, status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", bringState: state, branch: `ab/${id}`, baseCommitOid: "base-1", ...o });

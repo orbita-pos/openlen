@@ -680,6 +680,43 @@ async function restoreControlLive(
   return false;
 }
 
+/** TAKES DOWN A SPLIT THAT OUTLIVED ITS ROW (round 3, B): a system re-emit swapped a split release over a decision that closed
+ *  while it was publishing, or the like. The row is closed and stays what it is; the live release has no business carrying the
+ *  experiment. A promoted winner goes back to the release its promotion published (exact, and it doesn't depend on the published
+ *  sources having been recorded yet); anything else republishes the PUBLISHED sources with the split gone (`abLive: "ending"`: taking
+ *  the split down IS the end of the experiment, the door must not refuse it). Purges the edge. `false` = there was nothing to put back. */
+export async function takeSplitDown(exp: AbExperimentRow, ownerId: string, subdomain: string): Promise<boolean> {
+  const [project] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, exp.projectId)).limit(1);
+  const languages = project?.data?.settings?.languages ?? [];
+  if (exp.status === "promoted_b" && exp.promotedReleaseSha) {
+    try {
+      await rollbackToSha(subdomain, exp.promotedReleaseSha);
+      await db
+        .update(schema.projects)
+        .set({ publishedReleaseSha: exp.promotedReleaseSha, updatedAt: new Date() })
+        .where(eq(schema.projects.id, exp.projectId))
+        .catch(() => undefined);
+      await purgeExperimentEdge(subdomain, exp, languages);
+      return true;
+    } catch {
+      // The promotion's release was pruned or is gone: fall through to the published sources.
+    }
+  }
+  const published = await readPublishedSources(exp.projectId);
+  if (!published) return false;
+  await publishProject({
+    projectId: exp.projectId,
+    userId: ownerId,
+    subdomain,
+    skipFlightCheck: true,
+    dataChanges: { mode: "skip" },
+    sourcesOverride: { data: published.data, folder: await readPublishedFolder(exp.projectId, published) },
+    abLive: "ending",
+  });
+  await purgeExperimentEdge(subdomain, exp, languages);
+  return true;
+}
+
 /** Owner chooses «Quedarme con la original» (keep Control A). */
 export async function keepControlA(p: {
   readonly projectId: string;

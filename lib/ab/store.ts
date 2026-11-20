@@ -360,6 +360,21 @@ export async function listLiveExperiments(): Promise<AbExperimentRow[]> {
     .where(inArray(schema.abExperiments.status, [...AB_LIVE_STATUSES]));
 }
 
+/** Experiments that ENDED since `since` and had a split (a start): the ones whose split the reconcile pass checks is really gone
+ *  from the live release (round 3, B). A decision applying is not an end yet, so it isn't here. */
+export async function listRecentlyClosedExperiments(since: Date): Promise<AbExperimentRow[]> {
+  return db
+    .select()
+    .from(schema.abExperiments)
+    .where(
+      and(
+        inArray(schema.abExperiments.status, ["kept_a", "paused_harm", "cancelled", "promoted_b"]),
+        isNotNull(schema.abExperiments.startedAt),
+        or(gte(schema.abExperiments.endedAt, since), gte(schema.abExperiments.decidedAt, since)),
+      ),
+    );
+}
+
 /** A publish that failed after the claim: the experiment is a draft again, and the project has no live one. */
 export async function releaseLaunch(id: string, fence: LaunchFence): Promise<void> {
   await db

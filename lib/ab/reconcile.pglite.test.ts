@@ -26,6 +26,7 @@ const h = vi.hoisted(() => ({
   tip: vi.fn(),
   waitForLen: vi.fn(),
   noSubdomain: false,
+  rollback: vi.fn(),
 }));
 
 vi.mock("@/lib/db", async () => ({
@@ -44,7 +45,7 @@ vi.mock("@/lib/len-watch/worktree", () => ({ branchTip: (...args: unknown[]) => 
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: vi.fn() }));
 vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: h.purge }));
-vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: vi.fn() }));
+vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: (...args: unknown[]) => h.rollback(...args) }));
 vi.mock("@/lib/ab/worktree", () => ({
   cleanupAbWorktree: h.cleanup,
   commitAbWorktree: vi.fn(),
@@ -101,6 +102,10 @@ beforeEach(async () => {
   h.merge.mockReset();
   h.merge.mockResolvedValue({ kind: "brought" });
   h.waitForLen.mockResolvedValue(false);
+  h.rollback.mockReset();
+  h.rollback.mockResolvedValue(undefined);
+  h.publishProject.mockReset();
+  h.publishProject.mockResolvedValue({ sha: "rel-republished" });
   h.tip.mockReset();
   h.tip.mockResolvedValue("tip-1");
   h.published = { commitOid: "pub-1", data: { html: "<html>A</html>" }, extraFiles: {} };
@@ -369,5 +374,77 @@ describe("a launch that never finished (a claimed slot, no start)", () => {
     await run();
     const row = (await getExperimentById("ab_strand005"))!;
     expect(row.experimentReleaseSha).toBe("rel-launch");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A SPLIT THAT OUTLIVES ITS ROW (round 3, B): a system re-emit checks for a decision before it publishes and nothing re-checks after
+// its swap, so a keep A (or harm stop, or «Stop and publish») that closed in between can have a split release swapped over its
+// Control. The row is closed, the pass reads only live rows — so for the rows closed in the last 7 days it reads the live manifest too.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("a closed experiment whose split is still live (round 3, B)", () => {
+  const closed = (id: string, status: string, o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status, decisionStatus: "resolved", startedAt: new Date(NOW.getTime() - 5 * DAY), endedAt: new Date(NOW.getTime() - DAY), controlReleaseSha: "rel-c", copyProjectId: null, branch: null, ...o });
+
+  it("🔴 the live manifest still names an experiment that was closed yesterday: the published sources are republished (abLive ending), the edge purged, and it is logged", async () => {
+    await closed("ab_ghost0001", "kept_a");
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: ["/css/b.css"], splitBps: 5000 });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const stats = await run();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+    expect(h.publishProject.mock.calls[0]![0]).toMatchObject({ projectId: "p1", userId: "u1", subdomain: "pan1", abLive: "ending", sourcesOverride: { data: { html: "<html>A</html>" } } });
+    expect(h.publishProject.mock.calls[0]![0]).not.toHaveProperty("abExperiment");
+    expect(h.purge).toHaveBeenCalled();
+    expect(warn.mock.calls.flat().join(" ")).toMatch(/ab_ghost0001/);
+    warn.mockRestore();
+    expect(stats.splitsTakenDown).toBe(1);
+    // a closed row stays what it is, and nobody is told: the owner already decided
+    expect(await getExperimentById("ab_ghost0001")).toMatchObject({ status: "kept_a" });
+    expect(h.tell).not.toHaveBeenCalled();
+  });
+
+  it("a promoted winner whose split came back is put right by rolling back to the release the promotion published", async () => {
+    await closed("ab_ghost0002", "promoted_b", { bringState: "brought" });
+    await raw().query(`UPDATE "abExperiments" SET "promotedReleaseSha" = 'rel-promoted' WHERE "id" = 'ab_ghost0002'`);
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    await run();
+    expect(h.rollback).toHaveBeenCalledWith("pan1", "rel-promoted");
+    expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("🔴 nothing happens when the manifest doesn't name it, can't be read, or the row was closed more than a week ago", async () => {
+    await closed("ab_ghost0003", "kept_a");
+    h.live.mockResolvedValue({ kind: "none", sha: "rel-c" });
+    await run();
+    h.live.mockResolvedValue({ kind: "unknown" });
+    await run();
+    expect(h.publishProject).not.toHaveBeenCalled();
+
+    await raw().query(`UPDATE "abExperiments" SET "endedAt" = $1, "decidedAt" = $1 WHERE "id" = 'ab_ghost0003'`, [new Date(NOW.getTime() - 8 * DAY)]);
+    h.live.mockReset();
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    await run();
+    expect(h.live).not.toHaveBeenCalled();
+    expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("a project whose NEW launch is in flight (a claimed slot) is left alone: its publish is the one writing the release", async () => {
+    await closed("ab_ghost0004", "kept_a", { projectId: "p1" });
+    await insertExperiment(raw(), { id: "ab_launch001", projectId: "p1", status: "running", startedAt: null, targetPath: "/pricing", updatedAt: NOW, decisionLockedAt: NOW, decisionLockToken: "tok" });
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    await run();
+    expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("a take-down that fails is logged and doesn't stop the pass; the next pass tries again", async () => {
+    await closed("ab_ghost0005", "paused_harm");
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-reemit", overrides: [], splitBps: 5000 });
+    h.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(run()).resolves.toMatchObject({ splitsTakenDown: 0 });
+    error.mockRestore();
+    warn.mockRestore();
+    await expect(run()).resolves.toMatchObject({ splitsTakenDown: 1 });
   });
 });

@@ -1339,7 +1339,7 @@ export async function publishProject(
   // added are purged like the launch's (never throws: the release is live).
   if (reemitted) {
     const { recordAndPurgeReemit } = await import("@/lib/ab/reemit");
-    await recordAndPurgeReemit(reemitted.experiment, v.value, publishResult, publishResult.locales);
+    await recordAndPurgeReemit(reemitted.experiment, v.value, publishResult, publishResult.locales, params.userId);
   }
 
   // 5b'. LEN WATCH + EDGE A/B TESTING: what just went live, kept as a commit off the

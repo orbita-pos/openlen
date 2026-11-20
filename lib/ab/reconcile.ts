@@ -51,6 +51,10 @@ export interface ReconcileDeps {
   cancel(exp: AbExperimentRow): Promise<AbExperimentRow | null>;
   /** (a) what follows a cancel: the edge purge and the copy's cleanup (best-effort, no publish). */
   afterCancel(original: AbExperimentRow, project: EvaluatorProjectInfo): Promise<void>;
+  /** (c) Experiments that ended since `since` and had a split. */
+  listRecentlyClosed(since: Date): Promise<readonly AbExperimentRow[]>;
+  /** (c) puts the live release back without the split; `false` = there was nothing to put back. */
+  takeSplitDown(exp: AbExperimentRow, project: EvaluatorProjectInfo): Promise<boolean>;
   /** Tells the owner, once. */
   tell(project: EvaluatorProjectInfo, exp: AbExperimentRow, verdict: ReconcileVerdict, now: Date): Promise<void>;
 }
@@ -60,13 +64,19 @@ export interface ReconcileStats {
   readonly launchesReleased: number;
   readonly cancelled: number;
   readonly promoted: number;
+  readonly splitsTakenDown: number;
 }
+
+/** How far back (c) looks for an ended experiment whose split might still be live: a swap over a decision happens within seconds of
+ *  it, and a pass runs every half hour. */
+export const CLOSED_LOOKBACK_MS = 7 * 24 * 3_600_000;
 
 export async function reconcileLiveExperiments(deps: ReconcileDeps, now: Date = new Date()): Promise<ReconcileStats> {
   let launchesFinished = 0;
   let launchesReleased = 0;
   let cancelled = 0;
   let promoted = 0;
+  let splitsTakenDown = 0;
 
   for (const exp of await deps.listLive()) {
     // A person's decision is being applied: not ours to touch.
@@ -130,7 +140,31 @@ export async function reconcileLiveExperiments(deps: ReconcileDeps, now: Date = 
     }
   }
 
-  return { launchesFinished, launchesReleased, cancelled, promoted };
+  // (c) A split that OUTLIVED ITS ROW. A system re-emit checks for a decision before it publishes and nothing re-checks after its
+  //     swap, so a keep A / harm stop / «Stop and publish» that closed in between can have a split release swapped over its Control —
+  //     the row is closed and the loop above reads only live rows. For the experiments that ended in the last 7 days, read the live
+  //     manifest; if it still names one, put the release back without it. A project with a launch in flight (a claim with no start, or a
+  //     decision applying) is left alone: its own publish is the one writing the release.
+  try {
+    const busy = new Set((await deps.listLive()).filter((e) => !e.startedAt || e.decisionStatus === "applying").map((e) => e.projectId));
+    for (const exp of await deps.listRecentlyClosed(new Date(now.getTime() - CLOSED_LOOKBACK_MS))) {
+      if (busy.has(exp.projectId)) continue;
+      try {
+        const project = await deps.project(exp.projectId);
+        if (!project?.subdomain) continue;
+        const live = await deps.readLive(project.subdomain, exp.id);
+        if (live.kind !== "live") continue;
+        console.warn(`[ab-reconcile] the live release still carries the split of ${exp.id}, which ended as ${exp.status}; taking it down`);
+        if (await deps.takeSplitDown(exp, project)) splitsTakenDown++;
+      } catch (err) {
+        console.error(`[ab-reconcile] couldn't take the split of ${exp.id} down; the next pass will try again`, err);
+      }
+    }
+  } catch (err) {
+    console.warn("[ab-reconcile] couldn't look for splits that outlived their experiments", err);
+  }
+
+  return { launchesFinished, launchesReleased, cancelled, promoted, splitsTakenDown };
 }
 
 /** Same files, byte for byte (path → content). */
@@ -220,6 +254,12 @@ export function defaultReconcileDeps(io: {
       const [{ purgeExperimentEdge }, { cleanupBestEffort }] = await Promise.all([import("./edge-purge"), import("./lifecycle")]);
       if (project.subdomain) await purgeExperimentEdge(project.subdomain, original, await languagesOf(original.projectId));
       await cleanupBestEffort({ parentId: original.projectId, copyProjectId: original.copyProjectId, branch: original.branch });
+    },
+
+    listRecentlyClosed: async (since) => (await import("./store")).listRecentlyClosedExperiments(since),
+    takeSplitDown: async (exp, project) => {
+      const { takeSplitDown } = await import("./lifecycle");
+      return takeSplitDown(exp, project.ownerId, project.subdomain!);
     },
 
     tell: io.tell,
