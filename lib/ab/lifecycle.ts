@@ -14,6 +14,8 @@ import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-thr
 import { rollbackToSha } from "@/lib/publish/filesystem";
 import { holdDecision, holdLaunchClaim } from "./decision-lock";
 import { abTestingEnabled } from "./enabled";
+import { AbExperimentRunningError } from "./errors";
+import { assertNoLiveExperiment } from "./publish-guard";
 import { purgeExperimentEdge } from "./edge-purge";
 import { readLiveAb } from "./live-manifest";
 import { abSpecOf, loadControlSources } from "./live-publish";
@@ -686,9 +688,27 @@ async function restoreControlLive(
  *  sources having been recorded yet); anything else republishes the PUBLISHED sources with the split gone (`abLive: "ending"`: taking
  *  the split down IS the end of the experiment, the door must not refuse it). Purges the edge. `false` = there was nothing to put back. */
 export async function takeSplitDown(exp: AbExperimentRow, ownerId: string, subdomain: string): Promise<boolean> {
+  // A NEW experiment live on the project (round 4, F): its split is the release's now, or will be as soon as its launch publishes —
+  // and that release replaces the stale one anyway. Taking the old split down would overwrite the new one, so it is left to that
+  // experiment's own lifecycle. The check is also the bottom door's (below: no `abLive` policy, so the door refuses while anything is live).
+  try {
+    await assertNoLiveExperiment(exp.projectId);
+  } catch (err) {
+    if (err instanceof AbExperimentRunningError) {
+      console.warn(`[ab] the split of ${exp.id} (ended as ${exp.status}) is still live, but ${err.experimentId} is live now: leaving it to that experiment's own release`);
+      return false;
+    }
+    throw err;
+  }
   const [project] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, exp.projectId)).limit(1);
   const languages = project?.data?.settings?.languages ?? [];
-  if (exp.status === "promoted_b" && exp.promotedReleaseSha) {
+  const published = await readPublishedSources(exp.projectId);
+  // A promoted winner goes back to the release its promotion published — but ONLY while nothing was published since (round 4, G):
+  // the published sources are no newer than the decision. A later owner publish is in them, and a rollback would drop it, on the live
+  // site and in `publishedReleaseSha`. No sources recorded at all = nothing newer to lose; sources with no time to compare = don't guess.
+  const decidedAt = exp.decidedAt ?? exp.endedAt;
+  const nothingPublishedSince = !published || Boolean(published.publishedAt && decidedAt && published.publishedAt.getTime() <= decidedAt.getTime());
+  if (exp.status === "promoted_b" && exp.promotedReleaseSha && nothingPublishedSince) {
     try {
       await rollbackToSha(subdomain, exp.promotedReleaseSha);
       await db
@@ -702,17 +722,25 @@ export async function takeSplitDown(exp: AbExperimentRow, ownerId: string, subdo
       // The promotion's release was pruned or is gone: fall through to the published sources.
     }
   }
-  const published = await readPublishedSources(exp.projectId);
   if (!published) return false;
-  await publishProject({
-    projectId: exp.projectId,
-    userId: ownerId,
-    subdomain,
-    skipFlightCheck: true,
-    dataChanges: { mode: "skip" },
-    sourcesOverride: { data: published.data, folder: await readPublishedFolder(exp.projectId, published) },
-    abLive: "ending",
-  });
+  try {
+    await publishProject({
+      projectId: exp.projectId,
+      userId: ownerId,
+      subdomain,
+      skipFlightCheck: true,
+      dataChanges: { mode: "skip" },
+      sourcesOverride: { data: published.data, folder: await readPublishedFolder(exp.projectId, published) },
+      // No `abLive` policy (round 4, F): the closed experiment needs no «ending», and with none the bottom door refuses while ANY
+      // experiment is live — one that launched since the check above is not overwritten.
+    });
+  } catch (err) {
+    if (err instanceof AbExperimentRunningError) {
+      console.warn(`[ab] the take-down of ${exp.id} was refused: ${err.experimentId} launched meanwhile; leaving it to that experiment's own release`);
+      return false;
+    }
+    throw err;
+  }
   await purgeExperimentEdge(subdomain, exp, languages);
   return true;
 }
