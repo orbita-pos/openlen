@@ -18,6 +18,8 @@ const es = {
   instaladaProyecto: "Instalada. Está en este proyecto.",
   revisionSigue: "La revisión de seguridad sigue en marcha.",
   volverAIntentar: "Volver a intentar",
+  aprobarEnLaWeb: "Aprueba este conector en OpenLen, en la web, para poder conectarlo.",
+  esperandoInicioDeSesion: "Esperando a que termines de iniciar sesión…",
 };
 type Texts = Record<keyof typeof es, string>;
 
@@ -37,6 +39,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Installed. It's in this project.",
     revisionSigue: "The security review is still running.",
     volverAIntentar: "Try again",
+    aprobarEnLaWeb: "Approve this connector in OpenLen on the web to be able to connect it.",
+    esperandoInicioDeSesion: "Waiting for you to finish signing in…",
   },
   pt: {
     titulo: "Ferramentas",
@@ -52,6 +56,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Instalada. Está neste projeto.",
     revisionSigue: "A revisão de segurança ainda está em andamento.",
     volverAIntentar: "Tentar de novo",
+    aprobarEnLaWeb: "Aprove este conector no OpenLen, na web, para o poder conectar.",
+    esperandoInicioDeSesion: "À espera de que termine de iniciar sessão…",
   },
   fr: {
     titulo: "Outils",
@@ -67,6 +73,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Installé. Il est dans ce projet.",
     revisionSigue: "La revue de sécurité est toujours en cours.",
     volverAIntentar: "Réessayer",
+    aprobarEnLaWeb: "Approuvez ce connecteur dans OpenLen, sur le web, pour pouvoir le connecter.",
+    esperandoInicioDeSesion: "En attente de la fin de votre connexion…",
   },
   de: {
     titulo: "Werkzeuge",
@@ -82,6 +90,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Installiert. Es ist in diesem Projekt.",
     revisionSigue: "Die Sicherheitsprüfung läuft noch.",
     volverAIntentar: "Erneut versuchen",
+    aprobarEnLaWeb: "Genehmige diesen Konnektor in OpenLen im Web, damit du ihn verbinden kannst.",
+    esperandoInicioDeSesion: "Warte darauf, dass du die Anmeldung abschließt…",
   },
   it: {
     titulo: "Strumenti",
@@ -97,6 +107,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Installato. È in questo progetto.",
     revisionSigue: "La revisione di sicurezza è ancora in corso.",
     volverAIntentar: "Riprova",
+    aprobarEnLaWeb: "Approva questo connettore in OpenLen sul web per poterlo collegare.",
+    esperandoInicioDeSesion: "In attesa che tu finisca l'accesso…",
   },
   ja: {
     titulo: "ツール",
@@ -112,6 +124,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "インストールしました。このプロジェクトにあります。",
     revisionSigue: "セキュリティレビューはまだ実行中です。",
     volverAIntentar: "もう一度",
+    aprobarEnLaWeb: "このコネクタを接続するには、Web の OpenLen で承認してください。",
+    esperandoInicioDeSesion: "サインインが終わるのを待っています…",
   },
   ko: {
     titulo: "도구",
@@ -127,6 +141,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "설치했습니다. 이 프로젝트에 있습니다.",
     revisionSigue: "보안 검토가 아직 진행 중입니다.",
     volverAIntentar: "다시 시도",
+    aprobarEnLaWeb: "이 커넥터를 연결하려면 웹의 OpenLen에서 승인하세요.",
+    esperandoInicioDeSesion: "로그인을 마칠 때까지 기다리는 중…",
   },
   zh: {
     titulo: "工具",
@@ -142,6 +158,8 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "已安装。在此项目中。",
     revisionSigue: "安全审查仍在进行中。",
     volverAIntentar: "重试",
+    aprobarEnLaWeb: "请先在网页版 OpenLen 中批准此连接器，才能连接。",
+    esperandoInicioDeSesion: "正在等你完成登录…",
   },
   nl: {
     titulo: "Tools",
@@ -157,5 +175,7 @@ export const textosHerramientas: Record<Idioma, Texts> = {
     instaladaProyecto: "Geïnstalleerd. Hij staat in dit project.",
     revisionSigue: "De beveiligingscontrole loopt nog.",
     volverAIntentar: "Opnieuw proberen",
+    aprobarEnLaWeb: "Keur deze connector goed in OpenLen op het web om hem te kunnen verbinden.",
+    esperandoInicioDeSesion: "Wachten tot je klaar bent met inloggen…",
   },
 };
