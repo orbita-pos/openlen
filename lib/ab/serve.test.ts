@@ -5,6 +5,7 @@
 //   - Sticky cookie + QA query override (`?_ol_ab=a|b` + `X-Robots-Tag: noindex`)
 //   - Internal path blocking (`/openlen/ab.json`, `/openlen/ab/*`)
 //   - Strict Variant B file resolution without fallback to Control A
+import { readFileSync } from "node:fs";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -14,6 +15,7 @@ import {
   AB_HTML_CACHE_CONTROL,
   abResponseHeaders,
   evaluateAbManifest,
+  hashBucket,
   hashVariant,
   isBlockedInternalAbPath,
   isEdgeBot,
@@ -44,49 +46,41 @@ const MANIFEST = parseAbManifest(
 )!;
 
 describe("lib/ab/serve", () => {
-  it("matches Rust crates/edge/src/ab/assign.rs golden hash vectors bit-for-bit", () => {
-    expect(
-      hashVariant(
-        "3f9a1c8e7b2d4012",
-        "ab_9f3c2a1b",
-        "203.0.113.10",
-        "Mozilla/5.0 Chrome/131.0",
-        "es-MX,es;q=0.9",
-        5000,
+  it("matches the Rust golden hash vectors bit-for-bit (one shared JSON file)", () => {
+    const doc = JSON.parse(
+      readFileSync(
+        path.join(process.cwd(), "crates", "edge", "tests", "fixtures", "ab", "hash-vectors.json"),
+        "utf8",
       ),
-    ).toBe("b");
-    expect(
-      hashVariant(
-        "3f9a1c8e7b2d4012",
-        "ab_9f3c2a1b",
-        "203.0.113.10",
-        "Mozilla/5.0 Chrome/131.0",
-        "es-MX,es;q=0.9",
-        3785,
-      ),
-    ).toBe("a");
-    expect(
-      hashVariant(
-        "3f9a1c8e7b2d4012",
-        "ab_9f3c2a1b",
-        "203.0.113.10",
-        "Mozilla/5.0 Chrome/131.0",
-        "es-MX,es;q=0.9",
-        3786,
-      ),
-    ).toBe("b");
-    expect(
-      hashVariant(
-        "3f9a1c8e7b2d4012",
-        "ab_9f3c2a1b",
-        "198.51.100.42",
-        "Mozilla/5.0 Safari/605.1",
-        "en-US,en;q=0.9",
-        5000,
-      ),
-    ).toBe("a");
-    expect(hashVariant("salt0", "ab_deadbeef", "10.0.0.1", "UA", "fr", 5000)).toBe("b");
-    expect(hashVariant("salt1", "ab_00112233", "192.0.2.5", "UA2", "de", 5000)).toBe("a");
+    ) as {
+      vectors: { salt: string; expId: string; ip: string; ua: string; lang: string; bucket: number }[];
+    };
+    expect(doc.vectors.length).toBeGreaterThanOrEqual(10);
+    for (const v of doc.vectors) {
+      expect(hashBucket(v.salt, v.expId, v.ip, v.ua, v.lang), JSON.stringify(v)).toBe(v.bucket);
+      // A visitor is in B iff bucket < splitBps: the boundary is exact.
+      expect(hashVariant(v.salt, v.expId, v.ip, v.ua, v.lang, v.bucket)).toBe("a");
+      if (v.bucket < 9_999) {
+        expect(hashVariant(v.salt, v.expId, v.ip, v.ua, v.lang, v.bucket + 1)).toBe("b");
+      }
+    }
+  });
+
+  it("buckets are uniform, so every split gets its share (200k visitors, +/- 0.5 %)", () => {
+    // The bucket is the first 4 bytes as a u32 modulo 10_000 (bias 2e-6). A u16 modulo 10_000
+    // (the first version) sent 53.4 % of a 50/50 to B and tripped the sample-ratio guard at ~2,300
+    // visits; this pins the exact expectation instead of a band that passes by luck.
+    const N = 200_000;
+    const buckets = new Uint16Array(N);
+    for (let i = 0; i < N; i++) {
+      const ip = `10.${(i >> 16) & 255}.${(i >> 8) & 255}.${i & 255}`;
+      buckets[i] = hashBucket("3f9a1c8e7b2d4012", "ab_9f3c2a1b", ip, "UA", "en");
+    }
+    for (const split of [1000, 2500, 5000, 7500, 9000]) {
+      let inB = 0;
+      for (const b of buckets) if (b < split) inB++;
+      expect(Math.abs(inB / N - split / 10_000), `split ${split}`).toBeLessThanOrEqual(0.005);
+    }
   });
 
   it("blocks /ab.json and /_ab/* internal paths regardless of casing", () => {

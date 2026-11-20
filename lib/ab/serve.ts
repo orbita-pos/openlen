@@ -7,7 +7,7 @@
 //
 // Hash contract (identical to `crates/edge/src/ab/assign.rs`):
 //   SHA-256(`${salt}:${expId}:${clientIp}:${ua}:${acceptLang}`)
-//   bucket = ((digest[0] << 8) | digest[1]) % 10_000
+//   bucket = digest.readUInt32BE(0) % 10_000   (first 4 bytes, big-endian)
 //   variant = bucket < splitBps ? "b" : "a"
 
 import { createHash } from "node:crypto";
@@ -136,6 +136,22 @@ export function parseAbManifest(raw: string | Buffer): AbManifest | null {
   };
 }
 
+/** Bucket (0..9_999) of a visitor, identical to Rust `hash_bucket`. */
+export function hashBucket(
+  salt: string,
+  expId: string,
+  clientIp: string,
+  userAgent: string,
+  acceptLanguage: string,
+): number {
+  const digest = createHash("sha256")
+    .update(`${salt}:${expId}:${clientIp}:${userAgent}:${acceptLanguage}`, "utf8")
+    .digest();
+  // u32, not u16: 65_536 is not a multiple of 10_000, so a u16 would favour buckets 0..5_535 and
+  // send 53.4 % of a 50/50 to B (the bias of a u32 is 2e-6). readUInt32BE is unsigned.
+  return digest.readUInt32BE(0) % 10_000;
+}
+
 export function hashVariant(
   salt: string,
   expId: string,
@@ -146,11 +162,7 @@ export function hashVariant(
 ): AbVariant {
   if (splitBps <= 0) return "a";
   if (splitBps >= 10_000) return "b";
-  const digest = createHash("sha256")
-    .update(`${salt}:${expId}:${clientIp}:${userAgent}:${acceptLanguage}`, "utf8")
-    .digest();
-  const bucket = ((digest[0]! << 8) | digest[1]!) % 10_000;
-  return bucket < splitBps ? "b" : "a";
+  return hashBucket(salt, expId, clientIp, userAgent, acceptLanguage) < splitBps ? "b" : "a";
 }
 
 function readCookie(cookieHeader: string | null | undefined, name: string): string | null {
