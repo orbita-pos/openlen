@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { getExperimentById } from "@/lib/ab/store";
 import { copySources, ensurePublishedSources } from "@/lib/ab/worktree";
 import { db, schema } from "@/lib/db";
-import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
@@ -17,7 +17,8 @@ export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string; expId: string }> },
 ): Promise<Response> {
-  const userId = await usuarioDeLaPeticion(req);
+  // Web session only (review item 27): the comparator is the workspace's; no phone key.
+  const userId = (await auth())?.user?.id;
   if (!userId) return new Response("Unauthorized", { status: 401 });
   const { id, expId } = await params;
   const acceso = await exigirAcceso(id, userId, "ver");

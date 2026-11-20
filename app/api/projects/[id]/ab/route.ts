@@ -10,8 +10,7 @@ import {
   toExperimentView,
   updateExperiment,
 } from "@/lib/ab/store";
-import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
@@ -33,11 +32,12 @@ function json(body: unknown, status: number): Response {
   });
 }
 
-export const GET = paraLaApp(async (
+// Web session only (review item 27): the phone doesn't call this route, so it doesn't take the phone's key and has no CORS.
+export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> => {
-  const userId = await usuarioDeLaPeticion(req);
+): Promise<Response> {
+  const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
   const acceso = await exigirAcceso(id, userId, "ver");
@@ -86,13 +86,13 @@ export const GET = paraLaApp(async (
     ) ?? null;
 
   return json({ enabled: true, active, experiments: views }, 200);
-});
+}
 
-export const POST = paraLaApp(async (
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
-): Promise<Response> => {
-  const userId = await usuarioDeLaPeticion(req);
+): Promise<Response> {
+  const userId = (await auth())?.user?.id;
   if (!userId) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
   const acceso = await exigirAcceso(id, userId, "editar");
@@ -123,6 +123,4 @@ export const POST = paraLaApp(async (
     }
     return json({ error: "internal_error" }, 500);
   }
-});
-
-export const OPTIONS = respuestaPrevia;
+}
