@@ -12,21 +12,22 @@ import { readPublishedSources } from "@/lib/len-watch/published-sources";
 import { publishProject } from "@/lib/projects";
 import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-through-gates";
 import { rollbackToSha } from "@/lib/publish/filesystem";
+import { holdDecision } from "./decision-lock";
 import { abTestingEnabled } from "./enabled";
 import { purgeExperimentEdge } from "./edge-purge";
+import { readLiveAb } from "./live-manifest";
 import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
   claimExperimentDecision,
   claimLaunch,
   createExperimentRow,
-  DECISION_LOCK_CLEARED,
+  finalizeLaunch,
   getExperimentById,
   liveExperimentForProject,
   normalizePrimaryMetric,
   releaseLaunch,
   normalizeTargetPath,
-  releaseDecisionLock,
   toExperimentView,
   transitionBringState,
   updateExperiment,
@@ -68,12 +69,14 @@ export class AbLifecycleError extends Error {
   }
 }
 
-/** A decision that fails gives its lock back as it was; if even that fails, the evaluator's sweep does it in ten minutes
- *  (`releaseStaleDecisionLocks`) — and the error that matters is the decision's, not this one. */
-async function giveBackTheLock(id: string): Promise<void> {
-  await releaseDecisionLock(id).catch((err: unknown) => {
-    console.error("[ab] couldn't give a decision lock back; the evaluator's sweep will", id, err);
-  });
+/** The experiment's copy and branch are deleted AFTER its end was recorded, and a cleanup that fails must not undo the end:
+ *  the row says what the site is, a leftover copy is only clutter (review: record the end first, clean up best-effort). */
+async function cleanupBestEffort(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void> {
+  try {
+    await cleanupAbWorktree(p);
+  } catch (err) {
+    console.error("[ab] couldn't clean up an ended experiment's worktree (it is only clutter now)", p.copyProjectId, err);
+  }
 }
 
 function newExperimentId(): string {
@@ -318,6 +321,8 @@ export async function launchAbExperiment(p: {
 
   // 3b. TAKE THE PROJECT'S ONE LIVE SLOT before writing anything: the check above is a read, and two launches at the same
   //     instant both pass it. The unique index decides; the loser publishes nothing (review: one live experiment per project).
+  //     The claim is `running` with no start yet: nobody can decide it (`claimExperimentDecision` needs a start) and the
+  //     evaluator doesn't judge it until the launch finishes — or the reconcile pass settles it from the live release.
   const claimed = await claimLaunch(exp.id);
   if (claimed === "taken") {
     throw new AbLifecycleError(
@@ -330,9 +335,8 @@ export async function launchAbExperiment(p: {
     throw new AbLifecycleError("invalid_state", `Experiment ${exp.id} is no longer a draft.`, 409);
   }
 
-  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`. A publish that fails gives
-  //    the slot back: the experiment is a draft again.
-  let pub: Awaited<ReturnType<typeof publishProject>>;
+  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
+  let pub: { readonly sha?: string; readonly abOverrides?: readonly string[] };
   try {
     pub = await publishProject({
       projectId: p.projectId,
@@ -345,17 +349,32 @@ export async function launchAbExperiment(p: {
       abExperiment: abSpecOf(exp, variantBSrc, splitBps),
     });
   } catch (err) {
-    await releaseLaunch(exp.id).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
-    throw err;
+    // A publish can throw AFTER its release was swapped in (a step past the swap). What the live release says decides: if it
+    // carries this experiment the split IS live and the row finishes the launch; if it doesn't, the slot goes back to the draft;
+    // if it can't be read now, the slot stays claimed and the reconcile pass settles it from the release (never guess).
+    const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
+    if (live.kind === "live") {
+      console.error("[ab] the launch's publish threw AFTER its release went live; finishing the launch", exp.id, err);
+      pub = { sha: live.sha, abOverrides: live.overrides };
+    } else if (live.kind === "unknown") {
+      console.error("[ab] the launch's publish threw and the live release can't be read; the slot stays claimed for the reconcile pass", exp.id, err);
+      throw err;
+    } else {
+      await releaseLaunch(exp.id).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
+      throw err;
+    }
   }
 
   // 5. Purge what the edge kept of the old page: the target (and its languages), and every asset Variant B overrides.
   const overridePaths = pub.abOverrides ? [...pub.abOverrides] : [];
   await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
 
+  // 6. The final write is a compare-and-swap on the launch's own claim. If it changes nothing, something settled the row
+  //    while the split went live (the reconcile pass): the split is taken down — Control is published again — and the
+  //    launch says it didn't happen.
   const now = new Date();
   const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
-  const updated = await updateExperiment(exp.id, {
+  const updated = await finalizeLaunch(exp.id, {
     status: "running",
     decisionStatus: "none",
     splitBps,
@@ -366,8 +385,27 @@ export async function launchAbExperiment(p: {
     startedAt: now,
     minEndAt,
   });
+  if (!updated) {
+    console.error("[ab] the launch's final write changed nothing: the row was settled meanwhile; republishing Control", exp.id);
+    try {
+      await publishProject({
+        projectId: p.projectId,
+        userId: p.ownerId,
+        subdomain: project.subdomain,
+        skipFlightCheck: true,
+        dataChanges: { mode: "skip" },
+        sourcesOverride: { data: control.data, folder: control.folder },
+        // Taking the split down IS the end of the experiment: the door must not refuse it.
+        abLive: "ending",
+      });
+      await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
+    } catch (err) {
+      console.error("[ab] couldn't republish Control after a launch that was settled meanwhile", exp.id, err);
+    }
+    throw new AbLifecycleError("decision_conflict", "The test was settled while it was launching, so it did not start. Your original is live.", 409);
+  }
 
-  return toExperimentView(updated ?? exp, project.title);
+  return toExperimentView(updated, project.title);
 }
 
 /** What bringing a promoted Variant B into the owner's draft came to: `brought` (it is in; `nothing` = there was nothing to
@@ -446,6 +484,7 @@ export async function promoteVariantB(p: {
       409,
     );
   }
+  const held = holdDecision(locked);
 
   let title: string | undefined;
   let subdomain = "";
@@ -486,21 +525,31 @@ export async function promoteVariantB(p: {
     const promotedSha = typeof gated.body.sha === "string" ? gated.body.sha : null;
     const now = new Date();
     // B is live: the decision is recorded NOW (and the lock is over), the copy and the branch stay until B is in the draft.
-    recorded =
-      (await updateExperiment(locked.id, {
-        status: "promoted_b",
-        decisionStatus: "resolved",
-        ...DECISION_LOCK_CLEARED,
-        bringState: "pending",
-        promotedReleaseSha: promotedSha,
-        winnerVariant: "b",
-        endedAt: locked.endedAt ?? now,
-        decidedAt: now,
-        decidedBy: p.actorId,
-      })) ?? locked;
+    // The write is fenced on this decision's own lock: if the sweep gave it away meanwhile, nothing is overwritten and the
+    // reconcile pass records what the release says.
+    const closed = await held.close({
+      status: "promoted_b",
+      decisionStatus: "resolved",
+      bringState: "pending",
+      promotedReleaseSha: promotedSha,
+      winnerVariant: "b",
+      endedAt: locked.endedAt ?? now,
+      decidedAt: now,
+      decidedBy: p.actorId,
+    });
+    if (!closed) {
+      throw new AbLifecycleError(
+        "decision_conflict",
+        "Variant B went live, but this decision lost its lock before it could be recorded; the system will record it.",
+        409,
+      );
+    }
+    recorded = closed;
   } catch (err) {
-    await giveBackTheLock(locked.id);
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
 
   await purgeExperimentEdge(subdomain, recorded, languages);
@@ -512,7 +561,13 @@ export async function promoteVariantB(p: {
   } catch (err) {
     console.error("[ab] bringing the promoted winner into the draft failed; it stays pending", recorded.id, err);
   }
-  const settled = await settleBring(recorded, outcome);
+  // A cleanup error settling the bring must not turn a successful promotion into a 500: B is live and recorded.
+  let settled: AbExperimentRow | null = null;
+  try {
+    settled = await settleBring(recorded, outcome);
+  } catch (err) {
+    console.error("[ab] settling the promoted winner's bring failed; it stays as it was", recorded.id, err);
+  }
   if (outcome.state === "pending") bringWhenLenIsDone(recorded, p.ownerId, p.actorId);
 
   return {
@@ -586,6 +641,7 @@ export async function keepControlA(p: {
       409,
     );
   }
+  const held = holdDecision(locked);
 
   try {
     const [project] = await db
@@ -595,16 +651,16 @@ export async function keepControlA(p: {
       .limit(1);
 
     if (project?.subdomain) {
-      await restoreControlLive(locked, p.ownerId, project.subdomain);
+      // A published project whose Control can't be put back is NOT «kept»: the split is still live. It fails, like the harm brake.
+      const restored = await restoreControlLive(locked, p.ownerId, project.subdomain);
+      if (!restored) {
+        throw new AbLifecycleError("invalid_state", "Control can't be restored: nothing to restore it from.", 409);
+      }
     }
-    await cleanupAbWorktree({
-      parentId: p.projectId,
-      copyProjectId: locked.copyProjectId,
-      branch: locked.branch,
-    });
 
+    // The end is RECORDED first (fenced on this decision's lock); the copy and the branch are cleaned up after, best-effort.
     const now = new Date();
-    const updated = await updateExperiment(locked.id, {
+    const updated = await held.close({
       status: "kept_a",
       decisionStatus: "resolved",
       winnerVariant: "a",
@@ -612,12 +668,21 @@ export async function keepControlA(p: {
       endedAt: locked.endedAt ?? now,
       decidedAt: now,
       decidedBy: p.actorId,
-      ...DECISION_LOCK_CLEARED,
     });
-    return toExperimentView(updated ?? locked, project?.title);
+    if (!updated) {
+      throw new AbLifecycleError(
+        "decision_conflict",
+        "Your original is live again, but this decision lost its lock before it could be recorded; the system will record it.",
+        409,
+      );
+    }
+    await cleanupBestEffort({ parentId: p.projectId, copyProjectId: locked.copyProjectId, branch: locked.branch });
+    return toExperimentView(updated, project?.title);
   } catch (err) {
-    await giveBackTheLock(locked.id);
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
 }
 
@@ -639,16 +704,16 @@ export async function extendExperiment(p: {
       409,
     );
   }
+  const held = holdDecision(locked);
   try {
     const days = Math.min(14, Math.max(1, p.extraDays ?? 7));
     const targetDate = new Date(Date.now() + days * 24 * 3_600_000);
     const currentStop = locked.startedAt
       ? locked.startedAt.getTime() + maxDurationDaysOf(locked) * 24 * 3_600_000
       : 0;
-    const updated = await updateExperiment(locked.id, {
+    const updated = await held.close({
       status: "running",
       decisionStatus: "none",
-      ...DECISION_LOCK_CLEARED,
       endedAt: null,
       winnerVariant: null,
       // A new verdict will be announced as a new notice.
@@ -658,10 +723,15 @@ export async function extendExperiment(p: {
       maxEndAt: new Date(Math.max(currentStop, targetDate.getTime())),
       decidedBy: p.actorId,
     });
-    return toExperimentView(updated ?? locked);
+    if (!updated) {
+      throw new AbLifecycleError("decision_conflict", "The test was decided by someone else while it was being extended.", 409);
+    }
+    return toExperimentView(updated);
   } catch (err) {
-    await giveBackTheLock(locked.id);
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
 }
 
@@ -680,6 +750,7 @@ export async function autoStopExperimentForHarm(
 ): Promise<{ readonly restored: boolean } | null> {
   const locked = await claimExperimentDecision(exp.id, exp.projectId);
   if (!locked) return null;
+  const held = holdDecision(locked);
   try {
     let restored = false;
     if (subdomain) {
@@ -688,15 +759,11 @@ export async function autoStopExperimentForHarm(
         throw new AbLifecycleError("invalid_state", "Control can't be restored: nothing to restore it from.", 409);
       }
     }
-    await cleanupAbWorktree({
-      parentId: locked.projectId,
-      copyProjectId: locked.copyProjectId,
-      branch: locked.branch,
-    });
-    await updateExperiment(locked.id, {
+    // Recorded first (fenced on this decision's lock), cleaned up after, best-effort: a cleanup that throws after Control
+    // was restored must not give the lock back and leave a live-looking row over a release with no split.
+    const closed = await held.close({
       status: "paused_harm",
       decisionStatus: "resolved",
-      ...DECISION_LOCK_CLEARED,
       winnerVariant: "a",
       copyProjectId: null,
       metricsSnapshot: snapshot,
@@ -704,10 +771,16 @@ export async function autoStopExperimentForHarm(
       endedAt: now,
       decidedAt: now,
     });
+    if (!closed) {
+      throw new AbLifecycleError("decision_conflict", "The harm stop lost its lock before it could be recorded.", 409);
+    }
+    await cleanupBestEffort({ parentId: locked.projectId, copyProjectId: locked.copyProjectId, branch: locked.branch });
     return { restored };
   } catch (err) {
-    await giveBackTheLock(locked.id);
+    await held.release();
     throw err;
+  } finally {
+    held.stop();
   }
 }
 

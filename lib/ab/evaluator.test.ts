@@ -25,6 +25,7 @@ function makeExp(patch: Partial<AbExperimentRow> = {}): AbExperimentRow {
     decisionStatus: "none",
     decisionPrevStatus: null,
     decisionLockedAt: null,
+    decisionLockToken: null,
     maxEndAt: null,
     overridePaths: null,
     copyProjectId: "copy1",

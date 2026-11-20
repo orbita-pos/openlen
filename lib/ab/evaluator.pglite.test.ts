@@ -31,6 +31,7 @@ vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: h.notify }));
 vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: async () => ({ locale: h.ownerLocale }) }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
+vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: async () => ({ kind: "none", sha: "x" }) }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: vi.fn() }));

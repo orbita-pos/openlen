@@ -19,6 +19,7 @@ const h = vi.hoisted(() => ({
   createWorktree: vi.fn(),
   cleanup: vi.fn(),
   purge: vi.fn(),
+  live: vi.fn(),
 }));
 
 vi.mock("@/lib/db", async () => ({
@@ -30,6 +31,7 @@ vi.mock("@/lib/db", async () => ({
 vi.mock("@/lib/assistants/store", () => ({ assistantOfProject: async () => null }));
 vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
+vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: h.live }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: h.runSecurityGate, publishThroughGates: vi.fn() }));
@@ -68,6 +70,9 @@ beforeEach(async () => {
   h.cleanup.mockResolvedValue(undefined);
   h.purge.mockReset();
   h.purge.mockResolvedValue(undefined);
+  // What the live release says about the experiment after a publish that threw: by default, nothing of it is live.
+  h.live.mockReset();
+  h.live.mockResolvedValue({ kind: "none", sha: "rel-live" });
   h.createWorktree.mockResolvedValue({ copyId: "copy-new", branch: "ab/new", base: "base-1" });
   h.publishProject.mockImplementation(async () => {
     await tick(); // a publish takes time: this is where the second launch would slip in
@@ -211,5 +216,51 @@ describe("the launch purges what the edge kept (item 24)", () => {
     await launch("ab_purge002");
     expect(h.purge).toHaveBeenCalledWith("pan1", []);
     expect((await getExperimentById("ab_purge002"))!.overridePaths).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A LAUNCH THAT CAN'T STRAND ITS SLOT (review item 1): the publish can throw after its release is live, and the final write is
+// a compare-and-swap on the launch's own claim.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("the launch's slot (review item 1)", () => {
+  it("🔴 the publish throws AFTER its release went live (the live manifest names the experiment): the launch is finished, not released to draft", async () => {
+    await draft("ab_slot0001", "/");
+    h.publishProject.mockRejectedValue(new Error("a step past the swap failed"));
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-experiment-live", overrides: ["/css/site.css"] });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const view = await launch("ab_slot0001");
+    error.mockRestore();
+    expect(view.status).toBe("running");
+    const row = (await getExperimentById("ab_slot0001"))!;
+    expect(row).toMatchObject({ status: "running", experimentReleaseSha: "rel-experiment-live", overridePaths: ["/css/site.css"], controlReleaseSha: "rel-live" });
+    expect(row.startedAt).toBeInstanceOf(Date);
+  });
+
+  it("🔴 the publish throws and the live release can't be read: the slot STAYS claimed (never a guess) for the reconcile pass", async () => {
+    await draft("ab_slot0002", "/");
+    h.publishProject.mockRejectedValue(new Error("boom"));
+    h.live.mockResolvedValue({ kind: "unknown" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_slot0002")).rejects.toThrow(/boom/);
+    error.mockRestore();
+    expect(await getExperimentById("ab_slot0002")).toMatchObject({ status: "running", startedAt: null });
+  });
+
+  it("🔴 the final write is a compare-and-swap: a row settled meanwhile is not overwritten back to running — Control is republished", async () => {
+    await draft("ab_slot0003", "/");
+    h.publishProject.mockImplementationOnce(async () => {
+      // while the release is being written, the reconcile pass (or anything else) closes the row
+      await raw().query(`UPDATE "abExperiments" SET "status" = 'cancelled', "decisionStatus" = 'resolved' WHERE "id" = 'ab_slot0003'`);
+      return { sha: "release-experiment" };
+    });
+    h.publishProject.mockResolvedValueOnce({ sha: "release-control-again" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_slot0003")).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    expect(await getExperimentById("ab_slot0003")).toMatchObject({ status: "cancelled", decisionStatus: "resolved" });
+    expect(h.publishProject).toHaveBeenCalledTimes(2);
+    expect(h.publishProject.mock.calls[1]![0]).toMatchObject({ abLive: "ending" });
+    expect(h.publishProject.mock.calls[1]![0]).not.toHaveProperty("abExperiment");
   });
 });

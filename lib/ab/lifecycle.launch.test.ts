@@ -28,6 +28,7 @@ vi.mock("@/lib/db", async () => ({
 vi.mock("@/lib/assistants/store", () => ({ assistantOfProject: async () => null }));
 vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
+vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: async () => ({ kind: "none", sha: "x" }) }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: h.runSecurityGate, publishThroughGates: vi.fn() }));
@@ -41,8 +42,11 @@ vi.mock("@/lib/ab/store", () => ({
   claimExperimentDecision: vi.fn(),
   releaseDecisionLock: vi.fn(),
   updateExperiment: h.updateExperiment,
-  claimLaunch: async () => ({ ...h.exp, status: "running" }),
+  claimLaunch: async () => ({ ...h.exp, status: "running", updatedAt: new Date("2026-11-19T10:00:00Z") }),
   releaseLaunch: vi.fn(),
+  finalizeLaunch: async (id: string, patch: Record<string, unknown>) => h.updateExperiment(id, patch),
+  closeDecision: vi.fn(),
+  heartbeatDecisionLock: vi.fn(),
   toExperimentView: (row: unknown) => row,
   normalizePrimaryMetric: (m: unknown) => m,
   normalizeTargetPath: (p: unknown) => p,
