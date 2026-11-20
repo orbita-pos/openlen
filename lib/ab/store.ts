@@ -3,9 +3,10 @@
 // so simultaneous clicks from Web and Mobile can never double-promote or double-rollback.
 import "server-only";
 
-import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { HARM_NOTICE_DAYS } from "./cards";
 import {
   AB_ACTIVE_STATUSES,
   AB_LIVE_STATUSES,
@@ -310,10 +311,15 @@ export async function pendingDecisionsForProjects(
   });
 }
 
+/** The cards a person's screens show for these projects: the decisions waiting for them AND the experiments the harm brake
+ *  stopped in the last `HARM_NOTICE_DAYS` — the push and the email of a harm stop open a screen, and it has to show what
+ *  they talk about (review item 23). A harm stop has no decision to take: the view says `paused_harm`, resolved. */
 export async function pendingExperimentViewsForProjects(
   projectIds: readonly string[],
+  now: Date = new Date(),
 ): Promise<AbExperimentView[]> {
   if (projectIds.length === 0) return [];
+  const harmSince = new Date(now.getTime() - HARM_NOTICE_DAYS * 86_400_000);
   const rows = await db
     .select({
       exp: schema.abExperiments,
@@ -324,8 +330,13 @@ export async function pendingExperimentViewsForProjects(
     .where(
       and(
         inArray(schema.abExperiments.projectId, [...projectIds]),
-        eq(schema.abExperiments.decisionStatus, "pending"),
-        inArray(schema.abExperiments.status, ["winner_ready", "inconclusive"]),
+        or(
+          and(
+            eq(schema.abExperiments.decisionStatus, "pending"),
+            inArray(schema.abExperiments.status, ["winner_ready", "inconclusive"]),
+          ),
+          and(eq(schema.abExperiments.status, "paused_harm"), gte(schema.abExperiments.endedAt, harmSince)),
+        ),
       ),
     )
     .orderBy(desc(schema.abExperiments.evaluatedAt));

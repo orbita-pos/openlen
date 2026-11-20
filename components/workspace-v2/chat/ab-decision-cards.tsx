@@ -6,6 +6,7 @@
 // the exact same one-click decision experience.
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { visibleAbCards } from "@/lib/ab/cards";
 import type { AbExperimentView } from "@/lib/ab/types";
 import { AbExperimentCard } from "../ab/ab-experiment-card";
 import { AbDecisionCard } from "../ab/ab-decision-card";
@@ -64,14 +65,7 @@ export function AbDecisionCards({
 
   if (!enabled) return null;
 
-  const visible = experiments.filter(
-    (e) =>
-      e.status === "draft" ||
-      ((e.status === "winner_ready" || e.status === "inconclusive") &&
-        e.decisionStatus === "pending") ||
-      e.bringState === "conflict" ||
-      (highlight !== null && e.id === highlight),
-  );
+  const visible = visibleAbCards(experiments, { highlight });
 
   if (visible.length === 0) return null;
 

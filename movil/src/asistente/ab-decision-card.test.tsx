@@ -103,6 +103,15 @@ describe("MobileAbDecisionCard", () => {
     expect(host.textContent).toContain("own.ab.promotedDone");
   });
 
+  it("🔴 a test the harm brake stopped is a card to read: its headline and notice, no decision buttons (item 23)", async () => {
+    const { host } = await mountCard({ ...EXP, status: "paused_harm", decisionStatus: "resolved", winnerVariant: "a" });
+    expect(host.textContent).toContain("own.ab.harmStopTitle");
+    expect(host.textContent).toContain("own.ab.pausedHarmNotice");
+    expect(host.querySelector("[data-ab-promote-b]")).toBeNull();
+    expect(host.querySelector("[data-ab-keep-a]")).toBeNull();
+    expect(host.querySelector("[data-ab-extend]")).toBeNull();
+  });
+
   it("shows conflict message when another device decided first (409)", async () => {
     vi.mocked(decidirPruebaAb).mockResolvedValueOnce({
       ok: false,
