@@ -68,6 +68,10 @@ export async function register() {
       void import("@/lib/assistants/summary/pass")
         .then((m) => m.startMorningSummaries())
         .catch((err) => console.error("[assistant-summary] no se pudo arrancar la pasada", err));
+      // Edge A/B Testing evaluator (Plan 3): evaluates running experiments every 30 min. OPENLEN_AB_TESTING=1 enables it.
+      void import("@/lib/ab/evaluator")
+        .then((m) => m.startAbEvaluator())
+        .catch((err) => console.error("[ab-evaluator] no se pudo arrancar el evaluador A/B", err));
       // Len's subagents (spec local 2026-11-01-subagentes-de-len): the ones a restart cut close as stopped, and
       // every notice that never reached Len goes to him, one server turn per project. OPENLEN_SUBAGENTS=0 leaves it.
       if (process.env.OPENLEN_SUBAGENTS !== "0") {

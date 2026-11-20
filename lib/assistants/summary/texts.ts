@@ -14,6 +14,7 @@ import ko from "@/messages/ko/panelsChat.json";
 import nl from "@/messages/nl/panelsChat.json";
 import pt from "@/messages/pt/panelsChat.json";
 import zh from "@/messages/zh/panelsChat.json";
+import { abSummaryLine } from "@/lib/ab/texts";
 import { idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 
 import type { SummaryCounts } from "./count";
@@ -33,7 +34,9 @@ export function summaryTexts(locale: string, name: string, c: SummaryCounts, url
     ...(c.contacts > 0 ? [t("contacts", { count: c.contacts })] : []),
     ...(c.requests > 0 ? [t("requests", { count: c.requests })] : []),
   ];
-  const line = t("push", { list: new Intl.ListFormat(l, { type: "conjunction" }).format(parts) });
+  const abLine = c.abReady && c.abReady.length > 0 ? abSummaryLine(l, c.abReady) : "";
+  const yesterdayLine = parts.length > 0 ? t("push", { list: new Intl.ListFormat(l, { type: "conjunction" }).format(parts) }) : "";
+  const line = yesterdayLine && abLine ? `${yesterdayLine} ${abLine}` : yesterdayLine || abLine;
   const push = line.length > PUSH_MAX ? `${line.slice(0, PUSH_MAX - 1)}…` : line;
   return { title: name, push, emailSubject: t("emailSubject", { name }), emailText: t("emailText", { push, name, url }) };
 }

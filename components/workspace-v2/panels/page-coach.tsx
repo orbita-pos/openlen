@@ -8,6 +8,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { FlaskConical } from "lucide-react";
 import { LenMark, Wand, X } from "../icons";
 import { getCoachTip, isActionable } from "@/lib/analytics/coach";
 import type { Funnel } from "@/lib/analytics/queries";
@@ -15,9 +16,11 @@ import type { Funnel } from "@/lib/analytics/queries";
 export function PageCoach({
   funnel,
   onApplyTip,
+  abEnabled = false,
 }: {
   funnel: Funnel;
   onApplyTip?: (instruction: string) => void;
+  abEnabled?: boolean;
 }) {
   const t = useTranslations("panelsB");
   const [dismissed, setDismissed] = useState(false);
@@ -48,7 +51,7 @@ export function PageCoach({
       </div>
       <p className="text-[12px] fg leading-relaxed">{message}</p>
       {action && onApplyTip && (
-        <div className="mt-2 flex items-center gap-1.5">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -60,6 +63,20 @@ export function PageCoach({
             <Wand size={12} />
             <span>{t("coach.apply")}</span>
           </button>
+          {abEnabled && (
+            <button
+              type="button"
+              data-coach-test-ab=""
+              onClick={() => {
+                onApplyTip(t("coach.abInstruction", { instruction: t(`coach.instruction.${tip.id}`) }));
+                setDismissed(true);
+              }}
+              className="inline-flex items-center gap-1 h-7 px-2.5 rounded-md text-[11.5px] font-medium border bd bg-elev fg hover:bg-hover transition"
+            >
+              <FlaskConical size={12} />
+              <span>{t("coach.testAb")}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setDismissed(true)}

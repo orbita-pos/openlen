@@ -133,7 +133,9 @@
       "booked": "Booked",
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
-    }
+    },
+    "testAb": "Prova con A/B",
+    "abInstruction": "Crea un test A/B con create_ab_variant per testare questo miglioramento senza modificare ancora la pagina pubblicata: {instruction}"
   },
   "toast": {
     "restored": "Ripristinata alla versione {label}",

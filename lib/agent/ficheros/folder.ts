@@ -60,7 +60,7 @@ export const RESERVED_ROOTS: readonly string[] = [
 ];
 /** Ficheros sueltos que no son de la carpeta: el manual de Len y el LEN.md
  *  del proyecto (su memoria, `len-md.ts`), que con `.md` se PUBLICARÍA. */
-const RESERVED_FILES: readonly string[] = ["/AGENTS.md", "/LEN.md"];
+const RESERVED_FILES: readonly string[] = ["/AGENTS.md", "/LEN.md", "/ab.json"];
 /** Las carpetas ocultas que no son del proyecto: el git de Len (que no es un fichero de la carpeta, como
  *  en un repo) y la de Len (su memoria, sus skills). `.openlen` es de la plataforma, aparte. */
 const HIDDEN_ROOTS: readonly string[] = [".git", ".len"];
@@ -82,7 +82,7 @@ export type FolderPathClass = { readonly ok: true; readonly kind: FolderFileKind
 export function classifyFolderPath(path: string): FolderPathClass {
   if (esFicheroDeSupabase(path)) return { ok: true, kind: "supabase" };
   const segments = path.split("/").slice(1);
-  if (RESERVED_FILES.includes(path) || segments[0] === ".openlen") {
+  if (RESERVED_FILES.includes(path) || segments[0] === ".openlen" || segments[0] === "_ab") {
     return { ok: false, reason: `${path} belongs to the platform and is read-only.` };
   }
   // OPEN NPM: /node_modules is what npm installs, read-only (`lib/apps/npm/node-modules.ts`).

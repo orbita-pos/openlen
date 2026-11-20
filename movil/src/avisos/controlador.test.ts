@@ -172,4 +172,12 @@ describe("her pushes", () => {
     await p.eventos().abrir({ projectId: "p1", recipientUserId: "otra", type: "assistant_summary", asistente: "a1" });
     expect(p.asistentes).toEqual([]);
   });
+
+  it("ab_result push opens her Pedidos tab on the experiment card when asistente is present, else opens the project", async () => {
+    const p = prueba(); await p.control.iniciar();
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "ab_result", tarjeta: "ab_9f3c2a1b", asistente: "a1" });
+    expect(p.asistentes).toEqual([["a1", { parte: "pedidos", tarjeta: "ab_9f3c2a1b" }]]);
+    await p.eventos().abrir({ projectId: "p1", recipientUserId: "ana", type: "ab_result", tarjeta: "ab_9f3c2a1b" });
+    expect(p.abiertos).toEqual(["p1"]);
+  });
 });

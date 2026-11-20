@@ -164,7 +164,25 @@ export interface LenAvisoEvent {
   emailText: string;
 }
 
-export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent | AssistantSummaryEvent;
+/** EDGE A/B TESTING (Plan 3): an experiment reached a verdict (winner, inconclusive, or auto-stopped for harm).
+ *  When the owner has an assistant with morning summary enabled, winner/inconclusive wait for the 8 a.m. summary;
+ *  harm_stop and projects without morning summary notify directly. Texts come pre-localized in `lib/ab/texts.ts`. */
+export interface AbResultEvent {
+  type: "ab_result";
+  projectId: string;
+  recipientUserId: string;
+  experimentId: string;
+  assistantId?: string;
+  assistantSlug?: string;
+  locale: string;
+  verdict: "winner_b" | "winner_a" | "inconclusive" | "harm_stop";
+  title: string;
+  push: string;
+  emailSubject: string;
+  emailText: string;
+}
+
+export type NotificationEvent = ChatMessageEvent | LenTurnoEvent | MencionEvent | FunctionsQuotaEvent | AppAiCapEvent | EmailDomainEvent | EmailQuotaEvent | LenWatchEvent | LenAvisoEvent | AssistantAsleepEvent | AssistantSummaryEvent | AbResultEvent;
 
 export interface NotificationPrefs {
   webPushEnabled: boolean;

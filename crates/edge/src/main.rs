@@ -11,9 +11,9 @@ use tracing::{info, warn};
 use observability::{install_exporter, spawn_process_collector_loop};
 use openlen_edge::{
     bind_with_lookup_and_layers, build_dynamic_config, build_lookup_from_config,
-    ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair, run_http_redirect,
-    run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer,
-    DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig, RateLimitConfig,
+    ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair, run_ab_loopback,
+    run_http_redirect, run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer,
+    AppState, DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig, RateLimitConfig,
     RateLimitLayer, RenewalConfig,
 };
 use openlen_rate_limit::{LimitWindow, SmartCache, SmartCacheConfig};
@@ -268,12 +268,41 @@ async fn main() -> Result<()> {
         None
     };
 
+    let ab_loopback_task = if let Some(bind_addr) = cfg.ab_loopback_bind {
+        if !bind_addr.ip().is_loopback() {
+            warn!(
+                addr = %bind_addr,
+                "A/B loopback bind is not loopback — refusing to start it externally"
+            );
+            None
+        } else {
+            let ab_shutdown = shutdown.clone();
+            let ab_state = AppState::with_lookup(
+                &cfg,
+                lookup.clone() as Arc<dyn openlen_edge::DomainLookup>,
+            )?;
+            Some(tokio::spawn(async move {
+                let signal = async move { ab_shutdown.notified().await };
+                run_ab_loopback(bind_addr, ab_state, signal).await
+            }))
+        }
+    } else {
+        None
+    };
+
     shutdown_signal().await;
     shutdown.notify_waiters();
 
     let tls_result = tls_task.await?;
     if let Err(err) = &tls_result {
         warn!(error = %err, "TLS listener exited with error");
+    }
+    if let Some(handle) = ab_loopback_task {
+        match handle.await {
+            Ok(Ok(())) => {}
+            Ok(Err(err)) => warn!(error = %err, "A/B loopback sidecar exited with error"),
+            Err(err) => warn!(error = %err, "A/B loopback sidecar task panicked"),
+        }
     }
     if let Some(handle) = redirect_task {
         match handle.await {

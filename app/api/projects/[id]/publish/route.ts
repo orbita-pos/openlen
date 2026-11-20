@@ -68,6 +68,8 @@ const PublishBodySchema = z.object({
   locale: z.string().min(2).max(10).optional(),
   /** «Publicar igual» sin el arreglo de Len Watch que el borrador aún no tiene (428 len_watch_fix_pending). */
   acceptLenWatchFix: z.string().min(1).max(64).optional(),
+  /** Confirmación explícita para cerrar una prueba A/B en curso al publicar el borrador (428 ab_experiment_running). */
+  stopActiveAb: z.boolean().optional(),
 });
 
 export const POST = paraLaApp(async (
@@ -115,6 +117,7 @@ export const POST = paraLaApp(async (
     acceptSecurityFingerprint: parsed.data.acceptSecurityFingerprint,
     locale: parsed.data.locale,
     ...(parsed.data.acceptLenWatchFix ? { acceptLenWatchFix: parsed.data.acceptLenWatchFix } : {}),
+    ...(parsed.data.stopActiveAb ? { stopActiveAb: true } : {}),
     source: "person",
   });
   return json(r.body, r.status);

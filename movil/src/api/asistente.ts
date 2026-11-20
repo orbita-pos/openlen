@@ -2,6 +2,7 @@
 // tab reads and does, over the routes that take the phone's key (app/api/assistants/**) — the same answers her place
 // on the web gets. Talking with her goes through `mandarALen` with her id (./chat.ts), as on the web.
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
+import type { AbExperimentView } from "@/lib/ab/types";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
 import type { AssistantTone } from "@/lib/assistants/names";
 import type { FigureLook } from "@/lib/figure/look";
@@ -99,4 +100,42 @@ export async function tocarPedido(c: ClienteDeOpenLen, id: string, cardId: strin
   if (res?.ok) return { ok: true };
   const body = (await res?.json().catch(() => null)) as { error?: unknown } | null;
   return { ok: false, error: typeof body?.error === "string" ? body.error : res ? String(res.status) : "network" };
+}
+
+/** Pending Edge A/B decision cards across all projects served by this assistant (Plan 3). */
+export const leerPruebasAb = (c: ClienteDeOpenLen, id: string) =>
+  leer<AbExperimentView>(c, suya(id, "/ab-decisions"), "decisions");
+
+/** One-tap decision on an A/B test from the phone: promote_b | keep_a | extend. */
+export async function decidirPruebaAb(
+  c: ClienteDeOpenLen,
+  projectId: string,
+  expId: string,
+  action: "promote_b" | "keep_a" | "extend",
+  locale?: string,
+): Promise<{ ok: true; experiment?: AbExperimentView; bringState?: string } | { ok: false; status?: number; error: string }> {
+  const res = await c
+    .pedir(`/api/projects/${encodeURIComponent(projectId)}/ab/${encodeURIComponent(expId)}/decide`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action, ...(locale ? { locale } : {}) }),
+    })
+    .catch(() => null);
+  const body = (await res?.json().catch(() => null)) as {
+    experiment?: AbExperimentView;
+    bringState?: string;
+    error?: unknown;
+  } | null;
+  if (res?.ok) {
+    return {
+      ok: true,
+      ...(body?.experiment ? { experiment: body.experiment } : {}),
+      ...(typeof body?.bringState === "string" ? { bringState: body.bringState } : {}),
+    };
+  }
+  return {
+    ok: false,
+    ...(res ? { status: res.status } : {}),
+    error: typeof body?.error === "string" ? body.error : res ? String(res.status) : "network",
+  };
 }

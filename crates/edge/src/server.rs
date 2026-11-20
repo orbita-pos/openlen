@@ -21,11 +21,15 @@ use tower_http::set_header::SetResponseHeaderLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 
+use crate::ab::{
+    evaluate_request, is_blocked_internal_path, AbDecision, AbManifestCache, AssignSource, Variant,
+};
 use crate::config::EdgeConfig;
-use crate::files::{cache_control_for, resolve, resolve_strict, Resolved};
+use crate::files::{cache_control_for, resolve, resolve_strict, Resolved, AB_HTML_CACHE_CONTROL};
 use crate::lookup::{DomainLookup, MockDomainLookup};
 use crate::middleware::RateLimitLayer;
 use crate::proxy::{self, decide_route, disk_base_for, DiskBase, NodeClient, RouteAction};
+use crate::routing::extract_subdomain;
 
 /// Cache-Control for files served out of the shared uploads root. 30 days
 /// immutable matches nginx's `expires 30d; Cache-Control: public, immutable`
@@ -108,6 +112,9 @@ pub struct AppState {
     pub proxy_paths: Arc<Vec<String>>,
     pub custom_domain_proxy_paths: Arc<Vec<String>>,
     pub domain_lookup: Arc<dyn DomainLookup>,
+    /// Optional per-release `ab.json` manifest cache. `None` when A/B routing
+    /// is disabled (`OPENLEN_EDGE_AB_ENABLED=false`).
+    pub ab_cache: Option<Arc<AbManifestCache>>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -121,6 +128,7 @@ impl std::fmt::Debug for AppState {
             .field("proxy_paths", &self.proxy_paths)
             .field("custom_domain_proxy_paths", &self.custom_domain_proxy_paths)
             .field("domain_lookup", &self.domain_lookup)
+            .field("ab_enabled", &self.ab_cache.is_some())
             .finish()
     }
 }
@@ -175,6 +183,9 @@ impl AppState {
             proxy_paths: Arc::new(config.proxy_paths.clone()),
             custom_domain_proxy_paths: Arc::new(config.custom_domain_proxy_paths.clone()),
             domain_lookup,
+            ab_cache: config
+                .ab_enabled
+                .then(|| Arc::new(AbManifestCache::new(config.ab_manifest_cache_max))),
         })
     }
 }
@@ -241,6 +252,7 @@ async fn serve_or_proxy(
         .or_else(|| req.uri().authority().map(|a| a.as_str().to_owned()))
         .unwrap_or_default();
     let url_path = req.uri().path().to_owned();
+    let query = req.uri().query().map(str::to_owned);
 
     let started = std::time::Instant::now();
     let action = decide_route(
@@ -254,12 +266,32 @@ async fn serve_or_proxy(
 
     let response = match action {
         RouteAction::Proxy => proxy::forward(&state.node_client, peer, host.clone(), req).await,
-        RouteAction::Disk { sub } => serve_from_disk(&state, peer, &sub, &url_path).await,
+        RouteAction::Disk { sub } => {
+            serve_from_disk(
+                &state,
+                peer,
+                &sub,
+                &url_path,
+                query.as_deref(),
+                req.headers(),
+                true,
+            )
+            .await
+        }
         RouteAction::CustomDomain { host: custom_host } => {
             match state.domain_lookup.lookup(&custom_host).await {
                 Ok(Some(sub)) => {
                     debug!(%peer, host = %custom_host, %sub, "custom domain resolved");
-                    serve_from_disk(&state, peer, &sub, &url_path).await
+                    serve_from_disk(
+                        &state,
+                        peer,
+                        &sub,
+                        &url_path,
+                        query.as_deref(),
+                        req.headers(),
+                        true,
+                    )
+                    .await
                 }
                 Ok(None) => {
                     debug!(%peer, host = %custom_host, "custom domain unknown or unverified");
@@ -321,34 +353,146 @@ async fn serve_or_proxy(
     response
 }
 
+/// Resolve a Variant B candidate file strictly inside `release_root` without
+/// SPA fallback to Control A's `/index.html`.
+fn resolve_variant_b_strict(release_root: &Path, variant_b_path: &str, is_page: bool) -> Resolved {
+    if let r @ Resolved::File(_) = resolve_strict(release_root, variant_b_path) {
+        return r;
+    }
+    if is_page {
+        let trimmed = variant_b_path.trim_end_matches('/');
+        if !trimmed.ends_with(".html") && !trimmed.ends_with(".htm") {
+            let idx = format!("{trimmed}/index.html");
+            if let r @ Resolved::File(_) = resolve_strict(release_root, &idx) {
+                return r;
+            }
+        }
+    }
+    Resolved::NotFound
+}
+
 async fn serve_from_disk(
     state: &AppState,
     peer: SocketAddr,
     sub: &str,
     url_path: &str,
+    query: Option<&str>,
+    req_headers: &axum::http::HeaderMap,
+    secure_cookie: bool,
 ) -> Response<Body> {
+    // Never expose internal A/B manifests or `_ab/` directories directly over HTTP.
+    if is_blocked_internal_path(url_path) {
+        debug!(%peer, sub, path = %url_path, "blocked direct access to internal A/B path");
+        return not_found();
+    }
+
     // /assets/* lives at `<publish>/<sub>/assets/...` — a sibling of `current/`
     // managed by the publish flow. Keeping it outside `current/` lets the
     // file survive release rotations (the assets dir is shared across deploys).
-    let sub_root = match disk_base_for(url_path) {
+    let base = disk_base_for(url_path);
+    let mut sub_root = match base {
         DiskBase::Current => state.publish_root.join(sub).join("current"),
         DiskBase::Sibling => state.publish_root.join(sub),
     };
 
-    match resolve(&sub_root, url_path) {
+    let mut ab_decision: Option<AbDecision> = None;
+    let mut resolved_file: Option<Resolved> = None;
+
+    if matches!(base, DiskBase::Current) {
+        if let Some(cache) = &state.ab_cache {
+            let (decision, release_dir) = evaluate_request(
+                cache,
+                &state.publish_root,
+                sub,
+                url_path,
+                query,
+                req_headers,
+                peer,
+                secure_cookie,
+            )
+            .await;
+            if let Some(dir) = release_dir {
+                sub_root = dir;
+            }
+            if let Some(mut d) = decision {
+                if let Some(ref path_b) = d.variant_b_path {
+                    match resolve_variant_b_strict(&sub_root, path_b, d.is_page_route) {
+                        Resolved::File(p) => {
+                            resolved_file = Some(Resolved::File(p));
+                            ab_decision = Some(d);
+                        }
+                        _ => {
+                            // Variant B did not ship this specific locale/asset file:
+                            // gracefully serve Control A without misreporting Variant B.
+                            if d.is_page_route {
+                                d.variant = Variant::A;
+                                d.variant_b_path = None;
+                                ab_decision = Some(d);
+                            }
+                        }
+                    }
+                } else {
+                    ab_decision = Some(d);
+                }
+            }
+        }
+    }
+
+    let resolved = resolved_file.unwrap_or_else(|| resolve(&sub_root, url_path));
+
+    match resolved {
         Resolved::File(path) => match tokio::fs::read(&path).await {
             Ok(bytes) => {
                 let ext = path.extension().and_then(|s| s.to_str());
-                let cache_ctl = cache_control_for(ext);
                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
+                let cache_ctl = if ab_decision.is_some() {
+                    AB_HTML_CACHE_CONTROL
+                } else {
+                    cache_control_for(ext)
+                };
                 debug!(
                     %peer, sub, path = %url_path, file = %path.display(),
-                    bytes = bytes.len(), "serve file"
+                    bytes = bytes.len(), ab = ?ab_decision.as_ref().map(|d| (&d.experiment_id, d.variant)),
+                    "serve file"
                 );
-                Response::builder()
+                let mut builder = Response::builder()
                     .status(StatusCode::OK)
                     .header(header::CONTENT_TYPE, mime.as_ref())
-                    .header(header::CACHE_CONTROL, cache_ctl)
+                    .header(header::CACHE_CONTROL, cache_ctl);
+
+                if let Some(d) = ab_decision {
+                    builder = builder.header(header::VARY, "Cookie");
+                    let ab_hdr = if d.source == AssignSource::Bot {
+                        format!("{}:a-bot", d.experiment_id)
+                    } else {
+                        format!("{}:{}", d.experiment_id, d.variant.as_str())
+                    };
+                    if let Ok(val) = HeaderValue::from_str(&ab_hdr) {
+                        builder = builder.header(HeaderName::from_static("x-openlen-ab"), val);
+                    }
+                    let etag = format!(
+                        "W/\"{}-{}-{}\"",
+                        d.experiment_id,
+                        d.variant.as_str(),
+                        bytes.len()
+                    );
+                    if let Ok(val) = HeaderValue::from_str(&etag) {
+                        builder = builder.header(header::ETAG, val);
+                    }
+                    if let Some(cookie) = d.set_cookie {
+                        if let Ok(val) = HeaderValue::from_str(&cookie) {
+                            builder = builder.header(header::SET_COOKIE, val);
+                        }
+                    }
+                    if d.is_override {
+                        builder = builder.header(
+                            HeaderName::from_static("x-robots-tag"),
+                            HeaderValue::from_static("noindex"),
+                        );
+                    }
+                }
+
+                builder
                     .body(Body::from(bytes))
                     .expect("response is valid")
             }
@@ -369,6 +513,92 @@ async fn serve_from_disk(
             (StatusCode::BAD_REQUEST, "bad request\n").into_response()
         }
     }
+}
+
+/// Validate a subdomain slug passed via `X-OpenLen-Sub` from Caddy loopback.
+fn is_valid_sub_header(sub: &str) -> bool {
+    !sub.is_empty()
+        && sub.len() <= 63
+        && !sub.starts_with('-')
+        && !sub.ends_with('-')
+        && sub
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
+async fn ab_loopback_handler(
+    State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    req: Request<Body>,
+) -> Response<Body> {
+    if !peer.ip().is_loopback() {
+        warn!(%peer, "rejected non-loopback peer on A/B sidecar listener");
+        return (StatusCode::FORBIDDEN, "forbidden\n").into_response();
+    }
+    let sub = req
+        .headers()
+        .get("x-openlen-sub")
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|s| is_valid_sub_header(s))
+        .map(str::to_owned)
+        .or_else(|| {
+            req.headers()
+                .get(header::HOST)
+                .and_then(|v| v.to_str().ok())
+                .and_then(extract_subdomain)
+        });
+
+    let Some(sub) = sub else {
+        return not_found();
+    };
+    let url_path = req.uri().path().to_owned();
+    let query = req.uri().query().map(str::to_owned);
+    serve_from_disk(
+        &state,
+        peer,
+        &sub,
+        &url_path,
+        query.as_deref(),
+        req.headers(),
+        true,
+    )
+    .await
+}
+
+/// Router for the loopback-only Caddy `@has_ab` sidecar listener (`127.0.0.1:8085`).
+pub fn ab_loopback_router(state: AppState) -> Router {
+    Router::new()
+        .route("/_edge/version", get(version))
+        .fallback(ab_loopback_handler)
+        .with_state(state)
+        .layer(SetResponseHeaderLayer::overriding(
+            header::SERVER,
+            HeaderValue::from_static(SERVER_HEADER_VALUE),
+        ))
+}
+
+/// Bind and serve the loopback-only HTTP A/B sidecar behind Caddy until `shutdown` resolves.
+pub async fn run_ab_loopback(
+    bind: SocketAddr,
+    state: AppState,
+    shutdown: impl Future<Output = ()> + Send + 'static,
+) -> Result<()> {
+    if !bind.ip().is_loopback() {
+        anyhow::bail!("A/B loopback sidecar must bind to a loopback address, got {bind}");
+    }
+    let listener = TcpListener::bind(bind)
+        .await
+        .with_context(|| format!("failed to bind A/B sidecar on {bind}"))?;
+    let local_addr = listener.local_addr()?;
+    info!(addr = %local_addr, "openlen-edge A/B loopback sidecar listening");
+    axum::serve(
+        listener,
+        ab_loopback_router(state).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown)
+    .await
+    .context("A/B loopback sidecar exited with error")
 }
 
 /// Serve `<root>/<rel_path>` direct from disk for the shared-root routes
