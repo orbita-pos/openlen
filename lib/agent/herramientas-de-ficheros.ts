@@ -56,7 +56,7 @@ import { MAX_NOTES_PER_PROJECT, MEMORY_INDEX_MAX, buildMemoryIndex, parseNote, s
 import { SITE_FILE_REFUSAL, deletionRefusal } from "@/lib/agent/terminal/deletion-rule";
 import { findSecret } from "@/lib/agent/memory/secrets";
 import { ONLY_SKILL_MD, isUnderSkillsDir, skillPath, skillPathOf } from "@/lib/agent/skills/paths";
-import { parseSkillFile } from "@/lib/agent/skills/skill-file";
+import { MAX_SKILLS_PER_SCOPE, parseSkillFile } from "@/lib/agent/skills/skill-file";
 import { bundledSkillNames, bundledSkills } from "@/lib/agent/skills/bundled";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { parseAgentFile } from "@/lib/agent/subagents/agent-file";
@@ -1040,8 +1040,7 @@ async function guardarMemoria(
   };
 }
 
-/** Skills per scope, as many as memory notes per project. */
-export const MAX_SKILLS_PER_SCOPE = 100;
+export { MAX_SKILLS_PER_SCOPE };
 
 /**
  * A USER SKILL IS SAVED (spec local 2026-10-26-len-skills, §4.2): only a SKILL.md that parses, never

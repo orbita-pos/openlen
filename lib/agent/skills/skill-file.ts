@@ -15,6 +15,8 @@ import { findSecret } from "@/lib/agent/memory/secrets";
 export const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const SKILL_NAME_MAX = 64;
 export const SKILL_BODY_MAX = 20_000;
+/** Skills per scope, as many as memory notes per project. */
+export const MAX_SKILLS_PER_SCOPE = 100;
 
 export interface SkillDefinition {
   readonly fork: { readonly agent: string } | null;
