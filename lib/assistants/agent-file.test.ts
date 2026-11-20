@@ -14,7 +14,7 @@ const { agentPreloads, agentTypeProblem, loadAgentOf } = await import("./agent-f
 const teacher = `---\nname: mr-smith\ndescription: My English teacher\nskills: language-teacher, b, missing\ninitialPrompt: Hola, empecemos con tu nivel\n---\n\nYou are Mr. Smith. Never give the answer first.\n`;
 const stored = (name: string, text: string) => ({ name, text, updatedAt: new Date("2026-11-19T00:00:00Z") });
 const skill = (name: string, modelInvocable = true) => ({
-  skill: { name, description: `${name} skill`, modelInvocable, userInvocable: true, body: `${name} body`, fork: false },
+  skill: { name, description: `${name} skill`, modelInvocable, userInvocable: true, body: `${name} body`, fork: null },
   baseDir: `/.openlen/skills/${name}`,
 });
 

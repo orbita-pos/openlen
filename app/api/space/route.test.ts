@@ -13,7 +13,7 @@ vi.mock("@/lib/space/store", () => ({ ensureSpace: m.ensureSpace }));
 
 const { POST } = await import("./route");
 
-const post = () => POST(new Request("http://localhost/api/space", { method: "POST" }), { params: Promise.resolve({}) });
+const post = () => POST(new Request("http://localhost/api/space", { method: "POST" }));
 
 beforeEach(() => {
   m.person.mockResolvedValue("u1");
