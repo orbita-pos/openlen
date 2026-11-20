@@ -1,7 +1,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, expect, it, vi } from "vitest";
-vi.mock("../sesion/plataforma", () => ({ plataforma: { abrirNavegador: vi.fn() } }));
+vi.mock("../sesion/plataforma", () => ({ plataforma: { abrirNavegador: vi.fn(), alVolverAlPrimerPlano: vi.fn(() => () => {}) } }));
 import { TarjetaDeLaApp } from "./tarjetas";
 import { plataforma } from "../sesion/plataforma";
 vi.mock("use-intl", () => ({ useTranslations: () => (s: string) => s }));
@@ -139,37 +139,143 @@ it("mientras instala, sin revisión de por medio, dice «Instalando…»", async
 });
 
 // OAuth de los conectores MCP en el teléfono (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1): el toque pide la URL
-// con la llave de la app y la abre en el navegador del sistema; al volver al primer plano, pide el estado del servidor
-// (`GET /api/mcp-connectors`) y pasa a «Conectado».
-it("«Conectar» un conector MCP abre la URL en el navegador del sistema y al recuperar el foco dice «Conectado»", async () => {
+// con la llave de la app y la abre en el navegador del sistema; al volver al primer plano (lo dice Capacitor, no el foco de
+// una ventana), pide el estado del servidor (`GET /api/mcp-connectors`) y pasa a «Conectado».
+const OAUTH_CARD = {
+  server: "cal",
+  host: "calendarmcp.googleapis.com",
+  headerNames: [],
+  credentials: [],
+  fingerprint: "fp-cal",
+  version: 0,
+  oauth: { issuerHost: "accounts.google.com" as string | null, reason: "first" as const },
+};
+const conectar = (card: unknown, pedir: ReturnType<typeof vi.fn>) =>
+  act(async () => root.render(<TarjetaDeLaApp x={{ tipo: "conectarMcp", card } as never} cliente={{ pedir, avisarAlCerrar: vi.fn() } as never} projectId="p1" idioma="es" />));
+/** Captura lo que la tarjeta registra para enterarse de que la app volvió al primer plano. */
+const alVolver = () => {
+  let volver: (() => void) | null = null;
+  let quitado = 0;
+  vi.mocked(plataforma.alVolverAlPrimerPlano).mockImplementation((fn: () => void) => {
+    volver = fn;
+    return () => void quitado++;
+  });
+  return { volver: () => volver?.(), registrado: () => volver !== null, quitado: () => quitado };
+};
+const servidores = (...s: { name: string; status: string }[]) => Response.json({ available: true, version: 1, servers: s, credentials: [] });
+
+it("«Conectar» un conector MCP abre la URL en el navegador del sistema y al volver a la app dice «Conectado»", async () => {
   iniciar();
   const abrirSpy = vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const foco = alVolver();
   const pedir = vi.fn(async (ruta: string, init?: RequestInit) => {
     if (ruta === "/api/mcp-connectors/cal/oauth" && init?.method === "POST") {
       return Response.json({ authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" });
     }
-    if (ruta === "/api/mcp-connectors") {
-      return Response.json({ available: true, version: 1, servers: [{ name: "cal", status: "connected", tools: 5 }], credentials: [] });
-    }
+    if (ruta === "/api/mcp-connectors") return servidores({ name: "cal", status: "connected" });
     return new Response(null, { status: 404 });
   });
-  const card = {
-    server: "cal",
-    host: "calendarmcp.googleapis.com",
-    headerNames: [],
-    credentials: [],
-    fingerprint: "fp-cal",
-    version: 0,
-    oauth: { issuerHost: "accounts.google.com", reason: "first" as const },
-  };
-  await act(async () => root.render(<TarjetaDeLaApp x={{ tipo: "conectarMcp", card } as never} cliente={{ pedir, avisarAlCerrar: vi.fn() }} projectId="p1" idioma="es" />));
+  await conectar(OAUTH_CARD, pedir);
   await pulsar("mcpApproval.connect");
   expect(pedir).toHaveBeenCalledWith("/api/mcp-connectors/cal/oauth", expect.objectContaining({ method: "POST" }));
   expect(abrirSpy).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/v2/auth?state=s1");
 
+  // El foco de una ventana no es «volví a la app»: sólo lo que dice Capacitor.
   await act(async () => {
     window.dispatchEvent(new Event("focus"));
   });
+  expect(pedir).not.toHaveBeenCalledWith("/api/mcp-connectors");
+
+  await act(async () => foco.volver());
   expect(pedir).toHaveBeenCalledWith("/api/mcp-connectors");
   expect(host.textContent).toContain("mcpApproval.oauthConnected");
+  // Ya conectado, deja de oír.
+  expect(foco.quitado()).toBeGreaterThan(0);
+});
+
+it("mientras espera a que termines de iniciar sesión, lo dice", async () => {
+  iniciar();
+  vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const foco = alVolver();
+  const pedir = vi.fn(async (ruta: string) => (ruta === "/api/mcp-connectors" ? servidores({ name: "cal", status: "needs-auth" }) : Response.json({ authorizationUrl: "https://accounts.google.com/auth" })));
+  await conectar(OAUTH_CARD, pedir);
+  expect(foco.registrado()).toBe(false);
+  expect(host.textContent).not.toContain("esperandoInicioDeSesion");
+  await pulsar("mcpApproval.connect");
+  expect(host.textContent).toContain("esperandoInicioDeSesion");
+  // Volvió sin haber terminado: sigue esperando.
+  await act(async () => foco.volver());
+  expect(host.textContent).toContain("esperandoInicioDeSesion");
+  expect(host.textContent).not.toContain("mcpApproval.oauthConnected");
+});
+
+it("🔴 una tarjeta que pide aprobación (un servidor que escribió Len) no tiene botón en el teléfono: se aprueba en la web", async () => {
+  iniciar();
+  const pedir = vi.fn();
+  await conectar({ ...OAUTH_CARD, version: 7, credentials: [{ name: "KEY", set: false, destinationHosts: ["calendarmcp.googleapis.com"], otherHosts: [], firstTime: false }] }, pedir);
+  expect(host.querySelector("button")).toBeNull();
+  expect(host.textContent).toContain("aprobarEnLaWeb");
+  expect(host.textContent).toContain("mcpApproval.title");
+  expect(pedir).not.toHaveBeenCalled();
+});
+
+it("las tarjetas de iniciar sesión (versión 0) y las del directorio conservan su botón", async () => {
+  iniciar();
+  await conectar(OAUTH_CARD, vi.fn());
+  expect(host.textContent).not.toContain("aprobarEnLaWeb");
+  expect([...host.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["mcpApproval.connect"]);
+  act(() => root.unmount());
+  host.remove();
+  iniciar();
+  await conectar({ ...OAUTH_CARD, version: 3, suggest: { id: "google-calendar", name: "Google Calendar", host: "calendarmcp.googleapis.com" } }, vi.fn());
+  expect(host.textContent).not.toContain("aprobarEnLaWeb");
+  expect([...host.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["mcpApproval.connect"]);
+});
+
+it("🔴 con el directorio, busca el servidor con el nombre que éste devolvió (google-calendar-2), no el de la tarjeta", async () => {
+  iniciar();
+  vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const foco = alVolver();
+  let conectado = false;
+  const pedir = vi.fn(async (ruta: string, init?: RequestInit) => {
+    if (ruta === "/api/mcp-connectors/directory/google-calendar" && init?.method === "POST") {
+      return Response.json({ server: "google-calendar-2", authorizationUrl: "https://accounts.google.com/auth" });
+    }
+    if (ruta === "/api/mcp-connectors") {
+      return servidores({ name: "google-calendar", status: "needs-auth" }, { name: "google-calendar-2", status: conectado ? "connected" : "needs-auth" });
+    }
+    return new Response(null, { status: 404 });
+  });
+  await conectar({ ...OAUTH_CARD, server: "google-calendar", version: 2, suggest: { id: "google-calendar", name: "Google Calendar", host: "calendarmcp.googleapis.com" } }, pedir);
+  await pulsar("mcpApproval.connect");
+  await act(async () => foco.volver());
+  expect(host.textContent).not.toContain("mcpApproval.oauthConnected");
+  conectado = true;
+  await act(async () => foco.volver());
+  expect(host.textContent).toContain("mcpApproval.oauthConnected");
+});
+
+it("sin un host conocido de inicio de sesión dice «la página del propio servidor», nunca «null» ni el host del MCP", async () => {
+  iniciar();
+  await conectar({ ...OAUTH_CARD, oauth: { issuerHost: null, reason: "first" as const } }, vi.fn());
+  expect(host.textContent).toContain("mcpApproval.signInOnServerPage");
+  expect(host.textContent).not.toContain("signInAt");
+  expect(host.textContent).not.toContain("null");
+});
+
+it("🔴 un fallo se dice con una frase, nunca con el código, y deja «Reintentar»", async () => {
+  iniciar();
+  const pedir = vi.fn(async () => Response.json({ error: "no_client", detail: "set oauth.clientId in mcp.json" }, { status: 422 }));
+  await conectar(OAUTH_CARD, pedir);
+  await pulsar("mcpApproval.connect");
+  const alerta = host.querySelector('[role="alert"]')?.textContent ?? "";
+  expect(alerta).toContain("mcpApproval.errors.noClient");
+  expect(alerta).toContain("set oauth.clientId in mcp.json");
+  expect(alerta).not.toContain("no_client");
+  expect([...host.querySelectorAll("button")].map((b) => b.textContent)).toEqual(["mcpApproval.tryAgain"]);
+  // Un código que nadie conoce es la frase genérica.
+  pedir.mockResolvedValueOnce(Response.json({ error: "raro_123" }, { status: 500 }));
+  await pulsar("mcpApproval.tryAgain");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("mcpApproval.errors.failed");
+  expect(host.textContent).not.toContain("raro_123");
 });
