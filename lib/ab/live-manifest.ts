@@ -8,7 +8,7 @@
 // closed over a split that is still live).
 import "server-only";
 
-import { readFile } from "node:fs/promises";
+import { readFile, readlink } from "node:fs/promises";
 import path from "node:path";
 
 import { AB_MANIFEST_PATH } from "./layout";
@@ -30,14 +30,44 @@ export interface LiveAbIo {
   readManifest(subdomain: string, sha: string): Promise<string | null>;
 }
 
+const absent = (err: unknown): boolean => {
+  const code = (err as NodeJS.ErrnoException | null)?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
+};
+
+/** The sha `<root>/<sub>/current` points at. `null` ONLY when there is no such link (ENOENT/ENOTDIR: never published, or
+ *  unpublished); any other failure THROWS, so `readLiveAb` says «unknown» — `getCurrentReleaseSha` swallows every error into
+ *  null, and an EIO there would read as «no experiment» (round 3, D). */
+async function readCurrentSha(subdomain: string): Promise<string | null> {
+  const { getPublishRoot } = await import("@/lib/publish/filesystem");
+  if (!subdomain || subdomain !== path.basename(subdomain)) throw new Error("not a subdomain");
+  const currentPath = path.join(getPublishRoot(), subdomain, "current");
+  try {
+    const target = await readlink(currentPath);
+    const m = target.match(/(?:^|[\\/])releases[\\/](.+)$/);
+    return m ? m[1]! : null;
+  } catch (err) {
+    if (absent(err)) return null;
+    // Not a link: the marker file the Windows test environment writes instead (EINVAL is «this isn't a symlink»).
+    if ((err as NodeJS.ErrnoException | null)?.code !== "EINVAL") throw err;
+  }
+  try {
+    const trimmed = (await readFile(currentPath, "utf8")).trim();
+    return /^[a-f0-9]{1,64}$/.test(trimmed) ? trimmed : null;
+  } catch (err) {
+    if (absent(err)) return null;
+    throw err;
+  }
+}
+
 const realIo: LiveAbIo = {
-  currentSha: async (subdomain) => (await import("@/lib/publish/filesystem")).getCurrentReleaseSha(subdomain),
+  currentSha: readCurrentSha,
   readManifest: async (subdomain, sha) => {
     const { getPublishRoot } = await import("@/lib/publish/filesystem");
     try {
       return await readFile(path.join(getPublishRoot(), subdomain, "releases", sha, AB_MANIFEST_PATH), "utf8");
     } catch (err) {
-      if ((err as NodeJS.ErrnoException | null)?.code === "ENOENT" || (err as NodeJS.ErrnoException | null)?.code === "ENOTDIR") return null;
+      if (absent(err)) return null;
       throw err;
     }
   },
