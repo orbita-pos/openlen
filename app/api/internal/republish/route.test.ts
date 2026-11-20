@@ -78,6 +78,8 @@ describe("POST /api/internal/republish", () => {
       userId: "u1",
       subdomain: "a-sub",
       skipFlightCheck: true,
+      // A system republish keeps a live A/B experiment alive (review item 13): the door re-emits it instead of refusing.
+      abLive: "keep",
     });
   });
 
