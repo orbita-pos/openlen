@@ -1006,7 +1006,10 @@
       "pushHarmStopNotRestored": "„{name}“ wurde gestoppt, da Variante B deutlich schlechter konvertierte. Deine Seite ist nicht veröffentlicht, es war also nichts Live-Geschaltetes wiederherzustellen.",
       "emailTextInfo": "{push}\n\nSieh nach, was passiert ist: {url}",
       "pushUnevenTraffic": "„{name}“ endete ohne Ergebnis: Der Traffic wurde ungleich auf die beiden Versionen verteilt, die Zahlen sind daher nicht verlässlich. Wähle, welche Version bleibt.",
-      "summaryUnevenTraffic": "Der Test „{name}“ endete ohne Ergebnis – der Traffic war ungleich verteilt, ich traue den Zahlen nicht. Welche Version soll bleiben?"
+      "summaryUnevenTraffic": "Der Test „{name}“ endete ohne Ergebnis – der Traffic war ungleich verteilt, ich traue den Zahlen nicht. Welche Version soll bleiben?",
+      "bringPendingNotice": "Variante B ist live. Sie muss noch in deinen Entwurf übernommen werden – bis dahin wartet deine nächste Veröffentlichung.",
+      "bringQueued": "Len arbeitet an der Seite; Variante B kommt in deinen Entwurf, sobald er fertig ist.",
+      "discardBring": "Änderungen von Variante B verwerfen"
     }
   }
 }

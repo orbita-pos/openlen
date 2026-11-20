@@ -13,12 +13,13 @@ const m = vi.hoisted(() => ({
   publishProject: vi.fn(),
   gate: vi.fn(),
   live: vi.fn(),
+  unbrought: vi.fn(),
   endAfterPublish: vi.fn(),
   order: [] as string[],
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => enabled.on }));
-vi.mock("@/lib/ab/store", () => ({ liveExperimentForProject: m.live }));
+vi.mock("@/lib/ab/store", () => ({ liveExperimentForProject: m.live, pendingBringForProject: m.unbrought }));
 vi.mock("@/lib/ab/publish-guard", () => ({ endExperimentAfterPublish: m.endAfterPublish }));
 vi.mock("@/lib/security-review/real", () => ({
   securityReviewer: () => ({ gate: m.gate, wait: vi.fn(async () => null), markPublished: vi.fn(async () => undefined) }),
@@ -48,6 +49,7 @@ beforeEach(() => {
   enabled.on = true;
   m.gate.mockResolvedValue({ kind: "open", view: { fingerprint: "f".repeat(64) } });
   m.live.mockResolvedValue(EXP);
+  m.unbrought.mockResolvedValue(null);
   m.publishProject.mockImplementation(async () => {
     m.order.push("publish");
     return { subdomain: "holi", url: "https://holi.openlen.app", sha: "rel-1" };
@@ -90,6 +92,39 @@ describe("the owner's publish over a live experiment", () => {
     m.live.mockResolvedValue(null);
     expect((await publishThroughGates({ ...INPUT, stopActiveAb: true })).status).toBe(200);
     expect(m.endAfterPublish).not.toHaveBeenCalled();
+  });
+});
+
+describe("a promoted winner that isn't in the draft yet (item 26)", () => {
+  const UNBROUGHT = { id: "ab_promo0001", name: "Hero test", status: "promoted_b", bringState: "conflict" };
+
+  it("🔴 the owner's next publish is refused (428 ab_bring_pending) until they bring it in or discard it: it would undo the promotion", async () => {
+    m.live.mockResolvedValue(null);
+    m.unbrought.mockResolvedValue(UNBROUGHT);
+    const r = await publishThroughGates(INPUT);
+    expect(r).toEqual({ status: 428, body: { error: "ab_bring_pending", experimentId: "ab_promo0001", name: "Hero test", bringState: "conflict" } });
+    expect(m.publishProject).not.toHaveBeenCalled();
+    expect(m.gate).not.toHaveBeenCalled();
+  });
+
+  it("once they resolve it (nothing pending any more) the publish goes through", async () => {
+    m.live.mockResolvedValue(null);
+    m.unbrought.mockResolvedValue(null);
+    expect((await publishThroughGates(INPUT)).status).toBe(200);
+  });
+
+  it("it is the PERSON's publish that waits: Len Watch's fix and the experiment's own promote are not held by it", async () => {
+    m.live.mockResolvedValue(null);
+    m.unbrought.mockResolvedValue(UNBROUGHT);
+    expect((await publishThroughGates({ ...INPUT, source: "len_watch", sourcesFrom: "copy-9" })).status).toBe(200);
+    expect(m.unbrought).not.toHaveBeenCalled();
+  });
+
+  it("with the flag off nothing about experiments is looked up", async () => {
+    enabled.on = false;
+    m.unbrought.mockResolvedValue(UNBROUGHT);
+    expect((await publishThroughGates(INPUT)).status).toBe(200);
+    expect(m.unbrought).not.toHaveBeenCalled();
   });
 });
 

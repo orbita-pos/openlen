@@ -5,6 +5,7 @@ import type { DestructiveChange } from "@/lib/backend/data-changes-types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
+import { AbBringPending } from "@/components/workspace-v2/ab/bring-pending";
 import { AbExperimentRunning } from "@/components/workspace-v2/ab/experiment-running";
 import { LenWatchFixPending } from "@/components/workspace-v2/len-watch/fix-pending";
 import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
@@ -167,6 +168,8 @@ export function PublishModal({
   const aceptarArreglo = useRef<string | null>(null);
   // A live A/B experiment the publish would end (428): the owner confirms with «Detener y publicar» (`stopActiveAb`).
   const [abRunning, setAbRunning] = useState<{ name: string } | null>(null);
+  // A promoted A/B winner that isn't in the draft yet: the publish waits for it (review item 26).
+  const [abBring, setAbBring] = useState<{ experimentId: string; name: string } | null>(null);
   const detenerPrueba = useRef(false);
   const dataPreview = useDataChangesPreview(project.id, open);
   // La revisión de seguridad (spec local 2026-10-15): arranca al abrir y se
@@ -316,6 +319,12 @@ export function PublishModal({
       if (outcome.kind === "ab_experiment_running") {
         detenerPrueba.current = false;
         setAbRunning({ name: outcome.name });
+        setSubmitting(null);
+        return;
+      }
+      // A promoted A/B winner that isn't in the draft yet: publishing would undo it (review item 26).
+      if (outcome.kind === "ab_bring_pending") {
+        setAbBring({ experimentId: outcome.experimentId, name: outcome.name });
         setSubmitting(null);
         return;
       }
@@ -750,6 +759,20 @@ export function PublishModal({
                 void doPublish({ acceptLenWatchFix: id });
               }}
               onCancel={() => setLenWatchFix(null)}
+            />
+          )}
+
+          {abBring && (
+            <AbBringPending
+              projectId={project.id}
+              experimentId={abBring.experimentId}
+              name={abBring.name}
+              busy={submitting !== null}
+              onPublishAgain={() => {
+                setAbBring(null);
+                void doPublish();
+              }}
+              onCancel={() => setAbBring(null)}
             />
           )}
 

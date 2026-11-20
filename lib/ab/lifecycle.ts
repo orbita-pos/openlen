@@ -26,6 +26,7 @@ import {
   normalizeTargetPath,
   releaseDecisionLock,
   toExperimentView,
+  transitionBringState,
   updateExperiment,
   type AbExperimentRow,
 } from "./store";
@@ -344,8 +345,63 @@ export async function launchAbExperiment(p: {
   return toExperimentView(updated ?? exp, project.title);
 }
 
+/** What bringing a promoted Variant B into the owner's draft came to: `brought` (it is in; `nothing` = there was nothing to
+ *  bring), `conflict` (it clashed with their edits; the branch stays), `pending` (a Len turn is live: later). */
+type BringOutcome =
+  | { readonly state: "brought"; readonly kind: "brought" | "nothing" }
+  | { readonly state: "conflict"; readonly paths: readonly string[] }
+  | { readonly state: "pending" };
+
+async function tryBringIntoDraft(exp: AbExperimentRow, ownerId: string, actorId: string): Promise<BringOutcome> {
+  if (!exp.baseCommitOid || !exp.branch) return { state: "brought", kind: "nothing" };
+  const merged = await mergeWinnerIntoDraft({
+    projectId: exp.projectId,
+    ownerId,
+    actorId,
+    baseCommitOid: exp.baseCommitOid,
+    branch: exp.branch,
+  });
+  if (merged.kind === "busy") return { state: "pending" };
+  if (merged.kind === "conflict") return { state: "conflict", paths: merged.paths };
+  return { state: "brought", kind: merged.kind };
+}
+
+/** Writes down how the bring ended, only if nobody settled it meanwhile (a person's button and the background wait can
+ *  race): `brought` deletes the branch too; `conflict` keeps it (Len or the owner finishes it, or discards it). */
+async function settleBring(exp: AbExperimentRow, outcome: BringOutcome): Promise<AbExperimentRow | null> {
+  if (outcome.state === "pending") return null;
+  const moved = await transitionBringState(exp.id, ["pending", "conflict"], {
+    bringState: outcome.state,
+    copyProjectId: null,
+  });
+  if (!moved) return null;
+  await cleanupAbWorktree({
+    parentId: exp.projectId,
+    copyProjectId: exp.copyProjectId,
+    branch: outcome.state === "brought" ? exp.branch : null,
+  });
+  return moved;
+}
+
+/** A merge that had to wait for Len's live turn is tried again when it ends (up to half an hour, like «Traer el
+ *  arreglo»); if nobody asked meanwhile. A restart loses the wait: the card's button and the publish gate still hold it. */
+function bringWhenLenIsDone(exp: AbExperimentRow, ownerId: string, actorId: string): void {
+  void (async () => {
+    const { esperarALen } = await import("@/lib/agent/turnos-desde-el-servidor");
+    if (!(await esperarALen(exp.projectId))) return;
+    await retryBringWinner({ projectId: exp.projectId, experimentId: exp.id, ownerId, actorId });
+  })().catch((err: unknown) => {
+    console.warn("[ab] the winner couldn't be brought into the draft after Len's turn", exp.id, err);
+  });
+}
+
 /** Promote Variant B to 100% production (clean release without ab.json → restores
- *  Cloudflare s-maxage=3600), purge CF, and 3-way merge B into the owner's draft. */
+ *  Cloudflare s-maxage=3600), purge CF, and 3-way merge B into the owner's draft.
+ *
+ *  Once B is published the decision is MADE: it is recorded right then, and what is left — bringing B into the owner's
+ *  draft — never undoes it. That second step can clash (`conflict`), wait for Len's live turn (`pending`) or fail; the
+ *  owner's next publish waits until they bring it in or discard it, because it would otherwise send the draft without B
+ *  (review item 26). */
 export async function promoteVariantB(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -354,7 +410,7 @@ export async function promoteVariantB(p: {
   readonly locale?: string;
 }): Promise<{
   readonly experiment: AbExperimentView;
-  readonly bringState: "brought" | "conflict";
+  readonly bringState: "brought" | "conflict" | "pending";
   readonly conflictPaths?: readonly string[];
 }> {
   const locked = await claimExperimentDecision(p.experimentId, p.projectId);
@@ -366,16 +422,21 @@ export async function promoteVariantB(p: {
     );
   }
 
+  let title: string | undefined;
+  let subdomain = "";
+  let recorded: AbExperimentRow;
   try {
     const [project] = await db
       .select({ title: schema.projects.title, subdomain: schema.projects.subdomain })
       .from(schema.projects)
       .where(eq(schema.projects.id, p.projectId))
       .limit(1);
+    title = project?.title;
 
     if (!project?.subdomain || !locked.copyProjectId) {
       throw new AbLifecycleError("invalid_state", "Missing subdomain or Variant B worktree.", 409);
     }
+    subdomain = project.subdomain;
 
     const gated = await publishThroughGates({
       projectId: p.projectId,
@@ -396,66 +457,42 @@ export async function promoteVariantB(p: {
     }
 
     const promotedSha = typeof gated.body.sha === "string" ? gated.body.sha : null;
-    await purgeSubdomain(project.subdomain, ["/", "/index.html", locked.targetPath]).catch(
-      () => undefined,
-    );
-
-    // Three-way merge Variant B into owner's draft.
-    let bringState: "brought" | "conflict" = "brought";
-    let conflictPaths: readonly string[] | undefined;
-    if (locked.baseCommitOid && locked.branch) {
-      const merged = await mergeWinnerIntoDraft({
-        projectId: p.projectId,
-        ownerId: p.ownerId,
-        actorId: p.actorId,
-        baseCommitOid: locked.baseCommitOid,
-        branch: locked.branch,
-      });
-      if (merged.kind === "conflict") {
-        bringState = "conflict";
-        conflictPaths = merged.paths;
-      }
-    }
-
-    // If merge succeeded cleanly, tear down worktree + branch; on conflict, keep
-    // the branch alive so Len can finish merging when requested.
-    if (bringState === "brought") {
-      await cleanupAbWorktree({
-        parentId: p.projectId,
-        copyProjectId: locked.copyProjectId,
-        branch: locked.branch,
-      });
-    } else if (locked.copyProjectId) {
-      await cleanupAbWorktree({
-        parentId: p.projectId,
-        copyProjectId: locked.copyProjectId,
-        branch: null,
-      });
-    }
-
     const now = new Date();
-    const updated = await updateExperiment(locked.id, {
-      status: "promoted_b",
-      decisionStatus: "resolved",
-      bringState,
-      promotedReleaseSha: promotedSha,
-      winnerVariant: "b",
-      endedAt: locked.endedAt ?? now,
-      decidedAt: now,
-      decidedBy: p.actorId,
-      ...DECISION_LOCK_CLEARED,
-      copyProjectId: null,
-    });
-
-    return {
-      experiment: toExperimentView(updated ?? locked, project.title),
-      bringState,
-      ...(conflictPaths ? { conflictPaths } : {}),
-    };
+    // B is live: the decision is recorded NOW (and the lock is over), the copy and the branch stay until B is in the draft.
+    recorded =
+      (await updateExperiment(locked.id, {
+        status: "promoted_b",
+        decisionStatus: "resolved",
+        ...DECISION_LOCK_CLEARED,
+        bringState: "pending",
+        promotedReleaseSha: promotedSha,
+        winnerVariant: "b",
+        endedAt: locked.endedAt ?? now,
+        decidedAt: now,
+        decidedBy: p.actorId,
+      })) ?? locked;
   } catch (err) {
     await giveBackTheLock(locked.id);
     throw err;
   }
+
+  await purgeSubdomain(subdomain, ["/", "/index.html", locked.targetPath]).catch(() => undefined);
+
+  // Three-way merge Variant B into owner's draft. Whatever happens here, B is already live.
+  let outcome: BringOutcome = { state: "pending" };
+  try {
+    outcome = await tryBringIntoDraft(recorded, p.ownerId, p.actorId);
+  } catch (err) {
+    console.error("[ab] bringing the promoted winner into the draft failed; it stays pending", recorded.id, err);
+  }
+  const settled = await settleBring(recorded, outcome);
+  if (outcome.state === "pending") bringWhenLenIsDone(recorded, p.ownerId, p.actorId);
+
+  return {
+    experiment: toExperimentView(settled ?? recorded, title),
+    bringState: outcome.state,
+    ...(outcome.state === "conflict" ? { conflictPaths: outcome.paths } : {}),
+  };
 }
 
 /** Restore clean Control A at 100% (no ab.json), purge Cloudflare. `true` = a release without the experiment is live now
@@ -638,7 +675,7 @@ export async function autoStopExperimentForHarm(
   }
 }
 
-/** Retry three-way merge after a conflict or cancel a draft experiment cleanly. */
+/** Cancel a draft experiment cleanly: its copy and branch are deleted. */
 export async function cancelAbDraft(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -664,28 +701,60 @@ export async function cancelAbDraft(p: {
   return toExperimentView(updated ?? exp);
 }
 
+/** Re-tries bringing a promoted Variant B into the owner's draft: the button of the conflict card, and the wait that
+ *  follows a Len turn. Only a PROMOTED experiment whose bring is still open (`pending` or `conflict`) can be brought:
+ *  anything else has no branch worth merging, or already had it (review item 26). With a Len turn live it answers
+ *  `queued` and tries again when the turn ends. */
 export async function retryBringWinner(p: {
   readonly projectId: string;
   readonly experimentId: string;
   readonly ownerId: string;
   readonly actorId: string;
-}): Promise<{ readonly status: "brought" | "conflict" | "nothing"; readonly paths?: readonly string[] }> {
+}): Promise<{
+  readonly status: "brought" | "conflict" | "nothing" | "queued";
+  readonly paths?: readonly string[];
+}> {
   const exp = await getExperimentById(p.experimentId);
   if (!exp || exp.projectId !== p.projectId || !exp.baseCommitOid || !exp.branch) {
     throw new AbLifecycleError("not_found", "Experiment branch not found", 404);
   }
-  const merged = await mergeWinnerIntoDraft({
-    projectId: p.projectId,
-    ownerId: p.ownerId,
-    actorId: p.actorId,
-    baseCommitOid: exp.baseCommitOid,
-    branch: exp.branch,
-  });
-  if (merged.kind === "conflict") {
-    await updateExperiment(exp.id, { bringState: "conflict" });
-    return { status: "conflict", paths: merged.paths };
+  if (exp.status !== "promoted_b") {
+    throw new AbLifecycleError("invalid_state", "Only a promoted Variant B can be brought into the draft.", 409);
   }
-  await updateExperiment(exp.id, { bringState: "brought" });
-  await cleanupAbWorktree({ parentId: p.projectId, copyProjectId: null, branch: exp.branch });
-  return { status: merged.kind };
+  if (exp.bringState !== "pending" && exp.bringState !== "conflict") {
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, or discarded.", 409);
+  }
+  const outcome = await tryBringIntoDraft(exp, p.ownerId, p.actorId);
+  if (outcome.state === "pending") {
+    bringWhenLenIsDone(exp, p.ownerId, p.actorId);
+    return { status: "queued" };
+  }
+  if (outcome.state === "conflict") {
+    await transitionBringState(exp.id, ["pending", "conflict"], { bringState: "conflict" });
+    return { status: "conflict", paths: outcome.paths };
+  }
+  await settleBring(exp, outcome);
+  return { status: outcome.kind };
+}
+
+/** «Don't bring it in»: the owner keeps their draft as it is and gives up Variant B's changes in it. Production stays as
+ *  it is — B is live — and the branch is deleted. After this their next publish no longer waits (and WILL publish the draft
+ *  without B: that is the choice they just made). */
+export async function discardWinnerBring(p: {
+  readonly projectId: string;
+  readonly experimentId: string;
+}): Promise<AbExperimentView> {
+  const exp = await getExperimentById(p.experimentId);
+  if (!exp || exp.projectId !== p.projectId) {
+    throw new AbLifecycleError("not_found", "Experiment not found", 404);
+  }
+  if (exp.status !== "promoted_b") {
+    throw new AbLifecycleError("invalid_state", "Only a promoted Variant B has changes to discard.", 409);
+  }
+  const moved = await transitionBringState(exp.id, ["pending", "conflict"], { bringState: "declined", copyProjectId: null });
+  if (!moved) {
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, or discarded.", 409);
+  }
+  await cleanupAbWorktree({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch });
+  return toExperimentView(moved);
 }

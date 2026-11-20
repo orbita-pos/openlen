@@ -54,6 +54,9 @@ describe("visibleAbCards", () => {
       exp({ id: "inconclusive", status: "inconclusive", decisionStatus: "pending" }),
       exp({ id: "applying", status: "winner_ready", decisionStatus: "applying" }),
       exp({ id: "conflict", status: "promoted_b", bringState: "conflict" }),
+      exp({ id: "bring-pending", status: "promoted_b", bringState: "pending" }),
+      exp({ id: "brought", status: "promoted_b", bringState: "brought" }),
+      exp({ id: "declined", status: "promoted_b", bringState: "declined" }),
       exp({ id: "harm", status: "paused_harm", decisionStatus: "resolved", endedAt: iso(3 * DAY) }),
       exp({ id: "old-harm", status: "paused_harm", decisionStatus: "resolved", endedAt: iso(30 * DAY) }),
       exp({ id: "running" }),
@@ -65,6 +68,7 @@ describe("visibleAbCards", () => {
       "pending",
       "inconclusive",
       "conflict",
+      "bring-pending",
       "harm",
       "linked",
     ]);

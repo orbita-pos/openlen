@@ -83,11 +83,18 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   const { abTestingEnabled } = await import("@/lib/ab/enabled");
   let stopping: import("@/lib/ab/store").AbExperimentRow | null = null;
   if (i.source === "person" && abTestingEnabled()) {
-    const live = await (await import("@/lib/ab/store")).liveExperimentForProject(i.projectId);
+    const abStore = await import("@/lib/ab/store");
+    const live = await abStore.liveExperimentForProject(i.projectId);
     if (live && !i.stopActiveAb) {
       return { status: 428, body: { error: "ab_experiment_running", experimentId: live.id, name: live.name, targetPath: live.targetPath } };
     }
     if (live) stopping = live;
+    // A promoted Variant B that isn't in the draft yet (it clashed with their edits, or waits for Len): publishing the draft
+    // now would send the page WITHOUT it and undo the promotion. It waits for them to bring it in or discard it (review item 26).
+    const unbrought = await abStore.pendingBringForProject(i.projectId);
+    if (unbrought) {
+      return { status: 428, body: { error: "ab_bring_pending", experimentId: unbrought.id, name: unbrought.name, bringState: unbrought.bringState } };
+    }
   }
   const abLive = stopping || i.source === "ab_promote" ? ({ abLive: "ending" } as const) : {};
 

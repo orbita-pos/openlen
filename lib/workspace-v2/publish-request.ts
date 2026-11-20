@@ -28,6 +28,8 @@ export type PublishOutcome =
   | { readonly kind: "len_watch_fix_pending"; readonly incidentId: string; readonly branch: string }
   // A live A/B experiment (review items 13, 14): publishing would stop it; the owner confirms with `stopActiveAb`.
   | { readonly kind: "ab_experiment_running"; readonly experimentId: string; readonly name: string; readonly targetPath: string }
+  // A promoted A/B winner that isn't in the draft yet (review item 26): publishing now would undo it. Bring it in or discard it.
+  | { readonly kind: "ab_bring_pending"; readonly experimentId: string; readonly name: string; readonly bringState: "pending" | "conflict" }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
 /** A gated POST — publish, or install a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): both answer
@@ -61,6 +63,9 @@ async function postGated(url: string, body: Record<string, unknown>, send: Send 
   // 428 is the question; 409 is a publish that raced a launch (same meaning for the owner: ask).
   if ((res.status === 428 || res.status === 409) && data.error === "ab_experiment_running") {
     return { kind: "ab_experiment_running", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? ""), targetPath: String(data.targetPath ?? "/") };
+  }
+  if (res.status === 428 && data.error === "ab_bring_pending") {
+    return { kind: "ab_bring_pending", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? ""), bringState: data.bringState === "conflict" ? "conflict" : "pending" };
   }
   if (res.status === 428 && data.error === "len_watch_fix_pending") return { kind: "len_watch_fix_pending", incidentId: String(data.incidentId ?? ""), branch: String(data.branch ?? "") };
   if (res.status === 428 && data.error === "secrets_required") return { kind: "secrets_required", missing: (data.missing as string[]) ?? [] };

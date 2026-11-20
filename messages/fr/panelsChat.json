@@ -1006,7 +1006,10 @@
       "pushHarmStopNotRestored": "J’ai arrêté « {name} » car la variante B faisait baisser les conversions. Votre site n’est pas publié : il n’y avait rien en ligne à rétablir.",
       "emailTextInfo": "{push}\n\nVoir ce qui s’est passé : {url}",
       "pushUnevenTraffic": "« {name} » s’est terminé sans résultat : le trafic a été réparti de façon inégale entre les deux versions, les chiffres ne sont donc pas fiables. Choisissez quelle version garder.",
-      "summaryUnevenTraffic": "Le test « {name} » s’est terminé sans résultat : le trafic était réparti de façon inégale, je ne me fie pas aux chiffres. Quelle version garder ?"
+      "summaryUnevenTraffic": "Le test « {name} » s’est terminé sans résultat : le trafic était réparti de façon inégale, je ne me fie pas aux chiffres. Quelle version garder ?",
+      "bringPendingNotice": "La variante B est en ligne. Elle doit encore entrer dans votre brouillon ; d’ici là, votre prochaine publication attend.",
+      "bringQueued": "Len travaille sur la page ; la variante B entrera dans votre brouillon quand il aura fini.",
+      "discardBring": "Abandonner les changements de la variante B"
     }
   }
 }
