@@ -20,22 +20,24 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
+const get = () => GET(new Request("http://x/api/mcp-connectors"));
+
 describe("/api/mcp-connectors", () => {
   it("GET lists the person's connectors", async () => {
-    const res = await GET();
+    const res = await get();
     expect(await res.json()).toEqual({ available: true, version: 2, servers: [], credentials: [] });
     expect(view.listView).toHaveBeenCalledWith("u1", {});
   });
 
   it("available false when OPENLEN_MCP=0", async () => {
     vi.stubEnv("OPENLEN_MCP", "0");
-    expect(await (await GET()).json()).toEqual({ available: false });
+    expect(await (await get()).json()).toEqual({ available: false });
     expect(view.listView).not.toHaveBeenCalled();
   });
 
   it("401 without a session", async () => {
     vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
-    expect((await GET()).status).toBe(401);
+    expect((await get()).status).toBe(401);
   });
 
   it("PUT passes what the person wrote, and refuses non-string headers", async () => {
