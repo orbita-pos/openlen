@@ -77,11 +77,24 @@ describe("salidaDeLaTerminal — como el Bash de Claude Code", () => {
     expect(MAX_SALIDA).toBe(30_000);
   });
 
-  it("si no se pudo guardar, lo que cabe y el aviso de Claude Code", () => {
-    const largo = "a".repeat(MAX_SALIDA + 500);
+  it("si no se pudo guardar, el principio Y el final (el error de un build está al final) y el aviso", () => {
+    const lineas = Array.from({ length: 6_000 }, (_, i) => `linea ${i}`);
+    const largo = `${lineas.join("\n")}\nERROR TS2345: Type 'string' is not assignable to type 'number'.`;
+    expect(largo.length).toBeGreaterThan(MAX_SALIDA);
     const { texto } = salidaDeLaTerminal({ stdout: largo, stderr: "", exitCode: 0 });
-    expect(texto.startsWith("a".repeat(MAX_SALIDA))).toBe(true);
-    expect(texto.endsWith("Output too large (29.8KB). It could not be saved, so only the first 29.3KB are shown; the rest was dropped. If the tool can page or filter its results, call it again for the part you need.")).toBe(true);
+    expect(texto.startsWith("linea 0\nlinea 1\n")).toBe(true);
+    expect(texto).toContain("\n...\n");
+    expect(texto).toContain("ERROR TS2345: Type 'string' is not assignable to type 'number'.");
+    expect(texto).toMatch(/Output too large \(\d+(\.\d)?KB\)\. It could not be saved, so only the first [\d.]+KB and the last [\d.]+KB are shown; the middle \([\d.]+KB\) was dropped\. If the tool can page or filter its results, call it again for the part you need\.$/);
+    // Inside the same budget as before, plus the notice.
+    expect(texto.length).toBeLessThan(MAX_SALIDA + 400);
+  });
+
+  it("si no se pudo guardar, un emoji en el corte no llega partido", () => {
+    const mitad = MAX_SALIDA / 2;
+    const largo = "a".repeat(mitad - 1) + "\u{1F600}" + "b".repeat(5_000) + "c".repeat(9_000) + "\u{1F600}" + "d".repeat(mitad - 1);
+    const { texto } = salidaDeLaTerminal({ stdout: largo, stderr: "", exitCode: 0 });
+    expect(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(texto)).toBe(false);
   });
 
   it("un guardado rechazado es un fallo con código 1 aunque el comando terminara bien; las notas van tras la salida", () => {
