@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import * as z from "zod4";
 
 import { openMcp } from "./client";
+import { reviewTools } from "./names";
 
 function server(opts: { resources?: boolean; instructions?: string } = {}) {
   const methods: string[] = [];
@@ -16,6 +17,12 @@ function server(opts: { resources?: boolean; instructions?: string } = {}) {
     const mcp = new McpServer({ name: "fake", version: "1.2.3" }, { instructions: opts.instructions });
     mcp.registerTool("search", { description: "Search", inputSchema: { q: z.string() } }, async ({ q }) => ({ content: [{ type: "text" as const, text: `found ${q}` }] }));
     mcp.registerTool("fail", { description: "Fails", inputSchema: {} }, async () => ({ isError: true, content: [{ type: "text" as const, text: "nope" }] }));
+    // MCP Apps (SEP-1865): tools only the server's own UI calls, and what a careless server writes instead.
+    const ui = (visibility: unknown) => ({ ui: { visibility } });
+    mcp.registerTool("refresh_table", { description: "UI only", inputSchema: {}, _meta: ui(["app"]) }, async () => ({ content: [] }));
+    mcp.registerTool("both", { description: "Both", inputSchema: {}, _meta: ui(["model", "app"]) }, async () => ({ content: [] }));
+    mcp.registerTool("empty", { description: "Nobody", inputSchema: {}, _meta: ui([]) }, async () => ({ content: [] }));
+    mcp.registerTool("typo", { description: "Typo", inputSchema: {}, _meta: ui(["App"]) }, async () => ({ content: [] }));
     if (opts.resources) {
       mcp.registerResource("menu", "menu://today", { mimeType: "text/plain" }, async () => ({ contents: [{ uri: "menu://today", text: "soup" }] }));
     }
@@ -54,7 +61,23 @@ describe("openMcp", () => {
   it("lists every tool", async () => {
     const s = server();
     const c = await openMcp(target, { fetch: s.fetch, timeoutMs: 5000 });
-    expect((await c.listTools()).map((t) => t.name).sort()).toEqual(["fail", "search"]);
+    expect((await c.listTools()).map((t) => t.name).sort()).toEqual(["both", "empty", "fail", "refresh_table", "search", "typo"]);
+    await c.close();
+  });
+
+  it("🔴 keeps each tool's _meta.ui.visibility as the server wrote it, so the review can hide what isn't for the model", async () => {
+    const s = server();
+    const c = await openMcp(target, { fetch: s.fetch, timeoutMs: 5000 });
+    const tools = await c.listTools();
+    expect(Object.fromEntries(tools.map((t) => [t.name, t.visibility]))).toEqual({
+      search: undefined,
+      fail: undefined,
+      refresh_table: ["app"],
+      both: ["model", "app"],
+      empty: [],
+      typo: ["App"],
+    });
+    expect(reviewTools("fake", tools).tools.map((t) => t.rawName).sort()).toEqual(["both", "fail", "search"]);
     await c.close();
   });
 

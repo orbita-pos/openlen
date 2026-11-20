@@ -4,6 +4,7 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 
 import type { McpCallResult, McpTool } from "@/lib/tools/mcp/client";
+import { declaredVisibility } from "@/lib/tools/mcp/visibility";
 
 export interface McpConnection {
   readonly serverInfo: { readonly name: string; readonly version: string };
@@ -66,7 +67,17 @@ export async function openMcp(
       let cursor: string | undefined;
       for (let page = 0; page < MAX_PAGES; page++) {
         const r = await bounded(client.listTools(cursor ? { cursor } : undefined, request), opts.timeoutMs, "listing the tools", opts.signal);
-        out.push(...(r.tools as McpTool[]));
+        // The SDK's tool keeps the server's `_meta`; what the review (names.ts) needs of it is the visibility, as the server wrote it.
+        for (const t of r.tools) {
+          const visibility = declaredVisibility(t);
+          out.push({
+            name: t.name,
+            ...(typeof t.title === "string" ? { title: t.title } : {}),
+            ...(typeof t.description === "string" ? { description: t.description } : {}),
+            inputSchema: t.inputSchema as Record<string, unknown>,
+            ...(visibility ? { visibility } : {}),
+          });
+        }
         cursor = r.nextCursor;
         if (!cursor) break;
       }

@@ -97,6 +97,30 @@ describe("operationsFor", () => {
     expect(out.declarations.map((x) => x.name)).toEqual(["mcp__empleados__add_employee", "mcp__empleados__list_employees"]);
     expect(out.routes.has("mcp__empleados__paginate_table")).toBe(false);
   });
+
+  it("🔴 a visibility that doesn't name model hides the operation — empty, a typo, only app — and a missing one shows it", async () => {
+    const d = deps({
+      releaseMcp: vi.fn(async (sha: string) =>
+        sha === "sha-1"
+          ? {
+              serverName: "empleados",
+              function: "mcp",
+              tools: [
+                { ...op("empty"), visibility: [] as string[] },
+                { ...op("typo"), visibility: ["App"] },
+                { ...op("only_app"), visibility: ["app"] },
+                { ...op("both"), visibility: ["model", "app"] },
+                { ...op("only_model"), visibility: ["model"] },
+                op("absent"),
+              ],
+            }
+          : null,
+      ),
+    });
+    const out = await operationsFor("u1", d);
+    expect(out.declarations.map((x) => x.name)).toEqual(["mcp__empleados__absent", "mcp__empleados__both", "mcp__empleados__only_model"]);
+    for (const hidden of ["empty", "typo", "only_app"]) expect(out.routes.has(`mcp__empleados__${hidden}`)).toBe(false);
+  });
 });
 
 describe("callOperation", () => {

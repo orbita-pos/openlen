@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { McpConnection } from "./client";
 import { entryFingerprint, parseMcpConfig } from "./config";
+import { mountServer } from "./mount";
 import type { ServerState } from "./store";
 import { connectorsForTurn, mergeMcpDeclarations, RESOURCE_TOOL_NAMES, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
 
@@ -294,5 +295,52 @@ describe("TurnConnections", () => {
     await tc.call("mcp__ok__search", {});
     await tc.closeAll();
     expect(conn.closedCount()).toBe(1);
+  });
+});
+
+describe("🔴 a connector's app-only tool never reaches Len", () => {
+  it("mounted out: the turn neither declares nor routes it, and a call by name is refused before any request", async () => {
+    const saved: ServerState[] = [];
+    const text = JSON.stringify({ servers: { ui: entry("https://ui.example.com/mcp") } });
+    const parsed = parseMcpConfig(text, { reservedServerNames: new Set() });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const fp = entryFingerprint(parsed.config.servers.ui!);
+    const { c } = connection({
+      listTools: async () => [
+        { name: "search", inputSchema: obj },
+        { name: "refresh_table", inputSchema: obj, visibility: ["app"] },
+        { name: "typo", inputSchema: obj, visibility: ["App"] },
+        { name: "empty", inputSchema: obj, visibility: [] },
+        { name: "both", inputSchema: obj, visibility: ["model", "app"] },
+      ],
+    });
+    await mountServer("p1", "ui", {
+      readConfig: async () => ({ text, approved: { ui: fp }, version: 1 }),
+      readStates: async () => [],
+      saveState: async (_p, s) => {
+        saved.push(s);
+      },
+      resolveCredentials: async () => new Map([["TOK", "tok123"]]),
+      open: async () => c,
+      fetch: (async () => new Response()) as typeof fetch,
+      now: () => NOW,
+    });
+    const turn = await connectorsForTurn("p1", { readConfig: async () => ({ text, approved: { ui: fp }, version: 1 }), readStates: async () => saved, now: () => NOW });
+    expect(turn.declarations.map((x) => String(x.name)).filter((n) => n.startsWith("mcp__"))).toEqual(["mcp__ui__both", "mcp__ui__search"]);
+    for (const hidden of ["refresh_table", "typo", "empty"]) expect(turn.routes.has(`mcp__ui__${hidden}`)).toBe(false);
+    let opened = 0;
+    const tc = new TurnConnections("p1", turn, {
+      resolveCredentials: async () => new Map([["TOK", "tok123"]]),
+      open: async () => {
+        opened++;
+        return c;
+      },
+      fetch: (async () => new Response()) as typeof fetch,
+      markStale: async () => {},
+      modelTakesImages: true,
+    });
+    const refused = await tc.call("mcp__ui__refresh_table", {});
+    expect(refused.response).toMatchObject({ isError: true });
+    expect(opened).toBe(0);
   });
 });

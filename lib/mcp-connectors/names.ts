@@ -2,11 +2,13 @@
 // (dsh-mcp-client, archived note 2026-07-07-mcp-client-plugin): `mcp__<serverName>__<rawName>`, a pure function of the
 // two; invalid characters become `_`, and when that changed the name or it is over 64 characters, it is cut and gets
 // `_` + 12 hex of sha256(serverName \0 rawName), so distinct identities never collapse. Only the raw name goes on the
-// wire. The schema rules are those of an installed tool's operations (`lib/tools/mcp/schema.ts`). Pure.
+// wire. The schema rules are those of an installed tool's operations (`lib/tools/mcp/schema.ts`), and so is who may see a tool at all
+// (`lib/tools/mcp/visibility.ts`): what a server marks as only for its own UI is left out here. Pure.
 import { createHash } from "node:crypto";
 
 import type { McpTool } from "@/lib/tools/mcp/client";
 import { hasRef, MCP_DESCRIPTION_MAX, MCP_SCHEMA_MAX_BYTES, structureProblem } from "@/lib/tools/mcp/schema";
+import { modelMaySee } from "@/lib/tools/mcp/visibility";
 
 const NAME_MAX = 64;
 
@@ -35,6 +37,9 @@ export function reviewTools(serverName: string, tools: readonly McpTool[]): { to
   const ok: ReviewedTool[] = [];
   const problems: string[] = [];
   for (const tool of tools) {
+    // MCP Apps (SEP-1865): a tool the server kept for its own UI is not Len's — no declaration, so no route to call it.
+    // Same rule as an installed tool's operations; not a problem to report, the server meant it.
+    if (!modelMaySee(tool)) continue;
     const { $schema: _dropped, ...schema } = tool.inputSchema ?? {};
     if (schema.type !== "object") {
       problems.push(`${tool.name}: its inputSchema must be an object (type: "object")`);

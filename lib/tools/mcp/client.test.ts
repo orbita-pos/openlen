@@ -73,6 +73,35 @@ describe("mcpSession against what a server can do badly", () => {
     expect((await mcpSession(send).listTools()).map((t) => t.name)).toEqual(["ping"]);
   });
 
+  it("🔴 what a server declares in _meta.ui.visibility comes back as listed — [] and a typo included, so they can hide the tool", async () => {
+    const send: McpSend = async (body) => {
+      const req = JSON.parse(body) as { id?: number; method: string };
+      if (req.method === "initialize") return sse(req.id!, { protocolVersion: "2025-06-18", capabilities: {}, serverInfo: { name: "x", version: "1" } });
+      if (req.id === undefined) return new Response(null, { status: 202 });
+      const schema = { type: "object" };
+      const meta = (visibility: unknown) => ({ ui: { visibility } });
+      return sse(req.id, {
+        tools: [
+          { name: "app_only", inputSchema: schema, _meta: meta(["app"]) },
+          { name: "empty", inputSchema: schema, _meta: meta([]) },
+          { name: "typo", inputSchema: schema, _meta: meta(["App"]) },
+          { name: "both", inputSchema: schema, _meta: meta(["model", "app"]) },
+          { name: "not_an_array", inputSchema: schema, _meta: meta("app") },
+          { name: "plain", inputSchema: schema },
+        ],
+      });
+    };
+    const tools = await mcpSession(send).listTools();
+    expect(Object.fromEntries(tools.map((t) => [t.name, t.visibility]))).toEqual({
+      app_only: ["app"],
+      empty: [],
+      typo: ["App"],
+      both: ["model", "app"],
+      not_an_array: undefined,
+      plain: undefined,
+    });
+  });
+
   it("a server that never answers: timeout", async () => {
     const send: McpSend = () => new Promise(() => undefined);
     await expect(mcpSession(send, { timeoutMs: 50 }).listTools()).rejects.toMatchObject({ code: "timeout" });
