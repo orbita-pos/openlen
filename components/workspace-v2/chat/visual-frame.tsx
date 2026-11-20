@@ -71,7 +71,7 @@ export function VisualFrame({
   const [link, setLink] = useState<string | null>(null);
   const [loadingIndex, setLoadingIndex] = useState(0);
   const clickedAt = useRef(0);
-  /** The last click into the frame, not used up by a prompt: what updateModelContext is gated by. */
+  /** The last click into the frame, used up by the report it lets through (a prompt doesn't touch it): what updateModelContext is gated by. */
   const lastClickAt = useRef(0);
   const onPromptRef = useRef(onPrompt);
   onPromptRef.current = onPrompt;
@@ -102,8 +102,13 @@ export function VisualFrame({
         }
       } else if (d.kind === "ol-visual:context") {
         // What it reports goes with the person's next message, so it is gated like a prompt: only right after they
-        // clicked into the frame. The click isn't used up (a visual reports its selection, then may ask Len something).
-        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) onContextRef.current?.(cleanVisualContext(d.text));
+        // clicked into the frame, and one click is one report: the mark is used up once a report is taken, so a visual
+        // can't keep writing for the rest of the 5 s window. The prompt has its own mark (a visual reports its
+        // selection, then may ask Len something in the same click).
+        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) {
+          lastClickAt.current = 0;
+          onContextRef.current?.(cleanVisualContext(d.text));
+        }
       }
     }
     window.addEventListener("message", onMessage);

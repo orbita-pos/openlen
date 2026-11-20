@@ -146,8 +146,8 @@ describe("VisualFrame", () => {
   });
 
   // What a visual reports with updateModelContext reaches the person's next message, so it is gated like sendPrompt:
-  // only right after the person clicked into the frame. (It isn't used up by the click: a visual may report its
-  // selection and then ask Len something in the same click.)
+  // only right after the person clicked into the frame: one click, one report. (Its own mark: a visual may report its
+  // selection and then ask Len something in the same click, because sendPrompt reads its own.)
   describe("🔴 updateModelContext is forwarded only after a click into the frame", () => {
     const clickInto = (m: ReturnType<typeof mount>) => {
       vi.spyOn(document, "activeElement", "get").mockReturnValue(m.iframe());
@@ -163,13 +163,34 @@ describe("VisualFrame", () => {
       expect(onContext).not.toHaveBeenCalled();
     });
 
-    it("after a click it is forwarded, trimmed, and again for the next report in the same window", () => {
+    it("after a click it is forwarded, trimmed", () => {
       const onContext = vi.fn();
       const m = mount({ onContext });
       clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "  Selected: Marzo  " });
+      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
+    });
+
+    it("🔴 one click is one report: the next one, without a new click, is ignored — and a new click opens the window again", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Mayo" });
+      m.fromFrame({ kind: "ol-visual:context", text: "" });
+      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
+      clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "Selected: Mayo" });
       expect(onContext.mock.calls).toEqual([["Selected: Marzo"], ["Selected: Mayo"]]);
+    });
+
+    it("a report that wasn't forwarded (no click) doesn't use up a later click", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      m.fromFrame({ kind: "ol-visual:context", text: "too early" });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
+      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
     });
 
     it("a report followed by sendPrompt in the same click: both go", () => {
@@ -201,6 +222,7 @@ describe("VisualFrame", () => {
       expect(onContext).not.toHaveBeenCalled();
       clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "" });
+      clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "z".repeat(4000) });
       expect(onContext.mock.calls[0]).toEqual([""]);
       expect((onContext.mock.calls[1]![0] as string).length).toBe(1500);
@@ -211,6 +233,7 @@ describe("VisualFrame", () => {
       const m = mount({ onContext });
       clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "x".repeat(1499) + "😀" + "tail" });
+      clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "a" + String.fromCharCode(0xd83d) + "b" });
       expect(onContext.mock.calls).toEqual([["x".repeat(1499)], ["a" + String.fromCharCode(0xfffd) + "b"]]);
     });
