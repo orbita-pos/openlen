@@ -83,15 +83,33 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   const { abTestingEnabled } = await import("@/lib/ab/enabled");
   let stopping: import("@/lib/ab/store").AbExperimentRow | null = null;
   if (i.source === "person" && abTestingEnabled()) {
+    // The A/B tables are read for the owner's publish only. If they can't be (the database, a migration not run yet), the
+    // answer is a clean 503 with its own code — never a raw 500 «publish_failed» from deep in a lookup — and nothing is
+    // published: not knowing whether a test is running is not a reason to end it (G1+G3 review, item 22).
+    const unavailable = (err: unknown): GatedPublishResult => {
+      // eslint-disable-next-line no-console
+      console.error("[publish] couldn't read the A/B experiments", err);
+      return { status: 503, body: { error: "ab_unavailable" } };
+    };
     const abStore = await import("@/lib/ab/store");
-    const live = await abStore.liveExperimentForProject(i.projectId);
+    let live: Awaited<ReturnType<typeof abStore.liveExperimentForProject>>;
+    try {
+      live = await abStore.liveExperimentForProject(i.projectId);
+    } catch (err) {
+      return unavailable(err);
+    }
     if (live && !i.stopActiveAb) {
       return { status: 428, body: { error: "ab_experiment_running", experimentId: live.id, name: live.name, targetPath: live.targetPath } };
     }
     if (live) stopping = live;
     // A promoted Variant B that isn't in the draft yet (it clashed with their edits, or waits for Len): publishing the draft
     // now would send the page WITHOUT it and undo the promotion. It waits for them to bring it in or discard it (review item 26).
-    const unbrought = await abStore.pendingBringForProject(i.projectId);
+    let unbrought: Awaited<ReturnType<typeof abStore.pendingBringForProject>>;
+    try {
+      unbrought = await abStore.pendingBringForProject(i.projectId);
+    } catch (err) {
+      return unavailable(err);
+    }
     if (unbrought) {
       return { status: 428, body: { error: "ab_bring_pending", experimentId: unbrought.id, name: unbrought.name, bringState: unbrought.bringState } };
     }

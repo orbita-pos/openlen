@@ -149,3 +149,31 @@ describe("the other doors", () => {
     expect(m.endAfterPublish).not.toHaveBeenCalled(); // promote closes the row itself
   });
 });
+
+describe("when the A/B tables can't be read (G1+G3 review, item 22)", () => {
+  it("🔴 a database error asking whether an experiment is live is a clean 503 with its own code, and nothing is published", async () => {
+    m.live.mockRejectedValue(new Error("connection terminated"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await publishThroughGates(INPUT);
+    error.mockRestore();
+    expect(r).toEqual({ status: 503, body: { error: "ab_unavailable" } });
+    expect(m.publishProject).not.toHaveBeenCalled();
+    expect(m.gate).not.toHaveBeenCalled();
+  });
+
+  it("the same for the question about a promoted winner still to bring in", async () => {
+    m.live.mockResolvedValue(null);
+    m.unbrought.mockRejectedValue(new Error("connection terminated"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await publishThroughGates(INPUT);
+    error.mockRestore();
+    expect(r).toEqual({ status: 503, body: { error: "ab_unavailable" } });
+    expect(m.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("with the flag off the A/B tables are never asked, so their failure can't stop a publish", async () => {
+    enabled.on = false;
+    m.live.mockRejectedValue(new Error("connection terminated"));
+    expect((await publishThroughGates(INPUT)).status).toBe(200);
+  });
+});
