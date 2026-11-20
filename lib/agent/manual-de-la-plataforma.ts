@@ -46,6 +46,7 @@ import { FUNCTIONS_CATALOG_CURRENT, functionsCatalog } from "@/lib/functions/cat
 import { appAiEnabledIn } from "@/lib/app-ai/enabled";
 import { functionsEnabledIn } from "@/lib/functions/enabled";
 import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
+import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { stripeEnabledIn } from "@/lib/stripe/enabled";
 import { emailEnabledIn } from "@/lib/project-email/enabled";
 import { shopifyEnabledIn } from "@/lib/shopify/enabled";
@@ -388,18 +389,26 @@ export function buildManualDeLaPlataforma(
   const agents = shopifyEnabledIn(env) ? conShopify(withFunctions, app) : withFunctions;
   const withArtifacts = env.OPENLEN_ARTIFACTS === "1" ? `${agents}\n\n${skillsEnabled(env) ? ARTIFACT_MANUAL_INDEX_SKILLS : ARTIFACT_MANUAL_INDEX}` : agents;
   const withTool = tool && app ? manualOfTool(withArtifacts) : withArtifacts;
-  const withMcp = connectorsEnabled(env) ? `${withTool}\n\n${MCP_CONNECTORS_MANUAL}` : withTool;
+  const withMcp = connectorsEnabled(env) ? `${withTool}\n\n${mcpConnectorsManual(env)}` : withTool;
   return terminalOnly(mode, env) ? paraSoloLaTerminal(withMcp) : withMcp;
 }
 
 /** LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.5): the person's MCP servers, as a file. */
-const MCP_CONNECTORS_MANUAL = `THE PERSON'S MCP SERVERS (~/.len/mcp.json)
+const MCP_CONNECTORS_MANUAL_HEAD = `THE PERSON'S MCP SERVERS (~/.len/mcp.json)
 - ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer \${credential:NAME}"}}}}. Only https:// servers (no stdio).
 - You never see or write a key: a header that carries one is written as \${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.
 - A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.
-- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.
-- A server that uses OAuth can carry an optional "oauth": {"scope": "…", "clientId": "…", "clientSecret": "\${credential:NAME}", "authorizationServer": ["https://…"], "authServerMetadataUrl": "https://…"} block (or none when it discovers by 401 WWW-Authenticate); while it needs the person to sign in (needs-auth) it exposes mcp__<server>__authenticate, which shows them a "Connect" button.
-- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success.`;
+- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.`;
+
+/** OAuth of the connectors (spec local 2026-11-17-oauth-de-conectores-mcp, §5.5): only while `OPENLEN_MCP_OAUTH` is on —
+ *  off, the section is what it was before, byte for byte. */
+const MCP_CONNECTORS_MANUAL_OAUTH = `- A server that uses OAuth can carry an optional "oauth": {"scope": "…", "clientId": "…", "clientSecret": "\${credential:NAME}", "authorizationServer": ["https://…"], "authServerMetadataUrl": "https://…"} block (or none when it discovers by 401 WWW-Authenticate); while it needs the person to sign in (needs-auth) it exposes mcp__<server>__authenticate, which shows them a "Connect" button.`;
+
+const MCP_CONNECTORS_MANUAL_EMAIL = `- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success.`;
+
+function mcpConnectorsManual(env: Readonly<Record<string, string | undefined>>): string {
+  return [MCP_CONNECTORS_MANUAL_HEAD, ...(oauthEnabled(env) ? [MCP_CONNECTORS_MANUAL_OAUTH] : []), MCP_CONNECTORS_MANUAL_EMAIL].join("\n");
+}
 
 /** Los ficheros de /.openlen/docs, por su ruta. Una app tiene su guía de
  *  diseño en la MISMA ruta, y no tiene la de las librerías de las páginas
