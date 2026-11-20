@@ -49,18 +49,19 @@ const scopeTokens = (scope: string | undefined): string[] => (scope ?? "").split
  *
  * And only for the scopes the directory offers: that consent screen says «OpenLen» whatever is asked, so an entry written
  * at the directory's URL with `https://mail.google.com/` must not get this client. `requested` (the entry's
- * `oauth.scope`) must be within the directory entry's scope plus `stepUp`, the scope the server itself asked for in a
- * step-up; no `requested` is the server's own default.
+ * `oauth.scope`) must be within the directory entry's own scope; no `requested` is the server's own default. A scope the
+ * server asks for later (a step-up) is not part of this: it is asked of the provider through the sign-in's own scope,
+ * and the exchange and the refresh — which never see it — must reach the same answer as the start did.
  */
 export function openLenClientFor(
   issuer: string,
   serverUrl: string,
   env: Env = process.env,
-  scopes: { readonly requested?: string | undefined; readonly stepUp?: string | undefined } = {},
+  scopes: { readonly requested?: string | undefined } = {},
 ): { client_id: string; client_secret: string } | null {
   const offered = directoryEntryFor(serverUrl, issuer);
   if (issuer !== GOOGLE_ISSUER || !offered) return null;
-  const allowed = new Set([...scopeTokens(offered.entry.oauth.scope), ...scopeTokens(scopes.stepUp)]);
+  const allowed = new Set(scopeTokens(offered.entry.oauth.scope));
   if (!scopeTokens(scopes.requested).every((t) => allowed.has(t))) return null;
   const clientId = env.OPENLEN_MCP_GOOGLE_CLIENT_ID;
   const clientSecret = env.OPENLEN_MCP_GOOGLE_CLIENT_SECRET;
@@ -89,7 +90,6 @@ export function preRegisteredClient(
   issuer: string,
   secrets: ReadonlyMap<string, string>,
   env: Env = process.env,
-  stepUpScope?: string,
 ): StoredOAuthClientInformation | ClientRefusal | null {
   const own = entry.oauth;
   if (own?.clientId) {
@@ -103,7 +103,7 @@ export function preRegisteredClient(
     const secret = name === undefined ? undefined : secrets.get(name);
     return secret ? { client_id: own.clientId, client_secret: secret } : { refused: "missing_secret", detail: name ?? "oauth.clientSecret" };
   }
-  return openLenClientFor(issuer, entry.url, env, { requested: own?.scope, stepUp: stepUpScope });
+  return openLenClientFor(issuer, entry.url, env, { requested: own?.scope });
 }
 
 /** Where the provider sends the person back (and the one address registered with it). */

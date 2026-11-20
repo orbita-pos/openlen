@@ -183,18 +183,16 @@ export async function discoverAuthServer(entry: McpServerEntry, d: Pick<OAuthDep
 }
 
 /** The client the entry names (with its secret resolved now, so a rotated value is used at once) or OpenLen's own for
- *  this issuer — steps 2 and 3 of §5.2 —, a refusal, or null. `stepUpScope` is the scope a sign-in is asked to add
- *  because the server asked for it (OpenLen's own client is only for the directory's scope and that one). */
+ *  this issuer — steps 2 and 3 of §5.2 —, a refusal, or null. */
 export async function entryClient(
   personId: string,
   entry: McpServerEntry,
   issuer: string,
   d: OAuthDeps,
-  stepUpScope?: string,
 ): Promise<StoredOAuthClientInformation | ClientRefusal | null> {
   const names = entry.oauth?.clientSecret ? credentialRefs(entry.oauth.clientSecret) : [];
   const secrets = names.length > 0 ? await d.resolveCredentials(personId, names) : new Map<string, string>();
-  return preRegisteredClient(entry, issuer, secrets, d.env, stepUpScope);
+  return preRegisteredClient(entry, issuer, secrets, d.env);
 }
 
 /** What the row keeps of a client: never its secret (the entry's comes back from the person's credentials, OpenLen's
