@@ -133,3 +133,14 @@ come from Anthropic's `cash-flow-snapshot` skill (github.com/anthropics/knowledg
 named, not one number. The `[VERIFY: …]` marker for a fact not checked is the convention of Anthropic's
 `claude-for-legal` (Apache-2.0). The rest — the budget, avalanche and snowball, the payoff formula, the emergency fund
 — is common knowledge written in our own words. Added on 2026-11-20.
+
+`legal-helper` is adapted from Anthropic's `legal-clinic` and `law-student` plugins (github.com/anthropics/claude-for-legal
+at `4a6c651`) and the `contract-review` skill of `knowledge-work-plugins` (at `0e0fcac`, `small-business/skills/`), Apache
+License 2.0, the same license text as `LICENSES/anthropic-skills.Apache-2.0.txt`. Taken from `client-intake`: an open
+question first and the person's own words kept; the questions of each kind of matter; problems of another kind spotted
+inside the story; the urgency classes (Urgent, Time-sensitive, Standard, out of scope); computed deadlines left
+`[VERIFY]`; a record of the facts known and missing and what to confirm. From `law-student`: a real situation is not
+something it can give legal advice on, and the `[VERIFY: …]` and `[UNCERTAIN: …]` markers. From `contract-review`:
+risky clauses named in plain words by category, asking which side the reader is on. Changed: it serves one person about
+their OWN matter, never a clinic, a student or a firm; the categories are a person's (a lease, a job, a purchase), and
+when to see a lawyer is ours. Written in our own words. Added on 2026-11-20.
