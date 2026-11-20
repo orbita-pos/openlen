@@ -358,6 +358,8 @@ export async function findOrCreateBlankProject(userId: string): Promise<string> 
     .where(
       and(
         eq(p.userId, userId),
+        // Never the person's space (spec local 2026-11-19-agentes-para-todos, §6.2): it is empty until an agent writes.
+        sqlOp`(${p.data}->'space') is null`,
         sqlOp`coalesce(btrim(${p.data}->>'html'), '') = ''`,
         sqlOp`coalesce(${p.data}->'pages', '{}'::jsonb) = '{}'::jsonb`,
         sqlOp`not exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${p}."id")`,
@@ -440,7 +442,8 @@ async function resumenesDe(donde: SQL): Promise<ProjectSummary[]> {
     })
     .from(schema.projects)
     // Never the hidden working copy of a Len Watch fix (spec local 2026-10-30-len-watch, §5.5).
-    .where(and(donde, isNull(schema.projects.parentProjectId)))
+    // Nor the person's space, the hidden home of their agents (spec local 2026-11-19-agentes-para-todos, §6.2).
+    .where(and(donde, isNull(schema.projects.parentProjectId), sqlOp`(${schema.projects.data}->'space') is null`))
     .orderBy(desc(schema.projects.updatedAt))
     .limit(200);
 

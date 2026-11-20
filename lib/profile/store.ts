@@ -54,6 +54,8 @@ export function profileProjectsQuery(profileUserId: string, viewerId: string | n
         // join, Postgres recorría la tabla entera en cada visita a un perfil.
         sql`${p}."id" in (select "id" from ${p} where "userId" = ${profileUserId} union all select "projectId" from ${pm} where "userId" = ${profileUserId})`,
         ne(p.status, "archived"),
+        // Never the person's space (spec local 2026-11-19-agentes-para-todos, §6.2).
+        sql`(${p}."data"->'space') is null`,
         // NO en blanco: con portada, con páginas o con conversación (lo mismo
         // que `isBlankProject`, en SQL para no traer el HTML de 200 proyectos).
         sql`(coalesce(btrim(${p}."data"->>'html'), '') <> '' or coalesce(${p}."data"->'pages', '{}'::jsonb) not in ('{}'::jsonb, 'null'::jsonb) or exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${p}."id"))`,

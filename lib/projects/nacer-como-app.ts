@@ -56,6 +56,7 @@ export async function bornWithSkeleton(p: {
         AND coalesce(btrim("data"->>'html'), '') = ''
         AND coalesce("data"->'pages', '{}'::jsonb) = '{}'::jsonb
         AND "data"->'app' IS NULL
+        AND "data"->'space' IS NULL
         AND NOT EXISTS (SELECT 1 FROM "projectChatMessages" m WHERE m."projectId" = ${p.projectId})
       RETURNING "id"
     ),
