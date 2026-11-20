@@ -278,11 +278,13 @@ export function isUniqueViolation(err: unknown): boolean {
 /** The launch takes its place BEFORE it publishes: the draft becomes `running` (with no start yet) under the one-live-per-
  *  project index, so of two launches at the same instant one gets the project and the other is refused — without having
  *  written a release. `"taken"` = another experiment of the project is live; `"moved"` = this one was no longer a draft. */
-export async function claimLaunch(id: string): Promise<AbExperimentRow | "taken" | "moved"> {
+export async function claimLaunch(id: string, now: Date = new Date()): Promise<AbExperimentRow | "taken" | "moved"> {
   try {
     const [row] = await db
       .update(schema.abExperiments)
-      .set({ status: "running", updatedAt: new Date() })
+      // The claim is a LEASE (round 3, A): the decision lock's own columns — a row with no start can't be claimed by a decision, so
+      // they never overlap. `updatedAt` stays the moment of the claim; `decisionLockedAt` is the launch's last heartbeat.
+      .set({ status: "running", updatedAt: now, decisionLockToken: randomBytes(12).toString("hex"), decisionLockedAt: now })
       .where(and(eq(schema.abExperiments.id, id), eq(schema.abExperiments.status, "draft")))
       .returning();
     return row ?? "moved";
@@ -292,21 +294,58 @@ export async function claimLaunch(id: string): Promise<AbExperimentRow | "taken"
   }
 }
 
-/** The launch's FINAL write is a compare-and-swap: it lands only while the row is still the launch's own claim
- *  (`running`, no start). `null` = something else settled the row meanwhile (the reconcile pass), and the caller undoes
- *  what it published. */
-export async function finalizeLaunch(
-  id: string,
-  patch: Partial<Omit<AbExperimentInsert, "id" | "projectId" | "createdAt">>,
-): Promise<AbExperimentRow | null> {
-  const [row] = await db
+/** What a write that settles a launch must still find on the row: the claim's own token (a relaunch of the same row is a NEW claim),
+ *  and — for the reconcile pass, which acts on a lease it judged stale — the very clock it read: a heartbeat that landed since moved
+ *  it, and the write misses. `lockedAt` omitted = not part of the fence. */
+export interface LaunchFence {
+  readonly token: string | null;
+  readonly lockedAt?: Date | null;
+}
+
+function launchFence(f: LaunchFence) {
+  const parts = [f.token === null ? isNull(schema.abExperiments.decisionLockToken) : eq(schema.abExperiments.decisionLockToken, f.token)];
+  if (f.lockedAt !== undefined) {
+    parts.push(f.lockedAt === null ? isNull(schema.abExperiments.decisionLockedAt) : eq(schema.abExperiments.decisionLockedAt, f.lockedAt));
+  }
+  return and(...parts);
+}
+
+/** The launch that holds the claim says it is alive: the lease's clock moves to `now`, ONLY under its own token and only while the
+ *  launch hasn't finished. `false` = the claim is no longer its (the pass gave it back, or it finished). */
+export async function heartbeatLaunchLease(id: string, token: string, now: Date = new Date()): Promise<boolean> {
+  const rows = await db
     .update(schema.abExperiments)
-    .set({ ...patch, updatedAt: new Date() })
+    .set({ decisionLockedAt: now })
     .where(
       and(
         eq(schema.abExperiments.id, id),
         eq(schema.abExperiments.status, "running"),
         isNull(schema.abExperiments.startedAt),
+        eq(schema.abExperiments.decisionLockToken, token),
+      ),
+    )
+    .returning({ id: schema.abExperiments.id });
+  return rows.length > 0;
+}
+
+/** The launch's FINAL write is a compare-and-swap: it lands only while the row is still the launch's own claim
+ *  (`running`, no start). `null` = something else settled the row meanwhile (the reconcile pass), and the caller undoes
+ *  what it published. */
+export async function finalizeLaunch(
+  id: string,
+  fence: LaunchFence,
+  patch: Partial<Omit<AbExperimentInsert, "id" | "projectId" | "createdAt">>,
+): Promise<AbExperimentRow | null> {
+  const [row] = await db
+    .update(schema.abExperiments)
+    // A launch that is finished carries no lease.
+    .set({ ...patch, decisionLockToken: null, decisionLockedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "running"),
+        isNull(schema.abExperiments.startedAt),
+        launchFence(fence),
       ),
     )
     .returning();
@@ -322,15 +361,16 @@ export async function listLiveExperiments(): Promise<AbExperimentRow[]> {
 }
 
 /** A publish that failed after the claim: the experiment is a draft again, and the project has no live one. */
-export async function releaseLaunch(id: string): Promise<void> {
+export async function releaseLaunch(id: string, fence: LaunchFence): Promise<void> {
   await db
     .update(schema.abExperiments)
-    .set({ status: "draft", startedAt: null, updatedAt: new Date() })
+    .set({ status: "draft", startedAt: null, decisionLockToken: null, decisionLockedAt: null, updatedAt: new Date() })
     .where(
       and(
         eq(schema.abExperiments.id, id),
         eq(schema.abExperiments.status, "running"),
         isNull(schema.abExperiments.startedAt),
+        launchFence(fence),
       ),
     );
 }

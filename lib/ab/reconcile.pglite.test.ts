@@ -255,8 +255,21 @@ describe("a promote whose recording was lost after B went live", () => {
 });
 
 describe("a launch that never finished (a claimed slot, no start)", () => {
+  // A launch's claim: `updatedAt` is when it was made, `decisionLockedAt` is the lease's clock (its last heartbeat; by default none since the claim).
   const claimed = (id: string, ageMin: number, o: Record<string, unknown> = {}) =>
-    insertExperiment(raw(), { id, status: "running", startedAt: null, updatedAt: new Date(NOW.getTime() - ageMin * MIN), controlReleaseSha: "rel-c", copyProjectId: "copy-1", branch: `ab/${id}`, baseCommitOid: "base-1", ...o });
+    insertExperiment(raw(), {
+      id,
+      status: "running",
+      startedAt: null,
+      updatedAt: new Date(NOW.getTime() - ageMin * MIN),
+      decisionLockedAt: new Date(NOW.getTime() - ageMin * MIN),
+      decisionLockToken: `tok-${id}`,
+      controlReleaseSha: "rel-c",
+      copyProjectId: "copy-1",
+      branch: `ab/${id}`,
+      baseCommitOid: "base-1",
+      ...o,
+    });
 
   it("🔴 the release carries its split: the launch is FINISHED from what the release says (start = the claim time, the live sha, the manifest's overrides and split)", async () => {
     await claimed("ab_strand001", 20);
@@ -306,6 +319,44 @@ describe("a launch that never finished (a claimed slot, no start)", () => {
     const row = (await getExperimentById("ab_strand004"))!;
     expect(row.status).toBe("running");
     expect(row.startedAt).toBeNull();
+  });
+
+  it("🔴 a launch that has been running a long time but KEEPS REFRESHING its lease is alive: the pass leaves it alone (round 3, A)", async () => {
+    // claimed 40 minutes ago, last heartbeat 1 minute ago: a localized publish that is still going
+    await claimed("ab_slow00001", 40, { decisionLockedAt: new Date(NOW.getTime() - MIN) });
+    h.live.mockResolvedValue({ kind: "none", sha: "rel-c" });
+    await run();
+    expect((await getExperimentById("ab_slow00001"))!.status).toBe("running");
+    expect(h.live).not.toHaveBeenCalled();
+  });
+
+  it("🔴 a heartbeat that lands between the pass's read and its write saves the launch: the release/finish is fenced on the clock it read", async () => {
+    await claimed("ab_beat00001", 20);
+    h.live.mockImplementation(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "decisionLockedAt" = $1 WHERE "id" = 'ab_beat00001'`, [new Date(NOW.getTime() - 1000)]);
+      return { kind: "none", sha: "rel-c" };
+    });
+    await run();
+    const row = (await getExperimentById("ab_beat00001"))!;
+    expect(row.status).toBe("running");
+    expect(row.startedAt).toBeNull();
+  });
+
+  it("🔴 a relaunch that re-claimed the slot (a new token) between the pass's read and its write isn't released by it", async () => {
+    await claimed("ab_aba000001", 20);
+    h.live.mockImplementation(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "decisionLockToken" = 'the-relaunch', "decisionLockedAt" = $1 WHERE "id" = 'ab_aba000001'`, [NOW]);
+      return { kind: "none", sha: "rel-c" };
+    });
+    await run();
+    expect(await getExperimentById("ab_aba000001")).toMatchObject({ status: "running", decisionLockToken: "the-relaunch" });
+  });
+
+  it("a finished launch carries no lease: its token and clock are cleared", async () => {
+    await claimed("ab_clear0001", 20);
+    h.live.mockResolvedValue({ kind: "live", sha: "rel-ab", overrides: [], splitBps: 5000 });
+    await run();
+    expect(await getExperimentById("ab_clear0001")).toMatchObject({ decisionLockToken: null, decisionLockedAt: null });
   });
 
   it("the launch's own final write wins the race: the reconcile's finish doesn't land and nothing is double-written", async () => {

@@ -24,6 +24,10 @@ vi.mock("@/lib/db", async () => {
 
 const {
   claimExperimentDecision,
+  claimLaunch,
+  finalizeLaunch,
+  heartbeatLaunchLease,
+  releaseLaunch,
   createExperimentRow,
   closeDecision,
   heartbeatDecisionLock,
@@ -331,5 +335,78 @@ describe("the decision lock's token (fencing)", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await closeDecision("ab_fence0002", null, { status: "kept_a" })).toBeNull();
     error.mockRestore();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE LAUNCH CLAIM IS A LEASE (round 3, A): the same token and clock as a decision's lock, on a row that has no start yet (a
+// decision can't claim such a row, so they never overlap). Everything that settles a launch is fenced on the token.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("the launch lease (round 3, A)", () => {
+  const draft = (id: string) =>
+    createExperimentRow({ id, projectId: "p1", name: id, targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "draft", decisionStatus: "none" });
+  const row = async (id: string) => (await pg().query<Record<string, unknown>>(`SELECT * FROM "abExperiments" WHERE "id" = $1`, [id])).rows[0]!;
+  const PATCH = { status: "running" as const, decisionStatus: "none" as const, startedAt: new Date(), experimentReleaseSha: "rel-1" };
+
+  it("🔴 the claim takes a fresh token and starts the lease's clock; every claim has its own", async () => {
+    await draft("ab_lease0001");
+    const claimed = (await claimLaunch("ab_lease0001")) as { decisionLockToken: string | null; decisionLockedAt: Date | null; startedAt: Date | null };
+    expect(claimed.decisionLockToken).toMatch(/^[0-9a-f]{24}$/);
+    expect(claimed.decisionLockedAt).toBeInstanceOf(Date);
+    expect(claimed.startedAt).toBeNull();
+    await releaseLaunch("ab_lease0001", { token: claimed.decisionLockToken });
+    const again = (await claimLaunch("ab_lease0001")) as { decisionLockToken: string | null };
+    expect(again.decisionLockToken).not.toBe(claimed.decisionLockToken);
+  });
+
+  it("🔴 the heartbeat refreshes the clock only under its own token, and only while the launch hasn't finished", async () => {
+    await draft("ab_lease0002");
+    const claimed = (await claimLaunch("ab_lease0002")) as { decisionLockToken: string };
+    const later = new Date(Date.now() + 5 * 60_000);
+    expect(await heartbeatLaunchLease("ab_lease0002", "not-the-token", later)).toBe(false);
+    expect(await heartbeatLaunchLease("ab_lease0002", claimed.decisionLockToken, later)).toBe(true);
+    expect(((await row("ab_lease0002")).decisionLockedAt as Date).getTime()).toBe(later.getTime());
+    await finalizeLaunch("ab_lease0002", { token: claimed.decisionLockToken }, PATCH);
+    expect(await heartbeatLaunchLease("ab_lease0002", claimed.decisionLockToken, later)).toBe(false);
+  });
+
+  it("🔴 the final write is fenced: another claim's token misses; the claim's own lands, and clears the lease", async () => {
+    await draft("ab_lease0003");
+    const claimed = (await claimLaunch("ab_lease0003")) as { decisionLockToken: string };
+    expect(await finalizeLaunch("ab_lease0003", { token: "someone-elses" }, PATCH)).toBeNull();
+    expect((await row("ab_lease0003")).startedAt).toBeNull();
+    const done = await finalizeLaunch("ab_lease0003", { token: claimed.decisionLockToken }, PATCH);
+    expect(done).toMatchObject({ status: "running", decisionLockToken: null, decisionLockedAt: null });
+    expect(done!.startedAt).toBeInstanceOf(Date);
+  });
+
+  it("🔴 giving the slot back is fenced too: a launch that lost its claim can't release the next one's", async () => {
+    await draft("ab_lease0004");
+    const first = (await claimLaunch("ab_lease0004")) as { decisionLockToken: string };
+    await releaseLaunch("ab_lease0004", { token: first.decisionLockToken }); // the reconcile pass gave it back
+    const second = (await claimLaunch("ab_lease0004")) as { decisionLockToken: string }; // the relaunch
+    await releaseLaunch("ab_lease0004", { token: first.decisionLockToken }); // the first launch's late release
+    expect(await row("ab_lease0004")).toMatchObject({ status: "running", decisionLockToken: second.decisionLockToken });
+    await releaseLaunch("ab_lease0004", { token: second.decisionLockToken });
+    expect(await row("ab_lease0004")).toMatchObject({ status: "draft", decisionLockToken: null, decisionLockedAt: null });
+  });
+
+  it("🔴 the reconcile pass's fence also names the clock it read: a heartbeat that landed since makes its write miss", async () => {
+    await draft("ab_lease0005");
+    const claimed = (await claimLaunch("ab_lease0005")) as { decisionLockToken: string; decisionLockedAt: Date };
+    const read = claimed.decisionLockedAt;
+    await heartbeatLaunchLease("ab_lease0005", claimed.decisionLockToken, new Date(read.getTime() + 60_000));
+    expect(await finalizeLaunch("ab_lease0005", { token: claimed.decisionLockToken, lockedAt: read }, PATCH)).toBeNull();
+    await releaseLaunch("ab_lease0005", { token: claimed.decisionLockToken, lockedAt: read });
+    expect((await row("ab_lease0005")).status).toBe("running");
+    // …and with the clock it really has, it lands
+    const current = (await row("ab_lease0005")).decisionLockedAt as Date;
+    expect(await finalizeLaunch("ab_lease0005", { token: claimed.decisionLockToken, lockedAt: current }, PATCH)).not.toBeNull();
+  });
+
+  it("a row from before the lease (no token, no clock) is fenced on null", async () => {
+    await pg().query(`INSERT INTO "abExperiments" ("id","projectId","name","targetPath","salt","status","decisionStatus","createdBy") VALUES ('ab_lease0006','p1','x','/','s','running','none','u1')`);
+    expect(await finalizeLaunch("ab_lease0006", { token: "something" }, PATCH)).toBeNull();
+    expect(await finalizeLaunch("ab_lease0006", { token: null, lockedAt: null }, PATCH)).not.toBeNull();
   });
 });
