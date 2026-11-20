@@ -8,7 +8,7 @@ const base = "name: reviewer\ndescription: Reviews copy";
 describe("parseAgentFile", () => {
   it("parses every key of the subset", () => {
     const r = parseAgentFile(
-      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true\nisolation: worktree\nreadOnly: true`),
+      file(`${base}\ntools: Read, Grep, Glob\ndisallowedTools: [bash]\nskills: dataviz, pdf\neffort: high\nmaxTurns: 12\nomitLenMd: true\nisolation: worktree\nreadOnly: true\ninitialPrompt: Hola, empecemos con tu nivel`),
       "reviewer",
     );
     expect(r).toEqual({
@@ -24,6 +24,7 @@ describe("parseAgentFile", () => {
         omitLenMd: true,
         isolation: "worktree",
         readOnly: true,
+        initialPrompt: "Hola, empecemos con tu nivel",
         body: "Review the copy of the page.",
       },
     });
@@ -31,7 +32,7 @@ describe("parseAgentFile", () => {
 
   it("defaults", () => {
     const r = parseAgentFile(file(base), "reviewer");
-    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false, isolation: null, readOnly: false });
+    expect(r.ok && r.agent).toMatchObject({ tools: null, disallowedTools: [], skills: [], effort: null, maxTurns: null, omitLenMd: false, isolation: null, readOnly: false, initialPrompt: null });
   });
 
   it("isolation: any other value is refused with its template", () => {
@@ -71,6 +72,13 @@ describe("parseAgentFile", () => {
   it("every error shows what a type looks like", () => {
     const r = parseAgentFile(file("name: reviewer"), "reviewer");
     expect(!r.ok && r.error).toContain("---\nname: reviewer\ndescription:");
+  });
+
+  it("initialPrompt: Claude Code's first turn, one line up to 2,000 characters", () => {
+    const long = parseAgentFile(file(`${base}\ninitialPrompt: ${"a".repeat(2001)}`), "reviewer");
+    expect(!long.ok && long.error).toMatch(/^initialPrompt is longer than 2000 characters\./);
+    const empty = parseAgentFile(file(`${base}\ninitialPrompt: `), "reviewer");
+    expect(empty.ok && empty.agent.initialPrompt).toBeNull();
   });
 
   it("ignores Claude Code keys it doesn't implement", () => {

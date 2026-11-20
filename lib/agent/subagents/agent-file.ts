@@ -20,6 +20,8 @@ export const AGENT_BODY_MAX = 20_000;
 /** Claude Code preloads up to 32 skills in an agent. */
 export const AGENT_SKILLS_MAX = 32;
 export const AGENT_MAX_TURNS_MAX = 200;
+/** One line, like every key here. */
+export const AGENT_INITIAL_PROMPT_MAX = 2_000;
 
 export interface AgentDefinition {
   readonly name: string;
@@ -39,6 +41,9 @@ export interface AgentDefinition {
   /** Read-only on the SERVER, like Explore and Plan: no tool that writes, and its session refuses what a command
    *  would change. It only limits, but a malformed value drops the type like any key that limits. */
   readonly readOnly: boolean;
+  /** Claude Code's `initialPrompt`: «Auto-submitted as the first user turn when this agent is the main thread agent».
+   *  Only an agent of the person's own (spec local 2026-11-19-agentes-para-todos, §6.4) uses it; a subagent ignores it. */
+  readonly initialPrompt: string | null;
   /** The type's section. */
   readonly body: string;
 }
@@ -46,7 +51,7 @@ export interface AgentDefinition {
 const TRUE = new Set(["true", "yes", "on", "1"]);
 const FALSE = new Set(["false", "no", "off", "0"]);
 const ITEM = /^[A-Za-z_][\w-]*$/;
-const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd", "isolation", "readOnly"]);
+const KEYS = new Set(["name", "description", "tools", "disallowedTools", "skills", "effort", "maxTurns", "omitLenMd", "isolation", "readOnly", "initialPrompt"]);
 
 function template(name: string): string {
   return `---\nname: ${name}\ndescription: <what it does and when to use it, in one line>\ntools: Read, Grep, Glob\n---\n\n<the instructions for this type of subagent>\n`;
@@ -112,10 +117,12 @@ export function parseAgentFile(text: string, expectedName: string | null): { ok:
   const isolationText = fields.get("isolation");
   if (isolationText !== undefined && isolationText !== "worktree") return fail("isolation must be worktree.");
   const isolation = isolationText === "worktree" ? ("worktree" as const) : null;
+  const initialPrompt = fields.get("initialPrompt") || null;
+  if (initialPrompt !== null && initialPrompt.length > AGENT_INITIAL_PROMPT_MAX) return fail(`initialPrompt is longer than ${AGENT_INITIAL_PROMPT_MAX} characters.`);
   const body = t.slice(end + "\n---\n".length).trim();
   if (!body) return fail("The type has no instructions after the frontmatter.");
   if (body.length > AGENT_BODY_MAX) return fail(`The instructions are longer than ${AGENT_BODY_MAX} characters.`);
-  const secret = findSecret(`${description}\n${body}`);
+  const secret = findSecret(`${description}\n${initialPrompt ?? ""}\n${body}`);
   if (secret) return { ok: false, error: `The type seems to contain a ${secret}. Never save credentials in a subagent type.` };
-  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, isolation, readOnly, body } };
+  return { ok: true, agent: { name, description, tools, disallowedTools, skills, effort, maxTurns, omitLenMd, isolation, readOnly, initialPrompt, body } };
 }
