@@ -4,7 +4,7 @@
 // the line — a partial UNIQUE index on the project over the live statuses — and the launch takes it BEFORE it publishes, so
 // the second launch is told 409 `ab_already_running` and publishes nothing (the release carries ONE manifest).
 import type { PGlite } from "@electric-sql/pglite";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { insertExperiment, openAbPglite, resetAbRows, type AbPglite } from "./testing/pglite";
 
@@ -37,6 +37,7 @@ vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: h.runSecurityGate, publishThroughGates: vi.fn() }));
 vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: h.purge }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: vi.fn() }));
+vi.mock("@/lib/len-watch/worktree", () => ({ branchTip: async () => "tip-1" }));
 vi.mock("@/lib/ab/worktree", () => ({
   cleanupAbWorktree: h.cleanup,
   commitAbWorktree: h.commit,
@@ -48,7 +49,8 @@ vi.mock("@/lib/ab/worktree", () => ({
 }));
 
 const { AbLifecycleError, createAbDraft, launchAbExperiment } = await import("./lifecycle");
-const { getExperimentById, liveExperimentForProject } = await import("./store");
+const { getExperimentById, liveExperimentForProject, claimLaunch, releaseLaunch } = await import("./store");
+const { reconcileLiveExperiments, defaultReconcileDeps } = await import("./reconcile");
 
 let pglite: AbPglite;
 const raw = (): PGlite => pglite.raw;
@@ -61,6 +63,9 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await raw().close();
+});
+afterEach(() => {
+  vi.useRealTimers();
 });
 beforeEach(async () => {
   vi.clearAllMocks();
@@ -255,6 +260,8 @@ describe("the launch's slot (review item 1)", () => {
       return { sha: "release-experiment" };
     });
     h.publishProject.mockResolvedValueOnce({ sha: "release-control-again" });
+    // what is live is this launch's own release: its split is the one to take down
+    h.live.mockResolvedValue({ kind: "live", sha: "release-experiment", overrides: [], splitBps: 5000 });
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(launch("ab_slot0003")).rejects.toMatchObject({ code: "decision_conflict" });
     error.mockRestore();
@@ -262,5 +269,107 @@ describe("the launch's slot (review item 1)", () => {
     expect(h.publishProject).toHaveBeenCalledTimes(2);
     expect(h.publishProject.mock.calls[1]![0]).toMatchObject({ abLive: "ending" });
     expect(h.publishProject.mock.calls[1]![0]).not.toHaveProperty("abExperiment");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE LAUNCH HOLDS ITS CLAIM AS A LEASE (round 3, A): a launch publishes Control AND B, so it can outlast any fixed time; the
+// claim carries a token and a heartbeat, the reconcile pass measures the heartbeat, and everything that settles a launch is
+// fenced on the token (a relaunch of the same row is a NEW claim).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("the launch lease (round 3, A)", () => {
+  const info = async (projectId: string) => ({ id: projectId, ownerId: "u1", title: "Panadería", subdomain: "pan1", locale: "en", assistant: null });
+  const pass = (now: Date) => reconcileLiveExperiments(defaultReconcileDeps({ projectInfo: info, tell: async () => undefined }), now);
+  const realTick = () => new Promise<void>((r) => setTimeout(r, 0));
+
+  it("🔴 a launch whose publish takes longer than the claim's staleness (simulated clock) is NOT torn down by a reconcile pass in the middle of it", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    await draft("ab_slow0001", "/");
+    let during: Awaited<ReturnType<typeof pass>> | null = null;
+    h.publishProject.mockImplementationOnce(async () => {
+      // twenty simulated minutes of publishing, one heartbeat a minute
+      for (let i = 0; i < 20; i++) {
+        await vi.advanceTimersByTimeAsync(60_000);
+        await realTick();
+      }
+      // the swap hasn't landed: the live release carries no split yet — the pass must still leave the claim alone
+      h.live.mockResolvedValue({ kind: "none", sha: "rel-live" });
+      during = await pass(new Date());
+      return { sha: "release-experiment" };
+    });
+    const view = await launch("ab_slow0001");
+    expect(during).toMatchObject({ launchesReleased: 0, launchesFinished: 0 });
+    expect(view.status).toBe("running");
+    expect(await getExperimentById("ab_slow0001")).toMatchObject({ status: "running", experimentReleaseSha: "release-experiment", decisionLockToken: null, decisionLockedAt: null });
+    expect(h.publishProject).toHaveBeenCalledTimes(1); // nothing was taken down
+  });
+
+  it("the heartbeat stops with the launch: a launch that threw leaves no timer behind", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    await draft("ab_slow0002", "/");
+    h.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
+    await expect(launch("ab_slow0002")).rejects.toThrow(/disco lleno/);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("🔴 a relaunch of the same row while the first publish is still in flight can't be finalized by the first launch (ABA): the relaunch's claim is untouched", async () => {
+    await draft("ab_aba00001", "/");
+    let second: Awaited<ReturnType<typeof claimLaunch>> | null = null;
+    h.publishProject.mockImplementationOnce(async () => {
+      // the pass gave the first claim back (its lease went stale) and the owner launched again: a NEW claim on the same row
+      const first = await getExperimentById("ab_aba00001");
+      await releaseLaunch("ab_aba00001", { token: first!.decisionLockToken });
+      second = await claimLaunch("ab_aba00001");
+      return { sha: "release-first" };
+    });
+    h.publishProject.mockResolvedValueOnce({ sha: "release-control-again" });
+    // the first launch's release is what is live (the relaunch hasn't swapped yet): that split is ours to take down
+    h.live.mockResolvedValue({ kind: "live", sha: "release-first", overrides: [], splitBps: 5000 });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_aba00001")).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    const row = (await getExperimentById("ab_aba00001"))!;
+    expect(row).toMatchObject({ status: "running", startedAt: null, experimentReleaseSha: null });
+    expect(row.decisionLockToken).toBe((second as unknown as { decisionLockToken: string }).decisionLockToken);
+  });
+
+  it("🔴 a miss on the final write where the row is already RUNNING with this launch's release (the pass finished it) is accepted as launched, not torn down", async () => {
+    await draft("ab_acc00001", "/");
+    h.publishProject.mockImplementationOnce(async () => {
+      await raw().query(
+        `UPDATE "abExperiments" SET "startedAt" = now(), "experimentReleaseSha" = 'release-experiment', "decisionLockToken" = NULL, "decisionLockedAt" = NULL WHERE "id" = 'ab_acc00001'`,
+      );
+      return { sha: "release-experiment" };
+    });
+    const view = await launch("ab_acc00001");
+    expect(view.status).toBe("running");
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+    expect(await getExperimentById("ab_acc00001")).toMatchObject({ status: "running", experimentReleaseSha: "release-experiment" });
+  });
+
+  it("🔴 a miss where what is live is NOT this launch's release (someone published since) takes nothing down", async () => {
+    await draft("ab_notours01", "/");
+    h.publishProject.mockImplementationOnce(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "status" = 'cancelled', "decisionStatus" = 'resolved' WHERE "id" = 'ab_notours01'`);
+      return { sha: "release-experiment" };
+    });
+    h.live.mockResolvedValue({ kind: "none", sha: "release-of-the-owner" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_notours01")).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
+  });
+
+  it("a miss where the live release can't be read takes nothing down either (never a guess): the pass settles it", async () => {
+    await draft("ab_notours02", "/");
+    h.publishProject.mockImplementationOnce(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "status" = 'cancelled', "decisionStatus" = 'resolved' WHERE "id" = 'ab_notours02'`);
+      return { sha: "release-experiment" };
+    });
+    h.live.mockResolvedValue({ kind: "unknown" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(launch("ab_notours02")).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    expect(h.publishProject).toHaveBeenCalledTimes(1);
   });
 });

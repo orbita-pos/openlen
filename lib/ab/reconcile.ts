@@ -27,7 +27,7 @@ import { AB_SYSTEM_ACTOR } from "./types";
 
 /** `decidedBy` of what the system closed on its own. */
 export const SYSTEM_ACTOR = AB_SYSTEM_ACTOR;
-/** A launch's claim older than this belongs to a launch that is gone: a publish and its two writes take seconds. */
+/** A launch's lease not refreshed for this long belongs to a launch that is gone: a live one beats every minute. */
 export const LAUNCH_CLAIM_STALE_MS = 15 * 60_000;
 
 export type ReconcileVerdict = "closed_by_system" | "promoted_by_system";
@@ -77,8 +77,10 @@ export async function reconcileLiveExperiments(deps: ReconcileDeps, now: Date = 
 
       // (b) A claimed slot with no start.
       if (!exp.startedAt) {
+        // The claim is a lease: its clock is the launch's last heartbeat (a row from before the lease has none: the claim's time).
         const claimedAt = exp.updatedAt;
-        if (now.getTime() - claimedAt.getTime() < LAUNCH_CLAIM_STALE_MS) continue;
+        const lastBeat = exp.decisionLockedAt ?? exp.updatedAt;
+        if (now.getTime() - lastBeat.getTime() < LAUNCH_CLAIM_STALE_MS) continue;
         const live: LiveAb = project.subdomain ? await deps.readLive(project.subdomain, exp.id) : { kind: "none", sha: null };
         if (live.kind === "unknown") continue;
         if (live.kind === "live") {
@@ -159,7 +161,8 @@ export function defaultReconcileDeps(io: {
       const [{ finalizeLaunch }, { branchTip }] = await Promise.all([import("./store"), import("@/lib/len-watch/worktree")]);
       // Variant B's commit as it was at the launch: the branch's tip (nothing commits to it after the launch).
       const tip = exp.branch ? await branchTip(exp.projectId, exp.branch).catch(() => null) : null;
-      const row = await finalizeLaunch(exp.id, {
+      // Fenced on the claim it read: its token AND its clock — a heartbeat that landed since, or a relaunch's new claim, makes this miss.
+      const row = await finalizeLaunch(exp.id, { token: exp.decisionLockToken, lockedAt: exp.decisionLockedAt }, {
         status: "running",
         decisionStatus: "none",
         splitBps: live.splitBps,
@@ -171,7 +174,8 @@ export function defaultReconcileDeps(io: {
       });
       return row !== null;
     },
-    giveLaunchBack: async (exp) => (await import("./store")).releaseLaunch(exp.id),
+    giveLaunchBack: async (exp) =>
+      (await import("./store")).releaseLaunch(exp.id, { token: exp.decisionLockToken, lockedAt: exp.decisionLockedAt }),
 
     whatIsLive: async (exp) => {
       if (!exp.copyProjectId) return "other";

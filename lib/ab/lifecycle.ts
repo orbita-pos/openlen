@@ -12,7 +12,7 @@ import { readPublishedSources } from "@/lib/len-watch/published-sources";
 import { publishProject } from "@/lib/projects";
 import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-through-gates";
 import { rollbackToSha } from "@/lib/publish/filesystem";
-import { holdDecision } from "./decision-lock";
+import { holdDecision, holdLaunchClaim } from "./decision-lock";
 import { abTestingEnabled } from "./enabled";
 import { purgeExperimentEdge } from "./edge-purge";
 import { readLiveAb } from "./live-manifest";
@@ -336,77 +336,101 @@ export async function launchAbExperiment(p: {
     throw new AbLifecycleError("invalid_state", `Experiment ${exp.id} is no longer a draft.`, 409);
   }
 
-  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
-  let pub: { readonly sha?: string; readonly abOverrides?: readonly string[] };
+  // The claim is a LEASE (round 3, A): a launch publishes Control AND B and can outlast any fixed time, so it refreshes the lease's
+  // clock every minute while it runs, and everything that settles the claim is fenced on its token. The reconcile pass measures the
+  // clock; a relaunch of this row is a new claim (a new token) that this launch can't touch.
+  const lease = holdLaunchClaim(claimed);
+  const fence = { token: lease.token };
   try {
-    pub = await publishProject({
-      projectId: p.projectId,
-      userId: p.ownerId,
-      subdomain: project.subdomain,
-      skipFlightCheck: true,
-      dataChanges: { mode: "skip" },
-      sourcesOverride: { data: control.data, folder: control.folder },
-      protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
-      abExperiment: abSpecOf(exp, variantBSrc, splitBps),
-    });
-  } catch (err) {
-    // A publish can throw AFTER its release was swapped in (a step past the swap). What the live release says decides: if it
-    // carries this experiment the split IS live and the row finishes the launch; if it doesn't, the slot goes back to the draft;
-    // if it can't be read now, the slot stays claimed and the reconcile pass settles it from the release (never guess).
-    const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
-    if (live.kind === "live") {
-      console.error("[ab] the launch's publish threw AFTER its release went live; finishing the launch", exp.id, err);
-      pub = { sha: live.sha, abOverrides: live.overrides };
-    } else if (live.kind === "unknown") {
-      console.error("[ab] the launch's publish threw and the live release can't be read; the slot stays claimed for the reconcile pass", exp.id, err);
-      throw err;
-    } else {
-      await releaseLaunch(exp.id).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
-      throw err;
-    }
-  }
-
-  // 5. Purge what the edge kept of the old page: the target (and its languages), and every asset Variant B overrides.
-  const overridePaths = pub.abOverrides ? [...pub.abOverrides] : [];
-  await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
-
-  // 6. The final write is a compare-and-swap on the launch's own claim. If it changes nothing, something settled the row
-  //    while the split went live (the reconcile pass): the split is taken down — Control is published again — and the
-  //    launch says it didn't happen.
-  const now = new Date();
-  const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
-  const updated = await finalizeLaunch(exp.id, {
-    status: "running",
-    decisionStatus: "none",
-    splitBps,
-    variantBCommitOid: tipOid,
-    controlReleaseSha,
-    experimentReleaseSha: pub.sha ?? null,
-    overridePaths,
-    startedAt: now,
-    minEndAt,
-  });
-  if (!updated) {
-    console.error("[ab] the launch's final write changed nothing: the row was settled meanwhile; republishing Control", exp.id);
+    // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
+    let pub: { readonly sha?: string; readonly abOverrides?: readonly string[] };
     try {
-      await publishProject({
+      pub = await publishProject({
         projectId: p.projectId,
         userId: p.ownerId,
         subdomain: project.subdomain,
         skipFlightCheck: true,
         dataChanges: { mode: "skip" },
         sourcesOverride: { data: control.data, folder: control.folder },
-        // Taking the split down IS the end of the experiment: the door must not refuse it.
-        abLive: "ending",
+        protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
+        abExperiment: abSpecOf(exp, variantBSrc, splitBps),
       });
-      await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
     } catch (err) {
-      console.error("[ab] couldn't republish Control after a launch that was settled meanwhile", exp.id, err);
+      // A publish can throw AFTER its release was swapped in (a step past the swap). What the live release says decides: if it
+      // carries this experiment the split IS live and the row finishes the launch; if it doesn't, the slot goes back to the draft;
+      // if it can't be read now, the slot stays claimed and the reconcile pass settles it from the release (never guess).
+      const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
+      if (live.kind === "live") {
+        console.error("[ab] the launch's publish threw AFTER its release went live; finishing the launch", exp.id, err);
+        pub = { sha: live.sha, abOverrides: live.overrides };
+      } else if (live.kind === "unknown") {
+        console.error("[ab] the launch's publish threw and the live release can't be read; the slot stays claimed for the reconcile pass", exp.id, err);
+        throw err;
+      } else {
+        await releaseLaunch(exp.id, fence).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
+        throw err;
+      }
     }
-    throw new AbLifecycleError("decision_conflict", "The test was settled while it was launching, so it did not start. Your original is live.", 409);
-  }
 
-  return toExperimentView(updated, project.title);
+    // 5. Purge what the edge kept of the old page: the target (and its languages), and every asset Variant B overrides.
+    const overridePaths = pub.abOverrides ? [...pub.abOverrides] : [];
+    await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
+
+    // 6. The final write is a compare-and-swap on the launch's own claim (its token). If it changes nothing, the claim is no longer
+    //    this launch's: re-read the row. `running` with THIS release means the reconcile pass already finished the launch from the
+    //    release — accept it, tear nothing down. Otherwise, take the split down only if it is THIS launch's release that is live
+    //    (Control is published again) — a release someone else published since, or one that can't be read, is not ours to touch.
+    const now = new Date();
+    const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
+    const updated = await finalizeLaunch(exp.id, fence, {
+      status: "running",
+      decisionStatus: "none",
+      splitBps,
+      variantBCommitOid: tipOid,
+      controlReleaseSha,
+      experimentReleaseSha: pub.sha ?? null,
+      overridePaths,
+      startedAt: now,
+      minEndAt,
+    });
+    if (!updated) {
+      const settled = await getExperimentById(exp.id).catch(() => null);
+      if (settled && settled.status === "running" && settled.startedAt && pub.sha && settled.experimentReleaseSha === pub.sha) {
+        console.warn("[ab] the launch's final write missed because the reconcile pass already finished the launch from the release; accepting it", exp.id);
+        return toExperimentView(settled, project.title);
+      }
+      const live = await readLiveAb(project.subdomain, exp.id).catch(() => ({ kind: "unknown" }) as const);
+      const ours = live.kind === "live" && (!pub.sha || live.sha === pub.sha);
+      if (ours) {
+        console.error("[ab] the launch's final write changed nothing: the claim was settled meanwhile; republishing Control", exp.id);
+        try {
+          await publishProject({
+            projectId: p.projectId,
+            userId: p.ownerId,
+            subdomain: project.subdomain,
+            skipFlightCheck: true,
+            dataChanges: { mode: "skip" },
+            sourcesOverride: { data: control.data, folder: control.folder },
+            // Taking the split down IS the end of the experiment: the door must not refuse it.
+            abLive: "ending",
+          });
+          await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
+        } catch (err) {
+          console.error("[ab] couldn't republish Control after a launch that was settled meanwhile", exp.id, err);
+        }
+      } else {
+        console.error(
+          `[ab] the launch's final write changed nothing and the live release isn't this launch's (${live.kind}); taking nothing down`,
+          exp.id,
+        );
+      }
+      throw new AbLifecycleError("decision_conflict", "The test was settled while it was launching, so it did not start.", 409);
+    }
+
+    return toExperimentView(updated, project.title);
+  } finally {
+    lease.stop();
+  }
 }
 
 /** What bringing a promoted Variant B into the owner's draft came to: `brought` (it is in; `nothing` = there was nothing to

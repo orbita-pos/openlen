@@ -8,7 +8,7 @@
 // lost it. A «stale» lock is now what the word says — not refreshed for ten minutes.
 import "server-only";
 
-import { closeDecision, heartbeatDecisionLock, releaseDecisionLock, type AbExperimentRow } from "./store";
+import { closeDecision, heartbeatDecisionLock, heartbeatLaunchLease, releaseDecisionLock, type AbExperimentRow } from "./store";
 
 /** How often a running decision says it is alive. The sweep's threshold is ten minutes: ten missed beats. */
 export const HEARTBEAT_MS = 60_000;
@@ -28,6 +28,40 @@ const realDeps: LockDeps = {
   release: (id, token) => releaseDecisionLock(id, token),
   everyMs: HEARTBEAT_MS,
 };
+
+/** A LAUNCH holds its claim the same way (round 3, A): the claim's token, a heartbeat every minute on the lease's clock while the
+ *  publish runs (a launch publishes Control AND B, so it can outlast any fixed time), `stop()` in a `finally`. The reconcile pass
+ *  measures the clock, so a launch that is alive is never torn down. */
+export interface LaunchLeaseDeps {
+  heartbeat(id: string, token: string): Promise<boolean>;
+  readonly everyMs: number;
+}
+
+export function holdLaunchClaim(
+  row: Pick<AbExperimentRow, "id" | "decisionLockToken">,
+  deps: LaunchLeaseDeps = { heartbeat: (id, token) => heartbeatLaunchLease(id, token), everyMs: HEARTBEAT_MS },
+): { readonly token: string | null; stop(): void } {
+  const token = row.decisionLockToken;
+  let timer: ReturnType<typeof setInterval> | null = null;
+  if (token) {
+    timer = setInterval(() => {
+      void deps
+        .heartbeat(row.id, token)
+        .then((alive) => {
+          if (!alive) console.warn(`[ab] the launch of ${row.id} no longer holds its claim`);
+        })
+        .catch((err: unknown) => console.warn(`[ab] couldn't refresh the launch claim of ${row.id}`, err));
+    }, deps.everyMs);
+    timer.unref?.();
+  }
+  return {
+    token,
+    stop: () => {
+      if (timer) clearInterval(timer);
+      timer = null;
+    },
+  };
+}
 
 export interface HeldDecision {
   /** The claimed row (its `decisionLockToken` is this decision's). */
