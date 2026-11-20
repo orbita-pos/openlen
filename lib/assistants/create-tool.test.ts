@@ -6,11 +6,11 @@ import { childToolDeclarations } from "@/lib/agent/subagents/presets";
 import { assistantTools } from "./agent";
 import { DEFAULT_LOOK, checkLook } from "@/lib/figure/look";
 
-import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION, SUGGESTABLE, runCreateAssistant, suggestedLookOf } from "./create-tool";
+import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION, SUGGESTABLE, runCreateAssistant, suggestedAgentOf, suggestedLookOf } from "./create-tool";
 
 const LEN = { projectId: "p1", userId: "u1" } as unknown as AgentSession;
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia" };
-const none = { assistantOfProject: async () => null, assistantsOf: async () => [], accentOf: async () => null };
+const none = { assistantOfProject: async () => null, assistantsOf: async () => [], accentOf: async () => null, agentTypeProblem: async () => null };
 
 describe("create_assistant", () => {
   afterEach(() => vi.unstubAllEnvs());
@@ -32,6 +32,45 @@ describe("create_assistant", () => {
     expect(said).toContain("Lucía");
     expect(said).toMatch(/use .* here too or create another/i);
     expect(out.action).toMatchObject({ tool: CREATE_ASSISTANT, ok: true });
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): Len names the agent file he wrote.
+  describe("with the agent file Len wrote", () => {
+    const withFile = (problem: string | null) => ({ ...none, agentTypeProblem: async () => problem });
+
+    it("declares an optional agent", () => {
+      const props = CREATE_ASSISTANT_DECLARATION.parameters.properties as Record<string, { type: string }>;
+      expect(props.agent?.type).toBe("STRING");
+      expect((CREATE_ASSISTANT_DECLARATION.parameters as { required?: string[] }).required ?? []).not.toContain("agent");
+    });
+
+    it("🔴 a file that is missing or broken is refused and no card shows", async () => {
+      const out = await runCreateAssistant(LEN, { agent: "mr-smith" }, withFile("missing"));
+      expect(out.response).toMatchObject({ ok: false, error: "agent_missing" });
+      expect(out.action).toBeUndefined();
+    });
+
+    it("the card carries the file, and says it comes from the person's space", async () => {
+      const out = await runCreateAssistant({ ...LEN, space: true } as AgentSession, { agent: "mr-smith" }, withFile(null));
+      expect(out.response).toMatchObject({ ok: true, card: "assistant_create" });
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: "mr-smith", fromSpace: true });
+      expect(suggestedLookOf(out.action!.summary)).toBeDefined();
+    });
+
+    it("🔴 a new agent's card only creates it: Len is not told to offer the person's others", async () => {
+      const out = await runCreateAssistant({ ...LEN, space: true } as AgentSession, { agent: "mr-smith" }, { ...withFile(null), assistantsOf: async () => [LUCIA as never] });
+      expect(out.response).not.toHaveProperty("existing");
+      expect(String((out.response as { tool_result: string }).tool_result)).not.toContain("Lucía");
+    });
+
+    it("the declaration sends an agent of their own through the agent-creation skill", () => {
+      expect(CREATE_ASSISTANT_DECLARATION.description).toContain("agent-creation");
+    });
+
+    it("without a file, or from a page, the card is as before", async () => {
+      const out = await runCreateAssistant(LEN, {}, withFile(null));
+      expect(suggestedAgentOf(out.action!.summary)).toEqual({ agent: null, fromSpace: false });
+    });
   });
 
   it("says which one it already has", async () => {
@@ -120,7 +159,7 @@ describe("create_assistant", () => {
       // And every one of them is still a figure that draws.
       for (const id of SUGGESTABLE[category]) expect(checkLook({ ...DEFAULT_LOOK, [category]: id }).ok, `${category}: ${id}`).toBe(true);
     }
-    expect(JSON.stringify(CREATE_ASSISTANT_DECLARATION)).toMatchInlineSnapshot(`"{"name":"create_assistant","description":"Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.","parameters":{"type":"OBJECT","properties":{"shape":{"type":"STRING","enum":["drop","round","capsule","cube","ears","heart","flower","triangle","star","cloud","diamond","teardrop","clover","cat","bean"],"description":"Optional. The figure's body: drop, round (a ball), capsule, cube, ears (a ball with two round ears), heart, flower, triangle, star, cloud, diamond, teardrop (a pointed water droplet), clover, cat (pointed kitty ears), bean (a peanut shape)."},"eyes":{"type":"STRING","enum":["oval","round","dot","smile","sleepy","wink","sparkle","cheerful","calm","lash"],"description":"Optional. oval, round, dot (two small dots), smile (closed, smiling arcs), sleepy (half-closed), wink (one eye winking), sparkle (big with bright glints), cheerful (happy > < arcs), calm (peaceful horizontal lines), lash (with outer eyelashes)."},"eyewear":{"type":"STRING","enum":["none","round","shades","square","heart","star","visor","catEye"],"description":"Optional. none, round (round glasses), shades (dark sunglasses), square (square-framed glasses), heart (heart-shaped glasses), star (star-shaped glasses), visor (a futuristic visor), catEye (cat-eye sunglasses). Left out, it wears none."},"accessory":{"type":"STRING","enum":["none","beret","beanie","bow","crown","hat","headphones","halo","cap","wizard","flower","sprout","horns","chef","antenna","party"],"description":"Optional. What it wears on its head: none, beret, beanie (a knit cap with a pompom), bow, crown, hat (a short top hat with a brim), headphones, halo, cap (a baseball cap with a visor), wizard (a pointed wizard hat), flower (a little blossom), sprout (a little leaf sprout), horns, chef (a white chef's toque), antenna (a robot antenna), party (a party cone hat). Left out, it wears none."},"color":{"type":"STRING","description":"Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."}}}}"`);
+    expect(JSON.stringify(CREATE_ASSISTANT_DECLARATION)).toMatchInlineSnapshot(`"{"name":"create_assistant","description":"Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. For an agent of their own that is not about a business (a teacher, a coach, a helper for anything), load the agent-creation skill first: it has you write the agent's file, which you pass as agent. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.","parameters":{"type":"OBJECT","properties":{"shape":{"type":"STRING","enum":["drop","round","capsule","cube","ears","heart","flower","triangle","star","cloud","diamond","teardrop","clover","cat","bean"],"description":"Optional. The figure's body: drop, round (a ball), capsule, cube, ears (a ball with two round ears), heart, flower, triangle, star, cloud, diamond, teardrop (a pointed water droplet), clover, cat (pointed kitty ears), bean (a peanut shape)."},"eyes":{"type":"STRING","enum":["oval","round","dot","smile","sleepy","wink","sparkle","cheerful","calm","lash"],"description":"Optional. oval, round, dot (two small dots), smile (closed, smiling arcs), sleepy (half-closed), wink (one eye winking), sparkle (big with bright glints), cheerful (happy > < arcs), calm (peaceful horizontal lines), lash (with outer eyelashes)."},"eyewear":{"type":"STRING","enum":["none","round","shades","square","heart","star","visor","catEye"],"description":"Optional. none, round (round glasses), shades (dark sunglasses), square (square-framed glasses), heart (heart-shaped glasses), star (star-shaped glasses), visor (a futuristic visor), catEye (cat-eye sunglasses). Left out, it wears none."},"accessory":{"type":"STRING","enum":["none","beret","beanie","bow","crown","hat","headphones","halo","cap","wizard","flower","sprout","horns","chef","antenna","party"],"description":"Optional. What it wears on its head: none, beret, beanie (a knit cap with a pompom), bow, crown, hat (a short top hat with a brim), headphones, halo, cap (a baseball cap with a visor), wizard (a pointed wizard hat), flower (a little blossom), sprout (a little leaf sprout), horns, chef (a white chef's toque), antenna (a robot antenna), party (a party cone hat). Left out, it wears none."},"color":{"type":"STRING","description":"Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."},"agent":{"type":"STRING","description":"Optional. The name of the agent file you wrote in ~/.len/agents/ for it (the agent-creation skill says how): what it is for, how it talks and the skills it carries. Write the file first; a file that is missing or doesn't parse is refused."}}}}"`);
   });
 
   it("is not the assistant's: an assistant doesn't make assistants", async () => {

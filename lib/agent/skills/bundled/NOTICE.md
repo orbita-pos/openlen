@@ -100,3 +100,15 @@ DSH pages, `create_tool` in place of `create_personalized_page`, and our own exa
 - `references/phaser/template-react-ts.md` holds five files of `phaserjs/template-react-ts` at
   `c7265972c856906cacf1f2892d8565d64a358d34` (MIT License, Copyright (c) 2025 Phaser Studio Inc), as they are,
   inside Markdown so the repo's type check doesn't read them as source.
+
+`agent-creation` is ours (spec local 2026-11-19-agentes-para-todos, §6.3), from the facts of Claude Code's agent files
+(binary 2.1.329: the `.claude/agents/<name>.md` format, `initialPrompt` sent as the first user turn of a main-thread
+agent, agents made by asking Claude instead of a wizard) and of its «Learning» output style (the person does the part
+they learn from), which have no open license. Added on 2026-11-20.
+
+`language-teacher` v0 is ours (same spec, §6.5), after the method of Anthropic's `law-student` skill
+(github.com/anthropics/claude-for-legal, Apache License 2.0, the same license text as
+`LICENSES/anthropic-skills.Apache-2.0.txt`): a placement interview, a plan that results change, short sessions of
+questions that update the plan, Leitner flashcards, questions that make the person think, and corrections that don't
+rewrite their work. Written in our own words for a language, with none of its text. Added on 2026-11-20; delivery 2
+rewrites it.

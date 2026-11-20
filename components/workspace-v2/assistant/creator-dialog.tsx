@@ -39,9 +39,15 @@ export function AssistantCreatorDialog({
   initial,
   editing,
   onSaved,
+  agentType = null,
+  fromSpace = false,
 }: {
   open: boolean;
   projectId: string;
+  /** The agent file Len wrote for it (spec local 2026-11-19-agentes-para-todos, §6.3). */
+  agentType?: string | null;
+  /** Asked for in the person's space: it attends no page, so none is sent. */
+  fromSpace?: boolean;
   onClose: () => void;
   onCreated: (created: { id: string; slug: string; name: string }) => void;
   /** The look it opens with: what Len suggested. Without it, one that goes well together, by chance. */
@@ -76,7 +82,7 @@ export function AssistantCreatorDialog({
         : await fetch("/api/assistants", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ projectId, name, look, tone, morningSummary, locale }),
+            body: JSON.stringify({ ...(fromSpace ? {} : { projectId }), name, look, tone, morningSummary, locale, ...(agentType ? { agentType } : {}) }),
           });
       const body = (await res.json().catch(() => ({}))) as { id?: string; slug?: string; field?: string; error?: string };
       if (editing && res.ok) {

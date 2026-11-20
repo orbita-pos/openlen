@@ -122,6 +122,7 @@
     "skills": "Skills",
     "noSkills": "Geen skill komt overeen",
     "skillDescriptions": {
+      "agent-creation": "Een van je eigen agents maken of wijzigen",
       "artifact-audio": "Een audio of voice-over maken",
       "artifact-dashboard": "Een datadashboard maken",
       "artifact-image": "Een promotieafbeelding maken",
@@ -133,6 +134,7 @@
       "frontend-design": "De ontwerpgids voor een nieuwe pagina of app",
       "game-development": "Deze game maken of aanpassen, en testen door te spelen",
       "grill-me": "Mij interviewen om scope, doelen en ontwerp af te stemmen vóór het bouwen",
+      "language-teacher": "Een taal leren door te oefenen, op jouw niveau",
       "learn": "Een regel of vaardigheid opslaan op basis van correcties in deze chat",
       "office": "Documenten, spreadsheets, presentaties en pdf's",
       "office-docx": "Word-documenten (.docx) maken en bewerken",

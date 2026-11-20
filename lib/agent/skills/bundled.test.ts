@@ -30,11 +30,13 @@ const ALL_ARTIFACT_KINDS = {
 describe("bundled skills", () => {
   it("ships the seven office skills, pdf, research, charts, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
+      "agent-creation",
       "convert-to-app",
       "dataviz",
       "deep-research",
       "frontend-design",
       "grill-me",
+      "language-teacher",
       "learn",
       "office",
       "office-docx",

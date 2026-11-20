@@ -122,6 +122,7 @@
     "skills": "스킬",
     "noSkills": "일치하는 스킬이 없습니다",
     "skillDescriptions": {
+      "agent-creation": "나만의 에이전트 만들기와 바꾸기",
       "artifact-audio": "오디오나 내레이션 만들기",
       "artifact-dashboard": "데이터 대시보드 만들기",
       "artifact-image": "홍보 이미지 만들기",
@@ -133,6 +134,7 @@
       "frontend-design": "새 페이지나 앱을 위한 디자인 가이드",
       "game-development": "이 게임을 만들거나 바꾸고, 플레이해서 확인",
       "grill-me": "구현 전에 범위·목표·디자인을 질문으로 정리하기",
+      "language-teacher": "내 수준에 맞춰 연습하며 언어 배우기",
       "learn": "이 대화의 수정 사항을 규칙이나 스킬로 저장하기",
       "office": "문서, 스프레드시트, 프레젠테이션, PDF",
       "office-docx": "Word 문서(.docx) 만들기와 편집",

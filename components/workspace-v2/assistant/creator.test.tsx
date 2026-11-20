@@ -72,6 +72,18 @@ describe("the creator", () => {
     expect(onCreated).toHaveBeenCalledWith({ id: "a1", slug: "lucia", name: "Lucía" });
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): an agent Len wrote in the person's space.
+  it("🔴 from the person's space it sends its agent file and no page", async () => {
+    fetchMock.mockReturnValueOnce(json({ id: "a2", slug: "mr-smith" }, 201));
+    mount(<AssistantCreatorDialog open projectId="space-1" agentType="mr-smith" fromSpace onClose={() => {}} onCreated={() => {}} />);
+    type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Mr. Smith");
+    await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+    await flush();
+    const body = JSON.parse(String(fetchMock.mock.calls[0]![1].body));
+    expect(body).toMatchObject({ name: "Mr. Smith", agentType: "mr-smith" });
+    expect(body).not.toHaveProperty("projectId");
+  });
+
   // Phase 4D (spec §6.9): the creator offers the morning summary, unticked.
   it("🔴 the creator offers the morning summary, unticked, and sends what was chosen with the page's language", async () => {
     fetchMock.mockReturnValue(json({ id: "a1", slug: "lucia" }, 201));
@@ -302,6 +314,45 @@ describe("the card Len leaves", () => {
     act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());
     await flush();
     expect(document.querySelector("[role=dialog]")).not.toBeNull();
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): the card for an agent file Len just wrote.
+  describe("for an agent Len wrote", () => {
+    const LOOK = '"v":1,"shape":"round","color":"#19c3b1","eyes":"oval","eyewear":"none","accessory":"none"';
+    const inSpace = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"agent":"english-teacher","fromSpace":true}` }];
+    const onPage = [{ tool: "create_assistant", status: "done" as const, summary: `create_assistant {${LOOK},"agent":"english-teacher"}` }];
+    // An agent of the space with no page of its own lists the space as where it lives.
+    const COACH = { id: "a7", name: "Coach", slug: "coach", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "space-1", projectIds: ["space-1"] };
+
+    it("🔴 only creates it: another agent is never offered for it, nor taken for the space's own", async () => {
+      fetchMock.mockReturnValue(json({ assistants: [COACH] }));
+      const host = mount(<AssistantCreateCard actions={inSpace} projectId="space-1" />);
+      await flush();
+      expect(host.querySelector("[data-assistant-talk]")).toBeNull();
+      expect(host.querySelector("[data-assistant-use]")).toBeNull();
+      expect(host.querySelector("[data-assistant-create]")!.textContent).toBe("ownAssistant.card.create");
+    });
+
+    it("on a page too, it is a new agent: no «use one of yours here»", async () => {
+      fetchMock.mockReturnValue(json({ assistants: [{ ...COACH, projectId: "p9", projectIds: ["p9"] }] }));
+      const host = mount(<AssistantCreateCard actions={onPage} projectId="p1" />);
+      await flush();
+      expect(host.querySelector("[data-assistant-use]")).toBeNull();
+      expect(host.querySelector("[data-assistant-create]")!.textContent).toBe("ownAssistant.card.create");
+    });
+
+    it("🔴 created in the space, the card says nothing about a page", async () => {
+      const host = mount(<AssistantCreateCard actions={inSpace} projectId="space-1" />);
+      await flush();
+      act(() => host.querySelector<HTMLButtonElement>("[data-assistant-create]")!.click());
+      type(document.querySelector<HTMLInputElement>("[data-assistant-name]")!, "Mr. Smith");
+      fetchMock.mockReturnValueOnce(json({ id: "a8", slug: "mr-smith" }, 201));
+      fetchMock.mockReturnValueOnce(json({ ...COACH, id: "a8", name: "Mr. Smith", slug: "mr-smith" }));
+      await act(async () => document.querySelector<HTMLButtonElement>("[data-assistant-done]")!.click());
+      await flush();
+      expect(host.querySelector<HTMLAnchorElement>("[data-assistant-talk]")!.getAttribute("href")).toBe("/es/assistant/mr-smith");
+      expect(host.querySelector("[data-assistant-card-hint]")).toBeNull();
+    });
   });
 
   it("is not there without Len's card", () => {

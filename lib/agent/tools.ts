@@ -1249,6 +1249,9 @@ export interface AgentSession {
   /** A GAME (spec local 2026-11-05-modo-juego-design, §8.4): the game posture and the `game-development` skill.
    *  Absent = not a game. */
   game?: boolean;
+  /** Len in the person's SPACE (spec local 2026-11-19-agentes-para-todos, §6.3): `create_assistant` hands a card that
+   *  makes an agent living there, with no page. Absent elsewhere and in an agent's own turn. */
+  space?: true;
   /** The project OWNER is on a paid plan (spec local 2026-11-05-modo-juego-design, §11): their turns get the box.
    *  Read once per turn by the route; absent = only `OPENLEN_SANDBOX_ONLY_USERS` decides. */
   ownerPaid?: boolean;

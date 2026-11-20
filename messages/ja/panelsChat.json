@@ -122,6 +122,7 @@
     "skills": "スキル",
     "noSkills": "一致するスキルはありません",
     "skillDescriptions": {
+      "agent-creation": "自分のエージェントを作成・変更",
       "artifact-audio": "音声やナレーションを作る",
       "artifact-dashboard": "データダッシュボードを作る",
       "artifact-image": "宣伝用の画像を作る",
@@ -133,6 +134,7 @@
       "frontend-design": "新しいページやアプリのデザインガイド",
       "game-development": "このゲームを作る・変える、遊んで確かめる",
       "grill-me": "作成前に要件・範囲・デザインを質問で整理する",
+      "language-teacher": "自分のレベルで、練習しながら言語を学ぶ",
       "learn": "このチャットの修正からルールやスキルを保存する",
       "office": "文書、表計算、プレゼンテーション、PDF",
       "office-docx": "Word 文書（.docx）を作成・編集",

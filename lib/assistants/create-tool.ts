@@ -6,6 +6,7 @@
 //
 // Len may suggest her figure (spec local 2026-11-10-figuras-del-asistente, §5.6): parts of the catalog and a color.
 // The creator opens with it; the owner changes anything there, and Len never changes it afterwards.
+import { personOf } from "@/lib/agent/person";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { DEFAULT_LOOK, checkLook, type FigureCategory, type FigureLook } from "@/lib/figure/look";
 
@@ -13,7 +14,7 @@ import { assistantsEnabled } from "./enabled";
 import type { AssistantRow } from "./store";
 import { summaryWithLook } from "./suggested-look";
 
-export { suggestedLookOf } from "./suggested-look";
+export { suggestedAgentOf, suggestedLookOf } from "./suggested-look";
 
 const PARTS: readonly FigureCategory[] = ["shape", "eyes", "eyewear", "accessory"];
 
@@ -108,6 +109,7 @@ export const CREATE_ASSISTANT_DECLARATION = {
   description:
     "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. " +
     "Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. " +
+    "For an agent of their own that is not about a business (a teacher, a coach, a helper for anything), load the agent-creation skill first: it has you write the agent's file, which you pass as agent. " +
     "If this project already has one, you get which, and say so. " +
     "You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. " +
     "Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.",
@@ -119,6 +121,10 @@ export const CREATE_ASSISTANT_DECLARATION = {
       eyewear: part("eyewear", `Optional. ${listed("eyewear")}. Left out, it wears none.`),
       accessory: part("accessory", `Optional. What it wears on its head: ${listed("accessory")}. Left out, it wears none.`),
       color: { type: "STRING", description: "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent." },
+      agent: {
+        type: "STRING",
+        description: "Optional. The name of the agent file you wrote in ~/.len/agents/ for it (the agent-creation skill says how): what it is for, how it talks and the skills it carries. Write the file first; a file that is missing or doesn't parse is refused.",
+      },
     },
   },
 } as const;
@@ -135,6 +141,8 @@ export interface CreateAssistantDeps {
   assistantsOf(personId: string): Promise<Pick<AssistantRow, "name" | "slug">[]>;
   /** The accent of the project's page (#rrggbb), when it has one. */
   accentOf(projectId: string): Promise<string | null>;
+  /** What is wrong with naming this agent file of the person's (lib/assistants/agent-file.ts), or null. */
+  agentTypeProblem(personId: string, agentType: string): Promise<string | null>;
 }
 
 async function storeDeps(): Promise<CreateAssistantDeps> {
@@ -146,6 +154,7 @@ async function storeDeps(): Promise<CreateAssistantDeps> {
       const [{ pageHtmlOf }, { detectSiteAccent }] = await Promise.all([import("./projects"), import("@/lib/publish/site-accent")]);
       return detectSiteAccent((await pageHtmlOf(projectId)) ?? "");
     },
+    agentTypeProblem: async (personId, agentType) => (await import("./agent-file")).agentTypeProblem(personId, agentType),
   };
 }
 
@@ -170,12 +179,21 @@ export async function runCreateAssistant(session: AgentSession, args: Record<str
   if (session.assistant) return { response: { ok: false, error: "not_available", message: "Only Len offers a new assistant." } };
   if (!assistantsEnabled()) return { response: { ok: false, error: "assistants_off", message: "Assistants are turned off right now." } };
   const d = deps ?? (await storeDeps());
+  // The agent file Len wrote (spec local 2026-11-19-agentes-para-todos, §6.3): the person's, checked before any card.
+  const agent = typeof args.agent === "string" && args.agent.trim() ? args.agent.trim() : null;
+  if (agent) {
+    const problem = await d.agentTypeProblem(personOf(session), agent);
+    if (problem) {
+      return { response: { ok: false, error: `agent_${problem}`, message: `~/.len/agents/${agent}.md is ${problem === "missing" ? "not there: write it first" : problem === "reserved" ? "a reserved name: pick another" : "not a valid agent file: read it, fix it, and call again"}.` } };
+    }
+  }
   const existing = await d.assistantOfProject(session.projectId);
   if (existing) {
     return { response: { ok: false, error: "project_has_assistant", assistant: { name: existing.name, slug: existing.slug }, message: `This project already has its assistant, ${existing.name}.` } };
   }
-  // The session's user is the project's owner (a member never gets this tool): their own assistants, elsewhere.
-  const theirs = (await d.assistantsOf(session.userId)).map((a) => ({ name: a.name, slug: a.slug }));
+  // The session's user is the project's owner (a member never gets this tool): their own assistants, elsewhere. An agent
+  // file is a new agent: the card only creates it, so none of them is offered for it.
+  const theirs = agent ? [] : (await d.assistantsOf(session.userId)).map((a) => ({ name: a.name, slug: a.slug }));
   const look = await suggestedLook(args, session.projectId, d);
   // What the card shows, said back as it is — like Claude Code's Edit answering with what the file now says — so what he
   // tells the owner is what they see (11/11: he described a «gorro de panadero» over a top hat, and glasses he never chose).
@@ -185,6 +203,6 @@ export async function runCreateAssistant(session: AgentSession, args: Record<str
     : `The owner now sees the card to create their assistant: they pick its name and its look there. ${opens}`;
   return {
     response: { ok: true, card: "assistant_create", ...(theirs.length ? { existing: theirs } : {}), tool_result },
-    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(look) },
+    action: { tool: CREATE_ASSISTANT, ok: true, summary: summaryWithLook(look, { agent, fromSpace: session.space === true }) },
   };
 }

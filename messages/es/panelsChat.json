@@ -122,6 +122,7 @@
     "skills": "Skills",
     "noSkills": "Ninguna skill coincide",
     "skillDescriptions": {
+      "agent-creation": "Crear o cambiar uno de tus agentes",
       "artifact-audio": "Hacer un audio o una narración",
       "artifact-dashboard": "Hacer un panel de datos",
       "artifact-image": "Hacer una imagen promocional",
@@ -133,6 +134,7 @@
       "frontend-design": "La guía de diseño para una página o una app nueva",
       "game-development": "Hacer o cambiar este juego, y probarlo jugando",
       "grill-me": "Entrevistarme para alinear alcance, objetivos y diseño antes de construir",
+      "language-teacher": "Aprender un idioma practicando, a tu nivel",
       "learn": "Guardar una regla o habilidad a partir de correcciones en este chat",
       "office": "Documentos, hojas de cálculo, presentaciones y PDF",
       "office-docx": "Crear y editar documentos de Word (.docx)",

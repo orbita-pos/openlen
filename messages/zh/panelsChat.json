@@ -122,6 +122,7 @@
     "skills": "技能",
     "noSkills": "没有匹配的技能",
     "skillDescriptions": {
+      "agent-creation": "创建或修改你自己的智能体",
       "artifact-audio": "制作音频或旁白",
       "artifact-dashboard": "制作数据看板",
       "artifact-image": "制作宣传图片",
@@ -133,6 +134,7 @@
       "frontend-design": "新页面或新应用的设计指南",
       "game-development": "制作或修改这个游戏，并通过试玩检查",
       "grill-me": "在开始制作前通过提问对齐范围、目标和设计",
+      "language-teacher": "按你的水平，通过练习学一门语言",
       "learn": "将本次对话中的纠正保存为规则或技能",
       "office": "文档、表格、演示文稿和 PDF",
       "office-docx": "创建和编辑 Word 文档（.docx）",

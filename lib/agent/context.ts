@@ -475,6 +475,8 @@ export interface BuildAgentMessagesArgs {
   tool?: boolean;
   /** A game project (spec local 2026-11-05-modo-juego-design, §8.4): the app's prompt and manual said for a game. */
   game?: boolean;
+  /** Len in the person's space (spec local 2026-11-19-agentes-para-todos, §6.3): the space posture. */
+  space?: boolean;
   /** La zona del usuario (IANA), la misma de `AgentSession.zonaHoraria`: el HOY
    *  del contexto es SU día (plans/len-resultados/diseno.md §7). */
   zona?: string;
@@ -585,7 +587,7 @@ export type BuildAgentMessagesResult =
  *  (ensayo de caja de crear-es-len, 06/10). El último mensaje es el del dueño:
  *  ahí van también sus fotos (la ruta) y, marcados, los avisos del turno. */
 export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMessagesResult {
-  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true, args.game === true);
+  const systemPrompt = buildAgentSystemPrompt(process.env, args.mode, args.app ?? null, args.tool === true, args.game === true, args.space === true);
   const contextBlock = buildAgentContext({
     equipo: args.equipo,
     zona: args.zona,

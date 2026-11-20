@@ -790,6 +790,8 @@ async function correrTurno(
   const toolDelTurno = appDelTurno && project.data?.tool && toolsEnabled() ? true : false;
   // A GAME (spec local 2026-11-05-modo-juego-design, §8.4): an app with the game posture. Off, it is the app it is.
   const gameDelTurno = appDelTurno && project.data?.game && gamesEnabled() && !toolDelTurno ? true : false;
+  /** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): decided once, like a tool or a game. */
+  const espacioDelTurno = isSpaceData(project.data);
   // EL MODO DISEÑO (spec local 2026-10-11): sólo en una app. Las líneas se
   // leen de la carpeta, y un elemento inválido se descarta sin tumbar el turno.
   const ficherosDelDiseno =
@@ -1441,6 +1443,8 @@ async function correrTurno(
     app: appDelTurno,
     tool: toolDelTurno,
     game: gameDelTurno,
+    // Len in the person's space (spec local 2026-11-19-agentes-para-todos, §6.3); never an agent's own turn there.
+    ...(espacioDelTurno && !asistente ? { space: true } : {}),
     realTerminal,
     zona: zonaDelTurno,
     timeContext: timeContextDelTurno,
@@ -1626,6 +1630,7 @@ async function correrTurno(
     app: appDelTurno,
     tool: toolDelTurno,
     game: gameDelTurno,
+    ...(espacioDelTurno && !asistente ? { space: true as const } : {}),
     // El idioma del panel, para los hallazgos de la revisión de seguridad de `publish`.
     ...(typeof body?.idioma === "string" ? { uiLocale: body.idioma.slice(0, 10) } : {}),
     // Los PDF de la conversación (26/10), por la ruta con la que Read los abre:
@@ -1690,7 +1695,7 @@ async function correrTurno(
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
             // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
-            inSpace: isSpaceData(project.data),
+            inSpace: espacioDelTurno,
             ...(asistente.agentType ? { withAgentFile: true } : {}),
           },
           // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).

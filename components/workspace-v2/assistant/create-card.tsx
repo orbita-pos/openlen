@@ -8,7 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import type { AssistantListItem, AssistantView } from "@/lib/assistants/view";
-import { suggestedLookOf } from "@/lib/assistants/suggested-look";
+import { suggestedAgentOf, suggestedLookOf } from "@/lib/assistants/suggested-look";
 import { DEFAULT_LOOK, type FigureLook } from "@/lib/figure/look";
 
 import type { AgentAction } from "../agent-action-card";
@@ -21,12 +21,13 @@ export function AssistantCreateCard({ actions, projectId }: { actions: readonly 
   const offers = (actions ?? []).filter((a) => a.tool === CREATE_ASSISTANT_TOOL && a.status === "done");
   if (offers.length === 0) return null;
   // The figure Len suggested (phase 6), from his last offer of the turn; a turn from before has none.
-  return <Card projectId={projectId} suggested={suggestedLookOf(offers[offers.length - 1]!.summary)} />;
+  const last = offers[offers.length - 1]!.summary;
+  return <Card projectId={projectId} suggested={suggestedLookOf(last)} agent={suggestedAgentOf(last)} />;
 }
 
 const serves = (a: AssistantListItem, projectId: string) => a.projectId === projectId || (a.projectIds ?? []).includes(projectId);
 
-function Card({ projectId, suggested }: { projectId: string; suggested: FigureLook | undefined }) {
+function Card({ projectId, suggested, agent }: { projectId: string; suggested: FigureLook | undefined; agent: { agent: string | null; fromSpace: boolean } }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [mine, setMine] = useState<AssistantView | null | undefined>(undefined);
@@ -36,8 +37,15 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
   const [failed, setFailed] = useState<string | null>(null);
   // Created or used here from this card: she is on the page at once (11/11), and visitors see her after a publish.
   const [added, setAdded] = useState(false);
+  // An agent file Len just wrote (spec local 2026-11-19-agentes-para-todos, §6.3) is a new agent: the card only creates
+  // it. None of the person's others stands for it, and in the space every agent lives there without serving it.
+  const fresh = agent.agent !== null;
 
   useEffect(() => {
+    if (fresh) {
+      setMine(null);
+      return;
+    }
     let live = true;
     fetch("/api/assistants")
       .then((r) => (r.ok ? (r.json() as Promise<{ assistants: AssistantListItem[] }>) : { assistants: [] }))
@@ -50,7 +58,7 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
     return () => {
       live = false;
     };
-  }, [projectId]);
+  }, [projectId, fresh]);
 
   const connectHere = async (a: AssistantListItem) => {
     setUsing(a.id);
@@ -76,7 +84,7 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
           <AssistantFigure look={mine.look} size={40} />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-medium fg">{t("ownAssistant.card.ready", { name: mine.name })}</p>
-            {added && (
+            {added && !agent.fromSpace && (
               <p className="text-[11.5px] leading-snug fg-faint" data-assistant-card-hint="">
                 {t("ownAssistant.place.onPageHint")}
               </p>
@@ -122,6 +130,8 @@ function Card({ projectId, suggested }: { projectId: string; suggested: FigureLo
           <AssistantCreatorDialog
             open={creating}
             projectId={projectId}
+            agentType={agent.agent}
+            fromSpace={agent.fromSpace}
             {...(suggested ? { initial: suggested } : {})}
             onClose={() => setCreating(false)}
             onCreated={(c) => {
