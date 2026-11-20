@@ -7,6 +7,7 @@ import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig } 
 import { DIRECTORY, GOOGLE_ISSUER, type DirectoryEntry } from "./directory-entries";
 import { oauthEnabled } from "./oauth/enabled";
 import { startSignIn, type StartDeps, type StartResult } from "./oauth/flow";
+import type { StartedFrom } from "./oauth/store";
 import type { StoredConfig } from "./store";
 
 export { DIRECTORY, type DirectoryEntry } from "./directory-entries";
@@ -81,6 +82,8 @@ export async function installAndStartFromDirectory(
   personId: string,
   id: string,
   d: DirectoryInstallDeps,
+  /** Where the tap came from (final review F5): the way back treats a web and a phone sign-in differently. */
+  opts: { startedFrom?: StartedFrom } = {},
 ): Promise<
   | { ok: true; server: string; authorizationUrl: string }
   | { ok: false; status: 400 | 404 | 409 | 422 | 502; error: string; detail?: string }
@@ -121,7 +124,7 @@ export async function installAndStartFromDirectory(
     if (!written.ok) return { ok: false, status: 409, error: "changed" };
   }
   // The card named the directory's issuer (spec §10.2): a server that signs in elsewhere now is not what it showed.
-  const started: StartResult = await startSignIn(personId, serverName, d, { expectedIssuerHost: hostOf(dir.issuer) });
+  const started: StartResult = await startSignIn(personId, serverName, d, { expectedIssuerHost: hostOf(dir.issuer), startedFrom: opts.startedFrom ?? "web" });
   if (started.ok) return { ok: true, server: serverName, authorizationUrl: started.authorizationUrl };
   if (started.reason === "issuer_changed") return { ok: false, status: 409, error: "issuer_changed", server: serverName, issuer: started.issuer, issuerHost: started.issuerHost };
   const status = started.reason === "not_approved" ? 409 : started.reason === "no_client" ? 422 : 502;

@@ -741,6 +741,8 @@
       "lost": "Die inloglink werkt niet meer. Probeer het opnieuw.",
       "issuerChanged": "De inlogpagina is veranderd, dus er is niets verbonden. Kijk waar die nu is en probeer het opnieuw.",
       "exchangeFailed": "De server heeft het inloggen niet afgerond. Probeer het opnieuw.",
+      "wrongBrowser": "De aanmelding eindigde in een browser die niet bij je OpenLen-account is aangemeld, dus er is niets verbonden. Probeer het opnieuw vanuit dit tabblad.",
+      "otherAccount": "Die aanmelding hoort bij een ander OpenLen-account, dus er is niets verbonden.",
       "off": "Inloggen bij connectoren staat uit.",
       "unauthorized": "Je OpenLen-sessie is beëindigd. Laad de pagina opnieuw en probeer het opnieuw.",
       "notAvailable": "Die connector is niet beschikbaar.",

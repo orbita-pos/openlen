@@ -13,7 +13,8 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const fake = vi.hoisted(() => ({
   finishResult: { ok: true, server: "cal" } as
     | { ok: true; server: string }
-    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed"; server?: string }
+    | { ok: "confirm"; server: string; personId: string; confirmToken: string }
+    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account"; server?: string }
     | { ok: false; reason: "issuer_changed"; server: string; personId: string; issuer: string | null; issuerHost: string | null },
   finishedWith: [] as unknown[],
   remembered: [] as unknown[],
@@ -30,6 +31,9 @@ vi.mock("@/lib/mcp-connectors/store", () => ({
 }));
 vi.mock("@/lib/mcp-connectors/mount", () => ({
   mountServer: async () => null,
+}));
+vi.mock("@/lib/tools/store", () => ({
+  personEmail: async (personId: string) => (personId === "u1" ? "jesus@example.com" : ""),
 }));
 vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
   finishSignIn: async (q: unknown, sessionPersonId: string | null) => {
@@ -63,7 +67,8 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     expect(res.status).toBe(400);
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
-    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; script-src 'unsafe-inline'");
+    expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; script-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'");
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
     const html = await res.text();
     expect(html).not.toContain("secret_code_123");
     expect(html).not.toContain("code=");
@@ -101,6 +106,53 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     expect(html).not.toContain("one_time_code_xyz");
     expect(html).not.toContain("code=");
     expect(html).not.toContain("s1");
+  });
+});
+
+// Final review, F5: the `state` alone is not trusted. A web sign-in in the wrong browser is refused with a page that says
+// where to finish it; a phone sign-in with no session gets a page that asks the person to confirm the account.
+describe("🔴 who the way back is for", () => {
+  it("a web sign-in in a browser that isn't its person's: 403, says to open it from the tab where it started", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    fake.finishResult = { ok: false, reason: "wrong_browser", server: "cal" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=s1&code=c", { headers: { cookie: "NEXT_LOCALE=en" } }));
+    expect(res.status).toBe(403);
+    expect(fake.finishedWith).toEqual([{ q: { state: "s1", code: "c" }, sessionPersonId: null }]);
+    const html = await res.text();
+    expect(html).toContain("Open it again from the OpenLen tab where you started it");
+    expect(html).toContain('"reason":"wrong_browser"');
+  });
+
+  it("a phone sign-in held for the person's yes: the account (masked) and the server, and a form with the one-time token only", async () => {
+    vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue(null);
+    fake.finishResult = { ok: "confirm", server: "cal", personId: "u1", confirmToken: "tok_ONE_TIME_123" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=STATE_SECRET&code=CODE_SECRET&iss=https://accounts.google.com", { headers: { cookie: "NEXT_LOCALE=en" } }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(res.headers.get("content-security-policy")).toContain("form-action 'self'");
+    expect(res.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    const html = await res.text();
+    expect(html).toContain("j***@example.com");
+    expect(html).not.toContain("jesus@example.com");
+    expect(html).toContain("“cal”");
+    expect(html).toContain('<form method="post" action="/api/mcp-connectors/oauth/confirm">');
+    expect(html).toContain('<input type="hidden" name="token" value="tok_ONE_TIME_123">');
+    expect(html).toContain('name="answer" value="connect"');
+    expect(html).toContain('name="answer" value="discard"');
+    expect(html).toContain("This isn&#39;t me");
+    expect(html).not.toContain("STATE_SECRET");
+    expect(html).not.toContain("CODE_SECRET");
+    expect(html).not.toContain("<script");
+    expect(html.match(/<input/g)).toHaveLength(1);
+  });
+
+  it("a phone sign-in under another person's session: 403, says it is another account's", async () => {
+    fake.finishResult = { ok: false, reason: "other_account", server: "cal" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=s1&code=c", { headers: { cookie: "NEXT_LOCALE=en" } }));
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain("this sign-in belongs to another OpenLen account");
   });
 });
 

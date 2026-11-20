@@ -741,6 +741,8 @@
       "lost": "Quel link di accesso non funziona più. Riprova.",
       "issuerChanged": "La pagina di accesso è cambiata, quindi non è stato collegato nulla. Controlla dove si trova ora e riprova.",
       "exchangeFailed": "Il server non ha completato l'accesso. Riprova.",
+      "wrongBrowser": "L'accesso è terminato in un browser che non ha aperto il tuo account OpenLen, quindi non è stato collegato nulla. Riprova da questa scheda.",
+      "otherAccount": "Quell'accesso è di un altro account OpenLen, quindi non è stato collegato nulla.",
       "off": "L'accesso ai connettori è disattivato.",
       "unauthorized": "La tua sessione di OpenLen è terminata. Ricarica la pagina e riprova.",
       "notAvailable": "Quel connettore non è disponibile.",

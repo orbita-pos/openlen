@@ -113,11 +113,13 @@ describe("GET /api/mcp-connectors/oauth/callback, when the person says no", () =
     expect(row).toMatchObject({ serverName: "cal", status: "needs-auth", failures: 2, authReason: "first", authIssuer: ISSUER });
   });
 
-  it("a denial under another person's session is answered as an unknown state, and touches nothing either", async () => {
+  // Final review, F5: a web sign-in comes back only to its person's browser; another session is refused before anything.
+  it("a denial under another person's session is refused as the wrong browser, and touches nothing either", async () => {
     const state = await start();
     vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u2" } });
     const res = await back(`state=${state}&error=access_denied`);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain('"reason":"wrong_browser"');
     const [row] = await readServerStates("u1");
     expect(row).toMatchObject({ status: "needs-auth", failures: 2 });
     expect(base.mounted).toEqual([]);

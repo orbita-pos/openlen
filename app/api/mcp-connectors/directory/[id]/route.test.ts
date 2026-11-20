@@ -214,10 +214,18 @@ describe("POST /api/mcp-connectors/directory/[id]", () => {
     expect((await post("google-calendar")).status).toBe(401);
   });
 
+  // Final review, F5: a tap from the phone (its key) starts a phone sign-in, whose way back asks the person to confirm.
+  it("🔴 a tap with the phone's key starts a phone sign-in", async () => {
+    await POST(new Request("http://x/api/mcp-connectors/directory/google-calendar", { method: "POST", headers: { authorization: "Bearer app-key" } }), {
+      params: Promise.resolve({ id: "google-calendar" }),
+    });
+    expect(fake.startOpts).toEqual([{ expectedIssuerHost: "accounts.google.com", startedFrom: "phone" }]);
+  });
+
   // Final review, F3 (spec §10.2): the suggestion card named the directory's issuer; the start checks it.
   it("🔴 the start checks the host the suggestion card named, and a change is a 409 that remembers the new issuer", async () => {
     await post("google-calendar");
-    expect(fake.startOpts).toEqual([{ expectedIssuerHost: "accounts.google.com" }]);
+    expect(fake.startOpts).toEqual([{ expectedIssuerHost: "accounts.google.com", startedFrom: "web" }]);
     fake.startResult = { ok: false, reason: "issuer_changed", error: "x", issuer: "https://login.example.org", issuerHost: "login.example.org" };
     const res = await post("google-calendar");
     expect(res.status).toBe(409);
