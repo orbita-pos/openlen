@@ -139,7 +139,7 @@ describe("suggest_connectors in a turn", () => {
         properties: {
           ids: {
             type: "array",
-            items: { enum: ["google-calendar"] },
+            items: { type: "string", enum: ["google-calendar"] },
             minItems: 1,
             maxItems: 3,
           },
@@ -180,6 +180,36 @@ describe("suggest_connectors in a turn", () => {
         {
           type: "text",
           text: "Nobody can sign in right now (this turn runs without the person). Tell them in one short sentence that Google Calendar needs them to connect it in OpenLen, and carry on with whatever does not need Google Calendar.",
+        },
+      ],
+    });
+  });
+});
+
+// Final review, M6: one call leaves one card — the first id it names. The text says exactly that, and how to offer another,
+// instead of claiming a card for every id.
+describe("suggest_connectors with more than one id", () => {
+  const second = { ...DIRECTORY[0]!, id: "other-calendar", name: "Other Calendar", server: "other-calendar", entry: { ...DIRECTORY[0]!.entry, url: "https://mcp.other.example/mcp" } };
+  const turn = {
+    declarations: [],
+    routes: new Map([["suggest_connectors", { server: "", rawName: "suggest_connectors" }]]),
+    serverNames: [],
+    active: new Map(),
+    directory: [DIRECTORY[0]!, second],
+    resourceServers: [],
+    contextText: "",
+    toMount: [],
+  };
+  const cd = { resolveCredentials: async () => new Map(), open: (async () => { throw new Error("not used"); }) as never, fetch: (async () => new Response()) as typeof fetch, markStale: async () => {}, modelTakesImages: true } as CallDeps;
+
+  it("🔴 names only the service whose card is shown, and says how to offer the others", async () => {
+    const r = await new TurnConnections("p1", turn, cd).call("suggest_connectors", { ids: ["other-calendar", "google-calendar"] });
+    expect(r.mcpApproval?.suggest).toMatchObject({ id: "other-calendar", name: "Other Calendar" });
+    expect(r.response).toEqual({
+      content: [
+        {
+          type: "text",
+          text: "The person is shown a Connect card for Other Calendar (one card per call: call suggest_connectors again for Google Calendar if it is needed too). Tell them in one short sentence what it lets you do once connected.",
         },
       ],
     });

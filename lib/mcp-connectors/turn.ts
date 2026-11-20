@@ -36,7 +36,7 @@ export function suggestConnectorsDeclaration(entries: readonly DirectoryEntry[])
       properties: {
         ids: {
           type: "array",
-          items: { enum: entries.map((e) => e.id) },
+          items: { type: "string", enum: entries.map((e) => e.id) },
           minItems: 1,
           maxItems: 3,
         },
@@ -394,7 +394,9 @@ export class TurnConnections {
         },
       };
     }
+    // One call, one card: the first id it names (final review M6). The text says so, and how to offer the others.
     const first = picked[0]!;
+    const others = [...new Set(picked.slice(1).map((e) => e.name).filter((n) => n !== first.name))];
     const host = hostOf(first.entry.url);
     const mcpApproval: McpApprovalCard = {
       server: first.server,
@@ -411,7 +413,7 @@ export class TurnConnections {
         content: [
           {
             type: "text",
-            text: `The person is shown a Connect card for ${names}. Tell them in one short sentence what it lets you do once connected.`,
+            text: `The person is shown a Connect card for ${first.name}${others.length > 0 ? ` (one card per call: call suggest_connectors again for ${others.join(", ")} if it is needed too)` : ""}. Tell them in one short sentence what it lets you do once connected.`,
           },
         ],
       },
