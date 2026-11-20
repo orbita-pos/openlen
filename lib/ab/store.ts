@@ -205,10 +205,16 @@ export async function transitionBringState(
 /** A system republish kept the live experiment alive with a NEW release: that is its release now, and the fallback it was
  *  launched with is stale — rolling back to it (keep A, a harm stop) would undo whatever the republish carried (a platform-
  *  wide fix). Cleared, the way back is a republish of the published sources, which carries it (G1+G3 review, item 18). */
-export async function recordReemittedRelease(id: string, sha: string | null): Promise<void> {
+export async function recordReemittedRelease(id: string, sha: string | null, overrides?: readonly string[]): Promise<void> {
   await db
     .update(schema.abExperiments)
-    .set({ experimentReleaseSha: sha, controlReleaseSha: null, updatedAt: new Date() })
+    .set({
+      experimentReleaseSha: sha,
+      controlReleaseSha: null,
+      // The new control can make other assets differ from B: the edge must be purged of whatever the CURRENT manifest names.
+      ...(overrides ? { overridePaths: [...overrides] } : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(schema.abExperiments.id, id));
 }
 

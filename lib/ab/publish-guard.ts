@@ -5,6 +5,11 @@
 // between. `publishProject` (the bottom door), `unpublishProject` and `rollbackProject` ask this module first.
 import "server-only";
 
+import { eq } from "drizzle-orm";
+
+import { db, schema } from "@/lib/db";
+
+import { purgeExperimentEdge } from "./edge-purge";
 import { abTestingEnabled } from "./enabled";
 import { AbExperimentRunningError } from "./errors";
 import { buildLiveAbPublish, type LiveAbPublish } from "./live-publish";
@@ -65,8 +70,17 @@ export async function assertNoLiveExperiment(projectId: string, deps: GuardDeps 
 export interface EndDeps {
   cancel(id: string, actorId: string): Promise<AbExperimentRow | null>;
   cleanup(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void>;
+  /** Purges what the edge keeps of the ended experiment (its target page, its languages, the assets B overrode). */
+  purge(exp: AbExperimentRow): Promise<void>;
 }
-const realEnd: EndDeps = { cancel: cancelLiveExperiment, cleanup: cleanupAbWorktree };
+const realEnd: EndDeps = {
+  cancel: cancelLiveExperiment,
+  cleanup: cleanupAbWorktree,
+  purge: async (exp) => {
+    const [row] = await db.select({ subdomain: schema.projects.subdomain, data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, exp.projectId)).limit(1);
+    if (row?.subdomain) await purgeExperimentEdge(row.subdomain, exp, row.data?.settings?.languages ?? []);
+  },
+};
 
 /** After an owner's «Stop and publish» went through: the experiment is over. Called only once the publish succeeded —
  *  a failed publish leaves the experiment live and untouched (review item 14). Never throws: the publish is done. A close
@@ -89,6 +103,8 @@ export async function endExperimentAfterPublish(exp: AbExperimentRow, actorId: s
     return;
   }
   if (!ended) return; // someone decided it meanwhile: not ours to touch
+  // The owner's publish purged «/» and its own pages; the experiment's target, languages and B's assets are this purge's.
+  await deps.purge(exp).catch((err: unknown) => console.error("[ab] couldn't purge the stopped experiment from the edge", exp.id, err));
   await deps
     .cleanup({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch })
     .catch((err: unknown) => console.error("[ab] couldn't clean up the stopped experiment's worktree", exp.id, err));

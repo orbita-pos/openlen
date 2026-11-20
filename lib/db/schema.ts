@@ -3638,6 +3638,9 @@ export const abExperiments = pgTable(
     startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }),
     minEndAt: timestamp("minEndAt", { mode: "date", withTimezone: true }),
     snoozeUntil: timestamp("snoozeUntil", { mode: "date", withTimezone: true }),
+    /** The asset paths Variant B overrides (the manifest's `overrides`): the edge cache keeps them up to 30 days, so every end of
+     *  the experiment purges them (edge review). Set at the launch and by a re-emit. */
+    overridePaths: jsonb("overridePaths").$type<string[]>(),
     /** THIS experiment's hard stop, when «Seguir probando» moved it past the global 21 days; null = the default. */
     maxEndAt: timestamp("maxEndAt", { mode: "date", withTimezone: true }),
     endedAt: timestamp("endedAt", { mode: "date", withTimezone: true }),

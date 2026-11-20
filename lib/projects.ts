@@ -832,6 +832,8 @@ interface PublishResult {
   url: string;
   publishedAt: Date;
   sha?: string;
+  /** With an A/B experiment: the asset paths Variant B overrides (the launch records them; every end purges them). */
+  abOverrides?: readonly string[];
   /** Stripe (spec local 2026-10-21-stripe-integration, §6.4): what went to live mode and what the release carries live. */
   stripe?: { created: import("@/lib/stripe/twins/engine").TwinsPlanCounts; swaps: number; chargesEnabled: boolean | null };
 }
@@ -1145,6 +1147,7 @@ export async function publishProject(
     html: string;
     written: boolean;
     locales: string[];
+    abOverrides?: readonly string[];
   };
   // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.4.5): on the page → her bubble, and what
   // she knows is what this publish writes (below, after it succeeds).
@@ -1329,7 +1332,7 @@ export async function publishProject(
   // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now.
   if (reemitted) {
     const { recordReemittedRelease } = await import("@/lib/ab/store");
-    await recordReemittedRelease(reemitted.experiment.id, publishResult.sha ?? null).catch((err: unknown) => {
+    await recordReemittedRelease(reemitted.experiment.id, publishResult.sha ?? null, publishResult.abOverrides).catch((err: unknown) => {
       console.error("[publish] couldn't record the re-emitted experiment release", reemitted?.experiment.id, err);
     });
   }
@@ -1439,6 +1442,7 @@ export async function publishProject(
     url: `https://${v.value}.${publishBaseHost()}`,
     publishedAt: now,
     sha: publishResult.sha,
+    ...(publishResult.abOverrides ? { abOverrides: publishResult.abOverrides } : {}),
     ...(stripe
       ? { stripe: { created: { ...stripe.preview.plan.create }, swaps: stripe.preview.plan.swaps, chargesEnabled: stripe.preview.plan.chargesEnabled } }
       : {}),

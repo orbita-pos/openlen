@@ -11,9 +11,9 @@ import { db, schema } from "@/lib/db";
 import { readPublishedSources } from "@/lib/len-watch/published-sources";
 import { publishProject } from "@/lib/projects";
 import { publishThroughGates, runSecurityGate } from "@/lib/projects/publish-through-gates";
-import { purgeSubdomain } from "@/lib/publish/cache-purge";
 import { rollbackToSha } from "@/lib/publish/filesystem";
 import { abTestingEnabled } from "./enabled";
+import { purgeExperimentEdge } from "./edge-purge";
 import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
@@ -82,14 +82,6 @@ function newExperimentId(): string {
 
 function newSalt(): string {
   return randomBytes(8).toString("hex");
-}
-
-function edgePathsForTarget(targetPath: string, locales: readonly string[]): string[] {
-  const paths = targetPath === "/" ? ["/", "/index.html"] : [targetPath, `${targetPath}/`];
-  if (targetPath === "/") {
-    for (const loc of locales) paths.push(`/${loc}`, `/${loc}/`);
-  }
-  return paths;
 }
 
 /** Create a new draft A/B experiment + isolated `ab/<id>` worktree cloned from
@@ -357,11 +349,9 @@ export async function launchAbExperiment(p: {
     throw err;
   }
 
-  // 5. Purge previous cached Control HTML from Cloudflare PoPs immediately.
-  const langs = control.data.settings?.languages ?? [];
-  await purgeSubdomain(project.subdomain, edgePathsForTarget(exp.targetPath, langs)).catch(
-    () => undefined,
-  );
+  // 5. Purge what the edge kept of the old page: the target (and its languages), and every asset Variant B overrides.
+  const overridePaths = pub.abOverrides ? [...pub.abOverrides] : [];
+  await purgeExperimentEdge(project.subdomain, { targetPath: exp.targetPath, includeLocales: exp.includeLocales, overridePaths }, control.data.settings?.languages ?? []);
 
   const now = new Date();
   const minEndAt = new Date(now.getTime() + MIN_DURATION_HOURS * 3_600_000);
@@ -372,6 +362,7 @@ export async function launchAbExperiment(p: {
     variantBCommitOid: tipOid,
     controlReleaseSha,
     experimentReleaseSha: pub.sha ?? null,
+    overridePaths,
     startedAt: now,
     minEndAt,
   });
@@ -458,14 +449,16 @@ export async function promoteVariantB(p: {
 
   let title: string | undefined;
   let subdomain = "";
+  let languages: readonly string[] = [];
   let recorded: AbExperimentRow;
   try {
     const [project] = await db
-      .select({ title: schema.projects.title, subdomain: schema.projects.subdomain })
+      .select({ title: schema.projects.title, subdomain: schema.projects.subdomain, data: schema.projects.data })
       .from(schema.projects)
       .where(eq(schema.projects.id, p.projectId))
       .limit(1);
     title = project?.title;
+    languages = project?.data?.settings?.languages ?? [];
 
     if (!project?.subdomain || !locked.copyProjectId) {
       throw new AbLifecycleError("invalid_state", "Missing subdomain or Variant B worktree.", 409);
@@ -510,7 +503,7 @@ export async function promoteVariantB(p: {
     throw err;
   }
 
-  await purgeSubdomain(subdomain, ["/", "/index.html", locked.targetPath]).catch(() => undefined);
+  await purgeExperimentEdge(subdomain, recorded, languages);
 
   // Three-way merge Variant B into owner's draft. Whatever happens here, B is already live.
   let outcome: BringOutcome = { state: "pending" };
@@ -539,11 +532,12 @@ async function restoreControlLive(
   // The rollback goes back to the release saved at launch — right only while the live release is still the experiment's. If
   // something else was published since, going back would undo it: the published SOURCES are republished instead (below).
   const [live] = await db
-    .select({ sha: schema.projects.publishedReleaseSha })
+    .select({ sha: schema.projects.publishedReleaseSha, data: schema.projects.data })
     .from(schema.projects)
     .where(eq(schema.projects.id, exp.projectId))
     .limit(1);
   const publishedSince = Boolean(exp.experimentReleaseSha) && (live?.sha ?? null) !== exp.experimentReleaseSha;
+  const languages = live?.data?.settings?.languages ?? [];
   if (exp.controlReleaseSha && !publishedSince) {
     try {
       await rollbackToSha(subdomain, exp.controlReleaseSha);
@@ -552,7 +546,7 @@ async function restoreControlLive(
         .set({ publishedReleaseSha: exp.controlReleaseSha, updatedAt: new Date() })
         .where(eq(schema.projects.id, exp.projectId))
         .catch(() => undefined);
-      await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
+      await purgeExperimentEdge(subdomain, exp, languages);
       return true;
     } catch {
       // Control release dir was pruned or missing on disk — fall through to clean republish.
@@ -571,7 +565,7 @@ async function restoreControlLive(
       // Restoring Control IS the end of the experiment: the door must not refuse it.
       abLive: "ending",
     });
-    await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
+    await purgeExperimentEdge(subdomain, exp, languages);
     return true;
   }
   return false;
