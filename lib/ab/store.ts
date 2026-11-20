@@ -5,13 +5,14 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 
-import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { HARM_NOTICE_DAYS } from "./cards";
 import {
   AB_ACTIVE_STATUSES,
   AB_LIVE_STATUSES,
+  type AbBringRowState,
   type AbBringState,
   type AbDecisionStatus,
   type AbExperimentStatus,
@@ -41,7 +42,8 @@ export function toExperimentView(
     status: row.status,
     decisionStatus: row.decisionStatus,
     copyProjectId: row.copyProjectId,
-    bringState: row.bringState,
+    // `bringing` (a bring's claim, for the seconds the merge takes) is a bring still waiting, to everyone outside.
+    bringState: row.bringState === "bringing" ? "pending" : row.bringState,
     winnerVariant: row.winnerVariant,
     metrics: row.metricsSnapshot ?? null,
     startedAt: row.startedAt ? row.startedAt.toISOString() : null,
@@ -175,7 +177,8 @@ export async function pendingBringForProject(projectId: string): Promise<AbExper
       and(
         eq(schema.abExperiments.projectId, projectId),
         eq(schema.abExperiments.status, "promoted_b"),
-        inArray(schema.abExperiments.bringState, ["pending", "conflict"]),
+        // A bring in the middle of its merge still holds the owner's publish: the draft doesn't have B yet.
+        inArray(schema.abExperiments.bringState, ["pending", "conflict", "bringing"]),
       ),
     )
     .orderBy(desc(schema.abExperiments.decidedAt))
@@ -187,7 +190,7 @@ export async function pendingBringForProject(projectId: string): Promise<AbExper
  *  button can race: the loser changes nothing). `null` = it didn't move. */
 export async function transitionBringState(
   id: string,
-  from: readonly AbBringState[],
+  from: readonly AbBringRowState[],
   patch: Partial<Pick<AbExperimentInsert, "bringState" | "copyProjectId">>,
 ): Promise<AbExperimentRow | null> {
   const [row] = await db
@@ -198,6 +201,32 @@ export async function transitionBringState(
         eq(schema.abExperiments.id, id),
         eq(schema.abExperiments.status, "promoted_b"),
         inArray(schema.abExperiments.bringState, [...from]),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
+/** A `bringing` claim older than this belongs to a process that died mid-merge: it can be taken again. A merge takes seconds. */
+export const BRING_CLAIM_STALE_MS = 10 * 60_000;
+
+/** A bring CLAIMS the row before it merges (review of G4+G5, minor 10): `pending`/`conflict` → `bringing`, a compare-and-swap, so a
+ *  discard (which moves only from `pending`/`conflict`) that arrives meanwhile is refused, and a discard that came first leaves
+ *  nothing to claim — B is never merged into a draft whose bring was declined. A `bringing` that nobody has touched for
+ *  `BRING_CLAIM_STALE_MS` is a dead process's and is taken again. `null` = not claimable (settled, discarded, or being brought). */
+export async function claimBring(id: string, now: Date = new Date()): Promise<AbExperimentRow | null> {
+  const stale = new Date(now.getTime() - BRING_CLAIM_STALE_MS);
+  const [row] = await db
+    .update(schema.abExperiments)
+    .set({ bringState: "bringing", updatedAt: now })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "promoted_b"),
+        or(
+          inArray(schema.abExperiments.bringState, ["pending", "conflict"]),
+          and(eq(schema.abExperiments.bringState, "bringing"), lt(schema.abExperiments.updatedAt, stale)),
+        ),
       ),
     )
     .returning();

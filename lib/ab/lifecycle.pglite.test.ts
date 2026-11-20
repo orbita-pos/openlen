@@ -69,7 +69,7 @@ vi.mock("@/lib/ab/store", async (orig) => {
 });
 
 const { discardWinnerBring, extendExperiment, keepControlA, promoteVariantB, retryBringWinner } = await import("./lifecycle");
-const { claimExperimentDecision, releaseStaleDecisionLocks, getExperimentById, pendingBringForProject } = await import("./store");
+const { claimExperimentDecision, releaseStaleDecisionLocks, getExperimentById, pendingBringForProject, toExperimentView } = await import("./store");
 const { autoStopExperimentForHarm } = await import("./lifecycle");
 const { computeExperimentMetrics, metricsInputOf } = await import("./metrics");
 const { evaluateAbStats, maxDurationDaysOf } = await import("./stats");
@@ -342,6 +342,79 @@ describe("«Bring into draft» and «Don't bring it in» (item 26)", () => {
     await insertExperiment(raw(), { id: "ab_ring0007", projectId: "p2", status: "promoted_b", decisionStatus: "resolved", bringState: "brought" });
     await expect(discardWinnerBring({ projectId: "p2", experimentId: "ab_ring0007" })).rejects.toMatchObject({ code: "invalid_state" });
     await expect(discardWinnerBring({ projectId: "p1", experimentId: "ab_nope0000" })).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+describe("a bring and a discard racing (review of G4+G5, minor 10)", () => {
+  const open = (id: string, state = "pending", o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", bringState: state, branch: `ab/${id}`, baseCommitOid: "base-1", ...o });
+  const bring = (id: string) => retryBringWinner({ projectId: "p1", experimentId: id, ownerId: "u1", actorId: "u1" });
+  const discard = (id: string) => discardWinnerBring({ projectId: "p1", experimentId: id });
+
+  it("🔴 the bring CLAIMS the row before it merges: a discard that arrives meanwhile is refused, and B is never merged into a draft whose bring was declined", async () => {
+    await open("ab_race0001");
+    let during: unknown;
+    h.merge.mockImplementation(async () => {
+      during = await discard("ab_race0001").catch((e: unknown) => e);
+      return { kind: "brought" };
+    });
+    await expect(bring("ab_race0001")).resolves.toEqual({ status: "brought" });
+    expect(during).toMatchObject({ code: "invalid_state", status: 409 });
+    expect(await getExperimentById("ab_race0001")).toMatchObject({ bringState: "brought" });
+  });
+
+  it("🔴 a discard that comes FIRST wins cleanly: the bring is refused and nothing is merged", async () => {
+    await open("ab_race0002", "conflict");
+    await discard("ab_race0002");
+    await expect(bring("ab_race0002")).rejects.toMatchObject({ code: "invalid_state", status: 409 });
+    expect(h.merge).not.toHaveBeenCalled();
+    expect(await getExperimentById("ab_race0002")).toMatchObject({ bringState: "declined" });
+  });
+
+  it("two brings at once: one merges, the other is refused", async () => {
+    await open("ab_race0003");
+    h.merge.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 40));
+      return { kind: "brought" };
+    });
+    const results = await Promise.allSettled([bring("ab_race0003"), bring("ab_race0003")]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
+    expect(h.merge).toHaveBeenCalledTimes(1);
+  });
+
+  it("🔴 while it is being brought the owner's publish still waits (the gate sees it), and clients are told «pending»", async () => {
+    await open("ab_race0004");
+    let gate: Awaited<ReturnType<typeof pendingBringForProject>> = null;
+    h.merge.mockImplementation(async () => {
+      gate = await pendingBringForProject("p1");
+      return { kind: "brought" };
+    });
+    await bring("ab_race0004");
+    expect(gate).toMatchObject({ id: "ab_race0004", bringState: "bringing" });
+    expect(toExperimentView(gate!).bringState).toBe("pending");
+  });
+
+  it("🔴 a merge that throws, or meets a live Len turn, or clashes, never leaves the row on «bringing»", async () => {
+    await open("ab_race0005");
+    h.merge.mockRejectedValueOnce(new Error("the database went away"));
+    await expect(bring("ab_race0005")).rejects.toThrow("the database went away");
+    expect((await getExperimentById("ab_race0005"))!.bringState).toBe("pending");
+    h.merge.mockResolvedValueOnce({ kind: "busy" });
+    await expect(bring("ab_race0005")).resolves.toEqual({ status: "queued" });
+    expect((await getExperimentById("ab_race0005"))!.bringState).toBe("pending");
+    h.merge.mockResolvedValueOnce({ kind: "conflict", paths: ["/a.css"] });
+    await expect(bring("ab_race0005")).resolves.toEqual({ status: "conflict", paths: ["/a.css"] });
+    expect((await getExperimentById("ab_race0005"))!.bringState).toBe("conflict");
+  });
+
+  it("a «bringing» left by a process that died is reclaimed after ten minutes; a fresh one is somebody else's work", async () => {
+    await open("ab_race0006", "bringing", { updatedAt: new Date(Date.now() - 3 * 60_000) });
+    await expect(bring("ab_race0006")).rejects.toMatchObject({ code: "invalid_state", status: 409 });
+    expect(h.merge).not.toHaveBeenCalled();
+    await open("ab_race0007", "bringing", { projectId: "p2", updatedAt: new Date(Date.now() - 11 * 60_000) });
+    h.merge.mockResolvedValue({ kind: "brought" });
+    await expect(retryBringWinner({ projectId: "p2", experimentId: "ab_race0007", ownerId: "u1", actorId: "u1" })).resolves.toEqual({ status: "brought" });
   });
 });
 

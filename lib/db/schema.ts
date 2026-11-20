@@ -3633,7 +3633,7 @@ export const abExperiments = pgTable(
     branch: text("branch"),
     baseCommitOid: text("baseCommitOid"),
     variantBCommitOid: text("variantBCommitOid"),
-    bringState: text("bringState").$type<import("@/lib/ab/types").AbBringState>(),
+    bringState: text("bringState").$type<import("@/lib/ab/types").AbBringRowState>(),
     controlReleaseSha: text("controlReleaseSha"),
     experimentReleaseSha: text("experimentReleaseSha"),
     promotedReleaseSha: text("promotedReleaseSha"),

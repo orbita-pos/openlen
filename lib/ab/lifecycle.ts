@@ -19,6 +19,7 @@ import { readLiveAb } from "./live-manifest";
 import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
+  claimBring,
   claimExperimentDecision,
   claimLaunch,
   createExperimentRow,
@@ -433,7 +434,7 @@ async function tryBringIntoDraft(exp: AbExperimentRow, ownerId: string, actorId:
  *  race): `brought` deletes the branch too; `conflict` keeps it (Len or the owner finishes it, or discards it). */
 async function settleBring(exp: AbExperimentRow, outcome: BringOutcome): Promise<AbExperimentRow | null> {
   if (outcome.state === "pending") return null;
-  const moved = await transitionBringState(exp.id, ["pending", "conflict"], {
+  const moved = await transitionBringState(exp.id, ["pending", "conflict", "bringing"], {
     bringState: outcome.state,
     copyProjectId: null,
   });
@@ -843,19 +844,32 @@ export async function retryBringWinner(p: {
   if (exp.status !== "promoted_b") {
     throw new AbLifecycleError("invalid_state", "Only a promoted Variant B can be brought into the draft.", 409);
   }
-  if (exp.bringState !== "pending" && exp.bringState !== "conflict") {
-    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, or discarded.", 409);
+  // CLAIM the bring before merging: a discard that comes first leaves nothing to claim (so nothing is merged into a draft whose
+  // bring was declined), and one that comes meanwhile is refused. Two brings at once: one merges.
+  const claimed = await claimBring(exp.id);
+  if (!claimed) {
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, discarded, or is being brought in right now.", 409);
   }
-  const outcome = await tryBringIntoDraft(exp, p.ownerId, p.actorId);
+  // What it was before the claim (a stale «bringing» was somebody's waiting bring): where it goes back to if nothing settles it.
+  const before = exp.bringState === "conflict" ? "conflict" : "pending";
+  let outcome: BringOutcome;
+  try {
+    outcome = await tryBringIntoDraft(claimed, p.ownerId, p.actorId);
+  } catch (err) {
+    // Never leave the row on «bringing»: it goes back as a bring that is still waiting.
+    await transitionBringState(exp.id, ["bringing"], { bringState: before }).catch((e: unknown) => console.error("[ab] couldn't give a bring's claim back", exp.id, e));
+    throw err;
+  }
   if (outcome.state === "pending") {
-    bringWhenLenIsDone(exp, p.ownerId, p.actorId);
+    await transitionBringState(exp.id, ["bringing"], { bringState: before });
+    bringWhenLenIsDone(claimed, p.ownerId, p.actorId);
     return { status: "queued" };
   }
   if (outcome.state === "conflict") {
-    await transitionBringState(exp.id, ["pending", "conflict"], { bringState: "conflict" });
+    await transitionBringState(exp.id, ["bringing"], { bringState: "conflict" });
     return { status: "conflict", paths: outcome.paths };
   }
-  await settleBring(exp, outcome);
+  await settleBring(claimed, outcome);
   return { status: outcome.kind };
 }
 
@@ -875,7 +889,7 @@ export async function discardWinnerBring(p: {
   }
   const moved = await transitionBringState(exp.id, ["pending", "conflict"], { bringState: "declined", copyProjectId: null });
   if (!moved) {
-    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in, or discarded.", 409);
+    throw new AbLifecycleError("invalid_state", "This Variant B was already brought in or discarded, or is being brought in right now.", 409);
   }
   await cleanupAbWorktree({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch });
   return toExperimentView(moved);
