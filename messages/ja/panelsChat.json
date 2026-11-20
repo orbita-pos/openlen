@@ -453,6 +453,8 @@
   "visualLinkTitle": "このリンクを開きますか?",
   "visualLinkOpen": "開く",
   "visualLinkCancel": "キャンセル",
+  "visualContextLabel": "ビジュアルから:",
+  "visualContextClear": "ビジュアルのコンテキストを削除",
   "emailDomain": {
     "cardLabel": "メールドメイン",
     "cardHint": "プロジェクトのメールはこのドメインのアドレスから送られます。追加する DNS の行はメールタブに表示されます。",

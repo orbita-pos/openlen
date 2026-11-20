@@ -453,6 +453,8 @@
   "visualLinkTitle": "打开这个链接？",
   "visualLinkOpen": "打开",
   "visualLinkCancel": "取消",
+  "visualContextLabel": "来自图示：",
+  "visualContextClear": "清除图示上下文",
   "emailDomain": {
     "cardLabel": "邮件域名",
     "cardHint": "项目的邮件将从这个域名下的地址发出。需要添加的 DNS 记录会显示在邮件标签页中。",

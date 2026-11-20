@@ -145,15 +145,76 @@ describe("VisualFrame", () => {
     expect(mount({ final: false, widget: { ...widget, loadingMessages: [] } }).host.textContent).toContain("visualLoading");
   });
 
-  it("A5 · forwards ol-visual:context to onContext in chat mode and ignores it when isolated", () => {
-    const onContext = vi.fn();
-    const m = mount({ onContext });
-    m.fromFrame({ kind: "ol-visual:context", text: "  Selected: Marzo  " });
-    expect(onContext).toHaveBeenCalledWith("Selected: Marzo");
+  // What a visual reports with updateModelContext reaches the person's next message, so it is gated like sendPrompt:
+  // only right after the person clicked into the frame. (It isn't used up by the click: a visual may report its
+  // selection and then ask Len something in the same click.)
+  describe("🔴 updateModelContext is forwarded only after a click into the frame", () => {
+    const clickInto = (m: ReturnType<typeof mount>) => {
+      vi.spyOn(document, "activeElement", "get").mockReturnValue(m.iframe());
+      act(() => {
+        window.dispatchEvent(new Event("blur"));
+      });
+    };
 
-    const onIsolatedContext = vi.fn();
-    const iso = mount({ isolated: true, onContext: onIsolatedContext });
-    iso.fromFrame({ kind: "ol-visual:context", text: "Should be ignored" }, "null");
-    expect(onIsolatedContext).not.toHaveBeenCalled();
+    it("without a click it is ignored — a visual that runs by itself can't write into the person's next message", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
+      expect(onContext).not.toHaveBeenCalled();
+    });
+
+    it("after a click it is forwarded, trimmed, and again for the next report in the same window", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "  Selected: Marzo  " });
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Mayo" });
+      expect(onContext.mock.calls).toEqual([["Selected: Marzo"], ["Selected: Mayo"]]);
+    });
+
+    it("a report followed by sendPrompt in the same click: both go", () => {
+      const onContext = vi.fn();
+      const onPrompt = vi.fn();
+      const m = mount({ onContext, onPrompt });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
+      m.fromFrame({ kind: "ol-visual:prompt", text: "compara" });
+      expect(onContext).toHaveBeenCalledWith("Selected: Marzo");
+      expect(onPrompt).toHaveBeenCalledWith("compara");
+    });
+
+    it("the click's window runs out", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      const now = vi.spyOn(Date, "now");
+      now.mockReturnValue(1_000_000);
+      clickInto(m);
+      now.mockReturnValue(1_000_000 + 5_001);
+      m.fromFrame({ kind: "ol-visual:context", text: "late" });
+      expect(onContext).not.toHaveBeenCalled();
+    });
+
+    it("an empty report clears, and it also needs the click; the frame's text is cut at the server's cap", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      m.fromFrame({ kind: "ol-visual:context", text: "" });
+      expect(onContext).not.toHaveBeenCalled();
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "" });
+      m.fromFrame({ kind: "ol-visual:context", text: "z".repeat(4000) });
+      expect(onContext.mock.calls[0]).toEqual([""]);
+      expect((onContext.mock.calls[1]![0] as string).length).toBe(1500);
+    });
+
+    it("an isolated frame (a visitor's own code) never reports context, click or not", () => {
+      const onContext = vi.fn();
+      const iso = mount({ isolated: true, onContext });
+      vi.spyOn(document, "activeElement", "get").mockReturnValue(iso.iframe());
+      act(() => {
+        window.dispatchEvent(new Event("blur"));
+      });
+      iso.fromFrame({ kind: "ol-visual:context", text: "Should be ignored" }, "null");
+      expect(onContext).not.toHaveBeenCalled();
+    });
   });
 });
