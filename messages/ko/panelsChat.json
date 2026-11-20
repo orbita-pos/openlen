@@ -1002,7 +1002,9 @@
       "close": "닫기",
       "collectingHint": "실제 방문자 데이터를 수집 중이에요({views} 방문, 최소 72시간).",
       "decidedByConflict": "다른 팀원이나 기기에서 이미 결정한 테스트예요.",
-      "pausedHarmNotice": "전환 보호를 위해 자동 중지되었으며 원본이 100% 제공 중입니다."
+      "pausedHarmNotice": "전환 보호를 위해 자동 중지되었으며 원본이 100% 제공 중입니다.",
+      "pushHarmStopNotRestored": "변형 B의 전환이 크게 떨어져 ‘{name}’을 자동 중지했어요. 사이트가 게시되어 있지 않아 되돌릴 것이 없었어요.",
+      "emailTextInfo": "{push}\n\n무슨 일이 있었는지 보기: {url}"
     }
   }
 }

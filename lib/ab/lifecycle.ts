@@ -30,7 +30,7 @@ import {
   type AbExperimentRow,
 } from "./store";
 import { MIN_DURATION_HOURS, maxDurationDaysOf } from "./stats";
-import type { AbExperimentView, AbPrimaryMetric } from "./types";
+import type { AbExperimentView, AbMetricsSnapshot, AbPrimaryMetric } from "./types";
 import {
   cleanupAbWorktree,
   commitAbWorktree,
@@ -458,12 +458,13 @@ export async function promoteVariantB(p: {
   }
 }
 
-/** Restore clean Control A at 100% (no ab.json), purge Cloudflare, clean up worktree. */
+/** Restore clean Control A at 100% (no ab.json), purge Cloudflare. `true` = a release without the experiment is live now
+ *  (rolled back to Control's, or published again from its sources); `false` = there was nothing to restore it from. */
 async function restoreControlLive(
   exp: AbExperimentRow,
   ownerId: string,
   subdomain: string,
-): Promise<void> {
+): Promise<boolean> {
   if (exp.controlReleaseSha) {
     try {
       await rollbackToSha(subdomain, exp.controlReleaseSha);
@@ -473,7 +474,7 @@ async function restoreControlLive(
         .where(eq(schema.projects.id, exp.projectId))
         .catch(() => undefined);
       await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
-      return;
+      return true;
     } catch {
       // Control release dir was pruned or missing on disk — fall through to clean republish.
     }
@@ -492,7 +493,9 @@ async function restoreControlLive(
       abLive: "ending",
     });
     await purgeSubdomain(subdomain, ["/", "/index.html", exp.targetPath]).catch(() => undefined);
+    return true;
   }
+  return false;
 }
 
 /** Owner chooses «Quedarme con la original» (keep Control A). */
@@ -575,6 +578,8 @@ export async function extendExperiment(p: {
       ...DECISION_LOCK_CLEARED,
       endedAt: null,
       winnerVariant: null,
+      // A new verdict will be announced as a new notice.
+      notifiedAt: null,
       minEndAt: targetDate,
       snoozeUntil: targetDate,
       maxEndAt: new Date(Math.max(currentStop, targetDate.getTime())),
@@ -587,27 +592,50 @@ export async function extendExperiment(p: {
   }
 }
 
-/** Auto-stop guardrail when evaluator detects severe harm (>30% drop at >=95% confidence). */
+/** Auto-stop guardrail when the evaluator detects harm (review items 21, 22). It CLAIMS the decision first, the same claim
+ *  a person's decision takes: if a person is already deciding (or someone decided), it does nothing and returns `null` —
+ *  never a second publish racing the first. With the claim, it puts Control back (`restored`: false only when the project
+ *  has no address, so there was nothing live to put back), closes the row as `paused_harm` with the metrics that caused it,
+ *  and gives the lock back if anything fails so the next pass tries again. A published project whose original can't be
+ *  restored is NOT closed: the split is still live. */
 export async function autoStopExperimentForHarm(
   exp: AbExperimentRow,
   ownerId: string,
-  subdomain: string,
-): Promise<AbExperimentRow | null> {
-  await restoreControlLive(exp, ownerId, subdomain);
-  await cleanupAbWorktree({
-    parentId: exp.projectId,
-    copyProjectId: exp.copyProjectId,
-    branch: exp.branch,
-  });
-  const now = new Date();
-  return updateExperiment(exp.id, {
-    status: "paused_harm",
-    decisionStatus: "resolved",
-    winnerVariant: "a",
-    copyProjectId: null,
-    endedAt: now,
-    notifiedAt: now,
-  });
+  subdomain: string | null,
+  snapshot: AbMetricsSnapshot,
+  now: Date = new Date(),
+): Promise<{ readonly restored: boolean } | null> {
+  const locked = await claimExperimentDecision(exp.id, exp.projectId);
+  if (!locked) return null;
+  try {
+    let restored = false;
+    if (subdomain) {
+      restored = await restoreControlLive(locked, ownerId, subdomain);
+      if (!restored) {
+        throw new AbLifecycleError("invalid_state", "Control can't be restored: nothing to restore it from.", 409);
+      }
+    }
+    await cleanupAbWorktree({
+      parentId: locked.projectId,
+      copyProjectId: locked.copyProjectId,
+      branch: locked.branch,
+    });
+    await updateExperiment(locked.id, {
+      status: "paused_harm",
+      decisionStatus: "resolved",
+      ...DECISION_LOCK_CLEARED,
+      winnerVariant: "a",
+      copyProjectId: null,
+      metricsSnapshot: snapshot,
+      evaluatedAt: now,
+      endedAt: now,
+      decidedAt: now,
+    });
+    return { restored };
+  } catch (err) {
+    await giveBackTheLock(locked.id);
+    throw err;
+  }
 }
 
 /** Retry three-way merge after a conflict or cancel a draft experiment cleanly. */

@@ -1002,7 +1002,9 @@
       "close": "Close",
       "collectingHint": "Collecting real visitor data ({views} views, 72h minimum).",
       "decidedByConflict": "Another teammate or device already decided this test.",
-      "pausedHarmNotice": "Auto-stopped to protect conversions; the original is serving 100% of traffic."
+      "pausedHarmNotice": "Auto-stopped to protect conversions; the original is serving 100% of traffic.",
+      "pushHarmStopNotRestored": "Stopped “{name}” because Variant B dropped conversions. Your site isn't published, so there was nothing live to put back.",
+      "emailTextInfo": "{push}\n\nSee what happened: {url}"
     }
   }
 }

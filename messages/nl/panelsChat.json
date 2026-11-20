@@ -1002,7 +1002,9 @@
       "close": "Sluiten",
       "collectingHint": "Verzamelt echte bezoekersdata ({views} weergaven, minimaal 72 uur).",
       "decidedByConflict": "Een ander teamlid of apparaat heeft deze test al besloten.",
-      "pausedHarmNotice": "Automatisch gestopt om je conversies te beschermen; het origineel draait op 100%."
+      "pausedHarmNotice": "Automatisch gestopt om je conversies te beschermen; het origineel draait op 100%.",
+      "pushHarmStopNotRestored": "Ik heb “{name}” gestopt omdat variant B veel minder converteerde. Je site is niet gepubliceerd, dus er was niets live om terug te zetten.",
+      "emailTextInfo": "{push}\n\nBekijk wat er gebeurd is: {url}"
     }
   }
 }
