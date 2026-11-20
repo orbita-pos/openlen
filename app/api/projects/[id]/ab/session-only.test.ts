@@ -12,7 +12,7 @@ const m = vi.hoisted(() => ({
 vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: async () => m.session }));
 vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: m.keyLookup }));
-vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: m.exigirAcceso }));
+vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: m.exigirAcceso, puede: () => true }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
 vi.mock("@/lib/ab/lifecycle", () => ({
   AbLifecycleError: class extends Error {},
@@ -24,6 +24,7 @@ vi.mock("@/lib/ab/lifecycle", () => ({
 vi.mock("@/lib/ab/metrics", () => ({ computeExperimentMetrics: vi.fn(), metricsInputOf: vi.fn() }));
 vi.mock("@/lib/ab/store", () => ({
   listExperimentsForProject: vi.fn(async () => []),
+  saveEvaluation: vi.fn(),
   getExperimentById: vi.fn(async () => null),
   toExperimentView: vi.fn(),
   updateExperiment: vi.fn(),
