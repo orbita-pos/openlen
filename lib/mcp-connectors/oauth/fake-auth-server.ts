@@ -77,6 +77,14 @@ export interface FakeAuthServer {
   /** Answer the metadata request with this instead (given the document the fake would serve): broken or hostile
    *  metadata. */
   serveMetadata: ((standard: Record<string, unknown>) => Response) | null;
+  /** The `WWW-Authenticate` of the MCP server's 401 (undefined: `Bearer resource_metadata=…`; null: no header at all, as
+   *  a server keyed by `X-API-Key` answers). */
+  challenge: string | null | undefined;
+  /** Serve the well-known metadata documents (false: every `/.well-known/…` is a 404, as on a server with no OAuth). */
+  wellKnown: boolean;
+  /** A server keyed by `X-API-Key` (spec local 2026-11-17-oauth-de-conectores-mcp, §5.1): with this value in that header
+   *  the MCP server answers without a token; with another, or none, it is a 401 with `challenge`. */
+  apiKey: string | null;
   /** The path (and query) of every request the fake received, in order. */
   readonly requests: string[];
   /** Plays the person at `/authorize`: follows the URL by hand and reads the redirect back to OpenLen. */
@@ -148,6 +156,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     const path = url.pathname;
     server.requests.push(`${path}${url.search}`);
 
+    if (path.startsWith("/.well-known/") && !server.wellKnown) return new Response("not found", { status: 404 });
     if (path.startsWith("/.well-known/oauth-protected-resource")) {
       return json({ resource: `${base}/mcp`, authorization_servers: [issuer()] });
     }
@@ -226,11 +235,15 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     }
 
     if (path === "/mcp") {
+      const unauthorized = () => {
+        const challenge = server.challenge === undefined ? `Bearer resource_metadata="${resourceMetadataUrl()}"` : server.challenge;
+        return new Response("unauthorized", { status: 401, headers: challenge === null ? {} : { "www-authenticate": challenge } });
+      };
+      const keyed = server.apiKey !== null;
+      if (keyed && req.headers.get("x-api-key") !== server.apiKey) return unauthorized();
       const bearer = req.headers.get("authorization")?.replace(/^Bearer /, "") ?? "";
-      const a = access.get(bearer);
-      if (!a || (a.expiresAt !== null && a.expiresAt <= opts.now().getTime())) {
-        return new Response("unauthorized", { status: 401, headers: { "www-authenticate": `Bearer resource_metadata="${resourceMetadataUrl()}"` } });
-      }
+      const a = keyed ? { scope: undefined, expiresAt: null } : access.get(bearer);
+      if (!a || (a.expiresAt !== null && a.expiresAt <= opts.now().getTime())) return unauthorized();
       const required = server.requiredScope;
       if (required && !(a.scope ?? "").split(" ").includes(required)) {
         return new Response("forbidden", {
@@ -292,6 +305,9 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     sendIss: true,
     metadataAt: null,
     serveMetadata: null,
+    challenge: undefined,
+    wellKnown: true,
+    apiKey: null,
     requests: [],
     async authorize(authorizationUrl: string) {
       const r = await routed(authorizationUrl, { redirect: "manual" });

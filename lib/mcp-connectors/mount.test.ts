@@ -231,6 +231,9 @@ const SIGNED_IN: OAuthConnection = {
   tokens: { access_token: "at", refresh_token: "rt", token_type: "Bearer", issuer: GOOGLE },
 };
 
+/** The person started a sign-in once and stopped: the client is stored, no token. The server is OAuth's (F1). */
+const CLIENT_ONLY: OAuthConnection = { ...SIGNED_IN, tokens: null };
+
 /** An OAuth store that holds `connection` (or nothing) for every server, and records who asked for it. */
 function fakeOAuth(connection: OAuthConnection | null = null) {
   const loads: { personId: string; serverName: string; serverUrl: string }[] = [];
@@ -343,10 +346,23 @@ describe("a server that needs a sign-in", () => {
           throw new UnauthorizedError("401");
         },
       });
-    const fresh = await mountServer("p1", "cal", calDeps({ open: dropsTheSession, oauth: fakeOAuth(null).oauth }).d);
+    const fresh = await mountServer("p1", "cal", calDeps({ open: dropsTheSession, oauth: fakeOAuth(CLIENT_ONLY).oauth }).d);
     expect(fresh).toMatchObject({ status: "needs-auth", authReason: "first", failures: 0 });
     const signedIn = await mountServer("p1", "cal", calDeps({ open: dropsTheSession, oauth: fakeOAuth(SIGNED_IN).oauth }).d);
     expect(signedIn).toMatchObject({ status: "needs-auth", authReason: "lapsed", authIssuer: GOOGLE, failures: 0 });
+  });
+
+  // Final review, F1 (spec §5.1): a server with no `oauth` block, no connection of the person's and no Bearer challenge
+  // with metadata behind it is not asking anyone to sign in. Its 401 is a failure, retried as one.
+  it("🔴 a 401 from a server that isn't OAuth's (no block, nothing stored) is a failure that counts", async () => {
+    const dropsTheSession: MountDeps["open"] = async () =>
+      conn({
+        listTools: async () => {
+          throw new UnauthorizedError("401");
+        },
+      });
+    const s = await mountServer("p1", "cal", calDeps({ states: [{ ...prevCal, failures: 1 }], open: dropsTheSession, oauth: fakeOAuth(null).oauth }).d);
+    expect(s).toMatchObject({ status: "failed", failures: 2, authReason: null, authIssuer: null });
   });
 
   it("🔴 a 403 insufficient_scope from listTools asks for the scope it had plus the new one", async () => {
@@ -440,7 +456,7 @@ describe("a server that needs a sign-in", () => {
           throw new UnauthorizedError("401");
         },
       });
-    expect(await probeServer("p1", "cal", calDeps({ open: midSession }).d)).toEqual({ ok: false, stage: "list", error: "needs authentication" });
+    expect(await probeServer("p1", "cal", calDeps({ open: midSession, oauth: fakeOAuth(CLIENT_ONLY).oauth }).d)).toEqual({ ok: false, stage: "list", error: "needs authentication" });
   });
 });
 
