@@ -6,7 +6,7 @@ import {
   evaluateAbManifest,
   isBlockedInternalAbPath,
   isInternalAbFile,
-  readReleaseAbManifest,
+  releaseAbManifests,
   resolveVariantBFile,
   type AbServeDecision,
 } from "@/lib/ab/serve";
@@ -186,6 +186,17 @@ function resolveFile(
   };
 }
 
+/** Whether the visitor came over https. Behind Caddy, Node sees plain http on every request, so the
+ *  protocol of `req.url` says nothing: Caddy's X-Forwarded-Proto (the first value) does; without it,
+ *  the scheme the site is configured with (`NEXT_PUBLIC_SITE_URL`, https in production), and last
+ *  the URL's own (local dev). */
+function isSecureRequest(req: Request, reqUrl: URL): boolean {
+  const forwarded = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwarded) return forwarded === "https";
+  if ((process.env.NEXT_PUBLIC_SITE_URL ?? "").trim().toLowerCase().startsWith("https://")) return true;
+  return reqUrl.protocol === "https:";
+}
+
 /** El Host de la petición, sin puerto y en minúsculas. */
 function hostDeLaPeticion(req: Request): string {
   return (req.headers.get("host") ?? "").trim().toLowerCase().replace(/:\d+$/, "");
@@ -235,7 +246,9 @@ async function serve(
   let abDecision: AbServeDecision | null = null;
   let servedFromBTree = false;
   if (pathParts[0] !== "assets") {
-    const manifest = await readReleaseAbManifest(releaseDir);
+    // The manifest comes from the RESOLVED release (cached per release), and Variant B's files are
+    // read from that same directory.
+    const { manifest, dir: abDir } = await releaseAbManifests.get(releaseDir);
     if (manifest) {
       const reqUrl = new URL(req.url);
       const clientIp =
@@ -249,16 +262,18 @@ async function serve(
         userAgent: req.headers.get("user-agent"),
         acceptLanguage: req.headers.get("accept-language"),
         clientIp,
-        secureCookie: reqUrl.protocol === "https:",
+        secureCookie: isSecureRequest(req, reqUrl),
       });
       if (d) {
         if (d.variantBPath) {
-          const bFile = await resolveVariantBFile(releaseDir, d.variantBPath, d.isPageRoute);
+          const bFile = await resolveVariantBFile(abDir, d.variantBPath, d.isPageRoute);
           if (bFile && bFile.startsWith(rootNorm)) {
             absNorm = bFile;
             servedFromBTree = true;
             abDecision = d;
-          } else if (d.isPageRoute) {
+          } else {
+            // B did not ship this page or file: control's. A decided FILE is no-store all the same
+            // (control's bytes are as unshareable as B's), so the decision stays.
             abDecision = { ...d, variant: "a", variantBPath: null };
           }
         } else {

@@ -22,6 +22,7 @@ import {
   isInternalAbFile,
   parseAbManifest,
   readReleaseAbManifest,
+  ReleaseAbManifestCache,
   resolveVariantBFile,
 } from "./serve";
 
@@ -376,4 +377,123 @@ describe("lib/ab/serve — the shared evaluate fixtures (parity with the Rust ed
       }
     });
   }
+});
+
+describe("lib/ab/serve — the manifest cache and the headers of a decided file", () => {
+  const MANIFEST_JSON = JSON.stringify({
+    version: 1,
+    overrides: ["/css/site.css"],
+    experiments: [
+      {
+        id: "ab_9f3c2a1b",
+        cookieName: "ol_ab_9f3c2a1b",
+        targetPath: "/",
+        splitBps: 5000,
+        salt: "3f9a1c8e7b2d4012",
+        prefixB: "openlen/ab/ab_9f3c2a1b/b",
+      },
+    ],
+  });
+
+  /** The cache's door to the disk, counting what it is asked. */
+  function fakeIo(files: Record<string, string>) {
+    const calls = { realpath: 0, stat: 0, readFile: 0 };
+    const mtimes: Record<string, number> = {};
+    const failures: { stat?: NodeJS.ErrnoException; readFile?: NodeJS.ErrnoException } = {};
+    const io = {
+      async realpath(p: string) {
+        calls.realpath++;
+        return p.replace(/current$/, "releases/aaaa11112222");
+      },
+      async stat(p: string) {
+        calls.stat++;
+        if (failures.stat) throw failures.stat;
+        const body = files[p];
+        if (body === undefined) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+        return { isFile: () => true, size: body.length, mtimeMs: mtimes[p] ?? 1 };
+      },
+      async readFile(p: string) {
+        calls.readFile++;
+        if (failures.readFile) throw failures.readFile;
+        return files[p]!;
+      },
+    };
+    return { io, calls, mtimes, failures, files };
+  }
+  const AB_FILE = path.join("/srv", "demo", "releases", "aaaa11112222", "openlen", "ab.json");
+
+  it("reads a release once, then answers from memory while the file is unchanged", async () => {
+    const f = fakeIo({ [AB_FILE]: MANIFEST_JSON });
+    const cache = new ReleaseAbManifestCache({ maxEntries: 10, maxBytes: 1 << 20 }, f.io);
+    for (let i = 0; i < 3; i++) {
+      const got = await cache.get("/srv/demo/current");
+      expect(got.manifest?.experiments).toHaveLength(1);
+      // The manifest AND the directory files are served from are the resolved release.
+      expect(got.dir).toBe(path.join("/srv", "demo", "releases", "aaaa11112222"));
+    }
+    expect(f.calls.readFile).toBe(1);
+    // Edited in place (a plain directory in dev): the signature moves, so it is read again.
+    f.mtimes[AB_FILE] = 2;
+    await cache.get("/srv/demo/current");
+    expect(f.calls.readFile).toBe(2);
+  });
+
+  it("remembers that a release has no experiment, without reading anything", async () => {
+    const f = fakeIo({});
+    const cache = new ReleaseAbManifestCache({ maxEntries: 10, maxBytes: 1 << 20 }, f.io);
+    for (let i = 0; i < 3; i++) expect((await cache.get("/srv/demo/current")).manifest).toBeNull();
+    expect(f.calls.readFile).toBe(0);
+  });
+
+  it("never caches a transient error: the next request reads the file again", async () => {
+    const f = fakeIo({ [AB_FILE]: MANIFEST_JSON });
+    const cache = new ReleaseAbManifestCache({ maxEntries: 10, maxBytes: 1 << 20 }, f.io);
+    f.failures.readFile = Object.assign(new Error("EIO"), { code: "EIO" });
+    expect((await cache.get("/srv/demo/current")).manifest).toBeNull();
+    f.failures.readFile = undefined;
+    expect((await cache.get("/srv/demo/current")).manifest).not.toBeNull();
+    // Same for a failing stat.
+    const g = fakeIo({ [AB_FILE]: MANIFEST_JSON });
+    const cache2 = new ReleaseAbManifestCache({ maxEntries: 10, maxBytes: 1 << 20 }, g.io);
+    g.failures.stat = Object.assign(new Error("EACCES"), { code: "EACCES" });
+    expect((await cache2.get("/srv/demo/current")).manifest).toBeNull();
+    g.failures.stat = undefined;
+    expect((await cache2.get("/srv/demo/current")).manifest).not.toBeNull();
+  });
+
+  it("is bounded by entries and by bytes", async () => {
+    const files: Record<string, string> = {};
+    for (let i = 0; i < 30; i++) {
+      files[path.join("/srv", `s${i}`, "releases", "aaaa11112222", "openlen", "ab.json")] = MANIFEST_JSON;
+    }
+    const f = fakeIo(files);
+    const byCount = new ReleaseAbManifestCache({ maxEntries: 5, maxBytes: 1 << 30 }, f.io);
+    const byBytes = new ReleaseAbManifestCache({ maxEntries: 1000, maxBytes: 3 * MANIFEST_JSON.length }, f.io);
+    for (let i = 0; i < 30; i++) {
+      await byCount.get(`/srv/s${i}/current`);
+      await byBytes.get(`/srv/s${i}/current`);
+    }
+    expect(byCount.size).toBeLessThanOrEqual(5);
+    expect(byBytes.size).toBeLessThan(10);
+    expect(byBytes.bytes).toBeLessThanOrEqual(3 * MANIFEST_JSON.length);
+  });
+
+  it("a decided file is no-store for everyone, with no validator", () => {
+    const asset = {
+      experimentId: "ab_9f3c2a1b",
+      variant: "a" as const,
+      source: "cookie" as const,
+      variantBPath: null,
+      setCookie: null,
+      isOverride: false,
+      isPageRoute: false,
+    };
+    const h = abResponseHeaders(asset, 99);
+    expect(h["Cache-Control"]).toBe("no-store");
+    expect(h["Vary"]).toBe("Cookie");
+    expect(h["X-OpenLen-AB"]).toBe("ab_9f3c2a1b:a");
+    expect(h["ETag"]).toBeUndefined();
+    // A page keeps its own policy.
+    expect(abResponseHeaders({ ...asset, isPageRoute: true }, 99)["Cache-Control"]).toBe("private, no-store");
+  });
 });
