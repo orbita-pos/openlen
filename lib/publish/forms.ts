@@ -39,7 +39,7 @@ function injectFormCidStamp(html: string): string {
   if (html.includes(CID_STAMP_MARKER)) return html;
   // Only when the Rust pass actually wired a form to our submit endpoint.
   if (!html.includes("/api/f/")) return html;
-  const script = `<script ${CID_STAMP_MARKER}>(function(){try{var c=${cidExpr()},ab=null;try{ab=sessionStorage.getItem("ol_ab")||null;if(!ab&&document.cookie){var m=document.cookie.match(/(?:^|;\\s*)ol_ab_([a-z0-9_-]{4,40})=(a|b)(?:;|$)/i);if(m)ab=(m[1]+":"+m[2]).toLowerCase();}}catch(_){}var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(c&&!f.querySelector('input[name=_openlen_cid]')){var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}if(ab&&!f.querySelector('input[name=_openlen_ab]')){var a=document.createElement('input');a.type='hidden';a.name='_openlen_ab';a.value=ab;f.appendChild(a)}}}catch(e){}})();</script>`;
+  const script = `<script ${CID_STAMP_MARKER}>(function(){try{var c=${cidExpr()};if(!c)return;var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(f.querySelector('input[name=_openlen_cid]'))continue;var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}}catch(e){}})();</script>`;
   const idx = html.lastIndexOf("</body>");
   return idx === -1 ? html + script : html.slice(0, idx) + script + html.slice(idx);
 }
