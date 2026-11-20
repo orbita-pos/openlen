@@ -5,7 +5,10 @@
 //!   bucket = u32::from_be_bytes(digest[0..4]) % 10_000
 //!   variant = if bucket < split_bps { B } else { A }
 
+use std::path::{Component, Path};
+
 use chrono::{DateTime, Utc};
+use percent_encoding::percent_decode_str;
 use sha2::{Digest, Sha256};
 
 use super::bot::is_bot;
@@ -61,14 +64,49 @@ pub struct AbDecision {
     pub is_page_route: bool,
 }
 
-/// True if `url_path` tries to directly address the experiment's own files:
-/// `/openlen/ab.json` or `/openlen/ab` / `/openlen/ab/*`. The edge must ALWAYS return
-/// 404 for these. Other files of the reserved `openlen/` root (e.g. the bubble's
-/// `figure-<sha>.js`) are served as usual.
+/// The segments of the path the file resolver would walk: percent-decoded once (like
+/// `files::resolve`), `\` as a separator, empty and `.` segments dropped, `..` popping its
+/// parent, a NUL cutting its segment, and lower-cased (the filesystem may not care about case).
+fn resolved_segments(url_path: &str) -> Vec<String> {
+    let decoded = percent_decode_str(url_path).decode_utf8_lossy();
+    let mut out: Vec<String> = Vec::new();
+    for seg in decoded.split(['/', '\\']) {
+        let seg = seg.split('\0').next().unwrap_or("");
+        match seg {
+            "" | "." => {}
+            ".." => {
+                out.pop();
+            }
+            other => out.push(other.to_ascii_lowercase()),
+        }
+    }
+    out
+}
+
+/// True if `url_path` addresses the experiment's own files once it is RESOLVED (decoded,
+/// dot segments removed, trailing and doubled slashes gone): `/openlen/ab.json` or
+/// `/openlen/ab` / `/openlen/ab/*`. The edge must ALWAYS return 404 for these. Other files of
+/// the reserved `openlen/` root (e.g. the bubble's `figure-<sha>.js`) are served as usual.
 pub fn is_blocked_internal_path(url_path: &str) -> bool {
-    let trimmed = url_path.trim_start_matches('/');
-    let lower = trimmed.to_ascii_lowercase();
-    lower == "openlen/ab.json" || lower == "openlen/ab" || lower.starts_with("openlen/ab/")
+    let segs = resolved_segments(url_path);
+    segs.len() >= 2 && segs[0] == "openlen" && (segs[1] == "ab.json" || segs[1] == "ab")
+}
+
+/// True when `file` (canonical) is the experiment manifest or lives under the experiment's
+/// own tree, inside the canonical release dir `release_root`.
+pub fn is_internal_ab_file(release_root: &Path, file: &Path) -> bool {
+    let Ok(rel) = file.strip_prefix(release_root) else {
+        return false;
+    };
+    let mut parts = rel.components().filter_map(|c| match c {
+        Component::Normal(p) => p.to_str(),
+        _ => None,
+    });
+    let (Some(first), Some(second)) = (parts.next(), parts.next()) else {
+        return false;
+    };
+    first.eq_ignore_ascii_case("openlen")
+        && (second.eq_ignore_ascii_case("ab.json") || second.eq_ignore_ascii_case("ab"))
 }
 
 /// Parse a named cookie from a raw `Cookie` header string.
@@ -351,6 +389,72 @@ mod tests {
         // The pre-move layout is an ordinary path now.
         assert!(!is_blocked_internal_path("/ab.json"));
         assert!(!is_blocked_internal_path("/_ab/x"));
+    }
+
+    #[test]
+    fn blocks_the_internal_files_on_the_resolved_path_not_the_raw_one() {
+        // The filter used to look at the raw path: each of these reaches the manifest or
+        // Variant B's tree after the file resolver decodes and normalizes it.
+        for path in [
+            "/openlen/ab.json/",
+            "/openlen/%61b.json",
+            "/openlen/%61B.JSON",
+            "/openlen/./ab.json",
+            "/openlen//ab.json",
+            "//openlen/ab.json",
+            "/foo/../openlen/ab.json",
+            "/openlen/ab%2Ejson",
+            "/openlen%2Fab.json",
+            "/openlen/ab/",
+            "/openlen/%61b",
+            "/openlen/%61b/ab_9f3c2a1b/b/index.html",
+            "/openlen/./ab/ab_9f3c2a1b/b/index.html",
+            "/OpEnLeN/Ab/ab_9f3c2a1b/b/index.html",
+            "/openlen/ab/../ab/x",
+            r"/openlen\ab.json",
+            "/openlen/ab.json%00.png",
+        ] {
+            assert!(is_blocked_internal_path(path), "{path} must be blocked");
+        }
+        for path in [
+            "/",
+            "/about",
+            "/abc.json",
+            "/openlen",
+            "/openlen/",
+            "/openlen/abc",
+            "/openlen/ab.jsonx",
+            "/openlen/ab.json.map",
+            "/openlen/figure-0a1b2c3d.js",
+            "/x/openlen/ab.json",
+            "/openlen/../about",
+            "/ab/openlen/ab.json",
+        ] {
+            assert!(!is_blocked_internal_path(path), "{path} must NOT be blocked");
+        }
+    }
+
+    #[test]
+    fn a_resolved_file_is_internal_only_inside_this_releases_openlen_ab() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let release = dir.path().join("releases").join("aaaa11112222");
+        std::fs::create_dir_all(release.join("openlen/ab/ab_1/b")).unwrap();
+        std::fs::write(release.join("openlen/ab.json"), "{}").unwrap();
+        std::fs::write(release.join("openlen/ab/ab_1/b/index.html"), "b").unwrap();
+        std::fs::write(release.join("openlen/figure-0a1b2c3d.js"), "f").unwrap();
+        std::fs::write(release.join("index.html"), "a").unwrap();
+        let root = release.canonicalize().unwrap();
+        let file = |rel: &str| release.join(rel).canonicalize().unwrap();
+        assert!(is_internal_ab_file(&root, &file("openlen/ab.json")));
+        assert!(is_internal_ab_file(&root, &file("openlen/ab/ab_1/b/index.html")));
+        assert!(!is_internal_ab_file(&root, &file("openlen/figure-0a1b2c3d.js")));
+        assert!(!is_internal_ab_file(&root, &file("index.html")));
+        // A site that is itself called `ab` (publish root /…/openlen/ab/…) is not blocked.
+        let nested = dir.path().join("openlen").join("ab").join("current");
+        std::fs::create_dir_all(&nested).unwrap();
+        std::fs::write(nested.join("index.html"), "x").unwrap();
+        let nested_root = nested.canonicalize().unwrap();
+        assert!(!is_internal_ab_file(&nested_root, &nested.join("index.html").canonicalize().unwrap()));
     }
 
     /// Deterministic visitors: 200k distinct IPs, one browser. Same generator as the TS test.

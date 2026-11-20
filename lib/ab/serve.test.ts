@@ -19,6 +19,7 @@ import {
   hashVariant,
   isBlockedInternalAbPath,
   isEdgeBot,
+  isInternalAbFile,
   parseAbManifest,
   readReleaseAbManifest,
   resolveVariantBFile,
@@ -253,5 +254,67 @@ describe("lib/ab/serve — the manifest lives under the reserved openlen/ root",
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("lib/ab/serve — internal files are blocked on the RESOLVED path", () => {
+  it("blocks every spelling that reaches the manifest or B's tree once resolved", () => {
+    for (const p of [
+      "/openlen/ab.json/",
+      "/openlen/%61b.json",
+      "/openlen/%61B.JSON",
+      "/openlen/./ab.json",
+      "/openlen//ab.json",
+      "//openlen/ab.json",
+      "/foo/../openlen/ab.json",
+      "/openlen/ab%2Ejson",
+      "/openlen%2Fab.json",
+      "/openlen/ab/",
+      "/openlen/%61b",
+      "/openlen/%61b/ab_9f3c2a1b/b/index.html",
+      "/openlen/./ab/ab_9f3c2a1b/b/index.html",
+      "/OpEnLeN/Ab/ab_9f3c2a1b/b/index.html",
+      "/openlen/ab/../ab/x",
+      "/openlen\\ab.json",
+      "/openlen/ab.json%00.png",
+    ]) {
+      expect(isBlockedInternalAbPath(p), `${p} must be blocked`).toBe(true);
+    }
+  });
+
+  it("leaves every other path alone", () => {
+    for (const p of [
+      "/",
+      "/about",
+      "/abc.json",
+      "/openlen",
+      "/openlen/",
+      "/openlen/abc",
+      "/openlen/ab.jsonx",
+      "/openlen/ab.json.map",
+      "/openlen/figure-0a1b2c3d.js",
+      "/x/openlen/ab.json",
+      "/openlen/../about",
+      "/ab/openlen/ab.json",
+    ]) {
+      expect(isBlockedInternalAbPath(p), `${p} must NOT be blocked`).toBe(false);
+    }
+  });
+
+  it("a malformed percent sequence does not throw (it is judged as written)", () => {
+    expect(isBlockedInternalAbPath("/openlen/ab.json%E0%A4%A")).toBe(false);
+    expect(isBlockedInternalAbPath("/openlen/%E0%A4%A/ab.json")).toBe(false);
+  });
+
+  it("isInternalAbFile: only this release's openlen/ab.json and openlen/ab/**", () => {
+    const rel = path.join(os.tmpdir(), "releases", "aaaa11112222");
+    expect(isInternalAbFile(rel, path.join(rel, "openlen", "ab.json"))).toBe(true);
+    expect(isInternalAbFile(rel, path.join(rel, "openlen", "ab", "ab_1", "b", "index.html"))).toBe(true);
+    expect(isInternalAbFile(rel, path.join(rel, "OPENLEN", "AB.JSON"))).toBe(true);
+    expect(isInternalAbFile(rel, path.join(rel, "openlen", "figure-0a1b2c3d.js"))).toBe(false);
+    expect(isInternalAbFile(rel, path.join(rel, "index.html"))).toBe(false);
+    // A site that is itself called ab (…/openlen/ab/current) is not blocked.
+    const nested = path.join(os.tmpdir(), "openlen", "ab", "current");
+    expect(isInternalAbFile(nested, path.join(nested, "index.html"))).toBe(false);
   });
 });

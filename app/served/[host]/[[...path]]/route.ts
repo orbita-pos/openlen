@@ -1,10 +1,11 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { contentTypeFor as folderContentType, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import {
   abResponseHeaders,
   evaluateAbManifest,
   isBlockedInternalAbPath,
+  isInternalAbFile,
   readReleaseAbManifest,
   resolveVariantBFile,
   type AbServeDecision,
@@ -232,6 +233,7 @@ async function serve(
 
   // Edge A/B testing fallback for custom domains served through Next.js.
   let abDecision: AbServeDecision | null = null;
+  let servedFromBTree = false;
   if (pathParts[0] !== "assets") {
     const manifest = await readReleaseAbManifest(releaseDir);
     if (manifest) {
@@ -254,6 +256,7 @@ async function serve(
           const bFile = await resolveVariantBFile(releaseDir, d.variantBPath, d.isPageRoute);
           if (bFile && bFile.startsWith(rootNorm)) {
             absNorm = bFile;
+            servedFromBTree = true;
             abDecision = d;
           } else if (d.isPageRoute) {
             abDecision = { ...d, variant: "a", variantBPath: null };
@@ -263,6 +266,17 @@ async function serve(
         }
       }
     }
+  }
+
+  // Second lock on the experiment's files, on the RESOLVED file (symlinks and case-folding
+  // included): a visitor's request never reads <release>/openlen/ab.json or anything under
+  // <release>/openlen/ab/. Variant B's own tree is read through the A/B routing above.
+  if (!servedFromBTree) {
+    const [realFile, realRelease] = await Promise.all([
+      realpath(absNorm).catch(() => absNorm),
+      realpath(releaseDir).catch(() => releaseDir),
+    ]);
+    if (isInternalAbFile(realRelease, realFile)) return notFound(includeBody);
   }
 
   let body: ArrayBuffer | null = null;

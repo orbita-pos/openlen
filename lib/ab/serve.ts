@@ -49,9 +49,54 @@ export function isEdgeBot(ua: string): boolean {
   return EDGE_BOT_RE.test(trimmed);
 }
 
+/** The segments of the path a file resolver would walk: percent-decoded once, `\` as a separator,
+ *  empty and `.` segments dropped, `..` popping its parent, a NUL cutting its segment, lower-cased
+ *  (the filesystem may not care about case). Mirrors Rust `resolved_segments`. */
+function resolvedSegments(urlPath: string): string[] {
+  let decoded = urlPath;
+  try {
+    decoded = decodeURIComponent(urlPath);
+  } catch {
+    // A malformed sequence is judged as written: it cannot name a file either.
+  }
+  const out: string[] = [];
+  for (const raw of decoded.split(/[/\\]/)) {
+    const seg = raw.split("\0")[0] ?? "";
+    if (seg === "" || seg === ".") continue;
+    if (seg === "..") {
+      out.pop();
+      continue;
+    }
+    out.push(asciiLower(seg));
+  }
+  return out;
+}
+
+/** Lower-case ASCII only (the same on both sides of the Rust/TS parity). */
+function asciiLower(s: string): string {
+  return s.replace(/[A-Z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 32));
+}
+
+/** True if `urlPath` addresses the experiment's own files once it is RESOLVED (decoded, dot
+ *  segments removed, trailing and doubled slashes gone): `/openlen/ab.json`, `/openlen/ab` or
+ *  anything under `/openlen/ab/`. Other files of the reserved `openlen/` root (e.g. the bubble's
+ *  `figure-<sha>.js`) are served as usual. Mirrors Rust `is_blocked_internal_path`. */
 export function isBlockedInternalAbPath(urlPath: string): boolean {
-  const lower = urlPath.replace(/^\/+/, "").toLowerCase();
-  return lower === "openlen/ab.json" || lower === "openlen/ab" || lower.startsWith("openlen/ab/");
+  const segs = resolvedSegments(urlPath);
+  return segs.length >= 2 && segs[0] === "openlen" && (segs[1] === "ab.json" || segs[1] === "ab");
+}
+
+/** Second lock, on the RESOLVED file: true when `file` is `<releaseDir>/openlen/ab.json` or lives
+ *  under `<releaseDir>/openlen/ab/`. Whatever the URL looked like, a visitor's request must never
+ *  end up reading those; Variant B's own tree is read through the A/B routing, not this door. */
+export function isInternalAbFile(releaseDir: string, file: string): boolean {
+  const rel = path.relative(path.resolve(releaseDir), path.resolve(file));
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return false;
+  const [first, second] = rel.split(path.sep);
+  return (
+    asciiLower(first ?? "") === "openlen" &&
+    (asciiLower(second ?? "") === "ab.json" || asciiLower(second ?? "") === "ab")
+  );
 }
 
 export function normalizeMatchPath(raw: string): string {
