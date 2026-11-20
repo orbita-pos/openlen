@@ -261,9 +261,10 @@ fn build_variant_b_url(prefix_b: &str, url_path: &str) -> String {
 /// control with its standard headers untouched). `url_path` may be raw: it is resolved first.
 ///
 /// A PAGE of an experiment is bucketed (override, bot, sticky cookie, hash). A FILE is decided
-/// only when the manifest lists it in `overrides` — B ships different bytes for it — and then for
-/// EVERY visitor, control included: the caller marks the answer `no-store`, or Cloudflare would
-/// cache one variant's bytes under the shared URL for the other's visitors.
+/// only when a live experiment lists it in its `overrides` — B ships different bytes for it — and
+/// then by THAT experiment (its cookie, its override parameter, its `prefix_b`), for EVERY visitor,
+/// control included: the caller marks the answer `no-store`, or Cloudflare would cache one
+/// variant's bytes under the shared URL for the other's visitors.
 #[allow(clippy::too_many_arguments)]
 pub fn evaluate_manifest(
     manifest: &AbManifest,
@@ -279,10 +280,10 @@ pub fn evaluate_manifest(
     let path = canonical_path(url_path);
 
     if path_has_non_html_extension(&path) {
-        if !manifest.overrides_file(&path) {
-            return None;
-        }
-        let exp = manifest.experiments.iter().find(|e| !e.is_expired(now))?;
+        let exp = manifest
+            .experiments
+            .iter()
+            .find(|e| !e.is_expired(now) && e.overrides_file(&path))?;
         let ov = read_query_param(query, &exp.override_param).map(|v| v.to_ascii_lowercase());
         let cv = read_cookie(cookie_header, &exp.cookie_name).map(str::to_ascii_lowercase);
         let (variant, source) = match (ov.as_deref(), cv.as_deref()) {
@@ -405,8 +406,8 @@ mod tests {
                 prefix_b: "openlen/ab/ab_9f3c2a1b/b".into(),
                 override_param: "_ol_ab".into(),
                 expires_at: None,
+                overrides: Vec::new(),
             }],
-            overrides: Vec::new(),
         }
     }
 

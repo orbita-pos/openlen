@@ -6,12 +6,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -26,7 +20,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -55,12 +55,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -75,7 +69,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -104,12 +104,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -124,7 +118,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -152,12 +152,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -172,7 +166,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -201,12 +201,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -221,7 +215,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -250,12 +250,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -270,7 +264,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -297,12 +297,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -317,7 +311,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -344,12 +344,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -364,7 +358,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -391,12 +391,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -411,7 +405,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -440,12 +440,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -460,7 +454,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -487,12 +487,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -507,7 +501,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -536,12 +536,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -556,7 +550,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -584,12 +584,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -604,7 +598,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -631,12 +631,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -651,7 +645,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -678,12 +678,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -698,7 +692,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -725,12 +725,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -745,7 +739,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -772,12 +772,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -792,7 +786,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -819,12 +819,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -839,7 +833,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "preview_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -866,12 +866,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -886,7 +880,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "x",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -913,12 +913,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -933,7 +927,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -961,12 +961,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -981,7 +975,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1009,12 +1009,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1029,7 +1023,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1057,12 +1057,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1077,7 +1071,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1105,12 +1105,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1125,7 +1119,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1153,12 +1153,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1173,7 +1167,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1194,12 +1194,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1214,7 +1208,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1235,12 +1235,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1255,7 +1249,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1276,12 +1276,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1296,7 +1290,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1324,12 +1324,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1344,7 +1338,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1365,12 +1365,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1387,7 +1381,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1415,12 +1415,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1435,7 +1429,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1456,12 +1456,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1476,7 +1470,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1505,12 +1505,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1525,7 +1519,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1554,12 +1554,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1574,7 +1568,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1603,12 +1603,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1623,7 +1617,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1652,12 +1652,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1672,7 +1666,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1701,12 +1701,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1721,7 +1715,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1750,12 +1750,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1770,7 +1764,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1791,12 +1791,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1811,7 +1805,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1840,12 +1840,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1860,7 +1854,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1881,12 +1881,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1901,7 +1895,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1922,12 +1922,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1942,7 +1936,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -1963,12 +1963,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -1983,7 +1977,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2011,12 +2011,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2031,7 +2025,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2052,12 +2052,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2072,7 +2066,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2093,12 +2093,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2113,7 +2107,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2134,12 +2134,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2154,7 +2148,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2175,12 +2175,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2195,7 +2189,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-01-01T00:00:00Z"
+            "expiresAt": "2026-01-01T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2212,7 +2212,7 @@
       "expect": null
     },
     {
-      "name": "a manifest with no overrides decides no file",
+      "name": "an experiment with no overrides decides no file",
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
@@ -2251,16 +2251,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          7,
-          null,
-          "/../etc/passwd",
-          "/a/./b.css",
-          "/css/site.css",
-          {
-            "x": 1
-          }
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2275,7 +2265,17 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              7,
+              null,
+              "/../etc/passwd",
+              "/a/./b.css",
+              "/css/site.css",
+              {
+                "x": 1
+              }
+            ]
           }
         ]
       },
@@ -2300,16 +2300,101 @@
       }
     },
     {
-      "name": "expiresAt in the past ends the experiment",
+      "name": "the publisher's own manifest decides its overridden file",
+      "manifest": {
+        "raw": "{\"version\":1,\"releaseSha\":\"abc123456789\",\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"includeLocales\":false,\"locales\":[],\"splitBps\":5000,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\",\"overrideParam\":\"_ol_ab\",\"expiresAt\":null,\"overrides\":[\"/css/site.css\",\"/img/hero.png\"]}]}"
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "the publisher's own manifest: a file it does not list is not decided",
+      "manifest": {
+        "raw": "{\"version\":1,\"releaseSha\":\"abc123456789\",\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"includeLocales\":false,\"locales\":[],\"splitBps\":5000,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\",\"overrideParam\":\"_ol_ab\",\"expiresAt\":null,\"overrides\":[\"/css/site.css\",\"/img/hero.png\"]}]}"
+      },
+      "request": {
+        "path": "/css/other.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "the publisher's own manifest: the control gets a decided file too",
+      "manifest": {
+        "raw": "{\"version\":1,\"releaseSha\":\"abc123456789\",\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"includeLocales\":false,\"locales\":[],\"splitBps\":5000,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\",\"overrideParam\":\"_ol_ab\",\"expiresAt\":null,\"overrides\":[\"/css/site.css\",\"/img/hero.png\"]}]}"
+      },
+      "request": {
+        "path": "/img/hero.png",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "the publisher's own manifest buckets its page",
+      "manifest": {
+        "raw": "{\"version\":1,\"releaseSha\":\"abc123456789\",\"experiments\":[{\"id\":\"ab_9f3c2a1b\",\"cookieName\":\"ol_ab_9f3c2a1b\",\"targetPath\":\"/\",\"includeLocales\":false,\"locales\":[],\"splitBps\":5000,\"salt\":\"3f9a1c8e7b2d4012\",\"prefixB\":\"openlen/ab/ab_9f3c2a1b/b\",\"overrideParam\":\"_ol_ab\",\"expiresAt\":null,\"overrides\":[\"/css/site.css\",\"/img/hero.png\"]}]}"
+      },
+      "request": {
+        "path": "/",
+        "query": "",
+        "cookie": null,
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "hash",
+        "isPageRoute": true,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/index.html"
+      }
+    },
+    {
+      "name": "a top-level overrides is not read (the publisher never writes one)",
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2324,7 +2409,366 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-01-01T00:00:00Z"
+            "expiresAt": null
+          }
+        ],
+        "overrides": [
+          "/css/site.css"
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "two experiments: a file goes to the experiment that lists it, by its own cookie",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css"
+            ]
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/img/hero.png"
+            ]
+          }
+        ]
+      },
+      "request": {
+        "path": "/img/hero.png",
+        "query": "",
+        "cookie": "ol_ab_22222222=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_22222222",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_22222222/b/img/hero.png",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "two experiments: the other experiment's cookie does not move a file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css"
+            ]
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/img/hero.png"
+            ]
+          }
+        ]
+      },
+      "request": {
+        "path": "/img/hero.png",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_22222222",
+        "variant": "a",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": null,
+        "setCookie": null
+      }
+    },
+    {
+      "name": "two experiments: the first one keeps its own file",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css"
+            ]
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/img/hero.png"
+            ]
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_9f3c2a1b",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_9f3c2a1b/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "two experiments: a file nobody lists is not decided",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css"
+            ]
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/img/hero.png"
+            ]
+          }
+        ]
+      },
+      "request": {
+        "path": "/js/app.js",
+        "query": "",
+        "cookie": "ol_ab_9f3c2a1b=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": null
+    },
+    {
+      "name": "an expired experiment's file goes to a live one that lists it",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-01-01T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
+          },
+          {
+            "id": "ab_22222222",
+            "cookieName": "ol_ab_22222222",
+            "targetPath": "/pricing",
+            "includeLocales": false,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 10000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_22222222/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css"
+            ]
+          }
+        ]
+      },
+      "request": {
+        "path": "/css/site.css",
+        "query": "",
+        "cookie": "ol_ab_22222222=b",
+        "ua": "Mozilla/5.0 Chrome/131.0",
+        "lang": "es-MX,es;q=0.9",
+        "ip": "203.0.113.10",
+        "secure": true,
+        "nowMs": 1780272000000
+      },
+      "expect": {
+        "experimentId": "ab_22222222",
+        "variant": "b",
+        "source": "cookie",
+        "isPageRoute": false,
+        "isOverride": false,
+        "variantBPath": "/openlen/ab/ab_22222222/b/css/site.css",
+        "setCookie": null
+      }
+    },
+    {
+      "name": "expiresAt in the past ends the experiment",
+      "manifest": {
+        "version": 1,
+        "releaseSha": "abc123456789",
+        "experiments": [
+          {
+            "id": "ab_9f3c2a1b",
+            "cookieName": "ol_ab_9f3c2a1b",
+            "targetPath": "/",
+            "includeLocales": true,
+            "locales": [
+              "es",
+              "fr"
+            ],
+            "splitBps": 5000,
+            "salt": "3f9a1c8e7b2d4012",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
+            "overrideParam": "_ol_ab",
+            "expiresAt": "2026-01-01T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2345,12 +2789,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2365,7 +2803,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-12-31T23:59:59Z"
+            "expiresAt": "2026-12-31T23:59:59Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2392,12 +2836,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2412,7 +2850,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-06-01T01:00:00+02:00"
+            "expiresAt": "2026-06-01T01:00:00+02:00",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2439,12 +2883,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2459,7 +2897,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-06-01T01:00:00+02:00"
+            "expiresAt": "2026-06-01T01:00:00+02:00",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2480,12 +2924,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2500,7 +2938,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-05-31T20:00:00-04:00"
+            "expiresAt": "2026-05-31T20:00:00-04:00",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2527,12 +2971,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2547,7 +2985,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-06-01T00:00:00Z"
+            "expiresAt": "2026-06-01T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2568,12 +3012,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2588,7 +3026,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-06-01T00:00:00.500Z"
+            "expiresAt": "2026-06-01T00:00:00.500Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2615,12 +3059,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2635,7 +3073,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01"
+            "expiresAt": "2027-01-01",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2656,12 +3100,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2676,7 +3114,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01t00:00:00z"
+            "expiresAt": "2027-01-01t00:00:00z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2697,12 +3141,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2717,7 +3155,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01 00:00:00Z"
+            "expiresAt": "2027-01-01 00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2738,12 +3182,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2758,7 +3196,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01T00:00:00"
+            "expiresAt": "2027-01-01T00:00:00",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2779,12 +3223,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2799,7 +3237,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-02-30T00:00:00Z"
+            "expiresAt": "2027-02-30T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2820,12 +3264,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2840,7 +3278,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01T24:00:00Z"
+            "expiresAt": "2027-01-01T24:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2861,12 +3305,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2881,7 +3319,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-01-01T00:00:60Z"
+            "expiresAt": "2027-01-01T00:00:60Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2902,12 +3346,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2922,7 +3360,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": ""
+            "expiresAt": "",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2943,12 +3387,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -2963,7 +3401,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": 1893456000000
+            "expiresAt": 1893456000000,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -2984,12 +3428,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3004,7 +3442,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2028-02-29T00:00:00Z"
+            "expiresAt": "2028-02-29T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3031,12 +3475,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3051,7 +3489,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2027-02-29T00:00:00Z"
+            "expiresAt": "2027-02-29T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3072,12 +3516,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3092,7 +3530,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": "2026-01-01T00:00:00Z"
+            "expiresAt": "2026-01-01T00:00:00Z",
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_22222222",
@@ -3107,7 +3551,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_22222222/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3132,12 +3582,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3152,7 +3596,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3167,7 +3617,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3194,12 +3650,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3214,7 +3664,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3229,7 +3685,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3256,12 +3718,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3276,7 +3732,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3291,7 +3753,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3318,12 +3786,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3338,7 +3800,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3353,7 +3821,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3380,12 +3854,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3399,7 +3867,13 @@
             "splitBps": 5000,
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3414,7 +3888,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3441,12 +3921,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3461,7 +3935,13 @@
             "salt": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3476,7 +3956,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3503,12 +3989,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "AB",
@@ -3523,7 +4003,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3538,7 +4024,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3565,12 +4057,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3585,7 +4071,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3600,7 +4092,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3627,12 +4125,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3647,7 +4139,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "_ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3662,7 +4160,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3689,12 +4193,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3709,7 +4207,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/../b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           },
           {
             "id": "ab_9f3c2a1b",
@@ -3724,7 +4228,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3751,12 +4261,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           7,
           null,
@@ -3774,7 +4278,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3801,12 +4311,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3821,7 +4325,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3842,12 +4352,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3862,7 +4366,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -3890,12 +4400,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -3910,7 +4414,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -4052,12 +4562,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -4072,7 +4576,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -4100,12 +4610,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -4120,7 +4624,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
@@ -4147,12 +4657,6 @@
       "manifest": {
         "version": 1,
         "releaseSha": "abc123456789",
-        "overrides": [
-          "/css/site.css",
-          "/img/hero.png",
-          "js/app.js",
-          "/fonts/a b.woff2"
-        ],
         "experiments": [
           {
             "id": "ab_9f3c2a1b",
@@ -4167,7 +4671,13 @@
             "salt": "3f9a1c8e7b2d4012",
             "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
-            "expiresAt": null
+            "expiresAt": null,
+            "overrides": [
+              "/css/site.css",
+              "/img/hero.png",
+              "js/app.js",
+              "/fonts/a b.woff2"
+            ]
           }
         ]
       },
