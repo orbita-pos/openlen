@@ -132,3 +132,87 @@ describe("/served/<host>/ — una app web", () => {
     expect(res.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
   });
 });
+
+// A/B EN UN DOMINIO PROPIO (revisión del 19/11, puntos 7 y 11). El experimento vive bajo la raíz
+// reservada `openlen/` de la release: `openlen/ab.json` es el manifiesto y `openlen/ab/<id>/b/` el
+// árbol de la variante B. Un visitante nunca los lee directo, se escriba como se escriba la ruta.
+describe("/served/<host>/ — A/B", () => {
+  const MANIFIESTO = {
+    version: 1,
+    releaseSha: "abc123456789",
+    experiments: [
+      {
+        id: "ab_9f3c2a1b",
+        cookieName: "ol_ab_9f3c2a1b",
+        targetPath: "/",
+        includeLocales: false,
+        locales: [],
+        splitBps: 5000,
+        salt: "3f9a1c8e7b2d4012",
+        prefixB: "openlen/ab/ab_9f3c2a1b/b",
+        overrideParam: "_ol_ab",
+        expiresAt: null,
+      },
+    ],
+  };
+  const release = () => path.join(raiz, "demo", "current");
+  const escribe = (rel: string, contenido: string) => {
+    const abs = path.join(release(), ...rel.split("/"));
+    mkdirSync(path.dirname(abs), { recursive: true });
+    writeFileSync(abs, contenido);
+  };
+  const pideRuta = (ruta: string, init: { cookie?: string; query?: string } = {}) => {
+    const partes = ruta.split("/").filter(Boolean);
+    return GET(
+      new Request(`https://${DOMINIO}${ruta}${init.query ?? ""}`, {
+        headers: {
+          host: DOMINIO,
+          "user-agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/131.0.0.0 Safari/537.36",
+          "cf-connecting-ip": "203.0.113.10",
+          ...(init.cookie ? { cookie: init.cookie } : {}),
+        },
+      }),
+      { params: Promise.resolve({ host: DOMINIO, path: partes }) },
+    );
+  };
+
+  beforeEach(() => {
+    rmSync(path.join(release(), "openlen"), { recursive: true, force: true });
+    escribe("openlen/ab.json", JSON.stringify(MANIFIESTO));
+    escribe("openlen/ab/ab_9f3c2a1b/b/index.html", "<h1>Variante B</h1>");
+    escribe("openlen/figure-0a1b2c3d.js", "figure()");
+  });
+
+  it("🔴 el manifiesto y el árbol de B dan 404 escritos de cualquier modo", async () => {
+    for (const ruta of [
+      "/openlen/ab.json",
+      "/openlen/ab.json/",
+      "/openlen/%61b.json",
+      "/openlen/./ab.json",
+      "/openlen//ab.json",
+      "/foo/../openlen/ab.json",
+      "/OPENLEN/AB.JSON",
+      "/openlen/ab/ab_9f3c2a1b/b/index.html",
+      "/openlen/%61b/ab_9f3c2a1b/b/index.html",
+    ]) {
+      const res = await pideRuta(ruta);
+      expect(res.status, ruta).toBe(404);
+      expect(await res.text(), ruta).not.toContain("experiments");
+    }
+  });
+
+  it("los otros ficheros de openlen/ se siguen sirviendo", async () => {
+    const res = await pideRuta("/openlen/figure-0a1b2c3d.js");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("figure()");
+  });
+
+  it("la cookie b sirve la variante B desde su árbol, sin caché compartida", async () => {
+    const res = await pideRuta("/", { cookie: "ol_ab_9f3c2a1b=b" });
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("<h1>Variante B</h1>");
+    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("vary")).toBe("Cookie");
+    expect(res.headers.get("x-openlen-ab")).toBe("ab_9f3c2a1b:b");
+  });
+});

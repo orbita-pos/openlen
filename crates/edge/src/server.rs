@@ -22,7 +22,8 @@ use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 
 use crate::ab::{
-    evaluate_request, is_blocked_internal_path, AbDecision, AbManifestCache, AssignSource, Variant,
+    evaluate_request, is_blocked_internal_path, is_internal_ab_file, AbDecision, AbManifestCache,
+    AssignSource, Variant,
 };
 use crate::config::EdgeConfig;
 use crate::files::{cache_control_for, resolve, resolve_strict, Resolved, AB_HTML_CACHE_CONTROL};
@@ -438,7 +439,23 @@ async fn serve_from_disk(
         }
     }
 
+    let served_from_b_tree = resolved_file.is_some();
     let resolved = resolved_file.unwrap_or_else(|| resolve(&sub_root, url_path));
+
+    // Second lock on the experiment's files, on the RESOLVED file this time: whatever the URL
+    // looked like (a symlink, a case-insensitive filesystem), a visitor's request never ends up
+    // reading `<release>/openlen/ab.json` or anything under `<release>/openlen/ab/`. Variant B's
+    // own tree is read through the A/B routing above, never through this door.
+    if !served_from_b_tree && state.ab_cache.is_some() {
+        if let Resolved::File(file) = &resolved {
+            if let Ok(release_root) = tokio::fs::canonicalize(&sub_root).await {
+                if is_internal_ab_file(&release_root, file) {
+                    warn!(%peer, sub, path = %url_path, "blocked a request that resolved to an internal A/B file");
+                    return not_found();
+                }
+            }
+        }
+    }
 
     match resolved {
         Resolved::File(path) => match tokio::fs::read(&path).await {

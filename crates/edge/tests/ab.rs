@@ -105,6 +105,54 @@ async fn blocks_ab_json_and_internal_ab_prefix_with_404() {
 }
 
 #[tokio::test]
+async fn the_block_looks_at_the_resolved_path_not_the_raw_one() {
+    let dir = TempDir::new().unwrap();
+    write_release_with_ab(dir.path(), "demo", "aaaa11112222", "<h1>A</h1>", "<h1>B</h1>");
+    let app = ab_loopback_router(build_state(dir.path()));
+    let chrome = "Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36";
+
+    // Each of these used to walk past the raw-path filter and answer the manifest or B's tree
+    // (or the control page through the SPA fallback) after the resolver decoded it.
+    for path in [
+        "/openlen/ab.json/",
+        "/openlen/%61b.json",
+        "/openlen/%61B.JSON",
+        "/openlen/./ab.json",
+        "/openlen//ab.json",
+        "/foo/../openlen/ab.json",
+        "/openlen/ab%2Ejson",
+        "/openlen%2Fab.json",
+        "/openlen/%61b/ab_9f3c2a1b/b/index.html",
+        "/OPENLEN/AB/ab_9f3c2a1b/b/index.html",
+        "/openlen/ab/",
+    ] {
+        let (status, _, body) =
+            send_loopback(&app, "demo", path, chrome, None, "198.51.100.1").await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "path={path} must 404");
+        assert!(!body.contains("experiments"), "path={path} leaked the manifest");
+    }
+}
+
+#[tokio::test]
+async fn variant_b_still_reads_its_own_tree_even_though_visitors_cannot() {
+    let dir = TempDir::new().unwrap();
+    write_release_with_ab(dir.path(), "demo", "aaaa11112222", "<h1>A</h1>", "<h1>B</h1>");
+    let app = ab_loopback_router(build_state(dir.path()));
+    let chrome = "Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36";
+    let (status, _, body) = send_loopback(
+        &app,
+        "demo",
+        "/?_ol_ab=b",
+        chrome,
+        None,
+        "198.51.100.1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, "<h1>B</h1>");
+}
+
+#[tokio::test]
 async fn other_files_of_the_reserved_openlen_root_keep_being_served() {
     let dir = TempDir::new().unwrap();
     write_release_with_ab(dir.path(), "demo", "aaaa11112222", "<h1>A</h1>", "<h1>B</h1>");
