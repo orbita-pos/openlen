@@ -82,6 +82,17 @@ export async function readPublishedFolder(
   return folder;
 }
 
+/** Every file of a commit, as text, by absolute path: what a commit of this project's repository held. Throws when the commit
+ *  or one of its objects can't be read. Variant B's launch commit is read this way when a republish re-emits the split. */
+export async function readFilesAtCommit(projectId: string, commitOid: string): Promise<Record<string, string>> {
+  const repo = new Repository(postgresStore(projectId));
+  const tree = await repo.files((await repo.commit(commitOid)).tree);
+  await repo.objects([...tree.values()]);
+  const out: Record<string, string> = {};
+  for (const [repoPath, oid] of tree) out[toAbsolute(repoPath)] = await repo.text(oid);
+  return out;
+}
+
 /** Create an isolated hidden worktree project cut from `projectPublishedSources`
  *  on branch `ab/<experimentId>`. Serialized per project via `oneAtATime`. */
 export async function createAbWorktree(p: {
