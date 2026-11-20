@@ -301,6 +301,7 @@ export async function pendingDecisionsForProjects(
       projectTitle: projectTitle || exp.projectId,
       name: exp.name,
       status: exp.status === "inconclusive" ? "inconclusive" : "winner_ready",
+      ...(snap?.stats.reason ? { reason: snap.stats.reason } : {}),
       winnerVariant: exp.winnerVariant ?? null,
       rateA,
       rateB,

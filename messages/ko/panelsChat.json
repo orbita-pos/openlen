@@ -1004,7 +1004,9 @@
       "decidedByConflict": "다른 팀원이나 기기에서 이미 결정한 테스트예요.",
       "pausedHarmNotice": "전환 보호를 위해 자동 중지되었으며 원본이 100% 제공 중입니다.",
       "pushHarmStopNotRestored": "변형 B의 전환이 크게 떨어져 ‘{name}’을 자동 중지했어요. 사이트가 게시되어 있지 않아 되돌릴 것이 없었어요.",
-      "emailTextInfo": "{push}\n\n무슨 일이 있었는지 보기: {url}"
+      "emailTextInfo": "{push}\n\n무슨 일이 있었는지 보기: {url}",
+      "pushUnevenTraffic": "‘{name}’이 결과 없이 끝났어요. 두 버전으로 가는 트래픽이 고르지 않아 수치를 믿을 수 없어요. 남길 버전을 선택하세요.",
+      "summaryUnevenTraffic": "‘{name}’ 테스트가 결과 없이 끝났어요. 트래픽이 고르지 않게 나뉘어 수치를 믿을 수 없어요. 어떤 버전을 남길까요?"
     }
   }
 }
