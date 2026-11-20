@@ -19,6 +19,7 @@ import {
   activeExperimentForTarget,
   claimExperimentDecision,
   createExperimentRow,
+  DECISION_LOCK_CLEARED,
   getExperimentById,
   liveExperimentForProject,
   normalizePrimaryMetric,
@@ -28,7 +29,7 @@ import {
   updateExperiment,
   type AbExperimentRow,
 } from "./store";
-import { MIN_DURATION_HOURS } from "./stats";
+import { MIN_DURATION_HOURS, maxDurationDaysOf } from "./stats";
 import type { AbExperimentView, AbPrimaryMetric } from "./types";
 import {
   cleanupAbWorktree,
@@ -62,6 +63,14 @@ export class AbLifecycleError extends Error {
     super(message);
     this.name = "AbLifecycleError";
   }
+}
+
+/** A decision that fails gives its lock back as it was; if even that fails, the evaluator's sweep does it in ten minutes
+ *  (`releaseStaleDecisionLocks`) — and the error that matters is the decision's, not this one. */
+async function giveBackTheLock(id: string): Promise<void> {
+  await releaseDecisionLock(id).catch((err: unknown) => {
+    console.error("[ab] couldn't give a decision lock back; the evaluator's sweep will", id, err);
+  });
 }
 
 function newExperimentId(): string {
@@ -434,7 +443,8 @@ export async function promoteVariantB(p: {
       endedAt: locked.endedAt ?? now,
       decidedAt: now,
       decidedBy: p.actorId,
-      ...(bringState === "brought" ? { copyProjectId: null } : { copyProjectId: null }),
+      ...DECISION_LOCK_CLEARED,
+      copyProjectId: null,
     });
 
     return {
@@ -443,7 +453,7 @@ export async function promoteVariantB(p: {
       ...(conflictPaths ? { conflictPaths } : {}),
     };
   } catch (err) {
-    await releaseDecisionLock(locked.id, locked.decisionStatus === "pending" ? "pending" : "none");
+    await giveBackTheLock(locked.id);
     throw err;
   }
 }
@@ -526,15 +536,19 @@ export async function keepControlA(p: {
       endedAt: locked.endedAt ?? now,
       decidedAt: now,
       decidedBy: p.actorId,
+      ...DECISION_LOCK_CLEARED,
     });
     return toExperimentView(updated ?? locked, project?.title);
   } catch (err) {
-    await releaseDecisionLock(locked.id, locked.decisionStatus === "pending" ? "pending" : "none");
+    await giveBackTheLock(locked.id);
     throw err;
   }
 }
 
-/** Owner chooses «Seguir probando»: extend for +7 days. */
+/** Owner chooses «Seguir probando»: keep testing. It really continues (review item 19): the experiment goes back to
+ *  `running`, its window REOPENS (`endedAt` cleared — the metrics stop at it) and ITS hard stop moves out to the end of
+ *  the extension if that is later than the one it had (`maxEndAt`; the global 21 days would end a run that is already on
+ *  day 22 at the next pass). Verdicts are held back until the extension is over (`snoozeUntil`). */
 export async function extendExperiment(p: {
   readonly projectId: string;
   readonly experimentId: string;
@@ -549,16 +563,28 @@ export async function extendExperiment(p: {
       409,
     );
   }
-  const days = Math.min(14, Math.max(1, p.extraDays ?? 7));
-  const targetDate = new Date(Date.now() + days * 24 * 3_600_000);
-  const updated = await updateExperiment(locked.id, {
-    status: "running",
-    decisionStatus: "none",
-    minEndAt: targetDate,
-    snoozeUntil: targetDate,
-    decidedBy: p.actorId,
-  });
-  return toExperimentView(updated ?? locked);
+  try {
+    const days = Math.min(14, Math.max(1, p.extraDays ?? 7));
+    const targetDate = new Date(Date.now() + days * 24 * 3_600_000);
+    const currentStop = locked.startedAt
+      ? locked.startedAt.getTime() + maxDurationDaysOf(locked) * 24 * 3_600_000
+      : 0;
+    const updated = await updateExperiment(locked.id, {
+      status: "running",
+      decisionStatus: "none",
+      ...DECISION_LOCK_CLEARED,
+      endedAt: null,
+      winnerVariant: null,
+      minEndAt: targetDate,
+      snoozeUntil: targetDate,
+      maxEndAt: new Date(Math.max(currentStop, targetDate.getTime())),
+      decidedBy: p.actorId,
+    });
+    return toExperimentView(updated ?? locked);
+  } catch (err) {
+    await giveBackTheLock(locked.id);
+    throw err;
+  }
 }
 
 /** Auto-stop guardrail when evaluator detects severe harm (>30% drop at >=95% confidence). */

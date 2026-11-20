@@ -3,7 +3,7 @@
 // so simultaneous clicks from Web and Mobile can never double-promote or double-rollback.
 import "server-only";
 
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import {
@@ -140,14 +140,22 @@ export async function updateExperiment(
 
 /** Atomic compare-and-swap lock for deciding an experiment (promote_b / keep_a / extend).
  *  Accepts experiments in `pending` OR `none` (when the owner manually decides early)
- *  and moves `decisionStatus` to `applying` exactly once. Returns null if another caller won. */
+ *  and moves `decisionStatus` to `applying` exactly once, remembering what it was (`decisionPrevStatus`, copied by the
+ *  same statement: in an UPDATE every expression reads the OLD row) and when (`decisionLockedAt`). Returns null if another
+ *  caller won. A decision that fails calls `releaseDecisionLock`; one that dies is found by `releaseStaleDecisionLocks`. */
 export async function claimExperimentDecision(
   id: string,
   projectId: string,
 ): Promise<AbExperimentRow | null> {
+  const now = new Date();
   const [row] = await db
     .update(schema.abExperiments)
-    .set({ decisionStatus: "applying", updatedAt: new Date() })
+    .set({
+      decisionPrevStatus: sql`${schema.abExperiments.decisionStatus}`,
+      decisionStatus: "applying",
+      decisionLockedAt: now,
+      updatedAt: now,
+    })
     .where(
       and(
         eq(schema.abExperiments.id, id),
@@ -163,19 +171,46 @@ export async function claimExperimentDecision(
   return row ?? null;
 }
 
-export async function releaseDecisionLock(
-  id: string,
-  restoreStatus: AbDecisionStatus = "pending",
-): Promise<void> {
+/** What the lock columns are set to when a decision is over (resolved, or taken back). */
+export const DECISION_LOCK_CLEARED = { decisionPrevStatus: null, decisionLockedAt: null } as const;
+
+/** The decision status an `applying` row goes back to: the one it had when it was claimed; a row with no memory of it (a
+ *  lock from before the column) derives it — a running experiment had no decision, one that reached a verdict had a
+ *  pending one. */
+const previousDecisionStatus = () =>
+  sql`COALESCE(${schema.abExperiments.decisionPrevStatus}, CASE WHEN ${schema.abExperiments.status} = 'running' THEN 'none' ELSE 'pending' END)`;
+
+/** A decision that failed gives the lock back AS IT WAS (review item 20): a failed promote of a pending winner is still
+ *  pending — the card and the morning summary keep showing it — and an early decision of a running test is still none.
+ *  Only an `applying` row is touched. */
+export async function releaseDecisionLock(id: string): Promise<void> {
   await db
     .update(schema.abExperiments)
-    .set({ decisionStatus: restoreStatus, updatedAt: new Date() })
+    .set({ decisionStatus: previousDecisionStatus(), ...DECISION_LOCK_CLEARED, updatedAt: new Date() })
+    .where(and(eq(schema.abExperiments.id, id), eq(schema.abExperiments.decisionStatus, "applying")));
+}
+
+/** How long a decision may hold `applying` before it counts as dead (a deploy or a crash in the middle of it). */
+export const STALE_DECISION_LOCK_MS = 10 * 60_000;
+
+/** The evaluator's pass gives back the locks of decisions that died: an `applying` older than ten minutes returns to the
+ *  status it had. Returns the ids it released. */
+export async function releaseStaleDecisionLocks(
+  now: Date = new Date(),
+  olderThanMs: number = STALE_DECISION_LOCK_MS,
+): Promise<string[]> {
+  const cutoff = new Date(now.getTime() - olderThanMs);
+  const rows = await db
+    .update(schema.abExperiments)
+    .set({ decisionStatus: previousDecisionStatus(), ...DECISION_LOCK_CLEARED, updatedAt: now })
     .where(
       and(
-        eq(schema.abExperiments.id, id),
         eq(schema.abExperiments.decisionStatus, "applying"),
+        sql`COALESCE(${schema.abExperiments.decisionLockedAt}, ${schema.abExperiments.updatedAt}) < ${cutoff}`,
       ),
-    );
+    )
+    .returning({ id: schema.abExperiments.id });
+  return rows.map((r) => r.id);
 }
 
 /** Pending decision summaries for one or more projects (used by Morning Summary & Mobile). */

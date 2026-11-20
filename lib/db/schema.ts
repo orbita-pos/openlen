@@ -3621,6 +3621,10 @@ export const abExperiments = pgTable(
       .$type<import("@/lib/ab/types").AbDecisionStatus>()
       .notNull()
       .default("none"),
+    /** What `decisionStatus` was when a decision claimed it (`applying`): a failed or interrupted decision gives it back. */
+    decisionPrevStatus: text("decisionPrevStatus").$type<import("@/lib/ab/types").AbDecisionStatus>(),
+    /** When the current `applying` claim was made: one older than ten minutes is a decision that died. */
+    decisionLockedAt: timestamp("decisionLockedAt", { mode: "date", withTimezone: true }),
     copyProjectId: text("copyProjectId"),
     branch: text("branch"),
     baseCommitOid: text("baseCommitOid"),
@@ -3634,6 +3638,8 @@ export const abExperiments = pgTable(
     startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }),
     minEndAt: timestamp("minEndAt", { mode: "date", withTimezone: true }),
     snoozeUntil: timestamp("snoozeUntil", { mode: "date", withTimezone: true }),
+    /** THIS experiment's hard stop, when «Seguir probando» moved it past the global 21 days; null = the default. */
+    maxEndAt: timestamp("maxEndAt", { mode: "date", withTimezone: true }),
     endedAt: timestamp("endedAt", { mode: "date", withTimezone: true }),
     evaluatedAt: timestamp("evaluatedAt", { mode: "date", withTimezone: true }),
     notifiedAt: timestamp("notifiedAt", { mode: "date", withTimezone: true }),
