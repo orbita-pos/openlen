@@ -92,6 +92,22 @@ describe("removeEntry", () => {
     expect(s.removedStates).toEqual(["notion"]);
     expect(s.creds.has("NOTION_AUTHORIZATION")).toBe(true);
   });
+
+  it("🔴 a sign-in that can't be dropped never undoes the removal: the entry is already gone", async () => {
+    const s = deps();
+    await saveEntry("p1", "notion", { url: URL1, headers: {}, secretHeaders: { Authorization: "Bearer t" }, version: 0 }, s.d);
+    const dropped: string[] = [];
+    const d: ManageDeps = {
+      ...s.d,
+      dropOAuth: async (_p, name) => {
+        dropped.push(name);
+        throw new Error("the database is away");
+      },
+    };
+    expect(await removeEntry("p1", "notion", 1, d)).toEqual({ ok: true });
+    expect(dropped).toEqual(["notion"]);
+    expect(s.row().text).not.toContain("notion");
+  });
 });
 
 describe("listView", () => {

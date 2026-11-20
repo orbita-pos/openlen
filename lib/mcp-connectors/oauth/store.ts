@@ -121,7 +121,15 @@ export async function dropConnection(personId: string, serverName: string): Prom
 /** Server names of the person that have an active OAuth token stored (for the «Desconectar» button on the Herramientas page). */
 export async function listConnectedServers(personId: string): Promise<ReadonlySet<string>> {
   const rows = await db.select({ serverName: o.serverName, serverUrl: o.serverUrl, issuer: o.issuer, clientInfo: o.clientInfo, tokens: o.tokens }).from(o).where(eq(o.personId, personId));
-  return new Set(rows.filter((r) => readConnection(r)?.tokens !== null).map((r) => r.serverName));
+  // Connected = a connection that reads (its client decrypts) and holds tokens that read; an unreadable row is none.
+  return new Set(
+    rows
+      .filter((r) => {
+        const conn = readConnection(r);
+        return conn !== null && conn.tokens !== null;
+      })
+      .map((r) => r.serverName),
+  );
 }
 
 /** Starts a sign-in and returns its `state`: 32 random bytes, base64url, good once and for ten minutes from `now`. */

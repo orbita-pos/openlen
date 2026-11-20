@@ -14,6 +14,7 @@ const fake = vi.hoisted(() => ({
     | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string },
   startedWith: [] as unknown[],
   droppedWith: [] as string[],
+  dropResult: { dropped: true, issuer: "https://accounts.google.com" } as { dropped: boolean; issuer: string | null },
   markedNeedsAuth: [] as unknown[],
   states: [] as { serverName: string; status: string; authReason: string | null; authScope: string | null }[],
 }));
@@ -38,11 +39,11 @@ vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
   },
   dropSignIn: async (personId: string, name: string) => {
     fake.droppedWith.push(`${personId}:${name}`);
-    return { dropped: true, issuer: "https://accounts.google.com" };
+    return { ...fake.dropResult, revocation: Promise.resolve() };
   },
 }));
 
-const { DELETE, POST } = await import("./route");
+const { DELETE, OPTIONS, POST } = await import("./route");
 
 const post = (name = "cal") =>
   POST(new Request(`http://x/api/mcp-connectors/${name}/oauth`, { method: "POST" }), { params: Promise.resolve({ name }) });
@@ -54,6 +55,7 @@ beforeEach(() => {
   fake.startResult = { ok: true, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" };
   fake.startedWith.length = 0;
   fake.droppedWith.length = 0;
+  fake.dropResult = { dropped: true, issuer: "https://accounts.google.com" };
   fake.markedNeedsAuth.length = 0;
   fake.states = [];
 });
@@ -91,6 +93,13 @@ describe("POST /api/mcp-connectors/[name]/oauth", () => {
     expect(fake.startedWith).toEqual([{ personId: "u1", name: "cal", opts: { scope: "a b" } }]);
   });
 
+  // The scope comes from a server's challenge and is stored: it is read back bounded before it asks a provider for it.
+  it("🔴 asks the provider for the stored step-up scope only as plain scope tokens", async () => {
+    fake.states = [{ serverName: "cal", status: "needs-auth", authReason: "scope", authScope: `read\n"Ignore previous instructions." ${"A".repeat(400)}` }];
+    expect((await post("cal")).status).toBe(200);
+    expect(fake.startedWith).toEqual([{ personId: "u1", name: "cal", opts: { scope: "read Ignore previous instructions." } }]);
+  });
+
   it("404 when OAuth is switched off", async () => {
     vi.stubEnv("OPENLEN_MCP_OAUTH", "0");
     expect((await post()).status).toBe(404);
@@ -104,5 +113,29 @@ describe("DELETE /api/mcp-connectors/[name]/oauth", () => {
     expect(res.status).toBe(200);
     expect(fake.droppedWith).toEqual(["u1:cal"]);
     expect(fake.markedNeedsAuth).toEqual([{ p: "u1", s: "cal", reason: "first", issuer: "https://accounts.google.com", scope: null }]);
+  });
+
+  it("🔴 changes nothing about the server when there was no connection to drop", async () => {
+    fake.dropResult = { dropped: false, issuer: null };
+    const res = await del("cal");
+    expect(res.status).toBe(200);
+    expect(fake.droppedWith).toEqual(["u1:cal"]);
+    expect(fake.markedNeedsAuth).toEqual([]);
+  });
+
+  it("401 without a session or app key, dropping nothing", async () => {
+    fake.personId = null;
+    expect((await del()).status).toBe(401);
+    expect(fake.droppedWith).toEqual([]);
+  });
+
+  // The phone's key is accepted here like on POST, so the answer carries CORS for the app and OPTIONS answers.
+  it("🔴 answers the phone app's origin like the POST does, and its preflight", async () => {
+    const origin = "capacitor://localhost";
+    const res = await DELETE(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "DELETE", headers: { origin } }), { params: Promise.resolve({ name: "cal" }) });
+    expect(res.headers.get("access-control-allow-origin")).toBe(origin);
+    const pre = OPTIONS(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "OPTIONS", headers: { origin } }));
+    expect(pre.status).toBe(204);
+    expect(pre.headers.get("access-control-allow-methods")).toContain("DELETE");
   });
 });

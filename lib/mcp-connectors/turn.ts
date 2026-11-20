@@ -9,7 +9,7 @@ import type { ToolOutcome } from "@/lib/agent/tools";
 import { hostOf, issuerHostOf, type McpApprovalCard } from "./approval";
 import type { McpConnection, openMcp } from "./client";
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "./config";
-import { directoryFor, type DirectoryEntry } from "./directory";
+import { directoryFor, directoryForAnyone, type DirectoryEntry } from "./directory";
 import { MOUNT_MAX_ATTEMPTS, serversToMount } from "./mount";
 import { asNeedsSignIn, connectionProvider, NeedsSignIn, shortError, type ConnectionProvider, type OAuthDeps, type SignInReason } from "./oauth/provider";
 import { cleanScope } from "./oauth/remote-text";
@@ -56,6 +56,16 @@ export function authenticateDescription(
   }
   const why = reason === "scope" ? `needs additional permissions (scope: "${cleanScope(scope) ?? ""}")` : "requires authentication";
   return `The "${server}" MCP server (streamable-http at ${host}) is installed but ${why}. Call this tool when the user's request needs it: the person is shown a "Connect" button to sign in${issuerHost ? ` at ${issuerHost}` : ""}. Once they finish in their browser, the server's real tools become available on their next message. Do not ask the user for authorization codes, tokens, or URLs.`;
+}
+
+/**
+ * What the model reads when a server's sign-in stops working IN THE MIDDLE of a turn (a call or a resource read). The
+ * turn's tools were fixed when it began, so `mcp__<server>__authenticate` isn't among them yet: this text can't send the
+ * model to it (the description above does, for the next turn). The server is now `needs-auth`, and on the person's next
+ * message they are offered the Connect button.
+ */
+export function signInLapsedMidTurn(server: string): string {
+  return `The "${server}" connector's sign-in has stopped working, so its tools are unavailable. The person will be offered a "Connect" button to sign in again on their next message. Tell them in one short sentence that ${server} needs them to sign in again, carry on with whatever does not need it, and do not call the ${server} tools again in this turn. Do not ask the user for authorization codes, tokens, or URLs.`;
 }
 
 const SERVER_ARG = { type: "string", description: "One of the person's MCP server names, as listed in the turn's context." };
@@ -133,7 +143,8 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
   if (!parsed.ok) return EMPTY;
   const config = parsed.config;
   const names = Object.keys(config.servers).sort();
-  const email = d.personEmail ? await d.personEmail(personId).catch(() => null) : null;
+  // The email only decides which directory entries are theirs: with none to offer anyone, it is never looked up.
+  const email = d.personEmail && directoryForAnyone(config, d.env).length > 0 ? await d.personEmail(personId).catch(() => null) : null;
   const directory = directoryFor(email, config, d.env);
   if (names.length === 0 && directory.length === 0) return EMPTY;
   if (names.length === 0) {
@@ -307,7 +318,7 @@ export class TurnConnections {
           const needs = err instanceof NeedsSignIn ? err : await asNeedsSignIn(provider, err);
           if (needs) {
             await this.d.markNeedsAuth?.(this.personId, server, needs.reason, needs.issuer, needs.scope).catch(() => {});
-            return authenticateDescription(server, hostOf(entry.url), issuerHostOf(entry, needs.issuer), "lapsed");
+            return signInLapsedMidTurn(server);
           }
           return `${server}: couldn't connect: ${redact(messageOf(err))}`;
         }
@@ -420,7 +431,7 @@ export class TurnConnections {
     } catch (err) {
       const needs = err instanceof NeedsSignIn ? err : await asNeedsSignIn(opened.provider, err);
       if (needs) {
-        const text = authenticateDescription(route.server, hostOf(entry.url), issuerHostOf(entry, needs.issuer), "lapsed");
+        const text = signInLapsedMidTurn(route.server);
         this.opened.set(route.server, Promise.resolve(text));
         await this.d.markNeedsAuth?.(this.personId, route.server, needs.reason, needs.issuer, needs.scope).catch(() => {});
         return failure(text);
@@ -451,10 +462,9 @@ export class TurnConnections {
       if (json === null) return failure("read_mcp_resource needs a uri.");
       return { response: { content: [{ type: "text", text: renderResource(server, json) }] } };
     } catch (err) {
-      const entry = this.turn.active.get(server)!;
       const needs = err instanceof NeedsSignIn ? err : await asNeedsSignIn(opened.provider, err);
       if (needs) {
-        const text = authenticateDescription(server, hostOf(entry.url), issuerHostOf(entry, needs.issuer), "lapsed");
+        const text = signInLapsedMidTurn(server);
         this.opened.set(server, Promise.resolve(text));
         await this.d.markNeedsAuth?.(this.personId, server, needs.reason, needs.issuer, needs.scope).catch(() => {});
         return failure(text);

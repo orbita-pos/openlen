@@ -34,6 +34,14 @@ describe("las rutas de la app", () => {
     expect(listed.get("app/api/assistants/[id]/len-requests/route.ts")).toEqual(["GET"]);
   });
 
+  // OAuth of the MCP connectors on the phone (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1): the route that
+  // accepts the key for a method lists it (a method that takes the key without being here has no CORS for the app).
+  it("🔴 the connector sign-in route lists both its methods", () => {
+    const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
+    expect(listed.get("app/api/mcp-connectors/[name]/oauth/route.ts")).toEqual(["POST", "DELETE"]);
+    expect(listed.get("app/api/mcp-connectors/directory/[id]/route.ts")).toEqual(["POST"]);
+  });
+
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {
     const src = leer("app/api/projects/[id]/versions/route.ts");
     expect(src).not.toContain("usuarioDeLaPeticion");

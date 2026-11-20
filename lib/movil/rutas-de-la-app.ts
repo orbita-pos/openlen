@@ -62,6 +62,6 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/projects/[id]/install/route.ts", metodos: ["POST"] },
   // OAuth of the MCP connectors on the phone (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1).
   { fichero: "app/api/mcp-connectors/route.ts", metodos: ["GET"] },
-  { fichero: "app/api/mcp-connectors/[name]/oauth/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/mcp-connectors/[name]/oauth/route.ts", metodos: ["POST", "DELETE"] },
   { fichero: "app/api/mcp-connectors/directory/[id]/route.ts", metodos: ["POST"] },
 ];
