@@ -741,6 +741,8 @@
       "lost": "Esse link de início de sessão já não funciona. Tente de novo.",
       "issuerChanged": "A página de início de sessão mudou, por isso nada foi conectado. Veja onde está agora e tente de novo.",
       "exchangeFailed": "O servidor não concluiu o início de sessão. Tente de novo.",
+      "wrongBrowser": "O início de sessão terminou num navegador sem a sua conta do OpenLen aberta, por isso nada foi conectado. Tente de novo a partir deste separador.",
+      "otherAccount": "Esse início de sessão é de outra conta do OpenLen, por isso nada foi conectado.",
       "off": "O início de sessão nos conectores está desativado.",
       "unauthorized": "A sua sessão do OpenLen terminou. Recarregue a página e tente de novo.",
       "notAvailable": "Esse conector não está disponível.",

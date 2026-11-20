@@ -62,4 +62,8 @@ export const CREATE_MCP_CONNECTORS: readonly string[] = [
   `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "authScope" text;`,
   // A connection is bound to the entry it was signed in with (review fix, 19/11): additive. A row without it is used by no entry.
   `ALTER TABLE "personMcpOAuth" ADD COLUMN IF NOT EXISTS "fingerprint" text;`,
+  // Where a sign-in was started, and a phone sign-in's tokens held for the person's yes (final review F5, 19/11): additive.
+  `ALTER TABLE "personMcpOAuthFlows" ADD COLUMN IF NOT EXISTS "startedFrom" text NOT NULL DEFAULT 'web';`,
+  `ALTER TABLE "personMcpOAuthFlows" ADD COLUMN IF NOT EXISTS "heldTokens" text;`,
+  `ALTER TABLE "personMcpOAuthFlows" ADD COLUMN IF NOT EXISTS "confirmHash" text;`,
 ];

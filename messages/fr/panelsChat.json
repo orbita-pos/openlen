@@ -741,6 +741,8 @@
       "lost": "Ce lien de connexion ne fonctionne plus. Réessayez.",
       "issuerChanged": "La page de connexion a changé, donc rien n'a été connecté. Vérifiez où elle se trouve maintenant et réessayez.",
       "exchangeFailed": "Le serveur n'a pas terminé la connexion. Réessayez.",
+      "wrongBrowser": "La connexion s'est terminée dans un navigateur qui n'est pas connecté à votre compte OpenLen, donc rien n'a été connecté. Réessayez depuis cet onglet.",
+      "otherAccount": "Cette connexion appartient à un autre compte OpenLen, donc rien n'a été connecté.",
       "off": "La connexion aux connecteurs est désactivée.",
       "unauthorized": "Votre session OpenLen est terminée. Rechargez la page, puis réessayez.",
       "notAvailable": "Ce connecteur n'est pas disponible.",

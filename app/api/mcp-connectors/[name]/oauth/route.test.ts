@@ -16,6 +16,7 @@ const fake = vi.hoisted(() => ({
     | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string }
     | { ok: false; reason: "issuer_changed"; error: string; issuer: string | null; issuerHost: string | null },
   remembered: [] as unknown[],
+  startedFrom: [] as unknown[],
   startedWith: [] as unknown[],
   droppedWith: [] as string[],
   dropResult: { dropped: true, issuer: "https://accounts.google.com" } as { dropped: boolean; issuer: string | null },
@@ -46,8 +47,11 @@ vi.mock("@/lib/mcp-connectors/real", () => ({
   realOAuthDeps: () => ({ siteUrl: "https://openlen.test" }),
 }));
 vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
-  startSignIn: async (personId: string, name: string, _d: unknown, opts?: { scope?: string }) => {
-    fake.startedWith.push({ personId, name, opts });
+  startSignIn: async (personId: string, name: string, _d: unknown, opts?: { scope?: string; startedFrom?: string }) => {
+    // Where it was started is checked on its own (below): the rest of these tests are about what is asked.
+    const { startedFrom, ...rest } = opts ?? {};
+    fake.startedWith.push({ personId, name, opts: rest });
+    fake.startedFrom.push(startedFrom);
     return fake.startResult;
   },
   dropSignIn: async (personId: string, name: string) => {
@@ -80,6 +84,7 @@ beforeEach(() => {
   fake.dropResult = { dropped: true, issuer: "https://accounts.google.com" };
   fake.markedNeedsAuth.length = 0;
   fake.remembered.length = 0;
+  fake.startedFrom.length = 0;
   fake.states = [];
   fake.config = { text: CAL_TEXT, approved: { cal: calFingerprint() }, version: 1 };
 });
@@ -165,6 +170,14 @@ describe("POST /api/mcp-connectors/[name]/oauth", () => {
     vi.stubEnv("OPENLEN_MCP_OAUTH", "0");
     expect((await post()).status).toBe(404);
     expect(fake.startedWith).toEqual([]);
+  });
+
+  // Final review, F5: the flow records where it was started — the app's key or the web session — and the way back treats
+  // each its own way.
+  it("🔴 records where the sign-in was started: the phone's key, or the web session", async () => {
+    await post("cal");
+    await POST(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "POST", headers: { authorization: "Bearer app-key" } }), { params: Promise.resolve({ name: "cal" }) });
+    expect(fake.startedFrom).toEqual(["web", "phone"]);
   });
 
   // Final review, F3 (spec §10.2): the start checks the sign-in host the person was shown.

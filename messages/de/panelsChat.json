@@ -741,6 +741,8 @@
       "lost": "Dieser Anmeldelink funktioniert nicht mehr. Versuche es erneut.",
       "issuerChanged": "Die Anmeldeseite hat sich geändert, deshalb wurde nichts verbunden. Prüfe, wo sie jetzt ist, und versuche es noch einmal.",
       "exchangeFailed": "Der Server hat die Anmeldung nicht abgeschlossen. Versuche es erneut.",
+      "wrongBrowser": "Die Anmeldung endete in einem Browser, der nicht bei deinem OpenLen-Konto angemeldet ist, deshalb wurde nichts verbunden. Versuche es noch einmal aus diesem Tab.",
+      "otherAccount": "Diese Anmeldung gehört zu einem anderen OpenLen-Konto, deshalb wurde nichts verbunden.",
       "off": "Die Anmeldung bei Konnektoren ist ausgeschaltet.",
       "unauthorized": "Deine OpenLen-Sitzung ist beendet. Lade die Seite neu und versuche es erneut.",
       "notAvailable": "Dieser Konnektor ist nicht verfügbar.",

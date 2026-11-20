@@ -6,6 +6,9 @@
 // The sign-in host the person was shown (§10.2): the card sends the host it named (`{ issuerHost }`, null when it named
 // none); without a body — the Herramientas page — it is the one the stored state names. If the discovery now names
 // another, nothing starts: 409 `issuer_changed` with the new host, which is stored so the next card names it.
+//
+// The flow records where it was started (final review F5): the phone's key ("phone") or the web session ("web"). The way
+// back trusts a web flow only in a browser signed in as its person, and holds a phone flow's tokens for the person's yes.
 import { entryFingerprint, parseMcpConfig } from "@/lib/mcp-connectors/config";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { issuerHostOf } from "@/lib/mcp-connectors/approval";
@@ -14,6 +17,7 @@ import { cleanScope } from "@/lib/mcp-connectors/oauth/remote-text";
 import { realOAuthDeps } from "@/lib/mcp-connectors/real";
 import { markNeedsAuth, readMcpConfig, readServerStates, type ServerState, type StoredConfig } from "@/lib/mcp-connectors/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { startedFromOf } from "@/lib/movil/started-from";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 
 export const runtime = "nodejs";
@@ -68,7 +72,7 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
     personId,
     name,
     { ...realOAuthDeps(), readConfig: readMcpConfig },
-    { ...(scope ? { scope } : {}), ...(expectedIssuerHost !== undefined ? { expectedIssuerHost } : {}) },
+    { ...(scope ? { scope } : {}), ...(expectedIssuerHost !== undefined ? { expectedIssuerHost } : {}), startedFrom: startedFromOf(req) },
   );
   if (r.ok) return json({ authorizationUrl: r.authorizationUrl }, 200);
   if (r.reason === "issuer_changed") {

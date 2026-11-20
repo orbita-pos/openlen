@@ -23,7 +23,8 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
-const { FLOW_TTL_MS, createFlow, dropConnection, dropTokens, listConnectedServers, loadConnection, saveClientInfo, saveTokens, takeFlow } = await import("./store");
+const { FLOW_TTL_MS, createFlow, dropConnection, dropExpiredHeld, dropTokens, holdTokens, listConnectedServers, loadConnection, saveClientInfo, saveTokens, takeFlow, takeHeldTokens } =
+  await import("./store");
 
 const URL_A = "https://calendar.example/mcp";
 const URL_B = "https://otro.example/mcp";
@@ -268,8 +269,49 @@ describe("the pending sign-in", () => {
       issuer: ISSUER,
       codeVerifier: "verifier-secret-value",
       scope: "calendar.read",
+      // A flow that doesn't say where it was started is the stricter one (final review F5).
+      startedFrom: "web",
     });
     expect(await takeFlow(state, new Date(NOW.getTime() + 2000))).toBe("used");
+  });
+
+  // Final review, F5: a phone sign-in's tokens, held on its spent flow for the person's yes.
+  describe("held tokens", () => {
+    const TOKENS = { access_token: "at_held", refresh_token: "rt_held", token_type: "Bearer" };
+    const held = async () => {
+      const state = await createFlow({ ...flowInput(), startedFrom: "phone" });
+      await takeFlow(state, new Date(NOW.getTime() + 1000));
+      await holdTokens(state, TOKENS, "hash-1");
+      return state;
+    };
+
+    it("are held only on a spent flow, encrypted, and taken once by their confirm hash", async () => {
+      const fresh = await createFlow(flowInput());
+      await expect(holdTokens(fresh, TOKENS, "hash-0")).rejects.toThrow();
+      await held();
+      const raw = (await pg.query(`SELECT "heldTokens" FROM "personMcpOAuthFlows" WHERE "confirmHash" = 'hash-1'`)).rows as { heldTokens: string }[];
+      expect(raw[0]?.heldTokens).not.toContain("at_held");
+      const [a, b] = await Promise.all([takeHeldTokens("hash-1", NOW), takeHeldTokens("hash-1", NOW)]);
+      expect([a, b].filter((x) => typeof x === "object")).toEqual([{ personId: "p1", serverName: "cal", fingerprint: "fp1", issuer: ISSUER, tokens: TOKENS }]);
+      expect([a, b].filter((x) => x === "unknown")).toHaveLength(1);
+      expect((await pg.query(`SELECT 1 FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL OR "confirmHash" IS NOT NULL`)).rows).toEqual([]);
+    });
+
+    it("past the flow's ten minutes: the take says expired and clears them, and the sweep clears any", async () => {
+      await held();
+      expect(await takeHeldTokens("hash-1", new Date(NOW.getTime() + FLOW_TTL_MS))).toBe("expired");
+      expect((await pg.query(`SELECT 1 FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL`)).rows).toEqual([]);
+      await held();
+      await dropExpiredHeld(new Date(NOW.getTime() + FLOW_TTL_MS - 1));
+      expect((await pg.query(`SELECT 1 FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL`)).rows).toHaveLength(1);
+      await dropExpiredHeld(new Date(NOW.getTime() + FLOW_TTL_MS));
+      expect((await pg.query(`SELECT 1 FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL OR "confirmHash" IS NOT NULL`)).rows).toEqual([]);
+    });
+  });
+
+  it("a flow keeps where it was started", async () => {
+    const state = await createFlow({ ...flowInput(), startedFrom: "phone" });
+    expect(await takeFlow(state, new Date(NOW.getTime() + 1000))).toMatchObject({ startedFrom: "phone" });
   });
 
   it("a flow without a scope keeps it null", async () => {

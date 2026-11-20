@@ -741,6 +741,8 @@
       "lost": "该登录链接已失效。请重试。",
       "issuerChanged": "登录页面已更改，因此没有连接任何内容。请查看它现在的位置，然后重试。",
       "exchangeFailed": "服务器没有完成登录。请重试。",
+      "wrongBrowser": "登录在未登录你的 OpenLen 帐户的浏览器中完成，因此没有连接任何内容。请从此标签页重试。",
+      "otherAccount": "该登录属于另一个 OpenLen 帐户，因此没有连接任何内容。",
       "off": "连接器登录已关闭。",
       "unauthorized": "你的 OpenLen 会话已结束。请刷新页面后重试。",
       "notAvailable": "该连接器不可用。",

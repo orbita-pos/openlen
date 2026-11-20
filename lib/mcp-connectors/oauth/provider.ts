@@ -35,7 +35,7 @@ import { entryFingerprint, type McpServerEntry } from "../config";
 import { credentialRefs } from "../templates";
 import { callbackUrl, clientMetadata, isClientRefusal, preRegisteredClient, type ClientRefusal } from "./clients";
 import { cleanIssuer, cleanScope } from "./remote-text";
-import type { OAuthConnection, OAuthFlow } from "./store";
+import type { HeldSignIn, OAuthConnection, OAuthFlow, StartedFrom } from "./store";
 
 /** What the provider and the flow use of store.ts — an interface, so tests can hand the real one or a fake. */
 export interface OAuthStore {
@@ -45,8 +45,21 @@ export interface OAuthStore {
   saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, tokens: StoredOAuthTokens): Promise<void>;
   dropTokens(personId: string, serverName: string): Promise<void>;
   dropConnection(personId: string, serverName: string): Promise<OAuthConnection | null>;
-  createFlow(flow: { personId: string; serverName: string; fingerprint: string; issuer: string; codeVerifier: string; scope: string | null; now: Date }): Promise<string>;
+  createFlow(flow: {
+    personId: string;
+    serverName: string;
+    fingerprint: string;
+    issuer: string;
+    codeVerifier: string;
+    scope: string | null;
+    startedFrom?: StartedFrom;
+    now: Date;
+  }): Promise<string>;
   takeFlow(state: string, now: Date): Promise<OAuthFlow | "expired" | "used" | "unknown">;
+  /** A phone sign-in's tokens, held on its spent flow until the person confirms (final review F5). */
+  holdTokens(state: string, tokens: StoredOAuthTokens, confirmHash: string): Promise<void>;
+  takeHeldTokens(confirmHash: string, now: Date): Promise<HeldSignIn | "expired" | "unknown">;
+  dropExpiredHeld(now: Date): Promise<void>;
 }
 
 export interface OAuthDeps {

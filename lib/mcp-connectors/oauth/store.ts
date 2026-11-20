@@ -9,11 +9,13 @@
 //   the person gave the first one are never handed to it.
 // - `personMcpOAuthFlows`: a sign-in in progress, keyed by the `state` the provider sends back. One use, ten minutes,
 //   tied to the person, the server, the entry's fingerprint and the issuer; taken with a compare-and-swap so a replayed
-//   or duplicated callback never wins twice.
+//   or duplicated callback never wins twice. It records where it was started (web or phone), and — for a phone sign-in
+//   that came back to a browser with no session — HOLDS the tokens until the person confirms on the way-back page (final
+//   review F5): held tokens are no connection, nothing reads them but the confirm, and they go when the flow expires.
 import "server-only";
 import { randomBytes } from "node:crypto";
 import type { StoredOAuthClientInformation, StoredOAuthTokens } from "@modelcontextprotocol/client";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
@@ -34,6 +36,8 @@ export interface OAuthConnection {
   readonly tokens: StoredOAuthTokens | null;
 }
 
+export type StartedFrom = "web" | "phone";
+
 export interface OAuthFlow {
   readonly personId: string;
   readonly serverName: string;
@@ -41,7 +45,18 @@ export interface OAuthFlow {
   readonly issuer: string;
   readonly codeVerifier: string;
   readonly scope: string | null;
+  readonly startedFrom: StartedFrom;
 }
+
+/** A phone sign-in's tokens, held for the person's yes (final review F5). */
+export interface HeldSignIn {
+  readonly personId: string;
+  readonly serverName: string;
+  readonly fingerprint: string;
+  readonly issuer: string;
+  readonly tokens: StoredOAuthTokens;
+}
+
 
 /** The JSON inside a ciphertext; a value that doesn't decrypt or isn't an object counts as missing (NEXTAUTH_SECRET
  *  rotated, a broken row): the person signs in again. */
@@ -151,10 +166,13 @@ export async function createFlow(flow: {
   issuer: string;
   codeVerifier: string;
   scope: string | null;
+  startedFrom?: StartedFrom;
   now: Date;
 }): Promise<string> {
   const state = randomBytes(32).toString("base64url");
+  await dropExpiredHeld(flow.now);
   await db.insert(f).values({
+    startedFrom: flow.startedFrom ?? "web",
     state,
     personId: flow.personId,
     serverName: flow.serverName,
@@ -182,9 +200,51 @@ export async function takeFlow(state: string, now: Date): Promise<OAuthFlow | "e
     } catch {
       return "unknown";
     }
-    return { personId: row.personId, serverName: row.serverName, fingerprint: row.fingerprint, issuer: row.issuer, codeVerifier, scope: row.scope };
+    return {
+      personId: row.personId,
+      serverName: row.serverName,
+      fingerprint: row.fingerprint,
+      issuer: row.issuer,
+      codeVerifier,
+      scope: row.scope,
+      startedFrom: row.startedFrom === "phone" ? "phone" : "web",
+    };
   }
   // Nothing to spend: either it was spent already or it never existed (the update's only conditions are those two).
   const existing = await db.select({ state: f.state }).from(f).where(eq(f.state, state)).limit(1);
   return existing.length > 0 ? "used" : "unknown";
+}
+
+/** Holds a phone sign-in's tokens on its (spent) flow, with the hash of the one-time token the way-back page's form
+ *  carries. Nothing but `takeHeldTokens` reads them. */
+export async function holdTokens(state: string, tokens: StoredOAuthTokens, confirmHash: string): Promise<void> {
+  const held = await db
+    .update(f)
+    .set({ heldTokens: encryptToken(JSON.stringify(tokens)), confirmHash })
+    .where(and(eq(f.state, state), isNotNull(f.usedAt)))
+    .returning({ state: f.state });
+  if (held.length === 0) throw new Error("no spent sign-in to hold the tokens on");
+}
+
+/** Takes the held tokens of a confirm hash, once. The compare-and-swap is on the hash: one `UPDATE … SET confirmHash =
+ *  NULL WHERE confirmHash = $hash RETURNING` wins, so of two posts of the same form exactly one gets them; the tokens are
+ *  then cleared from the row whatever happens next. Past the flow's ten minutes it is "expired" (and they are cleared). */
+export async function takeHeldTokens(confirmHash: string, now: Date): Promise<HeldSignIn | "expired" | "unknown"> {
+  const rows = await db
+    .update(f)
+    .set({ confirmHash: null })
+    .where(and(eq(f.confirmHash, confirmHash), isNotNull(f.heldTokens)))
+    .returning({ state: f.state, personId: f.personId, serverName: f.serverName, fingerprint: f.fingerprint, issuer: f.issuer, expiresAt: f.expiresAt, held: f.heldTokens });
+  const row = rows[0];
+  if (!row) return "unknown";
+  await db.update(f).set({ heldTokens: null }).where(eq(f.state, row.state));
+  if (row.expiresAt.getTime() <= now.getTime()) return "expired";
+  const tokens = openJson<StoredOAuthTokens>(row.held);
+  if (!tokens) return "unknown";
+  return { personId: row.personId, serverName: row.serverName, fingerprint: row.fingerprint, issuer: row.issuer, tokens };
+}
+
+/** Clears every held token whose flow is past its ten minutes. */
+export async function dropExpiredHeld(now: Date): Promise<void> {
+  await db.update(f).set({ heldTokens: null, confirmHash: null }).where(and(isNotNull(f.heldTokens), lte(f.expiresAt, now)));
 }

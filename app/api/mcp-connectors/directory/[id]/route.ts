@@ -8,6 +8,7 @@ import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { realLenFileDeps, realOAuthDeps, realTurnDeps } from "@/lib/mcp-connectors/real";
 import { markNeedsAuth, readMcpConfig, readServerStates, writeMcpConfig } from "@/lib/mcp-connectors/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
+import { startedFromOf } from "@/lib/movil/started-from";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 
 export const runtime = "nodejs";
@@ -29,7 +30,7 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
     writeConfig: writeMcpConfig,
     installedServerNames: lenDeps.installedServerNames,
     personEmail: async (p) => (await turnDeps.personEmail?.(p)) ?? null,
-  });
+  }, { startedFrom: startedFromOf(req) });
   if (r.ok) return json({ server: r.server, authorizationUrl: r.authorizationUrl }, 200);
   // The sign-in is somewhere else now (spec §10.2): stored, so the server's next card names it.
   if ("issuerHost" in r) {

@@ -3576,4 +3576,12 @@ export const personMcpOAuthFlows = pgTable("personMcpOAuthFlows", {
   expiresAt: timestamp("expiresAt", { mode: "date", withTimezone: true }).notNull(),
   /** Set by the one take that wins (compare-and-swap); an expired flow is spent the same way. */
   usedAt: timestamp("usedAt", { mode: "date", withTimezone: true }),
+  /** Where the sign-in was started (final review F5): "web" (the workspace's session) or "phone" (the app's key). A web
+   *  flow comes back only to a browser signed in as its person; a phone flow's tokens wait for that person's yes. */
+  startedFrom: text("startedFrom").notNull().default("web"),
+  /** Encrypted JSON: the tokens of a phone flow that came back to a browser with no session — NOT a connection yet, used by
+   *  nothing until the person confirms on the way-back page. Gone at the confirm, the «not me», or when the flow expires. */
+  heldTokens: text("heldTokens"),
+  /** SHA-256 (hex) of the one-time token the way-back page's form carries to confirm or discard the held tokens. */
+  confirmHash: text("confirmHash"),
 });

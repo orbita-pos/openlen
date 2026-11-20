@@ -14,6 +14,8 @@ export const SIGN_IN_ERROR_KEYS = [
   "lost",
   "issuerChanged",
   "exchangeFailed",
+  "wrongBrowser",
+  "otherAccount",
   "off",
   "unauthorized",
   "notAvailable",
@@ -40,6 +42,9 @@ const KEY_OF_CODE: Readonly<Record<string, SignInErrorKey>> = {
   unknown: "lost",
   issuer_changed: "issuerChanged",
   exchange_failed: "exchangeFailed",
+  // The way back refused this browser (final review F5): not signed in as the sign-in's person, or as another.
+  wrong_browser: "wrongBrowser",
+  other_account: "otherAccount",
 };
 
 export function signInErrorKey(code: string): SignInErrorKey {

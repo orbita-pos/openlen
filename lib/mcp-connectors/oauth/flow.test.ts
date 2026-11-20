@@ -27,7 +27,7 @@ vi.mock("@/lib/db", async () => {
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
 const store = await import("./store");
-const { REVOKE_TIMEOUT_MS, dropSignIn, finishSignIn, rememberNewIssuer, startSignIn } = await import("./flow");
+const { REVOKE_TIMEOUT_MS, confirmSignIn, dropSignIn, finishSignIn, rememberNewIssuer, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
 const { mountServer, serversToMount, retryDelayMs } = await import("../mount");
@@ -439,15 +439,35 @@ describe("dropping a sign-in", () => {
 });
 
 describe("the way back", () => {
-  it("state of another session person is refused", async () => {
-    const back = await fake.authorize(await start());
-    expect(await finishSignIn({ state: back.state!, code: back.code! }, "otra-persona", deps())).toEqual({ ok: false, reason: "unknown" });
-    expect(fake.tokenRequests).toHaveLength(0);
-  });
+  // Final review, F5: the `state` alone is not trusted. A sign-in started on the web comes back only to a browser signed
+  // in as its person: someone who started one on THEIR account and sent the provider's URL to a victim would otherwise get
+  // the victim's tokens on their own account.
+  describe("🔴 a sign-in started on the web", () => {
+    const heldRows = async () => (await pg.query(`SELECT "heldTokens" FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL`)).rows;
 
-  it("without a session the state alone is trusted", async () => {
-    const back = await fake.authorize(await start());
-    expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, null, deps())).toEqual({ ok: true, server: "cal" });
+    it("under another person's session: refused, no code exchanged, nothing stored, the state spent", async () => {
+      const back = await fake.authorize(await start());
+      const q = { state: back.state!, code: back.code!, iss: back.iss! };
+      expect(await finishSignIn(q, "p2", deps())).toEqual({ ok: false, reason: "wrong_browser", server: "cal" });
+      expect(fake.tokenRequests).toHaveLength(0);
+      expect((await stored())?.tokens ?? null).toBeNull();
+      expect(await heldRows()).toEqual([]);
+      expect(mounted).toEqual([]);
+      expect(await finishSignIn(q, "p1", deps())).toEqual({ ok: false, reason: "used" });
+    });
+
+    it("with no session: refused the same way", async () => {
+      const back = await fake.authorize(await start());
+      expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, null, deps())).toEqual({ ok: false, reason: "wrong_browser", server: "cal" });
+      expect(fake.tokenRequests).toHaveLength(0);
+      expect((await stored())?.tokens ?? null).toBeNull();
+      expect(await heldRows()).toEqual([]);
+    });
+
+    it("a denial in the wrong browser is refused before anything else (nothing to tell its person)", async () => {
+      const url = new URL(await start());
+      expect(await finishSignIn({ state: url.searchParams.get("state")!, error: "access_denied" }, null, deps())).toEqual({ ok: false, reason: "wrong_browser", server: "cal" });
+    });
   });
 
   it("denied by the person", async () => {
@@ -581,6 +601,125 @@ describe("the way back", () => {
     const r = await finishSignIn({ state: second.searchParams.get("state")!, code: first.code!, iss: first.iss! }, "p1", deps());
     expect(r).toEqual({ ok: false, reason: "exchange_failed", server: "cal" });
     expect((await stored())?.tokens).toEqual(good);
+  });
+});
+
+// Final review, F5: a sign-in started from the phone (the app's key) comes back to the system browser, which usually has
+// no OpenLen session. The code is exchanged, but the tokens are only HELD — no connection, nothing a turn or a mount can
+// use — until the person confirms the account on the way-back page with its one-time token.
+describe("🔴 a sign-in started from the phone", () => {
+  const startPhone = async (person = "p1") => {
+    const r = await startSignIn(person, "cal", deps(), { startedFrom: "phone" });
+    if (!r.ok) throw new Error(`start failed: ${r.reason}`);
+    return r.authorizationUrl;
+  };
+  const backFromProvider = async (session: string | null = null) => {
+    const back = await fake.authorize(await startPhone());
+    return finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, session, deps());
+  };
+  const heldRows = async () => (await pg.query(`SELECT "heldTokens", "confirmHash" FROM "personMcpOAuthFlows" WHERE "heldTokens" IS NOT NULL OR "confirmHash" IS NOT NULL`)).rows as { heldTokens: string | null; confirmHash: string | null }[];
+  const mountDeps = (): MountDeps => {
+    let states: ServerState[] = [];
+    return {
+      readConfig: async () => config,
+      readStates: async () => states,
+      async saveState(_p, s) {
+        states = [s];
+      },
+      resolveCredentials: async () => new Map(),
+      open: openMcp,
+      fetch: fake.fetch,
+      now: () => clock,
+      oauth: deps(),
+    };
+  };
+
+  it("with no session: the code is exchanged, the tokens are held — encrypted, not a connection — and the page asks", async () => {
+    const r = await backFromProvider(null);
+    expect(r).toMatchObject({ ok: "confirm", server: "cal", personId: "p1" });
+    if (r.ok !== "confirm") throw new Error("not held");
+    expect(r.confirmToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(fake.tokenRequests).toHaveLength(1);
+    // Not a connection: no tokens for any turn or mount, and nothing mounted.
+    expect((await stored())?.tokens ?? null).toBeNull();
+    expect(mounted).toEqual([]);
+    expect(await mountServer("p1", "cal", mountDeps())).toMatchObject({ status: "needs-auth" });
+    const err = await connect().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(NeedsSignIn);
+    // Held encrypted, and only the token's hash is kept.
+    const [row] = await heldRows();
+    expect(row?.heldTokens).toBeTruthy();
+    expect(row?.heldTokens).not.toContain("at_");
+    expect(row?.confirmHash).not.toBe(r.confirmToken);
+  });
+
+  it("«Connect to this account» makes them the person's connection and mounts; the token works once", async () => {
+    const r = await backFromProvider(null);
+    if (r.ok !== "confirm") throw new Error("not held");
+    expect(await confirmSignIn(r.confirmToken, "connect", null, deps())).toEqual({ ok: true, server: "cal" });
+    expect((await stored())?.tokens?.access_token).toMatch(/^at_/);
+    expect(mounted).toEqual(["cal"]);
+    expect(await heldRows()).toEqual([]);
+    expect(await confirmSignIn(r.confirmToken, "connect", null, deps())).toEqual({ ok: false, reason: "unknown" });
+    const c = await connect();
+    expect((await c.listTools()).map((t) => t.name)).toEqual(["ping"]);
+    await c.close();
+  });
+
+  it("«This isn't me» discards them: nothing stored, nothing mounted, and they are revoked", async () => {
+    const r = await backFromProvider(null);
+    if (r.ok !== "confirm") throw new Error("not held");
+    expect(await confirmSignIn(r.confirmToken, "discard", null, deps())).toEqual({ ok: false, reason: "discarded", server: "cal" });
+    expect((await stored())?.tokens ?? null).toBeNull();
+    expect(mounted).toEqual([]);
+    expect(await heldRows()).toEqual([]);
+    await vi.waitFor(() => expect(fake.revoked.length).toBeGreaterThan(0));
+    expect(await confirmSignIn(r.confirmToken, "connect", null, deps())).toEqual({ ok: false, reason: "unknown" });
+  });
+
+  it("past the flow's ten minutes they are gone: the confirm is expired, and any sign-in started meanwhile clears them", async () => {
+    const r = await backFromProvider(null);
+    if (r.ok !== "confirm") throw new Error("not held");
+    clock = new Date(NOW.getTime() + 10 * 60 * 1000 + 1);
+    expect(await confirmSignIn(r.confirmToken, "connect", null, deps())).toEqual({ ok: false, reason: "expired" });
+    expect(await heldRows()).toEqual([]);
+    expect((await stored())?.tokens ?? null).toBeNull();
+
+    clock = NOW;
+    const again = await backFromProvider(null);
+    expect(again.ok).toBe("confirm");
+    expect(await heldRows()).toHaveLength(1);
+    clock = new Date(NOW.getTime() + 10 * 60 * 1000 + 1);
+    await startPhone("p2").catch(() => null);
+    expect(await heldRows()).toEqual([]);
+  });
+
+  it("a browser signed in as the same person skips the question", async () => {
+    expect(await backFromProvider("p1")).toEqual({ ok: true, server: "cal" });
+    expect((await stored())?.tokens?.access_token).toMatch(/^at_/);
+    expect(await heldRows()).toEqual([]);
+  });
+
+  it("a browser signed in as another person is refused before any exchange", async () => {
+    expect(await backFromProvider("p2")).toEqual({ ok: false, reason: "other_account", server: "cal" });
+    expect(fake.tokenRequests).toHaveLength(0);
+    expect(await heldRows()).toEqual([]);
+  });
+
+  it("a confirm from a browser signed in as another person is refused, and the held tokens are dropped", async () => {
+    const r = await backFromProvider(null);
+    if (r.ok !== "confirm") throw new Error("not held");
+    expect(await confirmSignIn(r.confirmToken, "connect", "p2", deps())).toEqual({ ok: false, reason: "other_account", server: "cal" });
+    expect((await stored())?.tokens ?? null).toBeNull();
+    expect(await heldRows()).toEqual([]);
+  });
+
+  it("an entry edited before the confirm is not connected", async () => {
+    const r = await backFromProvider(null);
+    if (r.ok !== "confirm") throw new Error("not held");
+    setServer({ headers: { "X-Edited": "1" } });
+    expect(await confirmSignIn(r.confirmToken, "connect", null, deps())).toEqual({ ok: false, reason: "changed", server: "cal" });
+    expect(mounted).toEqual([]);
   });
 });
 

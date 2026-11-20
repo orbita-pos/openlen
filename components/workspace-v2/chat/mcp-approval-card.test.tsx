@@ -477,7 +477,7 @@ describe("signInErrorKey", () => {
   it("maps every code the start, the way back and the popup can produce", () => {
     const codes = [
       "popup_blocked", "sign_in_url_refused", "not_approved", "no_client", "unreachable", "expired", "used", "unknown",
-      "issuer_changed", "exchange_failed", "off", "unauthorized", "not_found", "config_unreadable",
+      "issuer_changed", "exchange_failed", "off", "unauthorized", "not_found", "config_unreadable", "wrong_browser", "other_account",
     ];
     for (const code of codes) expect(signInErrorKey(code), code).not.toBe("failed");
     expect(signInErrorKey("whatever")).toBe("failed");

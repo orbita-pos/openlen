@@ -741,6 +741,8 @@
       "lost": "That sign-in link doesn't work any more. Try again.",
       "issuerChanged": "The sign-in page changed, so nothing was connected. Check where it is now and try again.",
       "exchangeFailed": "The server didn't finish the sign-in. Try again.",
+      "wrongBrowser": "The sign-in finished in a browser that isn't signed in to your OpenLen account, so nothing was connected. Try again from this tab.",
+      "otherAccount": "That sign-in belongs to another OpenLen account, so nothing was connected.",
       "off": "Signing in to connectors is switched off.",
       "unauthorized": "Your OpenLen session ended. Reload the page and try again.",
       "notAvailable": "That connector isn't available.",
