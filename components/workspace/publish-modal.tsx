@@ -6,6 +6,7 @@ import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
 import { AbBringPending } from "@/components/workspace-v2/ab/bring-pending";
+import { AbDecisionInProgress } from "@/components/workspace-v2/ab/decision-in-progress";
 import { AbExperimentRunning } from "@/components/workspace-v2/ab/experiment-running";
 import { LenWatchFixPending } from "@/components/workspace-v2/len-watch/fix-pending";
 import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
@@ -170,6 +171,8 @@ export function PublishModal({
   const [abRunning, setAbRunning] = useState<{ name: string } | null>(null);
   // A promoted A/B winner that isn't in the draft yet: the publish waits for it (review item 26).
   const [abBring, setAbBring] = useState<{ experimentId: string; name: string } | null>(null);
+  // «Stop and publish» met a decision being applied on the test: it says so and touches nothing.
+  const [abDeciding, setAbDeciding] = useState(false);
   const detenerPrueba = useRef(false);
   const dataPreview = useDataChangesPreview(project.id, open);
   // La revisión de seguridad (spec local 2026-10-15): arranca al abrir y se
@@ -319,6 +322,12 @@ export function PublishModal({
       if (outcome.kind === "ab_experiment_running") {
         detenerPrueba.current = false;
         setAbRunning({ name: outcome.name });
+        setSubmitting(null);
+        return;
+      }
+      if (outcome.kind === "ab_decision_in_progress") {
+        detenerPrueba.current = false;
+        setAbDeciding(true);
         setSubmitting(null);
         return;
       }
@@ -761,6 +770,8 @@ export function PublishModal({
               onCancel={() => setLenWatchFix(null)}
             />
           )}
+
+          {abDeciding && <AbDecisionInProgress onClose={() => setAbDeciding(false)} />}
 
           {abBring && (
             <AbBringPending

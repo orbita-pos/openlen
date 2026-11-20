@@ -178,9 +178,16 @@ describe("lib/ab/store & metrics (PGlite)", () => {
     expect((await pendingExperimentViewsForProjects(["p1", "p2"])).map((v) => v.id).sort()).toEqual(["ab_told0001", "ab_untold01"]);
   });
 
+  it("🔴 a re-emit is recorded only on a LIVE experiment: one a decision closed meanwhile keeps its record", async () => {
+    await createExperimentRow({ id: "ab_reemit02", projectId: "p1", name: "r", targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "kept_a", decisionStatus: "resolved", controlReleaseSha: "kept-control", experimentReleaseSha: "old-exp", overridePaths: ["/a.css"] });
+    expect(await recordReemittedRelease("ab_reemit02", "new-release", ["/a.css", "/b.css"])).toEqual({ recorded: false, added: ["/b.css"] });
+    const [row] = (await pg().query<{ experimentReleaseSha: string; controlReleaseSha: string | null; overridePaths: string[] }>(`SELECT "experimentReleaseSha", "controlReleaseSha", "overridePaths" FROM "abExperiments" WHERE "id" = 'ab_reemit02'`)).rows;
+    expect(row).toEqual({ experimentReleaseSha: "old-exp", controlReleaseSha: "kept-control", overridePaths: ["/a.css"] });
+  });
+
   it("🔴 a system re-emit makes the new release the experiment's AND clears the stale fallback: keep-A/harm no longer roll back over what the republish carried (G1+G3 item 18)", async () => {
     await createExperimentRow({ id: "ab_reemit01", projectId: "p1", name: "r", targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "running", decisionStatus: "none", controlReleaseSha: "old-control", experimentReleaseSha: "old-exp" });
-    await recordReemittedRelease("ab_reemit01", "new-release");
+    expect(await recordReemittedRelease("ab_reemit01", "new-release")).toEqual({ recorded: true, added: [] });
     const [row] = (await pg().query<{ experimentReleaseSha: string; controlReleaseSha: string | null }>(`SELECT "experimentReleaseSha", "controlReleaseSha" FROM "abExperiments" WHERE "id" = 'ab_reemit01'`)).rows;
     expect(row).toEqual({ experimentReleaseSha: "new-release", controlReleaseSha: null });
   });

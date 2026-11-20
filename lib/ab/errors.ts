@@ -22,3 +22,16 @@ export class AbExperimentRunningError extends Error {
     return { error: this.code, experimentId: this.experimentId, name: this.experimentName, targetPath: this.targetPath };
   }
 }
+
+/** A system republish that leaves a project alone this time (not an error of the project's: the sweep reports it as skipped):
+ *  a decision is being applied on its experiment, or its launch hasn't finished, or its winner isn't in the draft yet. */
+export class AbRepublishSkipped extends Error {
+  readonly code = "ab_republish_skipped";
+  constructor(
+    public readonly reason: "decision_in_progress" | "bring_pending",
+    message: string,
+  ) {
+    super(message);
+    this.name = "AbRepublishSkipped";
+  }
+}

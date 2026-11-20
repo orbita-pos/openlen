@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { inArray, and, isNotNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { AbRepublishSkipped } from "@/lib/ab/errors";
 import { DataChangesNeedOwnerError } from "@/lib/backend/data-changes";
 import { FunctionsNeedOwnerError } from "@/lib/functions/publish-errors";
 import { publishProject } from "@/lib/projects";
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     } catch (err) {
       // Cambios de tablas o de funciones sin publicar: los publica el dueño
       // (specs locales 2026-10-09 y 2026-10-11).
-      if (err instanceof DataChangesNeedOwnerError || err instanceof FunctionsNeedOwnerError) {
+      if (err instanceof DataChangesNeedOwnerError || err instanceof FunctionsNeedOwnerError || err instanceof AbRepublishSkipped) {
         skipped.push(row.id);
         continue;
       }

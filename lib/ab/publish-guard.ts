@@ -11,12 +11,12 @@ import { db, schema } from "@/lib/db";
 
 import { purgeExperimentEdge } from "./edge-purge";
 import { abTestingEnabled } from "./enabled";
-import { AbExperimentRunningError } from "./errors";
+import { AbExperimentRunningError, AbRepublishSkipped } from "./errors";
 import { buildLiveAbPublish, type LiveAbPublish } from "./live-publish";
-import { cancelLiveExperiment, liveExperimentForProject, type AbExperimentRow } from "./store";
+import { closeDecision, liveExperimentForProject, type AbExperimentRow } from "./store";
 import { cleanupAbWorktree } from "./worktree";
 
-export { AbExperimentRunningError };
+export { AbExperimentRunningError, AbRepublishSkipped };
 
 /** What the caller of `publishProject` says about a live experiment it knows nothing of:
  *  · `keep`   — a SYSTEM republish (republish-all, internal republish): re-emit it, the split survives;
@@ -51,6 +51,12 @@ export async function resolveAbPublish(
   if (!live) return null;
   if (input.policy === "ending") return null;
   if (input.policy === "keep") {
+    // A system republish takes no claim. So it leaves alone an experiment whose decision is being applied (or whose launch
+    // hasn't finished): re-emitting under it would swap a split release over what that decision is publishing.
+    if (live.decisionStatus === "applying" || !live.startedAt) {
+      console.warn(`[ab] a system republish skipped project ${input.projectId}: a decision or a launch is in progress on ${live.id}`);
+      throw new AbRepublishSkipped("decision_in_progress", `A decision on the A/B test "${live.name}" is being applied: this republish is skipped.`);
+    }
     const rebuilt = await deps.rebuild(live, input.ownerId);
     // Can't rebuild it (its copy is gone, nothing published): ending it in silence is the thing to avoid.
     if (!rebuilt) throw refusal(live);
@@ -68,13 +74,24 @@ export async function assertNoLiveExperiment(projectId: string, deps: GuardDeps 
 
 /** What closing the experiment needs (injected by the test). */
 export interface EndDeps {
-  cancel(id: string, actorId: string): Promise<AbExperimentRow | null>;
+  /** Closes the experiment as cancelled, FENCED on the lock the owner's «Stop and publish» holds (`exp.decisionLockToken`). */
+  cancel(exp: AbExperimentRow, actorId: string): Promise<AbExperimentRow | null>;
   cleanup(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void>;
   /** Purges what the edge keeps of the ended experiment (its target page, its languages, the assets B overrode). */
   purge(exp: AbExperimentRow): Promise<void>;
 }
 const realEnd: EndDeps = {
-  cancel: cancelLiveExperiment,
+  cancel: (exp, actorId) => {
+    const now = new Date();
+    return closeDecision(exp.id, exp.decisionLockToken, {
+      status: "cancelled",
+      decisionStatus: "resolved",
+      copyProjectId: null,
+      endedAt: now,
+      decidedAt: now,
+      decidedBy: actorId,
+    });
+  },
   cleanup: cleanupAbWorktree,
   purge: async (exp) => {
     const [row] = await db.select({ subdomain: schema.projects.subdomain, data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, exp.projectId)).limit(1);
@@ -91,7 +108,7 @@ export async function endExperimentAfterPublish(exp: AbExperimentRow, actorId: s
   let failure: unknown = null;
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      ended = await deps.cancel(exp.id, actorId);
+      ended = await deps.cancel(exp, actorId);
       failure = null;
       break;
     } catch (err) {

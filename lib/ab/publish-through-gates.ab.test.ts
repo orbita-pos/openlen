@@ -15,11 +15,16 @@ const m = vi.hoisted(() => ({
   live: vi.fn(),
   unbrought: vi.fn(),
   endAfterPublish: vi.fn(),
+  claim: vi.fn(),
+  hold: vi.fn(),
+  release: vi.fn(),
+  stop: vi.fn(),
   order: [] as string[],
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => enabled.on }));
-vi.mock("@/lib/ab/store", () => ({ liveExperimentForProject: m.live, pendingBringForProject: m.unbrought }));
+vi.mock("@/lib/ab/store", () => ({ liveExperimentForProject: m.live, pendingBringForProject: m.unbrought, claimExperimentDecision: m.claim }));
+vi.mock("@/lib/ab/decision-lock", () => ({ holdDecision: m.hold }));
 vi.mock("@/lib/ab/publish-guard", () => ({ endExperimentAfterPublish: m.endAfterPublish }));
 vi.mock("@/lib/security-review/real", () => ({
   securityReviewer: () => ({ gate: m.gate, wait: vi.fn(async () => null), markPublished: vi.fn(async () => undefined) }),
@@ -50,6 +55,9 @@ beforeEach(() => {
   m.gate.mockResolvedValue({ kind: "open", view: { fingerprint: "f".repeat(64) } });
   m.live.mockResolvedValue(EXP);
   m.unbrought.mockResolvedValue(null);
+  // «Stop and publish» claims the decision first: the claimed row carries the lock's token.
+  m.claim.mockImplementation(async () => ({ ...EXP, decisionStatus: "applying", decisionLockToken: "tok-1" }));
+  m.hold.mockImplementation((row: unknown) => ({ row, release: m.release, stop: m.stop, close: vi.fn() }));
   m.publishProject.mockImplementation(async () => {
     m.order.push("publish");
     return { subdomain: "holi", url: "https://holi.openlen.app", sha: "rel-1" };
@@ -69,8 +77,40 @@ describe("the owner's publish over a live experiment", () => {
     const r = await publishThroughGates({ ...INPUT, stopActiveAb: true });
     expect(r.status).toBe(200);
     expect(m.publishProject).toHaveBeenCalledWith(expect.objectContaining({ abLive: "ending" }));
-    expect(m.endAfterPublish).toHaveBeenCalledWith(EXP, "u1");
+    // it closes the CLAIMED row (the one that carries the lock's token)
+    expect(m.endAfterPublish).toHaveBeenCalledWith(expect.objectContaining({ id: "ab_1234abcd", decisionLockToken: "tok-1" }), "u1");
     expect(m.order).toEqual(["publish", "end-experiment"]);
+    expect(m.stop).toHaveBeenCalledTimes(1); // the heartbeat of the lock stops
+    expect(m.release).not.toHaveBeenCalled();
+  });
+
+  it("🔴 «Stop and publish» CLAIMS the decision before it publishes — and if it can't (a decision is being applied), it is 409 ab_decision_in_progress and publishes nothing", async () => {
+    m.claim.mockResolvedValue(null);
+    const r = await publishThroughGates({ ...INPUT, stopActiveAb: true });
+    expect(r).toEqual({ status: 409, body: { error: "ab_decision_in_progress", experimentId: "ab_1234abcd", name: "Direct hero" } });
+    expect(m.publishProject).not.toHaveBeenCalled();
+    expect(m.endAfterPublish).not.toHaveBeenCalled();
+    expect(m.hold).not.toHaveBeenCalled();
+  });
+
+  it("🔴 a publish that fails gives the lock back (fenced) and stops its heartbeat; the experiment stays as it was", async () => {
+    m.publishProject.mockRejectedValueOnce(new Error("disco lleno"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await publishThroughGates({ ...INPUT, stopActiveAb: true });
+    error.mockRestore();
+    expect(r.status).toBe(500);
+    expect(m.release).toHaveBeenCalledTimes(1);
+    expect(m.stop).toHaveBeenCalledTimes(1);
+    expect(m.endAfterPublish).not.toHaveBeenCalled();
+  });
+
+  it("a claim that can't be read is a clean 503, and nothing is published", async () => {
+    m.claim.mockRejectedValue(new Error("connection terminated"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await publishThroughGates({ ...INPUT, stopActiveAb: true });
+    error.mockRestore();
+    expect(r).toEqual({ status: 503, body: { error: "ab_unavailable" } });
+    expect(m.publishProject).not.toHaveBeenCalled();
   });
 
   it("🔴 a publish that fails leaves the experiment live and untouched", async () => {

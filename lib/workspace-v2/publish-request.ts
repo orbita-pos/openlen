@@ -30,6 +30,8 @@ export type PublishOutcome =
   | { readonly kind: "ab_experiment_running"; readonly experimentId: string; readonly name: string; readonly targetPath: string }
   // A promoted A/B winner that isn't in the draft yet (review item 26): publishing now would undo it. Bring it in or discard it.
   | { readonly kind: "ab_bring_pending"; readonly experimentId: string; readonly name: string; readonly bringState: "pending" | "conflict" }
+  // «Stop and publish» met a decision being applied on the test (review: writers outside the claim): nothing was touched.
+  | { readonly kind: "ab_decision_in_progress"; readonly experimentId: string; readonly name: string }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
 /** A gated POST — publish, or install a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): both answer
@@ -63,6 +65,9 @@ async function postGated(url: string, body: Record<string, unknown>, send: Send 
   // 428 is the question; 409 is a publish that raced a launch (same meaning for the owner: ask).
   if ((res.status === 428 || res.status === 409) && data.error === "ab_experiment_running") {
     return { kind: "ab_experiment_running", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? ""), targetPath: String(data.targetPath ?? "/") };
+  }
+  if (res.status === 409 && data.error === "ab_decision_in_progress") {
+    return { kind: "ab_decision_in_progress", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? "") };
   }
   if (res.status === 428 && data.error === "ab_bring_pending") {
     return { kind: "ab_bring_pending", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? ""), bringState: data.bringState === "conflict" ? "conflict" : "pending" };

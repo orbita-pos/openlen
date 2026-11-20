@@ -1332,7 +1332,13 @@ export async function publishProject(
   // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now.
   if (reemitted) {
     const { recordReemittedRelease } = await import("@/lib/ab/store");
-    await recordReemittedRelease(reemitted.experiment.id, publishResult.sha ?? null, publishResult.abOverrides).catch((err: unknown) => {
+    await recordReemittedRelease(reemitted.experiment.id, publishResult.sha ?? null, publishResult.abOverrides)
+      .then((r) => {
+        if (!r.recorded) {
+          console.error(`[publish] a system re-emit of ${reemitted?.experiment.id} landed, but the experiment was closed meanwhile: its release now carries a split nobody is judging`);
+        }
+      })
+      .catch((err: unknown) => {
       console.error("[publish] couldn't record the re-emitted experiment release", reemitted?.experiment.id, err);
     });
   }

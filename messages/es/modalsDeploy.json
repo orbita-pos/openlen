@@ -113,5 +113,10 @@
     "queued": "Len está trabajando en la página. La variante B entrará en tu borrador cuando termine.",
     "conflict": "Chocó con tus cambios. Pídele a Len que la mezcle a mano, o descártala.",
     "failed": "No se pudo. Inténtalo de nuevo."
+  },
+  "abDecisionInProgress": {
+    "title": "Se está aplicando una decisión sobre la prueba A/B",
+    "body": "Alguien —o el sistema— está aplicando ahora una decisión sobre la prueba A/B de esta página. Publicar a la mitad podría deshacerla. Inténtalo de nuevo en un minuto.",
+    "ok": "Entendido"
   }
 }

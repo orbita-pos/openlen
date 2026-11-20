@@ -113,5 +113,10 @@
     "queued": "Len werkt aan de pagina. Variant B komt in je concept zodra hij klaar is.",
     "conflict": "Het botste met je wijzigingen. Vraag Len het met de hand samen te voegen, of gooi het weg.",
     "failed": "Dat lukte niet. Probeer het opnieuw."
+  },
+  "abDecisionInProgress": {
+    "title": "Er wordt een beslissing over de A/B-test toegepast",
+    "body": "Iemand — of het systeem — past nu een beslissing over de A/B-test van deze pagina toe. Midden in het proces publiceren kan die ongedaan maken. Probeer het over een minuut opnieuw.",
+    "ok": "Begrepen"
   }
 }

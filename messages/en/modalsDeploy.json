@@ -113,5 +113,10 @@
     "queued": "Len is working on the page. Variant B will come into your draft when he finishes.",
     "conflict": "It clashed with your edits. Ask Len to merge it by hand, or discard it.",
     "failed": "That didn't work. Try again."
+  },
+  "abDecisionInProgress": {
+    "title": "A decision on the A/B test is being applied",
+    "body": "Someone — or the system — is applying a decision on this page's A/B test right now. Publishing in the middle could undo it. Try again in a minute.",
+    "ok": "OK"
   }
 }
