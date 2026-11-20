@@ -29,6 +29,47 @@ function deps(o: Partial<SummaryDeps> & { counts?: { talkedWith: number; contact
 // 2026-11-09 08:05 in Lima (UTC−5).
 const AT_8 = new Date("2026-11-09T13:05:00Z");
 
+describe("the A/B decisions the summary says are said once (item 29)", () => {
+  const ready = (id: string) => ({ experimentId: id, projectId: "p1", projectTitle: "Tienda", name: "Hero", status: "winner_ready" as const, winnerVariant: "b" as const, rateA: 0.04, rateB: 0.053, liftPct: 31, totalViews: 900, probability: 0.97 });
+
+  it("🔴 after the summary was queued it marks exactly the decisions it listed as told", async () => {
+    const order: string[] = [];
+    const markAbTold = vi.fn(async () => void order.push("marked"));
+    const d = deps({
+      count: vi.fn(async () => ({ talkedWith: 0, contacts: 0, requests: 0, abReady: [ready("ab_1"), ready("ab_2")] })),
+      notify: vi.fn(async () => void order.push("notified")),
+      markAbTold,
+    });
+    expect(await summaryPass(d, AT_8)).toBe(1);
+    expect(markAbTold).toHaveBeenCalledWith(["ab_1", "ab_2"], AT_8);
+    expect(order).toEqual(["notified", "marked"]);
+  });
+
+  it("🔴 a summary that never went out marks nothing: the decision is said the next morning", async () => {
+    const markAbTold = vi.fn(async () => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const d = deps({
+      count: vi.fn(async () => ({ talkedWith: 0, contacts: 0, requests: 0, abReady: [ready("ab_1")] })),
+      notify: vi.fn(async () => Promise.reject(new Error("queue down"))),
+      markAbTold,
+    });
+    expect(await summaryPass(d, AT_8)).toBe(0);
+    warn.mockRestore();
+    expect(markAbTold).not.toHaveBeenCalled();
+  });
+
+  it("a summary with no A/B decision marks none; a marking that fails doesn't undo a summary that was sent", async () => {
+    const markAbTold = vi.fn(async () => Promise.reject(new Error("db")));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const plain = deps({ markAbTold });
+    expect(await summaryPass(plain, AT_8)).toBe(1);
+    expect(markAbTold).not.toHaveBeenCalled();
+    const withAb = deps({ count: vi.fn(async () => ({ talkedWith: 1, contacts: 0, requests: 0, abReady: [ready("ab_1")] })), markAbTold });
+    expect(await summaryPass(withAb, AT_8)).toBe(1);
+    warn.mockRestore();
+  });
+});
+
 describe("summaryPass", () => {
   it("is at 8 in the morning", () => expect(SUMMARY_HOUR).toBe(8));
 

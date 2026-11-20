@@ -162,6 +162,16 @@ describe("lib/ab/store & metrics (PGlite)", () => {
     expect((await pendingDecisionsForProjects(["p1", "p2", "p3", "p4"])).map((x) => x.experimentId)).toEqual(["ab_pending1"]);
   });
 
+  it("🔴 the morning summary lists a pending decision only until it has told it (notifiedAt), the cards keep showing it (item 29)", async () => {
+    const mk = (id: string, patch: Partial<Parameters<typeof createExperimentRow>[0]>) =>
+      createExperimentRow({ id, projectId: "p1", name: id, targetPath: `/${id}`, primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "winner_ready", decisionStatus: "pending", evaluatedAt: new Date(), ...patch });
+    await pg().query(`INSERT INTO "projects" ("id", "userId", "title") VALUES ('p2','u1','Tienda');`);
+    await mk("ab_untold01", {});
+    await mk("ab_told0001", { projectId: "p2", notifiedAt: new Date() });
+    expect((await pendingDecisionsForProjects(["p1", "p2"])).map((x) => x.experimentId)).toEqual(["ab_untold01"]);
+    expect((await pendingExperimentViewsForProjects(["p1", "p2"])).map((v) => v.id).sort()).toEqual(["ab_told0001", "ab_untold01"]);
+  });
+
   it("computeExperimentMetrics deduplicates repeat reloads and attributes forms + CTA clicks cleanly", async () => {
     await createExperimentRow({
       id: "ab_metr1234",

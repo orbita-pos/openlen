@@ -155,29 +155,38 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     }
     return { status: 200, body: result as unknown as Record<string, unknown> };
   } catch (err) {
-    if (err instanceof SubdomainInvalidError) return { status: 400, body: { error: err.reason } };
-    if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
-    if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
-    if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
-    if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
-    // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
-    if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };
-    // Una app web que no compila no se publica (spec local 2026-10-07-apps):
-    // se dice qué fichero y qué línea, para el dueño y para Len.
-    if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
-    // Los datos (spec local 2026-10-09): una migración que falla en producción,
-    // o lo destructivo sin confirmar.
-    const dataError = dataChangesErrorBody(err);
-    if (dataError) return dataError;
-    // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
-    const stripeError = stripePublishErrorBody(err);
-    if (stripeError) return stripeError;
-    // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
-    // o su despliegue falló (la página no cambió).
-    const fnError = functionsPublishErrorBody(err);
-    if (fnError) return fnError;
+    const mapped = publishErrorResult(err);
+    if (mapped) return mapped;
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);
     return { status: 500, body: { error: "publish_failed" } };
   }
+}
+
+/** The publish's own errors as the answer a route gives (status and body): the subdomain, the data, Stripe, the Edge Functions,
+ *  an app that doesn't compile, a live experiment. `null` = not one of ours, the caller decides (a 500). The publish route and
+ *  the A/B launch both answer through it, so a launch that stops at a missing secret says so instead of «launch_failed». */
+export function publishErrorResult(err: unknown): GatedPublishResult | null {
+  if (err instanceof SubdomainInvalidError) return { status: 400, body: { error: err.reason } };
+  if (err instanceof SubdomainTakenError) return { status: 409, body: { error: "taken" } };
+  if (err instanceof SubdomainLimitError) return { status: 402, body: { error: "limit_reached", limit: err.limit } };
+  if (err instanceof ProjectNotFoundError) return { status: 404, body: { error: "not_found" } };
+  if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
+  // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
+  if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };
+  // Una app web que no compila no se publica (spec local 2026-10-07-apps):
+  // se dice qué fichero y qué línea, para el dueño y para Len.
+  if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };
+  // Los datos (spec local 2026-10-09): una migración que falla en producción,
+  // o lo destructivo sin confirmar.
+  const dataError = dataChangesErrorBody(err);
+  if (dataError) return dataError;
+  // Stripe (spec local 2026-10-21-stripe-integration, §6.4): keys of two accounts, or the copy to live mode failed.
+  const stripeError = stripePublishErrorBody(err);
+  if (stripeError) return stripeError;
+  // Las Edge Functions (spec local 2026-10-11): no compilan, faltan secretos,
+  // o su despliegue falló (la página no cambió).
+  const fnError = functionsPublishErrorBody(err);
+  if (fnError) return fnError;
+  return null;
 }

@@ -1,6 +1,6 @@
 // Mobile touch decision card for Edge A/B Testing (Plan 3) inside Tu Asistente → «Pedidos».
 // Shares all translated copy with the web via `movil.asistente` (`own.ab.*`).
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
@@ -32,6 +32,8 @@ export function MobileAbDecisionCard({
   const [aviso, setAviso] = useState<string | null>(null);
   const [listo, setListo] = useState<string | null>(null);
   const [actual, setActual] = useState<AbExperimentView>(experiment);
+  // The list reloads (every visit to the tab, every decision): a card that kept its first copy would show a stale verdict.
+  useEffect(() => setActual(experiment), [experiment]);
 
   const metrics = actual.metrics;
   const stats = metrics?.stats;

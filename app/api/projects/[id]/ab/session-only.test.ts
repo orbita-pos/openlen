@@ -14,6 +14,7 @@ vi.mock("@/auth", () => ({ auth: async () => m.session }));
 vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: m.keyLookup }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: m.exigirAcceso, puede: () => true }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
+vi.mock("@/lib/projects/publish-through-gates", () => ({ publishErrorResult: () => null }));
 vi.mock("@/lib/ab/lifecycle", () => ({
   AbLifecycleError: class extends Error {},
   createAbDraft: vi.fn(),

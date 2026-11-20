@@ -31,14 +31,15 @@ export async function GET(
   const variant = url.searchParams.get("variant") === "b" ? "b" : "a";
 
   let html = "";
-  if (variant === "b" && exp.copyProjectId) {
-    const src = await copySources(exp.copyProjectId).catch(() => null);
-    if (src) {
-      html =
-        exp.targetPath === "/"
-          ? src.data.html
-          : (src.data.pages?.[exp.targetPath.slice(1)]?.html ?? src.data.html);
-    }
+  if (variant === "b") {
+    // No copy left (the experiment ended and its worktree was cleaned): there is no Variant B to show — never Control A
+    // under B's name (review item 29).
+    const src = exp.copyProjectId ? await copySources(exp.copyProjectId).catch(() => null) : null;
+    if (!src) return new Response("Not found", { status: 404 });
+    html =
+      exp.targetPath === "/"
+        ? src.data.html
+        : (src.data.pages?.[exp.targetPath.slice(1)]?.html ?? src.data.html);
   } else {
     const control = await ensurePublishedSources(id, acceso.duenoId).catch(() => null);
     if (control) {
