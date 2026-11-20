@@ -1,6 +1,6 @@
 // @vitest-environment node
 // Real Postgres (PGlite) contract tests for OpenLen Edge A/B Testing (Plan 3):
-//   - Idempotent migration DDL (`CREATE_AB_TESTING`)
+//   - Idempotent migration DDL (`runAbTestingMigration`)
 //   - Unique partial index enforcing at most ONE active experiment per (projectId, targetPath)
 //   - Atomic CAS race on `claimExperimentDecision` (double-click Web + Mobile)
 //   - Live SQL attribution in `computeExperimentMetrics` + `upsertExperimentDailySnapshot`
@@ -9,7 +9,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as schema from "@/lib/db/schema";
-import { CREATE_AB_TESTING } from "@/scripts/ab-testing-migrate-sql";
+import { runAbTestingMigration, type MigrationClient } from "@/scripts/ab-testing-migrate-sql";
 
 const base = vi.hoisted(() => ({ db: null as unknown, pg: null as unknown }));
 vi.mock("@/lib/db", async () => {
@@ -40,18 +40,14 @@ beforeEach(async () => {
   await db.query(`CREATE TABLE "formSubmissions" ("id" text PRIMARY KEY, "projectId" text NOT NULL, "meta" jsonb, "createdAt" timestamp NOT NULL DEFAULT now());`);
   await db.query(`CREATE TABLE "bookings" ("id" text PRIMARY KEY, "projectId" text NOT NULL, "cid" text, "createdAt" timestamp NOT NULL DEFAULT now());`);
   await db.query(`INSERT INTO "projects" ("id", "userId", "title") VALUES ('p1', 'u1', 'Panadería Sol');`);
-  for (const stmt of CREATE_AB_TESTING) {
-    await db.query(stmt);
-  }
+  await runAbTestingMigration(db as unknown as MigrationClient);
   base.pg = db;
   base.db = drizzle(db, { schema });
 });
 
 describe("lib/ab/store & metrics (PGlite)", () => {
   it("migration DDL is idempotent when re-executed", async () => {
-    for (const stmt of CREATE_AB_TESTING) {
-      await expect(pg().query(stmt)).resolves.toBeDefined();
-    }
+    await expect(runAbTestingMigration(pg() as unknown as MigrationClient)).resolves.toBeUndefined();
   });
 
   it("enforces at most one active experiment per (projectId, targetPath) via partial unique index", async () => {

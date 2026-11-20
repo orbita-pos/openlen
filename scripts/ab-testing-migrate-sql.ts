@@ -62,12 +62,82 @@ export const CREATE_AB_TESTING: readonly string[] = [
     CONSTRAINT "abExperimentDaily_experimentId_abExperiments_id_fk"
       FOREIGN KEY ("experimentId") REFERENCES "abExperiments"("id") ON DELETE CASCADE
   );`,
-  // Additive attribution column on pageEvents + partial index (zero overhead when no A/B runs).
+  // Additive attribution column on pageEvents. Its partial index, and the one on formSubmissions, are built
+  // CONCURRENTLY by `runAbTestingMigration` (see CREATE_AB_TESTING_CONCURRENT below).
   `ALTER TABLE "pageEvents" ADD COLUMN IF NOT EXISTS "ab" text;`,
-  `CREATE INDEX IF NOT EXISTS "pageEvents_projectId_ab_ts_idx"
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The indexes on the HOT tables (review item 4). `pageEvents` takes an insert on every page view of every published
+// site and `formSubmissions` the leads: a plain CREATE INDEX holds a lock that stops those writes until it is built,
+// and the migration runs in the deploy. So they are built CONCURRENTLY, which cannot run inside a transaction block —
+// each goes alone, on one connection (`runAbTestingMigration`), never inside BEGIN/COMMIT.
+//
+// A CONCURRENTLY build that is interrupted (a deploy killed, a lock timeout) leaves an INVALID index of the same name,
+// and `IF NOT EXISTS` would then skip it forever: the runner drops an invalid one before building.
+// ─────────────────────────────────────────────────────────────────────────────
+export interface AbConcurrentIndex {
+  readonly name: string;
+  readonly sql: string;
+}
+
+export const CREATE_AB_TESTING_CONCURRENT: readonly AbConcurrentIndex[] = [
+  {
+    name: "pageEvents_projectId_ab_ts_idx",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS "pageEvents_projectId_ab_ts_idx"
     ON "pageEvents" ("projectId", "ab", "ts")
     WHERE "ab" IS NOT NULL;`,
-  `CREATE INDEX IF NOT EXISTS "formSubmissions_projectId_ab_idx"
+  },
+  {
+    name: "formSubmissions_projectId_ab_idx",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS "formSubmissions_projectId_ab_idx"
     ON "formSubmissions" ("projectId", ("meta" ->> 'ab'))
     WHERE ("meta" ->> 'ab') IS NOT NULL;`,
+  },
 ];
+
+/** How long a DDL waits for a lock before it gives up (instead of making every insert queue behind IT). */
+export const AB_LOCK_TIMEOUT = "5s";
+/** Postgres' `lock_not_available`, what `lock_timeout` raises. */
+const LOCK_NOT_AVAILABLE = "55P03";
+const LOCK_ATTEMPTS = 5;
+
+/** What the runner needs from ONE connection (a `pg` client or PGlite): the same session must see the `SET`. */
+export interface MigrationClient {
+  query(text: string, params?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>;
+}
+
+/** Runs the whole migration on ONE connection, outside any transaction: `lock_timeout` first, the plain statements,
+ *  then the hot-table indexes CONCURRENTLY. A statement that times out on a lock is retried a few times, with a growing
+ *  pause; any other error goes up (the deploy stops before the swap, and the migration is idempotent: run it again). */
+export async function runAbTestingMigration(
+  client: MigrationClient,
+  opts: { readonly sleep?: (ms: number) => Promise<void> } = {},
+): Promise<void> {
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const retrying = async (run: () => Promise<unknown>): Promise<void> => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await run();
+        return;
+      } catch (err) {
+        const code = (err as { code?: unknown } | null)?.code;
+        if (code !== LOCK_NOT_AVAILABLE || attempt >= LOCK_ATTEMPTS) throw err;
+        await sleep(attempt * 2_000);
+      }
+    }
+  };
+
+  await client.query(`SET lock_timeout = '${AB_LOCK_TIMEOUT}'`);
+  for (const statement of CREATE_AB_TESTING) await retrying(() => client.query(statement));
+  for (const index of CREATE_AB_TESTING_CONCURRENT) {
+    await retrying(async () => {
+      const state = await client.query(
+        `SELECT i.indisvalid AS valid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = $1`,
+        [index.name],
+      );
+      if (state.rows[0]?.valid === false) await client.query(`DROP INDEX CONCURRENTLY IF EXISTS "${index.name}"`);
+      await client.query(index.sql);
+    });
+  }
+}
