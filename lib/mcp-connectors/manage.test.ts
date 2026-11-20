@@ -156,10 +156,11 @@ describe("listView", () => {
       authScope: null,
     };
     const s = deps({ text, approved: { cal: fingerprint }, version: 2 }, [state]);
-    expect((await listView("p1", { ...s.d, env: {} })).servers[0]).toMatchObject({ status: "needs-auth", oauth: true });
+    expect((await listView("p1", { ...s.d, env: {} })).servers[0]).toMatchObject({ status: "needs-auth", oauth: true, signIn: { issuerHost: "accounts.google.com", reason: "first" } });
     const off = (await listView("p1", { ...s.d, env: { OPENLEN_MCP_OAUTH: "0" }, oauthServers: async () => new Set(["cal"]) })).servers[0];
     expect(off).toMatchObject({ status: "failed", error: "needs authentication" });
     expect(off?.oauth).toBeUndefined();
+    expect(off?.signIn).toBeUndefined();
   });
 
   it("a server Len added waits, with its card", async () => {

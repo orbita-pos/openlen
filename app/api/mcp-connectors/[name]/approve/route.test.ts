@@ -12,6 +12,7 @@ const fake = vi.hoisted(() => ({
   credentials: new Map<string, string>(),
   approved: [] as unknown[][],
   mounted: [] as string[],
+  mountedState: null as Record<string, unknown> | null,
 }));
 vi.mock("@/lib/mcp-connectors/store", () => ({
   readMcpConfig: async () => fake.row,
@@ -32,7 +33,7 @@ vi.mock("@/lib/mcp-connectors/real", () => ({
 vi.mock("@/lib/mcp-connectors/mount", () => ({
   mountServer: async (_p: string, name: string) => {
     fake.mounted.push(name);
-    return { serverName: name, status: "connected", tools: [{ publicName: "mcp__notion__search" }] };
+    return fake.mountedState ?? { serverName: name, status: "connected", tools: [{ publicName: "mcp__notion__search" }] };
   },
 }));
 
@@ -55,6 +56,7 @@ beforeEach(() => {
   fake.credentials.clear();
   fake.approved.length = 0;
   fake.mounted.length = 0;
+  fake.mountedState = null;
 });
 
 describe("POST /api/mcp-connectors/[name]/approve", () => {
@@ -90,6 +92,16 @@ describe("POST /api/mcp-connectors/[name]/approve", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+
+  // Final review, F4 (spec §10.5): a server Len added without an `oauth` block that turns out to need a sign-in — the card
+  // can't know it before approving. The answer says where, so the card offers «Conectar» naming that host.
+  it("🔴 a mount that asks for a sign-in answers where (the host it found) and why", async () => {
+    fake.mountedState = { serverName: "notion", status: "needs-auth", tools: [], error: "needs authentication", authIssuer: "https://accounts.google.com", authReason: "first", authScope: null };
+    const res = await post({ fingerprint: FP, version: 3, credentials: { NOTION_TOKEN: "x" } });
+    expect(await res.json()).toEqual({
+      state: { status: "needs-auth", tools: 0, error: "needs authentication", signIn: { issuerHost: "accounts.google.com", reason: "first" } },
+    });
   });
 
   it("401 without a session", async () => {
