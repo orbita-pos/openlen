@@ -41,6 +41,8 @@ vi.mock("@/lib/ab/store", () => ({
   claimExperimentDecision: vi.fn(),
   releaseDecisionLock: vi.fn(),
   updateExperiment: h.updateExperiment,
+  claimLaunch: async () => ({ ...h.exp, status: "running" }),
+  releaseLaunch: vi.fn(),
   toExperimentView: (row: unknown) => row,
   normalizePrimaryMetric: (m: unknown) => m,
   normalizeTargetPath: (p: unknown) => p,

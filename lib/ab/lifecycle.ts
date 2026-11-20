@@ -18,11 +18,13 @@ import { abSpecOf, loadControlSources } from "./live-publish";
 import {
   activeExperimentForTarget,
   claimExperimentDecision,
+  claimLaunch,
   createExperimentRow,
   DECISION_LOCK_CLEARED,
   getExperimentById,
   liveExperimentForProject,
   normalizePrimaryMetric,
+  releaseLaunch,
   normalizeTargetPath,
   releaseDecisionLock,
   toExperimentView,
@@ -311,17 +313,38 @@ export async function launchAbExperiment(p: {
   // draft was made (item 12): going back to that one would undo every publication in between.
   const controlReleaseSha = project.publishedReleaseSha ?? null;
 
-  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`.
-  const pub = await publishProject({
-    projectId: p.projectId,
-    userId: p.ownerId,
-    subdomain: project.subdomain,
-    skipFlightCheck: true,
-    dataChanges: { mode: "skip" },
-    sourcesOverride: { data: control.data, folder: control.folder },
-    protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
-    abExperiment: abSpecOf(exp, variantBSrc, splitBps),
-  });
+  // 3b. TAKE THE PROJECT'S ONE LIVE SLOT before writing anything: the check above is a read, and two launches at the same
+  //     instant both pass it. The unique index decides; the loser publishes nothing (review: one live experiment per project).
+  const claimed = await claimLaunch(exp.id);
+  if (claimed === "taken") {
+    throw new AbLifecycleError(
+      "ab_already_running",
+      "Another A/B test of this site started a moment ago. Decide it (keep A, promote B) before launching a new one.",
+      409,
+    );
+  }
+  if (claimed === "moved") {
+    throw new AbLifecycleError("invalid_state", `Experiment ${exp.id} is no longer a draft.`, 409);
+  }
+
+  // 4. Publish atomic release containing Control A + `openlen/ab/<id>/b/` + `openlen/ab.json`. A publish that fails gives
+  //    the slot back: the experiment is a draft again.
+  let pub: Awaited<ReturnType<typeof publishProject>>;
+  try {
+    pub = await publishProject({
+      projectId: p.projectId,
+      userId: p.ownerId,
+      subdomain: project.subdomain,
+      skipFlightCheck: true,
+      dataChanges: { mode: "skip" },
+      sourcesOverride: { data: control.data, folder: control.folder },
+      protectReleaseShas: controlReleaseSha ? [controlReleaseSha] : [],
+      abExperiment: abSpecOf(exp, variantBSrc, splitBps),
+    });
+  } catch (err) {
+    await releaseLaunch(exp.id).catch((e: unknown) => console.error("[ab] couldn't give the launch slot back", exp.id, e));
+    throw err;
+  }
 
   // 5. Purge previous cached Control HTML from Cloudflare PoPs immediately.
   const langs = control.data.settings?.languages ?? [];
