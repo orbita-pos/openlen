@@ -31,7 +31,7 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     cargas[`../../messages/${idioma}/modalsDeploy.json`]!(),
   ]);
   // The Publish screen says what the web's Publish dialog says about an A/B test (review items 13, 14, 26).
-  const gestion = { ...textosGestion[idioma], abRunning: sub(modalsDeploy.default, "abRunning"), abBringPending: sub(modalsDeploy.default, "abBringPending") };
+  const gestion = { ...textosGestion[idioma], abRunning: sub(modalsDeploy.default, "abRunning"), abBringPending: sub(modalsDeploy.default, "abBringPending"), abDecisionInProgress: sub(modalsDeploy.default, "abDecisionInProgress") };
   const herramientas = { ...textosHerramientas[idioma], tools: sub(wsChrome.default, "tools"), installCard: sub(panelsChat.default, "installCard"), toolCard: sub(panelsChat.default, "toolCard"), mcpApproval: sub(panelsChat.default, "mcpApproval") };
   // The person's own assistant's tab (phase 5): her place's texts are the web's own (`own`).
   const asistente = { ...textosAsistente[idioma], own: sub(panelsChat.default, "ownAssistant") };

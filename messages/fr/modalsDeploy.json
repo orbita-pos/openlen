@@ -113,5 +113,10 @@
     "queued": "Len travaille sur la page. La variante B entrera dans votre brouillon quand il aura fini.",
     "conflict": "Elle entre en conflit avec vos modifications. Demandez à Len de la fusionner à la main, ou abandonnez-la.",
     "failed": "Ça n’a pas marché. Réessayez."
+  },
+  "abDecisionInProgress": {
+    "title": "Une décision sur le test A/B est en cours d’application",
+    "body": "Quelqu’un — ou le système — applique en ce moment une décision sur le test A/B de cette page. Publier en plein milieu pourrait l’annuler. Réessayez dans une minute.",
+    "ok": "Compris"
   }
 }

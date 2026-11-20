@@ -115,6 +115,8 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     }
   }
   const abLive = stopping || i.source === "ab_promote" ? ({ abLive: "ending" } as const) : {};
+  /** «Stop and publish» holds the experiment's decision lock for the whole publish (see below). */
+  let held: import("@/lib/ab/decision-lock").HeldDecision | null = null;
 
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
   // branch isn't in the draft yet would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
@@ -139,6 +141,27 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     waitWhenPending: i.source === "len_watch",
   });
   if ("stop" in seguridad) return seguridad.stop;
+
+  // «STOP AND PUBLISH» TAKES THE DECISION FIRST (review: writers outside the claim). The owner's publish swaps the live release;
+  // while the harm brake or another decision holds the lock, a swap in between would be rolled back over, or would undo theirs,
+  // and the owner never told. So it claims the experiment like any decision does — and if it can't, it says so.
+  if (stopping) {
+    try {
+      const claimed = await (await import("@/lib/ab/store")).claimExperimentDecision(stopping.id, i.projectId);
+      if (!claimed) {
+        return {
+          status: 409,
+          body: { error: "ab_decision_in_progress", experimentId: stopping.id, name: stopping.name },
+        };
+      }
+      stopping = claimed;
+      held = (await import("@/lib/ab/decision-lock")).holdDecision(claimed);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[publish] couldn't claim the A/B experiment to stop it", err);
+      return { status: 503, body: { error: "ab_unavailable" } };
+    }
+  }
 
   try {
     // La versión «Publicado» lleva el nombre de quien publicó (lib/projects/autor-del-cambio.ts).
@@ -173,11 +196,15 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
     }
     return { status: 200, body: result as unknown as Record<string, unknown> };
   } catch (err) {
+    // The publish failed: the experiment is as it was, and the lock goes back as it was (fenced on its own token).
+    await held?.release();
     const mapped = publishErrorResult(err);
     if (mapped) return mapped;
     // eslint-disable-next-line no-console
     console.error("[publish] unexpected error:", err);
     return { status: 500, body: { error: "publish_failed" } };
+  } finally {
+    held?.stop();
   }
 }
 

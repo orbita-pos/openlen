@@ -160,3 +160,19 @@ it("🔴 un ganador de la prueba A/B aún sin traer al borrador: lo dice, y no o
   expect(alerta).toContain("body");
   expect(alerta).not.toContain("publicarIgual");
 });
+
+it("🔴 «Detener y publicar» que encuentra una decisión en curso: lo dice, no publica nada, y se cierra", async () => {
+  const posts: unknown[] = [];
+  await montar({ avisarAlCerrar: vi.fn(), pedir: async (r, init) => {
+    if (r.endsWith("/publish")) { posts.push(JSON.parse(String(init?.body))); return Response.json({ error: "ab_decision_in_progress", experimentId: "ab_1", name: "Hero" }, { status: 409 }); }
+    return Response.json({ project });
+  } });
+  await act(async () => host.querySelector<HTMLButtonElement>(".gestion-principal")!.click());
+  const alerta = host.querySelector('[role="alert"]')?.textContent ?? "";
+  expect(alerta).toContain("title");
+  expect(alerta).toContain("body");
+  expect(alerta).not.toContain("publicarIgual");
+  expect(posts).toHaveLength(1);
+  await act(async () => boton("ok").click());
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});

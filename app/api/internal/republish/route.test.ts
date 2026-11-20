@@ -21,6 +21,7 @@ vi.mock("@/lib/projects", () => ({
 }));
 
 import { POST } from "./route";
+import { AbRepublishSkipped } from "@/lib/ab/errors";
 
 function rowsResult(rows: unknown[]) {
   selectMock.mockReturnValue({ from: () => ({ where: async () => rows }) });
@@ -81,6 +82,16 @@ describe("POST /api/internal/republish", () => {
       // A system republish keeps a live A/B experiment alive (review item 13): the door re-emits it instead of refusing.
       abLive: "keep",
     });
+  });
+
+  it("🔴 un proyecto con una decisión A/B en curso (o un ganador por traer) se salta: va a skipped, no a failed", async () => {
+    process.env.OPENLEN_INTERNAL_SECRET = "s3cr3t";
+    rowsResult([{ id: "a", userId: "u1", subdomain: "a-sub" }, { id: "b", userId: "u2", subdomain: "b-sub" }]);
+    publishMock.mockRejectedValueOnce(new AbRepublishSkipped("decision_in_progress", "a decision is being applied"));
+    const body = await (await post({ "x-internal-secret": "s3cr3t" }, { projectIds: ["a", "b"] })).json();
+    expect(body.skipped).toEqual(["a"]);
+    expect(body.republished).toEqual(["b"]);
+    expect(body.failed).toEqual([]);
   });
 
   it("un publish que truena no aborta el batch (aislamiento por proyecto)", async () => {

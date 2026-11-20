@@ -10,9 +10,9 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { AbExperimentRunningError, assertNoLiveExperiment, endExperimentAfterPublish, resolveAbPublish } = await import("./publish-guard");
+const { AbExperimentRunningError, AbRepublishSkipped, assertNoLiveExperiment, endExperimentAfterPublish, resolveAbPublish } = await import("./publish-guard");
 
-const EXP = { id: "ab_1234abcd", name: "Direct hero", targetPath: "/", status: "running", controlReleaseSha: "rel-c" } as never;
+const EXP = { id: "ab_1234abcd", name: "Direct hero", targetPath: "/", status: "running", controlReleaseSha: "rel-c", startedAt: new Date(), decisionStatus: "none" } as never;
 const REBUILT = { experiment: EXP, sourcesOverride: { data: { html: "A" }, folder: {} }, abExperiment: { id: "ab_1234abcd" }, protectReleaseShas: ["rel-c"] } as never;
 
 function deps(over: Partial<Parameters<typeof resolveAbPublish>[1] & object> = {}) {
@@ -98,6 +98,8 @@ describe("endExperimentAfterPublish", () => {
     await endExperimentAfterPublish(ROW, "u1", d);
     expect(cancel).toHaveBeenCalledTimes(2);
     expect(d.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-1", branch: "ab/ab_1234abcd" });
+    // the close is handed the CLAIMED row (it carries the lock's token: the close is fenced on it)
+    expect(cancel).toHaveBeenCalledWith(ROW, "u1");
   });
 
   it("🔴 an experiment stopped by a publish is purged from the edge (item 24); one decided meanwhile isn't ours", async () => {
@@ -134,5 +136,39 @@ describe("endExperimentAfterPublish", () => {
     await endExperimentAfterPublish(ROW, "u1", d);
     expect(cancel).toHaveBeenCalledTimes(1);
     expect(d.cleanup).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// A SYSTEM RE-EMIT TAKES NO CLAIM, SO IT LEAVES ALONE WHAT A DECISION HOLDS (review: writers outside the claim).
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("a system republish (keep) and an experiment being decided", () => {
+  const WITH = (over: Record<string, unknown>) => ({ ...(EXP as object), startedAt: new Date(), decisionStatus: "none", ...over }) as never;
+
+  it("🔴 a decision is being applied: the republish is SKIPPED (a log line, an AbRepublishSkipped), nothing is rebuilt", async () => {
+    const d = deps({ liveExperiment: vi.fn(async () => WITH({ decisionStatus: "applying" })) });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const err = await resolveAbPublish({ ...base, policy: "keep" }, d).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AbRepublishSkipped);
+    expect(warn.mock.calls.flat().join(" ")).toMatch(/skipped project p1/);
+    warn.mockRestore();
+    expect(d.rebuild).not.toHaveBeenCalled();
+  });
+
+  it("a launch that hasn't finished (no start yet) is skipped the same way", async () => {
+    const d = deps({ liveExperiment: vi.fn(async () => WITH({ startedAt: null })) });
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(resolveAbPublish({ ...base, policy: "keep" }, d)).rejects.toBeInstanceOf(AbRepublishSkipped);
+    warn.mockRestore();
+  });
+
+  it("with no decision in progress the republish re-emits as before", async () => {
+    const d = deps({ liveExperiment: vi.fn(async () => WITH({})) });
+    await expect(resolveAbPublish({ ...base, policy: "keep" }, d)).resolves.toBe(REBUILT);
+  });
+
+  it("the ending policies never look: the decision itself (and «Stop and publish», which holds the lock) is what publishes", async () => {
+    const d = deps({ liveExperiment: vi.fn(async () => WITH({ decisionStatus: "applying" })) });
+    await expect(resolveAbPublish({ ...base, policy: "ending" }, d)).resolves.toBeNull();
   });
 });

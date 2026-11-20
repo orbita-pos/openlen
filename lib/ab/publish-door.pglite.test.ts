@@ -88,8 +88,8 @@ beforeEach(async () => {
 
 const liveExperiment = async (status = "running") =>
   raw.query(
-    `INSERT INTO "abExperiments" ("id","projectId","name","targetPath","salt","status","createdBy","controlReleaseSha")
-     VALUES ('ab_1234abcd','p1','Direct hero','/','salt','${status}','u1','rel-c')`,
+    `INSERT INTO "abExperiments" ("id","projectId","name","targetPath","salt","status","createdBy","controlReleaseSha","startedAt")
+     VALUES ('ab_1234abcd','p1','Direct hero','/','salt','${status}','u1','rel-c', CASE WHEN '${status}' = 'draft' THEN NULL ELSE now() END)`,
   );
 
 describe("with the flag off", () => {
