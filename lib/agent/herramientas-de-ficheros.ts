@@ -1043,7 +1043,16 @@ async function guardarMemoria(
 export { MAX_SKILLS_PER_SCOPE };
 
 const PERSONAL_SKILLS_FROM_THE_CARD =
-  "The person's own skills (~/.len/skills/) are saved only from a review card: call propose_skills with the whole SKILL.md, or, to change one of theirs, read it and send your edits. Writing the file does not save it. The project's skills (/.len/skills/) are still written with Write.";
+  "The person's own skills (~/.len/skills/) are saved only from a review card: call propose_skills with the whole SKILL.md, or, to change one of theirs, read it and send your edits. Writing the file does not save it. To rename one, propose it under the new name and remove the old one only after they save it. The project's skills (/.len/skills/) are still written with Write.";
+
+const RENAME_A_PERSONAL_SKILL =
+  "this command also writes one of the person's skills, which only the review card saves: to rename one, propose it under the new name with propose_skills and remove the old one only after they save it.";
+
+/** Who may write the person's own skills as files: only the person (their Code lens, their terminal); Len and anything
+ *  acting for him propose them on the card (spec local 2026-11-19-agentes-para-todos, §6.6). */
+function mayWritePersonalSkills(session: AgentSession): boolean {
+  return session.autor === "usuario";
+}
 
 /**
  * A USER SKILL IS SAVED (spec local 2026-10-26-len-skills, §4.2): only a SKILL.md that parses, never
@@ -1063,7 +1072,7 @@ async function guardarSkill(
   // THE PERSON'S OWN SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329:
   // its skill files on disk are a read-only cache and `propose_skills` is the way. Their own edit (the Code lens, their
   // terminal) still saves; removing one stays Len's (`rm`), as OpenLen has no list of skills for them to delete from yet.
-  if (at.scope === "personal" && session.autor !== "usuario") return { response: respuesta(fallo(PERSONAL_SKILLS_FROM_THE_CARD)) };
+  if (at.scope === "personal" && !mayWritePersonalSkills(session)) return { response: respuesta(fallo(PERSONAL_SKILLS_FROM_THE_CARD)) };
   if (bundledSkillNames().has(at.name)) {
     return { response: respuesta(fallo(`"${at.name}" is reserved: it is one of OpenLen's own skills. Give yours another name.`)) };
   }
@@ -1252,6 +1261,10 @@ export async function guardarLoDeLaTerminal(
     for (const c of cambios) deshacer(c.ruta, READ_ONLY_REFUSAL);
     return { notas, rechazado, enLaTerminal, escrituras };
   }
+  // A command that writes one of the person's skills (refused: the card's job) and removes one is a rename or a rewrite:
+  // the removal is kept back too, or the skill would just be gone (final review I3).
+  const writesPersonalSkill =
+    !mayWritePersonalSkills(session) && cambios.some((c) => c.tipo !== "borrado" && skillPathOf(c.ruta)?.scope === "personal");
   for (const c of cambios) {
     if (c.ruta.startsWith(ARTIFACT_WORKSPACE)) {
       if (!deps.artifacts) { deshacer(c.ruta, "Artifact sources are unavailable in this session."); continue; }
@@ -1267,6 +1280,10 @@ export async function guardarLoDeLaTerminal(
     if (c.tipo === "borrado") {
       // A SKILL (spec local 2026-10-26-len-skills): `rm` deletes it, like a memory note.
       const skillAt = skillPathOf(c.ruta);
+      if (skillAt?.scope === "personal" && writesPersonalSkill) {
+        deshacer(c.ruta, RENAME_A_PERSONAL_SKILL);
+        continue;
+      }
       if (skillAt && deps.skillStore) {
         await deps.skillStore.remove(skillAt.scope, skillAt.scope === "project" ? virtualProjectOf(session) : personOf(session), skillAt.name);
         enLaTerminal[c.ruta] = null;

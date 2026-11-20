@@ -1201,6 +1201,28 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.equal(estado.upserts.length, 1);
   });
 
+  // Final review I3: `mv ~/.len/skills/a ~/.len/skills/b` is a removal plus a write; the write is refused (the card's job),
+  // so the removal must not go through alone — the skill would just be gone.
+  it("🔴 a rename of the person's skill in Len's terminal keeps it, and says how to rename one", async () => {
+    const mia = SKILL.replace(/cotizar/g, "mia");
+    const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });
+    const s = makeSession();
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(
+      s,
+      deps,
+      [
+        { tipo: "borrado", ruta: "/home/user/.len/skills/mia/SKILL.md" },
+        { tipo: "escrito", ruta: "/home/user/.len/skills/nueva/SKILL.md", contenido: SKILL.replace(/cotizar/g, "nueva"), crea: true },
+      ],
+      antes,
+    );
+    assert.deepEqual(estado.removed, []);
+    assert.equal(estado.upserts.length, 0);
+    assert.match(g.notas.join("\n"), /propose_skills/);
+    assert.equal(g.enLaTerminal["/home/user/.len/skills/mia/SKILL.md"], mia);
+  });
+
   it("Len still removes one of the person's skills when they ask (rm)", async () => {
     const { deps, estado } = depsConSkills({ personal: { u1: { mia: SKILL.replace(/cotizar/g, "mia") } } });
     const s = makeSession();
