@@ -106,9 +106,14 @@ DSH pages, `create_tool` in place of `create_personalized_page`, and our own exa
 agent, agents made by asking Claude instead of a wizard) and of its «Learning» output style (the person does the part
 they learn from), which have no open license. Added on 2026-11-20.
 
-`language-teacher` v0 is ours (same spec, §6.5), after the method of Anthropic's `law-student` skill
-(github.com/anthropics/claude-for-legal, Apache License 2.0, the same license text as
-`LICENSES/anthropic-skills.Apache-2.0.txt`): a placement interview, a plan that results change, short sessions of
-questions that update the plan, Leitner flashcards, questions that make the person think, and corrections that don't
-rewrite their work. Written in our own words for a language, with none of its text. Added on 2026-11-20; delivery 2
-rewrites it.
+`language-teacher` is adapted from Anthropic's `law-student` plugin (github.com/anthropics/claude-for-legal at
+`4a6c651`, `law-student/skills/`: `cold-start-interview`, `study-plan`, `session`, `socratic-drill` and `flashcards`),
+Apache License 2.0, the same license text as `LICENSES/anthropic-skills.Apache-2.0.txt`. Taken: the first conversation
+that asks one thing at a time and whether to drill or explain; a plan whose weak areas weigh double and that results
+re-order; sessions that log the score and the misses; the drill's answers to a right, sloppy, wrong, guessing or stuck
+reply; Leitner boxes at +1/+3/+7/+21 days with a miss back to the first box within hours. Changed: it teaches a
+language, not law; it shows the right form after a second miss (a learner needs the model of the form, an exam drill
+doesn't); it asks one question per turn, stricter than `cold-start-interview`'s two or three, because a real turn of
+2026-11-20 asked two; the placement items, the CEFR summary, the exercise kinds and the conversation mode are ours.
+Written in our own words, with none of its text. v0 added on 2026-11-20 (spec local 2026-11-19-agentes-para-todos,
+§6.5); rewritten the same day for delivery 2.
