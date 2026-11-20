@@ -50,7 +50,7 @@ type Global = typeof globalThis & { [LOCKS]?: Map<string, Promise<unknown>> };
  *  the parent's repository in a serializable transaction, and parallel launches (`subagent` runs concurrently) aborted
  *  each other past their retries: against a real Postgres, 8 at once made 5 copies (03/11). On `globalThis`, like the
  *  registry: the route, the boot and every bundle of this process share it. Other projects don't wait. */
-function oneAtATime<T>(projectId: string, work: () => Promise<T>): Promise<T> {
+export function oneAtATime<T>(projectId: string, work: () => Promise<T>): Promise<T> {
   const locks = ((globalThis as Global)[LOCKS] ??= new Map());
   const next = (locks.get(projectId) ?? Promise.resolve()).then(work);
   const settled = next.then(() => undefined, () => undefined);

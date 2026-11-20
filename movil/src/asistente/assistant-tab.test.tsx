@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("use-intl", () => ({ useTranslations: () => (k: string, v?: Record<string, unknown>) => (v ? `${k} ${JSON.stringify(v)}` : k) }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
-vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn(), marcarSusVisitasLeidas: vi.fn(), figurasEncendidas: vi.fn(async () => false) }));
+vi.mock("../api/asistente", () => ({ leerSusVisitas: vi.fn(), leerSusPedidos: vi.fn(), tocarPedido: vi.fn(), marcarSusVisitasLeidas: vi.fn(), figurasEncendidas: vi.fn(async () => false), leerPruebasAb: vi.fn(async () => []), decidirPruebaAb: vi.fn(async () => ({ ok: true })) }));
 
 import { leerSusPedidos, leerSusVisitas, marcarSusVisitasLeidas, tocarPedido } from "../api/asistente";
 import { AssistantTab } from "./assistant-tab";

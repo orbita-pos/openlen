@@ -48,7 +48,7 @@ export async function summaryPass(d: SummaryDeps, now: Date): Promise<number> {
       if (!(await d.claim(a.id, day.today))) continue;
       const c = await d.count(a.id, await d.projectIdsOf(a.id), day.yesterdayStart, day.yesterdayEnd);
       // «She only talks to you when there is something» (§4.6).
-      if (c.talkedWith === 0 && c.contacts === 0 && c.requests === 0) continue;
+      if (c.talkedWith === 0 && c.contacts === 0 && c.requests === 0 && (c.abReady?.length ?? 0) === 0) continue;
       const locale = a.summaryLocale ?? "en";
       const texts = summaryTexts(locale, a.name, c, `${d.siteUrl}/${locale}/assistant/${encodeURIComponent(a.slug)}`);
       await d.notify(

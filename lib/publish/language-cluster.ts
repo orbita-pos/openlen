@@ -109,6 +109,10 @@ export function buildSitemap(baseUrl: string, cluster: ClusterMember[]): string 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"${xmlnsXhtml}>\n${urls}\n</urlset>\n`;
 }
 
-export function buildRobots(baseUrl: string): string {
-  return `User-agent: *\nAllow: /\n\nSitemap: ${baseUrl}/sitemap.xml\n`;
+export function buildRobots(
+  baseUrl: string,
+  opts?: { readonly disallowAb?: boolean },
+): string {
+  const disallow = opts?.disallowAb ? "Disallow: /_ab/\n" : "";
+  return `User-agent: *\nAllow: /\n${disallow}\nSitemap: ${baseUrl}/sitemap.xml\n`;
 }

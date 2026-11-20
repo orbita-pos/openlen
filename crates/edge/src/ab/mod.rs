@@ -1,0 +1,97 @@
+//! Edge A/B testing engine (`crates/edge/src/ab/`).
+//!
+//! Reads per-release `<publish_root>/<sub>/current/ab.json` via a release-keyed
+//! `moka` cache (0 ms invalidation on atomic symlink rotation, zero Postgres
+//! queries on the hot path) and resolves traffic deterministically between
+//! Control A and Variant B (`_ab/<expId>/b/...`).
+
+pub mod assign;
+pub mod bot;
+pub mod cache;
+pub mod manifest;
+
+use std::net::SocketAddr;
+use std::path::Path;
+use std::time::Instant;
+
+use axum::http::{header, HeaderMap};
+use chrono::Utc;
+
+pub use assign::{
+    evaluate_manifest, hash_variant, is_blocked_internal_path, AbDecision, AssignSource, Variant,
+};
+pub use bot::is_bot;
+pub use cache::{AbManifestCache, DEFAULT_AB_MANIFEST_CACHE_MAX};
+pub use manifest::{normalize_match_path, parse_manifest, AbExperiment, AbManifest};
+
+/// Extract the best-effort client IP from forwarded Cloudflare/Caddy headers
+/// (`cf-connecting-ip`, `x-real-ip`) with TCP peer fallback.
+fn client_ip_from_headers(headers: &HeaderMap, peer: SocketAddr) -> String {
+    for name in ["cf-connecting-ip", "x-real-ip"] {
+        if let Some(val) = headers.get(name).and_then(|v| v.to_str().ok()) {
+            let first = val.split(',').next().unwrap_or(val).trim();
+            if !first.is_empty() && first.parse::<std::net::IpAddr>().is_ok() {
+                return first.to_owned();
+            }
+        }
+    }
+    peer.ip().to_string()
+}
+
+/// Evaluate A/B routing for a subdomain request against `publish_root`.
+/// Returns `(decision, resolved_release_dir)`.
+#[allow(clippy::too_many_arguments)]
+pub async fn evaluate_request(
+    cache: &AbManifestCache,
+    publish_root: &Path,
+    sub: &str,
+    url_path: &str,
+    query: Option<&str>,
+    headers: &HeaderMap,
+    peer: SocketAddr,
+    secure_cookie: bool,
+) -> (Option<AbDecision>, Option<std::path::PathBuf>) {
+    let started = Instant::now();
+    let (manifest_opt, release_dir) = cache.get(publish_root, sub).await;
+    let Some(manifest) = manifest_opt else {
+        return (None, release_dir);
+    };
+
+    let ua = headers
+        .get(header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let accept_lang = headers
+        .get(header::ACCEPT_LANGUAGE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    let cookie = headers
+        .get(header::COOKIE)
+        .and_then(|v| v.to_str().ok());
+    let ip = client_ip_from_headers(headers, peer);
+
+    let decision = evaluate_manifest(
+        &manifest,
+        url_path,
+        query,
+        cookie,
+        ua,
+        accept_lang,
+        &ip,
+        secure_cookie,
+        Utc::now(),
+    );
+
+    if let Some(ref d) = decision {
+        metrics::counter!(
+            "openlen_edge_ab_assignments_total",
+            "variant" => d.variant.as_str(),
+            "source" => d.source.as_label(),
+        )
+        .increment(1);
+        metrics::histogram!("openlen_edge_ab_decision_duration_seconds")
+            .record(started.elapsed().as_secs_f64());
+    }
+
+    (decision, release_dir)
+}

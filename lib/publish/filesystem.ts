@@ -35,6 +35,8 @@ import { consolidateUnsplashCredits } from "@/lib/publish/credits";
 import { stripDesignStash } from "@/lib/publish/design-stash-strip";
 import { wirePublishedForms } from "@/lib/publish/forms";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
+import { AB_COOKIE_PREFIX, AB_OVERRIDE_PARAM, formatAbTag } from "@/lib/analytics/ab-tag";
+import type { AbManifest } from "@/lib/ab/types";
 import { lenWatchEnabled } from "@/lib/len-watch/enabled";
 import { injectWatchSnippet } from "@/lib/len-watch/snippet";
 import { injectTrackingStrip } from "@/lib/publish/tracking-strip";
@@ -225,6 +227,27 @@ export interface PublishParams {
   /** Cuentas preset: also publish the account card at /cuenta (its bytes ARE
    *  the auth card / dashboard — mode:"account" — with no protected doc behind
    *  it). Wears the same detected accent as the gate stubs. */
+  /** Edge A/B testing (Plan 3): bake Control A + Variant B under `_ab/<id>/b/`
+   *  plus `<release>/ab.json` atomically in a single content-addressed release. */
+  abExperiment?: AbPublishSpec;
+  /** Additional release SHAs that `pruneOldReleases` must never delete (e.g.
+   *  `controlReleaseSha` while an A/B experiment is running). */
+  protectReleaseShas?: readonly string[];
+}
+
+export interface AbPublishSpec {
+  readonly id: string;
+  /** Target path: "/" or "/<slug>". */
+  readonly targetPath: string;
+  readonly splitBps: number;
+  readonly salt: string;
+  readonly includeLocales: boolean;
+  readonly expiresAt?: string | null;
+  readonly variantB: {
+    readonly html: string;
+    readonly pages?: ReadonlyArray<{ slug: string; html: string }>;
+    readonly files?: ReadonlyArray<{ path: string; content: string }>;
+  };
 }
 
 const ASSET_URL_RE_FOR =
@@ -524,6 +547,7 @@ async function bakeDocument(
   // Site-page slug this document publishes as (null = home) — forms wiring
   // uses it for page-scoped config + lead attribution.
   page: string | null = null,
+  abTag: string | null = null,
 ): Promise<string> {
   // «La banda manda»: a SECTION module the creator placed somewhere on the site
   // ships ONLY where its band is — inserting Reservas on /citas must not also
@@ -642,7 +666,7 @@ async function bakeDocument(
 
   // Wire <form>s to the OpenLen submit endpoint. Soft-fail.
   try {
-    migratedHtml = wirePublishedForms(migratedHtml, ctx.sub, ctx.formConfigs, page);
+    migratedHtml = wirePublishedForms(migratedHtml, ctx.sub, ctx.formConfigs, page, abTag);
   } catch (err) {
     // eslint-disable-next-line no-console
     console.warn("[publishToDir] form wiring failed; publishing without it", err);
@@ -663,7 +687,7 @@ async function bakeDocument(
 
   // Analytics tracker snippet — AFTER all other rewrites.
   if (ctx.projectId && ctx.analyticsEnabled) {
-    migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId, page);
+    migratedHtml = injectAnalyticsSnippet(migratedHtml, ctx.projectId, page, abTag);
   }
 
   // Len Watch (spec local 2026-10-30-len-watch): the page tells OpenLen when it stays blank.
@@ -986,7 +1010,18 @@ export async function publishToDir(
     // Sólo una app: sólo en una app inyecta el compilador las hojas como `text/tailwindcss`.
     tailwindStylesheets: app ? tailwindStylesheetsOf(params.files ?? []) : [],
   };
-  let migratedHtml = await bakeDocument(publishHtml, bakeCtx);
+  const abSpec = !app ? params.abExperiment : undefined;
+  const abTargetPath = abSpec
+    ? abSpec.targetPath === "/"
+      ? "/"
+      : `/${abSpec.targetPath.replace(/^\/+|\/+$/g, "")}`
+    : null;
+  const abTagFor = (slug: string | null, variant: "a" | "b"): string | null => {
+    if (!abSpec || !abTargetPath) return null;
+    const pathHere = slug ? `/${slug}` : "/";
+    return pathHere === abTargetPath ? formatAbTag(abSpec.id, variant) : null;
+  };
+  let migratedHtml = await bakeDocument(publishHtml, bakeCtx, null, abTagFor(null, "a"));
 
 
   // Speak Every Language: translated locale variants of the final baked
@@ -1079,7 +1114,7 @@ export async function publishToDir(
         `publishToDir: refusing to write page /${page.slug} containing data-slot-path`,
       );
     }
-    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug);
+    let doc = await bakeDocument(pageSanitized.html, bakeCtx, page.slug, abTagFor(page.slug, "a"));
     doc = annotateLanguageCluster(doc, {
       baseUrl,
       selfPath: `/${page.slug}/`,
@@ -1121,7 +1156,7 @@ export async function publishToDir(
     // site itself, named by its content. Only where the bubble is hers.
     ...(process.env.OPENLEN_ASSISTANT !== "0" && params.assistant?.enabled === true && params.assistant.persona ? [{ path: FIGURE_ENGINE_PATH, content: FIGURE_ENGINE.code }] : []),
     { path: "sitemap.xml", content: sitemap },
-    { path: "robots.txt", content: buildRobots(baseUrl) },
+    { path: "robots.txt", content: buildRobots(baseUrl, { disallowAb: Boolean(abSpec) }) },
     {
       path: "llms.txt",
       content: buildLlmsTxt({
@@ -1151,6 +1186,142 @@ export async function publishToDir(
   }
   const own = new Set(folder.map((f) => f.path));
   const tree = [...releaseFiles.filter((f) => !own.has(f.path)), ...folder];
+
+  // Edge A/B testing (Plan 3): bake Variant B under `_ab/<id>/b/` with the
+  // SAME canonical selfPath as Control A (SEO safe), plus modified folder files
+  // and `ab.json` manifest read by Rust `crates/edge` and TS fallback.
+  if (abSpec && abTargetPath) {
+    const prefixB = `_ab/${abSpec.id}/b`;
+    const abVariantFiles: Array<{ path: string; content: string }> = [];
+    const variantBLocaleCodes: string[] = [];
+
+    if (abTargetPath === "/") {
+      const bSanitized = gateReservedMarker(stripOpIds(abSpec.variantB.html));
+      if (bSanitized.html === null) {
+        throw new Error("publishToDir: refusing to write A/B Variant B containing data-slot-path");
+      }
+      const bBakeCtx: BakeDocumentCtx = {
+        ...bakeCtx,
+        fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
+      };
+      let bHtml = await bakeDocument(bSanitized.html, bBakeCtx, null, formatAbTag(abSpec.id, "b"));
+      let bLocales: Array<{ locale: string; html: string }> = [];
+      if (
+        abSpec.includeLocales &&
+        params.buildLocaleDocs &&
+        process.env.OPENLEN_LOCALIZE !== "0"
+      ) {
+        try {
+          bLocales = (await params.buildLocaleDocs(bHtml)).filter((d) =>
+            /^[a-z]{2,5}$/.test(d.locale),
+          );
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn("[publishToDir] Variant B localization failed; using root only", err);
+        }
+      }
+      bHtml = annotateLanguageCluster(bHtml, { baseUrl, selfPath: "/", cluster });
+      bHtml = optOutOfEmailObfuscation(seal(bHtml, `/_ab/${abSpec.id}/b/`));
+      abVariantFiles.push({ path: `${prefixB}/index.html`, content: bHtml });
+
+      for (const d of bLocales) {
+        const localized = optOutOfEmailObfuscation(
+          seal(
+            annotateLanguageCluster(d.html, {
+              baseUrl,
+              selfPath: `/${d.locale}/`,
+              cluster,
+            }),
+            `/_ab/${abSpec.id}/b/${d.locale}`,
+          ),
+        );
+        abVariantFiles.push({ path: `${prefixB}/${d.locale}/index.html`, content: localized });
+        variantBLocaleCodes.push(d.locale);
+      }
+    } else {
+      const targetSlug = abTargetPath.slice(1);
+      const bPage = (abSpec.variantB.pages ?? []).find((p) => p.slug === targetSlug);
+      if (!bPage) {
+        throw new Error(`publishToDir: A/B Variant B missing target page /${targetSlug}`);
+      }
+      const bSanitized = gateReservedMarker(stripOpIds(bPage.html));
+      if (bSanitized.html === null) {
+        throw new Error(
+          `publishToDir: refusing to write A/B Variant B page /${targetSlug} containing data-slot-path`,
+        );
+      }
+      const bBakeCtx: BakeDocumentCtx = {
+        ...bakeCtx,
+        fuentesDeClases: fuentesDeClasesDeLaCarpeta(abSpec.variantB.files ?? params.files ?? []),
+      };
+      let bDoc = await bakeDocument(
+        bSanitized.html,
+        bBakeCtx,
+        targetSlug,
+        formatAbTag(abSpec.id, "b"),
+      );
+      bDoc = annotateLanguageCluster(bDoc, {
+        baseUrl,
+        selfPath: `/${targetSlug}/`,
+        cluster: [{ lang: sourceLang, path: `/${targetSlug}/` }],
+      });
+      bDoc = optOutOfEmailObfuscation(seal(bDoc, `/_ab/${abSpec.id}/b/${targetSlug}`));
+      abVariantFiles.push({ path: `${prefixB}/${targetSlug}/index.html`, content: bDoc });
+    }
+
+    // Include only Variant B folder files that differ from Control A (avoids duplication).
+    if (abSpec.variantB.files && abSpec.variantB.files.length > 0) {
+      const bCarpetaPublicable: Record<string, string> = Object.fromEntries(
+        abSpec.variantB.files
+          .filter((f) => isCompileInputPath(f.path))
+          .map((f) => [f.path, f.content]),
+      );
+      const bCompiled = compilarCarpeta({
+        carpeta: bCarpetaPublicable,
+        catalogo: null,
+        ...(params.entorno ? { entorno: params.entorno } : {}),
+      });
+      if (bCompiled.errores.length > 0) {
+        throw new AppNoCompilaError(bCompiled.errores);
+      }
+      const controlByPath = new Map(folder.map((f) => [f.path, f.content]));
+      const bFolder = publishableFolderFiles(bCompiled.ficheros);
+      for (const bf of bFolder) {
+        if (
+          /\.html?$/i.test(bf.path) &&
+          !isBlobPointer(bf.content) &&
+          gateReservedMarker(bf.content).html === null
+        ) {
+          throw new Error(`publishToDir: refusing to write Variant B /${bf.path} containing data-slot-path`);
+        }
+        if (controlByPath.get(bf.path) !== bf.content) {
+          abVariantFiles.push({ path: `${prefixB}/${bf.path}`, content: bf.content });
+        }
+      }
+    }
+
+    for (const f of abVariantFiles) tree.push(f);
+    const contentSha = computeShaFiles(tree);
+    const manifest: AbManifest = {
+      version: 1,
+      releaseSha: contentSha,
+      experiments: [
+        {
+          id: abSpec.id,
+          cookieName: `${AB_COOKIE_PREFIX}${abSpec.id}`,
+          targetPath: abTargetPath,
+          includeLocales: abSpec.includeLocales && variantBLocaleCodes.length > 0,
+          locales: variantBLocaleCodes,
+          splitBps: abSpec.splitBps,
+          salt: abSpec.salt,
+          prefixB,
+          overrideParam: AB_OVERRIDE_PARAM,
+          expiresAt: abSpec.expiresAt ?? null,
+        },
+      ],
+    };
+    tree.push({ path: "ab.json", content: JSON.stringify(manifest) });
+  }
   // EL SERVICE WORKER NO ATRAPA A NADIE (lib/publish/service-worker.ts): donde
   // el sitio tuvo o puede tener uno y esta release no lo trae, va el que se da
   // de baja. Las rutas se recuerdan fuera de la release, para las siguientes.
@@ -1221,9 +1392,8 @@ export async function publishToDir(
   await rename(currentNew, currentPath);
 
   // Best-effort prune of old releases. Keep the RELEASES_KEEP newest by
-  // mtime; never delete the one `current` points at, just in case the
-  // caller is currently rolling back.
-  await pruneOldReleases(releasesDir, sha).catch(() => {});
+  // mtime; never delete the one `current` points at or protected A/B controls.
+  await pruneOldReleases(releasesDir, [sha, ...(params.protectReleaseShas ?? [])]).catch(() => {});
 
   // Keep the protected store in lockstep — drop protected/<sha> dirs whose
   // release no longer exists. Best-effort, same posture as the prune above.
@@ -1535,8 +1705,9 @@ export async function cleanupStaleTmpDirs(): Promise<void> {
 
 async function pruneOldReleases(
   releasesDir: string,
-  protectSha: string,
+  protectShas: string | readonly string[],
 ): Promise<void> {
+  const protectedSet = new Set(typeof protectShas === "string" ? [protectShas] : protectShas);
   let names: string[];
   try {
     names = await readdir(releasesDir);
@@ -1561,7 +1732,7 @@ async function pruneOldReleases(
   );
   if (valid.length <= RELEASES_KEEP) return;
   valid.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  const toDelete = valid.slice(RELEASES_KEEP).filter((x) => x.sha !== protectSha);
+  const toDelete = valid.slice(RELEASES_KEEP).filter((x) => !protectedSet.has(x.sha));
   await Promise.all(
     toDelete.map((x) =>
       rm(path.join(releasesDir, x.sha), { recursive: true, force: true }).catch(

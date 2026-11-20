@@ -8,7 +8,18 @@ import { Inbox } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import type { AbExperimentView } from "@/lib/ab/types";
+import { AbDecisionCard } from "../ab/ab-decision-card";
 import { RequestCard, type RequestCardData } from "./request-card";
+
+function readAbQueryParam(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return new URLSearchParams(window.location.search).get("ab");
+  } catch {
+    return null;
+  }
+}
 
 interface PlaceCard extends RequestCardData {
   readonly projectTitle: string | null;
@@ -18,17 +29,26 @@ export function VisitorRequests({ assistantId, name }: { assistantId: string; na
   const t = useTranslations("panelsChat");
   const locale = useLocale();
   const [cards, setCards] = useState<readonly PlaceCard[] | null>(null);
+  const [abDecisions, setAbDecisions] = useState<readonly AbExperimentView[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [deciding, setDeciding] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   /** The cards pressed here, by the project whose chat Len works in. */
   const [working, setWorking] = useState<Readonly<Record<string, string>>>({});
+  const highlightAb = readAbQueryParam();
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/assistants/${encodeURIComponent(assistantId)}/requests`);
-      if (!res.ok) throw new Error(String(res.status));
-      setCards(((await res.json()) as { cards?: PlaceCard[] }).cards ?? []);
+      const [reqRes, abRes] = await Promise.all([
+        fetch(`/api/assistants/${encodeURIComponent(assistantId)}/requests`),
+        fetch(`/api/assistants/${encodeURIComponent(assistantId)}/ab-decisions`).catch(() => null),
+      ]);
+      if (!reqRes.ok) throw new Error(String(reqRes.status));
+      setCards(((await reqRes.json()) as { cards?: PlaceCard[] }).cards ?? []);
+      if (abRes?.ok) {
+        const abBody = (await abRes.json().catch(() => null)) as { decisions?: AbExperimentView[] } | null;
+        setAbDecisions(Array.isArray(abBody?.decisions) ? abBody.decisions : []);
+      }
       setLoadFailed(false);
     } catch {
       setLoadFailed(true);
@@ -75,7 +95,16 @@ export function VisitorRequests({ assistantId, name }: { assistantId: string; na
     <div className="nice-scroll min-h-0 flex-1 overflow-y-auto" data-visitor-requests="">
       <div className="mx-auto flex w-full max-w-[680px] flex-col gap-3 px-5 pb-10 pt-9">
         <h1 className="mb-1 text-[22px] font-semibold tracking-tight fg">{t("ownAssistant.requests.tab")}</h1>
-        {ordered.length === 0 ? (
+        {abDecisions.map((exp) => (
+          <AbDecisionCard
+            key={exp.id}
+            experiment={exp}
+            assistantName={name}
+            highlight={highlightAb === exp.id}
+            onUpdated={() => void load()}
+          />
+        ))}
+        {ordered.length === 0 && abDecisions.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <span className="her-wash flex h-12 w-12 items-center justify-center rounded-full fg-muted" aria-hidden="true">
               <Inbox size={20} strokeWidth={1.7} />

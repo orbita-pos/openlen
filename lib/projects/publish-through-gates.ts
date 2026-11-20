@@ -26,12 +26,14 @@ export interface GatedPublishInput {
   skipMissingSecrets?: boolean;
   acceptSecurityFingerprint?: string;
   locale?: string;
-  source: "person" | "len_watch";
+  source: "person" | "len_watch" | "ab_promote";
   /** Publishing a Len Watch branch (spec local 2026-10-30-len-watch, §5.5): its sources are this copy's, everything
    *  else the project's; no data changes; reviewed against the project's published base. */
   sourcesFrom?: string;
   /** «Publicar igual» over a Len Watch fix that isn't in the draft yet: that incident, not asked again. */
   acceptLenWatchFix?: string;
+  /** Owner explicitly confirmed stopping an active A/B experiment to publish the draft. */
+  stopActiveAb?: boolean;
 }
 
 export interface GatedPublishResult {
@@ -76,6 +78,43 @@ export async function publishThroughGates(i: GatedPublishInput): Promise<GatedPu
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5 step 5): a person's publish while the fix Len published from its
   // branch isn't in the draft would bring the crash back. It waits for «Traer el arreglo» or «Publicar igual».
   if (i.source === "person") {
+    const { abTestingEnabled } = await import("@/lib/ab/enabled");
+    if (abTestingEnabled()) {
+      const abStore = await import("@/lib/ab/store");
+      const activeAb = await abStore.liveExperimentForProject(i.projectId).catch(() => null);
+      if (activeAb && !i.stopActiveAb) {
+        return {
+          status: 428,
+          body: {
+            error: "ab_experiment_running",
+            experimentId: activeAb.id,
+            name: activeAb.name,
+            targetPath: activeAb.targetPath,
+          },
+        };
+      }
+      if (activeAb && i.stopActiveAb) {
+        const abWt = await import("@/lib/ab/worktree");
+        await abWt
+          .cleanupAbWorktree({
+            parentId: i.projectId,
+            copyProjectId: activeAb.copyProjectId,
+            branch: activeAb.branch,
+          })
+          .catch(() => undefined);
+        await abStore
+          .updateExperiment(activeAb.id, {
+            status: "cancelled",
+            decisionStatus: "resolved",
+            copyProjectId: null,
+            endedAt: new Date(),
+            decidedAt: new Date(),
+            decidedBy: i.actorId,
+          })
+          .catch(() => undefined);
+      }
+    }
+
     const bring = await import("@/lib/len-watch/bring");
     const pending = await bring.pendingFix(i.projectId).catch((err: unknown) => {
       console.warn("[publish] couldn't tell whether a Len Watch fix is pending; publishing", err);

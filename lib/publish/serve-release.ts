@@ -18,6 +18,15 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  abResponseHeaders,
+  evaluateAbManifest,
+  isBlockedInternalAbPath,
+  readReleaseAbManifest,
+  resolveVariantBFile,
+  type AbServeDecision,
+} from "@/lib/ab/serve";
+
 const MIME: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -65,6 +74,7 @@ export async function resolveReleasePath(subDir: string, releaseSha: string, pat
     return null;
   }
   if (decoded.split("/").some((s) => s === "..")) return null;
+  if (isBlockedInternalAbPath(decoded)) return null;
   if (decoded.startsWith("/assets/")) {
     const name = decoded.slice("/assets/".length);
     if (!/^[A-Za-z0-9._-]+$/.test(name)) return null;
@@ -81,10 +91,47 @@ export async function resolveReleasePath(subDir: string, releaseSha: string, pat
 }
 
 export async function serveRelease(subDir: string, releaseSha: string): Promise<ServedRelease> {
+  const releaseDir = path.join(subDir, "releases", releaseSha);
   const handler = async (req: IncomingMessage, res: ServerResponse) => {
     try {
-      const pathname = new URL(req.url ?? "/", "http://release.local").pathname;
-      const file = await resolveReleasePath(subDir, releaseSha, pathname);
+      const parsed = new URL(req.url ?? "/", "http://release.local");
+      const pathname = parsed.pathname;
+      if (isBlockedInternalAbPath(pathname)) {
+        res.writeHead(404).end();
+        return;
+      }
+      let file: string | null = null;
+      let abDecision: AbServeDecision | null = null;
+      if (!pathname.startsWith("/assets/")) {
+        const manifest = await readReleaseAbManifest(releaseDir);
+        if (manifest) {
+          const d = evaluateAbManifest(manifest, {
+            urlPath: pathname,
+            searchParams: parsed.searchParams,
+            cookieHeader: req.headers.cookie ?? null,
+            userAgent: req.headers["user-agent"] ?? null,
+            acceptLanguage: req.headers["accept-language"] ?? null,
+            clientIp: req.socket.remoteAddress ?? "127.0.0.1",
+            secureCookie: false,
+          });
+          if (d) {
+            if (d.variantBPath) {
+              const bFile = await resolveVariantBFile(releaseDir, d.variantBPath, d.isPageRoute);
+              if (bFile) {
+                file = bFile;
+                abDecision = d;
+              } else if (d.isPageRoute) {
+                abDecision = { ...d, variant: "a", variantBPath: null };
+              }
+            } else {
+              abDecision = d;
+            }
+          }
+        }
+      }
+      if (!file) {
+        file = await resolveReleasePath(subDir, releaseSha, pathname);
+      }
       if (!file) {
         res.writeHead(404).end();
         return;
@@ -93,6 +140,7 @@ export async function serveRelease(subDir: string, releaseSha: string): Promise<
       res.writeHead(200, {
         "content-type": MIME[path.extname(file).toLowerCase()] ?? "application/octet-stream",
         "cache-control": "no-store",
+        ...(abDecision ? abResponseHeaders(abDecision, bytes.byteLength) : {}),
       });
       res.end(bytes);
     } catch {

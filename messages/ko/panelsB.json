@@ -133,7 +133,9 @@
       "booked": "Booked",
       "approx": "Approximate · per-browser in one session",
       "untracked": "{count} untracked"
-    }
+    },
+    "testAb": "A/B로 테스트",
+    "abInstruction": "게시된 페이지를 아직 바꾸지 않고 이 개선을 검증하도록 create_ab_variant로 A/B 테스트를 만들어 주세요: {instruction}"
   },
   "toast": {
     "restored": "{label}(으)로 복원했습니다",

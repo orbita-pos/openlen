@@ -244,6 +244,9 @@ const targets = [
   // with IF NOT EXISTS. 🔴 Before the code: the agent route writes it on every model call
   // (best effort — without the table the turn goes on and the store logs the failure).
   "agent-steps-migrate",
+  // EDGE A/B TESTING (Plan 3): abExperiments, abExperimentDaily, and pageEvents.ab.
+  // New, with IF NOT EXISTS. 🔴 Before the code: Drizzle selects pageEvents.ab on queries.
+  "ab-testing-migrate",
 ];
 
 // LO SIMÉTRICO, y es el agujero que faltaba: un script de migración que EXISTE
