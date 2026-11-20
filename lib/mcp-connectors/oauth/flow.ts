@@ -11,23 +11,36 @@
 // discovery state: the issuer the start names is the one the flow is bound to, and at the exchange an issuer that is no
 // longer the flow's is refused (`issuer_changed`) before a code is sent anywhere.
 //
+// And the start checks the sign-in host the person was SHOWN (§10.2): the «Conectar» card named where they sign in, from
+// what an earlier mount discovered. If the discovery at the tap names another host, nothing starts (`issuer_changed`),
+// and the caller stores the new issuer (`rememberNewIssuer`) so the next card names it. A card that named no host (the
+// server's own sign-in page) made no promise to check.
+//
 // Nothing here logs or returns a token, code, verifier or secret; errors from remote servers are redacted and cut short.
 import { auth, AuthorizationServerMismatchError, computeScopeUnion, type OAuthClientProvider, type OAuthDiscoveryState, type StoredOAuthClientInformation } from "@modelcontextprotocol/client";
 
+import { issuerHostOf } from "../approval";
 import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "../config";
 import type { ServerState, StoredConfig } from "../store";
 import { credentialRefsOf, makeRedactor, resolveEntry } from "../templates";
 import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal } from "./clients";
-import { discoverAuthServer, entryClient, shortError, storableClient, type OAuthDeps } from "./provider";
+import { discoverAuthServer, entryClient, shortError, storableClient, type OAuthDeps, type SignInReason } from "./provider";
 import type { OAuthConnection } from "./store";
 
 export type StartDeps = OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> };
 export type FinishDeps = StartDeps & { mount(personId: string, name: string): Promise<ServerState | null> };
 
-export type StartResult = { ok: true; authorizationUrl: string } | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string };
+/** `issuer_changed`: the sign-in host is no longer the one the person was shown — `issuer` is where it is now (what the
+ *  caller stores for the next card) and `issuerHost` what that card will name. */
+export type IssuerChanged = { ok: false; reason: "issuer_changed"; issuer: string | null; issuerHost: string | null };
+export type StartResult =
+  | { ok: true; authorizationUrl: string }
+  | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string }
+  | (IssuerChanged & { error: string });
 export type FinishResult =
   | { ok: true; server: string }
-  | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "issuer_changed" | "exchange_failed"; server?: string };
+  | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed"; server?: string }
+  | (IssuerChanged & { server: string; personId: string });
 
 class AuthorizationEndpointNotHttps extends Error {
   constructor() {
@@ -92,9 +105,16 @@ function flowProvider(
 
 /**
  * «Conectar»: the authorization URL for the person to open (§5.4 step 2). `opts.scope` is what the server last asked
- * for (a 403 `insufficient_scope`, §10.6); it joins the entry's own `oauth.scope`.
+ * for (a 403 `insufficient_scope`, §10.6); it joins the entry's own `oauth.scope`. `opts.expectedIssuerHost` is the
+ * sign-in host the person was shown (§10.2): another one now is `issuer_changed`, and nothing starts. Null or absent:
+ * nothing was named, nothing to check.
  */
-export async function startSignIn(personId: string, serverName: string, d: StartDeps, opts: { scope?: string } = {}): Promise<StartResult> {
+export async function startSignIn(
+  personId: string,
+  serverName: string,
+  d: StartDeps,
+  opts: { scope?: string; expectedIssuerHost?: string | null } = {},
+): Promise<StartResult> {
   const approved = approvedEntry(await d.readConfig(personId), serverName);
   if (!approved) return { ok: false, reason: "not_approved", error: `"${serverName}" is not an approved connector` };
   const { entry, fingerprint } = approved;
@@ -107,6 +127,10 @@ export async function startSignIn(personId: string, serverName: string, d: Start
   const found = await discover(entry, d, redact);
   if (!found.ok) return { ok: false, reason: "unreachable", error: found.error };
   const { issuer } = found;
+  const issuerHost = issuerHostOf(entry, issuer);
+  if (typeof opts.expectedIssuerHost === "string" && issuerHost !== opts.expectedIssuerHost) {
+    return { ok: false, reason: "issuer_changed", issuer, issuerHost, error: "the sign-in page is not the one the person was shown" };
+  }
 
   const own = await entryClient(personId, entry, issuer, d);
   if (isClientRefusal(own)) return { ok: false, reason: "no_client", error: shortError(own.detail, redact) };
@@ -179,8 +203,20 @@ export async function finishSignIn(
   const { entry } = approved;
   if (q.error !== undefined) return { ok: false, reason: "denied", server };
   if (!q.code) return { ok: false, reason: "exchange_failed", server };
+  /** Where the sign-in is now, by the server's own discovery — never by the `iss` in the URL — for the next card. */
+  const changed = async (now: string | null): Promise<FinishResult> => ({
+    ok: false,
+    reason: "issuer_changed",
+    server,
+    personId: flow.personId,
+    issuer: now,
+    issuerHost: now === null ? null : issuerHostOf(entry, now),
+  });
   // RFC 9207: an `iss` on the way back names who minted the code. Not the flow's issuer → a mix-up, never exchanged.
-  if (q.iss !== undefined && q.iss !== flow.issuer) return { ok: false, reason: "issuer_changed", server };
+  if (q.iss !== undefined && q.iss !== flow.issuer) {
+    const again = await discover(entry, d, (t) => t);
+    return changed(again.ok ? again.issuer : null);
+  }
 
   const values = await d.resolveCredentials(flow.personId, credentialRefsOf(entry));
   const resolved = resolveEntry(entry, values);
@@ -189,7 +225,7 @@ export async function finishSignIn(
 
   const found = await discover(entry, d, redact);
   if (!found.ok) return { ok: false, reason: "exchange_failed", server };
-  if (found.issuer !== flow.issuer) return { ok: false, reason: "issuer_changed", server };
+  if (found.issuer !== flow.issuer) return changed(found.issuer);
 
   const own = await entryClient(flow.personId, entry, flow.issuer, d);
   if (isClientRefusal(own)) return { ok: false, reason: "exchange_failed", server };
@@ -214,11 +250,31 @@ export async function finishSignIn(
     const result = await auth(provider, { serverUrl: entry.url, authorizationCode: q.code, iss: q.iss, scope: flow.scope ?? undefined, fetchFn: d.fetch });
     if (result !== "AUTHORIZED") return { ok: false, reason: "exchange_failed", server };
   } catch (err) {
-    if (AuthorizationServerMismatchError.isInstance(err)) return { ok: false, reason: "issuer_changed", server };
+    if (AuthorizationServerMismatchError.isInstance(err)) return changed(found.issuer);
     return { ok: false, reason: "exchange_failed", server };
   }
   await d.mount(flow.personId, server).catch(() => null);
   return { ok: true, server };
+}
+
+/**
+ * After an `issuer_changed` (§10.2): the server waits for a sign-in at the issuer found NOW, so the next «Conectar» names
+ * it. It keeps why it waits (a lapsed sign-in, more permissions) and what scope it asked for; a server that is connected
+ * meanwhile is left as it is. The issuer is a server's own word: `markNeedsAuth` stores it only as an https URL.
+ */
+export async function rememberNewIssuer(
+  personId: string,
+  serverName: string,
+  issuer: string | null,
+  d: {
+    readStates(personId: string): Promise<ServerState[]>;
+    markNeedsAuth(personId: string, serverName: string, reason: SignInReason, issuer: string | null, scope: string | null): Promise<void>;
+  },
+): Promise<void> {
+  const state = (await d.readStates(personId)).find((s) => s.serverName === serverName);
+  if (state?.status === "connected") return;
+  const waiting = state?.status === "needs-auth";
+  await d.markNeedsAuth(personId, serverName, waiting ? (state.authReason ?? "first") : "first", issuer, waiting ? state.authScope : null);
 }
 
 /** The whole of revoking a token, from the first request to the last: past it the courtesy is abandoned. */

@@ -27,7 +27,7 @@ vi.mock("@/lib/db", async () => {
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
 const store = await import("./store");
-const { REVOKE_TIMEOUT_MS, dropSignIn, finishSignIn, startSignIn } = await import("./flow");
+const { REVOKE_TIMEOUT_MS, dropSignIn, finishSignIn, rememberNewIssuer, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
 const { mountServer, serversToMount, retryDelayMs } = await import("../mount");
@@ -181,6 +181,30 @@ describe("signing in", () => {
     setServer({}, { approve: false });
     expect(await startSignIn("p1", "cal", deps())).toMatchObject({ ok: false, reason: "not_approved" });
     expect(await startSignIn("p1", "other", deps())).toMatchObject({ ok: false, reason: "not_approved" });
+  });
+
+  // Final review, F3 (spec §10.2): the card named where the person signs in, from an earlier mount. The start checks the
+  // host it would open against that one; another is refused before any flow exists, with where it is now.
+  describe("the sign-in host the card named", () => {
+    const flows = async () => (await pg.query(`SELECT count(*)::int AS n FROM "personMcpOAuthFlows"`)).rows[0] as { n: number };
+
+    it("🔴 another host now: issuer_changed with the new issuer, and no flow is made", async () => {
+      const r = await startSignIn("p1", "cal", deps(), { expectedIssuerHost: "accounts.example.org" });
+      expect(r).toEqual({ ok: false, reason: "issuer_changed", issuer: fake.issuer, issuerHost: "mcp.fake.test", error: "the sign-in page is not the one the person was shown" });
+      expect((await flows()).n).toBe(0);
+      expect(fake.registrations).toHaveLength(0);
+    });
+
+    it("the same host starts", async () => {
+      const r = await startSignIn("p1", "cal", deps(), { expectedIssuerHost: "mcp.fake.test" });
+      expect(r).toMatchObject({ ok: true });
+      expect((await flows()).n).toBe(1);
+    });
+
+    it("a card that named no host (the server's own sign-in page) made no promise: it starts", async () => {
+      expect(await startSignIn("p1", "cal", deps(), { expectedIssuerHost: null })).toMatchObject({ ok: true });
+      expect(await startSignIn("p1", "cal", deps(), {})).toMatchObject({ ok: true });
+    });
   });
 
   it("a server with no authorization server is unreachable", async () => {
@@ -464,7 +488,15 @@ describe("the way back", () => {
     const url = await start();
     fake.setIssuer("/as2");
     const back = await fake.authorize(url);
-    expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    // Where the sign-in is now comes from the server's own discovery, for the next card (final review, F3).
+    expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, "p1", deps())).toEqual({
+      ok: false,
+      reason: "issuer_changed",
+      server: "cal",
+      personId: "p1",
+      issuer: `${fake.base}/as2`,
+      issuerHost: "mcp.fake.test",
+    });
     expect(fake.tokenRequests).toHaveLength(0);
   });
 
@@ -475,7 +507,7 @@ describe("the way back", () => {
     fake.setIssuer("/as2");
     const back = await fake.authorize(url);
     expect(back.iss).toBeNull();
-    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toMatchObject({ ok: false, reason: "issuer_changed", server: "cal", issuer: `${fake.base}/as2` });
     expect(fake.tokenRequests).toHaveLength(0);
   });
 
@@ -487,8 +519,57 @@ describe("the way back", () => {
 
   it("an iss on the way back that isn't the flow's issuer is refused before the exchange (RFC 9207)", async () => {
     const back = await fake.authorize(await start());
-    expect(await finishSignIn({ state: back.state!, code: back.code!, iss: "https://evil.example" }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    // The `iss` in the URL is never what is remembered: the server's own discovery still says the flow's issuer.
+    expect(await finishSignIn({ state: back.state!, code: back.code!, iss: "https://evil.example" }, "p1", deps())).toMatchObject({
+      ok: false,
+      reason: "issuer_changed",
+      server: "cal",
+      issuer: fake.issuer,
+    });
     expect(fake.tokenRequests).toHaveLength(0);
+  });
+
+  // Final review, F3: after an issuer_changed the server waits at the issuer found now, so the next card names it.
+  describe("rememberNewIssuer", () => {
+    const base: ServerState = {
+      serverName: "cal",
+      fingerprint: "fp",
+      tools: [],
+      instructions: "",
+      hasResources: false,
+      listedAt: null,
+      status: "needs-auth",
+      error: "needs additional permissions (scope: a b)",
+      stale: false,
+      failures: 0,
+      attemptedAt: null,
+      authIssuer: "https://old.example",
+      authReason: "scope",
+      authScope: "a b",
+    };
+    const run = async (states: ServerState[]) => {
+      const marked: unknown[] = [];
+      await rememberNewIssuer("p1", "cal", "https://new.example", {
+        readStates: async () => states,
+        markNeedsAuth: async (...args) => {
+          marked.push(args);
+        },
+      });
+      return marked;
+    };
+
+    it("keeps why the server waits and what it asked for, with the new issuer", async () => {
+      expect(await run([base])).toEqual([["p1", "cal", "scope", "https://new.example", "a b"]]);
+    });
+
+    it("a server with no state, or one that failed, waits for a first sign-in there", async () => {
+      expect(await run([])).toEqual([["p1", "cal", "first", "https://new.example", null]]);
+      expect(await run([{ ...base, status: "failed" }])).toEqual([["p1", "cal", "first", "https://new.example", null]]);
+    });
+
+    it("a connected server is left as it is", async () => {
+      expect(await run([{ ...base, status: "connected" }])).toEqual([]);
+    });
   });
 
   it("second finish with a valid state but a spent code keeps the good tokens", async () => {
@@ -589,7 +670,7 @@ describe("an entry's oauth.authServerMetadataUrl", () => {
     expect(`${url.origin}${url.pathname}`).toBe(`${fake.issuer}/authorize`);
     fake.setIssuer("/as2");
     const back = await fake.authorize(url.toString());
-    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toEqual({ ok: false, reason: "issuer_changed", server: "cal" });
+    expect(await finishSignIn({ state: back.state!, code: back.code! }, "p1", deps())).toMatchObject({ ok: false, reason: "issuer_changed", server: "cal", issuer: `${fake.base}/as2` });
     expect(fake.tokenRequests).toHaveLength(0);
   });
 

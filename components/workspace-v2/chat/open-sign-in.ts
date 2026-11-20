@@ -12,20 +12,27 @@
 //    are read the same way — the page's origin, the message type, and the server this sign-in is for.
 // If the window closes with no word, the server's own state decides: the way back may have been cut after the connection
 // was made, so the connectors are read again and «connected» is what they say.
+//
+// The start is told the sign-in host the card named (`issuerHost`, final review F3, spec §10.2): when the server now signs
+// in elsewhere it answers `issuer_changed` with the new host, and the card shows it before the person taps again.
 import { SIGN_IN_CHANNEL } from "@/lib/mcp-connectors/oauth/sign-in-channel";
 
-/** A sign-in that couldn't start: the server's code, and what it said about it (never shown as a code). */
+import { signInHostFrom as hostIn } from "./sign-in-errors";
+
+/** A sign-in that couldn't start: the server's code, what it said about it (never shown as a code) and, for
+ *  `issuer_changed`, the sign-in host now (null: the server's own page). */
 export class SignInError extends Error {
   constructor(
     readonly code: string,
     readonly detail?: string,
+    readonly issuerHost?: string | null,
   ) {
     super(code);
     this.name = "SignInError";
   }
 }
 
-export type SignInResult = "connected" | "closed" | { error: string; detail?: string };
+export type SignInResult = "connected" | "closed" | { error: string; detail?: string; issuerHost?: string | null };
 
 /** What a start answers: where to send the window, and the name the server ended up with (the directory may pick
  *  `google-calendar-2` when the first name was taken). */
@@ -37,22 +44,27 @@ export interface StartedSignIn {
 export interface OpenSignInOptions {
   approve?: () => Promise<boolean>;
   start?: (server: string) => Promise<string | StartedSignIn>;
+  /** The sign-in host the card named (null: the server's own page), sent to the default start, which checks it. Absent:
+   *  no card (the Herramientas page) — the server checks the host its stored state names. */
+  issuerHost?: string | null;
 }
 
 /** POST to a route that starts a sign-in (`…/<name>/oauth`, `…/directory/<id>`), as `{ authorizationUrl, server? }`. */
-export async function postStart(url: string): Promise<StartedSignIn> {
-  const res = await fetch(url, { method: "POST" });
-  const body = (await res.json().catch(() => ({}))) as { authorizationUrl?: unknown; server?: unknown; detail?: unknown; error?: unknown };
-  if (!res.ok || typeof body.authorizationUrl !== "string") {
-    throw new SignInError(typeof body.error === "string" && body.error ? body.error : String(res.status), typeof body.detail === "string" ? body.detail : undefined);
+export async function postStart(url: string, body?: Record<string, unknown>): Promise<StartedSignIn> {
+  const res = await fetch(url, body ? { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) } : { method: "POST" });
+  const answer = (await res.json().catch(() => ({}))) as { authorizationUrl?: unknown; server?: unknown; detail?: unknown; error?: unknown; issuerHost?: unknown };
+  if (!res.ok || typeof answer.authorizationUrl !== "string") {
+    throw new SignInError(
+      typeof answer.error === "string" && answer.error ? answer.error : String(res.status),
+      typeof answer.detail === "string" ? answer.detail : undefined,
+      hostIn(answer.issuerHost),
+    );
   }
-  return { authorizationUrl: body.authorizationUrl, ...(typeof body.server === "string" && body.server ? { server: body.server } : {}) };
+  return { authorizationUrl: answer.authorizationUrl, ...(typeof answer.server === "string" && answer.server ? { server: answer.server } : {}) };
 }
 
-const defaultStart = (server: string) => postStart(`/api/mcp-connectors/${encodeURIComponent(server)}/oauth`);
-
-function errorOf(err: unknown): { error: string; detail?: string } {
-  if (err instanceof SignInError) return { error: err.code, ...(err.detail ? { detail: err.detail } : {}) };
+function errorOf(err: unknown): { error: string; detail?: string; issuerHost?: string | null } {
+  if (err instanceof SignInError) return { error: err.code, ...(err.detail ? { detail: err.detail } : {}), ...(err.issuerHost !== undefined ? { issuerHost: err.issuerHost } : {}) };
   return { error: err instanceof Error ? err.message : String(err) };
 }
 
@@ -73,7 +85,10 @@ function readMessage(data: unknown, expected: string): SignInResult | null {
   // A success is for a server: one that doesn't say which isn't this sign-in's.
   if (m.ok === true) return m.server === expected ? "connected" : null;
   if (m.reason === "denied") return "closed";
-  return { error: typeof m.reason === "string" && /^[a-z_]{1,40}$/.test(m.reason) ? m.reason : "failed" };
+  const error = typeof m.reason === "string" && /^[a-z_]{1,40}$/.test(m.reason) ? m.reason : "failed";
+  // Where the sign-in is now, when the way back found it moved: a hostname, or nothing.
+  const issuerHost = error === "issuer_changed" ? hostIn((m as { issuerHost?: unknown }).issuerHost) : undefined;
+  return issuerHost !== undefined ? { error, issuerHost } : { error };
 }
 
 /** Is `server` connected now, by OpenLen's own account? Any doubt is «no». */
@@ -116,6 +131,8 @@ export function openSignIn(server: string, opts: OpenSignInOptions = {}): Promis
       }
     }
 
+    const defaultStart = (name: string) =>
+      postStart(`/api/mcp-connectors/${encodeURIComponent(name)}/oauth`, opts.issuerHost !== undefined ? { issuerHost: opts.issuerHost } : undefined);
     let started: StartedSignIn;
     try {
       const answer = await (opts.start ?? defaultStart)(server);

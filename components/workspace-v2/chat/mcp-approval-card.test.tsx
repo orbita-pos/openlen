@@ -189,6 +189,60 @@ describe("McpApprovalCardView", () => {
   });
 });
 
+// Final review, F3 (spec §10.2): the start checks the sign-in host this card named. When it moved, the card names the new
+// host and says the page changed; the next tap is checked against what the person now sees.
+describe("🔴 a sign-in page that moved", () => {
+  const SIGN_IN: McpApprovalCard = {
+    server: "cal",
+    host: "calendarmcp.googleapis.com",
+    headerNames: [],
+    credentials: [],
+    fingerprint: "fp-cal",
+    version: 0,
+    oauth: { issuerHost: "accounts.google.com", reason: "first" },
+  };
+  const AUTH_URL = "https://login.example.org/authorize?state=s1";
+  const fakePopup = () => ({ closed: false, opener: {} as unknown, location: { href: "about:blank" }, close() { this.closed = true; } });
+  const sentBodies = () => fetchMock.mock.calls.filter((c) => String(c[0]).endsWith("/oauth")).map((c) => JSON.parse(String((c[1] as RequestInit).body)));
+  const signInLine = () => document.querySelector("[data-mcp-sign-in]")?.textContent ?? "";
+
+  it("the start is told the host the card named; a move names the new host, says so, and the next tap checks that one", async () => {
+    const popup = fakePopup();
+    window.open = vi.fn(() => popup) as unknown as typeof window.open;
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: "issuer_changed", issuerHost: "login.example.org" }), { status: 409 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ authorizationUrl: AUTH_URL })));
+    await render(SIGN_IN);
+    await act(async () => button("mcpApproval.connect").click());
+    expect(popup.closed).toBe(true);
+    expect(document.body.textContent).toContain("mcpApproval.errors.issuerChanged");
+    expect(signInLine()).toBe('mcpApproval.signInAt {"issuer":"login.example.org"}');
+
+    popup.closed = false;
+    await act(async () => button("mcpApproval.tryAgain").click());
+    expect(sentBodies()).toEqual([{ issuerHost: "accounts.google.com" }, { issuerHost: "login.example.org" }]);
+    expect(popup.location.href).toBe(AUTH_URL);
+  });
+
+  it("a card that named no host tells the start so (null), and the way back's move is shown too", async () => {
+    window.open = vi.fn(() => fakePopup()) as unknown as typeof window.open;
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ authorizationUrl: AUTH_URL })));
+    await render({ ...SIGN_IN, oauth: { issuerHost: null, reason: "lapsed" } });
+    await act(async () => button("mcpApproval.connect").click());
+    expect(sentBodies()).toEqual([{ issuerHost: null }]);
+    await act(async () => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          data: { type: "openlen:mcp-oauth", server: "cal", ok: false, reason: "issuer_changed", issuerHost: "login.example.org" },
+        }),
+      );
+    });
+    expect(document.body.textContent).toContain("mcpApproval.errors.issuerChanged");
+    expect(signInLine()).toBe('mcpApproval.signInAgainAt {"issuer":"login.example.org"}');
+  });
+});
+
 // Review fix OB1: the card says where each thing really goes. A client secret goes to the authorization server's token
 // endpoint, a header's key to the MCP server, and a sign-in that nobody knows the page of is said to be on the server's
 // own sign-in page — never on the MCP server's host, which is where the tools are.

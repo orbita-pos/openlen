@@ -739,7 +739,7 @@
       "unreachable": "Die Anmeldung des Servers war nicht erreichbar. Versuche es gleich noch einmal.",
       "expired": "Die Anmeldung hat zu lange gedauert und ist abgelaufen. Versuche es erneut.",
       "lost": "Dieser Anmeldelink funktioniert nicht mehr. Versuche es erneut.",
-      "issuerChanged": "Die Anmeldeseite ist nicht die, für die dieser Konnektor genehmigt wurde, daher wurde nichts verbunden.",
+      "issuerChanged": "Die Anmeldeseite hat sich geändert, deshalb wurde nichts verbunden. Prüfe, wo sie jetzt ist, und versuche es noch einmal.",
       "exchangeFailed": "Der Server hat die Anmeldung nicht abgeschlossen. Versuche es erneut.",
       "off": "Die Anmeldung bei Konnektoren ist ausgeschaltet.",
       "unauthorized": "Deine OpenLen-Sitzung ist beendet. Lade die Seite neu und versuche es erneut.",

@@ -3,9 +3,10 @@
 // and starts the OAuth sign-in — only for a person the directory offers the entry to. The answer names the server the
 // entry got (`google-calendar-2` when the name was taken), so the page can match the way back.
 import { installAndStartFromDirectory } from "@/lib/mcp-connectors/directory";
+import { rememberNewIssuer } from "@/lib/mcp-connectors/oauth/flow";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { realLenFileDeps, realOAuthDeps, realTurnDeps } from "@/lib/mcp-connectors/real";
-import { readMcpConfig, writeMcpConfig } from "@/lib/mcp-connectors/store";
+import { markNeedsAuth, readMcpConfig, readServerStates, writeMcpConfig } from "@/lib/mcp-connectors/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 
@@ -30,6 +31,11 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
     personEmail: async (p) => (await turnDeps.personEmail?.(p)) ?? null,
   });
   if (r.ok) return json({ server: r.server, authorizationUrl: r.authorizationUrl }, 200);
+  // The sign-in is somewhere else now (spec §10.2): stored, so the server's next card names it.
+  if ("issuerHost" in r) {
+    await rememberNewIssuer(personId, r.server, r.issuer, { readStates: readServerStates, markNeedsAuth }).catch(() => {});
+    return json({ error: r.error, server: r.server, issuerHost: r.issuerHost }, r.status);
+  }
   return json({ error: r.error, ...(r.detail ? { detail: r.detail } : {}) }, r.status);
 });
 

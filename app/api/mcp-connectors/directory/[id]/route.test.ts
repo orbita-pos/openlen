@@ -16,7 +16,10 @@ const fake = vi.hoisted(() => ({
   startedFor: [] as string[],
   startResult: { ok: true, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" } as
     | { ok: true; authorizationUrl: string }
-    | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string },
+    | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string }
+    | { ok: false; reason: "issuer_changed"; error: string; issuer: string | null; issuerHost: string | null },
+  startOpts: [] as unknown[],
+  remembered: [] as unknown[],
 }));
 
 vi.mock("@/lib/movil/quien", () => ({
@@ -24,6 +27,8 @@ vi.mock("@/lib/movil/quien", () => ({
 }));
 vi.mock("@/lib/mcp-connectors/store", () => ({
   readMcpConfig: async () => fake.row,
+  readServerStates: async () => [],
+  markNeedsAuth: async () => {},
   writeMcpConfig: async (_p: string, text: string, expectedVersion: number, approve: Record<string, string>, presentNames: string[]) => {
     if (expectedVersion !== fake.row.version) return { ok: false, reason: "conflict" };
     const keep = new Set(presentNames);
@@ -40,9 +45,13 @@ vi.mock("@/lib/mcp-connectors/real", () => ({
   }),
 }));
 vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
-  startSignIn: async (_p: string, name: string) => {
+  startSignIn: async (_p: string, name: string, _d: unknown, opts?: unknown) => {
     fake.startedFor.push(name);
+    fake.startOpts.push(opts);
     return fake.startResult;
+  },
+  rememberNewIssuer: async (personId: string, name: string, issuer: string | null) => {
+    fake.remembered.push({ personId, name, issuer });
   },
 }));
 
@@ -73,6 +82,8 @@ beforeEach(() => {
   fake.row = { text: '{\n  "servers": {}\n}\n', approved: {}, version: 0 };
   fake.reserved = new Set();
   fake.startedFor.length = 0;
+  fake.startOpts.length = 0;
+  fake.remembered.length = 0;
   fake.startResult = { ok: true, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" };
 });
 
@@ -201,5 +212,16 @@ describe("POST /api/mcp-connectors/directory/[id]", () => {
     expect((await post("unknown-service")).status).toBe(404);
     fake.personId = null;
     expect((await post("google-calendar")).status).toBe(401);
+  });
+
+  // Final review, F3 (spec §10.2): the suggestion card named the directory's issuer; the start checks it.
+  it("🔴 the start checks the host the suggestion card named, and a change is a 409 that remembers the new issuer", async () => {
+    await post("google-calendar");
+    expect(fake.startOpts).toEqual([{ expectedIssuerHost: "accounts.google.com" }]);
+    fake.startResult = { ok: false, reason: "issuer_changed", error: "x", issuer: "https://login.example.org", issuerHost: "login.example.org" };
+    const res = await post("google-calendar");
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "issuer_changed", server: "google-calendar", issuerHost: "login.example.org" });
+    expect(fake.remembered).toEqual([{ personId: "u1", name: "google-calendar", issuer: "https://login.example.org" }]);
   });
 });

@@ -739,7 +739,7 @@
       "unreachable": "The server's sign-in couldn't be reached. Try again in a moment.",
       "expired": "The sign-in took too long and expired. Try again.",
       "lost": "That sign-in link doesn't work any more. Try again.",
-      "issuerChanged": "The sign-in page isn't the one this connector was approved for, so nothing was connected.",
+      "issuerChanged": "The sign-in page changed, so nothing was connected. Check where it is now and try again.",
       "exchangeFailed": "The server didn't finish the sign-in. Try again.",
       "off": "Signing in to connectors is switched off.",
       "unauthorized": "Your OpenLen session ended. Reload the page and try again.",
