@@ -44,6 +44,63 @@ describe("las rutas de la app", () => {
     expect(listed.get("app/api/mcp-connectors/directory/[id]/route.ts")).toEqual(["POST"]);
   });
 
+  // 🔴 A route that takes the phone's key (`usuarioDeLaPeticion`) without being on the list has an app CORS nobody listed
+  // and nobody reviewed — the A/B routes were that (review item 27). Every route that calls it is on the list; the ones
+  // that were already off it when this guard was written are named here, so the allowance can only SHRINK: an entry that is
+  // listed, or no longer calls it, must leave this array. (They are not the A/B work's to decide — see the report.)
+  const PRE_EXISTING_UNLISTED: readonly string[] = [
+    "app/api/agent/responder/route.ts",
+    "app/api/agent/subagents/[id]/stop/route.ts",
+    "app/api/agent/subagents/route.ts",
+    "app/api/movil/canvas/route.ts",
+    "app/api/projects/[id]/backend/environments/route.ts",
+    "app/api/projects/[id]/event-cards/[cardId]/route.ts",
+    "app/api/projects/[id]/event-cards/route.ts",
+    "app/api/projects/[id]/security-review/route.ts",
+    "app/api/tools/[id]/restore/route.ts",
+    "app/api/tools/[id]/route.ts",
+  ];
+
+  const routesUsingTheKey = (): string[] => {
+    const out: string[] = [];
+    const walk = (dir: string) => {
+      for (const e of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
+        const rel = `${dir}/${e.name}`;
+        if (e.isDirectory()) walk(rel);
+        else if (/^route\.tsx?$/.test(e.name) && leer(rel).includes("usuarioDeLaPeticion")) out.push(rel);
+      }
+    };
+    walk("app/api");
+    return out.sort();
+  };
+
+  it("🔴 no route takes the phone's key without being on the list (the allowance of the old ones only shrinks)", () => {
+    const listed = new Set(RUTAS_DE_LA_APP.map((r) => r.fichero));
+    const using = routesUsingTheKey();
+    expect(using.filter((f) => !listed.has(f) && !PRE_EXISTING_UNLISTED.includes(f))).toEqual([]);
+    expect(PRE_EXISTING_UNLISTED.filter((f) => listed.has(f) || !using.includes(f))).toEqual([]);
+  });
+
+  it("🔴 the A/B routes the phone doesn't call are web-session only: no phone key, no app CORS", () => {
+    const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
+    // What the phone calls: the assistant's decision cards, and the decision itself.
+    expect(listed.get("app/api/assistants/[id]/ab-decisions/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/projects/[id]/ab/[expId]/decide/route.ts")).toEqual(["POST"]);
+    for (const f of [
+      "app/api/projects/[id]/ab/route.ts",
+      "app/api/projects/[id]/ab/[expId]/launch/route.ts",
+      "app/api/projects/[id]/ab/[expId]/bring/route.ts",
+      "app/api/projects/[id]/ab/[expId]/preview/route.ts",
+    ]) {
+      const src = leer(f);
+      expect(src, f).not.toContain("usuarioDeLaPeticion");
+      expect(src, f).not.toContain("paraLaApp");
+      expect(src, f).not.toMatch(/export const OPTIONS/);
+      expect(src, f).toContain("await auth()");
+      expect(listed.has(f), f).toBe(false);
+    }
+  });
+
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {
     const src = leer("app/api/projects/[id]/versions/route.ts");
     expect(src).not.toContain("usuarioDeLaPeticion");
