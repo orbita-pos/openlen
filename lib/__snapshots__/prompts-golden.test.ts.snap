@@ -44,7 +44,6 @@ WHAT EXISTS AND WHAT DOESN'T:
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
-- assistant: AI assistant on the published page — answers questions about the business's information. Turn it on when the user wants a bot to answer visitors using their information.
 
 THEIR DATA AND THEIR LINKS:
 The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (grep finds it), do everything else and ask them with ask_user_question. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
@@ -116,7 +115,6 @@ WHAT EXISTS AND WHAT DOESN'T:
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
-- assistant: AI assistant on the published page — answers questions about the business's information. Turn it on when the user wants a bot to answer visitors using their information.
 
 THEIR DATA AND THEIR LINKS:
 The user's phone, WhatsApp, social profiles and address live ON THEIR PAGE: if they give you one, you write it on the page and that's it. What you can't decide for them —their page's address, their phone, their email, which account a link points to, their menu, their prices, their opening hours, their available spots, their business figures and what their customers say (reviews, testimonials, ratings)— is never invented or guessed, because it looks true: if it isn't in the files (grep finds it), do everything else and ask them with ask_user_question. <example>user: "add a TikTok button for me" — agent: adds the button with href="#" and asks "what's your TikTok?", never tiktok.com/@yourbusiness worked out from the name.</example>
@@ -186,7 +184,6 @@ WHAT EXISTS AND WHAT DOESN'T:
 
 MODULES YOU CAN OPERATE (toggle_module):
 - chat: Private visitor↔user chat on the published page (messenger style). Turn it on when they ask for 'chat', 'messages from customers' or direct support.
-- assistant: AI assistant on the published page — answers questions about the business's information. Turn it on when the user wants a bot to answer visitors using their information.
 
 THEIR DATA AND THEIR LINKS:
 What the app shows about THEIR business —their products, their prices, their menu, their customers, their stock, their opening hours, their phone, which account a link points to— is never invented or guessed, because it looks true. Their records live in the app's database: they give them to you (ask_user_question), or they enter them in the app themselves, so the app has the screens to add and change them. If the app needs some records to be tried out, add a few that are obviously examples (named as such), and say so when you finish. Their phone, WhatsApp, social profiles and address go in the code only if they give them to you. <example>user: "make me a POS for my coffee shop" — agent: builds the products table, the sale screen and the screen to add products, adds two products named "Example product", and when it finishes asks for their real menu and prices; it never fills the menu with prices it made up.</example>
@@ -397,8 +394,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "module": {
           "type": "STRING",
           "enum": [
-            "chat",
-            "assistant"
+            "chat"
           ]
         },
         "on": {
@@ -1038,7 +1034,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Put in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1357,7 +1353,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1376,7 +1372,8 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "Explore",
             "Plan",
             "len-design",
-            "len-office"
+            "len-office",
+            "len-review"
           ],
           "description": "The type of subagent; general-purpose when omitted."
         },
@@ -1478,10 +1475,88 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "create_assistant",
-    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.",
     "parameters": {
       "type": "OBJECT",
-      "properties": {}
+      "properties": {
+        "shape": {
+          "type": "STRING",
+          "enum": [
+            "drop",
+            "round",
+            "capsule",
+            "cube",
+            "ears",
+            "heart",
+            "flower",
+            "triangle",
+            "star",
+            "cloud",
+            "diamond",
+            "teardrop",
+            "clover",
+            "cat",
+            "bean"
+          ],
+          "description": "Optional. The figure's body: drop, round (a ball), capsule, cube, ears (a ball with two round ears), heart, flower, triangle, star, cloud, diamond, teardrop (a pointed water droplet), clover, cat (pointed kitty ears), bean (a peanut shape)."
+        },
+        "eyes": {
+          "type": "STRING",
+          "enum": [
+            "oval",
+            "round",
+            "dot",
+            "smile",
+            "sleepy",
+            "wink",
+            "sparkle",
+            "cheerful",
+            "calm",
+            "lash"
+          ],
+          "description": "Optional. oval, round, dot (two small dots), smile (closed, smiling arcs), sleepy (half-closed), wink (one eye winking), sparkle (big with bright glints), cheerful (happy > < arcs), calm (peaceful horizontal lines), lash (with outer eyelashes)."
+        },
+        "eyewear": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "round",
+            "shades",
+            "square",
+            "heart",
+            "star",
+            "visor",
+            "catEye"
+          ],
+          "description": "Optional. none, round (round glasses), shades (dark sunglasses), square (square-framed glasses), heart (heart-shaped glasses), star (star-shaped glasses), visor (a futuristic visor), catEye (cat-eye sunglasses). Left out, it wears none."
+        },
+        "accessory": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "beret",
+            "beanie",
+            "bow",
+            "crown",
+            "hat",
+            "headphones",
+            "halo",
+            "cap",
+            "wizard",
+            "flower",
+            "sprout",
+            "horns",
+            "chef",
+            "antenna",
+            "party"
+          ],
+          "description": "Optional. What it wears on its head: none, beret, beanie (a knit cap with a pompom), bow, crown, hat (a short top hat with a brim), headphones, halo, cap (a baseball cap with a visor), wizard (a pointed wizard hat), flower (a little blossom), sprout (a little leaf sprout), horns, chef (a white chef's toque), antenna (a robot antenna), party (a party cone hat). Left out, it wears none."
+        },
+        "color": {
+          "type": "STRING",
+          "description": "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."
+        }
+      }
     }
   },
   {
@@ -1849,6 +1924,48 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "MultiEdit",
+    "description": "Applies multiple exact text replacements to one file atomically, in order: if any edit fails, nothing is saved. Read the file in this conversation first: a MultiEdit to a file you have not read is refused. Prefer MultiEdit over several Edit calls on the same file.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "file_path": {
+          "type": "STRING",
+          "description": "Absolute path of the file to change"
+        },
+        "edits": {
+          "type": "ARRAY",
+          "description": "Ordered list of 1 to 20 replacements applied sequentially to the file. Each edit sees the result of the previous ones.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "old_string": {
+                "type": "STRING",
+                "description": "The text that is in the file at this step, character for character, never with the line number and tab that Read puts before each line. It must appear only once, unless replace_all is true."
+              },
+              "new_string": {
+                "type": "STRING",
+                "description": "The text that takes its place (it must differ from old_string; empty deletes old_string)"
+              },
+              "replace_all": {
+                "type": "BOOLEAN",
+                "description": "Change every copy of old_string instead of exactly one (default false)"
+              }
+            },
+            "required": [
+              "old_string",
+              "new_string"
+            ]
+          }
+        }
+      },
+      "required": [
+        "file_path",
+        "edits"
+      ]
+    }
+  },
+  {
     "name": "Write",
     "description": "Creates a file of this website or replaces it whole; writing /<slug>/index.html creates that page. Keep it for a page the request needs and for full rewrites, and change part of a page with Edit. A file that already exists has to be read in this conversation first.",
     "parameters": {
@@ -1878,8 +1995,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "module": {
           "type": "STRING",
           "enum": [
-            "chat",
-            "assistant"
+            "chat"
           ]
         },
         "on": {
@@ -2512,7 +2628,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Put in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -2831,7 +2947,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -2850,7 +2966,8 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "Explore",
             "Plan",
             "len-design",
-            "len-office"
+            "len-office",
+            "len-review"
           ],
           "description": "The type of subagent; general-purpose when omitted."
         },
@@ -2952,10 +3069,88 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "create_assistant",
-    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.",
     "parameters": {
       "type": "OBJECT",
-      "properties": {}
+      "properties": {
+        "shape": {
+          "type": "STRING",
+          "enum": [
+            "drop",
+            "round",
+            "capsule",
+            "cube",
+            "ears",
+            "heart",
+            "flower",
+            "triangle",
+            "star",
+            "cloud",
+            "diamond",
+            "teardrop",
+            "clover",
+            "cat",
+            "bean"
+          ],
+          "description": "Optional. The figure's body: drop, round (a ball), capsule, cube, ears (a ball with two round ears), heart, flower, triangle, star, cloud, diamond, teardrop (a pointed water droplet), clover, cat (pointed kitty ears), bean (a peanut shape)."
+        },
+        "eyes": {
+          "type": "STRING",
+          "enum": [
+            "oval",
+            "round",
+            "dot",
+            "smile",
+            "sleepy",
+            "wink",
+            "sparkle",
+            "cheerful",
+            "calm",
+            "lash"
+          ],
+          "description": "Optional. oval, round, dot (two small dots), smile (closed, smiling arcs), sleepy (half-closed), wink (one eye winking), sparkle (big with bright glints), cheerful (happy > < arcs), calm (peaceful horizontal lines), lash (with outer eyelashes)."
+        },
+        "eyewear": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "round",
+            "shades",
+            "square",
+            "heart",
+            "star",
+            "visor",
+            "catEye"
+          ],
+          "description": "Optional. none, round (round glasses), shades (dark sunglasses), square (square-framed glasses), heart (heart-shaped glasses), star (star-shaped glasses), visor (a futuristic visor), catEye (cat-eye sunglasses). Left out, it wears none."
+        },
+        "accessory": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "beret",
+            "beanie",
+            "bow",
+            "crown",
+            "hat",
+            "headphones",
+            "halo",
+            "cap",
+            "wizard",
+            "flower",
+            "sprout",
+            "horns",
+            "chef",
+            "antenna",
+            "party"
+          ],
+          "description": "Optional. What it wears on its head: none, beret, beanie (a knit cap with a pompom), bow, crown, hat (a short top hat with a brim), headphones, halo, cap (a baseball cap with a visor), wizard (a pointed wizard hat), flower (a little blossom), sprout (a little leaf sprout), horns, chef (a white chef's toque), antenna (a robot antenna), party (a party cone hat). Left out, it wears none."
+        },
+        "color": {
+          "type": "STRING",
+          "description": "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."
+        }
+      }
     }
   },
   {
@@ -3305,6 +3500,48 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
     }
   },
   {
+    "name": "MultiEdit",
+    "description": "Applies multiple exact text replacements to one file atomically, in order: if any edit fails, nothing is saved. Read the file in this conversation first: a MultiEdit to a file you have not read is refused. Prefer MultiEdit over several Edit calls on the same file.",
+    "parameters": {
+      "type": "OBJECT",
+      "properties": {
+        "file_path": {
+          "type": "STRING",
+          "description": "Absolute path of the file to change"
+        },
+        "edits": {
+          "type": "ARRAY",
+          "description": "Ordered list of 1 to 20 replacements applied sequentially to the file. Each edit sees the result of the previous ones.",
+          "items": {
+            "type": "OBJECT",
+            "properties": {
+              "old_string": {
+                "type": "STRING",
+                "description": "The text that is in the file at this step, character for character, never with the line number and tab that Read puts before each line. It must appear only once, unless replace_all is true."
+              },
+              "new_string": {
+                "type": "STRING",
+                "description": "The text that takes its place (it must differ from old_string; empty deletes old_string)"
+              },
+              "replace_all": {
+                "type": "BOOLEAN",
+                "description": "Change every copy of old_string instead of exactly one (default false)"
+              }
+            },
+            "required": [
+              "old_string",
+              "new_string"
+            ]
+          }
+        }
+      },
+      "required": [
+        "file_path",
+        "edits"
+      ]
+    }
+  },
+  {
     "name": "Write",
     "description": "Creates a file of this website or replaces it whole; writing /<slug>/index.html creates that page. Keep it for a page the request needs and for full rewrites, and change part of a page with Edit. A file that already exists has to be read in this conversation first.",
     "parameters": {
@@ -3334,8 +3571,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         "module": {
           "type": "STRING",
           "enum": [
-            "chat",
-            "assistant"
+            "chat"
           ]
         },
         "on": {
@@ -3975,7 +4211,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "schedule_create",
-    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Write in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
+    "description": "Create a reminder in this project's chat that delivers prompt when it becomes due. Supply exactly one timing parameter: after_seconds, at, every_seconds, daily, weekly, or cron. Local times that do not exist in the zone are skipped; repeated local times fire once, at the earlier instant. After downtime, a recurring reminder delivers only its latest missed occurrence. Minimum interval is 1 hour. Avoid the :00 and :30 minute marks when the task allows it: when the request is approximate (\\"every morning around 9\\"), pick a minute that is not 0 or 30, such as 08:57 or 09:03; use 0 or 30 only when the user names that exact time and clearly means it. When you tell the user when it will run, give the returned scheduledAtLocal, not the time you asked for. Or, instead of a timing parameter, supply on: the task then wakes when its source changes, not on a clock; each change is judged read-only and the owner hears only when it needs them. Put in prompt the facts that judgment needs, such as what counts as a clash; the judge has no terminal and reads the source only by key or by field values, so say what to compare, not commands to run.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -4294,7 +4530,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -4313,7 +4549,8 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
             "Explore",
             "Plan",
             "len-design",
-            "len-office"
+            "len-office",
+            "len-review"
           ],
           "description": "The type of subagent; general-purpose when omitted."
         },
@@ -4415,10 +4652,88 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "create_assistant",
-    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so.",
+    "description": "Shows the owner the card to create their own assistant: a chat assistant of theirs, with the name and the look they pick, that knows their business and talks with them about it — not you. Call it when the owner asks for an assistant, a chatbot or an AI of their own. It creates nothing: the owner names it and picks its look on the card. If this project already has one, you get which, and say so. You may suggest its figure — any of shape, eyes, eyewear, accessory and color — when something fits the business; the card opens with it and the owner changes whatever they like. Name only the parts you mean: what you leave out stays plain. The result says exactly what the card opens with.",
     "parameters": {
       "type": "OBJECT",
-      "properties": {}
+      "properties": {
+        "shape": {
+          "type": "STRING",
+          "enum": [
+            "drop",
+            "round",
+            "capsule",
+            "cube",
+            "ears",
+            "heart",
+            "flower",
+            "triangle",
+            "star",
+            "cloud",
+            "diamond",
+            "teardrop",
+            "clover",
+            "cat",
+            "bean"
+          ],
+          "description": "Optional. The figure's body: drop, round (a ball), capsule, cube, ears (a ball with two round ears), heart, flower, triangle, star, cloud, diamond, teardrop (a pointed water droplet), clover, cat (pointed kitty ears), bean (a peanut shape)."
+        },
+        "eyes": {
+          "type": "STRING",
+          "enum": [
+            "oval",
+            "round",
+            "dot",
+            "smile",
+            "sleepy",
+            "wink",
+            "sparkle",
+            "cheerful",
+            "calm",
+            "lash"
+          ],
+          "description": "Optional. oval, round, dot (two small dots), smile (closed, smiling arcs), sleepy (half-closed), wink (one eye winking), sparkle (big with bright glints), cheerful (happy > < arcs), calm (peaceful horizontal lines), lash (with outer eyelashes)."
+        },
+        "eyewear": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "round",
+            "shades",
+            "square",
+            "heart",
+            "star",
+            "visor",
+            "catEye"
+          ],
+          "description": "Optional. none, round (round glasses), shades (dark sunglasses), square (square-framed glasses), heart (heart-shaped glasses), star (star-shaped glasses), visor (a futuristic visor), catEye (cat-eye sunglasses). Left out, it wears none."
+        },
+        "accessory": {
+          "type": "STRING",
+          "enum": [
+            "none",
+            "beret",
+            "beanie",
+            "bow",
+            "crown",
+            "hat",
+            "headphones",
+            "halo",
+            "cap",
+            "wizard",
+            "flower",
+            "sprout",
+            "horns",
+            "chef",
+            "antenna",
+            "party"
+          ],
+          "description": "Optional. What it wears on its head: none, beret, beanie (a knit cap with a pompom), bow, crown, hat (a short top hat with a brim), headphones, halo, cap (a baseball cap with a visor), wizard (a pointed wizard hat), flower (a little blossom), sprout (a little leaf sprout), horns, chef (a white chef's toque), antenna (a robot antenna), party (a party cone hat). Left out, it wears none."
+        },
+        "color": {
+          "type": "STRING",
+          "description": "Optional. The figure's color as #RRGGBB. Left out, it takes the page's accent."
+        }
+      }
     }
   },
   {
@@ -4746,6 +5061,64 @@ skills: office, brand
 Make or edit the document Len asks for. The office skill says which format skill to load; when the brand skill is loaded, the document follows it.
 Check the document as its skill says, and leave the result in /tmp/office.
 You don't deliver it: Len does. Len gets only your final message: give him the file's path and what it contains.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/agents/len-review.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: len-review
+description: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files.
+readOnly: true
+disallowedTools: Write, Edit, MultiEdit, edit_image, toggle_module, convert_to_app, draft_reply
+---
+
+Review the target changes or files Len asks you to audit. You are strictly read-only: do not modify project files.
+
+## Review Methodology
+1. **Audit beyond the diff**: trace callers and callees across the project to verify contracts still hold.
+2. **Check pattern completeness (sibling implementations)**: when a change adds or alters a route, tab, tool, flag, schema, table or component, inspect sibling implementations to verify every required registration, mapping, allowlist, UI wiring and test was also updated.
+3. **Evaluate real defects only**: focus on correctness, edge cases, broken invariants, unhandled failure paths, leaked resources and missing test coverage. Skip formatting trivia.
+
+## Evidence Rules (No Speculation)
+- Ruling out alternatives B and C does NOT confirm A until direct positive evidence in code or test output confirms A.
+- Never report speculative findings ("likely", "probably", "might break"): trace the path or run the relevant check until the issue is either Confirmed (with exact path:line and observed evidence) or Ruled out (dropped).
+- If the change is sound and complete, say so concisely instead of inventing problems.
+
+## Output Format
+Return a concise structured report to Len:
+- **Verdict**: CLEAN or ISSUES FOUND
+- **Findings (by severity: P1 Blocking / P2 Important)**: exact path:line, confirmed evidence, and minimal fix direction
+- **Verified**: exact checks or code paths inspected
+- **Unverified aspects**: anything you could not verify (or "none")
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/agents/len-review.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: len-review
+description: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files.
+readOnly: true
+disallowedTools: Write, Edit, MultiEdit, edit_image, toggle_module, convert_to_app, draft_reply
+---
+
+Review the target changes or files Len asks you to audit. You are strictly read-only: do not modify project files.
+
+## Review Methodology
+1. **Audit beyond the diff**: trace callers and callees across the project to verify contracts still hold.
+2. **Check pattern completeness (sibling implementations)**: when a change adds or alters a route, tab, tool, flag, schema, table or component, inspect sibling implementations to verify every required registration, mapping, allowlist, UI wiring and test was also updated.
+3. **Evaluate real defects only**: focus on correctness, edge cases, broken invariants, unhandled failure paths, leaked resources and missing test coverage. Skip formatting trivia.
+
+## Evidence Rules (No Speculation)
+- Ruling out alternatives B and C does NOT confirm A until direct positive evidence in code or test output confirms A.
+- Never report speculative findings ("likely", "probably", "might break"): trace the path or run the relevant check until the issue is either Confirmed (with exact path:line and observed evidence) or Ruled out (dropped).
+- If the change is sound and complete, say so concisely instead of inventing problems.
+
+## Output Format
+Return a concise structured report to Len:
+- **Verdict**: CLEAN or ISSUES FOUND
+- **Findings (by severity: P1 Blocking / P2 Important)**: exact path:line, confirmed evidence, and minimal fix direction
+- **Verified**: exact checks or code paths inspected
+- **Unverified aspects**: anything you could not verify (or "none")
 "
 `;
 
@@ -6089,6 +6462,128 @@ Not Draco or KTX2: their decoders are fetched by URL, which has no path here.
 ## Collisions and physics
 
 None by default. Boxes that touch are a bounding-box check (\`new THREE.Box3().setFromObject(a).intersectsBox(…)\`), and the ground under the player is a \`THREE.Raycaster\`. When the game needs real physics, use \`@dimforge/rapier3d-compat\` (the build with its .wasm inside), and call \`await RAPIER.init()\` before creating the world.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/grill-me/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: grill-me
+description: Run a focused, structured interview with ask_user_question to resolve ambiguous goals, scope and design trade-offs before entering plan mode or building.
+---
+
+# Structured alignment interview
+
+Use this skill when the request is broad, open-ended or has high-impact design choices that should be agreed before writing code or a plan.
+
+## 1. Inspect the project first
+- Read what already exists in the project before asking anything. Never ask the owner questions whose answers are already in the files, schema or settings.
+
+## 2. Ask only high-leverage questions (1–2 short rounds)
+- Use \`ask_user_question\` with concrete, plain-language options and a clear recommendation first when one choice is obviously stronger.
+- Focus on decisions that change architecture, user flow, visual direction, data model or external integrations:
+  - Target audience and primary goal of the page, app or tool
+  - Must-have flows vs what stays out of scope for v1
+  - Visual style, tone or brand constraints (if not already in the \`brand\` skill)
+  - Data ownership, permissions or publishing/integration boundaries
+- Skip trivia you can decide sensibly on your own.
+
+## 3. Converge and hand off
+- Summarize the agreed decisions in a short bulleted list (including explicit non-goals and open risks).
+- If the task is complex enough for a plan, transition into \`enter_plan_mode\` (or write the plan if already in plan mode). Otherwise, proceed directly once the owner confirms.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/grill-me/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: grill-me
+description: Run a focused, structured interview with ask_user_question to resolve ambiguous goals, scope and design trade-offs before entering plan mode or building.
+---
+
+# Structured alignment interview
+
+Use this skill when the request is broad, open-ended or has high-impact design choices that should be agreed before writing code or a plan.
+
+## 1. Inspect the project first
+- Read what already exists in the project before asking anything. Never ask the owner questions whose answers are already in the files, schema or settings.
+
+## 2. Ask only high-leverage questions (1–2 short rounds)
+- Use \`ask_user_question\` with concrete, plain-language options and a clear recommendation first when one choice is obviously stronger.
+- Focus on decisions that change architecture, user flow, visual direction, data model or external integrations:
+  - Target audience and primary goal of the page, app or tool
+  - Must-have flows vs what stays out of scope for v1
+  - Visual style, tone or brand constraints (if not already in the \`brand\` skill)
+  - Data ownership, permissions or publishing/integration boundaries
+- Skip trivia you can decide sensibly on your own.
+
+## 3. Converge and hand off
+- Summarize the agreed decisions in a short bulleted list (including explicit non-goals and open risks).
+- If the task is complex enough for a plan, transition into \`enter_plan_mode\` (or write the plan if already in plan mode). Otherwise, proceed directly once the owner confirms.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/learn/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: learn
+description: Turn corrections, preferences or hard-won fixes from this conversation into a concrete proposal to update or create a rule in /LEN.md or a reusable skill under /.len/skills/ or ~/.len/skills/, always asking the owner before editing.
+---
+
+# Learning from this conversation
+
+Use this skill when the owner wants to save a recurring preference, correction or workflow so future turns follow it automatically.
+
+## 1. Identify what is actually worth saving
+- Scan the conversation for explicit corrections, constraints or overrides from the owner ("no", "instead", "always do X", "never Y") and for failures that took multiple steps to diagnose.
+- Isolate the root rule or procedure, not a one-off typo or single-turn detail.
+- If nothing reusable emerged, tell the owner plainly and stop without proposing edits.
+
+## 2. Classify: Rule vs Skill
+- **Rule** (\`/LEN.md\` for this project, or \`~/.len/LEN.md\` for every project): universal behavioral guardrails, tone/style invariants, naming conventions or hard constraints.
+- **Skill** (\`/.len/skills/<name>/SKILL.md\` or \`~/.len/skills/<name>/SKILL.md\`): multi-step procedures, repeatable checklists, domain recipes or verification flows. Load \`skill-creator\` if you need the exact file format.
+
+## 3. Update existing first, and watch file size
+- Inspect existing \`/LEN.md\` and relevant skills before proposing a new file.
+- Prefer updating an existing rule or skill that missed an edge case over adding a duplicate. If the file is already long, condense or split instead of appending blindly.
+
+## 4. Propose before editing
+- Do **not** edit \`/LEN.md\` or any skill file until the owner approves.
+- Show the owner:
+  1. Target path and whether it is an update or a new file.
+  2. Why it belongs there (Rule vs Skill, project vs personal).
+  3. The exact concise text or diff you plan to write.
+- Wait for confirmation, then apply only what the owner approved.
+"
+`;
+
+exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/learn/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
+"---
+name: learn
+description: Turn corrections, preferences or hard-won fixes from this conversation into a concrete proposal to update or create a rule in /LEN.md or a reusable skill under /.len/skills/ or ~/.len/skills/, always asking the owner before editing.
+---
+
+# Learning from this conversation
+
+Use this skill when the owner wants to save a recurring preference, correction or workflow so future turns follow it automatically.
+
+## 1. Identify what is actually worth saving
+- Scan the conversation for explicit corrections, constraints or overrides from the owner ("no", "instead", "always do X", "never Y") and for failures that took multiple steps to diagnose.
+- Isolate the root rule or procedure, not a one-off typo or single-turn detail.
+- If nothing reusable emerged, tell the owner plainly and stop without proposing edits.
+
+## 2. Classify: Rule vs Skill
+- **Rule** (\`/LEN.md\` for this project, or \`~/.len/LEN.md\` for every project): universal behavioral guardrails, tone/style invariants, naming conventions or hard constraints.
+- **Skill** (\`/.len/skills/<name>/SKILL.md\` or \`~/.len/skills/<name>/SKILL.md\`): multi-step procedures, repeatable checklists, domain recipes or verification flows. Load \`skill-creator\` if you need the exact file format.
+
+## 3. Update existing first, and watch file size
+- Inspect existing \`/LEN.md\` and relevant skills before proposing a new file.
+- Prefer updating an existing rule or skill that missed an edge case over adding a duplicate. If the file is already long, condense or split instead of appending blindly.
+
+## 4. Propose before editing
+- Do **not** edit \`/LEN.md\` or any skill file until the owner approves.
+- Show the owner:
+  1. Target path and whether it is an update or a new file.
+  2. Why it belongs there (Rule vs Skill, project vs personal).
+  3. The exact concise text or diff you plan to write.
+- Wait for confirmation, then apply only what the owner approved.
 "
 `;
 
@@ -9061,6 +9556,9 @@ Deno.serve((req) => {
 1. In this project (the draft), call the function with \`curl\` from your terminal at the address the platform manual gives for this project's Edge Functions (\`…/functions/v1/mcp\`): POST \`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}\`, then \`tools/list\` and a \`tools/call\`, with the headers \`content-type: application/json\` and \`accept: application/json, text/event-stream\`.
 2. Install it with \`publish\`. Installing asks the server for its tools once: an operation the model provider couldn't take is left out and the answer names it — fix it and install again.
 3. From your next turn you have \`mcp__<serverName>__<operation>\`: call one, then do the same from the screen and compare.
+
+### App-only UI operations (MCP Apps visibility)
+If an operation is only for the tool's own UI (e.g. table pagination, quick filter refresh) and Len does not need to call it, annotate its tool metadata with \`_meta: { ui: { visibility: ["app"] } }\`. OpenLen keeps it callable from the tool's screen while omitting it from Len's \`mcp__*\` catalog.
 "
 `;
 
@@ -9161,6 +9659,9 @@ Deno.serve((req) => {
 1. In this project (the draft), call the function with \`curl\` from your terminal at the address the platform manual gives for this project's Edge Functions (\`…/functions/v1/mcp\`): POST \`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"curl","version":"1"}}}\`, then \`tools/list\` and a \`tools/call\`, with the headers \`content-type: application/json\` and \`accept: application/json, text/event-stream\`.
 2. Install it with \`publish\`. Installing asks the server for its tools once: an operation the model provider couldn't take is left out and the answer names it — fix it and install again.
 3. From your next turn you have \`mcp__<serverName>__<operation>\`: call one, then do the same from the screen and compare.
+
+### App-only UI operations (MCP Apps visibility)
+If an operation is only for the tool's own UI (e.g. table pagination, quick filter refresh) and Len does not need to call it, annotate its tool metadata with \`_meta: { ui: { visibility: ["app"] } }\`. OpenLen keeps it callable from the tool's screen while omitting it from Len's \`mcp__*\` catalog.
 "
 `;
 
