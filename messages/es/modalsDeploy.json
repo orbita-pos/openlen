@@ -95,5 +95,12 @@
       "queued": "Len está trabajando en el proyecto: lo traemos en cuanto termine.",
       "failed": "No se pudo traer el arreglo. Inténtalo otra vez."
     }
+  },
+  "abRunning": {
+    "title": "Hay una prueba A/B en marcha",
+    "body": "Hay una prueba A/B en marcha en esta página. Publicar la detiene. ¿Detenerla y publicar?",
+    "name": "Prueba: {name}",
+    "stopAndPublish": "Detener y publicar",
+    "cancel": "Cancelar"
   }
 }

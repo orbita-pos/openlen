@@ -95,5 +95,12 @@
       "queued": "Len travaille sur le projet : nous l'apporterons dès qu'il aura fini.",
       "failed": "Impossible d'apporter la correction. Réessayez."
     }
+  },
+  "abRunning": {
+    "title": "Un test A/B est en cours",
+    "body": "Un test A/B est en cours sur cette page. Publier l'arrête. L'arrêter et publier ?",
+    "name": "Test : {name}",
+    "stopAndPublish": "Arrêter et publier",
+    "cancel": "Annuler"
   }
 }

@@ -5,6 +5,7 @@ import type { DestructiveChange } from "@/lib/backend/data-changes-types";
 import { postPublishAfterSecurity } from "@/lib/workspace-v2/publish-request";
 import { DataChangesNotice, DestructiveConfirm, useDataChangesPreview } from "@/components/workspace-v2/data-changes-notice";
 import { MissingSecrets } from "@/components/workspace-v2/missing-secrets";
+import { AbExperimentRunning } from "@/components/workspace-v2/ab/experiment-running";
 import { LenWatchFixPending } from "@/components/workspace-v2/len-watch/fix-pending";
 import { SecurityPanel, fixRequestText } from "@/components/workspace-v2/security-findings";
 import { useSecurityReview } from "@/components/workspace-v2/use-security-review";
@@ -164,6 +165,9 @@ export function PublishModal({
   // and «Publicar igual» once chosen.
   const [lenWatchFix, setLenWatchFix] = useState<{ incidentId: string } | null>(null);
   const aceptarArreglo = useRef<string | null>(null);
+  // A live A/B experiment the publish would end (428): the owner confirms with «Detener y publicar» (`stopActiveAb`).
+  const [abRunning, setAbRunning] = useState<{ name: string } | null>(null);
+  const detenerPrueba = useRef(false);
   const dataPreview = useDataChangesPreview(project.id, open);
   // La revisión de seguridad (spec local 2026-10-15): arranca al abrir y se
   // sigue mientras corre; un 428 de la ruta la sustituye. «Publicar igual»
@@ -193,6 +197,8 @@ export function PublishModal({
     aceptarSeguridad.current = null;
     setLenWatchFix(null);
     aceptarArreglo.current = null;
+    setAbRunning(null);
+    detenerPrueba.current = false;
     // Focus input after the modal mount animation settles.
     const t = setTimeout(() => inputRef.current?.focus(), 30);
     return () => clearTimeout(t);
@@ -275,7 +281,7 @@ export function PublishModal({
     };
   }, [normalized, isCurrent]);
 
-  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string } = {}) => {
+  const doPublish = useCallback(async (o: { confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptSecurityFingerprint?: string; acceptLenWatchFix?: string; stopActiveAb?: boolean } = {}) => {
     if (submitting) return;
     // Allow the existing subdomain through even when the availability check
     // hasn't settled yet — same precedence as `canPublish` below.
@@ -283,6 +289,7 @@ export function PublishModal({
     if (o.skipMissingSecrets) saltarSecretos.current = true;
     if (o.acceptSecurityFingerprint) aceptarSeguridad.current = o.acceptSecurityFingerprint;
     if (o.acceptLenWatchFix) aceptarArreglo.current = o.acceptLenWatchFix;
+    if (o.stopActiveAb) detenerPrueba.current = true;
     setSubmitting("publishing");
     setError(null);
     try {
@@ -301,9 +308,17 @@ export function PublishModal({
           locale,
           ...(aceptarSeguridad.current ? { acceptSecurityFingerprint: aceptarSeguridad.current } : {}),
           ...(aceptarArreglo.current ? { acceptLenWatchFix: aceptarArreglo.current } : {}),
+          ...(detenerPrueba.current ? { stopActiveAb: true } : {}),
         },
         setSecurity,
       );
+      // A running A/B test the publish would stop (review items 13, 14): the owner decides.
+      if (outcome.kind === "ab_experiment_running") {
+        detenerPrueba.current = false;
+        setAbRunning({ name: outcome.name });
+        setSubmitting(null);
+        return;
+      }
       // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix it published isn't in the draft yet.
       if (outcome.kind === "len_watch_fix_pending") {
         setLenWatchFix({ incidentId: outcome.incidentId });
@@ -735,6 +750,18 @@ export function PublishModal({
                 void doPublish({ acceptLenWatchFix: id });
               }}
               onCancel={() => setLenWatchFix(null)}
+            />
+          )}
+
+          {abRunning && (
+            <AbExperimentRunning
+              name={abRunning.name}
+              busy={submitting !== null}
+              onStopAndPublish={() => {
+                setAbRunning(null);
+                void doPublish({ stopActiveAb: true });
+              }}
+              onCancel={() => setAbRunning(null)}
             />
           )}
 

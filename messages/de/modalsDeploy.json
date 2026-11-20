@@ -95,5 +95,12 @@
       "queued": "Len arbeitet gerade am Projekt: Wir übernehmen sie, sobald er fertig ist.",
       "failed": "Die Korrektur konnte nicht übernommen werden. Versuch es noch einmal."
     }
+  },
+  "abRunning": {
+    "title": "Ein A/B-Test läuft",
+    "body": "Auf dieser Seite läuft ein A/B-Test. Beim Veröffentlichen wird er gestoppt. Stoppen und veröffentlichen?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Stoppen und veröffentlichen",
+    "cancel": "Abbrechen"
   }
 }

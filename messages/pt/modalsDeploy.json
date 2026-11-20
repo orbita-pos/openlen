@@ -95,5 +95,12 @@
       "queued": "O Len está trabalhando no projeto: trazemos assim que ele terminar.",
       "failed": "Não foi possível trazer a correção. Tente de novo."
     }
+  },
+  "abRunning": {
+    "title": "Há um teste A/B em andamento",
+    "body": "Há um teste A/B em andamento nesta página. Publicar o interrompe. Interromper e publicar?",
+    "name": "Teste: {name}",
+    "stopAndPublish": "Interromper e publicar",
+    "cancel": "Cancelar"
   }
 }
