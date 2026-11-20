@@ -45,6 +45,7 @@ export const CREATE_AB_TESTING: readonly string[] = [
   `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "maxEndAt" timestamptz;`,
   `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "decisionPrevStatus" text;`,
   `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "decisionLockedAt" timestamptz;`,
+  `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "overridePaths" jsonb;`,
   // At most one live/draft experiment per (project, targetPath).
   `CREATE UNIQUE INDEX IF NOT EXISTS "abExperiments_active_target_idx"
     ON "abExperiments" ("projectId", "targetPath")

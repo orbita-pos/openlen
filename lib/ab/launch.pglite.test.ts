@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   commit: vi.fn(),
   createWorktree: vi.fn(),
   cleanup: vi.fn(),
+  purge: vi.fn(),
 }));
 
 vi.mock("@/lib/db", async () => ({
@@ -32,7 +33,7 @@ vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: h.runSecurityGate, publishThroughGates: vi.fn() }));
-vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => undefined }));
+vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: h.purge }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: vi.fn() }));
 vi.mock("@/lib/ab/worktree", () => ({
   cleanupAbWorktree: h.cleanup,
@@ -65,6 +66,8 @@ beforeEach(async () => {
   h.runSecurityGate.mockResolvedValue({ fingerprint: null });
   h.commit.mockResolvedValue("tip-1");
   h.cleanup.mockResolvedValue(undefined);
+  h.purge.mockReset();
+  h.purge.mockResolvedValue(undefined);
   h.createWorktree.mockResolvedValue({ copyId: "copy-new", branch: "ab/new", base: "base-1" });
   h.publishProject.mockImplementation(async () => {
     await tick(); // a publish takes time: this is where the second launch would slip in
@@ -184,5 +187,29 @@ describe("the base check's backstop (item 17)", () => {
     await raw().query(`UPDATE "projects" SET "publishedReleaseSha" = NULL WHERE "id" = 'p1'`);
     await insertExperiment(raw(), { id: "ab_sha00003", status: "draft", copyProjectId: "copy-s", branch: "ab/ab_sha00003", baseCommitOid: "base-1", controlReleaseSha: null });
     await expect(launch("ab_sha00003")).resolves.toBeDefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE EDGE KEEPS WHAT THE EXPERIMENT CHANGES (edge review, item 24): at the launch the target page and every asset B
+// overrides are purged, through the existing purge helper.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("the launch purges what the edge kept (item 24)", () => {
+  it("🔴 a target page other than «/» and the overridden assets are purged, and the overrides are remembered for the end", async () => {
+    await draft("ab_purge001", "/pricing");
+    await raw().query(`UPDATE "projects" SET "data" = '{"html":"<html>A</html>","pages":{"pricing":{"html":"<p>p</p>"}},"settings":{"languages":["es"]}}'::jsonb WHERE "id" = 'p1'`);
+    h.publishProject.mockResolvedValue({ sha: "release-experiment", abOverrides: ["/css/site.css", "/js/hero.js"] });
+    await launch("ab_purge001");
+    expect(h.purge).toHaveBeenCalledTimes(1);
+    expect(h.purge).toHaveBeenCalledWith("pan1", ["/pricing", "/pricing/", "/pricing/index.html", "/css/site.css", "/js/hero.js"]);
+    expect((await getExperimentById("ab_purge001"))!.overridePaths).toEqual(["/css/site.css", "/js/hero.js"]);
+  });
+
+  it("an experiment on the home with no overrides purges nothing extra (the purge always carries «/»)", async () => {
+    await draft("ab_purge002", "/");
+    h.publishProject.mockResolvedValue({ sha: "release-experiment" });
+    await launch("ab_purge002");
+    expect(h.purge).toHaveBeenCalledWith("pan1", []);
+    expect((await getExperimentById("ab_purge002"))!.overridePaths).toEqual([]);
   });
 });

@@ -13,6 +13,7 @@ vi.mock("server-only", () => ({}));
 const h = vi.hoisted(() => ({
   db: null as unknown,
   notify: vi.fn(),
+  purge: vi.fn(),
   ownerLocale: "en",
   publishProject: vi.fn(),
   rollbackToSha: vi.fn(),
@@ -33,7 +34,7 @@ vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: vi.fn() }));
-vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => undefined }));
+vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: h.purge }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: h.rollbackToSha }));
 vi.mock("@/lib/ab/worktree", () => ({
   cleanupAbWorktree: vi.fn(async () => undefined),
@@ -104,6 +105,8 @@ beforeEach(async () => {
   vi.clearAllMocks();
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
   h.notify.mockResolvedValue(undefined);
+  h.purge.mockReset();
+  h.purge.mockResolvedValue(undefined);
   h.ownerLocale = "en";
   h.rollbackToSha.mockResolvedValue(undefined);
   await resetAbRows(raw());
@@ -159,6 +162,13 @@ describe("a person who is deciding wins (item 21)", () => {
     expect(row.endedAt).toEqual(NOW);
     expect(row.notifiedAt).toEqual(NOW);
     expect(h.notify.mock.calls[0]![0]).toMatchObject({ verdict: "harm_stop", experimentId: "ab_eval0004" });
+  });
+
+  it("🔴 the harm stop purges the edge too: the target page and the assets B overrode (item 24)", async () => {
+    await running("ab_eval0010", { targetPath: "/pricing" });
+    await raw().query(`UPDATE "abExperiments" SET "overridePaths" = '["/css/site.css"]'::jsonb WHERE "id" = 'ab_eval0010'`);
+    await evaluateRunningExperiments(await depsWith("harm_stop"), NOW);
+    expect(h.purge).toHaveBeenCalledWith("pan1", ["/pricing", "/pricing/", "/pricing/index.html", "/css/site.css"]);
   });
 
   it("🔴 the harm brake that can't put Control back leaves the split running, gives the lock back, and says nothing", async () => {

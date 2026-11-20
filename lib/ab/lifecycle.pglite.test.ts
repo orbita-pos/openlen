@@ -16,6 +16,7 @@ const h = vi.hoisted(() => ({
   rollbackToSha: vi.fn(),
   merge: vi.fn(),
   cleanup: vi.fn(),
+  purge: vi.fn(),
   waitForLen: vi.fn(),
   failNextUpdate: false,
 }));
@@ -32,7 +33,7 @@ vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: h.publishThroughGates }));
-vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => undefined }));
+vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: h.purge }));
 vi.mock("@/lib/publish/filesystem", () => ({ rollbackToSha: h.rollbackToSha }));
 vi.mock("@/lib/ab/worktree", () => ({
   cleanupAbWorktree: h.cleanup,
@@ -84,6 +85,8 @@ beforeEach(async () => {
   h.publishProject.mockReset();
   h.publishProject.mockResolvedValue({ sha: "rel-republished" });
   h.merge.mockReset();
+  h.purge.mockReset();
+  h.purge.mockResolvedValue(undefined);
   h.cleanup.mockResolvedValue(undefined);
   h.waitForLen.mockResolvedValue(false); // Len's turn never ends in a test: the background retry never fires
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
@@ -370,5 +373,55 @@ describe("keep-A goes back by rollback only when nothing was published since (it
     await setLive("anything");
     await keepControlA({ projectId: "p1", experimentId: "ab_back0003", ownerId: "u1", actorId: "u1" });
     expect(h.rollbackToSha).toHaveBeenCalledWith("pan1", "rel-c");
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// EVERY END PURGES THE EDGE (edge review, item 24): promote, keep A, harm stop — the target page, its languages when the
+// experiment covers them, and every asset B overrode, through the existing purge helper.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("every end of an experiment purges the edge (item 24)", () => {
+  const live = (id: string, o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status: "winner_ready", decisionStatus: "pending", targetPath: "/pricing", controlReleaseSha: "rel-c", copyProjectId: "copy-1", branch: `ab/${id}`, baseCommitOid: "base-1", startedAt: new Date(Date.now() - 4 * DAY), ...o });
+  const withOverrides = (id: string) =>
+    raw().query(`UPDATE "abExperiments" SET "overridePaths" = '["/css/site.css","/js/hero.js"]'::jsonb, "includeLocales" = true WHERE "id" = $1`, [id]);
+  const withLanguages = () => raw().query(`UPDATE "projects" SET "data" = '{"html":"<html>A</html>","settings":{"languages":["es","fr"]}}'::jsonb WHERE "id" = 'p1'`);
+  const EXPECTED = ["/pricing", "/pricing/", "/pricing/index.html", "/es/pricing", "/es/pricing/", "/es/pricing/index.html", "/fr/pricing", "/fr/pricing/", "/fr/pricing/index.html", "/css/site.css", "/js/hero.js"];
+
+  it("🔴 keep A by rollback", async () => {
+    await live("ab_end00001");
+    await withOverrides("ab_end00001");
+    await withLanguages();
+    await keepControlA({ projectId: "p1", experimentId: "ab_end00001", ownerId: "u1", actorId: "u1" });
+    expect(h.rollbackToSha).toHaveBeenCalled();
+    expect(h.purge).toHaveBeenCalledWith("pan1", EXPECTED);
+  });
+
+  it("🔴 keep A by republishing the published sources (no fallback release)", async () => {
+    await live("ab_end00002", { controlReleaseSha: null });
+    await withOverrides("ab_end00002");
+    await withLanguages();
+    h.published = { commitOid: "base-1", data: { html: "<html>PUBLISHED</html>" }, extraFiles: {} };
+    await keepControlA({ projectId: "p1", experimentId: "ab_end00002", ownerId: "u1", actorId: "u1" });
+    expect(h.publishProject).toHaveBeenCalled();
+    expect(h.purge).toHaveBeenCalledWith("pan1", EXPECTED);
+  });
+
+  it("🔴 promote B", async () => {
+    await live("ab_end00003");
+    await withOverrides("ab_end00003");
+    await withLanguages();
+    h.publishThroughGates.mockResolvedValue({ status: 200, body: { sha: "rel-promoted" } });
+    h.merge.mockResolvedValue({ kind: "brought" });
+    await promoteVariantB({ projectId: "p1", experimentId: "ab_end00003", ownerId: "u1", actorId: "u1" });
+    expect(h.purge).toHaveBeenCalledWith("pan1", EXPECTED);
+  });
+
+  it("an experiment that doesn't cover languages purges its page and assets only", async () => {
+    await live("ab_end00004");
+    await raw().query(`UPDATE "abExperiments" SET "overridePaths" = '["/css/site.css"]'::jsonb WHERE "id" = 'ab_end00004'`);
+    await withLanguages();
+    await keepControlA({ projectId: "p1", experimentId: "ab_end00004", ownerId: "u1", actorId: "u1" });
+    expect(h.purge).toHaveBeenCalledWith("pan1", ["/pricing", "/pricing/", "/pricing/index.html", "/css/site.css"]);
   });
 });

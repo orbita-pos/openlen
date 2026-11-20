@@ -864,6 +864,8 @@ export interface PublishResult {
   localesFallidos: string[];
   /** Site-page slugs published as /<slug>/index.html. */
   pages: string[];
+  /** With an experiment: the asset paths (leading slash) Variant B overrides — what the edge must be purged of. */
+  abOverrides?: readonly string[];
   /** Gated slugs — stub in the release, real doc under protected/<sha>/. */
   /** Documentos que salieron SIN su CSP sellada, por etiqueta ("/", "es",
    *  "/precios"). Vacío es lo normal. Antes esto se tiraba: el sellador
@@ -1224,6 +1226,7 @@ export async function publishToDir(
   // Edge A/B testing (Plan 3): bake Variant B under `openlen/ab/<id>/b/` with the
   // SAME canonical selfPath as Control A (SEO safe), plus modified folder files
   // and the `openlen/ab.json` manifest read by Rust `crates/edge` and TS fallback.
+  let abOverridesOut: readonly string[] | undefined;
   if (abSpec && abTargetPath) {
     const prefixB = abVariantPrefix(abSpec.id);
     const abVariantFiles: Array<{ path: string; content: string }> = [];
@@ -1315,6 +1318,7 @@ export async function publishToDir(
       }
     }
 
+    abOverridesOut = [...abOverrides].sort();
     for (const f of abVariantFiles) tree.push(f);
     const contentSha = computeShaFiles(tree);
     const manifest: AbManifest = {
@@ -1424,6 +1428,7 @@ export async function publishToDir(
       (code) => !localeDocs.some((d) => d.locale === code),
     ),
     pages: pageDocs.map((p) => p.slug),
+    ...(abOverridesOut ? { abOverrides: abOverridesOut } : {}),
   };
 }
 

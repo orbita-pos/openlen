@@ -90,7 +90,7 @@ describe("assertNoLiveExperiment (unpublish, rollback)", () => {
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 describe("endExperimentAfterPublish", () => {
   const ROW = { id: "ab_1234abcd", projectId: "p1", copyProjectId: "copy-1", branch: "ab/ab_1234abcd" } as never;
-  const endDeps = (cancel: ReturnType<typeof vi.fn>) => ({ cancel, cleanup: vi.fn(async () => undefined) });
+  const endDeps = (cancel: ReturnType<typeof vi.fn>) => ({ cancel, cleanup: vi.fn(async () => undefined), purge: vi.fn(async () => undefined) });
 
   it("🔴 a close that fails is retried once, and the worktree is cleaned when the retry succeeds", async () => {
     const cancel = vi.fn().mockRejectedValueOnce(new Error("db blip")).mockResolvedValueOnce({ id: "ab_1234abcd" });
@@ -98,6 +98,24 @@ describe("endExperimentAfterPublish", () => {
     await endExperimentAfterPublish(ROW, "u1", d);
     expect(cancel).toHaveBeenCalledTimes(2);
     expect(d.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-1", branch: "ab/ab_1234abcd" });
+  });
+
+  it("🔴 an experiment stopped by a publish is purged from the edge (item 24); one decided meanwhile isn't ours", async () => {
+    const closed = endDeps(vi.fn().mockResolvedValue({ id: "ab_1234abcd" }));
+    await endExperimentAfterPublish(ROW, "u1", closed);
+    expect(closed.purge).toHaveBeenCalledWith(ROW);
+    const decided = endDeps(vi.fn().mockResolvedValue(null));
+    await endExperimentAfterPublish(ROW, "u1", decided);
+    expect(decided.purge).not.toHaveBeenCalled();
+  });
+
+  it("a purge that fails doesn't stop the worktree cleanup", async () => {
+    const d = endDeps(vi.fn().mockResolvedValue({ id: "ab_1234abcd" }));
+    d.purge.mockRejectedValue(new Error("cloudflare"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await endExperimentAfterPublish(ROW, "u1", d);
+    error.mockRestore();
+    expect(d.cleanup).toHaveBeenCalledTimes(1);
   });
 
   it("fails twice: it says so (the publish is done, nothing is thrown) and cleans nothing", async () => {
