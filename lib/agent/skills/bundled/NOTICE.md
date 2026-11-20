@@ -144,3 +144,10 @@ something it can give legal advice on, and the `[VERIFY: …]` and `[UNCERTAIN: 
 risky clauses named in plain words by category, asking which side the reader is on. Changed: it serves one person about
 their OWN matter, never a clinic, a student or a firm; the categories are a person's (a lease, a job, a purchase), and
 when to see a lawyer is ours. Written in our own words. Added on 2026-11-20.
+
+`cooking` is ours (spec local 2026-11-19-agentes-para-todos, §6.5): Anthropic's repositories have no skill for cooking.
+Its facts come from public sources, cited in its `references/`: the safe minimum internal temperatures and safe-handling
+basics of the U.S. Department of Agriculture's Food Safety and Inspection Service; the European Union's 14 allergens
+(Regulation (EU) No 1169/2011, Annex II); and the 9 major food allergens of the U.S. Food and Drug Administration
+(FALCPA and the FASTER Act). The method — allergies before anything, a week planned from what is at home, one shopping
+list — is ours. Added on 2026-11-20.
