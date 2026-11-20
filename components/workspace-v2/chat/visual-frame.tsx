@@ -13,6 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { VISUAL_TOKENS } from "@/lib/agent/visuals/manual";
+import { VISUAL_CONTEXT_MAX_CHARS } from "@/lib/agent/visuals/model-context";
 import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
 import { isFrameToParent, type ParentToFrame } from "@/lib/visuals/protocol";
 import type { ReplyWidget } from "@/lib/visuals/split-reply";
@@ -70,6 +71,8 @@ export function VisualFrame({
   const [link, setLink] = useState<string | null>(null);
   const [loadingIndex, setLoadingIndex] = useState(0);
   const clickedAt = useRef(0);
+  /** The last click into the frame, not used up by a prompt: what updateModelContext is gated by. */
+  const lastClickAt = useRef(0);
   const onPromptRef = useRef(onPrompt);
   onPromptRef.current = onPrompt;
   const onContextRef = useRef(onContext);
@@ -98,7 +101,9 @@ export function VisualFrame({
           send(d.text);
         }
       } else if (d.kind === "ol-visual:context") {
-        if (!isolated) onContextRef.current?.(d.text.trim().slice(0, 1500));
+        // What it reports goes with the person's next message, so it is gated like a prompt: only right after they
+        // clicked into the frame. The click isn't used up (a visual reports its selection, then may ask Len something).
+        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) onContextRef.current?.(d.text.trim().slice(0, VISUAL_CONTEXT_MAX_CHARS));
       }
     }
     window.addEventListener("message", onMessage);
@@ -109,7 +114,7 @@ export function VisualFrame({
   useEffect(() => {
     function onBlur() {
       const mark = () => {
-        if (document.activeElement === ref.current) clickedAt.current = Date.now();
+        if (document.activeElement === ref.current) clickedAt.current = lastClickAt.current = Date.now();
       };
       mark();
       setTimeout(mark, 0);

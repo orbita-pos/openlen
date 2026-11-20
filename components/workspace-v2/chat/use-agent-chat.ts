@@ -53,6 +53,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
+import { cleanVisualContext } from "@/lib/agent/visuals/model-context";
 import { deliveredFrom } from "@/lib/agent/skills/present";
 import { screenshotsFrom } from "@/lib/agent/step-screenshots";
 import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
@@ -1258,9 +1259,15 @@ export function useAgentChat({
         readonly idioma?: string;
         /** «Aplicar» del modo Diseño: viaja en el cuerpo como `design`. */
         readonly design?: DesignRequest | null;
+        /** What a visual on screen reported with updateModelContext: a field of its own in the body, never part of `prompt`
+         *  (the server reads `prompt` as what the person wrote). Cut here at the server's cap too. */
+        readonly visualContext?: string;
+        /** The server accepted this request: the context above can be let go. Not called when the send never happened. */
+        readonly onAccepted?: () => void;
       },
     ) => {
       const escrito = rawPrompt.trim();
+      const visualContext = cleanVisualContext(opciones?.visualContext);
       // Lo que escribes tiene su tope; con los comentarios, el del mensaje entero.
       if (escrito.length > (opciones?.comentarios ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
       const comentarios = opciones?.comentarios ?? [];
@@ -1550,6 +1557,8 @@ export function useAgentChat({
               ...(opciones?.design ? { design: opciones.design } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
               ...camposDeNacer(opciones),
+              // WHAT A VISUAL REPORTED (updateModelContext): data, in its own field.
+              ...(visualContext ? { visualContext } : {}),
             }),
             signal: abort.signal,
           });
@@ -1566,6 +1575,8 @@ export function useAgentChat({
             updateTurn(turnId, { status: "error", errorText: t(texto.key, texto.values) });
             return;
           }
+          // The server took the turn: what was kept for it (a visual's context) goes now, not before.
+          opciones?.onAccepted?.();
 
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
@@ -2541,14 +2552,21 @@ export function useAgentChat({
    * sigue en el servidor (Len 2.1).
    */
   const submit = useCallback(
-    (extraContext?: string) => {
-      const ctx = typeof extraContext === "string" ? extraContext.trim() : "";
-      const withContext = (raw: string) => (ctx && raw.trim() ? `${raw.trim()}\n\n[Widget context: ${ctx}]` : raw);
+    (extra?: {
+      /** What a visual on screen reported for this message (updateModelContext): its own field of the request, never part of the text. */
+      readonly visualContext?: string;
+      /** The server accepted the turn: the one who kept that context can let it go. */
+      readonly onAccepted?: () => void;
+    }) => {
+      // `onClick={submit}` hands over a click event: only options of ours count.
+      const visualContext = typeof extra?.visualContext === "string" ? extra.visualContext : undefined;
+      const onAccepted = typeof extra?.onAccepted === "function" ? extra.onAccepted : undefined;
       if (sending || reenganche) {
-        const texto = withContext(draft.trim());
+        // A correction to the turn in flight carries only what you typed. A visual's context has no place in it (it
+        // would be one more way for text that isn't yours to steer a turn): it waits, with its chip, for the next message.
+        const texto = draft.trim();
         const turnoId = turnoIdRef.current;
         if (!texto || !turnoId) return;
-        const originalDraft = draft.trim();
         // NO SE LIMPIA POR ADELANTADO. La primera version limpiaba la caja
         // y devolvia el texto desde un `.catch` — pero `.catch` solo salta
         // con un fallo de RED: un 404 (el turno acabo entre tu clic y la
@@ -2565,12 +2583,12 @@ export function useAgentChat({
         })
           .then((r) => {
             // Y solo si no has seguido escribiendo mientras iba.
-            if (r.ok) setDraft((d) => (d.trim() === originalDraft ? "" : d));
+            if (r.ok) setDraft((d) => (d.trim() === texto ? "" : d));
           })
           .catch(() => {});
         return;
       }
-      void send(withContext(draft), undefined, { comentarios });
+      void send(draft, undefined, { comentarios, ...(visualContext ? { visualContext, ...(onAccepted ? { onAccepted } : {}) } : {}) });
     },
     [comentarios, draft, reenganche, send, sending],
   );

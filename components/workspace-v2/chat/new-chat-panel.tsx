@@ -39,6 +39,7 @@ import type { FoundSecret } from "@/lib/apps/env/secret-patterns";
 import { ChatHeader } from "./chat-header";
 import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
+import { VisualContextChip } from "./visual-context-chip";
 import { GoalCardView } from "./goal-card";
 import { isRunning, liveStatus } from "./live-status";
 import { useAgentChat, type PendingAttachments } from "./use-agent-chat";
@@ -477,9 +478,10 @@ function AgentChatView({
       if (!permitido(destino, equipo.puedeLen)) return;
       if (await enviarAlEquipo()) return;
     }
+    // What a visual reported goes with this message as a field of its own — never inside the text — and is let go
+    // only once the server accepted the turn (and only if the visual hasn't reported something newer meanwhile).
     const ctx = visualContext.trim();
-    if (ctx) setVisualContext("");
-    chat.submit(ctx || undefined);
+    chat.submit(ctx ? { visualContext: ctx, onAccepted: () => setVisualContext((now) => (now.trim() === ctx ? "" : now)) } : undefined);
   };
   // Los mensajes entre personas no son turnos: la pregunta de Len la contesta
   // su turno siguiente, no lo que se digan dos personas en medio.
@@ -635,22 +637,7 @@ function AgentChatView({
             onClear={() => void chat.clearGoal()}
           />
         )}
-        {visualContext.trim().length > 0 && !soloLectura && (
-          <div
-            data-testid="visual-context-chip"
-            className="mb-1.5 flex items-center gap-2 rounded-lg border bd bg-elev px-2.5 py-1 text-[12px] fg-muted"
-          >
-            <span className="min-w-0 flex-1 truncate">{visualContext}</span>
-            <button
-              type="button"
-              onClick={() => setVisualContext("")}
-              className="shrink-0 rounded px-1 text-[12px] fg-faint hover:bg-hover hover:fg"
-              aria-label="Clear visual context"
-            >
-              ×
-            </button>
-          </div>
-        )}
+        {visualContext.trim().length > 0 && !soloLectura && <VisualContextChip text={visualContext.trim()} onClear={() => setVisualContext("")} />}
         {soloLectura && !equipo.compartido ? (
           <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">
             {t("composer.soloLectura")}
