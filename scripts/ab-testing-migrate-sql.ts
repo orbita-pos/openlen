@@ -41,6 +41,10 @@ export const CREATE_AB_TESTING: readonly string[] = [
     CONSTRAINT "abExperiments_assistantId_assistants_id_fk"
       FOREIGN KEY ("assistantId") REFERENCES "assistants"("id") ON DELETE SET NULL
   );`,
+  // Columns added after the table's first version (additive: a table an earlier run created gets them here).
+  `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "maxEndAt" timestamptz;`,
+  `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "decisionPrevStatus" text;`,
+  `ALTER TABLE "abExperiments" ADD COLUMN IF NOT EXISTS "decisionLockedAt" timestamptz;`,
   // At most one live/draft experiment per (project, targetPath).
   `CREATE UNIQUE INDEX IF NOT EXISTS "abExperiments_active_target_idx"
     ON "abExperiments" ("projectId", "targetPath")

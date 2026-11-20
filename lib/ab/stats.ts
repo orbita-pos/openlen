@@ -235,6 +235,17 @@ export function computeSrmChi2(nA: number, nB: number, splitBps: number): number
   return ((nA - expA) ** 2) / expA + ((nB - expB) ** 2) / expB;
 }
 
+/** An experiment's own hard stop, in days since it started: the one «Seguir probando» moved it to (`maxEndAt`), never shorter
+ *  than the global default. The evaluator, the metrics and the list all use THIS, not `MAX_DURATION_DAYS` alone. */
+export function maxDurationDaysOf(e: {
+  readonly startedAt: Date | null;
+  readonly maxEndAt: Date | null;
+}): number {
+  if (!e.startedAt || !e.maxEndAt) return MAX_DURATION_DAYS;
+  const days = (e.maxEndAt.getTime() - e.startedAt.getTime()) / 86_400_000;
+  return Number.isFinite(days) ? Math.max(MAX_DURATION_DAYS, days) : MAX_DURATION_DAYS;
+}
+
 export interface EvaluateAbStatsInput {
   readonly viewsA: number;
   readonly conversionsA: number;
