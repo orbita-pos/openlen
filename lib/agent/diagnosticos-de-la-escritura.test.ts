@@ -82,7 +82,7 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
     const ds = escritura({
       antes,
       despues,
-      edit: { old_string: '<img src="https://images.openlen.com/fachada.webp" alt="">', new_string: "<p>sin foto</p>" },
+      edits: [{ old_string: '<img src="https://images.openlen.com/fachada.webp" alt="">', new_string: "<p>sin foto</p>" }],
     });
     const d = ds.find((x) => x.codigo === "dato-perdido");
     expect(d).toMatchObject({ linea: 6, columna: 1, gravedad: "Warning" });
@@ -138,9 +138,77 @@ describe("diagnosticosDeLaEscritura: lo que antes era un aviso_critico, anclado 
       '<div class="t"><h3>Básico</h3><p>Lo esencial para empezar tu negocio en línea hoy mismo.</p><ul><li>Una página</li><li>Dominio</li></ul></div>';
     const antes = pagina(tarjeta);
     const despues = pagina('<div class="t"></div>');
-    const ds = escritura({ antes, despues, edit: { old_string: tarjeta, new_string: '<div class="t"></div>' } });
+    const ds = escritura({ antes, despues, edits: [{ old_string: tarjeta, new_string: '<div class="t"></div>' }] });
     expect(ds.map((d) => d.codigo)).toEqual(["contenido-vaciado"]);
     expect(ds[0]).toMatchObject({ linea: 5, columna: 1 });
+  });
+
+  // MultiEdit is Edit k times: each pair is measured on its own and anchored where ITS text is.
+  it("un MultiEdit que vació un bloque avisa igual que el Edit, en el sitio de su par", () => {
+    const tarjeta =
+      '<div class="t"><h3>Básico</h3><p>Lo esencial para empezar tu negocio en línea hoy mismo.</p><ul><li>Una página</li><li>Dominio</li></ul></div>';
+    const antes = pagina(`<p>hola</p>\n<p>adiós</p>\n${tarjeta}`);
+    const despues = pagina('<p>hola!</p>\n<p>adiós</p>\n<div class="t"></div>');
+    const ds = escritura({
+      antes,
+      despues,
+      edits: [
+        { old_string: "<p>hola</p>", new_string: "<p>hola!</p>" },
+        { old_string: tarjeta, new_string: '<div class="t"></div>' },
+      ],
+    });
+    expect(ds.map((d) => d.codigo)).toEqual(["contenido-vaciado"]);
+    // The emptied card is on line 7 of the saved page, not on the first pair's line 5.
+    expect(ds[0]).toMatchObject({ linea: 7, columna: 1 });
+    expect(ds[0]!.mensaje).toContain("of what it replaced");
+  });
+
+  it("un MultiEdit que vacía dos bloques avisa una vez por par", () => {
+    const una = '<div class="a"><h3>Uno</h3><p>Lo esencial para empezar tu negocio en línea hoy mismo.</p><ul><li>Una</li><li>Dos</li></ul></div>';
+    const otra = '<div class="b"><h3>Dos</h3><p>Otro bloque con suficiente texto para que el aviso hable sin duda alguna.</p><ul><li>Tres</li><li>Cuatro</li></ul></div>';
+    const antes = pagina(`${una}\n${otra}`);
+    const despues = pagina('<div class="a"></div>\n<div class="b"></div>');
+    const ds = escritura({
+      antes,
+      despues,
+      edits: [
+        { old_string: una, new_string: '<div class="a"></div>' },
+        { old_string: otra, new_string: '<div class="b"></div>' },
+      ],
+    });
+    expect(ds.map((d) => d.codigo)).toEqual(["contenido-vaciado", "contenido-vaciado"]);
+    expect(ds.map((d) => d.linea)).toEqual([5, 6]);
+  });
+
+  it("un MultiEdit que quitó un dato: el aviso ancla en el par que lo tenía, no en 1:1", () => {
+    const foto = '<img src="https://images.openlen.com/fachada.webp" alt="">';
+    const antes = pagina(`<p>hola</p>\n<p>adiós</p>\n${foto}`);
+    const despues = pagina("<p>hola!</p>\n<p>adiós</p>\n<p>sin foto</p>");
+    const ds = escritura({
+      antes,
+      despues,
+      edits: [
+        { old_string: "<p>hola</p>", new_string: "<p>hola!</p>" },
+        { old_string: foto, new_string: "<p>sin foto</p>" },
+      ],
+    });
+    const d = ds.find((x) => x.codigo === "dato-perdido");
+    expect(d).toMatchObject({ linea: 7, columna: 1, gravedad: "Warning" });
+  });
+
+  it("un MultiEdit sano no cuesta un token", () => {
+    const antes = pagina("<p>hola</p>\n<p>adiós</p>");
+    const despues = pagina("<p>hola!</p>\n<p>adiós!</p>");
+    expect(
+      escritura({
+        antes,
+        despues,
+        edits: [
+          { old_string: "<p>hola</p>", new_string: "<p>hola!</p>" },
+          { old_string: "<p>adiós</p>", new_string: "<p>adiós!</p>" },
+        ],
+      }),
+    ).toEqual([]);
   });
 
   it("una regla CSS nueva que no puede aplicar nunca, en su línea del <style>", () => {

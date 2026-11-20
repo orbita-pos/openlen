@@ -336,6 +336,42 @@ describe("Len 2.0 — el sitio como ficheros, contra el proyecto", () => {
     assert.ok(store.data.html!.includes("$310") && store.data.html!.includes("$1550"));
   });
 
+  // Ruta 98 · C1: MultiEdit es Edit k veces, y el aviso de «vació lo que reemplazaba» lo sabe.
+  describe("🔴 un bloque vaciado avisa igual con Edit que con MultiEdit", () => {
+    const TARJETA =
+      '<div class="t"><h3>Básico</h3><p>Lo esencial para empezar tu negocio en línea hoy mismo.</p><ul><li>Una página</li><li>Dominio</li></ul></div>';
+    const CON_TARJETA = HOME.replace("</body>", `${TARJETA}\n</body>`);
+    const vaciado = (o: { diagnosticos?: readonly { codigo?: string; linea: number }[] }) => (o.diagnosticos ?? []).filter((d) => d.codigo === "contenido-vaciado");
+
+    it("Edit (control)", async () => {
+      const { deps, store } = makeDeps({ html: CON_TARJETA });
+      const session = makeSession();
+      await runAgentTool(session, deps, "Read", { file_path: "/index.html" });
+      const out = await runAgentTool(session, deps, "Edit", { file_path: "/index.html", old_string: TARJETA, new_string: '<div class="t"></div>' });
+      assert.equal(out.response.ok, true, texto(out));
+      const avisos = vaciado(out);
+      assert.equal(avisos.length, 1);
+      assert.equal(store.data.html!.split("\n")[avisos[0]!.linea - 1], '<div class="t"></div>');
+    });
+
+    it("MultiEdit: el mismo aviso, en la línea del par que vació", async () => {
+      const { deps, store } = makeDeps({ html: CON_TARJETA });
+      const session = makeSession();
+      await runAgentTool(session, deps, "Read", { file_path: "/index.html" });
+      const out = await runAgentTool(session, deps, "MultiEdit", {
+        file_path: "/index.html",
+        edits: [
+          { old_string: "$250", new_string: "$300" },
+          { old_string: TARJETA, new_string: '<div class="t"></div>' },
+        ],
+      });
+      assert.equal(out.response.ok, true, texto(out));
+      const avisos = vaciado(out);
+      assert.equal(avisos.length, 1, "un MultiEdit que vacía un bloque calla");
+      assert.equal(store.data.html!.split("\n")[avisos[0]!.linea - 1], '<div class="t"></div>');
+    });
+  });
+
   it("editar otra página es otra ruta, sin mudarse: escribe en data.pages y dice cuál", async () => {
     const { deps, store } = makeDeps({ html: HOME, pages: { menu: { html: MENU } } });
     const session = makeSession();
