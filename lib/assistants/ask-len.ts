@@ -98,16 +98,34 @@ function framingOf(name: string, request: string, ownerMessage: string | null): 
   ].join("\n\n");
 }
 
-export async function runAskLen(session: AgentSession, args: Record<string, unknown>, launch?: LaunchAssistantRequest, notes?: AskLenNotes, steer: SteerLen = steerLiveTurn): Promise<ToolOutcome> {
+/** A project of the person's for a request from their space: their blank project, or a new one. */
+type NewProjectFor = (personId: string) => Promise<string>;
+
+const blankProjectOf: NewProjectFor = async (personId) => (await import("@/lib/projects")).findOrCreateBlankProject(personId);
+
+export async function runAskLen(
+  session: AgentSession,
+  args: Record<string, unknown>,
+  launch?: LaunchAssistantRequest,
+  notes?: AskLenNotes,
+  steer: SteerLen = steerLiveTurn,
+  newProject: NewProjectFor = blankProjectOf,
+): Promise<ToolOutcome> {
   const assistant = session.assistant;
   if (!assistant) return { response: { ok: false, error: "not_available", message: `${ASK_LEN} is the person's own assistant's tool.` } };
   const request = typeof args.request === "string" ? args.request.trim() : "";
   if (!request || request.length > ASK_LEN_MAX) {
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
-  // Which project (phase 4): hers only, and the one the request names when she serves more than one.
-  const served = assistant.projects?.length ? assistant.projects : [{ id: session.projectId, title: "" }];
   const named = typeof args.project === "string" ? args.project.trim() : "";
+  // FROM THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.4): Len never builds there. Attending no page,
+  // a request that names none starts Len in a project of the person's own — their blank one, or a new one.
+  if (assistant.inSpace && !assistant.projects?.length && !named) {
+    return passToLen(session, request, { id: await newProject(session.userId), title: "" }, "a new project", launch, notes, steer);
+  }
+  // Which project (phase 4): hers only, and the one the request names when she serves more than one. In the person's
+  // space her home is never one of them.
+  const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
   // Looking on the phone at a project she doesn't serve (spec local 2026-11-16-movil-es-tu-asistente, §5.6): a request
   // that names none can't go to one of hers by default — it would change a page the owner isn't looking at.
   if (!named && assistant.viewing && !assistant.viewing.served) {
@@ -135,7 +153,21 @@ export async function runAskLen(session: AgentSession, args: Record<string, unkn
   }
   // Serving more than one, the result and the note name where it went, as Claude Code's Write names the path it wrote:
   // she can tell her owner which project she took it to, and they can correct her (phase 4, task 8).
-  const where = served.length > 1 ? target.title?.trim() || target.id : null;
+  return passToLen(session, request, target, served.length > 1 ? target.title?.trim() || target.id : null, launch, notes, steer);
+}
+
+/** The request as Len's turn in `target`. `where`, when said, names it in the result and the note: a project of
+ *  several, or «a new project» for a request from the person's space. */
+async function passToLen(
+  session: AgentSession,
+  request: string,
+  target: { readonly id: string; readonly title: string },
+  where: string | null,
+  launch: LaunchAssistantRequest | undefined,
+  notes: AskLenNotes | undefined,
+  steer: SteerLen,
+): Promise<ToolOutcome> {
+  const assistant = session.assistant!;
   const go = launch ?? (await import("@/lib/agent/turnos-desde-el-servidor")).launchAssistantRequestTurn;
   // How it ends comes back to the assistant with its next request (lib/assistants/notices.ts). Kept softly: a note
   // that can't be written never stops the request. An injected launch without notes keeps none (tests).

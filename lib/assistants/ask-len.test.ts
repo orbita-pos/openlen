@@ -257,6 +257,37 @@ describe("ask_len", () => {
     });
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4): from the person's space, Len never builds there.
+  describe("from the person's space", () => {
+    const inSpace = (projects: { id: string; title: string }[] = []) =>
+      ({ ...ASSISTANT_SESSION, projectId: "space", assistant: { id: "a1", name: "Mr. Smith", projects, inSpace: true } }) as unknown as AgentSession;
+
+    it("🔴 an agent with no pages starts Len in a new project of the person's", async () => {
+      const launch = vi.fn();
+      const newProject = vi.fn(async () => "fresh");
+      const out = await runAskLen(inSpace(), { request: "hazme una app de tarjetas de vocabulario" }, launch, undefined, undefined, newProject);
+      expect(out.response).toMatchObject({ ok: true, queued: true });
+      expect(String((out.response as { tool_result?: string }).tool_result)).toMatch(/new project/);
+      expect(newProject).toHaveBeenCalledWith("u1");
+      expect(launch.mock.calls[0]![0].projectId).toBe("fresh");
+    });
+
+    it("🔴 naming the space is not one of its projects", async () => {
+      const launch = vi.fn();
+      const out = await runAskLen(inSpace(), { request: "x", project: "space" }, launch, undefined, undefined, vi.fn(async () => "fresh"));
+      expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("an agent that attends one page takes it there, as before", async () => {
+      const launch = vi.fn();
+      const newProject = vi.fn(async () => "fresh");
+      await runAskLen(inSpace([{ id: "p1", title: "Pan" }]), { request: "botón verde" }, launch, undefined, undefined, newProject);
+      expect(launch.mock.calls[0]![0].projectId).toBe("p1");
+      expect(newProject).not.toHaveBeenCalled();
+    });
+  });
+
   it("is not Len's tool", async () => {
     const launch = vi.fn();
     expect((await runAskLen(LEN_SESSION, { request: "x" }, launch)).response).toMatchObject({ ok: false, error: "not_available" });
