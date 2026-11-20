@@ -138,6 +138,30 @@ describe("signing in", () => {
     expect(fake.registrations[0]).toMatchObject({ client_name: "OpenLen", redirect_uris: [CALLBACK] });
   });
 
+  // Final review, M3: the SDK refuses a Client ID Metadata Document URL that isn't https before it even asks whether the
+  // server takes one — so local development (http://localhost:3000) could never sign in by dynamic registration.
+  it("🔴 a site that isn't https offers no metadata document and signs in by dynamic registration", async () => {
+    const local = { ...deps(), siteUrl: "http://localhost:3000" };
+    const r = await startSignIn("p1", "cal", local);
+    expect(r).toMatchObject({ ok: true });
+    expect(fake.registrations).toHaveLength(1);
+    expect(fake.registrations[0]).toMatchObject({ redirect_uris: ["http://localhost:3000/api/mcp-connectors/oauth/callback"] });
+    // A server that takes metadata documents doesn't get an http one either: it is registered with instead.
+    fake.cimd = true;
+    setServer({ headers: { "X-Other": "1" } });
+    const again = await startSignIn("p1", "cal", local);
+    if (!again.ok) throw new Error(again.reason);
+    expect(new URL(again.authorizationUrl).searchParams.get("client_id")).toMatch(/^dyn_/);
+  });
+
+  it("an https site's metadata document is used where the server takes one", async () => {
+    fake.cimd = true;
+    const r = await startSignIn("p1", "cal", deps());
+    if (!r.ok) throw new Error(r.reason);
+    expect(new URL(r.authorizationUrl).searchParams.get("client_id")).toBe(`${SITE}/oauth/mcp-client.json`);
+    expect(fake.registrations).toHaveLength(0);
+  });
+
   it("a second sign-in reuses the client registered the first time", async () => {
     await signIn();
     await signIn();

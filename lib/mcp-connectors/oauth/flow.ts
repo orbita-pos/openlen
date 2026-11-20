@@ -99,11 +99,14 @@ function flowProvider(
   fingerprint: string,
   own: StoredOAuthClientInformation | null,
 ): Pick<OAuthClientProvider, "redirectUrl" | "clientMetadata" | "clientMetadataUrl" | "discoveryState" | "clientInformation" | "saveClientInformation"> {
+  const metadataUrl = clientMetadataUrl(d.siteUrl);
   return {
     redirectUrl: callbackUrl(d.siteUrl),
     clientMetadata: clientMetadata(d.siteUrl),
-    // The SDK uses it only when the authorization server says it supports Client ID Metadata Documents (§5.2 step 4).
-    clientMetadataUrl: clientMetadataUrl(d.siteUrl),
+    // The SDK uses it only when the authorization server says it supports Client ID Metadata Documents (§5.2 step 4) —
+    // but it refuses one that isn't https before asking (final review M3): a site served over http (local development)
+    // offers none, and signs in by dynamic registration.
+    ...(new URL(metadataUrl).protocol === "https:" ? { clientMetadataUrl: metadataUrl } : {}),
     discoveryState: () => discovery,
     async clientInformation(ctx) {
       // The SDK resolved the issuer from the discovery handed to it; anything else is not this flow's server.
