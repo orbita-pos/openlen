@@ -914,6 +914,12 @@ export async function publishProject(
       };
     }
   }
+  // A PROMOTED WINNER NOT IN THE DRAFT YET (review): a publish FROM THE DRAFT — no sources of its own — would undo the promotion.
+  // Asked here, at the bottom, so every door meets it (the web route, MCP, Len's card, the system sweeps).
+  if (abTestingEnabled() && !params.sourcesOverride && !params.sourcesFrom && !params.abExperiment) {
+    const { assertNoUnbroughtWinner } = await import("@/lib/ab/publish-guard");
+    await assertNoUnbroughtWinner({ projectId: params.projectId, system: params.abLive === "keep" });
+  }
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft
   // is never written (see `persistLanguages` below).

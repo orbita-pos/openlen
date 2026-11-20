@@ -217,3 +217,13 @@ describe("when the A/B tables can't be read (G1+G3 review, item 22)", () => {
     expect((await publishThroughGates(INPUT)).status).toBe(200);
   });
 });
+
+describe("a promoted winner that isn't in the draft yet, met at the bottom door (review)", () => {
+  it("🔴 the person's publish is 428 ab_bring_pending with the same body the dialog already reads", async () => {
+    const { AbBringPendingError } = await import("./errors");
+    m.live.mockResolvedValue(null);
+    m.publishProject.mockRejectedValueOnce(new AbBringPendingError("ab_promo0001", "Hero test", "conflict"));
+    const r = await publishThroughGates(INPUT);
+    expect(r).toEqual({ status: 428, body: { error: "ab_bring_pending", experimentId: "ab_promo0001", name: "Hero test", bringState: "conflict" } });
+  });
+});

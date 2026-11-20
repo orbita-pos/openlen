@@ -5,7 +5,7 @@
 import { ProjectIsToolError } from "@/lib/tools/errors";
 import "server-only";
 
-import { AbExperimentRunningError } from "@/lib/ab/errors";
+import { AbBringPendingError, AbExperimentRunningError } from "@/lib/ab/errors";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { dataChangesErrorBody } from "@/lib/backend/data-changes";
 import { functionsPublishErrorBody } from "@/lib/functions/publish-errors";
@@ -219,6 +219,8 @@ export function publishErrorResult(err: unknown): GatedPublishResult | null {
   if (err instanceof ProjectIsToolError) return { status: 409, body: { error: "tool_installs" } };
   // A live A/B experiment this publish would have ended (review item 13): Len Watch, MCP, or a person whose publish raced a launch.
   if (err instanceof AbExperimentRunningError) return { status: 409, body: err.body };
+  // A promoted winner not in the draft yet (review): the door refuses a publish from the draft; the person resolves it.
+  if (err instanceof AbBringPendingError) return { status: 428, body: err.body };
   // Una app web que no compila no se publica (spec local 2026-10-07-apps):
   // se dice qué fichero y qué línea, para el dueño y para Len.
   if (err instanceof AppNoCompilaError) return { status: 422, body: { error: "app_does_not_compile", errors: err.errores.map(textoDeDiagnostico) } };

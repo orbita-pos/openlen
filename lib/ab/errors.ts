@@ -35,3 +35,27 @@ export class AbRepublishSkipped extends Error {
     this.name = "AbRepublishSkipped";
   }
 }
+
+/** A publish FROM THE DRAFT of a project whose promoted Variant B isn't in the draft yet (it clashed, or waits for Len): it would
+ *  send the page without B and undo the promotion. Raised by the bottom door, so every door meets it — the web route, the MCP
+ *  tool, Len's card — and each says how to resolve it. */
+export class AbBringPendingError extends Error {
+  readonly code = "ab_bring_pending";
+  constructor(
+    public readonly experimentId: string,
+    public readonly experimentName: string,
+    public readonly bringState: "pending" | "conflict" | "bringing",
+    message?: string,
+  ) {
+    super(
+      message ??
+        `The winner of the A/B test "${experimentName}" is live but isn't in the draft yet, so publishing the draft would undo it. In OpenLen, open the A/B card (or the Publish dialog) and choose "Bring into draft" — or "Discard Variant B's changes" to give them up — then publish.`,
+    );
+    this.name = "AbBringPendingError";
+  }
+
+  /** The body the HTTP routes answer with (the publish dialog reads it). */
+  get body(): { error: "ab_bring_pending"; experimentId: string; name: string; bringState: string } {
+    return { error: this.code, experimentId: this.experimentId, name: this.experimentName, bringState: this.bringState };
+  }
+}

@@ -11,12 +11,12 @@ import { db, schema } from "@/lib/db";
 
 import { purgeExperimentEdge } from "./edge-purge";
 import { abTestingEnabled } from "./enabled";
-import { AbExperimentRunningError, AbRepublishSkipped } from "./errors";
+import { AbBringPendingError, AbExperimentRunningError, AbRepublishSkipped } from "./errors";
 import { buildLiveAbPublish, type LiveAbPublish } from "./live-publish";
-import { closeDecision, liveExperimentForProject, type AbExperimentRow } from "./store";
+import { closeDecision, liveExperimentForProject, pendingBringForProject, type AbExperimentRow } from "./store";
 import { cleanupAbWorktree } from "./worktree";
 
-export { AbExperimentRunningError, AbRepublishSkipped };
+export { AbBringPendingError, AbExperimentRunningError, AbRepublishSkipped };
 
 /** What the caller of `publishProject` says about a live experiment it knows nothing of:
  *  · `keep`   — a SYSTEM republish (republish-all, internal republish): re-emit it, the split survives;
@@ -63,6 +63,25 @@ export async function resolveAbPublish(
     return rebuilt;
   }
   throw refusal(live);
+}
+
+/** THE BRING GATE, IN THE BOTTOM DOOR (review): with a promoted winner that isn't in the draft yet (`pending`, `conflict`), any
+ *  publish FROM THE DRAFT would send the page without it. `publishProject` asks this for every publish that has no explicit
+ *  sources of its own (the experiment's promote and its restore bring theirs). A person, Len's card and the MCP tool are
+ *  refused with `AbBringPendingError` (its message says how to resolve it); a system sweep (`system`) SKIPS the project, with a
+ *  log line. Moot with the flag off. */
+export async function assertNoUnbroughtWinner(
+  input: { readonly projectId: string; readonly system: boolean },
+  deps: { enabled(): boolean; pending(projectId: string): Promise<AbExperimentRow | null> } = { enabled: () => abTestingEnabled(), pending: pendingBringForProject },
+): Promise<void> {
+  if (!deps.enabled()) return;
+  const pending = await deps.pending(input.projectId);
+  if (!pending) return;
+  if (input.system) {
+    console.warn(`[ab] a system republish skipped project ${input.projectId}: the winner of ${pending.id} isn't in the draft yet`);
+    throw new AbRepublishSkipped("bring_pending", `The winner of the A/B test "${pending.name}" isn't in the draft yet: this republish is skipped.`);
+  }
+  throw new AbBringPendingError(pending.id, pending.name, (pending.bringState as "pending" | "conflict" | "bringing" | null) ?? "pending");
 }
 
 /** For `unpublishProject` and `rollbackProject`: they have no way to keep an experiment alive. */

@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { AbExperimentRunningError, AbRepublishSkipped, assertNoLiveExperiment, endExperimentAfterPublish, resolveAbPublish } = await import("./publish-guard");
+const { AbBringPendingError, AbExperimentRunningError, AbRepublishSkipped, assertNoLiveExperiment, assertNoUnbroughtWinner, endExperimentAfterPublish, resolveAbPublish } = await import("./publish-guard");
 
 const EXP = { id: "ab_1234abcd", name: "Direct hero", targetPath: "/", status: "running", controlReleaseSha: "rel-c", startedAt: new Date(), decisionStatus: "none" } as never;
 const REBUILT = { experiment: EXP, sourcesOverride: { data: { html: "A" }, folder: {} }, abExperiment: { id: "ab_1234abcd" }, protectReleaseShas: ["rel-c"] } as never;
@@ -170,5 +170,35 @@ describe("a system republish (keep) and an experiment being decided", () => {
   it("the ending policies never look: the decision itself (and «Stop and publish», which holds the lock) is what publishes", async () => {
     const d = deps({ liveExperiment: vi.fn(async () => WITH({ decisionStatus: "applying" })) });
     await expect(resolveAbPublish({ ...base, policy: "ending" }, d)).resolves.toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE BRING GATE IN THE BOTTOM DOOR (review): a publish from the draft while the promoted winner isn't in it.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("assertNoUnbroughtWinner", () => {
+  const WINNER = { id: "ab_promo0001", name: "Hero test", status: "promoted_b", bringState: "conflict" } as never;
+  const gate = (pending: unknown, enabled = true) => ({ enabled: () => enabled, pending: vi.fn(async () => pending as never) });
+
+  it("🔴 a person's (or MCP's) publish from the draft is refused with ab_bring_pending, and the message says how to resolve it", async () => {
+    const err = await assertNoUnbroughtWinner({ projectId: "p1", system: false }, gate(WINNER)).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(AbBringPendingError);
+    expect((err as InstanceType<typeof AbBringPendingError>).body).toEqual({ error: "ab_bring_pending", experimentId: "ab_promo0001", name: "Hero test", bringState: "conflict" });
+    expect((err as Error).message).toMatch(/Bring into draft/);
+    expect((err as Error).message).toMatch(/Discard/);
+  });
+
+  it("🔴 a system sweep SKIPS the project, with a log line", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(assertNoUnbroughtWinner({ projectId: "p1", system: true }, gate(WINNER))).rejects.toBeInstanceOf(AbRepublishSkipped);
+    expect(warn.mock.calls.flat().join(" ")).toMatch(/skipped project p1/);
+    warn.mockRestore();
+  });
+
+  it("nothing pending, or the flag off: nothing happens (and with the flag off nothing is asked)", async () => {
+    await expect(assertNoUnbroughtWinner({ projectId: "p1", system: false }, gate(null))).resolves.toBeUndefined();
+    const off = gate(WINNER, false);
+    await expect(assertNoUnbroughtWinner({ projectId: "p1", system: false }, off)).resolves.toBeUndefined();
+    expect(off.pending).not.toHaveBeenCalled();
   });
 });

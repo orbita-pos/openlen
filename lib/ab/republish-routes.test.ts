@@ -38,3 +38,19 @@ describe("system republishes", () => {
     expect(m.publishProject).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", abLive: "keep" }));
   });
 });
+
+describe("a project whose promoted winner isn't in the draft yet (review: the bring gate in the bottom door)", () => {
+  it("🔴 the sweeps skip it, with the reason, instead of counting a failure", async () => {
+    const { AbRepublishSkipped } = await import("@/lib/ab/errors");
+    m.rows = [{ id: "p1", userId: "u1", subdomain: "pan" }, { id: "p2", userId: "u2", subdomain: "two" }];
+    m.publishProject.mockRejectedValueOnce(new AbRepublishSkipped("bring_pending", "The winner of the A/B test \"Hero\" isn't in the draft yet"));
+    const res = await all.POST();
+    expect(res.status).toBe(202);
+    await vi.waitFor(async () => {
+      const state = await (await all.GET()).json();
+      expect(state.running).toBe(false);
+      expect(state.lastRun.skippedAb).toEqual(["pan"]);
+      expect(state.lastRun).toMatchObject({ ok: 1, failed: 0 });
+    });
+  });
+});
