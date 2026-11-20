@@ -135,4 +135,69 @@ describe("screenshots in the conversation", () => {
     keepRecentScreenshots(messages);
     expect(messages[1]!.content).toBe(once);
   });
+
+  // C5 of the Ruta 98 review: the gist keeps the facts it exists for.
+  const gistOf = (visit: string): string | null => {
+    const messages = looks(41);
+    messages[1] = { role: "user", content: "", functionResponses: [{ name: "use_page", response: { ok: true, visit } }], images: [img("1")] };
+    keepRecentScreenshots(messages);
+    return /Observed before screenshots were dropped: (.*)/.exec(messages[1]!.content)?.[1] ?? null;
+  };
+  const GIST_CAP = 220;
+
+  it("C5 · keeps the lines that say nothing changed, next to their step, and not the other detail", () => {
+    const gist = gistOf(
+      [
+        "Visit to / as a new visitor.",
+        "1. click «Guardar» → clicked",
+        "   · nothing changed: not what is shown, not the fields, not what is saved in the browser.",
+        "2. click «Más» → clicked",
+        "   · the counter went from 3 to 4",
+        "3. reload → reloaded",
+        "   · after reloading, the page looks the same as before reloading.",
+        "JavaScript errors in the visit: none.",
+      ].join("\n"),
+    );
+    expect(gist).toBe(
+      "1. click «Guardar» → clicked | nothing changed | 2. click «Más» → clicked | 3. reload → reloaded | after reloading, the page looks the same as before reloading | JavaScript errors in the visit: none.",
+    );
+    // A field's step says «nothing else changed» (and the suffix about what changes by itself goes with the rest).
+    expect(
+      gistOf(["1. type «a» into «Nombre» → typed", "   · nothing else changed: not what is shown, not the other fields, not what is saved in the browser (only what changes by itself changed)."].join("\n")),
+    ).toBe("1. type «a» into «Nombre» → typed | nothing else changed");
+  });
+
+  it("🔴 C5 · the JavaScript errors line is never the part that is cut: the middle gives way to it", () => {
+    const steps = Array.from({ length: 12 }, (_, i) => [`${i + 1}. click «Botón número ${i + 1}» → clicked`, "   · nothing changed: not what is shown."]).flat();
+    const errors = "JavaScript errors in the visit: TypeError: cart.items is undefined.";
+    const gist = gistOf(["Visit to /.", ...steps, errors].join("\n"))!;
+    expect(gist.endsWith(errors)).toBe(true);
+    expect(gist.startsWith("1. click «Botón número 1» → clicked | nothing changed | 2. ")).toBe(true);
+    expect(gist).toContain("… | JavaScript errors");
+    expect(gist.length).toBeLessThanOrEqual(GIST_CAP + 1);
+  });
+
+  it("C5 · an errors line longer than the cap is still there, from its start, inside the cap", () => {
+    const long = `JavaScript errors in the visit: ${Array.from({ length: 5 }, (_, i) => `Error ${i}: ${"x".repeat(150)}`).join("; ")}.`;
+    const gist = gistOf(["Visit to /.", "1. click «Guardar» → clicked", "   · nothing changed.", long].join("\n"))!;
+    expect(gist.startsWith("JavaScript errors in the visit: Error 0: ")).toBe(true);
+    expect(gist.length).toBeLessThanOrEqual(GIST_CAP + 1);
+  });
+
+  it("C5 · an emoji at the cut is not left half", () => {
+    const errors = "JavaScript errors in the visit: none.";
+    const room = GIST_CAP - errors.length - " | ".length - "…".length;
+    const first = "1. click «x» → clicked";
+    const step = first + "a".repeat(room - first.length - 1) + "\u{1F600}" + "b".repeat(60);
+    const gist = gistOf(["Visit to /.", step, errors].join("\n"))!;
+    expect(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(gist)).toBe(false);
+    expect(gist.endsWith(`… | ${errors}`)).toBe(true);
+  });
+
+  it("C5 · without an errors line (view_page) the cap is the same as before", () => {
+    const steps = Array.from({ length: 30 }, (_, i) => `${i + 1}. click «Botón número ${i + 1}» → clicked`);
+    const gist = gistOf(steps.join("\n"))!;
+    expect(gist.length).toBe(GIST_CAP + 1);
+    expect(gist.endsWith("…")).toBe(true);
+  });
 });
