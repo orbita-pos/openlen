@@ -3,6 +3,8 @@
 // The OAuth return page and OpenLen's Client ID Metadata Document (spec local 2026-11-17-oauth-de-conectores-mcp, §5.2,
 // §5.4 step 3, §10.1): minimal HTML with `postMessage` and strict headers, never echoing `code` or a token, and
 // `/oauth/mcp-client.json` naming its own URL as `client_id`.
+import vm from "node:vm";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -91,6 +93,74 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     expect(html).not.toContain("one_time_code_xyz");
     expect(html).not.toContain("code=");
     expect(html).not.toContain("s1");
+  });
+});
+
+// Review fix OB3: the provider's pages (or a Cross-Origin-Opener-Policy) may have cut the opener off, so the page tells the
+// workspace on a same-origin BroadcastChannel as well, and with postMessage to the opener as a fallback. The page's own
+// script is run here against a fake window to see what it really does.
+describe("what the return page's script does", () => {
+  async function runPage(opts: { opener?: boolean; channel?: "works" | "missing" | "throws" } = {}) {
+    fake.finishResult = { ok: true, server: "cal" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=s1&code=c"));
+    const html = await res.text();
+    const script = /<script>([\s\S]*?)<\/script>/.exec(html)![1]!;
+    const onChannel: { name: string; data: unknown; closedAfter: boolean }[] = [];
+    const toOpener: { data: unknown; origin: string }[] = [];
+    const timers: (() => void)[] = [];
+    const closed = { times: 0 };
+    class Channel {
+      posted: unknown[] = [];
+      constructor(readonly name: string) {
+        if (opts.channel === "throws") throw new Error("not allowed");
+      }
+      postMessage(data: unknown) {
+        onChannel.push({ name: this.name, data, closedAfter: false });
+      }
+      close() {}
+    }
+    const sandbox: Record<string, unknown> = {
+      window: {
+        opener: opts.opener === false ? null : { postMessage: (data: unknown, origin: string) => toOpener.push({ data, origin }) },
+        close: () => {
+          closed.times++;
+        },
+      },
+      location: { origin: "https://openlen.test" },
+      setTimeout: (fn: () => void) => timers.push(fn),
+      ...(opts.channel === "missing" ? {} : { BroadcastChannel: Channel }),
+    };
+    vm.runInNewContext(script, sandbox);
+    return { onChannel, toOpener, closed, runTimers: () => timers.splice(0).forEach((t) => t()) };
+  }
+  const PAYLOAD = { type: "openlen:mcp-oauth", server: "cal", ok: true };
+
+  it("posts on the openlen:mcp-oauth channel and to the opener, then closes itself", async () => {
+    const page = await runPage();
+    expect(page.onChannel).toEqual([expect.objectContaining({ name: "openlen:mcp-oauth", data: PAYLOAD })]);
+    expect(page.toOpener).toEqual([{ data: PAYLOAD, origin: "https://openlen.test" }]);
+    // Not at once: the channel's message is on its way before the window goes.
+    expect(page.closed.times).toBe(0);
+    page.runTimers();
+    expect(page.closed.times).toBe(1);
+  });
+
+  it("🔴 reaches the workspace through the channel when the opener was cut off", async () => {
+    const page = await runPage({ opener: false });
+    expect(page.onChannel).toHaveLength(1);
+    expect(page.toOpener).toEqual([]);
+    page.runTimers();
+    expect(page.closed.times).toBe(1);
+  });
+
+  it("falls back to the opener when the browser has no channel or refuses one", async () => {
+    for (const channel of ["missing", "throws"] as const) {
+      const page = await runPage({ channel });
+      expect(page.onChannel, channel).toEqual([]);
+      expect(page.toOpener, channel).toEqual([{ data: PAYLOAD, origin: "https://openlen.test" }]);
+      page.runTimers();
+      expect(page.closed.times, channel).toBe(1);
+    }
   });
 });
 
