@@ -36,21 +36,54 @@ export function screenshotLimits(env: Env = process.env): { kept: number; quantu
 
 const DROPPED_NOTE = "(The screenshots that were here were dropped to keep the turn light: take a new one if you need to look again.)";
 const SUMMARY_MAX_CHARS = 220;
+const JS_ERRORS_LINE = "JavaScript errors in the visit:";
+/** The `·` detail lines of a step that say it did nothing: the lead clause is the fact, the rest explains it
+ *  (`usar-pagina.ts`: «nothing changed: not what is shown…», «nothing else changed…», and a reload's «after
+ *  reloading, the page looks the same as before reloading»). */
+const NOTHING_CHANGED = /^·\s+(nothing (?:else )?changed|after reloading, the page looks the same as before reloading)/;
 
-/** Extracts a short deterministic factual gist from dropped browser tool responses so facts survive pixel eviction. */
+/** The first `n` characters, without the half of a surrogate pair (an emoji) the cut may land in. */
+function firstChars(text: string, n: number): string {
+  const cut = text.slice(0, n);
+  return /[\ud800-\udbff]$/.test(cut) ? cut.slice(0, -1) : cut;
+}
+
+/** Fits the gist in the cap. The `JavaScript errors` line is the fact the gist exists for, so it is never the part
+ *  that goes: the steps in the middle give way to it. An errors line that alone passes the cap is kept from its start. */
+function fitGist(middle: readonly string[], errors: string): string {
+  const mid = middle.join(" | ").replace(/\s+/g, " ").trim();
+  const last = errors.replace(/\s+/g, " ").trim();
+  const whole = [mid, last].filter((x) => x !== "").join(" | ");
+  if (whole.length <= SUMMARY_MAX_CHARS) return whole;
+  if (last === "") return `${firstChars(mid, SUMMARY_MAX_CHARS)}…`;
+  // «<middle>… | <errors line>» inside the cap.
+  const room = SUMMARY_MAX_CHARS - last.length - " | ".length - "…".length;
+  if (room <= 0) return last.length <= SUMMARY_MAX_CHARS ? last : `${firstChars(last, SUMMARY_MAX_CHARS)}…`;
+  return `${firstChars(mid, room).trimEnd()}… | ${last}`;
+}
+
+/** Extracts a short deterministic factual gist from dropped browser tool responses so facts survive pixel eviction:
+ *  each step, the ones that did nothing, and the JavaScript errors of the visit. */
 function droppedObservationSummary(responses: Carrier["functionResponses"]): string | null {
   if (!responses?.length) return null;
   for (const r of responses) {
     if (r.name !== "use_page" && r.name !== "view_page") continue;
     const visit = typeof r.response?.visit === "string" ? r.response.visit : typeof r.response?.summary === "string" ? r.response.summary : "";
     if (!visit) continue;
-    const lines = visit
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => /^\d+\.\s/.test(l) || l.startsWith("JavaScript errors in the visit:"));
-    const gist = lines.join(" | ").replace(/\s+/g, " ").trim();
+    const middle: string[] = [];
+    let errors = "";
+    for (const raw of visit.split("\n")) {
+      const line = raw.trim();
+      if (/^\d+\.\s/.test(line)) middle.push(line);
+      else if (line.startsWith(JS_ERRORS_LINE)) errors = line;
+      else {
+        const nothing = NOTHING_CHANGED.exec(line);
+        if (nothing) middle.push(nothing[1]!);
+      }
+    }
+    const gist = fitGist(middle, errors);
     if (!gist) continue;
-    return `Observed before screenshots were dropped: ${gist.length <= SUMMARY_MAX_CHARS ? gist : `${gist.slice(0, SUMMARY_MAX_CHARS)}…`}`;
+    return `Observed before screenshots were dropped: ${gist}`;
   }
   return null;
 }
