@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { EMPTY_MCP_CONFIG, entryFingerprint, parseMcpConfig } from "./config";
-import { DIRECTORY, directoryFor } from "./directory";
+import { DIRECTORY, directoryFor, directoryForAnyone } from "./directory";
 import { connectorsForTurn, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
 
 const NOW = new Date("2026-11-17T12:00:00Z");
@@ -52,7 +52,39 @@ describe("directoryFor", () => {
   });
 });
 
+describe("directoryForAnyone", () => {
+  it("is what the deployment could offer someone, whoever they are: nothing without the client id, OAuth off, or the server already configured", () => {
+    const env = { OPENLEN_MCP_GOOGLE_CLIENT_ID: "gid.apps.googleusercontent.com", OPENLEN_MCP_GOOGLE_TEST_USERS: "someone@example.com" };
+    expect(directoryForAnyone({ servers: {} }, env).map((d) => d.id)).toEqual(["google-calendar"]);
+    expect(directoryForAnyone({ servers: {} }, {})).toEqual([]);
+    expect(directoryForAnyone({ servers: {} }, { ...env, OPENLEN_MCP_OAUTH: "0" })).toEqual([]);
+    expect(directoryForAnyone({ servers: {} }, { ...env, OPENLEN_MCP: "0" })).toEqual([]);
+    const configured = configWith({ mycal: { transport: "streamable-http", url: "https://calendarmcp.googleapis.com/mcp/v1" } });
+    expect(directoryForAnyone(configured, env)).toEqual([]);
+  });
+});
+
 describe("suggest_connectors in a turn", () => {
+  // OA6: a person nobody could offer anything to costs no query: the email is looked up only when an entry could be theirs.
+  it("🔴 never asks for the person's email when no entry can be offered to anyone", async () => {
+    let asked = 0;
+    const base: TurnDeps = {
+      readConfig: async () => ({ text: EMPTY_MCP_CONFIG, approved: {}, version: 0 }),
+      readStates: async () => [],
+      personEmail: async () => {
+        asked++;
+        return "jesus@example.com";
+      },
+      now: () => NOW,
+    };
+    await connectorsForTurn("p1", { ...base, env: {} });
+    await connectorsForTurn("p1", { ...base, env: { OPENLEN_MCP_GOOGLE_CLIENT_ID: "gid", OPENLEN_MCP_OAUTH: "0" } });
+    expect(asked).toBe(0);
+    const t = await connectorsForTurn("p1", { ...base, env: { OPENLEN_MCP_GOOGLE_CLIENT_ID: "gid", OPENLEN_MCP_GOOGLE_TEST_USERS: "jesus@example.com" } });
+    expect(asked).toBe(1);
+    expect(t.declarations.map((x) => x.name)).toEqual(["suggest_connectors"]);
+  });
+
   it("is not declared when directoryFor is empty, leaving connectorsForTurn identical to today", async () => {
     const d: TurnDeps = {
       readConfig: async () => ({ text: EMPTY_MCP_CONFIG, approved: {}, version: 0 }),

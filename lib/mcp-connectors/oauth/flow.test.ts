@@ -27,7 +27,7 @@ vi.mock("@/lib/db", async () => {
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
 const store = await import("./store");
-const { finishSignIn, startSignIn } = await import("./flow");
+const { dropSignIn, finishSignIn, startSignIn } = await import("./flow");
 const { connectionProvider, NeedsSignIn } = await import("./provider");
 const { openMcp } = await import("../client");
 const { mountServer } = await import("../mount");
@@ -186,6 +186,134 @@ describe("signing in", () => {
     setServer({ url: "https://mcp.fake.test/nowhere" });
     const d = { ...deps(), fetch: (async () => new Response("no", { status: 404 })) as typeof fetch };
     expect(await startSignIn("p1", "cal", d)).toMatchObject({ ok: false, reason: "unreachable" });
+  });
+});
+
+// Disconnecting (spec §5.4 step 5): the person's connection is deleted FIRST — nothing that follows can keep it — and
+// revoking the tokens at the provider (RFC 7009) is a courtesy done in the background, bounded and never raising.
+describe("dropping a sign-in", () => {
+  const sleeper = (revokeDelay: Promise<unknown>): typeof fetch =>
+    (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input instanceof Request ? input.url : input).endsWith("/revoke")) {
+        await revokeDelay;
+        return new Response(null, { status: 200 });
+      }
+      return fake.fetch(input, init);
+    }) as typeof fetch;
+
+  it("deletes the connection and revokes the refresh and the access token", async () => {
+    await signIn();
+    const tokens = (await stored())!.tokens!;
+    const r = await dropSignIn("p1", "cal", deps());
+    expect(r).toMatchObject({ dropped: true, issuer: fake.issuer });
+    await r.revocation;
+    expect(await stored()).toBeNull();
+    expect(fake.revoked).toEqual([tokens.refresh_token, tokens.access_token]);
+  });
+
+  it("🔴 the connection is already gone when the revocation request leaves", async () => {
+    await signIn();
+    let storedWhenRevoking: unknown = "not asked";
+    const d = {
+      ...deps(),
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith("/revoke")) storedWhenRevoking = await stored();
+        return fake.fetch(input, init);
+      }) as typeof fetch,
+    };
+    await (await dropSignIn("p1", "cal", d)).revocation;
+    expect(storedWhenRevoking).toBeNull();
+  });
+
+  it("revokes with the entry's own client, secret included", async () => {
+    fake.addClient("own-client", "own-secret-value");
+    creds.set("CAL_SECRET", "own-secret-value");
+    setServer({ oauth: { clientId: "own-client", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [fake.issuer] } });
+    expect(await signIn()).toEqual({ ok: true, server: "cal" });
+    await (await dropSignIn("p1", "cal", deps())).revocation;
+    expect(fake.revokeRequests).toHaveLength(2);
+    for (const form of fake.revokeRequests) {
+      expect(form.get("client_id")).toBe("own-client");
+      expect(form.get("client_secret")).toBe("own-secret-value");
+    }
+  });
+
+  it("🔴 revokes nowhere when the authorization server is no longer the one the tokens came from", async () => {
+    await signIn();
+    fake.setIssuer("/moved");
+    const r = await dropSignIn("p1", "cal", deps());
+    expect(r.dropped).toBe(true);
+    await r.revocation;
+    expect(fake.revoked).toEqual([]);
+    expect(await stored()).toBeNull();
+  });
+
+  it("a connection with no tokens is deleted and nothing is revoked", async () => {
+    await start();
+    const r = await dropSignIn("p1", "cal", deps());
+    expect(r.dropped).toBe(true);
+    await r.revocation;
+    expect(fake.revoked).toEqual([]);
+  });
+
+  it("a person with no connection drops nothing", async () => {
+    const r = await dropSignIn("p1", "cal", deps());
+    expect(r).toMatchObject({ dropped: false, issuer: null });
+    await r.revocation;
+    expect(fake.revoked).toEqual([]);
+  });
+
+  it("🔴 a slow revocation doesn't hold the drop up, and what it was given can be abandoned after five seconds", async () => {
+    await signIn();
+    let release: () => void = () => {};
+    const seen: (AbortSignal | null | undefined)[] = [];
+    const slow = sleeper(new Promise<void>((resolve) => (release = resolve)));
+    const d = {
+      ...deps(),
+      fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+        seen.push(init?.signal);
+        return slow(input, init);
+      }) as typeof fetch,
+    };
+    const r = await dropSignIn("p1", "cal", d);
+    expect(r.dropped).toBe(true);
+    expect(await stored()).toBeNull();
+    // Every request of the background job carries a signal that is not aborted yet: the timeout, as a bound.
+    expect(seen.length).toBeGreaterThan(0);
+    for (const signal of seen) {
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal!.aborted).toBe(false);
+    }
+    release();
+    await r.revocation;
+  });
+
+  it("a failing revocation (a refused connection, a 500) never raises", async () => {
+    await signIn();
+    const refused = {
+      ...deps(),
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).endsWith("/revoke")) throw new Error("connection refused");
+        return fake.fetch(input, init);
+      }) as typeof fetch,
+    };
+    const r = await dropSignIn("p1", "cal", refused);
+    expect(r.dropped).toBe(true);
+    await expect(r.revocation).resolves.toBeUndefined();
+
+    await signIn();
+    const broken = {
+      ...deps(),
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input).endsWith("/revoke") ? new Response("boom", { status: 500 }) : fake.fetch(input, init)) as typeof fetch,
+    };
+    const again = await dropSignIn("p1", "cal", broken);
+    expect(again.dropped).toBe(true);
+    await expect(again.revocation).resolves.toBeUndefined();
+
+    await signIn();
+    const nowhere = { ...deps(), fetch: (async () => { throw new Error("no network"); }) as typeof fetch };
+    await expect((await dropSignIn("p1", "cal", nowhere)).revocation).resolves.toBeUndefined();
   });
 });
 

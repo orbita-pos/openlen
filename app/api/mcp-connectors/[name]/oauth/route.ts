@@ -4,6 +4,7 @@
 // the stored connection, leaving the server in `needs-auth` `first`.
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { dropSignIn, startSignIn } from "@/lib/mcp-connectors/oauth/flow";
+import { cleanScope } from "@/lib/mcp-connectors/oauth/remote-text";
 import { realOAuthDeps } from "@/lib/mcp-connectors/real";
 import { markNeedsAuth, readMcpConfig, readServerStates } from "@/lib/mcp-connectors/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -22,7 +23,8 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   const { name } = await params;
   const states = await readServerStates(personId).catch(() => []);
   const state = states.find((s) => s.serverName === name);
-  const scope = state?.status === "needs-auth" && state.authReason === "scope" && state.authScope ? state.authScope : undefined;
+  // The scope is a server's own word, stored: it asks the provider for plain scope tokens only (remote-text.ts).
+  const scope = state?.status === "needs-auth" && state.authReason === "scope" ? (cleanScope(state.authScope) ?? undefined) : undefined;
   const r = await startSignIn(
     personId,
     name,
@@ -34,14 +36,15 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   return json({ error: r.reason, detail: r.error }, status);
 });
 
-export async function DELETE(req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> {
+export const DELETE = paraLaApp(async (req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> => {
   const personId = await usuarioDeLaPeticion(req);
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!oauthEnabled()) return json({ error: "off" }, 404);
   const { name } = await params;
   const r = await dropSignIn(personId, name, { ...realOAuthDeps(), readConfig: readMcpConfig });
-  await markNeedsAuth(personId, name, "first", r.issuer, null).catch(() => {});
+  // Only a connection that was there leaves the server waiting for a sign-in: dropping nothing changes nothing.
+  if (r.dropped) await markNeedsAuth(personId, name, "first", r.issuer, null).catch(() => {});
   return json({ ok: true }, 200);
-}
+});
 
 export const OPTIONS = respuestaPrevia;

@@ -13,13 +13,6 @@ const fake = vi.hoisted(() => ({
     | { ok: true; server: string }
     | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "issuer_changed" | "exchange_failed"; server?: string },
   finishedWith: [] as unknown[],
-  serverState: {
-    serverName: "cal",
-    status: "needs-auth",
-    failures: 2,
-    authReason: "first",
-    authIssuer: "https://accounts.google.com",
-  },
 }));
 
 vi.mock("@/lib/mcp-connectors/real", () => ({
@@ -47,13 +40,6 @@ beforeEach(() => {
   vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
   fake.finishResult = { ok: true, server: "cal" };
   fake.finishedWith.length = 0;
-  fake.serverState = {
-    serverName: "cal",
-    status: "needs-auth",
-    failures: 2,
-    authReason: "first",
-    authIssuer: "https://accounts.google.com",
-  };
 });
 
 afterEach(() => {
@@ -73,7 +59,9 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     expect(html).not.toContain("code=");
   });
 
-  it("🔴 access_denied returns 200 «not connected» and leaves the server in needs-auth with failures untouched (Review Focus 4)", async () => {
+  // What it does to the server (still needs-auth, failures untouched, state spent, nothing mounted) is asserted on the
+  // real flow and tables in route.denied.pglite.test.ts: this file mocks the flow, so it can only see the page.
+  it("🔴 access_denied returns 200 «not connected», handing the flow the denial and no code (Review Focus 4)", async () => {
     fake.finishResult = { ok: false, reason: "denied", server: "cal" };
     const res = await GET(
       new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=s1&error=access_denied", {
@@ -84,8 +72,7 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     const html = await res.text();
     expect(html).toContain("No se conectó");
     expect(html).toContain('"ok":false');
-    expect(fake.serverState.status).toBe("needs-auth");
-    expect(fake.serverState.failures).toBe(2);
+    expect(fake.finishedWith).toEqual([{ q: { state: "s1", error: "access_denied" }, sessionPersonId: "u1" }]);
   });
 
   it("successful callback posts openlen:mcp-oauth with ok: true and never contains code= or a token", async () => {

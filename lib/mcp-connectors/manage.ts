@@ -157,6 +157,8 @@ export async function removeEntry(personId: string, name: string, version: numbe
   const written = await d.write(personId, serializeMcpConfig({ servers }), version, {}, Object.keys(servers));
   if (!written.ok) return { ok: false, status: 409, error: "changed" };
   await d.deleteState(personId, name);
-  await d.dropOAuth?.(personId, name, removed);
+  // The entry is gone: a connection that can't be dropped now (its revocation runs in the background anyway) is not
+  // this call's failure — the stored row is bound to a URL nobody uses, and the next sign-in for the name replaces it.
+  await d.dropOAuth?.(personId, name, removed).catch(() => {});
   return { ok: true };
 }

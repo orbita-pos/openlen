@@ -322,6 +322,12 @@ const oauthEntry = (url = "https://calendarmcp.googleapis.com/mcp/v1") => ({
   oauth: { scope: "https://www.googleapis.com/auth/calendar" },
 });
 
+// What the model reads when a sign-in stops working IN THE MIDDLE of a turn. `authenticate` isn't declared in that turn (a turn
+// never waits on a server, and the list was fixed when it began), so the text can't tell it to call it: the person will be
+// offered the Connect button on their next message, when it is.
+const MID_TURN_TEXT =
+  "The \"cal\" connector's sign-in has stopped working, so its tools are unavailable. The person will be offered a \"Connect\" button to sign in again on their next message. Tell them in one short sentence that cal needs them to sign in again, carry on with whatever does not need it, and do not call the cal tools again in this turn. Do not ask the user for authorization codes, tokens, or URLs.";
+
 describe("mcp__<server>__authenticate", () => {
   it("needs-auth declares only authenticate, even when a previous tool list and resources were stored", async () => {
     const { d } = setup({ cal: oauthEntry() }, ["cal"], [
@@ -576,12 +582,40 @@ describe("mcp__<server>__authenticate", () => {
     });
     const first = await tc.call("mcp__cal__list_events", {});
     const second = await tc.call("mcp__cal__list_events", {});
-    const expectedText =
-      'The "cal" connector is installed, but its sign-in has stopped working, so its tools are unavailable. Call this tool only when the user\'s request needs this connector (even if they didn\'t name it explicitly). It tries the connection again. If the connector still needs a sign-in, the call fails, and the person is shown a "Connect" button to sign in again. Then tell them in one short sentence that cal needs them to sign in again, carry on with whatever does not need it, and do not call this tool again until they send another message. Do not ask the user for authorization codes, tokens, or URLs.';
-    expect(first.response).toEqual({ isError: true, content: [{ type: "text", text: expectedText }] });
-    expect(second.response).toEqual({ isError: true, content: [{ type: "text", text: expectedText }] });
+    expect(first.response).toEqual({ isError: true, content: [{ type: "text", text: MID_TURN_TEXT }] });
+    expect(second.response).toEqual({ isError: true, content: [{ type: "text", text: MID_TURN_TEXT }] });
     expect(opens).toBe(1);
     expect(marked).toEqual([{ p: "p1", s: "cal", reason: "lapsed", issuer: "https://accounts.google.com", scope: null }]);
+  });
+
+  it("🔴 the mid-turn text never tells the model to call a tool that isn't declared in that turn", async () => {
+    expect(MID_TURN_TEXT).not.toMatch(/call this tool|mcp__cal__authenticate/i);
+    const { d } = setup({ cal: oauthEntry() }, ["cal"], [{ serverName: "cal", tools: [tool("cal", "list_events")], hasResources: true, status: "connected" }]);
+    const turn = await connectorsForTurn("p1", d);
+    const marked: unknown[] = [];
+    const tc = (over: Partial<McpConnection>) =>
+      new TurnConnections("p1", turn, {
+        resolveCredentials: async () => new Map(),
+        open: async () => connection(over).c,
+        fetch: (async () => new Response()) as typeof fetch,
+        markStale: async () => {},
+        markNeedsAuth: async (p, s, reason) => {
+          marked.push({ p, s, reason });
+        },
+        modelTakesImages: true,
+      });
+    const lapsed = async () => {
+      throw new NeedsSignIn("lapsed", "https://accounts.google.com", null);
+    };
+    // The session ended after connecting: a call, and a resource read.
+    const call = await tc({ callTool: lapsed }).call("mcp__cal__list_events", {});
+    expect(call.response).toEqual({ isError: true, content: [{ type: "text", text: MID_TURN_TEXT }] });
+    const resource = await tc({ readResource: lapsed }).resource("read_mcp_resource", { server: "cal", uri: "a://b" });
+    expect(resource.response).toEqual({ isError: true, content: [{ type: "text", text: MID_TURN_TEXT }] });
+    expect(marked).toEqual([
+      { p: "p1", s: "cal", reason: "lapsed" },
+      { p: "p1", s: "cal", reason: "lapsed" },
+    ]);
   });
 
   it("🔴 a member's connectors are the member's: the owner never sees or uses them (Review Focus 5)", async () => {

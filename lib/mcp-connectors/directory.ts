@@ -12,25 +12,33 @@ export { DIRECTORY, type DirectoryEntry } from "./directory-entries";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-export function directoryFor(personEmail: string | null, config: McpConfig, env: Env = process.env): DirectoryEntry[] {
+/** What this deployment could offer SOMEONE who doesn't have it yet, whoever they are: OAuth is on, the server isn't in the
+ *  person's file, and — for Google — the deployment has its client. The turn asks for the person's email only when this
+ *  isn't empty (a person nothing could be offered to costs no query). */
+export function directoryForAnyone(config: McpConfig, env: Env = process.env): DirectoryEntry[] {
   if (!oauthEnabled(env)) return [];
   const configuredUrls = new Set(Object.values(config.servers).map((e) => e.url));
   return DIRECTORY.filter((d) => {
     if (configuredUrls.has(d.entry.url)) return false;
-    if (d.issuer === GOOGLE_ISSUER) {
-      if (!env.OPENLEN_MCP_GOOGLE_CLIENT_ID?.trim()) return false;
-      const testList = env.OPENLEN_MCP_GOOGLE_TEST_USERS?.trim();
-      if (testList) {
-        const email = personEmail?.trim().toLowerCase() ?? "";
-        if (!email) return false;
-        const allowed = testList
-          .split(",")
-          .map((u) => u.trim().toLowerCase())
-          .filter(Boolean);
-        if (!allowed.includes(email)) return false;
-      }
-    }
+    if (d.issuer === GOOGLE_ISSUER && !env.OPENLEN_MCP_GOOGLE_CLIENT_ID?.trim()) return false;
     return true;
+  });
+}
+
+/** What the directory offers this person: the above, and — while Google hasn't verified the app — only a person on
+ *  `OPENLEN_MCP_GOOGLE_TEST_USERS`. */
+export function directoryFor(personEmail: string | null, config: McpConfig, env: Env = process.env): DirectoryEntry[] {
+  return directoryForAnyone(config, env).filter((d) => {
+    if (d.issuer !== GOOGLE_ISSUER) return true;
+    const testList = env.OPENLEN_MCP_GOOGLE_TEST_USERS?.trim();
+    if (!testList) return true;
+    const email = personEmail?.trim().toLowerCase() ?? "";
+    if (!email) return false;
+    const allowed = testList
+      .split(",")
+      .map((u) => u.trim().toLowerCase())
+      .filter(Boolean);
+    return allowed.includes(email);
   });
 }
 

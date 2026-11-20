@@ -54,6 +54,8 @@ export interface FakeAuthServer {
   readonly tokenRequests: URLSearchParams[];
   /** Tokens posted to `/revoke`. */
   readonly revoked: string[];
+  /** Every `/revoke` request's whole form (the client it names and its secret), in order. */
+  readonly revokeRequests: URLSearchParams[];
   /** A client known in advance (an entry's `oauth.clientId`). */
   addClient(clientId: string, secret?: string): void;
   /** `expires_in` of the next access tokens (undefined: they never expire). */
@@ -217,6 +219,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     if (path.endsWith("/revoke") && req.method === "POST") {
       const form = new URLSearchParams(await req.text());
       server.revoked.push(form.get("token") ?? "");
+      server.revokeRequests.push(form);
       access.delete(form.get("token") ?? "");
       refresh.delete(form.get("token") ?? "");
       return new Response(null, { status: 200 });
@@ -276,6 +279,7 @@ export async function startFakeAuthServer(opts: { now: () => Date; origin?: stri
     registrations: [],
     tokenRequests: [],
     revoked: [],
+    revokeRequests: [],
     addClient(clientId: string, secret?: string) {
       // An entry's client is registered with the provider by hand, return address included: any is accepted.
       clients.set(clientId, { clientId, secret, redirectUris: [], anyRedirect: true });

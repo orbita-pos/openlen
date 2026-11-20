@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_MCP_CONNECTORS } = await import("@/scripts/mcp-connectors-migrate-sql");
-const { FLOW_TTL_MS, createFlow, dropConnection, dropTokens, loadConnection, saveClientInfo, saveTokens, takeFlow } = await import("./store");
+const { FLOW_TTL_MS, createFlow, dropConnection, dropTokens, listConnectedServers, loadConnection, saveClientInfo, saveTokens, takeFlow } = await import("./store");
 
 const URL_A = "https://calendar.example/mcp";
 const URL_B = "https://otro.example/mcp";
@@ -169,6 +169,20 @@ describe("the connection", () => {
     expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toBeNull();
     expect(await dropConnection("p1", "cal")).toBeNull();
     expect(await pg.query(`SELECT 1 FROM "personMcpOAuth"`).then((r) => r.rows.length)).toBe(0);
+  });
+
+  it("🔴 only a connection that still has usable tokens is listed as connected: not a bare client, not a row whose client no longer decrypts", async () => {
+    await saveClientInfo("p1", "signed-in", URL_A, ISSUER, CLIENT);
+    await saveTokens("p1", "signed-in", URL_A, ISSUER, TOKENS);
+    await saveClientInfo("p1", "only-client", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "broken-client", URL_A, ISSUER, CLIENT);
+    await saveTokens("p1", "broken-client", URL_A, ISSUER, TOKENS);
+    await pg.query(`UPDATE "personMcpOAuth" SET "clientInfo" = 'v1:AAAA' WHERE "serverName" = 'broken-client'`);
+    await saveClientInfo("p1", "broken-tokens", URL_A, ISSUER, CLIENT);
+    await pg.query(`UPDATE "personMcpOAuth" SET "tokens" = 'v1:AAAA' WHERE "serverName" = 'broken-tokens'`);
+    await saveClientInfo("p2", "of-someone-else", URL_A, ISSUER, CLIENT);
+    await saveTokens("p2", "of-someone-else", URL_A, ISSUER, TOKENS);
+    expect([...(await listConnectedServers("p1"))]).toEqual(["signed-in"]);
   });
 
   it("removing the person removes their connections and flows", async () => {
