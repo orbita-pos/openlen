@@ -33,7 +33,20 @@ export function experimentEdgePaths(exp: EdgeExperiment, languages: readonly str
   return [...out];
 }
 
-/** Purges all of it. Soft-failing like every purge: the experiment's own work is done; a stale edge flushes on its own. */
+/** The most URLs one Cloudflare purge call takes (30 historically, 100 on non-Enterprise plans now: the lower one is safe on both).
+ *  A call over the cap is rejected WHOLE — the home with it — and the soft-fail would hide that. */
+export const PURGE_URLS_PER_CALL = 30;
+/** `purgeSubdomain` always adds the home (`/` and `/index.html`) to the paths it is given. */
+const PURGE_ALWAYS_THERE = 2;
+/** The paths of an experiment per call: ten languages × three forms, the target and a few overrides can pass thirty. */
+export const PURGE_PATHS_PER_CALL = PURGE_URLS_PER_CALL - PURGE_ALWAYS_THERE;
+
+/** Purges all of it, in batches the edge accepts, through the existing helper. Soft-failing like every purge: the experiment's
+ *  own work is done and a stale edge flushes on its own — and one batch that fails doesn't stop the next. */
 export async function purgeExperimentEdge(subdomain: string, exp: EdgeExperiment, languages: readonly string[]): Promise<void> {
-  await purgeSubdomain(subdomain, experimentEdgePaths(exp, languages)).catch(() => undefined);
+  const paths = experimentEdgePaths(exp, languages);
+  // Always at least one call: even with nothing of its own to purge, the home goes.
+  for (let i = 0; i === 0 || i < paths.length; i += PURGE_PATHS_PER_CALL) {
+    await purgeSubdomain(subdomain, paths.slice(i, i + PURGE_PATHS_PER_CALL)).catch(() => undefined);
+  }
 }

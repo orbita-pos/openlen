@@ -1335,18 +1335,11 @@ export async function publishProject(
       console.error("[publish] failed to persist publishedReleaseSha", err);
     });
 
-  // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now.
+  // 5a'. A system republish that kept a live experiment alive: the experiment's release is this one now, and the overrides it
+  // added are purged like the launch's (never throws: the release is live).
   if (reemitted) {
-    const { recordReemittedRelease } = await import("@/lib/ab/store");
-    await recordReemittedRelease(reemitted.experiment.id, publishResult.sha ?? null, publishResult.abOverrides)
-      .then((r) => {
-        if (!r.recorded) {
-          console.error(`[publish] a system re-emit of ${reemitted?.experiment.id} landed, but the experiment was closed meanwhile: its release now carries a split nobody is judging`);
-        }
-      })
-      .catch((err: unknown) => {
-      console.error("[publish] couldn't record the re-emitted experiment release", reemitted?.experiment.id, err);
-    });
+    const { recordAndPurgeReemit } = await import("@/lib/ab/reemit");
+    await recordAndPurgeReemit(reemitted.experiment, v.value, publishResult, publishResult.locales);
   }
 
   // 5b'. LEN WATCH + EDGE A/B TESTING: what just went live, kept as a commit off the

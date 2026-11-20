@@ -59,3 +59,40 @@ describe("purgeExperimentEdge", () => {
     await expect(purgeExperimentEdge("pan", { targetPath: "/", includeLocales: false }, [])).resolves.toBeUndefined();
   });
 });
+
+describe("one Cloudflare call carries at most 30 URLs (review of G4+G5, minor 9)", () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => `/assets/b-${i}.css`);
+
+  it("🔴 the paths go in batches: every call, with the «/» and «/index.html» the helper always adds, stays within 30", async () => {
+    await purgeExperimentEdge("pan", { targetPath: "/", includeLocales: false, overridePaths: many(70) }, []);
+    expect(purge.mock.calls.length).toBeGreaterThan(1);
+    for (const [, paths] of purge.mock.calls) expect((paths as string[]).length + 2).toBeLessThanOrEqual(30);
+    // nothing lost, nothing repeated, in order
+    expect(purge.mock.calls.flatMap(([, paths]) => paths as string[])).toEqual(many(70));
+  });
+
+  it("🔴 ten languages and a few overrides (the review's case) still reach Cloudflare in calls it accepts", async () => {
+    const langs = ["es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl", "ca"];
+    await purgeExperimentEdge("pan", { targetPath: "/pricing", includeLocales: true, overridePaths: many(6) }, langs);
+    const sent = purge.mock.calls.flatMap(([, paths]) => paths as string[]);
+    expect(sent).toContain("/pricing");
+    expect(sent).toContain("/ca/pricing/index.html");
+    expect(sent).toContain("/assets/b-5.css");
+    for (const [, paths] of purge.mock.calls) expect((paths as string[]).length + 2).toBeLessThanOrEqual(30);
+  });
+
+  it("a short list is still ONE call, and none at all is one call too (the «/» purge the edge always wants)", async () => {
+    await purgeExperimentEdge("pan", { targetPath: "/", includeLocales: false, overridePaths: many(3) }, []);
+    expect(purge).toHaveBeenCalledTimes(1);
+    purge.mockClear();
+    await purgeExperimentEdge("pan", { targetPath: "/", includeLocales: false }, []);
+    expect(purge).toHaveBeenCalledTimes(1);
+    expect(purge).toHaveBeenCalledWith("pan", []);
+  });
+
+  it("a batch that fails doesn't stop the next ones", async () => {
+    purge.mockRejectedValueOnce(new Error("cloudflare hiccup"));
+    await purgeExperimentEdge("pan", { targetPath: "/", includeLocales: false, overridePaths: many(70) }, []);
+    expect(purge.mock.calls.length).toBeGreaterThan(2);
+  });
+});
