@@ -86,6 +86,7 @@ function makeDeps(opts: {
     ownerId: "u1",
     title: "Cafetería Sol",
     subdomain: "cafesol",
+    locale: "en",
     assistant: null,
   };
   return {
@@ -136,12 +137,12 @@ describe("evaluateRunningExperiments", () => {
         ownerId: "u1",
         title: "Cafetería Sol",
         subdomain: "cafesol",
+        locale: "es",
         assistant: {
           id: "a1",
           name: "Lucía",
           slug: "lucia",
           morningSummary: true,
-          summaryLocale: "es",
         },
       },
     });
@@ -166,12 +167,12 @@ describe("evaluateRunningExperiments", () => {
         ownerId: "u1",
         title: "Cafetería Sol",
         subdomain: "cafesol",
+        locale: "es",
         assistant: {
           id: "a1",
           name: "Lucía",
           slug: "lucia",
           morningSummary: true,
-          summaryLocale: "es",
         },
       },
     });
@@ -266,8 +267,8 @@ describe("notices are at least once (item 22)", () => {
   });
 
   it("the sweep leaves a winner to the morning summary, but a harm stop is always sent", async () => {
-    const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true, summaryLocale: "es" };
-    const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", assistant: morning };
+    const morning = { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true };
+    const proj = { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale: "en", assistant: morning };
     const winner = makeExp({ status: "winner_ready", decisionStatus: "pending", winnerVariant: "b", metricsSnapshot: makeSnapshot("winner_b") });
     const harm = makeExp({ id: "ab_harm0001", status: "paused_harm", decisionStatus: "resolved", winnerVariant: "a", metricsSnapshot: makeSnapshot("harm_stop") });
     const deps = makeDeps({ verdict: "collecting", exp: makeExp({ startedAt: null }), project: proj });
@@ -278,13 +279,34 @@ describe("notices are at least once (item 22)", () => {
   });
 
   it("🔴 the harm notice says the original was put back only if it was: no site address → another text", async () => {
-    const deps = makeDeps({ verdict: "harm_stop", project: { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: null, assistant: null } });
+    const deps = makeDeps({ verdict: "harm_stop", project: { id: "p1", ownerId: "u1", title: "Cafetería", subdomain: null, locale: "en", assistant: null } });
     vi.mocked(deps.autoStopForHarm).mockResolvedValue({ restored: false });
     await evaluateRunningExperiments(deps, NOW);
     expect(vi.mocked(deps.autoStopForHarm).mock.calls[0]![2]).toBeNull();
     const [event] = vi.mocked(deps.notify).mock.calls[0]!;
     expect(event.push).toMatch(/isn't published/);
     expect(event.push).not.toMatch(/restored the original/);
+  });
+});
+
+describe("the notices speak the owner's language (item 29)", () => {
+  const info = (locale: string, assistant: EvaluatorProjectInfo["assistant"] = null): EvaluatorProjectInfo => ({ id: "p1", ownerId: "u1", title: "Cafetería", subdomain: "cafesol", locale, assistant });
+
+  it("🔴 the text and the link use the OWNER's locale, not the assistant's summary locale or English", async () => {
+    const deps = makeDeps({ verdict: "winner_b", project: info("es") });
+    await evaluateRunningExperiments(deps, NOW);
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.locale).toBe("es");
+    expect(event.push).toMatch(/convirtió/);
+    expect(event.emailText).toContain("https://openlen.com/es/new?project=p1");
+  });
+
+  it("with an assistant the link is her place, in the owner's language too", async () => {
+    const deps = makeDeps({ verdict: "harm_stop", project: info("ja", { id: "a1", name: "Lucía", slug: "lucia", morningSummary: true }) });
+    await evaluateRunningExperiments(deps, NOW);
+    const [event] = vi.mocked(deps.notify).mock.calls[0]!;
+    expect(event.locale).toBe("ja");
+    expect(event.emailText).toContain("https://openlen.com/ja/assistant/lucia");
   });
 });
 
