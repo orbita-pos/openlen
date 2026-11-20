@@ -57,7 +57,6 @@ fn write_release_with_ab(root: &Path, sub: &str, sha: &str, html_a: &str, html_b
             r#"{{
               "version": 1,
               "releaseSha": "{sha}",
-              "overrides": ["/css/site.css", "img/hero.png", "/fonts/a b.woff2"],
               "experiments": [{{
                 "id": "ab_9f3c2a1b",
                 "cookieName": "ol_ab_9f3c2a1b",
@@ -68,7 +67,8 @@ fn write_release_with_ab(root: &Path, sub: &str, sha: &str, html_a: &str, html_b
                 "salt": "3f9a1c8e7b2d4012",
                 "prefixB": "openlen/ab/ab_9f3c2a1b/b",
                 "overrideParam": "_ol_ab",
-                "expiresAt": null
+                "expiresAt": null,
+                "overrides": ["/css/site.css", "img/hero.png", "/fonts/a b.woff2"]
               }}]
             }}"#
         ),

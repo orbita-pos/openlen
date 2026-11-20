@@ -26,7 +26,7 @@ static RFC3339_RE: Lazy<Regex> = Lazy::new(|| {
     .expect("valid rfc3339 regex")
 });
 
-/// Most entries read from the manifest's `overrides`, and the longest one.
+/// Most entries read from an experiment's `overrides`, and the longest one.
 const MAX_OVERRIDES: usize = 4096;
 const MAX_OVERRIDE_LEN: usize = 1024;
 
@@ -35,20 +35,6 @@ pub struct AbManifest {
     pub version: u32,
     pub release_sha: String,
     pub experiments: Vec<AbExperiment>,
-    /// The files (non-pages) whose bytes differ between Variant B and control, as absolute URL
-    /// paths, sorted. They are decided per visitor and marked `no-store` for everybody, so
-    /// Cloudflare never caches one variant's bytes under the shared URL. A manifest without the
-    /// field means none.
-    pub overrides: Vec<String>,
-}
-
-impl AbManifest {
-    /// True if `path` (resolved, case-sensitive) is one of the overridden files.
-    pub fn overrides_file(&self, path: &str) -> bool {
-        self.overrides
-            .binary_search_by(|p| p.as_str().cmp(path))
-            .is_ok()
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +53,21 @@ pub struct AbExperiment {
     pub override_param: String,
     /// A full RFC 3339 timestamp (validated at parse time), or none.
     pub expires_at: Option<String>,
+    /// The files (non-pages) whose bytes differ between Variant B and this experiment's control, as
+    /// absolute URL paths, normalized and sorted. The publisher writes them INSIDE the experiment;
+    /// a file is decided by the experiment that lists it (its cookie, its split, its `prefix_b`)
+    /// and marked `no-store` for everybody, so Cloudflare never caches one variant's bytes under
+    /// the shared URL. An experiment without the field decides no file.
+    pub overrides: Vec<String>,
+}
+
+impl AbExperiment {
+    /// True if `path` (resolved, case-sensitive) is one of the files this experiment overrides.
+    pub fn overrides_file(&self, path: &str) -> bool {
+        self.overrides
+            .binary_search_by(|p| p.as_str().cmp(path))
+            .is_ok()
+    }
 }
 
 fn default_override_param() -> String {
@@ -189,7 +190,7 @@ fn is_safe_prefix(prefix: &str) -> bool {
         .all(|seg| !seg.is_empty() && *seg != "." && *seg != "..")
 }
 
-/// Normalize one entry of the manifest's `overrides` to an absolute URL path (`css/site.css` and
+/// Normalize one entry of an experiment's `overrides` to an absolute URL path (`css/site.css` and
 /// `/css/site.css` are the same file). Dot segments, backslashes, NULs and absurd lengths are not
 /// files: `None`. Case is kept (the filesystem is case-sensitive). Mirrors `normalizeOverride`.
 pub fn normalize_override(raw: &str) -> Option<String> {
@@ -239,6 +240,17 @@ fn parse_experiment(v: &Value) -> Option<AbExperiment> {
             .collect(),
         None => Vec::new(),
     };
+    let mut overrides: Vec<String> = match e.get("overrides").and_then(Value::as_array) {
+        Some(list) => list
+            .iter()
+            .take(MAX_OVERRIDES)
+            .filter_map(Value::as_str)
+            .filter_map(normalize_override)
+            .collect(),
+        None => Vec::new(),
+    };
+    overrides.sort();
+    overrides.dedup();
     let expires_at = match e.get("expiresAt") {
         None | Some(Value::Null) => None,
         Some(Value::String(s)) if parse_rfc3339_ms(s).is_some() => Some(s.clone()),
@@ -256,6 +268,7 @@ fn parse_experiment(v: &Value) -> Option<AbExperiment> {
         prefix_b: prefix_b.to_owned(),
         override_param,
         expires_at,
+        overrides,
     })
 }
 
@@ -277,17 +290,6 @@ pub fn parse_manifest(bytes: &[u8]) -> Option<AbManifest> {
     if experiments.is_empty() {
         return None;
     }
-    let mut overrides: Vec<String> = match obj.get("overrides").and_then(Value::as_array) {
-        Some(list) => list
-            .iter()
-            .take(MAX_OVERRIDES)
-            .filter_map(Value::as_str)
-            .filter_map(normalize_override)
-            .collect(),
-        None => Vec::new(),
-    };
-    overrides.sort();
-    overrides.dedup();
     Some(AbManifest {
         version: 1,
         release_sha: obj
@@ -296,7 +298,6 @@ pub fn parse_manifest(bytes: &[u8]) -> Option<AbManifest> {
             .unwrap_or("")
             .to_owned(),
         experiments,
-        overrides,
     })
 }
 
@@ -326,8 +327,8 @@ mod tests {
         assert_eq!(m.experiments.len(), 1);
         assert_eq!(m.experiments[0].locales, vec!["es", "fr"]);
         assert_eq!(m.experiments[0].target_path, "/");
-        // An older manifest, without `overrides`, decides no file.
-        assert!(m.overrides.is_empty());
+        // An experiment without `overrides` decides no file.
+        assert!(m.experiments[0].overrides.is_empty());
     }
 
     #[test]
@@ -397,11 +398,15 @@ mod tests {
             assert_eq!(normalize_override(bad), None, "{bad:?}");
         }
         let m = parse_manifest(
-            br#"{"version":1,"overrides":["/z.css","a.css","/a.css",7,"/../x"],"experiments":[{"id":"ab_12345678","cookieName":"ol_ab_12345678","targetPath":"/","splitBps":5000,"salt":"abcd","prefixB":"openlen/ab/ab_12345678/b"}]}"#,
+            br#"{"version":1,"overrides":["/top-level.css"],"experiments":[{"id":"ab_12345678","cookieName":"ol_ab_12345678","targetPath":"/","splitBps":5000,"salt":"abcd","prefixB":"openlen/ab/ab_12345678/b","overrides":["/z.css","a.css","/a.css",7,"/../x"]},{"id":"ab_22222222","cookieName":"ol_ab_22222222","targetPath":"/p","splitBps":5000,"salt":"abcd","prefixB":"openlen/ab/ab_22222222/b","overrides":["/other.css"]}]}"#,
         )
         .expect("manifest");
-        assert_eq!(m.overrides, vec!["/a.css", "/z.css"]);
-        assert!(m.overrides_file("/a.css") && !m.overrides_file("/A.css"));
+        // Normalized, sorted, deduped, per experiment — and a top-level list is not read.
+        assert_eq!(m.experiments[0].overrides, vec!["/a.css", "/z.css"]);
+        assert!(m.experiments[0].overrides_file("/a.css") && !m.experiments[0].overrides_file("/A.css"));
+        assert!(!m.experiments[0].overrides_file("/top-level.css"));
+        // Each experiment decides only its own files.
+        assert!(m.experiments[1].overrides_file("/other.css") && !m.experiments[1].overrides_file("/a.css"));
     }
 
     #[test]

@@ -386,7 +386,6 @@ describe("lib/ab/serve — the shared evaluate fixtures (parity with the Rust ed
 describe("lib/ab/serve — the manifest cache and the headers of a decided file", () => {
   const MANIFEST_JSON = JSON.stringify({
     version: 1,
-    overrides: ["/css/site.css"],
     experiments: [
       {
         id: "ab_9f3c2a1b",
@@ -395,6 +394,7 @@ describe("lib/ab/serve — the manifest cache and the headers of a decided file"
         splitBps: 5000,
         salt: "3f9a1c8e7b2d4012",
         prefixB: "openlen/ab/ab_9f3c2a1b/b",
+        overrides: ["/css/site.css"],
       },
     ],
   });

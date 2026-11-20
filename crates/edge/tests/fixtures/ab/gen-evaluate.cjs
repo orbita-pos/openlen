@@ -20,12 +20,13 @@ const exp = (over = {}) => ({
   prefixB: "openlen/ab/ab_9f3c2a1b/b",
   overrideParam: "_ol_ab",
   expiresAt: null,
+  // The files B overrides live INSIDE the experiment (the publisher writes them there).
+  overrides: ["/css/site.css", "/img/hero.png", "js/app.js", "/fonts/a b.woff2"],
   ...over,
 });
 const manifest = (experiments, extra = {}) => ({
   version: 1,
   releaseSha: "abc123456789",
-  overrides: ["/css/site.css", "/img/hero.png", "js/app.js", "/fonts/a b.woff2"],
   experiments,
   ...extra,
 });
@@ -113,7 +114,7 @@ add("the home is outside a non-home target", manifest([exp({ targetPath: "/prici
 add("locales are lower-cased and filtered in the manifest", manifest([exp({ locales: ["ES", "bad_locale", 7, "fr-CA"] })]), req({ path: "/fr-ca" }), page("b", "hash", { variantBPath: "/openlen/ab/ab_9f3c2a1b/b/fr-ca" }));
 add("includeLocales that is not literally true counts as false", manifest([exp({ includeLocales: "yes" })]), req({ path: "/es" }), null);
 
-// ── files: only the manifest's `overrides` are decided, for every visitor ──
+// ── files: only an experiment's `overrides` are decided, for every visitor ──
 add("an overridden file goes to B for a B cookie", M, req({ path: "/css/site.css", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
 add("an overridden file is control (decided, so no-store) for everyone else", M, req({ path: "/css/site.css" }), asset("a", "cookie", null));
 add("the override parameter sends a file to B", M, req({ path: "/css/site.css", query: "_ol_ab=b" }), asset("b", "override", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
@@ -131,8 +132,28 @@ add("a path ending in a dot is a file", M, req({ path: "/foo." }), null);
 add("an unknown extension is a file", M, req({ path: "/data.v2" }), null);
 add("a dotted directory with a clean last segment is a page (outside the target)", M, req({ path: "/v1.2/pricing" }), null);
 add("an overridden file of an expired experiment is not decided", manifest([exp({ expiresAt: "2026-01-01T00:00:00Z" })]), req({ path: "/css/site.css", cookie: COOKIE_B }), null);
-add("a manifest with no overrides decides no file", manifest([exp()], { overrides: undefined }), req({ path: "/css/site.css", cookie: COOKIE_B }), null);
-add("junk overrides are dropped, the rest kept", manifest([exp()], { overrides: [7, null, "/../etc/passwd", "/a/./b.css", "/css/site.css", { x: 1 }] }), req({ path: "/css/site.css", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
+add("an experiment with no overrides decides no file", manifest([exp({ overrides: undefined })]), req({ path: "/css/site.css", cookie: COOKIE_B }), null);
+add("junk overrides are dropped, the rest kept", manifest([exp({ overrides: [7, null, "/../etc/passwd", "/a/./b.css", "/css/site.css", { x: 1 }] })]), req({ path: "/css/site.css", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
+
+// The manifest EXACTLY as the publisher writes it (lib/publish/filesystem.ts): `overrides` inside the
+// experiment, with the leading slash, sorted. No other field, no top-level overrides.
+const PUBLISHER_MANIFEST = {
+  raw: '{"version":1,"releaseSha":"abc123456789","experiments":[{"id":"ab_9f3c2a1b","cookieName":"ol_ab_9f3c2a1b","targetPath":"/","includeLocales":false,"locales":[],"splitBps":5000,"salt":"3f9a1c8e7b2d4012","prefixB":"openlen/ab/ab_9f3c2a1b/b","overrideParam":"_ol_ab","expiresAt":null,"overrides":["/css/site.css","/img/hero.png"]}]}',
+};
+add("the publisher's own manifest decides its overridden file", PUBLISHER_MANIFEST, req({ path: "/css/site.css", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
+add("the publisher's own manifest: a file it does not list is not decided", PUBLISHER_MANIFEST, req({ path: "/css/other.css", cookie: COOKIE_B }), null);
+add("the publisher's own manifest: the control gets a decided file too", PUBLISHER_MANIFEST, req({ path: "/img/hero.png" }), asset("a", "cookie", null));
+add("the publisher's own manifest buckets its page", PUBLISHER_MANIFEST, req(), page("b", "hash", { variantBPath: B_HOME }));
+add("a top-level overrides is not read (the publisher never writes one)", { ...manifest([exp({ overrides: undefined })]), overrides: ["/css/site.css"] }, req({ path: "/css/site.css", cookie: COOKIE_B }), null);
+
+// Two experiments: a file is decided by the experiment that lists it — its cookie, its prefix.
+const SECOND = { id: "ab_22222222", cookieName: "ol_ab_22222222", prefixB: "openlen/ab/ab_22222222/b", targetPath: "/pricing", includeLocales: false, splitBps: 10000, overrides: ["/img/hero.png"] };
+const TWO = manifest([exp({ overrides: ["/css/site.css"] }), exp(SECOND)]);
+add("two experiments: a file goes to the experiment that lists it, by its own cookie", TWO, req({ path: "/img/hero.png", cookie: "ol_ab_22222222=b" }), { ...asset("b", "cookie", "/openlen/ab/ab_22222222/b/img/hero.png"), experimentId: "ab_22222222" });
+add("two experiments: the other experiment's cookie does not move a file", TWO, req({ path: "/img/hero.png", cookie: COOKIE_B }), { ...asset("a", "cookie", null), experimentId: "ab_22222222" });
+add("two experiments: the first one keeps its own file", TWO, req({ path: "/css/site.css", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/css/site.css"));
+add("two experiments: a file nobody lists is not decided", TWO, req({ path: "/js/app.js", cookie: COOKIE_B }), null);
+add("an expired experiment's file goes to a live one that lists it", manifest([exp({ expiresAt: "2026-01-01T00:00:00Z" }), exp({ ...SECOND, overrides: ["/css/site.css"] })]), req({ path: "/css/site.css", cookie: "ol_ab_22222222=b" }), { ...asset("b", "cookie", "/openlen/ab/ab_22222222/b/css/site.css"), experimentId: "ab_22222222" });
 
 // ── expiresAt: only a full RFC 3339 timestamp counts ──
 const withExpiry = (v) => manifest([exp({ expiresAt: v })]);

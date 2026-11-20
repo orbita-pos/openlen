@@ -18,7 +18,7 @@ import type { AbManifest, AbManifestExperiment, AbVariant } from "./types";
 
 export const AB_HTML_CACHE_CONTROL = "private, no-store";
 
-/** A FILE an experiment decides per visitor (the manifest's `overrides`), whatever the variant. */
+/** A FILE an experiment decides per visitor (an experiment's `overrides`), whatever the variant. */
 export const AB_FILE_CACHE_CONTROL = "no-store";
 
 /** Where a release keeps its experiment manifest. `openlen/` is a reserved root of the
@@ -120,11 +120,14 @@ function isSafePrefix(prefix: string): boolean {
   return parts.every((seg) => seg.length > 0 && seg !== "." && seg !== "..");
 }
 
-/** A manifest as the evaluator reads it: the experiments that survived validation, and the files
- *  (non-pages) whose bytes differ between Variant B and control (`overrides`, normalized, sorted;
- *  empty for a manifest that does not list any). */
+/** An experiment as the evaluator reads it: the files (non-pages) whose bytes differ between its
+ *  Variant B and its control (`overrides`, absolute paths, normalized, sorted; empty when it lists
+ *  none). The publisher writes them INSIDE the experiment. */
+export type ParsedAbExperiment = AbManifestExperiment & { readonly overrides: readonly string[] };
+
+/** A manifest as the evaluator reads it: the experiments that survived validation. */
 export interface ParsedAbManifest extends AbManifest {
-  readonly overrides: readonly string[];
+  readonly experiments: readonly ParsedAbExperiment[];
 }
 
 // A full RFC 3339 timestamp, upper-case T and Z only. A bare date, a space for the T or no zone is
@@ -166,7 +169,7 @@ export function parseRfc3339Ms(raw: string): number | null {
   return Date.UTC(y, mo - 1, d, h, mi, s, ms) - offsetMin * 60_000;
 }
 
-/** One entry of the manifest's `overrides` as an absolute URL path (`css/site.css` and
+/** One entry of an experiment's `overrides` as an absolute URL path (`css/site.css` and
  *  `/css/site.css` are the same file); dot segments, backslashes, NULs and absurd lengths are not
  *  files (null). Case is kept: the filesystem is case-sensitive. Mirrors Rust `normalize_override`. */
 export function normalizeOverride(raw: string): string | null {
@@ -177,7 +180,7 @@ export function normalizeOverride(raw: string): string | null {
   return `/${segments.join("/")}`;
 }
 
-function parseExperiment(item: unknown): AbManifestExperiment | null {
+function parseExperiment(item: unknown): ParsedAbExperiment | null {
   if (!item || typeof item !== "object" || Array.isArray(item)) return null;
   const e = item as Record<string, unknown>;
   if (typeof e.id !== "string" || !EXP_ID_RE.test(e.id)) return null;
@@ -212,6 +215,17 @@ function parseExperiment(item: unknown): AbManifestExperiment | null {
     if (typeof e.expiresAt !== "string" || parseRfc3339Ms(e.expiresAt) === null) return null;
     expiresAt = e.expiresAt;
   }
+  const overrides = Array.isArray(e.overrides)
+    ? [
+        ...new Set(
+          e.overrides
+            .slice(0, MAX_OVERRIDES)
+            .filter((o): o is string => typeof o === "string")
+            .map(normalizeOverride)
+            .filter((o): o is string => o !== null),
+        ),
+      ].sort(compareBytes)
+    : [];
   return {
     id: e.id,
     cookieName: e.cookieName,
@@ -223,6 +237,7 @@ function parseExperiment(item: unknown): AbManifestExperiment | null {
     prefixB: e.prefixB,
     overrideParam,
     expiresAt,
+    overrides,
   };
 }
 
@@ -242,25 +257,13 @@ export function parseAbManifest(raw: string | Buffer): ParsedAbManifest | null {
 
   const experiments = obj.experiments
     .map(parseExperiment)
-    .filter((e): e is AbManifestExperiment => e !== null);
+    .filter((e): e is ParsedAbExperiment => e !== null);
   if (experiments.length === 0) return null;
 
-  const overrides = Array.isArray(obj.overrides)
-    ? [
-        ...new Set(
-          obj.overrides
-            .slice(0, MAX_OVERRIDES)
-            .filter((o): o is string => typeof o === "string")
-            .map(normalizeOverride)
-            .filter((o): o is string => o !== null),
-        ),
-      ].sort(compareBytes)
-    : [];
   return {
     version: 1,
     releaseSha: typeof obj.releaseSha === "string" ? obj.releaseSha : "",
     experiments,
-    overrides,
   };
 }
 
@@ -393,12 +396,15 @@ function buildVariantBPath(prefixB: string, urlPath: string): string {
 
 /** The decision for a request, or null when it is outside every live experiment (the caller serves
  *  control with its standard headers). A PAGE of an experiment is bucketed (override, bot, sticky
- *  cookie, hash). A FILE is decided only when the manifest lists it in `overrides` (B ships other
- *  bytes for it) and then for EVERY visitor, control included: the caller marks the answer
- *  `no-store`, or a CDN would cache one variant's bytes under the shared URL for the other's
- *  visitors. Mirrors Rust `evaluate_manifest`; both run `tests/fixtures/ab/evaluate.json`. */
+ *  cookie, hash). A FILE is decided only when a live experiment lists it in its `overrides` (B ships
+ *  other bytes for it), by THAT experiment (its cookie, its override parameter, its `prefixB`), and
+ *  then for EVERY visitor, control included: the caller marks the answer `no-store`, or a CDN would
+ *  cache one variant's bytes under the shared URL for the other's visitors. Mirrors Rust
+ *  `evaluate_manifest`; both run `tests/fixtures/ab/evaluate.json`. */
 export function evaluateAbManifest(
-  manifest: AbManifest & { readonly overrides?: readonly string[] },
+  manifest: {
+    readonly experiments: readonly (AbManifestExperiment & { readonly overrides?: readonly string[] })[];
+  },
   req: {
     readonly urlPath: string;
     readonly searchParams?: URLSearchParams | null;
@@ -416,8 +422,9 @@ export function evaluateAbManifest(
   const readableUa = readableHeader(req.userAgent);
 
   if (pathHasNonHtmlExtension(pathname)) {
-    if (!manifest.overrides?.includes(pathname)) return null;
-    const exp = manifest.experiments.find((e) => !isExpired(e, nowMs));
+    const exp = manifest.experiments.find(
+      (e) => !isExpired(e, nowMs) && e.overrides?.includes(pathname),
+    );
     if (!exp) return null;
     const ov = overrideValue(req.searchParams, exp.overrideParam);
     const cv = asciiLower(readCookie(cookieHeader, exp.cookieName) ?? "");
