@@ -61,14 +61,15 @@ export async function insertExperiment(
     readonly updatedAt?: Date;
     readonly decisionPrevStatus?: string | null;
     readonly decisionLockedAt?: Date | null;
+    readonly decisionLockToken?: string | null;
     readonly name?: string;
   },
 ): Promise<void> {
   await raw.query(
     `INSERT INTO "abExperiments" ("id","projectId","name","targetPath","salt","status","decisionStatus","startedAt","endedAt","maxEndAt","snoozeUntil",
        "notifiedAt","winnerVariant","bringState","copyProjectId","branch","baseCommitOid","controlReleaseSha","metricsSnapshot","updatedAt",
-       "decisionPrevStatus","decisionLockedAt","createdBy")
-     VALUES ($1,$2,$3,$4,'salt',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,'u1')`,
+       "decisionPrevStatus","decisionLockedAt","decisionLockToken","createdBy")
+     VALUES ($1,$2,$3,$4,'salt',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,'u1')`,
     [
       o.id,
       o.projectId ?? "p1",
@@ -76,7 +77,8 @@ export async function insertExperiment(
       o.targetPath ?? "/",
       o.status ?? "running",
       o.decisionStatus ?? "none",
-      o.startedAt ?? null,
+      // A live experiment has started (a decision can't claim one that hasn't: its launch is still writing it); a draft hasn't.
+      o.startedAt === undefined ? ((o.status ?? "running") === "draft" ? null : new Date(Date.now() - 86_400_000)) : o.startedAt,
       o.endedAt ?? null,
       o.maxEndAt ?? null,
       o.snoozeUntil ?? null,
@@ -91,6 +93,7 @@ export async function insertExperiment(
       o.updatedAt ?? new Date(),
       o.decisionPrevStatus ?? null,
       o.decisionLockedAt ?? null,
+      o.decisionLockToken ?? null,
     ],
   );
 }

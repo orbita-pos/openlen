@@ -25,9 +25,13 @@ vi.mock("@/lib/db", async () => {
 const {
   claimExperimentDecision,
   createExperimentRow,
+  closeDecision,
+  heartbeatDecisionLock,
   pendingDecisionsForProjects,
   pendingExperimentViewsForProjects,
   recordReemittedRelease,
+  releaseDecisionLock,
+  releaseStaleDecisionLocks,
   updateExperiment,
 } = await import("./store");
 const { computeExperimentMetrics, upsertExperimentDailySnapshot } = await import("./metrics");
@@ -125,6 +129,7 @@ describe("lib/ab/store & metrics (PGlite)", () => {
       status: "winner_ready",
       decisionStatus: "pending",
       winnerVariant: "b",
+      startedAt: new Date(Date.now() - 86_400_000),
       evaluatedAt: new Date(),
       createdBy: "u1",
     });
@@ -242,5 +247,82 @@ describe("lib/ab/store & metrics (PGlite)", () => {
       `SELECT "views" FROM "abExperimentDaily" WHERE "experimentId" = 'ab_metr1234' AND "variant" = 'b'`,
     );
     expect(daily.rows[0]?.views).toBe(5);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE DECISION LOCK IS FENCED (review: stale-lock recovery). A claim has a token; the decision refreshes the lock's clock
+// under it and writes its close under it; the sweep clears the token — so a decision whose lock was taken over can't write.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("the decision lock's token (fencing)", () => {
+  const live = (id: string, o: Partial<Parameters<typeof createExperimentRow>[0]> = {}) =>
+    createExperimentRow({ id, projectId: "p1", name: id, targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "winner_ready", decisionStatus: "pending", startedAt: new Date(Date.now() - 86_400_000), ...o });
+  const row = async (id: string) => (await pg().query<Record<string, unknown>>(`SELECT * FROM "abExperiments" WHERE "id" = $1`, [id])).rows[0]!;
+
+  it("🔴 an experiment whose launch hasn't finished (running, no start) can't be claimed by a decision", async () => {
+    await live("ab_launching", { status: "running", decisionStatus: "none", startedAt: null });
+    expect(await claimExperimentDecision("ab_launching", "p1")).toBeNull();
+    expect((await row("ab_launching")).decisionStatus).toBe("none");
+  });
+
+  it("every claim carries its own token, and the previous status", async () => {
+    await live("ab_token0001");
+    const a = (await claimExperimentDecision("ab_token0001", "p1"))!;
+    expect(a.decisionLockToken).toMatch(/^[0-9a-f]{24}$/);
+    await releaseDecisionLock("ab_token0001", a.decisionLockToken);
+    const b = (await claimExperimentDecision("ab_token0001", "p1"))!;
+    expect(b.decisionLockToken).not.toBe(a.decisionLockToken);
+    expect(b.decisionPrevStatus).toBe("pending");
+  });
+
+  it("🔴 the heartbeat refreshes the lock's clock only under its own token, and only while the row is applying", async () => {
+    await live("ab_beat0001");
+    const claimed = (await claimExperimentDecision("ab_beat0001", "p1"))!;
+    const later = new Date(Date.now() + 5 * 60_000);
+    expect(await heartbeatDecisionLock("ab_beat0001", "not-the-token", later)).toBe(false);
+    expect(((await row("ab_beat0001")).decisionLockedAt as Date).getTime()).toBeLessThan(later.getTime() - 4 * 60_000);
+    expect(await heartbeatDecisionLock("ab_beat0001", claimed.decisionLockToken!, later)).toBe(true);
+    expect(((await row("ab_beat0001")).decisionLockedAt as Date).getTime()).toBe(later.getTime());
+    await releaseDecisionLock("ab_beat0001", claimed.decisionLockToken);
+    expect(await heartbeatDecisionLock("ab_beat0001", claimed.decisionLockToken!, later)).toBe(false);
+  });
+
+  it("🔴 a lock that is refreshed is not stale however long the decision runs; one that isn't, is", async () => {
+    await live("ab_beat0002");
+    const claimed = (await claimExperimentDecision("ab_beat0002", "p1"))!;
+    await pg().query(`UPDATE "abExperiments" SET "decisionLockedAt" = now() - interval '25 minutes' WHERE "id" = 'ab_beat0002'`);
+    await heartbeatDecisionLock("ab_beat0002", claimed.decisionLockToken!); // it is alive: the clock is now
+    expect(await releaseStaleDecisionLocks()).toEqual([]);
+    await pg().query(`UPDATE "abExperiments" SET "decisionLockedAt" = now() - interval '11 minutes' WHERE "id" = 'ab_beat0002'`);
+    expect(await releaseStaleDecisionLocks()).toEqual(["ab_beat0002"]);
+    expect((await row("ab_beat0002")).decisionLockToken).toBeNull();
+  });
+
+  it("🔴 a decision whose lock the sweep gave away (and another took) cannot write its close; the new holder can", async () => {
+    await live("ab_fence0001");
+    const first = (await claimExperimentDecision("ab_fence0001", "p1"))!;
+    await pg().query(`UPDATE "abExperiments" SET "decisionLockedAt" = now() - interval '20 minutes' WHERE "id" = 'ab_fence0001'`);
+    expect(await releaseStaleDecisionLocks()).toEqual(["ab_fence0001"]);
+    const second = (await claimExperimentDecision("ab_fence0001", "p1"))!;
+    expect(second.decisionLockToken).not.toBe(first.decisionLockToken);
+
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await closeDecision("ab_fence0001", first.decisionLockToken, { status: "kept_a", decisionStatus: "resolved" })).toBeNull();
+    expect(error.mock.calls.flat().join(" ")).toMatch(/MISSED/);
+    error.mockRestore();
+    // nothing was overwritten, and the first one's give-back doesn't free the second's lock either
+    await releaseDecisionLock("ab_fence0001", first.decisionLockToken);
+    expect(await row("ab_fence0001")).toMatchObject({ status: "winner_ready", decisionStatus: "applying", decisionLockToken: second.decisionLockToken });
+
+    const closed = await closeDecision("ab_fence0001", second.decisionLockToken, { status: "kept_a", decisionStatus: "resolved" });
+    expect(closed).toMatchObject({ status: "kept_a", decisionStatus: "resolved", decisionLockToken: null, decisionLockedAt: null, decisionPrevStatus: null });
+  });
+
+  it("a close with no token never lands", async () => {
+    await live("ab_fence0002");
+    await claimExperimentDecision("ab_fence0002", "p1");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await closeDecision("ab_fence0002", null, { status: "kept_a" })).toBeNull();
+    error.mockRestore();
   });
 });

@@ -3623,7 +3623,11 @@ export const abExperiments = pgTable(
       .default("none"),
     /** What `decisionStatus` was when a decision claimed it (`applying`): a failed or interrupted decision gives it back. */
     decisionPrevStatus: text("decisionPrevStatus").$type<import("@/lib/ab/types").AbDecisionStatus>(),
-    /** When the current `applying` claim was made: one older than ten minutes is a decision that died. */
+    /** The claim's own token: the decision that holds it refreshes `decisionLockedAt` with it and writes its close fenced on it,
+     *  so a lock the sweep gave back (and someone else took) can't be written over by the decision that lost it. */
+    decisionLockToken: text("decisionLockToken"),
+    /** When the current `applying` claim was made, refreshed every minute while it runs: one not refreshed for ten minutes is
+     *  a decision that died. */
     decisionLockedAt: timestamp("decisionLockedAt", { mode: "date", withTimezone: true }),
     copyProjectId: text("copyProjectId"),
     branch: text("branch"),

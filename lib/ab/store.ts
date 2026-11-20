@@ -3,7 +3,9 @@
 // so simultaneous clicks from Web and Mobile can never double-promote or double-rollback.
 import "server-only";
 
-import { and, desc, eq, gte, inArray, isNull, or, sql } from "drizzle-orm";
+import { randomBytes } from "node:crypto";
+
+import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import { HARM_NOTICE_DAYS } from "./cards";
@@ -205,8 +207,17 @@ export async function transitionBringState(
 /** A system republish kept the live experiment alive with a NEW release: that is its release now, and the fallback it was
  *  launched with is stale — rolling back to it (keep A, a harm stop) would undo whatever the republish carried (a platform-
  *  wide fix). Cleared, the way back is a republish of the published sources, which carries it (G1+G3 review, item 18). */
-export async function recordReemittedRelease(id: string, sha: string | null, overrides?: readonly string[]): Promise<void> {
-  await db
+export async function recordReemittedRelease(
+  id: string,
+  sha: string | null,
+  overrides?: readonly string[],
+): Promise<{ readonly recorded: boolean; readonly added: readonly string[] }> {
+  const [before] = await db
+    .select({ overridePaths: schema.abExperiments.overridePaths })
+    .from(schema.abExperiments)
+    .where(eq(schema.abExperiments.id, id))
+    .limit(1);
+  const rows = await db
     .update(schema.abExperiments)
     .set({
       experimentReleaseSha: sha,
@@ -215,7 +226,11 @@ export async function recordReemittedRelease(id: string, sha: string | null, ove
       ...(overrides ? { overridePaths: [...overrides] } : {}),
       updatedAt: new Date(),
     })
-    .where(eq(schema.abExperiments.id, id));
+    // Only an experiment that is still live: one a decision closed meanwhile keeps its record (review: re-emit race).
+    .where(and(eq(schema.abExperiments.id, id), inArray(schema.abExperiments.status, [...AB_LIVE_STATUSES])))
+    .returning({ id: schema.abExperiments.id });
+  const known = new Set(before?.overridePaths ?? []);
+  return { recorded: rows.length > 0, added: (overrides ?? []).filter((p) => !known.has(p)) };
 }
 
 /** Postgres' unique_violation, however the driver wraps it (node-postgres, PGlite, drizzle's query error with a `cause`). */
@@ -241,6 +256,35 @@ export async function claimLaunch(id: string): Promise<AbExperimentRow | "taken"
     if (isUniqueViolation(err)) return "taken";
     throw err;
   }
+}
+
+/** The launch's FINAL write is a compare-and-swap: it lands only while the row is still the launch's own claim
+ *  (`running`, no start). `null` = something else settled the row meanwhile (the reconcile pass), and the caller undoes
+ *  what it published. */
+export async function finalizeLaunch(
+  id: string,
+  patch: Partial<Omit<AbExperimentInsert, "id" | "projectId" | "createdAt">>,
+): Promise<AbExperimentRow | null> {
+  const [row] = await db
+    .update(schema.abExperiments)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "running"),
+        isNull(schema.abExperiments.startedAt),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
+/** Every live experiment of every project, the claimed launches included: what the reconcile pass looks at. */
+export async function listLiveExperiments(): Promise<AbExperimentRow[]> {
+  return db
+    .select()
+    .from(schema.abExperiments)
+    .where(inArray(schema.abExperiments.status, [...AB_LIVE_STATUSES]));
 }
 
 /** A publish that failed after the claim: the experiment is a draft again, and the project has no live one. */
@@ -299,12 +343,17 @@ export async function claimExperimentDecision(
       decisionPrevStatus: sql`${schema.abExperiments.decisionStatus}`,
       decisionStatus: "applying",
       decisionLockedAt: now,
+      // Fresh per claim: what fences the decision's heartbeat and its closing write (a lock the sweep gave back and
+      // someone else took has ANOTHER token).
+      decisionLockToken: randomBytes(12).toString("hex"),
       updatedAt: now,
     })
     .where(
       and(
         eq(schema.abExperiments.id, id),
         eq(schema.abExperiments.projectId, projectId),
+        // An experiment whose launch hasn't finished (no start yet) is nobody's to decide: the launch is still writing it.
+        isNotNull(schema.abExperiments.startedAt),
         inArray(schema.abExperiments.status, [...AB_LIVE_STATUSES]),
         or(
           eq(schema.abExperiments.decisionStatus, "pending"),
@@ -317,7 +366,53 @@ export async function claimExperimentDecision(
 }
 
 /** What the lock columns are set to when a decision is over (resolved, or taken back). */
-export const DECISION_LOCK_CLEARED = { decisionPrevStatus: null, decisionLockedAt: null } as const;
+export const DECISION_LOCK_CLEARED = { decisionPrevStatus: null, decisionLockedAt: null, decisionLockToken: null } as const;
+
+/** The decision that holds the lock says it is alive: `decisionLockedAt` moves to `now`, ONLY while the row is still
+ *  `applying` under THIS token. `false` = the lock is no longer its (the sweep gave it back, or someone else took it). */
+export async function heartbeatDecisionLock(id: string, token: string, now: Date = new Date()): Promise<boolean> {
+  const rows = await db
+    .update(schema.abExperiments)
+    .set({ decisionLockedAt: now })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.decisionStatus, "applying"),
+        eq(schema.abExperiments.decisionLockToken, token),
+      ),
+    )
+    .returning({ id: schema.abExperiments.id });
+  return rows.length > 0;
+}
+
+/** A decision's closing write, FENCED on its own lock (review: stale-lock recovery): it lands only while the row is
+ *  `applying` under `token`, and clears the lock with it. If it misses — the sweep gave the lock back and another
+ *  decision took it — it changes nothing, says so loudly, and returns `null`: what is published stays published, and the
+ *  evaluator's reconcile pass makes the row agree with the release. */
+export async function closeDecision(
+  id: string,
+  token: string | null,
+  patch: Partial<Omit<AbExperimentInsert, "id" | "projectId" | "createdAt">>,
+): Promise<AbExperimentRow | null> {
+  const [row] = token
+    ? await db
+        .update(schema.abExperiments)
+        .set({ ...patch, ...DECISION_LOCK_CLEARED, updatedAt: new Date() })
+        .where(
+          and(
+            eq(schema.abExperiments.id, id),
+            eq(schema.abExperiments.decisionStatus, "applying"),
+            eq(schema.abExperiments.decisionLockToken, token),
+          ),
+        )
+        .returning()
+    : [];
+  if (!row) {
+    // eslint-disable-next-line no-console
+    console.error(`[ab] a decision's closing write MISSED (its lock was taken over or lost): ${id} — nothing was overwritten`);
+  }
+  return row ?? null;
+}
 
 /** The decision status an `applying` row goes back to: the one it had when it was claimed; a row with no memory of it (a
  *  lock from before the column) derives it — a running experiment had no decision, one that reached a verdict had a
@@ -328,11 +423,18 @@ const previousDecisionStatus = () =>
 /** A decision that failed gives the lock back AS IT WAS (review item 20): a failed promote of a pending winner is still
  *  pending — the card and the morning summary keep showing it — and an early decision of a running test is still none.
  *  Only an `applying` row is touched. */
-export async function releaseDecisionLock(id: string): Promise<void> {
+export async function releaseDecisionLock(id: string, token?: string | null): Promise<void> {
   await db
     .update(schema.abExperiments)
     .set({ decisionStatus: previousDecisionStatus(), ...DECISION_LOCK_CLEARED, updatedAt: new Date() })
-    .where(and(eq(schema.abExperiments.id, id), eq(schema.abExperiments.decisionStatus, "applying")));
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.decisionStatus, "applying"),
+        // Fenced when the caller holds a token: it never gives back a lock that is another decision's now.
+        ...(token ? [eq(schema.abExperiments.decisionLockToken, token)] : []),
+      ),
+    );
 }
 
 /** How long a decision may hold `applying` before it counts as dead (a deploy or a crash in the middle of it). */

@@ -30,6 +30,7 @@ vi.mock("@/lib/db", async () => ({
 vi.mock("@/lib/assistants/store", () => ({ assistantOfProject: async () => null }));
 vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
+vi.mock("@/lib/ab/live-manifest", () => ({ readLiveAb: async () => ({ kind: "none", sha: "x" }) }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
 vi.mock("@/lib/projects/publish-through-gates", () => ({ runSecurityGate: vi.fn(), publishThroughGates: h.publishThroughGates }));
@@ -57,11 +58,19 @@ vi.mock("@/lib/ab/store", async (orig) => {
       }
       return real.updateExperiment(...args);
     },
+    closeDecision: (...args: Parameters<typeof real.closeDecision>) => {
+      if (h.failNextUpdate) {
+        h.failNextUpdate = false;
+        return Promise.reject(new Error("the database went away"));
+      }
+      return real.closeDecision(...args);
+    },
   };
 });
 
 const { discardWinnerBring, extendExperiment, keepControlA, promoteVariantB, retryBringWinner } = await import("./lifecycle");
 const { claimExperimentDecision, releaseStaleDecisionLocks, getExperimentById, pendingBringForProject } = await import("./store");
+const { autoStopExperimentForHarm } = await import("./lifecycle");
 const { computeExperimentMetrics, metricsInputOf } = await import("./metrics");
 const { evaluateAbStats, maxDurationDaysOf } = await import("./stats");
 
@@ -423,5 +432,96 @@ describe("every end of an experiment purges the edge (item 24)", () => {
     await withLanguages();
     await keepControlA({ projectId: "p1", experimentId: "ab_end00004", ownerId: "u1", actorId: "u1" });
     expect(h.purge).toHaveBeenCalledWith("pan1", ["/pricing", "/pricing/", "/pricing/index.html", "/css/site.css"]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// FENCING, ON REAL DECISIONS (review: stale-lock recovery), and the ends that must record before they clean up.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("a decision whose lock was taken over writes nothing (review: stale-lock recovery)", () => {
+  const live = (id: string, o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status: "winner_ready", decisionStatus: "pending", controlReleaseSha: "rel-c", copyProjectId: "copy-1", branch: `ab/${id}`, baseCommitOid: "base-1", startedAt: new Date(Date.now() - 4 * DAY), ...o });
+
+  it("🔴 keep A: its publish is slow, the sweep gives the lock away and another decision takes it; the close misses and overwrites nothing", async () => {
+    await live("ab_fenc0001");
+    let second: string | null = null;
+    h.rollbackToSha.mockImplementation(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "decisionLockedAt" = now() - interval '20 minutes' WHERE "id" = 'ab_fenc0001'`);
+      await releaseStaleDecisionLocks();
+      second = (await claimExperimentDecision("ab_fenc0001", "p1"))!.decisionLockToken;
+    });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(keepControlA({ projectId: "p1", experimentId: "ab_fenc0001", ownerId: "u1", actorId: "u1" })).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    const row = (await getExperimentById("ab_fenc0001"))!;
+    expect(row).toMatchObject({ status: "winner_ready", decisionStatus: "applying", decisionLockToken: second });
+    expect(h.cleanup).not.toHaveBeenCalled();
+  });
+
+  it("🔴 promote: B went live but the lock was taken over before the record: nothing is overwritten, and it says so", async () => {
+    await live("ab_fenc0002");
+    h.publishThroughGates.mockImplementation(async () => {
+      await raw().query(`UPDATE "abExperiments" SET "decisionLockedAt" = now() - interval '20 minutes' WHERE "id" = 'ab_fenc0002'`);
+      await releaseStaleDecisionLocks();
+      await claimExperimentDecision("ab_fenc0002", "p1");
+      return { status: 200, body: { sha: "rel-promoted" } };
+    });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(promoteVariantB({ projectId: "p1", experimentId: "ab_fenc0002", ownerId: "u1", actorId: "u1" })).rejects.toMatchObject({ code: "decision_conflict" });
+    error.mockRestore();
+    expect(await getExperimentById("ab_fenc0002")).toMatchObject({ status: "winner_ready", decisionStatus: "applying", promotedReleaseSha: null });
+    expect(h.merge).not.toHaveBeenCalled();
+  });
+
+  it("🔴 a launch that hasn't finished (running, no start) can't be decided by anybody", async () => {
+    await insertExperiment(raw(), { id: "ab_fenc0003", status: "running", startedAt: null });
+    await expect(keepControlA({ projectId: "p1", experimentId: "ab_fenc0003", ownerId: "u1", actorId: "u1" })).rejects.toMatchObject({ code: "decision_conflict" });
+    await expect(extendExperiment({ projectId: "p1", experimentId: "ab_fenc0003", actorId: "u1" })).rejects.toMatchObject({ code: "decision_conflict" });
+    expect(h.rollbackToSha).not.toHaveBeenCalled();
+  });
+});
+
+describe("the ends record first and clean up after (review minors 6 and 7)", () => {
+  const live = (id: string, o: Record<string, unknown> = {}) =>
+    insertExperiment(raw(), { id, status: "winner_ready", decisionStatus: "pending", controlReleaseSha: "rel-c", copyProjectId: "copy-1", branch: `ab/${id}`, baseCommitOid: "base-1", startedAt: new Date(Date.now() - 4 * DAY), ...o });
+
+  it("🔴 keep A that can't restore Control (nothing to restore it from) is NOT «kept»: the split is live — it fails and the decision stays", async () => {
+    await live("ab_rec00001", { controlReleaseSha: null });
+    h.published = null;
+    await expect(keepControlA({ projectId: "p1", experimentId: "ab_rec00001", ownerId: "u1", actorId: "u1" })).rejects.toMatchObject({ code: "invalid_state" });
+    expect(await getExperimentById("ab_rec00001")).toMatchObject({ status: "winner_ready", decisionStatus: "pending", decisionLockToken: null });
+  });
+
+  it("🔴 keep A: a cleanup that throws AFTER Control was restored doesn't undo the end", async () => {
+    await live("ab_rec00002");
+    h.cleanup.mockRejectedValue(new Error("git store down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const view = await keepControlA({ projectId: "p1", experimentId: "ab_rec00002", ownerId: "u1", actorId: "u1" });
+    error.mockRestore();
+    expect(view.status).toBe("kept_a");
+    expect(await getExperimentById("ab_rec00002")).toMatchObject({ status: "kept_a", decisionStatus: "resolved", copyProjectId: null });
+  });
+
+  it("🔴 the harm stop: the same — recorded, then cleaned up best-effort", async () => {
+    await live("ab_rec00003", { status: "running", decisionStatus: "none" });
+    h.cleanup.mockRejectedValue(new Error("git store down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const row = (await getExperimentById("ab_rec00003"))!;
+    const out = await autoStopExperimentForHarm(row, "u1", "pan1", { a: {}, b: {}, stats: { verdict: "harm_stop" } } as never, new Date());
+    error.mockRestore();
+    expect(out).toEqual({ restored: true });
+    expect(await getExperimentById("ab_rec00003")).toMatchObject({ status: "paused_harm", decisionStatus: "resolved", copyProjectId: null });
+  });
+
+  it("🔴 promote: a cleanup error while settling the bring doesn't turn a successful promotion into an error", async () => {
+    await live("ab_rec00004");
+    h.publishThroughGates.mockResolvedValue({ status: 200, body: { sha: "rel-promoted" } });
+    h.merge.mockResolvedValue({ kind: "brought" });
+    h.cleanup.mockRejectedValue(new Error("git store down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const out = await promoteVariantB({ projectId: "p1", experimentId: "ab_rec00004", ownerId: "u1", actorId: "u1" });
+    error.mockRestore();
+    expect(out.experiment.status).toBe("promoted_b");
+    expect((await getExperimentById("ab_rec00004"))!.status).toBe("promoted_b");
   });
 });
