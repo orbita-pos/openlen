@@ -31,12 +31,14 @@ export interface EvaluatorProjectInfo {
   readonly ownerId: string;
   readonly title: string;
   readonly subdomain: string | null;
+  /** The OWNER'S language, as Len Watch writes its notices in (`watchLocale`): the one they write to Len in, then their
+   *  interface's, the page's only when nothing is known about them (review item 29). The notices and their links use it. */
+  readonly locale: string;
   readonly assistant: {
     readonly id: string;
     readonly name: string;
     readonly slug: string;
     readonly morningSummary: boolean;
-    readonly summaryLocale: string | null;
   } | null;
 }
 
@@ -86,7 +88,7 @@ async function announce(
   extra: { readonly restored?: boolean },
   now: Date,
 ): Promise<void> {
-  const locale = info.assistant?.summaryLocale ?? "en";
+  const locale = info.locale;
   const url = info.assistant
     ? `${deps.siteUrl}/${locale}/assistant/${encodeURIComponent(info.assistant.slug)}`
     : `${deps.siteUrl}/${locale}/new?project=${encodeURIComponent(exp.projectId)}&chat=1&ab=${encodeURIComponent(exp.id)}`;
@@ -249,6 +251,7 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
     { computeExperimentMetrics, upsertExperimentDailySnapshot, metricsInputOf },
     { listRunningExperiments, listUnannouncedResults, markExperimentNotified, releaseStaleDecisionLocks, saveEvaluation },
     { autoStopExperimentForHarm },
+    { projectForWatch },
   ] = await Promise.all([
     import("@/lib/db"),
     import("@/lib/assistants/store"),
@@ -257,6 +260,7 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
     import("./metrics"),
     import("./store"),
     import("./lifecycle"),
+    import("@/lib/len-watch/owner"),
   ]);
 
   return {
@@ -285,7 +289,6 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
               name: schema.assistants.name,
               slug: schema.assistants.slug,
               morningSummary: schema.assistants.morningSummary,
-              summaryLocale: schema.assistants.summaryLocale,
             })
             .from(schema.assistants)
             .where(eq(schema.assistants.id, a.id))
@@ -293,7 +296,9 @@ export async function defaultEvaluatorDeps(): Promise<EvaluatorDeps> {
           if (row) assistant = row;
         }
       }
-      return { ...proj, assistant };
+      // Len Watch's own reading of the owner's language; a failure to read it is "en", never a missed notice.
+      const locale = await projectForWatch(projectId).then((p) => p?.locale ?? "en", () => "en");
+      return { ...proj, locale, assistant };
     },
     computeMetrics: (exp, now) =>
       computeExperimentMetrics(metricsInputOf({ ...exp, startedAt: exp.startedAt! }), now),

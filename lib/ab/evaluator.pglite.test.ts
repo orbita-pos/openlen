@@ -13,6 +13,7 @@ vi.mock("server-only", () => ({}));
 const h = vi.hoisted(() => ({
   db: null as unknown,
   notify: vi.fn(),
+  ownerLocale: "en",
   publishProject: vi.fn(),
   rollbackToSha: vi.fn(),
   published: null as Record<string, unknown> | null,
@@ -27,6 +28,7 @@ vi.mock("@/lib/db", async () => ({
 vi.mock("@/lib/assistants/store", () => ({ assistantOfProject: async () => null }));
 vi.mock("@/lib/assistants/enabled", () => ({ assistantsEnabled: () => false }));
 vi.mock("@/lib/notifications/dispatch", () => ({ scheduleNotification: h.notify }));
+vi.mock("@/lib/len-watch/owner", () => ({ projectForWatch: async () => ({ locale: h.ownerLocale }) }));
 vi.mock("@/lib/ab/enabled", () => ({ abTestingEnabled: () => true }));
 vi.mock("@/lib/len-watch/published-sources", () => ({ readPublishedSources: async () => h.published }));
 vi.mock("@/lib/projects", () => ({ publishProject: h.publishProject }));
@@ -97,6 +99,7 @@ beforeEach(async () => {
   vi.clearAllMocks();
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
   h.notify.mockResolvedValue(undefined);
+  h.ownerLocale = "en";
   h.rollbackToSha.mockResolvedValue(undefined);
   await resetAbRows(raw());
 });
@@ -177,6 +180,17 @@ describe("a person who is deciding wins (item 21)", () => {
     expect(stats).toMatchObject({ winners: 1, notifiedDirectly: 1 });
     expect(order).toEqual(["notify", "marked"]);
     expect(await getExperimentById("ab_eval0006")).toMatchObject({ status: "winner_ready", decisionStatus: "pending", winnerVariant: "b", notifiedAt: NOW });
+  });
+});
+
+describe("the notice is written in the owner's language (item 29)", () => {
+  it("🔴 the default deps read it the way Len Watch does, and the notice carries it", async () => {
+    await running("ab_eval0009");
+    h.ownerLocale = "pt";
+    await evaluateRunningExperiments(await depsWith("winner_b"), NOW);
+    const event = h.notify.mock.calls[0]![0] as { locale: string; emailText: string };
+    expect(event.locale).toBe("pt");
+    expect(event.emailText).toContain("/pt/new?project=p1");
   });
 });
 
