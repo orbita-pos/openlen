@@ -1,0 +1,101 @@
+{
+  "_doc": "Golden vectors shared by crates/edge (assign.rs) and lib/ab (serve.test.ts). bucket = first 4 bytes of SHA-256(salt:expId:ip:ua:lang) as a big-endian u32, modulo 10000. Variant B iff bucket < splitBps.",
+  "vectors": [
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "203.0.113.10",
+      "ua": "Mozilla/5.0 Chrome/131.0",
+      "lang": "es-MX,es;q=0.9",
+      "bucket": 4692
+    },
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "198.51.100.42",
+      "ua": "Mozilla/5.0 Safari/605.1",
+      "lang": "en-US,en;q=0.9",
+      "bucket": 8330
+    },
+    {
+      "salt": "salt0",
+      "expId": "ab_deadbeef",
+      "ip": "10.0.0.1",
+      "ua": "UA",
+      "lang": "fr",
+      "bucket": 4726
+    },
+    {
+      "salt": "salt1",
+      "expId": "ab_00112233",
+      "ip": "192.0.2.5",
+      "ua": "UA2",
+      "lang": "de",
+      "bucket": 54
+    },
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "2001:db8::7334",
+      "ua": "Mozilla/5.0 (iPhone) Safari",
+      "lang": "pt-BR",
+      "bucket": 236
+    },
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "unknown",
+      "ua": "",
+      "lang": "",
+      "bucket": 465
+    },
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "203.0.113.77",
+      "ua": "Mozilla/5.0 (ñandú ✓) Chrome/131",
+      "lang": "es-419",
+      "bucket": 3471
+    },
+    {
+      "salt": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expId": "ab_ffffffff",
+      "ip": "255.255.255.255",
+      "ua": "Mozilla/5.0 Firefox/132.0",
+      "lang": "ja,en;q=0.5",
+      "bucket": 6970
+    },
+    {
+      "salt": "0",
+      "expId": "ab_12345678",
+      "ip": "0.0.0.0",
+      "ua": "x",
+      "lang": "y",
+      "bucket": 2628
+    },
+    {
+      "salt": "deadbeefcafef00d",
+      "expId": "ab_abcdef01",
+      "ip": "192.168.1.1",
+      "ua": "Mozilla/5.0 Edg/131",
+      "lang": "de-DE,de;q=0.9,en;q=0.8",
+      "bucket": 4175
+    },
+    {
+      "salt": "deadbeefcafef00d",
+      "expId": "ab_abcdef01",
+      "ip": "192.168.1.2",
+      "ua": "Mozilla/5.0 Edg/131",
+      "lang": "de-DE,de;q=0.9,en;q=0.8",
+      "bucket": 2030
+    },
+    {
+      "salt": "3f9a1c8e7b2d4012",
+      "expId": "ab_9f3c2a1b",
+      "ip": "1.2.3.4",
+      "ua": "Mozilla/5.0 Chrome/131.0",
+      "lang": "es",
+      "bucket": 1819
+    }
+  ]
+}

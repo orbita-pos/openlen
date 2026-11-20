@@ -2,7 +2,7 @@
 //!
 //! Parity contract with TypeScript `lib/ab/serve.ts`:
 //!   SHA-256("{salt}:{exp_id}:{client_ip}:{ua}:{accept_lang}")
-//!   bucket = u16::from_be_bytes([digest[0], digest[1]]) % 10_000
+//!   bucket = u32::from_be_bytes(digest[0..4]) % 10_000
 //!   variant = if bucket < split_bps { B } else { A }
 
 use chrono::{DateTime, Utc};
@@ -100,6 +100,30 @@ pub fn read_query_param<'a>(query: Option<&'a str>, name: &str) -> Option<&'a st
     None
 }
 
+/// Bucket (0..10_000) of a visitor, identical to TypeScript `hashBucket`.
+pub fn hash_bucket(
+    salt: &str,
+    exp_id: &str,
+    client_ip: &str,
+    user_agent: &str,
+    accept_language: &str,
+) -> u16 {
+    let mut hasher = Sha256::new();
+    hasher.update(salt.as_bytes());
+    hasher.update(b":");
+    hasher.update(exp_id.as_bytes());
+    hasher.update(b":");
+    hasher.update(client_ip.as_bytes());
+    hasher.update(b":");
+    hasher.update(user_agent.as_bytes());
+    hasher.update(b":");
+    hasher.update(accept_language.as_bytes());
+    let digest = hasher.finalize();
+    // u32, not u16: 65_536 is not a multiple of 10_000, so a u16 would favour buckets
+    // 0..5_535 and send 53.4 % of a 50/50 to B (the bias of a u32 is 2e-6).
+    (u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]) % 10_000) as u16
+}
+
 /// Pure deterministic hash assignment identical to TypeScript `hashVariant`.
 pub fn hash_variant(
     salt: &str,
@@ -115,19 +139,7 @@ pub fn hash_variant(
     if split_bps >= 10_000 {
         return Variant::B;
     }
-    let mut hasher = Sha256::new();
-    hasher.update(salt.as_bytes());
-    hasher.update(b":");
-    hasher.update(exp_id.as_bytes());
-    hasher.update(b":");
-    hasher.update(client_ip.as_bytes());
-    hasher.update(b":");
-    hasher.update(user_agent.as_bytes());
-    hasher.update(b":");
-    hasher.update(accept_language.as_bytes());
-    let digest = hasher.finalize();
-    let bucket = u16::from_be_bytes([digest[0], digest[1]]) % 10_000;
-    if bucket < split_bps {
+    if hash_bucket(salt, exp_id, client_ip, user_agent, accept_language) < split_bps {
         Variant::B
     } else {
         Variant::A
@@ -341,27 +353,37 @@ mod tests {
         assert!(!is_blocked_internal_path("/_ab/x"));
     }
 
+    /// Deterministic visitors: 200k distinct IPs, one browser. Same generator as the TS test.
+    fn sample_bucket(i: u32) -> u16 {
+        let ip = format!("10.{}.{}.{}", (i >> 16) & 255, (i >> 8) & 255, i & 255);
+        hash_bucket("3f9a1c8e7b2d4012", "ab_9f3c2a1b", &ip, "UA", "en")
+    }
+
     #[test]
-    fn hash_distribution_is_balanced_around_50_50() {
-        let mut b_count = 0usize;
-        for i in 0..10_000u32 {
-            let ip = format!("203.0.{}.{}", (i / 256) % 256, i % 256);
-            let v = hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                &ip,
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                5000,
+    fn buckets_are_uniform_so_every_split_gets_its_share() {
+        // The bucket is the first 4 bytes as a u32 modulo 10_000 (bias: 2e-6). A u16 modulo
+        // 10_000 (the first version) sent 53.4 % of a 50/50 to B and tripped the sample-ratio
+        // guard at ~2,300 visits; 200k visitors pin the exact expectation instead of a lucky band.
+        const N: u32 = 200_000;
+        let buckets: Vec<u16> = (0..N).map(sample_bucket).collect();
+        for split in [1000u32, 2500, 5000, 7500, 9000] {
+            let in_b = buckets.iter().filter(|b| u32::from(**b) < split).count() as f64;
+            let share = in_b / f64::from(N);
+            let expected = f64::from(split) / 10_000.0;
+            assert!(
+                (share - expected).abs() <= 0.005,
+                "split {split}: expected {expected} +/- 0.005 of {N} visitors, got {share}"
             );
-            if v == Variant::B {
-                b_count += 1;
-            }
         }
-        assert!(
-            (4700..=5300).contains(&b_count),
-            "expected ~5000 B assignments, got {b_count}"
-        );
+    }
+
+    #[test]
+    fn hash_variant_applies_the_bucket_to_the_split() {
+        let b = hash_bucket("s", "ab_12345678", "1.2.3.4", "UA", "en");
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", b), Variant::A);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", b + 1), Variant::B);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", 0), Variant::A);
+        assert_eq!(hash_variant("s", "ab_12345678", "1.2.3.4", "UA", "en", 10_000), Variant::B);
     }
 
     #[test]
@@ -429,58 +451,26 @@ mod tests {
 
     #[test]
     fn shared_parity_vectors_match_typescript() {
-        // Golden SHA-256 vectors verified bit-for-bit against `lib/ab/serve.test.ts`.
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                5000
-            ),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                3785
-            ),
-            Variant::A
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "203.0.113.10",
-                "Mozilla/5.0 Chrome/131.0",
-                "es-MX,es;q=0.9",
-                3786
-            ),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant(
-                "3f9a1c8e7b2d4012",
-                "ab_9f3c2a1b",
-                "198.51.100.42",
-                "Mozilla/5.0 Safari/605.1",
-                "en-US,en;q=0.9",
-                5000
-            ),
-            Variant::A
-        );
-        assert_eq!(
-            hash_variant("salt0", "ab_deadbeef", "10.0.0.1", "UA", "fr", 5000),
-            Variant::B
-        );
-        assert_eq!(
-            hash_variant("salt1", "ab_00112233", "192.0.2.5", "UA2", "de", 5000),
-            Variant::A
-        );
+        // Golden vectors shared with `lib/ab/serve.test.ts` (one JSON file, read by both).
+        let doc: serde_json::Value =
+            serde_json::from_str(include_str!("../../tests/fixtures/ab/hash-vectors.json"))
+                .expect("hash-vectors.json");
+        let vectors = doc["vectors"].as_array().expect("vectors");
+        assert!(vectors.len() >= 10);
+        for v in vectors {
+            let s = |k: &str| v[k].as_str().expect(k).to_owned();
+            let (salt, exp_id, ip, ua, lang) = (s("salt"), s("expId"), s("ip"), s("ua"), s("lang"));
+            let bucket = v["bucket"].as_u64().expect("bucket") as u16;
+            assert_eq!(hash_bucket(&salt, &exp_id, &ip, &ua, &lang), bucket, "{v}");
+            // A visitor is in B iff bucket < split: the boundary is exact.
+            assert_eq!(hash_variant(&salt, &exp_id, &ip, &ua, &lang, bucket), Variant::A, "{v}");
+            if bucket < 9_999 {
+                assert_eq!(
+                    hash_variant(&salt, &exp_id, &ip, &ua, &lang, bucket + 1),
+                    Variant::B,
+                    "{v}"
+                );
+            }
+        }
     }
 }

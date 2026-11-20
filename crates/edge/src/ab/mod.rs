@@ -18,7 +18,7 @@ use axum::http::{header, HeaderMap};
 use chrono::Utc;
 
 pub use assign::{
-    evaluate_manifest, hash_variant, is_blocked_internal_path, AbDecision, AssignSource, Variant,
+    evaluate_manifest, hash_bucket, hash_variant, is_blocked_internal_path, AbDecision, AssignSource, Variant,
 };
 pub use bot::is_bot;
 pub use cache::{AbManifestCache, DEFAULT_AB_MANIFEST_CACHE_MAX};
