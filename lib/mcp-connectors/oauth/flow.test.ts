@@ -46,6 +46,8 @@ let clock: Date;
 let config: { text: string; approved: Record<string, string>; version: number };
 let creds: Map<string, string>;
 let mounted: string[];
+/** The OpenLen accounts the way back looks up (R1: the confirm page vouches for an account by its email, so only a verified one). */
+let accounts: Record<string, { email: string; emailVerified: boolean }>;
 
 beforeEach(async () => {
   pg = new PGlite();
@@ -57,6 +59,7 @@ beforeEach(async () => {
   fake = await startFakeAuthServer({ now: () => clock, origin: "https://mcp.fake.test" });
   creds = new Map();
   mounted = [];
+  accounts = { p1: { email: "p1@example.com", emailVerified: true }, p2: { email: "p2@example.com", emailVerified: true } };
   setServer({});
 });
 
@@ -94,6 +97,9 @@ const deps = () => ({
   async mount(_personId: string, name: string) {
     mounted.push(name);
     return null;
+  },
+  async accountOf(personId: string) {
+    return accounts[personId] ?? null;
   },
 });
 
@@ -660,7 +666,7 @@ describe("🔴 a sign-in started from the phone", () => {
 
   it("with no session: the code is exchanged, the tokens are held — encrypted, not a connection — and the page asks", async () => {
     const r = await backFromProvider(null);
-    expect(r).toMatchObject({ ok: "confirm", server: "cal", personId: "p1" });
+    expect(r).toMatchObject({ ok: "confirm", server: "cal", personId: "p1", email: "p1@example.com" });
     if (r.ok !== "confirm") throw new Error("not held");
     expect(r.confirmToken).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(fake.tokenRequests).toHaveLength(1);
@@ -736,6 +742,60 @@ describe("🔴 a sign-in started from the phone", () => {
     expect(await confirmSignIn(r.confirmToken, "connect", "p2", deps())).toEqual({ ok: false, reason: "other_account", server: "cal" });
     expect((await stored())?.tokens ?? null).toBeNull();
     expect(await heldRows()).toEqual([]);
+  });
+
+  // R1 (final review, residual): the confirm page names the account by its email, so an account that never proved its
+  // email — OpenLen lets an address sign up unverified (lib/auth/verify-email.ts) — must not be vouched for: someone could
+  // register the victim's own address and have the victim connect to it.
+  describe("🔴 the account the page would name must have a verified email", () => {
+    it("an unverified email: nothing exchanged, nothing held, the flow spent", async () => {
+      accounts.p1 = { email: "victim@example.com", emailVerified: false };
+      const back = await fake.authorize(await startPhone());
+      const r = await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, null, deps());
+      expect(r).toEqual({ ok: false, reason: "email_unverified", server: "cal" });
+      expect(fake.tokenRequests).toHaveLength(0);
+      expect(await heldRows()).toEqual([]);
+      expect((await stored())?.tokens ?? null).toBeNull();
+      expect(mounted).toEqual([]);
+      // Spent: the same state works no more.
+      expect(await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, null, deps())).toEqual({ ok: false, reason: "used" });
+    });
+
+    it("no account, an account with no email, or a lookup that fails: refused the same way", async () => {
+      for (const account of [null, { email: "", emailVerified: true }, "throws"] as const) {
+        const back = await fake.authorize(await startPhone());
+        const d = {
+          ...deps(),
+          accountOf: async () => {
+            if (account === "throws") throw new Error("db down");
+            return account;
+          },
+        };
+        const r = await finishSignIn({ state: back.state!, code: back.code!, iss: back.iss! }, null, d);
+        expect(r, JSON.stringify(account)).toEqual({ ok: false, reason: "email_unverified", server: "cal" });
+      }
+      expect(fake.tokenRequests).toHaveLength(0);
+      expect(await heldRows()).toEqual([]);
+    });
+
+    it("a verified email: the page is offered, and it carries the whole address", async () => {
+      accounts.p1 = { email: "victim@example.com", emailVerified: true };
+      const r = await backFromProvider(null);
+      expect(r).toMatchObject({ ok: "confirm", server: "cal", personId: "p1", email: "victim@example.com" });
+      expect(fake.tokenRequests).toHaveLength(1);
+    });
+
+    it("the same person's session still skips the question, verified or not", async () => {
+      accounts.p1 = { email: "victim@example.com", emailVerified: false };
+      expect(await backFromProvider("p1")).toEqual({ ok: true, server: "cal" });
+      expect((await stored())?.tokens?.access_token).toMatch(/^at_/);
+    });
+
+    it("another person's session is refused before the email is even looked at", async () => {
+      accounts.p1 = { email: "victim@example.com", emailVerified: false };
+      expect(await backFromProvider("p2")).toEqual({ ok: false, reason: "other_account", server: "cal" });
+      expect(fake.tokenRequests).toHaveLength(0);
+    });
   });
 
   it("an entry edited before the confirm is not connected", async () => {

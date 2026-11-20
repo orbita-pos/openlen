@@ -15,7 +15,10 @@
 //  - from the phone (the app's key): the system browser usually has no session. The code is exchanged, but the tokens
 //    are only HELD on the flow (`holdTokens`) — no turn or mount can use them — and the way-back page asks the person to
 //    confirm the OpenLen account they go to (`confirmSignIn`), with a one-time token in its form. The same person's
-//    session skips that question; another person's refuses ("other_account").
+//    session skips that question; another person's refuses ("other_account"). The page names the account by its WHOLE
+//    email, so only an account whose email is verified is ever offered (R1): OpenLen accounts work before their email is
+//    verified, so someone could register the victim's own address and have the victim connect to it. An unverified one
+//    gets nothing exchanged and nothing held ("email_unverified"): the person finishes from a browser signed in to OpenLen.
 //
 // OpenLen discovers the authorization server itself, once, before `auth()` and hands the SDK that result as its
 // discovery state: the issuer the start names is the one the flow is bound to, and at the exchange an issuer that is no
@@ -41,7 +44,10 @@ import { confirmHashOf } from "./confirm-hash";
 import type { OAuthConnection, StartedFrom } from "./store";
 
 export type StartDeps = OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> };
-export type FinishDeps = StartDeps & { mount(personId: string, name: string): Promise<ServerState | null> };
+/** What the confirm needs (it takes the person's yes to tokens already held: no account to name). */
+export type ConfirmDeps = StartDeps & { mount(personId: string, name: string): Promise<ServerState | null> };
+/** The way back also names the account a phone sign-in would go to: `accountOf` is its email and whether it is verified. */
+export type FinishDeps = ConfirmDeps & { accountOf(personId: string): Promise<{ email: string; emailVerified: boolean } | null> };
 
 /** `issuer_changed`: the sign-in host is no longer the one the person was shown — `issuer` is where it is now (what the
  *  caller stores for the next card) and `issuerHost` what that card will name. */
@@ -53,8 +59,8 @@ export type StartResult =
 export type FinishResult =
   | { ok: true; server: string }
   /** A phone sign-in whose tokens are held for the person's yes: the page shows `confirmToken` in its form, once. */
-  | { ok: "confirm"; server: string; personId: string; confirmToken: string }
-  | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account"; server?: string }
+  | { ok: "confirm"; server: string; personId: string; email: string; confirmToken: string }
+  | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account" | "email_unverified"; server?: string }
   | (IssuerChanged & { server: string; personId: string });
 export type ConfirmResult = { ok: true; server: string } | { ok: false; reason: "expired" | "unknown" | "discarded" | "changed" | "other_account"; server?: string };
 
@@ -240,6 +246,14 @@ export async function finishSignIn(
   const { entry } = approved;
   if (q.error !== undefined) return { ok: false, reason: "denied", server };
   if (!q.code) return { ok: false, reason: "exchange_failed", server };
+  // The page that asks a browser with no session names the account by its whole email (R1), so the account must have
+  // proved that email. A lookup that fails or finds nothing is the same refusal: nothing is exchanged and nothing held.
+  let email: string | null = null;
+  if (confirmToken !== null) {
+    const account = await d.accountOf(flow.personId).catch(() => null);
+    if (!account || !account.emailVerified || !account.email) return { ok: false, reason: "email_unverified", server };
+    email = account.email;
+  }
   /** Where the sign-in is now, by the server's own discovery — never by the `iss` in the URL — for the next card. */
   const changed = async (now: string | null): Promise<FinishResult> => ({
     ok: false,
@@ -292,7 +306,7 @@ export async function finishSignIn(
     if (AuthorizationServerMismatchError.isInstance(err)) return changed(found.issuer);
     return { ok: false, reason: "exchange_failed", server };
   }
-  if (confirmToken !== null) return { ok: "confirm", server, personId: flow.personId, confirmToken };
+  if (confirmToken !== null && email !== null) return { ok: "confirm", server, personId: flow.personId, email, confirmToken };
   await d.mount(flow.personId, server).catch(() => null);
   return { ok: true, server };
 }
@@ -307,7 +321,7 @@ export async function confirmSignIn(
   confirmToken: string,
   answer: "connect" | "discard",
   sessionPersonId: string | null,
-  d: FinishDeps & { readConfig(personId: string): Promise<StoredConfig> },
+  d: ConfirmDeps,
 ): Promise<ConfirmResult> {
   if (!confirmToken) return { ok: false, reason: "unknown" };
   const held = await d.store.takeHeldTokens(confirmHashOf(confirmToken), d.now());
