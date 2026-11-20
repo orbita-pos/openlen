@@ -1002,7 +1002,9 @@
       "close": "Schließen",
       "collectingHint": "Sammelt echte Besucherdaten ({views} Aufrufe, mind. 72 Std.).",
       "decidedByConflict": "Ein anderes Teammitglied oder Gerät hat diesen Test bereits entschieden.",
-      "pausedHarmNotice": "Automatisch gestoppt zum Schutz deiner Conversions; das Original läuft wieder zu 100%."
+      "pausedHarmNotice": "Automatisch gestoppt zum Schutz deiner Conversions; das Original läuft wieder zu 100%.",
+      "pushHarmStopNotRestored": "„{name}“ wurde gestoppt, da Variante B deutlich schlechter konvertierte. Deine Seite ist nicht veröffentlicht, es war also nichts Live-Geschaltetes wiederherzustellen.",
+      "emailTextInfo": "{push}\n\nSieh nach, was passiert ist: {url}"
     }
   }
 }

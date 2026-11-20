@@ -3,7 +3,7 @@
 // so simultaneous clicks from Web and Mobile can never double-promote or double-rollback.
 import "server-only";
 
-import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 import {
@@ -104,6 +104,28 @@ export async function liveExperimentForProject(
   return row ?? null;
 }
 
+/** Experiments that ended in a verdict (a winner, no result, a harm stop) and whose owner was never told: the notice was
+ *  cut between the verdict and the queue (review item 22). */
+export async function listUnannouncedResults(): Promise<AbExperimentRow[]> {
+  return db
+    .select()
+    .from(schema.abExperiments)
+    .where(
+      and(
+        inArray(schema.abExperiments.status, ["winner_ready", "inconclusive", "paused_harm"]),
+        isNull(schema.abExperiments.notifiedAt),
+      ),
+    );
+}
+
+/** The owner was told (the notice is in the queue). Set only AFTER it was queued. */
+export async function markExperimentNotified(id: string, at: Date): Promise<void> {
+  await db
+    .update(schema.abExperiments)
+    .set({ notifiedAt: at, updatedAt: new Date() })
+    .where(eq(schema.abExperiments.id, id));
+}
+
 export async function listRunningExperiments(): Promise<AbExperimentRow[]> {
   return db
     .select()
@@ -136,6 +158,32 @@ export async function updateExperiment(
     .where(eq(schema.abExperiments.id, id))
     .returning();
   return row ?? null;
+}
+
+/** What the evaluator may write about an experiment it just evaluated. */
+export type AbEvaluationPatch = Partial<
+  Pick<
+    AbExperimentInsert,
+    "metricsSnapshot" | "evaluatedAt" | "status" | "decisionStatus" | "winnerVariant" | "endedAt" | "notifiedAt"
+  >
+>;
+
+/** The evaluator's write is a compare-and-swap (review item 21): it only lands on an experiment that is STILL running with
+ *  no decision taken. A person who claimed a decision between the evaluator's read and this write wins, and the evaluator
+ *  changes nothing — nothing of what follows (a notice) happens either. `true` = a row changed. */
+export async function saveEvaluation(id: string, patch: AbEvaluationPatch): Promise<boolean> {
+  const rows = await db
+    .update(schema.abExperiments)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(
+      and(
+        eq(schema.abExperiments.id, id),
+        eq(schema.abExperiments.status, "running"),
+        eq(schema.abExperiments.decisionStatus, "none"),
+      ),
+    )
+    .returning({ id: schema.abExperiments.id });
+  return rows.length > 0;
 }
 
 /** Atomic compare-and-swap lock for deciding an experiment (promote_b / keep_a / extend).

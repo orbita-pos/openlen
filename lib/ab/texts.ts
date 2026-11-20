@@ -62,6 +62,8 @@ export interface AbNotificationInput {
   readonly liftPct: number;
   readonly probabilityPct: number;
   readonly url: string;
+  /** Harm stop only: false = there was no published site to put the original back on (the text must not say it was). */
+  readonly restored?: boolean;
 }
 
 /** Standalone push + email copy used when harm_stop triggers or when the project has no morning summary. */
@@ -84,7 +86,7 @@ export function abNotificationTexts(
       : input.verdict === "winner_a"
         ? t("pushWinnerA", { name: input.name, prob })
         : input.verdict === "harm_stop"
-          ? t("pushHarmStop", { name: input.name })
+          ? t(input.restored === false ? "pushHarmStopNotRestored" : "pushHarmStop", { name: input.name })
           : t("pushInconclusive", { name: input.name });
   const push = clampPush(rawPush);
   const title = input.assistantName?.trim() || t("badge");
@@ -93,6 +95,7 @@ export function abNotificationTexts(
     title,
     push,
     emailSubject: t("emailSubject", { name: input.name }),
-    emailText: t("emailText", { push: rawPush, url: input.url }),
+    // A harm stop is already decided: its email shows what happened, it doesn't ask for a decision.
+    emailText: t(input.verdict === "harm_stop" ? "emailTextInfo" : "emailText", { push: rawPush, url: input.url }),
   };
 }

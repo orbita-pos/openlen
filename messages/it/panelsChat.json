@@ -1002,7 +1002,9 @@
       "close": "Chiudi",
       "collectingHint": "Raccolta dati reali ({views} visite, minimo 72 ore).",
       "decidedByConflict": "Un altro membro o dispositivo ha già deciso questo test.",
-      "pausedHarmNotice": "Fermato automaticamente per proteggere le conversioni; l’originale è al 100%."
+      "pausedHarmNotice": "Fermato automaticamente per proteggere le conversioni; l’originale è al 100%.",
+      "pushHarmStopNotRestored": "Ho fermato “{name}” perché la variante B riduceva le conversioni. Il tuo sito non è pubblicato, quindi non c’era nulla online da ripristinare.",
+      "emailTextInfo": "{push}\n\nVedi cosa è successo: {url}"
     }
   }
 }
