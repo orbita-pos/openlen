@@ -172,6 +172,48 @@ describe("assistants store", () => {
     ]);
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.1–§6.3): a new one lives in the person's space; the
+  // pages it attends are rows of its own, never its home.
+  describe("living in the person's space", () => {
+    beforeEach(async () => {
+      await pg.query(`insert into "projects" values ('space', 'u1')`);
+    });
+    const served = async () =>
+      (await pg.query<{ projectId: string; assistantId: string; onPage: boolean }>(`select "projectId", "assistantId", "onPage" from "assistantProjects" order by "projectId"`)).rows;
+
+    it("created from the home: home is the space, no page served, its agent file named", async () => {
+      const r = await createAssistant({ personId: "u1", homeProjectId: "space", served: null, input: LUCIA, agentType: "mr-smith" });
+      if (!r.ok) throw new Error("not created");
+      expect(r.assistant.homeProjectId).toBe("space");
+      expect(r.assistant.agentType).toBe("mr-smith");
+      expect(await served()).toEqual([]);
+    });
+
+    it("created from a page: home is the space and the page is served, on", async () => {
+      const r = await createAssistant({ personId: "u1", homeProjectId: "space", served: { projectId: "p1", onPage: true }, input: LUCIA });
+      if (!r.ok) throw new Error("not created");
+      expect(r.assistant.homeProjectId).toBe("space");
+      expect(r.assistant.agentType).toBeNull();
+      expect(await served()).toEqual([{ projectId: "p1", assistantId: r.assistant.id, onPage: true }]);
+    });
+
+    it("from the phone, with onPage false: the page is served, off", async () => {
+      await createAssistant({ personId: "u1", homeProjectId: "space", served: { projectId: "p1", onPage: false }, input: LUCIA });
+      expect((await served()).map((r) => r.onPage)).toEqual([false]);
+    });
+
+    it("two agents in the same space don't collide", async () => {
+      expect((await createAssistant({ personId: "u1", homeProjectId: "space", served: null, input: LUCIA })).ok).toBe(true);
+      expect((await createAssistant({ personId: "u1", homeProjectId: "space", served: null, input: { ...LUCIA, name: "Mr. Smith" } })).ok).toBe(true);
+    });
+
+    it("a page that already has one is refused and leaves no half-made one", async () => {
+      await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+      expect(await createAssistant({ personId: "u1", homeProjectId: "space", served: { projectId: "p1", onPage: true }, input: { ...LUCIA, name: "Toña" } })).toEqual({ ok: false, code: "project_has_assistant" });
+      expect(await assistantBySlug("u1", "tona")).toBeNull();
+    });
+  });
+
   it("lists the newest first", async () => {
     await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
     await new Promise((r) => setTimeout(r, 5));

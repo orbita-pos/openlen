@@ -29,7 +29,7 @@ vi.mock("@/auth", () => ({ auth: async () => null }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: async () => base.userId }));
 vi.mock("@/lib/projects/acceso", async (orig) => ({ ...(await orig<object>()), exigirAcceso: async () => ({ rol: "dueno", duenoId: base.userId }) }));
 
-const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
+const { CREATE_ASSISTANTS, CREATE_SPACE } = await import("@/scripts/assistants-migrate-sql");
 const { ensureSpace } = await import("./store");
 const { tableSql } = await import("./test-helpers");
 const { ProjectIsSpaceError, SpaceHasAgentsError } = await import("./errors");
@@ -46,7 +46,7 @@ beforeEach(async () => {
   for (const t of [schema.users, schema.projects, schema.projectChatMessages, schema.projectMembers, schema.projectInvites, schema.projectEnvVars, schema.projectFiles])
     await pg.query(tableSql(t));
   await pg.query(`insert into "users" ("id", "email") values ('u1', 'ana@example.com')`);
-  for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+  for (const statement of [...CREATE_ASSISTANTS, ...CREATE_SPACE]) await pg.query(statement);
   base.db = drizzle(pg, { schema });
   space = await ensureSpace("u1");
 });

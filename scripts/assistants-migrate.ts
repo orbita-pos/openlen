@@ -8,10 +8,10 @@
 import { sql } from "drizzle-orm";
 
 import { db } from "../lib/db";
-import { CREATE_ASSISTANTS } from "./assistants-migrate-sql";
+import { CREATE_ASSISTANTS, CREATE_SPACE } from "./assistants-migrate-sql";
 
 async function main() {
-  for (const statement of CREATE_ASSISTANTS) await db.execute(sql.raw(statement));
+  for (const statement of [...CREATE_ASSISTANTS, ...CREATE_SPACE]) await db.execute(sql.raw(statement));
   console.log("[assistants:migrate] assistants and assistantProjects ready.");
   process.exit(0);
 }

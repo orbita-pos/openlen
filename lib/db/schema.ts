@@ -1560,6 +1560,12 @@ export const assistants = pgTable(
     tone: text("tone").notNull(),
     /** ~/.assistant/MEMORY.md: what its owner taught it, replaced whole. */
     memory: text("memory").notNull().default(""),
+    /** The agent file it follows, `~/.len/agents/<agentType>.md` of its person (spec local
+     *  2026-11-19-agentes-para-todos, §6.1). NULL in an assistant from before: it is the plain assistant. */
+    agentType: text("agentType"),
+    /** ~/.assistant/CUSTOMERS.md: what its customers may be told (same spec, §6.7). An agent with a file never puts its
+     *  personal memory before a visitor: this goes instead. */
+    customerNote: text("customerNote").notNull().default(""),
     /** How its `ask_len` requests ended, until it hears them (lib/assistants/notices.ts). */
     notices: jsonb("notices").$type<AskLenNotice[]>().notNull().default([]),
     homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),

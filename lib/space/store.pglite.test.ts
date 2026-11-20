@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
+const { CREATE_ASSISTANTS, CREATE_SPACE } = await import("@/scripts/assistants-migrate-sql");
 const { ensureSpace, spaceIdOf } = await import("./store");
 const { isSpaceData } = await import("./types");
 const { projectsTableSql } = await import("./test-helpers");
@@ -32,7 +32,7 @@ beforeEach(async () => {
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(projectsTableSql());
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+  for (const statement of [...CREATE_ASSISTANTS, ...CREATE_SPACE]) await pg.query(statement);
   base.db = drizzle(pg, { schema });
 });
 

@@ -117,6 +117,15 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "look" jsonb;`,
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "summaryLocale" text;`,
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "lastSummaryOn" text;`,
-  // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.2) — the person's space: one per person.
+  // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.1, §6.7): the agent file it follows, and what
+  // its customers may be told, apart from its personal memory.
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "agentType" text;`,
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "customerNote" text NOT NULL DEFAULT '';`,
+];
+
+/** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): one per person. Apart from CREATE_ASSISTANTS
+ *  because it is an index on `projects`, which the assistants' tests build without `data`; `assistants:migrate` runs
+ *  both. */
+export const CREATE_SPACE: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "projects_one_space_idx" ON "projects" ("userId") WHERE ("data"->'space') IS NOT NULL;`,
 ];

@@ -29,19 +29,38 @@ export function isUniqueViolation(err: unknown): boolean {
   return e.code === "23505" || e.cause?.code === "23505";
 }
 
-export async function createAssistant(o: {
+interface CreateCommon {
   personId: string;
-  projectId: string;
   input: AssistantInput;
   /** Its memory to start with: what today's assistant of the project was taught (lib/assistants/knowledge.ts). */
   memory?: string;
-  /** Her bubble on the page: on, unless born from the phone (Jesús 16/11, spec local 2026-11-16-movil-es-tu-asistente,
-   *  §5.6). Absent = on, the web's rule of 11/11. */
-  onPage?: boolean;
   /** The morning summary, ticked in the creator (phase 4D, spec §6.9), and the language it was ticked in. */
   morningSummary?: boolean;
   locale?: string;
-}): Promise<{ ok: true; assistant: AssistantRow } | { ok: false; code: "name_taken" | "project_has_assistant" }> {
+  /** The agent file it follows (spec local 2026-11-19-agentes-para-todos, §6.1). */
+  agentType?: string | null;
+}
+
+/** An assistant AS BEFORE: its home is the page it serves. Her bubble on the page: on, unless born from the phone
+ *  (Jesús 16/11, spec local 2026-11-16-movil-es-tu-asistente, §5.6). Absent = on, the web's rule of 11/11. */
+interface CreateOnItsPage extends CreateCommon {
+  projectId: string;
+  onPage?: boolean;
+}
+
+/** An agent of the person's (spec local 2026-11-19-agentes-para-todos, §6.1–§6.3): its home is the person's space, and
+ *  the page it attends, if any, is a row of its own. */
+interface CreateInTheSpace extends CreateCommon {
+  homeProjectId: string;
+  served: { readonly projectId: string; readonly onPage: boolean } | null;
+}
+
+export async function createAssistant(
+  given: CreateOnItsPage | CreateInTheSpace,
+): Promise<{ ok: true; assistant: AssistantRow } | { ok: false; code: "name_taken" | "project_has_assistant" }> {
+  const o = given;
+  const home = "homeProjectId" in given ? given.homeProjectId : given.projectId;
+  const served = "homeProjectId" in given ? given.served : { projectId: given.projectId, onPage: given.onPage ?? true };
   try {
     const assistant = await db.transaction(async (tx) => {
       let row: AssistantRow;
@@ -50,7 +69,8 @@ export async function createAssistant(o: {
           .insert(a)
           .values({
             personId: o.personId,
-            homeProjectId: o.projectId,
+            homeProjectId: home,
+            ...(o.agentType ? { agentType: o.agentType } : {}),
             slug: assistantSlug(o.input.name),
             name: o.input.name,
             tone: o.input.tone,
@@ -66,11 +86,13 @@ export async function createAssistant(o: {
         if (isUniqueViolation(err)) throw new Refused("name_taken");
         throw err;
       }
+      // Born in the person's space from the home: no page (spec local 2026-11-19-agentes-para-todos, decision 7).
+      if (!served) return row!;
       try {
         // Born on the page (11/11, Jesús: «encendido de una»): she is created from Len's card, where the owner asked for
         // an assistant for this page. The next publish bakes her bubble; until then her place says so. Born from the
         // phone, off (16/11): there she is made to pass requests to Len, not to answer the page's visitors.
-        await tx.insert(schema.assistantProjects).values({ projectId: o.projectId, assistantId: row!.id, onPage: o.onPage ?? true });
+        await tx.insert(schema.assistantProjects).values({ projectId: served.projectId, assistantId: row!.id, onPage: served.onPage });
       } catch (err) {
         if (isUniqueViolation(err)) throw new Refused("project_has_assistant");
         throw err;

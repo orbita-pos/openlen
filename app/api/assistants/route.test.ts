@@ -26,12 +26,17 @@ const m = vi.hoisted(() => ({
   explicitVisitorCap: vi.fn(async (): Promise<number | null> => null),
   setExplicitVisitorCap: vi.fn(async () => {}),
   creditState: vi.fn(async () => ({ plan: "pro", balance: 10_000, allotment: 50_000, refillsAt: null })),
+  // Agents for everyone (spec local 2026-11-19-agentes-para-todos): the person's space and their agent files.
+  ensureSpace: vi.fn(async () => "space-1"),
+  agentTypeProblem: vi.fn(async (): Promise<string | null> => null),
 }));
 vi.mock("@/auth", () => ({ auth: m.auth }));
 vi.mock("@/lib/assistants/store", () => ({ createAssistant: m.createAssistant, assistantsOf: m.assistantsOf, assistantById: m.assistantById, deleteAssistant: m.deleteAssistant, oldAssistantSettings: m.oldAssistantSettings, switchOldAssistantOff: m.switchOldAssistantOff, renameAssistant: m.renameAssistant, setMorningSummary: m.setMorningSummary, setAssistantLook: m.setAssistantLook }));
 vi.mock("@/lib/assistants/projects", () => ({ titlesOf: m.titlesOf, projectIdsOf: m.projectIdsOf }));
 vi.mock("@/lib/assistants/visitor/store", () => ({ setOnPage: m.setOnPage, visitsOf: m.visitsOf, monthSpent: m.monthSpent, explicitVisitorCap: m.explicitVisitorCap, setExplicitVisitorCap: m.setExplicitVisitorCap }));
 vi.mock("@/lib/credits", () => ({ getCreditState: m.creditState }));
+vi.mock("@/lib/space/store", () => ({ ensureSpace: m.ensureSpace }));
+vi.mock("@/lib/assistants/agent-file", () => ({ agentTypeProblem: m.agentTypeProblem }));
 vi.mock("@/lib/projects/acceso", () => import("@/lib/projects/acceso-de-prueba"));
 
 const { fijarAccesoDePrueba } = await import("@/lib/projects/acceso-de-prueba");
@@ -55,19 +60,54 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("POST /api/assistants", () => {
-  it("creates it for the project's owner", async () => {
+  it("creates it for the project's owner: it lives in their space and attends the page, on", async () => {
     const res = await post(BODY);
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ id: "a1", slug: "lucia" });
-    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: LOOK, tone: "friendly" }, memory: "" });
+    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", homeProjectId: "space-1", served: { projectId: "p1", onPage: true }, input: { name: "Lucía", look: LOOK, tone: "friendly" }, memory: "", agentType: null });
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): from the home there is no page.
+  it("🔴 created from the home: it lives in the person's space and attends no page", async () => {
+    const res = await post({ name: "Mr. Smith", look: LOOK, tone: "friendly", agentType: "mr-smith" });
+    expect(res.status).toBe(201);
+    expect(m.ensureSpace).toHaveBeenCalledWith("u1");
+    expect(m.agentTypeProblem).toHaveBeenCalledWith("u1", "mr-smith");
+    expect(m.createAssistant).toHaveBeenCalledWith({ personId: "u1", homeProjectId: "space-1", served: null, input: { name: "Mr. Smith", look: LOOK, tone: "friendly" }, agentType: "mr-smith" });
+    expect(m.oldAssistantSettings).not.toHaveBeenCalled();
+  });
+
+  it("the space is not a page to attend: 400 space_not_a_page", async () => {
+    const res = await post({ ...BODY, projectId: "space-1" });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "space_not_a_page" });
+    expect(m.createAssistant).not.toHaveBeenCalled();
+  });
+
+  it("an agent file that is missing, broken or reserved: 400 and nothing is made", async () => {
+    for (const problem of ["missing", "invalid", "reserved"]) {
+      m.agentTypeProblem.mockResolvedValueOnce(problem);
+      const res = await post({ ...BODY, agentType: "x" });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: `agent_${problem}` });
+    }
+    expect(m.createAssistant).not.toHaveBeenCalled();
+  });
+
+  it("🔴 with OPENLEN_AGENTS=0 it is today's: the page is its home and a page is required", async () => {
+    vi.stubEnv("OPENLEN_AGENTS", "0");
+    await post(BODY);
+    expect(m.createAssistant).toHaveBeenLastCalledWith({ personId: "u1", projectId: "p1", input: { name: "Lucía", look: LOOK, tone: "friendly" }, memory: "" });
+    expect(m.ensureSpace).not.toHaveBeenCalled();
+    expect((await post({ name: "Mr. Smith", look: LOOK, tone: "friendly" })).status).toBe(404);
   });
 
   // 16/11, Jesús (spec local 2026-11-16-movil-es-tu-asistente, §5.6): born from the phone, her bubble is off.
   it("🔴 the phone's welcome creates her with her bubble off; without onPage: false, as the web always did", async () => {
     await post({ ...BODY, onPage: false });
-    expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ onPage: false }));
+    expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ served: { projectId: "p1", onPage: false } }));
     await post({ ...BODY, onPage: "no" });
-    expect(m.createAssistant.mock.lastCall?.[0]).not.toHaveProperty("onPage");
+    expect(m.createAssistant).toHaveBeenLastCalledWith(expect.objectContaining({ served: { projectId: "p1", onPage: true } }));
   });
 
   it("🔴 the morning summary is created on only when the creator ticked it, in the page's language", async () => {
