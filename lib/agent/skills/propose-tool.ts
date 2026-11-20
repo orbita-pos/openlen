@@ -77,10 +77,12 @@ async function storeDeps(): Promise<ProposeSkillsDeps> {
 
 const lf = (text: string) => text.replace(/^﻿/, "").replace(/\r\n/g, "\n");
 
-/** What Len knows of the person's skill: read whole and as it is now, never read whole, or read before it changed. */
+/** What Len knows of the person's skill: read whole and as it is now, never read whole, or read before it changed. Edit's
+ *  own rule (`lib/agent/ficheros/edit.ts`): a Read that showed only part of the file is `vistaParcial` (a whole one still
+ *  records offset 1 and its lines, so those say nothing — final review C1). */
 function readStateOf(session: AgentSession, name: string, current: string | undefined): ReadState {
-  const seen = (session.leidos as ReadonlyMap<string, { instantanea: string; offset?: number; limit?: number }> | undefined)?.get(skillPath("personal", name));
-  if (!seen || seen.offset !== undefined || seen.limit !== undefined) return "unread";
+  const seen = (session.leidos as ReadonlyMap<string, { instantanea: string; vistaParcial?: true }> | undefined)?.get(skillPath("personal", name));
+  if (!seen || seen.vistaParcial) return "unread";
   return current !== undefined && lf(seen.instantanea) === lf(current) ? "read" : "stale";
 }
 

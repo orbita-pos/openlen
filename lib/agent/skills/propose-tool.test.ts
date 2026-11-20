@@ -2,6 +2,7 @@
 // review card under his answer and writes nothing; the person saves from the card.
 import { describe, expect, it } from "vitest";
 
+import { ejecutarRead, type Leidos } from "@/lib/agent/ficheros/read";
 import type { AgentSession } from "@/lib/agent/tools";
 
 import { bundledSkillFiles } from "./bundled";
@@ -67,11 +68,23 @@ describe("propose_skills", () => {
     expect(said(await runProposeSkills(withRead(null), { proposals: [IMPROVE] }, deps()))).toContain("read ~/.len/skills/plant-care/SKILL.md first");
     expect(said(await runProposeSkills(withRead("an older text"), { proposals: [IMPROVE] }, deps()))).toMatch(/changed since you read it/);
     const partial = withRead(CURRENT);
-    (partial.leidos as Map<string, { limit?: number }>).get(skillPath("personal", "plant-care"))!.limit = 3;
+    Object.assign((partial.leidos as Map<string, object>).get(skillPath("personal", "plant-care"))!, { offset: 1, limit: 3, vistaParcial: true });
     expect(said(await runProposeSkills(partial, { proposals: [IMPROVE] }, deps()))).toContain("first");
     const out = await runProposeSkills(withRead(CURRENT.replace(/\n/g, "\r\n")), { proposals: [IMPROVE] }, deps());
     expect(out.response).toMatchObject({ ok: true });
     expect(skillProposalsOf(out.action!)[0]!.base).toBe(skillFingerprint(CURRENT));
+  });
+
+  // Final review C1: a real Read records offset 1 for a whole file; the check must be Edit's own (`vistaParcial`).
+  it("🔴 after a real whole-file Read, an improvement goes through; after a partial one, it doesn't", async () => {
+    const path = skillPath("personal", "plant-care");
+    const site = { contenido: (r: string) => (r === path ? CURRENT : null), ficheros: [path] };
+    const whole = { ...LEN, leidos: new Map() } as unknown as AgentSession;
+    expect(ejecutarRead({ file_path: "~/.len/skills/plant-care/SKILL.md" }, site, whole.leidos as Leidos).ok).toBe(true);
+    expect((await runProposeSkills(whole, { proposals: [IMPROVE] }, deps())).response).toMatchObject({ ok: true });
+    const partial = { ...LEN, leidos: new Map() } as unknown as AgentSession;
+    (partial.leidos as Leidos).set(path, { instantanea: CURRENT, offset: 1, limit: 2, vistaParcial: true });
+    expect(said(await runProposeSkills(partial, { proposals: [IMPROVE] }, deps()))).toContain("first");
   });
 
   it("a refused proposal is a tool error with no card", async () => {
