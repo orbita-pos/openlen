@@ -27,13 +27,14 @@ fn build_state(publish_root: &Path) -> AppState {
 
 fn write_release_with_ab(root: &Path, sub: &str, sha: &str, html_a: &str, html_b: &str) {
     let rel = root.join(sub).join("releases").join(sha);
-    fs::create_dir_all(rel.join("_ab/ab_9f3c2a1b/b")).unwrap();
+    fs::create_dir_all(rel.join("openlen/ab/ab_9f3c2a1b/b")).unwrap();
     fs::create_dir_all(rel.join("about")).unwrap();
     fs::write(rel.join("index.html"), html_a).unwrap();
     fs::write(rel.join("about/index.html"), "<h1>About</h1>").unwrap();
-    fs::write(rel.join("_ab/ab_9f3c2a1b/b/index.html"), html_b).unwrap();
+    fs::write(rel.join("openlen/ab/ab_9f3c2a1b/b/index.html"), html_b).unwrap();
+    fs::write(rel.join("openlen/figure-0a1b2c3d.js"), "figure()").unwrap();
     fs::write(
-        rel.join("ab.json"),
+        rel.join("openlen/ab.json"),
         format!(
             r#"{{
               "version": 1,
@@ -46,7 +47,7 @@ fn write_release_with_ab(root: &Path, sub: &str, sha: &str, html_a: &str, html_b
                 "locales": [],
                 "splitBps": 5000,
                 "salt": "3f9a1c8e7b2d4012",
-                "prefixB": "_ab/ab_9f3c2a1b/b",
+                "prefixB": "openlen/ab/ab_9f3c2a1b/b",
                 "overrideParam": "_ol_ab",
                 "expiresAt": null
               }}]
@@ -93,10 +94,33 @@ async fn blocks_ab_json_and_internal_ab_prefix_with_404() {
     let app = ab_loopback_router(build_state(dir.path()));
     let chrome = "Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36";
 
-    for path in ["/ab.json", "/_ab", "/_ab/ab_9f3c2a1b/b/index.html"] {
+    for path in [
+        "/openlen/ab.json",
+        "/openlen/ab",
+        "/openlen/ab/ab_9f3c2a1b/b/index.html",
+    ] {
         let (status, _, _) = send_loopback(&app, "demo", path, chrome, None, "198.51.100.1").await;
         assert_eq!(status, StatusCode::NOT_FOUND, "path={path} must 404");
     }
+}
+
+#[tokio::test]
+async fn other_files_of_the_reserved_openlen_root_keep_being_served() {
+    let dir = TempDir::new().unwrap();
+    write_release_with_ab(dir.path(), "demo", "aaaa11112222", "<h1>A</h1>", "<h1>B</h1>");
+    let app = ab_loopback_router(build_state(dir.path()));
+    let chrome = "Mozilla/5.0 Chrome/131.0.0.0 Safari/537.36";
+    let (status, _, body) = send_loopback(
+        &app,
+        "demo",
+        "/openlen/figure-0a1b2c3d.js",
+        chrome,
+        None,
+        "198.51.100.1",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, "figure()");
 }
 
 #[tokio::test]

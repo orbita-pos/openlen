@@ -51,7 +51,7 @@ pub struct AbDecision {
     pub variant: Variant,
     pub source: AssignSource,
     /// Path to try on disk when serving Variant B (relative to release dir,
-    /// starting with `/_ab/<id>/b/...`). `None` when serving Control A.
+    /// starting with `/openlen/ab/<id>/b/...`). `None` when serving Control A.
     pub variant_b_path: Option<String>,
     /// `Set-Cookie` header value when a new sticky assignment was minted.
     pub set_cookie: Option<String>,
@@ -61,12 +61,14 @@ pub struct AbDecision {
     pub is_page_route: bool,
 }
 
-/// True if `url_path` tries to directly address `/ab.json` or `/_ab` / `/_ab/*`.
-/// The edge must ALWAYS return 404 for these paths.
+/// True if `url_path` tries to directly address the experiment's own files:
+/// `/openlen/ab.json` or `/openlen/ab` / `/openlen/ab/*`. The edge must ALWAYS return
+/// 404 for these. Other files of the reserved `openlen/` root (e.g. the bubble's
+/// `figure-<sha>.js`) are served as usual.
 pub fn is_blocked_internal_path(url_path: &str) -> bool {
     let trimmed = url_path.trim_start_matches('/');
     let lower = trimmed.to_ascii_lowercase();
-    lower == "ab.json" || lower == "_ab" || lower.starts_with("_ab/")
+    lower == "openlen/ab.json" || lower == "openlen/ab" || lower.starts_with("openlen/ab/")
 }
 
 /// Parse a named cookie from a raw `Cookie` header string.
@@ -317,7 +319,7 @@ mod tests {
                 locales: vec!["es".into(), "fr".into()],
                 split_bps: 5000,
                 salt: "3f9a1c8e7b2d4012".into(),
-                prefix_b: "_ab/ab_9f3c2a1b/b".into(),
+                prefix_b: "openlen/ab/ab_9f3c2a1b/b".into(),
                 override_param: "_ol_ab".into(),
                 expires_at: None,
             }],
@@ -326,12 +328,17 @@ mod tests {
 
     #[test]
     fn blocks_internal_ab_paths() {
-        assert!(is_blocked_internal_path("/ab.json"));
-        assert!(is_blocked_internal_path("/AB.JSON"));
-        assert!(is_blocked_internal_path("/_ab"));
-        assert!(is_blocked_internal_path("/_ab/ab_9f3c2a1b/b/index.html"));
+        assert!(is_blocked_internal_path("/openlen/ab.json"));
+        assert!(is_blocked_internal_path("/OPENLEN/AB.JSON"));
+        assert!(is_blocked_internal_path("/openlen/ab"));
+        assert!(is_blocked_internal_path("/openlen/ab/ab_9f3c2a1b/b/index.html"));
         assert!(!is_blocked_internal_path("/about"));
         assert!(!is_blocked_internal_path("/"));
+        // Other files of the reserved `openlen/` root keep being served.
+        assert!(!is_blocked_internal_path("/openlen/figure-0a1b2c3d.js"));
+        // The pre-move layout is an ordinary path now.
+        assert!(!is_blocked_internal_path("/ab.json"));
+        assert!(!is_blocked_internal_path("/_ab/x"));
     }
 
     #[test]
@@ -389,7 +396,7 @@ mod tests {
         assert!(ov.set_cookie.is_none());
         assert_eq!(
             ov.variant_b_path.as_deref(),
-            Some("/_ab/ab_9f3c2a1b/b/index.html")
+            Some("/openlen/ab/ab_9f3c2a1b/b/index.html")
         );
 
         // Sticky cookie preserves variant without minting a new cookie
@@ -410,7 +417,7 @@ mod tests {
         assert!(sticky.set_cookie.is_none());
         assert_eq!(
             sticky.variant_b_path.as_deref(),
-            Some("/_ab/ab_9f3c2a1b/b/es")
+            Some("/openlen/ab/ab_9f3c2a1b/b/es")
         );
 
         // Route outside targetPath returns None

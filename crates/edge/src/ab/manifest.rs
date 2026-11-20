@@ -1,4 +1,4 @@
-//! Strict parser + validator for `<release>/ab.json`.
+//! Strict parser + validator for `<release>/openlen/ab.json`.
 //!
 //! Malformed manifests or unknown schema versions fail open (`None`) so a bad
 //! manifest can never break live traffic — the edge serves Control A cleanly.
@@ -38,7 +38,8 @@ pub struct AbExperiment {
     /// Basis points (0..=10_000) assigned to Variant B. 5000 = 50/50.
     pub split_bps: u16,
     pub salt: String,
-    /// Relative prefix inside `<release>/`, e.g. `_ab/ab_9f3c2a1b/b`.
+    /// Relative prefix inside `<release>/`, e.g. `openlen/ab/ab_9f3c2a1b/b`. It must live
+    /// under the reserved `openlen/ab/` root, so no file of the owner can collide with it.
     pub prefix_b: String,
     #[serde(default = "default_override_param")]
     pub override_param: String,
@@ -97,13 +98,14 @@ fn is_safe_prefix(prefix: &str) -> bool {
     if prefix.contains('\\') || prefix.contains('\0') {
         return false;
     }
-    let mut parts = prefix.split('/');
-    if parts.next() != Some("_ab") {
+    let segments: Vec<&str> = prefix.split('/').collect();
+    // `openlen/ab/<id>/…`: at least the reserved root, `ab` and one more segment.
+    if segments.len() < 3 || segments[0] != "openlen" || segments[1] != "ab" {
         return false;
     }
-    prefix
-        .split('/')
-        .all(|seg| !seg.is_empty() && seg != "." && seg != "..")
+    segments
+        .iter()
+        .all(|seg| !seg.is_empty() && *seg != "." && *seg != "..")
 }
 
 /// Parse and strictly validate an `ab.json` payload. Returns `None` if schema
@@ -163,7 +165,7 @@ mod tests {
             "locales": ["es", "FR"],
             "splitBps": 5000,
             "salt": "3f9a1c8e7b2d4012",
-            "prefixB": "_ab/ab_9f3c2a1b/b",
+            "prefixB": "openlen/ab/ab_9f3c2a1b/b",
             "overrideParam": "_ol_ab",
             "expiresAt": null
           }]
@@ -184,7 +186,7 @@ mod tests {
             "targetPath": "/",
             "splitBps": 5000,
             "salt": "abcd",
-            "prefixB": "_ab/../etc"
+            "prefixB": "openlen/ab/../etc"
           }]
         }"#;
         assert!(parse_manifest(bad_prefix).is_none());
@@ -197,10 +199,25 @@ mod tests {
             "targetPath": "/",
             "splitBps": 10001,
             "salt": "abcd",
-            "prefixB": "_ab/ab_12345678/b"
+            "prefixB": "openlen/ab/ab_12345678/b"
           }]
         }"#;
         assert!(parse_manifest(bad_split).is_none());
+    }
+
+    #[test]
+    fn variant_b_prefix_must_live_under_the_reserved_openlen_root() {
+        let with_prefix = |prefix: &str| {
+            format!(
+                r#"{{"version":1,"experiments":[{{"id":"ab_12345678","cookieName":"ol_ab_12345678","targetPath":"/","splitBps":5000,"salt":"abcd","prefixB":"{prefix}"}}]}}"#
+            )
+        };
+        assert!(parse_manifest(with_prefix("openlen/ab/ab_12345678/b").as_bytes()).is_some());
+        // The pre-move layout and anything else outside `openlen/ab/` is refused.
+        assert!(parse_manifest(with_prefix("_ab/ab_12345678/b").as_bytes()).is_none());
+        assert!(parse_manifest(with_prefix("openlen/figure/b").as_bytes()).is_none());
+        assert!(parse_manifest(with_prefix("openlen/ab").as_bytes()).is_none());
+        assert!(parse_manifest(with_prefix("img/ab/b").as_bytes()).is_none());
     }
 
     #[test]

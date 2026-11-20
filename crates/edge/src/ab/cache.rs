@@ -15,6 +15,9 @@ use tracing::warn;
 use super::manifest::{parse_manifest, AbManifest};
 
 pub const DEFAULT_AB_MANIFEST_CACHE_MAX: u64 = 10_000;
+/// Where a release keeps its experiment manifest. `openlen/` is a reserved root, so no
+/// file of the owner can sit there.
+pub const AB_MANIFEST_REL: &str = "openlen/ab.json";
 const MAX_MANIFEST_BYTES: u64 = 64 * 1024;
 
 #[derive(Clone, Debug)]
@@ -62,7 +65,7 @@ impl AbManifestCache {
                 .map(|d| d.as_nanos())
                 .unwrap_or(0);
             // Also check ab.json mtime if present so in-place directory tests invalidate.
-            let ab_mtime = tokio::fs::metadata(current.join("ab.json"))
+            let ab_mtime = tokio::fs::metadata(current.join(AB_MANIFEST_REL))
                 .await
                 .ok()
                 .and_then(|m| m.modified().ok())
@@ -97,7 +100,7 @@ impl AbManifestCache {
             return (cached, Some(release_dir));
         }
 
-        let ab_path = release_dir.join("ab.json");
+        let ab_path = release_dir.join(AB_MANIFEST_REL);
         let loaded = match tokio::fs::metadata(&ab_path).await {
             Ok(meta) if meta.is_file() && meta.len() <= MAX_MANIFEST_BYTES => {
                 match tokio::fs::read(&ab_path).await {
