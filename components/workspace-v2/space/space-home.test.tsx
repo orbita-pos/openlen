@@ -30,6 +30,16 @@ vi.mock("../chat/new-chat-panel", () => ({
   ),
 }));
 
+// The Code lens is a mark that says what it was given; its labels say which kind they were built for.
+vi.mock("../code-view", () => ({
+  CodeView: (p: { projectId: string; space?: boolean; rutaActual?: string | null; labels: { title: string }; onClose: () => void }) => (
+    <section data-code={p.projectId} data-space-mode={String(Boolean(p.space))} data-ruta={String(p.rutaActual)} data-title={p.labels.title}>
+      <button type="button" data-code-close="" onClick={p.onClose} />
+    </section>
+  ),
+}));
+vi.mock("../code-view-labels", () => ({ useCodeViewLabels: (kind: string) => ({ title: kind }) }));
+
 import { leaveFirstMessage, takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
 
 import { SpaceHome } from "./space-home";
@@ -97,6 +107,24 @@ describe("the space", () => {
     leaveFirstMessage({ brief: BRIEF, kind: "pagina" });
     const el = mount({ arrivalBrief: BRIEF });
     expect(chat(el).dataset.auto).toBe("false");
+  });
+
+  // Delivery 2 (spec §6.2): the space's files — what the agents keep (a plan, flashcards, recipes) — in the Code lens.
+  it("🔴 «Ficheros» opens the Code lens of the space beside the chat, and closing it leaves the chat", async () => {
+    const el = mount({});
+    const toggle = el.querySelector<HTMLButtonElement>("[data-space-files-toggle]")!;
+    expect(toggle.textContent).toContain("space.files");
+    expect(el.querySelector("[data-code]")).toBeNull();
+    await act(async () => toggle.click());
+    const lens = el.querySelector<HTMLElement>("[data-code]")!;
+    expect(lens.dataset.code).toBe("space-1");
+    expect(lens.dataset.spaceMode).toBe("true");
+    expect(lens.dataset.ruta).toBe("null");
+    expect(lens.dataset.title).toBe("space");
+    expect(chat(el)).not.toBeNull();
+    await act(async () => el.querySelector<HTMLButtonElement>("[data-code-close]")!.click());
+    expect(el.querySelector("[data-code]")).toBeNull();
+    expect(chat(el)).not.toBeNull();
   });
 
   it("a draft («Cambiar a…») fills without sending, and leaves the address", () => {

@@ -860,6 +860,7 @@
   "space": {
     "title": "Jouw ruimte",
     "home": "Terug naar home",
-    "disclaimer": "Len kan zich vergissen. Controleer de antwoorden."
+    "disclaimer": "Len kan zich vergissen. Controleer de antwoorden.",
+    "files": "Bestanden"
   }
 }

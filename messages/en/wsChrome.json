@@ -860,6 +860,7 @@
   "space": {
     "title": "Your space",
     "home": "Back to home",
-    "disclaimer": "Len can make mistakes. Please double-check responses."
+    "disclaimer": "Len can make mistakes. Please double-check responses.",
+    "files": "Files"
   }
 }

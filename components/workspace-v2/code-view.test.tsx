@@ -219,6 +219,25 @@ const escribirNombre = async (el: HTMLElement, nombre: string) => {
   await esperar(() => false, 3);
 };
 
+// THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): its lens shows what the agents keep — no home page
+// (the space is no page) and no tab opened for one.
+describe("CodeView — in the person's space", () => {
+  it("🔴 lists the agents' files without /index.html, and opens nothing at first", async () => {
+    LISTA = { ficheros: [{ ruta: "/index.html", contenido: "" }, { ruta: "/english/plan.md", contenido: "# Plan" }], perezosos: [] };
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const root = createRoot(el);
+    roots.push(root);
+    await act(async () => {
+      root.render(<CodeView html="" projectId={proyecto} rutaActual={null} space onClose={() => {}} labels={labels} />);
+    });
+    await esperar(() => botonDelArbol(el, "plan.md"));
+    expect(botonDelArbol(el, "plan.md")).toBeDefined();
+    expect(botonDelArbol(el, "index.html")).toBeUndefined();
+    expect(pestanas(el)).toEqual([]);
+  });
+});
+
 describe("CodeView — abrir archivos en pestañas", () => {
   it("abre la página del lienzo con lo GUARDADO, en un editor de verdad", async () => {
     const { el } = await pintar();

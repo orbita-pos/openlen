@@ -186,8 +186,10 @@ interface CodeViewProps {
   /** Con proyecto, el explorador de TODOS sus ficheros (los mismos que ve Len
    *  en su terminal). Sin él —la vista previa de una plantilla—, sólo `html`. */
   readonly projectId?: string | null;
-  /** La ruta del fichero de la página abierta (`/index.html`, `/menu/index.html`). */
-  readonly rutaActual?: string;
+  /** La ruta del fichero de la página abierta (`/index.html`, `/menu/index.html`); null: ninguna (el espacio). */
+  readonly rutaActual?: string | null;
+  /** THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): no home page to list or open. */
+  readonly space?: boolean;
   /** Una ruta pulsada en el Chat (la #9): la lente se abre con ese fichero elegido. */
   readonly peticion?: PeticionDeCodigo | null;
   readonly onClose: () => void;
@@ -372,9 +374,11 @@ function Explorador({
   peticion,
   labels,
   soloLectura = false,
+  space = false,
 }: {
   projectId: string;
-  rutaActual: string;
+  rutaActual: string | null;
+  space?: boolean;
   peticion: PeticionDeCodigo | null;
   /** Un lector del proyecto compartido: todo se ve, nada se cambia. */
   soloLectura?: boolean;
@@ -389,7 +393,7 @@ function Explorador({
   // Al entrar, lo que se recordaba de este proyecto; si no, la página abierta
   // (o la que pidió el Chat).
   const [editores, setEditores] = useState<Editores>(() => {
-    const base = recordada?.editores ?? unGrupo([rutaActual], rutaActual);
+    const base = recordada?.editores ?? unGrupo(rutaActual ? [rutaActual] : [], rutaActual);
     return peticion ? abrirEn(base, base.activo, peticion.ruta) : base;
   });
   const grupoActivo = editores.grupos[editores.activo] ?? editores.grupos[0]!;
@@ -460,12 +464,12 @@ function Explorador({
     const pedidaEn = Date.now();
     fetch(`/api/projects/${encodeURIComponent(projectId)}/ficheros`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<ListaDeFicheros>) : Promise.reject(new Error(String(r.status)))))
-      .then((j) => vivo && setLista({ ...j, pedidaEn }))
+      .then((j) => vivo && setLista({ ...j, ficheros: space ? j.ficheros.filter((f) => f.ruta !== "/index.html") : j.ficheros, pedidaEn }))
       .catch(() => vivo && setLista((l) => (typeof l === "string" ? "error" : l)));
     return () => {
       vivo = false;
     };
-  }, [projectId, recarga, turnosConCambios]);
+  }, [projectId, recarga, turnosConCambios, space]);
   // Lo que cambió en la carpeta desde FUERA del turno de Len y de este editor (el arreglo de Len Watch traído).
   useEffect(() => onFolderChanged(projectId, ({ outside }) => outside && setRecarga((n) => n + 1)), [projectId]);
 
@@ -511,7 +515,7 @@ function Explorador({
   const arbolBase = useMemo(
     () =>
       typeof lista === "string"
-        ? arbolDeFicheros([{ ruta: rutaActual }])
+        ? arbolDeFicheros(rutaActual ? [{ ruta: rutaActual }] : [])
         : arbolDeFicheros([
             ...lista.ficheros.map((f) => ({ ruta: f.ruta })),
             ...lista.perezosos.map((ruta) => ({ ruta, perezoso: true })),
@@ -1893,7 +1897,7 @@ function Bloque({ etiqueta, codigo, lenguaje, labels }: { etiqueta: string; codi
   );
 }
 
-export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, onEnvVars, labels, soloLectura = false }: CodeViewProps) {
+export function CodeView({ html, projectId, rutaActual = "/index.html", peticion = null, onClose, onEnvVars, labels, soloLectura = false, space = false }: CodeViewProps) {
   const cierreRef = useRef<HTMLDivElement>(null);
 
   // Escape cierra, como cualquier panel superpuesto. Se engancha al documento
@@ -1932,7 +1936,7 @@ export function CodeView({ html, projectId, rutaActual = "/index.html", peticion
       </div>
       {projectId ? (
         <div className="min-h-0 flex-1">
-          <Explorador projectId={projectId} rutaActual={rutaActual} peticion={peticion} labels={labels} soloLectura={soloLectura} />
+          <Explorador projectId={projectId} rutaActual={rutaActual} peticion={peticion} labels={labels} soloLectura={soloLectura} space={space} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto nice-scroll">

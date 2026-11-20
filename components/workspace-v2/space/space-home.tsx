@@ -2,13 +2,13 @@
 
 // THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2–6.3): Len's chat alone, in the middle — no canvas,
 // no Publicar, no page addresses. It is where an agent is asked for and changed: Len writes its file here and leaves
-// the card that creates it.
+// the card that creates it. «Ficheros» opens the Code lens on what the agents keep here (delivery 2).
 //
 // WHAT ARRIVES: the home's Agente comes with the one-use ticket (`lib/marketing/first-message-in-transit.ts`) for the
 // brief in the address, and that is THE send — the person already pressed it on the home. Anything else only fills the
 // box: a brief without its ticket (a link from elsewhere, a reload), a page's ticket, or a draft («Cambiar a <nombre>»).
 // Either way the address loses them, through the router, so a reload writes nothing again.
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, FolderOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
@@ -18,6 +18,8 @@ import { spaceHref } from "@/lib/space/href";
 import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
+import { CodeView } from "../code-view";
+import { useCodeViewLabels } from "../code-view-labels";
 import { ToastProvider } from "../toast";
 
 const noCanvas = () => {};
@@ -52,6 +54,9 @@ export function SpaceHome({
   const tc = useTranslations("common");
   const router = useRouter();
   const [start, setStart] = useState<Start | null>(null);
+  // THE SPACE'S FILES (delivery 2, spec §6.2): what the agents keep, in the Code lens, beside the chat.
+  const [files, setFiles] = useState(false);
+  const codeViewLabels = useCodeViewLabels("space");
   // Read once: the ticket is spent on the first read, and a second effect run (React's development double-run) must
   // not turn the send into a fill.
   const read = useRef(false);
@@ -79,8 +84,19 @@ export function SpaceHome({
             <ArrowLeft size={17} aria-hidden="true" />
           </Link>
           <h1 className="text-[13.5px] font-semibold fg">{t("space.title")}</h1>
+          <button
+            type="button"
+            data-space-files-toggle=""
+            aria-pressed={files}
+            onClick={() => setFiles((v) => !v)}
+            className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] fg-muted transition-colors hover:bg-hover hover:fg"
+          >
+            <FolderOpen size={15} aria-hidden="true" />
+            {t("space.files")}
+          </button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <NewChatPanel
             flatProjectId={projectId}
             flatProjectHtml=""
@@ -92,6 +108,13 @@ export function SpaceHome({
             onPendingDraftConsumed={() => setStart(null)}
             disclaimer={t("space.disclaimer")}
           />
+        </div>
+        {/* Beside the chat on a wide screen; over it on a phone. The lens fills its box (it is absolute inset-0). */}
+        {files && (
+          <div className="absolute inset-0 z-30 md:relative md:inset-auto md:w-1/2 md:shrink-0 md:border-l bd" data-space-files="">
+            <CodeView html="" projectId={projectId} rutaActual={null} space onClose={() => setFiles(false)} labels={codeViewLabels} />
+          </div>
+        )}
         </div>
         </div>
       </div>

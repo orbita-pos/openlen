@@ -860,6 +860,7 @@
   "space": {
     "title": "你的空间",
     "home": "返回首页",
-    "disclaimer": "Len 可能会出错。请核对回答。"
+    "disclaimer": "Len 可能会出错。请核对回答。",
+    "files": "文件"
   }
 }

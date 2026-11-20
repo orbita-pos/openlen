@@ -860,6 +860,7 @@
   "space": {
     "title": "Dein Bereich",
     "home": "Zur Startseite",
-    "disclaimer": "Len kann sich irren. Prüfe die Antworten."
+    "disclaimer": "Len kann sich irren. Prüfe die Antworten.",
+    "files": "Dateien"
   }
 }
