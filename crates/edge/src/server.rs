@@ -22,14 +22,18 @@ use tower_http::trace::TraceLayer;
 use tracing::{debug, error, info, warn};
 
 use crate::ab::{
-    evaluate_request, is_blocked_internal_path, AbDecision, AbManifestCache, AssignSource, Variant,
+    canonical_path, evaluate_request, is_asset_path, is_blocked_internal_path, is_internal_ab_file,
+    AbDecision, AbManifestCache, AssignSource, Variant,
 };
 use crate::config::EdgeConfig;
-use crate::files::{cache_control_for, resolve, resolve_strict, Resolved, AB_HTML_CACHE_CONTROL};
+use crate::files::{
+    cache_control_for, resolve, resolve_strict, Resolved, AB_FILE_CACHE_CONTROL,
+    AB_HTML_CACHE_CONTROL,
+};
 use crate::lookup::{DomainLookup, MockDomainLookup};
 use crate::middleware::RateLimitLayer;
 use crate::proxy::{self, decide_route, disk_base_for, DiskBase, NodeClient, RouteAction};
-use crate::routing::extract_subdomain;
+use crate::routing::extract_subdomain_in;
 
 /// Cache-Control for files served out of the shared uploads root. 30 days
 /// immutable matches nginx's `expires 30d; Cache-Control: public, immutable`
@@ -115,6 +119,12 @@ pub struct AppState {
     /// Optional per-release `ab.json` manifest cache. `None` when A/B routing
     /// is disabled (`OPENLEN_EDGE_AB_ENABLED=false`).
     pub ab_cache: Option<Arc<AbManifestCache>>,
+    /// Sidecar-only mode (see `EdgeConfig::ab_sidecar_only`): Caddy keeps serving every file and
+    /// asks this process only for what an experiment decides — a page is answered with its bytes,
+    /// a file with WHICH file to serve (`serve_from_disk`).
+    pub ab_sidecar: bool,
+    /// Zones a site's subdomain lives under (`openlen.app`, `openlen.com`).
+    pub publish_hosts: Arc<Vec<String>>,
 }
 
 impl std::fmt::Debug for AppState {
@@ -129,6 +139,7 @@ impl std::fmt::Debug for AppState {
             .field("custom_domain_proxy_paths", &self.custom_domain_proxy_paths)
             .field("domain_lookup", &self.domain_lookup)
             .field("ab_enabled", &self.ab_cache.is_some())
+            .field("ab_sidecar", &self.ab_sidecar)
             .finish()
     }
 }
@@ -186,6 +197,8 @@ impl AppState {
             ab_cache: config
                 .ab_enabled
                 .then(|| Arc::new(AbManifestCache::new(config.ab_manifest_cache_max))),
+            ab_sidecar: config.ab_sidecar_only,
+            publish_hosts: Arc::new(config.publish_hosts.clone()),
         })
     }
 }
@@ -380,10 +393,16 @@ async fn serve_from_disk(
     req_headers: &axum::http::HeaderMap,
     secure_cookie: bool,
 ) -> Response<Body> {
-    // Never expose internal A/B manifests or `_ab/` directories directly over HTTP.
+    // Never expose internal A/B manifests or `openlen/ab/` directories directly over HTTP.
     if is_blocked_internal_path(url_path) {
         debug!(%peer, sub, path = %url_path, "blocked direct access to internal A/B path");
         return not_found();
+    }
+
+    // The sidecar serves PAGES. A file is only DECIDED: Caddy keeps serving every file (Range, 304,
+    // streaming, the branded 404) and asks here which one — see `decide_file`.
+    if state.ab_sidecar && is_asset_path(url_path) {
+        return decide_file(state, peer, sub, url_path, query, req_headers, secure_cookie).await;
     }
 
     // /assets/* lives at `<publish>/<sub>/assets/...` — a sibling of `current/`
@@ -422,13 +441,12 @@ async fn serve_from_disk(
                             ab_decision = Some(d);
                         }
                         _ => {
-                            // Variant B did not ship this specific locale/asset file:
-                            // gracefully serve Control A without misreporting Variant B.
-                            if d.is_page_route {
-                                d.variant = Variant::A;
-                                d.variant_b_path = None;
-                                ab_decision = Some(d);
-                            }
+                            // Variant B did not ship this specific locale/file: gracefully serve
+                            // Control A without misreporting Variant B. A decided file is still
+                            // no-store: control's bytes are as unshareable as B's.
+                            d.variant = Variant::A;
+                            d.variant_b_path = None;
+                            ab_decision = Some(d);
                         }
                     }
                 } else {
@@ -438,17 +456,49 @@ async fn serve_from_disk(
         }
     }
 
+    let served_from_b_tree = resolved_file.is_some();
     let resolved = resolved_file.unwrap_or_else(|| resolve(&sub_root, url_path));
+
+    // Second lock on the experiment's files, on the RESOLVED file this time: whatever the URL
+    // looked like (a symlink, a case-insensitive filesystem), a visitor's request never ends up
+    // reading `<release>/openlen/ab.json` or anything under `<release>/openlen/ab/`. Variant B's
+    // own tree is read through the A/B routing above, never through this door.
+    if !served_from_b_tree && state.ab_cache.is_some() {
+        if let Resolved::File(file) = &resolved {
+            if let Ok(release_root) = tokio::fs::canonicalize(&sub_root).await {
+                if is_internal_ab_file(&release_root, file) {
+                    warn!(%peer, sub, path = %url_path, "blocked a request that resolved to an internal A/B file");
+                    return not_found();
+                }
+            }
+        }
+    }
 
     match resolved {
         Resolved::File(path) => match tokio::fs::read(&path).await {
             Ok(bytes) => {
                 let ext = path.extension().and_then(|s| s.to_str());
                 let mime = mime_guess::from_path(&path).first_or_octet_stream();
-                let cache_ctl = if ab_decision.is_some() {
-                    AB_HTML_CACHE_CONTROL
+                let is_html = matches!(
+                    ext.map(str::to_ascii_lowercase).as_deref(),
+                    Some("html") | Some("htm")
+                );
+                let content_type = if is_html {
+                    "text/html; charset=utf-8".to_owned()
                 } else {
-                    cache_control_for(ext)
+                    mime.as_ref().to_owned()
+                };
+                // A page of an experiment: nothing shared. A decided FILE (B ships other bytes for
+                // it): `no-store` for everyone, or a CDN keeps one variant's bytes under the URL.
+                let cache_ctl = match &ab_decision {
+                    Some(d) if d.is_page_route => AB_HTML_CACHE_CONTROL,
+                    Some(_) => AB_FILE_CACHE_CONTROL,
+                    // The sidecar never says "immutable": it is not the one that knows the name carries a hash.
+                    None if state.ab_sidecar => match cache_control_for(ext) {
+                        c if c.contains("immutable") => AB_FILE_CACHE_CONTROL,
+                        c => c,
+                    },
+                    None => cache_control_for(ext),
                 };
                 debug!(
                     %peer, sub, path = %url_path, file = %path.display(),
@@ -457,7 +507,7 @@ async fn serve_from_disk(
                 );
                 let mut builder = Response::builder()
                     .status(StatusCode::OK)
-                    .header(header::CONTENT_TYPE, mime.as_ref())
+                    .header(header::CONTENT_TYPE, content_type)
                     .header(header::CACHE_CONTROL, cache_ctl);
 
                 if let Some(d) = ab_decision {
@@ -470,14 +520,17 @@ async fn serve_from_disk(
                     if let Ok(val) = HeaderValue::from_str(&ab_hdr) {
                         builder = builder.header(HeaderName::from_static("x-openlen-ab"), val);
                     }
-                    let etag = format!(
-                        "W/\"{}-{}-{}\"",
-                        d.experiment_id,
-                        d.variant.as_str(),
-                        bytes.len()
-                    );
-                    if let Ok(val) = HeaderValue::from_str(&etag) {
-                        builder = builder.header(header::ETAG, val);
+                    // A weak validator only for a page: a no-store file is never revalidated.
+                    if d.is_page_route {
+                        let etag = format!(
+                            "W/\"{}-{}-{}\"",
+                            d.experiment_id,
+                            d.variant.as_str(),
+                            bytes.len()
+                        );
+                        if let Ok(val) = HeaderValue::from_str(&etag) {
+                            builder = builder.header(header::ETAG, val);
+                        }
                     }
                     if let Some(cookie) = d.set_cookie {
                         if let Ok(val) = HeaderValue::from_str(&cookie) {
@@ -515,6 +568,76 @@ async fn serve_from_disk(
     }
 }
 
+/// What a URL path may keep unescaped in the `X-OpenLen-Serve` header Caddy rewrites to.
+const SERVE_PATH_SET: &percent_encoding::AsciiSet = &percent_encoding::NON_ALPHANUMERIC
+    .remove(b'/')
+    .remove(b'-')
+    .remove(b'.')
+    .remove(b'_')
+    .remove(b'~');
+
+/// A FILE on an experiment's site, in sidecar mode: the answer is only WHICH file Caddy serves,
+/// never the bytes. 204 plus `X-OpenLen-Serve: <absolute path in the release>` (Variant B's file
+/// when the visitor is in B and B ships it, control's otherwise) and `X-OpenLen-AB: <id>:<variant>`
+/// for a file an experiment lists in its `overrides`; 204 with nothing for any other file, which
+/// Caddy serves as it serves every site. Caddy stamps the file `no-store` when the header is there.
+///
+/// ONE-REQUEST WINDOW, accepted and documented (infra/AB_TESTING_RUNBOOK.md, "Known limits"): the
+/// decision is made against the release `<sub>/current` names when it is read (resolved once, like
+/// the manifest), but Caddy serves the file through `<sub>/current` a moment later — its `root` is
+/// `current`, not the resolved directory, and that cannot be changed from here. A publish that swaps
+/// `current` in between can hand ONE request B's path against the next release (a 404 for a file
+/// that release does not carry) or the next release's file. It lasts about one request per swap, and
+/// the next request is right. (`app/served` closes the same window: it reads control, the manifest
+/// and B from one resolved directory.)
+async fn decide_file(
+    state: &AppState,
+    peer: SocketAddr,
+    sub: &str,
+    url_path: &str,
+    query: Option<&str>,
+    req_headers: &axum::http::HeaderMap,
+    secure_cookie: bool,
+) -> Response<Body> {
+    let mut builder = Response::builder()
+        .status(StatusCode::NO_CONTENT)
+        .header(header::CACHE_CONTROL, AB_FILE_CACHE_CONTROL);
+    if let Some(cache) = &state.ab_cache {
+        let (decision, release_dir) = evaluate_request(
+            cache,
+            &state.publish_root,
+            sub,
+            url_path,
+            query,
+            req_headers,
+            peer,
+            secure_cookie,
+        )
+        .await;
+        if let (Some(d), Some(release_dir)) = (decision, release_dir) {
+            let (target, variant) = match d.variant_b_path.as_deref() {
+                Some(b_path)
+                    if matches!(
+                        resolve_variant_b_strict(&release_dir, b_path, false),
+                        Resolved::File(_)
+                    ) =>
+                {
+                    (b_path.to_owned(), Variant::B)
+                }
+                _ => (canonical_path(url_path), Variant::A),
+            };
+            let serve = percent_encoding::utf8_percent_encode(&target, SERVE_PATH_SET).to_string();
+            if let Ok(val) = HeaderValue::from_str(&serve) {
+                builder = builder.header(HeaderName::from_static("x-openlen-serve"), val);
+            }
+            if let Ok(val) = HeaderValue::from_str(&format!("{}:{}", d.experiment_id, variant.as_str())) {
+                builder = builder.header(HeaderName::from_static("x-openlen-ab"), val);
+            }
+        }
+    }
+    builder.body(Body::empty()).expect("response is valid")
+}
+
 /// Validate a subdomain slug passed via `X-OpenLen-Sub` from Caddy loopback.
 fn is_valid_sub_header(sub: &str) -> bool {
     !sub.is_empty()
@@ -546,7 +669,7 @@ async fn ab_loopback_handler(
             req.headers()
                 .get(header::HOST)
                 .and_then(|v| v.to_str().ok())
-                .and_then(extract_subdomain)
+                .and_then(|host| extract_subdomain_in(host, &state.publish_hosts))
         });
 
     let Some(sub) = sub else {
@@ -568,14 +691,11 @@ async fn ab_loopback_handler(
 
 /// Router for the loopback-only Caddy `@has_ab` sidecar listener (`127.0.0.1:8085`).
 pub fn ab_loopback_router(state: AppState) -> Router {
+    // No `/_edge/version` (a path of a site is not ours to answer) and no `Server` header (Caddy
+    // sends its own; a second one would reach the visitor).
     Router::new()
-        .route("/_edge/version", get(version))
         .fallback(ab_loopback_handler)
         .with_state(state)
-        .layer(SetResponseHeaderLayer::overriding(
-            header::SERVER,
-            HeaderValue::from_static(SERVER_HEADER_VALUE),
-        ))
 }
 
 /// Bind and serve the loopback-only HTTP A/B sidecar behind Caddy until `shutdown` resolves.

@@ -4,7 +4,6 @@ use std::time::Duration;
 use anyhow::Result;
 use dashmap::DashMap;
 use rustls::sign::CertifiedKey;
-use tokio::signal;
 use tokio::sync::Notify;
 use tracing::{info, warn};
 
@@ -12,7 +11,7 @@ use observability::{install_exporter, spawn_process_collector_loop};
 use openlen_edge::{
     bind_with_lookup_and_layers, build_dynamic_config, build_lookup_from_config,
     ensure_crypto_provider, load_persisted_certs, observability, read_cert_pair, run_ab_loopback,
-    run_http_redirect, run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer,
+    run_ab_sidecar, run_http_redirect, run_internal_api, run_renewal_loop, watch_wildcard, AcmeClient, AcmeIssuer,
     AppState, DynamicCertResolver, EdgeConfig, InternalApiState, IpExtractConfig, RateLimitConfig,
     RateLimitLayer, RenewalConfig,
 };
@@ -23,7 +22,15 @@ async fn main() -> Result<()> {
     observability::try_init_logs();
     ensure_crypto_provider();
 
-    let cfg = EdgeConfig::from_env()?;
+    let mut cfg = EdgeConfig::from_env()?;
+    // The A/B sidecar: ONLY the loopback listener, none of the full edge below (TLS, :80/:443,
+    // ACME, the database). Caddy remains the web tier; see infra/AB_TESTING_RUNBOOK.md.
+    if std::env::args().skip(1).any(|a| a == "--ab-sidecar") {
+        cfg.ab_sidecar_only = true;
+    }
+    if cfg.ab_sidecar_only {
+        return run_ab_sidecar(cfg).await;
+    }
     info!(
         bind = %cfg.bind,
         bind_http = ?cfg.bind_http,
@@ -290,7 +297,7 @@ async fn main() -> Result<()> {
         None
     };
 
-    shutdown_signal().await;
+    openlen_edge::shutdown_signal().await;
     shutdown.notify_waiters();
 
     let tls_result = tls_task.await?;
@@ -334,31 +341,4 @@ async fn main() -> Result<()> {
     process_collector.abort();
 
     tls_result
-}
-
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        if let Err(err) = signal::ctrl_c().await {
-            warn!(error = %err, "ctrl_c handler failed");
-        }
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        use signal::unix::{signal, SignalKind};
-        match signal(SignalKind::terminate()) {
-            Ok(mut s) => {
-                s.recv().await;
-            }
-            Err(err) => warn!(error = %err, "SIGTERM handler failed"),
-        }
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => info!("ctrl-c received"),
-        _ = terminate => info!("SIGTERM received"),
-    }
 }

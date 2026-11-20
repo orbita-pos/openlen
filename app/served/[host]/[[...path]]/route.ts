@@ -1,11 +1,12 @@
-import { readFile, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import { contentTypeFor as folderContentType, isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
 import {
   abResponseHeaders,
   evaluateAbManifest,
   isBlockedInternalAbPath,
-  readReleaseAbManifest,
+  isInternalAbFile,
+  releaseAbManifests,
   resolveVariantBFile,
   type AbServeDecision,
 } from "@/lib/ab/serve";
@@ -185,6 +186,28 @@ function resolveFile(
   };
 }
 
+let publishRootReal: Promise<string> | null = null;
+
+/** True when `p` is inside the publish root, whether that root is written with or without a symlink in
+ *  it (a release directory is resolved with `realpath`, the root as configured need not be). */
+async function isInsidePublishRoot(p: string): Promise<boolean> {
+  const norm = path.normalize(p);
+  if (norm.startsWith(path.normalize(PUBLISH_ROOT) + path.sep)) return true;
+  publishRootReal ??= realpath(PUBLISH_ROOT).catch(() => PUBLISH_ROOT);
+  return norm.startsWith(path.normalize(await publishRootReal) + path.sep);
+}
+
+/** Whether the visitor came over https. Behind Caddy, Node sees plain http on every request, so the
+ *  protocol of `req.url` says nothing: Caddy's X-Forwarded-Proto (the first value) does; without it,
+ *  the scheme the site is configured with (`NEXT_PUBLIC_SITE_URL`, https in production), and last
+ *  the URL's own (local dev). */
+function isSecureRequest(req: Request, reqUrl: URL): boolean {
+  const forwarded = req.headers.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
+  if (forwarded) return forwarded === "https";
+  if ((process.env.NEXT_PUBLIC_SITE_URL ?? "").trim().toLowerCase().startsWith("https://")) return true;
+  return reqUrl.protocol === "https:";
+}
+
 /** El Host de la petición, sin puerto y en minúsculas. */
 function hostDeLaPeticion(req: Request): string {
   return (req.headers.get("host") ?? "").trim().toLowerCase().replace(/:\d+$/, "");
@@ -232,8 +255,24 @@ async function serve(
 
   // Edge A/B testing fallback for custom domains served through Next.js.
   let abDecision: AbServeDecision | null = null;
+  let servedFromBTree = false;
+  // The release directory the request is served from, once it is resolved (below).
+  let releaseReal = releaseDir;
   if (pathParts[0] !== "assets") {
-    const manifest = await readReleaseAbManifest(releaseDir);
+    // ONE release per request. `current` is swapped in one move by a publish, so the manifest, Variant
+    // B's files AND control's file are all read from the directory `current` named at this moment
+    // (resolved once, cached per release) — never through `current` again, which a publish may have
+    // pointed at the next release by the time the file is read.
+    const { manifest, dir: abDir } = await releaseAbManifests.get(releaseDir);
+    const releaseNorm = path.normalize(releaseDir);
+    if (
+      abDir !== releaseNorm &&
+      (absNorm === releaseNorm || absNorm.startsWith(releaseNorm + path.sep)) &&
+      (await isInsidePublishRoot(abDir))
+    ) {
+      absNorm = path.join(abDir, path.relative(releaseNorm, absNorm));
+      releaseReal = abDir;
+    }
     if (manifest) {
       const reqUrl = new URL(req.url);
       const clientIp =
@@ -247,15 +286,18 @@ async function serve(
         userAgent: req.headers.get("user-agent"),
         acceptLanguage: req.headers.get("accept-language"),
         clientIp,
-        secureCookie: reqUrl.protocol === "https:",
+        secureCookie: isSecureRequest(req, reqUrl),
       });
       if (d) {
         if (d.variantBPath) {
-          const bFile = await resolveVariantBFile(releaseDir, d.variantBPath, d.isPageRoute);
-          if (bFile && bFile.startsWith(rootNorm)) {
+          const bFile = await resolveVariantBFile(abDir, d.variantBPath, d.isPageRoute);
+          if (bFile && (await isInsidePublishRoot(bFile))) {
             absNorm = bFile;
+            servedFromBTree = true;
             abDecision = d;
-          } else if (d.isPageRoute) {
+          } else {
+            // B did not ship this page or file: control's. A decided FILE is no-store all the same
+            // (control's bytes are as unshareable as B's), so the decision stays.
             abDecision = { ...d, variant: "a", variantBPath: null };
           }
         } else {
@@ -263,6 +305,17 @@ async function serve(
         }
       }
     }
+  }
+
+  // Second lock on the experiment's files, on the RESOLVED file (symlinks and case-folding
+  // included): a visitor's request never reads <release>/openlen/ab.json or anything under
+  // <release>/openlen/ab/. Variant B's own tree is read through the A/B routing above.
+  if (!servedFromBTree) {
+    const [realFile, realRelease] = await Promise.all([
+      realpath(absNorm).catch(() => absNorm),
+      releaseReal !== releaseDir ? releaseReal : realpath(releaseDir).catch(() => releaseDir),
+    ]);
+    if (isInternalAbFile(realRelease, realFile)) return notFound(includeBody);
   }
 
   let body: ArrayBuffer | null = null;
