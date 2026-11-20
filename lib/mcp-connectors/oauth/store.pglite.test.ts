@@ -31,6 +31,8 @@ const ISSUER = "https://accounts.example";
 const CLIENT = { client_id: "cid-123", client_secret: "csecret-xyz", redirect_uris: ["https://openlen.app/api/mcp-connectors/oauth/callback"] };
 const TOKENS = { access_token: "at_super_secret", refresh_token: "rt_super_secret", token_type: "Bearer", expires_in: 3600 };
 const NOW = new Date("2026-11-17T10:00:00Z");
+/** The fingerprint of the entry the person signed in with (config.ts `entryFingerprint`). */
+const FP = "fp-signed-in-entry";
 
 let pg: PGlite;
 beforeEach(async () => {
@@ -54,139 +56,183 @@ const flowInput = (over: Partial<Parameters<typeof createFlow>[0]> = {}) => ({
 
 describe("the connection", () => {
   it("tokens round-trip encrypted", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
     const raw = await pg.query<{ clientInfo: string; tokens: string }>(`SELECT "clientInfo", "tokens" FROM "personMcpOAuth"`);
     expect(raw.rows[0]!.tokens).not.toContain("at_super_secret");
     expect(raw.rows[0]!.tokens).not.toContain("rt_super_secret");
     expect(raw.rows[0]!.tokens.startsWith("v1:")).toBe(true);
     expect(raw.rows[0]!.clientInfo).not.toContain("csecret-xyz");
     expect(raw.rows[0]!.clientInfo.startsWith("v1:")).toBe(true);
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toEqual({ serverUrl: URL_A, issuer: ISSUER, clientInfo: CLIENT, tokens: TOKENS });
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: TOKENS });
   });
 
   it("a connection with no tokens yet has tokens null", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toEqual({ serverUrl: URL_A, issuer: ISSUER, clientInfo: CLIENT, tokens: null });
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: null });
   });
 
   it("nothing saved reads as null", async () => {
-    expect(await loadConnection("p1", "cal", URL_A, null)).toBeNull();
+    expect(await loadConnection("p1", "cal", URL_A, null, FP)).toBeNull();
   });
 
   it("another url gets nothing", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    expect(await loadConnection("p1", "cal", URL_B, null)).toBeNull();
-    expect(await loadConnection("p1", "cal", URL_B, ISSUER)).toBeNull();
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    expect(await loadConnection("p1", "cal", URL_B, null, FP)).toBeNull();
+    expect(await loadConnection("p1", "cal", URL_B, ISSUER, FP)).toBeNull();
   });
 
   it("another issuer gets nothing", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    expect(await loadConnection("p1", "cal", URL_A, "https://evil.example")).toBeNull();
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    expect(await loadConnection("p1", "cal", URL_A, "https://evil.example", FP)).toBeNull();
   });
 
   it("without an issuer given, the stored one is accepted and reported", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    expect((await loadConnection("p1", "cal", URL_A, null))?.issuer).toBe(ISSUER);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    expect((await loadConnection("p1", "cal", URL_A, null, FP))?.issuer).toBe(ISSUER);
   });
 
   it("people and servers never mix", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    expect(await loadConnection("p2", "cal", URL_A, ISSUER)).toBeNull();
-    expect(await loadConnection("p1", "other", URL_A, ISSUER)).toBeNull();
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    expect(await loadConnection("p2", "cal", URL_A, ISSUER, FP)).toBeNull();
+    expect(await loadConnection("p1", "other", URL_A, ISSUER, FP)).toBeNull();
   });
 
   it("saving the client again for the same url and issuer keeps the tokens", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, { ...CLIENT, client_secret: "rotated" });
-    const c = await loadConnection("p1", "cal", URL_A, ISSUER);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, { ...CLIENT, client_secret: "rotated" });
+    const c = await loadConnection("p1", "cal", URL_A, ISSUER, FP);
     expect(c?.tokens).toEqual(TOKENS);
     expect(c?.clientInfo).toMatchObject({ client_secret: "rotated" });
   });
 
   it("saving the client for another url or issuer drops the old tokens, they belong to the old binding", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    await saveClientInfo("p1", "cal", URL_B, ISSUER, CLIENT);
-    expect(await loadConnection("p1", "cal", URL_B, ISSUER)).toEqual({ serverUrl: URL_B, issuer: ISSUER, clientInfo: CLIENT, tokens: null });
-    await saveTokens("p1", "cal", URL_B, ISSUER, TOKENS);
-    await saveClientInfo("p1", "cal", URL_B, "https://other-issuer.example", CLIENT);
-    expect((await loadConnection("p1", "cal", URL_B, null))?.tokens).toBeNull();
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    await saveClientInfo("p1", "cal", URL_B, ISSUER, FP, CLIENT);
+    expect(await loadConnection("p1", "cal", URL_B, ISSUER, FP)).toEqual({ serverUrl: URL_B, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: null });
+    await saveTokens("p1", "cal", URL_B, ISSUER, FP, TOKENS);
+    await saveClientInfo("p1", "cal", URL_B, "https://other-issuer.example", FP, CLIENT);
+    expect((await loadConnection("p1", "cal", URL_B, null, FP))?.tokens).toBeNull();
     expect(await pg.query(`SELECT 1 FROM "personMcpOAuth"`).then((r) => r.rows.length)).toBe(1);
   });
 
   it("tokens can only be saved into a connection at that url and issuer", async () => {
-    await expect(saveTokens("p1", "cal", URL_A, ISSUER, TOKENS)).rejects.toThrow(/no OAuth connection/);
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await expect(saveTokens("p1", "cal", URL_B, ISSUER, TOKENS)).rejects.toThrow(/no OAuth connection/);
-    await expect(saveTokens("p1", "cal", URL_A, "https://evil.example", TOKENS)).rejects.toThrow(/no OAuth connection/);
-    await expect(saveTokens("p2", "cal", URL_A, ISSUER, TOKENS)).rejects.toThrow(/no OAuth connection/);
-    expect((await loadConnection("p1", "cal", URL_A, ISSUER))?.tokens).toBeNull();
+    await expect(saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS)).rejects.toThrow(/no OAuth connection/);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await expect(saveTokens("p1", "cal", URL_B, ISSUER, FP, TOKENS)).rejects.toThrow(/no OAuth connection/);
+    await expect(saveTokens("p1", "cal", URL_A, "https://evil.example", FP, TOKENS)).rejects.toThrow(/no OAuth connection/);
+    await expect(saveTokens("p2", "cal", URL_A, ISSUER, FP, TOKENS)).rejects.toThrow(/no OAuth connection/);
+    expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toBeNull();
   });
 
   it("saving tokens again replaces them", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    await saveTokens("p1", "cal", URL_A, ISSUER, { ...TOKENS, access_token: "at_new" });
-    expect((await loadConnection("p1", "cal", URL_A, ISSUER))?.tokens).toMatchObject({ access_token: "at_new" });
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, { ...TOKENS, access_token: "at_new" });
+    expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toMatchObject({ access_token: "at_new" });
   });
 
   it("dropTokens keeps the client and removes only the tokens", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
     await dropTokens("p1", "cal");
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toEqual({ serverUrl: URL_A, issuer: ISSUER, clientInfo: CLIENT, tokens: null });
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: null });
   });
 
   it("dropConnection hands back what it deleted, to revoke it", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "cal", URL_A, ISSUER, TOKENS);
-    expect(await dropConnection("p1", "cal")).toEqual({ serverUrl: URL_A, issuer: ISSUER, clientInfo: CLIENT, tokens: TOKENS });
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toBeNull();
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+    expect(await dropConnection("p1", "cal")).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: TOKENS });
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toBeNull();
     expect(await dropConnection("p1", "cal")).toBeNull();
   });
 
   it("dropConnection never touches another person's row", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
-    await saveClientInfo("p2", "cal", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveClientInfo("p2", "cal", URL_A, ISSUER, FP, CLIENT);
     await dropConnection("p1", "cal");
-    expect(await loadConnection("p2", "cal", URL_A, ISSUER)).not.toBeNull();
+    expect(await loadConnection("p2", "cal", URL_A, ISSUER, FP)).not.toBeNull();
   });
 
   it("tokens that no longer decrypt count as missing, the client stays", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
     await pg.query(`UPDATE "personMcpOAuth" SET "tokens" = 'v1:AAAA'`);
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toEqual({ serverUrl: URL_A, issuer: ISSUER, clientInfo: CLIENT, tokens: null });
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: FP, clientInfo: CLIENT, tokens: null });
   });
 
   it("a client that no longer decrypts is no connection at all", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
     await pg.query(`UPDATE "personMcpOAuth" SET "clientInfo" = 'v1:AAAA'`);
-    expect(await loadConnection("p1", "cal", URL_A, ISSUER)).toBeNull();
+    expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toBeNull();
     expect(await dropConnection("p1", "cal")).toBeNull();
     expect(await pg.query(`SELECT 1 FROM "personMcpOAuth"`).then((r) => r.rows.length)).toBe(0);
   });
 
+  // The binding to the entry (review fix, round 1): tokens were issued to a client for the entry the person approved and
+  // signed in with. An edit that adds a client or another metadata URL is another entry, and never inherits them.
+  describe("bound to the entry it was signed in with", () => {
+    const OTHER_FP = "fp-an-edited-entry";
+
+    it("🔴 another entry (same URL, same issuer) finds no connection, and its tokens are never handed over", async () => {
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+      await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+      expect(await loadConnection("p1", "cal", URL_A, ISSUER, OTHER_FP)).toBeNull();
+      expect(await loadConnection("p1", "cal", URL_A, null, OTHER_FP)).toBeNull();
+      expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toEqual(TOKENS);
+    });
+
+    it("saving the client for another entry takes the tokens away, and the same entry keeps them", async () => {
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+      await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, { ...CLIENT, client_secret: "rotated" });
+      expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toEqual(TOKENS);
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, OTHER_FP, CLIENT);
+      expect(await loadConnection("p1", "cal", URL_A, ISSUER, OTHER_FP)).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: OTHER_FP, clientInfo: CLIENT, tokens: null });
+      expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toBeNull();
+    });
+
+    it("tokens are saved only into the connection of that very entry", async () => {
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+      await expect(saveTokens("p1", "cal", URL_A, ISSUER, OTHER_FP, TOKENS)).rejects.toThrow(/no OAuth connection/);
+      expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toBeNull();
+    });
+
+    it("🔴 a row from before the fingerprint was kept is bound to no entry: it is used by none, and still dropped (and revoked) as it was", async () => {
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+      await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+      await pg.query(`UPDATE "personMcpOAuth" SET "fingerprint" = NULL`);
+      expect(await loadConnection("p1", "cal", URL_A, ISSUER, FP)).toBeNull();
+      expect(await dropConnection("p1", "cal")).toEqual({ serverUrl: URL_A, issuer: ISSUER, fingerprint: null, clientInfo: CLIENT, tokens: TOKENS });
+    });
+
+    it("dropping hands back the fingerprint, so a revocation knows which entry it was signed in with", async () => {
+      await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+      await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
+      expect((await dropConnection("p1", "cal"))?.fingerprint).toBe(FP);
+    });
+  });
+
   it("🔴 only a connection that still has usable tokens is listed as connected: not a bare client, not a row whose client no longer decrypts", async () => {
-    await saveClientInfo("p1", "signed-in", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "signed-in", URL_A, ISSUER, TOKENS);
-    await saveClientInfo("p1", "only-client", URL_A, ISSUER, CLIENT);
-    await saveClientInfo("p1", "broken-client", URL_A, ISSUER, CLIENT);
-    await saveTokens("p1", "broken-client", URL_A, ISSUER, TOKENS);
+    await saveClientInfo("p1", "signed-in", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "signed-in", URL_A, ISSUER, FP, TOKENS);
+    await saveClientInfo("p1", "only-client", URL_A, ISSUER, FP, CLIENT);
+    await saveClientInfo("p1", "broken-client", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "broken-client", URL_A, ISSUER, FP, TOKENS);
     await pg.query(`UPDATE "personMcpOAuth" SET "clientInfo" = 'v1:AAAA' WHERE "serverName" = 'broken-client'`);
-    await saveClientInfo("p1", "broken-tokens", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "broken-tokens", URL_A, ISSUER, FP, CLIENT);
     await pg.query(`UPDATE "personMcpOAuth" SET "tokens" = 'v1:AAAA' WHERE "serverName" = 'broken-tokens'`);
-    await saveClientInfo("p2", "of-someone-else", URL_A, ISSUER, CLIENT);
-    await saveTokens("p2", "of-someone-else", URL_A, ISSUER, TOKENS);
+    await saveClientInfo("p2", "of-someone-else", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p2", "of-someone-else", URL_A, ISSUER, FP, TOKENS);
     expect([...(await listConnectedServers("p1"))]).toEqual(["signed-in"]);
   });
 
   it("removing the person removes their connections and flows", async () => {
-    await saveClientInfo("p1", "cal", URL_A, ISSUER, CLIENT);
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
     await createFlow(flowInput());
     await pg.query(`DELETE FROM "users" WHERE "id" = 'p1'`);
     expect((await pg.query(`SELECT 1 FROM "personMcpOAuth"`)).rows).toHaveLength(0);

@@ -3555,6 +3555,9 @@ export const personMcpOAuth = pgTable(
     clientInfo: text("clientInfo").notNull(),
     /** Encrypted JSON: the SDK's StoredOAuthTokens. Null until the person finishes signing in, and after a failed refresh. */
     tokens: text("tokens"),
+    /** The fingerprint of the entry the person approved and signed in with (config.ts `entryFingerprint`): the connection
+     *  is used only with an entry of that very fingerprint. Null (a row from before it was kept) is bound to no entry. */
+    fingerprint: text("fingerprint"),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.personId, t.serverName] })],

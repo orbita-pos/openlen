@@ -24,7 +24,7 @@ import {
   type StoredOAuthTokens,
 } from "@modelcontextprotocol/client";
 
-import type { McpServerEntry } from "../config";
+import { entryFingerprint, type McpServerEntry } from "../config";
 import { credentialRefs } from "../templates";
 import { callbackUrl, clientMetadata, isClientRefusal, preRegisteredClient, type ClientRefusal } from "./clients";
 import { cleanIssuer, cleanScope } from "./remote-text";
@@ -32,9 +32,10 @@ import type { OAuthConnection, OAuthFlow } from "./store";
 
 /** What the provider and the flow use of store.ts — an interface, so tests can hand the real one or a fake. */
 export interface OAuthStore {
-  loadConnection(personId: string, serverName: string, serverUrl: string, issuer: string | null): Promise<OAuthConnection | null>;
-  saveClientInfo(personId: string, serverName: string, serverUrl: string, issuer: string, info: StoredOAuthClientInformation): Promise<void>;
-  saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, tokens: StoredOAuthTokens): Promise<void>;
+  /** Only the connection signed in with the entry of that fingerprint (and URL, and issuer when given): else null. */
+  loadConnection(personId: string, serverName: string, serverUrl: string, issuer: string | null, fingerprint: string): Promise<OAuthConnection | null>;
+  saveClientInfo(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, info: StoredOAuthClientInformation): Promise<void>;
+  saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, tokens: StoredOAuthTokens): Promise<void>;
   dropTokens(personId: string, serverName: string): Promise<void>;
   dropConnection(personId: string, serverName: string): Promise<OAuthConnection | null>;
   createFlow(flow: { personId: string; serverName: string; fingerprint: string; issuer: string; codeVerifier: string; scope: string | null; now: Date }): Promise<string>;
@@ -134,7 +135,8 @@ async function readCapped(r: Response, max: number): Promise<string> {
 }
 
 /** The metadata document at an entry's `oauth.authServerMetadataUrl`: untrusted JSON, checked at least as strictly as
- *  the SDK's own schema checks discovered metadata for what the flow uses — https issuer and endpoints (an
+ *  the SDK's own schema checks discovered metadata for what the flow uses — an https issuer on the same origin as the
+ *  document's own URL (its endpoints may be elsewhere: some providers split them), https endpoints (an
  *  `authorization_endpoint` is a URL the person's browser opens: never `javascript:` or `data:`), lists of strings,
  *  booleans for the flags, `code` among the response types. Never followed through a redirect. */
 async function fetchAuthServerMetadata(url: string, fetchFn: typeof fetch): Promise<AuthorizationServerMetadata> {
@@ -153,6 +155,11 @@ async function fetchAuthServerMetadata(url: string, fetchFn: typeof fetch): Prom
   if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("the authorization server metadata is not an object");
   const m = doc as Record<string, unknown>;
   if (!isHttps(m.issuer)) throw new Error("the authorization server metadata has no https issuer");
+  // A document is the word of whoever serves it: one that names an issuer on another origin claims to be a server it
+  // isn't (a person's connection is bound to an issuer, and a revocation or a refresh goes to the endpoints it lists).
+  if (new URL(m.issuer as string).origin !== new URL(url).origin) {
+    throw new Error("the authorization server metadata's issuer is not on the same origin as oauth.authServerMetadataUrl");
+  }
   for (const k of REQUIRED_ENDPOINTS) if (!isHttps(m[k])) throw new Error(`the authorization server metadata's ${k} is not an https URL`);
   for (const k of OPTIONAL_ENDPOINTS) if (m[k] !== undefined && !isHttps(m[k])) throw new Error(`the authorization server metadata's ${k} is not an https URL`);
   for (const k of LISTS) {
@@ -176,11 +183,18 @@ export async function discoverAuthServer(entry: McpServerEntry, d: Pick<OAuthDep
 }
 
 /** The client the entry names (with its secret resolved now, so a rotated value is used at once) or OpenLen's own for
- *  this issuer — steps 2 and 3 of §5.2 —, a refusal, or null. */
-export async function entryClient(personId: string, entry: McpServerEntry, issuer: string, d: OAuthDeps): Promise<StoredOAuthClientInformation | ClientRefusal | null> {
+ *  this issuer — steps 2 and 3 of §5.2 —, a refusal, or null. `stepUpScope` is the scope a sign-in is asked to add
+ *  because the server asked for it (OpenLen's own client is only for the directory's scope and that one). */
+export async function entryClient(
+  personId: string,
+  entry: McpServerEntry,
+  issuer: string,
+  d: OAuthDeps,
+  stepUpScope?: string,
+): Promise<StoredOAuthClientInformation | ClientRefusal | null> {
   const names = entry.oauth?.clientSecret ? credentialRefs(entry.oauth.clientSecret) : [];
   const secrets = names.length > 0 ? await d.resolveCredentials(personId, names) : new Map<string, string>();
-  return preRegisteredClient(entry, issuer, secrets, d.env);
+  return preRegisteredClient(entry, issuer, secrets, d.env, stepUpScope);
 }
 
 /** What the row keeps of a client: never its secret (the entry's comes back from the person's credentials, OpenLen's
@@ -206,12 +220,15 @@ export async function asNeedsSignIn(provider: ConnectionProvider | undefined, er
 
 /** The provider for connecting to `serverName` in a mount or a turn (§5.4 steps 1 and 4). */
 export function connectionProvider(personId: string, serverName: string, entry: McpServerEntry, d: OAuthDeps): ConnectionProvider {
+  // The connection is the one signed in with THIS entry (this fingerprint): an edited entry finds none, and the tokens of
+  // the entry it was before are never sent anywhere it names.
+  const fingerprint = entryFingerprint(entry);
   let issuer: string | null = null;
   let lapsed = false;
   // A person who had signed in before (a token is stored, or it was just dropped) signs in AGAIN; one who never did
   // signs in for the first time. `row` is what the caller just read, when it did.
   const needs = async (row?: OAuthConnection | null) => {
-    const stored = row === undefined ? await d.store.loadConnection(personId, serverName, entry.url, issuer) : row;
+    const stored = row === undefined ? await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint) : row;
     return new NeedsSignIn(lapsed || stored?.tokens ? "lapsed" : "first", issuer ?? stored?.issuer ?? null, null);
   };
   const provider: ConnectionProvider = {
@@ -230,20 +247,20 @@ export function connectionProvider(personId: string, serverName: string, entry: 
       const own = await entryClient(personId, entry, ctx.issuer, d);
       if (isClientRefusal(own)) throw new OAuthClientRefused(own);
       if (own) return { ...own, issuer: ctx.issuer };
-      const stored = await d.store.loadConnection(personId, serverName, entry.url, ctx.issuer);
+      const stored = await d.store.loadConnection(personId, serverName, entry.url, ctx.issuer, fingerprint);
       if (stored) return stored.clientInfo;
       // Registering a client is part of signing in, never of connecting.
       throw await needs(null);
     },
     async tokens(ctx?: OAuthClientInformationContext) {
       // Without ctx it is the per-request read for this very server URL: the row's issuer is the one.
-      const c = await d.store.loadConnection(personId, serverName, entry.url, ctx?.issuer ?? null);
+      const c = await d.store.loadConnection(personId, serverName, entry.url, ctx?.issuer ?? null, fingerprint);
       return c?.tokens ?? undefined;
     },
     async saveTokens(tokens: StoredOAuthTokens, ctx?: OAuthClientInformationContext) {
       const at = ctx?.issuer ?? tokens.issuer;
       if (!at) throw new Error("tokens without an issuer are never saved");
-      await d.store.saveTokens(personId, serverName, entry.url, at, tokens);
+      await d.store.saveTokens(personId, serverName, entry.url, at, fingerprint, tokens);
     },
     async redirectToAuthorization() {
       throw await needs();

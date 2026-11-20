@@ -60,4 +60,6 @@ export const CREATE_MCP_CONNECTORS: readonly string[] = [
   `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "authIssuer" text;`,
   `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "authReason" text;`,
   `ALTER TABLE "personMcpServerState" ADD COLUMN IF NOT EXISTS "authScope" text;`,
+  // A connection is bound to the entry it was signed in with (review fix, 19/11): additive. A row without it is used by no entry.
+  `ALTER TABLE "personMcpOAuth" ADD COLUMN IF NOT EXISTS "fingerprint" text;`,
 ];

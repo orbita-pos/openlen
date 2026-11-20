@@ -225,6 +225,7 @@ const prevCal: ServerState = { ...previous, serverName: "cal", fingerprint: CAL_
 const SIGNED_IN: OAuthConnection = {
   serverUrl: CAL.url,
   issuer: GOOGLE,
+  fingerprint: CAL_FP,
   clientInfo: { client_id: "cid", redirect_uris: ["https://openlen.test/api/mcp-connectors/oauth/callback"] },
   // The SDK stamps the issuer on the tokens it hands the provider to save.
   tokens: { access_token: "at", refresh_token: "rt", token_type: "Bearer", issuer: GOOGLE },

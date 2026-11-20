@@ -67,6 +67,7 @@ function flowProvider(
   d: OAuthDeps,
   discovery: OAuthDiscoveryState,
   issuer: string,
+  fingerprint: string,
   own: StoredOAuthClientInformation | null,
 ): Pick<OAuthClientProvider, "redirectUrl" | "clientMetadata" | "clientMetadataUrl" | "discoveryState" | "clientInformation" | "saveClientInformation"> {
   return {
@@ -80,11 +81,11 @@ function flowProvider(
       // Defence in depth: behind the discovery comparison (`found.issuer !== flow.issuer`) this can't fire today.
       if (!ctx || ctx.issuer !== issuer) throw new AuthorizationServerMismatchError(issuer, ctx?.issuer ?? "");
       if (own) return { ...own, issuer };
-      return (await d.store.loadConnection(personId, serverName, entry.url, issuer))?.clientInfo;
+      return (await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint))?.clientInfo;
     },
     async saveClientInformation(info, ctx) {
       // A client the provider gave OpenLen (CIMD or dynamic registration): bound to this server's URL and issuer.
-      await d.store.saveClientInfo(personId, serverName, entry.url, ctx?.issuer ?? issuer, info);
+      await d.store.saveClientInfo(personId, serverName, entry.url, ctx?.issuer ?? issuer, fingerprint, info);
     },
   };
 }
@@ -107,21 +108,21 @@ export async function startSignIn(personId: string, serverName: string, d: Start
   if (!found.ok) return { ok: false, reason: "unreachable", error: found.error };
   const { issuer } = found;
 
-  const own = await entryClient(personId, entry, issuer, d);
+  const own = await entryClient(personId, entry, issuer, d, opts.scope);
   if (isClientRefusal(own)) return { ok: false, reason: "no_client", error: shortError(own.detail, redact) };
   const metadata = found.state.authorizationServerMetadata;
   if (!own && !metadata?.registration_endpoint && !metadata?.client_id_metadata_document_supported) {
-    if (!(await d.store.loadConnection(personId, serverName, entry.url, issuer))) {
+    if (!(await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint))) {
       return { ok: false, reason: "no_client", error: "the authorization server takes no new clients: set oauth.clientId in mcp.json" };
     }
   }
   // The entry's (or OpenLen's) client gets the row now, so the tokens have a binding to land in — without its secret.
-  if (own) await d.store.saveClientInfo(personId, serverName, entry.url, issuer, storableClient({ ...own, issuer }));
+  if (own) await d.store.saveClientInfo(personId, serverName, entry.url, issuer, fingerprint, storableClient({ ...own, issuer }));
 
   let verifier: string | undefined;
   let authorizationUrl: URL | undefined;
   const provider: OAuthClientProvider = {
-    ...flowProvider(personId, serverName, entry, d, found.state, issuer, own),
+    ...flowProvider(personId, serverName, entry, d, found.state, issuer, fingerprint, own),
     // Signing in always asks the person: a refresh token from before is not this flow's business.
     tokens: () => undefined,
     saveTokens() {
@@ -194,10 +195,10 @@ export async function finishSignIn(
   if (isClientRefusal(own)) return { ok: false, reason: "exchange_failed", server };
 
   const provider: OAuthClientProvider = {
-    ...flowProvider(flow.personId, server, entry, d, found.state, flow.issuer, own),
+    ...flowProvider(flow.personId, server, entry, d, found.state, flow.issuer, flow.fingerprint, own),
     tokens: () => undefined,
     async saveTokens(tokens, ctx) {
-      await d.store.saveTokens(flow.personId, server, entry.url, ctx?.issuer ?? flow.issuer, tokens);
+      await d.store.saveTokens(flow.personId, server, entry.url, ctx?.issuer ?? flow.issuer, flow.fingerprint, tokens);
     },
     saveCodeVerifier() {},
     codeVerifier: () => flow.codeVerifier,
@@ -239,14 +240,37 @@ export async function dropSignIn(
 ): Promise<{ dropped: boolean; issuer: string | null; revocation: Promise<void> }> {
   const removed = await d.store.dropConnection(personId, serverName);
   if (!removed) return { dropped: false, issuer: null, revocation: Promise.resolve() };
-  const revocation = removed.tokens ? revokeTokens(personId, serverName, removed, d, entryHint) : Promise.resolve();
+  const revocation = removed.tokens ? revokeTokens(personId, removed, d, entryHint) : Promise.resolve();
   return { dropped: true, issuer: removed.issuer, revocation };
+}
+
+/**
+ * The entry a connection is revoked through: the one the person signed in with — the `entryHint` of whoever removed or
+ * edited it, or an entry of the person's file, but only if its fingerprint is the connection's — else the server's own
+ * RFC 9728 discovery from the URL the tokens were issued for. The hint is never taken on faith: Len writes mcp.json, and
+ * an entry he edited in (a client and a metadata URL of his own, claiming Google's issuer) would be a revocation endpoint
+ * of his choosing for a person's real tokens.
+ */
+async function connectionEntry(
+  personId: string,
+  removed: OAuthConnection,
+  d: { readConfig?(personId: string): Promise<StoredConfig> },
+  entryHint: McpServerEntry | undefined,
+): Promise<McpServerEntry> {
+  if (removed.fingerprint !== null) {
+    if (entryHint && entryFingerprint(entryHint) === removed.fingerprint) return entryHint;
+    if (d.readConfig) {
+      const parsed = parseMcpConfig((await d.readConfig(personId)).text, { reservedServerNames: new Set() });
+      const own = parsed.ok ? Object.values(parsed.config.servers).find((e) => entryFingerprint(e) === removed.fingerprint) : undefined;
+      if (own) return own;
+    }
+  }
+  return { transport: "streamable-http", url: removed.serverUrl, headers: {}, enabled: true, startupTimeoutMs: 30_000, toolCallTimeoutMs: 60_000 };
 }
 
 /** Best-effort RFC 7009, for a connection that is already deleted: the token endpoint's answer doesn't matter. */
 async function revokeTokens(
   personId: string,
-  serverName: string,
   removed: OAuthConnection,
   d: OAuthDeps & { readConfig?(personId: string): Promise<StoredConfig> },
   entryHint: McpServerEntry | undefined,
@@ -254,10 +278,7 @@ async function revokeTokens(
   try {
     const signal = AbortSignal.timeout(REVOKE_TIMEOUT_MS);
     const bounded: OAuthDeps = { ...d, fetch: (input, init) => d.fetch(input, { ...init, signal }) };
-    const entry =
-      entryHint ??
-      (d.readConfig ? approvedEntry(await d.readConfig(personId), serverName)?.entry : undefined) ??
-      ({ transport: "streamable-http", url: removed.serverUrl, headers: {}, enabled: true } as McpServerEntry);
+    const entry = await connectionEntry(personId, removed, d, entryHint);
     const found = await discover(entry, bounded, (t) => t);
     // Tokens go only to the authorization server they came from.
     if (!found.ok || found.issuer !== removed.issuer) return;

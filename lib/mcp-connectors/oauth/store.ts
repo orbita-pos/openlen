@@ -3,8 +3,10 @@
 // (lib/integrations/crypto.ts), like `personCredentials`: nothing here reaches the model, a log or another person.
 //
 // - `personMcpOAuth`: one row per person and server — the OAuth client the person signed in with and its tokens. The row
-//   is bound to the server's URL and to the authorization server's issuer: if either changes, it is not used (and its old
-//   tokens are dropped the moment a client is saved for the new binding).
+//   is bound to the server's URL, to the authorization server's issuer AND to the fingerprint of the entry the person
+//   approved and signed in with: if any changes, it is not used (and its old tokens are dropped the moment a client is
+//   saved for the new binding). An entry edited to name a client or metadata of its own is another entry, and the tokens
+//   the person gave the first one are never handed to it.
 // - `personMcpOAuthFlows`: a sign-in in progress, keyed by the `state` the provider sends back. One use, ten minutes,
 //   tied to the person, the server, the entry's fingerprint and the issuer; taken with a compare-and-swap so a replayed
 //   or duplicated callback never wins twice.
@@ -25,6 +27,8 @@ export const FLOW_TTL_MS = 10 * 60 * 1000;
 export interface OAuthConnection {
   readonly serverUrl: string;
   readonly issuer: string;
+  /** The entry the person signed in with; null for a row from before it was kept (bound to no entry). */
+  readonly fingerprint: string | null;
   readonly clientInfo: StoredOAuthClientInformation;
   /** Null until the person finishes signing in, and after the tokens were dropped. */
   readonly tokens: StoredOAuthTokens | null;
@@ -51,56 +55,60 @@ function openJson<T extends object>(stored: string | null): T | null {
   }
 }
 
-function readConnection(row: { serverUrl: string; issuer: string; clientInfo: string; tokens: string | null }): OAuthConnection | null {
+function readConnection(row: { serverUrl: string; issuer: string; fingerprint: string | null; clientInfo: string; tokens: string | null }): OAuthConnection | null {
   const clientInfo = openJson<StoredOAuthClientInformation>(row.clientInfo);
   // Without its client the tokens can't be refreshed or revoked: the whole row is as good as missing.
   if (!clientInfo) return null;
-  return { serverUrl: row.serverUrl, issuer: row.issuer, clientInfo, tokens: openJson<StoredOAuthTokens>(row.tokens) };
+  return { serverUrl: row.serverUrl, issuer: row.issuer, fingerprint: row.fingerprint, clientInfo, tokens: openJson<StoredOAuthTokens>(row.tokens) };
 }
 
-/** The person's connection to a server, or null if there is none, it was made for another URL, or — when `issuer` is
- *  given — for another authorization server. URL and issuer are compared as written: no normalization, so a doubt fails
- *  closed. With `issuer` null the stored one is accepted and reported (the caller doesn't know it yet). */
-export async function loadConnection(personId: string, serverName: string, serverUrl: string, issuer: string | null): Promise<OAuthConnection | null> {
+/** The person's connection to a server, or null if there is none, it was made for another URL, another entry (its
+ *  `fingerprint`) or — when `issuer` is given — another authorization server. URL, fingerprint and issuer are compared
+ *  as written: no normalization, so a doubt fails closed (a row with no fingerprint is bound to no entry). With `issuer`
+ *  null the stored one is accepted and reported (the caller doesn't know it yet). */
+export async function loadConnection(personId: string, serverName: string, serverUrl: string, issuer: string | null, fingerprint: string): Promise<OAuthConnection | null> {
   const rows = await db
-    .select({ serverUrl: o.serverUrl, issuer: o.issuer, clientInfo: o.clientInfo, tokens: o.tokens })
+    .select({ serverUrl: o.serverUrl, issuer: o.issuer, fingerprint: o.fingerprint, clientInfo: o.clientInfo, tokens: o.tokens })
     .from(o)
     .where(and(eq(o.personId, personId), eq(o.serverName, serverName)))
     .limit(1);
   const row = rows[0];
-  if (!row || row.serverUrl !== serverUrl) return null;
+  if (!row || row.serverUrl !== serverUrl || row.fingerprint !== fingerprint) return null;
   if (issuer !== null && row.issuer !== issuer) return null;
   return readConnection(row);
 }
 
-/** Saves the OAuth client for this server, URL and issuer. If the row was bound to another URL or issuer, its tokens go:
- *  they were issued to that other server and must never be sent to this one. The same binding keeps them. */
-export async function saveClientInfo(personId: string, serverName: string, serverUrl: string, issuer: string, info: StoredOAuthClientInformation): Promise<void> {
+/** Saves the OAuth client for this server, URL, issuer and entry. If the row was bound to another URL, issuer or entry, its
+ *  tokens go: they were issued to that other server, or to the entry the person signed in with, and must never be sent
+ *  to this one. The same binding keeps them. */
+export async function saveClientInfo(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, info: StoredOAuthClientInformation): Promise<void> {
   const clientInfo = encryptToken(JSON.stringify(info));
   await db
     .insert(o)
-    .values({ personId, serverName, serverUrl, issuer, clientInfo })
+    .values({ personId, serverName, serverUrl, issuer, fingerprint, clientInfo })
     .onConflictDoUpdate({
       target: [o.personId, o.serverName],
       set: {
         serverUrl,
         issuer,
+        fingerprint,
         clientInfo,
-        tokens: sql`CASE WHEN ${o.serverUrl} = ${serverUrl} AND ${o.issuer} = ${issuer} THEN ${o.tokens} ELSE NULL END`,
+        tokens: sql`CASE WHEN ${o.serverUrl} = ${serverUrl} AND ${o.issuer} = ${issuer} AND ${o.fingerprint} = ${fingerprint} THEN ${o.tokens} ELSE NULL END`,
         updatedAt: new Date(),
       },
     });
 }
 
-/** Saves the tokens into the connection made for exactly this URL and issuer. Throws when there is none (the person
- *  removed the server, or it moved, while they were signing in): tokens are never saved against a different binding. */
-export async function saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, tokens: StoredOAuthTokens): Promise<void> {
+/** Saves the tokens into the connection made for exactly this URL, issuer and entry. Throws when there is none (the
+ *  person removed the server, or it moved or changed, while they were signing in): tokens are never saved against a
+ *  different binding. */
+export async function saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, tokens: StoredOAuthTokens): Promise<void> {
   const updated = await db
     .update(o)
     .set({ tokens: encryptToken(JSON.stringify(tokens)), updatedAt: new Date() })
-    .where(and(eq(o.personId, personId), eq(o.serverName, serverName), eq(o.serverUrl, serverUrl), eq(o.issuer, issuer)))
+    .where(and(eq(o.personId, personId), eq(o.serverName, serverName), eq(o.serverUrl, serverUrl), eq(o.issuer, issuer), eq(o.fingerprint, fingerprint)))
     .returning({ serverName: o.serverName });
-  if (updated.length === 0) throw new Error(`no OAuth connection for "${serverName}" at this URL and issuer to save the tokens into`);
+  if (updated.length === 0) throw new Error(`no OAuth connection for "${serverName}" at this URL, issuer and entry to save the tokens into`);
 }
 
 /** Forgets the tokens and keeps the client: the next sign-in reuses it. */
@@ -114,13 +122,16 @@ export async function dropConnection(personId: string, serverName: string): Prom
   const rows = await db
     .delete(o)
     .where(and(eq(o.personId, personId), eq(o.serverName, serverName)))
-    .returning({ serverUrl: o.serverUrl, issuer: o.issuer, clientInfo: o.clientInfo, tokens: o.tokens });
+    .returning({ serverUrl: o.serverUrl, issuer: o.issuer, fingerprint: o.fingerprint, clientInfo: o.clientInfo, tokens: o.tokens });
   return rows[0] ? readConnection(rows[0]) : null;
 }
 
 /** Server names of the person that have an active OAuth token stored (for the «Desconectar» button on the Herramientas page). */
 export async function listConnectedServers(personId: string): Promise<ReadonlySet<string>> {
-  const rows = await db.select({ serverName: o.serverName, serverUrl: o.serverUrl, issuer: o.issuer, clientInfo: o.clientInfo, tokens: o.tokens }).from(o).where(eq(o.personId, personId));
+  const rows = await db
+    .select({ serverName: o.serverName, serverUrl: o.serverUrl, issuer: o.issuer, fingerprint: o.fingerprint, clientInfo: o.clientInfo, tokens: o.tokens })
+    .from(o)
+    .where(eq(o.personId, personId));
   // Connected = a connection that reads (its client decrypts) and holds tokens that read; an unreadable row is none.
   return new Set(
     rows

@@ -59,6 +59,33 @@ describe("openLenClientFor", () => {
     expect(openLenClientFor("https://evil.example/https://accounts.google.com", GCAL_URL, GOOGLE_ENV)).toBeNull();
   });
 
+  // Review fix, round 1: the consent screen says «OpenLen» for whatever scope is asked, so OpenLen's client is only for what the
+  // directory offers: its scope, and a scope Google's own server asked for in a step-up. An entry Len wrote at the directory's
+  // URL with a broader scope (mail, drive) gets no client of OpenLen's.
+  describe("the scopes OpenLen's Google client may be used for", () => {
+    const CAL = "https://www.googleapis.com/auth/calendar";
+    const MAIL = "https://mail.google.com/";
+
+    it("is the directory entry's scope, or no scope at all (the server's own default)", () => {
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: CAL })).toMatchObject({ client_id: "openlen-google-id" });
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: undefined })).toMatchObject({ client_id: "openlen-google-id" });
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: "  " })).toMatchObject({ client_id: "openlen-google-id" });
+    });
+
+    it("🔴 is nothing for a scope outside the directory's, alone or beside the directory's own", () => {
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: MAIL })).toBeNull();
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: `${CAL} ${MAIL}` })).toBeNull();
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: `${CAL}.events` })).toBeNull();
+    });
+
+    it("also takes what the server itself asked for in a step-up, and only that", () => {
+      const events = `${CAL}.events`;
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: events, stepUp: events })).toMatchObject({ client_id: "openlen-google-id" });
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: `${CAL} ${events}`, stepUp: events })).toMatchObject({ client_id: "openlen-google-id" });
+      expect(openLenClientFor(GOOGLE, GCAL_URL, GOOGLE_ENV, { requested: MAIL, stepUp: events })).toBeNull();
+    });
+  });
+
   // OA1: Google's client is OpenLen's, shown as «OpenLen» on Google's consent screen. A server nobody curated that
   // merely names Google as its authorization server would collect the person's token with it.
   it("is null for Google's issuer at any server that is not the directory's, whatever the URL looks like", () => {
@@ -142,6 +169,19 @@ describe("preRegisteredClient", () => {
   // with an error that blames the provider, and a bare null would let the SDK carry on with CIMD or dynamic
   // registration as if the entry named no client. So it is a refusal that names the credential, and no step below this
   // one stands in for it — not even OpenLen's own client for Google.
+  it("🔴 never hands OpenLen's Google client to an entry at the directory's URL that asks for a scope the directory doesn't", () => {
+    expect(preRegisteredClient(entry({ scope: "https://mail.google.com/" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(entry({ scope: "https://www.googleapis.com/auth/calendar https://mail.google.com/" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(entry({ scope: "https://www.googleapis.com/auth/calendar" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toMatchObject({ client_id: "openlen-google-id" });
+  });
+
+  it("takes the step-up scope the server asked for into account, when the sign-in is for it", () => {
+    const events = "https://www.googleapis.com/auth/calendar.events";
+    const e = entry({ scope: events }, GCAL_URL);
+    expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV)).toBeNull();
+    expect(preRegisteredClient(e, GOOGLE, NO_SECRETS, GOOGLE_ENV, events)).toMatchObject({ client_id: "openlen-google-id" });
+  });
+
   describe("a secret the person hasn't typed yet", () => {
     const e = entry({ clientId: "mine", clientSecret: "${credential:CAL_SECRET}", authorizationServer: [GOOGLE] });
 
@@ -169,7 +209,7 @@ describe("preRegisteredClient", () => {
   it("is OpenLen's client for that issuer when the entry is the directory's server and names none", () => {
     expect(preRegisteredClient(entry(undefined, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({ client_id: "openlen-google-id", client_secret: "openlen-google-secret" });
     // An oauth block that only tunes the scope doesn't name a client either.
-    expect(preRegisteredClient(entry({ scope: "calendar.readonly" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({
+    expect(preRegisteredClient(entry({ scope: "https://www.googleapis.com/auth/calendar" }, GCAL_URL), GOOGLE, NO_SECRETS, GOOGLE_ENV)).toEqual({
       client_id: "openlen-google-id",
       client_secret: "openlen-google-secret",
     });
