@@ -23,9 +23,10 @@ import type { EvaluatorProjectInfo } from "./evaluator";
 import type { LiveAb } from "./live-manifest";
 import type { AbExperimentRow } from "./store";
 import { MIN_DURATION_HOURS } from "./stats";
+import { AB_SYSTEM_ACTOR } from "./types";
 
 /** `decidedBy` of what the system closed on its own. */
-export const SYSTEM_ACTOR = "system";
+export const SYSTEM_ACTOR = AB_SYSTEM_ACTOR;
 /** A launch's claim older than this belongs to a launch that is gone: a publish and its two writes take seconds. */
 export const LAUNCH_CLAIM_STALE_MS = 15 * 60_000;
 

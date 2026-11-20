@@ -12,6 +12,7 @@ import { HARM_NOTICE_DAYS } from "./cards";
 import {
   AB_ACTIVE_STATUSES,
   AB_LIVE_STATUSES,
+  AB_SYSTEM_ACTOR,
   type AbBringRowState,
   type AbBringState,
   type AbDecisionStatus,
@@ -118,8 +119,12 @@ export async function listUnannouncedResults(): Promise<AbExperimentRow[]> {
     .from(schema.abExperiments)
     .where(
       and(
-        inArray(schema.abExperiments.status, ["winner_ready", "inconclusive", "paused_harm"]),
         isNull(schema.abExperiments.notifiedAt),
+        or(
+          inArray(schema.abExperiments.status, ["winner_ready", "inconclusive", "paused_harm"]),
+          // What the reconcile pass closed or recorded on its own (round 3, C): nobody decided it, so nobody else will tell the owner.
+          and(inArray(schema.abExperiments.status, ["cancelled", "promoted_b"]), eq(schema.abExperiments.decidedBy, AB_SYSTEM_ACTOR)),
+        ),
       ),
     );
 }

@@ -29,6 +29,9 @@ export type AbVerdict =
  *  the end of its time, so its numbers can't be trusted. */
 export type AbInconclusiveReason = "uneven_traffic";
 
+/** `decidedBy` of what the SYSTEM closed or recorded on its own (the reconcile pass): no person decided it. */
+export const AB_SYSTEM_ACTOR = "system";
+
 export type AbBringState = "pending" | "brought" | "conflict" | "declined";
 
 /** What the column can hold: `bringing` is the claim a bring takes before it merges (a discard that arrives meanwhile is refused;
