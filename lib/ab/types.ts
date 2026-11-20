@@ -31,6 +31,10 @@ export type AbInconclusiveReason = "uneven_traffic";
 
 export type AbBringState = "pending" | "brought" | "conflict" | "declined";
 
+/** What the column can hold: `bringing` is the claim a bring takes before it merges (a discard that arrives meanwhile is refused;
+ *  a claim older than `BRING_CLAIM_STALE_MS` is a process that died). Clients never see it: the view says `pending`. */
+export type AbBringRowState = AbBringState | "bringing";
+
 export type AbDecideAction = "promote_b" | "keep_a" | "extend";
 
 export const AB_ACTIVE_STATUSES: readonly AbExperimentStatus[] = [
