@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { AVISO_DE_VISITANTES_EN_LA_TERMINAL } from "./herramientas-de-ficheros";
 import type { Message, StreamEvent } from "@/lib/ai-gateway";
-import { runAgentLoop as realRunAgentLoop, sobreQue, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN, type AgentLoopResult, type AgentStreamEvent } from "./loop";
+import { MAX_EFFORT_UNLOCKS_PER_TURN, runAgentLoop as realRunAgentLoop, sobreQue, TOOL_NOT_STARTED, TOOL_OUTCOME_UNKNOWN, type AgentLoopResult, type AgentStreamEvent } from "./loop";
 import { CHARS_PER_TOKEN, estimateTokens } from "./compaction/estimate";
 import { withReplayInvariant } from "./testing/replay-invariant";
 import { elapsedTimeReminder } from "./elapsed-time-reminder";
@@ -4898,14 +4898,13 @@ describe("Plan Ruta 98 % (P4b): auto-unlock effort after stall", () => {
     expect(optsSeen).toEqual([undefined, undefined, undefined, { effortUnlock: "high" }, undefined]);
   });
 
-  it("passes { effortUnlock: 'high' } for 1 step after 2 consecutive error/compile-error steps", async () => {
+  // The write's diagnostics reach the model once: what it was already told is not news, so an error it
+  // already heard (`entregados`) is not a new failure of the step. C3 of the Ruta 98 review.
+  const edit = (n: number): StreamEvent[] => [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: `v${n}`, new_string: `v${n + 1}` } }, done];
+  const errorDiag = (mensaje: string) => ({ ruta: "/a.ts", linea: 1, columna: 1, gravedad: "Error" as const, mensaje, codigo: "compila" });
+  const runWith = async (steps: number, outcome: (step: number) => { response: Record<string, unknown>; diagnosticos?: ReturnType<typeof errorDiag>[] }) => {
     const optsSeen: Array<{ readonly effortUnlock?: "high" } | undefined> = [];
-    const guion = scripted(
-      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "a", new_string: "b" } }, done],
-      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "b", new_string: "c" } }, done],
-      [{ type: "function_call", name: "Edit", args: { file_path: "/a.ts", old_string: "c", new_string: "d" } }, done],
-      [{ type: "text_delta", text: "Fixed." }, done],
-    );
+    const guion = scripted(...Array.from({ length: steps }, (_, i) => edit(i)), [{ type: "text_delta", text: "Done." }, done]);
     let step = 0;
     await runAgentLoop({
       messages: [{ role: "user", content: "fix" }],
@@ -4914,14 +4913,45 @@ describe("Plan Ruta 98 % (P4b): auto-unlock effort after stall", () => {
         optsSeen.push(opts);
         return guion(m);
       },
-      runTool: async () => {
-        step += 1;
-        return step <= 2
-          ? { response: { ok: true }, diagnosticos: [{ ruta: "/a.ts", linea: 1, columna: 1, gravedad: "Error", mensaje: "syntax error", codigo: "compila" }] }
-          : { response: { ok: true } };
-      },
+      runTool: async () => outcome((step += 1)),
       emit: () => {},
     });
-    expect(optsSeen).toEqual([undefined, undefined, { effortUnlock: "high" }, undefined]);
+    return optsSeen;
+  };
+  const U = undefined;
+  const H = { effortUnlock: "high" } as const;
+
+  it("passes { effortUnlock: 'high' } for 1 step after 2 consecutive steps that left a NEW error", async () => {
+    const optsSeen = await runWith(3, (n) => (n <= 2 ? { response: { ok: true }, diagnosticos: [errorDiag(`error ${n}`)] } : { response: { ok: true } }));
+    expect(optsSeen).toEqual([U, U, H, U]);
+  });
+
+  it("🔴 the same error re-emitted on every write does NOT unlock once it was delivered", async () => {
+    // Step 1 delivers it; steps 2..4 write it again, and the model already heard it: nothing new, no stall.
+    const optsSeen = await runWith(4, () => ({ response: { ok: true }, diagnosticos: [errorDiag("syntax error")] }));
+    expect(optsSeen).toEqual([U, U, U, U, U]);
+  });
+
+  it("a persistent error that is not delivered again does not hide a NEW one in the same step", async () => {
+    // Step 1: A. Step 2: A again (known) + B (new). Step 3: C (new): two steps in a row that carried a new error.
+    const optsSeen = await runWith(3, (n) => ({
+      response: { ok: true },
+      diagnosticos: n === 1 ? [errorDiag("A")] : n === 2 ? [errorDiag("A"), errorDiag("B")] : [errorDiag("C")],
+    }));
+    expect(optsSeen).toEqual([U, U, H, U]);
+  });
+
+  it("🔴 at most MAX_EFFORT_UNLOCKS_PER_TURN steps are unlocked in a turn: the 3rd stall does not unlock", async () => {
+    expect(MAX_EFFORT_UNLOCKS_PER_TURN).toBe(2);
+    // Every step leaves a different new error: a stall every second step. The 1st and the 2nd unlock; the 3rd does not.
+    const optsSeen = await runWith(8, (n) => ({ response: { ok: true }, diagnosticos: [errorDiag(`error ${n}`)] }));
+    expect(optsSeen.filter((o) => o !== undefined)).toHaveLength(MAX_EFFORT_UNLOCKS_PER_TURN);
+    expect(optsSeen).toEqual([U, U, H, U, H, U, U, U, U]);
+  });
+
+  it("the cap is per turn: a new turn unlocks again", async () => {
+    const outcome = (n: number) => ({ response: { ok: true }, diagnosticos: [errorDiag(`error ${n}`)] });
+    expect((await runWith(3, outcome)).filter((o) => o !== undefined)).toHaveLength(1);
+    expect((await runWith(3, outcome)).filter((o) => o !== undefined)).toHaveLength(1);
   });
 });
