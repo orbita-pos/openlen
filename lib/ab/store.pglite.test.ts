@@ -27,6 +27,7 @@ const {
   createExperimentRow,
   pendingDecisionsForProjects,
   pendingExperimentViewsForProjects,
+  recordReemittedRelease,
   updateExperiment,
 } = await import("./store");
 const { computeExperimentMetrics, upsertExperimentDailySnapshot } = await import("./metrics");
@@ -170,6 +171,13 @@ describe("lib/ab/store & metrics (PGlite)", () => {
     await mk("ab_told0001", { projectId: "p2", notifiedAt: new Date() });
     expect((await pendingDecisionsForProjects(["p1", "p2"])).map((x) => x.experimentId)).toEqual(["ab_untold01"]);
     expect((await pendingExperimentViewsForProjects(["p1", "p2"])).map((v) => v.id).sort()).toEqual(["ab_told0001", "ab_untold01"]);
+  });
+
+  it("🔴 a system re-emit makes the new release the experiment's AND clears the stale fallback: keep-A/harm no longer roll back over what the republish carried (G1+G3 item 18)", async () => {
+    await createExperimentRow({ id: "ab_reemit01", projectId: "p1", name: "r", targetPath: "/", primaryMetric: "conversion_any", splitBps: 5000, salt: "s", createdBy: "u1", status: "running", decisionStatus: "none", controlReleaseSha: "old-control", experimentReleaseSha: "old-exp" });
+    await recordReemittedRelease("ab_reemit01", "new-release");
+    const [row] = (await pg().query<{ experimentReleaseSha: string; controlReleaseSha: string | null }>(`SELECT "experimentReleaseSha", "controlReleaseSha" FROM "abExperiments" WHERE "id" = 'ab_reemit01'`)).rows;
+    expect(row).toEqual({ experimentReleaseSha: "new-release", controlReleaseSha: null });
   });
 
   it("computeExperimentMetrics deduplicates repeat reloads and attributes forms + CTA clicks cleanly", async () => {

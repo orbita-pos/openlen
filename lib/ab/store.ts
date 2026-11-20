@@ -202,6 +202,16 @@ export async function transitionBringState(
   return row ?? null;
 }
 
+/** A system republish kept the live experiment alive with a NEW release: that is its release now, and the fallback it was
+ *  launched with is stale — rolling back to it (keep A, a harm stop) would undo whatever the republish carried (a platform-
+ *  wide fix). Cleared, the way back is a republish of the published sources, which carries it (G1+G3 review, item 18). */
+export async function recordReemittedRelease(id: string, sha: string | null): Promise<void> {
+  await db
+    .update(schema.abExperiments)
+    .set({ experimentReleaseSha: sha, controlReleaseSha: null, updatedAt: new Date() })
+    .where(eq(schema.abExperiments.id, id));
+}
+
 /** Postgres' unique_violation, however the driver wraps it (node-postgres, PGlite, drizzle's query error with a `cause`). */
 export function isUniqueViolation(err: unknown): boolean {
   for (let e: unknown = err, depth = 0; e && typeof e === "object" && depth < 4; e = (e as { cause?: unknown }).cause, depth++) {
