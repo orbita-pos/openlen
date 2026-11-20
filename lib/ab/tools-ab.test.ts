@@ -153,3 +153,41 @@ describe("create_ab_variant refuses before it does anything", () => {
     expect(createAbDraft).not.toHaveBeenCalled();
   });
 });
+
+describe("anything that goes wrong after the draft exists cancels it (G1+G3 review, item 19)", () => {
+  it("🔴 the writer throws: the draft (and its copy) is cancelled, and Len reads the reason", async () => {
+    guardarFichero.mockRejectedValue(new Error("db went away"));
+    const out = await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps);
+    expect(out.response.ok).toBe(false);
+    expect(cancelAbDraft).toHaveBeenCalledWith({ projectId: "parent-1", experimentId: "ab_1234abcd" });
+  });
+
+  it("🔴 the commit of the copy throws: cancelled too — a draft with no Variant B committed must not stay as «active»", async () => {
+    commitAbWorktree.mockRejectedValue(new Error("git store down"));
+    const out = await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps);
+    expect(out.response.ok).toBe(false);
+    expect(cancelAbDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("loading the copy throws: cancelled", async () => {
+    (deps.loadProject as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("db"));
+    await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps);
+    expect(cancelAbDraft).toHaveBeenCalledTimes(1);
+  });
+
+  it("a refusal BEFORE any draft exists cancels nothing (there is nothing to cancel)", async () => {
+    createAbDraft.mockRejectedValue(new AbLifecycleError("not_published", "Publish the page first.", 400));
+    const out = await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps);
+    expect(out.response.ok).toBe(false);
+    expect(cancelAbDraft).not.toHaveBeenCalled();
+  });
+
+  it("the success path cancels nothing, and a cancel that itself fails doesn't hide the original error", async () => {
+    expect((await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps)).response.ok).toBe(true);
+    expect(cancelAbDraft).not.toHaveBeenCalled();
+    guardarFichero.mockRejectedValue(new Error("original failure"));
+    cancelAbDraft.mockRejectedValue(new Error("cancel failed too"));
+    const out = await runCreateAbVariant(session(), { name: "Direct hero", variant_b_html: "<html>B</html>" }, deps);
+    expect(JSON.stringify(out.response)).toContain("original failure");
+  });
+});
