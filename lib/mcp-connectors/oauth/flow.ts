@@ -108,7 +108,7 @@ export async function startSignIn(personId: string, serverName: string, d: Start
   if (!found.ok) return { ok: false, reason: "unreachable", error: found.error };
   const { issuer } = found;
 
-  const own = await entryClient(personId, entry, issuer, d, opts.scope);
+  const own = await entryClient(personId, entry, issuer, d);
   if (isClientRefusal(own)) return { ok: false, reason: "no_client", error: shortError(own.detail, redact) };
   const metadata = found.state.authorizationServerMetadata;
   if (!own && !metadata?.registration_endpoint && !metadata?.client_id_metadata_document_supported) {
