@@ -21,6 +21,8 @@ export const MEMORY_DIR = "/.len/memory/";
 export const MEMORY_INDEX = `${MEMORY_DIR}MEMORY.md`;
 /** THE PERSON'S OWN ASSISTANT's memory (spec local 2026-11-06-asistente-propio, §6.1): only in its sessions. */
 export const ASSISTANT_MEMORY = `${HOME_DIR}/.assistant/MEMORY.md`;
+/** What an agent's customers may be told (spec local 2026-11-19-agentes-para-todos, §6.7): only in its sessions. */
+export const ASSISTANT_CUSTOMERS = `${HOME_DIR}/.assistant/CUSTOMERS.md`;
 
 export type MemoryLayer = "personal" | "project" | "index" | "note" | "assistant";
 

@@ -48,7 +48,7 @@ import { CLAVE_TOOL_RESULT, exito, fallo, formatoDeBytes, type Resultado } from 
 import { IMAGE_FILE, MAX_IMAGE_READ_BYTES, imageEmpty, imageTooLarge, imageTypeOf, notAnImage } from "@/lib/agent/image-bytes";
 import { READ_BACK_NOTE, VIDEO_FILE, parseImageRegion, readImageNote, regionOnlyForImages, videoReadError, type ImageRegion } from "@/lib/agent/image-region";
 import { terminalEncendida } from "@/lib/agent/terminal/declaracion";
-import { ASSISTANT_MEMORY, HOME_DIR, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_CUSTOMERS, ASSISTANT_MEMORY, HOME_DIR, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD, isLegacyMemoryPath, memoryLayerOf, noteNameOf, notePath } from "@/lib/agent/ficheros/len-md";
 import { mountedSite } from "@/lib/agent/ficheros/mounted";
 import { ASSISTANT_PROJECTS_PATH } from "@/lib/assistants/projects-text";
 import { SERVED_FOLDERS, servedFolderAt, servedFolderOf } from "@/lib/assistants/served-folders";
@@ -615,14 +615,21 @@ export { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
 import { READ_ONLY_REFUSAL } from "./terminal/read-only-commands";
 import { AVISO_VISITANTES } from "./visitor-data";
 
-/** The one file a read-only session may write: the person's own assistant's memory, in that assistant's session. */
-function escribeSuMemoria(session: AgentSession, filePath: string): boolean {
-  return session.assistant !== undefined && resolverRuta(filePath) === ASSISTANT_MEMORY;
+/** What a read-only session may write, only in the person's own assistant's session: its memory and what its
+ *  customers may be told; and, when it lives in the person's space (spec local 2026-11-19-agentes-para-todos, §6.4), the
+ *  space's own files — never the person's home (`~/.len/`: Len's configuration for every project), the project's Len
+ *  configuration (`/.len/`, `/LEN.md`) or the platform's files (`/.openlen/`, where visitors' data is). */
+export function assistantMayWrite(session: AgentSession, filePath: string): boolean {
+  if (session.assistant === undefined) return false;
+  const path = resolverRuta(filePath);
+  if (path === ASSISTANT_MEMORY || path === ASSISTANT_CUSTOMERS) return true;
+  if (!session.assistant.inSpace) return false;
+  return !path.startsWith(`${HOME_DIR}/`) && !path.startsWith("/.len/") && path !== PROJECT_LEN_MD && !path.startsWith("/.openlen/");
 }
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const entrada = coercerEntradaEdit(args);
-  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
+  if (session.readOnly && !assistantMayWrite(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
@@ -640,7 +647,7 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
 
 export async function toolMultiEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const entrada = coercerEntradaMultiEdit(args);
-  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
+  if (session.readOnly && !assistantMayWrite(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
@@ -657,7 +664,7 @@ export async function toolMultiEdit(session: AgentSession, deps: AgentDeps, args
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   const { entrada, nota } = coercerEntradaWrite(args);
-  if (session.readOnly && !escribeSuMemoria(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
+  if (session.readOnly && !assistantMayWrite(session, entrada.file_path)) return { response: respuesta(fallo(READ_ONLY_REFUSAL)) };
   const artifactError = await loadArtifactSource(deps, entrada.file_path);
   if (artifactError) return artifactError;
   if (isLegacyMemoryPath(resolverRuta(entrada.file_path))) return { response: respuesta(fallo(MEMORIA_MUDADA)) };

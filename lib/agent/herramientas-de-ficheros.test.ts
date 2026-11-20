@@ -847,6 +847,44 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     assert.match(texto(await runAgentTool(s, deps, "Write", { file_path: "/LEN.md", content: "x" })), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4): living in the person's space, an agent writes
+  // the space's files — never Len's configuration, never a page.
+  const enSuEspacio = (memory = "") => ({ ...sesionDelAsistente(memory), assistant: { id: "a1", name: "Mr. Smith", inSpace: true } });
+  const negado = (out: Awaited<ReturnType<typeof runAgentTool>>) => assert.match(texto(out), new RegExp(READ_ONLY_REFUSAL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+  it("🔴 in the person's space an agent writes its own files", async () => {
+    const { deps } = depsConAsistente();
+    const archivos: Record<string, string> = {};
+    const conFicheros = {
+      ...deps,
+      async projectFiles() {
+        return { ...archivos };
+      },
+      async saveProjectFile(_p: string, ruta: string, contenido: string) {
+        archivos[ruta] = contenido;
+        return { before: null };
+      },
+    } as unknown as AgentDeps;
+    const out = await runAgentTool(enSuEspacio(), conFicheros, "Write", { file_path: "/vocabulario.md", content: "- apple: manzana\n" });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(archivos["/vocabulario.md"], "- apple: manzana\n");
+  });
+
+  it("🔴 but never Len's configuration nor the platform's files", async () => {
+    const { deps } = depsConAsistente();
+    const s = enSuEspacio();
+    for (const file_path of ["~/.len/LEN.md", "~/.len/mcp.json", "/.len/skills/x/SKILL.md", "/.len/agents/x.md", "/LEN.md", "/.openlen/bandeja/x.json"]) {
+      negado(await runAgentTool(s, deps, "Write", { file_path, content: "x" }));
+    }
+  });
+
+  it("its memory stays writable in its space", async () => {
+    const { deps, estado } = depsConAsistente();
+    const out = await runAgentTool(enSuEspacio(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "Nivel: B1." });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(estado.memory.a1, "Nivel: B1.");
+  });
+
   it("the assistant reads and edits its memory", async () => {
     const { deps, estado } = depsConAsistente("Jueves: pasteles sin gluten.");
     const s = sesionDelAsistente("Jueves: pasteles sin gluten.");
