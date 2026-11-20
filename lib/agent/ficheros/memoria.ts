@@ -14,7 +14,7 @@
  */
 
 import { normalizarFinales, type Leidos } from "./read";
-import { ASSISTANT_MEMORY, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD } from "./len-md";
+import { ASSISTANT_CUSTOMERS, ASSISTANT_MEMORY, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD } from "./len-md";
 
 /**
  * LA MEMORIA QUE YA VA EN EL CONTEXTO CUENTA COMO LEÍDA. Claude Code siembra
@@ -23,7 +23,7 @@ import { ASSISTANT_MEMORY, MEMORY_INDEX, PERSONAL_LEN_MD, PROJECT_LEN_MD } from 
  * que servirá el fichero, así que si alguien lo cambia a mitad de turno el
  * Edit lo nota como con cualquier otro fichero. El índice sólo si existe.
  */
-export function memoriaSembrada(m: { personal: string | null; project: string | null; index: string | null; assistant?: string }): Leidos {
+export function memoriaSembrada(m: { personal: string | null; project: string | null; index: string | null; assistant?: string; assistantCustomers?: string }): Leidos {
   const lectura = (t: string | null) => ({ instantanea: normalizarFinales(t ?? ""), offset: undefined, limit: undefined });
   return new Map([
     [PERSONAL_LEN_MD, lectura(m.personal)],
@@ -31,5 +31,7 @@ export function memoriaSembrada(m: { personal: string | null; project: string | 
     ...(m.index ? [[MEMORY_INDEX, lectura(m.index)] as const] : []),
     // The person's own assistant's memory, loaded in its context like LEN.md (spec local 2026-11-06-asistente-propio).
     ...(m.assistant !== undefined ? [[ASSISTANT_MEMORY, lectura(m.assistant)] as const] : []),
+    // What an agent's customers may be told, loaded beside its memory (spec local 2026-11-19-agentes-para-todos, §6.7).
+    ...(m.assistantCustomers !== undefined ? [[ASSISTANT_CUSTOMERS, lectura(m.assistantCustomers)] as const] : []),
   ]);
 }

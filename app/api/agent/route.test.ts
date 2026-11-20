@@ -5460,6 +5460,29 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(promptSent()).not.toMatch(/<skill_content/);
     });
 
+    it("🔴 it reads its note for customers beside its memory, and its session may write it", async () => {
+      assistantStore.assistantById.mockImplementation(async (id: string) => (id === "a1" ? { ...LUCIA, agentType: "mr-smith", memory: "Nivel B1.", customerNote: "Clases los martes." } : null));
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Read", { file_path: "/index.html" });
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1" }));
+      const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage: string | null }])[0];
+      expect(enviado.memoryMessage).toContain("Nivel B1.");
+      expect(enviado.memoryMessage).toContain("CUSTOMERS.md");
+      expect(enviado.memoryMessage).toContain("Clases los martes.");
+      const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { withAgentFile?: boolean }; leidos: Map<string, unknown> }];
+      expect(session.assistant?.withAgentFile).toBe(true);
+      expect(session.leidos.has("/home/user/.assistant/CUSTOMERS.md")).toBe(true);
+    });
+
+    it("an assistant without a file has no note for customers in its context", async () => {
+      assistantStore.assistantById.mockImplementation(async (id: string) => (id === "a1" ? { ...LUCIA, customerNote: "x" } : null));
+      await readEvents(await pedir({ assistantId: "a1" }));
+      const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage: string | null }])[0];
+      expect(enviado.memoryMessage ?? "").not.toContain("CUSTOMERS.md");
+    });
+
     it("its session knows its home is the person's space", async () => {
       mocks.loadProject.mockResolvedValue({ title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } });
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {

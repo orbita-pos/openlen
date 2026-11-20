@@ -67,7 +67,7 @@ import { MEMORIA_TIMEOUT_MS, getUserMemoryBounded } from "@/lib/agent/user-memor
 import { gitEnabled } from "@/lib/git/enabled";
 import { conPlazo } from "@/lib/agent/con-plazo";
 import { memoriaSembrada } from "@/lib/agent/ficheros/memoria";
-import { ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD, noteNameOf } from "@/lib/agent/ficheros/len-md";
+import { ASSISTANT_CUSTOMERS, ASSISTANT_MEMORY, MEMORY_INDEX, PROJECT_LEN_MD, noteNameOf } from "@/lib/agent/ficheros/len-md";
 import { MEMORY_INDEX_MAX, buildMemoryIndex, serializeNote } from "@/lib/agent/memory/note";
 import { PROJECT_MEMORY_MAX, foldMemoryDigests, memoryMessageForTurn } from "@/lib/agent/memory/memory-messages";
 import { bundledSkills } from "@/lib/agent/skills/bundled";
@@ -1319,7 +1319,14 @@ async function correrTurno(
   const memoriaDelTurno = asistente
     ? memoryMessageForTurn(
         [
-          { path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory },
+          ...(asistente.agentType
+            ? [
+                // An agent with a file (spec local 2026-11-19-agentes-para-todos, §6.7): its memory is its own, and its
+                // note for customers is what a page's visitors hear.
+                { path: ASSISTANT_MEMORY, label: "what you learned about the person — yours alone, never shown to visitors", text: asistente.memory },
+                { path: ASSISTANT_CUSTOMERS, label: "what a page's visitors may be told — write it only when the person asks", text: asistente.customerNote },
+              ]
+            : [{ path: ASSISTANT_MEMORY, label: "what your owner taught you about the business — yours to keep up to date", text: asistente.memory }]),
           {
             path: ASSISTANT_PROJECTS_PATH,
             label: "the projects you serve and what each one published — read-only; it changes when your owner publishes",
@@ -1654,6 +1661,7 @@ async function correrTurno(
         project: asistente ? null : (project.userBrief ?? null),
         index: memoryIndex,
         ...(asistente ? { assistant: asistente.memory } : {}),
+        ...(asistente?.agentType ? { assistantCustomers: asistente.customerNote } : {}),
       }),
     ]),
     // Lo que el usuario acaba de escribir. Sin esto ninguna herramienta puede
@@ -1683,6 +1691,7 @@ async function correrTurno(
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
             // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
             inSpace: isSpaceData(project.data),
+            ...(asistente.agentType ? { withAgentFile: true } : {}),
           },
           // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).
           ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),

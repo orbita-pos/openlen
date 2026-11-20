@@ -113,6 +113,23 @@ describe("POST /api/assistant/[sub] — her bubble", () => {
     expect(mocks.recordUncharged).not.toHaveBeenCalled();
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.7): an agent with a file keeps its memory to itself.
+  it("🔴 an agent with a file never puts its memory in a visitor's turn: its note for customers goes instead", async () => {
+    mocks.limit.mockResolvedValue(fila({}));
+    mocks.onPage.mockResolvedValue({
+      assistant: { ...LUCIA, agentType: "toña", memory: "Debo 3000 a la tarjeta.", customerNote: "Recetas de temporada." },
+      knowledge: "Martes a domingo.",
+      knowledgeAt: BAKED,
+      bakedAt: BAKED,
+      publicData: [],
+    });
+    mocks.visitorTurn.mockResolvedValue({ kind: "reply", text: "Hola.", intent: "answer", visuals: [] });
+    await escribe({ message: "hola", vid: VID });
+    const [arg] = mocks.visitorTurn.mock.calls.at(-1) as unknown as [{ assistant: { memory: string } }];
+    expect(arg.assistant.memory).toBe("Recetas de temporada.");
+    expect(JSON.stringify(arg)).not.toContain("Debo 3000");
+  });
+
   it("🔴 asleep: the visitor gets {asleep: true, intent: 'lead'} and no word about credits", async () => {
     mocks.limit.mockResolvedValue(fila({}));
     onPage();

@@ -345,7 +345,9 @@ async function herTurn(
     const r = await runVisitorTurn({
       projectId: owner.projectId,
       ownerId: owner.userId,
-      assistant: { id: ella.assistant.id, name: ella.assistant.name, slug: ella.assistant.slug, tone: ella.assistant.tone as AssistantTone, memory: ella.assistant.memory },
+      // An agent with a file keeps its memory to itself (spec local 2026-11-19-agentes-para-todos, §6.7): its visitors
+      // hear what it was told it may tell customers. One without a file: its memory, as always.
+      assistant: { id: ella.assistant.id, name: ella.assistant.name, slug: ella.assistant.slug, tone: ella.assistant.tone as AssistantTone, memory: ella.assistant.agentType ? ella.assistant.customerNote : ella.assistant.memory },
       businessName: project.title || sub,
       knowledge,
       siteLocale: detectPageLang(project.data.html) ?? "es",

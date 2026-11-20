@@ -878,6 +878,50 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     }
   });
 
+  // What an agent's customers may be told (spec local 2026-11-19-agentes-para-todos, §6.7): a file of its own.
+  function conNotaParaClientes(nota = "") {
+    const { deps, estado } = depsConAsistente();
+    const clientes = { a1: nota } as Record<string, string>;
+    (deps as unknown as Record<string, unknown>).assistantCustomers = {
+      async read(id: string) {
+        return clientes[id] ?? null;
+      },
+      async save(id: string, text: string) {
+        clientes[id] = text;
+        return true;
+      },
+    };
+    return { deps, estado, clientes };
+  }
+  /** As the route opens it: the note is in its context beside its memory, so it counts as read. */
+  const conFichero = () => ({
+    ...sesionDelAsistente(),
+    assistant: { id: "a1", name: "Toña", inSpace: true, withAgentFile: true },
+    leidos: memoriaSembrada({ personal: null, project: null, index: null, assistant: "", assistantCustomers: "" }),
+  });
+
+  it("🔴 an agent with a file writes what its customers may be told", async () => {
+    const { deps, clientes } = conNotaParaClientes();
+    const out = await runAgentTool(conFichero(), deps, "Write", { file_path: "~/.assistant/CUSTOMERS.md", content: "Recetas de temporada." });
+    assert.equal(out.response.ok, true, texto(out));
+    assert.equal(clientes.a1, "Recetas de temporada.");
+    assert.match(texto(await runAgentTool(conFichero(), deps, "Read", { file_path: "~/.assistant/CUSTOMERS.md" })), /Recetas de temporada/);
+  });
+
+  it("🔴 never a credential in it", async () => {
+    const { deps, clientes } = conNotaParaClientes("Hola.");
+    const out = await runAgentTool(conFichero(), deps, "Write", { file_path: "~/.assistant/CUSTOMERS.md", content: "La clave es sk-proj-abcdefghijklmnopqrstuv123" });
+    assert.equal(out.response.ok, false);
+    assert.equal(clientes.a1, "Hola.");
+  });
+
+  it("an assistant without a file has no such file: its memory is what visitors hear", async () => {
+    const { deps, clientes } = conNotaParaClientes("Hola.");
+    assert.equal((await runAgentTool(sesionDelAsistente(), deps, "Read", { file_path: "~/.assistant/CUSTOMERS.md" })).response.ok, false);
+    assert.equal((await runAgentTool(sesionDelAsistente(), deps, "Write", { file_path: "~/.assistant/CUSTOMERS.md", content: "x" })).response.ok, false);
+    assert.equal(clientes.a1, "Hola.");
+  });
+
   it("its memory stays writable in its space", async () => {
     const { deps, estado } = depsConAsistente();
     const out = await runAgentTool(enSuEspacio(), deps, "Write", { file_path: "~/.assistant/MEMORY.md", content: "Nivel: B1." });

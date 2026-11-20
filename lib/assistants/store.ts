@@ -226,6 +226,11 @@ export async function saveAssistantMemory(id: string, text: string): Promise<voi
   await db.update(a).set({ memory: text, updatedAt: new Date() }).where(eq(a.id, id));
 }
 
+/** ~/.assistant/CUSTOMERS.md, replaced whole (spec local 2026-11-19-agentes-para-todos, §6.7). */
+export async function saveAssistantCustomerNote(id: string, text: string): Promise<void> {
+  await db.update(a).set({ customerNote: text, updatedAt: new Date() }).where(eq(a.id, id));
+}
+
 // HOW ITS ask_len REQUESTS END (lib/assistants/notices.ts): appended when passed, settled when Len's turn ends, handed
 // to its next request and marked heard once — DeepSeek's «marked delivered once». A heard note stays a week for the
 // phone's card (spec local 2026-11-16-movil-es-tu-asistente, §5.8.5).

@@ -383,6 +383,11 @@ export interface AgentDeps {
     read(assistantId: string): Promise<string | null>;
     save(assistantId: string, text: string): Promise<boolean>;
   };
+  /** What an agent's customers may be told, `~/.assistant/CUSTOMERS.md` (spec local 2026-11-19-agentes-para-todos, §6.7). */
+  assistantCustomers?: {
+    read(assistantId: string): Promise<string | null>;
+    save(assistantId: string, text: string): Promise<boolean>;
+  };
   /** plans/len-md — las notas de `/.len/memory` (lib/agent/memory/store.ts). */
   memoryNotes?: {
     list(projectId: string): Promise<ReadonlyArray<MemoryNote & { readonly updatedAt: Date }>>;
@@ -906,6 +911,18 @@ export function realDeps(debit: ToolCharge = chargeToolToLedger): AgentDeps {
         return true;
       },
     },
+    // What an agent's customers may be told. Lazy import: it reads the database, server-only.
+    assistantCustomers: {
+      async read(assistantId) {
+        const { assistantById } = await import("@/lib/assistants/store");
+        return (await assistantById(assistantId))?.customerNote ?? null;
+      },
+      async save(assistantId, text) {
+        const { saveAssistantCustomerNote } = await import("@/lib/assistants/store");
+        await saveAssistantCustomerNote(assistantId, text);
+        return true;
+      },
+    },
     // Las notas de /.len/memory. Import perezoso: tiran de la base, server-only.
     memoryNotes: {
       async list(projectId) {
@@ -1402,6 +1419,9 @@ export interface AgentSession {
     /** Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write the space's files.
      *  Absent or false for an assistant whose home is its page. */
     readonly inSpace?: boolean;
+    /** It follows an agent file (spec local 2026-11-19-agentes-para-todos, §6.7): its visitors hear
+     *  `~/.assistant/CUSTOMERS.md`, never its memory, and that file is its to write. */
+    readonly withAgentFile?: boolean;
   };
   /** Her turn: the photos and files of the owner's message, for the Len turn her `ask_len` starts (spec local
    *  2026-11-16-movil-es-tu-asistente, §5.4.7). Absent for Len, and when the message had none. */

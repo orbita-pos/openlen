@@ -226,6 +226,17 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
       console.warn("[agente] no se pudo leer la memoria del asistente", err);
     }
   }
+  // What an agent's customers may be told: only for one that follows an agent file (spec local
+  // 2026-11-19-agentes-para-todos, §6.7) — one without a file shows its visitors its memory.
+  let paraSusClientes: string | null = null;
+  if (session.assistant?.withAgentFile) {
+    try {
+      paraSusClientes = (await deps.assistantCustomers?.read(session.assistant.id)) ?? "";
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[agente] no se pudo leer la nota para los clientes del asistente", err);
+    }
+  }
   let mcpConfig: string | null = null;
   try {
     mcpConfig = deps.mcpConfigStore ? await deps.mcpConfigStore.read(personOf(session)) : null;
@@ -242,6 +253,7 @@ async function virtualesDe(session: TerminalFilesOwner, deps: AgentDeps, ownBrie
       ...(indice ? [[MEMORY_INDEX, indice] as const] : []),
       ...notas.map((n) => [notePath(n.name), serializeNote(n)] as const),
       ...(deLaAsistente !== null ? [[ASSISTANT_MEMORY, deLaAsistente] as const] : []),
+      ...(paraSusClientes !== null ? [[ASSISTANT_CUSTOMERS, paraSusClientes] as const] : []),
     ]),
     skills,
     agents,
@@ -622,7 +634,8 @@ import { AVISO_VISITANTES } from "./visitor-data";
 export function assistantMayWrite(session: AgentSession, filePath: string): boolean {
   if (session.assistant === undefined) return false;
   const path = resolverRuta(filePath);
-  if (path === ASSISTANT_MEMORY || path === ASSISTANT_CUSTOMERS) return true;
+  if (path === ASSISTANT_MEMORY) return true;
+  if (path === ASSISTANT_CUSTOMERS) return session.assistant.withAgentFile === true;
   if (!session.assistant.inSpace) return false;
   return !path.startsWith(`${HOME_DIR}/`) && !path.startsWith("/.len/") && path !== PROJECT_LEN_MD && !path.startsWith("/.openlen/");
 }
@@ -994,7 +1007,10 @@ async function guardarMemoria(
     if (layer === "assistant" && (!session.assistant || !deps.assistantMemory)) {
       return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is the person's own assistant's memory: only that assistant writes it.`)) };
     }
-    const max = layer === "personal" || layer === "assistant" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
+    if (layer === "assistant_customers" && (!session.assistant?.withAgentFile || !deps.assistantCustomers)) {
+      return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is what an agent's customers may be told: only that agent writes it.`)) };
+    }
+    const max = layer === "personal" || layer === "assistant" || layer === "assistant_customers" ? AGENT_MEMORY_MAX : USER_BRIEF_MAX;
     if (plan.contenido.length > max) {
       return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} is longer than ${max} characters. Keep it to what must apply every time.`)) };
     }
@@ -1005,7 +1021,9 @@ async function guardarMemoria(
     const ok =
       layer === "assistant"
         ? await deps.assistantMemory!.save(session.assistant!.id, plan.contenido)
-        : layer === "personal"
+        : layer === "assistant_customers"
+          ? await deps.assistantCustomers!.save(session.assistant!.id, plan.contenido)
+          : layer === "personal"
           ? await deps.setPersonalLenMd?.(personOf(session), plan.contenido)
           : await deps.setUserBrief(virtualProjectOf(session), session.userId, plan.contenido);
     if (!ok) return { response: respuesta(fallo(`${rutaRelativa(plan.ruta)} could not be saved.`)) };

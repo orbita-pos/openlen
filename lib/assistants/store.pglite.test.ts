@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, runningAssistantRequest, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, runningAssistantRequest, saveAssistantCustomerNote, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 let pg: PGlite;
@@ -106,6 +106,17 @@ describe("assistants store", () => {
     expect(r.assistant.memory).toBe("");
     await saveAssistantMemory(r.assistant.id, "Jueves: pasteles sin gluten.");
     expect((await assistantById(r.assistant.id))?.memory).toBe("Jueves: pasteles sin gluten.");
+  });
+
+  it("keeps what its customers may be told apart from its memory", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    expect(r.assistant.customerNote).toBe("");
+    await saveAssistantMemory(r.assistant.id, "Debo 3000.");
+    await saveAssistantCustomerNote(r.assistant.id, "Clases los martes.");
+    const after = await assistantById(r.assistant.id);
+    expect(after?.customerNote).toBe("Clases los martes.");
+    expect(after?.memory).toBe("Debo 3000.");
   });
 
   it("keeps how its ask_len requests end, hands the ready ones, and never hands a heard one again", async () => {

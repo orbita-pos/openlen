@@ -24,7 +24,7 @@ export const ASSISTANT_MEMORY = `${HOME_DIR}/.assistant/MEMORY.md`;
 /** What an agent's customers may be told (spec local 2026-11-19-agentes-para-todos, §6.7): only in its sessions. */
 export const ASSISTANT_CUSTOMERS = `${HOME_DIR}/.assistant/CUSTOMERS.md`;
 
-export type MemoryLayer = "personal" | "project" | "index" | "note" | "assistant";
+export type MemoryLayer = "personal" | "project" | "index" | "note" | "assistant" | "assistant_customers";
 
 /** Nombre de nota: minúsculas, dígitos y guiones, como el `name:` de Claude Code. */
 export const NOTE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -45,6 +45,7 @@ export function memoryLayerOf(path: string): MemoryLayer | null {
   if (path === PROJECT_LEN_MD) return "project";
   if (path === MEMORY_INDEX) return "index";
   if (path === ASSISTANT_MEMORY) return "assistant";
+  if (path === ASSISTANT_CUSTOMERS) return "assistant_customers";
   return noteNameOf(path) !== null ? "note" : null;
 }
 
