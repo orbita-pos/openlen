@@ -2,9 +2,14 @@
 // and 5, §10.1, §10.6): POST accepts the web session or the phone's app key, discovers the authorization server, creates
 // a one-use ten-minute `state` and hands back the authorization URL. DELETE revokes (RFC 7009, best-effort) and drops
 // the stored connection, leaving the server in `needs-auth` `first`.
+//
+// The sign-in host the person was shown (§10.2): the card sends the host it named (`{ issuerHost }`, null when it named
+// none); without a body — the Herramientas page — it is the one the stored state names. If the discovery now names
+// another, nothing starts: 409 `issuer_changed` with the new host, which is stored so the next card names it.
 import { entryFingerprint, parseMcpConfig } from "@/lib/mcp-connectors/config";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
-import { dropSignIn, startSignIn } from "@/lib/mcp-connectors/oauth/flow";
+import { issuerHostOf } from "@/lib/mcp-connectors/approval";
+import { dropSignIn, rememberNewIssuer, startSignIn } from "@/lib/mcp-connectors/oauth/flow";
 import { cleanScope } from "@/lib/mcp-connectors/oauth/remote-text";
 import { realOAuthDeps } from "@/lib/mcp-connectors/real";
 import { markNeedsAuth, readMcpConfig, readServerStates, type ServerState, type StoredConfig } from "@/lib/mcp-connectors/store";
@@ -32,24 +37,44 @@ function stepUpScope(state: ServerState | undefined, name: string, stored: Store
   return cleanScope(state.authScope) ?? undefined;
 }
 
+/** The sign-in host the stored state names, if it was found for the entry approved now; undefined otherwise (nothing to
+ *  check, as when it names none). */
+function storedIssuerHost(state: ServerState | undefined, name: string, stored: StoredConfig): string | undefined {
+  if (state?.status !== "needs-auth") return undefined;
+  const parsed = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
+  const entry = parsed.ok ? parsed.config.servers[name] : undefined;
+  if (!entry) return undefined;
+  const current = entryFingerprint(entry);
+  if (stored.approved[name] !== current || state.fingerprint !== current) return undefined;
+  return issuerHostOf(entry, state.authIssuer) ?? undefined;
+}
+
 export const POST = paraLaApp(async (req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> => {
   const personId = await usuarioDeLaPeticion(req);
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!oauthEnabled()) return json({ error: "off" }, 404);
   const { name } = await params;
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
   const states = await readServerStates(personId).catch(() => []);
   const state = states.find((s) => s.serverName === name);
   // The scope is a server's own word, stored: it asks the provider for plain scope tokens only (remote-text.ts), and only
   // when it was asked of the entry that is approved now.
   const stored = state?.status === "needs-auth" ? await readMcpConfig(personId).catch(() => null) : null;
   const scope = stored ? stepUpScope(state, name, stored) : undefined;
+  // What the card showed is what the person agreed to; the stored state stands in when no card sent it.
+  const named = body !== null && typeof body === "object" && "issuerHost" in body ? body.issuerHost : undefined;
+  const expectedIssuerHost = typeof named === "string" || named === null ? named : stored ? storedIssuerHost(state, name, stored) : undefined;
   const r = await startSignIn(
     personId,
     name,
     { ...realOAuthDeps(), readConfig: readMcpConfig },
-    scope ? { scope } : {},
+    { ...(scope ? { scope } : {}), ...(expectedIssuerHost !== undefined ? { expectedIssuerHost } : {}) },
   );
   if (r.ok) return json({ authorizationUrl: r.authorizationUrl }, 200);
+  if (r.reason === "issuer_changed") {
+    await rememberNewIssuer(personId, name, r.issuer, { readStates: readServerStates, markNeedsAuth }).catch(() => {});
+    return json({ error: r.reason, issuerHost: r.issuerHost }, 409);
+  }
   const status = r.reason === "not_approved" ? 409 : r.reason === "no_client" ? 422 : 502;
   return json({ error: r.reason, detail: r.error }, status);
 });

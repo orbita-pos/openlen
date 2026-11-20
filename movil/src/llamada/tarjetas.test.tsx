@@ -279,3 +279,24 @@ it("🔴 un fallo se dice con una frase, nunca con el código, y deja «Reintent
   expect(host.querySelector('[role="alert"]')?.textContent).toContain("mcpApproval.errors.failed");
   expect(host.textContent).not.toContain("raro_123");
 });
+
+// Revisión final F3 (spec §10.2): el toque le dice al servidor el host de inicio de sesión que nombró la tarjeta; si ahora
+// es otro, lo dice con una frase y el siguiente toque se compara con el nuevo.
+it("🔴 la página de inicio de sesión cambió: lo dice y el siguiente toque manda el host nuevo", async () => {
+  iniciar();
+  vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue();
+  const cuerpos: unknown[] = [];
+  const pedir = vi.fn(async (_ruta: string, init?: RequestInit) => {
+    cuerpos.push(JSON.parse(String(init?.body ?? "null")));
+    return cuerpos.length === 1
+      ? Response.json({ error: "issuer_changed", issuerHost: "login.example.org" }, { status: 409 })
+      : Response.json({ authorizationUrl: "https://login.example.org/authorize" });
+  });
+  await conectar(OAUTH_CARD, pedir);
+  await pulsar("mcpApproval.connect");
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain("mcpApproval.errors.issuerChanged");
+  expect(host.textContent).not.toContain("issuer_changed");
+  await pulsar("mcpApproval.tryAgain");
+  expect(cuerpos).toEqual([{ issuerHost: "accounts.google.com" }, { issuerHost: "login.example.org" }]);
+  expect(plataforma.abrirNavegador).toHaveBeenCalledWith("https://login.example.org/authorize");
+});

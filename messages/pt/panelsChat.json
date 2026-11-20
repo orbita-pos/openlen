@@ -739,7 +739,7 @@
       "unreachable": "Não foi possível chegar ao início de sessão do servidor. Tente de novo daqui a pouco.",
       "expired": "O início de sessão demorou demasiado e expirou. Tente de novo.",
       "lost": "Esse link de início de sessão já não funciona. Tente de novo.",
-      "issuerChanged": "A página de início de sessão não é aquela para a qual este conector foi aprovado, por isso nada foi conectado.",
+      "issuerChanged": "A página de início de sessão mudou, por isso nada foi conectado. Veja onde está agora e tente de novo.",
       "exchangeFailed": "O servidor não concluiu o início de sessão. Tente de novo.",
       "off": "O início de sessão nos conectores está desativado.",
       "unauthorized": "A sua sessão do OpenLen terminou. Recarregue a página e tente de novo.",

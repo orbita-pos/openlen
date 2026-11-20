@@ -46,6 +46,14 @@ export function signInErrorKey(code: string): SignInErrorKey {
   return Object.hasOwn(KEY_OF_CODE, code) ? KEY_OF_CODE[code]! : "failed";
 }
 
+/** The sign-in host an `issuer_changed` names (final review F3, spec §10.2): a hostname as OpenLen's server writes it,
+ *  null for «the server's own page», undefined for anything else — which is never shown. */
+const HOST = /^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$/;
+export function signInHostFrom(v: unknown): string | null | undefined {
+  if (v === null) return null;
+  return typeof v === "string" && HOST.test(v) ? v : undefined;
+}
+
 /** The codes whose server-side `detail` is worth showing under the sentence (a credential's name, what to set in the
  *  file): an English line from OpenLen's own server, already redacted and cut short. */
 const CODES_WITH_DETAIL: ReadonlySet<string> = new Set(["no_client", "unreachable", "config_unreadable"]);

@@ -8,7 +8,7 @@ import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
-import { showsDetail, signInErrorKey } from "@/components/workspace-v2/chat/sign-in-errors";
+import { showsDetail, signInErrorKey, signInHostFrom } from "@/components/workspace-v2/chat/sign-in-errors";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 import { publishedHost } from "@/lib/publish/base-host";
@@ -256,12 +256,17 @@ function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { client
 // servidor. Aprobar lo que escribió Len (la tarjeta con versión, con las claves que enviaría) es sólo de la web: la ruta
 // de aprobar no es de la app, así que esa tarjeta aquí informa y no tiene botón. Iniciar sesión (versión 0) y las
 // sugerencias del directorio, que se instalan con su propio toque, sí lo tienen.
+//
+// El toque le dice al servidor qué host de inicio de sesión nombró la tarjeta (revisión final F3, spec §10.2): si ahora es
+// otro, no empieza nada, la tarjeta nombra el nuevo y dice que la página cambió; el siguiente toque se compara con ése.
 function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpApprovalCard }) {
   const t = useTranslations("movil.herramientas");
   const [estado, setEstado] = useState<"listo" | "abriendo" | "esperando" | "conectado" | "error">("listo");
   const [fallo, setFallo] = useState<{ codigo: string; detalle?: string } | null>(null);
   // El nombre que el directorio dio al servidor (`google-calendar-2` si el primero estaba ocupado): el de la tarjeta no vale.
   const [servidor, setServidor] = useState(card.server);
+  // Dónde se inicia sesión, como lo nombra la tarjeta ahora: el servidor puede haber dicho que cambió (issuer_changed).
+  const [oauth, setOauth] = useState(card.oauth);
   const pideAprobacion = !card.suggest && card.version > 0;
 
   useEffect(() => {
@@ -292,10 +297,15 @@ function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpAp
     try {
       const res = await cliente.pedir(
         card.suggest ? `/api/mcp-connectors/directory/${encodeURIComponent(card.suggest.id)}` : `/api/mcp-connectors/${encodeURIComponent(card.server)}/oauth`,
-        { method: "POST" },
+        card.suggest
+          ? { method: "POST" }
+          : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ issuerHost: oauth?.issuerHost ?? null }) },
       );
-      const body = (await res.json().catch(() => ({}))) as { server?: unknown; authorizationUrl?: unknown; detail?: unknown; error?: unknown };
+      const body = (await res.json().catch(() => ({}))) as { server?: unknown; authorizationUrl?: unknown; detail?: unknown; error?: unknown; issuerHost?: unknown };
       if (!res.ok || typeof body.authorizationUrl !== "string") {
+        // La página de inicio de sesión se movió: la tarjeta nombra la nueva antes del siguiente toque.
+        const nuevo = body.error === "issuer_changed" ? signInHostFrom(body.issuerHost) : undefined;
+        if (nuevo !== undefined && oauth && !card.suggest) setOauth({ ...oauth, issuerHost: nuevo });
         setFallo({ codigo: typeof body.error === "string" && body.error ? body.error : String(res.status), ...(typeof body.detail === "string" ? { detalle: body.detail } : {}) });
         setEstado("error");
         return;
@@ -309,7 +319,6 @@ function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpAp
     }
   };
 
-  const oauth = card.oauth;
   // Dónde se inicia sesión. La página del propio servidor cuando no se sabe su host: nunca el del MCP, que es donde están las herramientas.
   const dondeIniciaSesion = !oauth
     ? null

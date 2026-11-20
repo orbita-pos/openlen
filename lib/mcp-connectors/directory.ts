@@ -2,6 +2,7 @@
 // remote OAuth MCP servers that `suggest_connectors` offers when the person has none installed for what they asked.
 // Google Calendar is offered only to someone who can finish the flow: `OPENLEN_MCP_GOOGLE_CLIENT_ID` must be set, and
 // while `OPENLEN_MCP_GOOGLE_TEST_USERS` is set, the person's email must be in it.
+import { hostOf } from "./approval";
 import { entryFingerprint, parseMcpConfig, serializeMcpConfig, type McpConfig } from "./config";
 import { DIRECTORY, GOOGLE_ISSUER, type DirectoryEntry } from "./directory-entries";
 import { oauthEnabled } from "./oauth/enabled";
@@ -80,7 +81,11 @@ export async function installAndStartFromDirectory(
   personId: string,
   id: string,
   d: DirectoryInstallDeps,
-): Promise<{ ok: true; server: string; authorizationUrl: string } | { ok: false; status: 400 | 404 | 409 | 422 | 502; error: string; detail?: string }> {
+): Promise<
+  | { ok: true; server: string; authorizationUrl: string }
+  | { ok: false; status: 400 | 404 | 409 | 422 | 502; error: string; detail?: string }
+  | { ok: false; status: 409; error: "issuer_changed"; server: string; issuer: string | null; issuerHost: string | null }
+> {
   const dir = DIRECTORY.find((x) => x.id === id);
   if (!dir) return { ok: false, status: 404, error: "not_found" };
   const email = await d.personEmail(personId).catch(() => null);
@@ -115,8 +120,10 @@ export async function installAndStartFromDirectory(
     const written = await d.writeConfig(personId, serializeMcpConfig(parsed.config), stored.version, { [serverName]: entryFingerprint(entry) }, Object.keys(parsed.config.servers));
     if (!written.ok) return { ok: false, status: 409, error: "changed" };
   }
-  const started: StartResult = await startSignIn(personId, serverName, d);
+  // The card named the directory's issuer (spec §10.2): a server that signs in elsewhere now is not what it showed.
+  const started: StartResult = await startSignIn(personId, serverName, d, { expectedIssuerHost: hostOf(dir.issuer) });
   if (started.ok) return { ok: true, server: serverName, authorizationUrl: started.authorizationUrl };
+  if (started.reason === "issuer_changed") return { ok: false, status: 409, error: "issuer_changed", server: serverName, issuer: started.issuer, issuerHost: started.issuerHost };
   const status = started.reason === "not_approved" ? 409 : started.reason === "no_client" ? 422 : 502;
   return { ok: false, status, error: started.reason, detail: started.error };
 }

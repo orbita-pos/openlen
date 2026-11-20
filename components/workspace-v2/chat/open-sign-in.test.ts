@@ -293,6 +293,45 @@ describe("openSignIn", () => {
     });
   });
 
+  // Final review, F3 (spec §10.2): the host the card named goes to the start, and a moved sign-in page comes back with its
+  // new host — a hostname, or nothing.
+  describe("🔴 a sign-in page that moved", () => {
+    it("the default start sends the card's host (null included); with no host given it sends no body", async () => {
+      fetchMock.mockResolvedValue(new Response(JSON.stringify({ authorizationUrl: AUTH_URL })));
+      for (const issuerHost of ["accounts.google.com", null] as const) {
+        popup.closed = false;
+        void openSignIn("cal", { issuerHost });
+        await settle();
+      }
+      popup.closed = false;
+      void openSignIn("cal");
+      await settle();
+      const inits = fetchMock.mock.calls.map((c) => c[1] as RequestInit);
+      expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(["/api/mcp-connectors/cal/oauth", "/api/mcp-connectors/cal/oauth", "/api/mcp-connectors/cal/oauth"]);
+      expect(inits.map((i) => (i.body === undefined ? undefined : JSON.parse(String(i.body))))).toEqual([{ issuerHost: "accounts.google.com" }, { issuerHost: null }, undefined]);
+    });
+
+    it("a start's issuer_changed carries the new host; anything that isn't a hostname is dropped", async () => {
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "issuer_changed", issuerHost: "login.example.org" }), { status: 409 }));
+      expect(await openSignIn("cal", { issuerHost: "accounts.google.com" })).toEqual({ error: "issuer_changed", issuerHost: "login.example.org" });
+      popup.closed = false;
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: "issuer_changed", issuerHost: "<b>x</b> y" }), { status: 409 }));
+      expect(await openSignIn("cal", { issuerHost: "accounts.google.com" })).toEqual({ error: "issuer_changed" });
+    });
+
+    it("the way back's issuer_changed carries the new host, and only that reason does", async () => {
+      let run = openSignIn("cal", { start: async () => AUTH_URL });
+      await settle();
+      comeBack({ type: CHANNEL, server: "cal", ok: false, reason: "issuer_changed", issuerHost: "login.example.org" });
+      expect(await run).toEqual({ error: "issuer_changed", issuerHost: "login.example.org" });
+      popup.closed = false;
+      run = openSignIn("cal", { start: async () => AUTH_URL });
+      await settle();
+      comeBack({ type: CHANNEL, server: "cal", ok: false, reason: "exchange_failed", issuerHost: "login.example.org" });
+      expect(await run).toEqual({ error: "exchange_failed" });
+    });
+  });
+
   describe("🔴 the window closing with no message", () => {
     it("asks OpenLen, and says «connected» when the server now is (the way back was cut)", async () => {
       vi.useFakeTimers();

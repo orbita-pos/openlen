@@ -7,10 +7,10 @@
 import { auth } from "@/auth";
 import { mountServer } from "@/lib/mcp-connectors/mount";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
-import { finishSignIn } from "@/lib/mcp-connectors/oauth/flow";
+import { finishSignIn, rememberNewIssuer } from "@/lib/mcp-connectors/oauth/flow";
 import { realMountDeps, realOAuthDeps } from "@/lib/mcp-connectors/real";
 import { SIGN_IN_CHANNEL } from "@/lib/mcp-connectors/oauth/sign-in-channel";
-import { readMcpConfig } from "@/lib/mcp-connectors/store";
+import { markNeedsAuth, readMcpConfig, readServerStates } from "@/lib/mcp-connectors/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +36,12 @@ function localeFrom(cookieHeader: string | null): Locale {
   return (code in COPY ? code : "es") as Locale;
 }
 
-function page(locale: Locale, heading: string, payload: { type: typeof SIGN_IN_CHANNEL; server: string | null; ok: boolean; reason?: string }, status: number): Response {
+function page(
+  locale: Locale,
+  heading: string,
+  payload: { type: typeof SIGN_IN_CHANNEL; server: string | null; ok: boolean; reason?: string; issuerHost?: string | null },
+  status: number,
+): Response {
   const copy = COPY[locale];
   const jsonPayload = JSON.stringify(payload).replace(/</g, "\\u003c");
   const html = `<!doctype html>
@@ -103,5 +108,10 @@ export async function GET(req: Request): Promise<Response> {
   );
   if (r.ok) return page(locale, copy.ok, { type: SIGN_IN_CHANNEL, server: r.server, ok: true }, 200);
   if (r.reason === "denied") return page(locale, copy.denied, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: "denied" }, 200);
+  if (r.reason === "issuer_changed") {
+    // Stored, so the next card names where the sign-in is now (spec §10.2); the card hears the host, a hostname only.
+    await rememberNewIssuer(r.personId, r.server, r.issuer, { readStates: readServerStates, markNeedsAuth }).catch(() => {});
+    return page(locale, copy.failed, { type: SIGN_IN_CHANNEL, server: r.server, ok: false, reason: r.reason, issuerHost: r.issuerHost }, 400);
+  }
   return page(locale, copy.failed, { type: SIGN_IN_CHANNEL, server: r.server ?? null, ok: false, reason: r.reason }, 400);
 }

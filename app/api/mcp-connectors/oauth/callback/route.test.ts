@@ -13,8 +13,10 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 const fake = vi.hoisted(() => ({
   finishResult: { ok: true, server: "cal" } as
     | { ok: true; server: string }
-    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "issuer_changed" | "exchange_failed"; server?: string },
+    | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed"; server?: string }
+    | { ok: false; reason: "issuer_changed"; server: string; personId: string; issuer: string | null; issuerHost: string | null },
   finishedWith: [] as unknown[],
+  remembered: [] as unknown[],
 }));
 
 vi.mock("@/lib/mcp-connectors/real", () => ({
@@ -23,6 +25,8 @@ vi.mock("@/lib/mcp-connectors/real", () => ({
 }));
 vi.mock("@/lib/mcp-connectors/store", () => ({
   readMcpConfig: async () => ({ text: "{}", approved: {}, version: 1 }),
+  readServerStates: async () => [],
+  markNeedsAuth: async () => {},
 }));
 vi.mock("@/lib/mcp-connectors/mount", () => ({
   mountServer: async () => null,
@@ -31,6 +35,9 @@ vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
   finishSignIn: async (q: unknown, sessionPersonId: string | null) => {
     fake.finishedWith.push({ q, sessionPersonId });
     return fake.finishResult;
+  },
+  rememberNewIssuer: async (personId: string, name: string, issuer: string | null) => {
+    fake.remembered.push({ personId, name, issuer });
   },
 }));
 
@@ -42,6 +49,7 @@ beforeEach(() => {
   vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
   fake.finishResult = { ok: true, server: "cal" };
   fake.finishedWith.length = 0;
+  fake.remembered.length = 0;
 });
 
 afterEach(() => {
@@ -93,6 +101,21 @@ describe("GET /api/mcp-connectors/oauth/callback", () => {
     expect(html).not.toContain("one_time_code_xyz");
     expect(html).not.toContain("code=");
     expect(html).not.toContain("s1");
+  });
+});
+
+// Final review, F3 (spec §10.2): an issuer that changed on the way back is remembered, so the next card names it, and the
+// card hears the new host — a hostname, nothing else of the provider's.
+describe("an issuer that changed on the way back", () => {
+  it("🔴 remembers the issuer found now for the flow's person and tells the card its host", async () => {
+    fake.finishResult = { ok: false, reason: "issuer_changed", server: "cal", personId: "u1", issuer: "https://login.example.org/t1", issuerHost: "login.example.org" };
+    const res = await GET(new Request("https://openlen.test/api/mcp-connectors/oauth/callback?state=s1&code=c&iss=https://login.example.org/t1"));
+    expect(res.status).toBe(400);
+    expect(fake.remembered).toEqual([{ personId: "u1", name: "cal", issuer: "https://login.example.org/t1" }]);
+    const html = await res.text();
+    expect(html).toContain('"reason":"issuer_changed"');
+    expect(html).toContain('"issuerHost":"login.example.org"');
+    expect(html).not.toContain("https://login.example.org/t1");
   });
 });
 

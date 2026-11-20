@@ -13,12 +13,14 @@ const fake = vi.hoisted(() => ({
   personId: "u1" as string | null,
   startResult: { ok: true, authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=s1" } as
     | { ok: true; authorizationUrl: string }
-    | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string },
+    | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string }
+    | { ok: false; reason: "issuer_changed"; error: string; issuer: string | null; issuerHost: string | null },
+  remembered: [] as unknown[],
   startedWith: [] as unknown[],
   droppedWith: [] as string[],
   dropResult: { dropped: true, issuer: "https://accounts.google.com" } as { dropped: boolean; issuer: string | null },
   markedNeedsAuth: [] as unknown[],
-  states: [] as { serverName: string; fingerprint: string; status: string; authReason: string | null; authScope: string | null }[],
+  states: [] as { serverName: string; fingerprint: string; status: string; authReason: string | null; authScope: string | null; authIssuer?: string | null }[],
   config: { text: "{}", approved: {} as Record<string, string>, version: 1 },
 }));
 
@@ -52,12 +54,21 @@ vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
     fake.droppedWith.push(`${personId}:${name}`);
     return { ...fake.dropResult, revocation: Promise.resolve() };
   },
+  rememberNewIssuer: async (personId: string, name: string, issuer: string | null) => {
+    fake.remembered.push({ personId, name, issuer });
+  },
 }));
 
 const { DELETE, OPTIONS, POST } = await import("./route");
 
-const post = (name = "cal") =>
-  POST(new Request(`http://x/api/mcp-connectors/${name}/oauth`, { method: "POST" }), { params: Promise.resolve({ name }) });
+const post = (name = "cal", body?: unknown) =>
+  POST(
+    new Request(`http://x/api/mcp-connectors/${name}/oauth`, {
+      method: "POST",
+      ...(body !== undefined && { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
+    }),
+    { params: Promise.resolve({ name }) },
+  );
 const del = (name = "cal") =>
   DELETE(new Request(`http://x/api/mcp-connectors/${name}/oauth`, { method: "DELETE" }), { params: Promise.resolve({ name }) });
 
@@ -68,6 +79,7 @@ beforeEach(() => {
   fake.droppedWith.length = 0;
   fake.dropResult = { dropped: true, issuer: "https://accounts.google.com" };
   fake.markedNeedsAuth.length = 0;
+  fake.remembered.length = 0;
   fake.states = [];
   fake.config = { text: CAL_TEXT, approved: { cal: calFingerprint() }, version: 1 };
 });
@@ -153,6 +165,45 @@ describe("POST /api/mcp-connectors/[name]/oauth", () => {
     vi.stubEnv("OPENLEN_MCP_OAUTH", "0");
     expect((await post()).status).toBe(404);
     expect(fake.startedWith).toEqual([]);
+  });
+
+  // Final review, F3 (spec §10.2): the start checks the sign-in host the person was shown.
+  describe("🔴 the sign-in host the person was shown", () => {
+    const waiting = (fingerprint = calFingerprint()) => [
+      { serverName: "cal", fingerprint, status: "needs-auth", authReason: "first", authScope: null, authIssuer: "https://accounts.google.com" },
+    ];
+
+    it("the card's host is what the start checks, null included (the card named none)", async () => {
+      fake.states = waiting();
+      await post("cal", { issuerHost: "login.example.org" });
+      await post("cal", { issuerHost: null });
+      expect(fake.startedWith).toEqual([
+        { personId: "u1", name: "cal", opts: { expectedIssuerHost: "login.example.org" } },
+        { personId: "u1", name: "cal", opts: { expectedIssuerHost: null } },
+      ]);
+    });
+
+    it("without a card (the Herramientas page) it is the host the stored state names, for the entry approved now", async () => {
+      fake.states = waiting();
+      await post("cal");
+      fake.states = waiting("an-older-entry");
+      await post("cal");
+      fake.states = [];
+      await post("cal");
+      expect(fake.startedWith).toEqual([
+        { personId: "u1", name: "cal", opts: { expectedIssuerHost: "accounts.google.com" } },
+        { personId: "u1", name: "cal", opts: {} },
+        { personId: "u1", name: "cal", opts: {} },
+      ]);
+    });
+
+    it("another host now: 409 issuer_changed with the new host, and the new issuer is remembered for the next card", async () => {
+      fake.startResult = { ok: false, reason: "issuer_changed", error: "x", issuer: "https://login.example.org/t1", issuerHost: "login.example.org" };
+      const res = await post("cal", { issuerHost: "accounts.google.com" });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: "issuer_changed", issuerHost: "login.example.org" });
+      expect(fake.remembered).toEqual([{ personId: "u1", name: "cal", issuer: "https://login.example.org/t1" }]);
+    });
   });
 });
 

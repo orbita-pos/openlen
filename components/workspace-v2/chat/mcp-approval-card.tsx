@@ -9,6 +9,9 @@
 // each key goes to (the authorization server's for a client secret, not the MCP server's) and where the person signs in
 // (the server's own page when nobody knows its host), remembers that the approval went through so a retry never sends
 // the stale version again, and leaves «Try again» after a failure, in words. Every remote string is drawn as text.
+//
+// The start checks the sign-in host this card named (final review F3, spec §10.2): when the server signs in elsewhere
+// now, the card names the new host and says the page changed, and the next tap is checked against that one.
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -36,6 +39,8 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
   const [approved, setApproved] = useState(false);
   const missing = approved ? [] : card.credentials.filter((c) => !c.set);
   const [values, setValues] = useState<Record<string, string>>({});
+  // Where the person signs in, as this card names it now: the start may have found it moved (issuer_changed).
+  const [oauth, setOauth] = useState(card.oauth);
 
   // Where the sign-in is. The server's own page when nobody knows its host: never the MCP server's, which is where the
   // tools are and not where the person signs in.
@@ -57,10 +62,12 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
 
   async function connect() {
     const credentials = Object.fromEntries(missing.map((c) => [c.name, values[c.name] ?? ""]).filter(([, v]) => v));
-    if (card.suggest || card.oauth) {
+    if (card.suggest || oauth) {
       let sawChanged = false;
       // Open the popup synchronously on the click before any state update or await.
       const signIn = openSignIn(card.server, {
+        // The host this card named is what the start checks (the directory's route checks its own).
+        ...(!card.suggest && oauth ? { issuerHost: oauth.issuerHost } : {}),
         ...(card.suggest
           ? { start: () => postStart(`/api/mcp-connectors/directory/${encodeURIComponent(card.suggest!.id)}`) }
           : card.version > 0 && !approved
@@ -94,6 +101,8 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       }
       // The entry was edited while the person was signing in: it needs another look, not another try.
       if (res.error === "changed") return setState({ kind: "changed" });
+      // The sign-in page moved: the card names where it is now, so the person sees it before tapping again.
+      if (res.error === "issuer_changed" && res.issuerHost !== undefined && oauth && !card.suggest) setOauth({ ...oauth, issuerHost: res.issuerHost });
       return setState({ kind: "sign-in-failed", code: res.error, ...(res.detail ? { detail: res.detail } : {}) });
     }
     setState({ kind: "connecting" });
@@ -119,9 +128,9 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
       <p className="font-semibold fg">
         {card.suggest ? t("mcpApproval.suggestTitle", { name: card.suggest.name, host: card.suggest.host }) : t("mcpApproval.title", { server: card.server, host: card.host })}
       </p>
-      {card.oauth ? (
+      {oauth ? (
         <p className="mt-1 fg-muted" data-mcp-sign-in="">
-          {signInLine(card.oauth)}
+          {signInLine(oauth)}
         </p>
       ) : null}
       {card.credentials.map((c) => (
@@ -129,7 +138,7 @@ export function McpApprovalCardView({ card }: { card: McpApprovalCard }) {
           <p className="fg-muted" data-mcp-sends="">
             {c.destinationHosts.length > 0
               ? t("mcpApproval.sends", { name: c.name, host: c.destinationHosts.join(", ") })
-              : card.oauth
+              : oauth
                 ? t("mcpApproval.sendsToSignIn", { name: c.name })
                 : t("mcpApproval.sends", { name: c.name, host: card.host })}
           </p>

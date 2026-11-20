@@ -739,7 +739,7 @@
       "unreachable": "Impossible de joindre la connexion du serveur. Réessayez dans un instant.",
       "expired": "La connexion a pris trop de temps et a expiré. Réessayez.",
       "lost": "Ce lien de connexion ne fonctionne plus. Réessayez.",
-      "issuerChanged": "La page de connexion n'est pas celle pour laquelle ce connecteur a été approuvé, donc rien n'a été connecté.",
+      "issuerChanged": "La page de connexion a changé, donc rien n'a été connecté. Vérifiez où elle se trouve maintenant et réessayez.",
       "exchangeFailed": "Le serveur n'a pas terminé la connexion. Réessayez.",
       "off": "La connexion aux connecteurs est désactivée.",
       "unauthorized": "Votre session OpenLen est terminée. Rechargez la page, puis réessayez.",

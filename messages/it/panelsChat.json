@@ -739,7 +739,7 @@
       "unreachable": "Non è stato possibile raggiungere l'accesso del server. Riprova tra un momento.",
       "expired": "L'accesso ha richiesto troppo tempo ed è scaduto. Riprova.",
       "lost": "Quel link di accesso non funziona più. Riprova.",
-      "issuerChanged": "La pagina di accesso non è quella per cui questo connettore è stato approvato, quindi non è stato collegato nulla.",
+      "issuerChanged": "La pagina di accesso è cambiata, quindi non è stato collegato nulla. Controlla dove si trova ora e riprova.",
       "exchangeFailed": "Il server non ha completato l'accesso. Riprova.",
       "off": "L'accesso ai connettori è disattivato.",
       "unauthorized": "La tua sessione di OpenLen è terminata. Ricarica la pagina e riprova.",
