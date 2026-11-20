@@ -723,7 +723,36 @@
     "failed": "Kon niet verbinden: {error}",
     "changed": "Het is intussen veranderd: bekijk het opnieuw in Tools",
     "dismissed": "Niet verbonden. Je kunt het later goedkeuren in Tools.",
-    "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt"
+    "firstTime": "Je sleutel {name} is nog nooit naar {host} gestuurd: keur alleen goed als je die server vertrouwt",
+    "signInAt": "Inloggen bij {issuer}",
+    "signInAgainAt": "Opnieuw inloggen bij {issuer}",
+    "morePermissionsAt": "Vraagt meer rechten bij {issuer}",
+    "oauthConnected": "Verbonden",
+    "suggestTitle": "{name} ({host}) verbinden",
+    "signInOnServerPage": "Log in op de eigen inlogpagina van de server",
+    "signInAgainOnServerPage": "Log opnieuw in op de eigen inlogpagina van de server",
+    "morePermissionsOnServerPage": "Heeft meer rechten nodig, gevraagd op de eigen inlogpagina van de server",
+    "sendsToSignIn": "Je sleutel {name} wordt naar de inlogpagina van de server gestuurd",
+    "tryAgain": "Opnieuw proberen",
+    "openConnectors": "Connectoren openen in Tools",
+    "errors": {
+      "popupBlocked": "Je browser heeft het inlogvenster geblokkeerd. Sta pop-ups toe voor OpenLen en probeer het opnieuw.",
+      "unsafeUrl": "De server stuurde een inlogadres dat niet veilig is, daarom heeft OpenLen het niet geopend.",
+      "notApproved": "Deze connector is nog niet goedgekeurd. Keur hem goed in Tools, onder Connectoren.",
+      "noClient": "OpenLen kan nog niet inloggen bij deze server: er is een app nodig die is geregistreerd bij de inlogprovider van de server (oauth.clientId in mcp.json).",
+      "unreachable": "De inlog van de server was niet bereikbaar. Probeer het zo meteen opnieuw.",
+      "expired": "Het inloggen duurde te lang en is verlopen. Probeer het opnieuw.",
+      "lost": "Die inloglink werkt niet meer. Probeer het opnieuw.",
+      "issuerChanged": "De inlogpagina is veranderd, dus er is niets verbonden. Kijk waar die nu is en probeer het opnieuw.",
+      "exchangeFailed": "De server heeft het inloggen niet afgerond. Probeer het opnieuw.",
+      "wrongBrowser": "De aanmelding eindigde in een browser die niet bij je OpenLen-account is aangemeld, dus er is niets verbonden. Probeer het opnieuw vanuit dit tabblad.",
+      "otherAccount": "Die aanmelding hoort bij een ander OpenLen-account, dus er is niets verbonden.",
+      "off": "Inloggen bij connectoren staat uit.",
+      "unauthorized": "Je OpenLen-sessie is beëindigd. Laad de pagina opnieuw en probeer het opnieuw.",
+      "notAvailable": "Die connector is niet beschikbaar.",
+      "configUnreadable": "Je connectorbestand kan niet worden gelezen. Herstel het in Tools, onder Connectoren.",
+      "failed": "Inloggen niet gelukt. Probeer het opnieuw."
+    }
   },
   "ownAssistant": {
     "card": {

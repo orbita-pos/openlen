@@ -47,6 +47,12 @@ describe("assistantTools", () => {
     expect(names(assistantTools([...LEN, { name: "brand_new_tool" }]))).toContain("brand_new_tool");
   });
 
+  it("keeps mcp__<server>__authenticate and suggest_connectors so the assistant can offer OAuth connectors", () => {
+    const got = names(assistantTools([...LEN, { name: "mcp__cal__authenticate" }, { name: "suggest_connectors" }]));
+    expect(got).toContain("mcp__cal__authenticate");
+    expect(got).toContain("suggest_connectors");
+  });
+
   it("keeps Len's order, so the cached prefix of the tools is Len's minus some", () => {
     const got = names(assistantTools(LEN));
     expect(got).toEqual(names(LEN).filter((n) => got.includes(n)));

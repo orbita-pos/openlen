@@ -1,0 +1,476 @@
+// SIGNING IN TO AN MCP SERVER, SERVER-SIDE (spec local 2026-11-17-oauth-de-conectores-mcp, §5.2, §5.4 steps 2–3, §10.1,
+// §10.2, §10.6). The SDK's `auth()` does the OAuth — discovery (RFC 9728/8414), the client (§5.2's order), PKCE, the
+// resource indicator, RFC 9207's `iss` — with a provider that never redirects anyone: `startSignIn` hands back the
+// authorization URL for the web to open, and `finishSignIn` exchanges the code the provider sends back.
+//
+// The way back does NOT trust the `state` alone (final review F5, a tightening of §10.1). The `state` — 32 random bytes,
+// one use, ten minutes, bound to the person, the server, the entry's fingerprint and the issuer (store.ts) — is spent
+// first and checked after, so whatever goes wrong the same `state` never works twice. And then, by where the sign-in was
+// started:
+//  - from the web (the workspace's session): the browser that comes back must be signed in to OpenLen as the flow's
+//    person — the session cookie is SameSite=Lax, so the provider's top-level GET redirect carries it. With no session,
+//    or another person's, no code is exchanged ("wrong_browser"). Without this, someone could start a sign-in on THEIR
+//    OpenLen account, send the provider's URL to a victim, and the victim's consent would land the victim's tokens on the
+//    attacker's account.
+//  - from the phone (the app's key): the system browser usually has no session. The code is exchanged, but the tokens
+//    are only HELD on the flow (`holdTokens`) — no turn or mount can use them — and the way-back page asks the person to
+//    confirm the OpenLen account they go to (`confirmSignIn`), with a one-time token in its form. The same person's
+//    session skips that question; another person's refuses ("other_account"). The page names the account by its WHOLE
+//    email, so only an account whose email is verified is ever offered (R1): OpenLen accounts work before their email is
+//    verified, so someone could register the victim's own address and have the victim connect to it. An unverified one
+//    gets nothing exchanged and nothing held ("email_unverified"): the person finishes from a browser signed in to OpenLen.
+//
+// OpenLen discovers the authorization server itself, once, before `auth()` and hands the SDK that result as its
+// discovery state: the issuer the start names is the one the flow is bound to, and at the exchange an issuer that is no
+// longer the flow's is refused (`issuer_changed`) before a code is sent anywhere.
+//
+// And the start checks the sign-in host the person was SHOWN (§10.2): the «Conectar» card named where they sign in, from
+// what an earlier mount discovered. If the discovery at the tap names another host, nothing starts (`issuer_changed`),
+// and the caller stores the new issuer (`rememberNewIssuer`) so the next card names it. A card that named no host (the
+// server's own sign-in page) made no promise to check.
+//
+// Nothing here logs or returns a token, code, verifier or secret; errors from remote servers are redacted and cut short.
+import { randomBytes } from "node:crypto";
+
+import { auth, AuthorizationServerMismatchError, computeScopeUnion, type OAuthClientProvider, type OAuthDiscoveryState, type StoredOAuthClientInformation, type StoredOAuthTokens } from "@modelcontextprotocol/client";
+
+import { issuerHostOf } from "../approval";
+import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "../config";
+import type { ServerState, StoredConfig } from "../store";
+import { credentialRefsOf, makeRedactor, resolveEntry } from "../templates";
+import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal } from "./clients";
+import { discoverAuthServer, entryClient, shortError, storableClient, type OAuthDeps, type SignInReason } from "./provider";
+import { confirmHashOf } from "./confirm-hash";
+import type { OAuthConnection, StartedFrom } from "./store";
+
+export type StartDeps = OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> };
+/** What the confirm needs (it takes the person's yes to tokens already held: no account to name). */
+export type ConfirmDeps = StartDeps & { mount(personId: string, name: string): Promise<ServerState | null> };
+/** The way back also names the account a phone sign-in would go to: `accountOf` is its email and whether it is verified. */
+export type FinishDeps = ConfirmDeps & { accountOf(personId: string): Promise<{ email: string; emailVerified: boolean } | null> };
+
+/** `issuer_changed`: the sign-in host is no longer the one the person was shown — `issuer` is where it is now (what the
+ *  caller stores for the next card) and `issuerHost` what that card will name. */
+export type IssuerChanged = { ok: false; reason: "issuer_changed"; issuer: string | null; issuerHost: string | null };
+export type StartResult =
+  | { ok: true; authorizationUrl: string }
+  | { ok: false; reason: "not_approved" | "no_client" | "unreachable"; error: string }
+  | (IssuerChanged & { error: string });
+export type FinishResult =
+  | { ok: true; server: string }
+  /** A phone sign-in whose tokens are held for the person's yes: the page shows `confirmToken` in its form, once. */
+  | { ok: "confirm"; server: string; personId: string; email: string; confirmToken: string }
+  | { ok: false; reason: "expired" | "used" | "unknown" | "denied" | "changed" | "exchange_failed" | "wrong_browser" | "other_account" | "email_unverified"; server?: string }
+  | (IssuerChanged & { server: string; personId: string });
+export type ConfirmResult = { ok: true; server: string } | { ok: false; reason: "expired" | "unknown" | "discarded" | "changed" | "other_account"; server?: string };
+
+class AuthorizationEndpointNotHttps extends Error {
+  constructor() {
+    super("the authorization endpoint is not https");
+  }
+}
+
+/** The entry as the person approved it, or null (removed, edited since, or never approved). */
+function approvedEntry(stored: StoredConfig, serverName: string): { entry: McpServerEntry; fingerprint: string } | null {
+  const parsed = parseMcpConfig(stored.text, { reservedServerNames: new Set() });
+  const entry = parsed.ok ? parsed.config.servers[serverName] : undefined;
+  if (!entry) return null;
+  const fingerprint = entryFingerprint(entry);
+  return stored.approved[serverName] === fingerprint ? { entry, fingerprint } : null;
+}
+
+type Discovered = { ok: true; state: OAuthDiscoveryState; issuer: string } | { ok: false; error: string };
+
+/** The authorization server of `entry` (its `oauth.authServerMetadataUrl`, or discovery), as its metadata states it.
+ *  Its `issuer` is what everything is bound to. */
+async function discover(entry: McpServerEntry, d: OAuthDeps, redact: (t: string) => string): Promise<Discovered> {
+  try {
+    const info = await discoverAuthServer(entry, d);
+    const issuer = info.authorizationServerMetadata?.issuer;
+    if (!issuer) return { ok: false, error: "the authorization server publishes no metadata" };
+    return { ok: true, state: info, issuer };
+  } catch (err) {
+    return { ok: false, error: shortError(err instanceof Error ? err.message : String(err), redact) };
+  }
+}
+
+/** What both legs share of the provider: OpenLen as a client, the discovery done here, and the client to use. */
+function flowProvider(
+  personId: string,
+  serverName: string,
+  entry: McpServerEntry,
+  d: OAuthDeps,
+  discovery: OAuthDiscoveryState,
+  issuer: string,
+  fingerprint: string,
+  own: StoredOAuthClientInformation | null,
+): Pick<OAuthClientProvider, "redirectUrl" | "clientMetadata" | "clientMetadataUrl" | "discoveryState" | "clientInformation" | "saveClientInformation"> {
+  const metadataUrl = clientMetadataUrl(d.siteUrl);
+  return {
+    redirectUrl: callbackUrl(d.siteUrl),
+    clientMetadata: clientMetadata(d.siteUrl),
+    // The SDK uses it only when the authorization server says it supports Client ID Metadata Documents (§5.2 step 4) —
+    // but it refuses one that isn't https before asking (final review M3): a site served over http (local development)
+    // offers none, and signs in by dynamic registration.
+    ...(new URL(metadataUrl).protocol === "https:" ? { clientMetadataUrl: metadataUrl } : {}),
+    discoveryState: () => discovery,
+    async clientInformation(ctx) {
+      // The SDK resolved the issuer from the discovery handed to it; anything else is not this flow's server.
+      // Defence in depth: behind the discovery comparison (`found.issuer !== flow.issuer`) this can't fire today.
+      if (!ctx || ctx.issuer !== issuer) throw new AuthorizationServerMismatchError(issuer, ctx?.issuer ?? "");
+      if (own) return { ...own, issuer };
+      return (await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint))?.clientInfo;
+    },
+    async saveClientInformation(info, ctx) {
+      // A client the provider gave OpenLen (CIMD or dynamic registration): bound to this server's URL and issuer.
+      await d.store.saveClientInfo(personId, serverName, entry.url, ctx?.issuer ?? issuer, fingerprint, info);
+    },
+  };
+}
+
+/**
+ * «Conectar»: the authorization URL for the person to open (§5.4 step 2). `opts.scope` is what the server last asked
+ * for (a 403 `insufficient_scope`, §10.6); it joins the entry's own `oauth.scope`. `opts.expectedIssuerHost` is the
+ * sign-in host the person was shown (§10.2): another one now is `issuer_changed`, and nothing starts. Null or absent:
+ * nothing was named, nothing to check.
+ */
+export async function startSignIn(
+  personId: string,
+  serverName: string,
+  d: StartDeps,
+  /** `startedFrom`: the workspace's session ("web", what an absent one means: the stricter way back) or the app's key. */
+  opts: { scope?: string; expectedIssuerHost?: string | null; startedFrom?: StartedFrom } = {},
+): Promise<StartResult> {
+  const approved = approvedEntry(await d.readConfig(personId), serverName);
+  if (!approved) return { ok: false, reason: "not_approved", error: `"${serverName}" is not an approved connector` };
+  const { entry, fingerprint } = approved;
+
+  const values = await d.resolveCredentials(personId, credentialRefsOf(entry));
+  const resolved = resolveEntry(entry, values);
+  if (!resolved.ok) return { ok: false, reason: "no_client", error: `missing: ${resolved.missing.join(", ")}` };
+  const redact = makeRedactor(resolved.resolved);
+
+  const found = await discover(entry, d, redact);
+  if (!found.ok) return { ok: false, reason: "unreachable", error: found.error };
+  const { issuer } = found;
+  const issuerHost = issuerHostOf(entry, issuer);
+  if (typeof opts.expectedIssuerHost === "string" && issuerHost !== opts.expectedIssuerHost) {
+    return { ok: false, reason: "issuer_changed", issuer, issuerHost, error: "the sign-in page is not the one the person was shown" };
+  }
+
+  const own = await entryClient(personId, entry, issuer, d);
+  if (isClientRefusal(own)) return { ok: false, reason: "no_client", error: shortError(own.detail, redact) };
+  const metadata = found.state.authorizationServerMetadata;
+  if (!own && !metadata?.registration_endpoint && !metadata?.client_id_metadata_document_supported) {
+    if (!(await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint))) {
+      return { ok: false, reason: "no_client", error: "the authorization server takes no new clients: set oauth.clientId in mcp.json" };
+    }
+  }
+  // The entry's (or OpenLen's) client gets the row now, so the tokens have a binding to land in — without its secret.
+  if (own) await d.store.saveClientInfo(personId, serverName, entry.url, issuer, fingerprint, storableClient({ ...own, issuer }));
+
+  let verifier: string | undefined;
+  let authorizationUrl: URL | undefined;
+  const provider: OAuthClientProvider = {
+    ...flowProvider(personId, serverName, entry, d, found.state, issuer, fingerprint, own),
+    // Signing in always asks the person: a refresh token from before is not this flow's business.
+    tokens: () => undefined,
+    saveTokens() {
+      throw new Error("starting a sign-in never saves tokens");
+    },
+    saveCodeVerifier(v) {
+      verifier = v;
+    },
+    codeVerifier() {
+      if (verifier === undefined) throw new Error("no code verifier yet");
+      return verifier;
+    },
+    // The SDK asks for `state()` before it makes the PKCE pair, and the flow's row keeps the verifier: so the flow is
+    // made here, with both, and its `state` goes into the URL the SDK built.
+    async redirectToAuthorization(url) {
+      if (verifier === undefined) throw new Error("no code verifier yet");
+      // The person's browser opens this URL: whatever the metadata said, it is https or nothing (and no flow is made).
+      if (url.protocol !== "https:") throw new AuthorizationEndpointNotHttps();
+      const state = await d.store.createFlow({
+        personId,
+        serverName,
+        fingerprint,
+        issuer,
+        codeVerifier: verifier,
+        scope: url.searchParams.get("scope"),
+        startedFrom: opts.startedFrom ?? "web",
+        now: d.now(),
+      });
+      url.searchParams.set("state", state);
+      authorizationUrl = url;
+    },
+    invalidateCredentials() {},
+  };
+
+  try {
+    const result = await auth(provider, { serverUrl: entry.url, scope: computeScopeUnion(entry.oauth?.scope, opts.scope), fetchFn: d.fetch });
+    if (result !== "REDIRECT" || !authorizationUrl) return { ok: false, reason: "unreachable", error: "the authorization server did not ask the person to sign in" };
+    return { ok: true, authorizationUrl: authorizationUrl.toString() };
+  } catch (err) {
+    if (err instanceof AuthorizationEndpointNotHttps) return { ok: false, reason: "unreachable", error: err.message };
+    return { ok: false, reason: "unreachable", error: shortError(err instanceof Error ? err.message : String(err), redact) };
+  }
+}
+
+/**
+ * The way back from the provider (§5.4 step 3): spend the `state`, check the browser that came back (above), check it is
+ * still what the person approved, exchange the code with the SDK, save the tokens and mount the server — or, for a phone
+ * sign-in that came back to a browser with no session, hold them for the person's yes (`ok: "confirm"`).
+ * `sessionPersonId` is the OpenLen session of the browser that came back, or null.
+ */
+export async function finishSignIn(
+  q: { state: string; code?: string; error?: string; iss?: string },
+  sessionPersonId: string | null,
+  d: FinishDeps,
+): Promise<FinishResult> {
+  if (!q.state) return { ok: false, reason: "unknown" };
+  await d.store.dropExpiredHeld(d.now()).catch(() => {});
+  const flow = await d.store.takeFlow(q.state, d.now());
+  if (typeof flow === "string") return { ok: false, reason: flow };
+  const server = flow.serverName;
+  // Who is at this browser. Nothing is exchanged for a browser that isn't the flow's person's (the flow is spent).
+  const samePerson = sessionPersonId !== null && sessionPersonId === flow.personId;
+  if (flow.startedFrom === "web" && !samePerson) return { ok: false, reason: "wrong_browser", server };
+  if (flow.startedFrom === "phone" && sessionPersonId !== null && !samePerson) return { ok: false, reason: "other_account", server };
+  // A phone sign-in in a browser that isn't signed in to OpenLen: the tokens wait for the person's yes on this page, and
+  // this one-time token (only its hash is stored) is what the page's form carries.
+  const confirmToken = samePerson ? null : randomBytes(32).toString("base64url");
+
+  const approved = approvedEntry(await d.readConfig(flow.personId), server);
+  if (!approved || approved.fingerprint !== flow.fingerprint) return { ok: false, reason: "changed", server };
+  const { entry } = approved;
+  if (q.error !== undefined) return { ok: false, reason: "denied", server };
+  if (!q.code) return { ok: false, reason: "exchange_failed", server };
+  // The page that asks a browser with no session names the account by its whole email (R1), so the account must have
+  // proved that email. A lookup that fails or finds nothing is the same refusal: nothing is exchanged and nothing held.
+  let email: string | null = null;
+  if (confirmToken !== null) {
+    const account = await d.accountOf(flow.personId).catch(() => null);
+    if (!account || !account.emailVerified || !account.email) return { ok: false, reason: "email_unverified", server };
+    email = account.email;
+  }
+  /** Where the sign-in is now, by the server's own discovery — never by the `iss` in the URL — for the next card. */
+  const changed = async (now: string | null): Promise<FinishResult> => ({
+    ok: false,
+    reason: "issuer_changed",
+    server,
+    personId: flow.personId,
+    issuer: now,
+    issuerHost: now === null ? null : issuerHostOf(entry, now),
+  });
+  // RFC 9207: an `iss` on the way back names who minted the code. Not the flow's issuer → a mix-up, never exchanged.
+  if (q.iss !== undefined && q.iss !== flow.issuer) {
+    const again = await discover(entry, d, (t) => t);
+    return changed(again.ok ? again.issuer : null);
+  }
+
+  const values = await d.resolveCredentials(flow.personId, credentialRefsOf(entry));
+  const resolved = resolveEntry(entry, values);
+  if (!resolved.ok) return { ok: false, reason: "exchange_failed", server };
+  const redact = makeRedactor(resolved.resolved);
+
+  const found = await discover(entry, d, redact);
+  if (!found.ok) return { ok: false, reason: "exchange_failed", server };
+  if (found.issuer !== flow.issuer) return changed(found.issuer);
+
+  const own = await entryClient(flow.personId, entry, flow.issuer, d);
+  if (isClientRefusal(own)) return { ok: false, reason: "exchange_failed", server };
+
+  const provider: OAuthClientProvider = {
+    ...flowProvider(flow.personId, server, entry, d, found.state, flow.issuer, flow.fingerprint, own),
+    tokens: () => undefined,
+    async saveTokens(tokens, ctx) {
+      // Held tokens are no connection: nothing but the confirm reads them (store.ts).
+      if (confirmToken !== null) return d.store.holdTokens(q.state, tokens, confirmHashOf(confirmToken));
+      await d.store.saveTokens(flow.personId, server, entry.url, ctx?.issuer ?? flow.issuer, flow.fingerprint, tokens);
+    },
+    saveCodeVerifier() {},
+    codeVerifier: () => flow.codeVerifier,
+    redirectToAuthorization() {
+      throw new Error("the way back never starts another sign-in");
+    },
+    // A rejected code (spent, replayed) must not cost the person the tokens an earlier sign-in saved: the SDK's
+    // recovery from `invalid_grant` drops credentials, and here there is nothing to drop.
+    invalidateCredentials() {},
+  };
+
+  try {
+    const result = await auth(provider, { serverUrl: entry.url, authorizationCode: q.code, iss: q.iss, scope: flow.scope ?? undefined, fetchFn: d.fetch });
+    if (result !== "AUTHORIZED") return { ok: false, reason: "exchange_failed", server };
+  } catch (err) {
+    if (AuthorizationServerMismatchError.isInstance(err)) return changed(found.issuer);
+    return { ok: false, reason: "exchange_failed", server };
+  }
+  if (confirmToken !== null && email !== null) return { ok: "confirm", server, personId: flow.personId, email, confirmToken };
+  await d.mount(flow.personId, server).catch(() => null);
+  return { ok: true, server };
+}
+
+/**
+ * The person's answer on the way-back page of a phone sign-in (final review F5): `connect` makes the held tokens the
+ * person's connection — if the entry is still the one they approved — and mounts it; `discard` («this isn't me») drops
+ * them and, as a courtesy, revokes them. The one-time token is spent either way; past the flow's ten minutes the tokens
+ * are gone. A browser signed in as another person is refused.
+ */
+export async function confirmSignIn(
+  confirmToken: string,
+  answer: "connect" | "discard",
+  sessionPersonId: string | null,
+  d: ConfirmDeps,
+): Promise<ConfirmResult> {
+  if (!confirmToken) return { ok: false, reason: "unknown" };
+  const held = await d.store.takeHeldTokens(confirmHashOf(confirmToken), d.now());
+  // Anyone else's held tokens past their ten minutes go too (this one's were taken, or cleared, just above).
+  await d.store.dropExpiredHeld(d.now()).catch(() => {});
+  if (typeof held === "string") return { ok: false, reason: held };
+  const server = held.serverName;
+  if (sessionPersonId !== null && sessionPersonId !== held.personId) {
+    void revokeHeld(held.personId, server, held.fingerprint, held.issuer, held.tokens, d);
+    return { ok: false, reason: "other_account", server };
+  }
+  if (answer === "discard") {
+    void revokeHeld(held.personId, server, held.fingerprint, held.issuer, held.tokens, d);
+    return { ok: false, reason: "discarded", server };
+  }
+  const approved = approvedEntry(await d.readConfig(held.personId), server);
+  if (!approved || approved.fingerprint !== held.fingerprint) return { ok: false, reason: "changed", server };
+  try {
+    // Into the connection made for exactly this URL, issuer and entry — or nowhere (store.ts throws).
+    await d.store.saveTokens(held.personId, server, approved.entry.url, held.issuer, held.fingerprint, held.tokens);
+  } catch {
+    return { ok: false, reason: "changed", server };
+  }
+  await d.mount(held.personId, server).catch(() => null);
+  return { ok: true, server };
+}
+
+/** Best-effort RFC 7009 for tokens that never became a connection: only through the entry they were signed in with
+ *  (its fingerprint, in the person's file) and the client the connection row keeps for it; nothing else is followed. */
+async function revokeHeld(
+  personId: string,
+  serverName: string,
+  fingerprint: string,
+  issuer: string,
+  tokens: StoredOAuthTokens,
+  d: OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> },
+): Promise<void> {
+  try {
+    const parsed = parseMcpConfig((await d.readConfig(personId)).text, { reservedServerNames: new Set() });
+    const entry = parsed.ok ? Object.values(parsed.config.servers).find((e) => entryFingerprint(e) === fingerprint) : undefined;
+    if (!entry) return;
+    const conn = await d.store.loadConnection(personId, serverName, entry.url, issuer, fingerprint);
+    if (!conn) return;
+    await revokeTokens(personId, { ...conn, tokens }, d, entry);
+  } catch {
+    // A courtesy: the held tokens are already gone from OpenLen.
+  }
+}
+
+/**
+ * After an `issuer_changed` (§10.2): the server waits for a sign-in at the issuer found NOW, so the next «Conectar» names
+ * it. It keeps why it waits (a lapsed sign-in, more permissions) and what scope it asked for; a server that is connected
+ * meanwhile is left as it is. The issuer is a server's own word: `markNeedsAuth` stores it only as an https URL.
+ */
+export async function rememberNewIssuer(
+  personId: string,
+  serverName: string,
+  issuer: string | null,
+  d: {
+    readStates(personId: string): Promise<ServerState[]>;
+    markNeedsAuth(personId: string, serverName: string, reason: SignInReason, issuer: string | null, scope: string | null): Promise<void>;
+  },
+): Promise<void> {
+  const state = (await d.readStates(personId)).find((s) => s.serverName === serverName);
+  if (state?.status === "connected") return;
+  const waiting = state?.status === "needs-auth";
+  await d.markNeedsAuth(personId, serverName, waiting ? (state.authReason ?? "first") : "first", issuer, waiting ? state.authScope : null);
+}
+
+/** The whole of revoking a token, from the first request to the last: past it the courtesy is abandoned. */
+export const REVOKE_TIMEOUT_MS = 5_000;
+
+/**
+ * «Desconectar» (or removing the entry from mcp.json, §5.4 step 5): delete the stored connection FIRST — from then on
+ * nothing can use it —, and only then try, in the background, to revoke its tokens (RFC 7009) if the authorization
+ * server advertises `revocation_endpoint`. That is a courtesy to the provider, so it never holds the person up (it is
+ * not awaited: Len's Write and the Herramientas page call this), it is cut off after `REVOKE_TIMEOUT_MS`, and whatever
+ * goes wrong in it is swallowed. `revocation` settles when the attempt is over and never rejects: for a test, or for a
+ * caller that wants to wait; the routes don't.
+ */
+export async function dropSignIn(
+  personId: string,
+  serverName: string,
+  d: OAuthDeps & { readConfig?(personId: string): Promise<StoredConfig> },
+  entryHint?: McpServerEntry,
+): Promise<{ dropped: boolean; issuer: string | null; revocation: Promise<void> }> {
+  const removed = await d.store.dropConnection(personId, serverName);
+  if (!removed) return { dropped: false, issuer: null, revocation: Promise.resolve() };
+  const revocation = removed.tokens ? revokeTokens(personId, removed, d, entryHint) : Promise.resolve();
+  return { dropped: true, issuer: removed.issuer, revocation };
+}
+
+/**
+ * The entry a connection is revoked through: the one the person signed in with — the `entryHint` of whoever removed or
+ * edited it, or an entry of the person's file, but only if its fingerprint is the connection's — else the server's own
+ * RFC 9728 discovery from the URL the tokens were issued for. The hint is never taken on faith: Len writes mcp.json, and
+ * an entry he edited in (a client and a metadata URL of his own, claiming Google's issuer) would be a revocation endpoint
+ * of his choosing for a person's real tokens.
+ */
+async function connectionEntry(
+  personId: string,
+  removed: OAuthConnection,
+  d: { readConfig?(personId: string): Promise<StoredConfig> },
+  entryHint: McpServerEntry | undefined,
+): Promise<McpServerEntry> {
+  if (removed.fingerprint !== null) {
+    if (entryHint && entryFingerprint(entryHint) === removed.fingerprint) return entryHint;
+    if (d.readConfig) {
+      const parsed = parseMcpConfig((await d.readConfig(personId)).text, { reservedServerNames: new Set() });
+      const own = parsed.ok ? Object.values(parsed.config.servers).find((e) => entryFingerprint(e) === removed.fingerprint) : undefined;
+      if (own) return own;
+    }
+  }
+  return { transport: "streamable-http", url: removed.serverUrl, headers: {}, enabled: true, startupTimeoutMs: 30_000, toolCallTimeoutMs: 60_000 };
+}
+
+/** Best-effort RFC 7009, for a connection that is already deleted: the token endpoint's answer doesn't matter. */
+async function revokeTokens(
+  personId: string,
+  removed: OAuthConnection,
+  d: OAuthDeps & { readConfig?(personId: string): Promise<StoredConfig> },
+  entryHint: McpServerEntry | undefined,
+): Promise<void> {
+  try {
+    const signal = AbortSignal.timeout(REVOKE_TIMEOUT_MS);
+    const bounded: OAuthDeps = { ...d, fetch: (input, init) => d.fetch(input, { ...init, signal }) };
+    const entry = await connectionEntry(personId, removed, d, entryHint);
+    const found = await discover(entry, bounded, (t) => t);
+    // Tokens go only to the authorization server they came from.
+    if (!found.ok || found.issuer !== removed.issuer) return;
+    const endpoint = (found.state.authorizationServerMetadata as { revocation_endpoint?: string } | undefined)?.revocation_endpoint;
+    if (!endpoint || !removed.tokens) return;
+    const own = await entryClient(personId, entry, removed.issuer, bounded);
+    const client = !isClientRefusal(own) && own ? own : removed.clientInfo;
+    const secret = (client as { client_secret?: string }).client_secret;
+    const tokens = [removed.tokens.refresh_token, removed.tokens.access_token].filter((t): t is string => typeof t === "string" && t.length > 0);
+    for (const token of tokens) {
+      const form = new URLSearchParams({ token, client_id: client.client_id, ...(secret ? { client_secret: secret } : {}) });
+      await bounded
+        .fetch(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: form.toString(),
+          redirect: "manual",
+        })
+        .then((r) => r.body?.cancel().catch(() => {}))
+        .catch(() => {});
+    }
+  } catch {
+    // Best-effort: the connection is gone whatever happens here.
+  }
+}

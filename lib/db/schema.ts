@@ -3523,7 +3523,7 @@ export const personMcpServerState = pgTable(
     instructions: text("instructions").notNull().default(""),
     hasResources: boolean("hasResources").notNull().default(false),
     listedAt: timestamp("listedAt", { mode: "date", withTimezone: true }),
-    status: text("status").$type<"connected" | "failed" | "waiting-credentials">().notNull(),
+    status: text("status").$type<"connected" | "failed" | "waiting-credentials" | "needs-auth">().notNull(),
     /** Redacted: never a credential value. */
     error: text("error"),
     /** The server said its list changed, or a call met a tool it no longer has: re-list outside the next turn. */
@@ -3531,6 +3531,57 @@ export const personMcpServerState = pgTable(
     /** Consecutive failed mounts: DeepSeek's reconnect budget (delays doubling 500 ms → 30 s, 10 attempts). */
     failures: integer("failures").notNull().default(0),
     attemptedAt: timestamp("attemptedAt", { mode: "date", withTimezone: true }),
+    // What a `needs-auth` server tells the person and Len (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4, §5.5):
+    // the authorization server it asked for, why it needs signing in again, and the scope it asked for. Null otherwise.
+    authIssuer: text("authIssuer"),
+    authReason: text("authReason").$type<import("@/lib/mcp-connectors/oauth/provider").SignInReason>(),
+    authScope: text("authScope"),
   },
   (t) => [primaryKey({ columns: [t.personId, t.serverName] })],
 );
+
+// OAUTH OF THE CONNECTORS (spec local 2026-11-17-oauth-de-conectores-mcp, §5.3, §5.4). Keep in step with
+// scripts/mcp-connectors-migrate-sql.ts.
+/** A person's sign-in to one connector: the OAuth client and its tokens, both encrypted with lib/integrations/crypto.ts.
+ *  Bound to the server's URL and to the authorization server's issuer: if either changes, the row is not used. */
+export const personMcpOAuth = pgTable(
+  "personMcpOAuth",
+  {
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    serverName: text("serverName").notNull(),
+    serverUrl: text("serverUrl").notNull(),
+    issuer: text("issuer").notNull(),
+    /** Encrypted JSON: the SDK's StoredOAuthClientInformation (client id, and its secret when it has one). */
+    clientInfo: text("clientInfo").notNull(),
+    /** Encrypted JSON: the SDK's StoredOAuthTokens. Null until the person finishes signing in, and after a failed refresh. */
+    tokens: text("tokens"),
+    /** The fingerprint of the entry the person approved and signed in with (config.ts `entryFingerprint`): the connection
+     *  is used only with an entry of that very fingerprint. Null (a row from before it was kept) is bound to no entry. */
+    fingerprint: text("fingerprint"),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.personId, t.serverName] })],
+);
+
+/** A sign-in in progress: the `state` the provider sends back, one use, ten minutes, tied to the person, the server, the
+ *  entry's fingerprint and the issuer. The PKCE `code_verifier` is encrypted. */
+export const personMcpOAuthFlows = pgTable("personMcpOAuthFlows", {
+  state: text("state").primaryKey(),
+  personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  serverName: text("serverName").notNull(),
+  fingerprint: text("fingerprint").notNull(),
+  issuer: text("issuer").notNull(),
+  codeVerifier: text("codeVerifier").notNull(),
+  scope: text("scope"),
+  expiresAt: timestamp("expiresAt", { mode: "date", withTimezone: true }).notNull(),
+  /** Set by the one take that wins (compare-and-swap); an expired flow is spent the same way. */
+  usedAt: timestamp("usedAt", { mode: "date", withTimezone: true }),
+  /** Where the sign-in was started (final review F5): "web" (the workspace's session) or "phone" (the app's key). A web
+   *  flow comes back only to a browser signed in as its person; a phone flow's tokens wait for that person's yes. */
+  startedFrom: text("startedFrom").notNull().default("web"),
+  /** Encrypted JSON: the tokens of a phone flow that came back to a browser with no session — NOT a connection yet, used by
+   *  nothing until the person confirms on the way-back page. Gone at the confirm, the «not me», or when the flow expires. */
+  heldTokens: text("heldTokens"),
+  /** SHA-256 (hex) of the one-time token the way-back page's form carries to confirm or discard the held tokens. */
+  confirmHash: text("confirmHash"),
+});

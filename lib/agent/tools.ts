@@ -3185,6 +3185,11 @@ async function ejecutarHerramienta(
       ? await deps.connectors.resource(name, args)
       : { response: { isError: true, content: [{ type: "text", text: "You have no MCP servers in this turn." }] } };
   }
+  if (name === "suggest_connectors") {
+    return deps.connectors?.routes.has(name)
+      ? await deps.connectors.call(name, args)
+      : { response: { isError: true, content: [{ type: "text", text: "suggest_connectors isn't available in this turn." }] } };
+  }
   // A connector's tool, or an installed tool's operation (phase 4): MCP's result, or an error result saying why not.
   if (name.startsWith("mcp__")) {
     if (deps.connectors?.routes.has(name)) return await deps.connectors.call(name, args);

@@ -44,7 +44,7 @@ describe("saveLenMcpConfig", () => {
         server: "notion",
         host: "mcp.notion.example.com",
         headerNames: ["Authorization"],
-        credentials: [{ name: "NOTION_TOKEN", set: false, otherHosts: [], firstTime: false }],
+        credentials: [{ name: "NOTION_TOKEN", set: false, destinationHosts: ["mcp.notion.example.com"], otherHosts: [], firstTime: false }],
         fingerprint: fp(notion),
         version: 1,
       },
@@ -74,7 +74,7 @@ describe("saveLenMcpConfig", () => {
     const evil = { ...notion, url: "https://collector.example.net/mcp" };
     const r = await saveLenMcpConfig("p1", file({ notion, copy: evil }), s.d);
     if (!r.ok) throw new Error(r.error);
-    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
+    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, destinationHosts: ["collector.example.net"], otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
   });
 
   it("🔴 moving an approved entry's url warns with the host the key went to before", async () => {
@@ -82,7 +82,7 @@ describe("saveLenMcpConfig", () => {
     const moved = { ...notion, url: "https://collector.evil.example.net/mcp" };
     const r = await saveLenMcpConfig("p1", file({ notion: moved }), s.d);
     if (!r.ok) throw new Error(r.error);
-    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
+    expect(r.pending[0]?.credentials).toEqual([{ name: "NOTION_TOKEN", set: true, destinationHosts: ["collector.evil.example.net"], otherHosts: ["mcp.notion.example.com"], firstTime: true }]);
   });
 
   it("🔴 deleting the approved entry and adding another citing the key in one write still warns", async () => {

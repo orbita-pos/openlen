@@ -1,6 +1,7 @@
 // «CONECTAR» (spec local 2026-11-06-conectores-mcp, §5.3): the person approves one server Len added or changed in their
 // ~/.len/mcp.json, exactly as the card showed it, typing the keys it was missing. Only the workspace's browser session:
-// the person themself, never Len, never another member.
+// the person themself, never Len, never another member. A server that turns out to need a sign-in answers where (spec
+// local 2026-11-17-oauth-de-conectores-mcp, §10.5): the card then offers «Conectar» naming that host.
 import { auth } from "@/auth";
 import { approveServer } from "@/lib/mcp-connectors/approval";
 import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
@@ -32,5 +33,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ name: s
     mount: (p, n) => mountServer(p, n, realMountDeps()),
   });
   if (!r.ok) return r.reason === "changed" ? json({ error: "changed" }, 409) : json({ error: "unknown_credential" }, 400);
-  return json({ state: r.state ? { status: r.state.status, tools: r.state.tools.length, error: r.state.error } : null });
+  return json({ state: r.state ? { status: r.state.status, tools: r.state.tools.length, error: r.state.error, ...(r.signIn ? { signIn: r.signIn } : {}) } : null });
 }

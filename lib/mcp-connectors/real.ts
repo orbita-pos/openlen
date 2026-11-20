@@ -3,13 +3,19 @@
 // management routes and the tests (which mock this module) agree.
 import "server-only";
 
+import { siteOrigin } from "@/lib/mcp/config";
+
 import { openMcp } from "./client";
 import { credentialNames, resolveCredentials, setCredential } from "./credentials";
 import { createGuardedFetch } from "./fetch";
 import type { LenFileDeps } from "./len-file";
 import type { ManageDeps } from "./manage";
 import { mountServer, type MountDeps } from "./mount";
-import { deleteServerState, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
+import { oauthEnabled } from "./oauth/enabled";
+import { dropSignIn } from "./oauth/flow";
+import type { OAuthDeps } from "./oauth/provider";
+import * as oauthStore from "./oauth/store";
+import { deleteServerState, markNeedsAuth, markStale, readMcpConfig, readServerStates, saveServerState, writeMcpConfig } from "./store";
 import type { CallDeps, TurnDeps } from "./turn";
 
 /** What OpenLen reads of one MCP answer before it stops: generous (a list of tools, an SSE stream), never unbounded. */
@@ -18,12 +24,36 @@ export const MCP_ANSWER_MAX_BYTES = 8 * 1024 * 1024;
 const guardedFetch = createGuardedFetch({ maxBytes: MCP_ANSWER_MAX_BYTES });
 
 export function realTurnDeps(): TurnDeps {
-  return { readConfig: readMcpConfig, readStates: readServerStates, now: () => new Date() };
+  return {
+    readConfig: readMcpConfig,
+    readStates: readServerStates,
+    personEmail: async (p) => {
+      const { personEmail } = await import("@/lib/tools/store");
+      return personEmail(p);
+    },
+    now: () => new Date(),
+  };
 }
 
 export function realCallDeps(): CallDeps {
   // Len's model looks at the screenshots his eyes take (lib/agent/usar-pagina.ts): it takes images.
-  return { resolveCredentials, open: openMcp, fetch: guardedFetch, markStale, modelTakesImages: true };
+  return {
+    resolveCredentials,
+    open: openMcp,
+    fetch: guardedFetch,
+    markStale,
+    markNeedsAuth,
+    mount: (p, n) => mountServer(p, n, realMountDeps()),
+    ...(oauthEnabled() && { oauth: realOAuthDeps() }),
+    modelTakesImages: true,
+  };
+}
+
+/** OAuth of the connectors (spec local 2026-11-17-oauth-de-conectores-mcp): the person's own rows, every request through
+ *  the GUARDED fetch (https, no redirects, a public IP pinned — never a plain `fetch`), OpenLen's own site for the return
+ *  address and the client metadata document, and the person's keys for an entry's client secret. */
+export function realOAuthDeps(): OAuthDeps {
+  return { store: oauthStore, fetch: guardedFetch, siteUrl: siteOrigin(), resolveCredentials, now: () => new Date() };
 }
 
 export function realMountDeps(): MountDeps {
@@ -35,6 +65,8 @@ export function realMountDeps(): MountDeps {
     open: openMcp,
     fetch: guardedFetch,
     now: () => new Date(),
+    // With `OPENLEN_MCP_OAUTH=0` there are no OAuth deps at all: a server that answers 401 is `failed`, as before.
+    ...(oauthEnabled() && { oauth: realOAuthDeps() }),
   };
 }
 
@@ -52,6 +84,7 @@ export function realLenFileDeps(): LenFileDeps {
     write: writeMcpConfig,
     installedServerNames,
     credentialNames: async (p) => (await credentialNames(p)).map((c) => c.name),
+    dropOAuth: (p, n, e) => dropSignIn(p, n, realOAuthDeps(), e),
   };
 }
 
@@ -65,6 +98,8 @@ export function realManageDeps(): ManageDeps {
     setCredential,
     installedServerNames,
     mount: (p, n) => mountServer(p, n, realMountDeps()),
+    dropOAuth: (p, n, e) => dropSignIn(p, n, realOAuthDeps(), e),
+    oauthServers: oauthStore.listConnectedServers,
   };
 }
 

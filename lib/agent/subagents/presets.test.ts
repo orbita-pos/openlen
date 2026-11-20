@@ -16,6 +16,7 @@ const all = [
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
   "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
+  "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events",
 ].map((name) => ({ name }));
 const names = (p: SubagentPreset, plan = false) => childToolDeclarations(all, p, plan).map((d) => d.name);
 
@@ -36,6 +37,19 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
 
   it("no child proposes a «Crear» card (DeepSeek: «Cards are offered in the main conversation only»)", () => {
     for (const p of SUBAGENT_PRESETS) expect(names(p)).not.toContain("propose_action");
+  });
+
+  // The person is shown a Connect card (spec local 2026-11-17-oauth-de-conectores-mcp, §5.5, §6), and a child's events
+  // never reach the person: a child told «the person is shown a card» would say so to nobody.
+  it("🔴 no child offers a connector or signs in to one: suggest_connectors and mcp__<server>__authenticate are the main conversation's", async () => {
+    const { SUGGEST_CONNECTORS_TOOL } = await import("@/lib/mcp-connectors/tool-names");
+    expect(SUGGEST_CONNECTORS_TOOL).toBe("suggest_connectors");
+    for (const p of SUBAGENT_PRESETS) {
+      for (const plan of [false, true]) {
+        expect(names(p, plan)).not.toContain(SUGGEST_CONNECTORS_TOOL);
+        expect(names(p, plan)).not.toContain("mcp__cal__authenticate");
+      }
+    }
   });
 
   it("children keep send_message (to Len) and lose subagent_fork, interrupt_agent and list_agents (depth 1)", () => {
@@ -114,6 +128,10 @@ describe("custom child types", () => {
     const type = p.childTypeOf("reviewer", types)!;
     expect(p.childToolsFor(all, type, false).map((d) => d.name)).toEqual(["Read", "Write", "skill"]);
     expect(p.childToolsFor(all, type, true).map((d) => d.name)).toEqual(["Read", "skill"]);
+    const open = resolveAgentTypes({ project: [{ name: "helper", text: "---\nname: helper\ndescription: Helps\nomitLenMd: true\n---\nHelp.", updatedAt: new Date(0) }], personal: [] });
+    const helper = p.childTypeOf("helper", open)!;
+    expect(p.childToolsFor(all, helper, false).map((d) => d.name)).not.toContain("suggest_connectors");
+    expect(p.childToolsFor(all, helper, false).map((d) => d.name)).not.toContain("mcp__cal__authenticate");
     expect(p.omitsLenMdFor(type)).toBe(true);
     expect(p.isReadOnlyFor(type, false)).toBe(false);
     const prompt = p.childSystemPromptFor("LEN\n- guide", type, "guide");

@@ -562,4 +562,28 @@ describe("the manual and ~/.len/mcp.json", () => {
     expect(manual).not.toContain("~/.len/mcp.json");
     expect(manual).not.toContain("Herramientas → Conectores");
   });
+  // Final review, F2 (spec local 2026-11-17-oauth-de-conectores-mcp, §8): OPENLEN_MCP_OAUTH=0 is today's behaviour, prompt
+  // included. Golden texts: the section as master has it (no OAuth), and as this branch has it with the switch on.
+  const MASTER_SECTION = [
+    "THE PERSON'S MCP SERVERS (~/.len/mcp.json)",
+    '- ~/.len/mcp.json lists the MCP servers of the person you are talking to, for all their projects: {"servers": {"<name>": {"transport": "streamable-http", "url": "https://…", "headers": {"Authorization": "Bearer ${credential:NAME}"}}}}. Only https:// servers (no stdio).',
+    "- You never see or write a key: a header that carries one is written as ${credential:NAME}, and the person types its value in OpenLen. A key in clear is refused.",
+    "- A server you add or whose url or headers you change waits for the person's approval in a card OpenLen shows under your answer; it doesn't connect until they approve it.",
+    "- Its tools reach you from the next turn as mcp__<server>__<tool>, and list_mcp_resources, list_mcp_resource_templates and read_mcp_resource read its resources. The turn's context says which servers aren't connected and why.",
+    "- When asked to send an email from chat or how to enable sending, check the tools available this turn. If no email-sending tool is available in this chat, explain that the person can open OpenLen in a browser and authorize a connector with sending permission under Tools → Connectors (Herramientas → Conectores). If their email connector is already configured but unavailable, use its status in this turn to explain the next step. Say the email was sent only after the sending tool confirms success.",
+  ];
+  const OAUTH_LINE =
+    '- A server that uses OAuth can carry an optional "oauth": {"scope": "…", "clientId": "…", "clientSecret": "${credential:NAME}", "authorizationServer": ["https://…"], "authServerMetadataUrl": "https://…"} block (or none when it discovers by 401 WWW-Authenticate); while it needs the person to sign in (needs-auth) it exposes mcp__<server>__authenticate, which shows them a "Connect" button.';
+  const sectionOf = (manual: string) => manual.slice(manual.indexOf("THE PERSON'S MCP SERVERS"));
+
+  it("🔴 with OPENLEN_MCP_OAUTH=0 the section is master's, byte for byte", () => {
+    const manual = buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "1", OPENLEN_MCP_OAUTH: "0" });
+    expect(sectionOf(manual)).toBe(MASTER_SECTION.join("\n"));
+    expect(manual).not.toContain("authenticate");
+  });
+
+  it("🔴 with the switch on the section is this branch's: master's plus the OAuth line, in its place", () => {
+    const manual = buildManualDeLaPlataforma({ ...process.env, OPENLEN_MCP: "1", OPENLEN_MCP_OAUTH: "1" });
+    expect(sectionOf(manual)).toBe([...MASTER_SECTION.slice(0, 5), OAUTH_LINE, MASTER_SECTION[5]].join("\n"));
+  });
 });

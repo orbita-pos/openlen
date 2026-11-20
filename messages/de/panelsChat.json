@@ -723,7 +723,36 @@
     "failed": "Verbindung fehlgeschlagen: {error}",
     "changed": "Es hat sich inzwischen geändert: sieh es dir unter Tools noch einmal an",
     "dismissed": "Nicht verbunden. Du kannst es später unter Tools freigeben.",
-    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust"
+    "firstTime": "Dein Schlüssel {name} wurde noch nie an {host} gesendet: gib ihn nur frei, wenn du diesem Server vertraust",
+    "signInAt": "Bei {issuer} anmelden",
+    "signInAgainAt": "Erneut bei {issuer} anmelden",
+    "morePermissionsAt": "Benötigt weitere Berechtigungen bei {issuer}",
+    "oauthConnected": "Verbunden",
+    "suggestTitle": "{name} ({host}) verbinden",
+    "signInOnServerPage": "Melde dich auf der eigenen Anmeldeseite des Servers an",
+    "signInAgainOnServerPage": "Melde dich erneut auf der eigenen Anmeldeseite des Servers an",
+    "morePermissionsOnServerPage": "Braucht mehr Berechtigungen, abgefragt auf der eigenen Anmeldeseite des Servers",
+    "sendsToSignIn": "Dein Schlüssel {name} wird an die Anmeldeseite des Servers gesendet",
+    "tryAgain": "Erneut versuchen",
+    "openConnectors": "Konnektoren in Tools öffnen",
+    "errors": {
+      "popupBlocked": "Dein Browser hat das Anmeldefenster blockiert. Erlaube Pop-ups für OpenLen und versuche es erneut.",
+      "unsafeUrl": "Der Server hat eine Anmeldeadresse geschickt, die nicht sicher ist, deshalb hat OpenLen sie nicht geöffnet.",
+      "notApproved": "Dieser Konnektor ist noch nicht genehmigt. Genehmige ihn unter Tools bei den Konnektoren.",
+      "noClient": "OpenLen kann sich bei diesem Server noch nicht anmelden: Es braucht eine App, die beim Anmeldeanbieter des Servers registriert ist (oauth.clientId in mcp.json).",
+      "unreachable": "Die Anmeldung des Servers war nicht erreichbar. Versuche es gleich noch einmal.",
+      "expired": "Die Anmeldung hat zu lange gedauert und ist abgelaufen. Versuche es erneut.",
+      "lost": "Dieser Anmeldelink funktioniert nicht mehr. Versuche es erneut.",
+      "issuerChanged": "Die Anmeldeseite hat sich geändert, deshalb wurde nichts verbunden. Prüfe, wo sie jetzt ist, und versuche es noch einmal.",
+      "exchangeFailed": "Der Server hat die Anmeldung nicht abgeschlossen. Versuche es erneut.",
+      "wrongBrowser": "Die Anmeldung endete in einem Browser, der nicht bei deinem OpenLen-Konto angemeldet ist, deshalb wurde nichts verbunden. Versuche es noch einmal aus diesem Tab.",
+      "otherAccount": "Diese Anmeldung gehört zu einem anderen OpenLen-Konto, deshalb wurde nichts verbunden.",
+      "off": "Die Anmeldung bei Konnektoren ist ausgeschaltet.",
+      "unauthorized": "Deine OpenLen-Sitzung ist beendet. Lade die Seite neu und versuche es erneut.",
+      "notAvailable": "Dieser Konnektor ist nicht verfügbar.",
+      "configUnreadable": "Deine Konnektoren-Datei kann nicht gelesen werden. Korrigiere sie unter Tools bei den Konnektoren.",
+      "failed": "Anmeldung nicht möglich. Versuche es erneut."
+    }
   },
   "ownAssistant": {
     "card": {

@@ -674,6 +674,8 @@ export default defineConfig({
       // Len's MCP connectors (spec local 2026-11-06-conectores-mcp). LISTA BLANCA.
       "lib/mcp-connectors/**/*.test.ts",
       "app/api/mcp-connectors/**/*.test.ts",
+      // OpenLen's Client ID Metadata Document (spec local 2026-11-17-oauth-de-conectores-mcp, §5.2). LISTA BLANCA.
+      "app/oauth/**/*.test.ts",
       // The game mode (spec local 2026-11-05-modo-juego-design). LISTA BLANCA.
       "lib/games/**/*.test.ts",
       "app/api/games/**/*.test.ts",
