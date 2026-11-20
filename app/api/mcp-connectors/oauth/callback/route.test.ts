@@ -1,8 +1,8 @@
 // @vitest-environment node
 //
-// The OAuth return page and OpenLen's Client ID Metadata Document (spec local 2026-11-17-oauth-de-conectores-mcp, §5.2,
-// §5.4 step 3, §10.1): minimal HTML with `postMessage` and strict headers, never echoing `code` or a token, and
-// `/oauth/mcp-client.json` naming its own URL as `client_id`.
+// The OAuth return page (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4 step 3, §10.1): minimal HTML with
+// `postMessage` and strict headers, never echoing `code` or a token. (OpenLen's Client ID Metadata Document is tested
+// beside its route, app/oauth/mcp-client.json/route.test.ts.)
 import vm from "node:vm";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -47,7 +47,6 @@ vi.mock("@/lib/mcp-connectors/oauth/flow", () => ({
 
 const { auth } = await import("@/auth");
 const { GET } = await import("./route");
-const { GET: getClientMetadata } = await import("@/app/oauth/mcp-client.json/route");
 
 beforeEach(() => {
   vi.mocked(auth as unknown as () => Promise<unknown>).mockResolvedValue({ user: { id: "u1" } });
@@ -239,20 +238,3 @@ describe("what the return page's script does", () => {
   });
 });
 
-describe("GET /oauth/mcp-client.json", () => {
-  it("serves OpenLen's Client ID Metadata Document with client_id equal to its own URL and public cache", async () => {
-    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://openlen.com");
-    const res = getClientMetadata();
-    expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe("public, max-age=3600");
-    const doc = await res.json();
-    expect(doc).toEqual({
-      client_id: "https://openlen.com/oauth/mcp-client.json",
-      client_name: "OpenLen",
-      redirect_uris: ["https://openlen.com/api/mcp-connectors/oauth/callback"],
-      grant_types: ["authorization_code", "refresh_token"],
-      response_types: ["code"],
-      token_endpoint_auth_method: "none",
-    });
-  });
-});
