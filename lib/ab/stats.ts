@@ -29,6 +29,9 @@ export const HARM_MIN_DURATION_HOURS = 24;
 export const HARM_MIN_CONTROL_CONVERSIONS = 5;
 export const HARM_DROP_RATIO = 0.70;
 export const HARM_PROBABILITY = 0.95;
+/** The harm brake needs an ALWAYS-VALID test too, much stricter than the winner's: the evaluator looks every 30 minutes
+ *  for three weeks, and a brake that fires on noise tells the owner their change hurt them when it didn't. */
+export const HARM_MAX_ALWAYS_VALID_P = 0.01;
 
 export const SRM_MIN_TOTAL_VIEWS = 200;
 export const SRM_CHI2_CRITICAL = 10.828; // p = 0.001 for df = 1
@@ -224,6 +227,39 @@ export function sequentialAlwaysValidP(
   return Math.min(1, 1 / lambda);
 }
 
+/** Standard normal CDF (Abramowitz & Stegun 7.1.26 on erf, absolute error < 1.5e-7). */
+function normalCdf(x: number): number {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const erf = 1 - poly * Math.exp(-(x * x) / 2);
+  return 0.5 * (1 + (x >= 0 ? erf : -erf));
+}
+
+/** Always-valid sequential p-value for HARM — the one-sided mirror of `sequentialAlwaysValidP` (review item 25).
+ *
+ *  Null: B converts no worse than A (θ = pB − pA ≥ 0). The mixture over the harmful side only, θ < 0, of the
+ *  likelihood ratios, with the same N(0, τ²) prior folded onto that side:
+ *    Λ = 2 · Λ₂ · Φ(−zτ),  Λ₂ = √(V/(V+τ²)) · exp(τ²D²/(2V(V+τ²))),  zτ = Dτ/√(V(V+τ²)),  D = pB − pA, V = pooled variance.
+ *  Under θ = 0 each ratio has mean 1, so Λ is a non-negative martingale and P(Λ ever ≥ 1/α) ≤ α however often it is looked
+ *  at (Ville). B at or above A can never be harm: p = 1. */
+export function sequentialHarmP(nA: number, cA: number, nB: number, cB: number): number {
+  if (nA < 10 || nB < 10) return 1;
+  const pA = cA / nA;
+  const pB = cB / nB;
+  const diff = pB - pA;
+  if (diff >= 0) return 1;
+  const pooled = (cA + cB) / (nA + nB);
+  if (pooled <= 0 || pooled >= 1) return 1;
+  const variance = pooled * (1 - pooled) * (1 / nA + 1 / nB);
+  if (variance <= 0) return 1;
+  // The same mixing variance as the winner's test: effects of ~25% of the baseline rate.
+  const tauSq = Math.max(0.0004, Math.pow(0.25 * pooled, 2));
+  const z = (diff * Math.sqrt(tauSq)) / Math.sqrt(variance * (variance + tauSq)); // negative here
+  const lambda = 2 * Math.sqrt(variance / (variance + tauSq)) * Math.exp((z * z) / 2) * normalCdf(-z);
+  if (!Number.isFinite(lambda) || lambda <= 0) return 1;
+  return Math.min(1, 1 / lambda);
+}
+
 /** Pearson chi-square (df = 1) for Sample Ratio Mismatch against expected splitBps. */
 export function computeSrmChi2(nA: number, nB: number, splitBps: number): number {
   const total = nA + nB;
@@ -256,35 +292,164 @@ export interface EvaluateAbStatsInput {
   readonly maxDurationDays?: number;
 }
 
-export function evaluateAbStats(input: EvaluateAbStatsInput): AbStatsResult {
+/** The numbers of the Bayesian posterior, each computed on first use: a verdict that the cheap gates (sample, time,
+ *  always-valid tests) already settle never pays for the quadratures. */
+interface Posterior {
+  probBBeatsA(): number;
+  probHarm30(): number;
+  expectedLossB(): number;
+  expectedLossA(): number;
+}
+
+function lazyPosterior(nA: number, cA: number, nB: number, cB: number): Posterior {
+  const aA = PRIOR_ALPHA + cA;
+  const bA = PRIOR_BETA + (nA - cA);
+  const aB = PRIOR_ALPHA + cB;
+  const bB = PRIOR_BETA + (nB - cB);
+  const memo = <T>(f: () => T): (() => T) => {
+    let done = false;
+    let value: T;
+    return () => {
+      if (!done) {
+        value = f();
+        done = true;
+      }
+      return value;
+    };
+  };
+  return {
+    probBBeatsA: memo(() => probBetaExceedsScaled(aA, bA, aB, bB, 1)),
+    // P(pB < 0.70 * pA) = 1 - P(pB > 0.70 * pA)
+    probHarm30: memo(() => 1 - probBetaExceedsScaled(aA, bA, aB, bB, HARM_DROP_RATIO)),
+    expectedLossB: memo(() => expectedLossChooseB(aA, bA, aB, bB)),
+    expectedLossA: memo(() => expectedLossChooseB(aB, bB, aA, bA)),
+  };
+}
+
+interface Counts {
+  readonly nA: number;
+  readonly cA: number;
+  readonly nB: number;
+  readonly cB: number;
+  readonly durationHours: number;
+  readonly maxHours: number;
+  readonly splitBps: number;
+}
+
+function countsOf(input: EvaluateAbStatsInput): Counts {
   const nA = Math.max(0, Math.floor(input.viewsA));
   const nB = Math.max(0, Math.floor(input.viewsB));
-  const cA = Math.min(nA, Math.max(0, Math.floor(input.conversionsA)));
-  const cB = Math.min(nB, Math.max(0, Math.floor(input.conversionsB)));
-  const durationHours = Math.max(0, input.durationHours);
-  const maxHours = (input.maxDurationDays ?? MAX_DURATION_DAYS) * 24;
+  return {
+    nA,
+    nB,
+    cA: Math.min(nA, Math.max(0, Math.floor(input.conversionsA))),
+    cB: Math.min(nB, Math.max(0, Math.floor(input.conversionsB))),
+    durationHours: Math.max(0, input.durationHours),
+    maxHours: (input.maxDurationDays ?? MAX_DURATION_DAYS) * 24,
+    splitBps: input.splitBps,
+  };
+}
+
+interface Decision {
+  readonly verdict: AbVerdict;
+  readonly winner: AbVariant | null;
+  readonly reason?: AbInconclusiveReason;
+}
+
+/** THE VERDICT. Cheap gates first, the posterior only when they pass (and only the parts the decision reads), so a
+ *  simulation can ask it every 30 minutes for three weeks (stats.test.ts does). Order: uneven traffic blocks everything;
+ *  then the harm brake; then a winner. Both the brake and the winner need an ALWAYS-VALID test, because the evaluator
+ *  looks every 30 minutes: a fixed-horizon p-value or a posterior threshold alone would fire on noise sooner or later. */
+function decide(c: Counts, post: Posterior): Decision {
+  const { nA, cA, nB, cB, durationHours, maxHours } = c;
+  const srmWarning = nA + nB >= SRM_MIN_TOTAL_VIEWS && computeSrmChi2(nA, nB, c.splitBps) > SRM_CHI2_CRITICAL;
+
+  if (srmWarning) {
+    // No winner can be declared on a split that isn't the one asked for — but the experiment doesn't wait for ever: at the
+    // end of ITS time it closes as «no result, uneven traffic», and the owner is told (review item 24).
+    return durationHours >= maxHours
+      ? { verdict: "inconclusive", winner: null, reason: "uneven_traffic" }
+      : { verdict: "srm_blocked", winner: null };
+  }
+
+  if (
+    nA >= HARM_MIN_VIEWS_PER_VARIANT &&
+    nB >= HARM_MIN_VIEWS_PER_VARIANT &&
+    durationHours >= HARM_MIN_DURATION_HOURS &&
+    cA >= HARM_MIN_CONTROL_CONVERSIONS &&
+    sequentialHarmP(nA, cA, nB, cB) <= HARM_MAX_ALWAYS_VALID_P &&
+    post.probHarm30() >= HARM_PROBABILITY
+  ) {
+    return { verdict: "harm_stop", winner: "a" };
+  }
+
+  if (
+    nA >= MIN_VIEWS_PER_VARIANT &&
+    nB >= MIN_VIEWS_PER_VARIANT &&
+    cA + cB >= MIN_TOTAL_CONVERSIONS &&
+    durationHours >= MIN_DURATION_HOURS &&
+    sequentialAlwaysValidP(nA, cA, nB, cB) <= MAX_ALWAYS_VALID_P
+  ) {
+    const absLift = Math.abs(relativeLiftOf(nA, cA, nB, cB));
+    if (
+      absLift >= MIN_RELATIVE_LIFT &&
+      cB >= MIN_LEADER_CONVERSIONS &&
+      post.probBBeatsA() >= WIN_PROBABILITY &&
+      post.expectedLossB() <= MAX_EXPECTED_LOSS
+    ) {
+      return { verdict: "winner_b", winner: "b" };
+    }
+    if (
+      absLift >= MIN_RELATIVE_LIFT &&
+      cA >= MIN_LEADER_CONVERSIONS &&
+      1 - post.probBBeatsA() >= WIN_PROBABILITY &&
+      post.expectedLossA() <= MAX_EXPECTED_LOSS
+    ) {
+      return { verdict: "winner_a", winner: "a" };
+    }
+  }
+  if (durationHours >= maxHours) return { verdict: "inconclusive", winner: null };
+  return { verdict: "collecting", winner: null };
+}
+
+function relativeLiftOf(nA: number, cA: number, nB: number, cB: number): number {
+  const rateA = nA > 0 ? cA / nA : 0;
+  const rateB = nB > 0 ? cB / nB : 0;
+  if (rateA > 0) return (rateB - rateA) / rateA;
+  const meanA = (PRIOR_ALPHA + cA) / (PRIOR_ALPHA + PRIOR_BETA + nA);
+  const meanB = (PRIOR_ALPHA + cB) / (PRIOR_ALPHA + PRIOR_BETA + nB);
+  return meanA > 0 ? (meanB - meanA) / meanA : 0;
+}
+
+/** Only the verdict — what the evaluator's decision comes down to — without computing the numbers the card shows. For
+ *  simulations of the evaluator's cadence. `evaluateAbStats(x).verdict` is always the same as `evaluateAbVerdict(x).verdict`. */
+export function evaluateAbVerdict(input: EvaluateAbStatsInput): Decision {
+  const c = countsOf(input);
+  return decide(c, lazyPosterior(c.nA, c.cA, c.nB, c.cB));
+}
+
+export function evaluateAbStats(input: EvaluateAbStatsInput): AbStatsResult {
+  const c = countsOf(input);
+  const { nA, cA, nB, cB, durationHours } = c;
+  const post = lazyPosterior(nA, cA, nB, cB);
+  const decision = decide(c, post);
 
   const aA = PRIOR_ALPHA + cA;
   const bA = PRIOR_BETA + (nA - cA);
   const aB = PRIOR_ALPHA + cB;
   const bB = PRIOR_BETA + (nB - cB);
 
-  const probBBeatsA = probBetaExceedsScaled(aA, bA, aB, bB, 1);
+  const probBBeatsA = post.probBBeatsA();
   const probABeatsB = 1 - probBBeatsA;
-  // P(pB < 0.70 * pA) = 1 - P(pB > 0.70 * pA)
-  const probHarm30 = 1 - probBetaExceedsScaled(aA, bA, aB, bB, HARM_DROP_RATIO);
-  const expectedLossB = expectedLossChooseB(aA, bA, aB, bB);
-  const expectedLossA = expectedLossChooseB(aB, bB, aA, bA);
   const alwaysValidP = sequentialAlwaysValidP(nA, cA, nB, cB);
+  const harmAlwaysValidP = sequentialHarmP(nA, cA, nB, cB);
 
-  const srmChi2 = computeSrmChi2(nA, nB, input.splitBps);
+  const srmChi2 = computeSrmChi2(nA, nB, c.splitBps);
   const srmWarning = nA + nB >= SRM_MIN_TOTAL_VIEWS && srmChi2 > SRM_CHI2_CRITICAL;
 
-  const rateA = nA > 0 ? cA / nA : 0;
-  const rateB = nB > 0 ? cB / nB : 0;
   const meanA = aA / (aA + bA);
   const meanB = aB / (aB + bB);
-  const relativeLift = rateA > 0 ? (rateB - rateA) / rateA : meanA > 0 ? (meanB - meanA) / meanA : 0;
+  const relativeLift = relativeLiftOf(nA, cA, nB, cB);
 
   // Delta-method 95% credible interval for relative lift (pB - pA) / pA using posterior moments.
   const varA = (aA * bA) / ((aA + bA) ** 2 * (aA + bA + 1));
@@ -294,74 +459,22 @@ export function evaluateAbStats(input: EvaluateAbStatsInput): AbStatsResult {
   const liftCiLow = ratioMean - 1 - 1.96 * ratioSd;
   const liftCiHigh = ratioMean - 1 + 1.96 * ratioSd;
 
-  let verdict: AbVerdict = "collecting";
-  let winner: AbVariant | null = null;
-  let reason: AbInconclusiveReason | undefined;
-
-  if (srmWarning) {
-    // No winner can be declared on a split that isn't the one asked for — but the experiment doesn't wait for ever: at the
-    // end of ITS time it closes as «no result, uneven traffic», and the owner is told (review item 24).
-    if (durationHours >= maxHours) {
-      verdict = "inconclusive";
-      reason = "uneven_traffic";
-    } else {
-      verdict = "srm_blocked";
-    }
-  } else if (
-    nA >= HARM_MIN_VIEWS_PER_VARIANT &&
-    nB >= HARM_MIN_VIEWS_PER_VARIANT &&
-    durationHours >= HARM_MIN_DURATION_HOURS &&
-    cA >= HARM_MIN_CONTROL_CONVERSIONS &&
-    probHarm30 >= HARM_PROBABILITY
-  ) {
-    verdict = "harm_stop";
-    winner = "a";
-  } else if (
-    nA >= MIN_VIEWS_PER_VARIANT &&
-    nB >= MIN_VIEWS_PER_VARIANT &&
-    cA + cB >= MIN_TOTAL_CONVERSIONS &&
-    durationHours >= MIN_DURATION_HOURS &&
-    alwaysValidP <= MAX_ALWAYS_VALID_P
-  ) {
-    const absLift = Math.abs(relativeLift);
-    if (
-      probBBeatsA >= WIN_PROBABILITY &&
-      expectedLossB <= MAX_EXPECTED_LOSS &&
-      cB >= MIN_LEADER_CONVERSIONS &&
-      absLift >= MIN_RELATIVE_LIFT
-    ) {
-      verdict = "winner_b";
-      winner = "b";
-    } else if (
-      probABeatsB >= WIN_PROBABILITY &&
-      expectedLossA <= MAX_EXPECTED_LOSS &&
-      cA >= MIN_LEADER_CONVERSIONS &&
-      absLift >= MIN_RELATIVE_LIFT
-    ) {
-      verdict = "winner_a";
-      winner = "a";
-    } else if (durationHours >= maxHours) {
-      verdict = "inconclusive";
-    }
-  } else if (durationHours >= maxHours) {
-    verdict = "inconclusive";
-  }
-
   return {
-    verdict,
-    winner,
+    verdict: decision.verdict,
+    winner: decision.winner,
     probBBeatsA,
     probABeatsB,
-    probHarm30,
-    expectedLossB,
-    expectedLossA,
+    probHarm30: post.probHarm30(),
+    expectedLossB: post.expectedLossB(),
+    expectedLossA: post.expectedLossA(),
     relativeLift,
     liftCiLow,
     liftCiHigh,
     alwaysValidP,
+    harmAlwaysValidP,
     srmChi2,
     srmWarning,
     durationHours,
-    ...(reason ? { reason } : {}),
+    ...(decision.reason ? { reason: decision.reason } : {}),
   };
 }
