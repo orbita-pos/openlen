@@ -206,6 +206,15 @@ describe("VisualFrame", () => {
       expect((onContext.mock.calls[1]![0] as string).length).toBe(1500);
     });
 
+    it("🔴 the cut at the cap never splits an emoji, and a lone surrogate from the frame is replaced", () => {
+      const onContext = vi.fn();
+      const m = mount({ onContext });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "x".repeat(1499) + "😀" + "tail" });
+      m.fromFrame({ kind: "ol-visual:context", text: "a" + String.fromCharCode(0xd83d) + "b" });
+      expect(onContext.mock.calls).toEqual([["x".repeat(1499)], ["a" + String.fromCharCode(0xfffd) + "b"]]);
+    });
+
     it("an isolated frame (a visitor's own code) never reports context, click or not", () => {
       const onContext = vi.fn();
       const iso = mount({ isolated: true, onContext });

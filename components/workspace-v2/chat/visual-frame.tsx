@@ -13,7 +13,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { VISUAL_TOKENS } from "@/lib/agent/visuals/manual";
-import { VISUAL_CONTEXT_MAX_CHARS } from "@/lib/agent/visuals/model-context";
+import { cleanVisualContext } from "@/lib/agent/visuals/model-context";
 import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
 import { isFrameToParent, type ParentToFrame } from "@/lib/visuals/protocol";
 import type { ReplyWidget } from "@/lib/visuals/split-reply";
@@ -103,7 +103,7 @@ export function VisualFrame({
       } else if (d.kind === "ol-visual:context") {
         // What it reports goes with the person's next message, so it is gated like a prompt: only right after they
         // clicked into the frame. The click isn't used up (a visual reports its selection, then may ask Len something).
-        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) onContextRef.current?.(d.text.trim().slice(0, VISUAL_CONTEXT_MAX_CHARS));
+        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) onContextRef.current?.(cleanVisualContext(d.text));
       }
     }
     window.addEventListener("message", onMessage);

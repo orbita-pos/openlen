@@ -3063,6 +3063,42 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(promptDelModelo().match(/§/g)).toHaveLength(1500);
       });
 
+      // Postgres refuses a lone surrogate in a jsonb row, and the row's save is what a turn ends with.
+      const HIGH = String.fromCharCode(0xd83d);
+      const LOW = String.fromCharCode(0xde00);
+      const REPLACEMENT = String.fromCharCode(0xfffd);
+      const bienFormado = (t: string) => {
+        for (let i = 0; i < t.length; i++) {
+          const c = t.charCodeAt(i);
+          if (c >= 0xd800 && c <= 0xdbff) {
+            const next = t.charCodeAt(i + 1);
+            if (!(next >= 0xdc00 && next <= 0xdfff)) return false;
+            i++;
+          } else if (c >= 0xdc00 && c <= 0xdfff) return false;
+        }
+        return JSON.parse(JSON.stringify(t)) === t;
+      };
+
+      it("🔴 an emoji straddling the cap never leaves half of itself in what is stored or sent", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await pedirConContexto("§".repeat(1499) + "😀" + "cola"));
+        const guardado = guardada().transcript?.sentText ?? "";
+        expect(guardado).toBe(promptDelModelo());
+        expect(guardado).toContain("§".repeat(1499) + "\n</widget_context>");
+        expect(bienFormado(guardado)).toBe(true);
+      });
+
+      it("🔴 a lone surrogate sent straight in the body is replaced before it is stored", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await pedirConContexto(`fila ${HIGH} rota ${LOW} y 😀 entera`));
+        const guardado = guardada().transcript?.sentText ?? "";
+        expect(guardado).toBe(promptDelModelo());
+        expect(guardado).toContain(`fila ${REPLACEMENT} rota ${REPLACEMENT} y 😀 entera`);
+        expect(bienFormado(guardado)).toBe(true);
+      });
+
       it("BRAZO DE CONTROL: without it, or with something that isn't text, no fence and no sentText — the row of always", async () => {
         turno();
         mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);

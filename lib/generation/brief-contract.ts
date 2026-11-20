@@ -5,7 +5,7 @@ const GENERATION_BRIEF_COUNTER_THRESHOLD = GENERATION_BRIEF_MAX_LENGTH * 0.75;
 
 /** Prefix capped in UTF-16 units (the same units used by `maxLength`) without
  *  leaving a high surrogate detached from its low surrogate. */
-function utf16SafePrefix(value: string, maxLength: number): string {
+export function utf16SafePrefix(value: string, maxLength: number): string {
   let end = Math.min(value.length, Math.max(0, Math.floor(maxLength)));
   if (end > 0 && end < value.length) {
     const previous = value.charCodeAt(end - 1);

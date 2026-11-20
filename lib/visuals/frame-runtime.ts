@@ -133,7 +133,11 @@ export const FRAME_RUNTIME_JS = `(function () {
     if (typeof text === "string" && text.trim()) post({ kind: "ol-visual:prompt", text: text.slice(0, 2000) });
   };
   window.updateModelContext = function (text) {
-    post({ kind: "ol-visual:context", text: typeof text === "string" ? text.trim().slice(0, 1500) : "" });
+    var t = typeof text === "string" ? text.trim().slice(0, 1500) : "";
+    // The cut never leaves the first half of an emoji at its end (it would be a lone surrogate in a stored row).
+    var last = t.charCodeAt(t.length - 1);
+    if (last >= 0xd800 && last <= 0xdbff) t = t.slice(0, -1);
+    post({ kind: "ol-visual:context", text: t });
   };
   window.openLink = function (url) {
     post({ kind: "ol-visual:link", href: String(url) });
