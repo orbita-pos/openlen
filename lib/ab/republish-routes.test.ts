@@ -14,6 +14,10 @@ vi.mock("@/lib/db", async () => ({
   db: { select: () => ({ from: () => ({ where: async () => m.rows }) }) },
 }));
 
+// Loaded once, up here: importing a route pulls half the app, and doing it inside a test timed out under load.
+const internal = await import("@/app/api/internal/republish/route");
+const all = await import("@/app/api/admin/republish-all/route");
+
 beforeEach(() => {
   vi.clearAllMocks();
   m.rows = [{ id: "p1", userId: "u1", subdomain: "pan" }];
@@ -22,15 +26,13 @@ beforeEach(() => {
 
 describe("system republishes", () => {
   it("🔴 the internal republish keeps a live experiment (`abLive: keep`)", async () => {
-    const { POST } = await import("@/app/api/internal/republish/route");
-    const res = await POST(new Request("http://x/api/internal/republish", { method: "POST", body: JSON.stringify({ projectIds: ["p1"] }) }));
+    const res = await internal.POST(new Request("http://x/api/internal/republish", { method: "POST", body: JSON.stringify({ projectIds: ["p1"] }) }));
     expect(res.status).toBe(200);
     expect(m.publishProject).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", abLive: "keep" }));
   });
 
   it("🔴 republish-all keeps it too", async () => {
-    const { POST } = await import("@/app/api/admin/republish-all/route");
-    const res = await POST();
+    const res = await all.POST();
     expect(res.status).toBe(202);
     await vi.waitFor(() => expect(m.publishProject).toHaveBeenCalled());
     expect(m.publishProject).toHaveBeenCalledWith(expect.objectContaining({ projectId: "p1", abLive: "keep" }));
