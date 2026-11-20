@@ -15,6 +15,7 @@ const m = vi.hoisted(() => ({
   prepareFunctions: vi.fn(),
   buildLive: vi.fn(),
   publishToDir: vi.fn(),
+  prepareStripe: vi.fn(),
 }));
 vi.mock("@/lib/db", async () => {
   const s = await import("@/lib/db/schema");
@@ -29,7 +30,7 @@ vi.mock("@/lib/db", async () => {
 });
 vi.mock("@/lib/limits", () => ({ getUserPlan: async () => "pro" }));
 vi.mock("@/lib/functions/publish", () => ({ prepareFunctionsForPublish: m.prepareFunctions }));
-vi.mock("@/lib/stripe/publish", () => ({ storedTwins: async () => new Map(), prepareStripeForPublish: async () => null }));
+vi.mock("@/lib/stripe/publish", () => ({ storedTwins: async () => new Map(), prepareStripeForPublish: m.prepareStripe }));
 // Marks what control's head pass touched, so the test can tell that Variant B went through the same one.
 vi.mock("@/lib/publish/ensure-page-meta", () => ({ ensurePageMeta: (html: string) => `${html}<!--META-->` }));
 vi.mock("@/lib/branding/social-image", () => ({ ensureSocialOgImage: async (html: string) => html }));
@@ -81,6 +82,7 @@ beforeEach(async () => {
     ('p1','u1','Panadería','{"html":"<html>DRAFT</html>","settings":{}}','pan'),
     ('tool1','u1','Tool','{"html":"x","tool":{"bornAt":"2026-11-04T00:00:00Z"}}',null);`);
   m.prepareFunctions.mockResolvedValue(null);
+  m.prepareStripe.mockResolvedValue(null);
   m.publishToDir.mockRejectedValue(new Error("STOP-AFTER-CLAIM"));
 });
 
@@ -161,6 +163,59 @@ describe("with the flag on and a live experiment", () => {
     m.buildLive.mockResolvedValue(null);
     await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", abLive: "keep" })).rejects.toBeInstanceOf(AbExperimentRunningError);
     expect(m.publishToDir).not.toHaveBeenCalled();
+  });
+});
+
+describe("Variant B's Stripe ids are twinned too (G1+G3 review, item 15)", () => {
+  const sources = { data: { html: "<html>CONTROL no stripe</html>", settings: {} }, folder: { "/css/a.css": "a{}" } };
+  const spec = {
+    id: "ab_1234abcd",
+    targetPath: "/",
+    splitBps: 5000,
+    salt: "salt",
+    includeLocales: false,
+    variantB: {
+      html: '<html><a data-price="price_OnlyBtest">B</a></html>',
+      pages: [{ slug: "pricing", html: "<p>plink https://buy.stripe.com/test_PageOnlyB</p>" }],
+      files: [{ path: "/js/pay.js", content: 'const p = "prod_OnlyBtest";' }],
+    },
+  };
+  const twins = new Map([
+    ["price_OnlyBtest", "price_OnlyBlive"],
+    ["https://buy.stripe.com/test_PageOnlyB", "https://buy.stripe.com/live_PageOnlyB"],
+    ["prod_OnlyBtest", "prod_OnlyBlive"],
+  ]);
+
+  beforeEach(() => vi.stubEnv("OPENLEN_AB_TESTING", "1"));
+
+  it("🔴 what only B uses is looked for: B's home, pages and files are part of the texts the Stripe step reads", async () => {
+    await expect(
+      publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", sourcesOverride: sources, abExperiment: spec }),
+    ).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    const o = m.prepareStripe.mock.calls[0]![1] as { texts: string[] };
+    expect(o.texts).toEqual(expect.arrayContaining([spec.variantB.html, spec.variantB.pages[0]!.html, spec.variantB.files[0]!.content]));
+    // …and the control's own are still there
+    expect(o.texts).toContain("<html>CONTROL no stripe</html><!--META-->");
+  });
+
+  it("🔴 a price id only B uses comes out LIVE in B's baked documents, with no Stripe ref in control at all", async () => {
+    m.prepareStripe.mockResolvedValue({ preview: { plan: { create: {}, swaps: 3, unknownRefs: [], chargesEnabled: null, needsWrites: false, droppedImages: 0 }, accountName: null }, apply: async () => twins });
+    await expect(
+      publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", sourcesOverride: sources, abExperiment: spec }),
+    ).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    const call = m.publishToDir.mock.calls[0]![0] as { html: string; abExperiment: { variantB: { html: string; pages: { html: string }[]; files: { content: string }[] } } };
+    expect(call.abExperiment.variantB.html).toContain("price_OnlyBlive");
+    expect(call.abExperiment.variantB.html).not.toContain("price_OnlyBtest");
+    expect(call.abExperiment.variantB.pages[0]!.html).toContain("live_PageOnlyB");
+    expect(call.abExperiment.variantB.files[0]!.content).toContain("prod_OnlyBlive");
+    // control had nothing to swap
+    expect(call.html).toContain("CONTROL no stripe");
+  });
+
+  it("with no experiment the texts are exactly what they were", async () => {
+    await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
+    const o = m.prepareStripe.mock.calls[0]![1] as { texts: string[] };
+    expect(o.texts).toEqual(["<html>DRAFT</html><!--META-->"]);
   });
 });
 

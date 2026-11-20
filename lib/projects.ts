@@ -1031,7 +1031,20 @@ export async function publishProject(
   const stripe = await stripeModule.prepareStripeForPublish(params.projectId, {
     mode: ownerOrSystem,
     skipMissingSecrets: params.functions?.skipMissingSecrets === true,
-    texts: [html, ...splitPagesForPublish(project.data).publicPages.map((p) => p.html), ...Object.values(projectFiles)],
+    // Variant B is published too, and it can use a price, a product or a payment link that control doesn't: its documents
+    // are read for Stripe references like control's, or what only B uses would ship in test mode (G1+G3 review).
+    texts: [
+      html,
+      ...splitPagesForPublish(project.data).publicPages.map((p) => p.html),
+      ...Object.values(projectFiles),
+      ...(params.abExperiment
+        ? [
+            params.abExperiment.variantB.html,
+            ...(params.abExperiment.variantB.pages ?? []).map((p) => p.html),
+            ...(params.abExperiment.variantB.files ?? []).map((f) => f.content),
+          ]
+        : []),
+    ],
     liveFunctions: funciones?.functions ?? [],
   });
 
