@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { entryFingerprint, parseMcpConfig } from "@/lib/mcp-connectors/config";
 
 vi.mock("server-only", () => ({}));
+vi.mock("@/auth", () => ({ auth: async () => (fake.personId ? { user: { id: fake.personId } } : null) }));
 
 const fake = vi.hoisted(() => ({
   personId: "u1" as string | null,
@@ -242,13 +243,19 @@ describe("DELETE /api/mcp-connectors/[name]/oauth", () => {
     expect(fake.droppedWith).toEqual([]);
   });
 
-  // The phone's key is accepted here like on POST, so the answer carries CORS for the app and OPTIONS answers.
-  it("🔴 answers the phone app's origin like the POST does, and its preflight", async () => {
+  // Final review, M5: the phone never disconnects (that is the Herramientas page's): DELETE is the web session's only — the
+  // app's key is never read here and the answer carries no CORS for the app. Its POST still does (the preflight is shared).
+  it("🔴 is the web session's: an app key is refused, nothing is dropped, and the app's origin gets no CORS", async () => {
     const origin = "capacitor://localhost";
-    const res = await DELETE(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "DELETE", headers: { origin } }), { params: Promise.resolve({ name: "cal" }) });
-    expect(res.headers.get("access-control-allow-origin")).toBe(origin);
-    const pre = OPTIONS(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "OPTIONS", headers: { origin } }));
-    expect(pre.status).toBe(204);
-    expect(pre.headers.get("access-control-allow-methods")).toContain("DELETE");
+    fake.personId = null;
+    const keyed = await DELETE(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "DELETE", headers: { origin, authorization: "Bearer app-key" } }), {
+      params: Promise.resolve({ name: "cal" }),
+    });
+    expect(keyed.status).toBe(401);
+    expect(keyed.headers.get("access-control-allow-origin")).toBeNull();
+    expect(fake.droppedWith).toEqual([]);
+    const post = await POST(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "POST", headers: { origin } }), { params: Promise.resolve({ name: "cal" }) });
+    expect(post.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(OPTIONS(new Request("http://x/api/mcp-connectors/cal/oauth", { method: "OPTIONS", headers: { origin } })).status).toBe(204);
   });
 });

@@ -1,5 +1,7 @@
 // THE PERSON'S CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.7): what the «Conectores» section of the Herramientas
-// page reads. Never a header value or a key. Only the workspace's browser session.
+// page reads. Never a header value or a key. The workspace's browser session, or the phone's app key: the phone's
+// «Conectar» card reads it to learn that a sign-in finished, or that the person approved the server on the web (spec
+// local 2026-11-17-oauth-de-conectores-mcp, §10.1; final review M5).
 import { connectorsEnabled } from "@/lib/mcp-connectors/enabled";
 import { listView } from "@/lib/mcp-connectors/manage";
 import { realManageDeps } from "@/lib/mcp-connectors/real";
