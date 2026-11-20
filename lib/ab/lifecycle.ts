@@ -573,21 +573,37 @@ export async function finishPromotion(
 ): Promise<{ readonly outcome: BringOutcome; readonly settled: AbExperimentRow | null }> {
   await purgeExperimentEdge(subdomain, recorded, languages);
 
+  // CLAIM the bring before merging, like the owner's retry does (round 3, E): the dialog shows «Don't bring it in» as soon as the
+  // row is `promoted_b`, and a discard that lands while this tail merges would leave B in a draft whose bring was declined. A lost
+  // claim means a discard (or another bring) won: stop quietly — nothing is merged and nothing waits for Len.
+  const claimed = await claimBring(recorded.id).catch((err: unknown) => {
+    console.error("[ab] couldn't claim the promoted winner's bring", recorded.id, err);
+    return null;
+  });
+  if (!claimed) {
+    return { outcome: { state: "pending" }, settled: await getExperimentById(recorded.id).catch(() => null) };
+  }
+
   // Three-way merge Variant B into owner's draft.
   let outcome: BringOutcome = { state: "pending" };
   try {
-    outcome = await tryBringIntoDraft(recorded, ownerId, actorId);
+    outcome = await tryBringIntoDraft(claimed, ownerId, actorId);
   } catch (err) {
     console.error("[ab] bringing the promoted winner into the draft failed; it stays pending", recorded.id, err);
   }
   // A cleanup error settling the bring must not turn a successful promotion into a 500: B is live and recorded.
   let settled: AbExperimentRow | null = null;
   try {
-    settled = await settleBring(recorded, outcome);
+    if (outcome.state === "pending") {
+      // Not merged (a live Len turn, or the merge threw): the row goes back to a bring that is still waiting.
+      settled = await transitionBringState(claimed.id, ["bringing"], { bringState: "pending" });
+    } else {
+      settled = await settleBring(claimed, outcome);
+    }
   } catch (err) {
     console.error("[ab] settling the promoted winner's bring failed; it stays as it was", recorded.id, err);
   }
-  if (outcome.state === "pending") bringWhenLenIsDone(recorded, ownerId, actorId);
+  if (outcome.state === "pending") bringWhenLenIsDone(claimed, ownerId, actorId);
   return { outcome, settled };
 }
 

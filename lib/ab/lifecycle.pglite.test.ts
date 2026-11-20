@@ -345,6 +345,54 @@ describe("«Bring into draft» and «Don't bring it in» (item 26)", () => {
   });
 });
 
+describe("promote's own tail claims the bring too (round 3, E)", () => {
+  beforeEach(() => {
+    h.publishThroughGates.mockResolvedValue({ status: 200, body: { sha: "rel-promoted" } });
+  });
+
+  it("🔴 a discard that lands BEFORE the tail's merge wins: nothing is merged into the declined draft, and nothing waits for Len", async () => {
+    await winnerReady("ab_tail0001");
+    // the tail starts with the edge purge: the dialog's «Don't bring it in» arrives right there
+    h.purge.mockImplementationOnce(async () => {
+      await discardWinnerBring({ projectId: "p1", experimentId: "ab_tail0001" });
+    });
+    const r = await promote("ab_tail0001");
+    expect(h.merge).not.toHaveBeenCalled();
+    expect(h.waitForLen).not.toHaveBeenCalled();
+    expect(await getExperimentById("ab_tail0001")).toMatchObject({ status: "promoted_b", bringState: "declined" });
+    expect(r.experiment.bringState).toBe("declined");
+  });
+
+  it("🔴 a discard that arrives DURING the tail's merge is refused, and the bring ends brought", async () => {
+    await winnerReady("ab_tail0002");
+    let during: unknown;
+    h.merge.mockImplementation(async () => {
+      during = await discardWinnerBring({ projectId: "p1", experimentId: "ab_tail0002" }).catch((e: unknown) => e);
+      return { kind: "brought" };
+    });
+    const r = await promote("ab_tail0002");
+    expect(during).toMatchObject({ code: "invalid_state", status: 409 });
+    expect(r.bringState).toBe("brought");
+    expect(await getExperimentById("ab_tail0002")).toMatchObject({ bringState: "brought" });
+  });
+
+  it("a merge that meets a live Len turn, or throws, puts the row back as a waiting bring (never stuck on «bringing»)", async () => {
+    await winnerReady("ab_tail0003");
+    h.merge.mockResolvedValue({ kind: "busy" });
+    await promote("ab_tail0003");
+    expect((await getExperimentById("ab_tail0003"))!.bringState).toBe("pending");
+    await vi.waitFor(() => expect(h.waitForLen).toHaveBeenCalledWith("p1"));
+
+    await winnerReady("ab_tail0004", { projectId: "p2" });
+    h.merge.mockRejectedValue(new Error("guard exploded"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = await promoteVariantB({ projectId: "p2", experimentId: "ab_tail0004", ownerId: "u1", actorId: "u1" });
+    error.mockRestore();
+    expect(r.bringState).toBe("pending");
+    expect((await getExperimentById("ab_tail0004"))!.bringState).toBe("pending");
+  });
+});
+
 describe("a bring and a discard racing (review of G4+G5, minor 10)", () => {
   const open = (id: string, state = "pending", o: Record<string, unknown> = {}) =>
     insertExperiment(raw(), { id, status: "promoted_b", decisionStatus: "resolved", winnerVariant: "b", bringState: state, branch: `ab/${id}`, baseCommitOid: "base-1", ...o });
