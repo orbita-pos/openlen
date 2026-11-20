@@ -3,15 +3,13 @@
 // optionally applies the proposed Variant B HTML directly into the worktree copy
 // so the owner can inspect A vs B side-by-side and launch 50/50 in one click.
 // Cache effect: declared only when OPENLEN_AB_TESTING=1; never mutates prior turns.
-import { eq } from "drizzle-orm";
-
 import { abTestingEnabled } from "@/lib/ab/enabled";
-import { AbLifecycleError, createAbDraft } from "@/lib/ab/lifecycle";
+import { AbLifecycleError, cancelAbDraft, createAbDraft } from "@/lib/ab/lifecycle";
 import { normalizePrimaryMetric, normalizeTargetPath } from "@/lib/ab/store";
 import { commitAbWorktree } from "@/lib/ab/worktree";
 import { CLAVE_TOOL_RESULT, fallo } from "@/lib/agent/ficheros/resultado";
-import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
-import { db, schema } from "@/lib/db";
+import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
+import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 
@@ -53,20 +51,29 @@ export const CREATE_AB_VARIANT_DECLARATION = {
   },
 } as const;
 
+/** Variant B is written into the COPY through `guardarFichero`, the door Write and Edit use (review item 1): the page
+ *  gate (size, format, `data-slot-path` rejected, `data-op-id` stripped) and the compare-and-swap writer of
+ *  `projects.data`. A bare `UPDATE projects SET data` here would skip the gate and the CAS (invariant I4, pinned by
+ *  `lib/projects/escritores-de-data.test.ts`). */
 export async function runCreateAbVariant(
   session: AgentSession,
   args: Record<string, unknown>,
+  /** The turn's deps (the tool loop passes them); absent = the real ones. */
+  deps?: AgentDeps,
 ): Promise<ToolOutcome> {
-  if (!abTestingEnabled()) {
-    const r = fallo("A/B testing is not enabled on this server.");
+  const refuse = (msg: string): ToolOutcome => {
+    const r = fallo(msg);
     return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
+  };
+  if (!abTestingEnabled()) return refuse("A/B testing is not enabled on this server.");
+  // Apps, games and tools aren't static HTML. The declaration isn't offered there either (`declaracionesDeLaApp`), so
+  // this only answers a turn whose list was built before the project became one.
+  if (session.app || session.game || session.tool) {
+    return refuse("A/B testing supports static HTML sites (including multi-page), not apps, games or tools. Nothing was created.");
   }
   const name = typeof args.name === "string" ? args.name.trim() : "";
   const variantBHtml = typeof args.variant_b_html === "string" ? args.variant_b_html.trim() : "";
-  if (!name || !variantBHtml) {
-    const r = fallo("name and variant_b_html are required.");
-    return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
-  }
+  if (!name || !variantBHtml) return refuse("name and variant_b_html are required.");
 
   const hypothesis = typeof args.hypothesis === "string" ? args.hypothesis.trim() : null;
   const targetPath = normalizeTargetPath(
@@ -76,6 +83,7 @@ export async function runCreateAbVariant(
   const actorId = session.personId ?? session.userId;
 
   try {
+    // Refuses (not published, an app, a missing page, one already active) BEFORE it creates anything.
     const created = await createAbDraft({
       projectId: session.projectId,
       ownerId: session.userId,
@@ -87,31 +95,35 @@ export async function runCreateAbVariant(
     });
 
     if (created.copyProjectId) {
-      const [copyRow] = await db
-        .select({ data: schema.projects.data })
-        .from(schema.projects)
-        .where(eq(schema.projects.id, created.copyProjectId))
-        .limit(1);
-      if (copyRow?.data) {
-        const nextData =
-          targetPath === "/"
-            ? { ...copyRow.data, html: variantBHtml }
-            : {
-                ...copyRow.data,
-                pages: {
-                  ...(copyRow.data.pages ?? {}),
-                  [targetPath.slice(1)]: {
-                    ...(copyRow.data.pages?.[targetPath.slice(1)] ?? { title: name }),
-                    html: variantBHtml,
-                  },
-                },
-              };
-        await db
-          .update(schema.projects)
-          .set({ data: nextData, updatedAt: new Date() })
-          .where(eq(schema.projects.id, created.copyProjectId));
-        await commitAbWorktree(created.copyProjectId, session.userId, created.id);
+      const writerDeps = deps ?? (await import("@/lib/agent/tools")).realDeps();
+      const page = targetPath === "/" ? null : targetPath.slice(1);
+      const copy = await writerDeps.loadProject(created.copyProjectId, session.userId);
+      if (!copy) {
+        await cancelAbDraft({ projectId: session.projectId, experimentId: created.id }).catch(() => undefined);
+        return refuse("Could not open the Variant B copy. The test was not created.");
       }
+      // The copy is a hidden project of the same owner; the writer's session points at it, never at the owner's draft.
+      const copySession = {
+        projectId: created.copyProjectId,
+        userId: session.userId,
+        page,
+        ownerEmail: null,
+        imageEditsThisTurn: 0,
+        photoSearchesThisTurn: 0,
+        busquedasVaciasSeguidas: 0,
+      } satisfies AgentSession;
+      const { guardarFichero } = await import("@/lib/agent/herramientas-de-ficheros");
+      const ruta = rutaDePagina(page);
+      const saved = await guardarFichero(copySession, writerDeps, copy.data, ruta, variantBHtml, {
+        crea: false,
+        etiqueta: `create_ab_variant ${ruta}`,
+      });
+      if (!saved.ok) {
+        // A Variant B the gate refuses is no variant: the empty draft goes, and Len reads why.
+        await cancelAbDraft({ projectId: session.projectId, experimentId: created.id }).catch(() => undefined);
+        return refuse(`Variant B was not saved: ${saved.error}. The test was not created.`);
+      }
+      await commitAbWorktree(created.copyProjectId, session.userId, created.id);
     }
 
     const summary =
@@ -128,13 +140,12 @@ export async function runCreateAbVariant(
       },
     };
   } catch (err) {
-    const msg =
+    return refuse(
       err instanceof AbLifecycleError
         ? err.message
         : err instanceof Error
           ? err.message
-          : "Could not create A/B test draft.";
-    const r = fallo(msg);
-    return { response: { ok: false, error: r.error, [CLAVE_TOOL_RESULT]: r.texto } };
+          : "Could not create A/B test draft.",
+    );
   }
 }

@@ -370,3 +370,18 @@ describe("open npm in Len's manual", () => {
     expect(m).not.toContain("Nothing gets installed");
   });
 });
+
+describe("A/B testing is for static pages (review item 1)", () => {
+  const ON = { ...ENV, OPENLEN_AB_TESTING: "1" };
+  const names = (d: Record<string, unknown>[]) => d.map((x) => String(x.name));
+
+  it("🔴 with the flag on, a page is offered create_ab_variant and an app (or game, or tool: all are apps) is not", () => {
+    expect(names(buildFunctionDeclarations(ON, {}, "len", null))).toContain("create_ab_variant");
+    expect(names(buildFunctionDeclarations(ON, {}, "len", APP))).not.toContain("create_ab_variant");
+  });
+
+  it("with the flag off neither has it: the declarations are the ones people who don't use A/B always had", () => {
+    expect(names(buildFunctionDeclarations(ENV, {}, "len", null))).not.toContain("create_ab_variant");
+    expect(names(buildFunctionDeclarations(ENV, {}, "len", APP))).not.toContain("create_ab_variant");
+  });
+});

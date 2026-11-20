@@ -3249,7 +3249,7 @@ async function ejecutarHerramienta(
         return await runCreateAssistant(session, args);
       // Edge A/B testing: isolated Variant B draft on branch `ab/<id>` (Plan 3).
       case CREATE_AB_VARIANT:
-        return await runCreateAbVariant(session, args);
+        return await runCreateAbVariant(session, args, deps);
       case ASK_USER_QUESTION:
         return await toolAskUserQuestion(session, deps, args);
       // Edge Functions (fase 2): la tarjeta segura, por el canal de la pregunta.
