@@ -19,20 +19,23 @@ import { textosAsistente } from "./textos-asistente";
 
 // The tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14) read the web's own texts for what the web
 // already says — OpenLen's confirmations and the «Instalar» and «Crear» cards —, so both say the same thing.
-const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada,panelsChat,wsChrome}.json");
+const cargas = import.meta.glob<{ default: Record<string, unknown> }>("../../messages/*/{movil,llamada,panelsChat,wsChrome,modalsDeploy}.json");
 const sub = (o: Record<string, unknown>, k: string): Record<string, unknown> => (o[k] && typeof o[k] === "object" ? (o[k] as Record<string, unknown>) : {});
 
 async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
-  const [movil, llamada, panelsChat, wsChrome] = await Promise.all([
+  const [movil, llamada, panelsChat, wsChrome, modalsDeploy] = await Promise.all([
     cargas[`../../messages/${idioma}/movil.json`]!(),
     cargas[`../../messages/${idioma}/llamada.json`]!(),
     cargas[`../../messages/${idioma}/panelsChat.json`]!(),
     cargas[`../../messages/${idioma}/wsChrome.json`]!(),
+    cargas[`../../messages/${idioma}/modalsDeploy.json`]!(),
   ]);
+  // The Publish screen says what the web's Publish dialog says about an A/B test (review items 13, 14, 26).
+  const gestion = { ...textosGestion[idioma], abRunning: sub(modalsDeploy.default, "abRunning"), abBringPending: sub(modalsDeploy.default, "abBringPending") };
   const herramientas = { ...textosHerramientas[idioma], tools: sub(wsChrome.default, "tools"), installCard: sub(panelsChat.default, "installCard"), toolCard: sub(panelsChat.default, "toolCard"), mcpApproval: sub(panelsChat.default, "mcpApproval") };
   // The person's own assistant's tab (phase 5): her place's texts are the web's own (`own`).
   const asistente = { ...textosAsistente[idioma], own: sub(panelsChat.default, "ownAssistant") };
-  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion: textosGestion[idioma], avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente }, llamada: llamada.default };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion, avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {

@@ -35,7 +35,8 @@ export async function cargarGestion(c: ClienteDeOpenLen, id: string, signal?: Ab
 export function comprobarNombre(c: ClienteDeOpenLen, subdomain: string, signal?: AbortSignal) {
   return pedir<{ available: boolean; reason?: string }>(c, "/api/subdomains/check", { ...post({ subdomain }), signal });
 }
-export interface ConfirmacionPublicar { acceptSecurityFingerprint?: string; confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptLenWatchFix?: string }
+// `stopActiveAb`: the owner confirmed that publishing stops the A/B test running on the page (428 ab_experiment_running).
+export interface ConfirmacionPublicar { acceptSecurityFingerprint?: string; confirmFingerprint?: string; skipMissingSecrets?: boolean; acceptLenWatchFix?: string; stopActiveAb?: boolean }
 export function publicar(c: ClienteDeOpenLen, id: string, subdomain: string, locale: Idioma, confirmacion: ConfirmacionPublicar = {}) {
   return pedir<{ url: string; publishedAt: string }>(c, `/api/projects/${encodeURIComponent(id)}/publish`, post({ subdomain, locale, ...confirmacion }));
 }
