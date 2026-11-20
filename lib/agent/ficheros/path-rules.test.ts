@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectPathRules, parseCustomRuleFile } from "./path-rules";
+import { collectPathRules } from "./path-rules";
 
 describe("just-in-time path rules (Plan Ruta 98 %, P2)", () => {
   it("matches built-in Supabase migration rules once per turn and stays silent on ordinary pages", () => {
@@ -23,19 +23,12 @@ describe("just-in-time path rules (Plan Ruta 98 %, P2)", () => {
     expect(collectPathRules("/.len/artifacts/vid1/motion.json", seen)).toContain("immediateRender: false");
   });
 
-  it("parses and matches custom project rules under /.len/rules/*.md with YAML paths", () => {
-    const ruleText = "---\npaths:\n  - src/api/**\n  - src/hooks/*.ts\n---\nAlways validate payloads with Zod before calling fetch.";
-    const parsed = parseCustomRuleFile("/.len/rules/api.md", ruleText);
-    expect(parsed).toEqual({
-      id: "project:/.len/rules/api.md",
-      globs: ["src/api/**", "src/hooks/*.ts"],
-      body: "Always validate payloads with Zod before calling fetch.",
-    });
-
-    const seen = new Set<string>();
-    const files = { "/.len/rules/api.md": ruleText };
-    expect(collectPathRules("/.len/rules/api.md", seen, files)).toBeNull(); // reading the rule file itself doesn't trigger
-    expect(collectPathRules("/src/api/orders.ts", seen, files)).toContain("Always validate payloads with Zod");
-    expect(collectPathRules("/src/hooks/useOrders.ts", seen, files)).toBeNull(); // deduplicated once per turn
+  // C2: the manifest rule is the ROOT's package.json (as folder.ts treats it), not any file of that name.
+  it("the package.json rule fires for /package.json only, not for npm's or a folder's package.json", () => {
+    expect(collectPathRules("/package.json", new Set())).toContain("app catalog");
+    expect(collectPathRules("/node_modules/x/package.json", new Set())).toBeNull();
+    expect(collectPathRules("/node_modules/@scope/pkg/package.json", new Set())).toBeNull();
+    expect(collectPathRules("/src/a/package.json", new Set())).toBeNull();
+    expect(collectPathRules("/a/package.json", new Set())).toBeNull();
   });
 });

@@ -499,7 +499,7 @@ export async function toolRead(session: AgentSession, deps: AgentDeps, args: Rec
   );
   const ruta = resolverRuta(file_path);
   if (r.ok) {
-    const pathRules = collectPathRules(ruta, (session.appliedPathRules ??= new Set()), v.folder);
+    const pathRules = collectPathRules(ruta, (session.appliedPathRules ??= new Set()));
     if (pathRules) return { response: respuesta(exito(`${r.texto}\n\n${pathRules}`)) };
   }
   return { response: respuesta(r) };
@@ -670,7 +670,7 @@ export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Re
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}${plan.ok && plan.crea && paginaDeRuta(plan.ruta) ? NEW_PAGE_MARK : ""}`;
   const out = await aplicarPlan(session, deps, row.data, v, plan, "Write", detalle, nota);
   if (plan.ok && plan.crea && out.response.ok === true && typeof out.response[CLAVE_TOOL_RESULT] === "string") {
-    const pathRules = collectPathRules(plan.ruta, (session.appliedPathRules ??= new Set()), v.folder);
+    const pathRules = collectPathRules(plan.ruta, (session.appliedPathRules ??= new Set()));
     if (pathRules) {
       return { ...out, response: { ...out.response, [CLAVE_TOOL_RESULT]: `${out.response[CLAVE_TOOL_RESULT]}\n\n${pathRules}` } };
     }
