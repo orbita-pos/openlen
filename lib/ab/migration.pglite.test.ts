@@ -6,6 +6,8 @@
 // deploy, before the swap. The two indexes on those tables are built CONCURRENTLY (outside a transaction, one statement
 // each), under a `lock_timeout` so a DDL that queues behind a long transaction gives up instead of making every insert
 // queue behind IT. PGlite is Postgres, and runs CREATE INDEX CONCURRENTLY, so the real runner is exercised here.
+import fs from "node:fs";
+import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -105,5 +107,28 @@ describe("the runner", () => {
       },
     };
     await expect(runAbTestingMigration(broken, { sleep: async () => undefined })).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("the invalid-index probe looks at THIS schema's index (G1+G3 review, item 21)", () => {
+  it("🔴 a same-named index in another schema doesn't hide an invalid one in public: it is still repaired", async () => {
+    // Created FIRST, so a probe by bare name finds it before public's.
+    await pg.query(`CREATE SCHEMA other`);
+    await pg.query(`CREATE TABLE other."pageEvents" ("id" text, "projectId" text, "ab" text, "ts" timestamp)`);
+    await pg.query(`CREATE INDEX "pageEvents_projectId_ab_ts_idx" ON other."pageEvents" ("projectId", "ab", "ts")`);
+    await runAbTestingMigration(pg as unknown as MigrationClient, { sleep: async () => undefined });
+    await pg.query(`UPDATE pg_index SET indisvalid = false WHERE indexrelid = 'public."pageEvents_projectId_ab_ts_idx"'::regclass`);
+    await runAbTestingMigration(pg as unknown as MigrationClient, { sleep: async () => undefined });
+    const valid = async (schema: string) =>
+      (await pg.query<{ v: boolean }>(`SELECT i.indisvalid AS v FROM pg_index i WHERE i.indexrelid = to_regclass($1)`, [`${schema}."pageEvents_projectId_ab_ts_idx"`])).rows[0]?.v;
+    expect(await valid("public")).toBe(true);
+    expect(await valid("other")).toBe(true);
+  });
+
+  it("the probe is the schema-qualified regclass, and the drop is qualified too", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "scripts/ab-testing-migrate-sql.ts"), "utf8");
+    expect(src).toContain("to_regclass($1)");
+    expect(src).toContain('`public."${index.name}"`');
+    expect(src).toContain('DROP INDEX CONCURRENTLY IF EXISTS public."${index.name}"');
   });
 });

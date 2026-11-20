@@ -141,11 +141,10 @@ export async function runAbTestingMigration(
   for (const statement of CREATE_AB_TESTING) await retrying(() => client.query(statement));
   for (const index of CREATE_AB_TESTING_CONCURRENT) {
     await retrying(async () => {
-      const state = await client.query(
-        `SELECT i.indisvalid AS valid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = $1`,
-        [index.name],
-      );
-      if (state.rows[0]?.valid === false) await client.query(`DROP INDEX CONCURRENTLY IF EXISTS "${index.name}"`);
+      // THIS schema's index, by its qualified name: a bare relname probe also finds a same-named index of another schema
+      // (a staging copy, a tenant) and could judge — or drop — the wrong one (G1+G3 review, item 21).
+      const state = await client.query(`SELECT i.indisvalid AS valid FROM pg_index i WHERE i.indexrelid = to_regclass($1)`, [`public."${index.name}"`]);
+      if (state.rows[0]?.valid === false) await client.query(`DROP INDEX CONCURRENTLY IF EXISTS public."${index.name}"`);
       await client.query(index.sql);
     });
   }
