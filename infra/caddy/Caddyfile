@@ -287,7 +287,7 @@ openlen.com, www.openlen.com {
 	# sidecar (openlen-edge --ab-sidecar, loopback :8085). On an experiment site:
 	#   @ab_page  a page (no extension, or .html/.htm): the sidecar buckets the visitor, mints the
 	#             sticky cookie and SERVES A or B, `private, no-store`;
-	#   @ab_asset any other file: the sidecar only DECIDES (its manifest lists `overrides`, the
+	#   @ab_asset any other file: the sidecar only DECIDES (its manifest lists, per experiment, `overrides`, the
 	#             files whose bytes differ between B and control). Not overridden → Caddy serves it
 	#             as for any site (Range, 304, its normal Cache-Control). Overridden → Caddy serves
 	#             the variant's file — still its own file server, so Range and 304 work — but
@@ -304,6 +304,9 @@ openlen.com, www.openlen.com {
 		path_regexp ab_page_shape `(?i)^/$|^/(?:[^/]*/)*(?:[^/.]+|[^/]*\.html?)/?$`
 		not header_regexp Host ^lienzo-
 		not path /c/* /api/f/* /api/m/* /api/cm/* /api/bk/* /api/b/* /api/chat/* /uploads/* /assets/* /api/lienzo/* /rest/v1/* /auth/v1/* /storage/v1/* /realtime/v1/* /functions/v1/* /ai/v1/* /email/v1/*
+		# `openlen/` holds no pages (the figure engine, the experiment's own files): never delegated, or
+		# `/openlen/figure-x` would leave with two Cache-Control, one of them immutable.
+		not path /openlen/*
 	}
 	@ab_asset {
 		file {
@@ -629,7 +632,9 @@ openlen.com, www.openlen.com {
 	# for 10 s so the requests behind it do not each wait for the timeout. Whatever Caddy cannot get
 	# from it ends in the `handle_errors` below, which serves CONTROL from disk (measured with Caddy
 	# 2.11.4: without this, a dead sidecar was a 502 on every page of every site with an experiment).
-	# A page: the sidecar's answer is the response (a 5xx of its own is replaced by control too).
+	# A page: the sidecar's answer is the response — unless it is an error (4xx or 5xx): a sidecar that
+	# cannot read the release answers 404 (or 400 for a path that is not UTF-8), and master answers
+	# those paths with the SPA index and a 200, so control from disk, same try_files, takes over.
 	handle @ab_delegated {
 		reverse_proxy 127.0.0.1:8085 {
 			header_up Host {http.request.host}
@@ -641,8 +646,8 @@ openlen.com, www.openlen.com {
 			}
 			fail_duration 10s
 			max_fails 1
-			@ab_page_5xx status 5xx
-			handle_response @ab_page_5xx {
+			@ab_page_bad status 4xx 5xx
+			handle_response @ab_page_bad {
 				header Cache-Control "private, no-store"
 				root * /var/www/openlen/{labels.2}/current
 				try_files {path} {path}/index.html /index.html
@@ -673,6 +678,15 @@ openlen.com, www.openlen.com {
 				header X-OpenLen-AB "{rp.header.X-Openlen-Ab}"
 				rewrite * {rp.header.X-Openlen-Serve}
 				root * /var/www/openlen/{labels.2}/current
+				file_server
+			}
+			# The sidecar failed (5xx) on a file it may have meant to decide: control, not stored — Caddy's
+			# normal caching for an overridden file would let Cloudflare keep control's bytes under the URL.
+			@ab_file_5xx status 5xx
+			handle_response @ab_file_5xx {
+				header Cache-Control "private, no-store"
+				root * /var/www/openlen/{labels.2}/current
+				try_files {path} {path}/index.html /index.html
 				file_server
 			}
 			@ab_pass status 2xx 3xx 4xx 5xx
