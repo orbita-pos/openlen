@@ -404,8 +404,10 @@ describe("🔴 trying again after a sign-in that didn't finish", () => {
     expect(urls()).toEqual(["/api/mcp-connectors/cal/approve", "/api/mcp-connectors/cal/oauth"]);
 
     popup.closed = true; // the person closed the window before finishing
+    // The window's `closed` decides nothing (a provider's COOP sets it too, final review M2): the card waits for the sign-in's
+    // ten minutes, asking OpenLen meanwhile, and only then is a tap that can be made again.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(10 * 60 * 1000 + 2_000);
     });
     // Back to a tap that can be made again, and the key field it already sent is gone.
     expect(document.querySelectorAll("input")).toHaveLength(0);

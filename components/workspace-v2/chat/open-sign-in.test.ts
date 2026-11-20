@@ -4,7 +4,7 @@
 // or for the window to close, in which case the server's own state says whether it connected.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openSignIn, SignInError } from "./open-sign-in";
+import { openSignIn, SIGN_IN_WAIT_MS, SignInError } from "./open-sign-in";
 
 interface FakePopup {
   closed: boolean;
@@ -332,40 +332,70 @@ describe("openSignIn", () => {
     });
   });
 
-  describe("🔴 the window closing with no message", () => {
-    it("asks OpenLen, and says «connected» when the server now is (the way back was cut)", async () => {
+  // Final review, M2: a provider's Cross-Origin-Opener-Policy makes `popup.closed` read true right after the window leaves
+  // for the provider, while the person is still signing in. So the window's `closed` decides nothing: the sign-in keeps
+  // listening for as long as it lives (ten minutes), and asks OpenLen every five seconds whether the server connected.
+  describe("🔴 with no word from the way back", () => {
+    const at = async (ms: number) => vi.advanceTimersByTimeAsync(ms);
+
+    it("a window that reads as closed at once (COOP) keeps listening: a message minutes later still connects", async () => {
       vi.useFakeTimers();
-      fetchMock.mockResolvedValue(servers({ name: "other", status: "failed" }, { name: "cal", status: "connected" }));
+      fetchMock.mockResolvedValue(servers({ name: "cal", status: "needs-auth" }));
       const run = openSignIn("cal", { start: async () => AUTH_URL });
-      await vi.advanceTimersByTimeAsync(0);
+      await at(0);
       popup.closed = true;
-      await vi.advanceTimersByTimeAsync(250);
+      let done = false;
+      void run.then(() => (done = true));
+      await at(3 * 60 * 1000);
+      expect(done).toBe(false);
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
       expect(await run).toBe("connected");
+    });
+
+    it("asks OpenLen every five seconds, not before, and says «connected» when the server is (the way back was cut)", async () => {
+      vi.useFakeTimers();
+      fetchMock.mockResolvedValue(servers({ name: "cal", status: "needs-auth" }));
+      const run = openSignIn("cal", { start: async () => AUTH_URL });
+      await at(0);
+      popup.closed = true;
+      await at(4_000);
+      expect(fetchMock).not.toHaveBeenCalled();
+      await at(1_500);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith("/api/mcp-connectors");
+      await at(5_000);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      fetchMock.mockResolvedValue(servers({ name: "other", status: "failed" }, { name: "cal", status: "connected" }));
+      await at(5_000);
+      expect(await run).toBe("connected");
     });
 
     it("looks for the name `start` returned", async () => {
       vi.useFakeTimers();
       fetchMock.mockResolvedValue(servers({ name: "google-calendar", status: "needs-auth" }, { name: "google-calendar-2", status: "connected" }));
       const run = openSignIn("google-calendar", { start: async () => ({ authorizationUrl: AUTH_URL, server: "google-calendar-2" }) });
-      await vi.advanceTimersByTimeAsync(0);
-      popup.closed = true;
-      await vi.advanceTimersByTimeAsync(250);
+      await at(0);
+      await at(5_500);
       expect(await run).toBe("connected");
     });
 
-    it("says «closed» when it still isn't connected, or the answer can't be read", async () => {
+    it("says «closed» only when the ten minutes are up with no word and no connection, whatever the answers were", async () => {
       vi.useFakeTimers();
-      for (const answer of [servers({ name: "cal", status: "needs-auth" }), new Response("nope", { status: 500 }), new Error("offline")]) {
-        popup.closed = false;
-        if (answer instanceof Error) fetchMock.mockRejectedValue(answer);
-        else fetchMock.mockResolvedValue(answer);
-        const run = openSignIn("cal", { start: async () => AUTH_URL });
-        await vi.advanceTimersByTimeAsync(0);
-        popup.closed = true;
-        await vi.advanceTimersByTimeAsync(250);
-        expect(await run).toBe("closed");
-      }
+      let n = 0;
+      fetchMock.mockImplementation(async () => {
+        n++;
+        if (n % 3 === 0) throw new Error("offline");
+        return n % 3 === 1 ? servers({ name: "cal", status: "needs-auth" }) : new Response("nope", { status: 500 });
+      });
+      const run = openSignIn("cal", { start: async () => AUTH_URL });
+      await at(0);
+      popup.closed = true;
+      let done = false;
+      void run.then(() => (done = true));
+      await at(SIGN_IN_WAIT_MS - 2_000);
+      expect(done).toBe(false);
+      await at(3_000);
+      expect(await run).toBe("closed");
     });
 
     it("a message that arrives while it asks still wins", async () => {
@@ -373,13 +403,13 @@ describe("openSignIn", () => {
       let answer!: (r: Response) => void;
       fetchMock.mockReturnValue(new Promise<Response>((r) => (answer = r)));
       const run = openSignIn("cal", { start: async () => AUTH_URL });
-      await vi.advanceTimersByTimeAsync(0);
+      await at(0);
       popup.closed = true;
-      await vi.advanceTimersByTimeAsync(250);
+      await at(5_500);
       comeBack({ type: CHANNEL, server: "cal", ok: false, reason: "exchange_failed" });
       expect(await run).toEqual({ error: "exchange_failed" });
       answer(servers({ name: "cal", status: "connected" }));
-      await vi.advanceTimersByTimeAsync(0);
+      await at(0);
     });
   });
 });
