@@ -82,6 +82,9 @@ export async function runCreateAbVariant(
   const primaryMetric = normalizePrimaryMetric(args.primary_metric);
   const actorId = session.personId ?? session.userId;
 
+  // The draft, once it exists: whatever goes wrong after that cancels it (below), or it would sit as «active» for that page
+  // and answer every later try with `already_active` (G1+G3 review, item 19).
+  let draftId: string | null = null;
   try {
     // Refuses (not published, an app, a missing page, one already active) BEFORE it creates anything.
     const created = await createAbDraft({
@@ -93,6 +96,7 @@ export async function runCreateAbVariant(
       targetPath,
       primaryMetric,
     });
+    draftId = created.id;
 
     if (created.copyProjectId) {
       const writerDeps = deps ?? (await import("@/lib/agent/tools")).realDeps();
@@ -140,6 +144,7 @@ export async function runCreateAbVariant(
       },
     };
   } catch (err) {
+    if (draftId) await cancelAbDraft({ projectId: session.projectId, experimentId: draftId }).catch(() => undefined);
     return refuse(
       err instanceof AbLifecycleError
         ? err.message
