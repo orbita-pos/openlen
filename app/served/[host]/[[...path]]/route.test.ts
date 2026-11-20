@@ -154,6 +154,7 @@ describe("/served/<host>/ — A/B", () => {
         expiresAt: null,
       },
     ],
+    overrides: ["/css/site.css", "/img/hero.png"],
   };
   const release = () => path.join(raiz, "demo", "current");
   const escribe = (rel: string, contenido: string) => {
@@ -161,15 +162,26 @@ describe("/served/<host>/ — A/B", () => {
     mkdirSync(path.dirname(abs), { recursive: true });
     writeFileSync(abs, contenido);
   };
-  const pideRuta = (ruta: string, init: { cookie?: string; query?: string } = {}) => {
+  const pideRuta = (
+    ruta: string,
+    init: {
+      cookie?: string;
+      query?: string;
+      /** The scheme Node sees (behind Caddy it is always http). */
+      scheme?: "http" | "https";
+      /** What Caddy says the visitor used. */
+      forwardedProto?: string;
+    } = {},
+  ) => {
     const partes = ruta.split("/").filter(Boolean);
     return GET(
-      new Request(`https://${DOMINIO}${ruta}${init.query ?? ""}`, {
+      new Request(`${init.scheme ?? "https"}://${DOMINIO}${ruta}${init.query ?? ""}`, {
         headers: {
           host: DOMINIO,
           "user-agent": "Mozilla/5.0 (Windows NT 10.0) Chrome/131.0.0.0 Safari/537.36",
           "cf-connecting-ip": "203.0.113.10",
           ...(init.cookie ? { cookie: init.cookie } : {}),
+          ...(init.forwardedProto ? { "x-forwarded-proto": init.forwardedProto } : {}),
         },
       }),
       { params: Promise.resolve({ host: DOMINIO, path: partes }) },
@@ -181,6 +193,10 @@ describe("/served/<host>/ — A/B", () => {
     escribe("openlen/ab.json", JSON.stringify(MANIFIESTO));
     escribe("openlen/ab/ab_9f3c2a1b/b/index.html", "<h1>Variante B</h1>");
     escribe("openlen/figure-0a1b2c3d.js", "figure()");
+    escribe("css/site.css", "body{color:red}");
+    escribe("openlen/ab/ab_9f3c2a1b/b/css/site.css", "body{color:blue}");
+    escribe("css/other.css", "body{margin:0}");
+    escribe("img/hero.png", "PNG-A");
   });
 
   it("🔴 el manifiesto y el árbol de B dan 404 escritos de cualquier modo", async () => {
@@ -214,5 +230,59 @@ describe("/served/<host>/ — A/B", () => {
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("vary")).toBe("Cookie");
     expect(res.headers.get("x-openlen-ab")).toBe("ab_9f3c2a1b:b");
+  });
+
+  // 🔴 Detrás de Caddy, Node ve siempre http: la cookie sale Secure según lo que dice Caddy
+  // (X-Forwarded-Proto), o el esquema del sitio, y no según el protocolo de la petición que ve Node.
+  it("la cookie del primer visitante sale Secure según X-Forwarded-Proto, no según lo que ve Node", async () => {
+    const setCookie = async (init: Parameters<typeof pideRuta>[1]) =>
+      (await pideRuta("/", init)).headers.get("set-cookie") ?? "";
+    expect(await setCookie({ scheme: "http", forwardedProto: "https" })).toContain("; Secure");
+    expect(await setCookie({ scheme: "http", forwardedProto: "https, http" })).toContain("; Secure");
+    // El encabezado manda también cuando dice lo contrario.
+    expect(await setCookie({ scheme: "https", forwardedProto: "http" })).not.toContain("Secure");
+    // Sin encabezado y sin esquema configurado: el que ve la petición.
+    expect(await setCookie({ scheme: "http" })).not.toContain("Secure");
+    expect(await setCookie({ scheme: "https" })).toContain("; Secure");
+  });
+
+  it("sin X-Forwarded-Proto, el esquema configurado del sitio (https en producción) manda sobre lo que ve Node", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://openlen.com");
+    try {
+      const res = await pideRuta("/", { scheme: "http" });
+      expect(res.headers.get("set-cookie")).toContain("; Secure");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  // Un fichero que B sobrescribe (el manifiesto lo lista) es no-store PARA TODOS, también para el
+  // control: la caché se llena por URL y un solo cuerpo guardado llegaría a quien le toca el otro.
+  it("un fichero sobrescrito por B es no-store para B y para el control, y uno que no lo es no cambia", async () => {
+    const b = await pideRuta("/css/site.css", { cookie: "ol_ab_9f3c2a1b=b" });
+    expect(await b.text()).toBe("body{color:blue}");
+    expect(b.headers.get("cache-control")).toBe("no-store");
+    expect(b.headers.get("vary")).toBe("Cookie");
+    expect(b.headers.get("etag")).toBeNull();
+
+    const control = await pideRuta("/css/site.css");
+    expect(await control.text()).toBe("body{color:red}");
+    expect(control.headers.get("cache-control")).toBe("no-store");
+
+    // B lo lista pero no lo trae: se sirve el del control, y también sin guardar.
+    const faltaEnB = await pideRuta("/img/hero.png", { cookie: "ol_ab_9f3c2a1b=b" });
+    expect(await faltaEnB.text()).toBe("PNG-A");
+    expect(faltaEnB.headers.get("cache-control")).toBe("no-store");
+
+    // Un fichero que nadie decide conserva su caché.
+    const otro = await pideRuta("/css/other.css", { cookie: "ol_ab_9f3c2a1b=b" });
+    expect(await otro.text()).toBe("body{margin:0}");
+    expect(otro.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+    expect(otro.headers.get("x-openlen-ab")).toBeNull();
+  });
+
+  it("el parámetro de QA manda un fichero a B también", async () => {
+    const res = await pideRuta("/css/site.css", { query: "?_ol_ab=b" });
+    expect(await res.text()).toBe("body{color:blue}");
   });
 });

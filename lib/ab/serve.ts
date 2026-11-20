@@ -11,12 +11,15 @@
 //   variant = bucket < splitBps ? "b" : "a"
 
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { AbManifest, AbManifestExperiment, AbVariant } from "./types";
 
 export const AB_HTML_CACHE_CONTROL = "private, no-store";
+
+/** A FILE an experiment decides per visitor (the manifest's `overrides`), whatever the variant. */
+export const AB_FILE_CACHE_CONTROL = "no-store";
 
 /** Where a release keeps its experiment manifest. `openlen/` is a reserved root of the
  *  folder (lib/agent/ficheros/folder.ts), so no file of the owner can sit there. */
@@ -500,17 +503,129 @@ export function evaluateAbManifest(
   };
 }
 
-/** Read and validate `<releaseDir>/openlen/ab.json`, returning null if missing or invalid. */
-export async function readReleaseAbManifest(releaseDir: string): Promise<AbManifest | null> {
-  const filePath = path.join(releaseDir, AB_MANIFEST_REL);
-  try {
-    const s = await stat(filePath);
-    if (!s.isFile() || s.size > MAX_MANIFEST_BYTES) return null;
-    const raw = await readFile(filePath, "utf8");
-    return parseAbManifest(raw);
-  } catch {
-    return null;
+/** The disk, as the manifest cache sees it (injectable: the tests count and break it). */
+export interface AbManifestIo {
+  realpath(p: string): Promise<string>;
+  stat(p: string): Promise<{ isFile(): boolean; size: number; mtimeMs: number }>;
+  readFile(p: string): Promise<string>;
+}
+
+const realIo: AbManifestIo = {
+  realpath,
+  stat,
+  readFile: (p) => readFile(p, "utf8"),
+};
+
+function isAbsentError(err: unknown): boolean {
+  const code = (err as NodeJS.ErrnoException | null)?.code;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+/** A parsed manifest per release, like the Rust edge's `AbManifestCache`: the release directory is
+ *  resolved ONCE (`realpath` follows the `current` symlink), the file is read under THAT directory,
+ *  and the result is kept under it, so the manifest and the directory files are served from belong
+ *  to the same release even if a publish swaps the link meanwhile. A release is immutable, so a hit
+ *  costs one `stat` (it also catches a plain directory edited in place, in dev). A transient error
+ *  (EIO, EACCES…) answers "no experiment" for that request and is NEVER remembered. Bounded by an
+ *  entry count and a byte budget; the oldest entries go first. */
+export class ReleaseAbManifestCache {
+  private readonly slots = new Map<string, { sig: string; manifest: ParsedAbManifest | null; weight: number }>();
+  private weightTotal = 0;
+
+  constructor(
+    private readonly limits: { readonly maxEntries: number; readonly maxBytes: number } = {
+      maxEntries: 1000,
+      maxBytes: 4 * 1024 * 1024,
+    },
+    private readonly io: AbManifestIo = realIo,
+  ) {}
+
+  /** Entries held. */
+  get size(): number {
+    return this.slots.size;
   }
+
+  /** Total weight held (about the bytes of the manifests plus their keys). */
+  get bytes(): number {
+    return this.weightTotal;
+  }
+
+  clear(): void {
+    this.slots.clear();
+    this.weightTotal = 0;
+  }
+
+  /** The release's manifest (null when there is no experiment, or it could not be read right now)
+   *  and the resolved release directory to serve its files from. */
+  async get(releaseDir: string): Promise<{ manifest: ParsedAbManifest | null; dir: string }> {
+    let dir = releaseDir;
+    try {
+      dir = path.normalize(await this.io.realpath(releaseDir));
+    } catch {
+      // The release is not there (or cannot be resolved right now): no experiment for this request.
+      return { manifest: null, dir };
+    }
+    const file = path.join(dir, AB_MANIFEST_REL);
+
+    let sig = "absent";
+    let skip = false; // a file that is not a manifest at all: nothing to read
+    try {
+      const s = await this.io.stat(file);
+      if (!s.isFile() || s.size > MAX_MANIFEST_BYTES) {
+        sig = `invalid:${s.mtimeMs}:${s.size}`;
+        skip = true;
+      } else {
+        sig = `${s.mtimeMs}:${s.size}`;
+      }
+    } catch (err) {
+      if (!isAbsentError(err)) return { manifest: null, dir }; // transient: not remembered
+      skip = true;
+    }
+
+    const hit = this.slots.get(dir);
+    if (hit && hit.sig === sig) {
+      // Most recently used goes last.
+      this.slots.delete(dir);
+      this.slots.set(dir, hit);
+      return { manifest: hit.manifest, dir };
+    }
+
+    let manifest: ParsedAbManifest | null = null;
+    let weight = dir.length + 64;
+    if (!skip) {
+      try {
+        const raw = await this.io.readFile(file);
+        manifest = parseAbManifest(raw);
+        weight += raw.length;
+      } catch (err) {
+        if (!isAbsentError(err)) return { manifest: null, dir }; // transient: not remembered
+      }
+    }
+
+    const old = this.slots.get(dir);
+    if (old) {
+      this.weightTotal -= old.weight;
+      this.slots.delete(dir);
+    }
+    this.slots.set(dir, { sig, manifest, weight });
+    this.weightTotal += weight;
+    while (this.slots.size > this.limits.maxEntries || this.weightTotal > this.limits.maxBytes) {
+      const oldest = this.slots.keys().next();
+      if (oldest.done) break;
+      this.weightTotal -= this.slots.get(oldest.value)!.weight;
+      this.slots.delete(oldest.value);
+    }
+    return { manifest, dir };
+  }
+}
+
+/** The process's cache: one per Node, like the Rust edge's. */
+export const releaseAbManifests = new ReleaseAbManifestCache();
+
+/** Read and validate `<releaseDir>/openlen/ab.json` (cached per release), or null if missing,
+ *  invalid or unreadable right now. */
+export async function readReleaseAbManifest(releaseDir: string): Promise<ParsedAbManifest | null> {
+  return (await releaseAbManifests.get(releaseDir)).manifest;
 }
 
 /** Resolve Variant B file strictly inside `releaseDir` (no SPA fallback to Control A). */
@@ -546,14 +661,19 @@ export function abResponseHeaders(
   bodyLength: number,
 ): Record<string, string> {
   const out: Record<string, string> = {
-    "Cache-Control": AB_HTML_CACHE_CONTROL,
+    // A page of an experiment: nothing shared. A decided FILE (B ships other bytes for it): `no-store`
+    // for everyone, control's visitors included — a CDN caches by URL, and one variant's bytes kept
+    // under it would reach the other's — and no validator: it is never revalidated.
+    "Cache-Control": decision.isPageRoute ? AB_HTML_CACHE_CONTROL : AB_FILE_CACHE_CONTROL,
     Vary: "Cookie",
     "X-OpenLen-AB":
       decision.source === "bot"
         ? `${decision.experimentId}:a-bot`
         : `${decision.experimentId}:${decision.variant}`,
-    ETag: `W/"${decision.experimentId}-${decision.variant}-${bodyLength}"`,
   };
+  if (decision.isPageRoute) {
+    out["ETag"] = `W/"${decision.experimentId}-${decision.variant}-${bodyLength}"`;
+  }
   if (decision.setCookie) out["Set-Cookie"] = decision.setCookie;
   if (decision.isOverride) out["X-Robots-Tag"] = "noindex";
   return out;
