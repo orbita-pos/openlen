@@ -10,8 +10,11 @@
 //  - It may come back with no opener (that cut, or the provider's Cross-Origin-Opener-Policy), so the callback page
 //    tells this tab twice: on a same-origin `BroadcastChannel` and, as a fallback, with `postMessage` to the opener. Both
 //    are read the same way — the page's origin, the message type, and the server this sign-in is for.
-// If the window closes with no word, the server's own state decides: the way back may have been cut after the connection
-// was made, so the connectors are read again and «connected» is what they say.
+// The window's own `closed` says nothing reliable: a provider's Cross-Origin-Opener-Policy makes it read `true` right
+// after the window leaves for the provider, while the person is still signing in (final review M2). So this keeps
+// listening for the way back for as long as a sign-in lives (ten minutes, store.ts `FLOW_TTL_MS`), and asks OpenLen every
+// five seconds whether the server is connected — the way back may have been cut after the connection was made. «Closed»
+// is what is left when the ten minutes are up with no word and no connection.
 //
 // The start is told the sign-in host the card named (`issuerHost`, final review F3, spec §10.2): when the server now signs
 // in elsewhere it answers `issuer_changed` with the new host, and the card shows it before the person taps again.
@@ -48,6 +51,11 @@ export interface OpenSignInOptions {
    *  no card (the Herramientas page) — the server checks the host its stored state names. */
   issuerHost?: string | null;
 }
+
+/** How long a sign-in can come back: the life of its `state` (store.ts `FLOW_TTL_MS`). */
+export const SIGN_IN_WAIT_MS = 10 * 60 * 1000;
+/** How often OpenLen is asked whether the server is connected while the way back hasn't spoken. */
+export const SIGN_IN_ASK_EVERY_MS = 5_000;
 
 /** POST to a route that starts a sign-in (`…/<name>/oauth`, `…/directory/<id>`), as `{ authorizationUrl, server? }`. */
 export async function postStart(url: string, body?: Record<string, unknown>): Promise<StartedSignIn> {
@@ -184,12 +192,24 @@ export function openSignIn(server: string, opts: OpenSignInOptions = {}): Promis
       } catch {
         channel = null;
       }
+      const since = Date.now();
+      let asked = since;
       let asking = false;
       timer = setInterval(() => {
-        if (!popup.closed || asking) return;
+        if (asking) return;
+        const now = Date.now();
+        const over = now - since >= SIGN_IN_WAIT_MS;
+        if (!over && now - asked < SIGN_IN_ASK_EVERY_MS) return;
+        asked = now;
         asking = true;
-        void connectedNow(expected).then((connected) => finish(connected ? "connected" : "closed"));
-      }, 200);
+        void connectedNow(expected).then((connected) => {
+          asking = false;
+          if (!connected && !over) return;
+          // Connected without a word from the way back, or out of time: the window has nothing left to do.
+          closePopup();
+          finish(connected ? "connected" : "closed");
+        });
+      }, 1_000);
     });
   })();
 }
