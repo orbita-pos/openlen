@@ -1,0 +1,87 @@
+# openlen-ab-sidecar.service — the A/B testing sidecar (openlen-edge --ab-sidecar).
+#
+# Caddy stays the web tier. For a site whose release carries an experiment
+# (openlen/ab.json) Caddy hands THIS process its pages (it buckets the visitor, mints the sticky
+# cookie, serves A or B) and asks it which file to serve for the files B overrides; everything
+# else never reaches it (infra/caddy/Caddyfile, `@ab_page` / `@ab_asset`). It binds ONLY
+# 127.0.0.1:8085: no TLS, no :80/:443, no ACME, no database, no certificates. It is the SAME
+# binary as the full edge (/usr/local/bin/openlen-edge, shipped by infra/scripts/deploy-edge.sh),
+# told to run this one job.
+#
+# PREPARED, NOT DEPLOYED. infra/scripts/deploy.ps1 does not install or restart it: while
+# OPENLEN_AB_TESTING is off nothing publishes an experiment and nothing needs it. It is installed
+# by hand (infra/AB_TESTING_RUNBOOK.md §3), BEFORE the flag is turned on.
+#
+# Deliberately NOT ordered after openlen-app or caddy, and nothing requires it: Caddy FAILS OPEN.
+# While this unit is stopped, crashed or hung, every page of an experiment site is served from disk
+# as control (no-store, so Cloudflare does not keep it) and nothing 5xx's; only the experiment is
+# paused. A failed start (the port is taken) is logged at startup and the unit shows as failed.
+[Unit]
+Description=OpenLen A/B sidecar (openlen-edge --ab-sidecar, loopback :8085)
+Documentation=https://github.com/jesusbernalrj/inari-pages/blob/master/infra/AB_TESTING_RUNBOOK.md
+After=network.target
+
+# Same lesson as the other units: a limit on restarts leaves the unit `failed` until a person
+# lifts it, and nobody is on call. The backoff below does the hammering control instead.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+# It reads /var/www/openlen (written by openlen-deploy, group www-data) and writes nothing.
+DynamicUser=yes
+SupplementaryGroups=www-data
+ReadOnlyPaths=/var/www/openlen
+
+Environment=OPENLEN_EDGE_MODE=ab-sidecar
+Environment=OPENLEN_EDGE_PUBLISH_ROOT=/var/www/openlen
+Environment=OPENLEN_EDGE_AB_LOOPBACK_BIND=127.0.0.1:8085
+# The zones a site's subdomain may live under (the Host fallback; Caddy sends X-OpenLen-Sub).
+Environment=OPENLEN_EDGE_PUBLISH_HOSTS=openlen.app,openlen.com
+Environment=RUST_LOG=info
+# Optional overrides (e.g. OPENLEN_EDGE_AB_MANIFEST_CACHE_MAX); absent is fine.
+EnvironmentFile=-/etc/openlen/ab-sidecar.env
+
+ExecStart=/usr/local/bin/openlen-edge --ab-sidecar
+
+Restart=on-failure
+RestartSec=2s
+RestartSteps=5
+RestartMaxDelaySec=30s
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openlen-ab-sidecar
+
+# A manifest cache of at most 16 MiB plus a small Rust process.
+MemoryAccounting=true
+MemoryHigh=96M
+MemoryMax=128M
+LimitNOFILE=4096
+
+# Hardening. It needs the loopback and the publish root, and nothing else.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+IPAddressDeny=any
+IPAddressAllow=localhost
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+[Install]
+WantedBy=multi-user.target
