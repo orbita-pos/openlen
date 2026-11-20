@@ -117,3 +117,10 @@ doesn't); it asks one question per turn, stricter than `cold-start-interview`'s 
 2026-11-20 asked two; the placement items, the CEFR summary, the exercise kinds and the conversation mode are ours.
 Written in our own words, with none of its text. v0 added on 2026-11-20 (spec local 2026-11-19-agentes-para-todos,
 §6.5); rewritten the same day for delivery 2.
+
+`fitness-coach` is ours (spec local 2026-11-19-agentes-para-todos, §6.5): Anthropic's repositories have no skill for
+training. Its facts come from public sources, cited in `references/`: the World Health Organization's *guidelines on
+physical activity and sedentary behaviour* (2020) for how much activity adults and older adults need; and the idea of a
+readiness questionnaire before exercise, as the PAR-Q+ does, with questions written in our own words (the PAR-Q+'s text
+is not reproduced). Its coaching shape — one question per turn, they try first, a log that changes the plan — follows
+`language-teacher`. Added on 2026-11-20.
