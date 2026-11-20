@@ -24,6 +24,7 @@ import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
 import { SUGGEST_CONNECTORS_TOOL } from "@/lib/mcp-connectors/tool-names";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
+import { PROPOSE_SKILLS } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
@@ -73,6 +74,9 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   // events never reach the person, so a card it left would be shown to nobody. (`mcp__<server>__authenticate` is out by
   // its prefix, like every connector tool: `isToolOperation`.)
   SUGGEST_CONNECTORS_TOOL,
+  // And the review card of the person's skills (spec local 2026-11-19-agentes-para-todos, §6.6; final review I2): a card a
+  // child left would be shown to nobody.
+  PROPOSE_SKILLS,
   // Creating A/B worktree drafts belongs to Len's main thread.
   CREATE_AB_VARIANT,
 ]);

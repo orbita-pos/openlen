@@ -16,7 +16,7 @@ const all = [
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
   "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
-  "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events",
+  "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events", "propose_skills",
 ].map((name) => ({ name }));
 const names = (p: SubagentPreset, plan = false) => childToolDeclarations(all, p, plan).map((d) => d.name);
 
@@ -49,6 +49,14 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
         expect(names(p, plan)).not.toContain(SUGGEST_CONNECTORS_TOOL);
         expect(names(p, plan)).not.toContain("mcp__cal__authenticate");
       }
+    }
+  });
+
+  // Final review I2 (spec local 2026-11-19-agentes-para-todos, §6.6): the review card of the person's skills is drawn under
+  // the main conversation's answer; a child told «shown to the person» would send Len to tell them of a card that isn't there.
+  it("🔴 no child proposes skills: propose_skills is the main conversation's", () => {
+    for (const p of SUBAGENT_PRESETS) {
+      for (const plan of [false, true]) expect(names(p, plan)).not.toContain("propose_skills");
     }
   });
 
