@@ -94,9 +94,10 @@ describe("the closed frame", () => {
 
   it("Len's frame is byte for byte today's", () => {
     // Pinned from the unchanged file on 08/11, before the closed frame existed; re-pinned when window.updateModelContext
-    // joined the runtime (e9d580696) — the only change in these bytes (the CSP, third line, is the one of 08/11).
-    expect(sha(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }))).toBe("12a078cc94b7116038bfda633b47247a271c74417839740d543b841e5efaf6b0");
-    expect(sha(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false }))).toBe("d895c3d24cb09e79646fca9dee41e246a8f4701e089f29d46fd410d3c97302e6");
+    // joined the runtime (e9d580696), then again when its cut at 1500 stopped splitting an emoji (a lone surrogate in a
+    // stored row) — the only changes in these bytes (the CSP, third line, is the one of 08/11).
+    expect(sha(buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }))).toBe("4c477883bcdb0cb8e02be99f3d7f436fcc6652a5db90e78ee4785649e9093b2f");
+    expect(sha(buildVisualFrameDocument({ parentOrigins: ["https://openlen.com"], cspInMeta: false }))).toBe("0ebc079b24aae74737d494f23f81ed99a9a0a0e5caa1888f55bfa4b2eee9484f");
     expect(sha(visualFrameCsp("https://openlen.com"))).toBe("0c404282b62471a5771b6b057f9588dd52c61783438a93e226829a0fe1984e60");
   });
 });

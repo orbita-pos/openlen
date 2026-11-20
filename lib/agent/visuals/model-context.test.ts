@@ -16,6 +16,56 @@ describe("cleanVisualContext", () => {
     expect(VISUAL_CONTEXT_MAX_CHARS).toBe(1500);
     expect(cleanVisualContext("x".repeat(5000))).toHaveLength(1500);
   });
+
+  // Postgres rejects a lone surrogate in a jsonb row («invalid input syntax for type json»), and a provider may too:
+  // the report is stored with the turn as `sentText`, so what it holds must be well-formed text.
+  describe("🔴 it never holds half of a character", () => {
+    const HIGH = String.fromCharCode(0xd83d);
+    const LOW = String.fromCharCode(0xde00);
+    const REPLACEMENT = String.fromCharCode(0xfffd);
+    const loneSurrogates = (s: string) => {
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i);
+        if (c >= 0xd800 && c <= 0xdbff) {
+          const next = s.charCodeAt(i + 1);
+          if (!(next >= 0xdc00 && next <= 0xdfff)) return true;
+          i++;
+        } else if (c >= 0xdc00 && c <= 0xdfff) return true;
+      }
+      return false;
+    };
+    const survivesJson = (s: string) => JSON.parse(JSON.stringify(s)) === s && !loneSurrogates(s);
+
+    it("an emoji straddling the cap is dropped whole, not split", () => {
+      const out = cleanVisualContext("x".repeat(VISUAL_CONTEXT_MAX_CHARS - 1) + "😀" + "tail");
+      expect(out).toBe("x".repeat(VISUAL_CONTEXT_MAX_CHARS - 1));
+      expect(loneSurrogates(out)).toBe(false);
+      expect(survivesJson(out)).toBe(true);
+    });
+
+    it("an emoji that ends exactly at the cap stays whole", () => {
+      const out = cleanVisualContext("x".repeat(VISUAL_CONTEXT_MAX_CHARS - 2) + "😀" + "tail");
+      expect(out).toBe("x".repeat(VISUAL_CONTEXT_MAX_CHARS - 2) + "😀");
+      expect(out).toHaveLength(VISUAL_CONTEXT_MAX_CHARS);
+    });
+
+    it("a lone surrogate that arrives in the body is replaced, wherever it sits", () => {
+      const out = cleanVisualContext(`a${HIGH}b${LOW}c😀d`);
+      expect(out).toBe(`a${REPLACEMENT}b${REPLACEMENT}c😀d`);
+      expect(survivesJson(out)).toBe(true);
+      // A lone high one at the very end — what the cut itself used to leave.
+      expect(cleanVisualContext(`end${HIGH}`)).toBe(`end${REPLACEMENT}`);
+    });
+
+    it("BRAZO DE CONTROL: plain text, accents and whole emoji come back as they came", () => {
+      expect(cleanVisualContext("  Selected: Marzo — mañana 😀 日本語 ")).toBe("Selected: Marzo — mañana 😀 日本語");
+    });
+
+    it("the fenced message built from it is well-formed too", () => {
+      const out = withVisualContext("hola", "x".repeat(VISUAL_CONTEXT_MAX_CHARS - 1) + "😀");
+      expect(survivesJson(out)).toBe(true);
+    });
+  });
 });
 
 describe("withVisualContext", () => {

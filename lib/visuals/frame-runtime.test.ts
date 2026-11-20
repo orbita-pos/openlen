@@ -114,6 +114,19 @@ describe("the frame runtime", () => {
     });
   });
 
+  // What it posts becomes part of a stored row (Postgres refuses a lone surrogate in jsonb): the cut at 1500 units
+  // never leaves the first half of an emoji at its end.
+  it("🔴 updateModelContext cuts at 1500 without splitting an emoji", async () => {
+    const f = frame();
+    const w = f.win as unknown as { updateModelContext: (t: string) => void };
+    w.updateModelContext("x".repeat(1499) + "😀" + "tail");
+    w.updateModelContext("y".repeat(1498) + "😀" + "tail");
+    w.updateModelContext("z".repeat(4000));
+    await f.tick();
+    const texts = f.posted.filter((m) => m.kind === "ol-visual:context").map((m) => m.text as string);
+    expect(texts).toEqual(["x".repeat(1499), "y".repeat(1498) + "😀", "z".repeat(1500)]);
+  });
+
   it("a theme message sets the variables and data-theme on the root", async () => {
     const f = frame();
     f.send({ kind: "ol-visual:theme", theme: "dark", tokens: { "--fg": "#fff", color: "red" } });
