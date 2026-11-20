@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AbExperimentRunningError } from "@/lib/ab/errors";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -141,6 +142,8 @@ export async function DELETE(
     if (err instanceof ProjectNotFoundError) {
       return json({ error: "not_found" }, 404);
     }
+    // A live A/B experiment: taking the site down would end it (review item 13). The owner decides the test first.
+    if (err instanceof AbExperimentRunningError) return json(err.body, 409);
     // eslint-disable-next-line no-console
     console.error("[unpublish] unexpected error:", err);
     return json({ error: "unpublish_failed" }, 500);

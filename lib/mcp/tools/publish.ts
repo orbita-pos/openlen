@@ -2,6 +2,7 @@
 // openlen.com (salvo republicar en el mismo subdominio desde la misma conexión
 // que ya tuvo una), y por las MISMAS funciones que el botón Publicar.
 import * as z from "zod4";
+import { AbExperimentRunningError } from "@/lib/ab/errors";
 import { AppNoCompilaError, textoDeDiagnostico } from "@/lib/apps/compilador";
 import { DataChangesNeedOwnerError, dataChangesErrorBody } from "@/lib/backend/data-changes";
 import {
@@ -66,6 +67,8 @@ function publishError(err: unknown, projectId: string): ToolResult {
     );
   }
   if (err instanceof ProjectNotFoundError) return toolError("not_found", "The project no longer exists.");
+  // A live A/B experiment (review item 13): publishing from here would end it. Only the owner stops it, from OpenLen.
+  if (err instanceof AbExperimentRunningError) return toolError("ab_experiment_running", err.message);
   if (err instanceof AppNoCompilaError) {
     return toolError(
       "app_does_not_compile",
@@ -171,7 +174,12 @@ export const unpublishTool = defineTool({
     };
     const stop = await gate(req, approval_id, false);
     if (stop) return stop;
-    await conAutor(caller.userId, () => unpublishProject({ projectId: project_id, userId: open.acceso.duenoId }));
+    try {
+      await conAutor(caller.userId, () => unpublishProject({ projectId: project_id, userId: open.acceso.duenoId }));
+    } catch (err) {
+      if (err instanceof AbExperimentRunningError) return toolError("ab_experiment_running", err.message);
+      throw err;
+    }
     if (approval_id) await markApprovalUsed(approval_id);
     return jsonResult({ status: "unpublished" });
   },

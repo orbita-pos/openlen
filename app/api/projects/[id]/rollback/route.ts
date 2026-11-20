@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AbExperimentRunningError } from "@/lib/ab/errors";
 import { auth } from "@/auth";
 import {
   ProjectNotFoundError,
@@ -67,6 +68,8 @@ export const POST = conAutorDeLaPeticion(quienDeLaSesion, async function POST(
     if (err instanceof ReleaseUnavailableError) {
       return json({ error: "release_gone" }, 404);
     }
+    // A live A/B experiment: an older release has no manifest and would end it (review item 13).
+    if (err instanceof AbExperimentRunningError) return json(err.body, 409);
     // eslint-disable-next-line no-console
     console.error("[rollback] unexpected error:", err);
     return json({ error: "rollback_failed" }, 500);

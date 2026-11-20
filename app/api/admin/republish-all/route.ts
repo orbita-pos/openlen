@@ -53,6 +53,8 @@ async function runSweep(
         userId: row.userId,
         subdomain: row.subdomain,
         skipFlightCheck: true,
+        // A running A/B experiment survives a system republish (re-emitted with the new control).
+        abLive: "keep",
       });
       run.ok += 1;
       // eslint-disable-next-line no-console
