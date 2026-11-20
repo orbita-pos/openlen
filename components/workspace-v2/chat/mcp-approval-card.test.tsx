@@ -403,11 +403,15 @@ describe("🔴 trying again after a sign-in that didn't finish", () => {
     await act(async () => button("mcpApproval.connect").click());
     expect(urls()).toEqual(["/api/mcp-connectors/cal/approve", "/api/mcp-connectors/cal/oauth"]);
 
-    popup.closed = true; // the person closed the window before finishing
-    // The window's `closed` decides nothing (a provider's COOP sets it too, final review M2): the card waits for the sign-in's
-    // ten minutes, asking OpenLen meanwhile, and only then is a tap that can be made again.
+    // The person closes the window a few seconds in, before finishing. A `closed` seen right after the window left for the
+    // provider is its COOP (final review M2); a later one is the person (R2): one look at OpenLen and the card is a tap that
+    // can be made again.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(10 * 60 * 1000 + 2_000);
+      await vi.advanceTimersByTimeAsync(3_000);
+    });
+    popup.closed = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
     });
     // Back to a tap that can be made again, and the key field it already sent is gone.
     expect(document.querySelectorAll("input")).toHaveLength(0);
@@ -416,6 +420,80 @@ describe("🔴 trying again after a sign-in that didn't finish", () => {
     expect(urls().filter((u) => u.endsWith("/approve"))).toHaveLength(1);
     expect(urls().filter((u) => u.endsWith("/oauth"))).toHaveLength(2);
     expect(document.body.textContent).not.toContain("mcpApproval.changed");
+  });
+
+  // R2 (final review, residual): a person who closes the window to cancel gets the button back a moment later, not ten
+  // minutes later; a close that wasn't one (the provider's COOP seen late) still shows the connection when it comes through;
+  // and the wait goes with the card.
+  describe("🔴 closing the window to cancel", () => {
+    const SIGN_IN: McpApprovalCard = { ...NEEDS_APPROVAL, version: 0, credentials: [] };
+    const begin = async (rows: Response = servers({ name: "cal", status: "needs-auth" })) => {
+      vi.useFakeTimers();
+      const popup = fakePopup();
+      window.open = vi.fn(() => popup) as unknown as typeof window.open;
+      fetchMock.mockImplementation(async (url: string) => (url.endsWith("/oauth") ? startOk() : rows.clone()));
+      await render(SIGN_IN);
+      await act(async () => button("mcpApproval.connect").click());
+      expect(button("mcpApproval.connect").disabled).toBe(true);
+      return popup;
+    };
+    const advance = (ms: number) => act(async () => void (await vi.advanceTimersByTimeAsync(ms)));
+    const sawList = () => urls().filter((u) => u === "/api/mcp-connectors");
+
+    it("a window closed a few seconds in: the button is enabled again after one refetch, not ten minutes later", async () => {
+      const popup = await begin();
+      await advance(3_000);
+      popup.closed = true;
+      await advance(300);
+      expect(sawList()).toHaveLength(1);
+      expect(button("mcpApproval.connect").disabled).toBe(false);
+      expect(document.body.textContent).not.toContain("mcpApproval.errors");
+    });
+
+    it("a window closed a few seconds in, but the server is connected: the card says connected", async () => {
+      const popup = await begin(servers({ name: "cal", status: "connected" }));
+      await advance(3_000);
+      popup.closed = true;
+      await advance(300);
+      expect(document.body.textContent).toContain("mcpApproval.oauthConnected");
+    });
+
+    it("🔴 a close that wasn't one: the way back still shows the connection afterwards", async () => {
+      const popup = await begin();
+      await advance(3_000);
+      popup.closed = true;
+      await advance(300);
+      expect(button("mcpApproval.connect").disabled).toBe(false);
+      await act(async () => {
+        window.dispatchEvent(new MessageEvent("message", { origin: window.location.origin, data: { type: "openlen:mcp-oauth", server: "cal", ok: true } }));
+      });
+      expect(document.body.textContent).toContain("mcpApproval.oauthConnected");
+    });
+
+    it("🔴 the card going away clears the wait: no timer, no listener left", async () => {
+      await begin();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      const listening = vi.spyOn(window, "removeEventListener");
+      act(() => root!.unmount());
+      root = null;
+      expect(vi.getTimerCount()).toBe(0);
+      expect(listening).toHaveBeenCalledWith("message", expect.any(Function));
+    });
+
+    it("a new tap after a close takes the wait over: the old one leaves nothing behind", async () => {
+      const popup = await begin();
+      await advance(3_000);
+      popup.closed = true;
+      await advance(300);
+      popup.closed = false;
+      await act(async () => button("mcpApproval.connect").click());
+      expect(button("mcpApproval.connect").disabled).toBe(true);
+      await act(async () => {
+        window.dispatchEvent(new MessageEvent("message", { origin: window.location.origin, data: { type: "openlen:mcp-oauth", server: "cal", ok: true } }));
+      });
+      expect(document.body.textContent).toContain("mcpApproval.oauthConnected");
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it("a blocked window says so in words, keeps «Try again» and points at Tools", async () => {

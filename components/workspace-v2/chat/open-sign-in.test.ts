@@ -1,10 +1,10 @@
 // Opening the OAuth popup on a tap (spec local 2026-11-17-oauth-de-conectores-mcp, §10.5): `window.open` runs
 // synchronously before any `await`, then `approve?.()`, then `start`, and the popup navigates to the provider's URL and
 // waits for the way back — a `BroadcastChannel` (the provider's pages may have cut the opener off) or a `postMessage` —,
-// or for the window to close, in which case the server's own state says whether it connected.
+// or for the window to close (a close seen late), in which case the server's own state says whether it connected.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { openSignIn, SIGN_IN_WAIT_MS, SignInError } from "./open-sign-in";
+import { EARLY_CLOSE_MS, openSignIn, SIGN_IN_WAIT_MS, SignInError } from "./open-sign-in";
 
 interface FakePopup {
   closed: boolean;
@@ -79,7 +79,11 @@ afterEach(() => {
 });
 
 const message = (data: unknown, origin = window.location.origin) => window.dispatchEvent(new MessageEvent("message", { origin, data }));
-const comeBack = (data: unknown) => new FakeChannel(CHANNEL).postMessage(data);
+const comeBack = (data: unknown) => {
+  const page = new FakeChannel(CHANNEL);
+  page.postMessage(data);
+  page.close();
+};
 const settle = async () => {
   for (let i = 0; i < 5; i++) await Promise.resolve();
 };
@@ -410,6 +414,206 @@ describe("openSignIn", () => {
       expect(await run).toEqual({ error: "exchange_failed" });
       answer(servers({ name: "cal", status: "connected" }));
       await at(0);
+    });
+  });
+
+  // R2 (final review, residual): the window's `closed` is read by WHEN it is first seen. Right after the window left for the
+  // provider it is the provider's COOP (keep waiting, M2); later it is the person closing the window — one refetch says
+  // whether the server connected, and if not the card gets its button back at once instead of ten minutes later. A new tap
+  // (the window is one named window) and the card going away stop the wait before it, and leave no timer, listener or
+  // channel behind.
+  describe("🔴 a window the person closes", () => {
+    const at = async (ms: number) => vi.advanceTimersByTimeAsync(ms);
+    const begin = async (opts: Parameters<typeof openSignIn>[1] = {}) => {
+      vi.useFakeTimers();
+      fetchMock.mockResolvedValue(servers({ name: "cal", status: "needs-auth" }));
+      const run = openSignIn("cal", { start: async () => AUTH_URL, ...opts });
+      await at(0);
+      return { run };
+    };
+    const channelsOpen = () => FakeChannel.all.filter((c) => c.name === CHANNEL && !c.closed);
+
+    it("a close seen within 1.5 s of leaving for the provider (COOP) keeps waiting: no refetch before the five-second beat", async () => {
+      expect(EARLY_CLOSE_MS).toBe(1_500);
+      const { run } = await begin();
+      await at(1_000);
+      popup.closed = true;
+      let done = false;
+      void run.then(() => (done = true));
+      await at(3_000);
+      expect(done).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(await run).toBe("connected");
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("a close seen later is a real one: ONE refetch, and the server isn't connected → «closed» at once, with nothing polling afterwards", async () => {
+      const { run } = await begin();
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith("/api/mcp-connectors");
+      expect(await run).toBe("closed");
+      await at(60_000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("a real close, but the server is connected (the way back was cut): «connected»", async () => {
+      const { run } = await begin();
+      fetchMock.mockResolvedValue(servers({ name: "cal", status: "connected" }));
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(await run).toBe("connected");
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(channelsOpen()).toEqual([]);
+    });
+
+    it("a refetch that fails or says nothing about the server is «not connected»: the person gets the button back", async () => {
+      const { run } = await begin();
+      fetchMock.mockRejectedValue(new Error("offline"));
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(await run).toBe("closed");
+    });
+
+    it("🔴 after a real close it still hears a late success until the ten minutes are up (the card hears of it through onLate)", async () => {
+      const onLate = vi.fn();
+      const { run } = await begin({ onLate });
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(await run).toBe("closed");
+      await at(30_000);
+      comeBack({ type: CHANNEL, server: "cal", ok: false, reason: "exchange_failed" });
+      expect(onLate).not.toHaveBeenCalled();
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(onLate).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(channelsOpen()).toEqual([]);
+    });
+
+    it("…and with no late word it lets go of everything when the ten minutes are up", async () => {
+      const onLate = vi.fn();
+      const { run } = await begin({ onLate });
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(await run).toBe("closed");
+      await at(SIGN_IN_WAIT_MS);
+      expect(vi.getTimerCount()).toBe(0);
+      expect(channelsOpen()).toEqual([]);
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(onLate).not.toHaveBeenCalled();
+    });
+
+    it("🔴 a new tap aborts the wait before it: the first says «aborted», the second is the one that hears, nothing of the first is left", async () => {
+      const onLate = vi.fn();
+      const { run: first } = await begin({ onLate });
+      const second = openSignIn("cal", { start: async () => AUTH_URL });
+      await at(0);
+      expect(await first).toBe("aborted");
+      expect(channelsOpen()).toHaveLength(1);
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(await second).toBe("connected");
+      expect(onLate).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+      expect(channelsOpen()).toEqual([]);
+    });
+
+    it("a new tap aborts even a wait that already gave its «closed» and kept listening for a late success", async () => {
+      const onLate = vi.fn();
+      const { run: first } = await begin({ onLate });
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(await first).toBe("closed");
+      popup.closed = false;
+      const second = openSignIn("cal", { start: async () => AUTH_URL });
+      await at(0);
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(await second).toBe("connected");
+      expect(onLate).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("🔴 a new tap while the first is still starting: the first never takes the shared window to its provider page", async () => {
+      vi.useFakeTimers();
+      const SECOND_URL = "https://accounts.google.com/o/oauth2/v2/auth?state=second";
+      let releaseSlow!: (url: string) => void;
+      const slow = new Promise<string>((r) => (releaseSlow = r));
+      const first = openSignIn("cal", { start: () => slow });
+      const second = openSignIn("cal", { start: async () => SECOND_URL });
+      await at(0);
+      expect(navigations.map((n) => n.url)).toEqual([SECOND_URL]);
+      releaseSlow(AUTH_URL);
+      await at(0);
+      expect(await first).toBe("aborted");
+      expect(navigations.map((n) => n.url)).toEqual([SECOND_URL]);
+      expect(popup.closed).toBe(false);
+      comeBack({ type: CHANNEL, server: "cal", ok: true });
+      expect(await second).toBe("connected");
+    });
+
+    it("🔴 the card going away (its signal) clears the interval, the listeners and the channel — and leaves the window to the person", async () => {
+      const removed = vi.spyOn(window, "removeEventListener");
+      const controller = new AbortController();
+      const onLate = vi.fn();
+      const { run } = await begin({ signal: controller.signal, onLate });
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      expect(channelsOpen()).toHaveLength(1);
+      controller.abort();
+      expect(await run).toBe("aborted");
+      expect(vi.getTimerCount()).toBe(0);
+      expect(channelsOpen()).toEqual([]);
+      expect(removed).toHaveBeenCalledWith("message", expect.any(Function));
+      expect(popup.closed).toBe(false);
+      // Nothing is listening any more: no fetch on the beat, no reaction to the way back.
+      await at(60_000);
+      expect(fetchMock).not.toHaveBeenCalled();
+      message({ type: CHANNEL, server: "cal", ok: true });
+      expect(onLate).not.toHaveBeenCalled();
+    });
+
+    it("a card that goes away while a refetch is in flight is never answered by it", async () => {
+      const controller = new AbortController();
+      let answer!: (r: Response) => void;
+      const { run } = await begin({ signal: controller.signal });
+      fetchMock.mockReturnValue(new Promise<Response>((r) => (answer = r)));
+      await at(3_000);
+      popup.closed = true;
+      await at(300);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      controller.abort();
+      expect(await run).toBe("aborted");
+      answer(servers({ name: "cal", status: "connected" }));
+      await at(0);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it("a signal that is already aborted, or aborts while the start is in flight, ends with «aborted» and a blank window closed", async () => {
+      vi.useFakeTimers();
+      const done = new AbortController();
+      done.abort();
+      expect(await openSignIn("cal", { start: async () => AUTH_URL, signal: done.signal })).toBe("aborted");
+      expect(navigations).toEqual([]);
+      expect(popup.closed).toBe(true);
+
+      popup.closed = false;
+      const controller = new AbortController();
+      let release!: (url: string) => void;
+      const run = openSignIn("cal", { start: () => new Promise<string>((r) => (release = r)), signal: controller.signal });
+      await at(0);
+      controller.abort();
+      release(AUTH_URL);
+      expect(await run).toBe("aborted");
+      expect(navigations).toEqual([]);
+      expect(popup.closed).toBe(true);
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 });
