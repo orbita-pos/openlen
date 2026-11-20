@@ -88,9 +88,14 @@ async function depsWith(verdict: AbMetricsSnapshot["stats"]["verdict"], during?:
   };
 }
 
+// The default deps load their modules on first use (the evaluator's cost at boot): that first load, under a loaded machine,
+// is not what these tests measure — it is done once here, with room.
+vi.setConfig({ testTimeout: 20_000, hookTimeout: 60_000 });
+
 beforeAll(async () => {
   pglite = await openAbPglite();
   h.db = pglite.db;
+  await defaultEvaluatorDeps();
 });
 afterAll(async () => {
   await raw().close();

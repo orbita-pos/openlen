@@ -61,14 +61,35 @@ export async function assertNoLiveExperiment(projectId: string, deps: GuardDeps 
   if (live) throw refusal(live);
 }
 
+/** What closing the experiment needs (injected by the test). */
+export interface EndDeps {
+  cancel(id: string, actorId: string): Promise<AbExperimentRow | null>;
+  cleanup(p: { parentId: string; copyProjectId: string | null; branch: string | null }): Promise<void>;
+}
+const realEnd: EndDeps = { cancel: cancelLiveExperiment, cleanup: cleanupAbWorktree };
+
 /** After an owner's «Stop and publish» went through: the experiment is over. Called only once the publish succeeded —
- *  a failed publish leaves the experiment live and untouched (review item 14). Never throws: the publish is done. */
-export async function endExperimentAfterPublish(exp: AbExperimentRow, actorId: string): Promise<void> {
-  try {
-    const ended = await cancelLiveExperiment(exp.id, actorId);
-    if (!ended) return; // someone decided it meanwhile: not ours to touch
-    await cleanupAbWorktree({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch });
-  } catch (err) {
-    console.error("[ab] couldn't close the experiment after the owner stopped it by publishing", exp.id, err);
+ *  a failed publish leaves the experiment live and untouched (review item 14). Never throws: the publish is done. A close
+ *  that fails is tried once more (G1+G3 review, item 20): the row must not stay `running` with a release that carries no
+ *  split. If both fail it says so, loudly. */
+export async function endExperimentAfterPublish(exp: AbExperimentRow, actorId: string, deps: EndDeps = realEnd): Promise<void> {
+  let ended: AbExperimentRow | null = null;
+  let failure: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      ended = await deps.cancel(exp.id, actorId);
+      failure = null;
+      break;
+    } catch (err) {
+      failure = err;
+    }
   }
+  if (failure) {
+    console.error("[ab] couldn't close the experiment after the owner stopped it by publishing (it still says running)", exp.id, failure);
+    return;
+  }
+  if (!ended) return; // someone decided it meanwhile: not ours to touch
+  await deps
+    .cleanup({ parentId: exp.projectId, copyProjectId: exp.copyProjectId, branch: exp.branch })
+    .catch((err: unknown) => console.error("[ab] couldn't clean up the stopped experiment's worktree", exp.id, err));
 }

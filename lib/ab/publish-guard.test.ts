@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-const { AbExperimentRunningError, assertNoLiveExperiment, resolveAbPublish } = await import("./publish-guard");
+const { AbExperimentRunningError, assertNoLiveExperiment, endExperimentAfterPublish, resolveAbPublish } = await import("./publish-guard");
 
 const EXP = { id: "ab_1234abcd", name: "Direct hero", targetPath: "/", status: "running", controlReleaseSha: "rel-c" } as never;
 const REBUILT = { experiment: EXP, sourcesOverride: { data: { html: "A" }, folder: {} }, abExperiment: { id: "ab_1234abcd" }, protectReleaseShas: ["rel-c"] } as never;
@@ -81,5 +81,40 @@ describe("assertNoLiveExperiment (unpublish, rollback)", () => {
 
   it("🔴 a live experiment: refused the same way", async () => {
     await expect(assertNoLiveExperiment("p1", deps())).rejects.toBeInstanceOf(AbExperimentRunningError);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// CLOSING THE EXPERIMENT AFTER «STOP AND PUBLISH» (G1+G3 review, item 20): the publish is done, the row has to follow. A
+// failed close is tried once more; the experiment must not stay `running` with a release that has no split.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("endExperimentAfterPublish", () => {
+  const ROW = { id: "ab_1234abcd", projectId: "p1", copyProjectId: "copy-1", branch: "ab/ab_1234abcd" } as never;
+  const endDeps = (cancel: ReturnType<typeof vi.fn>) => ({ cancel, cleanup: vi.fn(async () => undefined) });
+
+  it("🔴 a close that fails is retried once, and the worktree is cleaned when the retry succeeds", async () => {
+    const cancel = vi.fn().mockRejectedValueOnce(new Error("db blip")).mockResolvedValueOnce({ id: "ab_1234abcd" });
+    const d = endDeps(cancel);
+    await endExperimentAfterPublish(ROW, "u1", d);
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(d.cleanup).toHaveBeenCalledWith({ parentId: "p1", copyProjectId: "copy-1", branch: "ab/ab_1234abcd" });
+  });
+
+  it("fails twice: it says so (the publish is done, nothing is thrown) and cleans nothing", async () => {
+    const cancel = vi.fn().mockRejectedValue(new Error("db down"));
+    const d = endDeps(cancel);
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    await expect(endExperimentAfterPublish(ROW, "u1", d)).resolves.toBeUndefined();
+    error.mockRestore();
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(d.cleanup).not.toHaveBeenCalled();
+  });
+
+  it("someone decided it meanwhile (the conditional close changes nothing): not ours to touch, no retry, no cleanup", async () => {
+    const cancel = vi.fn().mockResolvedValue(null);
+    const d = endDeps(cancel);
+    await endExperimentAfterPublish(ROW, "u1", d);
+    expect(cancel).toHaveBeenCalledTimes(1);
+    expect(d.cleanup).not.toHaveBeenCalled();
   });
 });
