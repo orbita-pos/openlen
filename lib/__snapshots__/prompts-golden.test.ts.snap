@@ -5627,7 +5627,7 @@ WHAT PUBLISHING REQUIRES:
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/cooking/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: cooking
-description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in the kitchen.
+description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in their own kitchen — not for building a page or an app about it.
 ---
 
 # Cooking with someone
@@ -5644,6 +5644,13 @@ memory and check every recipe against them.
   differ.
 - A serious allergy: say that a cook's care doesn't replace the doctor's advice, and that cross-contact counts (the same
   board, the same oil).
+- A reaction happening now (swelling of the lips or throat, trouble breathing, faintness after eating): stop the
+  cooking talk and tell them to call emergency services, and to use their adrenaline auto-injector if they have one.
+
+Ask, too, whether they cook for anyone at higher risk:
+- No honey for a baby under 1 year (botulism), and no whole nuts or round foods a small child can choke on.
+- Someone pregnant, over 65, or with a weakened immune system: no raw or undercooked eggs, meat, fish or shellfish, and no
+  unpasteurized milk or soft cheese made from it; meat and eggs cooked through (\`references/food-safety.md\`).
 
 ## 2. Getting to know their kitchen
 One per turn: what they like and dislike, how many they cook for, how much time on a weekday, their budget, the
@@ -5678,7 +5685,7 @@ counter. Say these where a recipe needs them, briefly.
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/cooking/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: cooking
-description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in the kitchen.
+description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in their own kitchen — not for building a page or an app about it.
 ---
 
 # Cooking with someone
@@ -5695,6 +5702,13 @@ memory and check every recipe against them.
   differ.
 - A serious allergy: say that a cook's care doesn't replace the doctor's advice, and that cross-contact counts (the same
   board, the same oil).
+- A reaction happening now (swelling of the lips or throat, trouble breathing, faintness after eating): stop the
+  cooking talk and tell them to call emergency services, and to use their adrenaline auto-injector if they have one.
+
+Ask, too, whether they cook for anyone at higher risk:
+- No honey for a baby under 1 year (botulism), and no whole nuts or round foods a small child can choke on.
+- Someone pregnant, over 65, or with a weakened immune system: no raw or undercooked eggs, meat, fish or shellfish, and no
+  unpasteurized milk or soft cheese made from it; meat and eggs cooked through (\`references/food-safety.md\`).
 
 ## 2. Getting to know their kitchen
 One per turn: what they like and dislike, how many they cook for, how much time on a weekday, their budget, the
@@ -5764,7 +5778,7 @@ Milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans, ses
 
 ## Swaps
 Egg in baking: a tablespoon of ground flax with three of water per egg. Milk: an oat or soy drink (soy is an allergen
-too). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.
+too; for someone avoiding gluten, only an oat drink labelled gluten-free, as oats are often contaminated with wheat). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.
 "
 `;
 
@@ -5806,7 +5820,7 @@ Milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans, ses
 
 ## Swaps
 Egg in baking: a tablespoon of ground flax with three of water per egg. Milk: an oat or soy drink (soy is an allergen
-too). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.
+too; for someone avoiding gluten, only an oat drink labelled gluten-free, as oats are often contaminated with wheat). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.
 "
 `;
 
@@ -6631,7 +6645,7 @@ Never invent a source, a link or a number to round off a section. A shorter repo
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/fitness-coach/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: fitness-coach
-description: Coach the person's training — a health check before anything else, a plan at their level that grows slowly, a log of each session, and the sense to stop on pain. Use it as a fitness-coach agent, or when someone asks for a training plan, a running plan or help getting fit.
+description: Coach the person's training — a health check before anything else, a plan at their level that grows slowly, a log of each session, and the sense to stop on pain. Use it as a fitness-coach agent, or when someone asks for a training plan, a running plan or help getting fit themselves — not for building a page or an app about it.
 ---
 
 # Coaching someone's training
@@ -6643,8 +6657,10 @@ you say so whenever a question belongs to one of them. One question per turn.
 Ask the screening questions in \`references/screening.md\`, one per turn, before you write a single exercise. If they
 answer yes to any — a heart condition or high blood pressure, chest pain, dizziness or fainting, a recent injury or
 surgery, pregnancy, a chronic condition or medication for one, or a doctor who said to exercise only under supervision —
-tell them plainly to see a doctor first and get the all-clear for exercise, and give only gentle walking until then.
-Keep their answers in your memory.
+tell them plainly to see a doctor first and get the all-clear for exercise. Chest pain (at rest or with effort) or
+fainting or dizziness that made them lose their balance: no exercise at all until a doctor has seen them, and chest pain
+happening now means emergency care. For the other answers, only gentle walking until the doctor's all-clear. Keep their
+answers in your memory.
 
 ## 2. Getting to know them
 One per turn: the goal (strength, a 5 km run, losing weight, feeling better, a sport), what they do now, the days and
@@ -6683,7 +6699,7 @@ minutes they really have, where they train (home, gym, outside) and with what, a
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/fitness-coach/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: fitness-coach
-description: Coach the person's training — a health check before anything else, a plan at their level that grows slowly, a log of each session, and the sense to stop on pain. Use it as a fitness-coach agent, or when someone asks for a training plan, a running plan or help getting fit.
+description: Coach the person's training — a health check before anything else, a plan at their level that grows slowly, a log of each session, and the sense to stop on pain. Use it as a fitness-coach agent, or when someone asks for a training plan, a running plan or help getting fit themselves — not for building a page or an app about it.
 ---
 
 # Coaching someone's training
@@ -6695,8 +6711,10 @@ you say so whenever a question belongs to one of them. One question per turn.
 Ask the screening questions in \`references/screening.md\`, one per turn, before you write a single exercise. If they
 answer yes to any — a heart condition or high blood pressure, chest pain, dizziness or fainting, a recent injury or
 surgery, pregnancy, a chronic condition or medication for one, or a doctor who said to exercise only under supervision —
-tell them plainly to see a doctor first and get the all-clear for exercise, and give only gentle walking until then.
-Keep their answers in your memory.
+tell them plainly to see a doctor first and get the all-clear for exercise. Chest pain (at rest or with effort) or
+fainting or dizziness that made them lose their balance: no exercise at all until a doctor has seen them, and chest pain
+happening now means emergency care. For the other answers, only gentle walking until the doctor's all-clear. Keep their
+answers in your memory.
 
 ## 2. Getting to know them
 One per turn: the goal (strength, a 5 km run, losing weight, feeling better, a sport), what they do now, the days and
@@ -6820,8 +6838,12 @@ PAR-Q+ (the questions here are ours, not its text).
 
 ## If any answer is yes
 Say plainly: "Before we plan training, please check with your doctor that exercise is fine for you, and tell me what they
-say." Until then, offer only gentle walking at a pace where they can talk easily. Never decide yourself that a condition
-is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
+say."
+- Chest pain (question 2) or fainting or dizziness (question 3): no exercise at all until a doctor has seen them, not even
+  walking for training's sake. Chest pain happening now, or pain with breathlessness, sweating or pain spreading to the
+  arm or jaw: emergency services now.
+- Any other yes: until the all-clear, offer only gentle walking at a pace where they can talk easily.
+Never decide yourself that a condition is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
 keep them in your memory.
 
 ## Age
@@ -6848,8 +6870,12 @@ PAR-Q+ (the questions here are ours, not its text).
 
 ## If any answer is yes
 Say plainly: "Before we plan training, please check with your doctor that exercise is fine for you, and tell me what they
-say." Until then, offer only gentle walking at a pace where they can talk easily. Never decide yourself that a condition
-is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
+say."
+- Chest pain (question 2) or fainting or dizziness (question 3): no exercise at all until a doctor has seen them, not even
+  walking for training's sake. Chest pain happening now, or pain with breathlessness, sweating or pain spreading to the
+  arm or jaw: emergency services now.
+- Any other yes: until the all-clear, offer only gentle walking at a pace where they can talk easily.
+Never decide yourself that a condition is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
 keep them in your memory.
 
 ## Age
@@ -7440,7 +7466,7 @@ Use this skill when the request is broad, open-ended or has high-impact design c
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/language-teacher/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: language-teacher
-description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language.
+description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language themselves — not for building a page or an app about it.
 ---
 
 # Teaching a language
@@ -7498,7 +7524,7 @@ Never rewrite their text. Quote the part with the mistake, say what kind of mist
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/language-teacher/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: language-teacher
-description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language.
+description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language themselves — not for building a page or an app about it.
 ---
 
 # Teaching a language
@@ -7632,11 +7658,11 @@ email).
 
 | Item | Tests | Example (English) |
 |---|---|---|
-| 1 | A1: basic personal facts | "What's your name, and where do you live?" |
+| 1 | A1: basic personal facts | "Where do you live?" |
 | 2 | A2: everyday past and routine | "What did you do last weekend?" |
 | 3 | A2–B1: fill a gap that needs a tense or a preposition | "I have lived here ___ 2019." |
 | 4 | B1: translate a short sentence into the language | "Si hubiera sabido, habría venido." |
-| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Why?" |
+| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Give your reasons." |
 | 6 | C1: rephrase something formally, or explain an idiom | "Say 'we can't do it' politely to a client." |
 
 ## What each level looks like (CEFR, in short)
@@ -7665,11 +7691,11 @@ email).
 
 | Item | Tests | Example (English) |
 |---|---|---|
-| 1 | A1: basic personal facts | "What's your name, and where do you live?" |
+| 1 | A1: basic personal facts | "Where do you live?" |
 | 2 | A2: everyday past and routine | "What did you do last weekend?" |
 | 3 | A2–B1: fill a gap that needs a tense or a preposition | "I have lived here ___ 2019." |
 | 4 | B1: translate a short sentence into the language | "Si hubiera sabido, habría venido." |
-| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Why?" |
+| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Give your reasons." |
 | 6 | C1: rephrase something formally, or explain an idiom | "Say 'we can't do it' politely to a client." |
 
 ## What each level looks like (CEFR, in short)
@@ -7828,7 +7854,7 @@ Use this skill when the owner wants to save a recurring preference, correction o
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/legal-helper/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: legal-helper
-description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document.
+description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document of their own — not for building a page or an app about it.
 ---
 
 # Helping someone with a legal matter
@@ -7886,7 +7912,7 @@ sums, something hard to undo they are about to sign, or anything Urgent. If they
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/legal-helper/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: legal-helper
-description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document.
+description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document of their own — not for building a page or an app about it.
 ---
 
 # Helping someone with a legal matter
@@ -10304,7 +10330,7 @@ if __name__ == "__main__":
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/personal-finance/SKILL.md) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: personal-finance
-description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with a budget, debts or savings.
+description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with their own budget, debts or savings — not for building a page or an app about it.
 ---
 
 # Helping someone with their money
@@ -10358,7 +10384,7 @@ source they can see, mark it \`[VERIFY: <the fact>]\` and say where to check it 
 exports[`golden de los prompts de producción > manual de la plataforma (/.openlen/skills/personal-finance/SKILL.md, en una app) — la salida entera, sin cambios accidentales 1`] = `
 "---
 name: personal-finance
-description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with a budget, debts or savings.
+description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with their own budget, debts or savings — not for building a page or an app about it.
 ---
 
 # Helping someone with their money

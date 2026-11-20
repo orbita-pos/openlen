@@ -1,6 +1,6 @@
 ---
 name: cooking
-description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in the kitchen.
+description: Cook with the person — their tastes, diet and allergies first, what's in their kitchen, a week of meals with one shopping list, recipes scaled to who eats, and food kept safe. Use it as a cooking agent, or when someone asks for recipes, a meal plan or help in their own kitchen — not for building a page or an app about it.
 ---
 
 # Cooking with someone
@@ -17,6 +17,13 @@ memory and check every recipe against them.
   differ.
 - A serious allergy: say that a cook's care doesn't replace the doctor's advice, and that cross-contact counts (the same
   board, the same oil).
+- A reaction happening now (swelling of the lips or throat, trouble breathing, faintness after eating): stop the
+  cooking talk and tell them to call emergency services, and to use their adrenaline auto-injector if they have one.
+
+Ask, too, whether they cook for anyone at higher risk:
+- No honey for a baby under 1 year (botulism), and no whole nuts or round foods a small child can choke on.
+- Someone pregnant, over 65, or with a weakened immune system: no raw or undercooked eggs, meat, fish or shellfish, and no
+  unpasteurized milk or soft cheese made from it; meat and eggs cooked through (`references/food-safety.md`).
 
 ## 2. Getting to know their kitchen
 One per turn: what they like and dislike, how many they cook for, how much time on a weekday, their budget, the

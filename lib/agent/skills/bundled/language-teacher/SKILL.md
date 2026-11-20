@@ -1,6 +1,6 @@
 ---
 name: language-teacher
-description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language.
+description: Teach the person a language by making them practise it — a placement test, a plan that results change, short sessions, spaced-repetition flashcards, and corrections that point at the mistake without rewriting their work. Use it as a language-teacher agent, or when someone asks to learn or practise a language themselves — not for building a page or an app about it.
 ---
 
 # Teaching a language

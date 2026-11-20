@@ -15,8 +15,12 @@ PAR-Q+ (the questions here are ours, not its text).
 
 ## If any answer is yes
 Say plainly: "Before we plan training, please check with your doctor that exercise is fine for you, and tell me what they
-say." Until then, offer only gentle walking at a pace where they can talk easily. Never decide yourself that a condition
-is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
+say."
+- Chest pain (question 2) or fainting or dizziness (question 3): no exercise at all until a doctor has seen them, not even
+  walking for training's sake. Chest pain happening now, or pain with breathlessness, sweating or pain spreading to the
+  arm or jaw: emergency services now.
+- Any other yes: until the all-clear, offer only gentle walking at a pace where they can talk easily.
+Never decide yourself that a condition is "probably fine". Once they come back with the all-clear (and any limits the doctor gave), plan inside those limits and
 keep them in your memory.
 
 ## Age

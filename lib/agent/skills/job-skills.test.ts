@@ -11,6 +11,13 @@ const skillMd = (name: string) => FILES[`/.openlen/skills/${name}/SKILL.md`] ?? 
 const reference = (name: string, rel: string) => FILES[`/.openlen/skills/${name}/references/${rel}`];
 
 function shape(name: string) {
+  // Final review (re-graded): these skills are in Len's catalog for everyone, so they say they are for the person's own
+  // matter — never pulled into building a page or an app about it (a restaurant's recipes section).
+  it("says it is for the person's own matter, not for building a page about it", () => {
+    const description = parseSkillFile(skillMd(name), name);
+    expect(description.ok && description.skill.description).toMatch(/not for building a page or an app/i);
+  });
+
   it("parses, is short, and every references/ file it names exists", () => {
     const text = skillMd(name);
     const parsed = parseSkillFile(text, name);
@@ -30,6 +37,12 @@ describe("language-teacher", () => {
     expect(t).toMatch(/never two/i);
     expect(t).toMatch(/estimate, not a certificate/i);
   });
+
+  it("🔴 its placement examples ask one thing each (models copy examples)", () => {
+    const table = (reference("language-teacher", "placement.md") ?? "").split("\n").filter((l) => /^\| \d /.test(l));
+    expect(table.length).toBeGreaterThan(4);
+    for (const row of table) expect((row.match(/\?/g) ?? []).length, row).toBeLessThanOrEqual(1);
+  });
 });
 
 describe("fitness-coach", () => {
@@ -40,6 +53,13 @@ describe("fitness-coach", () => {
     expect(t).toMatch(/doctor/i);
     expect(t).toMatch(/stop[^.\n]*pain|pain[^.\n]*stop/i);
     expect(t).toMatch(/not a (doctor|medical professional|physiotherapist)/i);
+  });
+
+  // Final review I4: chest pain at rest or fainting is no case for «gentle walking».
+  it("🔴 chest pain or fainting in the health check: no exercise at all, a doctor first", () => {
+    for (const text of [skillMd("fitness-coach"), reference("fitness-coach", "screening.md") ?? ""]) {
+      expect(text).toMatch(/chest pain[^.\n]*(faint|dizz)[^.\n]*no exercise at all|no exercise at all[^.\n]*chest pain/i);
+    }
   });
 });
 
@@ -97,9 +117,18 @@ describe("cooking", () => {
   shape("cooking");
   it("🔴 asks allergies first, keeps them in memory, and an allergen is never «probably fine»", () => {
     const t = skillMd("cooking");
-    expect(t).toMatch(/allerg/i);
-    expect(t).toMatch(/memory/i);
-    expect(t).toMatch(/probably fine/i);
+    expect(t).toMatch(/before the first recipe[^.]*allerg/i);
+    expect(t).toMatch(/allergies and diets[^.]*memory|memory[^.]*allergies/i);
+    expect(t).toMatch(/allergen is never "probably fine"/i);
+  });
+
+  // Final review (re-graded): who is at higher risk, and a reaction happening now.
+  it("🔴 knows the eaters at higher risk and sends a reaction happening now to emergency services", () => {
+    const t = skillMd("cooking");
+    expect(t).toMatch(/honey[^.\n]*(under|before)[^.\n]*1/i);
+    expect(t).toMatch(/pregnan[^.\n]*(raw|undercooked|unpasteurized)|(raw|undercooked|unpasteurized)[^.\n]*pregnan/i);
+    expect(t).toMatch(/emergency/i);
+    expect(reference("cooking", "allergens.md") ?? "").toMatch(/oat[^.\n]*gluten-free/i);
   });
 
   it("its food-safety temperatures are the USDA's, with their source", () => {

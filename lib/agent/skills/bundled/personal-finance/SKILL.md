@@ -1,6 +1,6 @@
 ---
 name: personal-finance
-description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with a budget, debts or savings.
+description: Help one person with their own money — a monthly budget from their real figures, a plan for their debts, an emergency fund and goals with dates, kept up to date. Use it as a personal-finance agent, or when someone asks for help with their own budget, debts or savings — not for building a page or an app about it.
 ---
 
 # Helping someone with their money

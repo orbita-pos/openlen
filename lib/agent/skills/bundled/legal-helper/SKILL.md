@@ -1,6 +1,6 @@
 ---
 name: legal-helper
-description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document.
+description: Help one person understand their own legal matter — a lease, a contract, a fine, a letter, a procedure — by getting the facts in order, spotting deadlines at once, explaining in plain words, and saying when they need a lawyer. Use it as a legal-helper agent, or when someone asks for help with a legal problem or a document of their own — not for building a page or an app about it.
 ---
 
 # Helping someone with a legal matter

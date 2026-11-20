@@ -35,4 +35,4 @@ Milk, eggs, fish, crustacean shellfish, tree nuts, peanuts, wheat, soybeans, ses
 
 ## Swaps
 Egg in baking: a tablespoon of ground flax with three of water per egg. Milk: an oat or soy drink (soy is an allergen
-too). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.
+too; for someone avoiding gluten, only an oat drink labelled gluten-free, as oats are often contaminated with wheat). Wheat flour: a gluten-free blend (results differ: say so). Peanuts in a sauce: sunflower seed butter.

@@ -6,11 +6,11 @@ email).
 
 | Item | Tests | Example (English) |
 |---|---|---|
-| 1 | A1: basic personal facts | "What's your name, and where do you live?" |
+| 1 | A1: basic personal facts | "Where do you live?" |
 | 2 | A2: everyday past and routine | "What did you do last weekend?" |
 | 3 | A2–B1: fill a gap that needs a tense or a preposition | "I have lived here ___ 2019." |
 | 4 | B1: translate a short sentence into the language | "Si hubiera sabido, habría venido." |
-| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Why?" |
+| 5 | B2: give an opinion with a reason, three or four lines | "Should cities ban cars from the centre? Give your reasons." |
 | 6 | C1: rephrase something formally, or explain an idiom | "Say 'we can't do it' politely to a client." |
 
 ## What each level looks like (CEFR, in short)
