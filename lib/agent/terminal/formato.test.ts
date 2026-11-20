@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { formatDuration, formatFileSize, persistedOutput } from "./formato";
+import { formatDuration, formatFileSize, headAndTail, persistedOutput } from "./formato";
 
 describe("como Claude Code", () => {
   it("formatDuration: como el de Claude Code", () => {
@@ -39,5 +39,50 @@ describe("como Claude Code", () => {
     expect(tail!.length).toBeLessThanOrEqual(1200);
     expect(text.startsWith(head! + "\n")).toBe(true);
     expect(text.endsWith(tail!)).toBe(true);
+  });
+
+  // C4 of the Ruta 98 review: the two cuts of the preview.
+  const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
+  const previewBody = (b: string) => b.split("):\n")[1]!.slice(0, -"\n</persisted-output>".length);
+
+  it("🔴 persistedOutput: the head's cut never splits a surrogate pair", () => {
+    // No newline in the first 1.200 characters, and the emoji (2 units) straddles index 1.200.
+    const text = "a".repeat(1199) + "\u{1F600}" + "b".repeat(3000);
+    const b = persistedOutput({ path: "/tmp/tool-results/1.txt", text });
+    expect(LONE_SURROGATE.test(b)).toBe(false);
+    const [head] = previewBody(b).split("\n...\n");
+    expect(head).toBe("a".repeat(1199));
+  });
+
+  it("🔴 persistedOutput: the tail's cut never splits a surrogate pair", () => {
+    // No newline anywhere, and the emoji straddles index len - 1.200, where the tail starts.
+    const text = "a".repeat(3000) + "\u{1F600}" + "b".repeat(1199);
+    expect(text.length - 1200).toBe(3001);
+    const b = persistedOutput({ path: "/tmp/tool-results/1.txt", text });
+    expect(LONE_SURROGATE.test(b)).toBe(false);
+    const [, tail] = previewBody(b).split("\n...\n");
+    expect(tail).toBe("b".repeat(1199));
+  });
+
+  it("🔴 persistedOutput: a tail cut that lands exactly on a line start keeps that line", () => {
+    const tailBlock = "IMPORTANT FIRST LINE OF THE TAIL".padEnd(600, "x") + "\n" + "z".repeat(599);
+    expect(tailBlock.length).toBe(1200);
+    const text = "m".repeat(2000) + "\n" + tailBlock;
+    expect(text.length - 1200).toBe(2001);
+    const b = persistedOutput({ path: "/tmp/tool-results/1.txt", text });
+    const [, tail] = previewBody(b).split("\n...\n");
+    expect(tail).toBe(tailBlock);
+  });
+
+  it("headAndTail: cuts at line breaks inside its budgets, and the two halves never overlap", () => {
+    const text = Array.from({ length: 400 }, (_, i) => `line ${i}`).join("\n");
+    const { head, tail } = headAndTail(text, 300, 300);
+    expect(head.length).toBeLessThanOrEqual(300);
+    expect(tail.length).toBeLessThanOrEqual(300);
+    expect(head.endsWith("\n")).toBe(false);
+    expect(text.startsWith(`${head}\n`)).toBe(true);
+    expect(text.endsWith(tail)).toBe(true);
+    expect(tail.startsWith("line ")).toBe(true);
+    expect(text.indexOf(tail)).toBeGreaterThanOrEqual(head.length);
   });
 });

@@ -1,4 +1,4 @@
-import { formatFileSize, persistedOutput } from "./formato";
+import { formatFileSize, headAndTail, persistedOutput } from "./formato";
 import { MAX_FILE_BYTES } from "@/lib/files/limits";
 /**
  * LOS FICHEROS DE LA TERMINAL DE LEN (F1 de plans/len-agente-2026).
@@ -125,9 +125,14 @@ export function salidaDeLaTerminal(r: {
   }
   let salida = cuerpo.replace(/^(\s*\n)+/, "").trimEnd();
   if (cuerpo.length > MAX_SALIDA) {
-    salida = r.persistida
-      ? persistedOutput({ path: r.persistida, text: cuerpo })
-      : `${cuerpo.slice(0, MAX_SALIDA)}\nOutput too large (${formatFileSize(cuerpo.length)}). It could not be saved, so only the first ${formatFileSize(MAX_SALIDA)} are shown; the rest was dropped. If the tool can page or filter its results, call it again for the part you need.`;
+    if (r.persistida) salida = persistedOutput({ path: r.persistida, text: cuerpo });
+    else {
+      // No file to read the rest from, so the end matters as much as the start (the error or the summary of a
+      // build is at the end): head + tail inside the same budget, as the preview of a saved one.
+      const { head, tail } = headAndTail(cuerpo, MAX_SALIDA / 2, MAX_SALIDA / 2);
+      const omitted = cuerpo.length - head.length - tail.length;
+      salida = `${head}\n...\n${tail}\nOutput too large (${formatFileSize(cuerpo.length)}). It could not be saved, so only the first ${formatFileSize(head.length)} and the last ${formatFileSize(tail.length)} are shown; the middle (${formatFileSize(omitted)}) was dropped. If the tool can page or filter its results, call it again for the part you need.`;
+    }
   }
   const texto = [salida, ...notas].filter((p) => p !== "").join("\n");
   return { texto: texto === "" ? SIN_SALIDA : texto, exitCode };

@@ -38,6 +38,36 @@ const VISTA = 2000;
 const HEAD_CHARS = 1200;
 const TAIL_CHARS = 1200;
 
+/** ¿El corte en `i` caería entre las dos mitades de un par sustituto UTF-16 (un emoji)? */
+function partiriaUnPar(text: string, i: number): boolean {
+  if (i <= 0 || i >= text.length) return false;
+  const antes = text.charCodeAt(i - 1);
+  const despues = text.charCodeAt(i);
+  return antes >= 0xd800 && antes <= 0xdbff && despues >= 0xdc00 && despues <= 0xdfff;
+}
+
+/**
+ * El principio y el final de un texto que no cabe, cortados en un salto de línea
+ * mientras eso conserve más de la mitad del principio y al menos el 40 % del
+ * final. Dos cuidados de los bordes: un corte nunca cae en medio de un par sustituto (se
+ * mueve un carácter hacia dentro: la mitad de un emoji llegaría al modelo como
+ * un carácter roto), y un corte que ya cae justo en el principio de una línea
+ * la conserva entera (buscar el siguiente salto desde ahí la tiraba).
+ */
+export function headAndTail(text: string, headChars: number, tailChars: number): { readonly head: string; readonly tail: string } {
+  let headEnd = text.slice(0, headChars).lastIndexOf("\n");
+  if (!(headEnd > headChars * 0.5)) headEnd = headChars;
+  if (partiriaUnPar(text, headEnd)) headEnd -= 1;
+  const head = text.slice(0, headEnd);
+  const tailStartMin = Math.max(head.length, text.length - tailChars);
+  // Desde el carácter ANTERIOR al corte: si es un salto, el corte está en el principio de una línea y se queda.
+  const corteTail = text.indexOf("\n", Math.max(0, tailStartMin - 1));
+  let tailStart =
+    corteTail !== -1 && corteTail < text.length - 1 && text.length - (corteTail + 1) >= tailChars * 0.4 ? corteTail + 1 : tailStartMin;
+  if (partiriaUnPar(text, tailStart)) tailStart += 1;
+  return { head, tail: text.slice(tailStart) };
+}
+
 /** El bloque que recibe el modelo cuando la salida se guardó entera en `path`.
  *  Conserva principio Y final (Head + Tail) para que el error/resumen final de builds y tests
  *  quede visible sin gastar una vuelta extra leyendo `/tmp/tool-results/`. */
@@ -49,14 +79,7 @@ export function persistedOutput(o: { readonly path: string; readonly text: strin
       `Preview (first ${formatFileSize(VISTA)}):\n${o.text}\n</persisted-output>`
     );
   }
-  const corteHead = o.text.slice(0, HEAD_CHARS).lastIndexOf("\n");
-  const head = o.text.slice(0, corteHead > HEAD_CHARS * 0.5 ? corteHead : HEAD_CHARS);
-  const tailStartMin = Math.max(head.length, o.text.length - TAIL_CHARS);
-  const corteTail = o.text.indexOf("\n", tailStartMin);
-  const tail =
-    corteTail !== -1 && corteTail < o.text.length - 1 && o.text.length - (corteTail + 1) >= TAIL_CHARS * 0.4
-      ? o.text.slice(corteTail + 1)
-      : o.text.slice(tailStartMin);
+  const { head, tail } = headAndTail(o.text, HEAD_CHARS, TAIL_CHARS);
   const omitted = Math.max(0, o.text.length - head.length - tail.length);
   return (
     `<persisted-output>\nOutput too large (${formatFileSize(o.text.length)}). Full output saved to: ${o.path}\n\n` +
