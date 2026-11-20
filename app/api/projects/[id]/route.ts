@@ -5,6 +5,7 @@ import { exigirAcceso } from "@/lib/projects/acceso";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { artifactsEnabled } from "@/lib/artifacts/enabled";
 import { stopProject } from "@/lib/agent/subagents/registry";
+import { SpaceHasAgentsError } from "@/lib/space/errors";
 import {
   deleteProject,
   getProject,
@@ -145,7 +146,14 @@ export async function DELETE(
   const session = await auth();
   if (!session?.user?.id) return json({ error: "unauthorized" }, 401);
   const { id } = await params;
-  const ok = await deleteProject(id, session.user.id);
+  let ok: boolean;
+  try {
+    ok = await deleteProject(id, session.user.id);
+  } catch (err) {
+    // The person's space while an agent lives in it (spec local 2026-11-19-agentes-para-todos, §6.2).
+    if (err instanceof SpaceHasAgentsError) return json({ error: "space_has_agents" }, 409);
+    throw err;
+  }
   if (!ok) return json({ error: "not_found" }, 404);
   // Its subagents stop with it (after the owner check: a stranger stops nothing).
   stopProject(id);

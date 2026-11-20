@@ -164,3 +164,12 @@ describe("a tool project", () => {
     expect(await publishThroughGates(INPUT)).toEqual({ status: 409, body: { error: "tool_installs" } });
   });
 });
+
+// THE PERSON'S SPACE NEVER PUBLISHES (spec local 2026-11-19-agentes-para-todos, §6.2).
+describe("the person's space", () => {
+  it("is not published: 409 space_never_publishes", async () => {
+    const { ProjectIsSpaceError } = await import("@/lib/space/errors");
+    mocks.publishProject.mockRejectedValue(new ProjectIsSpaceError());
+    expect(await publishThroughGates(INPUT)).toEqual({ status: 409, body: { error: "space_never_publishes" } });
+  });
+});

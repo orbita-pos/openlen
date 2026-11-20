@@ -19,6 +19,7 @@ import { validateSubdomain } from "@/lib/subdomain/validate";
 import { openProject } from "../access";
 import { approvalUrl, checkApproval, createApproval, hasTrustedPublish, markApprovalUsed, type ApprovalRequest } from "../approvals";
 import { editorUrl } from "../config";
+import { ProjectIsSpaceError } from "@/lib/space/errors";
 import { consumeQuota } from "../quota";
 import { jsonResult, toolError, type ToolResult } from "../results";
 import { defineTool, type ToolAnnotations } from "./define";
@@ -66,6 +67,7 @@ function publishError(err: unknown, projectId: string): ToolResult {
     );
   }
   if (err instanceof ProjectNotFoundError) return toolError("not_found", "The project no longer exists.");
+  if (err instanceof ProjectIsSpaceError) return toolError("space_never_publishes", "This is the person's private space for their agents: it is never published.");
   if (err instanceof AppNoCompilaError) {
     return toolError(
       "app_does_not_compile",

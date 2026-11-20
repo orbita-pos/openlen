@@ -41,6 +41,7 @@ import {
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { rehomeAssistantsOf } from "@/lib/assistants/projects";
+import { isSpaceData } from "@/lib/space/types";
 import { assistantOfProject, switchOldAssistantOff } from "@/lib/assistants/store";
 import { assistantBakeOf } from "@/lib/assistants/visitor/bake";
 import { publicDataOf } from "@/lib/assistants/visitor/public-data";
@@ -560,6 +561,24 @@ export async function getProject(
   };
 }
 
+/** A project's `data` without the space marker. */
+function withoutSpace(data: ProjectData): ProjectData {
+  if (!isSpaceData(data)) return data;
+  const { space: _space, ...rest } = data;
+  return rest;
+}
+
+/** The person's space with an agent living in it (spec local 2026-11-19-agentes-para-todos, §6.2). */
+async function spaceHasAgents(projectId: string): Promise<boolean> {
+  const [found] = await db
+    .select({ id: schema.assistants.id })
+    .from(schema.assistants)
+    .innerJoin(schema.projects, eq(schema.projects.id, schema.assistants.homeProjectId))
+    .where(and(eq(schema.assistants.homeProjectId, projectId), sqlOp`(${schema.projects.data}->'space') is not null`))
+    .limit(1);
+  return Boolean(found);
+}
+
 export async function deleteProject(
   projectId: string,
   userId: string,
@@ -577,6 +596,12 @@ export async function deleteProject(
     )
     .limit(1);
   const sub = existing[0]?.subdomain;
+  // THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.2): not while an agent lives in it — deleting it
+  // would take their agents and their conversations with it.
+  if (existing[0] && (await spaceHasAgents(projectId))) {
+    const { SpaceHasAgentsError } = await import("@/lib/space/errors");
+    throw new SpaceHasAgentsError();
+  }
   // La base de la página, si tiene: el `ref` ANTES de borrar (la fila se va en
   // cascada). Sin esto la base y su rol se quedaban en el clúster con las
   // cuentas de los visitantes dentro y sin dueño. Ver lib/backend/teardown.ts.
@@ -744,7 +769,9 @@ export async function duplicateProject(
     subdomain: null,
     publishedAt: null,
     publishedHtml: null,
-    data: existing.data,
+    // A copy of the person's space is an ordinary project: the space is one per person (spec local
+    // 2026-11-19-agentes-para-todos, §6.2).
+    data: withoutSpace(existing.data),
   });
   // LA CARPETA (pieza 9 de Len 2.5): duplicar copia tu carpeta entera. Si
   // falla, la copia ya existe: se dice en el log y sigue sin carpeta.
@@ -881,6 +908,11 @@ export async function publishProject(
   if ((project.data as { tool?: unknown } | null)?.tool) {
     const { ProjectIsToolError } = await import("@/lib/tools/errors");
     throw new ProjectIsToolError();
+  }
+  // THE PERSON'S SPACE NEVER PUBLISHES (spec local 2026-11-19-agentes-para-todos, §6.2): same bottom door.
+  if (isSpaceData(project.data as { space?: unknown } | null)) {
+    const { ProjectIsSpaceError } = await import("@/lib/space/errors");
+    throw new ProjectIsSpaceError();
   }
   // LEN WATCH (spec local 2026-10-30-len-watch, §5.5): a branch's SOURCES are its worktree copy's. From here
   // `project.data` IS the copy's — the project's row is still the one owned, claimed and published, and its draft

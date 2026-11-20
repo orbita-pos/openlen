@@ -127,6 +127,14 @@ describe("publish", () => {
     expect(text(r)).toContain("/src/App.tsx:4:2");
   });
 
+  it("the person's space is never published: a tool error, not a crash", async () => {
+    const { ProjectIsSpaceError } = await import("@/lib/space/errors");
+    m.openProject.mockResolvedValue(owner("cafe"));
+    m.hasTrustedPublish.mockResolvedValue(true);
+    m.publishProject.mockRejectedValue(new ProjectIsSpaceError());
+    expect(text(await publishTool.run({ project_id: "p1" }, caller))).toContain("space_never_publishes");
+  });
+
   it("con cambios de tablas pendientes: lo publica la persona desde el editor", async () => {
     m.openProject.mockResolvedValue(owner("cafe"));
     m.hasTrustedPublish.mockResolvedValue(true);

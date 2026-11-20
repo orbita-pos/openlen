@@ -7,6 +7,7 @@ import { generatePreviewToken, hashPasscode } from "@/lib/projects/preview";
 import { actualizarData } from "@/lib/projects/escribir-data";
 import type { PreviewSettings, ProjectData } from "@/lib/projects/types";
 import { exigirAcceso } from "@/lib/projects/acceso";
+import { isSpaceData } from "@/lib/space/types";
 
 export const runtime = "nodejs";
 
@@ -111,6 +112,8 @@ export const POST = paraLaApp(async (
   const body: PostBody = raw && typeof raw === "object" ? (raw as PostBody) : {};
   const data = await loadOwnedData(id, duenoId);
   if (!data) return json({ error: "not_found" }, 404);
+  // The person's space has no draft to show anyone (spec local 2026-11-19-agentes-para-todos, §6.2).
+  if (isSpaceData(data)) return json({ error: "space_is_private" }, 409);
 
   const prev = data.preview;
   const token = prev?.token && !body.rotate ? prev.token : generatePreviewToken();

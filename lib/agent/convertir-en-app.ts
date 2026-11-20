@@ -38,6 +38,7 @@ import { RUTA_APPS } from "@/lib/agent/ficheros/manual";
 import type { AppDeProyecto, ProjectData } from "@/lib/projects/types";
 import type { GameOfProject } from "@/lib/games/types";
 import { gamesEnabled } from "@/lib/games/enabled";
+import { isSpaceData } from "@/lib/space/types";
 import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
 export const CONVERTIR_EN_APP = "convert_to_app";
@@ -116,6 +117,9 @@ export async function toolConvertirEnApp(session: AgentSession, deps: AgentDeps,
   const row = await deps.loadProject(session.projectId, session.userId);
   if (!row) return { response: { ok: false, error: "project not found" } };
   if (row.data.app) return { response: { ok: false, error: "This project is already an app: there is nothing to convert." } };
+  // The person's space holds their agents and their files; it is never a page or an app (spec local
+  // 2026-11-19-agentes-para-todos, §6.2).
+  if (isSpaceData(row.data)) return { response: { ok: false, error: "This is the person's private space for their agents: it never becomes an app. Ask them to create a project for it." } };
   if (!deps.projectFiles) return { response: { ok: false, error: "convert_to_app isn't available in this environment." } };
   const ficheros = await deps.projectFiles(session.projectId);
   // La entrada que Len escribió: la de ahora (TypeScript) o la de siempre (.jsx).

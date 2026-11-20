@@ -55,4 +55,13 @@ describe("DELETE /api/projects/[id]", () => {
     expect((await remove()).status).toBe(404);
     expect(mocks.stopProject).not.toHaveBeenCalled();
   });
+
+  it("the person's space with an agent in it is not deleted: 409 space_has_agents", async () => {
+    const { SpaceHasAgentsError } = await import("@/lib/space/errors");
+    mocks.deleteProject.mockRejectedValue(new SpaceHasAgentsError());
+    const res = await remove();
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({ error: "space_has_agents" });
+    expect(mocks.stopProject).not.toHaveBeenCalled();
+  });
 });

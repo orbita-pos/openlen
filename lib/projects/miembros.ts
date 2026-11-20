@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import { and, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
+import { isSpaceData } from "@/lib/space/types";
 import type { RolDeMiembro } from "@/lib/projects/acceso";
 import { avatarOf } from "@/lib/profile/avatar";
 
@@ -110,7 +111,7 @@ export async function hayInvitacionesPendientes(projectId: string): Promise<bool
 
 export type ResultadoDeInvitar =
   | { readonly ok: true; readonly token: string }
-  | { readonly ok: false; readonly motivo: "tu_mismo" | "ya_es_miembro" | "limite" };
+  | { readonly ok: false; readonly motivo: "tu_mismo" | "ya_es_miembro" | "limite" | "space_is_private" };
 
 /**
  * Invita a `email` con `rol`: devuelve el token CRUDO (va en el correo; aquí
@@ -123,6 +124,9 @@ export async function invitar(
   email: string,
   rol: RolDeMiembro,
 ): Promise<ResultadoDeInvitar> {
+  // The person's space is theirs alone (spec local 2026-11-19-agentes-para-todos, §6.2).
+  const [proyecto] = await db.select({ data: schema.projects.data }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+  if (isSpaceData(proyecto?.data)) return { ok: false, motivo: "space_is_private" };
   const correo = normalizarCorreo(email);
   const [dueno] = await db.select({ email: schema.users.email }).from(schema.users).where(eq(schema.users.id, duenoId)).limit(1);
   if (dueno && normalizarCorreo(dueno.email) === correo) return { ok: false, motivo: "tu_mismo" };
