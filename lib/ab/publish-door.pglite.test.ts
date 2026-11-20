@@ -30,7 +30,8 @@ vi.mock("@/lib/db", async () => {
 vi.mock("@/lib/limits", () => ({ getUserPlan: async () => "pro" }));
 vi.mock("@/lib/functions/publish", () => ({ prepareFunctionsForPublish: m.prepareFunctions }));
 vi.mock("@/lib/stripe/publish", () => ({ storedTwins: async () => new Map(), prepareStripeForPublish: async () => null }));
-vi.mock("@/lib/publish/ensure-page-meta", () => ({ ensurePageMeta: (html: string) => html }));
+// Marks what control's head pass touched, so the test can tell that Variant B went through the same one.
+vi.mock("@/lib/publish/ensure-page-meta", () => ({ ensurePageMeta: (html: string) => `${html}<!--META-->` }));
 vi.mock("@/lib/branding/social-image", () => ({ ensureSocialOgImage: async (html: string) => html }));
 vi.mock("@/lib/branding/resolve-project-logo", () => ({ resolveProjectLogo: async () => null }));
 // The assistants tables aren't part of this test: the publish doesn't touch them here.
@@ -139,6 +140,7 @@ describe("with the flag on and a live experiment", () => {
     await liveExperiment();
     const published = { html: "<html>PUBLISHED</html>", settings: {} };
     const abExperiment = { id: "ab_1234abcd", targetPath: "/", splitBps: 5000, salt: "salt", includeLocales: false, variantB: { html: "<html>B</html>" } };
+    // (Stripe has nothing copied to live here: toLive is null. The swap itself is lib/ab/prebake.test.ts.)
     m.buildLive.mockImplementation(async (exp: { id: string }) => ({
       experiment: exp,
       sourcesOverride: { data: published, folder: { "/css/a.css": "a{}", "/supabase/functions/hi/index.ts": "export {}" } },
@@ -147,8 +149,9 @@ describe("with the flag on and a live experiment", () => {
     }));
     await expect(publishProject({ projectId: "p1", userId: "u1", subdomain: "pan", abLive: "keep" })).rejects.toThrow(/STOP-AFTER-CLAIM/);
     const call = m.publishToDir.mock.calls[0]![0] as Record<string, unknown>;
-    expect(call.html).toBe("<html>PUBLISHED</html>");
-    expect(call.abExperiment).toBe(abExperiment);
+    expect(call.html).toBe("<html>PUBLISHED</html><!--META-->");
+    // 🔴 Variant B went through control's pre-bake (item 16): the same head pass.
+    expect(call.abExperiment).toMatchObject({ id: "ab_1234abcd", variantB: { html: "<html>B</html><!--META-->" } });
     expect(call.protectReleaseShas).toEqual(["rel-c"]);
     expect((call.files as Array<{ path: string }>).map((f) => f.path).sort()).toEqual(["/css/a.css", "/supabase/functions/hi/index.ts"]);
   });

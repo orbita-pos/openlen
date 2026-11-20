@@ -39,6 +39,7 @@ import {
   splitPagesForPublish,
 } from "@/lib/projects/site-pages";
 import { abTestingEnabled } from "@/lib/ab/enabled";
+import { prebakeVariantB } from "@/lib/ab/prebake";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { rememberWhatWasPublished } from "@/lib/assistants/knowledge";
 import { rehomeAssistantsOf } from "@/lib/assistants/projects";
@@ -1193,7 +1194,10 @@ export async function publishProject(
       // así que es exactamente «lo que debería salir». Comparar contra ESTO es
       // lo que permite decirle al dueño qué idioma se cayó.
       localesPedidos: app ? [] : targets,
-      ...(params.abExperiment ? { abExperiment: params.abExperiment } : {}),
+      // Variant B takes the same pre-bake steps as control above: the head pass and Stripe's live ids (review item 16).
+      ...(params.abExperiment
+        ? { abExperiment: await prebakeVariantB(params.abExperiment, { title: project.title, baseUrl: `https://${v.value}.${publishBaseHost()}`, toLive }) }
+        : {}),
       ...(params.protectReleaseShas?.length ? { protectReleaseShas: params.protectReleaseShas } : {}),
       buildLocaleDocs:
         !app && targets.length > 0
