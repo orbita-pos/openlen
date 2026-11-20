@@ -13,7 +13,9 @@ import { CLAVE_TOOL_RESULT, fallo } from "@/lib/agent/ficheros/resultado";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { db, schema } from "@/lib/db";
 
-export const CREATE_AB_VARIANT = "create_ab_variant";
+import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
+
+export { CREATE_AB_VARIANT };
 
 export const CREATE_AB_VARIANT_DECLARATION = {
   name: CREATE_AB_VARIANT,

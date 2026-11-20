@@ -24,7 +24,7 @@ import { ARTIFACT_TOOLS } from "@/lib/artifacts/tools";
 import { SUGGEST_CONNECTORS_TOOL } from "@/lib/mcp-connectors/tool-names";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
-import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab";
+import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";

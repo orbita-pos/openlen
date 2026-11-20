@@ -25,7 +25,7 @@ import { SUBAGENT_GUIDANCE } from "@/lib/agent/subagents/tool";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
 import { CREATE_ASSISTANT } from "./create-tool";
-import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab";
+import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 import type { AssistantTone } from "./names";
 
 export const ASSISTANT_MEMORY_PATH = "~/.assistant/MEMORY.md";
