@@ -817,7 +817,8 @@
         "pending": "aguardando sua aprovação",
         "waiting": "falta {names}",
         "failed": "falhou: {error}",
-        "neverListed": "ainda não listado"
+        "neverListed": "ainda não listado",
+        "needsAuth": "precisa iniciar sessão"
       },
       "probe": "Testar",
       "probeOk": "Responde: {tools}",
@@ -836,7 +837,9 @@
       "cancel": "Cancelar",
       "keys": "Chaves",
       "keySet": "definida em {date}",
-      "changeKey": "Trocar"
+      "changeKey": "Trocar",
+      "connect": "Conectar",
+      "disconnect": "Desconectar"
     }
   }
 }

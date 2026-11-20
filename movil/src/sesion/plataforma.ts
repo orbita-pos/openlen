@@ -7,6 +7,7 @@ import { App as AppNativa } from "@capacitor/app";
 import { Browser } from "@capacitor/browser";
 import { ScreenOrientation } from "@capacitor/screen-orientation";
 import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import { volverAlPrimerPlano } from "./volver";
 
 const CLAVE = "len-llave";
 const enWeb = !Capacitor.isNativePlatform();
@@ -39,6 +40,12 @@ export const plataforma = {
       void Browser.close().catch(() => {});
       fn(e.url);
     });
+  },
+  /** La app vuelve al primer plano (se salió al navegador del sistema, p. ej. a iniciar sesión en un conector): `fn`
+   *  corre cada vez, y lo que devuelve la deja de oír. Teléfono: `appStateChange` de @capacitor/app (volver.ts);
+   *  navegador de la PC, el foco y la visibilidad. */
+  alVolverAlPrimerPlano(fn: () => void): () => void {
+    return volverAlPrimerPlano({ enWeb, escucharEstadoDeLaApp: (f) => AppNativa.addListener("appStateChange", f), ventana: window, documento: document }, fn);
   },
   /** App instalada: con algo abierto, atrás lo cierra (atras.ts, por el
    *  historial). Sin nada abierto, la app se va al fondo: lo que hace

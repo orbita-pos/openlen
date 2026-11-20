@@ -817,7 +817,8 @@
         "pending": "wacht op je goedkeuring",
         "waiting": "{names} ontbreekt",
         "failed": "mislukt: {error}",
-        "neverListed": "nog niet opgehaald"
+        "neverListed": "nog niet opgehaald",
+        "needsAuth": "inloggen vereist"
       },
       "probe": "Testen",
       "probeOk": "Antwoordt: {tools}",
@@ -836,7 +837,9 @@
       "cancel": "Annuleren",
       "keys": "Sleutels",
       "keySet": "ingesteld op {date}",
-      "changeKey": "Wijzigen"
+      "changeKey": "Wijzigen",
+      "connect": "Verbinden",
+      "disconnect": "Verbinding verbreken"
     }
   }
 }

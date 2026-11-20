@@ -9,6 +9,8 @@ import { db, schema } from "@/lib/db";
 
 import { EMPTY_MCP_CONFIG } from "./config";
 import type { ReviewedTool } from "./names";
+import type { SignInReason } from "./oauth/provider";
+import { cleanIssuer, cleanScope } from "./oauth/remote-text";
 
 const c = schema.personMcpConfigs;
 const s = schema.personMcpServerState;
@@ -20,12 +22,17 @@ export interface ServerState {
   readonly instructions: string;
   readonly hasResources: boolean;
   readonly listedAt: Date | null;
-  readonly status: "connected" | "failed" | "waiting-credentials";
+  readonly status: "connected" | "failed" | "waiting-credentials" | "needs-auth";
   readonly error: string | null;
   readonly stale: boolean;
   /** Consecutive failed mounts (DeepSeek's attempt budget); a success resets it, missing keys don't count. */
   readonly failures: number;
   readonly attemptedAt: Date | null;
+  // What a `needs-auth` server asks of the person (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4, §5.5): the
+  // authorization server it named, why it needs a sign-in, and the scope it asked for. All null in any other status.
+  readonly authIssuer: string | null;
+  readonly authReason: SignInReason | null;
+  readonly authScope: string | null;
 }
 
 export interface StoredConfig {
@@ -86,7 +93,9 @@ export async function readServerStates(personId: string): Promise<ServerState[]>
 }
 
 export async function saveServerState(personId: string, st: ServerState): Promise<void> {
-  const row = { ...st, tools: [...st.tools] };
+  // The upsert only sets the keys it is given: the auth columns are always written (null when there is nothing to
+  // say), so a server that comes back to `connected` never keeps the sign-in it used to ask for.
+  const row = { ...st, tools: [...st.tools], authIssuer: st.authIssuer ?? null, authReason: st.authReason ?? null, authScope: st.authScope ?? null };
   await db
     .insert(s)
     .values({ personId, ...row })
@@ -95,6 +104,30 @@ export async function saveServerState(personId: string, st: ServerState): Promis
 
 export async function markStale(personId: string, serverName: string): Promise<void> {
   await db.update(s).set({ stale: true }).where(and(eq(s.personId, personId), eq(s.serverName, serverName)));
+}
+
+export async function markNeedsAuth(
+  personId: string,
+  serverName: string,
+  reason: SignInReason,
+  issuerAsked: string | null,
+  scopeAsked: string | null,
+): Promise<void> {
+  // What the server said, in bounds before it is stored: the model reads it back.
+  const issuer = cleanIssuer(issuerAsked);
+  const scope = cleanScope(scopeAsked);
+  const error =
+    reason === "scope"
+      ? scope
+        ? `needs additional permissions (scope: ${scope})`
+        : "needs additional permissions"
+      : reason === "lapsed"
+        ? "needs you to sign in again"
+        : "needs authentication";
+  await db
+    .update(s)
+    .set({ status: "needs-auth", error, stale: false, authReason: reason, authIssuer: issuer, authScope: scope })
+    .where(and(eq(s.personId, personId), eq(s.serverName, serverName)));
 }
 
 export async function deleteServerState(personId: string, serverName: string): Promise<void> {

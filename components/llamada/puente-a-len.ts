@@ -6,6 +6,7 @@
 import type { RespuestaPreparada } from "@/lib/agent/resultados";
 import { dataChangesForCard, type DataChangesPreview } from "@/lib/backend/data-changes-types";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { mcpApprovalFrom, type McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 import { securityForCard, type SecurityForCard } from "@/lib/security-review/card";
 import { stripeForCard, type StripeForCard } from "@/lib/stripe/card";
 import type { EventoSse } from "@/lib/len-bench/sse";
@@ -22,6 +23,8 @@ export type TarjetaDeLlamada =
   | { tipo: "respuesta"; respuesta: RespuestaPreparada }
   // Herramientas, fase 5: lo que deja el `publish` de Len en un proyecto que es una herramienta.
   | { tipo: "instalar"; confirm: { title: string; placement: "rail" | "project" } }
+  // OAuth de los conectores MCP en el teléfono (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1).
+  | { tipo: "conectarMcp"; card: McpApprovalCard }
   | {
       tipo: "publicar";
       confirm: {
@@ -200,6 +203,9 @@ export function crearPuenteALen(deps: DepsDelPuente) {
         } else if (e.nombre === "confirm") {
           const tarjeta = tarjetaDeConfirmacion(d);
           if (tarjeta) confirmaciones.push(tarjeta);
+        } else if (e.nombre === "mcp_approval") {
+          const card = mcpApprovalFrom(d.card);
+          if (card) confirmaciones.push({ tipo: "conectarMcp", card });
         } else if (e.nombre === "error") error = typeof d.message === "string" ? d.message : "error desconocido";
         else if (e.nombre === "done") cerrado = true;
       });

@@ -17,6 +17,13 @@ describe("credential references", () => {
     expect(credentialRefs("${credential:Z} ${credential:A} ${credential:Z}")).toEqual(["A", "Z"]);
     expect(credentialRefsOf(entry)).toEqual(["A", "B"]);
   });
+
+  it("also lists the reference in oauth.clientSecret, with the others, sorted and unique", () => {
+    const withOauth = { ...entry, oauth: { clientId: "id", clientSecret: "${credential:AA}", authorizationServer: ["https://accounts.google.com"] } };
+    expect(credentialRefsOf(withOauth)).toEqual(["A", "AA", "B"]);
+    expect(credentialRefsOf({ ...entry, oauth: { clientId: "id", clientSecret: "${credential:B}" } })).toEqual(["A", "B"]);
+    expect(credentialRefsOf({ ...entry, oauth: { scope: "s" } })).toEqual(["A", "B"]);
+  });
 });
 
 describe("resolveEntry", () => {
@@ -28,6 +35,15 @@ describe("resolveEntry", () => {
       headers: { Authorization: "Bearer bb" },
       resolved: ["aa", "bb"],
     });
+  });
+
+  it("waits for the oauth client secret too, and redacts it once it is there", () => {
+    const withOauth = { ...entry, oauth: { clientId: "id", clientSecret: "${credential:C}", authorizationServer: ["https://accounts.google.com"] } };
+    expect(resolveEntry(withOauth, new Map([["A", "aa"], ["B", "bb"]]))).toEqual({ ok: false, missing: ["C"] });
+    const r = resolveEntry(withOauth, new Map([["A", "aa"], ["B", "bb"], ["C", "cc"]]));
+    expect(r).toMatchObject({ ok: true, url: "https://x.example.com/aa/mcp", headers: { Authorization: "Bearer bb" } });
+    // Not substituted anywhere here (it is the client secret, sent to the token endpoint), but it must never reach the model.
+    expect(r.ok && r.resolved).toEqual(["aa", "bb", "cc"]);
   });
 });
 

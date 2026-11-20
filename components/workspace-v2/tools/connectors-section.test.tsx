@@ -8,6 +8,20 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string, v?: Record<string, unknown>) => (v ? `${key} ${JSON.stringify(v)}` : key),
 }));
 
+const signIn = vi.hoisted(() => ({
+  result: "connected" as "connected" | "closed" | "aborted" | { error: string; detail?: string },
+  calls: [] as string[],
+  opts: [] as { signal?: AbortSignal; onLate?: () => void }[],
+}));
+vi.mock("../chat/open-sign-in", async (orig) => ({
+  ...(await orig<typeof import("../chat/open-sign-in")>()),
+  openSignIn: async (server: string, opts: { signal?: AbortSignal; onLate?: () => void } = {}) => {
+    signIn.calls.push(server);
+    signIn.opts.push(opts);
+    return signIn.result;
+  },
+}));
+
 import { ConnectorsSection } from "./connectors-section";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -95,5 +109,113 @@ describe("ConnectorsSection", () => {
     expect(JSON.parse(String(init.body))).toEqual({ url: "https://mcp.shop.example.com/mcp", headers: {}, secretHeaders: { Authorization: "Bearer shpat_secret" }, version: 3 });
     expect(document.body.textContent).not.toContain("shpat_secret");
     expect((document.body.innerHTML.match(/shpat_secret/g) ?? []).length).toBe(0);
+  });
+
+  it("needs-auth shows Connect and connected with OAuth shows Disconnect (calling DELETE /oauth)", async () => {
+    const viewWithOAuth = {
+      ...VIEW,
+      servers: [
+        { name: "cal-pending", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "needs-auth", tools: 0, headers: [], oauth: true },
+        { name: "cal-live", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "connected", tools: 6, headers: [], oauth: true },
+      ],
+    };
+    fetchMock.mockResolvedValueOnce(ok(viewWithOAuth)).mockResolvedValueOnce(ok({ ok: true })).mockResolvedValueOnce(ok(viewWithOAuth));
+    await render();
+    const pendingRow = document.querySelector('[data-connector="cal-pending"]')!;
+    const liveRow = document.querySelector('[data-connector="cal-live"]')!;
+    expect(button("tools.connectors.connect", pendingRow)).toBeTruthy();
+    const disconnectBtn = button("tools.connectors.disconnect", liveRow);
+    expect(disconnectBtn).toBeTruthy();
+    await act(async () => disconnectBtn.click());
+    expect(fetchMock.mock.calls[1]).toEqual(["/api/mcp-connectors/cal-live/oauth", expect.objectContaining({ method: "DELETE" })]);
+  });
+
+  // Review fix OB3/OB2: the window may close with the connection already made (the way back was cut), so the list is read
+  // again whatever the window said; and a sign-in that failed says why in words, never a code.
+  describe("the «Connect» button", () => {
+    const pending = {
+      ...VIEW,
+      servers: [{ name: "cal", host: "calendarmcp.googleapis.com", url: "https://calendarmcp.googleapis.com/mcp/v1", enabled: true, approved: true, status: "needs-auth", tools: 0, headers: [], oauth: true }],
+    };
+    const connect = async () => act(async () => button("tools.connectors.connect", document.querySelector('[data-connector="cal"]')!).click());
+    beforeEach(() => {
+      signIn.calls.length = 0;
+      signIn.opts.length = 0;
+      fetchMock.mockImplementation(async () => ok(pending));
+    });
+
+    it("🔴 reads the list again when the window closed with no word", async () => {
+      signIn.result = "closed";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(signIn.calls).toEqual(["cal"]);
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+      expect(fetchMock.mock.calls.at(-1)![0]).toBe("/api/mcp-connectors");
+    });
+
+    it("reads the list again when it connected", async () => {
+      signIn.result = "connected";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+    });
+
+    it("🔴 says in words why it failed, and never shows the code", async () => {
+      signIn.result = { error: "popup_blocked" };
+      await render();
+      await connect();
+      const row = document.querySelector('[data-connector="cal"]')!;
+      expect(row.textContent).toContain("mcpApproval.errors.popupBlocked");
+      expect(row.textContent).not.toContain("popup_blocked");
+    });
+
+    it("an unknown code is the generic sentence, and a useful detail comes with it", async () => {
+      signIn.result = { error: "weird_123" };
+      await render();
+      await connect();
+      expect(document.body.textContent).toContain("mcpApproval.errors.failed");
+      expect(document.body.textContent).not.toContain("weird_123");
+      signIn.result = { error: "no_client", detail: "set oauth.clientId in mcp.json" };
+      await connect();
+      expect(document.body.textContent).toContain("mcpApproval.errors.noClient");
+      expect(document.body.textContent).toContain("set oauth.clientId in mcp.json");
+    });
+
+    // R2: the wait belongs to this page. A newer tap and the page going away abort it, a wait a newer tap took over reads
+    // nothing, and a success that comes after the person closed the window reads the list again.
+    it("🔴 a wait a newer tap took over (aborted) answers nothing: the list is not read for it", async () => {
+      signIn.result = "aborted";
+      await render();
+      const before = fetchMock.mock.calls.length;
+      await connect();
+      expect(fetchMock.mock.calls.length).toBe(before);
+    });
+
+    it("a sign-in that came through after the window was closed reads the list again (onLate)", async () => {
+      signIn.result = "closed";
+      await render();
+      await connect();
+      const before = fetchMock.mock.calls.length;
+      await act(async () => signIn.opts.at(-1)!.onLate!());
+      expect(fetchMock.mock.calls.length).toBe(before + 1);
+      expect(fetchMock.mock.calls.at(-1)![0]).toBe("/api/mcp-connectors");
+    });
+
+    it("🔴 a new tap aborts the wait before it, and the page going away aborts the last one", async () => {
+      signIn.result = "closed";
+      await render();
+      await connect();
+      const first = signIn.opts.at(-1)!.signal!;
+      expect(first.aborted).toBe(false);
+      await connect();
+      const second = signIn.opts.at(-1)!.signal!;
+      expect(first.aborted).toBe(true);
+      expect(second.aborted).toBe(false);
+      act(() => root!.unmount());
+      root = null;
+      expect(second.aborted).toBe(true);
+    });
   });
 });

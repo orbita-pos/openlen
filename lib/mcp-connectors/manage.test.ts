@@ -92,6 +92,22 @@ describe("removeEntry", () => {
     expect(s.removedStates).toEqual(["notion"]);
     expect(s.creds.has("NOTION_AUTHORIZATION")).toBe(true);
   });
+
+  it("🔴 a sign-in that can't be dropped never undoes the removal: the entry is already gone", async () => {
+    const s = deps();
+    await saveEntry("p1", "notion", { url: URL1, headers: {}, secretHeaders: { Authorization: "Bearer t" }, version: 0 }, s.d);
+    const dropped: string[] = [];
+    const d: ManageDeps = {
+      ...s.d,
+      dropOAuth: async (_p, name) => {
+        dropped.push(name);
+        throw new Error("the database is away");
+      },
+    };
+    expect(await removeEntry("p1", "notion", 1, d)).toEqual({ ok: true });
+    expect(dropped).toEqual(["notion"]);
+    expect(s.row().text).not.toContain("notion");
+  });
 });
 
 describe("listView", () => {
@@ -114,7 +130,37 @@ describe("listView", () => {
     const d2 = { ...s.d, read: async () => ({ ...row, text: moved }) };
     const v = await listView("p1", d2);
     expect(v.servers[0]).toMatchObject({ name: "notion", approved: false, status: "pending" });
-    expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, otherHosts: [], firstTime: true }]);
+    expect(v.servers[0]?.approval?.credentials).toEqual([{ name: "NOTION_AUTHORIZATION", set: true, destinationHosts: ["collector.evil.example.net"], otherHosts: [], firstTime: true }]);
+  });
+
+  // Final review, F2: with OPENLEN_MCP_OAUTH=0 the page offers no Connect and no Disconnect: the routes would say «off».
+  it("🔴 with OPENLEN_MCP_OAUTH=0 a server left in needs-auth shows as failed, with no sign-in", async () => {
+    const text = JSON.stringify({ servers: { cal: { transport: "streamable-http", url: URL1, oauth: { scope: "s" } } } });
+    const parsed = parseMcpConfig(text, { reservedServerNames: new Set() });
+    if (!parsed.ok) throw new Error(parsed.error);
+    const fingerprint = entryFingerprint(parsed.config.servers.cal!);
+    const state: ServerState = {
+      serverName: "cal",
+      fingerprint,
+      tools: [],
+      instructions: "",
+      hasResources: false,
+      listedAt: null,
+      status: "needs-auth",
+      error: "needs authentication",
+      stale: false,
+      failures: 0,
+      attemptedAt: null,
+      authIssuer: "https://accounts.google.com",
+      authReason: "first",
+      authScope: null,
+    };
+    const s = deps({ text, approved: { cal: fingerprint }, version: 2 }, [state]);
+    expect((await listView("p1", { ...s.d, env: {} })).servers[0]).toMatchObject({ status: "needs-auth", oauth: true, signIn: { issuerHost: "accounts.google.com", reason: "first" } });
+    const off = (await listView("p1", { ...s.d, env: { OPENLEN_MCP_OAUTH: "0" }, oauthServers: async () => new Set(["cal"]) })).servers[0];
+    expect(off).toMatchObject({ status: "failed", error: "needs authentication" });
+    expect(off?.oauth).toBeUndefined();
+    expect(off?.signIn).toBeUndefined();
   });
 
   it("a server Len added waits, with its card", async () => {

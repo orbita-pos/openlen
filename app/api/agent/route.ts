@@ -830,7 +830,8 @@ async function correrTurno(
     : null;
   if (conectores && conectores.declarations.length > 0) {
     const [{ TurnConnections }, { realCallDeps }] = await Promise.all([import("@/lib/mcp-connectors/turn"), import("@/lib/mcp-connectors/real")]);
-    const conexiones = new TurnConnections(quien, conectores, realCallDeps());
+    const attended = !opts.round && !opts.hilo && !opts.email && !opts.scheduled;
+    const conexiones = new TurnConnections(quien, conectores, realCallDeps(), { attended });
     conexionesDelTurno = conexiones;
     deps.connectors = { routes: conexiones.routes, call: (name, args) => conexiones.call(name, args, deps.turnSignal), resource: (name, args) => conexiones.resource(name, args, deps.turnSignal) };
   }

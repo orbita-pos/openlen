@@ -7,11 +7,14 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "use-intl";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
+import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
+import { showsDetail, signInAskFrom, signInErrorKey, signInHostFrom } from "@/components/workspace-v2/chat/sign-in-errors";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import { enlaceDeCorreo, enlaceDeWhatsApp } from "@/lib/resultados/enlaces-de-respuesta";
 import { publishedHost } from "@/lib/publish/base-host";
 import { postInstallAfterSecurity, type PublishOutcome } from "@/lib/workspace-v2/publish-request";
 import { Icono } from "../iconos";
+import { plataforma } from "../sesion/plataforma";
 import { barrasDeVisitas } from "./barras";
 
 const DIA = (iso: string, idioma: string) => new Date(`${iso}T12:00:00`).toLocaleDateString(idioma, { weekday: "short" }).replace(".", "");
@@ -248,10 +251,158 @@ function Instalar({ cliente, projectId, idioma, confirm, onInstalada }: { client
   );
 }
 
+// «CONECTAR» UN CONECTOR MCP EN EL TELÉFONO (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1): el toque pide la URL
+// de inicio de sesión con la llave de la app y la abre en el navegador del sistema; al volver a la app, lee el estado del
+// servidor. Aprobar lo que escribió Len (la tarjeta con versión, con las claves que enviaría) es sólo de la web: la ruta
+// de aprobar no es de la app, así que esa tarjeta aquí informa y no tiene botón. Iniciar sesión (versión 0) y las
+// sugerencias del directorio, que se instalan con su propio toque, sí lo tienen.
+//
+// El toque le dice al servidor qué host de inicio de sesión nombró la tarjeta (revisión final F3, spec §10.2): si ahora es
+// otro, no empieza nada, la tarjeta nombra el nuevo y dice que la página cambió; el siguiente toque se compara con ése.
+//
+// Una tarjeta que pide aprobación mira la lista de conectores al aparecer y al volver la app al primer plano (revisión
+// final F4, §10.5): si la persona ya la aprobó en la web y el servidor resultó pedir inicio de sesión, la tarjeta pasa a
+// «Conectar» nombrando dónde; si ya conecta, lo dice. Aprobar sigue siendo sólo de la web.
+function ConectarMcp({ cliente, card }: { cliente: ClienteDeOpenLen; card: McpApprovalCard }) {
+  const t = useTranslations("movil.herramientas");
+  const [estado, setEstado] = useState<"listo" | "abriendo" | "esperando" | "conectado" | "error">("listo");
+  const [fallo, setFallo] = useState<{ codigo: string; detalle?: string } | null>(null);
+  // El nombre que el directorio dio al servidor (`google-calendar-2` si el primero estaba ocupado): el de la tarjeta no vale.
+  const [servidor, setServidor] = useState(card.server);
+  // Dónde se inicia sesión, como lo nombra la tarjeta ahora: el servidor puede haber dicho que cambió (issuer_changed).
+  const [oauth, setOauth] = useState(card.oauth);
+  // Aprobada en la web después de que llegara esta tarjeta (lo dice la lista de conectores).
+  const [aprobadaEnLaWeb, setAprobadaEnLaWeb] = useState(false);
+  const pideAprobacion = !card.suggest && card.version > 0 && !aprobadaEnLaWeb;
+
+  useEffect(() => {
+    if (!pideAprobacion) return;
+    let vigente = true;
+    const mirar = () => {
+      void cliente
+        .pedir("/api/mcp-connectors")
+        .then((r) => (r.ok ? (r.json() as Promise<{ servers?: { name: string; status: string; approved?: boolean; signIn?: unknown }[] }>) : null))
+        .then((body) => {
+          const s = vigente ? body?.servers?.find((x) => x.name === card.server) : undefined;
+          if (!s?.approved) return;
+          if (s.status === "connected") {
+            setAprobadaEnLaWeb(true);
+            setEstado("conectado");
+          } else if (s.status === "needs-auth") {
+            setAprobadaEnLaWeb(true);
+            setOauth(signInAskFrom(s.signIn));
+          }
+        })
+        .catch(() => {});
+    };
+    mirar();
+    const dejarDeOir = plataforma.alVolverAlPrimerPlano(mirar);
+    return () => {
+      vigente = false;
+      dejarDeOir();
+    };
+  }, [pideAprobacion, cliente, card.server]);
+
+  useEffect(() => {
+    if (estado !== "esperando") return;
+    let vigente = true;
+    const comprobar = () => {
+      void cliente
+        .pedir("/api/mcp-connectors")
+        .then((r) => (r.ok ? (r.json() as Promise<{ servers?: { name: string; status: string }[] }>) : null))
+        .then((body) => {
+          if (!vigente || !body?.servers) return;
+          if (body.servers.some((s) => s.name === servidor && s.status === "connected")) {
+            setEstado("conectado");
+          }
+        })
+        .catch(() => {});
+    };
+    const dejarDeOir = plataforma.alVolverAlPrimerPlano(comprobar);
+    return () => {
+      vigente = false;
+      dejarDeOir();
+    };
+  }, [estado, cliente, servidor]);
+
+  const conectar = async () => {
+    setEstado("abriendo");
+    setFallo(null);
+    try {
+      const res = await cliente.pedir(
+        card.suggest ? `/api/mcp-connectors/directory/${encodeURIComponent(card.suggest.id)}` : `/api/mcp-connectors/${encodeURIComponent(card.server)}/oauth`,
+        card.suggest
+          ? { method: "POST" }
+          : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ issuerHost: oauth?.issuerHost ?? null }) },
+      );
+      const body = (await res.json().catch(() => ({}))) as { server?: unknown; authorizationUrl?: unknown; detail?: unknown; error?: unknown; issuerHost?: unknown };
+      if (!res.ok || typeof body.authorizationUrl !== "string") {
+        // La página de inicio de sesión se movió: la tarjeta nombra la nueva antes del siguiente toque.
+        const nuevo = body.error === "issuer_changed" ? signInHostFrom(body.issuerHost) : undefined;
+        if (nuevo !== undefined && oauth && !card.suggest) setOauth({ ...oauth, issuerHost: nuevo });
+        setFallo({ codigo: typeof body.error === "string" && body.error ? body.error : String(res.status), ...(typeof body.detail === "string" ? { detalle: body.detail } : {}) });
+        setEstado("error");
+        return;
+      }
+      if (typeof body.server === "string" && body.server) setServidor(body.server);
+      await plataforma.abrirNavegador(body.authorizationUrl);
+      setEstado("esperando");
+    } catch {
+      setFallo({ codigo: "failed" });
+      setEstado("error");
+    }
+  };
+
+  // Dónde se inicia sesión. La página del propio servidor cuando no se sabe su host: nunca el del MCP, que es donde están las herramientas.
+  const dondeIniciaSesion = !oauth
+    ? null
+    : oauth.issuerHost === null
+      ? oauth.reason === "lapsed"
+        ? t("mcpApproval.signInAgainOnServerPage")
+        : oauth.reason === "scope"
+          ? t("mcpApproval.morePermissionsOnServerPage")
+          : t("mcpApproval.signInOnServerPage")
+      : oauth.reason === "lapsed"
+        ? t("mcpApproval.signInAgainAt", { issuer: oauth.issuerHost })
+        : oauth.reason === "scope"
+          ? t("mcpApproval.morePermissionsAt", { issuer: oauth.issuerHost })
+          : t("mcpApproval.signInAt", { issuer: oauth.issuerHost });
+
+  return (
+    <div className="nx" data-tarjeta-conectar-mcp={card.server}>
+      <div className="nx-cap">
+        {card.suggest ? t("mcpApproval.suggestTitle", { name: card.suggest.name, host: card.suggest.host }) : t("mcpApproval.title", { server: card.server, host: card.host })}
+      </div>
+      {estado === "conectado" ? (
+        <div className="nx-what">{t("mcpApproval.oauthConnected")}</div>
+      ) : pideAprobacion ? (
+        <div className="nx-what" role="status">{t("aprobarEnLaWeb")}</div>
+      ) : (
+        <>
+          {dondeIniciaSesion !== null ? <div className="nx-what">{dondeIniciaSesion}</div> : null}
+          {estado === "esperando" && <div className="nx-vs" role="status">{t("esperandoInicioDeSesion")}</div>}
+          {estado === "error" && fallo && (
+            <div className="nx-vs" role="alert">
+              <div>{t(`mcpApproval.errors.${signInErrorKey(fallo.codigo)}`)}</div>
+              {fallo.detalle && showsDetail(fallo.codigo) ? <div>{fallo.detalle}</div> : null}
+            </div>
+          )}
+          <div className="nx-acts">
+            <button type="button" className="nx-act" disabled={estado === "abriendo"} onClick={() => void conectar()}>
+              {estado === "error" ? t("mcpApproval.tryAgain") : t("mcpApproval.connect")}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function TarjetaDeLaApp({ x, cliente, projectId, idioma, onInstalada }: { x: TarjetaDeLlamada; cliente: ClienteDeOpenLen; projectId: string; idioma: string; onInstalada?: () => void }) {
   if (x.tipo === "visitas") return <Visitas cliente={cliente} projectId={projectId} idioma={idioma} />;
   if (x.tipo === "respuesta") return <Borrador cliente={cliente} r={x.respuesta} />;
   if (x.tipo === "publicar") return <Publicar cliente={cliente} projectId={projectId} confirm={x.confirm} />;
   if (x.tipo === "instalar") return <Instalar cliente={cliente} projectId={projectId} idioma={idioma} confirm={x.confirm} onInstalada={onInstalada} />;
+  if (x.tipo === "conectarMcp") return <ConectarMcp cliente={cliente} card={x.card} />;
   return <div className="nx"><div className="nx-what" style={{ whiteSpace: "pre-wrap" }}>{x.texto}</div></div>;
 }

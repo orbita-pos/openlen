@@ -123,6 +123,169 @@ describe("entryFingerprint", () => {
   });
 });
 
+// The oauth block (spec local 2026-11-17-oauth-de-conectores-mcp, §5.1): Claude Code's field names and rules.
+describe("oauth block", () => {
+  const cal = { transport: "streamable-http", url: "https://calendarmcp.googleapis.com/mcp/v1" };
+  const calWith = (oauth: unknown) => one({ ...cal, oauth }, "cal");
+  const google = ["https://accounts.google.com"];
+  const parseCal = (oauth: unknown) => {
+    const r = parseMcpConfig(calWith(oauth), none);
+    if (!r.ok) throw new Error(r.error);
+    return r.config.servers.cal!;
+  };
+
+  it("accepts scope only", () => {
+    const r = parseMcpConfig(
+      '{"servers":{"cal":{"transport":"streamable-http","url":"https://calendarmcp.googleapis.com/mcp/v1","oauth":{"scope":"https://www.googleapis.com/auth/calendar"}}}}',
+      none,
+    );
+    if (!r.ok) throw new Error(r.error);
+    expect(r.config.servers.cal!.oauth).toEqual({ scope: "https://www.googleapis.com/auth/calendar" });
+  });
+
+  it("accepts a registered client with its secret as a credential reference", () => {
+    const entry = parseCal({
+      clientId: "123.apps.googleusercontent.com",
+      clientSecret: "${credential:CAL_SECRET}",
+      scope: "https://www.googleapis.com/auth/calendar",
+      authServerMetadataUrl: "https://accounts.google.com/.well-known/openid-configuration",
+      authorizationServer: google,
+    });
+    expect(entry.oauth).toEqual({
+      clientId: "123.apps.googleusercontent.com",
+      clientSecret: "${credential:CAL_SECRET}",
+      scope: "https://www.googleapis.com/auth/calendar",
+      authServerMetadataUrl: "https://accounts.google.com/.well-known/openid-configuration",
+      authorizationServer: google,
+    });
+  });
+
+  it("an entry without oauth has no oauth key, and an empty block is kept", () => {
+    expect("oauth" in parseCal(undefined)).toBe(false);
+    expect(parseCal({}).oauth).toEqual({});
+  });
+
+  it("survives a write and a read", () => {
+    const entry = parseCal({ clientId: "id", authorizationServer: google, scope: "s" });
+    const again = parseMcpConfig(serializeMcpConfig({ servers: { cal: entry } }), none);
+    expect(again).toEqual({ ok: true, config: { servers: { cal: entry } } });
+  });
+
+  it("oauth must be an object", () => {
+    expect(errorOf(calWith("yes"))).toBe("servers.cal.oauth: must be an object");
+    expect(errorOf(calWith(null))).toBe("servers.cal.oauth: must be an object");
+    expect(errorOf(calWith(["scope"]))).toBe("servers.cal.oauth: must be an object");
+  });
+
+  it("clientSecret needs clientId", () => {
+    expect(errorOf(calWith({ clientSecret: "${credential:S}", authorizationServer: google }))).toBe(
+      "servers.cal.oauth.clientId: clientId is required when clientSecret/authServerMetadataUrl/authorizationServer is set",
+    );
+  });
+
+  it("authServerMetadataUrl and authorizationServer need clientId too", () => {
+    const needs = "servers.cal.oauth.clientId: clientId is required when clientSecret/authServerMetadataUrl/authorizationServer is set";
+    expect(errorOf(calWith({ authServerMetadataUrl: "https://accounts.google.com/.well-known/openid-configuration" }))).toBe(needs);
+    expect(errorOf(calWith({ authorizationServer: google }))).toBe(needs);
+  });
+
+  it("clientSecret needs authorizationServer", () => {
+    expect(errorOf(calWith({ clientId: "id", clientSecret: "${credential:S}" }))).toBe(
+      'servers.cal.oauth.authorizationServer: required when a client secret is configured (for a Google client use ["https://accounts.google.com"])',
+    );
+  });
+
+  it("clientSecret only as a credential reference", () => {
+    const only = "servers.cal.oauth.clientSecret: write the secret as ${credential:NAME}; the person types its value in OpenLen";
+    expect(errorOf(calWith({ clientId: "id", clientSecret: "abc", authorizationServer: google }))).toBe(only);
+    expect(errorOf(calWith({ clientSecret: "abc" }))).toBe(only);
+    expect(errorOf(calWith({ clientId: "id", clientSecret: "", authorizationServer: google }))).toBe(only);
+  });
+
+  it("🔴 clientSecret is exactly one reference: it goes to the token endpoint as is, with nothing around it", () => {
+    const only = "servers.cal.oauth.clientSecret: write the secret as ${credential:NAME}; the person types its value in OpenLen";
+    for (const secret of ["Bearer ${credential:X}", "abc${credential:X}", "${credential:A}${credential:B}", "${credential:X} ", " ${credential:X}", "${credential:X}-", "${credential:A} ${credential:B}"]) {
+      expect(errorOf(calWith({ clientId: "id", clientSecret: secret, authorizationServer: google })), JSON.stringify(secret)).toBe(only);
+    }
+    expect(parseCal({ clientId: "id", clientSecret: "${credential:CAL_SECRET_2}", authorizationServer: google }).oauth?.clientSecret).toBe("${credential:CAL_SECRET_2}");
+  });
+
+  it("clientSecret refuses a malformed reference and a key that looks real", () => {
+    expect(errorOf(calWith({ clientId: "id", clientSecret: "${credential:lower}", authorizationServer: google }))).toMatch(
+      /^servers\.cal\.oauth\.clientSecret: malformed credential reference/,
+    );
+    expect(errorOf(calWith({ clientId: "id", clientSecret: "sk-ant-abcdefghijklmnopqrstuvwxyz", authorizationServer: google }))).toMatch(
+      /^servers\.cal\.oauth\.clientSecret: it looks like it holds a API key; write the key as \$\{credential:NAME\}/,
+    );
+  });
+
+  it("authServerMetadataUrl must be https", () => {
+    expect(errorOf(calWith({ clientId: "id", authServerMetadataUrl: "http://accounts.google.com/.well-known/openid-configuration" }))).toBe(
+      "servers.cal.oauth.authServerMetadataUrl: must use https://",
+    );
+    expect(errorOf(calWith({ clientId: "id", authServerMetadataUrl: "not a url" }))).toBe("servers.cal.oauth.authServerMetadataUrl: must use https://");
+    expect(errorOf(calWith({ clientId: "id", authServerMetadataUrl: 5 }))).toBe("servers.cal.oauth.authServerMetadataUrl: must use https://");
+  });
+
+  it("authorizationServer is a non-empty list of https URLs", () => {
+    const at = "servers.cal.oauth.authorizationServer";
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: [] }))).toBe(`${at}: must be a non-empty list of https:// URLs`);
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: "https://accounts.google.com" }))).toBe(`${at}: must be a non-empty list of https:// URLs`);
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: ["https://accounts.google.com", "http://other.example.com"] }))).toBe(
+      `${at}[1]: must use https://`,
+    );
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: [7] }))).toBe(`${at}[0]: must use https://`);
+  });
+
+  it("the two URL fields can't carry a key either (findSecret runs over them)", () => {
+    const key = "sk-ant-abcdefghijklmnopqrstuvwxyz";
+    expect(errorOf(calWith({ clientId: "id", authServerMetadataUrl: `https://accounts.google.com/.well-known/openid-configuration?key=${key}` }))).toBe(
+      "servers.cal.oauth.authServerMetadataUrl: it looks like it holds a API key; a URL here can't carry a key",
+    );
+    expect(errorOf(calWith({ clientId: "id", authorizationServer: ["https://accounts.google.com", `https://issuer.example.com/?k=${key}`] }))).toBe(
+      "servers.cal.oauth.authorizationServer[1]: it looks like it holds a API key; a URL here can't carry a key",
+    );
+  });
+
+  it("a plain string field must be a non-empty string", () => {
+    expect(errorOf(calWith({ clientId: 7 }))).toBe("servers.cal.oauth.clientId: must be a non-empty string");
+    expect(errorOf(calWith({ clientId: "" }))).toBe("servers.cal.oauth.clientId: must be a non-empty string");
+    expect(errorOf(calWith({ scope: false }))).toBe("servers.cal.oauth.scope: must be a non-empty string");
+    expect(errorOf(calWith({ scope: "" }))).toBe("servers.cal.oauth.scope: must be a non-empty string");
+  });
+
+  it("unknown oauth field", () => {
+    expect(errorOf(calWith({ callbackPort: 8080 }))).toBe("servers.cal.oauth.callbackPort: unknown field");
+  });
+
+  it("oauth changes the fingerprint", () => {
+    const withScope = (scope: string) => parseCal({ scope });
+    expect(entryFingerprint(withScope("a"))).not.toBe(entryFingerprint(withScope("b")));
+    expect(entryFingerprint(withScope("a"))).not.toBe(entryFingerprint(parseCal(undefined)));
+    expect(entryFingerprint(parseCal({}))).not.toBe(entryFingerprint(parseCal(undefined)));
+    const registered = (extra: Record<string, unknown>) => parseCal({ clientId: "id", authorizationServer: google, ...extra });
+    expect(entryFingerprint(registered({ authorizationServer: ["https://other.example.com"] }))).not.toBe(entryFingerprint(registered({})));
+    expect(entryFingerprint(registered({ clientSecret: "${credential:A}" }))).not.toBe(entryFingerprint(registered({ clientSecret: "${credential:B}" })));
+  });
+
+  it("the order of the keys in oauth does not change the fingerprint", () => {
+    const a = parseCal({ clientId: "id", scope: "s", authorizationServer: google });
+    const b = parseCal({ authorizationServer: google, scope: "s", clientId: "id" });
+    expect(entryFingerprint(a)).toBe(entryFingerprint(b));
+  });
+
+  it("🔴 an entry without oauth keeps today's fingerprint: approvals already stored stay valid", () => {
+    const parse = (entry: Record<string, unknown>) => {
+      const r = parseMcpConfig(one(entry), none);
+      if (!r.ok) throw new Error(r.error);
+      return r.config.servers.a!;
+    };
+    // sha256 of JSON.stringify({ url, headers }), computed before the oauth block existed.
+    expect(entryFingerprint(parse({ ...base, headers: { B: "2", A: "1" } }))).toBe("275234381e7465744442317dc7a573efcc06fe4bf034140045b9b041f1ef926b");
+    expect(entryFingerprint(parse(base))).toBe("9d5c9f476cae8744ee203818c02c61f1abd6fde516db4527f7a829260c5edf3e");
+  });
+});
+
 describe("serializeMcpConfig", () => {
   it("writes two-space JSON with a final newline", () => {
     expect(serializeMcpConfig({ servers: {} })).toBe('{\n  "servers": {}\n}\n');

@@ -19,12 +19,13 @@ export function referencesWellFormed(text: string): boolean {
   return (text.match(CREDENTIAL_START) ?? []).length === (text.match(CREDENTIAL_REF) ?? []).length;
 }
 
-export function credentialRefsOf(e: Pick<McpServerEntry, "url" | "headers">): string[] {
-  return credentialRefs([e.url, ...Object.values(e.headers)].join("\n"));
+/** Every reference the entry cites: in the url, in the headers and in the oauth client secret. */
+export function credentialRefsOf(e: Pick<McpServerEntry, "url" | "headers" | "oauth">): string[] {
+  return credentialRefs([e.url, ...Object.values(e.headers), e.oauth?.clientSecret ?? ""].join("\n"));
 }
 
 export function resolveEntry(
-  e: Pick<McpServerEntry, "url" | "headers">,
+  e: Pick<McpServerEntry, "url" | "headers" | "oauth">,
   values: ReadonlyMap<string, string>,
 ): { ok: true; url: string; headers: Record<string, string>; resolved: string[] } | { ok: false; missing: string[] } {
   const missing = credentialRefsOf(e).filter((n) => !values.has(n));
@@ -38,6 +39,9 @@ export function resolveEntry(
     });
   const url = sub(e.url);
   const headers = Object.fromEntries(Object.entries(e.headers).map(([k, v]) => [k, sub(v)]));
+  // The oauth client secret is not substituted into the request to the server (it goes to the token endpoint), but its
+  // value is as secret as the rest: it belongs in what the redactor strips from any text that could reach the model.
+  if (e.oauth?.clientSecret) sub(e.oauth.clientSecret);
   return { ok: true, url, headers, resolved: [...new Set(resolved)] };
 }
 

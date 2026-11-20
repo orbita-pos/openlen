@@ -5,7 +5,7 @@
 import { HOME_DIR } from "@/lib/agent/ficheros/len-md";
 
 import { buildApprovalCard, type McpApprovalCard } from "./approval";
-import { entryFingerprint, parseMcpConfig } from "./config";
+import { entryFingerprint, parseMcpConfig, type McpServerEntry } from "./config";
 import type { StoredConfig } from "./store";
 
 export const MCP_CONFIG_PATH = `${HOME_DIR}/.len/mcp.json`;
@@ -21,6 +21,7 @@ export interface LenFileDeps {
   ): Promise<{ ok: true; version: number } | { ok: false; reason: "conflict" }>;
   installedServerNames(personId: string): Promise<ReadonlySet<string>>;
   credentialNames(personId: string): Promise<readonly string[]>;
+  dropOAuth?(personId: string, name: string, entry?: McpServerEntry): Promise<unknown>;
 }
 
 export type LenFileSaved = { ok: true; before: string; pending: McpApprovalCard[]; note: string } | { ok: false; error: string };
@@ -36,6 +37,12 @@ export async function saveLenMcpConfig(personId: string, text: string, d: LenFil
   const set = new Set(await d.credentialNames(personId));
   const before = parseMcpConfig(current.text, { reservedServerNames: new Set() });
   const previous = before.ok ? { config: before.config, approved: current.approved } : undefined;
+  if (before.ok && d.dropOAuth) {
+    const present = new Set(names);
+    for (const [oldName, oldEntry] of Object.entries(before.config.servers)) {
+      if (!present.has(oldName)) await d.dropOAuth(personId, oldName, oldEntry).catch(() => {});
+    }
+  }
   const pending = names
     .filter((n) => parsed.config.servers[n]!.enabled && approved[n] !== entryFingerprint(parsed.config.servers[n]!))
     .map((n) => buildApprovalCard(n, parsed.config.servers[n]!, parsed.config, approved, set, written.version, previous));

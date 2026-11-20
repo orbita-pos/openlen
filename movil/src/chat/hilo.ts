@@ -12,6 +12,7 @@ import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import type { EventoSse } from "@/lib/len-bench/sse";
 import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
 import { lenRequestRefFrom, type LenRequestRef } from "@/lib/assistants/len-request-ref";
+import { mcpApprovalFrom } from "@/lib/mcp-connectors/approval-card";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
 
@@ -166,6 +167,10 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
     case "confirm": {
       const tarjeta = tarjetaDeConfirmacion(d);
       return tarjeta ? { ...v, tarjetas: [...v.tarjetas, tarjeta] } : v;
+    }
+    case "mcp_approval": {
+      const card = mcpApprovalFrom(d.card);
+      return card ? { ...v, tarjetas: [...v.tarjetas, { tipo: "conectarMcp", card }] } : v;
     }
     case "html":
       return { ...v, cambioLaPagina: true };

@@ -4,11 +4,13 @@
 // person — each server with its status, «Probar», edit, switch off, delete, add — and the person's keys, by name only.
 // A server Len added waits with the same «Conectar» card the chat shows. A key typed here is sent once and never shown.
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { McpApprovalCard } from "@/lib/mcp-connectors/approval-card";
 
 import { McpApprovalCardView } from "../chat/mcp-approval-card";
+import { openSignIn } from "../chat/open-sign-in";
+import { showsDetail, signInErrorKey } from "../chat/sign-in-errors";
 
 interface ServerRow {
   name: string;
@@ -16,10 +18,11 @@ interface ServerRow {
   url: string;
   enabled: boolean;
   approved: boolean;
-  status: "connected" | "pending" | "waiting-credentials" | "failed" | "never-listed";
+  status: "connected" | "pending" | "waiting-credentials" | "needs-auth" | "failed" | "never-listed";
   tools: number;
   headers: string[];
   error?: string;
+  oauth?: boolean;
   approval?: McpApprovalCard;
 }
 interface View {
@@ -43,11 +46,17 @@ const send = async (url: string, method: string, body?: unknown) => {
 
 export function ConnectorsSection() {
   const t = useTranslations("wsChrome");
+  // A sign-in that failed says why in the person's language (`mcpApproval.errors`, shared with the chat's card).
+  const tc = useTranslations("panelsChat");
   const [view, setView] = useState<View | null>(null);
   const [probes, setProbes] = useState<Record<string, Probe>>({});
+  const [signInErrors, setSignInErrors] = useState<Record<string, { code: string; detail?: string }>>({});
   const [form, setForm] = useState<{ mode: "add" | "edit"; name: string; url: string; rows: HeaderRow[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [keyEdit, setKeyEdit] = useState<{ name: string; value: string } | null>(null);
+  // The sign-in this page is waiting on, if any (R2): a new tap and the page going away abort it.
+  const waiting = useRef<AbortController | null>(null);
+  useEffect(() => () => waiting.current?.abort(), []);
 
   const load = useCallback(async () => {
     try {
@@ -70,9 +79,29 @@ export function ConnectorsSection() {
         ? t("tools.connectors.status.pending")
         : s.status === "waiting-credentials"
           ? t("tools.connectors.status.waiting", { names: (s.error ?? "").replace(/^missing: /, "") })
-          : s.status === "failed"
-            ? t("tools.connectors.status.failed", { error: s.error ?? "" })
-            : t("tools.connectors.status.neverListed");
+          : s.status === "needs-auth"
+            ? t("tools.connectors.status.needsAuth")
+            : s.status === "failed"
+              ? t("tools.connectors.status.failed", { error: s.error ?? "" })
+              : t("tools.connectors.status.neverListed");
+
+  async function connectOAuth(name: string) {
+    setSignInErrors(({ [name]: _gone, ...rest }) => rest);
+    waiting.current?.abort();
+    const controller = new AbortController();
+    waiting.current = controller;
+    // `onLate`: the person closed the window and the sign-in came through anyway.
+    const res = await openSignIn(name, { signal: controller.signal, onLate: () => void load() });
+    if (res === "aborted") return;
+    // Whatever the window said, the list is read again: it may have closed with the connection already made.
+    await load();
+    if (typeof res === "object") setSignInErrors((e) => ({ ...e, [name]: { code: res.error, ...(res.detail ? { detail: res.detail } : {}) } }));
+  }
+
+  async function disconnectOAuth(name: string) {
+    await send(`/api/mcp-connectors/${encodeURIComponent(name)}/oauth`, "DELETE");
+    await load();
+  }
 
   async function probe(name: string) {
     const { body } = await send(`/api/mcp-connectors/${encodeURIComponent(name)}/probe`, "POST");
@@ -131,6 +160,16 @@ export function ConnectorsSection() {
               </div>
               {s.approved ? (
                 <>
+                  {s.status === "needs-auth" ? (
+                    <button type="button" className="text-[12px] font-medium fg" onClick={() => void connectOAuth(s.name)}>
+                      {t("tools.connectors.connect")}
+                    </button>
+                  ) : null}
+                  {s.status === "connected" && s.oauth ? (
+                    <button type="button" className="text-[12px] fg" onClick={() => void disconnectOAuth(s.name)}>
+                      {t("tools.connectors.disconnect")}
+                    </button>
+                  ) : null}
                   <button type="button" className="text-[12px] fg" onClick={() => void probe(s.name)}>
                     {t("tools.connectors.probe")}
                   </button>
@@ -152,6 +191,12 @@ export function ConnectorsSection() {
                   ? t("tools.connectors.probeOk", { tools: (probes[s.name] as { tools: string[] }).tools.join(", ") })
                   : t("tools.connectors.probeFailed", { error: (probes[s.name] as { error: string }).error })}
               </p>
+            ) : null}
+            {signInErrors[s.name] ? (
+              <div className="mt-1 text-[12px] text-red-600" role="alert" data-connector-sign-in-error="">
+                <p>{tc(`mcpApproval.errors.${signInErrorKey(signInErrors[s.name]!.code)}`)}</p>
+                {signInErrors[s.name]!.detail && showsDetail(signInErrors[s.name]!.code) ? <p className="fg-muted">{signInErrors[s.name]!.detail}</p> : null}
+              </div>
             ) : null}
             {s.approval ? <McpApprovalCardView card={s.approval} /> : null}
           </li>

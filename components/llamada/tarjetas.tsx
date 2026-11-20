@@ -11,6 +11,7 @@ import { useTranslations } from "next-intl";
 import { AgentConfirmCard } from "@/components/workspace-v2/agent-confirm-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "@/components/workspace-v2/agent-reply-card";
 import { InstallConfirmCard } from "@/components/workspace-v2/tools/install-confirm-card";
+import { McpApprovalCardView } from "@/components/workspace-v2/chat/mcp-approval-card";
 import type { DatosDeVisitas } from "@/lib/voz/tarjeta-de-visitas";
 import type { TarjetaDeLlamada } from "./puente-a-len";
 
@@ -81,6 +82,10 @@ export function TarjetasDeLaLlamada({ projectId, tarjetas }: { projectId: string
           // Herramientas, fase 5: el «Instalar» de una herramienta, la misma tarjeta que en el chat de la web.
           <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
             <InstallConfirmCard projectId={projectId} install={x.confirm} onInstalled={() => {}} />
+          </div>
+        ) : x.tipo === "conectarMcp" ? (
+          <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">
+            <McpApprovalCardView card={x.card} />
           </div>
         ) : (
           <div key={i} className="workspace-v2 rounded-2xl p-2 shadow-lg">

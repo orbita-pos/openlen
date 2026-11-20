@@ -723,7 +723,36 @@
     "failed": "无法连接：{error}",
     "changed": "期间已有变化：请在“工具”中重新查看",
     "dismissed": "未连接。你可以稍后在“工具”中批准。",
-    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准"
+    "firstTime": "你的密钥 {name} 从未发送到 {host}：只有信任该服务器时才批准",
+    "signInAt": "在 {issuer} 登录",
+    "signInAgainAt": "在 {issuer} 重新登录",
+    "morePermissionsAt": "在 {issuer} 需要更多权限",
+    "oauthConnected": "已连接",
+    "suggestTitle": "连接 {name} ({host})",
+    "signInOnServerPage": "在服务器自己的登录页面登录",
+    "signInAgainOnServerPage": "在服务器自己的登录页面重新登录",
+    "morePermissionsOnServerPage": "需要更多权限，将在服务器自己的登录页面请求",
+    "sendsToSignIn": "将把你的密钥 {name} 发送到服务器的登录页面",
+    "tryAgain": "重试",
+    "openConnectors": "在“工具”中打开连接器",
+    "errors": {
+      "popupBlocked": "浏览器拦截了登录窗口。请允许 OpenLen 的弹出窗口后重试。",
+      "unsafeUrl": "服务器发来的登录地址不安全，因此 OpenLen 没有打开。",
+      "notApproved": "此连接器尚未获批准。请在“工具”的连接器中批准。",
+      "noClient": "OpenLen 暂时无法登录此服务器：需要在服务器的登录提供方注册一个应用（mcp.json 中的 oauth.clientId）。",
+      "unreachable": "无法连接到服务器的登录。请稍后重试。",
+      "expired": "登录耗时过长，已过期。请重试。",
+      "lost": "该登录链接已失效。请重试。",
+      "issuerChanged": "登录页面已更改，因此没有连接任何内容。请查看它现在的位置，然后重试。",
+      "exchangeFailed": "服务器没有完成登录。请重试。",
+      "wrongBrowser": "登录在未登录你的 OpenLen 帐户的浏览器中完成，因此没有连接任何内容。请从此标签页重试。",
+      "otherAccount": "该登录属于另一个 OpenLen 帐户，因此没有连接任何内容。",
+      "off": "连接器登录已关闭。",
+      "unauthorized": "你的 OpenLen 会话已结束。请刷新页面后重试。",
+      "notAvailable": "该连接器不可用。",
+      "configUnreadable": "无法读取你的连接器文件。请在“工具”的连接器中修复。",
+      "failed": "无法登录。请重试。"
+    }
   },
   "ownAssistant": {
     "card": {
