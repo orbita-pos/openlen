@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "The A/B test “{name}” had stopped running on your live site, so it was closed. Your live page was not changed.",
       "pushPromotedBySystem": "Variant B of “{name}” went live as the winner. Bring it into your draft from the A/B card before you publish again."
     }
+  },
+  "skillProposal": {
+    "new": "New skill",
+    "improvement": "Improves {target}",
+    "show": "See the skill",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "changed": "It changed since Len proposed it. Ask him to propose it again.",
+    "failed": "It couldn't be saved. Try again."
   }
 }

@@ -77,6 +77,7 @@ describe("skillFingerprint", () => {
 describe("resolveProposals", () => {
   it("🔴 a new skill is saved with the name and description of its fields; other frontmatter keys are not kept", () => {
     const r = resolveProposals({ proposals: [newOne({ skillMd: fileOf("bread-baking", "x", "# Bread\n\nKnead ten minutes.", "when_to_use: always\n") })] }, ctx());
+    const skillMd = "---\nname: bread-baking\ndescription: Bake bread at home with the person, step by step.\n---\n\n# Bread\n\nKnead ten minutes.\n";
     expect(r).toEqual({
       ok: true,
       proposals: [
@@ -85,8 +86,11 @@ describe("resolveProposals", () => {
           kind: "new",
           target: null,
           description: "Bake bread at home with the person, step by step.",
-          skillMd: "---\nname: bread-baking\ndescription: Bake bread at home with the person, step by step.\n---\n\n# Bread\n\nKnead ten minutes.\n",
+          skillMd,
           base: null,
+          // What the card compares with the saved skill's, so a reload knows it was saved (the browser has no sha256 of
+          // ours to compute it with).
+          fingerprint: skillFingerprint(skillMd),
         },
       ],
     });

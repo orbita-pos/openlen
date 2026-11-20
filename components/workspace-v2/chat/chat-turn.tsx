@@ -21,6 +21,7 @@ import { AgentConfirmCard } from "../agent-confirm-card";
 import { InstallConfirmCard } from "../tools/install-confirm-card";
 import { AssistantCreateCard } from "../assistant/create-card";
 import { McpApprovalCardView } from "./mcp-approval-card";
+import { SkillProposalsCard } from "./skill-proposals-card";
 import { ToolSuggestionCards } from "../tools/tool-suggestion-card";
 import { AgentReplyCard, type EtiquetasDeRespuesta } from "../agent-reply-card";
 import { mismaPagina } from "../panels/undo-turn";
@@ -420,6 +421,8 @@ export function LenTurn({
       <DeliveredFiles actions={turn.actions} />
       {/* «QUIERO UN ASISTENTE» (spec local 2026-11-06-asistente-propio, §4.4): the card Len's create_assistant left. */}
       <AssistantCreateCard actions={turn.actions} projectId={projectId} />
+      {/* THE PERSON'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.6): the review card Len's propose_skills left. */}
+      <SkillProposalsCard actions={turn.actions} />
       {/* LEN'S SUBAGENTS: a live card per child this turn launched. */}
       <SubagentCards actions={turn.actions} projectId={projectId} rowId={turn.id} />
       {todos && todos.length > 0 && (

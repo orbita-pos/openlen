@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "Der A/B-Test „{name}“ lief auf deiner veröffentlichten Seite nicht mehr und wurde deshalb beendet. Deine veröffentlichte Seite wurde nicht verändert.",
       "pushPromotedBySystem": "Variante B von „{name}“ ist als Gewinnerin live gegangen. Übernimm sie über die Karte des A/B-Tests in deinen Entwurf, bevor du wieder veröffentlichst."
     }
+  },
+  "skillProposal": {
+    "new": "Neuer Skill",
+    "improvement": "Verbessert {target}",
+    "show": "Skill ansehen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "changed": "Er hat sich geändert, seit Len ihn vorgeschlagen hat. Bitte ihn, ihn erneut vorzuschlagen.",
+    "failed": "Konnte nicht gespeichert werden. Versuch es noch einmal."
   }
 }

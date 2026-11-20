@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "La prueba A/B «{name}» ya no estaba en marcha en tu sitio publicado, así que se cerró. Tu página publicada no cambió.",
       "pushPromotedBySystem": "La variante B de «{name}» quedó publicada como ganadora. Tráela a tu borrador desde la tarjeta de la prueba A/B antes de volver a publicar."
     }
+  },
+  "skillProposal": {
+    "new": "Skill nueva",
+    "improvement": "Mejora de {target}",
+    "show": "Ver la skill",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Guardada",
+    "changed": "Cambió desde que Len la propuso. Pídele que la proponga otra vez.",
+    "failed": "No se pudo guardar. Inténtalo otra vez."
   }
 }

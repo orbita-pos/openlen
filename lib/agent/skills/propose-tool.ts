@@ -10,7 +10,7 @@ import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { bundledSkillNames } from "./bundled";
 import { skillPath } from "./paths";
-import { MAX_PROPOSALS, resolveProposals, type ReadState, type ResolvedProposal } from "./proposals";
+import { MAX_PROPOSALS, resolveProposals, type ReadState } from "./proposals";
 
 export const PROPOSE_SKILLS = "propose_skills";
 
@@ -103,26 +103,4 @@ export async function runProposeSkills(session: AgentSession, args: Record<strin
   };
 }
 
-const isProposal = (p: unknown): p is ResolvedProposal => {
-  const x = p as ResolvedProposal | null;
-  return (
-    typeof x === "object" &&
-    x !== null &&
-    typeof x.name === "string" &&
-    (x.kind === "new" || x.kind === "improvement") &&
-    (x.target === null || typeof x.target === "string") &&
-    typeof x.description === "string" &&
-    typeof x.skillMd === "string" &&
-    (x.base === null || typeof x.base === "string")
-  );
-};
-
-/** The proposals a `propose_skills` action carries, for the card: anything malformed is dropped. */
-export function skillProposalsOf(action: { summary?: string }): ResolvedProposal[] {
-  try {
-    const parsed = JSON.parse(action.summary ?? "") as { proposals?: unknown };
-    return Array.isArray(parsed.proposals) ? parsed.proposals.filter(isProposal).slice(0, MAX_PROPOSALS) : [];
-  } catch {
-    return [];
-  }
-}
+export { skillProposalsOf } from "./proposal-card";

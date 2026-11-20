@@ -41,6 +41,8 @@ export interface ResolvedProposal {
   skillMd: string;
   /** `skillFingerprint` of the text the improvement was made on; null for a new skill. */
   base: string | null;
+  /** `skillFingerprint(skillMd)`: the card compares it with the saved skill's, so a reload knows it was saved. */
+  fingerprint: string;
 }
 
 /** What Len knows of a skill's current SKILL.md: read as it is now, never read, or read before it changed. */
@@ -163,7 +165,7 @@ function resolveOne(p: Record<string, unknown>, ctx: ProposalContext): ResolvedP
   const text = saved(name, description, body);
   const problem = checkSkillText(name, text, ctx.bundled);
   if (problem) return problem;
-  return { name, kind: p.kind, target, description, skillMd: text, base };
+  return { name, kind: p.kind, target, description, skillMd: text, base, fingerprint: skillFingerprint(text) };
 }
 
 export function resolveProposals(input: unknown, ctx: ProposalContext): { ok: true; proposals: ResolvedProposal[] } | { ok: false; error: string } {

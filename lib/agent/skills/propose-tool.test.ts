@@ -99,7 +99,7 @@ describe("propose_skills", () => {
   it("skillProposalsOf reads back what the card shows and drops what isn't a proposal", () => {
     expect(skillProposalsOf({ summary: "not json" })).toEqual([]);
     expect(skillProposalsOf({})).toEqual([]);
-    const good = { name: "a-b", kind: "new", target: null, description: "d", skillMd: "---\nname: a-b\ndescription: d\n---\n\nx\n", base: null };
+    const good = { name: "a-b", kind: "new", target: null, description: "d", skillMd: "---\nname: a-b\ndescription: d\n---\n\nx\n", base: null, fingerprint: "f".repeat(64) };
     expect(skillProposalsOf({ summary: JSON.stringify({ proposals: [good, { name: 3 }, null] }) })).toEqual([good]);
   });
 });

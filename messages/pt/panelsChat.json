@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "O teste A/B “{name}” já não estava em andamento no seu site publicado, então foi encerrado. Sua página publicada não mudou.",
       "pushPromotedBySystem": "A variante B de “{name}” foi ao ar como vencedora. Traga-a para o seu rascunho pelo cartão do teste A/B antes de publicar de novo."
     }
+  },
+  "skillProposal": {
+    "new": "Skill nova",
+    "improvement": "Melhora {target}",
+    "show": "Ver a skill",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "saved": "Salva",
+    "changed": "Mudou desde que o Len a propôs. Peça para ele propor de novo.",
+    "failed": "Não foi possível salvar. Tente de novo."
   }
 }

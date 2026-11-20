@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "Le test A/B « {name} » ne tournait plus sur votre site publié, il a donc été clôturé. Votre page publiée n’a pas changé.",
       "pushPromotedBySystem": "La variante B de « {name} » est en ligne comme gagnante. Intégrez-la à votre brouillon depuis la carte du test A/B avant de publier à nouveau."
     }
+  },
+  "skillProposal": {
+    "new": "Nouvelle skill",
+    "improvement": "Améliore {target}",
+    "show": "Voir la skill",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Enregistrée",
+    "changed": "Elle a changé depuis que Len l’a proposée. Demandez-lui de la reproposer.",
+    "failed": "Impossible de l’enregistrer. Réessayez."
   }
 }

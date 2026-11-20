@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "A/B 테스트 “{name}”이(가) 게시된 사이트에서 더 이상 실행되지 않아 종료했어요. 게시된 페이지는 바뀌지 않았어요.",
       "pushPromotedBySystem": "“{name}”의 B안이 승자로 게시되었어요. 다시 게시하기 전에 A/B 테스트 카드에서 초안으로 가져오세요."
     }
+  },
+  "skillProposal": {
+    "new": "새 스킬",
+    "improvement": "{target} 개선",
+    "show": "스킬 보기",
+    "save": "저장",
+    "saving": "저장 중…",
+    "saved": "저장됨",
+    "changed": "Len이 제안한 뒤로 바뀌었어요. 다시 제안해 달라고 하세요.",
+    "failed": "저장하지 못했어요. 다시 시도해 주세요."
   }
 }

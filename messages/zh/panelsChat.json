@@ -1023,5 +1023,15 @@
       "pushClosedBySystem": "A/B 测试“{name}”已不再在你已发布的网站上运行，因此已将其关闭。你已发布的页面没有任何改动。",
       "pushPromotedBySystem": "“{name}”的变体 B 已作为获胜版本上线。再次发布之前，请先在 A/B 测试卡片中把它合并到你的草稿。"
     }
+  },
+  "skillProposal": {
+    "new": "新技能",
+    "improvement": "改进 {target}",
+    "show": "查看技能",
+    "save": "保存",
+    "saving": "正在保存…",
+    "saved": "已保存",
+    "changed": "自 Len 提出后它已更改。请让他重新提出。",
+    "failed": "无法保存。请重试。"
   }
 }
