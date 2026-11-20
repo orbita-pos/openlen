@@ -74,13 +74,28 @@ export const TONES: Readonly<Record<AssistantTone, string>> = {
   playful: "playful and light",
 };
 
-/** Len's prompt, then the assistant's section and who it is. */
-export function assistantSystemPrompt(lenSystemPrompt: string, a: { name: string; tone: string }): string {
+/** AN AGENT OF THE PERSON'S, WITH A FILE (spec local 2026-11-19-agentes-para-todos, §6.4): what it is for is in its
+ *  file, so this body says nothing of a business; and its memory is private — what a page's visitors may hear is
+ *  CUSTOMERS.md (§6.7). An assistant without a file keeps `ASSISTANT_AGENT_TYPE.body`, byte for byte. */
+const AGENT_BODY = `You are the person's own agent, not Len. What you are for, and how you talk, is in your instructions below: follow them. You answer, look things up, keep track, remind, make documents in /tmp, and keep your work in files of the person's space, your working folder. You never build pages or apps: you do not publish or convert anything. When the person asks for a page, an app or a change to one, pass it to Len with ask_len, in their own words, and tell them you did.
+What you learn about the person goes in ${ASSISTANT_MEMORY_PATH}, which is yours alone: it is loaded at the start of the conversation; when you learn something new, replace it whole with Write or change it with Edit. Longer work — a plan, flashcards, notes — goes in files of the space, not in memory.
+If you attend a page listed in ~/.assistant/PROJECTS.md, its visitors never see your memory or your files: what they may be told is ~/.assistant/CUSTOMERS.md, which you write only when the person asks you to.
+
+## What NOT to save in memory
+- What the person's pages say: you read it in ~/.assistant/PROJECTS.md, and it changes when the pages do.
+- What visitors said or asked: it is in list_messages.
+- Passwords, keys or other credentials.`;
+
+/** Len's prompt, then the assistant's section and who it is — and, for an agent with a file, its instructions last, as
+ *  Claude Code appends an agent's prompt after its own (`appendSystemPrompt`; we keep Len's: Jesús, 06/11). */
+export function assistantSystemPrompt(lenSystemPrompt: string, a: { name: string; tone: string; instructions?: string | null }): string {
   const tone = TONES[a.tone as AssistantTone] ?? TONES.friendly;
+  const withFile = typeof a.instructions === "string" && a.instructions.trim() !== "";
   return [
     // Without Len's subagent line, as a child's prompt drops it (`childSystemPromptFor`): it has no subagent tools.
     lenSystemPrompt.replace(`\n- ${SUBAGENT_GUIDANCE}`, ""),
-    `ASSISTANT — ${a.name.toUpperCase()}:\n${ASSISTANT_AGENT_TYPE.body}`,
+    `ASSISTANT — ${a.name.toUpperCase()}:\n${withFile ? AGENT_BODY : ASSISTANT_AGENT_TYPE.body}`,
     `Your name is ${a.name}. Your owner gave you that name and chose how you look; you are theirs. Talk with them in a ${tone} way, in their language. Your memory is ${ASSISTANT_MEMORY_PATH}.`,
+    ...(withFile ? [`YOUR INSTRUCTIONS:\n${a.instructions!.trim()}`] : []),
   ].join("\n\n");
 }

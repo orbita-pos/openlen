@@ -228,6 +228,30 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("- another rule");
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant without an agent file keeps its
+  // prompt byte for byte; one with a file gets a body of its own and the file's instructions last.
+  it("🔴 without an agent file it is the prompt it always was", () => {
+    const before = [
+      "LEN PROMPT",
+      `ASSISTANT — LUCÍA:\n${ASSISTANT_AGENT_TYPE.body}`,
+      "Your name is Lucía. Your owner gave you that name and chose how you look; you are theirs. Talk with them in a warm and friendly way, in their language. Your memory is ~/.assistant/MEMORY.md.",
+    ].join("\n\n");
+    expect(assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" })).toBe(before);
+    expect(assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly", instructions: null })).toBe(before);
+  });
+
+  it("with an agent file: its own body, nothing about a business by default, and its instructions last", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Mr. Smith", tone: "playful", instructions: "You are Mr. Smith, an English teacher. Never give the answer first." });
+    expect(p.startsWith("LEN PROMPT\n\n")).toBe(true);
+    expect(p.endsWith("You are Mr. Smith, an English teacher. Never give the answer first.")).toBe(true);
+    expect(p).toContain("Your name is Mr. Smith");
+    expect(p).not.toContain(ASSISTANT_AGENT_TYPE.body);
+    // Its memory is private: visitors hear CUSTOMERS.md, never MEMORY.md.
+    expect(p).toContain("~/.assistant/CUSTOMERS.md");
+    expect(p).not.toMatch(/That memory is also what you know when you answer the visitors/);
+    expect(p).toContain("ask_len");
+  });
+
   it("says each tone", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("formal and polite");
     expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("playful and light");

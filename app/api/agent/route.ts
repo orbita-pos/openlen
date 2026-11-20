@@ -11,6 +11,8 @@ import { correoDelUsuario } from "@/lib/movil/llaves";
 import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
+import { agentPreloads, loadAgentOf } from "@/lib/assistants/agent-file";
+import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
@@ -550,6 +552,12 @@ async function correrTurno(
     if (pedidoDelEncargo || body.naceComo !== undefined) return errorJson(400, "a goal or a birth is Len's, not the assistant's", "not_for_assistant");
     asistente = encontrado;
   }
+  /** Its agent file (spec local 2026-11-19-agentes-para-todos, §6.4): its instructions, its skills. A file that is gone
+   *  or broken leaves the plain assistant — the turn still runs. */
+  const agenteDelAsistente = asistente?.agentType
+    ? await loadAgentOf(asistente.personId, asistente.agentType).catch(() => null)
+    : null;
+  if (asistente?.agentType && !agenteDelAsistente) console.warn(`[assistants] ${asistente.id}'s agent file ${asistente.agentType} is missing or broken: it runs as the plain assistant`);
   /** Where this turn's rows live: Len's conversation (nothing) or the assistant's. Len's calls stay byte for byte. */
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
   /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
@@ -1385,7 +1393,12 @@ async function correrTurno(
   // /name (spec local 2026-10-26-len-skills, §4.5): only what the person wrote invokes a skill, never
   // the thread's or the email's context; its content goes after the prompt, as DeepSeek injects it.
   const skillsConocidas = foldLoadedSkills(filasDelHistorial);
-  const skillsInvocadas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
+  const skillsPedidas = invokedSkillNames(prompt, new Set(skillsDelTurno.userInvocable().map((x) => x.skill.name))).map((n) => skillsDelTurno.get(n)!);
+  // AN AGENT'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.4): the ones its file preloads go the same way as
+  // the /name ones — after the prompt and kept as state —, once per conversation, as Claude Code preloads an agent's.
+  const skillsInvocadas = agenteDelAsistente
+    ? [...skillsPedidas, ...agentPreloads(agenteDelAsistente, new Set([...skillsConocidas, ...skillsPedidas.map((x) => x.skill.name)]), skillsDelTurno)]
+    : skillsPedidas;
   // A scheduled task: the model reads DeepSeek's `[SCHEDULE REMINDER]` message, which carries the
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
   // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
@@ -1538,7 +1551,7 @@ async function correrTurno(
   const messages = built.messages;
   // The person's own assistant: Len's system prompt byte for byte, then its section and who it is.
   if (asistente && messages[0]?.role === "system") {
-    messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, asistente) };
+    messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, { name: asistente.name, tone: asistente.tone, instructions: agenteDelAsistente?.body ?? null }) };
     // A prompt the plan mode left in the history gets its text from message 0 as it is NOW sent.
     messages.splice(0, messages.length, ...materializeSystemUpdates(messages));
   }
@@ -1668,6 +1681,8 @@ async function correrTurno(
             name: asistente.name,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
+            // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
+            inSpace: isSpaceData(project.data),
           },
           // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).
           ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),

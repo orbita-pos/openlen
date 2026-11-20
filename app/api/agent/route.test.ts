@@ -306,6 +306,9 @@ const assistantProjects = vi.hoisted(() => ({
   titlesOf: vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, `Title of ${id}`]))),
 }));
 vi.mock("@/lib/assistants/projects", () => assistantProjects);
+// Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant's agent file, none unless a test gives one.
+const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: string, _agentType: string): Promise<Record<string, unknown> | null> => null) }));
+vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   filasParaElHistorialConEquipo: mocks.filasParaElHistorialConEquipo,
@@ -5416,8 +5419,57 @@ describe("POST /api/agent — the person's own assistant", () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ readOnly?: true; assistant?: { id: string; name: string } }];
     expect(session.readOnly).toBe(true);
-    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [] });
+    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [], inSpace: false });
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4): an agent's file shapes its turn.
+  describe("with an agent file", () => {
+    const MR_SMITH = { name: "mr-smith", description: "My English teacher", tools: null, disallowedTools: [], skills: ["office-docx"], effort: null, maxTurns: null, omitLenMd: false, isolation: null, readOnly: false, initialPrompt: "Hola", body: "You are Mr. Smith. Never give the answer first." };
+    const promptSent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
+    const rowKept = () => (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { skillsLoaded?: string[] } | null }])[1];
+    beforeEach(() => {
+      assistantStore.assistantById.mockImplementation(async (id: string) => (id === "a1" ? { ...LUCIA, agentType: "mr-smith" } : null));
+      agentFile.loadAgentOf.mockImplementation(async (personId: string, agentType: string) => (personId === "u1" && agentType === "mr-smith" ? MR_SMITH : null));
+    });
+    afterEach(() => agentFile.loadAgentOf.mockReset());
+
+    it("🔴 its instructions come last in its prompt, and its skills are loaded after the person's words, as state", async () => {
+      mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), mutoDurable: true }));
+      await readEvents(await pedir({ assistantId: "a1" }));
+      const system = String(loopArgs().messages[0]!.content);
+      expect(system.endsWith("You are Mr. Smith. Never give the answer first.")).toBe(true);
+      expect(promptSent()).toMatch(/¿qué tal ayer\?\n\n<skill_content name="office-docx">/);
+      expect(rowKept().transcript?.skillsLoaded).toEqual(["office-docx"]);
+    });
+
+    it("a skill its conversation already loaded is not sent again", async () => {
+      mocks.turnosParaElHistorial.mockResolvedValue([{ userText: "hola", assistantReasoning: "Hola.", transcript: { mensajes: [{ role: "assistant", content: "Hola." }], leidos: [], skillsLoaded: ["office-docx"] } }]);
+      await readEvents(await pedir({ assistantId: "a1" }));
+      expect(promptSent()).not.toMatch(/<skill_content/);
+    });
+
+    it("🔴 a missing or broken file: the plain assistant, and the turn still runs", async () => {
+      agentFile.loadAgentOf.mockResolvedValue(null);
+      const res = await pedir({ assistantId: "a1" });
+      expect(res.status).toBe(200);
+      await readEvents(res);
+      const system = String(loopArgs().messages[0]!.content);
+      expect(system).toContain("Your name is Lucía");
+      expect(system).not.toContain("Mr. Smith");
+      expect(promptSent()).not.toMatch(/<skill_content/);
+    });
+
+    it("its session knows its home is the person's space", async () => {
+      mocks.loadProject.mockResolvedValue({ title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } });
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Read", { file_path: "/index.html" });
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1" }));
+      const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { inSpace?: boolean } }];
+      expect(session.assistant?.inSpace).toBe(true);
+    });
   });
 
   it("🔴 hears how its ask_len requests ended with its next request, once, and they are marked heard (kept for the phone)", async () => {

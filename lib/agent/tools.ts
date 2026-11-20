@@ -1399,6 +1399,9 @@ export interface AgentSession {
     /** The project on her owner's phone (spec local 2026-11-16-movil-es-tu-asistente, §5.3): `ask_len`'s default when
      *  she serves it. Absent outside the phone. */
     readonly viewing?: import("@/lib/assistants/viewing").ViewingProject;
+    /** Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write the space's files.
+     *  Absent or false for an assistant whose home is its page. */
+    readonly inSpace?: boolean;
   };
   /** Her turn: the photos and files of the owner's message, for the Len turn her `ask_len` starts (spec local
    *  2026-11-16-movil-es-tu-asistente, §5.4.7). Absent for Len, and when the message had none. */
