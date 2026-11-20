@@ -17,8 +17,19 @@ It lives in the person's space, talks with them in its own place and keeps its o
 - What the agent needs to learn about the person (their level, goals, schedule) is its job, not yours: it asks on its first turn.
 
 ## 2. Choose the job skill
+OpenLen's job skills, by job:
 - Teaching any language → `language-teacher`.
-- Any other job, for now: no job skill. Put the know-how in the file's body: what it knows, how it works with the person, what it keeps track of and what it never does. A helper for money, health or legal matters says it is not a professional and tells the person when they need one.
+- Training, fitness, running, a coach → `fitness-coach`.
+- Their own money: a budget, debts, savings → `personal-finance`.
+- A legal matter of theirs: a lease, a contract, a letter, a procedure → `legal-helper`.
+- Cooking, recipes, meal plans → `cooking`.
+
+Any other job (a gardener, a study buddy for chemistry, a travel planner): write its skill first and propose it with
+`propose_skills` — a new skill of theirs, its name taken from the job (`plant-care`). Load `skill-creator` for the
+format. The skill holds the know-how: what the agent knows, how it works with the person (one question per turn, they
+try before it shows), what it keeps track of and where, and what it never does. A helper for health, money or legal
+matters says it is not a professional and tells the person when they need one. Then write the agent's file naming that
+skill in `skills:`. The agent works without it until they save it on the card: say so in one line.
 
 ## 3. Write the file
 Write `~/.len/agents/<name>.md` with `Write`, in Claude Code's agent format. Each frontmatter key on one line:

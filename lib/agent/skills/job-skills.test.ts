@@ -68,6 +68,31 @@ describe("legal-helper", () => {
   });
 });
 
+// Len makes the agents (spec §6.3, §6.6): the five buttons map to their skills; any other job gets a skill Len writes and
+// proposes on the card before the agent's file names it.
+describe("agent-creation", () => {
+  it("🔴 gives each of the five jobs its skill", () => {
+    const t = skillMd("agent-creation");
+    for (const [job, skill] of [
+      [/language/i, "language-teacher"],
+      [/fitness|training|coach/i, "fitness-coach"],
+      [/money|finance|budget/i, "personal-finance"],
+      [/legal|lease|contract/i, "legal-helper"],
+      [/cook|recipe|meal/i, "cooking"],
+    ] as const) {
+      const line = t.split("\n").find((l) => l.includes(`\`${skill}\``)) ?? "";
+      expect(line, skill).toMatch(job);
+    }
+  });
+
+  it("🔴 for any other job, proposes its skill with propose_skills before writing the agent's file", () => {
+    const t = skillMd("agent-creation");
+    expect(t).toContain("propose_skills");
+    expect(t.indexOf("propose_skills")).toBeLessThan(t.indexOf("## 3. Write the file"));
+    expect(t).toMatch(/card/i);
+  });
+});
+
 describe("cooking", () => {
   shape("cooking");
   it("🔴 asks allergies first, keeps them in memory, and an allergen is never «probably fine»", () => {
