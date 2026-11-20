@@ -884,7 +884,7 @@ async function correrTurno(
   };
   const runToolWithAgentTypes: typeof runAgentTool = async (session, d, name, args) => {
     const result = await runAgentTool(session, d, name, args);
-    if (name === "Write" || name === "Edit" || name === "bash") await refreshAgentTypes();
+    if (name === "Write" || name === "Edit" || name === "MultiEdit" || name === "bash") await refreshAgentTypes();
     return result;
   };
   // History hardening — ver `lib/agent/historial-saneado.ts`. Del navegador

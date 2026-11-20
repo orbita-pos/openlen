@@ -4891,6 +4891,29 @@ describe("POST /api/agent — Len's subagents", () => {
     }
   });
 
+  it("a MultiEdit on a type's file refreshes the custom choices like Write and Edit do", async () => {
+    const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
+    let rows: typeof type[] = [];
+    const observed: unknown[] = [];
+    agentTypeStore.list.mockImplementation(async (scope) => scope === "project" ? rows : []);
+    mocks.runAgentTool.mockImplementation(async (_session, _deps, name) => {
+      if (name === "MultiEdit") rows = [type];
+      return { response: { ok: true } };
+    });
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"));
+      await args.runTool("MultiEdit", { file_path: "/.len/agents/reviewer.md", edits: [{ old_string: "Reviews", new_string: "Reviews code" }] });
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"));
+      return cierre();
+    });
+    try {
+      await pedir();
+      expect(observed).toEqual([false, true]);
+    } finally {
+      agentTypeStore.list.mockImplementation(async () => []);
+    }
+  });
+
   it("loads the project's and the speaker's custom types into the catalog and launcher", async () => {
     const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
     agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" && owner === "u1" ? [type] : []);

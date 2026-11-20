@@ -49,9 +49,10 @@ export interface Escritura {
   readonly despues: string;
   /** Lo que dijo el dueño (su mensaje, su brief): de dónde puede salir un dato. */
   readonly fuentes: readonly (string | null | undefined)[];
-  /** Si fue un Edit, qué trozo cambió por cuál: ancla lo que no tiene sitio
-   *  propio (un dato que se fue) y mide si vació lo que reemplazaba. */
-  readonly edit?: { readonly old_string: string; readonly new_string: string };
+  /** Si fue un Edit o un MultiEdit, qué trozo cambió por cuál, un par por Edit
+   *  (un Edit solo es una lista de uno): ancla lo que no tiene sitio propio
+   *  (un dato que se fue) y mide, par por par, si vació lo que reemplazaba. */
+  readonly edits?: readonly { readonly old_string: string; readonly new_string: string }[];
   /** Los ids que el script busca y la página ya no tiene, NUEVOS de esta
    *  escritura (`persistPage`). */
   readonly referenciasRotas?: readonly string[];
@@ -69,12 +70,18 @@ type Posicion = { linea: number; columna: number };
 export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
   const antes = e.antes ?? "";
   const inicio: Posicion = { linea: 1, columna: 1 };
-  // Donde fue el Edit, para lo que ya no tiene sitio en el fichero: el trozo
+  const edits = e.edits ?? [];
+  // Donde fue un Edit, para lo que ya no tiene sitio en el fichero: el trozo
   // nuevo en lo GUARDADO (la puerta puede añadir líneas arriba, como las metas
   // og: del primer guardado) y, si el Edit borró, donde estaba el viejo.
-  const dondeFueElEdit: Posicion =
-    (e.edit && (posicionDe(e.despues, e.edit.new_string) ?? (e.antes !== null ? posicionDe(e.antes, e.edit.old_string) : null))) ||
-    inicio;
+  const dondeFue = (edit: { readonly old_string: string; readonly new_string: string }): Posicion | null =>
+    posicionDe(e.despues, edit.new_string) ?? (e.antes !== null ? posicionDe(e.antes, edit.old_string) : null);
+  // Lo que se fue sin sitio propio se ancla en el par que lo tenía (un MultiEdit
+  // son varios), y si ninguno lo nombra, en el primero que se deja situar.
+  const dondeFueElEdit = (valor: string): Posicion => {
+    const suyo = edits.find((x) => x.old_string.includes(valor));
+    return (suyo && dondeFue(suyo)) || edits.map(dondeFue).find((p) => p !== null) || inicio;
+  };
   const diag = (p: Posicion | null, gravedad: Diagnostico["gravedad"], codigo: string, mensaje: string): Diagnostico => ({
     ruta: e.ruta,
     ...(p ?? inicio),
@@ -147,7 +154,7 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
     for (const h of hechosPerdidosNetos(e.antes, e.despues)) {
       deEstaEscritura.push(
         diag(
-          dondeFueElEdit,
+          dondeFueElEdit(h.valor),
           "Warning",
           "dato-perdido",
           `This write removed ${h.tipo === "imagen" ? "the image" : h.tipo === "enlace" ? "the link" : "the phone number"} ${h.valor}, which the page had: it is real data of the user's. If you weren't asked to, put it back with the exact value; if you were, tell the user.`,
@@ -155,12 +162,13 @@ export function diagnosticosDeLaEscritura(e: Escritura): Diagnostico[] {
       );
     }
   }
-  if (e.edit) {
-    const edit = e.edit;
+  // Un Edit solo es una lista de uno; un MultiEdit se mide par por par, cada uno
+  // contra lo que reemplazaba y en su sitio.
+  for (const edit of edits) {
     for (const p of contenidoPerdido([{ target: "edit", nuevoHtml: edit.new_string }], () => edit.old_string)) {
       deEstaEscritura.push(
         diag(
-          dondeFueElEdit,
+          dondeFue(edit) ?? inicio,
           "Warning",
           "contenido-vaciado",
           `This edit left ${p.elementosDespues} of ${p.elementosAntes} elements and ${p.textoDespues} of ${p.textoAntes} characters of text of what it replaced. If you didn't mean to delete it, put back what is missing; if you did, tell the user.`,

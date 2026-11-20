@@ -633,10 +633,9 @@ export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Rec
   if (binarioE) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioE)))) };
   const plan = planearEdit(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)}: «${recorte(entrada.old_string)}» → «${recorte(entrada.new_string)}»`;
-  return await aplicarPlan(session, deps, row.data, v, plan, "Edit", detalle, undefined, {
-    old_string: entrada.old_string,
-    new_string: entrada.new_string,
-  });
+  return await aplicarPlan(session, deps, row.data, v, plan, "Edit", detalle, undefined, [
+    { old_string: entrada.old_string, new_string: entrada.new_string },
+  ]);
 }
 
 export async function toolMultiEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -652,7 +651,8 @@ export async function toolMultiEdit(session: AgentSession, deps: AgentDeps, args
   if (binarioE) return { response: respuesta(fallo(encodingWriteError(await bytesDelBlob(binarioE)))) };
   const plan = planearMultiEdit(entrada, sitioDe(row.data, session, v), leidosDe(session));
   const detalle = `${rutaRelativa(plan.ok ? plan.ruta : entrada.file_path)} (${entrada.edits.length} edits)`;
-  return await aplicarPlan(session, deps, row.data, v, plan, "MultiEdit", detalle);
+  // Every pair goes to the diagnostics, as Edit's does: a MultiEdit that empties a block warns like an Edit.
+  return await aplicarPlan(session, deps, row.data, v, plan, "MultiEdit", detalle, undefined, entrada.edits.map((x) => ({ old_string: x.old_string, new_string: x.new_string })));
 }
 
 export async function toolWrite(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -707,7 +707,8 @@ async function aplicarPlan(
    *  versión sí la nombra, porque en el panel de Versiones no hay nada delante. */
   detalle: string,
   nota?: string,
-  edit?: { old_string: string; new_string: string },
+  /** The (old, new) pair of each Edit of the call — one for Edit, one per edit for MultiEdit — for the diagnostics. */
+  edits?: readonly { old_string: string; new_string: string }[],
 ): Promise<ToolOutcome> {
   if (!plan.ok) return { response: respuesta(plan.resultado) };
   if (plan.ruta.startsWith(ARTIFACT_WORKSPACE)) {
@@ -811,7 +812,7 @@ async function aplicarPlan(
         antes: guardado.previo === null ? null : sinOpIds(guardado.previo),
         despues: sinOpIds(guardado.html),
         fuentes: [session.userPrompt, session.brief, alEmpezar.get(plan.ruta), session.sitioAlEmpezar],
-        ...(edit ? { edit } : {}),
+        ...(edits ? { edits } : {}),
         referenciasRotas: guardado.referenciasRotas,
         ...(session.app ? { enUnaApp: true } : {}),
       }),
