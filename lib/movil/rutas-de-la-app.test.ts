@@ -36,9 +36,11 @@ describe("las rutas de la app", () => {
 
   // OAuth of the MCP connectors on the phone (spec local 2026-11-17-oauth-de-conectores-mcp, §10.1): the route that
   // accepts the key for a method lists it (a method that takes the key without being here has no CORS for the app).
-  it("🔴 the connector sign-in route lists both its methods", () => {
+  // Final review, M5: the phone signs in (POST) but never disconnects — «Desconectar» is the Herramientas page's, on the web.
+  it("🔴 the connector sign-in route lists the one method the phone calls", () => {
     const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
-    expect(listed.get("app/api/mcp-connectors/[name]/oauth/route.ts")).toEqual(["POST", "DELETE"]);
+    expect(listed.get("app/api/mcp-connectors/[name]/oauth/route.ts")).toEqual(["POST"]);
+    expect(listed.get("app/api/mcp-connectors/route.ts")).toEqual(["GET"]);
     expect(listed.get("app/api/mcp-connectors/directory/[id]/route.ts")).toEqual(["POST"]);
   });
 

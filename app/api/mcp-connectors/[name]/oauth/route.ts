@@ -1,7 +1,8 @@
 // STARTING AND DROPPING AN OAUTH SIGN-IN FOR ONE CONNECTOR (spec local 2026-11-17-oauth-de-conectores-mcp, §5.4 steps 2
 // and 5, §10.1, §10.6): POST accepts the web session or the phone's app key, discovers the authorization server, creates
 // a one-use ten-minute `state` and hands back the authorization URL. DELETE revokes (RFC 7009, best-effort) and drops
-// the stored connection, leaving the server in `needs-auth` `first`.
+// the stored connection, leaving the server in `needs-auth` `first` — only with the web session: «Desconectar» is the
+// Herramientas page's, and the phone never calls it (final review M5), so it takes no app key and carries no CORS.
 //
 // The sign-in host the person was shown (§10.2): the card sends the host it named (`{ issuerHost }`, null when it named
 // none); without a body — the Herramientas page — it is the one the stored state names. If the discovery now names
@@ -9,6 +10,7 @@
 //
 // The flow records where it was started (final review F5): the phone's key ("phone") or the web session ("web"). The way
 // back trusts a web flow only in a browser signed in as its person, and holds a phone flow's tokens for the person's yes.
+import { auth } from "@/auth";
 import { entryFingerprint, parseMcpConfig } from "@/lib/mcp-connectors/config";
 import { oauthEnabled } from "@/lib/mcp-connectors/oauth/enabled";
 import { issuerHostOf } from "@/lib/mcp-connectors/approval";
@@ -83,8 +85,8 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   return json({ error: r.reason, detail: r.error }, status);
 });
 
-export const DELETE = paraLaApp(async (req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> => {
-  const personId = await usuarioDeLaPeticion(req);
+export async function DELETE(_req: Request, { params }: { params: Promise<{ name: string }> }): Promise<Response> {
+  const personId = (await auth())?.user?.id;
   if (!personId) return json({ error: "unauthorized" }, 401);
   if (!oauthEnabled()) return json({ error: "off" }, 404);
   const { name } = await params;
@@ -92,6 +94,6 @@ export const DELETE = paraLaApp(async (req: Request, { params }: { params: Promi
   // Only a connection that was there leaves the server waiting for a sign-in: dropping nothing changes nothing.
   if (r.dropped) await markNeedsAuth(personId, name, "first", r.issuer, null).catch(() => {});
   return json({ ok: true }, 200);
-});
+}
 
 export const OPTIONS = respuestaPrevia;
