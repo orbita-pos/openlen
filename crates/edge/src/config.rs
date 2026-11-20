@@ -40,6 +40,8 @@ const ENV_RATE_LIMIT_TRUSTED_PROXIES: &str = "OPENLEN_EDGE_RATE_LIMIT_TRUSTED_PR
 const ENV_AB_ENABLED: &str = "OPENLEN_EDGE_AB_ENABLED";
 const ENV_AB_LOOPBACK_BIND: &str = "OPENLEN_EDGE_AB_LOOPBACK_BIND";
 const ENV_AB_MANIFEST_CACHE_MAX: &str = "OPENLEN_EDGE_AB_MANIFEST_CACHE_MAX";
+const ENV_MODE: &str = "OPENLEN_EDGE_MODE";
+const ENV_PUBLISH_HOSTS: &str = "OPENLEN_EDGE_PUBLISH_HOSTS";
 
 const DEFAULT_BIND: &str = "0.0.0.0:443";
 const DEFAULT_BIND_HTTP: &str = "0.0.0.0:80";
@@ -111,6 +113,12 @@ const DEFAULT_RATE_LIMIT_PER_IP_PER_HOUR: u32 = 5000;
 /// fails.
 const DEFAULT_RATE_LIMIT_EXEMPT_PATHS: &str = "/c/,/.well-known/acme-challenge/";
 const DEFAULT_AB_MANIFEST_CACHE_MAX: u64 = 10_000;
+/// The zones a site's subdomain may live under (`<sub>.<host>`). Production serves pages on
+/// `openlen.app` since 2026-09-10 (`openlen.com` only redirects there); the old zone stays so a
+/// local run on either works. Mirrors `PUBLISH_BASE_HOST` on the app side.
+const DEFAULT_PUBLISH_HOSTS: &str = "openlen.app,openlen.com";
+/// The only value of `OPENLEN_EDGE_MODE` besides the default full edge.
+pub const MODE_AB_SIDECAR: &str = "ab-sidecar";
 
 #[derive(Debug, Clone)]
 pub struct EdgeConfig {
@@ -203,6 +211,12 @@ pub struct EdgeConfig {
     pub ab_loopback_bind: Option<SocketAddr>,
     /// Max entries in the per-release `ab.json` moka manifest cache.
     pub ab_manifest_cache_max: u64,
+    /// Sidecar-only mode (`--ab-sidecar` / `OPENLEN_EDGE_MODE=ab-sidecar`): the process binds ONLY
+    /// the loopback A/B listener — no TLS, no :80/:443, no database — and answers the way Caddy's
+    /// delegation needs (pages served, files decided; see `server.rs`).
+    pub ab_sidecar_only: bool,
+    /// Zones under which `<sub>.<zone>` names a site (`openlen.app`, `openlen.com`).
+    pub publish_hosts: Vec<String>,
 }
 
 fn parse_csv_lower(raw: &str) -> Vec<String> {
@@ -411,6 +425,16 @@ impl EdgeConfig {
             })?,
             Err(_) => DEFAULT_AB_MANIFEST_CACHE_MAX,
         };
+        let ab_sidecar_only = match env::var(ENV_MODE) {
+            Ok(raw) if raw.trim().is_empty() || raw.trim().eq_ignore_ascii_case("full") => false,
+            Ok(raw) if raw.trim().eq_ignore_ascii_case(MODE_AB_SIDECAR) => true,
+            Ok(raw) => anyhow::bail!("{ENV_MODE}={raw} is not `{MODE_AB_SIDECAR}` (or empty)"),
+            Err(_) => false,
+        };
+        let publish_hosts = match env::var(ENV_PUBLISH_HOSTS) {
+            Ok(raw) => parse_csv_lower(&raw),
+            Err(_) => parse_csv_lower(DEFAULT_PUBLISH_HOSTS),
+        };
 
         Ok(Self {
             bind,
@@ -449,6 +473,8 @@ impl EdgeConfig {
             ab_enabled,
             ab_loopback_bind,
             ab_manifest_cache_max,
+            ab_sidecar_only,
+            publish_hosts,
         })
     }
 
@@ -495,6 +521,8 @@ pub struct EdgeConfigBuilder {
     ab_enabled: Option<bool>,
     ab_loopback_bind: Option<Option<SocketAddr>>,
     ab_manifest_cache_max: Option<u64>,
+    ab_sidecar_only: Option<bool>,
+    publish_hosts: Option<Vec<String>>,
 }
 
 impl EdgeConfigBuilder {
@@ -678,6 +706,16 @@ impl EdgeConfigBuilder {
         self
     }
 
+    pub fn ab_sidecar_only(mut self, on: bool) -> Self {
+        self.ab_sidecar_only = Some(on);
+        self
+    }
+
+    pub fn publish_hosts(mut self, hosts: Vec<String>) -> Self {
+        self.publish_hosts = Some(hosts);
+        self
+    }
+
     pub fn build(self) -> Result<EdgeConfig> {
         Ok(EdgeConfig {
             bind: self
@@ -765,6 +803,10 @@ impl EdgeConfigBuilder {
             ab_manifest_cache_max: self
                 .ab_manifest_cache_max
                 .unwrap_or(DEFAULT_AB_MANIFEST_CACHE_MAX),
+            ab_sidecar_only: self.ab_sidecar_only.unwrap_or(false),
+            publish_hosts: self
+                .publish_hosts
+                .unwrap_or_else(|| parse_csv_lower(DEFAULT_PUBLISH_HOSTS)),
         })
     }
 }
