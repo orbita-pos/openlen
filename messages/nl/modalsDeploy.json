@@ -95,5 +95,12 @@
       "queued": "Len werkt aan het project: we nemen hem over zodra hij klaar is.",
       "failed": "De fix kon niet worden overgenomen. Probeer het opnieuw."
     }
+  },
+  "abRunning": {
+    "title": "Er loopt een A/B-test",
+    "body": "Er loopt een A/B-test op deze pagina. Publiceren stopt hem. Stoppen en publiceren?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Stoppen en publiceren",
+    "cancel": "Annuleren"
   }
 }

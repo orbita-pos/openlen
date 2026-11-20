@@ -95,5 +95,12 @@
       "queued": "Len is working on the project: we'll bring it in as soon as he's done.",
       "failed": "The fix couldn't be brought in. Try again."
     }
+  },
+  "abRunning": {
+    "title": "An A/B test is running",
+    "body": "An A/B test is running on this page. Publishing stops it. Stop and publish?",
+    "name": "Test: {name}",
+    "stopAndPublish": "Stop and publish",
+    "cancel": "Cancel"
   }
 }

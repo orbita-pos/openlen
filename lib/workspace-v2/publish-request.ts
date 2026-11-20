@@ -26,6 +26,8 @@ export type PublishOutcome =
   | { readonly kind: "stripe_sync_failed"; readonly message: string }
   // Len Watch (spec local 2026-10-30-len-watch, §5.5): the fix it published isn't in the draft yet.
   | { readonly kind: "len_watch_fix_pending"; readonly incidentId: string; readonly branch: string }
+  // A live A/B experiment (review items 13, 14): publishing would stop it; the owner confirms with `stopActiveAb`.
+  | { readonly kind: "ab_experiment_running"; readonly experimentId: string; readonly name: string; readonly targetPath: string }
   | { readonly kind: "error"; readonly status: number; readonly error: string };
 
 /** A gated POST — publish, or install a tool (spec local 2026-11-04-herramientas-hechas-por-len, §4.2): both answer
@@ -56,6 +58,10 @@ async function postGated(url: string, body: Record<string, unknown>, send: Send 
     };
   }
   if (res.status === 428 && data.error === "security_review_pending") return { kind: "security_review_pending", fingerprint: String(data.fingerprint ?? "") };
+  // 428 is the question; 409 is a publish that raced a launch (same meaning for the owner: ask).
+  if ((res.status === 428 || res.status === 409) && data.error === "ab_experiment_running") {
+    return { kind: "ab_experiment_running", experimentId: String(data.experimentId ?? ""), name: String(data.name ?? ""), targetPath: String(data.targetPath ?? "/") };
+  }
   if (res.status === 428 && data.error === "len_watch_fix_pending") return { kind: "len_watch_fix_pending", incidentId: String(data.incidentId ?? ""), branch: String(data.branch ?? "") };
   if (res.status === 428 && data.error === "secrets_required") return { kind: "secrets_required", missing: (data.missing as string[]) ?? [] };
   if (data.error === "functions_do_not_compile") return { kind: "functions_do_not_compile", errors: (data.errors as string[]) ?? [] };

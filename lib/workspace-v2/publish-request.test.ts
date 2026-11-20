@@ -68,3 +68,21 @@ describe("postInstallAfterSecurity — with the caller's own send", () => {
     expect(global).not.toHaveBeenCalled();
   });
 });
+
+// A live A/B experiment (review items 13, 14): the question the owner is asked before the publish ends it.
+describe("postPublish — an A/B test is running", () => {
+  const BODY = { error: "ab_experiment_running", experimentId: "ab_1234abcd", name: "Direct hero", targetPath: "/" };
+  it("🔴 428 → ask (and 409, a publish that raced a launch, the same)", async () => {
+    const expected = { kind: "ab_experiment_running", experimentId: "ab_1234abcd", name: "Direct hero", targetPath: "/" };
+    reply(428, BODY);
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual(expected);
+    reply(409, BODY);
+    expect(await postPublish("p1", { subdomain: "x" })).toEqual(expected);
+  });
+  it("«Stop and publish» sends `stopActiveAb` in the body, as given", async () => {
+    const send = vi.fn(async () => new Response(JSON.stringify({ url: "https://x.openlen.app" }), { status: 200 }));
+    vi.stubGlobal("fetch", send);
+    await postPublish("p1", { subdomain: "x", stopActiveAb: true });
+    expect(JSON.parse((send.mock.calls[0] as unknown as [string, RequestInit])[1].body as string)).toMatchObject({ stopActiveAb: true });
+  });
+});
