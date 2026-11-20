@@ -7,6 +7,7 @@ import { projectsOfAssistant } from "@/lib/assistants/projects";
 import { assistantById } from "@/lib/assistants/store";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
+import { accesoAlProyecto, puede } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,8 +35,16 @@ export const GET = paraLaApp(async (
     return json({ error: "not_found" }, 404);
   }
 
+  // Her projects were assigned once; the person's access to each is asked NOW (review item 28): a project they were removed
+  // from, or can only read, shows no test cards — they carry the visitors' numbers and a decision only an editor takes.
   const served = await projectsOfAssistant(assistant.id);
-  const projectIds = served.map((p) => p.projectId);
+  const allowed = await Promise.all(
+    served.map(async (p) => {
+      const acceso = await accesoAlProyecto(p.projectId, userId).catch(() => null);
+      return acceso && puede(acceso.rol, "editar") ? p.projectId : null;
+    }),
+  );
+  const projectIds = allowed.filter((id): id is string => id !== null);
   const decisions = await pendingExperimentViewsForProjects(projectIds);
   return json({ decisions }, 200);
 });

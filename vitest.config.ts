@@ -144,6 +144,7 @@ export default defineConfig({
       "app/api/projects/[id]/install/route.test.ts",
       // A/B testing: the routes the phone does not call are web-session only (review item 27). LISTA BLANCA.
       "app/api/projects/[id]/ab/**/*.test.ts",
+      "app/api/ab/**/*.test.ts",
       // El idioma en que escribe el usuario, no el de su interfaz (10/10).
       "lib/language/**/*.test.ts",
       "lib/agent/user-language.test.ts",

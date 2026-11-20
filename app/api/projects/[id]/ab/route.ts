@@ -4,14 +4,15 @@ import { z } from "zod";
 
 import { abTestingEnabled } from "@/lib/ab/enabled";
 import { AbLifecycleError, createAbDraft } from "@/lib/ab/lifecycle";
-import { computeExperimentMetrics } from "@/lib/ab/metrics";
+import { computeExperimentMetrics, metricsInputOf } from "@/lib/ab/metrics";
+import { isSnapshotFresh } from "@/lib/ab/snapshot";
 import {
   listExperimentsForProject,
+  saveEvaluation,
   toExperimentView,
-  updateExperiment,
 } from "@/lib/ab/store";
 import { auth } from "@/auth";
-import { exigirAcceso } from "@/lib/projects/acceso";
+import { exigirAcceso, puede } from "@/lib/projects/acceso";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,24 +50,18 @@ export async function GET(
 
   const rows = await listExperimentsForProject(id, 20);
   const now = new Date();
+  // What the visitors did is the owner's and an editor's (lib/projects/acceso.ts: results are theirs): a reader gets the
+  // list of tests and no numbers (review item 28).
+  const seesVisitorData = puede(acceso.rol, "editar");
   const views = await Promise.all(
     rows.map(async (row) => {
-      if (row.status === "running" && row.startedAt) {
+      if (!seesVisitorData) return toExperimentView({ ...row, metricsSnapshot: null });
+      // The evaluator snapshots every 30 minutes; a request recomputes (four aggregations) and writes only when what is
+      // stored is older than five. The write is the evaluator's compare-and-swap: it never overwrites a decision.
+      if (row.status === "running" && row.startedAt && !isSnapshotFresh(row, now)) {
         try {
-          const metrics = await computeExperimentMetrics(
-            {
-              experimentId: row.id,
-              projectId: row.projectId,
-              primaryMetric: row.primaryMetric,
-              splitBps: row.splitBps,
-              startedAt: row.startedAt,
-              endedAt: row.endedAt,
-            },
-            now,
-          );
-          await updateExperiment(row.id, { metricsSnapshot: metrics, evaluatedAt: now }).catch(
-            () => undefined,
-          );
+          const metrics = await computeExperimentMetrics(metricsInputOf({ ...row, startedAt: row.startedAt }), now);
+          await saveEvaluation(row.id, { metricsSnapshot: metrics, evaluatedAt: now }).catch(() => false);
           return toExperimentView({ ...row, metricsSnapshot: metrics, evaluatedAt: now });
         } catch {
           return toExperimentView(row);
