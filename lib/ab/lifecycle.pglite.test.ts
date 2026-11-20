@@ -78,6 +78,12 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.clearAllMocks();
   h.failNextUpdate = false;
+  // clearAllMocks keeps implementations: what one test made fail must not fail the next.
+  h.rollbackToSha.mockReset();
+  h.rollbackToSha.mockResolvedValue(undefined);
+  h.publishProject.mockReset();
+  h.publishProject.mockResolvedValue({ sha: "rel-republished" });
+  h.merge.mockReset();
   h.cleanup.mockResolvedValue(undefined);
   h.waitForLen.mockResolvedValue(false); // Len's turn never ends in a test: the background retry never fires
   h.published = { commitOid: "base-1", data: { html: "<html>A</html>" }, extraFiles: {} };
@@ -324,5 +330,45 @@ describe("«Bring into draft» and «Don't bring it in» (item 26)", () => {
     await insertExperiment(raw(), { id: "ab_ring0007", projectId: "p2", status: "promoted_b", decisionStatus: "resolved", bringState: "brought" });
     await expect(discardWinnerBring({ projectId: "p2", experimentId: "ab_ring0007" })).rejects.toMatchObject({ code: "invalid_state" });
     await expect(discardWinnerBring({ projectId: "p1", experimentId: "ab_nope0000" })).rejects.toMatchObject({ code: "not_found" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// THE WAY BACK TO CONTROL (G1+G3 review, item 20): rolling back to the release saved at launch is only right while the live
+// release is the experiment's. If something else was published since (the live release isn't the experiment's), going back
+// to the saved one would undo it: the published SOURCES are republished instead.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+describe("keep-A goes back by rollback only when nothing was published since (item 20)", () => {
+  const setLive = (sha: string) => raw().query(`UPDATE "projects" SET "publishedReleaseSha" = $1 WHERE "id" = 'p1'`, [sha]);
+  const liveWithFallback = (id: string) =>
+    insertExperiment(raw(), { id, status: "winner_ready", decisionStatus: "pending", controlReleaseSha: "rel-c", startedAt: new Date(Date.now() - 4 * DAY), copyProjectId: "copy-1", branch: `ab/${id}` });
+  const withExperimentRelease = (id: string, sha: string) => raw().query(`UPDATE "abExperiments" SET "experimentReleaseSha" = $1 WHERE "id" = $2`, [sha, id]);
+
+  it("🔴 the live release is the experiment's: the rollback to Control's saved release, as before", async () => {
+    await liveWithFallback("ab_back0001");
+    await withExperimentRelease("ab_back0001", "rel-x");
+    await setLive("rel-x");
+    await keepControlA({ projectId: "p1", experimentId: "ab_back0001", ownerId: "u1", actorId: "u1" });
+    expect(h.rollbackToSha).toHaveBeenCalledWith("pan1", "rel-c");
+    expect(h.publishProject).not.toHaveBeenCalled();
+  });
+
+  it("🔴 something else was published since: NO rollback over it — the published sources are republished", async () => {
+    await liveWithFallback("ab_back0002");
+    await withExperimentRelease("ab_back0002", "rel-x");
+    await setLive("rel-published-since");
+    h.published = { commitOid: "base-1", data: { html: "<html>PUBLISHED</html>" }, extraFiles: {} };
+    h.publishProject.mockResolvedValue({ sha: "rel-new" });
+    await keepControlA({ projectId: "p1", experimentId: "ab_back0002", ownerId: "u1", actorId: "u1" });
+    expect(h.rollbackToSha).not.toHaveBeenCalled();
+    expect(h.publishProject).toHaveBeenCalledWith(expect.objectContaining({ abLive: "ending" }));
+    expect((await getExperimentById("ab_back0002"))!.status).toBe("kept_a");
+  });
+
+  it("an experiment that never recorded its release can't be compared: the rollback goes ahead, as before", async () => {
+    await liveWithFallback("ab_back0003");
+    await setLive("anything");
+    await keepControlA({ projectId: "p1", experimentId: "ab_back0003", ownerId: "u1", actorId: "u1" });
+    expect(h.rollbackToSha).toHaveBeenCalledWith("pan1", "rel-c");
   });
 });

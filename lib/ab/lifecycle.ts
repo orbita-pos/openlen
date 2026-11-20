@@ -536,7 +536,15 @@ async function restoreControlLive(
   ownerId: string,
   subdomain: string,
 ): Promise<boolean> {
-  if (exp.controlReleaseSha) {
+  // The rollback goes back to the release saved at launch — right only while the live release is still the experiment's. If
+  // something else was published since, going back would undo it: the published SOURCES are republished instead (below).
+  const [live] = await db
+    .select({ sha: schema.projects.publishedReleaseSha })
+    .from(schema.projects)
+    .where(eq(schema.projects.id, exp.projectId))
+    .limit(1);
+  const publishedSince = Boolean(exp.experimentReleaseSha) && (live?.sha ?? null) !== exp.experimentReleaseSha;
+  if (exp.controlReleaseSha && !publishedSince) {
     try {
       await rollbackToSha(subdomain, exp.controlReleaseSha);
       await db
