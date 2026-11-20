@@ -137,13 +137,19 @@ describe("Caddy: A/B testing", () => {
       .filter((n) => !n.startsWith("ab_") && n !== "doc");
     expect(names.length).toBeGreaterThanOrEqual(11);
     // A page has no extension (or .html/.htm). Each of these names an extension, or is a path the
-    // sidecar is never asked about (the delegation list excludes /assets/* and /uploads/*).
+    // sidecar is never asked about: the paths @ab_page itself leaves out (/assets/*, /uploads/* and
+    // the whole of /openlen/*, which holds no pages), read off the Caddyfile, not assumed.
+    const leftOut = [...matcher("ab_page").matchAll(/^\t\tnot path (.+)$/gm)]
+      .flatMap((m) => m[1]!.split(/\s+/))
+      .filter((e) => e.endsWith("/*"))
+      .map((e) => e.slice(0, -1));
+    expect(leftOut).toContain("/openlen/");
     for (const n of names) {
       const patterns = (/^\t\tpath (.+)$/m.exec(matcher(n))?.[1] ?? "").split(/\s+/);
       expect(patterns.length, `@${n}`).toBeGreaterThan(0);
       for (const p of patterns) {
         const ok = /^\*\.[a-z0-9]+$/.test(p) && !/^\*\.html?$/.test(p);
-        const excluded = ["/assets/*", "/uploads/*", "/openlen/figure-*"].includes(p);
+        const excluded = leftOut.some((e) => p.startsWith(e));
         expect(ok || excluded, `@${n}: ${p}`).toBe(true);
       }
     }
@@ -172,10 +178,30 @@ describe("Caddy: A/B testing", () => {
     expect(h.indexOf("handle_response @ab_serve")).toBeLessThan(h.indexOf("handle_response @ab_pass"));
   });
 
-  it("a 5xx of the sidecar on a page is replaced by control too", () => {
+  it("🔴 an error of the sidecar on a page (4xx or 5xx) is replaced by control, as master would serve it", () => {
+    // A sidecar that cannot read the release answers 404 (400 for a path that is not UTF-8): that
+    // used to reach the visitor as a plain-text error on every page of the site.
     const h = body(block, block.indexOf("\thandle @ab_delegated {"));
-    expect(h).toContain("@ab_page_5xx status 5xx");
-    expect(body(h, h.indexOf("handle_response @ab_page_5xx {"))).toContain('header Cache-Control "private, no-store"');
+    expect(h).toContain("@ab_page_bad status 4xx 5xx");
+    const control = body(h, h.indexOf("handle_response @ab_page_bad {"));
+    expect(control).toContain('header Cache-Control "private, no-store"');
+    expect(control).toContain("try_files {path} {path}/index.html /index.html");
+    expect(control).toContain("root * /var/www/openlen/{labels.2}/current");
+  });
+
+  it("🔴 a 5xx of the sidecar on a file serves control NOT stored, never with Caddy's normal caching", () => {
+    const h = body(block, block.indexOf("\thandle @ab_probed {"));
+    expect(h).toContain("@ab_file_5xx status 5xx");
+    const control = body(h, h.indexOf("handle_response @ab_file_5xx {"));
+    expect(control).toContain('header Cache-Control "private, no-store"');
+    expect(control).toContain("try_files {path} {path}/index.html /index.html");
+    // Before the catch-all that serves it as for any site, and after the decided file.
+    expect(h.indexOf("handle_response @ab_file_5xx")).toBeLessThan(h.indexOf("handle_response @ab_pass"));
+    expect(h.indexOf("handle_response @ab_serve")).toBeLessThan(h.indexOf("handle_response @ab_file_5xx"));
+  });
+
+  it("🔴 openlen/ is never delegated as a page (its figure engine would leave with two Cache-Control)", () => {
+    expect(matcher("ab_page")).toMatch(/^\t\tnot path \/openlen\/\*$/m);
   });
 
   it("the systemd unit runs the sidecar where Caddy looks for it, and binds nothing else", () => {
