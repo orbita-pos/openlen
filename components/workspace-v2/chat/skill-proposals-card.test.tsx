@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // THE REVIEW CARD OF THE PERSON'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.6): what Len's propose_skills left
-// under his answer. «Guardar» saves it as theirs; a reload knows what they already saved; a skill that changed since is
-// never overwritten.
+// under his answer. The action carries the proposals' ids; the card asks the server for them — only the person who asked
+// gets them (final review I1) — and «Guardar» saves the one the server keeps, by its id (C2).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -15,9 +15,10 @@ import { SkillProposalsCard } from "./skill-proposals-card";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const NEW = { name: "plant-care", kind: "new", target: null, description: "Look after the person's plants.", skillMd: "---\nname: plant-care\ndescription: Look after the person's plants.\n---\n\nWater when dry.\n", base: null, fingerprint: "a".repeat(64) };
-const IMPROVE = { ...NEW, name: "bread", kind: "improvement", target: "bread", skillMd: "---\nname: bread\ndescription: d\n---\n\nKnead.\n", base: "b".repeat(64), fingerprint: "c".repeat(64) };
-const actionOf = (proposals: unknown[]): AgentAction => ({ tool: "propose_skills", status: "done", summary: JSON.stringify({ proposals }) }) as AgentAction;
+const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
+const NEW = { id: id(1), name: "plant-care", kind: "new", target: null, description: "Look after the person's plants.", skillMd: "---\nname: plant-care\ndescription: d\n---\n\nWater when dry.\n", saved: false };
+const IMPROVE = { id: id(2), name: "bread", kind: "improvement", target: "bread", description: "d", skillMd: "---\nname: bread\ndescription: d\n---\n\nKnead.\n", saved: false };
+const actionOf = (ids: string[]): AgentAction => ({ tool: "propose_skills", status: "done", summary: JSON.stringify({ ids }) }) as AgentAction;
 
 const fetchMock = vi.fn();
 const roots: Root[] = [];
@@ -32,12 +33,11 @@ afterEach(() => {
 });
 
 const reply = (status: number, body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status }));
-/** GET answers `saved` per name; POST answers `post`. */
-function server(o: { saved?: Record<string, string>; post?: () => Promise<Response> }) {
-  fetchMock.mockImplementation((url: string, init?: RequestInit) => {
+/** GET answers `proposals`; POST answers `post`. */
+function server(o: { proposals?: unknown[]; post?: () => Promise<Response> }) {
+  fetchMock.mockImplementation((_url: string, init?: RequestInit) => {
     if (init?.method === "POST") return o.post ? o.post() : reply(200, { saved: true });
-    const name = decodeURIComponent(String(url).split("/").pop()!);
-    return reply(200, { fingerprint: o.saved?.[name] ?? null });
+    return reply(200, { proposals: o.proposals ?? [] });
   });
 }
 
@@ -53,57 +53,62 @@ const block = (el: HTMLElement, name: string) => el.querySelector<HTMLElement>(`
 const click = async (b: HTMLElement) => act(async () => b.click());
 
 describe("the review card", () => {
-  it("draws nothing without proposals", async () => {
+  it("draws nothing without proposals, and asks for nothing", async () => {
     const el = await mount([{ tool: "Write", status: "done", summary: "x" } as AgentAction]);
     expect(el.innerHTML).toBe("");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("🔴 asks the server for the turn's proposals by id", async () => {
+    server({ proposals: [NEW] });
+    await mount([actionOf([id(1)]), actionOf([id(2)])]);
+    expect(String(fetchMock.mock.calls[0]![0])).toBe(`/api/me/skills/proposals?ids=${id(1)},${id(2)}`);
+  });
+
+  it("🔴 someone else's proposals (the server gives none) draw nothing", async () => {
+    server({ proposals: [] });
+    const el = await mount([actionOf([id(1)])]);
+    expect(el.querySelector("[data-skill-proposal]")).toBeNull();
   });
 
   it("one block per proposal: its name, new or improvement of its target, its description and the whole SKILL.md", async () => {
-    server({});
-    const el = await mount([actionOf([NEW, IMPROVE])]);
-    expect(block(el, "plant-care").textContent).toContain("plant-care");
+    server({ proposals: [NEW, IMPROVE] });
+    const el = await mount([actionOf([id(1), id(2)])]);
     expect(block(el, "plant-care").textContent).toContain("skillProposal.new");
     expect(block(el, "plant-care").textContent).toContain("Look after the person's plants.");
     expect(block(el, "plant-care").querySelector("pre")!.textContent).toBe(NEW.skillMd);
     expect(block(el, "bread").textContent).toContain("skillProposal.improvement(bread)");
   });
 
-  it("🔴 «Guardar» posts name, skillMd and base, and then says it is saved", async () => {
-    server({});
-    const el = await mount([actionOf([IMPROVE])]);
+  it("🔴 «Guardar» posts the proposal's id only, then says it is saved", async () => {
+    server({ proposals: [IMPROVE] });
+    const el = await mount([actionOf([id(2)])]);
     await click(block(el, "bread").querySelector<HTMLElement>("[data-skill-save]")!);
     const post = fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === "POST")!;
     expect(post[0]).toBe("/api/me/skills");
-    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ name: "bread", skillMd: IMPROVE.skillMd, base: IMPROVE.base });
+    expect(JSON.parse(String((post[1] as RequestInit).body))).toEqual({ proposalId: id(2) });
     expect(block(el, "bread").textContent).toContain("skillProposal.saved");
     expect(block(el, "bread").querySelector("[data-skill-save]")).toBeNull();
   });
 
   it("🔴 a skill that changed since Len proposed it: the card says so and saves nothing", async () => {
-    server({ post: () => reply(409, { error: "changed" }) });
-    const el = await mount([actionOf([IMPROVE])]);
+    server({ proposals: [IMPROVE], post: () => reply(409, { error: "changed" }) });
+    const el = await mount([actionOf([id(2)])]);
     await click(block(el, "bread").querySelector<HTMLElement>("[data-skill-save]")!);
     expect(block(el, "bread").textContent).toContain("skillProposal.changed");
   });
 
   it("any other refusal says it couldn't be saved", async () => {
-    server({ post: () => reply(400, { error: "invalid" }) });
-    const el = await mount([actionOf([NEW])]);
+    server({ proposals: [NEW], post: () => reply(400, { error: "invalid" }) });
+    const el = await mount([actionOf([id(1)])]);
     await click(block(el, "plant-care").querySelector<HTMLElement>("[data-skill-save]")!);
     expect(block(el, "plant-care").textContent).toContain("skillProposal.failed");
   });
 
-  it("🔴 after a reload, what the person already saved shows as saved", async () => {
-    server({ saved: { "plant-care": NEW.fingerprint } });
-    const el = await mount([actionOf([NEW])]);
+  it("🔴 what the person already saved shows as saved (after a reload too)", async () => {
+    server({ proposals: [{ ...NEW, saved: true }] });
+    const el = await mount([actionOf([id(1)])]);
     expect(block(el, "plant-care").textContent).toContain("skillProposal.saved");
     expect(block(el, "plant-care").querySelector("[data-skill-save]")).toBeNull();
-  });
-
-  it("the same name proposed twice in a turn shows once, the last one", async () => {
-    server({});
-    const el = await mount([actionOf([NEW]), actionOf([{ ...NEW, description: "Second.", fingerprint: "d".repeat(64) }])]);
-    expect(el.querySelectorAll('[data-skill-proposal="plant-care"]')).toHaveLength(1);
-    expect(block(el, "plant-care").textContent).toContain("Second.");
   });
 });

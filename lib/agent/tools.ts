@@ -3288,7 +3288,9 @@ async function ejecutarHerramienta(
       // The review card of the person's own skills (lib/agent/skills/propose-tool.ts): render-only.
       case PROPOSE_SKILLS: {
         const store = deps.skillStore;
-        return await runProposeSkills(session, args, store ? { listPersonal: (personId) => store.list("personal", personId) } : undefined);
+        if (!store) return await runProposeSkills(session, args);
+        const { saveSkillProposals } = await import("@/lib/agent/skills/proposal-store");
+        return await runProposeSkills(session, args, { listPersonal: (personId) => store.list("personal", personId), saveProposals: saveSkillProposals });
       }
       // Edge A/B testing: isolated Variant B draft on branch `ab/<id>` (Plan 3).
       case CREATE_AB_VARIANT:

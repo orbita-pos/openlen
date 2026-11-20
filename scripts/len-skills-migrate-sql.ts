@@ -13,4 +13,20 @@ export const CREATE_LEN_SKILLS: readonly string[] = [
     "deletedAt" timestamp
   );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenSkills_scope_owner_name_idx" ON "lenSkills" ("scope", "ownerId", "name");`,
+  // What Len's propose_skills proposed (spec local 2026-11-19-agentes-para-todos, §6.6). Keep in step with
+  // lib/db/schema.ts (`skillProposals`).
+  `CREATE TABLE IF NOT EXISTS "skillProposals" (
+    "id" text PRIMARY KEY,
+    "personId" text NOT NULL,
+    "projectId" text NOT NULL,
+    "name" text NOT NULL,
+    "kind" text NOT NULL,
+    "target" text,
+    "description" text NOT NULL,
+    "skillMd" text NOT NULL,
+    "baseText" text,
+    "fingerprint" text NOT NULL,
+    "createdAt" timestamp NOT NULL DEFAULT now()
+  );`,
+  `CREATE INDEX IF NOT EXISTS "skillProposals_person_idx" ON "skillProposals" ("personId");`,
 ];

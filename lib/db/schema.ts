@@ -1521,6 +1521,29 @@ export const lenSkills = pgTable(
   (t) => [uniqueIndex("lenSkills_scope_owner_name_idx").on(t.scope, t.ownerId, t.name)],
 );
 
+/** WHAT LEN'S `propose_skills` PROPOSED (spec local 2026-11-19-agentes-para-todos, §6.6; final review C2 and I1): kept here,
+ *  not in the turn's action — the chat's save cuts an action's summary to 200 characters — so the review card shows it on
+ *  every reload, only to the person who asked for it, and «Guardar» saves what the server holds, never what a browser
+ *  sends. `baseText` is the skill as it was when an improvement was proposed: the save only goes through over that text.
+ *  Created by `npm run len-skills:migrate`, like `lenSkills`. */
+export const skillProposals = pgTable(
+  "skillProposals",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    personId: text("personId").notNull(),
+    projectId: text("projectId").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").$type<"new" | "improvement">().notNull(),
+    target: text("target"),
+    description: text("description").notNull(),
+    skillMd: text("skillMd").notNull(),
+    baseText: text("baseText"),
+    fingerprint: text("fingerprint").notNull(),
+    createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
+  },
+  (t) => [index("skillProposals_person_idx").on(t.personId)],
+);
+
 /** Los tipos de subagente de un proyecto (`/.len/agents`) y de una persona (`~/.len/agents`), como
  *  `lenSkills`: spec local 2026-11-01-subagentes-de-len, §6. La crea `npm run subagents:migrate`. */
 export const lenAgents = pgTable(

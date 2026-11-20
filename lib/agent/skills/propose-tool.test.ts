@@ -6,7 +6,8 @@ import { ejecutarRead, type Leidos } from "@/lib/agent/ficheros/read";
 import type { AgentSession } from "@/lib/agent/tools";
 
 import { bundledSkillFiles } from "./bundled";
-import { PROPOSE_SKILLS, PROPOSE_SKILLS_DECLARATION, runProposeSkills, skillProposalsOf } from "./propose-tool";
+import { skillProposalIdsOf } from "./proposal-card";
+import { PROPOSE_SKILLS, PROPOSE_SKILLS_DECLARATION, runProposeSkills } from "./propose-tool";
 import { skillFingerprint } from "./proposals";
 import { skillPath } from "./paths";
 
@@ -17,9 +18,17 @@ const withRead = (snapshot: string | null) => {
   if (snapshot !== null) leidos.set(skillPath("personal", "plant-care"), { instantanea: snapshot });
   return { ...LEN, leidos } as unknown as AgentSession;
 };
+/** What the tool stored, by the speaker and the project: final review C2 — the card reads them from the server. */
+type Row = { name: string; skillMd: string; base: string | null; baseText: string | null };
+const stored: { personId: string; projectId: string; rows: Row[] }[] = [];
 const deps = (seen: string[] = []) => ({
   listPersonal: async (personId: string) => (seen.push(personId), [{ name: "plant-care", text: CURRENT }]),
+  saveProposals: async (personId: string, projectId: string, rows: readonly Row[]) => {
+    stored.push({ personId, projectId, rows: [...rows] });
+    return rows.map((_, i) => `00000000-0000-4000-8000-00000000000${i + 1}`);
+  },
 });
+const lastStored = () => stored[stored.length - 1]!;
 const NEW = {
   name: "bread-baking",
   kind: "new",
@@ -53,9 +62,12 @@ describe("propose_skills", () => {
     expect(out.response).toMatchObject({ ok: true, card: "skill_proposals" });
     expect(said(out)).toBe("Shown 1 skill proposal(s) to the person for review. Continue; don't wait for their answer.");
     expect(out.action?.tool).toBe(PROPOSE_SKILLS);
-    const shown = skillProposalsOf(out.action!);
-    expect(shown).toHaveLength(1);
-    expect(shown[0]!.skillMd).toContain("name: bread-baking\ndescription: Bake bread at home with the person.");
+    // 🔴 The action carries only the ids: the chat's save cuts a summary to 200 characters (final review C2).
+    expect(skillProposalIdsOf(out.action!)).toEqual(["00000000-0000-4000-8000-000000000001"]);
+    expect(out.action!.summary!.length).toBeLessThan(200);
+    expect(lastStored()).toMatchObject({ personId: "u1", projectId: "p1" });
+    expect(lastStored().rows[0]!.skillMd).toContain("name: bread-baking\ndescription: Bake bread at home with the person.");
+    expect(lastStored().rows[0]!.baseText).toBeNull();
   });
 
   it("speaks for the member who talks, not the owner (personOf)", async () => {
@@ -72,7 +84,8 @@ describe("propose_skills", () => {
     expect(said(await runProposeSkills(partial, { proposals: [IMPROVE] }, deps()))).toContain("first");
     const out = await runProposeSkills(withRead(CURRENT.replace(/\n/g, "\r\n")), { proposals: [IMPROVE] }, deps());
     expect(out.response).toMatchObject({ ok: true });
-    expect(skillProposalsOf(out.action!)[0]!.base).toBe(skillFingerprint(CURRENT));
+    expect(lastStored().rows[0]!.base).toBe(skillFingerprint(CURRENT));
+    expect(lastStored().rows[0]!.baseText).toBe(CURRENT);
   });
 
   // Final review C1: a real Read records offset 1 for a whole file; the check must be Edit's own (`vistaParcial`).
@@ -109,10 +122,10 @@ describe("propose_skills", () => {
     }
   });
 
-  it("skillProposalsOf reads back what the card shows and drops what isn't a proposal", () => {
-    expect(skillProposalsOf({ summary: "not json" })).toEqual([]);
-    expect(skillProposalsOf({})).toEqual([]);
-    const good = { name: "a-b", kind: "new", target: null, description: "d", skillMd: "---\nname: a-b\ndescription: d\n---\n\nx\n", base: null, fingerprint: "f".repeat(64) };
-    expect(skillProposalsOf({ summary: JSON.stringify({ proposals: [good, { name: 3 }, null] }) })).toEqual([good]);
+  it("skillProposalIdsOf reads the ids back, at most three, and drops what isn't one", () => {
+    expect(skillProposalIdsOf({ summary: "not json" })).toEqual([]);
+    expect(skillProposalIdsOf({})).toEqual([]);
+    const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
+    expect(skillProposalIdsOf({ summary: JSON.stringify({ ids: [id(1), 3, "../x", id(2), id(3), id(4)] }) })).toEqual([id(1), id(2), id(3)]);
   });
 });

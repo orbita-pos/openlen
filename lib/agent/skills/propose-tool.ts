@@ -10,7 +10,7 @@ import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
 import { bundledSkillNames } from "./bundled";
 import { skillPath } from "./paths";
-import { MAX_PROPOSALS, resolveProposals, type ReadState } from "./proposals";
+import { MAX_PROPOSALS, resolveProposals, type ReadState, type ResolvedProposal } from "./proposals";
 
 export const PROPOSE_SKILLS = "propose_skills";
 
@@ -68,11 +68,13 @@ export const PROPOSE_SKILLS_DECLARATION = {
 
 export interface ProposeSkillsDeps {
   listPersonal(personId: string): Promise<readonly { name: string; text: string }[]>;
+  /** Keeps them on the server for the speaker (final review C2, I1); their ids, in order. */
+  saveProposals(personId: string, projectId: string, proposals: readonly (ResolvedProposal & { baseText: string | null })[]): Promise<string[]>;
 }
 
 async function storeDeps(): Promise<ProposeSkillsDeps> {
-  const { listSkills } = await import("./store");
-  return { listPersonal: (personId) => listSkills("personal", personId) };
+  const [{ listSkills }, { saveSkillProposals }] = await Promise.all([import("./store"), import("./proposal-store")]);
+  return { listPersonal: (personId) => listSkills("personal", personId), saveProposals: saveSkillProposals };
 }
 
 const lf = (text: string) => text.replace(/^﻿/, "").replace(/\r\n/g, "\n");
@@ -92,17 +94,18 @@ export async function runProposeSkills(session: AgentSession, args: Record<strin
   // Changing ~/.len/ is Len's job (spec §6.4): an agent of the person's never proposes skills.
   if (session.assistant) return { response: { ok: false, error: "not_available", message: "Only Len proposes skills." } };
   const d = deps ?? (await storeDeps());
-  const personal = new Map((await d.listPersonal(personOf(session))).map((s) => [s.name, s.text] as const));
+  const person = personOf(session);
+  const personal = new Map((await d.listPersonal(person)).map((s) => [s.name, s.text] as const));
   const r = resolveProposals(args, { personal, bundled: bundledSkillNames(), readState: (name) => readStateOf(session, name, personal.get(name)) });
   if (!r.ok) return refused(r.error);
+  // The skill as it is now under each improvement: the save goes through only over this text.
+  const ids = await d.saveProposals(person, session.projectId, r.proposals.map((p) => ({ ...p, baseText: p.target ? (personal.get(p.target) ?? null) : null })));
   return {
     response: {
       ok: true,
       card: "skill_proposals",
       tool_result: `Shown ${r.proposals.length} skill proposal(s) to the person for review. Continue; don't wait for their answer.`,
     },
-    action: { tool: PROPOSE_SKILLS, ok: true, summary: JSON.stringify({ proposals: r.proposals }) },
+    action: { tool: PROPOSE_SKILLS, ok: true, summary: JSON.stringify({ ids }) },
   };
 }
-
-export { skillProposalsOf } from "./proposal-card";

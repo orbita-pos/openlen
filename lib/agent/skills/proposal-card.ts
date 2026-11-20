@@ -1,34 +1,30 @@
 /**
- * WHAT THE REVIEW CARD READS (spec local 2026-11-19-agentes-para-todos, §6.6): the proposals a `propose_skills` action
- * carries in its summary. Client-safe — no node, no disk — so the card in the chat can import it.
+ * WHAT THE REVIEW CARD READS (spec local 2026-11-19-agentes-para-todos, §6.6): a `propose_skills` action carries only the
+ * ids of the proposals the server keeps (`skillProposals`; final review C2: the chat's save cuts an action's summary to
+ * 200 characters). The card asks the server for them — only their person gets them. Client-safe: no node, no disk.
  */
-import type { ResolvedProposal } from "./proposals";
-
-export type { ResolvedProposal } from "./proposals";
 
 /** The most proposals one call carries (`MAX_PROPOSALS`, kept here so the browser doesn't import the contract). */
 const MOST = 3;
+const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-const isProposal = (p: unknown): p is ResolvedProposal => {
-  const x = p as ResolvedProposal | null;
-  return (
-    typeof x === "object" &&
-    x !== null &&
-    typeof x.name === "string" &&
-    (x.kind === "new" || x.kind === "improvement") &&
-    (x.target === null || typeof x.target === "string") &&
-    typeof x.description === "string" &&
-    typeof x.skillMd === "string" &&
-    (x.base === null || typeof x.base === "string") &&
-    typeof x.fingerprint === "string"
-  );
-};
+/** What the card shows of one proposal (`GET /api/me/skills/proposals`). */
+export interface ProposalView {
+  readonly id: string;
+  readonly name: string;
+  readonly kind: "new" | "improvement";
+  readonly target: string | null;
+  readonly description: string;
+  readonly skillMd: string;
+  /** The person's skill of that name is already exactly this. */
+  readonly saved: boolean;
+}
 
-/** The proposals a `propose_skills` action carries, for the card: anything malformed is dropped. */
-export function skillProposalsOf(action: { summary?: string }): ResolvedProposal[] {
+/** The proposals' ids a `propose_skills` action carries; anything that isn't one is dropped. */
+export function skillProposalIdsOf(action: { summary?: string }): string[] {
   try {
-    const parsed = JSON.parse(action.summary ?? "") as { proposals?: unknown };
-    return Array.isArray(parsed.proposals) ? parsed.proposals.filter(isProposal).slice(0, MOST) : [];
+    const parsed = JSON.parse(action.summary ?? "") as { ids?: unknown };
+    return Array.isArray(parsed.ids) ? parsed.ids.filter((id): id is string => typeof id === "string" && ID.test(id)).slice(0, MOST) : [];
   } catch {
     return [];
   }

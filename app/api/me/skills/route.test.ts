@@ -1,125 +1,94 @@
 // @vitest-environment node
 //
-// SAVING A SKILL FROM THE REVIEW CARD (spec local 2026-11-19-agentes-para-todos, §6.6): the person's own, as the person
-// who is signed in; an improvement only over the text Len proposed it on, so a skill that changed since is never
-// overwritten in silence.
+// THE REVIEW CARD'S ROUTES (spec local 2026-11-19-agentes-para-todos, §6.6; final review C2, I1): the card asks for the
+// proposals by id — only their person gets them — and «Guardar» saves the one the server keeps, by id, never a SKILL.md a
+// browser sends. The store's rules (changed, limit, idempotent) are pinned in proposal-store.pglite.test.ts.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { skillFingerprint } from "@/lib/agent/skills/proposals";
-
+const ID = "00000000-0000-4000-8000-000000000001";
 const m = vi.hoisted(() => ({
   session: vi.fn(async (): Promise<{ user?: { id?: string } } | null> => ({ user: { id: "u1" } })),
-  skills: new Map<string, Map<string, string>>(),
-  upserts: [] as unknown[][],
+  save: vi.fn(async (..._a: unknown[]): Promise<unknown> => ({ ok: true, fingerprint: "f".repeat(64) })),
+  proposalsFor: vi.fn(async (..._a: unknown[]): Promise<unknown[]> => []),
+  skills: [] as { name: string; text: string }[],
 }));
 vi.mock("@/auth", () => ({ auth: m.session }));
-vi.mock("@/lib/agent/skills/store", () => ({
-  listSkills: async (scope: string, owner: string) =>
-    scope === "personal" ? [...(m.skills.get(owner) ?? new Map())].map(([name, text]) => ({ name, text, updatedAt: new Date(0) })) : [],
-  upsertSkill: async (scope: string, owner: string, name: string, text: string, author: string | null) => {
-    m.upserts.push([scope, owner, name, text, author]);
-    if (!m.skills.has(owner)) m.skills.set(owner, new Map());
-    m.skills.get(owner)!.set(name, text);
-    return { before: null };
-  },
-}));
+vi.mock("@/lib/agent/skills/proposal-store", () => ({ saveProposedSkill: m.save, proposalsFor: m.proposalsFor }));
+vi.mock("@/lib/agent/skills/store", () => ({ listSkills: async () => m.skills.map((s) => ({ ...s, updatedAt: new Date(0) })) }));
 
 const { POST } = await import("./route");
-const { GET } = await import("./[name]/route");
+const { GET } = await import("./proposals/route");
+const { skillFingerprint } = await import("@/lib/agent/skills/proposals");
 
-const fileOf = (name: string, body = "Water when the soil is dry.") => `---\nname: ${name}\ndescription: Look after plants.\n---\n\n${body}\n`;
 const post = (body: unknown) => POST(new Request("http://localhost/api/me/skills", { method: "POST", body: JSON.stringify(body) }));
-const get = (name: string) => GET(new Request(`http://localhost/api/me/skills/${name}`), { params: Promise.resolve({ name }) });
+const get = (ids: string) => GET(new Request(`http://localhost/api/me/skills/proposals?ids=${ids}`));
+const SKILL = "---\nname: plant-care\ndescription: d\n---\n\nWater.\n";
+const stored = { id: ID, name: "plant-care", kind: "new", target: null, description: "d", skillMd: SKILL, baseText: null, fingerprint: skillFingerprint(SKILL) };
 
 beforeEach(() => {
   m.session.mockResolvedValue({ user: { id: "u1" } });
-  m.skills.clear();
-  m.upserts.length = 0;
+  m.save.mockClear();
+  m.proposalsFor.mockReset();
+  m.proposalsFor.mockResolvedValue([]);
+  m.skills = [];
 });
 afterEach(() => vi.unstubAllEnvs());
 
 describe("POST /api/me/skills", () => {
   it("signed out: 401 and nothing saved", async () => {
     m.session.mockResolvedValue(null);
-    expect((await post({ name: "plant-care", skillMd: fileOf("plant-care"), base: null })).status).toBe(401);
-    expect(m.upserts).toEqual([]);
+    expect((await post({ proposalId: ID })).status).toBe(401);
+    expect(m.save).not.toHaveBeenCalled();
   });
 
-  it("🔴 saves a new one as the signed-in person's skill, and answers its fingerprint", async () => {
-    const res = await post({ name: "plant-care", skillMd: fileOf("plant-care"), base: null });
+  it("🔴 saves the stored proposal by its id, as the signed-in person", async () => {
+    const res = await post({ proposalId: ID });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ saved: true, fingerprint: skillFingerprint(fileOf("plant-care")) });
-    expect(m.upserts).toEqual([["personal", "u1", "plant-care", fileOf("plant-care"), "u1"]]);
+    expect(await res.json()).toEqual({ saved: true, fingerprint: "f".repeat(64) });
+    expect(m.save.mock.calls[0]!.slice(0, 2)).toEqual(["u1", ID]);
   });
 
-  it("🔴 an improvement saves over the text it was proposed on", async () => {
-    m.skills.set("u1", new Map([["plant-care", fileOf("plant-care")]]));
-    const res = await post({ name: "plant-care", skillMd: fileOf("plant-care", "Water less in winter."), base: skillFingerprint(fileOf("plant-care")) });
-    expect(res.status).toBe(200);
-    expect(m.skills.get("u1")!.get("plant-care")).toContain("winter");
+  it("🔴 a SKILL.md sent by the browser is never what gets saved", async () => {
+    await post({ proposalId: ID, skillMd: "---\nname: x\ndescription: y\n---\n\nInjected.\n", name: "x" });
+    expect(m.save).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(m.save.mock.calls[0])).not.toContain("Injected");
   });
 
-  it("🔴 a skill that changed since Len proposed it is never overwritten: 409 changed", async () => {
-    m.skills.set("u1", new Map([["plant-care", fileOf("plant-care", "Edited by hand meanwhile.")]]));
-    const res = await post({ name: "plant-care", skillMd: fileOf("plant-care", "Water less in winter."), base: skillFingerprint(fileOf("plant-care")) });
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "changed" });
-    expect(m.upserts).toEqual([]);
+  it("each refusal its status: another person's or unknown 404, changed/limit/reserved 409, invalid 400", async () => {
+    for (const [error, status] of [["not_found", 404], ["changed", 409], ["limit", 409], ["reserved", 409], ["invalid", 400]] as const) {
+      m.save.mockResolvedValueOnce({ ok: false, error });
+      const res = await post({ proposalId: ID });
+      expect(res.status, error).toBe(status);
+      expect((await res.json()).error).toBe(error);
+    }
   });
 
-  it("a new one whose name appeared meanwhile is a change too: 409 changed", async () => {
-    m.skills.set("u1", new Map([["plant-care", fileOf("plant-care")]]));
-    expect((await post({ name: "plant-care", skillMd: fileOf("plant-care", "Other."), base: null })).status).toBe(409);
-    expect(m.upserts).toEqual([]);
-  });
-
-  it("a new one past the most skills a person keeps: 409 limit, nothing saved", async () => {
-    m.skills.set("u1", new Map(Array.from({ length: 100 }, (_, i) => [`s-${i}`, fileOf(`s-${i}`)] as const)));
-    const res = await post({ name: "plant-care", skillMd: fileOf("plant-care"), base: null });
-    expect(res.status).toBe(409);
-    expect((await res.json()).error).toBe("limit");
-    expect(m.upserts).toEqual([]);
-  });
-
-  it("one of OpenLen's own names: 409 reserved", async () => {
-    const res = await post({ name: "skill-creator", skillMd: fileOf("skill-creator"), base: null });
-    expect(res.status).toBe(409);
-    expect(await res.json()).toEqual({ error: "reserved" });
-  });
-
-  it("🔴 a credential in it: 400 and nothing saved", async () => {
-    const res = await post({ name: "plant-care", skillMd: fileOf("plant-care", "Order with sk-abcdefghijklmnopqrstuvwxyz123456."), base: null });
-    expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe("invalid");
-    expect(m.upserts).toEqual([]);
-  });
-
-  it("a body that isn't a proposal: 400", async () => {
-    expect((await post({ name: 3 })).status).toBe(400);
+  it("a body without a proposal id: 400", async () => {
+    expect((await post({ name: "x" })).status).toBe(400);
     expect((await POST(new Request("http://localhost/api/me/skills", { method: "POST", body: "nope" }))).status).toBe(400);
-  });
-
-  it("another person's skill of the same name is never touched", async () => {
-    m.skills.set("u2", new Map([["plant-care", fileOf("plant-care", "Theirs.")]]));
-    await post({ name: "plant-care", skillMd: fileOf("plant-care"), base: null });
-    expect(m.skills.get("u2")!.get("plant-care")).toContain("Theirs.");
   });
 
   it("with skills off (OPENLEN_SKILLS=0): 404", async () => {
     vi.stubEnv("OPENLEN_SKILLS", "0");
-    expect((await post({ name: "plant-care", skillMd: fileOf("plant-care"), base: null })).status).toBe(404);
+    expect((await post({ proposalId: ID })).status).toBe(404);
   });
 });
 
-describe("GET /api/me/skills/[name]", () => {
-  it("the fingerprint of the person's skill, or null", async () => {
-    expect(await (await get("plant-care")).json()).toEqual({ fingerprint: null });
-    m.skills.set("u1", new Map([["plant-care", fileOf("plant-care")]]));
-    expect(await (await get("plant-care")).json()).toEqual({ fingerprint: skillFingerprint(fileOf("plant-care")) });
+describe("GET /api/me/skills/proposals", () => {
+  it("🔴 only the signed-in person's proposals, each saying whether it is saved", async () => {
+    m.proposalsFor.mockResolvedValue([stored]);
+    const res = await get(`${ID},not-an-id`);
+    expect(m.proposalsFor).toHaveBeenCalledWith("u1", [ID]);
+    expect(await res.json()).toEqual({ proposals: [{ id: ID, name: "plant-care", kind: "new", target: null, description: "d", skillMd: SKILL, saved: false }] });
+    m.skills = [{ name: "plant-care", text: SKILL }];
+    expect((await (await get(ID)).json()).proposals[0].saved).toBe(true);
   });
 
-  it("signed out: 401", async () => {
+  it("signed out: 401; skills off: 404", async () => {
     m.session.mockResolvedValue(null);
-    expect((await get("plant-care")).status).toBe(401);
+    expect((await get(ID)).status).toBe(401);
+    m.session.mockResolvedValue({ user: { id: "u1" } });
+    vi.stubEnv("OPENLEN_SKILLS", "0");
+    expect((await get(ID)).status).toBe(404);
   });
 });

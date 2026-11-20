@@ -1,15 +1,16 @@
 "use client";
 
 // THE REVIEW CARD OF THE PERSON'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.6), Claude Code's «review card where
-// they can save it»: what Len's `propose_skills` left under his answer, on reload too (it comes from the turn's actions).
+// they can save it»: what Len's `propose_skills` left under his answer, on reload too. The turn's action carries only the
+// proposals' ids; the card asks the server for them (`GET /api/me/skills/proposals`), which gives each person only their
+// own — on a shared project a member's proposal never shows to the owner, nor the owner's to a member (final review I1).
 // Each proposal shows its name, whether it is new or improves one of theirs, its description and the whole SKILL.md;
-// «Guardar» saves it as the signed-in person's skill (`POST /api/me/skills`). A skill that changed since Len proposed it is
-// never overwritten: the card says it changed. On mount it asks whether each one is already saved, so a reload shows it.
+// «Guardar» sends its id (`POST /api/me/skills`) and the server saves what it keeps, never over a skill that changed since.
 // Everything Len wrote is drawn as text.
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
-import { skillProposalsOf, type ResolvedProposal } from "@/lib/agent/skills/proposal-card";
+import { skillProposalIdsOf, type ProposalView } from "@/lib/agent/skills/proposal-card";
 
 import type { AgentAction } from "../agent-action-card";
 
@@ -17,54 +18,51 @@ const PROPOSE_SKILLS_TOOL = "propose_skills";
 
 type State = "idle" | "saving" | "saved" | "changed" | "failed";
 
-/** The turn's proposals, one per name: a name proposed again in the same turn shows its last version. */
-function proposalsOf(actions: readonly AgentAction[] | undefined): ResolvedProposal[] {
-  const byName = new Map<string, ResolvedProposal>();
-  for (const a of actions ?? []) {
-    if (a.tool !== PROPOSE_SKILLS_TOOL || a.status !== "done") continue;
-    for (const p of skillProposalsOf(a)) {
-      byName.delete(p.name);
-      byName.set(p.name, p);
-    }
-  }
-  return [...byName.values()];
+/** The turn's proposals' ids, in order, once each. */
+function idsOf(actions: readonly AgentAction[] | undefined): string[] {
+  const ids = (actions ?? []).filter((a) => a.tool === PROPOSE_SKILLS_TOOL && a.status === "done").flatMap((a) => skillProposalIdsOf(a));
+  return [...new Set(ids)];
 }
 
 export function SkillProposalsCard({ actions }: { actions: readonly AgentAction[] | undefined }) {
-  const proposals = useMemo(() => proposalsOf(actions), [actions]);
-  if (proposals.length === 0) return null;
-  return (
-    <div className="mt-2 flex flex-col gap-2" data-skill-proposals="">
-      {proposals.map((p) => (
-        <Proposal key={`${p.name}:${p.fingerprint}`} proposal={p} />
-      ))}
-    </div>
-  );
-}
-
-function Proposal({ proposal }: { proposal: ResolvedProposal }) {
-  const t = useTranslations("panelsChat");
-  const [state, setState] = useState<State>("idle");
+  const ids = useMemo(() => idsOf(actions), [actions]);
+  const key = ids.join(",");
+  const [proposals, setProposals] = useState<readonly ProposalView[]>([]);
 
   useEffect(() => {
+    if (!key) return;
     let live = true;
-    fetch(`/api/me/skills/${encodeURIComponent(proposal.name)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? (r.json() as Promise<{ fingerprint?: string | null }>) : null))
+    fetch(`/api/me/skills/proposals?ids=${key}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ proposals?: ProposalView[] }>) : null))
       .then((b) => {
-        if (live && b?.fingerprint === proposal.fingerprint) setState("saved");
+        if (live && Array.isArray(b?.proposals)) setProposals(b.proposals);
       })
       .catch(() => {});
     return () => {
       live = false;
     };
-  }, [proposal.name, proposal.fingerprint]);
+  }, [key]);
+
+  if (proposals.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-col gap-2" data-skill-proposals="">
+      {proposals.map((p) => (
+        <Proposal key={p.id} proposal={p} />
+      ))}
+    </div>
+  );
+}
+
+function Proposal({ proposal }: { proposal: ProposalView }) {
+  const t = useTranslations("panelsChat");
+  const [state, setState] = useState<State>(proposal.saved ? "saved" : "idle");
 
   async function save() {
     setState("saving");
     const r = await fetch("/api/me/skills", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: proposal.name, skillMd: proposal.skillMd, base: proposal.base }),
+      body: JSON.stringify({ proposalId: proposal.id }),
     }).catch(() => null);
     if (r?.ok) return setState("saved");
     const body = (await r?.json().catch(() => null)) as { error?: string } | null;

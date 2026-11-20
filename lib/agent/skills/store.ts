@@ -2,7 +2,7 @@
 // `lenSkills`), shaped like the memory notes' store (`lib/agent/memory/store.ts`): deleting is soft
 // (`deletedAt`), and writing one with the same name revives it in the same row.
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 
 import type { SkillScope } from "./paths";
@@ -35,6 +35,25 @@ export async function upsertSkill(scope: SkillScope, ownerId: string, name: stri
     .values({ scope, ownerId, name, text, authorId })
     .onConflictDoUpdate({ target: [t.scope, t.ownerId, t.name], set: { text, authorId, updatedAt: new Date(), deletedAt: null } });
   return { before };
+}
+
+/** Saves it only over what it was expected to replace, in one statement (final review: two saves at once must not both
+ *  pass a read-then-write check): `expected` null = there is no live skill of that name (a removed one comes back);
+ *  a text = the live skill is exactly that text. `changed` = it isn't, and nothing was written. */
+export async function upsertSkillIf(scope: SkillScope, ownerId: string, name: string, text: string, authorId: string | null, expected: string | null): Promise<"saved" | "changed"> {
+  const rows =
+    expected === null
+      ? await db
+          .insert(t)
+          .values({ scope, ownerId, name, text, authorId })
+          .onConflictDoUpdate({ target: [t.scope, t.ownerId, t.name], set: { text, authorId, updatedAt: new Date(), deletedAt: null }, setWhere: isNotNull(t.deletedAt) })
+          .returning({ id: t.id })
+      : await db
+          .update(t)
+          .set({ text, authorId, updatedAt: new Date() })
+          .where(and(owned(scope, ownerId), eq(t.name, name), eq(t.text, expected)))
+          .returning({ id: t.id });
+  return rows.length > 0 ? "saved" : "changed";
 }
 
 /** Soft delete. `before` = how it was, live, or `null` if there was none. */
