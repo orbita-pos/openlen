@@ -123,7 +123,9 @@ add("an entry without a leading slash is normalized", M, req({ path: "/js/app.js
 add("a file that B does not override is not decided", M, req({ path: "/css/other.css", cookie: COOKIE_B }), null);
 add("a file with a space in its name", M, req({ path: "/fonts/a%20b.woff2", cookie: COOKIE_B }), asset("b", "cookie", "/openlen/ab/ab_9f3c2a1b/b/fonts/a b.woff2"));
 add("file paths are case-sensitive", M, req({ path: "/CSS/site.css", cookie: COOKIE_B }), null);
-add("a dotfile is a file, never a page", M, req({ path: "/.well-known/x", cookie: COOKIE_B }), null);
+add("a file under a dot directory is a file", M, req({ path: "/.well-known/security.txt", cookie: COOKIE_B }), null);
+add("a dotfile named as the target is a file, never a page", manifest([exp({ targetPath: "/.hidden", includeLocales: false })]), req({ path: "/.hidden" }), null);
+add("a dot directory with a clean last segment is a page", manifest([exp({ targetPath: "/.well-known/x", includeLocales: false })]), req({ path: "/.well-known/x" }), page("b", "hash", { variantBPath: "/openlen/ab/ab_9f3c2a1b/b/.well-known/x" }));
 add("a bare dotfile is a file, never a page", M, req({ path: "/.hidden" }), null);
 add("a path ending in a dot is a file", M, req({ path: "/foo." }), null);
 add("an unknown extension is a file", M, req({ path: "/data.v2" }), null);
