@@ -1005,6 +1005,21 @@ describe("no pages: your agents are the app", () => {
     expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
   });
 
+  // Delivery 4's deferred minor M3: an agent made on the web after the app read its list has her runs in «Tareas»; her
+  // row closed the panel and opened nothing. The list is read again and her chat opens.
+  it("🔴 in «Tareas», the run of an agent made since the app opened: the list is read again and her chat opens", async () => {
+    const LUIS = { ...CHEF, id: "a5", name: "Coach Luis", slug: "coach-luis" };
+    const run = { kind: "run", projectId: "space", projectTitle: "Coach Luis", agentName: "Coach Luis", agentSlug: "coach-luis", text: "Rutina", at: "2026-11-21T15:00:00.000Z", open: "chat", outcome: "done" };
+    let lecturas = 0;
+    await paint(() => (++lecturas === 1 ? Response.json({ enabled: true, agents: true, assistants: [CHEF, ANA] }) : Response.json({ enabled: true, agents: true, assistants: [LUIS, CHEF, ANA] })), { ...OVERVIEW, resolved: [run] });
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-atajo-tareas]")!.click());
+    await act(async () => {});
+    const fila = [...host.querySelectorAll<HTMLButtonElement>(".resumen-fila")].find((b) => b.textContent?.includes("Rutina"))!;
+    await act(async () => fila.click());
+    await act(async () => {});
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Coach Luis" } });
+  });
+
   // Final review I3: with no pages, an agent's `ask_len` starts Len in a new project, which the list read at opening
   // doesn't have. Its card must not say «Esa página ya no está en tu lista»; the list is read again, the app goes to
   // that page, and her chat stays open.
