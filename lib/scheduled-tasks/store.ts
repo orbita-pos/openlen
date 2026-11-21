@@ -81,19 +81,19 @@ export async function listTasksOfProjects(projectIds: readonly string[]): Promis
     .orderBy(asc(schema.scheduledTasks.scheduledAt), asc(schema.scheduledTasks.id));
 }
 
-export type RunWithTask = RunRow & { readonly title: string; readonly createdBy: string };
+export type RunWithTask = RunRow & { readonly title: string; readonly createdBy: string; readonly assistantId: string | null };
 
-/** The runs of several projects that finished since `since`, newest first, with their task's title and
- *  creator (the phone's «Tareas · Resueltas»). */
+/** The runs of several projects that finished since `since`, newest first, with their task's title, creator
+ *  and agent (the phone's «Tareas · Resueltas»). */
 export async function runsSince(projectIds: readonly string[], since: Date): Promise<RunWithTask[]> {
   if (projectIds.length === 0) return [];
   const rows = await db
-    .select({ run: schema.scheduledTaskRuns, record: schema.scheduledTasks.record, createdBy: schema.scheduledTasks.createdBy })
+    .select({ run: schema.scheduledTaskRuns, record: schema.scheduledTasks.record, createdBy: schema.scheduledTasks.createdBy, assistantId: schema.scheduledTasks.assistantId })
     .from(schema.scheduledTaskRuns)
     .innerJoin(schema.scheduledTasks, eq(schema.scheduledTasks.id, schema.scheduledTaskRuns.taskId))
     .where(and(inArray(schema.scheduledTaskRuns.projectId, [...projectIds]), gte(schema.scheduledTaskRuns.finishedAt, since)))
     .orderBy(desc(schema.scheduledTaskRuns.finishedAt));
-  return rows.map((r) => ({ ...r.run, title: r.record.title, createdBy: r.createdBy }));
+  return rows.map((r) => ({ ...r.run, title: r.record.title, createdBy: r.createdBy, assistantId: r.assistantId }));
 }
 
 export async function getTask(projectId: string, id: string, scope?: TaskScope): Promise<TaskRow | null> {

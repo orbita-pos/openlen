@@ -47,6 +47,9 @@ export interface OverviewItem {
   readonly outcome?: string | null;
   /** An `aviso`'s card, which its chat brings into view. */
   readonly card?: string;
+  /** A run of an agent's task: the agent, whose name is also its `projectTitle` (spec local 2026-11-19-agentes-para-todos, §6.4). */
+  readonly agentName?: string;
+  readonly agentSlug?: string;
 }
 
 /** An event task (spec local 2026-11-03-len-que-avisa, §8): what it watches, read-only, and its records — what
@@ -112,8 +115,12 @@ export interface TasksOverviewDeps {
   eventTasksOf?(projectIds: readonly string[]): Promise<EventTaskRow[]>;
   eventRecordsOf?(taskId: string, limit: number): Promise<EventTaskRecordRow[]>;
   pendingCardsOf?(projectIds: readonly string[]): Promise<EventTaskCardRow[]>;
-  /** The agents of these tasks, by id (spec local 2026-11-19-agentes-para-todos, §6.4); absent: none is named. */
+  /** The PERSON's own agents among these ids (spec local 2026-11-19-agentes-para-todos, §6.4): an agent's task shows
+   *  under its name and only to its person, since it runs with their private context (final review I3). Absent: no
+   *  agent's task shows. */
   agentsOf?(assistantIds: readonly string[]): Promise<ReadonlyMap<string, { readonly name: string; readonly slug: string }>>;
+  /** The person's space, the hidden home of their agents, which `visibleProjects` never lists (final review I2). */
+  spaceOf?(userId: string): Promise<string | null>;
 }
 
 const canEdit = (p: VisibleProject) => p.role === "dueno" || p.role === "editor";
@@ -122,8 +129,11 @@ const owns = (p: VisibleProject) => p.role === "dueno";
 const newestFirst = (a: OverviewItem, b: OverviewItem) => b.at.localeCompare(a.at);
 
 export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps): Promise<TasksOverview> {
-  const projects = await deps.visibleProjects(userId);
-  if (projects.length === 0) return { needsYou: [], working: [], scheduled: [], resolved: [], events: [] };
+  const [projects, spaceId] = await Promise.all([deps.visibleProjects(userId), deps.spaceOf ? deps.spaceOf(userId) : Promise.resolve(null)]);
+  if (projects.length === 0 && !spaceId) return { needsYou: [], working: [], scheduled: [], resolved: [], events: [] };
+  // The space only brings its agents' tasks and runs: nothing else of it is the person's to see here.
+  const space: VisibleProject | null = spaceId ? { id: spaceId, title: "", role: "dueno", publishedAt: null } : null;
+  const spaceIds = space ? [space.id] : [];
   const now = deps.now();
   const since = new Date(now.getTime() - RESOLVED_DAYS * DAY_MS);
   const byId = new Map(projects.map((p) => [p.id, p]));
@@ -161,14 +171,24 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
   );
 
   const [tasks, runs, incidents, eventTasks, cards] = await Promise.all([
-    deps.tasksOf(editable.map((p) => p.id)),
-    deps.runsSince(ids, since),
+    deps.tasksOf([...editable.map((p) => p.id), ...spaceIds]),
+    deps.runsSince([...ids, ...spaceIds], since),
     deps.resolvedIncidents(editable.map((p) => p.id), since),
     deps.eventTasksOf ? deps.eventTasksOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
     deps.pendingCardsOf ? deps.pendingCardsOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
   ]);
-  const agentIds = [...new Set(tasks.flatMap((t) => (t.assistantId ? [t.assistantId] : [])))];
+  const agentIds = [...new Set([...tasks, ...runs].flatMap((t) => (t.assistantId ? [t.assistantId] : [])))];
   const agents = agentIds.length > 0 && deps.agentsOf ? await deps.agentsOf(agentIds) : new Map<string, { readonly name: string; readonly slug: string }>();
+  // Where a task or a run shows: Len's in a project the person may edit (see, for a run); an agent's only to its person.
+  const placeOf = (t: { readonly projectId: string; readonly assistantId: string | null }, may: (p: VisibleProject) => boolean): VisibleProject | null => {
+    if (t.assistantId) return agents.has(t.assistantId) ? (byId.get(t.projectId) ?? (t.projectId === space?.id ? space : null)) : null;
+    const p = byId.get(t.projectId);
+    return p && may(p) ? p : null;
+  };
+  const named = (assistantId: string | null) => {
+    const agent = assistantId ? agents.get(assistantId) : undefined;
+    return agent ? { projectTitle: agent.name, agentName: agent.name, agentSlug: agent.slug } : {};
+  };
   for (const c of cards) {
     const p = byId.get(c.projectId);
     if (p && owns(p)) needsYou.push(item(p, { kind: "aviso", text: c.title, at: c.createdAt.toISOString(), open: "chat", card: c.id }));
@@ -195,17 +215,16 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
   );
   const scheduled = await Promise.all(
     tasks
-      .filter((t) => byId.has(t.projectId) && canEdit(byId.get(t.projectId)!))
+      .filter((t) => placeOf(t, canEdit) !== null)
       .map(async (t): Promise<ScheduledItem> => {
         const last = t.lastRunId ? await deps.runOf(t.lastRunId) : null;
         const files = last?.finishedAt ? await deps.deliveriesBetween(t.projectId, last.startedAt ?? last.claimedAt, last.finishedAt) : [];
-        const p = byId.get(t.projectId)!;
-        const agent = t.assistantId ? agents.get(t.assistantId) : undefined;
+        const p = placeOf(t, canEdit)!;
         return {
           ...viewForModel(t.record, now.getTime(), t.timeZone, { pausedAt: t.pausedAt }),
           projectId: p.id,
-          projectTitle: agent ? agent.name : p.title,
-          ...(agent ? { agentName: agent.name, agentSlug: agent.slug } : {}),
+          projectTitle: p.title,
+          ...named(t.assistantId),
           recurring: isRecurringScheduleRecord(t.record),
           lastRun: last
             ? {
@@ -219,8 +238,10 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
       }),
   );
   for (const r of runs) {
-    const p = byId.get(r.projectId);
-    if (p && r.createdBy === userId && r.finishedAt) resolved.push(item(p, { kind: "run", text: r.title, at: r.finishedAt.toISOString(), open: "chat", outcome: r.outcome }));
+    const p = placeOf(r, () => true);
+    if (p && r.createdBy === userId && r.finishedAt) {
+      resolved.push({ ...item(p, { kind: "run", text: r.title, at: r.finishedAt.toISOString(), open: "chat", outcome: r.outcome }), ...named(r.assistantId) });
+    }
   }
   for (const i of incidents) {
     const p = byId.get(i.projectId);

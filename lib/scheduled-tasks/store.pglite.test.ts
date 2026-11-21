@@ -118,6 +118,15 @@ describe("an agent's tasks", () => {
     expect(await store.deleteTask("p1", "t-a1", A1)).toBe(true);
   });
 
+  // Final review I2: the phone's «Resueltas» names a run by its agent.
+  it("🔴 a finished run carries its task's agent", async () => {
+    await withAgents();
+    const task = await store.createTask({ ...input("t-a1"), assistantId: "a1" });
+    await store.claimDue(task, { occurrenceAt: task.scheduledAt.toISOString(), nextScheduledAt: "2026-11-09T15:03:00.000Z", runId: "r-a1", processStartedAt: new Date(NOW) });
+    await store.markRun("r-a1", { finishedAt: new Date("2026-11-02T15:04:00Z"), outcome: "done" });
+    expect(await store.runsSince(["p1"], new Date("2026-11-01T00:00:00Z"))).toEqual([expect.objectContaining({ id: "r-a1", assistantId: "a1" })]);
+  });
+
   it("🔴 an agent that is deleted takes its tasks with it", async () => {
     await withAgents();
     await store.createTask({ ...input("t-a1"), assistantId: "a1" });

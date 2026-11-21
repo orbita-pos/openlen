@@ -123,6 +123,25 @@ describe("buildTasksOverview", () => {
     expect(agentsOf).toHaveBeenCalledWith(["a1"]);
   });
 
+  // Final review I2: the space is never in the person's project list, and that is where their agents' tasks live.
+  it("🔴 the person's space brings its agents' tasks and runs, even with no project of their own", async () => {
+    const agentsOf = vi.fn(async () => new Map([["a1", { name: "Chef Rosa", slug: "chef-rosa" }]]));
+    const tasksOf = vi.fn(async (ids: readonly string[]) => [task("t9", "space", { assistantId: "a1" })].filter((t) => ids.includes(t.projectId)));
+    const runsSince = vi.fn(async (ids: readonly string[]) => [run({ taskId: "t9", projectId: "space", assistantId: "a1", title: "Receta" })].filter((r) => ids.includes(r.projectId)));
+    const out = await buildTasksOverview("owner", deps({ visibleProjects: async () => [], spaceOf: async () => "space", tasksOf, runsSince, agentsOf }));
+    expect(out.scheduled).toHaveLength(1);
+    expect(out.scheduled[0]).toMatchObject({ id: "t9", projectId: "space", projectTitle: "Chef Rosa", agentName: "Chef Rosa", agentSlug: "chef-rosa" });
+    expect(out.resolved).toHaveLength(1);
+    expect(out.resolved[0]).toMatchObject({ kind: "run", projectId: "space", projectTitle: "Chef Rosa", agentName: "Chef Rosa", agentSlug: "chef-rosa", text: "Receta" });
+  });
+
+  // Final review I3: an agent's task runs with its person's private context; another member of the page only sees Len's.
+  it("🔴 an agent's task shows only to the agent's person, never to another editor of its page", async () => {
+    const agentsOf = vi.fn(async () => new Map<string, { name: string; slug: string }>());
+    const out = await buildTasksOverview("editor", deps({ tasksOf: async () => [task("t1", "shared", { assistantId: "lucia" }), task("t2", "shared")], agentsOf }));
+    expect(out.scheduled.map((s) => s.id)).toEqual(["t2"]);
+  });
+
   it("a scheduled task carries how its last run went", async () => {
     const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { lastRunId: "r1" })], runOf: async () => run({ id: "r1", outcome: "no_credits", reason: "Sin créditos." }) }));
     expect(out.scheduled[0]!.lastRun).toEqual({ at: NOW.toISOString(), outcome: "no_credits", reason: "Sin créditos.", files: [] });

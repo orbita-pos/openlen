@@ -34,10 +34,15 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     deliveriesBetween,
     // Event tasks (spec local 2026-11-03-len-que-avisa, §8), when they are on.
     ...(eventTasksEnabled() ? { eventTasksOf: listEventTasksOfProjects, eventRecordsOf: recordsOf, pendingCardsOf: pendingCardsOfProjects } : {}),
-    // An agent's task shows under its name (spec local 2026-11-19-agentes-para-todos, §6.4): the person's own agents.
+    // An agent's task shows under its name and only to its person (spec local 2026-11-19-agentes-para-todos, §6.4): the
+    // person's own agents, and their space, where those agents live.
     agentsOf: async (ids) => {
       const { assistantsOf } = await import("@/lib/assistants/store");
       return new Map((await assistantsOf(userId)).filter((a) => ids.includes(a.id)).map((a) => [a.id, { name: a.name, slug: a.slug }] as const));
+    },
+    spaceOf: async (personId) => {
+      const { spaceIdOf } = await import("@/lib/space/store");
+      return spaceIdOf(personId);
     },
   });
   return Response.json(overview, { headers: { "cache-control": "no-store" } });
