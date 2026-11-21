@@ -1206,6 +1206,18 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.doesNotMatch(why, /propose_skills/);
   });
 
+  // Final review of the minors pass: a lone `delete_file` from an external agent still removed the person's skill — one
+  // asked to «clean up unused files» could wipe them all.
+  it("🔴 an external agent through OpenLen's MCP server can't remove the person's skill either", async () => {
+    const mia = SKILL.replace(/cotizar/g, "mia");
+    const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });
+    const s = { ...makeSession(), autor: "usuario", desde: "mcp" } as AgentSession;
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "borrado", ruta: "/home/user/.len/skills/mia/SKILL.md" }], antes);
+    assert.equal(estado.removed.length, 0);
+    assert.match(g.notas.join("\n"), /~\/\.len\/skills/);
+  });
+
   it("the person's own edit of their skill still saves (autor: usuario)", async () => {
     const mia = SKILL.replace(/cotizar/g, "mia");
     const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });

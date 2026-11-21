@@ -1050,7 +1050,7 @@ const RENAME_A_PERSONAL_SKILL =
 
 /** To an external agent through OpenLen's MCP server: it has no card to send them to. */
 const PERSONAL_SKILLS_NOT_FROM_OUTSIDE =
-  "The person's own skills (~/.len/skills/) are saved only inside OpenLen, from Len's review card or by the person themselves; an external agent can't write them. The project's skills (/.len/skills/) can be written.";
+  "The person's own skills (~/.len/skills/) are saved and removed only inside OpenLen, from Len's review card or by the person themselves; an external agent can't change them. The project's skills (/.len/skills/) can be written.";
 
 /** Who may write the person's own skills as files: only the person (their Code lens, their terminal); Len and anything
  *  acting for him propose them on the card (spec local 2026-11-19-agentes-para-todos, §6.6). An external agent through
@@ -1289,8 +1289,14 @@ export async function guardarLoDeLaTerminal(
     if (c.tipo === "borrado") {
       // A SKILL (spec local 2026-10-26-len-skills): `rm` deletes it, like a memory note.
       const skillAt = skillPathOf(c.ruta);
+      // An external agent (OpenLen's MCP server) neither writes nor removes them: one asked to clean up files would wipe
+      // the person's skills.
+      if (skillAt?.scope === "personal" && session.desde === "mcp") {
+        deshacer(c.ruta, PERSONAL_SKILLS_NOT_FROM_OUTSIDE);
+        continue;
+      }
       if (skillAt?.scope === "personal" && writesPersonalSkill) {
-        deshacer(c.ruta, session.desde === "mcp" ? PERSONAL_SKILLS_NOT_FROM_OUTSIDE : RENAME_A_PERSONAL_SKILL);
+        deshacer(c.ruta, RENAME_A_PERSONAL_SKILL);
         continue;
       }
       if (skillAt && deps.skillStore) {
