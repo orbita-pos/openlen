@@ -58,9 +58,12 @@ export interface TurnoEnVivo {
 }
 
 /** Lo que dijo Len, una burbuja por párrafo; las marcas de markdown fuera
- *  (en una burbuja se leen como asteriscos sueltos). */
+ *  (en una burbuja se leen como asteriscos sueltos). A separator line («---», «***», «___», «- - -») goes too: alone it
+ *  was a bubble that looked like someone typing, and the gap between bubbles already separates. It goes first, before
+ *  «**» is stripped and «***» would be left as a lone «*». */
 export function parrafos(texto: string): string[] {
   return texto
+    .replace(/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*(?:\r?\n|$)/gm, "")
     .replace(/\*\*|__|`/g, "")
     .replace(/^#+\s*/gm, "")
     .split(/\n\s*\n/)

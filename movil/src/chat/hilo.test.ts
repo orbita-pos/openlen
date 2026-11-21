@@ -47,6 +47,13 @@ describe("parrafos", () => {
   it("texto vacío: ninguna", () => {
     expect(parrafos("  \n\n ")).toEqual([]);
   });
+  // Seen on the phone (Jesús, 21/11): Chef Rosa's recipe separated its sections with «---», which became a bubble of its
+  // own that looked like someone typing. The gap between bubbles already separates them.
+  it("🔴 a separator line is not a bubble; a list item stays", () => {
+    expect(parrafos("Uno\n\n---\n\nDos")).toEqual(["Uno", "Dos"]);
+    expect(parrafos("Uno\n\n***\n\nDos\n\n___\n\n- - -\n\nTres")).toEqual(["Uno", "Dos", "Tres"]);
+    expect(parrafos("Ingredientes\n---\n- uno\n- dos")).toEqual(["Ingredientes\n- uno\n- dos"]);
+  });
 });
 
 // What Len delivered with `present`, seen in the phone's chat (spec local 2026-10-31-len-movil, §5.1).
