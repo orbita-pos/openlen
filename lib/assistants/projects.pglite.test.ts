@@ -48,6 +48,8 @@ beforeEach(async () => {
     `create table "projects" ("id" text primary key, "userId" text, "title" text, "subdomain" text, "data" jsonb, "updatedAt" timestamp, "status" text, "publishedAt" timestamp, "publishedHtml" text, "publishedPagesHash" text, "publishedFilesHash" text, "publishedEnvHash" text, "publishedReleaseSha" text, "deployUrl" text)`,
   );
   await pg.query(`create table "projectChatMessages" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "conversation" text, "status" text)`);
+  // What moving her home touches of the scheduled tasks (spec local 2026-11-19-agentes-para-todos, §6.4).
+  await pg.query(`create table "scheduledTasks" ("id" text primary key, "projectId" text not null references "projects"("id") on delete cascade, "assistantId" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
   await pg.query(
     `insert into "projects" ("id", "userId", "title", "subdomain") values ('p1', 'u1', 'Pastelería Canela', 'canela'), ('p2', 'u1', 'Canela Tienda', 'canela-tienda'), ('p3', 'u1', 'Canela Reservas', null), ('p4', 'u1', 'Otra', 'otra')`,
@@ -115,6 +117,17 @@ describe("her projects", () => {
     // Len's rows never move.
     expect((await pg.query(`select "projectId" from "projectChatMessages" where "id" = 'len1'`)).rows).toEqual([{ projectId: "p1" }]);
     expect((await projects.projectsOfAssistant(lucia)).map((p) => [p.projectId, p.isHome])).toEqual([["p3", true], ["p2", false]]);
+  });
+
+  // Agents for everyone, final review M2 (re-graded): a task of hers runs only at her home, so left behind it stopped.
+  it("🔴 her scheduled tasks move home with her; Len's stay", async () => {
+    await pg.query(`insert into "scheduledTasks" values ('t-hers', 'p1', $1), ('t-len', 'p1', null)`, [lucia]);
+    await projects.connectProject({ assistantId: lucia, projectId: "p3" });
+    expect(await projects.disconnectProject(lucia, "p1")).toBe("disconnected");
+    expect((await pg.query(`select "id", "projectId" from "scheduledTasks" order by "id"`)).rows).toEqual([
+      { id: "t-hers", projectId: "p3" },
+      { id: "t-len", projectId: "p1" },
+    ]);
   });
 
   // Final review M1 (re-graded): the turn closes its row by the project it started in; moved mid-turn, it stayed

@@ -111,10 +111,14 @@ export async function connectProject(o: {
   }
 }
 
-/** Her home and her conversation with her owner move to `to`, in the caller's transaction. Len's rows never move. */
+/** Her home, her conversation with her owner and her scheduled tasks move to `to`, in the caller's transaction: a task of
+ *  hers runs only at her home (spec local 2026-11-19-agentes-para-todos, §6.4; final review M2). Its past runs stay
+ *  where they happened. Len's rows never move. */
 async function moveHome(tx: Tx, assistantId: string, from: string, to: string): Promise<void> {
   const m = schema.projectChatMessages;
+  const st = schema.scheduledTasks;
   await tx.update(m).set({ projectId: to }).where(and(eq(m.projectId, from), eq(m.conversation, assistantConversationKey(assistantId))));
+  await tx.update(st).set({ projectId: to }).where(and(eq(st.projectId, from), eq(st.assistantId, assistantId)));
   await tx.update(a).set({ homeProjectId: to, updatedAt: new Date() }).where(eq(a.id, assistantId));
 }
 
