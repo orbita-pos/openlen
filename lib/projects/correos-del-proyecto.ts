@@ -198,6 +198,8 @@ export function correoDeLen(
 /** La frase de Len por correo cuando el turno no llegó a contestar. La de un agente pide volver a su chat: su correo no
  *  se contesta (spec local 2026-11-19-agentes-para-todos, §6.4). */
 export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null, agent = false): string {
+  // An agent deleted while her task ran: the route refuses her turn with its own English «assistant not found».
+  if (fallo && agent && fallo.code === "not_found") return scheduledTaskPhrase(idioma, "agent_gone");
   if (fallo) return fraseDeFalloDelHilo(idioma, fallo, agent);
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
   return t(agent ? "falloSinMotivoAgente" : "falloSinMotivo");

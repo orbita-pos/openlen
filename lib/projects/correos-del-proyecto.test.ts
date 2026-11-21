@@ -153,5 +153,11 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
       expect(cap).toContain("«Invitar»");
       expect(fraseDeFalloPorCorreo("es", { motivo: "cap", code: "tope_de_miembros" })).toMatch(/\bLen\b/);
     });
+
+    // Final review of the minors pass: an agent deleted while her task ran reached the email as «No pude hacerlo:
+    // assistant not found», the route's English.
+    it("🔴 the route's «not found» for an agent's turn says the agent is gone, in the person's language", () => {
+      expect(fraseDeFalloPorCorreo("es", { motivo: "assistant not found", code: "not_found" }, true)).toBe(scheduledTaskPhrase("es", "agent_gone"));
+    });
   });
 });

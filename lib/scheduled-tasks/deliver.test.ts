@@ -144,6 +144,19 @@ describe("an agent's task", () => {
     expect(vi.mocked(deps.send).mock.calls[0]![0]).toMatchObject({ replyTo: null, canReply: false, agentGone: true });
     expect(vi.mocked(deps.send).mock.calls[0]![0].agentName ?? null).toBeNull();
     expect(deps.replyAddress).not.toHaveBeenCalled();
+    // Her task went with her (the key cascades): there is nothing left to remove.
+    expect(vi.mocked(deps.send).mock.calls[0]![0].removeUrl).toBeNull();
+  });
+
+  // Final review of the minors pass: a lookup that failed (the database, a moment) read as «deleted», and a living
+  // agent's result said she no longer exists.
+  it("🔴 an agent that couldn't be looked up isn't «deleted»", async () => {
+    const { deps } = fakeDeps({ agentOf: vi.fn(async () => Promise.reject(new Error("db"))) });
+    await deliverResult(run, agentTask, "Tus 5 palabras de hoy…", [], deps);
+    const sent = vi.mocked(deps.send).mock.calls[0]![0];
+    expect(sent.agentGone ?? false).toBe(false);
+    expect(sent).toMatchObject({ replyTo: null, canReply: false });
+    expect(sent.removeUrl).not.toBeNull();
   });
 
   it("Len's task is as before: no agent, his reply address and chat", async () => {
