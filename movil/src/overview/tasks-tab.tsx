@@ -27,11 +27,14 @@ type Registro = EventItem["records"][number];
 export function TasksTab({
   cliente,
   onAbrirProyecto,
+  onAbrirAgente,
   onCerrar,
 }: {
   cliente: ClienteDeOpenLen;
   /** `card`: a pending event card, which the chat brings into view. */
   onAbrirProyecto: (projectId: string, open: "chat" | "gestion", card?: string) => void;
+  /** A row of an agent's task (spec local 2026-11-19-agentes-para-todos, §6.4): her chat, not her hidden space. */
+  onAbrirAgente?: (slug: string) => void;
   onCerrar: () => void;
 }) {
   const t = useTranslations("movil.resumen");
@@ -74,7 +77,7 @@ export function TasksTab({
         type="button"
         className={`resumen-fila${needsYou ? " is-necesita" : ""}`}
         {...(needsYou ? { "data-needs-you": "" } : {})}
-        onClick={() => (i.card ? onAbrirProyecto(i.projectId, i.open, i.card) : onAbrirProyecto(i.projectId, i.open))}
+        onClick={() => (i.agentSlug && onAbrirAgente ? onAbrirAgente(i.agentSlug) : i.card ? onAbrirProyecto(i.projectId, i.open, i.card) : onAbrirProyecto(i.projectId, i.open))}
       >
         <b>{label(i)}</b>
         <small>{`${i.projectTitle} · ${when(i.at)}${i.kind === "run" ? ` · ${t(i.outcome === "done" ? "ultimaBien" : "ultimaMal")}` : ""}`}</small>

@@ -71,6 +71,24 @@ describe("TasksTab", () => {
     expect(onAbrir).toHaveBeenCalledWith("p2", "chat");
   });
 
+  // Agents for everyone, delivery 4 (spec local 2026-11-19-agentes-para-todos, §6.4, §6.8): an agent's task lives in the
+  // person's hidden space; its run is answered in her chat.
+  it("🔴 a run of an agent's task opens her chat, not her hidden space", async () => {
+    const run = { kind: "run", projectId: "space", projectTitle: "Chef Rosa", agentName: "Chef Rosa", agentSlug: "chef-rosa", text: "Receta", at: "2026-11-21T15:00:00.000Z", open: "chat", outcome: "done" };
+    vi.mocked(fetchTasks).mockResolvedValue({ ...OVERVIEW, resolved: [run] } as unknown as TasksOverview);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const onAbrirProyecto = vi.fn();
+    const onAbrirAgente = vi.fn();
+    await act(async () => root.render(<TasksTab cliente={{} as never} onAbrirProyecto={onAbrirProyecto} onAbrirAgente={onAbrirAgente} onCerrar={() => undefined} />));
+    const fila = [...host.querySelectorAll<HTMLButtonElement>(".resumen-fila")].find((b) => b.textContent?.includes("Receta"))!;
+    await act(async () => fila.click());
+    expect(onAbrirAgente).toHaveBeenCalledWith("chef-rosa");
+    expect(onAbrirProyecto).not.toHaveBeenCalled();
+  });
+
   it("a recurring task pauses; a paused one says so and resumes; a one-shot has neither", async () => {
     const { host } = await paint();
     const row = (id: string) => host.querySelector(`[data-task="${id}"]`)!;

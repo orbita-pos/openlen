@@ -989,6 +989,16 @@ describe("no pages: your agents are the app", () => {
     expect(host.querySelector("[data-crear-agente]")).toBeNull();
   });
 
+  it("🔴 in «Tareas», an agent's run opens her chat", async () => {
+    const run = { kind: "run", projectId: "space", projectTitle: "Chef Rosa", agentName: "Chef Rosa", agentSlug: "chef-rosa", text: "Receta", at: "2026-11-21T15:00:00.000Z", open: "chat", outcome: "done" };
+    await paint(agents([CHEF, ANA]), { ...OVERVIEW, resolved: [run] });
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-atajo-tareas]")!.click());
+    await act(async () => {});
+    const fila = [...host.querySelectorAll<HTMLButtonElement>(".resumen-fila")].find((b) => b.textContent?.includes("Receta"))!;
+    await act(async () => fila.click());
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
+  });
+
   it("«Tareas» opens from your agents", async () => {
     const { pedir } = await paint(agents([CHEF]));
     await act(async () => host.querySelector<HTMLButtonElement>("[data-atajo-tareas]")!.click());
