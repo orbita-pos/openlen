@@ -86,6 +86,14 @@ function publicDataBlock(tables: readonly PublicTable[]): string {
   ].join("\n");
 }
 
+/** EMOJIS WITH A VISITOR (spec local 2026-11-21-emojis-en-el-chat): the bubble doesn't carry Len's prompt, so its Style
+ *  says its own, by the tone the owner chose. */
+export const VISITOR_EMOJIS: Readonly<Record<AssistantTone, string>> = {
+  friendly: "- An emoji now and then where it adds warmth, one in a message at most, and none next to a «no» or a problem.",
+  playful: "- An emoji or two where it adds warmth, and none next to a «no» or a problem.",
+  formal: "- No emojis.",
+};
+
 export function visitorSystemPrompt(p: {
   readonly name: string;
   readonly tone: AssistantTone;
@@ -98,7 +106,8 @@ export function visitorSystemPrompt(p: {
   /** The business's other sites she serves (phase 4); none = the prompt is what it was. */
   readonly otherSites?: readonly OtherSite[];
 }): string {
-  const tone = TONES[p.tone] ?? TONES.friendly;
+  const toneKey: AssistantTone = Object.hasOwn(TONES, p.tone) ? p.tone : "friendly";
+  const tone = TONES[toneKey];
   const tables = p.publicData ?? [];
   const sources = tables.length ? `<business>, <memory> or what ${READ_PUBLIC_DATA} returns` : "<business> and <memory>";
   const others = otherSitesBlock(p.otherSites ?? []);
@@ -128,6 +137,7 @@ export function visitorSystemPrompt(p: {
       "Style:",
       `- Reply in the language of the visitor's last message; when it's unclear, use "${p.siteLocale}".`,
       "- Brief: one to four sentences. Plain text: no markdown, no lists.",
+      VISITOR_EMOJIS[toneKey],
       `- Speak as someone from the business, naturally; don't start with "According to…".`,
     ].join("\n"),
     `<business name="${p.businessName}">\n${p.knowledge.trim()}\n</business>`,

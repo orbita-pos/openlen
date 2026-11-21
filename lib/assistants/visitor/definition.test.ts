@@ -6,7 +6,7 @@ import { HIDDEN_AGENT_TYPES, RESERVED_AGENT_TYPES } from "@/lib/agent/subagents/
 import { NO_AGENT_TYPES } from "@/lib/agent/subagents/agent-registry";
 import { ASSISTANT_VISITOR_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
 
-import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, OTHER_SITE_MAX, OTHER_SITES_MAX, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
+import { OFFER_HANDOFF, OFFER_HANDOFF_DECLARATION, OTHER_SITE_MAX, OTHER_SITES_MAX, VISITOR_EMOJIS, replyText, visitorMessage, visitorSystemPrompt, visitorTools } from "./definition";
 
 const BUSINESS = {
   name: "Lucía",
@@ -63,6 +63,18 @@ describe("the visitor definition", () => {
     expect(p).toContain('"es"');
     expect(p).toMatch(/markdown/i);
     expect(p).toContain("warm and friendly");
+  });
+
+  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): the bubble doesn't carry Len's prompt, so its Style says its own.
+  it("🔴 emojis follow the tone the owner chose", () => {
+    for (const tone of ["friendly", "playful", "formal"] as const) {
+      const p = visitorSystemPrompt({ ...BUSINESS, tone });
+      // Up to the business block itself: the rules above Style already name «<business>».
+      const style = p.slice(p.indexOf("Style:"), p.indexOf("<business name="));
+      expect(style.length, tone).toBeGreaterThan(0);
+      expect(style, tone).toContain(VISITOR_EMOJIS[tone]);
+    }
+    expect(VISITOR_EMOJIS.formal).toBe("- No emojis.");
   });
 
   it("🔴 the same business sends the same prefix, with or without visuals in the conversation", () => {
