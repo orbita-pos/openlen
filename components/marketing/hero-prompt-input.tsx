@@ -126,8 +126,9 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
     if (submitting || leaving || status === "loading") return;
     // Photos don't fit in a URL: they cross in `sessionStorage`, left BEFORE navigating and BEFORE the sign-in
     // dialog — the signed-out visitor goes to /register and comes back, and they must still be there.
-    // With Agente chosen too: the space sends them with the message, as /new does.
-    if (photos.length) dejarReferenciasEnTransito(photos);
+    // With Agente chosen too: the space sends them with the message, as /new does. Every send, even without photos:
+    // an empty list clears what an earlier send left, which would otherwise ride along with this message.
+    dejarReferenciasEnTransito(photos);
     // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
     // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
     leaveFirstMessage({ brief: value, kind });

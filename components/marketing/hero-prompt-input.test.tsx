@@ -44,6 +44,7 @@ vi.mock("@/lib/marketing/files-in-transit", () => ({
 import { HeroPromptInput } from "./hero-prompt-input";
 import { HomeDropZone } from "./home-drop";
 import { takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { dejarReferenciasEnTransito, tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -104,6 +105,15 @@ describe("the home's box", () => {
     await press(sendButton(el));
     expect(push).toHaveBeenCalledWith(`/new?brief=${encodeURIComponent(BRIEF)}`);
     expect(takeFirstMessage(BRIEF)).toEqual({ brief: BRIEF, kind: "pagina" });
+  });
+
+  it("🔴 a send without photos clears the ones an earlier send left: they never reach this message", async () => {
+    // An earlier send left a photo and the visitor never arrived (closed the sign-in dialog, went back).
+    dejarReferenciasEnTransito([{ dataUrl: "data:image/png;base64,AAAA", nombre: "vieja.png" }]);
+    const el = mount();
+    type(el, BRIEF);
+    await press(sendButton(el));
+    expect(tomarReferenciasEnTransito()).toEqual([]);
   });
 
   it("🔴 Enter sends too", async () => {
