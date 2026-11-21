@@ -159,6 +159,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       alive = false;
     };
   }, [cliente, idioma, recarga]);
+  // Read again on coming back to the app (final review I2): «Crear un agente» sends the person to the web, and an agent
+  // made or deleted there shows when they return. Its own counter: `recarga` also reloads the page's preview.
+  const [lecturaDeAgentes, setLecturaDeAgentes] = useState(0);
+  const releerAgentes = useCallback(() => setLecturaDeAgentes((n) => n + 1), []);
   useEffect(() => {
     let alive = true;
     readAssistants(cliente).then((x) => {
@@ -174,7 +178,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     return () => {
       alive = false;
     };
-  }, [cliente, recarga]);
+  }, [cliente, recarga, lecturaDeAgentes]);
   const modo = appModeOf({ loaded: asistentesLeidas, enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista ?? [], welcomeDismissed: bienvenidaCerrada });
   const suColor = modo.kind === "assistant" ? modo.assistant.color : null;
   // The app takes her color (§5.2); with no assistant, and on leaving this screen (signing out), Len's orange again.
@@ -400,13 +404,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   }, [cliente, id]);
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) { void cargar(true); releerHerramientas(); } });
+      const listener = AppNativa.addListener("appStateChange", ({ isActive }) => { if (isActive) { void cargar(true); releerHerramientas(); releerAgentes(); } });
       return () => { void listener.then((l) => l.remove()); };
     }
-    const volver = () => { if (document.visibilityState === "visible") { void cargar(true); releerHerramientas(); } };
+    const volver = () => { if (document.visibilityState === "visible") { void cargar(true); releerHerramientas(); releerAgentes(); } };
     document.addEventListener("visibilitychange", volver);
     return () => document.removeEventListener("visibilitychange", volver);
-  }, [cargar, releerHerramientas]);
+  }, [cargar, releerHerramientas, releerAgentes]);
 
   // El chat (pieza 2). Si cuelgas o cierras con Len trabajando, el chat se
   // vuelve a enganchar al turno (lo que antes hacía aquí la hoja).

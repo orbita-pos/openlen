@@ -999,6 +999,17 @@ describe("no pages: your agents are the app", () => {
     expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
   });
 
+  // Final review I2: «Crear un agente» sends the person to the web; coming back, the agent they made is there.
+  it("🔴 coming back to the app reads the agents again: one made on the web shows", async () => {
+    let mine: unknown[] = [];
+    await paint(() => Response.json({ enabled: true, agents: true, assistants: mine }));
+    expect(host.textContent).toContain("sinPaginas");
+    mine = [CHEF];
+    await act(async () => document.dispatchEvent(new Event("visibilitychange")));
+    await act(async () => {});
+    expect(host.querySelector('[data-agente="a3"]')).not.toBeNull();
+  });
+
   it("«Tareas» opens from your agents", async () => {
     const { pedir } = await paint(agents([CHEF]));
     await act(async () => host.querySelector<HTMLButtonElement>("[data-atajo-tareas]")!.click());
