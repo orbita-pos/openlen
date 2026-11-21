@@ -1048,10 +1048,19 @@ const PERSONAL_SKILLS_FROM_THE_CARD =
 const RENAME_A_PERSONAL_SKILL =
   "this command also writes one of the person's skills, which only the review card saves: to rename one, propose it under the new name with propose_skills and remove the old one only after they save it.";
 
+/** To an external agent through OpenLen's MCP server: it has no card to send them to. */
+const PERSONAL_SKILLS_NOT_FROM_OUTSIDE =
+  "The person's own skills (~/.len/skills/) are saved only inside OpenLen, from Len's review card or by the person themselves; an external agent can't write them. The project's skills (/.len/skills/) can be written.";
+
 /** Who may write the person's own skills as files: only the person (their Code lens, their terminal); Len and anything
- *  acting for him propose them on the card (spec local 2026-11-19-agentes-para-todos, §6.6). */
+ *  acting for him propose them on the card (spec local 2026-11-19-agentes-para-todos, §6.6). An external agent through
+ *  OpenLen's MCP server writes as the person (`desde: "mcp"`) but isn't them. */
 function mayWritePersonalSkills(session: AgentSession): boolean {
-  return session.autor === "usuario";
+  return session.autor === "usuario" && session.desde !== "mcp";
+}
+
+function personalSkillsRefusal(session: AgentSession): string {
+  return session.desde === "mcp" ? PERSONAL_SKILLS_NOT_FROM_OUTSIDE : PERSONAL_SKILLS_FROM_THE_CARD;
 }
 
 /**
@@ -1072,7 +1081,7 @@ async function guardarSkill(
   // THE PERSON'S OWN SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329:
   // its skill files on disk are a read-only cache and `propose_skills` is the way. Their own edit (the Code lens, their
   // terminal) still saves; removing one stays Len's (`rm`), as OpenLen has no list of skills for them to delete from yet.
-  if (at.scope === "personal" && !mayWritePersonalSkills(session)) return { response: respuesta(fallo(PERSONAL_SKILLS_FROM_THE_CARD)) };
+  if (at.scope === "personal" && !mayWritePersonalSkills(session)) return { response: respuesta(fallo(personalSkillsRefusal(session))) };
   if (bundledSkillNames().has(at.name)) {
     return { response: respuesta(fallo(`"${at.name}" is reserved: it is one of OpenLen's own skills. Give yours another name.`)) };
   }
@@ -1281,7 +1290,7 @@ export async function guardarLoDeLaTerminal(
       // A SKILL (spec local 2026-10-26-len-skills): `rm` deletes it, like a memory note.
       const skillAt = skillPathOf(c.ruta);
       if (skillAt?.scope === "personal" && writesPersonalSkill) {
-        deshacer(c.ruta, RENAME_A_PERSONAL_SKILL);
+        deshacer(c.ruta, session.desde === "mcp" ? PERSONAL_SKILLS_NOT_FROM_OUTSIDE : RENAME_A_PERSONAL_SKILL);
         continue;
       }
       if (skillAt && deps.skillStore) {

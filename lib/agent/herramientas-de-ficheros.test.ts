@@ -1191,6 +1191,21 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.equal(estado.upserts.length, 0);
   });
 
+  // Delivery 2's deferred minor: OpenLen's MCP server writes as the person (`autor: "usuario"`, `desde: "mcp"`), but what
+  // writes there is an external agent, not the person — like Len, it can't save their skills; it has no card, so the
+  // refusal doesn't send it to propose_skills.
+  it("🔴 an external agent through OpenLen's MCP server can't write the person's skill, and isn't sent to propose_skills", async () => {
+    const mia = SKILL.replace(/cotizar/g, "mia");
+    const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });
+    const s = { ...makeSession(), autor: "usuario", desde: "mcp" } as AgentSession;
+    const antes = await cargarFicherosDeLaTerminal(s, deps);
+    const g = await guardarLoDeLaTerminal(s, deps, [{ tipo: "escrito", ruta: "/home/user/.len/skills/mia/SKILL.md", contenido: mia.replace("size", "size and date"), crea: false }], antes);
+    assert.equal(estado.upserts.length, 0);
+    const why = g.notas.join("\n");
+    assert.match(why, /~\/\.len\/skills/);
+    assert.doesNotMatch(why, /propose_skills/);
+  });
+
   it("the person's own edit of their skill still saves (autor: usuario)", async () => {
     const mia = SKILL.replace(/cotizar/g, "mia");
     const { deps, estado } = depsConSkills({ personal: { u1: { mia } } });
