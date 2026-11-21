@@ -2,6 +2,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { tintOf } from "@/lib/figure/tint";
+import { BASE } from "../config";
+import { plataforma } from "../sesion/plataforma";
 import { PantallaPrincipal } from "./principal";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -334,16 +336,18 @@ it("the push of a finished task opens the delivered file in the viewer, with its
 // The person's own assistant (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5): a button with her name beside
 // «Entregado» and «Tareas», only when she exists; her notices open her tab.
 describe("her tab in the selector", () => {
+  // Closing a panel (the list of agents, on choosing one) animates its exit, which asks matchMedia (jsdom has none).
+  beforeEach(() => vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} })));
   const proyecto = { id: "p1", title: "Página", subdomain: null, publishedAt: null, updatedAt: "2026-11-09", chatHistory: [] };
   const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
-  async function paint(asistentes: unknown[]) {
+  async function paint(asistentes: unknown[], { agents = true }: { agents?: boolean } = {}) {
     const pedir = vi.fn(async (ruta: string) =>
       ruta === "/api/projects"
         ? Response.json({ projects: [proyecto] })
         : ruta.endsWith("/preview")
           ? Response.json({ enabled: true, token: "vista" })
           : ruta === "/api/assistants"
-            ? Response.json({ assistants: asistentes })
+            ? Response.json({ enabled: true, agents, assistants: asistentes })
             : ruta.startsWith("/api/tools?")
               ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
               : Response.json({ project: proyecto }),
@@ -369,10 +373,42 @@ describe("her tab in the selector", () => {
     const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta", color: "#3b82f6", look: { ...LUCIA.look, color: "#3b82f6" } };
     const { botones } = await paint([LUCIA, MARTA]);
     expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe(tintOf("#f4a48b")!.tint);
-    await act(async () => botones().find((x) => x.textContent === "Marta")!.click());
+    // Agents for everyone, delivery 4 (§6.8): with two or more, through the list of agents.
+    await act(async () => botones().find((x) => x.hasAttribute("data-agentes"))!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a2"]')!.click());
     expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe(tintOf("#3b82f6")!.tint);
     expect(localStorage.getItem("len-asistente")).toBe("a2");
     expect(host.querySelector('[data-assistant-tab="a2"]')).toBeNull();
+  });
+
+  // Agents for everyone, delivery 4 (spec local 2026-11-19-agentes-para-todos, §6.8): «una lista para elegir con cuál
+  // hablar» instead of one button per assistant.
+  it("🔴 with two or more, one «Agentes» button: its list makes the one you tap the app's and opens her chat", async () => {
+    const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta", color: "#3b82f6", look: { ...LUCIA.look, color: "#3b82f6" } };
+    const { botones } = await paint([LUCIA, MARTA]);
+    expect(botones().some((x) => x.textContent === "Lucía" || x.textContent === "Marta")).toBe(false);
+    await act(async () => botones().find((x) => x.hasAttribute("data-agentes"))!.click());
+    expect([...host.querySelectorAll<HTMLElement>("[data-agente]")].map((x) => x.dataset.agente)).toEqual(["a1", "a2"]);
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a2"]')!.click());
+    expect(localStorage.getItem("len-asistente")).toBe("a2");
+    expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe(tintOf("#3b82f6")!.tint);
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Marta" } });
+  });
+
+  it("«Crear un agente» opens OpenLen's home on the agent kind; with agents off it isn't there", async () => {
+    const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta" };
+    const abrir = vi.spyOn(plataforma, "abrirNavegador").mockResolvedValue(undefined);
+    const { botones } = await paint([LUCIA, MARTA]);
+    await act(async () => botones().find((x) => x.hasAttribute("data-agentes"))!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-crear-agente]")!.click());
+    expect(abrir).toHaveBeenCalledWith(`${BASE}/?kind=agent`);
+    act(() => root.unmount());
+    host.remove();
+    const off = await paint([LUCIA, MARTA], { agents: false });
+    await act(async () => off.botones().find((x) => x.hasAttribute("data-agentes"))!.click());
+    expect(host.querySelector("[data-agente]")).not.toBeNull();
+    expect(host.querySelector("[data-crear-agente]")).toBeNull();
+    abrir.mockRestore();
   });
 
   it("with no assistant, the app keeps Len's orange", async () => {

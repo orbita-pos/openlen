@@ -27,6 +27,7 @@ import { DeliveredTab } from "../overview/delivered-tab";
 import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
 import { AssistantTab } from "../asistente/assistant-tab";
+import { AgentsList } from "../asistente/agents-list";
 import { LenTurnView } from "../asistente/len-turn-view";
 import { useLenRequests } from "../asistente/use-len-requests";
 import { pasosDelTrabajo } from "../entrega/progreso";
@@ -102,7 +103,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const alEnfocarEnChat = useCallback(() => setEnfocarEnChat(null), []);
   const [conPip, setConPip] = useState(false);
   const [recarga, setRecarga] = useState(0);
-  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | "asistente" | "turnoDeLen" | null>(null);
+  const [panel, setPanel] = useState<"gestion" | "look" | "comparar" | "equipo" | "entregado" | "tareas" | "herramientas" | "asistente" | "turnoDeLen" | "agentes" | null>(null);
   // What Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §5.4.9): in her app, where his chat used to lead.
   const [turnoDeLen, setTurnoDeLen] = useState<{ fila: string; projectId: string } | null>(null);
   // «Antes / Ahora» of a Len card: that card's turn (null: the page's latest change, the sheet's shortcut).
@@ -113,6 +114,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.1): assistants on at all, the one chosen on
   // this phone, and whether the welcome was dismissed.
   const [asistentesOn, setAsistentesOn] = useState(true);
+  // Whether agents can be made (spec local 2026-11-19-agentes-para-todos, §6.8): «Crear un agente» opens the web's home on
+  // the agent kind, where Len makes them (§6.3) — only when the server says it can.
+  const [agentesOn, setAgentesOn] = useState(false);
+  const crearAgente = useCallback(() => void plataforma.abrirNavegador(`${BASE}/?kind=agent`).catch(() => {}), []);
   // Read at least once (final review, I6): until then, no welcome.
   const [asistentesLeidas, setAsistentesLeidas] = useState(false);
   const [elegida, setElegida] = useState<string | null>(readChosen);
@@ -157,6 +162,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       if (!alive) return;
       setAsistentes(x.assistants);
       setAsistentesOn(x.enabled);
+      setAgentesOn(x.agents);
       setAsistentesLeidas(true);
     }, () => {});
     return () => {
@@ -520,8 +526,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("entregado"); }}>{tr("entregado")}</button>
             <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("tareas"); }}>{tr("tareas")}</button>
             {herramientas !== "off" && <button type="button" className="lm-btn lm-sec" onClick={() => { setSelector(false); setPanel("herramientas"); }}>{th("titulo")}</button>}
+            {/* With two or more, one «Agentes» button: the list to choose whom to talk to (spec local
+                2026-11-19-agentes-para-todos, §6.8). With one, as before: her button opens her place (§6.10). */}
+            {asistentes.length >= 2 && (
+              <button type="button" className="lm-btn lm-sec" data-agentes="" onClick={() => { setSelector(false); setPanel("agentes"); }}>{tas("agentes")}</button>
+            )}
             {/* The app's assistant opens her place; another one becomes the app's (§5.1). */}
-            {asistentes.map((a) => {
+            {asistentes.length < 2 && asistentes.map((a) => {
               const esLaDeLaApp = modo.kind === "assistant" && modo.assistant.id === a.id;
               return <button key={a.id} type="button" className="lm-btn lm-sec" data-asistente={a.id} aria-current={esLaDeLaApp ? "true" : undefined} onClick={() => {
                 if (esLaDeLaApp) { setSelector(false); abrirSuPestana(a); return; }
@@ -644,6 +655,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); if (ella) { abrirTurnoDeLen(turno, destino); return; } setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
+          : panel === "agentes" ? <AgentsList agentes={asistentes} actual={ella?.id ?? null} onElegir={hablarCon} onCerrar={() => setPanel(null)} {...(agentesOn ? { onCrear: crearAgente } : {})} />
           : panel === "herramientas" ? <ToolsTab cliente={cliente} idioma={idioma} onCerrar={() => setPanel(null)} onAbrir={(tool) => { setPanel(null); setHerramientaAbierta({ tool, proyecto: null }); }} />
           : panel === "asistente" && asistenteAbierta ? <AssistantTab key={`${asistenteAbierta.asistente.id}:${asistenteAbierta.n}`} cubierta={!!ella && chatAbierto} cliente={cliente} asistente={asistenteAbierta.asistente} parte={asistenteAbierta.parte} tarjeta={asistenteAbierta.tarjeta ?? null} idioma={idioma} onCerrar={() => setPanel(null)} onHablar={() => hablarCon(asistenteAbierta.asistente)} onVerLen={(proyecto, fila) => { setPanel(null); if (ella && fila) { abrirTurnoDeLen(fila, proyecto); return; } abrirAviso(proyecto, ella ? undefined : "chat"); }} />
           : panel === "turnoDeLen" && turnoDeLen ? <LenTurnView key={turnoDeLen.fila} cliente={cliente} fila={turnoDeLen.fila} projectTitle={lista?.find((x) => x.id === turnoDeLen.projectId)?.title ?? ""} onClose={() => setPanel(null)}
