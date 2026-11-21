@@ -34,10 +34,13 @@ afterEach(() => {
 
 const item = (name: string, createdAt: string, o: Record<string, unknown> = {}) => ({ id: name, projectId: "p1", turnId: "t1", name, url: `/api/projects/p1/deliveries/t1/ab12cd34-${name}`, previewUrl: null, size: 10, contentType: "application/pdf", description: null, createdAt, projectTitle: "Mi tienda", ...o });
 
+/** Android's back, waited for until the page has heard it: a fixed 20 ms wasn't enough on a loaded machine (delivery
+ *  4's deferred minor). The app's own listener was added first, so it has run by then. */
 const back = () =>
   act(async () => {
+    const heard = new Promise<void>((r) => window.addEventListener("popstate", () => r(), { once: true }));
     history.back();
-    await new Promise((r) => setTimeout(r, 20));
+    await heard;
   });
 
 async function paint(items: unknown[], onCerrar: () => void = () => undefined, onIrAlChat: (projectId: string, turnId: string) => void = () => undefined) {

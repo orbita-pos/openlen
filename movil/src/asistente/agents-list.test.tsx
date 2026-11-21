@@ -74,9 +74,11 @@ describe("the list of agents", () => {
   it("🔴 as a panel, the phone's back closes it", async () => {
     const onCerrar = vi.fn();
     paint({ onCerrar });
+    // Waited for until the page has heard it, not for a fixed time (see delivered-tab.test).
     await act(async () => {
+      const heard = new Promise<void>((r) => window.addEventListener("popstate", () => r(), { once: true }));
       history.back();
-      await new Promise((r) => setTimeout(r, 20));
+      await heard;
     });
     expect(onCerrar).toHaveBeenCalled();
   });
