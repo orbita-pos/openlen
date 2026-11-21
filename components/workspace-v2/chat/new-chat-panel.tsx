@@ -119,6 +119,17 @@ export interface NewChatPanelProps {
   /** The line under Len's box, where his own speaks of a page to publish and there is none (the person's space, spec
    *  local 2026-11-19-agentes-para-todos, §6.2). An assistant's place keeps hers. */
   disclaimer?: string;
+  /** What the box says before anything is written, and the empty screen, where Len’s speak of a page and there is none
+   *  (the person’s space: agents). An assistant’s place keeps hers. */
+  placeholder?: string;
+  emptyState?: EmptyContent;
+}
+
+/** An empty chat’s title, subtitle and chips, given by the caller: each chip shows its label and fills its text. */
+export interface EmptyContent {
+  readonly title: string;
+  readonly subtitle: string;
+  readonly suggestions: readonly { readonly key: string; readonly label: string; readonly text: string }[];
 }
 
 const SUGGESTIONS = ["photos", "form", "mobile", "publish"] as const;
@@ -195,6 +206,8 @@ function AgentChatView({
   assistant,
   figurePaused,
   disclaimer,
+  placeholder,
+  emptyState,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -584,6 +597,7 @@ function AgentChatView({
             sinSugerencias={soloLectura}
             esApp={esApp}
             esJuego={esJuego}
+            {...(emptyState ? { content: emptyState } : {})}
             onPick={(text) => {
               chat.setDraft(text);
               queueMicrotask(() => chat.taRef.current?.focus());
@@ -705,9 +719,7 @@ function AgentChatView({
                   disclaimer: t("ownAssistant.speaker.disclaimer", { name: assistant.name }),
                   effortLabel: t("ownAssistant.composer.effort", { name: assistant.name }),
                 }
-              : disclaimer
-                ? { disclaimer }
-                : {})}
+              : { ...(disclaimer ? { disclaimer } : {}), ...(placeholder ? { placeholder } : {}) })}
             {...(equipo.compartido
               ? {
                   placeholder: t("equipo.placeholder"),
@@ -957,6 +969,7 @@ export function EmptyState({
   sinSugerencias = false,
   esApp = false,
   esJuego = false,
+  content,
 }: {
   onPick: (text: string) => void;
   disabled: boolean;
@@ -966,23 +979,29 @@ export function EmptyState({
   esApp?: boolean;
   /** The app is a game: its own title and suggestions (same subtitle). */
   esJuego?: boolean;
+  /** What the caller says instead (the person’s space). */
+  content?: EmptyContent;
 }) {
   const t = useTranslations("panelsChat");
-  const title = esJuego ? t("newChat.emptyGame.title") : esApp ? t("newChat.emptyApp.title") : t("newChat.empty.title");
-  const suggestions = esJuego
-    ? GAME_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyGame.suggestions.${key}`) }))
-    : esApp
-      ? APP_SUGGESTIONS.map((key) => ({ key, text: t(`newChat.emptyApp.suggestions.${key}`) }))
-      : SUGGESTIONS.map((key) => ({ key, text: t(`newChat.empty.suggestions.${key}`) }));
+  const title = content ? content.title : esJuego ? t("newChat.emptyGame.title") : esApp ? t("newChat.emptyApp.title") : t("newChat.empty.title");
+  // Len's own chips send what they say; the caller's show a label and fill a sentence.
+  const own = (key: string, text: string) => ({ key, label: text, text });
+  const suggestions = content
+    ? content.suggestions
+    : esJuego
+      ? GAME_SUGGESTIONS.map((key) => own(key, t(`newChat.emptyGame.suggestions.${key}`)))
+      : esApp
+        ? APP_SUGGESTIONS.map((key) => own(key, t(`newChat.emptyApp.suggestions.${key}`)))
+        : SUGGESTIONS.map((key) => own(key, t(`newChat.empty.suggestions.${key}`)));
   return (
     <div className="nc-up my-auto grid justify-items-center gap-2 px-1 py-3 text-center">
       <CaraDeLen estado="reposo" props="compact" className="mb-2.5 h-[84px] w-[84px]" />
       <h2 className="m-0 font-[family-name:var(--font-instrument)] text-[31px] font-normal leading-[1.08] tracking-[-0.01em]">
         {title}
       </h2>
-      <p className="m-0 text-[13.5px] fg-muted">{t("newChat.empty.subtitle")}</p>
+      <p className="m-0 text-[13.5px] fg-muted">{content ? content.subtitle : t("newChat.empty.subtitle")}</p>
       <div className="mt-[18px] flex flex-wrap justify-center gap-1.5" hidden={sinSugerencias}>
-        {suggestions.map(({ key, text }) => (
+        {suggestions.map(({ key, label, text }) => (
           <button
             key={key}
             type="button"
@@ -990,7 +1009,7 @@ export function EmptyState({
             onClick={() => onPick(text)}
             className="rounded-full border bd px-3 py-[5px] text-[12.5px] fg-muted transition hover:border-[color:var(--border-strong)] hover:bg-elev hover:fg disabled:opacity-50"
           >
-            {text}
+            {label}
           </button>
         ))}
       </div>

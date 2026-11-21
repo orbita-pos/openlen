@@ -861,6 +861,9 @@
     "title": "Jouw ruimte",
     "home": "Terug naar home",
     "disclaimer": "Len kan zich vergissen. Controleer de antwoorden.",
-    "files": "Bestanden"
+    "files": "Bestanden",
+    "placeholder": "Vraag Len om een nieuwe agent, of verander een van de jouwe…",
+    "emptyTitle": "Welke agent heb je nodig?",
+    "emptySubtitle": "Vertel Len waarvoor je hem wilt. Hij bereidt hem voor en laat je een kaart achter om hem te maken."
   }
 }

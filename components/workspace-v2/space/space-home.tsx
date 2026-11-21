@@ -12,6 +12,7 @@ import { ArrowLeft, FolderOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { AGENT_JOBS } from "@/components/marketing/agent-job-chips";
 import { Link, useRouter } from "@/i18n/navigation";
 import { takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
 import { spaceHref } from "@/lib/space/href";
@@ -57,6 +58,13 @@ export function SpaceHome({
   // THE SPACE'S FILES (delivery 2, spec §6.2): what the agents keep, in the Code lens, beside the chat.
   const [files, setFiles] = useState(false);
   const codeViewLabels = useCodeViewLabels("space");
+  // The space has agents, never a page: its box and its empty screen say so, with the home’s five jobs (delivery 1/2
+  // deferred minor, seen in the walk).
+  const emptyState = {
+    title: t("space.emptyTitle"),
+    subtitle: t("space.emptySubtitle"),
+    suggestions: AGENT_JOBS.map((job) => ({ key: job, label: t(`start.kind.agentJobs.${job}`), text: t(`start.kind.agentJobs.${job}Prompt`) })),
+  };
   // Read once: the ticket is spent on the first read, and a second effect run (React's development double-run) must
   // not turn the send into a fill.
   const read = useRef(false);
@@ -107,6 +115,8 @@ export function SpaceHome({
             pendingDraftAutoSend={start?.send === true}
             onPendingDraftConsumed={() => setStart(null)}
             disclaimer={t("space.disclaimer")}
+            placeholder={t("space.placeholder")}
+            emptyState={emptyState}
           />
         </div>
         {/* Beside the chat on a wide screen; over it on a phone. The lens fills its box (it is absolute inset-0). */}

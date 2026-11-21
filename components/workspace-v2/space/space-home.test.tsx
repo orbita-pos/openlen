@@ -18,7 +18,16 @@ vi.mock("@/i18n/navigation", () => ({
 vi.mock("../toast", () => ({ ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 // Len's chat panel is a mark that says what it was given.
 vi.mock("../chat/new-chat-panel", () => ({
-  NewChatPanel: (p: { flatProjectId: string; pendingDraft?: string | null; pendingDraftAutoSend?: boolean; centered?: boolean; flatProjectChat?: unknown[]; disclaimer?: string }) => (
+  NewChatPanel: (p: {
+    flatProjectId: string;
+    pendingDraft?: string | null;
+    pendingDraftAutoSend?: boolean;
+    centered?: boolean;
+    flatProjectChat?: unknown[];
+    disclaimer?: string;
+    placeholder?: string;
+    emptyState?: { title: string; subtitle: string; suggestions: readonly { key: string; label: string; text: string }[] };
+  }) => (
     <i
       data-chat={p.flatProjectId}
       data-draft={p.pendingDraft ?? ""}
@@ -26,6 +35,10 @@ vi.mock("../chat/new-chat-panel", () => ({
       data-centered={String(Boolean(p.centered))}
       data-turns={String(p.flatProjectChat?.length ?? 0)}
       data-disclaimer={p.disclaimer ?? ""}
+      data-placeholder={p.placeholder ?? ""}
+      data-empty-title={p.emptyState?.title ?? ""}
+      data-empty-subtitle={p.emptyState?.subtitle ?? ""}
+      data-empty-chips={JSON.stringify(p.emptyState?.suggestions ?? [])}
     />
   ),
 }));
@@ -69,6 +82,22 @@ function mount(props: { arrivalBrief?: string | null; draft?: string | null }) {
 const chat = (el: HTMLElement) => el.querySelector<HTMLElement>("[data-chat]")!;
 
 describe("the space", () => {
+  // Delivery 1/2 deferred minor, seen in the walk: the box read «Describe cómo debería verse o leerse tu página…» and the
+  // empty screen «¿Qué le hacemos hoy a tu página?» with «Publica mi página». The space has agents, never a page.
+  it("🔴 its box and its empty screen speak of agents, with the home’s five jobs, never of a page", () => {
+    const el = mount({});
+    expect(chat(el).dataset.placeholder).toBe("space.placeholder");
+    expect(chat(el).dataset.emptyTitle).toBe("space.emptyTitle");
+    expect(chat(el).dataset.emptySubtitle).toBe("space.emptySubtitle");
+    expect(JSON.parse(chat(el).dataset.emptyChips!)).toEqual(
+      ["language", "fitness", "finance", "legal", "cooking"].map((job) => ({
+        key: job,
+        label: `start.kind.agentJobs.${job}`,
+        text: `start.kind.agentJobs.${job}Prompt`,
+      })),
+    );
+  });
+
   it("is Len's chat in the space, in the middle, with the way home", () => {
     const el = mount({});
     expect(chat(el).dataset.chat).toBe("space-1");

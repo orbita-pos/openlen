@@ -84,6 +84,23 @@ describe("el chat vacío", () => {
     expect(onPick).toHaveBeenCalledWith("newChat.emptyGame.suggestions.screens");
   });
 
+  // Delivery 1/2 deferred minor: the person’s space (agents, no page) showed «¿Qué le hacemos hoy a tu página?» with
+  // «Publica mi página». Its caller gives the empty screen what to say; a chip fills the box with its own sentence.
+  it("🔴 with the caller’s content (the space): its title, its subtitle and its chips, each filling its sentence", () => {
+    const onPick = vi.fn();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    roots.push(root);
+    const content = { title: "Space title", subtitle: "Space subtitle", suggestions: [{ key: "language", label: "Teacher", text: "I want a teacher" }] };
+    act(() => root.render(<EmptyState onPick={onPick} disabled={false} content={content} />));
+    expect(host.querySelector("h2")?.textContent).toBe("Space title");
+    expect(host.querySelector("p")?.textContent).toBe("Space subtitle");
+    expect(sugerencias(host)).toEqual(["Teacher"]);
+    act(() => host.querySelector("button")!.click());
+    expect(onPick).toHaveBeenCalledWith("I want a teacher");
+  });
+
   it("en una página, como siempre", () => {
     const host = montar(false);
     expect(host.querySelector("h2")?.textContent).toBe("newChat.empty.title");

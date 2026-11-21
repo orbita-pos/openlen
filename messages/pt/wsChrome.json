@@ -861,6 +861,9 @@
     "title": "Seu espaço",
     "home": "Voltar ao início",
     "disclaimer": "O Len pode errar. Confira as respostas.",
-    "files": "Arquivos"
+    "files": "Arquivos",
+    "placeholder": "Peça ao Len um agente novo, ou mude um dos seus…",
+    "emptyTitle": "De que agente você precisa?",
+    "emptySubtitle": "Conte ao Len para que você o quer. Ele o prepara e deixa um cartão para você criá-lo."
   }
 }
