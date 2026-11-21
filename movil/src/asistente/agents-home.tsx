@@ -25,7 +25,7 @@ export function AgentsHome({
 }) {
   const t = useTranslations("movil.asistente");
   return (
-    <section className="ent-empty lm-layer lm-chat is-on app-agentes" data-mode="agents" aria-labelledby="agentes-inicio">
+    <section className="lm-layer lm-chat lm-m lm-marca is-on app-agentes" data-mode="agents" aria-labelledby="agentes-inicio">
       <h1 id="agentes-inicio">{t("agentes")}</h1>
       <AgentsList agentes={agentes} actual={actual} onElegir={onElegir} {...(onCrear ? { onCrear } : {})} />
       <div className="app-agentes-atajos">{atajos}</div>
