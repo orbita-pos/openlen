@@ -706,23 +706,23 @@ export async function sendScheduledTaskEmail(
   },
 ): Promise<void> {
   const correo = scheduledTaskEmail(input, input.idioma);
+  const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
+  // An agent's task comes in its name (spec local 2026-11-19-agentes-para-todos, §6.4): a person chose that name, so what
+  // could break the header goes, and it travels quoted. One whose agent was deleted is in no one's name: Len didn't write it.
+  const agentName = input.agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
+  const sender = agentName ? `"${agentName}" <${address}>` : input.agentGone ? `OpenLen <${address}>` : `Len <${address}>`;
   const live = liveClientOrWarn("scheduled task email");
   if (!live) {
     if (process.env.NODE_ENV !== "production") {
       // eslint-disable-next-line no-console
       console.log(
-        `\n  📧 [DEV] ${correo.subject} → ${input.to}${input.replyTo ? ` (reply-to: ${input.replyTo})` : ""}${input.attachments.length ? ` [${input.attachments.map((a) => a.filename).join(", ")}]` : ""}\n     ${correo.text.split("\n").join("\n     ")}\n`,
+        `\n  📧 [DEV] ${correo.subject} → ${input.to} (from: ${sender})${input.replyTo ? ` (reply-to: ${input.replyTo})` : ""}${input.attachments.length ? ` [${input.attachments.map((a) => a.filename).join(", ")}]` : ""}\n     ${correo.text.split("\n").join("\n     ")}\n`,
       );
     }
     return;
   }
-  const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
-  // An agent's task comes in its name (spec local 2026-11-19-agentes-para-todos, §6.4): a person chose that name, so what
-  // could break the header goes, and it travels quoted.
-  const agentName = input.agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
   await enviar(live, "scheduled task email", {
-    // One whose agent was deleted is in no one's name: Len didn't write it.
-    from: agentName ? `"${agentName}" <${address}>` : input.agentGone ? `OpenLen <${address}>` : `Len <${address}>`,
+    from: sender,
     to: input.to,
     ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     ...correo,

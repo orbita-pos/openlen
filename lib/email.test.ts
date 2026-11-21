@@ -122,6 +122,20 @@ describe("the sender of a scheduled task's email", () => {
     expect(from.match(/</g)).toHaveLength(1);
   });
 
+  // Delivery 3's deferred minor M7: in development (no Resend key) the log is the only way to see who it comes from.
+  it("🔴 without a Resend key, the development log says who it comes from", async () => {
+    vi.resetModules();
+    vi.stubEnv("RESEND_API_KEY", "");
+    const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { sendScheduledTaskEmail } = await import("./email");
+    await sendScheduledTaskEmail({ ...TASK, agentName: "Mr. Smith" });
+    expect(send).not.toHaveBeenCalled();
+    expect(logged.mock.calls.flat().join(" ")).toContain('"Mr. Smith" <');
+    logged.mockRestore();
+    warned.mockRestore();
+  });
+
   // Delivery 3's deferred minor M1: its agent was deleted, and Len didn't write it.
   it("🔴 the email of a task whose agent was deleted comes from OpenLen, not from Len", async () => {
     const { sendScheduledTaskEmail } = await cargar();
