@@ -75,7 +75,25 @@ describe("la tarjeta de los pasos", () => {
     expect(app).not.toMatch(/agent\.tool\.(Read|Edit|use_page)/);
     // Lo que no nombra la página, igual; y en una página, como siempre.
     expect(pintar([{ tool: "bash", status: "done", summary: "ls" } as AgentAction], true).textContent).toContain("agent.tool.bash");
-    expect(pintar(pasos).textContent).toContain("agent.tool.Read");
+    // In a page, a file that isn't one is «un fichero» (see below).
+    expect(pintar(pasos).textContent).toContain("agent.toolFile.Read");
+  });
+
+  // Delivery 1's walk: writing ~/.len/agents/plant-care.md in the space read «Escribiendo la página». Only a page's HTML
+  // is «la página»; any other file is «un fichero».
+  it("🔴 a file that isn't a page (an agent's file, a skill, a stylesheet) is «un fichero»; a page is «la página»", () => {
+    const pasos = [
+      { tool: "Write", status: "done", summary: "/home/user/.len/agents/plant-care.md" },
+      { tool: "Read", status: "done", summary: "~/.len/skills/cooking/SKILL.md" },
+      { tool: "Edit", status: "done", summary: "/styles.css" },
+      { tool: "MultiEdit", status: "done", summary: "/menu/index.html" },
+    ] as AgentAction[];
+    const texto = pintar(pasos).textContent ?? "";
+    expect(texto).toContain("agent.toolFile.Write");
+    expect(texto).toContain("agent.toolFile.Read");
+    expect(texto).toContain("agent.toolFile.Edit");
+    expect(texto).toContain("agent.tool.MultiEdit");
+    expect(texto).not.toMatch(/agent\.tool\.(Write|Read|Edit)\b/);
   });
 
 

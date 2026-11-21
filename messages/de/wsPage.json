@@ -172,6 +172,12 @@
       "Edit": "Bearbeitet ein Ergebnis",
       "MultiEdit": "Bearbeitet ein Ergebnis",
       "Write": "Schreibt ein Ergebnis"
+    },
+    "toolFile": {
+      "Read": "Liest eine Datei",
+      "Edit": "Bearbeitet eine Datei",
+      "MultiEdit": "Bearbeitet eine Datei",
+      "Write": "Schreibt eine Datei"
     }
   },
   "defaultProjectName": "Preisseite",

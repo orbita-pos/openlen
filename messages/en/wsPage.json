@@ -172,6 +172,12 @@
       "Edit": "Editing a deliverable",
       "MultiEdit": "Editing a deliverable",
       "Write": "Writing a deliverable"
+    },
+    "toolFile": {
+      "Read": "Reading a file",
+      "Edit": "Editing a file",
+      "MultiEdit": "Editing a file",
+      "Write": "Writing a file"
     }
   },
   "defaultProjectName": "Pricing Page",

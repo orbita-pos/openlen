@@ -172,6 +172,12 @@
       "Edit": "Modification d’un livrable",
       "MultiEdit": "Modification d’un livrable",
       "Write": "Rédaction d’un livrable"
+    },
+    "toolFile": {
+      "Read": "Lecture d’un fichier",
+      "Edit": "Modification d’un fichier",
+      "MultiEdit": "Modification d’un fichier",
+      "Write": "Écriture d’un fichier"
     }
   },
   "defaultProjectName": "Page de tarifs",

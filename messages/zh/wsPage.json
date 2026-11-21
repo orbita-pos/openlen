@@ -172,6 +172,12 @@
       "Edit": "正在编辑交付物",
       "MultiEdit": "正在编辑交付物",
       "Write": "正在编写交付物"
+    },
+    "toolFile": {
+      "Read": "正在读取文件",
+      "Edit": "正在编辑文件",
+      "MultiEdit": "正在编辑文件",
+      "Write": "正在编写文件"
     }
   },
   "defaultProjectName": "价格页面",

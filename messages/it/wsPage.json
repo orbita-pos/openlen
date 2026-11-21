@@ -172,6 +172,12 @@
       "Edit": "Modifica di un elaborato",
       "MultiEdit": "Modifica di un elaborato",
       "Write": "Scrittura di un elaborato"
+    },
+    "toolFile": {
+      "Read": "Lettura di un file",
+      "Edit": "Modifica di un file",
+      "MultiEdit": "Modifica di un file",
+      "Write": "Scrittura di un file"
     }
   },
   "defaultProjectName": "Pagina prezzi",

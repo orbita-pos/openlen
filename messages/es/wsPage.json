@@ -172,6 +172,12 @@
       "Edit": "Editando un entregable",
       "MultiEdit": "Editando un entregable",
       "Write": "Escribiendo un entregable"
+    },
+    "toolFile": {
+      "Read": "Leyendo un fichero",
+      "Edit": "Editando un fichero",
+      "MultiEdit": "Editando un fichero",
+      "Write": "Escribiendo un fichero"
     }
   },
   "defaultProjectName": "Página de precios",

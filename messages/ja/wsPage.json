@@ -172,6 +172,12 @@
       "Edit": "成果物を編集中",
       "MultiEdit": "成果物を編集中",
       "Write": "成果物を作成中"
+    },
+    "toolFile": {
+      "Read": "ファイルを読み込み中",
+      "Edit": "ファイルを編集中",
+      "MultiEdit": "ファイルを編集中",
+      "Write": "ファイルを作成中"
     }
   },
   "defaultProjectName": "料金ページ",

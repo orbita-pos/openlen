@@ -172,6 +172,12 @@
       "Edit": "Bewerkt een oplevering",
       "MultiEdit": "Bewerkt een oplevering",
       "Write": "Schrijft een oplevering"
+    },
+    "toolFile": {
+      "Read": "Leest een bestand",
+      "Edit": "Bewerkt een bestand",
+      "MultiEdit": "Bewerkt een bestand",
+      "Write": "Schrijft een bestand"
     }
   },
   "defaultProjectName": "Prijzenpagina",
