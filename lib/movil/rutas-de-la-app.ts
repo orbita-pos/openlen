@@ -9,6 +9,9 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   // The person's own assistant's tab (spec local 2026-11-06-asistente-propio, §4.6.3, phase 5).
   // POST: her welcome creates her from the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.1).
   { fichero: "app/api/assistants/route.ts", metodos: ["GET", "POST"] },
+  // The person's space, born the first time (spec local 2026-11-19-agentes-para-todos, §6.3): with their session or the
+  // phone's key — the phone will make agents there (delivery 4).
+  { fichero: "app/api/space/route.ts", metodos: ["POST"] },
   // «Que Lucía lo atienda» on the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.6).
   { fichero: "app/api/assistants/[id]/projects/route.ts", metodos: ["POST"] },
   { fichero: "app/api/assistants/[id]/chat/route.ts", metodos: ["GET"] },
