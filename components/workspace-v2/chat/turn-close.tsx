@@ -44,6 +44,7 @@ export function TurnClose({
   onRate,
   onClearRate,
   esApp = false,
+  noPage = false,
 }: {
   turn: DesignTurn;
   currentPage: string | null;
@@ -56,6 +57,8 @@ export function TurnClose({
   onClearRate: () => Promise<boolean>;
   /** El proyecto es una app: «No cambió nada de la app», «Revisa la app». */
   esApp?: boolean;
+  /** There is no page here (an assistant's place, the person's space): nothing is said about one not changing. */
+  noPage?: boolean;
 }) {
   const t = useTranslations("panelsChat");
   const tAgent = useTranslations("wsPage.agent");
@@ -128,7 +131,8 @@ export function TurnClose({
   const notice = aviso?.cortado ? t(esApp ? "cutShortApp" : "cutShort", { reason: aviso.motivo }) : aviso?.motivo ?? null;
   // La nota «✓ Publicada…» no es un turno de Len: sin la etiqueta de «No cambió
   // nada» (ver `publish-note.ts`).
-  const showLabel = !(turn.status === "applied" && turn.noDocChange && isPublishNote(turn));
+  // Nor with no page here (an assistant's place, the space): «nothing changed on the page» would be every answer's.
+  const showLabel = !(turn.status !== "reverted" && turn.noDocChange && (noPage || (turn.status === "applied" && isPublishNote(turn))));
 
   return (
     <div className="space-y-1.5">

@@ -297,6 +297,7 @@ export function LenTurn({
   onRate,
   onClearRate,
   esApp = false,
+  noPage = false,
   goalRunsOn = false,
   onContinue,
   onVisualContext,
@@ -330,6 +331,8 @@ export function LenTurn({
   onClearRate: () => Promise<boolean>;
   /** El proyecto es una app (ver `ChangesCard`). */
   esApp?: boolean;
+  /** No page here (an assistant's place, the person's space): see `TurnClose`. */
+  noPage?: boolean;
   /** Hay un encargo armado y activo: Len sigue solo, sin botón de seguir. */
   goalRunsOn?: boolean;
   /** «Sí, sigue con…» de la lista de progreso: manda ese mensaje. Sin él, no hay botón. */
@@ -494,6 +497,7 @@ export function LenTurn({
         onRate={onRate}
         onClearRate={onClearRate}
         esApp={esApp}
+        noPage={noPage}
       />
     </div>
   );

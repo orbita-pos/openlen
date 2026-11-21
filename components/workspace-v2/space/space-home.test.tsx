@@ -27,6 +27,7 @@ vi.mock("../chat/new-chat-panel", () => ({
     disclaimer?: string;
     placeholder?: string;
     emptyState?: { title: string; subtitle: string; suggestions: readonly { key: string; label: string; text: string }[] };
+    noPage?: boolean;
   }) => (
     <i
       data-chat={p.flatProjectId}
@@ -39,6 +40,7 @@ vi.mock("../chat/new-chat-panel", () => ({
       data-empty-title={p.emptyState?.title ?? ""}
       data-empty-subtitle={p.emptyState?.subtitle ?? ""}
       data-empty-chips={JSON.stringify(p.emptyState?.suggestions ?? [])}
+      data-no-page={String(Boolean(p.noPage))}
     />
   ),
 }));
@@ -89,6 +91,8 @@ describe("the space", () => {
     expect(chat(el).dataset.placeholder).toBe("space.placeholder");
     expect(chat(el).dataset.emptyTitle).toBe("space.emptyTitle");
     expect(chat(el).dataset.emptySubtitle).toBe("space.emptySubtitle");
+    // Nor «No cambió nada de la página» under Len's answers there (delivery 1's walk).
+    expect(chat(el).dataset.noPage).toBe("true");
     expect(JSON.parse(chat(el).dataset.emptyChips!)).toEqual(
       ["language", "fitness", "finance", "legal", "cooking"].map((job) => ({
         key: job,

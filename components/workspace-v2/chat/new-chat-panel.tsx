@@ -123,6 +123,9 @@ export interface NewChatPanelProps {
    *  (the person’s space: agents). An assistant’s place keeps hers. */
   placeholder?: string;
   emptyState?: EmptyContent;
+  /** No page here (the person's space): an answer that changed nothing doesn't say «the page didn't change». An
+   *  assistant's place is the same without it. */
+  noPage?: boolean;
 }
 
 /** An empty chat’s title, subtitle and chips, given by the caller: each chip shows its label and fills its text. */
@@ -208,6 +211,7 @@ function AgentChatView({
   disclaimer,
   placeholder,
   emptyState,
+  noPage = false,
 }: NewChatPanelProps & {
   projectId: string;
   onLocalUpdate: NonNullable<NewChatPanelProps["onFlatHtmlUpdate"]>;
@@ -637,6 +641,7 @@ function AgentChatView({
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
                 {...(soloLectura ? {} : { onContinue: chat.continueWith, onVisualContext: setVisualContext })}
                 esApp={esApp}
+                noPage={noPage || Boolean(assistant)}
                 {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={18} /> } } : {})}
               />
             </div>

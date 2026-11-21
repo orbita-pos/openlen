@@ -149,6 +149,26 @@ describe("el cierre del turno", () => {
     expect(cierre({ cortado: true, avisoTurno: "tope" }, true)).toContain("cutShortApp");
   });
 
+  // Delivery 1's walk: under an agent's answer her place said «No cambió nada de la página» — every time, as an agent
+  // rarely changes a page — and so did the space, which has none. With no page, nothing is said about one.
+  it("🔴 with no page (an assistant's place, the space): no «nothing changed on the page»; a change still shows", () => {
+    const sinPagina = (turno: Partial<DesignTurn>) =>
+      montar(
+        <TurnClose
+          turn={{ id: "t1", userText: "x", assistantReasoning: "", status: "applied", appliedAt: 0, preEditHtml: "", ...turno } as DesignTurn}
+          currentPage={null}
+          vote={undefined}
+          onRetry={() => {}}
+          onRate={async () => true}
+          onClearRate={async () => true}
+          noPage
+        />,
+      ).textContent;
+    expect(sinPagina({ noDocChange: true })).not.toContain("noChange.label");
+    expect(sinPagina({})).toContain("newChat.close.applied");
+    expect(sinPagina({ status: "reverted" })).toContain("reverted");
+  });
+
   it("en una página, como siempre", () => {
     expect(cierre({ noDocChange: true }, false)).not.toContain("labelApp");
     expect(cierre({ noDocChange: true }, false)).toContain("noChange.label");

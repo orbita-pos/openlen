@@ -117,6 +117,7 @@ export function SpaceHome({
             disclaimer={t("space.disclaimer")}
             placeholder={t("space.placeholder")}
             emptyState={emptyState}
+            noPage
           />
         </div>
         {/* Beside the chat on a wide screen; over it on a phone. The lens fills its box (it is absolute inset-0). */}
