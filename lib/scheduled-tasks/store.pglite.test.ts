@@ -96,6 +96,16 @@ describe("an agent's tasks", () => {
     for (const statement of SCHEDULED_TASKS_OF_AN_AGENT) await pg.query(statement);
   }
 
+  // Delivery 3's deferred minor M3: with OPENLEN_ASSISTANT=0 the route refuses an agent's turn, so its task failed every run.
+  it("🔴 with assistants off, what is due leaves agents' tasks where they are", async () => {
+    await withAgents();
+    await store.createTask(input("t-len"));
+    await store.createTask({ ...input("t-a1"), assistantId: "a1" });
+    const at = new Date("2026-11-02T15:03:00Z");
+    expect((await store.dueTasks(at, 20)).map((t) => t.id).sort()).toEqual(["t-a1", "t-len"]);
+    expect((await store.dueTasks(at, 20, { agents: false })).map((t) => t.id)).toEqual(["t-len"]);
+  });
+
   it("🔴 stores the agent, and each conversation lists only its own", async () => {
     await withAgents();
     await store.createTask(input("t-len"));

@@ -39,6 +39,8 @@ export interface SchedulerDeps {
   ownerPlan(ownerId: string): Promise<Plan>;
   /** The agent a task belongs to (spec local 2026-11-19-agentes-para-todos, §6.4): where it lives, or null if it is gone. */
   agentOf(assistantId: string): Promise<{ homeProjectId: string; name: string } | null>;
+  /** OPENLEN_ASSISTANT: off, an agent's turn is refused, so its tasks wait (delivery 3's M3). */
+  assistantsOn(): boolean;
   launch: typeof launchScheduledTurn;
   deliverResult(run: RunRow, task: TaskRow, text: string, cards: Parameters<Parameters<typeof launchScheduledTurn>[0]["reply"]>[1]): Promise<void>;
   deliverFailure(run: RunRow, task: TaskRow, outcome: ScheduledRunOutcome, phrase: string): Promise<void>;
@@ -106,7 +108,7 @@ async function tell(run: RunRow, task: TaskRow, why: "plan_required" | "no_acces
 export async function tick(deps: SchedulerDeps): Promise<number> {
   const now = deps.now();
   let launched = 0;
-  for (const task of await deps.store.dueTasks(now, DUE_PER_TICK)) {
+  for (const task of await deps.store.dueTasks(now, DUE_PER_TICK, { agents: deps.assistantsOn() })) {
     try {
       const record = task.record;
       const recurring = isRecurringScheduleRecord(record);
@@ -175,6 +177,7 @@ async function defaultDeps(): Promise<SchedulerDeps> {
     import("./deliver"),
     import("@/lib/assistants/store"),
   ]);
+  const { assistantsEnabled } = await import("@/lib/assistants/enabled");
   const deliverDeps = await deliver.defaultDeliverDeps();
   return {
     now: () => new Date(),
@@ -190,6 +193,7 @@ async function defaultDeps(): Promise<SchedulerDeps> {
       const a = await assistantById(assistantId);
       return a ? { homeProjectId: a.homeProjectId, name: a.name } : null;
     },
+    assistantsOn: assistantsEnabled,
     launch: launchScheduledTurn,
     deliverResult: (run, task, text, cards) => deliver.deliverResult(run, task, text, cards, deliverDeps),
     deliverFailure: (run, task, outcome, phrase) => deliver.deliverFailure(run, task, outcome, phrase, deliverDeps),

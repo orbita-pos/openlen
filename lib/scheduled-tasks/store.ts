@@ -175,11 +175,14 @@ export async function resumeTask(projectId: string, id: string, now: Date): Prom
   return row ?? "not_found";
 }
 
-export async function dueTasks(now: Date, limit: number): Promise<TaskRow[]> {
+/** What is due, oldest first. With `agents: false` (OPENLEN_ASSISTANT=0), agents' tasks are left where they are: their
+ *  turn would be refused, so they wait — and back on, a recurring one runs its latest occurrence, as after a restart. */
+export async function dueTasks(now: Date, limit: number, opts: { readonly agents?: boolean } = {}): Promise<TaskRow[]> {
+  const t = schema.scheduledTasks;
   return db
     .select()
-    .from(schema.scheduledTasks)
-    .where(and(eq(schema.scheduledTasks.status, "active"), isNull(schema.scheduledTasks.pausedAt), lte(schema.scheduledTasks.scheduledAt, now)))
+    .from(t)
+    .where(and(eq(t.status, "active"), isNull(t.pausedAt), lte(t.scheduledAt, now), ...(opts.agents === false ? [isNull(t.assistantId)] : [])))
     .orderBy(asc(schema.scheduledTasks.scheduledAt))
     .limit(limit);
 }

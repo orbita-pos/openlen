@@ -24,7 +24,8 @@ function memory(records: ScheduleRecord[]) {
   }
   const runs = new Map<string, RunRow>();
   const store: SchedulerDeps["store"] = {
-    dueTasks: async (now) => [...tasks.values()].filter((t) => t.status === "active" && t.scheduledAt <= now).map((t) => ({ ...t })),
+    dueTasks: async (now, _limit, opts) =>
+      [...tasks.values()].filter((t) => t.status === "active" && t.scheduledAt <= now && (opts?.agents !== false || t.assistantId === null)).map((t) => ({ ...t })),
     claimDue: async (task, claim) => {
       const cur = tasks.get(task.id);
       if (!cur || cur.status !== "active" || cur.scheduledAt.getTime() !== task.scheduledAt.getTime()) return null;
@@ -53,6 +54,7 @@ function deps(over: Partial<SchedulerDeps> & { store: SchedulerDeps["store"] }, 
     access: vi.fn(async () => ({ canEdit: true, ownerId: "owner" })),
     ownerPlan: vi.fn(async () => "pro" as const),
     agentOf: vi.fn(async () => ({ homeProjectId: "p1", name: "Mr. Smith" })),
+    assistantsOn: () => true,
     launch: vi.fn(),
     deliverResult: vi.fn(async () => {}),
     deliverFailure: vi.fn(async () => {}),
@@ -110,6 +112,20 @@ describe("tick", () => {
       await tick(d2);
       await vi.mocked(d2.launch).mock.calls[0]![0].fail(null, false);
       expect(vi.mocked(d2.deliverFailure).mock.calls[0]![3]).not.toContain("correo");
+    });
+
+    // Delivery 3's deferred minor M3: with OPENLEN_ASSISTANT=0 the route refuses its turn, so it failed and emailed every run.
+    it("🔴 with assistants off, it waits: not claimed, no turn, no email — and back on, it runs", async () => {
+      const m = memory([weekly()]);
+      due(m, "a1");
+      const off = deps({ store: m.store, assistantsOn: () => false }, "2026-11-02T15:04:00Z");
+      expect(await tick(off)).toBe(0);
+      expect(off.launch).not.toHaveBeenCalled();
+      expect(off.deliverFailure).not.toHaveBeenCalled();
+      expect(m.tasks.get("w")!).toMatchObject({ status: "active", scheduledAt: new Date("2026-11-02T15:03:00Z") });
+      const on = deps({ store: m.store }, "2026-11-02T15:05:00Z");
+      expect(await tick(on)).toBe(1);
+      expect(vi.mocked(on.launch).mock.calls[0]![0]).toMatchObject({ extraBody: { assistantId: "a1" } });
     });
 
     it("🔴 an agent that is gone, or no longer lives in the task's project: no turn, the task stops, one email", async () => {
