@@ -50,6 +50,22 @@ describe("which assistant the app is (spec local 2026-11-16-movil-es-tu-asistent
     expect(appModeOf({ ...base, projects: [SHARED] })).toEqual({ kind: "len", invite: false });
   });
 
+  // Agents for everyone, delivery 4 (spec local 2026-11-19-agentes-para-todos, §6.10): an agent made on the web lives in
+  // the person's space, which attends none of their pages; the phone of someone with a page's assistant stays hers.
+  const CHEF: AssistantListItem = { ...assistant("a3", "Chef Rosa"), projectId: "space", projectIds: ["space"] };
+
+  it("🔴 with none chosen, an agent of your space doesn't take your page's assistant's place", () => {
+    expect(appModeOf({ ...base, assistants: [CHEF, LUCIA] })).toEqual({ kind: "assistant", assistant: LUCIA });
+  });
+
+  it("with no pages, the newest agent", () => {
+    expect(appModeOf({ ...base, projects: [], assistants: [CHEF, LUCIA] })).toEqual({ kind: "assistant", assistant: CHEF });
+  });
+
+  it("🔴 no pages and the only agent deleted on the web: today's app, never the welcome", () => {
+    expect(appModeOf({ ...base, projects: [], assistants: [], chosenId: "a3" })).toEqual({ kind: "len", invite: false });
+  });
+
   it("🔴 assistants off on the server: today's app, whatever is saved", () => {
     expect(appModeOf({ ...base, enabled: false, assistants: [LUCIA], chosenId: "a1" })).toEqual({ kind: "len", invite: false });
   });

@@ -1,5 +1,5 @@
 // WHICH ASSISTANT THE APP IS (spec local 2026-11-16-movil-es-tu-asistente, §5.1): Len móvil is the app of your own
-// assistant. With one, it is her; with several, the one chosen on this phone (or the newest); with none, the welcome
+// assistant. With one, it is her; with several, the one chosen on this phone (or the newest of your pages); with none, the welcome
 // creates her. Today's app, with Len, is the safety net: assistants off on the server, no project of your own to be
 // her home, or the welcome dismissed (then the sheet invites you to meet her).
 import type { AssistantListItem } from "@/lib/assistants/view";
@@ -26,7 +26,10 @@ export function appModeOf(o: {
   readonly welcomeDismissed: boolean;
 }): AppMode {
   if (!o.loaded || !o.enabled) return { kind: "len", invite: false };
-  const chosen = o.assistants.find((a) => a.id === o.chosenId) ?? o.assistants[0];
+  // None chosen on this phone: the newest that attends one of your pages, else the newest. An agent made on the web lives
+  // in your space and attends none (spec local 2026-11-19-agentes-para-todos, §6.10): it doesn't take her place.
+  const ofYourPages = o.assistants.find((a) => a.projectIds.some((id) => o.projects.some((p) => p.id === id)));
+  const chosen = o.assistants.find((a) => a.id === o.chosenId) ?? ofYourPages ?? o.assistants[0];
   if (chosen) return { kind: "assistant", assistant: chosen };
   const ownsOne = o.projects.some((p) => !p.compartido);
   if (!ownsOne) return { kind: "len", invite: false };
