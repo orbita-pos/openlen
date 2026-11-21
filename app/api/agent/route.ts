@@ -543,9 +543,12 @@ async function correrTurno(
   // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio, §4.1): like Claude Code's `--agent <name>`, the
   // turn is Len's with the hidden `assistant` definition as its main thread — its own conversation, Len's prompt plus
   // its section, Len's tools minus what builds, a read-only session. Only from the person's own request, only theirs,
-  // and only in the project it was born in (phase 1). A goal or a birth is Len's.
+  // and only in the project it was born in (phase 1). A goal or a birth is Len's. Of the turns the server starts, only its
+  // own scheduled task is the agent's (spec local 2026-11-19-agentes-para-todos, §6.4): the scheduler puts its id in the
+  // body it makes; Len Watch, the subagents' notices, «Hazlo», a tool's creation and ask_len stay Len's.
   let asistente: AssistantRow | null = null;
-  if (typeof body?.assistantId === "string" && body.assistantId && !opts.round && !opts.hilo && !opts.email && !opts.scheduled) {
+  const agentsTask = !opts.scheduled || opts.scheduled.origin.kind === "scheduled";
+  if (typeof body?.assistantId === "string" && body.assistantId && !opts.round && !opts.hilo && !opts.email && agentsTask) {
     if (!assistantsEnabled()) return errorJson(404, "assistants are off", "assistants_off");
     const encontrado = await assistantById(body.assistantId.slice(0, 100)).catch(() => null);
     if (!encontrado || encontrado.personId !== quien || encontrado.homeProjectId !== projectId) return errorJson(404, "assistant not found", "not_found");

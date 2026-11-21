@@ -205,7 +205,8 @@
       "esperando": "Wartet in OpenLen auf dich:",
       "planGratis": "Nicht erledigt: Geplante Aufgaben gehören zu den bezahlten Tarifen, und das Konto des Projektinhabers ist im Gratis-Tarif. Die Aufgabe ist angehalten; mit einem bezahlten Tarif bitte Len erneut darum.",
       "sinAcceso": "Nicht erledigt: Wer diese Aufgabe erstellt hat, kann in diesem Projekt nicht mehr mit Len arbeiten. Die Aufgabe ist angehalten.",
-      "perdida": "Nicht erledigt: OpenLen war zur geplanten Zeit nicht erreichbar, und es ist mehr als ein Tag vergangen. Wenn du sie noch brauchst, bitte Len darum."
+      "perdida": "Nicht erledigt: OpenLen war zur geplanten Zeit nicht erreichbar, und es ist mehr als ein Tag vergangen. Wenn du sie noch brauchst, bitte Len darum.",
+      "agenteYaNo": "Ich habe sie nicht erledigt: Der Agent, der diese Aufgabe angelegt hat, existiert nicht mehr oder lebt nicht mehr hier. Die Aufgabe ist gestoppt."
     }
   },
   "envVars": {

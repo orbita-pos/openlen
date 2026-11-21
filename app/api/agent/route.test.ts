@@ -5397,6 +5397,26 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(evento).toMatchObject({ type: "len_turno", recipientUserId: "u1", asistente: { name: "Lucía", slug: "lucia" } });
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): an agent's scheduled task runs as
+  // the agent — and only a scheduled task: every other turn the server starts stays Len's.
+  describe("started by the server", () => {
+    const runner = () => mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+    const where = { url: "http://x/api/agent", signal: new AbortController().signal };
+
+    it("🔴 an agent's scheduled task runs as the agent, in its conversation", async () => {
+      const origin = { kind: "scheduled" as const, taskId: "t1", title: "Palabras", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "Mándame 5 palabras", turnId: "77777777-7777-4777-8777-777777777771", assistantId: "a1" }, where, { scheduled: { framing: "[SCHEDULE REMINDER]\nMándame 5 palabras", origin, onReply: vi.fn(async () => {}) } }));
+      expect(mocks.turnosParaElHistorial).toHaveBeenCalledWith("p1", "assistant:a1");
+    });
+
+    it("🔴 any other server turn ignores an assistantId: it stays Len's", async () => {
+      const origin = { kind: "subagents" as const, ids: ["r1"] };
+      mocks.turnosParaElHistorial.mockClear();
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "", turnId: "77777777-7777-4777-8777-777777777772", assistantId: "a1" }, where, { scheduled: { framing: "Background subagent r1 finished.", origin, onReply: vi.fn(async () => {}) } }));
+      expect(mocks.turnosParaElHistorial).not.toHaveBeenCalledWith("p1", "assistant:a1");
+    });
+  });
+
   it("runs in its own conversation, with Len's prompt plus its own and Len's tools minus what builds", async () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const chat = await import("@/lib/projects/chat");

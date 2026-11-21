@@ -205,7 +205,8 @@
       "esperando": "Wacht op je in OpenLen:",
       "planGratis": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en het account van de projecteigenaar is Gratis. De taak is gestopt; vraag het Len opnieuw met een betaald abonnement.",
       "sinAcceso": "Niet gedaan: wie deze taak heeft gemaakt, kan in dit project niet meer met Len werken. De taak is gestopt.",
-      "perdida": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag voorbij. Heb je het nog nodig, vraag het dan aan Len."
+      "perdida": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag voorbij. Heb je het nog nodig, vraag het dan aan Len.",
+      "agenteYaNo": "Niet gedaan: de agent die deze taak vroeg bestaat niet meer of woont hier niet meer. De taak is gestopt."
     }
   },
   "envVars": {

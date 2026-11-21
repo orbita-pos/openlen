@@ -247,7 +247,7 @@ export function scheduledTaskEmail(
 }
 
 /** Why a scheduled task was not done, when it never reached Len. */
-export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed"): string {
+export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed" | "agent_gone"): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });
-  return t(why === "plan_required" ? "planGratis" : why === "no_access" ? "sinAcceso" : "perdida");
+  return t(why === "plan_required" ? "planGratis" : why === "no_access" ? "sinAcceso" : why === "agent_gone" ? "agenteYaNo" : "perdida");
 }

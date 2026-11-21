@@ -37,6 +37,8 @@ export interface SchedulerDeps {
   /** Whether the creator can still talk to Len in the project, and who owns it. Null: no access at all. */
   access(projectId: string, userId: string): Promise<{ canEdit: boolean; ownerId: string } | null>;
   ownerPlan(ownerId: string): Promise<Plan>;
+  /** The agent a task belongs to (spec local 2026-11-19-agentes-para-todos, §6.4): where it lives, or null if it is gone. */
+  agentOf(assistantId: string): Promise<{ homeProjectId: string } | null>;
   launch: typeof launchScheduledTurn;
   deliverResult(run: RunRow, task: TaskRow, text: string, cards: Parameters<Parameters<typeof launchScheduledTurn>[0]["reply"]>[1]): Promise<void>;
   deliverFailure(run: RunRow, task: TaskRow, outcome: ScheduledRunOutcome, phrase: string): Promise<void>;
@@ -70,6 +72,8 @@ function launchRun(run: RunRow, task: TaskRow, deps: SchedulerDeps): void {
     timeZone: zoneOf(task),
     locale: task.locale,
     filaId: run.id,
+    // An agent's task runs as the agent: the route reads its id from the request the server makes (delivery 3).
+    ...(task.assistantId ? { extraBody: { assistantId: task.assistantId } } : {}),
     onStart: () => deps.store.markRun(run.id, { startedAt: deps.now() }),
     reply: (text, cards) => deps.deliverResult(run, task, text, cards),
     fail: (fallo, cut) =>
@@ -77,14 +81,16 @@ function launchRun(run: RunRow, task: TaskRow, deps: SchedulerDeps): void {
   });
 }
 
-/** Before launching: a paid owner and a creator who can still talk to Len there. */
-async function refusal(task: TaskRow, deps: SchedulerDeps): Promise<"plan_required" | "no_access" | null> {
+/** Before launching: a paid owner, a creator who can still talk to Len there, and — for an agent's task — the agent still
+ *  living in that project (never a Len turn in its place). */
+async function refusal(task: TaskRow, deps: SchedulerDeps): Promise<"plan_required" | "no_access" | "agent_gone" | null> {
   const access = await deps.access(task.projectId, task.createdBy);
   if (!access?.canEdit) return "no_access";
+  if (task.assistantId && (await deps.agentOf(task.assistantId))?.homeProjectId !== task.projectId) return "agent_gone";
   return (await deps.ownerPlan(access.ownerId)) === "free" ? "plan_required" : null;
 }
 
-async function tell(run: RunRow, task: TaskRow, why: "plan_required" | "no_access" | "missed", deps: SchedulerDeps): Promise<void> {
+async function tell(run: RunRow, task: TaskRow, why: "plan_required" | "no_access" | "missed" | "agent_gone", deps: SchedulerDeps): Promise<void> {
   await deps.deliverFailure(run, task, why, scheduledTaskPhrase(idiomaDelCorreo(task.locale), why));
 }
 
@@ -152,12 +158,13 @@ const PROCESS_STARTED_AT = new Date();
 let running: { stop(): void } | null = null;
 
 async function defaultDeps(): Promise<SchedulerDeps> {
-  const [store, { accesoAlProyecto, puede }, { getUserPlan }, { launchScheduledTurn }, deliver] = await Promise.all([
+  const [store, { accesoAlProyecto, puede }, { getUserPlan }, { launchScheduledTurn }, deliver, { assistantById }] = await Promise.all([
     import("./store"),
     import("@/lib/projects/acceso"),
     import("@/lib/limits"),
     import("@/lib/agent/turnos-desde-el-servidor"),
     import("./deliver"),
+    import("@/lib/assistants/store"),
   ]);
   const deliverDeps = await deliver.defaultDeliverDeps();
   return {
@@ -170,6 +177,10 @@ async function defaultDeps(): Promise<SchedulerDeps> {
       return a ? { canEdit: puede(a.rol, "editar"), ownerId: a.duenoId } : null;
     },
     ownerPlan: (ownerId) => getUserPlan(ownerId),
+    agentOf: async (assistantId) => {
+      const a = await assistantById(assistantId);
+      return a ? { homeProjectId: a.homeProjectId } : null;
+    },
     launch: launchScheduledTurn,
     deliverResult: (run, task, text, cards) => deliver.deliverResult(run, task, text, cards, deliverDeps),
     deliverFailure: (run, task, outcome, phrase) => deliver.deliverFailure(run, task, outcome, phrase, deliverDeps),

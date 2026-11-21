@@ -205,7 +205,8 @@
       "esperando": "Esperando por você no OpenLen:",
       "planGratis": "Não fiz: as tarefas agendadas são dos planos pagos e a conta do dono do projeto está no plano Grátis. A tarefa ficou parada; com um plano pago, peça de novo ao Len.",
       "sinAcceso": "Não fiz: quem criou esta tarefa já não pode trabalhar com o Len neste projeto. A tarefa ficou parada.",
-      "perdida": "Não fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça ao Len."
+      "perdida": "Não fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça ao Len.",
+      "agenteYaNo": "Não a fiz: o agente que pediu esta tarefa não existe mais ou não mora mais aqui. A tarefa ficou parada."
     }
   },
   "envVars": {

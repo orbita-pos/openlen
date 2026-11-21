@@ -2619,7 +2619,7 @@ export const scheduledTaskRuns = pgTable(
   (t) => [index("scheduledTaskRuns_claimedAt_idx").on(t.claimedAt)],
 );
 
-export type ScheduledRunOutcome = "done" | "no_credits" | "member_cap" | "cut" | "failed" | "missed" | "plan_required" | "no_access";
+export type ScheduledRunOutcome = "done" | "no_credits" | "member_cap" | "cut" | "failed" | "missed" | "plan_required" | "no_access" | "agent_gone";
 
 // «LEN QUE AVISA» (spec local 2026-11-03-len-que-avisa): a task that wakes on a change of a source, not on
 // the time. DeepSeek's event-triggered automation tasks: an instruction, a source with its parameters and the

@@ -52,6 +52,7 @@ function deps(over: Partial<SchedulerDeps> & { store: SchedulerDeps["store"] }, 
     newRunId: () => `run-${++n}`,
     access: vi.fn(async () => ({ canEdit: true, ownerId: "owner" })),
     ownerPlan: vi.fn(async () => "pro" as const),
+    agentOf: vi.fn(async () => ({ homeProjectId: "p1" })),
     launch: vi.fn(),
     deliverResult: vi.fn(async () => {}),
     deliverFailure: vi.fn(async () => {}),
@@ -72,6 +73,42 @@ describe("tick", () => {
     expect(call.framing.startsWith("[SCHEDULE REMINDER BATCH]\nThis is a scheduled message from the user\nreminders_json: ")).toBe(true);
     expect(call.origin).toEqual({ kind: "scheduled", taskId: "w", title: "PDF de resultados", occurrenceAt: "2026-11-02T15:03:00.000Z" });
     expect(m.tasks.get("w")!.scheduledAt.toISOString()).toBe("2026-11-09T15:03:00.000Z");
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3).
+  describe("an agent's task", () => {
+    const due = (m: ReturnType<typeof memory>, assistantId: string | null) =>
+      m.tasks.set("w", { ...m.tasks.get("w")!, assistantId, scheduledAt: new Date("2026-11-02T15:03:00Z"), record: { ...m.tasks.get("w")!.record, scheduledAt: "2026-11-02T15:03:00.000Z" } as ScheduleRecord });
+
+    it("🔴 launches as the agent: its id rides in the request the server makes", async () => {
+      const m = memory([weekly()]);
+      due(m, "a1");
+      const d = deps({ store: m.store }, "2026-11-02T15:04:00Z");
+      expect(await tick(d)).toBe(1);
+      expect(vi.mocked(d.launch).mock.calls[0]![0]).toMatchObject({ extraBody: { assistantId: "a1" } });
+      expect(d.agentOf).toHaveBeenCalledWith("a1");
+    });
+
+    it("Len's task launches exactly as before, with nothing more in its request", async () => {
+      const m = memory([weekly()]);
+      due(m, null);
+      const d = deps({ store: m.store }, "2026-11-02T15:04:00Z");
+      await tick(d);
+      expect(vi.mocked(d.launch).mock.calls[0]![0]).not.toHaveProperty("extraBody");
+      expect(d.agentOf).not.toHaveBeenCalled();
+    });
+
+    it("🔴 an agent that is gone, or no longer lives in the task's project: no turn, the task stops, one email", async () => {
+      for (const agent of [null, { homeProjectId: "elsewhere" }]) {
+        const m = memory([weekly()]);
+        due(m, "a1");
+        const d = deps({ store: m.store, agentOf: vi.fn(async () => agent) }, "2026-11-02T15:04:00Z");
+        expect(await tick(d)).toBe(0);
+        expect(d.launch).not.toHaveBeenCalled();
+        expect(m.tasks.get("w")!.status).toBe("inactive");
+        expect(vi.mocked(d.deliverFailure).mock.calls[0]![2]).toBe("agent_gone");
+      }
+    });
   });
 
   it("two passes at once launch it once", async () => {
