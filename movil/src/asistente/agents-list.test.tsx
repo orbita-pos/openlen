@@ -69,4 +69,15 @@ describe("the list of agents", () => {
     act(() => host.querySelector<HTMLButtonElement>("[data-agentes-volver]")!.click());
     expect(onCerrar).toHaveBeenCalled();
   });
+
+  // Final review I1: like every other panel, Android's back closes it instead of sending the app to the background.
+  it("🔴 as a panel, the phone's back closes it", async () => {
+    const onCerrar = vi.fn();
+    paint({ onCerrar });
+    await act(async () => {
+      history.back();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(onCerrar).toHaveBeenCalled();
+  });
 });

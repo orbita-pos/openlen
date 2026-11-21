@@ -8,6 +8,7 @@ import { AssistantFigure } from "@/components/workspace-v2/assistant/figure";
 import { lookOfRow } from "@/lib/assistants/look";
 import type { AssistantListItem } from "@/lib/assistants/view";
 
+import { useAtras } from "../atras";
 import "./agents-list.css";
 
 export function AgentsList({
@@ -28,6 +29,8 @@ export function AgentsList({
   onCerrar?: () => void;
 }) {
   const t = useTranslations("movil.asistente");
+  // As a panel, Android's back closes it, as it closes every other one (atras.ts; final review I1).
+  useAtras(Boolean(onCerrar), () => onCerrar?.());
   const lista = (
     <ul className="agentes-lista">
       {agentes.map((a) => (
