@@ -1,0 +1,19 @@
+/* The list of agents (agents-list.tsx): rows like the project selector's (estilos/app.css, .app-selector-fila), with
+   the selector's own tints of her color, which live only inside .app-selector. */
+.agentes-lista {
+  --agentes-acento: var(--her-deep, #A43A13);
+  --agentes-elegida: rgba(var(--her-rgb, 255, 138, 30), .09);
+  list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px;
+}
+:root[data-theme="dark"] .agentes-lista {
+  --agentes-acento: var(--her-light, #FFAC72);
+  --agentes-elegida: rgba(var(--her-rgb, 255, 138, 30), .17);
+}
+.agentes-fila {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 8px 12px;
+  border: 0; border-radius: 14px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.agentes-fila b { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agentes-fila[aria-current="true"] { background: var(--agentes-elegida); }
+.agentes-fila:focus-visible { outline: 2px solid var(--agentes-acento); outline-offset: 2px; }
+.agentes-crear { color: var(--agentes-acento); font-weight: 600; justify-content: center; }
