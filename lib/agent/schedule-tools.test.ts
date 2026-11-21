@@ -65,6 +65,23 @@ function fake(o: { plan?: "free" | "pro"; rows?: TaskRow[] } = {}) {
 
 const result = (out: ToolOutcome) => JSON.parse(String(out.response.tool_result));
 
+// Seen in delivery 3's paid walk: the turn ran out of credits right after scheduling, the cap's closing read «No change
+// was applied in this turn» (it counts what the tools say they wrote), and the agent told the person the task wasn't
+// made. A task saved, changed or deleted is a write of the turn, like a file's; a refusal or a list is not.
+describe("what a schedule tool says it wrote", () => {
+  it("🔴 creating, changing and deleting a task are writes of the turn; a refusal and a list are not", async () => {
+    const { deps } = fake();
+    const created = await toolScheduleCreate(session, deps, WEEKLY);
+    expect(created.mutoDurable).toBe(true);
+    const id = result(created).id as string;
+    expect((await toolScheduleUpdate(session, deps, { id, title: "Otro" })).mutoDurable).toBe(true);
+    expect((await toolScheduleList(session, deps, {})).mutoDurable).toBeUndefined();
+    expect((await toolScheduleDelete(session, deps, { id })).mutoDurable).toBe(true);
+    expect((await toolScheduleDelete(session, deps, { id: "schedule-unknown" })).mutoDurable).toBeUndefined();
+    expect((await toolScheduleCreate(session, fake({ plan: "free" }).deps, WEEKLY)).mutoDurable).toBeUndefined();
+  });
+});
+
 describe("schedule_create", () => {
   it("refuses on Free and saves nothing", async () => {
     const { deps, scheduledTasks } = fake({ plan: "free" });

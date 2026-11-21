@@ -213,9 +213,12 @@ function internalError(): ToolError {
   return { code: "internal_error", message: "The schedule operation failed." };
 }
 
-async function guarded(run: () => Promise<unknown>): Promise<ToolOutcome> {
+/** `writes`: a tool that saves, changes or deletes a task. When it succeeds the turn counts it as written, like a file
+ *  (`mutoDurable`): a turn cut after it keeps its row and its closing hears the task was made. */
+async function guarded(run: () => Promise<unknown>, writes = false): Promise<ToolOutcome> {
   try {
-    return answer(await run());
+    const out = answer(await run());
+    return writes && out.response.ok ? { ...out, mutoDurable: true } : out;
   } catch (error) {
     if (error instanceof ScheduleInputError || error instanceof OpenLenScheduleError) return answer({ code: error.code, message: error.message });
     console.error("[schedule] tool failed", error);
@@ -306,7 +309,7 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
         throw error;
       });
     return viewForModel(row.record, now, row.timeZone);
-  });
+  }, true);
 }
 
 export async function toolScheduleList(session: AgentSession, deps: AgentDeps, _args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -378,7 +381,7 @@ export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps,
     if (await sd.remove(session.projectId, args.id, scopeOf(session))) return { id: args.id, deleted: true };
     if (sd.events && isOwner(session) && !session.assistant && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
     return { id: args.id, deleted: false, code: "schedule_not_found" };
-  });
+  }, true);
 }
 
 export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
@@ -393,5 +396,5 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
       return row ? eventView(row, await sd.events.latestCards(row.id, 3)) : { id: args.id, code: "schedule_not_found", message: "No such schedule." };
     }
     return updateScheduledTask(session.projectId, args, sd, scopeOf(session));
-  });
+  }, true);
 }
