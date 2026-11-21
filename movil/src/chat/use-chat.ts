@@ -217,6 +217,8 @@ export function useChat(o: OpcionesDelChat) {
    *  web sends it: marked, so the server lets it go once. */
   const abrirCon = useCallback(
     (texto: string) => {
+      // With one of her turns live her conversation has begun: there is no opening to send, and never as a correction.
+      if ((vivoRef.current && !vivoRef.current.terminado) || reengancheRef.current) return;
       const k = nuevaClave("tu");
       setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, archivos: [], estado: "enviando" }]);
       void enviar(k, texto, undefined, undefined, [], true);

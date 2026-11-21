@@ -69,9 +69,24 @@ describe("assistants store", () => {
   it("🔴 her first message is claimed once, even by two at the same moment", async () => {
     const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
     if (!r.ok) throw new Error("not created");
+    await pg.query(`update "assistants" set "agentType" = 'english-teacher' where "id" = $1`, [r.assistant.id]);
     expect((await Promise.all([claimOpening(r.assistant.id), claimOpening(r.assistant.id)])).filter(Boolean)).toHaveLength(1);
     expect(await claimOpening(r.assistant.id)).toBe(false);
     expect((await assistantById(r.assistant.id))?.openedAt).toBeInstanceOf(Date);
+  });
+
+  // Final review of this pass: a stale opening on the phone could be sent to another assistant — one without a file, or
+  // one whose conversation already started (her openedAt is NULL after the migration). Neither has an opening to claim.
+  it("🔴 there is no opening to claim for an assistant without a file, or one whose conversation has begun", async () => {
+    const plain = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!plain.ok) throw new Error("not created");
+    expect(await claimOpening(plain.assistant.id)).toBe(false);
+    const talked = await createAssistant({ personId: "u1", projectId: "p2", input: { ...LUCIA, name: "Marta" } });
+    if (!talked.ok) throw new Error("not created");
+    await pg.query(`update "assistants" set "agentType" = 'english-teacher' where "id" in ($1, $2)`, [plain.assistant.id, talked.assistant.id]);
+    await pg.query(`insert into "projectChatMessages" values ('m1', 'p2', $1)`, [`assistant:${talked.assistant.id}`]);
+    expect(await claimOpening(talked.assistant.id)).toBe(false);
+    expect((await assistantById(talked.assistant.id))?.openedAt).toBeNull();
   });
 
   it("refuses the same name twice for one person", async () => {

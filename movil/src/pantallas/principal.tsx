@@ -193,7 +193,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const suId = ella?.id ?? null;
   const [suHistorial, setSuHistorial] = useState<StoredChatTurn[]>(SIN_HISTORIAL);
   // An agent whose conversation hasn't started: her file's first message, sent when her chat opens (as her place does).
-  const [suInicio, setSuInicio] = useState<string | null>(null);
+  // Whose it is goes with it: read for one agent, it never goes to the next one tapped (final review of this pass).
+  const [suInicio, setSuInicio] = useState<{ readonly id: string; readonly texto: string } | null>(null);
   const suIdActual = useRef(suId);
   useLayoutEffect(() => { suIdActual.current = suId; });
   const recargarSuChat = useCallback(() => {
@@ -201,7 +202,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     void leerSuChatYSuInicio(cliente, suId).then(({ historial, inicio }) => {
       if (suIdActual.current !== suId) return;
       setSuHistorial(historial);
-      setSuInicio(inicio);
+      setSuInicio(inicio ? { id: suId, texto: inicio } : null);
     }, () => {});
   }, [cliente, suId]);
   useEffect(() => {
@@ -458,10 +459,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // place on the web opens her at the same moment.
   const abiertas = useRef(new Set<string>());
   useEffect(() => {
-    if (!ella || !chatAbierto || !suInicio || abiertas.current.has(ella.id)) return;
+    if (!ella || !chatAbierto || !suInicio || suInicio.id !== ella.id || abiertas.current.has(ella.id)) return;
     abiertas.current.add(ella.id);
     setSuInicio(null);
-    chatDeElla.abrirCon(suInicio);
+    chatDeElla.abrirCon(suInicio.texto);
   }, [ella, chatAbierto, suInicio, chatDeElla]);
   const dichoElla = ella ? loQueDijoLen(suHistorial) : null;
   // HER LEN CARDS, followed here and not in her chat (final review, I2): the sheet over the page needs them too — a Len

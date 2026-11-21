@@ -20,7 +20,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { projectsOfAssistant, titlesOf, type ServedProject } from "@/lib/assistants/projects";
 import { viewingLine, type ViewingProject } from "@/lib/assistants/viewing";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
-import { assistantById, claimOpening, markAssistantNoticesHeard, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
+import { assistantById, claimOpening, markAssistantNoticesHeard, releaseOpening, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
@@ -1787,7 +1787,8 @@ async function correrTurno(
 
   // HER FILE'S FIRST MESSAGE GOES ONCE (spec local 2026-11-19-agentes-para-todos, §6.4): her place on the web and the
   // phone both send it to an empty conversation; the one that claims it runs, the other is told before any model call.
-  if (asistente && body?.opening === true && !(await claimOpening(asistente.id))) {
+  const aperturaReclamada = asistente !== null && body?.opening === true;
+  if (aperturaReclamada && asistente && !(await claimOpening(asistente.id))) {
     return errorJson(409, "this agent's first message was already sent", "already_opened");
   }
 
@@ -2054,11 +2055,18 @@ async function correrTurno(
               console.warn("[agent] no se pudo entregar la tarea programada", err),
             );
           }
-        } else if (filaAbierta) {
-          try {
-            await quitarFilaDelTurno(proyectoDelChat, filaId);
-          } catch (err) {
-            console.warn("[agent] no se pudo quitar la fila vacía del turno", err);
+        } else {
+          if (filaAbierta) {
+            try {
+              await quitarFilaDelTurno(proyectoDelChat, filaId);
+            } catch (err) {
+              console.warn("[agent] no se pudo quitar la fila vacía del turno", err);
+            }
+          }
+          // Her opening was claimed and this turn wrote nothing (no credits, the provider down before answering): her
+          // conversation is still empty, so she opens next time.
+          if (aperturaReclamada && asistente) {
+            await releaseOpening(asistente.id).catch((err: unknown) => console.warn("[agent] couldn't give back an agent's opening", err));
           }
         }
       };

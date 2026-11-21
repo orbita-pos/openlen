@@ -205,10 +205,28 @@ export async function assistantById(id: string): Promise<AssistantRow | null> {
 }
 
 /** Her file's first message is about to go: true for the one request that claims it, false for any other (two tabs, or
- *  the web and the phone, opening her at once). One UPDATE, so two at the same moment can't both win. */
+ *  the web and the phone, opening her at once). One UPDATE, so two at the same moment can't both win. There is nothing to
+ *  claim for an assistant without a file, nor once her conversation has begun (an assistant of before has no openedAt). */
 export async function claimOpening(id: string): Promise<boolean> {
-  const rows = await db.update(a).set({ openedAt: new Date() }).where(and(eq(a.id, id), sql`${a.openedAt} is null`)).returning({ id: a.id });
+  const m = schema.projectChatMessages;
+  const rows = await db
+    .update(a)
+    .set({ openedAt: new Date() })
+    .where(
+      and(
+        eq(a.id, id),
+        sql`${a.openedAt} is null`,
+        sql`${a.agentType} is not null`,
+        sql`not exists (select 1 from ${m} where ${m.projectId} = ${a.homeProjectId} and ${m.conversation} = ${assistantConversationKey(id)})`,
+      ),
+    )
+    .returning({ id: a.id });
   return rows.length > 0;
+}
+
+/** Her opening was claimed but its turn ended before writing anything (no credits, the provider down): she can open again. */
+export async function releaseOpening(id: string): Promise<void> {
+  await db.update(a).set({ openedAt: null }).where(eq(a.id, id));
 }
 
 /** The newest first. */

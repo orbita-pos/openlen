@@ -299,6 +299,7 @@ const assistantStore = vi.hoisted(() => ({
   readyAssistantNotices: vi.fn(async (_id: string, _now: Date): Promise<Record<string, unknown>[]> => []),
   markAssistantNoticesHeard: vi.fn(async (_id: string, _ids: readonly string[], _at: Date) => {}),
   claimOpening: vi.fn(async (_id: string) => true),
+  releaseOpening: vi.fn(async (_id: string) => {}),
 }));
 vi.mock("@/lib/assistants/store", () => assistantStore);
 // Phase 4: the projects she serves, read for her turn.
@@ -5337,6 +5338,24 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(second.status).toBe(409);
     expect(await second.json()).toMatchObject({ code: "already_opened" });
     expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  // Final review of this pass: the claim comes before the credit gate, which is inside the stream. A turn refused there
+  // wrote nothing, yet her opening was spent: after the refill she never greeted. It is given back.
+  it("🔴 an opening refused for credits gives her claim back; one that ran keeps it", async () => {
+    mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 100, refillsAt: null });
+    await readEvents(await pedir({ assistantId: "a1", prompt: "¡Hola! Empecemos.", opening: true }));
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+    expect(assistantStore.releaseOpening).toHaveBeenCalledWith("a1");
+    assistantStore.releaseOpening.mockClear();
+    // One that answered wrote its row: her conversation has begun.
+    mocks.runAgentLoop.mockImplementationOnce(async (args: AgentLoopArgs) => {
+      args.emit({ type: "text", text: "Hello! Let's find your level." });
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1", prompt: "¡Hola! Empecemos.", opening: true }));
+    expect(mocks.runAgentLoop).toHaveBeenCalled();
+    expect(assistantStore.releaseOpening).not.toHaveBeenCalled();
   });
 
   it("a message that isn't an opening claims nothing", async () => {

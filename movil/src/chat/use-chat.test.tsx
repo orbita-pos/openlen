@@ -50,6 +50,16 @@ it("🔴 already sent from the web: her bubble here goes, with no error, and her
   expect(recargar).toHaveBeenCalled();
 });
 
+// Final review of this pass: with one of her turns live, the opening went out as a correction of it, unclaimed.
+it("her first message isn't sent while one of her turns is live, never as a correction", async () => {
+  m.mandar.mockImplementation(() => new Promise(() => {}));
+  await act(async () => root.render(<Pantalla id="space" assistantId="a4" />));
+  await act(async () => chat.mandar("hola"));
+  await act(async () => chat.abrirCon("¡Hola! Empecemos."));
+  expect(m.mandar).toHaveBeenCalledTimes(1);
+  expect(chat.elementos.filter((e) => e.tipo === "tu").map((e) => (e as { texto: string }).texto)).toEqual(["hola"]);
+});
+
 it("a message the person writes isn't an opening", async () => {
   m.mandar.mockResolvedValue("terminado");
   await act(async () => root.render(<Pantalla id="space" assistantId="a4" />));

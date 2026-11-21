@@ -1007,6 +1007,16 @@ describe("no pages: your agents are the app", () => {
     expect(chats.abiertaCon).toEqual(["¡Hola! Empecemos."]);
   });
 
+  // Final review of this pass: the app's agent's opening, read while her chat was closed, went to the next one tapped.
+  it("🔴 one agent's opening never goes to another: tapping a different one sends nothing of hers", async () => {
+    chats.abiertaCon = [];
+    await paint(agents([CHEF, ANA]), OVERVIEW, (ruta) => (ruta === "/api/assistants/a3/chat" ? Response.json({ chatHistory: [], startsWith: "Hola, soy Chef Rosa." }) : undefined));
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a4"]')!.click());
+    await act(async () => {});
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Teacher Ana" } });
+    expect(chats.abiertaCon).toEqual([]);
+  });
+
   it("🔴 a turn notice of an agent opens her chat with no pages", async () => {
     await paint(agents([CHEF, ANA]));
     await act(async () => aviso.asistente!("a3", { parte: "hablar", tarjeta: null }));
