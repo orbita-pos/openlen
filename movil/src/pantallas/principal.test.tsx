@@ -411,6 +411,22 @@ describe("her tab in the selector", () => {
     abrir.mockRestore();
   });
 
+  // Final review of the minors pass: with pages, an agent of the space chosen here still offered «Ver en tu página» after
+  // writing in the space, and it closed her chat onto a page she has nothing to do with.
+  it("🔴 «Ver en tu página» is offered in her chat only when she lives in the page on screen", async () => {
+    const CHEF = { ...LUCIA, id: "a3", name: "Chef Rosa", slug: "chef-rosa", projectId: "space", projectIds: ["space"] };
+    localStorage.setItem("len-asistente", "a3");
+    await paint([CHEF, LUCIA]);
+    expect(chatProps.ella).toMatchObject({ asistente: { name: "Chef Rosa" } });
+    expect(chatProps.ella).not.toHaveProperty("onVerPagina");
+    act(() => root.unmount());
+    host.remove();
+    localStorage.setItem("len-asistente", "a1");
+    await paint([CHEF, LUCIA]);
+    expect(chatProps.ella).toMatchObject({ asistente: { name: "Lucía" } });
+    expect(chatProps.ella).toHaveProperty("onVerPagina");
+  });
+
   // Delivery 4's deferred minor M4: a browser that didn't open said nothing; «Abrir OpenLen» shows the no-network screen.
   it("🔴 «Crear un agente» that can't open the browser says so, as «Abrir OpenLen» does", async () => {
     const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta" };

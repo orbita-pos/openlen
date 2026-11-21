@@ -690,7 +690,9 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         conPip={!ella && llamada && conPip}
         onCerrar={() => { setChatAbierto(false); setEnfocarEnChat(null); }}
         onLlamar={() => setLlamada(true)}
-        {...(sinPaginas ? {} : { onVerPagina: () => setChatAbierto(false) })}
+        /* «Ver en tu página» only shows the page on screen: offered when the chat's project is that page (never an
+           agent of your space, nor with no pages at all). */
+        {...(!sinPaginas && (ella ? ella.projectId === id : true) ? { onVerPagina: () => setChatAbierto(false) } : {})}
         onEquipo={() => setPanel("equipo")}
         enfocar={enfocarEnChat}
         onEnfocado={alEnfocarEnChat}
