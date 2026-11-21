@@ -23,6 +23,17 @@ import "@/app/[locale]/new/tokens.css";
 
 export const dynamic = "force-dynamic";
 
+/** Her place's browser tab: her name (delivery 1's walk: it read the site's generic English title). Only for her person;
+ *  otherwise nothing, and the page itself answers the 404 or the sign-in. */
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; name: string }> }) {
+  if (!assistantsEnabled()) return {};
+  const { name } = await params;
+  const personId = (await auth())?.user?.id;
+  if (!personId) return {};
+  const assistant = await assistantBySlug(personId, slugFromParam(name)).catch(() => null);
+  return assistant ? { title: assistant.name } : {};
+}
+
 export default async function AssistantPage({ params }: { params: Promise<{ locale: string; name: string }> }) {
   if (!assistantsEnabled()) notFound();
   const { locale, name } = await params;

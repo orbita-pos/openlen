@@ -27,7 +27,7 @@ vi.mock("@/lib/assistants/visitor/store", () => ({ assistantOnPage: vi.fn() }));
 vi.mock("@/components/workspace-v2/assistant/assistant-home", () => ({ AssistantHome: () => null }));
 vi.mock("@/app/[locale]/new/tokens.css", () => ({}));
 
-const { default: AssistantPage } = await import("./page");
+const { default: AssistantPage, generateMetadata } = await import("./page");
 const open = (name: string) => AssistantPage({ params: Promise.resolve({ locale: "es", name }) });
 
 beforeEach(() => vi.clearAllMocks());
@@ -46,6 +46,16 @@ describe("her place's address", () => {
     m.assistantByOldSlug.mockResolvedValueOnce({ slug: "さくら" });
     await expect(open("lucia")).rejects.toThrow("NEXT_REDIRECT");
     expect(m.permanentRedirect).toHaveBeenCalledWith({ href: "/assistant/%E3%81%95%E3%81%8F%E3%82%89", locale: "es" });
+  });
+
+  // Delivery 1's walk: her place's browser tab read the site's generic English title, not her name.
+  it("🔴 her place's tab is titled with her name; someone else's, or none, says nothing", async () => {
+    m.assistantBySlug.mockResolvedValueOnce({ name: "Teacher Ana", slug: "teacher-ana" });
+    expect(await generateMetadata({ params: Promise.resolve({ locale: "es", name: "teacher-ana" }) })).toEqual({ title: "Teacher Ana" });
+    expect(m.assistantBySlug).toHaveBeenCalledWith("u1", "teacher-ana");
+    expect(await generateMetadata({ params: Promise.resolve({ locale: "es", name: "nadie" }) })).toEqual({});
+    m.auth.mockResolvedValueOnce(null as never);
+    expect(await generateMetadata({ params: Promise.resolve({ locale: "es", name: "teacher-ana" }) })).toEqual({});
   });
 
   it("an address that was never hers is 404", async () => {
