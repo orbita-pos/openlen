@@ -24,16 +24,24 @@ export interface StoredProposal {
 
 const t = schema.skillProposals;
 
+/** The project they go with: a hidden copy's (a subagent's or Len Watch's, deleted after its work) is its real one. */
+async function realProjectOf(projectId: string): Promise<string> {
+  const [row] = await db.select({ parent: schema.projects.parentProjectId }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+  return row?.parent ?? projectId;
+}
+
 /** Stores them for the speaker; the ids, in the proposals' order. `baseText` is the skill an improvement was made on. */
 export async function saveSkillProposals(
   personId: string,
   projectId: string,
   proposals: readonly (ResolvedProposal & { readonly baseText: string | null })[],
 ): Promise<string[]> {
+  if (proposals.length === 0) return [];
+  const project = await realProjectOf(projectId);
   const rows = proposals.map((p) => ({
     id: crypto.randomUUID(),
     personId,
-    projectId,
+    projectId: project,
     name: p.name,
     kind: p.kind,
     target: p.target,

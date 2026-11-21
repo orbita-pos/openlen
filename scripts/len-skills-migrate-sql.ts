@@ -29,4 +29,6 @@ export const CREATE_LEN_SKILLS: readonly string[] = [
     "createdAt" timestamp NOT NULL DEFAULT now()
   );`,
   `CREATE INDEX IF NOT EXISTS "skillProposals_person_idx" ON "skillProposals" ("personId");`,
+  // Deleting a project (and every hidden copy's cleanup) finds its proposals through this, not a scan.
+  `CREATE INDEX IF NOT EXISTS "skillProposals_project_idx" ON "skillProposals" ("projectId");`,
 ];

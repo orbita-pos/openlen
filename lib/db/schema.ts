@@ -1542,7 +1542,7 @@ export const skillProposals = pgTable(
     fingerprint: text("fingerprint").notNull(),
     createdAt: timestamp("createdAt", { mode: "date" }).notNull().defaultNow(),
   },
-  (t) => [index("skillProposals_person_idx").on(t.personId)],
+  (t) => [index("skillProposals_person_idx").on(t.personId), index("skillProposals_project_idx").on(t.projectId)],
 );
 
 /** Los tipos de subagente de un proyecto (`/.len/agents`) y de una persona (`~/.len/agents`), como

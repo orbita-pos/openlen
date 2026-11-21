@@ -49,7 +49,7 @@ beforeEach(async () => {
   pg = new PGlite();
   // Only the columns the proposals' keys point at: the real tables are OpenLen's first migration.
   await pg.query(`CREATE TABLE "users" ("id" text PRIMARY KEY)`);
-  await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
+  await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY, "parentProjectId" text)`);
   await pg.query(`INSERT INTO "users" ("id") VALUES ('u1'), ('u2')`);
   await pg.query(`INSERT INTO "projects" ("id") VALUES ('p1'), ('p2')`);
   for (const statement of CREATE_LEN_SKILLS) await pg.query(statement);
@@ -58,6 +58,15 @@ beforeEach(async () => {
 
 describe("the proposals", () => {
   // Delivery 2's deferred minor: they stayed after their project or the person's account was deleted.
+  // Final review of the minors pass: a Len Watch turn works in a hidden copy (its `parentProjectId` is the real project)
+  // that is deleted after «Traer» or a discard; the card in the real chat lost its proposals with it.
+  it("🔴 made in a hidden copy, they go with the real project, not with the copy", async () => {
+    await pg.query(`INSERT INTO "projects" ("id", "parentProjectId") VALUES ('copy-1', 'p1')`);
+    const [id] = await saveSkillProposals("u1", "copy-1", [proposal({ name: "one-skill" })]);
+    await pg.query(`DELETE FROM "projects" WHERE "id" = 'copy-1'`);
+    expect((await proposalsFor("u1", [id!])).map((p) => p.name)).toEqual(["one-skill"]);
+  });
+
   it("🔴 go with the project they were proposed in, and with the person's account", async () => {
     const [inP1] = await saveSkillProposals("u1", "p1", [proposal({ name: "one-skill" })]);
     const [inP2] = await saveSkillProposals("u1", "p2", [proposal({ name: "two-skill" })]);

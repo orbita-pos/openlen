@@ -1,6 +1,7 @@
 // LAS SKILLS DE LEN (spec local 2026-10-26-len-skills): la tabla de las skills que un proyecto y
 // una persona guardan en /.len/skills y ~/.len/skills. Idempotente (IF NOT EXISTS). Sin clave
-// foránea: `ownerId` es un proyecto o una persona, según `scope`.
+// foránea: `ownerId` es un proyecto o una persona, según `scope`. Y las propuestas de Len
+// (`skillProposals`), que sí las llevan: se van con su proyecto y con su persona.
 //
 // 🔴 OBLIGATORIA en el mismo deploy que el código: sin la tabla, Len no puede guardar skills
 // (fail-soft: la lectura devuelve ninguna y las de OpenLen siguen).
