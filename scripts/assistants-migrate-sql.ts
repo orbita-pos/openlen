@@ -123,10 +123,6 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "customerNote" text NOT NULL DEFAULT '';`,
 ];
 
-/** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): one per person. Apart from CREATE_ASSISTANTS
- *  because it is an index on `projects`, which the assistants' tests build without `data`; `assistants:migrate` runs
- *  both. A subagent's hidden copy (`parentProjectId`, lib/agent/subagents/worktree.ts) keeps the space's `data` and is
- *  not a second space — as `spaceIdOf` reads it. */
 /** An agent's scheduled tasks (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): `scheduledTasks.assistantId`
  *  points at the agent that asked, and deleting the agent deletes its tasks. Here, not in the tasks' migration: the deploy
  *  runs `scheduled-tasks-migrate` before `assistants-migrate` (scripts/build-migrations.mjs), and only this one finds both
@@ -144,6 +140,10 @@ export const SCHEDULED_TASKS_OF_AN_AGENT: readonly string[] = [
   END $$;`,
 ];
 
+/** The person's space (spec local 2026-11-19-agentes-para-todos, §6.2): one per person. Apart from CREATE_ASSISTANTS
+ *  because it is an index on `projects`, which the assistants' tests build without `data`; `assistants:migrate` runs
+ *  both. A subagent's hidden copy (`parentProjectId`, lib/agent/subagents/worktree.ts) keeps the space's `data` and is
+ *  not a second space — as `spaceIdOf` reads it. */
 export const CREATE_SPACE: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "projects_one_space_idx" ON "projects" ("userId") WHERE ("data"->'space') IS NOT NULL AND "parentProjectId" IS NULL;`,
 ];
