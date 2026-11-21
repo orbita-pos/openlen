@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ASK_USER_QUESTION, REQUEST_SECRETS } from "@/lib/agent/ask-user-question";
-import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { EMOJIS_IN_CHAT, buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { CONVERTIR_EN_APP } from "@/lib/agent/convertir-en-app";
 import { CREATE_GOAL } from "@/lib/agent/goal-tools";
 import { ENTER_PLAN_MODE } from "@/lib/agent/plan-mode";
@@ -263,6 +263,26 @@ describe("assistantSystemPrompt", () => {
   it("says each tone", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("formal and polite");
     expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("playful and light");
+  });
+
+  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): the agent inherits Len's line, and its tone adjusts it.
+  it("🔴 the tone sets the emojis: formal none, playful a bit more, friendly as Len", () => {
+    expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("Formal means no emojis in your messages.");
+    expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("a bit more often than TONE says");
+    const friendly = assistantSystemPrompt("L", { name: "A", tone: "friendly" });
+    expect(friendly).not.toContain("Formal means");
+    expect(friendly).not.toContain("a bit more often");
+  });
+
+  it("a formal agent's «no emojis» comes after Len's line, so the later one wins", () => {
+    const p = assistantSystemPrompt(`TONE:\n${EMOJIS_IN_CHAT}`, { name: "A", tone: "formal" });
+    expect(p.indexOf("Formal means no emojis")).toBeGreaterThan(p.indexOf(EMOJIS_IN_CHAT));
+  });
+
+  it("a tone the store doesn't know is friendly, adding nothing", () => {
+    expect(assistantSystemPrompt("L", { name: "A", tone: "grumpy" })).toBe(assistantSystemPrompt("L", { name: "A", tone: "friendly" }));
+    // Not even a name every object has.
+    expect(assistantSystemPrompt("L", { name: "A", tone: "toString" })).toBe(assistantSystemPrompt("L", { name: "A", tone: "friendly" }));
   });
 });
 

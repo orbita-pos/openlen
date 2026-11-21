@@ -78,6 +78,14 @@ export const TONES: Readonly<Record<AssistantTone, string>> = {
   playful: "playful and light",
 };
 
+/** EMOJIS BY TONE (spec local 2026-11-21-emojis-en-el-chat): the agent inherits Len's line in TONE (`EMOJIS_IN_CHAT`),
+ *  and this, said after it, adjusts it — friendly is Len's, so it adds nothing and its prompt stays what it was. */
+export const TONE_EMOJIS: Readonly<Record<AssistantTone, string>> = {
+  friendly: "",
+  playful: " Emojis can come a bit more often than TONE says, still never one per line.",
+  formal: " Formal means no emojis in your messages.",
+};
+
 /** AN AGENT OF THE PERSON'S, WITH A FILE (spec local 2026-11-19-agentes-para-todos, §6.4): what it is for is in its
  *  file, so this body says nothing of a business; and its memory is private — what a page's visitors may hear is
  *  CUSTOMERS.md (§6.7). An assistant without a file keeps `ASSISTANT_AGENT_TYPE.body`, byte for byte. */
@@ -93,13 +101,14 @@ If you attend a page listed in ~/.assistant/PROJECTS.md, its visitors never see 
 /** Len's prompt, then the assistant's section and who it is — and, for an agent with a file, its instructions last, as
  *  Claude Code appends an agent's prompt after its own (`appendSystemPrompt`; we keep Len's: Jesús, 06/11). */
 export function assistantSystemPrompt(lenSystemPrompt: string, a: { name: string; tone: string; instructions?: string | null }): string {
-  const tone = TONES[a.tone as AssistantTone] ?? TONES.friendly;
+  const toneKey: AssistantTone = Object.hasOwn(TONES, a.tone) ? (a.tone as AssistantTone) : "friendly";
+  const tone = TONES[toneKey];
   const withFile = typeof a.instructions === "string" && a.instructions.trim() !== "";
   return [
     // Without Len's subagent line, as a child's prompt drops it (`childSystemPromptFor`): it has no subagent tools.
     lenSystemPrompt.replace(`\n- ${SUBAGENT_GUIDANCE}`, ""),
     `ASSISTANT — ${a.name.toUpperCase()}:\n${withFile ? AGENT_BODY : ASSISTANT_AGENT_TYPE.body}`,
-    `Your name is ${a.name}. Your owner gave you that name and chose how you look; you are theirs. Talk with them in a ${tone} way, in their language. Your memory is ${ASSISTANT_MEMORY_PATH}.`,
+    `Your name is ${a.name}. Your owner gave you that name and chose how you look; you are theirs. Talk with them in a ${tone} way, in their language.${TONE_EMOJIS[toneKey]} Your memory is ${ASSISTANT_MEMORY_PATH}.`,
     ...(withFile ? [`YOUR INSTRUCTIONS:\n${a.instructions!.trim()}`] : []),
   ].join("\n\n");
 }
