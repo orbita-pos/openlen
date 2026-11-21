@@ -411,6 +411,18 @@ describe("her tab in the selector", () => {
     abrir.mockRestore();
   });
 
+  // Delivery 4's deferred minor M4: a browser that didn't open said nothing; «Abrir OpenLen» shows the no-network screen.
+  it("🔴 «Crear un agente» that can't open the browser says so, as «Abrir OpenLen» does", async () => {
+    const MARTA = { ...LUCIA, id: "a2", name: "Marta", slug: "marta" };
+    const abrir = vi.spyOn(plataforma, "abrirNavegador").mockRejectedValue(new Error("no browser"));
+    const { botones } = await paint([LUCIA, MARTA]);
+    await act(async () => botones().find((x) => x.hasAttribute("data-agentes"))!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-crear-agente]")!.click());
+    await act(async () => {});
+    expect(host.textContent).toContain("sinRed");
+    abrir.mockRestore();
+  });
+
   it("with no assistant, the app keeps Len's orange", async () => {
     await paint([]);
     expect(document.documentElement.style.getPropertyValue("--her-tint")).toBe("");

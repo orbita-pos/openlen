@@ -118,7 +118,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // Whether agents can be made (spec local 2026-11-19-agentes-para-todos, §6.8): «Crear un agente» opens the web's home on
   // the agent kind, where Len makes them (§6.3) — only when the server says it can.
   const [agentesOn, setAgentesOn] = useState(false);
-  const crearAgente = useCallback(() => void plataforma.abrirNavegador(`${BASE}/?kind=agent`).catch(() => {}), []);
+  // A browser that didn't open says so, as «Abrir OpenLen» does (delivery 4's M4).
+  const crearAgente = useCallback(() => void plataforma.abrirNavegador(`${BASE}/?kind=agent`).catch(() => setSinRed(true)), []);
   // Read at least once (final review, I6): until then, no welcome.
   const [asistentesLeidas, setAsistentesLeidas] = useState(false);
   // Their read failed (and none has succeeded since): with no pages, today's empty screen instead of waiting forever.
