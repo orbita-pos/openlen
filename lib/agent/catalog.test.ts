@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as catalogo from "./catalog";
 import {
   AGENT_MODULES,
+  EMOJIS_IN_CHAT,
   buildAgentSystemPrompt,
   buildFunctionDeclarations,
   instruccionesDeLen,
@@ -479,6 +480,16 @@ describe("buildAgentSystemPrompt", () => {
   // ya leyó que son una feature real. Desde la auditoría del 2026-09-29 la
   // apertura no nombra ningún módulo: los que existen van en su bloque, que se
   // deriva de `AGENT_MODULES` (ver «cada módulo que el prompt enumera…»).
+  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): Jesús wants them for more life in the messages. In the chat, now and
+  // then and in TONE; in files, the rule that was already there, unchanged.
+  it("🔴 in the chat, an emoji now and then; in files, their own rule", () => {
+    const p = buildAgentSystemPrompt();
+    const tone = p.slice(p.indexOf("TONE:"), p.indexOf("HOW TO WORK:"));
+    expect(tone).toContain(EMOJIS_IN_CHAT);
+    expect(EMOJIS_IN_CHAT).toContain("an emoji now and then");
+    expect(p).toContain("No emojis in the files unless the user asks for them.");
+  });
+
   it("la frase de apertura no ofrece ningún módulo retirado", () => {
     const p = buildAgentSystemPrompt();
     // Hasta el primer encabezado (TONO:). Medía hasta «REGLAS DURAS», que H4
