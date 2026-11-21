@@ -53,6 +53,21 @@ describe("the assistant's place", () => {
     expect(host.querySelector("textarea")!.getAttribute("placeholder")).toBe('ownAssistant.place.placeholder {"name":"Lucía"}');
   });
 
+  // Delivery 3 of agentes para todos (§6.4), final review I1: what she scheduled shows in her place, under her clock.
+  it("🔴 an agent's place shows her own clock with the tasks she scheduled", async () => {
+    const task = { id: "schedule-1", kind: "daily", title: "Receta rápida", prompt: "Send a quick recipe", scheduledAt: "2026-11-21T14:00:00.000Z", scheduledAtLocal: "2026-11-21T08:00:00-06:00[America/Mexico_City]", state: "scheduled", time: "08:00:00.000", timeZone: "America/Mexico_City", createdBy: "u1", lastRun: null };
+    const fetchMock = vi.fn(async (url: string) =>
+      String(url) === "/api/projects/p1/scheduled-tasks?assistantId=a1" ? new Response(JSON.stringify({ tasks: [task], events: [] })) : new Response("{}", { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const host = mount(<NewChatPanel flatProjectId="p1" flatProjectHtml="" onFlatHtmlUpdate={() => {}} flatProjectChat={[]} assistant={LUCIA} centered />);
+    await act(async () => void (await new Promise((r) => setTimeout(r, 20))));
+    const clock = host.querySelector<HTMLButtonElement>("[data-assistant-header] [data-scheduled-clock]");
+    expect(clock).not.toBeNull();
+    act(() => clock!.click());
+    expect(host.textContent).toContain("Receta rápida");
+  });
+
   // Phase 6 (spec local 2026-11-10-figuras-del-asistente, §2.4, §5.3).
   it("🔴 her place wears her color, with an ink that reads over it", async () => {
     const yellow = { ...LUCIA, look: { ...LUCIA.look, color: "#ffc21a" }, color: "#ffc21a" };

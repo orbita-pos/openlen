@@ -37,6 +37,7 @@ import { SecretDialog } from "./secret-dialog";
 import { functionSecretsAvailable } from "@/lib/workspace-v2/function-secrets-request";
 import type { FoundSecret } from "@/lib/apps/env/secret-patterns";
 import { ChatHeader } from "./chat-header";
+import { ScheduledTasksMenu } from "./scheduled-tasks-menu";
 import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
 import { VisualContextChip } from "./visual-context-chip";
@@ -514,9 +515,13 @@ function AgentChatView({
     >
       {drop.dragging && <DropOverlay label={t("composer.dropHere")} />}
       {assistant ? (
-        // Its place: its figure and its name; no conversations, no scheduled clock, no floating (they are Len's).
+        // Its place: its figure and its name; no conversations and no floating (they are Len's). Her clock is hers: it lists
+        // only what she scheduled (spec local 2026-11-19-agentes-para-todos, §6.4), and shows only when there is something.
         // Her figure heads the chat, alive, the only live one of the screen; under it her name and what she is doing.
-        <div className="flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
+        <div className="relative flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
+          <div className="absolute right-3 top-3">
+            <ScheduledTasksMenu scheduled={scheduled} />
+          </div>
           <LiveFigure look={assistant.look} size={76} activity={herActivity} active={herFigureOn} />
           <p className="mt-1 max-w-full truncate text-[14px] font-semibold fg">{assistant.name}</p>
           <p className="max-w-full truncate text-[11.5px] fg-muted" data-her-status="">

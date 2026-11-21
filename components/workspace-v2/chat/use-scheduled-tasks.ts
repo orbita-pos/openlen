@@ -17,8 +17,8 @@ export function useScheduledTasks(projectId: string | null, busy: boolean, assis
     try {
       const res = await fetch(list);
       if (res.ok) {
-        const body = (await res.json()) as { tasks: ClockTask[]; events?: ClockEventTask[] };
-        setTasks(body.tasks);
+        const body = (await res.json()) as { tasks?: ClockTask[]; events?: ClockEventTask[] };
+        setTasks(body.tasks ?? []);
         setEvents(body.events ?? []);
       }
     } catch {
