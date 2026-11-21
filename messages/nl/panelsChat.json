@@ -1037,6 +1037,8 @@
     "saving": "Opslaan…",
     "saved": "Opgeslagen",
     "changed": "Hij is veranderd sinds Len hem voorstelde. Vraag hem hem opnieuw voor te stellen.",
-    "failed": "Opslaan lukte niet. Probeer het opnieuw."
+    "failed": "Opslaan lukte niet. Probeer het opnieuw.",
+    "limit": "Je hebt al het maximale aantal skills. Vraag Len er een te verwijderen die je niet meer gebruikt en sla deze daarna opnieuw op.",
+    "reserved": "Die naam is van een skill van OpenLen. Vraag Len hem onder een andere naam voor te stellen."
   }
 }

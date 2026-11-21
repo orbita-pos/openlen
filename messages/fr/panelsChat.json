@@ -1037,6 +1037,8 @@
     "saving": "Enregistrement…",
     "saved": "Enregistrée",
     "changed": "Elle a changé depuis que Len l’a proposée. Demandez-lui de la reproposer.",
-    "failed": "Impossible de l’enregistrer. Réessayez."
+    "failed": "Impossible de l’enregistrer. Réessayez.",
+    "limit": "Vous avez déjà le maximum de skills. Demandez à Len d’en supprimer une que vous n’utilisez plus, puis enregistrez celle-ci à nouveau.",
+    "reserved": "Ce nom est celui d’une skill d’OpenLen. Demandez à Len de la proposer sous un autre nom."
   }
 }

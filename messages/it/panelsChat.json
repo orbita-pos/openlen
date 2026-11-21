@@ -1037,6 +1037,8 @@
     "saving": "Salvataggio…",
     "saved": "Salvata",
     "changed": "È cambiata da quando Len l’ha proposta. Chiedigli di riproporla.",
-    "failed": "Impossibile salvarla. Riprova."
+    "failed": "Impossibile salvarla. Riprova.",
+    "limit": "Hai già il numero massimo di skill. Chiedi a Len di rimuoverne una che non usi più, poi salva di nuovo questa.",
+    "reserved": "Quel nome è di una skill di OpenLen. Chiedi a Len di proporla con un altro nome."
   }
 }

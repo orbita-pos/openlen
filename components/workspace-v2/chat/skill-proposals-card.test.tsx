@@ -98,6 +98,23 @@ describe("the review card", () => {
     expect(block(el, "bread").textContent).toContain("skillProposal.changed");
   });
 
+  // Delivery 2's deferred minor: these two are answered as «No se pudo guardar. Inténtalo otra vez.», which no retry fixes.
+  it("🔴 at the most skills a person can keep, the card says so, not «try again»", async () => {
+    server({ proposals: [NEW], post: () => reply(409, { error: "limit" }) });
+    const el = await mount([actionOf([id(1)])]);
+    await click(block(el, "plant-care").querySelector<HTMLElement>("[data-skill-save]")!);
+    expect(block(el, "plant-care").textContent).toContain("skillProposal.limit");
+    expect(block(el, "plant-care").textContent).not.toContain("skillProposal.failed");
+  });
+
+  it("🔴 a name of one of OpenLen's own skills: the card says so, not «try again»", async () => {
+    server({ proposals: [NEW], post: () => reply(409, { error: "reserved" }) });
+    const el = await mount([actionOf([id(1)])]);
+    await click(block(el, "plant-care").querySelector<HTMLElement>("[data-skill-save]")!);
+    expect(block(el, "plant-care").textContent).toContain("skillProposal.reserved");
+    expect(block(el, "plant-care").textContent).not.toContain("skillProposal.failed");
+  });
+
   it("any other refusal says it couldn't be saved", async () => {
     server({ proposals: [NEW], post: () => reply(400, { error: "invalid" }) });
     const el = await mount([actionOf([id(1)])]);

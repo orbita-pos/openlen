@@ -1037,6 +1037,8 @@
     "saving": "Saving…",
     "saved": "Saved",
     "changed": "It changed since Len proposed it. Ask him to propose it again.",
-    "failed": "It couldn't be saved. Try again."
+    "failed": "It couldn't be saved. Try again.",
+    "limit": "You already have the most skills you can keep. Ask Len to remove one you no longer use, then save this one again.",
+    "reserved": "That name belongs to one of OpenLen’s own skills. Ask Len to propose it under another name."
   }
 }

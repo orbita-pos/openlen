@@ -1037,6 +1037,8 @@
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
     "changed": "Er hat sich geändert, seit Len ihn vorgeschlagen hat. Bitte ihn, ihn erneut vorzuschlagen.",
-    "failed": "Konnte nicht gespeichert werden. Versuch es noch einmal."
+    "failed": "Konnte nicht gespeichert werden. Versuch es noch einmal.",
+    "limit": "Du hast schon die meisten Skills, die du behalten kannst. Bitte Len, einen zu entfernen, den du nicht mehr nutzt, und speichere diesen dann erneut.",
+    "reserved": "Dieser Name gehört zu einem Skill von OpenLen. Bitte Len, ihn unter einem anderen Namen vorzuschlagen."
   }
 }

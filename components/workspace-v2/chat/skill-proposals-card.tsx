@@ -16,7 +16,10 @@ import type { AgentAction } from "../agent-action-card";
 
 const PROPOSE_SKILLS_TOOL = "propose_skills";
 
-type State = "idle" | "saving" | "saved" | "changed" | "failed";
+/** The server's 409s (`saveProposedSkill`), each with its own line: none of them is fixed by trying again. */
+const REFUSALS = ["changed", "limit", "reserved"] as const;
+type Refusal = (typeof REFUSALS)[number];
+type State = "idle" | "saving" | "saved" | Refusal | "failed";
 
 /** The turn's proposals' ids, in order, once each. */
 function idsOf(actions: readonly AgentAction[] | undefined): string[] {
@@ -66,8 +69,10 @@ function Proposal({ proposal }: { proposal: ProposalView }) {
     }).catch(() => null);
     if (r?.ok) return setState("saved");
     const body = (await r?.json().catch(() => null)) as { error?: string } | null;
-    setState(r?.status === 409 && body?.error === "changed" ? "changed" : "failed");
+    setState((r?.status === 409 && REFUSALS.find((e) => e === body?.error)) || "failed");
   }
+  const why = { changed: t("skillProposal.changed"), limit: t("skillProposal.limit"), reserved: t("skillProposal.reserved"), failed: t("skillProposal.failed") };
+  const refused = state === "idle" || state === "saving" || state === "saved" ? null : why[state];
 
   return (
     <div className="rounded-xl border bd bg-elev p-3" data-skill-proposal={proposal.name}>
@@ -99,14 +104,9 @@ function Proposal({ proposal }: { proposal: ProposalView }) {
         <summary className="cursor-pointer text-[12px] fg-faint">{t("skillProposal.show")}</summary>
         <pre className="mt-1 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-app p-2 text-[11.5px] leading-snug fg">{proposal.skillMd}</pre>
       </details>
-      {state === "changed" && (
+      {refused && (
         <p role="alert" className="mt-1 text-[12px] nc-bad">
-          {t("skillProposal.changed")}
-        </p>
-      )}
-      {state === "failed" && (
-        <p role="alert" className="mt-1 text-[12px] nc-bad">
-          {t("skillProposal.failed")}
+          {refused}
         </p>
       )}
     </div>

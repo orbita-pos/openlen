@@ -1037,6 +1037,8 @@
     "saving": "Guardando…",
     "saved": "Guardada",
     "changed": "Cambió desde que Len la propuso. Pídele que la proponga otra vez.",
-    "failed": "No se pudo guardar. Inténtalo otra vez."
+    "failed": "No se pudo guardar. Inténtalo otra vez.",
+    "limit": "Ya tienes el máximo de skills. Pídele a Len que borre una que ya no uses y vuelve a guardar esta.",
+    "reserved": "Ese nombre es de una skill de OpenLen. Pídele a Len que la proponga con otro nombre."
   }
 }

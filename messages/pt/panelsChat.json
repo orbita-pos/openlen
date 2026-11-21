@@ -1037,6 +1037,8 @@
     "saving": "Salvando…",
     "saved": "Salva",
     "changed": "Mudou desde que o Len a propôs. Peça para ele propor de novo.",
-    "failed": "Não foi possível salvar. Tente de novo."
+    "failed": "Não foi possível salvar. Tente de novo.",
+    "limit": "Você já tem o máximo de skills. Peça ao Len para remover uma que não usa mais e salve esta de novo.",
+    "reserved": "Esse nome é de uma skill do OpenLen. Peça ao Len para propô-la com outro nome."
   }
 }
