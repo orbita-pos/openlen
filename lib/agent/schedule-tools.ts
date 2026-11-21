@@ -272,7 +272,7 @@ export function scopeOf(session: AgentSession): TaskScope {
 }
 
 const LEN_ONLY =
-  "Watching a source for changes is Len's, not an agent's: tell the person to ask Len in their space. Nothing was created.";
+  "Watching a source for changes is Len's, not an agent's: tell the person to ask Len in his chat. Nothing was created.";
 /** An agent at the cap (final review I4): the ten are counted across its home, and its list shows only its own. */
 const SHARED_SLOTS = `The ${MAX_ACTIVE_TASKS_PER_PROJECT} active scheduled tasks of your home are shared with Len and the other agents that live there, and all ${MAX_ACTIVE_TASKS_PER_PROJECT} are taken. schedule_list shows only yours: delete one of yours to make room, or tell the person the rest belong to Len or their other agents, where they can remove one. Nothing was created.`;
 

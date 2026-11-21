@@ -402,6 +402,9 @@ describe("an agent's turn", () => {
     const out = result(await toolScheduleCreate(AGENT, deps, WATCH));
     expect(out.code).toBe("len_only");
     expect(out.message).toMatch(/Len/);
+    // Delivery 3's deferred minor M5: an assistant of before lives on a page, where Len is the page's chat, not «their
+    // space»; the line says where Len is for both.
+    expect(out.message).not.toMatch(/space/);
     expect(events.create).not.toHaveBeenCalled();
     // Nor does it see Len's event tasks in its list.
     await toolScheduleList(AGENT, deps, {});
