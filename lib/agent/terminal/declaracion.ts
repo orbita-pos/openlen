@@ -315,6 +315,8 @@ export const PARA_SOLO_LA_TERMINAL: readonly (readonly [string, string])[] = [
   ["open a note with Read when", "open a note with cat when"],
   // La descripción de `bash`.
   ["is saved like a Write, through the same checks and", "is saved through the same checks as any edit of the site, and"],
+  // La de `propose_skills` (lib/agent/skills/propose-tool.ts).
+  ["write those with Write, not with this.", "write those as files with bash, not with this."],
   // /AGENTS.md. ⚰️ Los tres de la receta de STORES (`data-ol-stores`) se fueron
   // el 2026-10-04 con ella: los datos de una página son su backend de Supabase.
   ["you write the SQL in it with Write or Edit,", "you write the SQL in it,"],

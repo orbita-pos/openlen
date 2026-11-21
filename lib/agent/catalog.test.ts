@@ -166,6 +166,8 @@ describe("buildFunctionDeclarations", () => {
       "list_agents",
       // The card to create the person's own assistant (spec local 2026-11-06-asistente-propio, §4.4).
       "create_assistant",
+      // The person's skills, proposed on a card (spec local 2026-11-19-agentes-para-todos, delivery 2).
+      "propose_skills",
       "undo_last_change",
       // F4 de las apps: convertir una página en app (sólo en una página).
       "convert_to_app",
