@@ -21,6 +21,10 @@ export const CREATE_SCHEDULED_TASKS: readonly string[] = [
   );`,
   `CREATE INDEX IF NOT EXISTS "scheduledTasks_status_scheduledAt_idx" ON "scheduledTasks" ("status", "scheduledAt");`,
   `CREATE INDEX IF NOT EXISTS "scheduledTasks_projectId_idx" ON "scheduledTasks" ("projectId");`,
+  // The agent that asked for it (spec local 2026-11-19-agentes-para-todos, §6.4): null = Len. Its link to `assistants` is
+  // added by `assistants:migrate`, which the deploy runs after this one (scripts/assistants-migrate-sql.ts).
+  `ALTER TABLE "scheduledTasks" ADD COLUMN IF NOT EXISTS "assistantId" text;`,
+  `CREATE INDEX IF NOT EXISTS "scheduledTasks_projectId_assistantId_idx" ON "scheduledTasks" ("projectId", "assistantId");`,
   `CREATE TABLE IF NOT EXISTS "scheduledTaskRuns" (
     "id" text PRIMARY KEY,
     "taskId" text NOT NULL,

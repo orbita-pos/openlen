@@ -28,6 +28,7 @@ function rowOf(record: ScheduleRecord): TaskRow {
     id: record.id,
     projectId: "p1",
     createdBy: "member",
+    assistantId: null,
     locale: "es",
     timeZone: "America/Mexico_City",
     record,

@@ -127,6 +127,23 @@ export const CREATE_ASSISTANTS: readonly string[] = [
  *  because it is an index on `projects`, which the assistants' tests build without `data`; `assistants:migrate` runs
  *  both. A subagent's hidden copy (`parentProjectId`, lib/agent/subagents/worktree.ts) keeps the space's `data` and is
  *  not a second space — as `spaceIdOf` reads it. */
+/** An agent's scheduled tasks (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): `scheduledTasks.assistantId`
+ *  points at the agent that asked, and deleting the agent deletes its tasks. Here, not in the tasks' migration: the deploy
+ *  runs `scheduled-tasks-migrate` before `assistants-migrate` (scripts/build-migrations.mjs), and only this one finds both
+ *  tables. The column itself comes from the tasks' migration; it is added here too in case this runs first somewhere. */
+export const SCHEDULED_TASKS_OF_AN_AGENT: readonly string[] = [
+  `DO $$
+  BEGIN
+    IF to_regclass('"scheduledTasks"') IS NOT NULL THEN
+      ALTER TABLE "scheduledTasks" ADD COLUMN IF NOT EXISTS "assistantId" text;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'scheduledTasks_assistantId_assistants_id_fk') THEN
+        ALTER TABLE "scheduledTasks" ADD CONSTRAINT "scheduledTasks_assistantId_assistants_id_fk"
+          FOREIGN KEY ("assistantId") REFERENCES "assistants"("id") ON DELETE CASCADE;
+      END IF;
+    END IF;
+  END $$;`,
+];
+
 export const CREATE_SPACE: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "projects_one_space_idx" ON "projects" ("userId") WHERE ("data"->'space') IS NOT NULL AND "parentProjectId" IS NULL;`,
 ];

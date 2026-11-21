@@ -2574,6 +2574,9 @@ export const scheduledTasks = pgTable(
     projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
     /** Who asked Len for it: the turn runs as them and the email goes to them. The owner pays. */
     createdBy: text("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    /** The person's agent that asked for it, whose turn it runs (spec local 2026-11-19-agentes-para-todos, §6.4); null =
+     *  Len. Deleting the agent deletes it: the FK is added by `assistants:migrate` (scripts/assistants-migrate-sql.ts). */
+    assistantId: text("assistantId"),
     /** Their interface language, for the email. */
     locale: text("locale").notNull(),
     /** The zone of the turn that created it, for rules that carry none. */

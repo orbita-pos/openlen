@@ -20,6 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_EVENT_TASKS, CREATE_SCHEDULED_TASKS } = await import("@/scripts/scheduled-tasks-migrate-sql");
+const { SCHEDULED_TASKS_OF_AN_AGENT } = await import("@/scripts/assistants-migrate-sql");
 const { ScheduleId, createAtScheduleRecord, createWeeklyScheduleRecord } = await import("./deepseek/domain");
 const store = await import("./store");
 
@@ -78,6 +79,50 @@ describe("createTask / listTasks", () => {
     await store.deactivateTask("t1");
     expect(await store.listTasks("p1")).toEqual([]);
     expect((await store.listTasks("p1", { includeInactive: true })).map((t) => t.status)).toEqual(["inactive"]);
+  });
+});
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): a task knows the agent that asked
+// for it; each conversation — Len's (null) or an agent's — sees only its own.
+describe("an agent's tasks", () => {
+  const LEN = { assistantId: null };
+  const A1 = { assistantId: "a1" };
+
+  async function withAgents() {
+    const pg = base.pg as PGlite;
+    await pg.query(`CREATE TABLE "assistants" ("id" text PRIMARY KEY);`);
+    await pg.query(`INSERT INTO "assistants" VALUES ('a1'), ('a2');`);
+    // As the deploy does: the assistants migration runs after the tasks' and adds the link between them.
+    for (const statement of SCHEDULED_TASKS_OF_AN_AGENT) await pg.query(statement);
+  }
+
+  it("🔴 stores the agent, and each conversation lists only its own", async () => {
+    await withAgents();
+    await store.createTask(input("t-len"));
+    await store.createTask({ ...input("t-a1"), assistantId: "a1" });
+    await store.createTask({ ...input("t-a2"), assistantId: "a2" });
+    expect((await store.getTask("p1", "t-a1"))?.assistantId).toBe("a1");
+    expect((await store.listTasks("p1", { scope: A1 })).map((t) => t.id)).toEqual(["t-a1"]);
+    expect((await store.listTasks("p1", { scope: LEN })).map((t) => t.id)).toEqual(["t-len"]);
+    expect((await store.listTasks("p1")).map((t) => t.id).sort()).toEqual(["t-a1", "t-a2", "t-len"]);
+  });
+
+  it("🔴 another conversation's task is not found, and stays untouched", async () => {
+    await withAgents();
+    await store.createTask({ ...input("t-a1"), assistantId: "a1" });
+    expect(await store.getTask("p1", "t-a1", LEN)).toBeNull();
+    expect(await store.deleteTask("p1", "t-a1", LEN)).toBe(false);
+    expect(await store.deleteTask("p1", "t-a1", { assistantId: "a2" })).toBe(false);
+    expect(await store.updateTask("p1", "t-a1", weekly("t-a1"), undefined, LEN)).toBe("not_found");
+    expect(await store.getTask("p1", "t-a1")).not.toBeNull();
+    expect(await store.deleteTask("p1", "t-a1", A1)).toBe(true);
+  });
+
+  it("🔴 an agent that is deleted takes its tasks with it", async () => {
+    await withAgents();
+    await store.createTask({ ...input("t-a1"), assistantId: "a1" });
+    await (base.pg as PGlite).query(`DELETE FROM "assistants" WHERE "id" = 'a1';`);
+    expect(await store.getTask("p1", "t-a1")).toBeNull();
   });
 });
 

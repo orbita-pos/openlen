@@ -21,12 +21,23 @@ const INACTIVE_KEEP_MS = 30 * DAY_MS;
 /** Runs, like `agentRequestSteps`. */
 const RUN_KEEP_MS = 90 * DAY_MS;
 
+/** Whose conversation a task belongs to (spec local 2026-11-19-agentes-para-todos, §6.4): Len's (null) or an agent's.
+ *  The scoped reads and writes see only that conversation's tasks; without a scope, every task of the project. */
+export interface TaskScope {
+  readonly assistantId: string | null;
+}
+
+const inScope = (scope: TaskScope | undefined) =>
+  scope === undefined ? undefined : scope.assistantId === null ? isNull(schema.scheduledTasks.assistantId) : eq(schema.scheduledTasks.assistantId, scope.assistantId);
+
 export async function createTask(input: {
   readonly projectId: string;
   readonly createdBy: string;
   readonly locale: string;
   readonly timeZone: string;
   readonly record: ScheduleRecord;
+  /** The agent that asked for it; null or absent = Len. */
+  readonly assistantId?: string | null;
 }): Promise<TaskRow> {
   return db.transaction(async (tx) => {
     const [active] = await tx
@@ -52,11 +63,11 @@ export async function createTask(input: {
   });
 }
 
-export async function listTasks(projectId: string, o: { readonly includeInactive?: boolean } = {}): Promise<TaskRow[]> {
+export async function listTasks(projectId: string, o: { readonly includeInactive?: boolean; readonly scope?: TaskScope } = {}): Promise<TaskRow[]> {
   return db
     .select()
     .from(schema.scheduledTasks)
-    .where(o.includeInactive ? eq(schema.scheduledTasks.projectId, projectId) : and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.status, "active")))
+    .where(and(eq(schema.scheduledTasks.projectId, projectId), o.includeInactive ? undefined : eq(schema.scheduledTasks.status, "active"), inScope(o.scope)))
     .orderBy(asc(schema.scheduledTasks.createdAt), asc(schema.scheduledTasks.id));
 }
 
@@ -85,11 +96,11 @@ export async function runsSince(projectIds: readonly string[], since: Date): Pro
   return rows.map((r) => ({ ...r.run, title: r.record.title, createdBy: r.createdBy }));
 }
 
-export async function getTask(projectId: string, id: string): Promise<TaskRow | null> {
+export async function getTask(projectId: string, id: string, scope?: TaskScope): Promise<TaskRow | null> {
   const [row] = await db
     .select()
     .from(schema.scheduledTasks)
-    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id)))
+    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id), inScope(scope)))
     .limit(1);
   return row ?? null;
 }
@@ -102,21 +113,21 @@ export async function getTaskById(id: string): Promise<TaskRow | null> {
 
 /** Replaces the record (and its next run). With `expectedUpdatedAt`, only if nobody changed it since. A
  *  paused task stays paused, unless it becomes a one-shot: those are never paused (`pauseTask`). */
-export async function updateTask(projectId: string, id: string, next: ScheduleRecord, expectedUpdatedAt?: Date): Promise<TaskRow | "not_found" | "conflict"> {
-  const where = and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id));
+export async function updateTask(projectId: string, id: string, next: ScheduleRecord, expectedUpdatedAt?: Date, scope?: TaskScope): Promise<TaskRow | "not_found" | "conflict"> {
+  const where = and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id), inScope(scope));
   const [row] = await db
     .update(schema.scheduledTasks)
     .set({ record: next, scheduledAt: new Date(next.scheduledAt), status: "active", updatedAt: new Date(), ...(isRecurringScheduleRecord(next) ? {} : { pausedAt: null }) })
     .where(expectedUpdatedAt ? and(where, eq(schema.scheduledTasks.updatedAt, expectedUpdatedAt)) : where)
     .returning();
   if (row) return row;
-  return (await getTask(projectId, id)) ? "conflict" : "not_found";
+  return (await getTask(projectId, id, scope)) ? "conflict" : "not_found";
 }
 
-export async function deleteTask(projectId: string, id: string): Promise<boolean> {
+export async function deleteTask(projectId: string, id: string, scope?: TaskScope): Promise<boolean> {
   const rows = await db
     .delete(schema.scheduledTasks)
-    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id)))
+    .where(and(eq(schema.scheduledTasks.projectId, projectId), eq(schema.scheduledTasks.id, id), inScope(scope)))
     .returning({ id: schema.scheduledTasks.id });
   return rows.length > 0;
 }
