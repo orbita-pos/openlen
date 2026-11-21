@@ -11,11 +11,14 @@ vi.mock("next-intl", () => ({
 }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "u1", name: "Ana" } }, status: "authenticated" }) }));
 vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {}, error: () => {} }), ToastProvider: ({ children }: { children: React.ReactNode }) => children }));
+const router = vi.hoisted(() => ({ refresh: vi.fn() }));
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => router }));
 // Len's chat panel is a mark that says what it was given, and hands the draft back when asked.
-const panel = vi.hoisted(() => ({ consumed: null as null | (() => void) }));
+const panel = vi.hoisted(() => ({ consumed: null as null | (() => void), chatChanged: null as null | (() => void) }));
 vi.mock("../chat/new-chat-panel", () => ({
-  NewChatPanel: (p: { pendingDraft?: string | null; pendingDraftAutoSend?: boolean; onPendingDraftConsumed?: () => void; pendingAttachments?: { opening?: boolean } | null }) => {
+  NewChatPanel: (p: { pendingDraft?: string | null; pendingDraftAutoSend?: boolean; onPendingDraftConsumed?: () => void; onChatChange?: () => void; pendingAttachments?: { opening?: boolean } | null }) => {
     panel.consumed = p.onPendingDraftConsumed ?? null;
+    panel.chatChanged = p.onChatChange ?? null;
     return <i data-chat="" data-draft={p.pendingDraft ?? ""} data-auto={String(Boolean(p.pendingDraftAutoSend))} data-opening={String(Boolean(p.pendingAttachments?.opening))} />;
   },
 }));
@@ -62,6 +65,13 @@ describe("an agent's first message", () => {
     act(() => panel.consumed?.());
     expect(chat(host).dataset.draft).toBe("");
     expect(chat(host).dataset.auto).toBe("false");
+  });
+
+  it("🔴 when her chat says it changed (her opening went from another tab), her place reads it again", () => {
+    router.refresh.mockReset();
+    mount(SMITH, "Hola, hazme la prueba de nivel");
+    act(() => panel.chatChanged?.());
+    expect(router.refresh).toHaveBeenCalledTimes(1);
   });
 
   it("without one, the box waits as before", () => {

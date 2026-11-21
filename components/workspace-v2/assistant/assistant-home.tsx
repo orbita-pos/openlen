@@ -14,6 +14,7 @@ import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, Wand2, type Lu
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
+import { useRouter } from "@/i18n/navigation";
 import type { AssistantView } from "@/lib/assistants/view";
 import { spaceHref } from "@/lib/space/href";
 import type { StoredChatTurn } from "@/lib/projects/types";
@@ -81,6 +82,9 @@ export function AssistantHome({
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
   const locale = useLocale();
+  // Her conversation comes from the server with the page: when her chat says it changed elsewhere (her opening sent
+  // from another tab, a turn picked up and finished), the page is read again and the chat merges what it brings.
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("talk");
   // Its first message goes out once: the panel hands it back when it is sent, and it is not given again.
   const [opening, setOpening] = useState<string | null>(startsWith);
@@ -249,6 +253,7 @@ export function AssistantHome({
                   flatProjectHtml={projectHtml}
                   onFlatHtmlUpdate={noCanvas}
                   flatProjectChat={initialChat}
+                  onChatChange={() => router.refresh()}
                   assistant={her}
                   figurePaused={creatorOpen || tab !== "talk"}
                   centered

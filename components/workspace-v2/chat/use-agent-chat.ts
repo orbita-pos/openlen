@@ -1575,9 +1575,11 @@ export function useAgentChat({
               .catch(() => ({ error: `HTTP ${res.status}` }));
             scanController.cancel();
             // Her first message, already sent from another tab or the phone: the conversation is that one's, and this
-            // send leaves nothing behind — no bubble, no error.
+            // send leaves nothing behind — no bubble, no error. The parent reads the conversation again, so the other
+            // one's turn shows here instead of an empty chat.
             if (res.status === 409 && errPayload?.code === "already_opened") {
               setTurns((prev) => prev.filter((x) => x.id !== turnId));
+              onChatChangeRef.current?.();
               return;
             }
             // EL CÓDIGO GANA A LA PROSA, igual que en `runAiDesignTurn` (N2 y

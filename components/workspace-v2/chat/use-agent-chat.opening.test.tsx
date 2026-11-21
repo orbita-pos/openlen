@@ -81,6 +81,14 @@ describe("an agent's first message", () => {
     expect(chat!.turns).toEqual([]);
   });
 
+  it("🔴 already sent from elsewhere: the conversation is read again, so the other's turn shows here", async () => {
+    stubAgent(() => Response.json({ error: "this agent's first message was already sent", code: "already_opened" }, { status: 409 }));
+    const onChatChange = vi.fn();
+    await render({ ...OPENING, onChatChange }, () => {});
+    await tick();
+    expect(onChatChange).toHaveBeenCalledTimes(1);
+  });
+
   it("a message the person writes isn't an opening", async () => {
     const cuerpos = stubAgent(() => stream([TURNO, ERROR]));
     let chat: ReturnType<typeof useAgentChat> | null = null;

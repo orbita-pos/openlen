@@ -9,6 +9,7 @@ vi.mock("next-intl", () => ({
   useLocale: () => "es",
 }));
 vi.mock("next-auth/react", () => ({ useSession: () => ({ data: { user: { id: "u1", name: "Ana" } }, status: "authenticated" }) }));
+vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }));
 const toast = vi.hoisted(() => ({ success: vi.fn() }));
 vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: toast.success, error: () => {} }), ToastProvider: ({ children }: { children: React.ReactNode }) => children }));
 
