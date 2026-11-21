@@ -99,7 +99,8 @@ export async function runProposeSkills(session: AgentSession, args: Record<strin
   const r = resolveProposals(args, { personal, bundled: bundledSkillNames(), readState: (name) => readStateOf(session, name, personal.get(name)) });
   if (!r.ok) return refused(r.error);
   // The skill as it is now under each improvement: the save goes through only over this text.
-  const ids = await d.saveProposals(person, session.projectId, r.proposals.map((p) => ({ ...p, baseText: p.target ? (personal.get(p.target) ?? null) : null })));
+  // Under the real project, which they go with: an isolated subagent works in a copy thrown away after its work.
+  const ids = await d.saveProposals(person, session.parentProjectId ?? session.projectId, r.proposals.map((p) => ({ ...p, baseText: p.target ? (personal.get(p.target) ?? null) : null })));
   return {
     response: {
       ok: true,

@@ -1525,13 +1525,14 @@ export const lenSkills = pgTable(
  *  not in the turn's action — the chat's save cuts an action's summary to 200 characters — so the review card shows it on
  *  every reload, only to the person who asked for it, and «Guardar» saves what the server holds, never what a browser
  *  sends. `baseText` is the skill as it was when an improvement was proposed: the save only goes through over that text.
- *  Created by `npm run len-skills:migrate`, like `lenSkills`. */
+ *  They go with their project and with the person, as `toolCards` do. Created by `npm run len-skills:migrate`, like
+ *  `lenSkills`. */
 export const skillProposals = pgTable(
   "skillProposals",
   {
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-    personId: text("personId").notNull(),
-    projectId: text("projectId").notNull(),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     kind: text("kind").$type<"new" | "improvement">().notNull(),
     target: text("target"),

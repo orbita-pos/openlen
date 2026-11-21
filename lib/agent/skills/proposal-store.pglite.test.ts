@@ -44,13 +44,31 @@ const proposal = (o: { name?: string; kind?: "new" | "improvement"; skillMd?: st
 };
 const live = async (person: string, name: string) => (await listSkills("personal", person)).find((s) => s.name === name)?.text;
 
+let pg: PGlite;
 beforeEach(async () => {
-  const pg = new PGlite();
+  pg = new PGlite();
+  // Only the columns the proposals' keys point at: the real tables are OpenLen's first migration.
+  await pg.query(`CREATE TABLE "users" ("id" text PRIMARY KEY)`);
+  await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
+  await pg.query(`INSERT INTO "users" ("id") VALUES ('u1'), ('u2')`);
+  await pg.query(`INSERT INTO "projects" ("id") VALUES ('p1'), ('p2')`);
   for (const statement of CREATE_LEN_SKILLS) await pg.query(statement);
   base.db = drizzle(pg, { schema });
 });
 
 describe("the proposals", () => {
+  // Delivery 2's deferred minor: they stayed after their project or the person's account was deleted.
+  it("🔴 go with the project they were proposed in, and with the person's account", async () => {
+    const [inP1] = await saveSkillProposals("u1", "p1", [proposal({ name: "one-skill" })]);
+    const [inP2] = await saveSkillProposals("u1", "p2", [proposal({ name: "two-skill" })]);
+    const [theirsInP1] = await saveSkillProposals("u2", "p1", [proposal({ name: "three-skill" })]);
+    await pg.query(`DELETE FROM "projects" WHERE "id" = 'p1'`);
+    expect((await proposalsFor("u1", [inP1!, inP2!])).map((p) => p.name)).toEqual(["two-skill"]);
+    expect(await proposalsFor("u2", [theirsInP1!])).toEqual([]);
+    await pg.query(`DELETE FROM "users" WHERE "id" = 'u1'`);
+    expect(await proposalsFor("u1", [inP2!])).toEqual([]);
+  });
+
   it("🔴 are read back only by the person who asked, in the order asked", async () => {
     const [a, b] = await saveSkillProposals("u1", "p1", [proposal({ name: "one-skill" }), proposal({ name: "two-skill" })]);
     const [theirs] = await saveSkillProposals("u2", "p1", [proposal({ name: "three-skill" })]);

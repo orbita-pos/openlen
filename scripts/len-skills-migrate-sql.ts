@@ -17,8 +17,8 @@ export const CREATE_LEN_SKILLS: readonly string[] = [
   // lib/db/schema.ts (`skillProposals`).
   `CREATE TABLE IF NOT EXISTS "skillProposals" (
     "id" text PRIMARY KEY,
-    "personId" text NOT NULL,
-    "projectId" text NOT NULL,
+    "personId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
     "name" text NOT NULL,
     "kind" text NOT NULL,
     "target" text,

@@ -26,6 +26,9 @@ const SKILL = "---\nname: cotizar\ndescription: How I quote.\n---\n\nAsk for the
 
 beforeEach(async () => {
   const pg = new PGlite();
+  // The proposals beside the skills point at these (skillProposals): only the columns their keys need.
+  await pg.query(`CREATE TABLE "users" ("id" text PRIMARY KEY)`);
+  await pg.query(`CREATE TABLE "projects" ("id" text PRIMARY KEY)`);
   for (const statement of CREATE_LEN_SKILLS) await pg.query(statement);
   base.db = drizzle(pg, { schema });
 });

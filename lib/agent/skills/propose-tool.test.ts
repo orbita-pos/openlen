@@ -76,6 +76,12 @@ describe("propose_skills", () => {
     expect(lastStored().rows[0]!.baseText).toBeNull();
   });
 
+  // The proposals go with their project (skillProposals' key): an isolated subagent's copy is thrown away after its work.
+  it("in an isolated subagent's copy, keeps them under the real project", async () => {
+    await runProposeSkills({ ...LEN, projectId: "copy-1", parentProjectId: "p1" } as unknown as AgentSession, { proposals: [NEW] }, deps());
+    expect(lastStored()).toMatchObject({ personId: "u1", projectId: "p1" });
+  });
+
   it("speaks for the member who talks, not the owner (personOf)", async () => {
     const seen: string[] = [];
     await runProposeSkills({ ...LEN, personId: "m1" } as unknown as AgentSession, { proposals: [NEW] }, deps(seen));
