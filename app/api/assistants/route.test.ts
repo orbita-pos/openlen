@@ -199,7 +199,7 @@ describe("GET /api/assistants", () => {
     m.assistantsOf.mockResolvedValueOnce([LUCIA]);
     const res = await GET(new Request("http://localhost/api/assistants"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ enabled: true, assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
+    expect(await res.json()).toEqual({ enabled: true, agents: true, assistants: [{ id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1", "p2"] }] });
     expect(m.projectIdsOf).toHaveBeenCalledWith(["a1"]);
     expect(m.assistantsOf).toHaveBeenCalledWith("u1");
   });
@@ -208,10 +208,23 @@ describe("GET /api/assistants", () => {
     const before = process.env.OPENLEN_ASSISTANT;
     process.env.OPENLEN_ASSISTANT = "0";
     try {
-      expect(await (await GET(new Request("http://localhost/api/assistants"))).json()).toEqual({ assistants: [], enabled: false });
+      expect(await (await GET(new Request("http://localhost/api/assistants"))).json()).toEqual({ assistants: [], enabled: false, agents: false });
     } finally {
       if (before === undefined) delete process.env.OPENLEN_ASSISTANT;
       else process.env.OPENLEN_ASSISTANT = before;
+    }
+  });
+
+  // Agents for everyone, delivery 4 (spec local 2026-11-19-agentes-para-todos, §6.8): the phone offers «Crear un agente»
+  // only when the web's home can make one.
+  it("says whether agents are on", async () => {
+    m.assistantsOf.mockResolvedValue([]);
+    expect(await (await GET(new Request("http://localhost/api/assistants"))).json()).toMatchObject({ enabled: true, agents: true });
+    vi.stubEnv("OPENLEN_AGENTS", "0");
+    try {
+      expect(await (await GET(new Request("http://localhost/api/assistants"))).json()).toMatchObject({ enabled: true, agents: false });
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 });

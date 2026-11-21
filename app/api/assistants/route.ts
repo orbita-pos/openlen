@@ -77,12 +77,13 @@ async function createInTheSpace(
 export const GET = paraLaApp(async (req: Request): Promise<Response> => {
   const personId = await usuarioDeLaPeticion(req);
   if (!personId) return json({ error: "unauthorized" }, 401);
-  // `enabled` (spec local 2026-11-16-movil-es-tu-asistente, §5.1): the phone tells «off» from «none yet».
-  if (!assistantsEnabled()) return json({ assistants: [], enabled: false });
+  // `enabled` (spec local 2026-11-16-movil-es-tu-asistente, §5.1): the phone tells «off» from «none yet». `agents`
+  // (spec local 2026-11-19-agentes-para-todos, §6.8): the phone offers «Crear un agente» only when the home can make one.
+  if (!assistantsEnabled()) return json({ assistants: [], enabled: false, agents: false });
   const mine = await assistantsOf(personId);
   // Each with the projects she serves (phase 4): a card in a project knows whether that project has her.
   const served = await projectIdsOf(mine.map((a) => a.id));
-  return json({ enabled: true, assistants: mine.map((a) => ({ ...assistantView(a), projectIds: served.get(a.id) ?? [a.homeProjectId] })) });
+  return json({ enabled: true, agents: agentsEnabled(), assistants: mine.map((a) => ({ ...assistantView(a), projectIds: served.get(a.id) ?? [a.homeProjectId] })) });
 });
 
 export const OPTIONS = respuestaPrevia;

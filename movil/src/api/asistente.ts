@@ -20,13 +20,14 @@ async function leer<T>(c: ClienteDeOpenLen, ruta: string, campo: string): Promis
 const suya = (id: string, tras = "") => `/api/assistants/${encodeURIComponent(id)}${tras}`;
 
 /** Her person's assistants, newest first, and whether assistants are on at all (spec local
- *  2026-11-16-movil-es-tu-asistente, §5.1): off is today's app with Len. A server from before says nothing: on. Throws
- *  on a failure. */
-export async function readAssistants(c: ClienteDeOpenLen): Promise<{ enabled: boolean; assistants: AssistantListItem[] }> {
+ *  2026-11-16-movil-es-tu-asistente, §5.1): off is today's app with Len. A server from before says nothing: on. And
+ *  whether agents can be made (spec local 2026-11-19-agentes-para-todos, §6.8): a server from before says nothing: off.
+ *  Throws on a failure. */
+export async function readAssistants(c: ClienteDeOpenLen): Promise<{ enabled: boolean; agents: boolean; assistants: AssistantListItem[] }> {
   const res = await c.pedir("/api/assistants");
-  const body = (await res.json().catch(() => null)) as { enabled?: unknown; assistants?: unknown } | null;
+  const body = (await res.json().catch(() => null)) as { enabled?: unknown; agents?: unknown; assistants?: unknown } | null;
   if (!res.ok || !body) throw new Error(String(res.status));
-  return { enabled: body.enabled !== false, assistants: Array.isArray(body.assistants) ? (body.assistants as AssistantListItem[]) : [] };
+  return { enabled: body.enabled !== false, agents: body.agents === true, assistants: Array.isArray(body.assistants) ? (body.assistants as AssistantListItem[]) : [] };
 }
 
 /** Her person's assistants, newest first; none (or assistants off on the server) is an empty list. Throws otherwise. */

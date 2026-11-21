@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { clienteDeMuestra } from "../muestra";
-import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, tocarPedido } from "./asistente";
+import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, readAssistants, tocarPedido } from "./asistente";
 import { mandarALen } from "./chat";
 
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
@@ -18,6 +18,12 @@ describe("her calls", () => {
     expect(await listarAsistentes(cliente(() => Response.json({ assistants: [LUCIA] })))).toEqual([LUCIA]);
     expect(await listarAsistentes(cliente(() => Response.json({ assistants: [] })))).toEqual([]);
     await expect(listarAsistentes(cliente(() => new Response("x", { status: 500 })))).rejects.toThrow();
+  });
+
+  // Agents for everyone, delivery 4 (spec local 2026-11-19-agentes-para-todos, §6.8).
+  it("reads whether agents are on; a server from before says nothing: off", async () => {
+    expect((await readAssistants(cliente(() => Response.json({ enabled: true, agents: true, assistants: [] })))).agents).toBe(true);
+    expect((await readAssistants(cliente(() => Response.json({ enabled: true, assistants: [] })))).agents).toBe(false);
   });
 
   it("reads her chat, visits and requests, and presses a request", async () => {
