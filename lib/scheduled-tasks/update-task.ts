@@ -5,7 +5,7 @@ import { ScheduleInputError, MAX_TITLE_LENGTH, REQUIRED_TITLE_MESSAGE } from "./
 import type { AtInput, CronInput, DailyInput, ScheduleTimingChange, WeeklyInput } from "./deepseek/types";
 import { resolveScheduleUpdate } from "./deepseek/update";
 import { checkOpenLenLimits, OpenLenScheduleError } from "./limits";
-import type { listTasks, updateTask } from "./store";
+import type { listTasks, TaskScope, updateTask } from "./store";
 import { viewForModel } from "./view";
 
 /** A DeepSeek value: a view, a list of views, a result or a `{ code, message }`. */
@@ -66,12 +66,13 @@ export interface UpdateDeps {
   now(): number;
 }
 
-/** `schedule_update`'s value for `args` (with `id`), in the project. Throws DeepSeek's or OpenLen's refusals. */
-export async function updateScheduledTask(projectId: string, args: Record<string, unknown>, deps: UpdateDeps): Promise<ScheduleToolValue> {
+/** `schedule_update`'s value for `args` (with `id`), in the project — within one conversation's tasks when `scope` says
+ *  whose (spec local 2026-11-19-agentes-para-todos, §6.4). Throws DeepSeek's or OpenLen's refusals. */
+export async function updateScheduledTask(projectId: string, args: Record<string, unknown>, deps: UpdateDeps, scope?: TaskScope): Promise<ScheduleToolValue> {
   const invalid = validateUpdateArgs(args);
   if (invalid) return invalid;
   const id = args.id as string;
-  const expected = (await deps.list(projectId, { includeInactive: true })).find((row) => row.id === id);
+  const expected = (await deps.list(projectId, { includeInactive: true, ...(scope ? { scope } : {}) })).find((row) => row.id === id);
   if (!expected) return { id, updated: false, code: "schedule_not_found" };
   if (expected.status !== "active") return { id, updated: false, code: "schedule_ended" };
   const now = deps.now();
@@ -82,7 +83,7 @@ export async function updateScheduledTask(projectId: string, args: Record<string
   if (!("record" in result)) return result as unknown as Record<string, unknown>;
   if (!result.updated) return viewForModel(expected.record, now, expected.timeZone, { pausedAt: expected.pausedAt });
   checkOpenLenLimits(result.record);
-  const saved = await deps.update(projectId, id, result.record, expected.updatedAt);
+  const saved = await deps.update(projectId, id, result.record, expected.updatedAt, scope);
   if (saved === "not_found") return { id, updated: false, code: "schedule_not_found" };
   if (saved === "conflict") return { id, updated: false, code: "schedule_conflict" };
   return viewForModel(saved.record, now, saved.timeZone, { pausedAt: saved.pausedAt });

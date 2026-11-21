@@ -39,7 +39,7 @@ import {
 } from "@/lib/scheduled-tasks/deepseek/domain";
 import type { AtInput, CronInput, DailyInput, ScheduleRecord, ScheduleTimingChange, WeeklyInput } from "@/lib/scheduled-tasks/deepseek/types";
 import { checkOpenLenLimits, OPENLEN_MIN_INTERVAL_SECONDS, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
-import type { createTask, deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
+import type { createTask, deleteTask, listTasks, TaskScope, updateTask } from "@/lib/scheduled-tasks/store";
 import { invalidInterval, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
 import { ON_DECLARATION, parseOn } from "@/lib/event-tasks/sources/declarations";
@@ -262,6 +262,15 @@ function recordFrom(args: Record<string, unknown>, now: number): ScheduleRecord 
 
 const FALLBACK_ZONE = "UTC";
 
+/** Whose tasks this turn reaches (spec local 2026-11-19-agentes-para-todos, §6.4): an agent's turn, only its own; Len's,
+ *  only Len's — each conversation has its own tasks, as it has its own memory. */
+export function scopeOf(session: AgentSession): TaskScope {
+  return { assistantId: session.assistant?.id ?? null };
+}
+
+const LEN_ONLY =
+  "Watching a source for changes is Len's, not an agent's: tell the person to ask Len in their space. Nothing was created.";
+
 export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   return guarded(async () => {
     const sd = depsOf(deps);
@@ -274,7 +283,10 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
         "Scheduled tasks are part of OpenLen's paid plans (Pro, Max, Ultra), and this project's owner is on Free. Tell the user it needs a paid plan; nothing was scheduled.",
       );
     }
-    if (args.on !== undefined && sd.events) return createEventTaskFrom(session, sd, sd.events, args);
+    if (args.on !== undefined && sd.events) {
+      if (session.assistant) return { code: "len_only", message: LEN_ONLY };
+      return createEventTaskFrom(session, sd, sd.events, args);
+    }
     const now = sd.now();
     const record = recordFrom(args, now);
     checkOpenLenLimits(record);
@@ -284,6 +296,7 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
       locale: session.uiLocale ?? "en",
       timeZone: session.zonaHoraria ?? FALLBACK_ZONE,
       record,
+      assistantId: scopeOf(session).assistantId,
     });
     return viewForModel(row.record, now, row.timeZone);
   });
@@ -294,8 +307,8 @@ export async function toolScheduleList(session: AgentSession, deps: AgentDeps, _
     const sd = depsOf(deps);
     if (!sd) return internalError();
     const now = sd.now();
-    const timed = (await sd.list(session.projectId)).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
-    if (!sd.events || !isOwner(session)) return timed;
+    const timed = (await sd.list(session.projectId, { scope: scopeOf(session) })).map((row) => viewForModel(row.record, now, row.timeZone, { pausedAt: row.pausedAt }));
+    if (!sd.events || !isOwner(session) || session.assistant) return timed;
     const events = sd.events;
     const watched = await Promise.all((await events.list(session.projectId)).map(async (row) => eventView(row, await events.latestCards(row.id, 3))));
     return [...timed, ...watched];
@@ -355,8 +368,8 @@ export async function toolScheduleDelete(session: AgentSession, deps: AgentDeps,
     }
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    if (await sd.remove(session.projectId, args.id)) return { id: args.id, deleted: true };
-    if (sd.events && isOwner(session) && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
+    if (await sd.remove(session.projectId, args.id, scopeOf(session))) return { id: args.id, deleted: true };
+    if (sd.events && isOwner(session) && !session.assistant && (await sd.events.remove(session.projectId, args.id))) return { id: args.id, deleted: true };
     return { id: args.id, deleted: false, code: "schedule_not_found" };
   });
 }
@@ -365,13 +378,13 @@ export async function toolScheduleUpdate(session: AgentSession, deps: AgentDeps,
   return guarded(async () => {
     const sd = depsOf(deps);
     if (!sd) return internalError();
-    const event = sd.events && isOwner(session) && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
+    const event = sd.events && isOwner(session) && !session.assistant && typeof args.id === "string" ? await sd.events.get(session.projectId, args.id) : null;
     if (event && sd.events) {
       const change = eventTaskPatch(args);
       if (!change.ok) return change.error;
       const row = await sd.events.update(session.projectId, event.id, change.patch, new Date(sd.now()));
       return row ? eventView(row, await sd.events.latestCards(row.id, 3)) : { id: args.id, code: "schedule_not_found", message: "No such schedule." };
     }
-    return updateScheduledTask(session.projectId, args, sd);
+    return updateScheduledTask(session.projectId, args, sd, scopeOf(session));
   });
 }

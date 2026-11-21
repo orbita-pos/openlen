@@ -121,7 +121,8 @@ describe("schedule_list / schedule_update / schedule_delete", () => {
     const created = result(await toolScheduleCreate(session, deps, WEEKLY));
     const out = result(await toolScheduleUpdate(session, deps, { id: created.id, weekly: { time: "08:00:00", time_zone: "America/Mexico_City", weekdays: [1] } }));
     expect(out).toMatchObject({ id: created.id, scheduledAtLocal: "2026-11-02T08:00:00-06:00[America/Mexico_City]" });
-    expect(scheduledTasks.update).toHaveBeenCalledWith("p1", created.id, expect.objectContaining({ time: "08:00:00.000" }), expect.any(Date));
+    // Within Len's tasks: a turn of Len's reaches only his (delivery 3).
+    expect(scheduledTasks.update).toHaveBeenCalledWith("p1", created.id, expect.objectContaining({ time: "08:00:00.000" }), expect.any(Date), { assistantId: null });
   });
 
   it("an update below one hour is refused like a create", async () => {
@@ -334,5 +335,46 @@ describe("event tasks through the schedule tools", () => {
     expect(create({ OPENLEN_EVENT_TASKS: "0" }).parameters.properties.on).toBeUndefined();
     const { deps } = fake();
     expect(result(await toolScheduleCreate(owner, deps, ROWS_ON)).code).toBe("invalid_selector");
+  });
+});
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): each conversation has its own tasks.
+// In an agent's turn the tools create, list, change and delete only that agent's; in Len's, only Len's.
+describe("an agent's turn", () => {
+  const AGENT = { ...session, personId: undefined, assistant: { id: "a1", name: "Mr. Smith" } } as unknown as AgentSession;
+  const LEN_TURN = { ...session, personId: undefined } as AgentSession;
+  const WATCH = { prompt: "Avísame si llega una reserva nueva.", title: "Reservas", on: { source: "app_rows", table: "reservas", created_column: "created_at" } };
+
+  it("🔴 schedule_create saves the task as the agent's", async () => {
+    const { deps, scheduledTasks } = fake();
+    await toolScheduleCreate(AGENT, deps, WEEKLY);
+    expect(scheduledTasks.create).toHaveBeenCalledWith(expect.objectContaining({ assistantId: "a1" }));
+    await toolScheduleCreate(LEN_TURN, deps, WEEKLY);
+    expect(scheduledTasks.create).toHaveBeenLastCalledWith(expect.objectContaining({ assistantId: null }));
+  });
+
+  it("🔴 list, delete and update reach only that conversation's tasks", async () => {
+    const { deps, scheduledTasks } = fake();
+    await toolScheduleList(AGENT, deps, {});
+    expect(scheduledTasks.list).toHaveBeenLastCalledWith("p1", expect.objectContaining({ scope: { assistantId: "a1" } }));
+    await toolScheduleList(LEN_TURN, deps, {});
+    expect(scheduledTasks.list).toHaveBeenLastCalledWith("p1", expect.objectContaining({ scope: { assistantId: null } }));
+    await toolScheduleDelete(AGENT, deps, { id: "schedule-x" });
+    expect(scheduledTasks.remove).toHaveBeenLastCalledWith("p1", "schedule-x", { assistantId: "a1" });
+    await toolScheduleUpdate(AGENT, deps, { id: "schedule-x", title: "Otra" });
+    expect(scheduledTasks.list).toHaveBeenLastCalledWith("p1", expect.objectContaining({ includeInactive: true, scope: { assistantId: "a1" } }));
+  });
+
+  it("🔴 an agent doesn't watch sources: that is Len's, and nothing is created", async () => {
+    const { deps } = fake();
+    const events = { validate: vi.fn(), create: vi.fn(), list: vi.fn(async () => []), get: vi.fn(), remove: vi.fn(), update: vi.fn(), latestCards: vi.fn() };
+    (deps as unknown as { scheduledTasks: { events: unknown } }).scheduledTasks.events = events;
+    const out = result(await toolScheduleCreate(AGENT, deps, WATCH));
+    expect(out.code).toBe("len_only");
+    expect(out.message).toMatch(/Len/);
+    expect(events.create).not.toHaveBeenCalled();
+    // Nor does it see Len's event tasks in its list.
+    await toolScheduleList(AGENT, deps, {});
+    expect(events.list).not.toHaveBeenCalled();
   });
 });
