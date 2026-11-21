@@ -28,6 +28,7 @@ import { TasksTab } from "../overview/tasks-tab";
 import { ToolsTab } from "../herramientas/tools-tab";
 import { AssistantTab } from "../asistente/assistant-tab";
 import { AgentsList } from "../asistente/agents-list";
+import { AgentsHome } from "../asistente/agents-home";
 import { LenTurnView } from "../asistente/len-turn-view";
 import { useLenRequests } from "../asistente/use-len-requests";
 import { pasosDelTrabajo } from "../entrega/progreso";
@@ -120,6 +121,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const crearAgente = useCallback(() => void plataforma.abrirNavegador(`${BASE}/?kind=agent`).catch(() => {}), []);
   // Read at least once (final review, I6): until then, no welcome.
   const [asistentesLeidas, setAsistentesLeidas] = useState(false);
+  // Their read failed (and none has succeeded since): with no pages, today's empty screen instead of waiting forever.
+  const [asistentesFallaron, setAsistentesFallaron] = useState(false);
   const [elegida, setElegida] = useState<string | null>(readChosen);
   const [bienvenidaCerrada, setBienvenidaCerrada] = useState(readWelcomeDismissed);
   const [asistenteAbierta, setAsistenteAbierta] = useState<{ asistente: AssistantListItem; parte?: ParteDeLaAsistente; tarjeta?: string | null; n: number } | null>(null);
@@ -164,7 +167,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       setAsistentesOn(x.enabled);
       setAgentesOn(x.agents);
       setAsistentesLeidas(true);
-    }, () => {});
+      setAsistentesFallaron(false);
+    }, () => {
+      if (alive) setAsistentesFallaron(true);
+    });
     return () => {
       alive = false;
     };
@@ -455,15 +461,34 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   });
 
   if (sinRed) return <SinRed onReintentar={() => void cargar()} />;
-  if (lista && lista.length === 0) return <section className="ent-empty lm-layer lm-chat is-on"><Cara estado="reposo" className="app-cargando-cara" /><p>{tv("sinPaginas")}</p><div className="app-vacio-acciones"><button className="app-vacio-abrir" type="button" onClick={() => void plataforma.abrirNavegador(BASE).catch(() => setSinRed(true))}>{ti("abrirOpenLen")}</button><button type="button" onClick={() => void cargar()}>{ti("actualizarPaginas")}</button></div><ControlAvisos avisos={avisos} /><button className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button></section>;
-  if (!lista || !id) return <Cargando mensaje={ti("cargandoPaginas")} />;
+  if (!lista) return <Cargando mensaje={ti("cargandoPaginas")} />;
+  // NO PAGES (spec local 2026-11-19-agentes-para-todos, §1, §6.8): their agents, once read, are the app; until they are
+  // known, loading — never «no pages» to someone who has agents —; with none (or their read failed), today's screen.
+  const sinPaginas = lista.length === 0;
+  if (sinPaginas && !asistentesLeidas && !asistentesFallaron) return <Cargando mensaje={ti("cargandoPaginas")} />;
+  if (sinPaginas && modo.kind !== "assistant") return <section className="ent-empty lm-layer lm-chat is-on"><Cara estado="reposo" className="app-cargando-cara" /><p>{tv("sinPaginas")}</p><div className="app-vacio-acciones"><button className="app-vacio-abrir" type="button" onClick={() => void plataforma.abrirNavegador(BASE).catch(() => setSinRed(true))}>{ti("abrirOpenLen")}</button>{agentesOn && <button type="button" data-crear-agente="" onClick={crearAgente}>{tas("crearAgente")}</button>}<button type="button" onClick={() => { void cargar(); setRecarga((n) => n + 1); }}>{ti("actualizarPaginas")}</button></div><ControlAvisos avisos={avisos} /><button className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button></section>;
+  if (!sinPaginas && !id) return <Cargando mensaje={ti("cargandoPaginas")} />;
 
-  if (!p) return <Cargando mensaje={ti("cargandoPagina")} />;
+  if (!sinPaginas && !p) return <Cargando mensaje={ti("cargandoPagina")} />;
 
   const direccion = p?.subdomain ? publishedHost(p.subdomain) : t("sinPublicar");
 
   return (
     <>
+      {/* No pages: their agents are the app (agents-home.tsx); her chat and the panels below are shared. */}
+      {sinPaginas && ella ? (
+        <AgentsHome
+          agentes={asistentes}
+          actual={ella.id}
+          onElegir={hablarCon}
+          {...(agentesOn ? { onCrear: crearAgente } : {})}
+          atajos={<>
+            <button type="button" className="lm-btn lm-sec" data-atajo-tareas="" onClick={() => setPanel("tareas")}>{tr("tareas")}</button>
+            <ControlAvisos avisos={avisos} />
+            <button type="button" className="lm-btn lm-sec" onClick={onSalir}>{t("salir")}</button>
+          </>}
+        />
+      ) : (
       <section className="lm-layer lm-app is-on" data-mode="page">
         <div className={`lm-pagehost app-con-iframe${tamano !== "cel" ? " is-dv" : ""}`} style={{ "--app-hoja": paginaCorta ? `${visibleEncogida}px` : "0px" } as CSSProperties}>
           {vista && !vistaFallo ? (
@@ -601,6 +626,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           </div>
         )}
       </section>
+      )}
 
       {/* ONE chat (spec local 2026-11-16-movil-es-tu-asistente): hers in her app — her home's conversation, with the
           cards of the project on screen — and Len's in today's app. */}
@@ -608,7 +634,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         abierto={chatAbierto}
         chat={ella ? chatDeElla : chat}
         cliente={cliente}
-        projectId={ella ? ella.projectId : id}
+        projectId={ella ? ella.projectId : (id ?? "")}
         {...(ella ? { cardsProjectId: id, asistente: { name: ella.name, color: ella.color, look: ella.look }, lenCards: {
           byFila: pedidosALen.byFila,
           onStop: (turno: string) => void pedidosALen.stop(turno),
@@ -645,13 +671,13 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         />
       )}
 
-      <PanelAnimado contexto={id}
+      <PanelAnimado contexto={id ?? "agentes"}
         paso={panel === "equipo" ? `equipo:${equipo.hilo?.id ?? "lista"}` : panel === "asistente" ? `asistente:${asistenteAbierta?.asistente.id ?? ""}:${asistenteAbierta?.n ?? 0}` : panel === "turnoDeLen" ? `turno:${turnoDeLen?.fila ?? ""}` : panel ?? ""}
         onVolver={() => { if (panel === "equipo" && equipo.hilo) equipo.cerrarHilo(); else setPanel(null); }}
         nivel={panel === "equipo" ? 370 : panel === "comparar" ? 350 : panel === "look" ? 70 : 45}>
-        {panel === "gestion" ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, m) => { setPanel(null); if (!ella) setChatAbierto(true); void chat.mandarEncargo(texto, m); }} />
+        {panel === "gestion" && id ? <Gestion cliente={cliente} projectId={id} idioma={idioma} trabajando={chat.trabajando} turnoId={chat.turnoId} onCerrar={() => setPanel(null)} onCambio={recargar} onEncargo={(texto, m) => { setPanel(null); if (!ella) setChatAbierto(true); void chat.mandarEncargo(texto, m); }} />
           : panel === "look" ? <TuLen onCerrar={() => setPanel(null)} />
-          : panel === "comparar" ? <Comparacion cliente={cliente} projectId={id} {...(comparando ? { fila: comparando } : { page: ultimoTurnoDeLen(p?.historial ?? [])?.page })} onCerrar={() => setPanel(null)} />
+          : panel === "comparar" && id ? <Comparacion cliente={cliente} projectId={id} {...(comparando ? { fila: comparando } : { page: ultimoTurnoDeLen(p?.historial ?? [])?.page })} onCerrar={() => setPanel(null)} />
           : panel === "equipo" ? <Equipo equipo={equipo} titulo={p?.title ?? ""} idioma={idioma} onCerrar={() => setPanel(null)} />
           : panel === "entregado" ? <DeliveredTab cliente={cliente} onCerrar={() => setPanel(null)} onIrAlChat={(destino, turno) => { setPanel(null); if (ella) { abrirTurnoDeLen(turno, destino); return; } setEnfocarEnChat(`${turno}:entregado`); abrirAviso(destino, "chat"); }} />
           : panel === "tareas" ? <TasksTab cliente={cliente} onCerrar={() => setPanel(null)} onAbrirProyecto={(destino, abrir, card) => { setPanel(null); if (card) abrirAvisoDeLen(destino, card); else abrirAviso(destino, abrir); }} />
@@ -669,7 +695,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       )}
       {archivoDelAviso && createPortal(<PhoneViewer cliente={cliente} file={archivoDelAviso} onClose={() => setArchivoDelAviso(null)} />, document.body)}
 
-      {llamada && !ella && (
+      {llamada && !ella && id && (
         <Llamada
           key={`llamada:${id}`}
           cliente={cliente}

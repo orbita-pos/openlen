@@ -912,3 +912,87 @@ it("🔴 the creator's home is a project of yours, never a shared one", async ()
   await act(async () => {});
   expect(host.querySelector("[data-welcome]")?.getAttribute("data-welcome")).toBe("p1");
 });
+
+// AGENTS FOR EVERYONE, delivery 4 (spec local 2026-11-19-agentes-para-todos, §1 and §6.8): someone who never made a page
+// and made an agent opens the phone. Their agents live in their hidden space, which isn't in the list of pages: the app
+// is their agents, not «Aún no tienes páginas».
+describe("no pages: your agents are the app", () => {
+  beforeEach(() => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }));
+    chatProps.ella = null;
+  });
+  const look = { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const;
+  const CHEF = { id: "a3", name: "Chef Rosa", slug: "chef-rosa", look, color: "#f4a48b", tone: "friendly", projectId: "space", projectIds: ["space"] };
+  const ANA = { ...CHEF, id: "a4", name: "Teacher Ana", slug: "teacher-ana" };
+  const OVERVIEW = { needsYou: [], working: [], scheduled: [], resolved: [], events: [] };
+  async function paint(asistentes: (ruta: string) => Response | Promise<Response>, overview: unknown = OVERVIEW) {
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: [] })
+        : ruta === "/api/assistants"
+          ? asistentes(ruta)
+          : ruta === "/api/movil/tasks"
+            ? Response.json(overview)
+            : ruta.startsWith("/api/tools?")
+              ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+              : Response.json({ chatHistory: [] }),
+    );
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={{ pedir, avisarAlCerrar: vi.fn() }} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    return { pedir };
+  }
+  const agents = (list: unknown[], on = true) => () => Response.json({ enabled: true, agents: on, assistants: list });
+
+  it("🔴 with no pages and two agents, the app lists them and never says you have no pages", async () => {
+    await paint(agents([CHEF, ANA]));
+    expect(host.querySelector('[data-mode="agents"]')).not.toBeNull();
+    expect([...host.querySelectorAll<HTMLElement>("[data-agente]")].map((x) => x.dataset.agente)).toEqual(["a3", "a4"]);
+    expect(host.textContent).not.toContain("sinPaginas");
+  });
+
+  it("🔴 tapping one opens her chat and keeps her on this phone", async () => {
+    await paint(agents([CHEF, ANA]));
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a4"]')!.click());
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Teacher Ana" }, projectId: "space" });
+    expect(localStorage.getItem("len-asistente")).toBe("a4");
+  });
+
+  it("🔴 a turn notice of an agent opens her chat with no pages", async () => {
+    await paint(agents([CHEF, ANA]));
+    await act(async () => aviso.asistente!("a3", { parte: "hablar", tarjeta: null }));
+    await act(async () => {});
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
+  });
+
+  it("🔴 assistants not read yet: loading, never «no pages»; their read failed: today's empty screen", async () => {
+    await paint(() => new Promise<Response>(() => {}));
+    expect(host.textContent).toContain("cargandoPaginas");
+    expect(host.textContent).not.toContain("sinPaginas");
+    expect(host.querySelector("[data-agente]")).toBeNull();
+    act(() => root.unmount());
+    host.remove();
+    await paint(() => new Response("no", { status: 500 }));
+    expect(host.textContent).toContain("sinPaginas");
+  });
+
+  it("no pages and no agents: today's screen, with «Crear un agente» only when agents are on", async () => {
+    await paint(agents([]));
+    expect(host.textContent).toContain("sinPaginas");
+    expect(host.querySelector("[data-crear-agente]")).not.toBeNull();
+    act(() => root.unmount());
+    host.remove();
+    await paint(agents([], false));
+    expect(host.textContent).toContain("sinPaginas");
+    expect(host.querySelector("[data-crear-agente]")).toBeNull();
+  });
+
+  it("«Tareas» opens from your agents", async () => {
+    const { pedir } = await paint(agents([CHEF]));
+    await act(async () => host.querySelector<HTMLButtonElement>("[data-atajo-tareas]")!.click());
+    await act(async () => {});
+    expect(pedir.mock.calls.some(([ruta]) => ruta === "/api/movil/tasks")).toBe(true);
+  });
+});

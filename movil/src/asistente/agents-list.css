@@ -17,3 +17,8 @@
 .agentes-fila[aria-current="true"] { background: var(--agentes-elegida); }
 .agentes-fila:focus-visible { outline: 2px solid var(--agentes-acento); outline-offset: 2px; }
 .agentes-crear { color: var(--agentes-acento); font-weight: 600; justify-content: center; }
+
+/* No pages: the list is the app (agents-home.tsx), on the empty screen's layer (.ent-empty). */
+.app-agentes { display: flex; flex-direction: column; gap: 14px; padding: calc(env(safe-area-inset-top) + 28px) 18px calc(env(safe-area-inset-bottom) + 18px); overflow-y: auto; }
+.app-agentes h1 { font-size: 25px; margin: 0 4px; }
+.app-agentes-atajos { display: flex; flex-direction: column; gap: 10px; margin-top: auto; }
