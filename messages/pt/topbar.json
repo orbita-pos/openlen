@@ -184,7 +184,8 @@
       "falloSinMotivo": "Não cheguei a fazer. Peça de novo pela conversa.",
       "topeAgotado": "o limite mensal do Len para os membros deste projeto acabou. O dono pode aumentá-lo em «Convidar».",
       "sinCreditos": "não há mais créditos na conta do dono do projeto.",
-      "interrumpido": "O servidor reiniciou enquanto eu fazia isto, então pode ter ficado pela metade. Confira as alterações e, se precisar, peça de novo pela conversa."
+      "interrumpido": "O servidor reiniciou enquanto eu fazia isto, então pode ter ficado pela metade. Confira as alterações e, se precisar, peça de novo pela conversa.",
+      "topeAgotadoAgente": "o limite mensal dos membros deste projeto acabou. O dono pode aumentá-lo em «Convidar»."
     },
     "len": {
       "titulo": "Escreva para o Len por e-mail",
@@ -214,7 +215,8 @@
       "contestaAgente": "Se quiser mudar algo, diga a {agente} no chat.",
       "planGratisAgente": "Não a fiz: as tarefas agendadas são dos planos pagos e sua conta está no plano Grátis. A tarefa ficou parada; com um plano pago, peça de novo a {agente}.",
       "perdidaAgente": "Não a fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça a {agente}.",
-      "pieSinAgente": "Tarefa agendada «{title}» de um agente que já não existe."
+      "pieSinAgente": "Tarefa agendada «{title}» de um agente que já não existe.",
+      "sinAccesoAgente": "Não fiz: quem criou esta tarefa já não tem acesso ao projeto onde {agente} vive. A tarefa ficou parada."
     }
   },
   "envVars": {

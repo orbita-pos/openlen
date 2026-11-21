@@ -130,7 +130,7 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
       const es = scheduledTaskEmail({ ...DATA, projectTitle: "Space", canReply: false, agentGone: true }, "es");
       expect(es.text).toContain("PDF de resultados");
       expect(es.text).not.toContain("Space");
-      expect(es.text).not.toMatch(/Len/);
+      expect(es.text).not.toMatch(/\bLen\b/);
       expect(es.text).not.toContain("contesta este correo");
     });
 
@@ -141,6 +141,17 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
       expect(fraseDeFalloPorCorreo("es", null, true)).not.toContain("correo");
       expect(fraseDeInterrupcionPorCorreo("es", true)).not.toContain("correo");
       expect(fraseDeFalloPorCorreo("es", null)).toContain("correo");
+    });
+
+    // Delivery 3's deferred minor M4: these two spoke of Len to the person whose agent's task it was.
+    it("🔴 «no access» and «the members' cap» have the agent's words too, without Len", () => {
+      const noAccess = scheduledTaskPhrase("es", "no_access", "Mr. Smith");
+      expect(noAccess).toContain("Mr. Smith");
+      expect(noAccess).not.toMatch(/\bLen\b/);
+      const cap = fraseDeFalloPorCorreo("es", { motivo: "cap", code: "tope_de_miembros" }, true);
+      expect(cap).not.toMatch(/\bLen\b/);
+      expect(cap).toContain("«Invitar»");
+      expect(fraseDeFalloPorCorreo("es", { motivo: "cap", code: "tope_de_miembros" })).toMatch(/\bLen\b/);
     });
   });
 });

@@ -184,7 +184,8 @@
       "falloSinMotivo": "Non ci sono arrivato. Chiedimelo di nuovo dalla conversazione.",
       "topeAgotado": "il limite mensile di Len per i membri di questo progetto è esaurito. Il proprietario può aumentarlo in «Invita».",
       "sinCreditos": "non ci sono più crediti sull’account del proprietario del progetto.",
-      "interrumpido": "Il server si è riavviato mentre ci lavoravo, quindi potrebbe essere fatto a metà. Controlla le modifiche e, se serve, chiedimelo di nuovo dalla conversazione."
+      "interrumpido": "Il server si è riavviato mentre ci lavoravo, quindi potrebbe essere fatto a metà. Controlla le modifiche e, se serve, chiedimelo di nuovo dalla conversazione.",
+      "topeAgotadoAgente": "il limite mensile per i membri di questo progetto è esaurito. Il proprietario può aumentarlo in «Invita»."
     },
     "len": {
       "titulo": "Scrivi a Len via e-mail",
@@ -214,7 +215,8 @@
       "contestaAgente": "Se vuoi cambiare qualcosa, dillo a {agente} nella sua chat.",
       "planGratisAgente": "Non l’ho fatta: le attività programmate fanno parte dei piani a pagamento e il tuo account è sul piano Gratis. L’attività è ferma; con un piano a pagamento, richiedila a {agente}.",
       "perdidaAgente": "Non l’ho fatta: OpenLen non era disponibile all’ora programmata ed è passato più di un giorno. Se ti serve ancora, chiedila a {agente}.",
-      "pieSinAgente": "Attività programmata «{title}» di un agente che non esiste più."
+      "pieSinAgente": "Attività programmata «{title}» di un agente che non esiste più.",
+      "sinAccesoAgente": "Non l'ho fatta: chi ha creato questa attività non ha più accesso al progetto in cui vive {agente}. L'attività è ferma."
     }
   },
   "envVars": {

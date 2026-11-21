@@ -184,7 +184,8 @@
       "falloSinMotivo": "我没能处理。请在讨论里再让我做一次。",
       "topeAgotado": "本项目成员的 Len 月度上限已用完。所有者可以在「邀请」中提高上限。",
       "sinCreditos": "项目所有者的账户里已经没有额度了。",
-      "interrumpido": "我处理时服务器重启了，可能只完成了一半。请检查改动，如有需要，请在讨论里再让我做一次。"
+      "interrumpido": "我处理时服务器重启了，可能只完成了一半。请检查改动，如有需要，请在讨论里再让我做一次。",
+      "topeAgotadoAgente": "本项目成员的月度上限已用完。所有者可以在「邀请」中提高上限。"
     },
     "len": {
       "titulo": "给 Len 发邮件",
@@ -214,7 +215,8 @@
       "contestaAgente": "如需修改，请在 {agente} 的聊天中告诉它。",
       "planGratisAgente": "未执行：定时任务属于付费方案，而你的账户是免费方案。任务已停止；升级到付费方案后，请再次让 {agente} 来做。",
       "perdidaAgente": "未执行：预定时间 OpenLen 不可用，且已过去一天以上。如仍需要，请让 {agente} 来做。",
-      "pieSinAgente": "一个已不存在的智能体的定时任务「{title}」。"
+      "pieSinAgente": "一个已不存在的智能体的定时任务「{title}」。",
+      "sinAccesoAgente": "没有执行：创建此任务的人已无法访问 {agente} 所在的项目。任务已停止。"
     }
   },
   "envVars": {

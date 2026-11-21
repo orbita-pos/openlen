@@ -142,12 +142,17 @@ export function correoDeMencion(
 
 /** La frase de Len en un hilo cuando el turno no llegó a contestar. Los fallos
  *  conocidos (el tope de los miembros, sin créditos) se dicen en el idioma de
- *  quien escribió; los demás, con la frase que dio el servidor. */
-export function fraseDeFalloDelHilo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null): string {
+ *  quien escribió; los demás, con la frase que dio el servidor. With `agent`, the members' cap doesn't name Len: it was
+ *  the person's agent's turn (delivery 3's M4). */
+export function fraseDeFalloDelHilo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null, agent = false): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.hilo" });
   if (!fallo) return t("falloSinMotivo");
   const motivo =
-    fallo.code === "tope_de_miembros" ? t("topeAgotado") : fallo.code === "no_credits" ? t("sinCreditos") : fallo.motivo.slice(0, 300);
+    fallo.code === "tope_de_miembros"
+      ? t(agent ? "topeAgotadoAgente" : "topeAgotado")
+      : fallo.code === "no_credits"
+        ? t("sinCreditos")
+        : fallo.motivo.slice(0, 300);
   return t("fallo", { motivo });
 }
 
@@ -193,7 +198,7 @@ export function correoDeLen(
 /** La frase de Len por correo cuando el turno no llegó a contestar. La de un agente pide volver a su chat: su correo no
  *  se contesta (spec local 2026-11-19-agentes-para-todos, §6.4). */
 export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null, agent = false): string {
-  if (fallo) return fraseDeFalloDelHilo(idioma, fallo);
+  if (fallo) return fraseDeFalloDelHilo(idioma, fallo, agent);
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
   return t(agent ? "falloSinMotivoAgente" : "falloSinMotivo");
 }
@@ -265,5 +270,6 @@ export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required
   const agente = agentName?.trim();
   if (agente && why === "plan_required") return t("planGratisAgente", { agente });
   if (agente && why === "missed") return t("perdidaAgente", { agente });
+  if (agente && why === "no_access") return t("sinAccesoAgente", { agente });
   return t(why === "plan_required" ? "planGratis" : why === "no_access" ? "sinAcceso" : why === "agent_gone" ? "agenteYaNo" : "perdida");
 }

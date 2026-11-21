@@ -184,7 +184,8 @@
       "falloSinMotivo": "No llegué a hacerlo. Pídemelo otra vez desde el hilo.",
       "topeAgotado": "se acabó el tope mensual de Len para los miembros de este proyecto. El dueño puede subirlo en «Invitar».",
       "sinCreditos": "no quedan créditos en la cuenta del dueño del proyecto.",
-      "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, pídemelo otra vez desde el hilo."
+      "interrumpido": "Se reinició el servidor mientras lo hacía, así que pudo quedar a medias. Mira los cambios y, si hace falta, pídemelo otra vez desde el hilo.",
+      "topeAgotadoAgente": "se acabó el tope mensual de los miembros de este proyecto. El dueño puede subirlo en «Invitar»."
     },
     "len": {
       "titulo": "Escríbele a Len por correo",
@@ -214,7 +215,8 @@
       "contestaAgente": "Si quieres que cambie algo, díselo a {agente} en su chat.",
       "planGratisAgente": "No la hice: las tareas programadas son de los planes de pago y tu cuenta está en el plan Gratis. La tarea quedó parada; con un plan de pago, pídesela otra vez a {agente}.",
       "perdidaAgente": "No la hice: OpenLen no estaba disponible a la hora programada y ya pasó más de un día. Si todavía la necesitas, pídesela a {agente}.",
-      "pieSinAgente": "Tarea programada «{title}» de un agente que ya no existe."
+      "pieSinAgente": "Tarea programada «{title}» de un agente que ya no existe.",
+      "sinAccesoAgente": "No la hice: quien creó esta tarea ya no tiene acceso al proyecto donde vive {agente}. La tarea quedó parada."
     }
   },
   "envVars": {

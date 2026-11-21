@@ -184,7 +184,8 @@
       "falloSinMotivo": "I couldn’t get to it. Ask me again from the thread.",
       "topeAgotado": "this project’s monthly Len limit for members is used up. The owner can raise it under Invite.",
       "sinCreditos": "there are no credits left on the project owner’s account.",
-      "interrumpido": "The server restarted while I was working on this, so it may be half done. Check the changes and, if needed, ask me again from the thread."
+      "interrumpido": "The server restarted while I was working on this, so it may be half done. Check the changes and, if needed, ask me again from the thread.",
+      "topeAgotadoAgente": "this project’s monthly limit for members is used up. The owner can raise it under Invite."
     },
     "len": {
       "titulo": "Email Len",
@@ -214,7 +215,8 @@
       "contestaAgente": "If you want something changed, tell {agente} in their chat.",
       "planGratisAgente": "I didn't do it: scheduled tasks are part of the paid plans and your account is on Free. The task has stopped; with a paid plan, ask {agente} for it again.",
       "perdidaAgente": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask {agente}.",
-      "pieSinAgente": "Scheduled task «{title}» of an agent that no longer exists."
+      "pieSinAgente": "Scheduled task «{title}» of an agent that no longer exists.",
+      "sinAccesoAgente": "I didn't do it: whoever created this task no longer has access to the project where {agente} lives. The task is stopped."
     }
   },
   "envVars": {

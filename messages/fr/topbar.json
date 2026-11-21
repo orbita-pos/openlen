@@ -184,7 +184,8 @@
       "falloSinMotivo": "Je n’ai pas pu m’en occuper. Redemandez-le-moi depuis le fil.",
       "topeAgotado": "la limite mensuelle de Len pour les membres de ce projet est atteinte. Le propriétaire peut l’augmenter dans « Inviter ».",
       "sinCreditos": "il n’y a plus de crédits sur le compte du propriétaire du projet.",
-      "interrumpido": "Le serveur a redémarré pendant que je m’en occupais, ce n’est peut-être fait qu’à moitié. Vérifiez les changements et, si besoin, redemandez-le-moi depuis le fil."
+      "interrumpido": "Le serveur a redémarré pendant que je m’en occupais, ce n’est peut-être fait qu’à moitié. Vérifiez les changements et, si besoin, redemandez-le-moi depuis le fil.",
+      "topeAgotadoAgente": "la limite mensuelle des membres de ce projet est atteinte. Le propriétaire peut l’augmenter dans « Inviter »."
     },
     "len": {
       "titulo": "Écrire à Len par e-mail",
@@ -214,7 +215,8 @@
       "contestaAgente": "Si vous voulez changer quelque chose, dites-le à {agente} dans son chat.",
       "planGratisAgente": "Je ne l’ai pas faite : les tâches programmées font partie des offres payantes et votre compte est sur l’offre Gratuite. La tâche est arrêtée ; avec une offre payante, redemandez-la à {agente}.",
       "perdidaAgente": "Je ne l’ai pas faite : OpenLen n’était pas disponible à l’heure prévue et plus d’un jour est passé. Si vous en avez encore besoin, demandez-la à {agente}.",
-      "pieSinAgente": "Tâche programmée « {title} » d’un agent qui n’existe plus."
+      "pieSinAgente": "Tâche programmée « {title} » d’un agent qui n’existe plus.",
+      "sinAccesoAgente": "Je ne l'ai pas faite : la personne qui a créé cette tâche n'a plus accès au projet où vit {agente}. La tâche est arrêtée."
     }
   },
   "envVars": {

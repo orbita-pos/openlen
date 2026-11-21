@@ -184,7 +184,8 @@
       "falloSinMotivo": "Ik ben er niet aan toegekomen. Vraag het me opnieuw vanuit de draad.",
       "topeAgotado": "de maandelijkse Len-limiet voor leden van dit project is op. De eigenaar kan die verhogen onder ‘Uitnodigen’.",
       "sinCreditos": "er zijn geen credits meer op het account van de eigenaar van het project.",
-      "interrumpido": "De server is opnieuw opgestart terwijl ik hiermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en vraag het me zo nodig opnieuw vanuit de draad."
+      "interrumpido": "De server is opnieuw opgestart terwijl ik hiermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en vraag het me zo nodig opnieuw vanuit de draad.",
+      "topeAgotadoAgente": "de maandelijkse limiet voor leden van dit project is op. De eigenaar kan die verhogen onder ‘Uitnodigen’."
     },
     "len": {
       "titulo": "Mail Len",
@@ -214,7 +215,8 @@
       "contestaAgente": "Wil je iets anders? Zeg het tegen {agente} in de chat.",
       "planGratisAgente": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en je account heeft Gratis. De taak is gestopt; vraag het met een betaald abonnement opnieuw aan {agente}.",
       "perdidaAgente": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag verstreken. Heb je het nog nodig, vraag het dan aan {agente}.",
-      "pieSinAgente": "Geplande taak „{title}” van een agent die niet meer bestaat."
+      "pieSinAgente": "Geplande taak „{title}” van een agent die niet meer bestaat.",
+      "sinAccesoAgente": "Niet gedaan: wie deze taak heeft gemaakt, heeft geen toegang meer tot het project waar {agente} woont. De taak is gestopt."
     }
   },
   "envVars": {
