@@ -864,6 +864,7 @@
     "files": "File",
     "placeholder": "Chiedi a Len un nuovo agente, o cambia uno dei tuoi…",
     "emptyTitle": "Di quale agente hai bisogno?",
-    "emptySubtitle": "Di’ a Len a cosa ti serve. Lui lo prepara e ti lascia una scheda per crearlo."
+    "emptySubtitle": "Di’ a Len a cosa ti serve. Lui lo prepara e ti lascia una scheda per crearlo.",
+    "preparing": "Preparazione del tuo messaggio…"
   }
 }

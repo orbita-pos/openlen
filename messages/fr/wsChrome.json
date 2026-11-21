@@ -864,6 +864,7 @@
     "files": "Fichiers",
     "placeholder": "Demandez à Len un nouvel agent, ou modifiez l’un des vôtres…",
     "emptyTitle": "De quel agent avez-vous besoin ?",
-    "emptySubtitle": "Dites à Len à quoi il doit servir. Il le prépare et vous laisse une carte pour le créer."
+    "emptySubtitle": "Dites à Len à quoi il doit servir. Il le prépare et vous laisse une carte pour le créer.",
+    "preparing": "Préparation de votre message…"
   }
 }

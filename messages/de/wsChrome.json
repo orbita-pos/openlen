@@ -864,6 +864,7 @@
     "files": "Dateien",
     "placeholder": "Bitte Len um einen neuen Agenten oder ändere einen deiner Agenten…",
     "emptyTitle": "Welchen Agenten brauchst du?",
-    "emptySubtitle": "Sag Len, wofür du ihn brauchst. Er bereitet ihn vor und lässt dir eine Karte da, um ihn zu erstellen."
+    "emptySubtitle": "Sag Len, wofür du ihn brauchst. Er bereitet ihn vor und lässt dir eine Karte da, um ihn zu erstellen.",
+    "preparing": "Deine Nachricht wird vorbereitet…"
   }
 }

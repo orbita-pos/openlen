@@ -13,6 +13,7 @@ import { ArrowLeft, FolderOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
+import { CaraDeLen } from "@/components/llamada/cara-de-len";
 import { AGENT_JOBS } from "@/components/marketing/agent-job-chips";
 import { Link, useRouter } from "@/i18n/navigation";
 import { takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
@@ -81,6 +82,9 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
   const toast = useToast();
   const router = useRouter();
   const [start, setStart] = useState<Start | null>(null);
+  // The home's send waits for what it attached to upload: meanwhile the chat isn't there to send anything before it
+  // (final review of this pass: a message sent then made the home's, and its attachments, drop without a word).
+  const [preparing, setPreparing] = useState(false);
   // THE SPACE'S FILES (delivery 2, spec §6.2): what the agents keep, in the Code lens, beside the chat.
   const [files, setFiles] = useState(false);
   const codeViewLabels = useCodeViewLabels("space");
@@ -106,11 +110,16 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
       return;
     }
     // The home's send: what it attached goes with it (delivery 1 deferred it, and it was lost on the way).
-    void fromTheHome(projectId).then(({ attachments, photosFailed, filesFailed }) => {
-      if (photosFailed > 0) toast.error(tp("toast.photosNotUploaded", { count: photosFailed }));
-      if (filesFailed > 0) toast.error(tp("toast.filesNotUploaded", { count: filesFailed }));
-      setStart({ ...first, attachments });
-    });
+    setPreparing(true);
+    void fromTheHome(projectId)
+      .then(({ attachments, photosFailed, filesFailed }) => {
+        if (photosFailed > 0) toast.error(tp("toast.photosNotUploaded", { count: photosFailed }));
+        if (filesFailed > 0) toast.error(tp("toast.filesNotUploaded", { count: filesFailed }));
+        setStart({ ...first, attachments });
+      })
+      // Reading what was left failed: the message still goes, alone, as on /new.
+      .catch(() => setStart(first))
+      .finally(() => setPreparing(false));
   }, [arrivalBrief, draft, router, projectId, toast, tp]);
 
   return (
@@ -140,6 +149,12 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
         </div>
         <div className="relative flex min-h-0 flex-1">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {preparing ? (
+            <div data-space-preparing="" role="status" aria-live="polite" className="m-auto grid justify-items-center gap-3 text-[13.5px] fg-muted">
+              <CaraDeLen estado="pensando" props="compact" className="h-[64px] w-[64px]" />
+              {t("space.preparing")}
+            </div>
+          ) : (
           <NewChatPanel
             flatProjectId={projectId}
             flatProjectHtml=""
@@ -155,6 +170,7 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
             emptyState={emptyState}
             noPage
           />
+          )}
         </div>
         {/* Beside the chat on a wide screen; over it on a phone. The lens fills its box (it is absolute inset-0). */}
         {files && (

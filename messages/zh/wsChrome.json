@@ -864,6 +864,7 @@
     "files": "文件",
     "placeholder": "让 Len 创建一个新智能体，或修改你已有的智能体…",
     "emptyTitle": "你需要什么样的智能体？",
-    "emptySubtitle": "告诉 Len 你想用它做什么。他会准备好，并留下一张卡片让你创建它。"
+    "emptySubtitle": "告诉 Len 你想用它做什么。他会准备好，并留下一张卡片让你创建它。",
+    "preparing": "正在准备你的消息…"
   }
 }

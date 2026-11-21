@@ -864,6 +864,7 @@
     "files": "Arquivos",
     "placeholder": "Peça ao Len um agente novo, ou mude um dos seus…",
     "emptyTitle": "De que agente você precisa?",
-    "emptySubtitle": "Conte ao Len para que você o quer. Ele o prepara e deixa um cartão para você criá-lo."
+    "emptySubtitle": "Conte ao Len para que você o quer. Ele o prepara e deixa um cartão para você criá-lo.",
+    "preparing": "Preparando sua mensagem…"
   }
 }

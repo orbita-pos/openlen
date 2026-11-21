@@ -864,6 +864,7 @@
     "files": "Files",
     "placeholder": "Ask Len for a new agent, or change one of yours…",
     "emptyTitle": "What agent do you need?",
-    "emptySubtitle": "Tell Len what you want it for. He prepares it and leaves you a card to create it."
+    "emptySubtitle": "Tell Len what you want it for. He prepares it and leaves you a card to create it.",
+    "preparing": "Getting your message ready…"
   }
 }

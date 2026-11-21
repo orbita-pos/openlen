@@ -57,8 +57,9 @@ vi.mock("../code-view", () => ({
 vi.mock("../code-view-labels", () => ({ useCodeViewLabels: (kind: string) => ({ title: kind }) }));
 // What the home attached crosses like it does to /new: photos in sessionStorage (the real module), files in IndexedDB
 // (here, a list), both uploaded to the space before the send.
-const transit = vi.hoisted(() => ({ files: [] as File[], photosUploaded: [] as unknown[][], filesUploaded: [] as string[] }));
-vi.mock("@/lib/marketing/files-in-transit", () => ({ takeFilesInTransit: async () => transit.files.splice(0) }));
+const transit = vi.hoisted(() => ({ files: [] as File[], photosUploaded: [] as unknown[][], filesUploaded: [] as string[], hold: Promise.resolve() as Promise<unknown> }));
+vi.mock("@/lib/marketing/files-in-transit", () => ({ takeFilesInTransit: async () => (await transit.hold, transit.files.splice(0)) }));
+vi.mock("@/components/llamada/cara-de-len", () => ({ CaraDeLen: () => <i data-len-face="" /> }));
 vi.mock("@/lib/workspace-v2/upload-photos", () => ({
   uploadPhotos: async (photos: unknown[], projectId: string) => (transit.photosUploaded.push([...photos, projectId]), { images: photos.map((_, i) => ({ url: `/u/photo-${i}.webp` })), failed: 0 }),
 }));
@@ -158,6 +159,24 @@ describe("the space", () => {
     expect(JSON.parse(chat(el).dataset.attachments!)).toEqual({ images: [{ url: "/u/photo-0.webp" }], files: [{ url: "/u/nivel.pdf", name: "nivel.pdf" }] });
     expect(transit.photosUploaded).toEqual([[{ dataUrl: "data:image/png;base64,AAAA", nombre: "libro.png" }, "space-1"]]);
     expect(transit.filesUploaded).toEqual(["nivel.pdf@space-1"]);
+  });
+
+  // Final review of this pass: while they uploaded, the box stayed live; a message the person sent meanwhile made the
+  // home's send (and its attachments) drop without a word. The chat waits until they are up.
+  it("🔴 while what the home attached uploads, the chat waits: nothing can be sent before the home's message", async () => {
+    let release!: () => void;
+    transit.hold = new Promise<void>((r) => (release = r));
+    leaveFirstMessage({ brief: BRIEF, kind: "agent" });
+    transit.files = [new File(["%PDF-1.4"], "nivel.pdf", { type: "application/pdf" })];
+    const el = mount({ arrivalBrief: BRIEF });
+    await act(async () => {});
+    expect(el.querySelector("[data-chat]")).toBeNull();
+    expect(el.querySelector("[data-space-preparing]")).not.toBeNull();
+    await act(async () => release());
+    await act(async () => {});
+    expect(el.querySelector("[data-space-preparing]")).toBeNull();
+    expect(chat(el).dataset.draft).toBe(BRIEF);
+    transit.hold = Promise.resolve();
   });
 
   it("a brief that only fills the box leaves what's in transit alone", async () => {

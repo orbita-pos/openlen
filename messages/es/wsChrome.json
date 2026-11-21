@@ -864,6 +864,7 @@
     "files": "Ficheros",
     "placeholder": "Pídele a Len un agente nuevo, o cambia uno de los tuyos…",
     "emptyTitle": "¿Qué agente te hace falta?",
-    "emptySubtitle": "Cuéntale a Len para qué lo quieres. Él lo prepara y te deja una tarjeta para crearlo."
+    "emptySubtitle": "Cuéntale a Len para qué lo quieres. Él lo prepara y te deja una tarjeta para crearlo.",
+    "preparing": "Preparando tu mensaje…"
   }
 }
