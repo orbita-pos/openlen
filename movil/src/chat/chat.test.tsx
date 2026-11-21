@@ -66,6 +66,24 @@ it("🔴 her chat shows a Len card for each request she passed, following its ro
  expect(onCompare).toHaveBeenCalledWith({ filaId: "f1", projectId: "p2" });
 });
 
+// Delivery 4's deferred minor M2: with no pages, an agent that wrote a file in your space ended her turn with «Ver en tu
+// página», and tapping it only closed the chat. With no page to look at, the card isn't offered.
+it("🔴 with no page to look at, a turn that changed something doesn't offer «Ver en tu página»", () => {
+ const chat = { elementos: [mensaje(), respuesta(), { tipo: "verEnTuPagina", clave: "t1:ver", t: 3 }], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="space" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} asistente={{ name: "Chef Rosa", color: "#3b82f6" }} />));
+ expect(host.querySelector('[data-clave="t1:ver"]')).toBeNull();
+ expect(host.textContent).not.toContain("verEnTuPagina");
+ expect(host.textContent).toContain("Respuesta");
+});
+
+it("with a page, the same turn offers it", () => {
+ const onVerPagina = vi.fn();
+ const chat = { elementos: [mensaje(), respuesta(), { tipo: "verEnTuPagina", clave: "t1:ver", t: 3 }], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ act(() => root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={onVerPagina} />));
+ act(() => host.querySelector<HTMLButtonElement>('[data-clave="t1:ver"] button')!.click());
+ expect(onVerPagina).toHaveBeenCalled();
+});
+
 it("her chat with no project on screen shows no project cards", () => {
  tarjetasDelProyecto.avisos = null;
  const chat = { elementos: [], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar: vi.fn(), reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;

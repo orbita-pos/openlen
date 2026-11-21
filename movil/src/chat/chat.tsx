@@ -45,7 +45,8 @@ interface Props {
   conPip: boolean;
   onCerrar: () => void;
   onLlamar: () => void;
-  onVerPagina: () => void;
+  /** Absent: there is no page to look at (no pages, only your agents): a turn that changed something doesn't offer it. */
+  onVerPagina?: () => void;
   onEquipo?: () => void;
   /** Desde «Entregado»: la clave del elemento del hilo que hay que traer a la vista (el turno que entregó). */
   enfocar?: string | null;
@@ -193,6 +194,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   // `as`: si no, TypeScript lo deja en `null` tras el map (no sigue asignaciones dentro de callbacks).
   let previo = null as "me" | "len" | null;
   const filas = chat.elementos.map((e, i) => {
+    if (e.tipo === "verEnTuPagina" && !onVerPagina) return null;
     if (e.tipo === "subagentes") return <div className="ch-row is-len is-cont" key={e.clave} data-clave={e.clave}>
       <SubagentesLineas runs={subagentes.porFila.get(e.fila) ?? []} parar={subagentes.parar} />
     </div>;
@@ -388,7 +390,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada
   cliente: ClienteDeOpenLen;
   projectId: string;
   idioma: string;
-  onVerPagina: () => void;
+  onVerPagina?: () => void;
   /** A tool installed from a card here: the app reads the person's tools again. */
   onInstalada: () => void;
 }) {

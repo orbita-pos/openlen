@@ -962,6 +962,8 @@ describe("no pages: your agents are the app", () => {
     await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a4"]')!.click());
     expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Teacher Ana" }, projectId: "space" });
     expect(localStorage.getItem("len-asistente")).toBe("a4");
+    // Delivery 4's deferred minor M2: with no page, her chat has no «Ver en tu página» to offer.
+    expect(chatProps.ella).not.toHaveProperty("onVerPagina");
   });
 
   it("🔴 a turn notice of an agent opens her chat with no pages", async () => {

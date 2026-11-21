@@ -677,7 +677,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         conPip={!ella && llamada && conPip}
         onCerrar={() => { setChatAbierto(false); setEnfocarEnChat(null); }}
         onLlamar={() => setLlamada(true)}
-        onVerPagina={() => setChatAbierto(false)}
+        {...(sinPaginas ? {} : { onVerPagina: () => setChatAbierto(false) })}
         onEquipo={() => setPanel("equipo")}
         enfocar={enfocarEnChat}
         onEnfocado={alEnfocarEnChat}
