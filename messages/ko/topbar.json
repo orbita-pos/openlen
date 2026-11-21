@@ -213,7 +213,8 @@
       "pieAgente": "{agente}의 예약 작업 «{title}».",
       "contestaAgente": "바꾸고 싶은 게 있으면 {agente}의 채팅에서 말해 주세요.",
       "planGratisAgente": "하지 않았어요: 예약 작업은 유료 플랜 기능인데 계정이 무료 플랜이에요. 작업이 멈췄어요. 유료 플랜으로 바꾼 뒤 {agente}에게 다시 부탁해 주세요.",
-      "perdidaAgente": "하지 않았어요: 예약 시간에 OpenLen을 쓸 수 없었고 하루가 넘게 지났어요. 아직 필요하면 {agente}에게 부탁해 주세요."
+      "perdidaAgente": "하지 않았어요: 예약 시간에 OpenLen을 쓸 수 없었고 하루가 넘게 지났어요. 아직 필요하면 {agente}에게 부탁해 주세요.",
+      "pieSinAgente": "더 이상 없는 에이전트의 예약 작업 «{title}»."
     }
   },
   "envVars": {

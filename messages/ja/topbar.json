@@ -213,7 +213,8 @@
       "pieAgente": "{agente} の予定タスク「{title}」。",
       "contestaAgente": "変更したいことがあれば、{agente} のチャットで伝えてください。",
       "planGratisAgente": "実行しませんでした: 予定タスクは有料プランの機能で、あなたのアカウントは無料プランです。タスクは停止しました。有料プランにしたら、もう一度 {agente} に頼んでください。",
-      "perdidaAgente": "実行しませんでした: 予定の時刻に OpenLen が利用できず、1 日以上が過ぎました。まだ必要なら {agente} に頼んでください。"
+      "perdidaAgente": "実行しませんでした: 予定の時刻に OpenLen が利用できず、1 日以上が過ぎました。まだ必要なら {agente} に頼んでください。",
+      "pieSinAgente": "もう存在しないエージェントの予定タスク「{title}」。"
     }
   },
   "envVars": {

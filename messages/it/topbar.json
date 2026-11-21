@@ -213,7 +213,8 @@
       "pieAgente": "Attività programmata «{title}» di {agente}.",
       "contestaAgente": "Se vuoi cambiare qualcosa, dillo a {agente} nella sua chat.",
       "planGratisAgente": "Non l’ho fatta: le attività programmate fanno parte dei piani a pagamento e il tuo account è sul piano Gratis. L’attività è ferma; con un piano a pagamento, richiedila a {agente}.",
-      "perdidaAgente": "Non l’ho fatta: OpenLen non era disponibile all’ora programmata ed è passato più di un giorno. Se ti serve ancora, chiedila a {agente}."
+      "perdidaAgente": "Non l’ho fatta: OpenLen non era disponibile all’ora programmata ed è passato più di un giorno. Se ti serve ancora, chiedila a {agente}.",
+      "pieSinAgente": "Attività programmata «{title}» di un agente che non esiste più."
     }
   },
   "envVars": {

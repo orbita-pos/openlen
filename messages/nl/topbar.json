@@ -213,7 +213,8 @@
       "pieAgente": "Geplande taak „{title}” van {agente}.",
       "contestaAgente": "Wil je iets anders? Zeg het tegen {agente} in de chat.",
       "planGratisAgente": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en je account heeft Gratis. De taak is gestopt; vraag het met een betaald abonnement opnieuw aan {agente}.",
-      "perdidaAgente": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag verstreken. Heb je het nog nodig, vraag het dan aan {agente}."
+      "perdidaAgente": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag verstreken. Heb je het nog nodig, vraag het dan aan {agente}.",
+      "pieSinAgente": "Geplande taak „{title}” van een agent die niet meer bestaat."
     }
   },
   "envVars": {

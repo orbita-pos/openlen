@@ -45,7 +45,7 @@ export interface DeliverDeps {
 
 type Agent = { id: string; name: string; slug: string } | null;
 
-/** The agent whose task it is, or null for Len's (and for one that is gone: its email falls back to Len's form). */
+/** The agent whose task it is, or null for Len's and for one that was deleted (its email is neither Len's nor hers). */
 async function agentOfTask(task: TaskRow, deps: DeliverDeps): Promise<Agent> {
   return task.assistantId ? deps.agentOf(task.assistantId).catch(() => null) : null;
 }
@@ -67,8 +67,10 @@ function zoneOf(task: TaskRow): string {
 async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: readonly string[], attachments: ScheduledEmail["attachments"], deps: DeliverDeps, agent: Agent): Promise<ScheduledEmail | null> {
   const to = await deps.recipientEmail(task.createdBy);
   if (!to) return null;
-  // An agent's email has no Reply-To: the space's Len address would start a Len turn, not the agent's.
-  const replyTo = agent ? null : deps.replyAddress(task.projectId);
+  // An agent's email has no Reply-To: the space's Len address would start a Len turn, not the agent's. Nor has the email
+  // of one that was deleted, which says so in no one's name (delivery 3's M1).
+  const agentGone = Boolean(task.assistantId) && agent === null;
+  const replyTo = task.assistantId ? null : deps.replyAddress(task.projectId);
   return {
     to,
     replyTo,
@@ -84,6 +86,7 @@ async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: reado
     chatUrl: agent ? deps.agentUrl(task.locale, agent.slug) : deps.chatUrl(task.projectId),
     removeUrl: deps.removeUrl(task),
     ...(agent ? { agentName: agent.name } : {}),
+    ...(agentGone ? { agentGone: true } : {}),
   };
 }
 

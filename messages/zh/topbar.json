@@ -213,7 +213,8 @@
       "pieAgente": "{agente} 的定时任务「{title}」。",
       "contestaAgente": "如需修改，请在 {agente} 的聊天中告诉它。",
       "planGratisAgente": "未执行：定时任务属于付费方案，而你的账户是免费方案。任务已停止；升级到付费方案后，请再次让 {agente} 来做。",
-      "perdidaAgente": "未执行：预定时间 OpenLen 不可用，且已过去一天以上。如仍需要，请让 {agente} 来做。"
+      "perdidaAgente": "未执行：预定时间 OpenLen 不可用，且已过去一天以上。如仍需要，请让 {agente} 来做。",
+      "pieSinAgente": "一个已不存在的智能体的定时任务「{title}」。"
     }
   },
   "envVars": {

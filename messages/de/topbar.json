@@ -213,7 +213,8 @@
       "pieAgente": "Geplante Aufgabe „{title}“ von {agente}.",
       "contestaAgente": "Wenn du etwas ändern möchtest, sag es {agente} im Chat.",
       "planGratisAgente": "Ich habe sie nicht erledigt: Geplante Aufgaben gehören zu den bezahlten Plänen, und dein Konto ist im Gratis-Plan. Die Aufgabe ist gestoppt; mit einem bezahlten Plan bitte {agente} erneut darum.",
-      "perdidaAgente": "Ich habe sie nicht erledigt: OpenLen war zur geplanten Zeit nicht verfügbar, und es ist mehr als ein Tag vergangen. Wenn du sie noch brauchst, bitte {agente} darum."
+      "perdidaAgente": "Ich habe sie nicht erledigt: OpenLen war zur geplanten Zeit nicht verfügbar, und es ist mehr als ein Tag vergangen. Wenn du sie noch brauchst, bitte {agente} darum.",
+      "pieSinAgente": "Geplante Aufgabe „{title}“ eines Agenten, den es nicht mehr gibt."
     }
   },
   "envVars": {

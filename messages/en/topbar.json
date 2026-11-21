@@ -213,7 +213,8 @@
       "pieAgente": "Scheduled task «{title}» of {agente}.",
       "contestaAgente": "If you want something changed, tell {agente} in their chat.",
       "planGratisAgente": "I didn't do it: scheduled tasks are part of the paid plans and your account is on Free. The task has stopped; with a paid plan, ask {agente} for it again.",
-      "perdidaAgente": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask {agente}."
+      "perdidaAgente": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask {agente}.",
+      "pieSinAgente": "Scheduled task «{title}» of an agent that no longer exists."
     }
   },
   "envVars": {

@@ -213,7 +213,8 @@
       "pieAgente": "Tarefa agendada «{title}» de {agente}.",
       "contestaAgente": "Se quiser mudar algo, diga a {agente} no chat.",
       "planGratisAgente": "Não a fiz: as tarefas agendadas são dos planos pagos e sua conta está no plano Grátis. A tarefa ficou parada; com um plano pago, peça de novo a {agente}.",
-      "perdidaAgente": "Não a fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça a {agente}."
+      "perdidaAgente": "Não a fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça a {agente}.",
+      "pieSinAgente": "Tarefa agendada «{title}» de um agente que já não existe."
     }
   },
   "envVars": {

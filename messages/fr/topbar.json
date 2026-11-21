@@ -213,7 +213,8 @@
       "pieAgente": "Tâche programmée « {title} » de {agente}.",
       "contestaAgente": "Si vous voulez changer quelque chose, dites-le à {agente} dans son chat.",
       "planGratisAgente": "Je ne l’ai pas faite : les tâches programmées font partie des offres payantes et votre compte est sur l’offre Gratuite. La tâche est arrêtée ; avec une offre payante, redemandez-la à {agente}.",
-      "perdidaAgente": "Je ne l’ai pas faite : OpenLen n’était pas disponible à l’heure prévue et plus d’un jour est passé. Si vous en avez encore besoin, demandez-la à {agente}."
+      "perdidaAgente": "Je ne l’ai pas faite : OpenLen n’était pas disponible à l’heure prévue et plus d’un jour est passé. Si vous en avez encore besoin, demandez-la à {agente}.",
+      "pieSinAgente": "Tâche programmée « {title} » d’un agent qui n’existe plus."
     }
   },
   "envVars": {

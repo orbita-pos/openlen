@@ -125,6 +125,15 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
       expect(es.html).toContain('href="https://openlen.com/es/assistant/mr-smith"');
     });
 
+    // Delivery 3's deferred minor M1.
+    it("🔴 one whose agent was deleted names neither Len nor the space, and doesn't ask to reply", () => {
+      const es = scheduledTaskEmail({ ...DATA, projectTitle: "Space", canReply: false, agentGone: true }, "es");
+      expect(es.text).toContain("PDF de resultados");
+      expect(es.text).not.toContain("Space");
+      expect(es.text).not.toMatch(/Len/);
+      expect(es.text).not.toContain("contesta este correo");
+    });
+
     it("🔴 its refusals and failures name it, and never ask to reply to the email", () => {
       expect(scheduledTaskPhrase("es", "plan_required", "Mr. Smith")).toContain("Mr. Smith");
       expect(scheduledTaskPhrase("es", "missed", "Mr. Smith")).toContain("Mr. Smith");

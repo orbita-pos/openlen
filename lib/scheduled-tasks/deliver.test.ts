@@ -136,6 +136,16 @@ describe("an agent's task", () => {
     expect(vi.mocked(deps.send).mock.calls[0]![0]).toMatchObject({ agentName: "Mr. Smith", replyTo: null });
   });
 
+  // Delivery 3's deferred minor M1: with the agent deleted, its «no longer exists» email went out in Len's form — from Len,
+  // replying to the space's Len address (a reply would start a Len turn) and naming the hidden home («Space»).
+  it("🔴 a deleted agent's email isn't Len's: no reply address, and it says so", async () => {
+    const { deps } = fakeDeps({ agentOf: vi.fn(async () => null) });
+    await deliverFailure(run, agentTask, "agent_gone", "No la hice: el agente ya no existe.", deps);
+    expect(vi.mocked(deps.send).mock.calls[0]![0]).toMatchObject({ replyTo: null, canReply: false, agentGone: true });
+    expect(vi.mocked(deps.send).mock.calls[0]![0].agentName ?? null).toBeNull();
+    expect(deps.replyAddress).not.toHaveBeenCalled();
+  });
+
   it("Len's task is as before: no agent, his reply address and chat", async () => {
     const { deps } = withAgent();
     await deliverResult(run, task, "Listo.", [], deps);

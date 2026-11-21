@@ -121,4 +121,11 @@ describe("the sender of a scheduled task's email", () => {
     expect(from).not.toMatch(/[\r\n]/);
     expect(from.match(/</g)).toHaveLength(1);
   });
+
+  // Delivery 3's deferred minor M1: its agent was deleted, and Len didn't write it.
+  it("🔴 the email of a task whose agent was deleted comes from OpenLen, not from Len", async () => {
+    const { sendScheduledTaskEmail } = await cargar();
+    await sendScheduledTaskEmail({ ...TASK, agentGone: true });
+    expect(String(send.mock.calls[0]![0].from)).toMatch(/^OpenLen </);
+  });
 });

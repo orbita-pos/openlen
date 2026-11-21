@@ -225,6 +225,8 @@ export interface DatosDeLaTareaProgramada {
   /** The person's agent whose task it is (spec local 2026-11-19-agentes-para-todos, §6.4): the email is in its name and
    *  links to its place. Absent for Len's. */
   readonly agentName?: string | null;
+  /** An agent's task whose agent was deleted: neither Len's nor in a name, and never naming the hidden home. */
+  readonly agentGone?: boolean;
 }
 
 export function scheduledTaskEmail(
@@ -238,7 +240,11 @@ export function scheduledTaskEmail(
   const otra = agente ? ["", t("contestaAgente", { agente })] : d.canReply ? ["", t("contesta")] : [];
   const cuerpo = [d.texto.trim(), ...(d.waiting.length > 0 ? ["", t("esperando"), ...d.waiting.map((w) => `· ${w}`)] : []), ...otra].join("\n");
   // An agent's task names the agent, never its hidden home («Space»).
-  const pie = agente ? t("pieAgente", { title: d.title, agente }) : t("pie", { title: d.title, proyecto: d.projectTitle.trim() || "OpenLen" });
+  const pie = agente
+    ? t("pieAgente", { title: d.title, agente })
+    : d.agentGone
+      ? t("pieSinAgente", { title: d.title })
+      : t("pie", { title: d.title, proyecto: d.projectTitle.trim() || "OpenLen" });
   const html = marco(idioma, {
     titulo: d.title,
     parrafos: [],

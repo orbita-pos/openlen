@@ -721,7 +721,8 @@ export async function sendScheduledTaskEmail(
   // could break the header goes, and it travels quoted.
   const agentName = input.agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
   await enviar(live, "scheduled task email", {
-    from: agentName ? `"${agentName}" <${address}>` : `Len <${address}>`,
+    // One whose agent was deleted is in no one's name: Len didn't write it.
+    from: agentName ? `"${agentName}" <${address}>` : input.agentGone ? `OpenLen <${address}>` : `Len <${address}>`,
     to: input.to,
     ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     ...correo,
