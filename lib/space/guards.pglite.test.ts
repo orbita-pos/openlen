@@ -28,6 +28,12 @@ vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => {} }))
 vi.mock("@/auth", () => ({ auth: async () => null }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: async () => base.userId }));
 vi.mock("@/lib/projects/acceso", async (orig) => ({ ...(await orig<object>()), exigirAcceso: async () => ({ rol: "dueno", duenoId: base.userId }) }));
+// A step deleteProject takes between its first look and the delete: where a test puts what happens meanwhile.
+const meanwhile = vi.hoisted(() => ({ run: null as null | (() => Promise<void>) }));
+vi.mock("@/lib/assistants/projects", async (orig) => {
+  const real = await orig<typeof import("@/lib/assistants/projects")>();
+  return { ...real, rehomeAssistantsOf: async (id: string) => (await meanwhile.run?.(), real.rehomeAssistantsOf(id)) };
+});
 
 const { CREATE_ASSISTANTS, CREATE_SPACE } = await import("@/scripts/assistants-migrate-sql");
 const { ensureSpace } = await import("./store");
@@ -102,6 +108,24 @@ describe("copying and deleting a space", () => {
     await expect(deleteProject(space, "u1")).rejects.toBeInstanceOf(SpaceHasAgentsError);
     expect(await row(space)).toBeTruthy();
     expect((await pg.query(`select 1 from "assistants"`)).rows).toHaveLength(1);
+  });
+
+  // Delivery 1 deferred it: the agents were looked for before the delete, not with it — one created in between went
+  // with the space in the cascade.
+  it("🔴 an agent created while the space is being deleted stops the delete, and lives", async () => {
+    meanwhile.run = async () => {
+      await pg.query(
+        `insert into "assistants" ("id", "personId", "name", "slug", "shape", "color", "tone", "homeProjectId") values ('a2', 'u1', 'Chef Rosa', 'chef-rosa', 'drop', '#3366ff', 'friendly', $1)`,
+        [space],
+      );
+    };
+    try {
+      await expect(deleteProject(space, "u1")).rejects.toBeInstanceOf(SpaceHasAgentsError);
+    } finally {
+      meanwhile.run = null;
+    }
+    expect(await row(space)).toBeTruthy();
+    expect((await pg.query(`select "id" from "assistants"`)).rows).toEqual([{ id: "a2" }]);
   });
 
   it("deleting an empty space is allowed", async () => {

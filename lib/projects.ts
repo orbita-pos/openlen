@@ -614,15 +614,21 @@ export async function deleteProject(
   // (spec local 2026-11-06-asistente-propio, §4.5): she is the person's, not this project's. Fail-soft: deleting goes on.
   if (existing[0]) await rehomeAssistantsOf(projectId).catch((err: unknown) => console.warn("[assistants] couldn't move an assistant's home before deleting its project", err));
 
-  const result = await db
-    .delete(schema.projects)
-    .where(
-      and(
-        eq(schema.projects.id, projectId),
-        eq(schema.projects.userId, userId),
-      ),
-    )
-    .returning({ id: schema.projects.id });
+  const owned = and(eq(schema.projects.id, projectId), eq(schema.projects.userId, userId));
+  // A SPACE IS DELETED ONLY WITHOUT AGENTS, checked WITH the delete (delivery 1 deferred it): its row is locked first, so
+  // an agent being created there either is seen here (refused) or waits and fails its own insert — never gone with the
+  // space in the cascade. Any other project deletes as before.
+  const result = existing[0]?.isSpace
+    ? await db.transaction(async (tx) => {
+        await tx.select({ id: schema.projects.id }).from(schema.projects).where(owned).for("update");
+        const [agent] = await tx.select({ id: schema.assistants.id }).from(schema.assistants).where(eq(schema.assistants.homeProjectId, projectId)).limit(1);
+        if (agent) {
+          const { SpaceHasAgentsError } = await import("@/lib/space/errors");
+          throw new SpaceHasAgentsError();
+        }
+        return tx.delete(schema.projects).where(owned).returning({ id: schema.projects.id });
+      })
+    : await db.delete(schema.projects).where(owned).returning({ id: schema.projects.id });
 
   if (sub) {
     await unpublishDir(sub).catch(() => {
