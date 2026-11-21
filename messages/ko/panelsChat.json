@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "예약 작업",
     "hint": "만들려면 Len에게 요청하세요.",
+    "hintAgent": "만들려면 {name}에게 요청하세요.",
     "next": "다음: {when}",
     "lastDone": "지난번: ✓ {when}",
     "lastFailed": "지난번: 실행 안 됨 ({why})",

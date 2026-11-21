@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "Attività programmate",
     "hint": "Per crearne una, chiedila a Len.",
+    "hintAgent": "Per crearne una, chiedila a {name}.",
     "next": "Prossima: {when}",
     "lastDone": "Ultima: ✓ {when}",
     "lastFailed": "Ultima: non fatta ({why})",

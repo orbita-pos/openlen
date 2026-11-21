@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "予定タスク",
     "hint": "作成するには Len に頼んでください。",
+    "hintAgent": "作成するには {name} に頼んでください。",
     "next": "次回: {when}",
     "lastDone": "前回: ✓ {when}",
     "lastFailed": "前回: 未実行（{why}）",

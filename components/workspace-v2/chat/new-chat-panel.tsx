@@ -520,7 +520,7 @@ function AgentChatView({
         // Her figure heads the chat, alive, the only live one of the screen; under it her name and what she is doing.
         <div className="relative flex shrink-0 flex-col items-center px-4 pb-3 pt-4 text-center" data-assistant-header="">
           <div className="absolute right-3 top-3">
-            <ScheduledTasksMenu scheduled={scheduled} />
+            <ScheduledTasksMenu scheduled={scheduled} agentName={assistant.name} />
           </div>
           <LiveFigure look={assistant.look} size={76} activity={herActivity} active={herFigureOn} />
           <p className="mt-1 max-w-full truncate text-[14px] font-semibold fg">{assistant.name}</p>

@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "Scheduled tasks",
     "hint": "To create one, ask Len.",
+    "hintAgent": "To create one, ask {name}.",
     "next": "Next: {when}",
     "lastDone": "Last: ✓ {when}",
     "lastFailed": "Last: not done ({why})",

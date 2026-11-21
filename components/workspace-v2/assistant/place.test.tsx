@@ -66,6 +66,10 @@ describe("the assistant's place", () => {
     expect(clock).not.toBeNull();
     act(() => clock!.click());
     expect(host.textContent).toContain("Receta rápida");
+    // Seen in the paid walk: her clock said «ask Len for one». In her place, you ask her.
+    expect(host.textContent).toContain('scheduled.hintAgent {"name":"Lucía"}');
+    expect(host.textContent).not.toContain("scheduled.hint ");
+    expect(host.textContent).not.toContain("/schedule");
   });
 
   // Phase 6 (spec local 2026-11-10-figuras-del-asistente, §2.4, §5.3).

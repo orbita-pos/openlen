@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "Tarefas agendadas",
     "hint": "Para criar uma, peça ao Len.",
+    "hintAgent": "Para criar uma, peça a {name}.",
     "next": "Próxima: {when}",
     "lastDone": "Última: ✓ {when}",
     "lastFailed": "Última: não feita ({why})",

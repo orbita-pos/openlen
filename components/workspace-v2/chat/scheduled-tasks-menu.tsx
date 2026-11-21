@@ -262,7 +262,9 @@ function recordLine(r: ClockEventRecord, t: ReturnType<typeof useTranslations>):
   return r.count > 1 ? `${what} ${t("eventTasks.recCount", { count: r.count })}` : what;
 }
 
-export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks }) {
+/** `agentName`: the clock of an agent's place (spec local 2026-11-19-agentes-para-todos, §6.4), where a new task is asked
+ *  of that agent, not of Len. */
+export function ScheduledTasksMenu({ scheduled, agentName }: { scheduled: ScheduledTasks; agentName?: string }) {
   const t = useTranslations("panelsChat");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -477,8 +479,14 @@ export function ScheduledTasksMenu({ scheduled }: { scheduled: ScheduledTasks })
             )}
           </ul>
           <div className="mt-1 flex items-center gap-2 border-t bd px-2 pb-1 pt-2 text-[12px] fg-muted">
-            {t("scheduled.hint")}
-            <span className="ml-auto rounded-md border bd bg-side px-1.5 py-0.5 font-mono text-[11.5px] fg">/schedule</span>
+            {agentName ? (
+              t("scheduled.hintAgent", { name: agentName })
+            ) : (
+              <>
+                {t("scheduled.hint")}
+                <span className="ml-auto rounded-md border bd bg-side px-1.5 py-0.5 font-mono text-[11.5px] fg">/schedule</span>
+              </>
+            )}
           </div>
         </div>
       )}

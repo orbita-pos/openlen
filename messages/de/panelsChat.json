@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "Geplante Aufgaben",
     "hint": "Um eine zu erstellen, frag Len.",
+    "hintAgent": "Um eine zu erstellen, frag {name}.",
     "next": "Nächste: {when}",
     "lastDone": "Letzte: ✓ {when}",
     "lastFailed": "Letzte: nicht erledigt ({why})",

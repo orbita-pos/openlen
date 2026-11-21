@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "定时任务",
     "hint": "要创建，请告诉 Len。",
+    "hintAgent": "要创建，请告诉 {name}。",
     "next": "下次：{when}",
     "lastDone": "上次：✓ {when}",
     "lastFailed": "上次：未执行（{why}）",

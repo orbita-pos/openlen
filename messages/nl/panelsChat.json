@@ -520,6 +520,7 @@
   "scheduled": {
     "title": "Geplande taken",
     "hint": "Vraag Len om er een te maken.",
+    "hintAgent": "Vraag {name} om er een te maken.",
     "next": "Volgende: {when}",
     "lastDone": "Laatste: ✓ {when}",
     "lastFailed": "Laatste: niet gedaan ({why})",
