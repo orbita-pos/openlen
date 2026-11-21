@@ -58,6 +58,18 @@ describe("which assistant the app is (spec local 2026-11-16-movil-es-tu-asistent
     expect(appModeOf({ ...base, assistants: [CHEF, LUCIA] })).toEqual({ kind: "assistant", assistant: LUCIA });
   });
 
+  // Delivery 4's deferred minor M1: before your pages arrive, «the newest that attends one of your pages» can't be told,
+  // and the newest — an agent of your space — tinted «Cargando» and had her chat read before the app settled on Lucía.
+  it("🔴 your pages not read yet, with several and none chosen: it waits, never guessing the newest", () => {
+    expect(appModeOf({ ...base, projects: null, assistants: [CHEF, LUCIA] })).toEqual({ kind: "len", invite: false });
+  });
+
+  it("your pages not read yet: the only one, or the one chosen on this phone, is the app already", () => {
+    expect(appModeOf({ ...base, projects: null, assistants: [LUCIA] })).toEqual({ kind: "assistant", assistant: LUCIA });
+    expect(appModeOf({ ...base, projects: null, assistants: [CHEF, LUCIA], chosenId: "a3" })).toEqual({ kind: "assistant", assistant: CHEF });
+    expect(appModeOf({ ...base, projects: null, assistants: [] })).toEqual({ kind: "len", invite: false });
+  });
+
   it("with no pages, the newest agent", () => {
     expect(appModeOf({ ...base, projects: [], assistants: [CHEF, LUCIA] })).toEqual({ kind: "assistant", assistant: CHEF });
   });

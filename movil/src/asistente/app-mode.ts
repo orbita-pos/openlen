@@ -22,16 +22,25 @@ export function appModeOf(o: {
   /** Newest first, as `GET /api/assistants` gives them. */
   readonly assistants: readonly AssistantListItem[];
   readonly chosenId: string | null;
-  readonly projects: readonly ProyectoEnLista[];
+  /** Null until your pages are read: then only a choice that doesn't depend on them is made (delivery 4's M1). */
+  readonly projects: readonly ProyectoEnLista[] | null;
   readonly welcomeDismissed: boolean;
 }): AppMode {
   if (!o.loaded || !o.enabled) return { kind: "len", invite: false };
   // None chosen on this phone: the newest that attends one of your pages, else the newest. An agent made on the web lives
   // in your space and attends none (spec local 2026-11-19-agentes-para-todos, §6.10): it doesn't take her place.
-  const ofYourPages = o.assistants.find((a) => a.projectIds.some((id) => o.projects.some((p) => p.id === id)));
-  const chosen = o.assistants.find((a) => a.id === o.chosenId) ?? ofYourPages ?? o.assistants[0];
+  const saved = o.assistants.find((a) => a.id === o.chosenId);
+  // Your pages not read yet: the one chosen here, or the only one, is already the app; which of several attends one of
+  // your pages can't be told yet, and guessing the newest tinted «Cargando» with an agent of your space.
+  const projects = o.projects;
+  if (projects === null) {
+    const sure = saved ?? (o.assistants.length === 1 ? o.assistants[0] : undefined);
+    return sure ? { kind: "assistant", assistant: sure } : { kind: "len", invite: false };
+  }
+  const ofYourPages = o.assistants.find((a) => a.projectIds.some((id) => projects.some((p) => p.id === id)));
+  const chosen = saved ?? ofYourPages ?? o.assistants[0];
   if (chosen) return { kind: "assistant", assistant: chosen };
-  const ownsOne = o.projects.some((p) => !p.compartido);
+  const ownsOne = projects.some((p) => !p.compartido);
   if (!ownsOne) return { kind: "len", invite: false };
   return o.welcomeDismissed ? { kind: "len", invite: true } : { kind: "welcome" };
 }

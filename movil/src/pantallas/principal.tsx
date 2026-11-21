@@ -179,7 +179,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
       alive = false;
     };
   }, [cliente, recarga, lecturaDeAgentes]);
-  const modo = appModeOf({ loaded: asistentesLeidas, enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista ?? [], welcomeDismissed: bienvenidaCerrada });
+  const modo = appModeOf({ loaded: asistentesLeidas, enabled: asistentesOn, assistants: asistentes, chosenId: elegida, projects: lista, welcomeDismissed: bienvenidaCerrada });
   const suColor = modo.kind === "assistant" ? modo.assistant.color : null;
   // The app takes her color (§5.2); with no assistant, and on leaving this screen (signing out), Len's orange again.
   useEffect(() => {
