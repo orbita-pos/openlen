@@ -64,7 +64,9 @@ export interface TurnoEnVivo {
 export function parrafos(texto: string): string[] {
   return texto
     .replace(/^[ \t]*([-*_])(?:[ \t]*\1){2,}[ \t]*(?:\r?\n|$)/gm, "")
-    .replace(/\*\*|__|`/g, "")
+    // «__» only as bold (two, not touching a third): a fill-in blank («She ____ (work)…», a language teacher's exercise)
+    // is a run of underscores and stays.
+    .replace(/\*\*|(?<!_)__(?!_)|`/g, "")
     .replace(/^#+\s*/gm, "")
     .split(/\n\s*\n/)
     .map((p) =>

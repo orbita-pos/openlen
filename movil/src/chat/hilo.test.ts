@@ -54,6 +54,11 @@ describe("parrafos", () => {
     expect(parrafos("Uno\n\n***\n\nDos\n\n___\n\n- - -\n\nTres")).toEqual(["Uno", "Dos", "Tres"]);
     expect(parrafos("Ingredientes\n---\n- uno\n- dos")).toEqual(["Ingredientes\n- uno\n- dos"]);
   });
+  // Seen in the paid walk (21/11): Teacher Ana's exercise lost its blank, «She (work) in a hospital».
+  it("🔴 a fill-in blank stays; «__» goes only as bold", () => {
+    expect(parrafos("**She ____ (work) in a hospital.**")).toEqual(["She ____ (work) in a hospital."]);
+    expect(parrafos("I ___ (be) tired and __muy__ cansado.")).toEqual(["I ___ (be) tired and muy cansado."]);
+  });
 });
 
 // What Len delivered with `present`, seen in the phone's chat (spec local 2026-10-31-len-movil, §5.1).
