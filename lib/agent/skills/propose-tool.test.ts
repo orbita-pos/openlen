@@ -55,6 +55,12 @@ describe("propose_skills", () => {
     expect(Object.keys(proposals.items!.properties!)).toEqual(["name", "kind", "target", "description", "evidence", "edits", "skillMd"]);
   });
 
+  // Delivery 2's deferred minor: the card says «Pídele que la proponga otra vez» when a skill changed since it was proposed,
+  // so the tool can't forbid proposing one they already saw when they ask for it.
+  it("🔴 proposing a skill they already saw again is fine when they ask for it, as the card's «changed» tells them to", () => {
+    expect(PROPOSE_SKILLS_DECLARATION.description).toContain("not again for a skill they already saw unless they ask for it");
+  });
+
   it("🔴 shows the card for the speaker's skills and writes nothing", async () => {
     const seen: string[] = [];
     const out = await runProposeSkills(LEN, { proposals: [NEW] }, deps(seen));

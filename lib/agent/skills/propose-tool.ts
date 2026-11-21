@@ -20,7 +20,7 @@ export const PROPOSE_SKILLS_DECLARATION = {
     "Shows the person a review card of skills of their own to save; it writes nothing. Their skills in ~/.len/skills/ are saved only from this card: " +
     "writing those files does not save them. When they want a skill added or changed, the proposal is what you deliver: draft it however helps, then propose it, " +
     "and never hand them a SKILL.md to save themselves. Call it once with all the proposals (at most 3) when they ask to turn a way of working into a skill of theirs, " +
-    "or when an agent of theirs needs a job skill that doesn't exist; not for a one-off task, and not again for a skill they already saw. " +
+    "or when an agent of theirs needs a job skill that doesn't exist; not for a one-off task, and not again for a skill they already saw unless they ask for it. " +
     "To change one of their skills, read its ~/.len/skills/<name>/SKILL.md first and send only your changes as edits; the card shows the whole updated file. " +
     "OpenLen's own skills can't be changed from the card: to adapt one, propose a new skill under a name of its own whose description says when to use it instead. " +
     "A project's skills (/.len/skills/) are files of the project: write those with Write, not with this.",
