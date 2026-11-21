@@ -9,6 +9,7 @@ import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { pauseTask, resumeTask } from "@/lib/scheduled-tasks/store";
+import { someoneElsesAgentTask } from "@/lib/scheduled-tasks/whose-task";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,8 @@ export const POST = paraLaApp(async (req: Request, ctx: Ctx): Promise<Response> 
   const { id, taskId } = await ctx.params;
   const access = await exigirAcceso(id, userId, "editar");
   if (access instanceof Response) return access;
+  // An agent's task is only its person's (lib/scheduled-tasks/whose-task.ts).
+  if (await someoneElsesAgentTask(id, taskId, userId)) return Response.json({ code: "schedule_not_found" }, { status: 404 });
   const body = (await req.json().catch(() => null)) as { paused?: unknown } | null;
   if (typeof body?.paused !== "boolean") return Response.json({ code: "invalid_body" }, { status: 400 });
   const now = new Date();

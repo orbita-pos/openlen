@@ -12,6 +12,7 @@ import { exigirAcceso } from "@/lib/projects/acceso";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { deleteTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
 import { asValue, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
+import { someoneElsesAgentTask } from "@/lib/scheduled-tasks/whose-task";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,10 @@ async function allowed(req: Request, ctx: Ctx): Promise<{ id: string; taskId: st
   if (!userId) return Response.json({ error: "unauthorized" }, { status: 401 });
   const { id, taskId } = await ctx.params;
   const acceso = await exigirAcceso(id, userId, "editar");
-  return acceso instanceof Response ? acceso : { id, taskId, owner: acceso.rol === "dueno" };
+  if (acceso instanceof Response) return acceso;
+  // An agent's task is only its person's (lib/scheduled-tasks/whose-task.ts).
+  if (await someoneElsesAgentTask(id, taskId, userId)) return Response.json({ code: "schedule_not_found" }, { status: 404 });
+  return { id, taskId, owner: acceso.rol === "dueno" };
 }
 
 const STATUS: Readonly<Record<string, number>> = { schedule_not_found: 404, schedule_ended: 409, schedule_conflict: 409, internal_error: 500 };

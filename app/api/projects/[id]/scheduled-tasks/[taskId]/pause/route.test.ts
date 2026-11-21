@@ -6,13 +6,15 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn() }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/scheduled-tasks/enabled", () => ({ scheduleEnabled: vi.fn(() => true) }));
-vi.mock("@/lib/scheduled-tasks/store", () => ({ pauseTask: vi.fn(), resumeTask: vi.fn() }));
+vi.mock("@/lib/scheduled-tasks/store", () => ({ pauseTask: vi.fn(), resumeTask: vi.fn(), getTask: vi.fn() }));
+vi.mock("@/lib/assistants/store", () => ({ assistantById: vi.fn() }));
 vi.mock("@/lib/event-tasks/store", () => ({ pauseEventTask: vi.fn(), resumeEventTask: vi.fn() }));
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
-import { pauseTask, resumeTask } from "@/lib/scheduled-tasks/store";
+import { getTask, pauseTask, resumeTask } from "@/lib/scheduled-tasks/store";
+import { assistantById, type AssistantRow } from "@/lib/assistants/store";
 import type { TaskRow } from "@/lib/scheduled-tasks/store";
 import { pauseEventTask, resumeEventTask } from "@/lib/event-tasks/store";
 import type { EventTaskRow } from "@/lib/event-tasks/store";
@@ -31,6 +33,8 @@ beforeEach(() => {
   vi.mocked(resumeTask).mockResolvedValue({ id: "t1", pausedAt: null } as TaskRow);
   vi.mocked(pauseEventTask).mockResolvedValue(null);
   vi.mocked(resumeEventTask).mockResolvedValue(null);
+  vi.mocked(getTask).mockResolvedValue({ id: "t1", assistantId: null } as TaskRow);
+  vi.mocked(assistantById).mockResolvedValue(null);
 });
 
 describe("POST /api/projects/[id]/scheduled-tasks/[taskId]/pause", () => {
@@ -62,6 +66,19 @@ describe("POST /api/projects/[id]/scheduled-tasks/[taskId]/pause", () => {
     expect(pauseEventTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
     expect(await (await post({ paused: false })).json()).toEqual({ id: "t1", paused: false });
     expect(resumeEventTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
+  });
+
+  // Agents for everyone, final review I3: an agent's task runs with its person's private context.
+  it("🔴 an agent's task is only its person's: another editor finds it not there", async () => {
+    vi.mocked(getTask).mockResolvedValue({ id: "t1", assistantId: "lucia" } as TaskRow);
+    vi.mocked(assistantById).mockResolvedValue({ id: "lucia", personId: "owner" } as AssistantRow);
+    const res = await post({ paused: true });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ code: "schedule_not_found" });
+    expect(pauseTask).not.toHaveBeenCalled();
+    vi.mocked(usuarioDeLaPeticion).mockResolvedValue("owner");
+    expect((await post({ paused: true })).status).toBe(200);
+    expect(pauseTask).toHaveBeenCalledWith("p1", "t1", expect.any(Date));
   });
 
   it("a viewer is refused", async () => {

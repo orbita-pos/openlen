@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/movil/llaves", () => ({ usuarioDeLaLlave: vi.fn(async () => "ana") }));
 vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
-vi.mock("@/lib/scheduled-tasks/store", () => ({ listTasks: vi.fn(), getRun: vi.fn(), updateTask: vi.fn(), deleteTask: vi.fn() }));
+vi.mock("@/lib/scheduled-tasks/store", () => ({ listTasks: vi.fn(), getRun: vi.fn(), updateTask: vi.fn(), deleteTask: vi.fn(), getTask: vi.fn() }));
 vi.mock("@/lib/event-tasks/enabled", () => ({ eventTasksEnabled: vi.fn(() => true) }));
 vi.mock("@/lib/event-tasks/store", () => ({ listEventTasks: vi.fn(), recordsOf: vi.fn(), getEventTask: vi.fn(), updateEventTask: vi.fn(), deleteEventTask: vi.fn() }));
 const assistants = vi.hoisted(() => ({ assistantById: vi.fn(async (_id: string): Promise<unknown> => null) }));
@@ -15,7 +15,7 @@ vi.mock("@/lib/assistants/store", () => ({ assistantById: assistants.assistantBy
 import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
 import { ScheduleId, createWeeklyScheduleRecord } from "@/lib/scheduled-tasks/deepseek/domain";
-import { deleteTask, getRun, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
+import { deleteTask, getRun, getTask, listTasks, updateTask } from "@/lib/scheduled-tasks/store";
 import type { TaskRow } from "@/lib/scheduled-tasks/store";
 import { eventTasksEnabled } from "@/lib/event-tasks/enabled";
 import { deleteEventTask, getEventTask, listEventTasks, recordsOf, updateEventTask } from "@/lib/event-tasks/store";
@@ -77,6 +77,8 @@ beforeEach(() => {
   vi.mocked(recordsOf).mockResolvedValue([]);
   vi.mocked(getEventTask).mockResolvedValue(null);
   vi.mocked(deleteEventTask).mockResolvedValue(false);
+  vi.mocked(getTask).mockResolvedValue({ ...row, assistantId: null });
+  assistants.assistantById.mockResolvedValue(null);
 });
 
 // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): each chat's clock lists its own tasks.
@@ -216,6 +218,23 @@ describe("PATCH / DELETE /api/projects/[id]/scheduled-tasks/[taskId]", () => {
     const res = await DELETE(new Request("http://x", { method: "DELETE" }), eventCtx);
     expect(res.status).toBe(200);
     expect(deleteEventTask).toHaveBeenCalledWith("p1", "e1");
+  });
+
+  // Final review I3: an agent's task runs with its person's private context (memory, connectors, ask_len).
+  it("🔴 an agent's task is only its person's: another editor neither changes nor deletes it", async () => {
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "editor", duenoId: "owner" } as never);
+    vi.mocked(getTask).mockResolvedValue({ ...row, assistantId: "lucia" });
+    assistants.assistantById.mockResolvedValue({ id: "lucia", personId: "owner" });
+    const changed = await PATCH(new Request("http://x", { method: "PATCH", body: JSON.stringify({ title: "Otro" }) }), taskCtx);
+    expect(changed.status).toBe(404);
+    expect(await changed.json()).toEqual({ code: "schedule_not_found" });
+    expect((await DELETE(new Request("http://x", { method: "DELETE" }), taskCtx)).status).toBe(404);
+    expect(updateTask).not.toHaveBeenCalled();
+    expect(deleteTask).not.toHaveBeenCalled();
+    vi.mocked(auth).mockResolvedValue({ user: { id: "owner" } } as never);
+    vi.mocked(exigirAcceso).mockResolvedValue({ rol: "dueno", duenoId: "owner" } as never);
+    expect((await DELETE(new Request("http://x", { method: "DELETE" }), taskCtx)).status).toBe(200);
+    expect(deleteTask).toHaveBeenCalledWith("p1", "schedule-1");
   });
 
   it("with OPENLEN_SCHEDULE=0, writes are off", async () => {
