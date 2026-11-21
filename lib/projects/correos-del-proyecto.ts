@@ -190,17 +190,18 @@ export function correoDeLen(
   return { subject, html, text };
 }
 
-/** La frase de Len por correo cuando el turno no llegó a contestar. */
-export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null): string {
+/** La frase de Len por correo cuando el turno no llegó a contestar. La de un agente pide volver a su chat: su correo no
+ *  se contesta (spec local 2026-11-19-agentes-para-todos, §6.4). */
+export function fraseDeFalloPorCorreo(idioma: IdiomaDelCorreo, fallo: { motivo: string; code?: string } | null, agent = false): string {
   if (fallo) return fraseDeFalloDelHilo(idioma, fallo);
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
-  return t("falloSinMotivo");
+  return t(agent ? "falloSinMotivoAgente" : "falloSinMotivo");
 }
 
-/** La frase de Len por correo cuando un reinicio le cortó el turno a medias. */
-export function fraseDeInterrupcionPorCorreo(idioma: IdiomaDelCorreo): string {
+/** La frase de Len por correo cuando un reinicio le cortó el turno a medias (la de un agente, sin «contesta»). */
+export function fraseDeInterrupcionPorCorreo(idioma: IdiomaDelCorreo, agent = false): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.len" });
-  return t("interrumpido");
+  return t(agent ? "interrumpidoAgente" : "interrumpido");
 }
 
 // ─── A scheduled task's email (spec local 2026-10-29-tareas-programadas, §7.7) ───
@@ -221,6 +222,9 @@ export interface DatosDeLaTareaProgramada {
   readonly chatUrl: string;
   /** «Quitar esta tarea», signed; null without a secret. */
   readonly removeUrl: string | null;
+  /** The person's agent whose task it is (spec local 2026-11-19-agentes-para-todos, §6.4): the email is in its name and
+   *  links to its place. Absent for Len's. */
+  readonly agentName?: string | null;
 }
 
 export function scheduledTaskEmail(
@@ -230,13 +234,16 @@ export function scheduledTaskEmail(
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });
   const fecha = new Intl.DateTimeFormat(idioma, { dateStyle: "full", timeZone: d.timeZone }).format(new Date(d.occurrenceAt));
   const subject = t("asunto", { title: d.title, fecha });
-  const cuerpo = [d.texto.trim(), ...(d.waiting.length > 0 ? ["", t("esperando"), ...d.waiting.map((w) => `· ${w}`)] : []), ...(d.canReply ? ["", t("contesta")] : [])].join("\n");
-  const pie = t("pie", { title: d.title, proyecto: d.projectTitle.trim() || "OpenLen" });
+  const agente = d.agentName?.trim() || null;
+  const otra = agente ? ["", t("contestaAgente", { agente })] : d.canReply ? ["", t("contesta")] : [];
+  const cuerpo = [d.texto.trim(), ...(d.waiting.length > 0 ? ["", t("esperando"), ...d.waiting.map((w) => `· ${w}`)] : []), ...otra].join("\n");
+  // An agent's task names the agent, never its hidden home («Space»).
+  const pie = agente ? t("pieAgente", { title: d.title, agente }) : t("pie", { title: d.title, proyecto: d.projectTitle.trim() || "OpenLen" });
   const html = marco(idioma, {
     titulo: d.title,
     parrafos: [],
     cuerpo,
-    boton: t("abrir"),
+    boton: agente ? t("abrirAgente", { agente }) : t("abrir"),
     url: d.chatUrl,
     pegar: createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros" })("email.pegar"),
     pie,
@@ -247,7 +254,10 @@ export function scheduledTaskEmail(
 }
 
 /** Why a scheduled task was not done, when it never reached Len. */
-export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed" | "agent_gone"): string {
+export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed" | "agent_gone", agentName?: string | null): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });
+  const agente = agentName?.trim();
+  if (agente && why === "plan_required") return t("planGratisAgente", { agente });
+  if (agente && why === "missed") return t("perdidaAgente", { agente });
   return t(why === "plan_required" ? "planGratis" : why === "no_access" ? "sinAcceso" : why === "agent_gone" ? "agenteYaNo" : "perdida");
 }

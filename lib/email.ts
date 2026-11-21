@@ -717,8 +717,11 @@ export async function sendScheduledTaskEmail(
     return;
   }
   const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
+  // An agent's task comes in its name (spec local 2026-11-19-agentes-para-todos, §6.4): a person chose that name, so what
+  // could break the header goes, and it travels quoted.
+  const agentName = input.agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
   await enviar(live, "scheduled task email", {
-    from: `Len <${address}>`,
+    from: agentName ? `"${agentName}" <${address}>` : `Len <${address}>`,
     to: input.to,
     ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     ...correo,

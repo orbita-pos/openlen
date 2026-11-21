@@ -87,3 +87,38 @@ describe("un correo que Resend RECHAZA se oye", () => {
     expect(gritos.join(" | ")).toContain("lead notification email");
   });
 });
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): an agent's scheduled task is emailed
+// in its name; Len's, in Len's. A name is cleaned of what would break the header.
+describe("the sender of a scheduled task's email", () => {
+  const TASK = {
+    to: "ana@example.com",
+    replyTo: null,
+    idioma: "es" as const,
+    attachments: [],
+    projectTitle: "Space",
+    title: "Palabras",
+    occurrenceAt: "2026-11-02T15:03:00.000Z",
+    timeZone: "UTC",
+    texto: "Hoy: apple, bread…",
+    waiting: [],
+    canReply: false,
+    chatUrl: "https://openlen.com/es/assistant/mr-smith",
+    removeUrl: null,
+  };
+  beforeEach(() => send.mockReset().mockResolvedValue({ data: { id: "e1" }, error: null }));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("🔴 Len's task comes from Len; an agent's from the agent, its name cleaned", async () => {
+    const { sendScheduledTaskEmail } = await cargar();
+    await sendScheduledTaskEmail(TASK);
+    expect(String(send.mock.calls[0]![0].from)).toMatch(/^Len </);
+    await sendScheduledTaskEmail({ ...TASK, agentName: "Mr. Smith" });
+    expect(String(send.mock.calls[1]![0].from)).toMatch(/^"Mr\. Smith" </);
+    await sendScheduledTaskEmail({ ...TASK, agentName: 'Bad "Name" <evil@x.com>\r\nBcc: y' });
+    const from = String(send.mock.calls[2]![0].from);
+    expect(from).not.toContain("evil@x.com>");
+    expect(from).not.toMatch(/[\r\n]/);
+    expect(from.match(/</g)).toHaveLength(1);
+  });
+});

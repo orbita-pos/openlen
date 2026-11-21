@@ -52,7 +52,7 @@ function deps(over: Partial<SchedulerDeps> & { store: SchedulerDeps["store"] }, 
     newRunId: () => `run-${++n}`,
     access: vi.fn(async () => ({ canEdit: true, ownerId: "owner" })),
     ownerPlan: vi.fn(async () => "pro" as const),
-    agentOf: vi.fn(async () => ({ homeProjectId: "p1" })),
+    agentOf: vi.fn(async () => ({ homeProjectId: "p1", name: "Mr. Smith" })),
     launch: vi.fn(),
     deliverResult: vi.fn(async () => {}),
     deliverFailure: vi.fn(async () => {}),
@@ -98,8 +98,22 @@ describe("tick", () => {
       expect(d.agentOf).not.toHaveBeenCalled();
     });
 
+    it("🔴 the sentences of a task it couldn't do name the agent and never ask to reply to the email", async () => {
+      const m = memory([weekly()]);
+      due(m, "a1");
+      const d = deps({ store: m.store, ownerPlan: vi.fn(async () => "free" as const), agentOf: vi.fn(async () => ({ homeProjectId: "p1", name: "Mr. Smith" })) }, "2026-11-02T15:04:00Z");
+      await tick(d);
+      expect(vi.mocked(d.deliverFailure).mock.calls[0]![3]).toContain("Mr. Smith");
+      const m2 = memory([weekly()]);
+      due(m2, "a1");
+      const d2 = deps({ store: m2.store }, "2026-11-02T15:04:00Z");
+      await tick(d2);
+      await vi.mocked(d2.launch).mock.calls[0]![0].fail(null, false);
+      expect(vi.mocked(d2.deliverFailure).mock.calls[0]![3]).not.toContain("correo");
+    });
+
     it("🔴 an agent that is gone, or no longer lives in the task's project: no turn, the task stops, one email", async () => {
-      for (const agent of [null, { homeProjectId: "elsewhere" }]) {
+      for (const agent of [null, { homeProjectId: "elsewhere", name: "Mr. Smith" }]) {
         const m = memory([weekly()]);
         due(m, "a1");
         const d = deps({ store: m.store, agentOf: vi.fn(async () => agent) }, "2026-11-02T15:04:00Z");

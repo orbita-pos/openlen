@@ -40,6 +40,8 @@ function fakeDeps(over: Partial<DeliverDeps> = {}) {
     siteUrl: "https://openlen.com",
     chatUrl: vi.fn(() => "https://openlen.com/new?project=p1"),
     removeUrl: vi.fn(() => "https://openlen.com/es/scheduled-tasks/remove?task=schedule-1&token=t"),
+    agentOf: vi.fn(async () => null),
+    agentUrl: vi.fn((locale: string, slug: string) => `https://openlen.com/${locale}/assistant/${slug}`),
     ...over,
   };
   return { deps, calls };
@@ -96,6 +98,52 @@ describe("deliverResult", () => {
     const { deps } = fakeDeps();
     await deliverResult(run, task, "Listo.", cards, deps);
     expect(vi.mocked(deps.send).mock.calls[0]![0].waiting).toEqual(["¿Lo publico ya?", "Publicar en cafe.openlen.app"]);
+  });
+});
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): an agent's task writes and notifies in
+// its own name, links to its place, and has no Reply-To — a reply to the space's Len address would start a Len turn.
+describe("an agent's task", () => {
+  const agentTask = { ...task, assistantId: "a1" } as TaskRow;
+  const SMITH = { id: "a1", name: "Mr. Smith", slug: "mr-smith" };
+  const withAgent = () =>
+    fakeDeps({
+      agentOf: vi.fn(async () => SMITH),
+      agentUrl: vi.fn((locale: string, slug: string) => `https://openlen.com/${locale}/assistant/${slug}`),
+    });
+
+  it("🔴 its email names it, links to its place and can't be replied to", async () => {
+    const { deps } = withAgent();
+    await deliverResult(run, agentTask, "Tus 5 palabras de hoy…", [], deps);
+    expect(vi.mocked(deps.send).mock.calls[0]![0]).toMatchObject({
+      agentName: "Mr. Smith",
+      replyTo: null,
+      canReply: false,
+      chatUrl: "https://openlen.com/es/assistant/mr-smith",
+    });
+    expect(deps.replyAddress).not.toHaveBeenCalled();
+  });
+
+  it("🔴 its push names it and opens its place", async () => {
+    const { deps } = withAgent();
+    await deliverResult(run, agentTask, "Tus 5 palabras de hoy…", [], deps);
+    expect(deps.push).toHaveBeenCalledWith(expect.objectContaining({ type: "len_turno", asistente: SMITH }), "scheduled:run-1");
+  });
+
+  it("its failure email names it too", async () => {
+    const { deps } = withAgent();
+    await deliverFailure(run, agentTask, "plan_required", "No la hice.", deps);
+    expect(vi.mocked(deps.send).mock.calls[0]![0]).toMatchObject({ agentName: "Mr. Smith", replyTo: null });
+  });
+
+  it("Len's task is as before: no agent, his reply address and chat", async () => {
+    const { deps } = withAgent();
+    await deliverResult(run, task, "Listo.", [], deps);
+    const sent = vi.mocked(deps.send).mock.calls[0]![0];
+    expect(sent).toMatchObject({ replyTo: "len-p1@reply.openlen.com", chatUrl: "https://openlen.com/new?project=p1" });
+    expect(sent.agentName ?? null).toBeNull();
+    expect(deps.agentOf).not.toHaveBeenCalled();
+    expect(vi.mocked(deps.push).mock.calls[0]![0]).not.toHaveProperty("asistente");
   });
 });
 

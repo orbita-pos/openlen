@@ -194,7 +194,9 @@
       "pie": "Reply to this email to keep working with Len on {titulo}.",
       "abrir": "Open the project",
       "falloSinMotivo": "I didn't get to it. Reply to this email to ask me again.",
-      "interrumpido": "The server restarted while I was working on it, so it may be half done. Check the changes and, if needed, reply to this email to ask me again."
+      "interrumpido": "The server restarted while I was working on it, so it may be half done. Check the changes and, if needed, reply to this email to ask me again.",
+      "falloSinMotivoAgente": "I didn't get to it. Ask me again in my chat.",
+      "interrumpidoAgente": "The server restarted while I was doing it, so it may be half done. Look at the result in my chat and, if needed, ask me again there."
     },
     "programada": {
       "asunto": "{title} · {fecha}",
@@ -206,7 +208,12 @@
       "planGratis": "I didn't do it: scheduled tasks are part of the paid plans and the project owner's account is on Free. The task is stopped; with a paid plan, ask Len for it again.",
       "sinAcceso": "I didn't do it: whoever created this task can no longer work with Len in this project. The task is stopped.",
       "perdida": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask Len.",
-      "agenteYaNo": "I didn't do it: the agent that asked for this task no longer exists, or no longer lives here. The task has stopped."
+      "agenteYaNo": "I didn't do it: the agent that asked for this task no longer exists, or no longer lives here. The task has stopped.",
+      "abrirAgente": "Open {agente}'s chat",
+      "pieAgente": "Scheduled task «{title}» of {agente}.",
+      "contestaAgente": "If you want something changed, tell {agente} in their chat.",
+      "planGratisAgente": "I didn't do it: scheduled tasks are part of the paid plans and your account is on Free. The task has stopped; with a paid plan, ask {agente} for it again.",
+      "perdidaAgente": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask {agente}."
     }
   },
   "envVars": {

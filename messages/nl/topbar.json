@@ -194,7 +194,9 @@
       "pie": "Beantwoord deze e-mail om met Len verder te werken aan {titulo}.",
       "abrir": "Project openen",
       "falloSinMotivo": "Het is me niet gelukt. Beantwoord deze e-mail om het opnieuw te vragen.",
-      "interrumpido": "De server is herstart terwijl ik ermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en beantwoord zo nodig deze e-mail om het opnieuw te vragen."
+      "interrumpido": "De server is herstart terwijl ik ermee bezig was, dus het kan half af zijn. Bekijk de wijzigingen en beantwoord zo nodig deze e-mail om het opnieuw te vragen.",
+      "falloSinMotivoAgente": "Het is me niet gelukt. Vraag het me opnieuw in mijn chat.",
+      "interrumpidoAgente": "De server herstartte terwijl ik bezig was, dus het kan half af zijn. Bekijk het resultaat in mijn chat en vraag het me daar zo nodig opnieuw."
     },
     "programada": {
       "asunto": "{title} · {fecha}",
@@ -206,7 +208,12 @@
       "planGratis": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en het account van de projecteigenaar is Gratis. De taak is gestopt; vraag het Len opnieuw met een betaald abonnement.",
       "sinAcceso": "Niet gedaan: wie deze taak heeft gemaakt, kan in dit project niet meer met Len werken. De taak is gestopt.",
       "perdida": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag voorbij. Heb je het nog nodig, vraag het dan aan Len.",
-      "agenteYaNo": "Niet gedaan: de agent die deze taak vroeg bestaat niet meer of woont hier niet meer. De taak is gestopt."
+      "agenteYaNo": "Niet gedaan: de agent die deze taak vroeg bestaat niet meer of woont hier niet meer. De taak is gestopt.",
+      "abrirAgente": "Open de chat van {agente}",
+      "pieAgente": "Geplande taak „{title}” van {agente}.",
+      "contestaAgente": "Wil je iets anders? Zeg het tegen {agente} in de chat.",
+      "planGratisAgente": "Niet gedaan: geplande taken horen bij de betaalde abonnementen en je account heeft Gratis. De taak is gestopt; vraag het met een betaald abonnement opnieuw aan {agente}.",
+      "perdidaAgente": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag verstreken. Heb je het nog nodig, vraag het dan aan {agente}."
     }
   },
   "envVars": {

@@ -194,7 +194,9 @@
       "pie": "Rispondi a questa e-mail per continuare con Len su {titulo}.",
       "abrir": "Apri il progetto",
       "falloSinMotivo": "Non sono riuscito a farlo. Rispondi a questa e-mail per chiedermelo di nuovo.",
-      "interrumpido": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere rimasto a metà. Controlla le modifiche e, se serve, rispondi a questa e-mail per chiedermelo di nuovo."
+      "interrumpido": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere rimasto a metà. Controlla le modifiche e, se serve, rispondi a questa e-mail per chiedermelo di nuovo.",
+      "falloSinMotivoAgente": "Non sono riuscito a farlo. Chiedimelo di nuovo nella mia chat.",
+      "interrumpidoAgente": "Il server si è riavviato mentre lo facevo, quindi potrebbe essere a metà. Guarda il risultato nella mia chat e, se serve, chiedimelo di nuovo lì."
     },
     "programada": {
       "asunto": "{title} · {fecha}",
@@ -206,7 +208,12 @@
       "planGratis": "Non l'ho fatta: le attività programmate fanno parte dei piani a pagamento e l'account del proprietario del progetto è nel piano Gratis. L'attività è ferma; con un piano a pagamento, chiedila di nuovo a Len.",
       "sinAcceso": "Non l'ho fatta: chi ha creato questa attività non può più lavorare con Len in questo progetto. L'attività è ferma.",
       "perdida": "Non l'ho fatta: OpenLen non era disponibile all'ora prevista ed è passato più di un giorno. Se ti serve ancora, chiedila a Len.",
-      "agenteYaNo": "Non l’ho fatta: l’agente che ha chiesto questa attività non esiste più o non vive più qui. L’attività è stata fermata."
+      "agenteYaNo": "Non l’ho fatta: l’agente che ha chiesto questa attività non esiste più o non vive più qui. L’attività è stata fermata.",
+      "abrirAgente": "Apri la chat di {agente}",
+      "pieAgente": "Attività programmata «{title}» di {agente}.",
+      "contestaAgente": "Se vuoi cambiare qualcosa, dillo a {agente} nella sua chat.",
+      "planGratisAgente": "Non l’ho fatta: le attività programmate fanno parte dei piani a pagamento e il tuo account è sul piano Gratis. L’attività è ferma; con un piano a pagamento, richiedila a {agente}.",
+      "perdidaAgente": "Non l’ho fatta: OpenLen non era disponibile all’ora programmata ed è passato più di un giorno. Se ti serve ancora, chiedila a {agente}."
     }
   },
   "envVars": {

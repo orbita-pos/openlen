@@ -37,6 +37,17 @@ export interface DeliverDeps {
   siteUrl: string;
   chatUrl(projectId: string): string;
   removeUrl(task: TaskRow): string | null;
+  /** The agent a task belongs to (spec local 2026-11-19-agentes-para-todos, §6.4), or null if it is gone. */
+  agentOf(assistantId: string): Promise<{ id: string; name: string; slug: string } | null>;
+  /** Its place: where its email sends the person to answer. */
+  agentUrl(locale: string, slug: string): string;
+}
+
+type Agent = { id: string; name: string; slug: string } | null;
+
+/** The agent whose task it is, or null for Len's (and for one that is gone: its email falls back to Len's form). */
+async function agentOfTask(task: TaskRow, deps: DeliverDeps): Promise<Agent> {
+  return task.assistantId ? deps.agentOf(task.assistantId).catch(() => null) : null;
 }
 
 /** What waits for the person: one rule with the phone's «Tareas» (`./waiting.ts`). */
@@ -53,10 +64,11 @@ function zoneOf(task: TaskRow): string {
   return "timeZone" in task.record ? task.record.timeZone : task.timeZone;
 }
 
-async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: readonly string[], attachments: ScheduledEmail["attachments"], deps: DeliverDeps): Promise<ScheduledEmail | null> {
+async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: readonly string[], attachments: ScheduledEmail["attachments"], deps: DeliverDeps, agent: Agent): Promise<ScheduledEmail | null> {
   const to = await deps.recipientEmail(task.createdBy);
   if (!to) return null;
-  const replyTo = deps.replyAddress(task.projectId);
+  // An agent's email has no Reply-To: the space's Len address would start a Len turn, not the agent's.
+  const replyTo = agent ? null : deps.replyAddress(task.projectId);
   return {
     to,
     replyTo,
@@ -69,8 +81,9 @@ async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: reado
     texto,
     waiting,
     canReply: replyTo !== null,
-    chatUrl: deps.chatUrl(task.projectId),
+    chatUrl: agent ? deps.agentUrl(task.locale, agent.slug) : deps.chatUrl(task.projectId),
     removeUrl: deps.removeUrl(task),
+    ...(agent ? { agentName: agent.name } : {}),
   };
 }
 
@@ -91,25 +104,26 @@ export async function deliverResult(run: RunRow, task: TaskRow, text: string, ca
     }
   }
   const texto = [text.trim(), ...(links.length > 0 ? ["", ...links] : [])].join("\n");
-  const email = await emailOf(run, task, texto, waitingFrom(cards), attachments, deps);
+  const agent = await agentOfTask(task, deps);
+  const email = await emailOf(run, task, texto, waitingFrom(cards), attachments, deps, agent);
   if (email) await deps.send(email);
   else console.warn(`[schedule] no email for ${task.createdBy}: the result stays in the chat`);
   await deps.markRun(run.id, { emailedAt: email ? new Date() : null, outcome: "done", finishedAt: new Date() });
   await deps
-    .push(avisoDelTurno({ projectId: task.projectId, userId: task.createdBy, texto: text, tarjetas: cards }), `scheduled:${run.id}`)
+    .push(avisoDelTurno({ projectId: task.projectId, userId: task.createdBy, texto: text, tarjetas: cards, ...(agent ? { asistente: agent } : {}) }), `scheduled:${run.id}`)
     .catch((err: unknown) => console.warn("[schedule] push failed", err));
 }
 
 export async function deliverFailure(run: RunRow, task: TaskRow, outcome: ScheduledRunOutcome, phrase: string, deps: DeliverDeps): Promise<void> {
   await deps.markRun(run.id, { outcome, reason: phrase });
-  const email = await emailOf(run, task, phrase, [], [], deps);
+  const email = await emailOf(run, task, phrase, [], [], deps, await agentOfTask(task, deps));
   if (email) await deps.send(email);
   await deps.markRun(run.id, { emailedAt: email ? new Date() : null, finishedAt: new Date() });
 }
 
 /** The real dependencies, loaded when first used (tests inject their own). */
 export async function defaultDeliverDeps(): Promise<DeliverDeps> {
-  const [{ eq }, { db, schema }, store, { sendScheduledTaskEmail }, { lenEmailAddress }, { deliveryStore }, { scheduleNotification }, { urlDelChat }, { removeUrl }] = await Promise.all([
+  const [{ eq }, { db, schema }, store, { sendScheduledTaskEmail }, { lenEmailAddress }, { deliveryStore }, { scheduleNotification }, { urlDelChat }, { removeUrl }, { assistantById }] = await Promise.all([
     import("drizzle-orm"),
     import("@/lib/db"),
     import("./store"),
@@ -119,6 +133,7 @@ export async function defaultDeliverDeps(): Promise<DeliverDeps> {
     import("@/lib/notifications/dispatch"),
     import("@/lib/notifications/channels/webpush"),
     import("./removal-token"),
+    import("@/lib/assistants/store"),
   ]);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
   return {
@@ -138,5 +153,10 @@ export async function defaultDeliverDeps(): Promise<DeliverDeps> {
     siteUrl,
     chatUrl: (projectId) => siteUrl + urlDelChat(projectId),
     removeUrl: (task) => removeUrl({ siteUrl, locale: task.locale, taskId: task.id }),
+    agentOf: async (assistantId) => {
+      const a = await assistantById(assistantId);
+      return a ? { id: a.id, name: a.name, slug: a.slug } : null;
+    },
+    agentUrl: (locale, slug) => `${siteUrl}/${locale}/assistant/${encodeURIComponent(slug)}`,
   };
 }

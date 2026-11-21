@@ -38,7 +38,7 @@ export interface SchedulerDeps {
   access(projectId: string, userId: string): Promise<{ canEdit: boolean; ownerId: string } | null>;
   ownerPlan(ownerId: string): Promise<Plan>;
   /** The agent a task belongs to (spec local 2026-11-19-agentes-para-todos, §6.4): where it lives, or null if it is gone. */
-  agentOf(assistantId: string): Promise<{ homeProjectId: string } | null>;
+  agentOf(assistantId: string): Promise<{ homeProjectId: string; name: string } | null>;
   launch: typeof launchScheduledTurn;
   deliverResult(run: RunRow, task: TaskRow, text: string, cards: Parameters<Parameters<typeof launchScheduledTurn>[0]["reply"]>[1]): Promise<void>;
   deliverFailure(run: RunRow, task: TaskRow, outcome: ScheduledRunOutcome, phrase: string): Promise<void>;
@@ -76,8 +76,14 @@ function launchRun(run: RunRow, task: TaskRow, deps: SchedulerDeps): void {
     ...(task.assistantId ? { extraBody: { assistantId: task.assistantId } } : {}),
     onStart: () => deps.store.markRun(run.id, { startedAt: deps.now() }),
     reply: (text, cards) => deps.deliverResult(run, task, text, cards),
+    // An agent's email can't be replied to: its sentences send the person back to its chat.
     fail: (fallo, cut) =>
-      deps.deliverFailure(run, task, cut ? "cut" : outcomeOf(fallo), cut ? fraseDeInterrupcionPorCorreo(idioma) : fraseDeFalloPorCorreo(idioma, fallo)),
+      deps.deliverFailure(
+        run,
+        task,
+        cut ? "cut" : outcomeOf(fallo),
+        cut ? fraseDeInterrupcionPorCorreo(idioma, task.assistantId !== null) : fraseDeFalloPorCorreo(idioma, fallo, task.assistantId !== null),
+      ),
   });
 }
 
@@ -91,7 +97,9 @@ async function refusal(task: TaskRow, deps: SchedulerDeps): Promise<"plan_requir
 }
 
 async function tell(run: RunRow, task: TaskRow, why: "plan_required" | "no_access" | "missed" | "agent_gone", deps: SchedulerDeps): Promise<void> {
-  await deps.deliverFailure(run, task, why, scheduledTaskPhrase(idiomaDelCorreo(task.locale), why));
+  // An agent's task names the agent («ask Mr. Smith again»), never Len.
+  const agent = task.assistantId && why !== "agent_gone" ? await deps.agentOf(task.assistantId).catch(() => null) : null;
+  await deps.deliverFailure(run, task, why, scheduledTaskPhrase(idiomaDelCorreo(task.locale), why, agent?.name ?? null));
 }
 
 /** One pass: claims and launches what is due. Returns how many it launched. */
@@ -143,9 +151,10 @@ export async function resumeAfterRestart(deps: SchedulerDeps): Promise<void> {
         continue;
       }
       const idioma = idiomaDelCorreo(task.locale);
+      const agents = task.assistantId !== null;
       if (run.reply !== null) await deps.deliverResult(run, task, run.reply, []);
-      else if (run.outcome !== null) await deps.deliverFailure(run, task, run.outcome, run.reason ?? fraseDeFalloPorCorreo(idioma, null));
-      else if (run.startedAt) await deps.deliverFailure(run, task, "cut", fraseDeInterrupcionPorCorreo(idioma));
+      else if (run.outcome !== null) await deps.deliverFailure(run, task, run.outcome, run.reason ?? fraseDeFalloPorCorreo(idioma, null, agents));
+      else if (run.startedAt) await deps.deliverFailure(run, task, "cut", fraseDeInterrupcionPorCorreo(idioma, agents));
       else if (now.getTime() - run.occurrenceAt.getTime() <= ONE_SHOT_GRACE_MS) launchRun(run, task, deps);
       else await tell(run, task, "missed", deps);
     } catch (err) {
@@ -179,7 +188,7 @@ async function defaultDeps(): Promise<SchedulerDeps> {
     ownerPlan: (ownerId) => getUserPlan(ownerId),
     agentOf: async (assistantId) => {
       const a = await assistantById(assistantId);
-      return a ? { homeProjectId: a.homeProjectId } : null;
+      return a ? { homeProjectId: a.homeProjectId, name: a.name } : null;
     },
     launch: launchScheduledTurn,
     deliverResult: (run, task, text, cards) => deliver.deliverResult(run, task, text, cards, deliverDeps),

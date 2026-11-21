@@ -2,7 +2,16 @@
 // EL CORREO DE LA INVITACIÓN, en el idioma de quien invita.
 import { describe, expect, it } from "vitest";
 
-import { correoDeInvitacion, correoDeMencion, fraseDeFalloDelHilo, idiomaDelCorreo, scheduledTaskEmail, scheduledTaskPhrase } from "./correos-del-proyecto";
+import {
+  correoDeInvitacion,
+  correoDeMencion,
+  fraseDeFalloDelHilo,
+  fraseDeFalloPorCorreo,
+  fraseDeInterrupcionPorCorreo,
+  idiomaDelCorreo,
+  scheduledTaskEmail,
+  scheduledTaskPhrase,
+} from "./correos-del-proyecto";
 
 const DATOS = { projectTitle: "Café <Sol>", inviterName: "Jesús", rol: "editor" as const, acceptUrl: "https://openlen.com/api/miembros/aceptar?token=abc&x=1" };
 
@@ -99,5 +108,30 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
     expect(scheduledTaskPhrase("es", "plan_required")).toMatch(/plan de pago/);
     expect(scheduledTaskPhrase("es", "no_access")).toBeTruthy();
     expect(scheduledTaskPhrase("en", "missed")).toBeTruthy();
+  });
+
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): an agent's email is in its name.
+  describe("of an agent", () => {
+    const AGENT = { ...DATA, projectTitle: "Space", agentName: "Mr. Smith", canReply: false, chatUrl: "https://openlen.com/es/assistant/mr-smith" };
+
+    it("🔴 its footer and button name the agent, never the space, and it says where to answer", () => {
+      const es = scheduledTaskEmail(AGENT, "es");
+      expect(es.text).toContain("Mr. Smith");
+      expect(es.html).toContain("Mr. Smith");
+      expect(es.text).not.toContain("Space");
+      expect(es.text).not.toMatch(/\bLen\b/);
+      expect(es.text).not.toContain("contesta este correo");
+      expect(es.text).toContain("en su chat");
+      expect(es.html).toContain('href="https://openlen.com/es/assistant/mr-smith"');
+    });
+
+    it("🔴 its refusals and failures name it, and never ask to reply to the email", () => {
+      expect(scheduledTaskPhrase("es", "plan_required", "Mr. Smith")).toContain("Mr. Smith");
+      expect(scheduledTaskPhrase("es", "missed", "Mr. Smith")).toContain("Mr. Smith");
+      expect(scheduledTaskPhrase("es", "plan_required", "Mr. Smith")).not.toMatch(/\bLen\b/);
+      expect(fraseDeFalloPorCorreo("es", null, true)).not.toContain("correo");
+      expect(fraseDeInterrupcionPorCorreo("es", true)).not.toContain("correo");
+      expect(fraseDeFalloPorCorreo("es", null)).toContain("correo");
+    });
   });
 });
