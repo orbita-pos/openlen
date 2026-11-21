@@ -6,14 +6,15 @@ import { SinRed } from "./proyectos";
 import type { ArchivoAdjunto } from "../chat/archivos";
 
 /** «cortado»: se fue la conexión a media respuesta — el turno sigue en el servidor y la app se vuelve a enganchar. */
-export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number };
+export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number; code?: string };
 
 export async function mandarALen(
   c: ClienteDeOpenLen,
   /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
   /** `assistantId`: a message to the person's own assistant, not Len (phase 5; the project is her home). */
   /** `viewingProjectId`: with her, the project on the phone's screen (spec local 2026-11-16-movil-es-tu-asistente, §5.3). */
-  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string; viewingProjectId?: string },
+  /** `opening`: her file's first message, which the server lets go once (spec local 2026-11-19-agentes-para-todos, §6.4). */
+  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string; viewingProjectId?: string; opening?: boolean },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -27,6 +28,7 @@ export async function mandarALen(
         ...(cuerpo.goal ? { goal: cuerpo.goal } : {}),
         ...(cuerpo.assistantId ? { assistantId: cuerpo.assistantId } : {}),
         ...(cuerpo.assistantId && cuerpo.viewingProjectId ? { viewingProjectId: cuerpo.viewingProjectId } : {}),
+        ...(cuerpo.assistantId && cuerpo.opening ? { opening: true } : {}),
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
         ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),
@@ -36,7 +38,11 @@ export async function mandarALen(
   } catch {
     return "sinRed";
   }
-  if (!res.ok || !res.body) return { status: res.status };
+  if (!res.ok || !res.body) {
+    // Why, when the server says: her first message already sent elsewhere is not a failure to show.
+    const motivo = (await res.json().catch(() => null)) as { code?: unknown } | null;
+    return { status: res.status, ...(typeof motivo?.code === "string" ? { code: motivo.code } : {}) };
+  }
   const lector = crearLectorSse();
   const dec = new TextDecoder();
   const reader = res.body.getReader();

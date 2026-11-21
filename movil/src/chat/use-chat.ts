@@ -109,13 +109,15 @@ export function useChat(o: OpcionesDelChat) {
     setLocales((ls) => sinLoEnviado(ls, o.historial));
   }, [o.historial, limpiarAdjuntos]);
 
-  const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume", documentos?: readonly ArchivoAdjunto[]): Promise<boolean> => {
+  /** `opening`: her file's first message. "yaAbierto": the server says it was already sent elsewhere (the web, another
+   *  phone) — not a failure. */
+  const correr = useCallback(async (prompt: string, fila: string, foto?: string, goal?: "create" | "resume", documentos?: readonly ArchivoAdjunto[], opening = false): Promise<boolean | "yaAbierto"> => {
     const { cliente, projectId, assistantId, viewingProjectId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
     vivoRef.current = turnoNuevo(fila);
     setVivo(vivoRef.current);
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}) } : {}) }, (e) => {
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}), ...(opening ? { opening: true } : {}) } : {}) }, (e) => {
       if (actual !== epoca.current) return;
       setVivo((v) => (v ? conEvento(v, e) : v));
       if (e.nombre === "turno" && typeof (e.datos as { turnoId?: unknown } | null)?.turnoId === "string") {
@@ -123,6 +125,10 @@ export function useChat(o: OpcionesDelChat) {
       }
     });
     if (actual !== epoca.current) return true;
+    if (typeof fin === "object" && fin.code === "already_opened") {
+      setVivo(null);
+      return "yaAbierto";
+    }
     if (fin === "sinRed" || typeof fin === "object") {
       setVivo(null);
       return false;
@@ -135,7 +141,7 @@ export function useChat(o: OpcionesDelChat) {
   }, []);
 
   const enviar = useCallback(
-    async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume", documentos: readonly File[] = []) => {
+    async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume", documentos: readonly File[] = [], opening = false) => {
       const { cliente, base, projectId } = op.current;
       const actual = epoca.current;
       setLocales((ls) => marcar(ls, k, { estado: "enviando" }));
@@ -180,8 +186,15 @@ export function useChat(o: OpcionesDelChat) {
       // conversación releída ya trae este mensaje.
       const fila = crypto.randomUUID();
       setLocales((ls) => marcar(ls, k, { estado: "enviando", fila }));
-      const ok = await correr(texto, fila, url, goal, enviados);
-      if (actual === epoca.current) setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
+      const ok = await correr(texto, fila, url, goal, enviados, opening);
+      if (actual !== epoca.current) return;
+      // Her first message, already sent from the web: this bubble goes, and her conversation (with that one) is read.
+      if (ok === "yaAbierto") {
+        setLocales((ls) => ls.filter((x) => x.clave !== k));
+        op.current.alCambiarLaPagina();
+        return;
+      }
+      setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
     },
     [correr],
   );
@@ -196,6 +209,17 @@ export function useChat(o: OpcionesDelChat) {
       const texto = escrito || (documentos.length ? op.current.textoDeArchivoSolo : "");
       setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, foto: vistaFoto, archivos: documentos.map(f=>({name:f.name,size:f.size,kind:tipoArchivo(f.name)??undefined})), estado: "enviando" }]);
       void enviar(k, texto, foto, undefined, documentos);
+    },
+    [enviar],
+  );
+
+  /** Her file's first message (spec local 2026-11-19-agentes-para-todos, §6.4), as the person's bubble, as her place on the
+   *  web sends it: marked, so the server lets it go once. */
+  const abrirCon = useCallback(
+    (texto: string) => {
+      const k = nuevaClave("tu");
+      setLocales((ls) => [...ls, { clave: k, t: Date.now(), tipo: "tu", texto, archivos: [], estado: "enviando" }]);
+      void enviar(k, texto, undefined, undefined, [], true);
     },
     [enviar],
   );
@@ -335,6 +359,7 @@ export function useChat(o: OpcionesDelChat) {
     turnoId: turnoIdEnCurso,
     pregunta: vivo ? vivo.pregunta : terminaEnPregunta(o.historial),
     mandar,
+    abrirCon,
     mandarEncargo,
     mandarNota,
     reintentar,

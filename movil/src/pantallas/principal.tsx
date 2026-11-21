@@ -33,7 +33,7 @@ import { LenTurnView } from "../asistente/len-turn-view";
 import { useLenRequests } from "../asistente/use-len-requests";
 import { pasosDelTrabajo } from "../entrega/progreso";
 import type { ElementoDelHilo } from "../chat/hilo";
-import { leerSuChat, listarAsistentes, readAssistants, serveProject } from "../api/asistente";
+import { leerSuChatYSuInicio, listarAsistentes, readAssistants, serveProject } from "../api/asistente";
 import { projectStatusOf } from "../asistente/project-status";
 import { appModeOf, dismissWelcome, readChosen, readWelcomeDismissed, saveChosen } from "../asistente/app-mode";
 import { WelcomeCreator } from "../asistente/welcome-creator";
@@ -192,14 +192,21 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   const ella = modo.kind === "assistant" ? modo.assistant : null;
   const suId = ella?.id ?? null;
   const [suHistorial, setSuHistorial] = useState<StoredChatTurn[]>(SIN_HISTORIAL);
+  // An agent whose conversation hasn't started: her file's first message, sent when her chat opens (as her place does).
+  const [suInicio, setSuInicio] = useState<string | null>(null);
   const suIdActual = useRef(suId);
   useLayoutEffect(() => { suIdActual.current = suId; });
   const recargarSuChat = useCallback(() => {
     if (!suId) return;
-    void leerSuChat(cliente, suId).then((h) => { if (suIdActual.current === suId) setSuHistorial(h); }, () => {});
+    void leerSuChatYSuInicio(cliente, suId).then(({ historial, inicio }) => {
+      if (suIdActual.current !== suId) return;
+      setSuHistorial(historial);
+      setSuInicio(inicio);
+    }, () => {});
   }, [cliente, suId]);
   useEffect(() => {
     setSuHistorial(SIN_HISTORIAL);
+    setSuInicio(null);
     recargarSuChat();
   }, [recargarSuChat]);
   /** Talking with one of her person's assistants: she becomes the app's (if she wasn't) and her chat opens. */
@@ -446,6 +453,16 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     textoDeArchivoSolo: ta("archivoSolo"),
     ...(ella ? { assistantId: ella.id, ...(id ? { viewingProjectId: id } : {}) } : {}),
   });
+  // HER FIRST MESSAGE (spec local 2026-11-19-agentes-para-todos, §6.4; delivery 1 deferred it): opened first here, a
+  // new agent's chat stayed empty. When her chat opens, it goes once, marked, so the server lets it go only once if her
+  // place on the web opens her at the same moment.
+  const abiertas = useRef(new Set<string>());
+  useEffect(() => {
+    if (!ella || !chatAbierto || !suInicio || abiertas.current.has(ella.id)) return;
+    abiertas.current.add(ella.id);
+    setSuInicio(null);
+    chatDeElla.abrirCon(suInicio);
+  }, [ella, chatAbierto, suInicio, chatDeElla]);
   const dichoElla = ella ? loQueDijoLen(suHistorial) : null;
   // HER LEN CARDS, followed here and not in her chat (final review, I2): the sheet over the page needs them too — a Len
   // turn her ask_len started after this page loaded is Len working on it, and the sheet says so with his steps.

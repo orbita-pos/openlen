@@ -74,6 +74,18 @@ export async function createAssistantFromPhone(
 /** The first page of her conversation with her owner, in the shape of a project's `chatHistory`. */
 export const leerSuChat = (c: ClienteDeOpenLen, id: string) => leer<StoredChatTurn>(c, suya(id, "/chat"), "chatHistory");
 
+/** Her conversation and, for an agent whose conversation hasn't started, the first message she opens with (spec local
+ *  2026-11-19-agentes-para-todos, §6.4): the phone sends it as her place on the web does. */
+export async function leerSuChatYSuInicio(c: ClienteDeOpenLen, id: string): Promise<{ historial: StoredChatTurn[]; inicio: string | null }> {
+  const res = await c.pedir(suya(id, "/chat"));
+  const body = (await res.json().catch(() => null)) as { chatHistory?: unknown; startsWith?: unknown } | null;
+  if (!res.ok || !body) throw new Error(String(res.status));
+  return {
+    historial: Array.isArray(body.chatHistory) ? (body.chatHistory as StoredChatTurn[]) : [],
+    inicio: typeof body.startsWith === "string" && body.startsWith ? body.startsWith : null,
+  };
+}
+
 /** Her visitors' conversations, as «Conversaciones» on the web shows them. */
 export const leerSusVisitas = <V = Record<string, unknown>>(c: ClienteDeOpenLen, id: string) => leer<V>(c, suya(id, "/visits"), "visits");
 

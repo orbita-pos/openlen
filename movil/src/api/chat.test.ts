@@ -24,6 +24,14 @@ const sinRed = async (): Promise<Response> => {
 };
 
 describe("mandarALen", () => {
+  // Delivery 1 deferred it: her first message, sent from the phone, is marked so the server lets it go once; when it was
+  // already sent elsewhere, the refusal says why.
+  it("🔴 her first message goes marked, and a refusal brings its code", async () => {
+    const { c, pedir } = cliente(async () => Response.json({ error: "already sent", code: "already_opened" }, { status: 409 }));
+    const fin = await mandarALen(c, { projectId: "space", prompt: "¡Hola!", assistantId: "a4", opening: true }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toMatchObject({ assistantId: "a4", opening: true });
+    expect(fin).toEqual({ status: 409, code: "already_opened" });
+  });
   it("un encargo conserva create/resume en la petición", async () => {
     const { c, pedir } = cliente(async () => trozos(""));
     await mandarALen(c, { projectId: "p1", prompt: "Termina mi página", goal: "create" }, () => {});

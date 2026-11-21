@@ -36,14 +36,14 @@ vi.mock("../herramientas/tool-screen", () => ({
   ),
 }));
 // Len's hook watches the project on screen; hers talks to her (spec local 2026-11-16-movil-es-tu-asistente, §5.3).
-const chats = vi.hoisted(() => ({ lenTrabajando: false, lenPregunta: false, mandarALen: null as null | ((t: string) => void), deElla: null as Record<string, unknown> | null, elementosDeElla: [] as unknown[] }));
+const chats = vi.hoisted(() => ({ lenTrabajando: false, lenPregunta: false, mandarALen: null as null | ((t: string) => void), deElla: null as Record<string, unknown> | null, elementosDeElla: [] as unknown[], abiertaCon: [] as string[] }));
 vi.mock("../chat/use-chat", () => ({
   useChat: (o: Record<string, unknown>) => {
     if (o.assistantId) chats.deElla = o;
     return {
       trabajando: o.assistantId ? false : chats.lenTrabajando,
       progreso: [],
-      ...(o.assistantId ? { elementos: chats.elementosDeElla } : { pregunta: chats.lenPregunta, mandar: (t: string) => chats.mandarALen?.(t) }),
+      ...(o.assistantId ? { elementos: chats.elementosDeElla, abrirCon: (t: string) => void chats.abiertaCon.push(t) } : { pregunta: chats.lenPregunta, mandar: (t: string) => chats.mandarALen?.(t) }),
     };
   },
 }));
@@ -957,9 +957,10 @@ describe("no pages: your agents are the app", () => {
   const CHEF = { id: "a3", name: "Chef Rosa", slug: "chef-rosa", look, color: "#f4a48b", tone: "friendly", projectId: "space", projectIds: ["space"] };
   const ANA = { ...CHEF, id: "a4", name: "Teacher Ana", slug: "teacher-ana" };
   const OVERVIEW = { needsYou: [], working: [], scheduled: [], resolved: [], events: [] };
-  async function paint(asistentes: (ruta: string) => Response | Promise<Response>, overview: unknown = OVERVIEW) {
+  async function paint(asistentes: (ruta: string) => Response | Promise<Response>, overview: unknown = OVERVIEW, suChat?: (ruta: string) => Response | undefined) {
     const pedir = vi.fn(async (ruta: string) =>
-      ruta === "/api/projects"
+      suChat?.(ruta) ??
+      (ruta === "/api/projects"
         ? Response.json({ projects: [] })
         : ruta === "/api/assistants"
           ? asistentes(ruta)
@@ -967,7 +968,7 @@ describe("no pages: your agents are the app", () => {
             ? Response.json(overview)
             : ruta.startsWith("/api/tools?")
               ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
-              : Response.json({ chatHistory: [] }),
+              : Response.json({ chatHistory: [] })),
     );
     host = document.createElement("div");
     document.body.append(host);
@@ -992,6 +993,18 @@ describe("no pages: your agents are the app", () => {
     expect(localStorage.getItem("len-asistente")).toBe("a4");
     // Delivery 4's deferred minor M2: with no page, her chat has no «Ver en tu página» to offer.
     expect(chatProps.ella).not.toHaveProperty("onVerPagina");
+  });
+
+  // Delivery 1 deferred it: opened first on the phone, a new agent's chat stayed empty — her place on the web sends her
+  // file's first message by itself, the phone didn't.
+  it("🔴 opening a new agent's chat sends her first message, once", async () => {
+    chats.abiertaCon = [];
+    await paint(agents([CHEF, ANA]), OVERVIEW, (ruta) => (ruta === "/api/assistants/a4/chat" ? Response.json({ chatHistory: [], startsWith: "¡Hola! Empecemos." }) : undefined));
+    expect(chats.abiertaCon).toEqual([]);
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a4"]')!.click());
+    await act(async () => {});
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Teacher Ana" } });
+    expect(chats.abiertaCon).toEqual(["¡Hola! Empecemos."]);
   });
 
   it("🔴 a turn notice of an agent opens her chat with no pages", async () => {

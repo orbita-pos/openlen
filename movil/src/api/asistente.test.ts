@@ -4,7 +4,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { clienteDeMuestra } from "../muestra";
-import { leerSuChat, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, readAssistants, tocarPedido } from "./asistente";
+import { leerSuChat, leerSuChatYSuInicio, leerSusPedidos, leerSusVisitas, listarAsistentes, marcarSusVisitasLeidas, readAssistants, tocarPedido } from "./asistente";
 import { mandarALen } from "./chat";
 
 const LUCIA = { id: "a1", name: "Lucía", slug: "lucia", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" } as const, color: "#f4a48b", tone: "friendly", projectId: "p1", projectIds: ["p1"] };
@@ -40,6 +40,15 @@ describe("her calls", () => {
   });
 
   // Phase 4E: «Conversaciones» on screen marks what it shows as read, as on the web.
+  // Delivery 1 deferred it: an agent opened first on the phone never sent her file's first message.
+  it("🔴 reads her chat with the first message she opens with, if it's due", async () => {
+    const empty = cliente(() => Response.json({ chatHistory: [], startsWith: "¡Hola! Empecemos." }));
+    expect(await leerSuChatYSuInicio(empty, "a4")).toEqual({ historial: [], inicio: "¡Hola! Empecemos." });
+    const started = cliente(() => Response.json({ chatHistory: [{ id: "t1" }] }));
+    expect(await leerSuChatYSuInicio(started, "a4")).toEqual({ historial: [{ id: "t1" }], inicio: null });
+    await expect(leerSuChatYSuInicio(cliente(() => new Response("no", { status: 500 })), "a4")).rejects.toThrow();
+  });
+
   it("marcarSusVisitasLeidas posts the ids with the key", async () => {
     const c = cliente(() => Response.json({ marked: 2 }));
     expect(await marcarSusVisitasLeidas(c, "a1", [{ id: "v1", lastAt: "2026-11-09T18:34:10.000Z" }, { id: "v2", lastAt: "2026-11-09T18:34:10.000Z" }])).toBe(true);

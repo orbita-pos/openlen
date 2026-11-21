@@ -33,6 +33,30 @@ it("sends the project on screen with each message to her (spec local 2026-11-16-
   await act(async () => chat.mandar("botón verde"));
   expect(m.mandar).toHaveBeenCalledWith(cliente, expect.objectContaining({ projectId: "p1", assistantId: "a1", viewingProjectId: "p2" }), expect.any(Function));
 });
+// Delivery 1 deferred it: an agent opened first on the phone never sent her file's first message.
+it("🔴 her first message goes as the person's bubble, marked as her opening", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="space" assistantId="a4" />));
+  await act(async () => chat.abrirCon("¡Hola! Empecemos."));
+  expect(m.mandar).toHaveBeenCalledWith(cliente, expect.objectContaining({ projectId: "space", assistantId: "a4", prompt: "¡Hola! Empecemos.", opening: true }), expect.any(Function));
+  expect(chat.elementos.find((e) => e.tipo === "tu")).toMatchObject({ texto: "¡Hola! Empecemos.", estado: "ok" });
+});
+
+it("🔴 already sent from the web: her bubble here goes, with no error, and her conversation is read again", async () => {
+  m.mandar.mockResolvedValue({ status: 409, code: "already_opened" });
+  await act(async () => root.render(<Pantalla id="space" assistantId="a4" />));
+  await act(async () => chat.abrirCon("¡Hola! Empecemos."));
+  expect(chat.elementos.filter((e) => e.tipo === "tu")).toEqual([]);
+  expect(recargar).toHaveBeenCalled();
+});
+
+it("a message the person writes isn't an opening", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="space" assistantId="a4" />));
+  await act(async () => chat.mandar("hola"));
+  expect(m.mandar.mock.calls[0]![1]).not.toHaveProperty("opening");
+});
+
 it.each(["", "mira esta foto"])("conserva la captura y su texto (%j) al enviar y reintentar", async (texto) => {
   vi.stubGlobal("URL", class extends URL {
     static createObjectURL = () => "blob:captura";
