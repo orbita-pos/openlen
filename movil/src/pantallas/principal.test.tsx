@@ -656,10 +656,14 @@ describe("Len móvil is her app: her sheet and her chat over your page (spec loc
   });
 
   it("🔴 a card of a project no longer in your list: it says so, and opening it leaves you where you are", async () => {
+    // Since the final review's I3, «gone» is said once the list, read again, still hasn't it (a new one isn't in it yet).
+    chats.elementosDeElla = [{ clave: "t9:lenPedidos", t: 1, tipo: "lenPedidos", refs: [{ filaId: "f2", projectId: "p9" }] }];
     const { pedir } = await paint();
+    await act(async () => {});
     const cards = () => chatProps.ella?.lenCards as { projectGone: (id: string) => boolean; onCompare: (r: { filaId: string; projectId: string }) => void };
     expect(cards().projectGone("p1")).toBe(false);
     expect(cards().projectGone("p9")).toBe(true);
+    chats.elementosDeElla = [];
     await act(async () => cards().onCompare({ filaId: "f2", projectId: "p9" }));
     await act(async () => {});
     expect(pedir.mock.calls.some(([r]) => String(r).includes("p9"))).toBe(false);
@@ -997,6 +1001,45 @@ describe("no pages: your agents are the app", () => {
     const fila = [...host.querySelectorAll<HTMLButtonElement>(".resumen-fila")].find((b) => b.textContent?.includes("Receta"))!;
     await act(async () => fila.click());
     expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
+  });
+
+  // Final review I3: with no pages, an agent's `ask_len` starts Len in a new project, which the list read at opening
+  // doesn't have. Its card must not say «Esa página ya no está en tu lista»; the list is read again, the app goes to
+  // that page, and her chat stays open.
+  it("🔴 a Len card of hers for a project not in the list yet: the list is read again, it isn't «gone», her chat stays open", async () => {
+    chats.elementosDeElla = [];
+    let lecturas = 0;
+    const NUEVO = { id: "p-nuevo", title: "Tarjetas", subdomain: null, publishedAt: null, updatedAt: "2026-11-21", chatHistory: [] };
+    const pedir = vi.fn(async (ruta: string) =>
+      ruta === "/api/projects"
+        ? Response.json({ projects: lecturas++ === 0 ? [] : [NUEVO] })
+        : ruta === "/api/assistants"
+          ? Response.json({ enabled: true, agents: true, assistants: [CHEF] })
+          : ruta.endsWith("/preview")
+            ? Response.json({ enabled: true, token: "vista" })
+            : ruta === "/api/projects/p-nuevo"
+              ? Response.json({ project: NUEVO })
+              : ruta.startsWith("/api/tools?")
+                ? Response.json({ tools: [], paid: true, person: { name: "Ana" } })
+                : Response.json({ chatHistory: [] }),
+    );
+    const cliente = { pedir, avisarAlCerrar: vi.fn() };
+    host = document.createElement("div");
+    document.body.append(host);
+    root = createRoot(host);
+    await act(async () => root.render(<PantallaPrincipal cliente={cliente} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-agente="a3"]')!.click());
+    // Her turn passed something to Len, who started in a new project.
+    chats.elementosDeElla = [{ clave: "t1:lenPedidos", t: 1, tipo: "lenPedidos", refs: [{ filaId: "f1", projectId: "p-nuevo" }] }];
+    await act(async () => root.render(<PantallaPrincipal cliente={cliente} idioma="es" onSalir={vi.fn()} />));
+    await act(async () => {});
+    await act(async () => {});
+    expect(pedir.mock.calls.filter(([ruta]) => ruta === "/api/projects").length).toBe(2);
+    const lenCards = chatProps.ella!.lenCards as { projectGone: (pid: string) => boolean };
+    expect(lenCards.projectGone("p-nuevo")).toBe(false);
+    expect(chatProps.ella).toMatchObject({ abierto: true, asistente: { name: "Chef Rosa" } });
+    chats.elementosDeElla = [];
   });
 
   // Final review I2: «Crear un agente» sends the person to the web; coming back, the agent they made is there.

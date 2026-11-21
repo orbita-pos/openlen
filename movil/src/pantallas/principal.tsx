@@ -450,6 +450,30 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         .find((v) => v?.status === "running" || v?.status === "queued")
     : undefined;
   const lenTrabajaAqui = chat.trabajando || lenAqui !== undefined;
+  // A CARD FOR A PROJECT THE LIST DOESN'T HAVE YET (final review I3): with no pages, her `ask_len` starts Len in a new
+  // project. The list is read again once per such project before its card may say it is gone; if it was the first page,
+  // the app goes to it, keeping her chat open if it was.
+  const proyectosDeSusTarjetas = ((chatDeElla.elementos as ElementoDelHilo[] | undefined) ?? SIN_ELEMENTOS)
+    .flatMap((e) => (e.tipo === "lenPedidos" ? e.refs.map((r) => r.projectId) : []))
+    .join(",");
+  const releidosPorTarjeta = useRef(new Set<string>());
+  const [noEncontrados, setNoEncontrados] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    if (!lista) return;
+    const nuevos = [...new Set(proyectosDeSusTarjetas.split(",").filter(Boolean))].filter((pid) => !lista.some((x) => x.id === pid) && !releidosPorTarjeta.current.has(pid));
+    if (nuevos.length === 0) return;
+    nuevos.forEach((pid) => releidosPorTarjeta.current.add(pid));
+    const conSuChat = chatAbierto;
+    void listarProyectos(cliente).then((ps) => {
+      setNoEncontrados((antes) => new Set([...antes, ...nuevos.filter((pid) => !ps.some((x) => x.id === pid))]));
+      const primera = idActual.current === null ? ps.find((x) => nuevos.includes(x.id)) ?? ps[0] : undefined;
+      if (primera) {
+        if (conSuChat) panelDelAviso.current = { id: primera.id, panel: "chat" };
+        setId(primera.id);
+      }
+      setLista(ps);
+    }, () => {});
+  }, [cliente, lista, proyectosDeSusTarjetas, chatAbierto]);
   // In her app Len's own chat is out of sight: a turn of his on this page (a goal, an «@Len») that ended on a question
   // shows in her sheet, with «Contestar» (deferred minor of the final review).
   const preguntaDeLen = ella && !lenTrabajaAqui && chat.pregunta ? ultimoTurnoDeLen(p?.historial ?? []) : undefined;
@@ -643,7 +667,8 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
           byFila: pedidosALen.byFila,
           onStop: (turno: string) => void pedidosALen.stop(turno),
           projectTitle: (pid: string) => lista?.find((x) => x.id === pid)?.title ?? "",
-          projectGone: (pid: string) => !!lista && !lista.some((x) => x.id === pid),
+          // Gone only once the list was read again without it (final review I3): a new one isn't in it yet.
+          projectGone: (pid: string) => noEncontrados.has(pid) && !!lista && !lista.some((x) => x.id === pid),
           onCompare: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "comparar", r.filaId),
           onPublish: (r: LenRequestRef) => abrirPanelDelProyecto(r.projectId, "gestion"),
           onOpen: (r: LenRequestRef) => abrirTurnoDeLen(r.filaId, r.projectId),
