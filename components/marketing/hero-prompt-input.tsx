@@ -120,16 +120,14 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
   // The brief WRITTEN in /new's URL too: it fills /new's box if the ticket can't be read there. With another kind, `kind=`.
   // An agent goes to the person's space (spec local 2026-11-19-agentes-para-todos, §6.3), which sends the same ticket.
   const target = newProjectHref(value, kind);
-  // What crosses with the ticket: the space takes the message alone in this delivery, so an agent's send leaves no
-  // photos or files behind for a later /new to pick up by mistake.
-  const carriesAttachments = kind !== "agent";
 
   const [leaving, setLeaving] = useState(false);
   const submit = async () => {
     if (submitting || leaving || status === "loading") return;
     // Photos don't fit in a URL: they cross in `sessionStorage`, left BEFORE navigating and BEFORE the sign-in
     // dialog — the signed-out visitor goes to /register and comes back, and they must still be there.
-    if (photos.length && carriesAttachments) dejarReferenciasEnTransito(photos);
+    // With Agente chosen too: the space sends them with the message, as /new does.
+    if (photos.length) dejarReferenciasEnTransito(photos);
     // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
     // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
     leaveFirstMessage({ brief: value, kind });
@@ -137,7 +135,7 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
     // the message still goes.
     setLeaving(true);
     try {
-      await leaveFilesInTransit(carriesAttachments ? files : []);
+      await leaveFilesInTransit(files);
     } finally {
       setLeaving(false);
     }

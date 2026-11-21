@@ -400,6 +400,19 @@ describe("Agente in the home's pill", () => {
     expect(takeFirstMessage("Quiero un profesor de inglés")).toEqual({ brief: "Quiero un profesor de inglés", kind: "agent" });
   });
 
+  // Delivery 1 deferred it: with Agente chosen, what was attached never reached the space. The space now sends it.
+  it("🔴 a file attached with Agente chosen crosses to the space with the message", async () => {
+    const el = mountWith(true);
+    chooseAgent(el);
+    const file = new File(["%PDF-1.4"], "nivel.pdf", { type: "application/pdf" });
+    const input = [...el.querySelectorAll<HTMLInputElement>('input[type="file"]')].find((i) => !i.accept.startsWith("image/"))!;
+    Object.defineProperty(input, "files", { value: [file], configurable: true });
+    act(() => void input.dispatchEvent(new Event("change", { bubbles: true })));
+    type(el, "Quiero un profesor de inglés");
+    await press(sendButton(el));
+    expect(transit.left).toEqual([[file]]);
+  });
+
   it("a link that carried kind=agent fills the pill only where agents are on", () => {
     window.history.replaceState(null, "", "/?kind=agent");
     const off = mountWith(false);

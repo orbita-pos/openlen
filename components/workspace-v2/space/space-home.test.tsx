@@ -15,7 +15,6 @@ vi.mock("@/i18n/navigation", () => ({
   ),
   useRouter: () => router,
 }));
-vi.mock("../toast", () => ({ ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 // Len's chat panel is a mark that says what it was given.
 vi.mock("../chat/new-chat-panel", () => ({
   NewChatPanel: (p: {
@@ -28,6 +27,7 @@ vi.mock("../chat/new-chat-panel", () => ({
     placeholder?: string;
     emptyState?: { title: string; subtitle: string; suggestions: readonly { key: string; label: string; text: string }[] };
     noPage?: boolean;
+    pendingAttachments?: unknown;
   }) => (
     <i
       data-chat={p.flatProjectId}
@@ -41,6 +41,7 @@ vi.mock("../chat/new-chat-panel", () => ({
       data-empty-subtitle={p.emptyState?.subtitle ?? ""}
       data-empty-chips={JSON.stringify(p.emptyState?.suggestions ?? [])}
       data-no-page={String(Boolean(p.noPage))}
+      data-attachments={JSON.stringify(p.pendingAttachments ?? null)}
     />
   ),
 }));
@@ -54,8 +55,20 @@ vi.mock("../code-view", () => ({
   ),
 }));
 vi.mock("../code-view-labels", () => ({ useCodeViewLabels: (kind: string) => ({ title: kind }) }));
+// What the home attached crosses like it does to /new: photos in sessionStorage (the real module), files in IndexedDB
+// (here, a list), both uploaded to the space before the send.
+const transit = vi.hoisted(() => ({ files: [] as File[], photosUploaded: [] as unknown[][], filesUploaded: [] as string[] }));
+vi.mock("@/lib/marketing/files-in-transit", () => ({ takeFilesInTransit: async () => transit.files.splice(0) }));
+vi.mock("@/lib/workspace-v2/upload-photos", () => ({
+  uploadPhotos: async (photos: unknown[], projectId: string) => (transit.photosUploaded.push([...photos, projectId]), { images: photos.map((_, i) => ({ url: `/u/photo-${i}.webp` })), failed: 0 }),
+}));
+vi.mock("@/lib/workspace-v2/upload-attachment", () => ({
+  uploadAttachment: async (file: File, projectId: string) => (transit.filesUploaded.push(`${file.name}@${projectId}`), { ok: true, file: { url: `/u/${file.name}`, name: file.name } }),
+}));
+vi.mock("../toast", () => ({ ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>, useToast: () => ({ error: vi.fn() }) }));
 
 import { leaveFirstMessage, takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { dejarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 
 import { SpaceHome } from "./space-home";
 
@@ -118,16 +131,42 @@ describe("the space", () => {
     expect(chat(el).dataset.disclaimer).toBe("space.disclaimer");
   });
 
-  it("🔴 sends the home's ticket once, as the person's own send, and spends it", () => {
+  it("🔴 sends the home's ticket once, as the person's own send, and spends it", async () => {
     window.history.replaceState(null, "", `/es/space?brief=${encodeURIComponent(BRIEF)}`);
     leaveFirstMessage({ brief: BRIEF, kind: "agent" });
     const el = mount({ arrivalBrief: BRIEF });
+    // It goes once what the home attached has been read (and uploaded): nothing here.
+    await act(async () => {});
     expect(chat(el).dataset.draft).toBe(BRIEF);
+    expect(chat(el).dataset.attachments).toBe("null");
     expect(chat(el).dataset.auto).toBe("true");
     expect(takeFirstMessage(BRIEF)).toBeNull();
     // The address loses it through the router, so a refresh after the turn doesn't bring it back (walked 20/11), and a
     // reload doesn't write it again.
     expect(router.replace).toHaveBeenCalledWith("/space", { scroll: false });
+  });
+
+  // Delivery 1 deferred it: with Agente chosen, the home's photos and files never reached the space.
+  it("🔴 the home's photos and files go with the agent's ticket: uploaded to the space, sent with the message", async () => {
+    leaveFirstMessage({ brief: BRIEF, kind: "agent" });
+    dejarReferenciasEnTransito([{ dataUrl: "data:image/png;base64,AAAA", nombre: "libro.png" }]);
+    transit.files = [new File(["%PDF-1.4"], "nivel.pdf", { type: "application/pdf" })];
+    const el = mount({ arrivalBrief: BRIEF });
+    await act(async () => {});
+    expect(chat(el).dataset.draft).toBe(BRIEF);
+    expect(chat(el).dataset.auto).toBe("true");
+    expect(JSON.parse(chat(el).dataset.attachments!)).toEqual({ images: [{ url: "/u/photo-0.webp" }], files: [{ url: "/u/nivel.pdf", name: "nivel.pdf" }] });
+    expect(transit.photosUploaded).toEqual([[{ dataUrl: "data:image/png;base64,AAAA", nombre: "libro.png" }, "space-1"]]);
+    expect(transit.filesUploaded).toEqual(["nivel.pdf@space-1"]);
+  });
+
+  it("a brief that only fills the box leaves what's in transit alone", async () => {
+    transit.files = [new File(["%PDF-1.4"], "nivel.pdf", { type: "application/pdf" })];
+    const el = mount({ arrivalBrief: BRIEF });
+    await act(async () => {});
+    expect(chat(el).dataset.attachments).toBe("null");
+    expect(transit.files).toHaveLength(1);
+    transit.files = [];
   });
 
   it("🔴 without the ticket — a link from elsewhere, a reload — the brief only fills the box", () => {

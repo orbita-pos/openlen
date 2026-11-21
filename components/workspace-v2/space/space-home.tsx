@@ -7,7 +7,8 @@
 // WHAT ARRIVES: the home's Agente comes with the one-use ticket (`lib/marketing/first-message-in-transit.ts`) for the
 // brief in the address, and that is THE send — the person already pressed it on the home. Anything else only fills the
 // box: a brief without its ticket (a link from elsewhere, a reload), a page's ticket, or a draft («Cambiar a <nombre>»).
-// Either way the address loses them, through the router, so a reload writes nothing again.
+// Either way the address loses them, through the router, so a reload writes nothing again. The send carries what the
+// home attached, as /new's does: its photos and files, uploaded to the space first.
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -15,19 +16,37 @@ import { useEffect, useRef, useState } from "react";
 import { AGENT_JOBS } from "@/components/marketing/agent-job-chips";
 import { Link, useRouter } from "@/i18n/navigation";
 import { takeFirstMessage } from "@/lib/marketing/first-message-in-transit";
+import { takeFilesInTransit } from "@/lib/marketing/files-in-transit";
+import { tomarReferenciasEnTransito } from "@/lib/referencia-en-transito";
 import { spaceHref } from "@/lib/space/href";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { uploadAttachment } from "@/lib/workspace-v2/upload-attachment";
+import { uploadPhotos } from "@/lib/workspace-v2/upload-photos";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
+import type { PendingAttachments } from "../chat/use-agent-chat";
 import { CodeView } from "../code-view";
 import { useCodeViewLabels } from "../code-view-labels";
-import { ToastProvider } from "../toast";
+import { ToastProvider, useToast } from "../toast";
 
 const noCanvas = () => {};
 
 interface Start {
   readonly text: string;
   readonly send: boolean;
+  readonly attachments?: PendingAttachments | null;
+}
+
+/** What the home attached (photos in sessionStorage, files in IndexedDB), read and spent, and uploaded to the space —
+ *  as /new does for its first message. What doesn't upload is counted; the message goes without it. */
+async function fromTheHome(projectId: string): Promise<{ attachments: PendingAttachments | null; photosFailed: number; filesFailed: number }> {
+  const photos = tomarReferenciasEnTransito();
+  const uploaded = photos.length > 0 ? await uploadPhotos(photos, projectId) : { images: [], failed: 0 };
+  const files = await takeFilesInTransit();
+  const done = await Promise.all(files.map((file) => uploadAttachment(file, projectId)));
+  const ok = done.flatMap((r) => (r.ok ? [r.file] : []));
+  const attachments = uploaded.images.length > 0 || ok.length > 0 ? { images: uploaded.images, ...(ok.length > 0 ? { files: ok } : {}) } : null;
+  return { attachments, photosFailed: uploaded.failed, filesFailed: files.length - ok.length };
 }
 
 /** What the box starts with: the home's ticket for this brief (sent), else the brief or the draft (filled). */
@@ -40,19 +59,26 @@ function startOf(arrivalBrief: string | null, draft: string | null): Start | nul
   return draft ? { text: draft, send: false } : null;
 }
 
-export function SpaceHome({
-  projectId,
-  initialChat,
-  arrivalBrief,
-  draft,
-}: {
+interface SpaceProps {
   projectId: string;
   initialChat: StoredChatTurn[];
   arrivalBrief: string | null;
   draft: string | null;
-}) {
-  const t = useTranslations("wsChrome");
+}
+
+export function SpaceHome(props: SpaceProps) {
   const tc = useTranslations("common");
+  return (
+    <ToastProvider dismissLabel={tc("close")}>
+      <SpaceView {...props} />
+    </ToastProvider>
+  );
+}
+
+function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) {
+  const t = useTranslations("wsChrome");
+  const tp = useTranslations("wsPage");
+  const toast = useToast();
   const router = useRouter();
   const [start, setStart] = useState<Start | null>(null);
   // THE SPACE'S FILES (delivery 2, spec §6.2): what the agents keep, in the Code lens, beside the chat.
@@ -71,14 +97,23 @@ export function SpaceHome({
   useEffect(() => {
     if (read.current) return;
     read.current = true;
-    setStart(startOf(arrivalBrief, draft));
+    const first = startOf(arrivalBrief, draft);
     // Through the router, not history.replaceState: the refresh after Len's turn put the old address back (walked with
     // a real turn, 20/11), and a reload then filled the box with the brief again.
     if (arrivalBrief || draft) router.replace(spaceHref(), { scroll: false });
-  }, [arrivalBrief, draft, router]);
+    if (!first?.send) {
+      setStart(first);
+      return;
+    }
+    // The home's send: what it attached goes with it (delivery 1 deferred it, and it was lost on the way).
+    void fromTheHome(projectId).then(({ attachments, photosFailed, filesFailed }) => {
+      if (photosFailed > 0) toast.error(tp("toast.photosNotUploaded", { count: photosFailed }));
+      if (filesFailed > 0) toast.error(tp("toast.filesNotUploaded", { count: filesFailed }));
+      setStart({ ...first, attachments });
+    });
+  }, [arrivalBrief, draft, router, projectId, toast, tp]);
 
   return (
-    <ToastProvider dismissLabel={tc("close")}>
       <div className="workspace-v2 relative h-dvh" data-space="">
         <div className="flex h-full flex-col bg-app">
         <div className="flex h-11 shrink-0 items-center gap-2 px-3">
@@ -113,6 +148,7 @@ export function SpaceHome({
             centered
             pendingDraft={start?.text ?? null}
             pendingDraftAutoSend={start?.send === true}
+            pendingAttachments={start?.attachments ?? null}
             onPendingDraftConsumed={() => setStart(null)}
             disclaimer={t("space.disclaimer")}
             placeholder={t("space.placeholder")}
@@ -129,6 +165,5 @@ export function SpaceHome({
         </div>
         </div>
       </div>
-    </ToastProvider>
   );
 }
