@@ -314,7 +314,8 @@ function AgentChatView({
   const feedback = useTurnFeedback(projectId);
   const conversations = useConversations(projectId, chat.conversationChanged);
   // The clock of the project's scheduled tasks (spec local 2026-10-29-tareas-programadas, §7.8).
-  const scheduled = useScheduledTasks(projectId, chat.busy);
+  // An agent's place lists only its own tasks; Len's chat, Len's (spec local 2026-11-19-agentes-para-todos, §6.4).
+  const scheduled = useScheduledTasks(projectId, chat.busy, assistant?.id);
   const [settledConfirms, setSettledConfirms] = useState<ReadonlySet<string>>(() => new Set());
   const { data: session } = useSession();
   const initial = useMemo(

@@ -26,9 +26,17 @@ export const GET = paraLaApp(async (req: Request, ctx: { params: Promise<{ id: s
   const { id } = await ctx.params;
   const acceso = await exigirAcceso(id, userId, "editar");
   if (acceso instanceof Response) return acceso;
+  // WHOSE CLOCK (spec local 2026-11-19-agentes-para-todos, §6.4): Len's chat lists Len's tasks; an agent's place
+  // (`?assistantId=`) only that agent's, and only for its owner and where it lives. An agent watches no sources.
+  const assistantId = new URL(req.url).searchParams.get("assistantId");
+  if (assistantId) {
+    const { assistantById } = await import("@/lib/assistants/store");
+    const agent = await assistantById(assistantId.slice(0, 100)).catch(() => null);
+    if (!agent || agent.personId !== userId || agent.homeProjectId !== id) return Response.json({ tasks: [], events: [] });
+  }
   const now = Date.now();
   const tasks = await Promise.all(
-    (await listTasks(id)).map(async (task) => {
+    (await listTasks(id, { scope: { assistantId: assistantId || null } })).map(async (task) => {
       const run = task.lastRunId ? await getRun(task.lastRunId) : null;
       return {
         ...viewForModel(task.record, now, task.timeZone, { pausedAt: task.pausedAt }),
@@ -37,7 +45,7 @@ export const GET = paraLaApp(async (req: Request, ctx: { params: Promise<{ id: s
       };
     }),
   );
-  const events = eventTasksEnabled() && acceso.rol === "dueno"
+  const events = eventTasksEnabled() && acceso.rol === "dueno" && !assistantId
     ? await Promise.all(
         (await listEventTasks(id)).map(async (task) => ({
           id: task.id,

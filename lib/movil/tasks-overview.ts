@@ -75,7 +75,12 @@ export interface RunFile {
 
 export type ScheduledItem = OpenLenScheduleView & {
   readonly projectId: string;
+  /** For an agent's task, the agent's name: its project is the person's hidden space (spec local
+   *  2026-11-19-agentes-para-todos, §6.4). */
   readonly projectTitle: string;
+  /** The agent whose task it is; absent for Len's. */
+  readonly agentName?: string;
+  readonly agentSlug?: string;
   readonly recurring: boolean;
   readonly lastRun: { readonly at: string; readonly outcome: string | null; readonly reason: string | null; readonly files: RunFile[] } | null;
 };
@@ -107,6 +112,8 @@ export interface TasksOverviewDeps {
   eventTasksOf?(projectIds: readonly string[]): Promise<EventTaskRow[]>;
   eventRecordsOf?(taskId: string, limit: number): Promise<EventTaskRecordRow[]>;
   pendingCardsOf?(projectIds: readonly string[]): Promise<EventTaskCardRow[]>;
+  /** The agents of these tasks, by id (spec local 2026-11-19-agentes-para-todos, §6.4); absent: none is named. */
+  agentsOf?(assistantIds: readonly string[]): Promise<ReadonlyMap<string, { readonly name: string; readonly slug: string }>>;
 }
 
 const canEdit = (p: VisibleProject) => p.role === "dueno" || p.role === "editor";
@@ -160,6 +167,8 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
     deps.eventTasksOf ? deps.eventTasksOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
     deps.pendingCardsOf ? deps.pendingCardsOf(projects.filter(owns).map((p) => p.id)) : Promise.resolve([]),
   ]);
+  const agentIds = [...new Set(tasks.flatMap((t) => (t.assistantId ? [t.assistantId] : [])))];
+  const agents = agentIds.length > 0 && deps.agentsOf ? await deps.agentsOf(agentIds) : new Map<string, { readonly name: string; readonly slug: string }>();
   for (const c of cards) {
     const p = byId.get(c.projectId);
     if (p && owns(p)) needsYou.push(item(p, { kind: "aviso", text: c.title, at: c.createdAt.toISOString(), open: "chat", card: c.id }));
@@ -191,10 +200,12 @@ export async function buildTasksOverview(userId: string, deps: TasksOverviewDeps
         const last = t.lastRunId ? await deps.runOf(t.lastRunId) : null;
         const files = last?.finishedAt ? await deps.deliveriesBetween(t.projectId, last.startedAt ?? last.claimedAt, last.finishedAt) : [];
         const p = byId.get(t.projectId)!;
+        const agent = t.assistantId ? agents.get(t.assistantId) : undefined;
         return {
           ...viewForModel(t.record, now.getTime(), t.timeZone, { pausedAt: t.pausedAt }),
           projectId: p.id,
-          projectTitle: p.title,
+          projectTitle: agent ? agent.name : p.title,
+          ...(agent ? { agentName: agent.name, agentSlug: agent.slug } : {}),
           recurring: isRecurringScheduleRecord(t.record),
           lastRun: last
             ? {

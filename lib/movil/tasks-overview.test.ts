@@ -112,6 +112,17 @@ describe("buildTasksOverview", () => {
     expect(out.scheduled[1]).not.toHaveProperty("paused");
   });
 
+  // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): an agent's task lives in the
+  // person's hidden space, whose title («Space») means nothing to them: it shows under the agent's name.
+  it("🔴 an agent's task shows under the agent's name, not its space's title", async () => {
+    const agentsOf = vi.fn(async () => new Map([["a1", { name: "Mr. Smith", slug: "mr-smith" }]]));
+    const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { assistantId: "a1" }), task("t2", "own")], agentsOf }));
+    expect(out.scheduled[0]).toMatchObject({ id: "t1", projectTitle: "Mr. Smith", agentName: "Mr. Smith", agentSlug: "mr-smith" });
+    expect(out.scheduled[1]).toMatchObject({ id: "t2", projectTitle: "Mi tienda" });
+    expect(out.scheduled[1]).not.toHaveProperty("agentName");
+    expect(agentsOf).toHaveBeenCalledWith(["a1"]);
+  });
+
   it("a scheduled task carries how its last run went", async () => {
     const out = await buildTasksOverview("owner", deps({ tasksOf: async () => [task("t1", "own", { lastRunId: "r1" })], runOf: async () => run({ id: "r1", outcome: "no_credits", reason: "Sin créditos." }) }));
     expect(out.scheduled[0]!.lastRun).toEqual({ at: NOW.toISOString(), outcome: "no_credits", reason: "Sin créditos.", files: [] });

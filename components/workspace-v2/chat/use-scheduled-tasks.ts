@@ -5,14 +5,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { ClockEventTask, ClockTask, ScheduledTasks } from "./scheduled-tasks-menu";
 
-export function useScheduledTasks(projectId: string | null, busy: boolean): ScheduledTasks {
+/** `assistantId`: an agent's place, which lists only that agent's tasks (spec local 2026-11-19-agentes-para-todos, §6.4);
+ *  without it, Len's chat. Changing a task still goes by its id. */
+export function useScheduledTasks(projectId: string | null, busy: boolean, assistantId?: string): ScheduledTasks {
   const [tasks, setTasks] = useState<readonly ClockTask[]>([]);
   const [events, setEvents] = useState<readonly ClockEventTask[]>([]);
   const base = projectId ? `/api/projects/${encodeURIComponent(projectId)}/scheduled-tasks` : null;
+  const list = base && assistantId ? `${base}?assistantId=${encodeURIComponent(assistantId)}` : base;
   const load = useCallback(async () => {
-    if (!base) return;
+    if (!list) return;
     try {
-      const res = await fetch(base);
+      const res = await fetch(list);
       if (res.ok) {
         const body = (await res.json()) as { tasks: ClockTask[]; events?: ClockEventTask[] };
         setTasks(body.tasks);
@@ -21,7 +24,7 @@ export function useScheduledTasks(projectId: string | null, busy: boolean): Sche
     } catch {
       // No clock this time; the next turn's end reads again.
     }
-  }, [base]);
+  }, [list]);
   useEffect(() => {
     void load();
   }, [load]);

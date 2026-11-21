@@ -9,6 +9,8 @@ vi.mock("@/lib/projects/acceso", () => ({ exigirAcceso: vi.fn() }));
 vi.mock("@/lib/scheduled-tasks/store", () => ({ listTasks: vi.fn(), getRun: vi.fn(), updateTask: vi.fn(), deleteTask: vi.fn() }));
 vi.mock("@/lib/event-tasks/enabled", () => ({ eventTasksEnabled: vi.fn(() => true) }));
 vi.mock("@/lib/event-tasks/store", () => ({ listEventTasks: vi.fn(), recordsOf: vi.fn(), getEventTask: vi.fn(), updateEventTask: vi.fn(), deleteEventTask: vi.fn() }));
+const assistants = vi.hoisted(() => ({ assistantById: vi.fn(async (_id: string): Promise<unknown> => null) }));
+vi.mock("@/lib/assistants/store", () => ({ assistantById: assistants.assistantById }));
 
 import { auth } from "@/auth";
 import { exigirAcceso } from "@/lib/projects/acceso";
@@ -75,6 +77,31 @@ beforeEach(() => {
   vi.mocked(recordsOf).mockResolvedValue([]);
   vi.mocked(getEventTask).mockResolvedValue(null);
   vi.mocked(deleteEventTask).mockResolvedValue(false);
+});
+
+// AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): each chat's clock lists its own tasks.
+describe("GET /api/projects/[id]/scheduled-tasks — whose clock", () => {
+  it("🔴 Len's chat lists Len's tasks; an agent's place, only that agent's", async () => {
+    await GET(new Request("http://x"), ctx);
+    expect(listTasks).toHaveBeenLastCalledWith("p1", { scope: { assistantId: null } });
+    assistants.assistantById.mockResolvedValue({ id: "a1", personId: "ana", homeProjectId: "p1" });
+    await GET(new Request("http://x?assistantId=a1"), ctx);
+    expect(listTasks).toHaveBeenLastCalledWith("p1", { scope: { assistantId: "a1" } });
+  });
+
+  it("🔴 another person's agent, or one that lives elsewhere, lists nothing — and no event tasks in an agent's clock", async () => {
+    vi.mocked(listEventTasks).mockResolvedValue([eventRow]);
+    for (const agent of [{ id: "a1", personId: "eli", homeProjectId: "p1" }, { id: "a1", personId: "ana", homeProjectId: "p9" }, null]) {
+      vi.mocked(listTasks).mockClear();
+      assistants.assistantById.mockResolvedValue(agent);
+      const body = (await (await GET(new Request("http://x?assistantId=a1"), ctx)).json()) as { tasks: unknown[]; events: unknown[] };
+      expect(body.tasks).toEqual([]);
+      expect(body.events).toEqual([]);
+      expect(listTasks).not.toHaveBeenCalled();
+    }
+    assistants.assistantById.mockResolvedValue({ id: "a1", personId: "ana", homeProjectId: "p1" });
+    expect(((await (await GET(new Request("http://x?assistantId=a1"), ctx)).json()) as { events: unknown[] }).events).toEqual([]);
+  });
 });
 
 describe("GET /api/projects/[id]/scheduled-tasks", () => {
