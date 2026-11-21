@@ -365,6 +365,19 @@ describe("an agent's turn", () => {
     expect(scheduledTasks.list).toHaveBeenLastCalledWith("p1", expect.objectContaining({ includeInactive: true, scope: { assistantId: "a1" } }));
   });
 
+  // Final review I4: the ten are counted across its home, but its list shows only its own.
+  it("🔴 an agent at the cap hears the ten are shared, and what it can do; Len hears it as before", async () => {
+    const full = () => new OpenLenScheduleError("too_many_schedules", "This project already has 10 active scheduled tasks. Delete one before creating another.");
+    const { deps, scheduledTasks } = fake();
+    vi.mocked(scheduledTasks.create).mockRejectedValueOnce(full()).mockRejectedValueOnce(full());
+    const agent = result(await toolScheduleCreate(AGENT, deps, WEEKLY));
+    expect(agent.code).toBe("too_many_schedules");
+    expect(agent.message).toMatch(/shared/);
+    expect(agent.message).toMatch(/schedule_list/);
+    expect(agent.message).toMatch(/Nothing was created/);
+    expect(result(await toolScheduleCreate(LEN_TURN, deps, WEEKLY)).message).toBe("This project already has 10 active scheduled tasks. Delete one before creating another.");
+  });
+
   it("🔴 an agent doesn't watch sources: that is Len's, and nothing is created", async () => {
     const { deps } = fake();
     const events = { validate: vi.fn(), create: vi.fn(), list: vi.fn(async () => []), get: vi.fn(), remove: vi.fn(), update: vi.fn(), latestCards: vi.fn() };

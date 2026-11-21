@@ -38,7 +38,7 @@ import {
   scheduleTitle,
 } from "@/lib/scheduled-tasks/deepseek/domain";
 import type { AtInput, CronInput, DailyInput, ScheduleRecord, ScheduleTimingChange, WeeklyInput } from "@/lib/scheduled-tasks/deepseek/types";
-import { checkOpenLenLimits, OPENLEN_MIN_INTERVAL_SECONDS, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
+import { checkOpenLenLimits, MAX_ACTIVE_TASKS_PER_PROJECT, OPENLEN_MIN_INTERVAL_SECONDS, OpenLenScheduleError } from "@/lib/scheduled-tasks/limits";
 import type { createTask, deleteTask, listTasks, TaskScope, updateTask } from "@/lib/scheduled-tasks/store";
 import { invalidInterval, updateScheduledTask } from "@/lib/scheduled-tasks/update-task";
 import { viewForModel } from "@/lib/scheduled-tasks/view";
@@ -270,6 +270,8 @@ export function scopeOf(session: AgentSession): TaskScope {
 
 const LEN_ONLY =
   "Watching a source for changes is Len's, not an agent's: tell the person to ask Len in their space. Nothing was created.";
+/** An agent at the cap (final review I4): the ten are counted across its home, and its list shows only its own. */
+const SHARED_SLOTS = `The ${MAX_ACTIVE_TASKS_PER_PROJECT} active scheduled tasks of your home are shared with Len and the other agents that live there, and all ${MAX_ACTIVE_TASKS_PER_PROJECT} are taken. schedule_list shows only yours: delete one of yours to make room, or tell the person the rest belong to Len or their other agents, where they can remove one. Nothing was created.`;
 
 export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {
   return guarded(async () => {
@@ -290,14 +292,19 @@ export async function toolScheduleCreate(session: AgentSession, deps: AgentDeps,
     const now = sd.now();
     const record = recordFrom(args, now);
     checkOpenLenLimits(record);
-    const row = await sd.create({
-      projectId: session.projectId,
-      createdBy: session.personId ?? session.userId,
-      locale: session.uiLocale ?? "en",
-      timeZone: session.zonaHoraria ?? FALLBACK_ZONE,
-      record,
-      assistantId: scopeOf(session).assistantId,
-    });
+    const row = await sd
+      .create({
+        projectId: session.projectId,
+        createdBy: session.personId ?? session.userId,
+        locale: session.uiLocale ?? "en",
+        timeZone: session.zonaHoraria ?? FALLBACK_ZONE,
+        record,
+        assistantId: scopeOf(session).assistantId,
+      })
+      .catch((error: unknown) => {
+        if (session.assistant && error instanceof OpenLenScheduleError && error.code === "too_many_schedules") throw new OpenLenScheduleError("too_many_schedules", SHARED_SLOTS);
+        throw error;
+      });
     return viewForModel(row.record, now, row.timeZone);
   });
 }
