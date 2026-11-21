@@ -276,7 +276,9 @@
       "module": "Encendiendo un módulo",
       "undoing": "Deshaciendo el último cambio",
       "asking": "Preparando una pregunta",
-      "working": "Trabajando"
+      "working": "Trabajando",
+      "readingFile": "Leyendo un fichero",
+      "editingFile": "Escribiendo un fichero"
     },
     "live": {
       "thinking": "Pensando",

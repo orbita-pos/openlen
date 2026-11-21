@@ -44,6 +44,7 @@ import { activityOf, openQuestionIndex, type Activity } from "./live-status";
 import { Lightbox, type GalleryPhoto } from "./photo-gallery";
 import { asksTheOwner } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { isOtherFile } from "@/lib/workspace-v2/step-file";
 import { TODO_WRITE } from "@/lib/agent/todo-list";
 import { READ_ME, SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { SUBAGENT_CARD_TOOLS } from "@/lib/agent/subagents/card";
@@ -52,6 +53,8 @@ import type { DesignTurn } from "./use-agent-chat";
 const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
   reading: Eye,
   editing: PenLine,
+  readingFile: Eye,
+  editingFile: PenLine,
   terminal: SquareTerminal,
   photos: ImageIcon,
   image: ImageIcon,
@@ -269,12 +272,6 @@ type AppToolLabel = typeof APP_TOOL_LABELS extends Set<infer T> ? T : never;
 const ARTIFACT_FILE_TOOLS = new Set(["Read", "Edit", "MultiEdit", "Write"] as const);
 type ArtifactToolLabel = typeof ARTIFACT_FILE_TOOLS extends Set<infer T> ? T : never;
 const isArtifactFile = (path: string) => /^\/?\.len\/artifacts\//.test(path);
-/** «La página» is a page's HTML; any other file — an agent's, a skill, a stylesheet, notes — is «un fichero» (delivery 1's
- *  walk: writing ~/.len/agents/plant-care.md in the space read «Escribiendo la página»). No path: as before. */
-const isOtherFile = (summary: string) => {
-  const path = summary.trim().split(/\s/)[0] ?? "";
-  return path !== "" && !/\.html?$/i.test(path);
-};
 
 function StepRow({
   action,
@@ -303,7 +300,7 @@ function StepRow({
       ? t(`agent.toolArtifact.${tool as ArtifactToolLabel}`)
     : esApp && APP_TOOL_LABELS.has(tool as AppToolLabel)
       ? t(`agent.toolApp.${tool as AppToolLabel}`)
-    : ARTIFACT_FILE_TOOLS.has(tool as ArtifactToolLabel) && isOtherFile(action.summary ?? "")
+    : ARTIFACT_FILE_TOOLS.has(tool as ArtifactToolLabel) && isOtherFile(action.summary)
       ? t(`agent.toolFile.${tool as ArtifactToolLabel}`)
       : t(`agent.tool.${tool}`);
   const detail = summaryLabel(action, t);

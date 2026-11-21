@@ -276,7 +276,9 @@
       "module": "Schaltet ein Modul ein",
       "undoing": "Macht die letzte Änderung rückgängig",
       "asking": "Bereitet eine Frage vor",
-      "working": "Arbeitet"
+      "working": "Arbeitet",
+      "readingFile": "Liest eine Datei",
+      "editingFile": "Schreibt eine Datei"
     },
     "live": {
       "thinking": "Denkt nach",

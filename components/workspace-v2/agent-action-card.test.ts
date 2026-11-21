@@ -581,3 +581,30 @@ describe("una tarjeta guardada con el nombre de antes se pinta con el de hoy", (
     }
   });
 });
+
+// Final review of delivery 1's leftovers: a subagent's card for ~/.len/agents/*.md read «Escribiendo la página», like
+// the steps card did. Only a page's HTML is «la página».
+describe("a file that isn't a page, on the card", () => {
+  let root: Root | null = null;
+  let host: HTMLDivElement | null = null;
+  const pintar = (action: AgentAction): HTMLElement => {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => {
+      root!.render(createElement(AgentActionCard, { action }));
+    });
+    return host.firstElementChild as HTMLElement;
+  };
+  afterEach(() => {
+    act(() => root?.unmount());
+    host?.remove();
+    root = null;
+    host = null;
+  });
+
+  it("🔴 is «un fichero»; a page is still «la página»", () => {
+    expect(pintar({ tool: "Write", status: "done", summary: "/home/user/.len/agents/plant-care.md" } as AgentAction).textContent).toContain("agent.toolFile.Write");
+    expect(pintar({ tool: "Edit", status: "done", summary: "index.html: «Hola» → «Adiós»" } as AgentAction).textContent).toContain("agent.tool.Edit");
+  });
+});

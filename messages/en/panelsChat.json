@@ -276,7 +276,9 @@
       "module": "Turning on a module",
       "undoing": "Undoing the last change",
       "asking": "Preparing a question",
-      "working": "Working"
+      "working": "Working",
+      "readingFile": "Reading a file",
+      "editingFile": "Writing a file"
     },
     "live": {
       "thinking": "Thinking",

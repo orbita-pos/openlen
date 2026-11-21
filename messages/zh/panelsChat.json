@@ -276,7 +276,9 @@
       "module": "正在开启模块",
       "undoing": "正在撤销上一次修改",
       "asking": "正在准备一个问题",
-      "working": "工作中"
+      "working": "工作中",
+      "readingFile": "正在读取文件",
+      "editingFile": "正在编写文件"
     },
     "live": {
       "thinking": "思考中",

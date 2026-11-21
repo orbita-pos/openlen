@@ -9,6 +9,7 @@ import { SalidaEnLaTarjeta, type DondeEstaLaSalida } from "./salida-en-la-tarjet
 import type { OpDescrita } from "@/lib/agent/ops-descritas";
 import { asksTheOwner, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { FILE_TOOLS, isOtherFile, type FileTool } from "@/lib/workspace-v2/step-file";
 import type { OwnerReason } from "@/lib/agent/owner-reason";
 import { rutaDeLaTarjeta } from "@/lib/workspace-v2/abrir-fichero";
 import { isPagePath, NEW_PAGE_MARK } from "@/lib/agent/new-page-mark";
@@ -427,7 +428,14 @@ export function AgentActionCard({
   const [abierta, setAbierta] = useState(false);
   // El nombre de hoy: una fila guardada antes del 2026-10-06 trae el de antes.
   const tool = currentToolName(action.tool);
-  const label = toolLabel ?? (KNOWN_TOOLS.has(tool) ? t(`agent.tool.${tool}`) : action.tool);
+  // A file that isn't a page (an agent's, a skill, notes) is «un fichero», as in the steps card (lib/workspace-v2/step-file.ts).
+  const label =
+    toolLabel ??
+    (FILE_TOOLS.has(tool as FileTool) && isOtherFile(action.summary)
+      ? t(`agent.toolFile.${tool as FileTool}`)
+      : KNOWN_TOOLS.has(tool)
+        ? t(`agent.tool.${tool}`)
+        : action.tool);
   const summary = summaryLabel(action, t);
   const cobertura = coberturaTitle(action, t);
   // LA DE LA TERMINAL SE DESPLIEGA (la #5 de plans/len-agente-2026/notas/

@@ -85,14 +85,17 @@ describe("la tarjeta de los pasos", () => {
     const pasos = [
       { tool: "Write", status: "done", summary: "/home/user/.len/agents/plant-care.md" },
       { tool: "Read", status: "done", summary: "~/.len/skills/cooking/SKILL.md" },
-      { tool: "Edit", status: "done", summary: "/styles.css" },
-      { tool: "MultiEdit", status: "done", summary: "/menu/index.html" },
+      // The summaries as the file tools write them (herramientas-de-ficheros.ts): Edit's path ends in «:».
+      { tool: "Edit", status: "done", summary: "styles.css: «azul» → «verde»" },
+      { tool: "MultiEdit", status: "done", summary: "menu/index.html (2 edits)" },
     ] as AgentAction[];
     const texto = pintar(pasos).textContent ?? "";
     expect(texto).toContain("agent.toolFile.Write");
     expect(texto).toContain("agent.toolFile.Read");
     expect(texto).toContain("agent.toolFile.Edit");
     expect(texto).toContain("agent.tool.MultiEdit");
+    // Final review of this pass: a finished edit of the page read «un fichero», its path ending in «:».
+    expect(pintar([{ tool: "Edit", status: "done", summary: "index.html: «Hola» → «Adiós»" } as AgentAction]).textContent).toContain("agent.tool.Edit");
     expect(texto).not.toMatch(/agent\.tool\.(Write|Read|Edit)\b/);
   });
 

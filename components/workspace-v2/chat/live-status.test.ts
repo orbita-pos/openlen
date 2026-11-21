@@ -82,6 +82,16 @@ describe("la barra viva", () => {
     expect(s).toMatchObject({ kind: "working", activity: "photos", face: "buscando" });
   });
 
+  // Final review of this pass: writing ~/.len/agents/*.md in the space, the bar said «Cambiando la página».
+  it("🔴 reading or writing a file that isn't a page says so; a page is still «la página»", () => {
+    const corriendo = (tool: string, summary: string) =>
+      liveStatus(turn({ status: "streaming", startedAt: 1, actions: [{ tool, status: "running", summary }] }), { busy: true });
+    expect(corriendo("Write", "/home/user/.len/agents/plant-care.md")).toMatchObject({ kind: "working", activity: "editingFile", face: "escribiendo" });
+    expect(corriendo("Read", "~/.len/skills/cooking/SKILL.md")).toMatchObject({ activity: "readingFile", face: "mirando" });
+    expect(corriendo("Edit", "index.html")).toMatchObject({ activity: "editing" });
+    expect(corriendo("Edit", "")).toMatchObject({ activity: "editing" });
+  });
+
   it("una fila de antes del 2026-10-06, con el nombre viejo, dice lo mismo", () => {
     expect(activityOf("elegir_foto")).toBe(activityOf("find_photo"));
     expect(activityOf("mirar_pagina")).toBe("reading");

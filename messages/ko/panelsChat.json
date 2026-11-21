@@ -276,7 +276,9 @@
       "module": "모듈을 켜는 중",
       "undoing": "마지막 변경을 되돌리는 중",
       "asking": "질문을 준비하는 중",
-      "working": "작업 중"
+      "working": "작업 중",
+      "readingFile": "파일 읽는 중",
+      "editingFile": "파일 작성 중"
     },
     "live": {
       "thinking": "생각하는 중",

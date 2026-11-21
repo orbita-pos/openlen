@@ -276,7 +276,9 @@
       "module": "Zet een module aan",
       "undoing": "Maakt de laatste wijziging ongedaan",
       "asking": "Bereidt een vraag voor",
-      "working": "Bezig"
+      "working": "Bezig",
+      "readingFile": "Leest een bestand",
+      "editingFile": "Schrijft een bestand"
     },
     "live": {
       "thinking": "Denkt na",

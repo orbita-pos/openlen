@@ -32,10 +32,11 @@ export function LiveBar({
   subagentsRunning?: number;
 }) {
   const t = useTranslations("panelsChat");
+  // In an app every file is its code: its own words win over «un fichero».
   const activityLabel = (a: Activity) =>
-    esApp && a === "reading"
+    esApp && (a === "reading" || a === "readingFile")
       ? t("newChat.activity.readingApp")
-      : esApp && a === "editing"
+      : esApp && (a === "editing" || a === "editingFile")
         ? t("newChat.activity.editingApp")
         : t(`newChat.activity.${a}`);
   const locale = useLocale();

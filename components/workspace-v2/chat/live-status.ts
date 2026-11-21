@@ -11,11 +11,15 @@ import type { DesignTurn } from "./use-agent-chat";
 import type { AgentAction } from "../agent-action-card";
 import { asksTheOwner, questionText, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { currentToolName } from "@/lib/agent/tool-renames";
+import { FILE_TOOLS, isOtherFile, type FileTool } from "@/lib/workspace-v2/step-file";
 
 /** Qué clase de trabajo hace la herramienta, en palabras de quien no programa. */
 export type Activity =
   | "reading"
   | "editing"
+  /** Reading or writing a file that isn't a page (an agent's, a skill, notes): lib/workspace-v2/step-file.ts. */
+  | "readingFile"
+  | "editingFile"
   | "terminal"
   | "photos"
   | "image"
@@ -105,6 +109,8 @@ export function activityOf(tool: string): Activity {
 const FACE_OF: Readonly<Record<Activity, FaceState>> = {
   reading: "mirando",
   editing: "escribiendo",
+  readingFile: "mirando",
+  editingFile: "escribiendo",
   terminal: "escribiendo",
   photos: "buscando",
   image: "escribiendo",
@@ -267,7 +273,10 @@ export function liveStatus(
     const startedAt = latest.startedAt ?? null;
     const running = [...(latest.actions ?? [])].reverse().find((a) => a.status === "running");
     if (running) {
-      const activity = activityOf(running.tool);
+      const base = activityOf(running.tool);
+      // A file that isn't a page: its own words (the space's agents' files read «Cambiando la página»).
+      const activity: Activity =
+        FILE_TOOLS.has(currentToolName(running.tool) as FileTool) && isOtherFile(running.summary) ? (base === "reading" ? "readingFile" : "editingFile") : base;
       return { kind: "working", face: FACE_OF[activity], activity, startedAt, onServer: latest.enServidor === true };
     }
     const chars = latest.streamedChars ?? 0;

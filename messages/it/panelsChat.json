@@ -276,7 +276,9 @@
       "module": "Attiva un modulo",
       "undoing": "Annulla l'ultima modifica",
       "asking": "Prepara una domanda",
-      "working": "Al lavoro"
+      "working": "Al lavoro",
+      "readingFile": "Lettura di un file",
+      "editingFile": "Scrittura di un file"
     },
     "live": {
       "thinking": "Ci pensa",
