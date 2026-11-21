@@ -204,6 +204,13 @@ export async function assistantById(id: string): Promise<AssistantRow | null> {
   return row ?? null;
 }
 
+/** Her file's first message is about to go: true for the one request that claims it, false for any other (two tabs, or
+ *  the web and the phone, opening her at once). One UPDATE, so two at the same moment can't both win. */
+export async function claimOpening(id: string): Promise<boolean> {
+  const rows = await db.update(a).set({ openedAt: new Date() }).where(and(eq(a.id, id), sql`${a.openedAt} is null`)).returning({ id: a.id });
+  return rows.length > 0;
+}
+
 /** The newest first. */
 export async function assistantsOf(personId: string): Promise<AssistantRow[]> {
   return db.select().from(a).where(eq(a.personId, personId)).orderBy(desc(a.createdAt));

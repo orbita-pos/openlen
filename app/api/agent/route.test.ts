@@ -298,6 +298,7 @@ const assistantStore = vi.hoisted(() => ({
   assistantById: vi.fn(async (_id: string): Promise<Record<string, unknown> | null> => null),
   readyAssistantNotices: vi.fn(async (_id: string, _now: Date): Promise<Record<string, unknown>[]> => []),
   markAssistantNoticesHeard: vi.fn(async (_id: string, _ids: readonly string[], _at: Date) => {}),
+  claimOpening: vi.fn(async (_id: string) => true),
 }));
 vi.mock("@/lib/assistants/store", () => assistantStore);
 // Phase 4: the projects she serves, read for her turn.
@@ -5321,6 +5322,26 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect.objectContaining({ userText: prompt, attachedImage: { url } }),
       "assistant:a1",
     );
+  });
+
+  // Delivery 1 deferred it: two tabs (or the web and the phone) opening a new agent at once both sent her first message,
+  // and she answered twice. The opening is claimed once on her row; a second one is refused before any model call.
+  it("🔴 an agent's opening message goes once: a second opening is refused before the model", async () => {
+    assistantStore.claimOpening.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    const first = await pedir({ assistantId: "a1", prompt: "¡Hola! Empecemos.", opening: true });
+    expect(first.status).toBe(200);
+    await readEvents(first);
+    expect(assistantStore.claimOpening).toHaveBeenCalledWith("a1");
+    mocks.runAgentLoop.mockClear();
+    const second = await pedir({ assistantId: "a1", prompt: "¡Hola! Empecemos.", opening: true });
+    expect(second.status).toBe(409);
+    expect(await second.json()).toMatchObject({ code: "already_opened" });
+    expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+  });
+
+  it("a message that isn't an opening claims nothing", async () => {
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(assistantStore.claimOpening).not.toHaveBeenCalled();
   });
 
   it("rechaza un mensaje sin texto cuando tampoco hay una imagen válida", async () => {

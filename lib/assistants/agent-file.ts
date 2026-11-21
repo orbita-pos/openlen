@@ -41,9 +41,10 @@ export function warnBrokenAgentFile(assistantId: string, agentType: string): voi
 }
 
 /** What its place sends as the person's first turn: the file's `initialPrompt` — Claude Code's «auto-submitted as the first
- *  user turn» — only while the conversation is empty; nothing for an assistant without a file, or with one that broke. */
-export async function firstMessageOf(personId: string, agentType: string | null, conversationTurns: number): Promise<string | null> {
-  if (!agentType || conversationTurns > 0) return null;
+ *  user turn» — only while the conversation is empty and it hasn't been sent (`openedAt`, claimed once by the turn);
+ *  nothing for an assistant without a file, or with one that broke. */
+export async function firstMessageOf(personId: string, agentType: string | null, conversationTurns: number, openedAt: Date | null = null): Promise<string | null> {
+  if (!agentType || conversationTurns > 0 || openedAt) return null;
   return (await loadAgentOf(personId, agentType))?.initialPrompt ?? null;
 }
 

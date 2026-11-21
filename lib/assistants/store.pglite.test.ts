@@ -20,7 +20,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { addAssistantNotice, assistantById, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, runningAssistantRequest, saveAssistantCustomerNote, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
+const { addAssistantNotice, assistantById, claimOpening, assistantByOldSlug, assistantBySlug, assistantNoticesByFila, assistantOfProject, assistantsOf, createAssistant, deleteAssistant, markAssistantNoticesHeard, readyAssistantNotices, renameAssistant, runningAssistantRequest, saveAssistantCustomerNote, saveAssistantMemory, setAssistantLook, setMorningSummary, settleAssistantNotice } = await import("./store");
 
 const LUCIA = { name: "Lucía", look: { v: 1, shape: "drop", color: "#f4a48b", eyes: "oval", eyewear: "none", accessory: "none" }, tone: "friendly" } as const;
 let pg: PGlite;
@@ -63,6 +63,15 @@ describe("assistants store", () => {
     const after = await assistantById(r.assistant.id);
     expect(after?.look).toEqual(heart);
     expect(after?.color).toBe("#19c3b1");
+  });
+
+  // Delivery 1 deferred it: two tabs (or the web and the phone) both sent a new agent's first message.
+  it("🔴 her first message is claimed once, even by two at the same moment", async () => {
+    const r = await createAssistant({ personId: "u1", projectId: "p1", input: LUCIA });
+    if (!r.ok) throw new Error("not created");
+    expect((await Promise.all([claimOpening(r.assistant.id), claimOpening(r.assistant.id)])).filter(Boolean)).toHaveLength(1);
+    expect(await claimOpening(r.assistant.id)).toBe(false);
+    expect((await assistantById(r.assistant.id))?.openedAt).toBeInstanceOf(Date);
   });
 
   it("refuses the same name twice for one person", async () => {

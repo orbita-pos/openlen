@@ -14,9 +14,9 @@ vi.mock("../toast", () => ({ useToast: () => ({ show: () => {}, success: () => {
 // Len's chat panel is a mark that says what it was given, and hands the draft back when asked.
 const panel = vi.hoisted(() => ({ consumed: null as null | (() => void) }));
 vi.mock("../chat/new-chat-panel", () => ({
-  NewChatPanel: (p: { pendingDraft?: string | null; pendingDraftAutoSend?: boolean; onPendingDraftConsumed?: () => void }) => {
+  NewChatPanel: (p: { pendingDraft?: string | null; pendingDraftAutoSend?: boolean; onPendingDraftConsumed?: () => void; pendingAttachments?: { opening?: boolean } | null }) => {
     panel.consumed = p.onPendingDraftConsumed ?? null;
-    return <i data-chat="" data-draft={p.pendingDraft ?? ""} data-auto={String(Boolean(p.pendingDraftAutoSend))} />;
+    return <i data-chat="" data-draft={p.pendingDraft ?? ""} data-auto={String(Boolean(p.pendingDraftAutoSend))} data-opening={String(Boolean(p.pendingAttachments?.opening))} />;
   },
 }));
 
@@ -57,6 +57,8 @@ describe("an agent's first message", () => {
     const host = mount(SMITH, "Hola, hazme la prueba de nivel");
     expect(chat(host).dataset.draft).toBe("Hola, hazme la prueba de nivel");
     expect(chat(host).dataset.auto).toBe("true");
+    // Marked as her opening: the server lets it go once, whoever else opened her at the same moment.
+    expect(chat(host).dataset.opening).toBe("true");
     act(() => panel.consumed?.());
     expect(chat(host).dataset.draft).toBe("");
     expect(chat(host).dataset.auto).toBe("false");

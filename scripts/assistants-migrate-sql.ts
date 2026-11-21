@@ -121,6 +121,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   // its customers may be told, apart from its personal memory.
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "agentType" text;`,
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "customerNote" text NOT NULL DEFAULT '';`,
+  // When its file's first message went: claimed once (two tabs, or the web and the phone, would both send it).
+  `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "openedAt" timestamp;`,
 ];
 
 /** An agent's scheduled tasks (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): `scheduledTasks.assistantId`

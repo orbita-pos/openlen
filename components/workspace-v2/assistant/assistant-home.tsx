@@ -31,6 +31,8 @@ import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
 
 const noCanvas = () => {};
+/** What travels with her file's first message: only that it is her opening (claimed once by the server). */
+const OPENING = { images: [], opening: true } as const;
 
 type Tab = "talk" | "conversations" | "requests";
 
@@ -252,6 +254,8 @@ export function AssistantHome({
                   centered
                   pendingDraft={opening}
                   pendingDraftAutoSend={opening !== null}
+                  // Marked as her opening: the server lets it go once, if the phone or another tab opened her too.
+                  pendingAttachments={opening !== null ? OPENING : null}
                   onPendingDraftConsumed={() => setOpening(null)}
                 />
               </div>

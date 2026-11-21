@@ -53,6 +53,13 @@ describe("firstMessageOf", () => {
     expect(await firstMessageOf("u1", "mr-smith", 2)).toBeNull();
   });
 
+  // Delivery 1 deferred it: once sent (claimed on her row), it isn't offered again — an opening that didn't get as far as
+  // writing a turn would be offered on every visit and refused every time.
+  it("🔴 once sent, it isn't offered again, even on an empty conversation", async () => {
+    expect(await firstMessageOf("u1", "mr-smith", 0, new Date())).toBeNull();
+    expect(await firstMessageOf("u1", "mr-smith", 0, null)).toBe("Hola, empecemos con tu nivel");
+  });
+
   it("is nothing without a file, with one that is missing or broken, or one without an initialPrompt", async () => {
     m.listAgents.mockResolvedValue([stored("quiet", "---\nname: quiet\ndescription: Says nothing first\n---\n\nYou help.\n"), stored("broken", "x")]);
     expect(await firstMessageOf("u1", null, 0)).toBeNull();

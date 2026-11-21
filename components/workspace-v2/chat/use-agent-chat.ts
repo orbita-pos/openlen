@@ -325,6 +325,8 @@ export interface PendingAttachments extends PideNacer {
   readonly files?: readonly AttachedFile[];
   /** «Aplicar» del modo Diseño de una app: los cambios del panel. */
   readonly design?: DesignRequest | null;
+  /** An agent's first message (her file's `initialPrompt`): the server sends it once (`claimOpening`). */
+  readonly opening?: boolean;
   // UNA APP NACE (`PideNacer`): la tarjeta App del estado vacío. El servidor
   // convierte el proyecto en blanco en app antes del turno
   // (`lib/projects/nacer-como-app.ts`), con el idioma de la interfaz de `lang`.
@@ -1259,6 +1261,8 @@ export function useAgentChat({
         readonly idioma?: string;
         /** «Aplicar» del modo Diseño: viaja en el cuerpo como `design`. */
         readonly design?: DesignRequest | null;
+        /** An agent's first message: `opening` in the body, claimed once by the server. */
+        readonly opening?: boolean;
         /** What a visual on screen reported with updateModelContext: a field of its own in the body, never part of `prompt`
          *  (the server reads `prompt` as what the person wrote). Cut here at the server's cap too. */
         readonly visualContext?: string;
@@ -1557,6 +1561,8 @@ export function useAgentChat({
               ...(opciones?.design ? { design: opciones.design } : {}),
               // UNA APP NACE con este mensaje (la tarjeta App del estado vacío).
               ...camposDeNacer(opciones),
+              // AN AGENT'S FIRST MESSAGE: the server lets it go once.
+              ...(opciones?.opening ? { opening: true } : {}),
               // WHAT A VISUAL REPORTED (updateModelContext): data, in its own field.
               ...(visualContext ? { visualContext } : {}),
             }),
@@ -1568,6 +1574,12 @@ export function useAgentChat({
               .json()
               .catch(() => ({ error: `HTTP ${res.status}` }));
             scanController.cancel();
+            // Her first message, already sent from another tab or the phone: the conversation is that one's, and this
+            // send leaves nothing behind — no bubble, no error.
+            if (res.status === 409 && errPayload?.code === "already_opened") {
+              setTurns((prev) => prev.filter((x) => x.id !== turnId));
+              return;
+            }
             // EL CÓDIGO GANA A LA PROSA, igual que en `runAiDesignTurn` (N2 y
             // N44, plans/new-chat/): «unauthorized», «page not found»… salían
             // tal cual en los diez idiomas. Ver ./http-error.
@@ -2368,6 +2380,7 @@ export function useAgentChat({
       ...(adjuntos?.images.length ? { images: adjuntos.images } : {}),
       ...(adjuntos?.files?.length ? { files: adjuntos.files } : {}),
       ...(adjuntos?.design ? { design: adjuntos.design } : {}),
+      ...(adjuntos?.opening ? { opening: true } : {}),
       ...camposDeNacer(adjuntos),
     });
   }, [pendingDraftAutoSend, pendingDraft, pendingAttachments, onPendingDraftConsumed, send]);

@@ -48,7 +48,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   const state = onPageState(found, Boolean(project.data?.app));
   // An agent's first message (spec local 2026-11-19-agentes-para-todos, §6.4): its file's initialPrompt, while the
   // conversation is empty. A file that can't be read leaves the box waiting, as for any assistant.
-  const startsWith = await firstMessageOf(personId, assistant.agentType ?? null, chat.length).catch(() => null);
+  const startsWith = await firstMessageOf(personId, assistant.agentType ?? null, chat.length, assistant.openedAt ?? null).catch(() => null);
   return (
     <AssistantHome
       assistant={assistantView(assistant)}

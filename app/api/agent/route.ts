@@ -20,7 +20,7 @@ import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { projectsOfAssistant, titlesOf, type ServedProject } from "@/lib/assistants/projects";
 import { viewingLine, type ViewingProject } from "@/lib/assistants/viewing";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
-import { assistantById, markAssistantNoticesHeard, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
+import { assistantById, claimOpening, markAssistantNoticesHeard, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
@@ -418,6 +418,8 @@ type CuerpoDelTurno = {
   visualContext?: unknown;
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): the turn runs as it, in its conversation. */
   assistantId?: unknown;
+  /** Her file's first message (spec local 2026-11-19-agentes-para-todos, §6.4): claimed once (`claimOpening`). */
+  opening?: unknown;
   /** Len móvil is her app (spec local 2026-11-16-movil-es-tu-asistente, §5.3): the project on the owner's phone, with
    *  `assistantId` only. */
   viewingProjectId?: unknown;
@@ -1782,6 +1784,12 @@ async function correrTurno(
     const b = billedUsage(g, { ...ajuste, minus: withForgiven(ajuste.minus, perdonadoPorElBucle) });
     return creditsForUsage(b.inputTokens, b.outputTokens, brain.creditRate(), b.cachedTokens);
   };
+
+  // HER FILE'S FIRST MESSAGE GOES ONCE (spec local 2026-11-19-agentes-para-todos, §6.4): her place on the web and the
+  // phone both send it to an empty conversation; the one that claims it runs, the other is told before any model call.
+  if (asistente && body?.opening === true && !(await claimOpening(asistente.id))) {
+    return errorJson(409, "this agent's first message was already sent", "already_opened");
+  }
 
   const sse = new ReadableStream<Uint8Array>({
     async start(controller) {

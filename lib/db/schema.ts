@@ -1590,6 +1590,9 @@ export const assistants = pgTable(
     /** ~/.assistant/CUSTOMERS.md: what its customers may be told (same spec, §6.7). An agent with a file never puts its
      *  personal memory before a visitor: this goes instead. */
     customerNote: text("customerNote").notNull().default(""),
+    /** When its file's first message went (same spec, §6.4): claimed once, so two tabs, or the web and the phone, don't
+     *  both send it. NULL until then. */
+    openedAt: timestamp("openedAt", { mode: "date" }),
     /** How its `ask_len` requests ended, until it hears them (lib/assistants/notices.ts). */
     notices: jsonb("notices").$type<AskLenNotice[]>().notNull().default([]),
     homeProjectId: text("homeProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
