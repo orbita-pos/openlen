@@ -82,7 +82,9 @@ import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { EMPTY_SKILL_SET, resolveSkills } from "@/lib/agent/skills/registry";
 import { foldLoadedSkills } from "@/lib/agent/skills/tool";
 import { invokedSkillNames, withInvokedSkills } from "@/lib/agent/skills/invocation";
-import { withVisualContext } from "@/lib/agent/visuals/model-context";
+import { cleanVisualStates, heldVisualStates, visualStatesReminder, type HeldVisualState } from "@/lib/agent/visuals/model-context";
+import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
+import { widgetIdOf } from "@/lib/visuals/widget-id";
 import { isFolderPath } from "@/lib/agent/ficheros/folder";
 import { leerFichero, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import {
@@ -102,7 +104,7 @@ import {
 } from "@/lib/agent/transcripcion";
 import { conseguirFotos, fotosQueCaben, photoAddress } from "@/lib/agent/fotos-de-la-conversacion";
 import { readProjectFileBytes } from "@/lib/backend/files";
-import { clearPendingIdleSummaries, filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, turnosParaElHistorial } from "@/lib/projects/chat";
+import { clearPendingIdleSummaries, filasParaElHistorialConEquipo, guardarMarcaDelTurno, lastTurnOfTheConversation, latestTodoListForChat, promoteIdleSummary, turnosParaElHistorial, widgetsOfConversation } from "@/lib/projects/chat";
 import { COLD_TRIM_MARK, isColdReturn, type ColdTrimMark } from "@/lib/agent/cold-return";
 import { armIdleSummary, cancelIdleSummary, idleSummaryDeadlineMs, idleSummaryDelayMs, idleSummaryEnabled, idleSummaryMinTokens } from "@/lib/agent/idle-summary";
 import { applyScreenshotBudget } from "@/lib/agent/screenshots-in-context";
@@ -147,7 +149,7 @@ import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
 import { createArtifactAgent } from "@/lib/artifacts/tools";
 
-import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, rondaSiguiente, queuedDirections } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, noteWidgetDrawn, rondaSiguiente, queuedDirections, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { materializeSystemUpdates, planInHistoryEnabled, planModeFromRows, resolveTurnPlanMode, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import {
@@ -419,9 +421,10 @@ type CuerpoDelTurno = {
   idioma?: unknown;
   /** LOS VISUALES: si la persona lee en un teléfono (`mobile`) o no (`desktop`). */
   dispositivo?: unknown;
-  /** What a visual on the person's screen reported with updateModelContext for THIS message (MCP Apps, SEP-1865). Data
-   *  from code that may be showing a visitor's words: never part of `prompt`. See `withVisualContext`. */
-  visualContext?: unknown;
+  /** What each visual of the conversation shared with THIS message (spec local 2026-11-22-visuales-de-verdad, §2):
+   *  `[{ widgetId, state }]`, data from code that may be showing a visitor's words — never part of `prompt`. See
+   *  `cleanVisualStates` and `visualStatesReminder`. */
+  visualStates?: unknown;
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): the turn runs as it, in its conversation. */
   assistantId?: unknown;
   /** Her file's first message (spec local 2026-11-19-agentes-para-todos, §6.4): claimed once (`claimOpening`). */
@@ -1473,15 +1476,21 @@ async function correrTurno(
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
   // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
   //
-  // WHAT A VISUAL REPORTED (updateModelContext): data, after the person's message and before any skill, in its fence
-  // (`withVisualContext`). It comes from its own field of the body and is never part of `prompt`, which is what the
-  // `/name` scan above, the chat's row and the person's language read; it travels in `textoEnviado`, so the row keeps it
-  // as `sentText` and the history rebuilds it byte for byte. Only a turn a person at a screen started carries one.
-  const contextoVisual = opts.round || opts.hilo || opts.email || programadaDelTurno ? undefined : body?.visualContext;
+  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the
+  // latest state of each visual of the conversation, from its own field of the body — never part of `prompt`, which is
+  // what the `/name` scan above, the chat's row and the person's language read. Only the visuals this conversation drew
+  // count; the model gets one line naming them after the person's message (it travels in `textoEnviado`, so the row
+  // keeps it as `sentText` and the history rebuilds it byte for byte) and reads them with `read_widget_context`. Only a
+  // turn a person at a screen started carries them; with none, nothing is read and the message is byte for byte.
+  const estadosPedidos = opts.round || opts.hilo || opts.email || programadaDelTurno ? [] : cleanVisualStates(body?.visualStates);
+  const estadosVisuales: HeldVisualState[] =
+    estadosPedidos.length > 0
+      ? heldVisualStates(estadosPedidos, await widgetsOfConversation(projectId, enLaCharla[0] ?? null).catch(() => new Map<string, string | null>()))
+      : [];
   const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
-      : withVisualContext(`${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}`, contextoVisual),
+      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}${visualStatesReminder(estadosVisuales)}`,
     skillsInvocadas,
   );
   // WHAT THE PERSON TYPED, for a subagent's <original_task> (lib/agent/subagents/run.ts): their own words, never
@@ -1677,6 +1686,8 @@ async function correrTurno(
     : {};
   const agentSession: AgentSession = {
     skills: skillsDelTurno,
+    // What the visuals shared, as the open turn holds it now: a correction or an answer can replace it mid-turn.
+    visualStates: () => visualStatesOf(turnoId),
     // What the conversation already loaded, as state (as Claude Code keeps it), and what /name
     // put in this message: `skill` answers «already loaded» for them.
     loadedSkills: new Set([...skillsConocidas, ...skillsInvocadas.map((x) => x.skill.name)]),
@@ -1902,6 +1913,8 @@ async function correrTurno(
       // al final. Vive en `lib/agent/registro-del-turno.ts` para que el arnés
       // de evals componga la MISMA fila al juzgar un turno cortado.
       const registro = crearRegistroDelTurno();
+      /** How many visuals this turn drew: the place of the next one (`widgetIdOf(filaId, k)`). */
+      let visualesDibujados = 0;
       /** H4 · lo que vio el modelo en este turno (`AgentLoopResult.transcripcion`). */
       let transcripcionDelTurno: Message[] | null = null;
       /** LEN 3.1 · lo que el turno lleva visto, mientras corre (`liveTranscript`
@@ -2224,7 +2237,9 @@ async function correrTurno(
         filaId,
         // Pieza 8: quitar el encargo espera a que no corra ningún turno aquí.
         projectId,
+        conversation: enLaCharla[0] ?? null,
       });
+      if (estadosVisuales.length > 0) setVisualStates(turnoId, estadosVisuales);
       emit("turno", { turnoId });
 
       const dirGrabacion = directorioDeGrabacion();
@@ -2862,6 +2877,11 @@ async function correrTurno(
           // ni el momento en que llega al cliente.
           emit: (ev) => {
             registro.observar(ev);
+            // A visual this turn drew, under the id its screen will report: a correction may name it before its card is
+            // stored. k counts the cards with a widget, as the chat does.
+            if (ev.type === "action" && ev.status !== "running" && ev.tool === SHOW_WIDGET && ev.widget) {
+              noteWidgetDrawn(turnoId, widgetIdOf(filaId, visualesDibujados++), ev.widget.title ?? null);
+            }
             if (ev.type === "compaction") {
               compactedThisTurn = true;
               stepRecorder?.onCompaction();

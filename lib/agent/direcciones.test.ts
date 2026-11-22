@@ -18,6 +18,11 @@ import {
   rondaSiguiente,
   siguienteDeLaFila,
   MAX_DIRECCION,
+  noteWidgetDrawn,
+  openTurnOf,
+  setVisualStates,
+  visualStatesOf,
+  widgetsDrawnBy,
 } from "./direcciones";
 import { QUESTION_DISMISSED, type QuestionAnswer } from "./ask-user-question";
 
@@ -352,5 +357,48 @@ describe("a correction that must not be lost", () => {
     dirigir("t1", "u1", "x", { alCerrarSinLeer: () => { throw new Error("boom"); } });
     expect(() => cerrarTurno("t1")).not.toThrow();
     expect(turnoDeLaFila("f1", "u1")).toBeNull();
+  });
+});
+
+
+// WHAT THE VISUALS SHARED, held by the open turn (spec local 2026-11-22-visuales-de-verdad, §2): the message brings them,
+// a correction or an answer replaces them, and read_widget_context reads what is there now.
+describe("the visual states of a running turn", () => {
+  const A = { widgetId: "widget_aaaa1111", state: "3 of 5", cut: false, title: "dutch_exercises" };
+  const B = { widgetId: "widget_bbbb2222", state: "5 of 5", cut: false, title: "dutch_exercises" };
+
+  it("holds what was set, and a new set replaces it", () => {
+    abrirTurno("t1", "u1");
+    expect(visualStatesOf("t1")).toEqual([]);
+    setVisualStates("t1", [A]);
+    expect(visualStatesOf("t1")).toEqual([A]);
+    setVisualStates("t1", [B]);
+    expect(visualStatesOf("t1")).toEqual([B]);
+  });
+
+  it("an unknown or closed turn holds nothing", () => {
+    setVisualStates("nope", [A]);
+    expect(visualStatesOf("nope")).toEqual([]);
+    abrirTurno("t1", "u1");
+    setVisualStates("t1", [A]);
+    cerrarTurno("t1");
+    expect(visualStatesOf("t1")).toEqual([]);
+  });
+
+  it("remembers the visuals the turn drew, with their titles", () => {
+    abrirTurno("t1", "u1");
+    noteWidgetDrawn("t1", "widget_aaaa1111", "dutch_exercises");
+    noteWidgetDrawn("t1", "widget_cccc3333", null);
+    expect([...widgetsDrawnBy("t1")]).toEqual([["widget_aaaa1111", "dutch_exercises"], ["widget_cccc3333", null]]);
+    expect(widgetsDrawnBy("nope").size).toBe(0);
+  });
+
+  it("tells its owner the turn's project and conversation, and nobody else", () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1", conversation: "assistant:a1" });
+    abrirTurno("t2", "u1", Date.now(), { projectId: "p2" });
+    expect(openTurnOf("t1", "u1")).toEqual({ projectId: "p1", conversation: "assistant:a1" });
+    expect(openTurnOf("t2", "u1")).toEqual({ projectId: "p2", conversation: null });
+    expect(openTurnOf("t1", "u2")).toBeNull();
+    expect(openTurnOf("nope", "u1")).toBeNull();
   });
 });

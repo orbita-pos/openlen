@@ -19,6 +19,7 @@
 // disparador para moverlo a la base, y no antes ([[no-redis-or-queue-until-trigger]]).
 
 import { QUESTION_DISMISSED, type AskUserResult, type QuestionAnswer, type UserQuestion } from "@/lib/agent/ask-user-question";
+import type { HeldVisualState } from "@/lib/agent/visuals/model-context";
 
 /** Cuánto texto se acepta. Una corrección es una frase, no un documento. */
 export const MAX_DIRECCION = 2000;
@@ -52,6 +53,14 @@ interface TurnoAbierto {
   /** Pieza 8: el proyecto del turno — quitar un encargo no puede pisar una
    *  ronda que sigue viva (`turnoVivoDelProyecto`). */
   readonly projectId?: string;
+  /** The conversation the turn writes in (null: Len's chat), for what the visuals shared (spec local
+   *  2026-11-22-visuales-de-verdad): a correction's states are checked against that conversation's visuals. */
+  readonly conversation?: string | null;
+  /** What the visuals shared with the person's message, replaced by a correction or an answer that brings new ones;
+   *  `read_widget_context` reads what is here now. */
+  visualStates?: readonly HeldVisualState[];
+  /** The visuals this turn drew, id → title: a correction may report on one before its card is stored. */
+  readonly drawnWidgets: Map<string, string | null>;
   /** Pieza 3 de Len 2.5: la pregunta de `ask_user_question` que ESPERA
    *  respuesta ahora mismo (como mucho una: la herramienta es exclusiva), y si
    *  la última ya se contestó — para que un doble clic no la resuelva dos veces. */
@@ -99,7 +108,7 @@ export function abrirTurno(
   turnoId: string,
   userId: string,
   ahora = Date.now(),
-  extra: { readonly abortar?: () => void; readonly filaId?: string; readonly projectId?: string } = {},
+  extra: { readonly abortar?: () => void; readonly filaId?: string; readonly projectId?: string; readonly conversation?: string | null } = {},
 ): void {
   barrer(ahora);
   abiertos.set(turnoId, {
@@ -107,10 +116,39 @@ export function abrirTurno(
     abiertoEn: ahora,
     pendientes: [],
     pregunta: { respondida: false },
+    drawnWidgets: new Map(),
+    ...(extra.conversation !== undefined ? { conversation: extra.conversation } : {}),
     ...(extra.abortar ? { abortar: extra.abortar } : {}),
     ...(extra.filaId ? { filaId: extra.filaId } : {}),
     ...(extra.projectId ? { projectId: extra.projectId } : {}),
   });
+}
+
+/** WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2), held by the open turn: the message brings
+ *  them, a correction or an answer replaces them. An unknown turn holds nothing and takes nothing. */
+export function setVisualStates(turnoId: string, states: readonly HeldVisualState[]): void {
+  const turno = abiertos.get(turnoId);
+  if (turno) turno.visualStates = [...states];
+}
+
+export function visualStatesOf(turnoId: string): readonly HeldVisualState[] {
+  return abiertos.get(turnoId)?.visualStates ?? [];
+}
+
+/** A visual this turn drew, under the id its screen will report (`widgetIdOf(filaId, k)`). */
+export function noteWidgetDrawn(turnoId: string, widgetId: string, title: string | null): void {
+  abiertos.get(turnoId)?.drawnWidgets.set(widgetId, title);
+}
+
+export function widgetsDrawnBy(turnoId: string): ReadonlyMap<string, string | null> {
+  return abiertos.get(turnoId)?.drawnWidgets ?? new Map();
+}
+
+/** The project and conversation of a turn its `userId` opened; null for an unknown turn or another user's. */
+export function openTurnOf(turnoId: string, userId: string): { readonly projectId: string | null; readonly conversation: string | null } | null {
+  const turno = abiertos.get(turnoId);
+  if (!turno || turno.userId !== userId) return null;
+  return { projectId: turno.projectId ?? null, conversation: turno.conversation ?? null };
 }
 
 /** Pieza 8: ¿corre ahora un turno de este usuario en este proyecto? */

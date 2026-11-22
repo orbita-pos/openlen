@@ -23,6 +23,8 @@ import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 import type { AgentErrorCode } from "@/lib/agent/loop";
 import { ASSISTANT_CONVERSATION_PREFIX, isAssistantConversation } from "@/lib/assistants/conversation";
+import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
+import { widgetIdOf } from "@/lib/visuals/widget-id";
 
 /** Las columnas de la fila SIN la transcripción (H4): el panel del chat no la
  *  usa, y son los resultados enteros de cada turno. Se calculan al usarse, no
@@ -270,6 +272,25 @@ async function desdeLaUltimaMarca(projectId: string, charla: string | null = nul
 }
 
 /** The last finished turn of the current conversation, for Len's time context (lib/agent/time-context.ts). */
+/** THE VISUALS A CONVERSATION DREW (spec local 2026-11-22-visuales-de-verdad, §2): id → title of every `show_widget`
+ *  card with a `widget` in its rows, the id as the screens compute it (`widgetIdOf(row, k)`, k counting only those
+ *  cards). Every row counts, not only since the last summary: the person still sees those visuals. Ownership, as
+ *  everywhere here, is the caller's. */
+export async function widgetsOfConversation(projectId: string, charla: string | null = null): Promise<Map<string, string | null>> {
+  const rows = await db
+    .select({ id: schema.projectChatMessages.id, actions: schema.projectChatMessages.actions })
+    .from(schema.projectChatMessages)
+    .where(turnoDeLaHistoria(projectId, charla))
+    .orderBy(asc(schema.projectChatMessages.createdAt));
+  const known = new Map<string, string | null>();
+  for (const row of rows) {
+    const actions = (row.actions ?? []) as NonNullable<StoredChatTurn["actions"]>;
+    const cards = actions.filter((a) => a.tool === SHOW_WIDGET && a.widget);
+    cards.forEach((a, k) => known.set(widgetIdOf(row.id, k), a.widget?.title ?? null));
+  }
+  return known;
+}
+
 export async function lastTurnOfTheConversation(projectId: string, charla: string | null = null): Promise<{ createdAt: Date; durationMs: number | null } | null> {
   const [fila] = await db
     .select({ createdAt: schema.projectChatMessages.createdAt, durationMs: schema.projectChatMessages.durationMs })

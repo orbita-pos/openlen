@@ -625,6 +625,8 @@ export default defineConfig({
       // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
       "lib/projects/chat-estado.pglite.test.ts",
       "lib/projects/chat-assistant-conversation.pglite.test.ts",
+      // What visuals a conversation drew (spec local 2026-11-22-visuales-de-verdad).
+      "lib/projects/chat-widgets.pglite.test.ts",
       "lib/projects/chat-rows-ended-at.pglite.test.ts",
       "lib/projects/chat-idle-summary.pglite.test.ts",
       // Deshacer lo de Len sobre lo que hay AHORA, sin llevarse lo que el dueño
