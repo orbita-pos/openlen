@@ -366,6 +366,9 @@ export async function findOrCreateBlankProject(userId: string): Promise<string> 
         sqlOp`coalesce(btrim(${p.data}->>'html'), '') = ''`,
         sqlOp`coalesce(${p.data}->'pages', '{}'::jsonb) = '{}'::jsonb`,
         sqlOp`not exists (select 1 from ${schema.projectChatMessages} m where m."projectId" = ${p}."id")`,
+        // Never one an agent started for a request (spec local 2026-11-21-agente-sigue-su-proyecto): it is empty until
+        // Len's turn writes — and may stay so — but it is that request's, and the agent follows it by id.
+        sqlOp`not exists (select 1 from ${schema.assistantStartedProjects} s where s."projectId" = ${p}."id")`,
       ),
     )
     .orderBy(desc(p.updatedAt))

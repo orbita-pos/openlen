@@ -24,9 +24,9 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
     "connectedAt" timestamp with time zone NOT NULL DEFAULT now()
   );`,
-  // Phase 2A — visitors (spec §4.4.5, §4.7, §6.5): on the page, what it knows, visits, the month's spend, the cap.
   // The projects an agent STARTED with ask_len's new_project (spec local 2026-11-21-agente-sigue-su-proyecto): a link,
   // not serving — as Claude Code's linked sessions and DeepSeek's subagent catalog. Gone with the project or the agent.
+  // findOrCreateBlankProject (lib/projects.ts) reads it: never hand a started project out as the person's blank one.
   `CREATE TABLE IF NOT EXISTS "assistantStartedProjects" (
     "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
     "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
@@ -34,6 +34,7 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     PRIMARY KEY ("assistantId", "projectId")
   );`,
   `CREATE INDEX IF NOT EXISTS "assistantStartedProjects_projectId_idx" ON "assistantStartedProjects" ("projectId");`,
+  // Phase 2A — visitors (spec §4.4.5, §4.7, §6.5): on the page, what it knows, visits, the month's spend, the cap.
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "onPage" boolean NOT NULL DEFAULT false;`,
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledge" text;`,
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledgeAt" timestamp with time zone;`,

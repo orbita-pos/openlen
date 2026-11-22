@@ -29,7 +29,7 @@ vi.mock("@/lib/publish/cache-purge", () => ({ purgeSubdomain: async () => {} }))
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { createAssistant, assistantById } = await import("./store");
 const projects = await import("./projects");
-const { deleteProject, unpublishProject } = await import("@/lib/projects");
+const { deleteProject, findOrCreateBlankProject, unpublishProject } = await import("@/lib/projects");
 const { saveKnowledge, setOnPage } = await import("./visitor/store");
 const { saveVisit } = await import("./visitor/store");
 const { noteRequest } = await import("./requests/store");
@@ -284,6 +284,24 @@ describe("the projects an agent started", () => {
     expect((await projects.startedProjectsOf(lucia)).map((p) => p.projectId)).toEqual(["p3"]);
     await pg.query(`delete from "assistants" where "id" = $1`, [lucia]);
     expect((await pg.query(`select 1 from "assistantStartedProjects"`)).rows).toEqual([]);
+  });
+
+  // Final review, finding 1: a project started for a request is empty until Len's turn writes — and may stay so (no
+  // credits, a restart). It is never the person's blank project, which /new and create_project would take over.
+  it("🔴 a project an agent started is never taken as the person's blank project", async () => {
+    // The setup's other projects have pages: only these two are empty.
+    await pg.query(`update "projects" set "data" = '{"html":"<p>Hola</p>"}' where "id" in ('p2', 'p3', 'p4')`);
+    await pg.query(`insert into "projects" ("id", "userId", "title", "data", "updatedAt") values ('b-old', 'u1', 'Sin título', '{"html":""}', '2026-11-20T10:00:00Z'), ('b-started', 'u1', 'Presupuesto', '{"html":""}', '2026-11-21T10:00:00Z')`);
+    await projects.linkStartedProject(lucia, "b-started");
+    expect(await findOrCreateBlankProject("u1")).toBe("b-old");
+  });
+
+  it("🔴 the live check says whether it started a project, with its title", async () => {
+    await projects.linkStartedProject(lucia, "p4");
+    expect(await projects.startedTitleOf(lucia, "p4")).toBe("Otra");
+    expect(await projects.startedTitleOf(lucia, "p3")).toBeNull();
+    await pg.query(`update "projects" set "title" = '' where "id" = 'p4'`);
+    expect(await projects.startedTitleOf(lucia, "p4")).toBe("p4");
   });
 
   it("only the 30 most recent, oldest first", async () => {

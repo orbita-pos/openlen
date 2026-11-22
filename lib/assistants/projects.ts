@@ -93,6 +93,19 @@ export async function startedProjectsOf(assistantId: string): Promise<StartedPro
   return rows.reverse();
 }
 
+/** Whether this agent started this project — checked live, whatever its turn's list says (one started earlier in the
+ *  same turn, one past the `STARTED_LISTED` most recent, a list that couldn't be read): its title, or its id when it
+ *  has none; null when it didn't start it. */
+export async function startedTitleOf(assistantId: string, projectId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ title: p.title })
+    .from(sp)
+    .innerJoin(p, eq(p.id, sp.projectId))
+    .where(and(eq(sp.assistantId, assistantId), eq(sp.projectId, projectId)))
+    .limit(1);
+  return row ? row.title?.trim() || projectId : null;
+}
+
 /** The projects each of these assistants serves (the person's list: a card knows whether this project has her). */
 export async function projectIdsOf(assistantIds: readonly string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>(assistantIds.map((id) => [id, []]));
