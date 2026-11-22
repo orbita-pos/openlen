@@ -217,6 +217,11 @@
       "perdidaAgente": "実行しませんでした: 予定の時刻に OpenLen が利用できず、1 日以上が過ぎました。まだ必要なら {agente} に頼んでください。",
       "pieSinAgente": "もう存在しないエージェントの予定タスク「{title}」。",
       "sinAccesoAgente": "実行しませんでした: このタスクを作成した人は、{agente} がいるプロジェクトにアクセスできなくなりました。タスクは停止しました。"
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}：{proyecto} について",
+      "abrir": "{agente} を開く",
+      "pie": "OpenLen のあなたのエージェント、{agente} からのメッセージです。"
     }
   },
   "envVars": {

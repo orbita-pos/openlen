@@ -217,6 +217,11 @@
       "perdidaAgente": "Niet gedaan: OpenLen was niet beschikbaar op het geplande tijdstip en er is meer dan een dag verstreken. Heb je het nog nodig, vraag het dan aan {agente}.",
       "pieSinAgente": "Geplande taak „{title}” van een agent die niet meer bestaat.",
       "sinAccesoAgente": "Niet gedaan: wie deze taak heeft gemaakt, heeft geen toegang meer tot het project waar {agente} woont. De taak is gestopt."
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}: over {proyecto}",
+      "abrir": "{agente} openen",
+      "pie": "Dit bericht komt van {agente}, je agent bij OpenLen."
     }
   },
   "envVars": {

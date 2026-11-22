@@ -217,6 +217,11 @@
       "perdidaAgente": "Non l’ho fatta: OpenLen non era disponibile all’ora programmata ed è passato più di un giorno. Se ti serve ancora, chiedila a {agente}.",
       "pieSinAgente": "Attività programmata «{title}» di un agente che non esiste più.",
       "sinAccesoAgente": "Non l'ho fatta: chi ha creato questa attività non ha più accesso al progetto in cui vive {agente}. L'attività è ferma."
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}: su {proyecto}",
+      "abrir": "Apri {agente}",
+      "pie": "Ti scrive {agente}, il tuo agente di OpenLen."
     }
   },
   "envVars": {

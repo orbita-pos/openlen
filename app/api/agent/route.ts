@@ -12,6 +12,9 @@ import type { InlineImage } from "@/lib/ai-gateway";
 import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
 import { agentPreloads, loadAgentOf, warnBrokenAgentFile } from "@/lib/assistants/agent-file";
+import { emailAgentNote } from "@/lib/assistants/messages/note";
+import { claimRideAlongForAgent, giveBackRideAlong, type HeldForAgent } from "@/lib/assistants/messages/ride-along";
+import { MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -136,7 +139,7 @@ import { getVersionHtml, listVersions } from "@/lib/projects/versions";
 import { loQueCambioElDueno } from "@/lib/agent/cambios-del-dueno";
 import { cambiosParaElAgente } from "@/lib/projects/cambios-para-el-agente";
 import { runAgentLoop, TOOL_OUTCOME_UNKNOWN, type AgentErrorCode, type AgentLoopResult } from "@/lib/agent/loop";
-import { isToolCreationOrigin, type ToolCreationOrigin } from "@/lib/projects/types";
+import { isAssistantRequestOrigin, isLenMessageOrigin, isToolCreationOrigin, type ToolCreationOrigin } from "@/lib/projects/types";
 import { randomUUID } from "node:crypto";
 import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
@@ -553,8 +556,13 @@ async function correrTurno(
   // and only in the project it was born in (phase 1). A goal or a birth is Len's. Of the turns the server starts, only its
   // own scheduled task is the agent's (spec local 2026-11-19-agentes-para-todos, §6.4): the scheduler puts its id in the
   // body it makes; Len Watch, the subagents' notices, «Hazlo», a tool's creation and ask_len stay Len's.
+  // And the turn LEN'S MESSAGE wakes (spec local 2026-11-21-len-y-el-agente-conversan, §2): the agent's, in its home and
+  // conversation, put in the body by lib/assistants/messages/wake.ts — and with no person in it (`woken`, below).
   let asistente: AssistantRow | null = null;
-  const agentsTask = !opts.scheduled || opts.scheduled.origin.kind === "scheduled";
+  /** A message of Len's woke this turn: it runs as the agent it was for, never as Len. Its origin names the project. */
+  const lenMessage = opts.scheduled && isLenMessageOrigin(opts.scheduled.origin) ? opts.scheduled.origin : null;
+  const wokenByLen = lenMessage !== null;
+  const agentsTask = !opts.scheduled || opts.scheduled.origin.kind === "scheduled" || wokenByLen;
   if (typeof body?.assistantId === "string" && body.assistantId && !opts.round && !opts.hilo && !opts.email && agentsTask) {
     if (!assistantsEnabled()) return errorJson(404, "assistants are off", "assistants_off");
     const encontrado = await assistantById(body.assistantId.slice(0, 100)).catch(() => null);
@@ -562,6 +570,13 @@ async function correrTurno(
     if (pedidoDelEncargo || body.naceComo !== undefined) return errorJson(400, "a goal or a birth is Len's, not the assistant's", "not_for_assistant");
     asistente = encontrado;
   }
+  // Without its agent (no id in the body), Len's message has no one to wake: it would be Len answering himself in the
+  // agent's home. Refused like a deleted agent's turn, so its messages go back to waiting.
+  if (wokenByLen && !asistente) return errorJson(404, "assistant not found", "not_found");
+  /** A message woke this turn — Len's to the agent, or an agent's to Len (`message: true`): no person spoke in it, and
+   *  what it read lives only in its transcript, so its row stays even when it says nothing (ruling R4-1). */
+  const wokenByMessage =
+    wokenByLen || (opts.scheduled !== undefined && isAssistantRequestOrigin(opts.scheduled.origin) && opts.scheduled.origin.message === true);
   /** Its agent file (spec local 2026-11-19-agentes-para-todos, §6.4): its instructions, its skills. A file that is gone
    *  or broken leaves the plain assistant — the turn still runs. */
   const agenteDelAsistente = asistente?.agentType
@@ -891,8 +906,10 @@ async function correrTurno(
     // offered the tool at all, as Claude Code leaves a denied tool out of the list.
     const todas = miembro ? conMcp.filter((d) => d.name !== CREATE_ASSISTANT) : conMcp;
     // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
-    // what builds it passes to Len.
-    return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }] : todas;
+    // what builds it passes to Len. Then `message_len` (spec local 2026-11-21-len-y-el-agente-conversan): every agent
+    // turn may write to Len — the same list whether a person or Len's message started it, so the cached prefix holds;
+    // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts).
+    return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }] : todas;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
@@ -1713,6 +1730,8 @@ async function correrTurno(
             // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
             inSpace: espacioDelTurno,
             ...(asistente.agentType ? { withAgentFile: true } : {}),
+            // Len's message started it, not its person: what needs their words is refused (lib/agent/tools.ts).
+            ...(wokenByLen ? { woken: true as const } : {}),
           },
           // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).
           ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),
@@ -1889,6 +1908,13 @@ async function correrTurno(
       let filaCerrada = false;
       /** The person's own assistant was deleted while it answered: no row, no push (see `closeRowOnce`). */
       let asistenteBorrado = false;
+      /** What waited for the agent from Len, claimed by this turn's row (a turn its person started, decision 9 of
+       *  «Len y el agente conversan»), and whether the model was handed it. What it never got, or what a turn that left
+       *  no row claimed, goes back to waiting (`closeRowOnce`). */
+      let rideAlong: HeldForAgent | null = null;
+      let rideAlongHanded = false;
+      /** The turn's row was written at its close (`closeRowOnce`). */
+      let rowWritten = false;
       /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
        *  historial del turno siguiente. Lo usan el cierre y, a mitad de turno, el
        *  avance (con `partial`). */
@@ -2003,7 +2029,12 @@ async function correrTurno(
         // la puerta de créditos) y cambió el estado, aunque no haya hecho nada más.
         // A11 · y siempre que resumió: sin la fila se perdería la marca (un
         // `/compact` no escribe nada más).
-        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado()) || marcaDelTurno !== null) {
+        // And a turn a MESSAGE woke that ran to its end (ruling R4-1 of «Len y el agente conversan»): it may rightly say
+        // nothing — the agent that only answered Len leaves its final text empty — but what it read is in its transcript,
+        // and the mailbox marked the messages read by this row. One that never got an answer from the model leaves none,
+        // as always, and its messages go back to waiting (lib/assistants/messages/wake.ts, `fail`).
+        const leyoUnMensaje = wokenByMessage && filaAbierta && finDelTurno === "completed";
+        if (registro.hayAlgo(mutoDurable) || (filaAbierta && estadoCambiado()) || marcaDelTurno !== null || leyoUnMensaje) {
           // Lo que vio el modelo: lo que devolvió el bucle; si reventó, lo que
           // llevaba visto, ya equilibrado (como en DeepSeek, no se pierde).
           const enVivo = transcripcionDelTurno ? [] : (readLiveTranscript?.() ?? []);
@@ -2044,6 +2075,7 @@ async function correrTurno(
                     now: { planMode: planActivo, goal: goalActual },
                   }),
             }, ...enLaCharla);
+            rowWritten = true;
           } catch (err) {
             console.warn("[agent] no se pudo registrar el turno", err);
           }
@@ -2066,6 +2098,31 @@ async function correrTurno(
               console.warn("[agent] no se pudo entregar la tarea programada", err),
             );
           }
+          // THE AGENT'S NOTE TO ITS PERSON (decision 12 of «Len y el agente conversan»): nobody watches the turn Len's
+          // message woke, so what it ended saying for its person goes to them — by email in its name, and by the push
+          // an unattended turn sends — as its scheduled task's result does. Its last words, and only when it has some:
+          // one that only answered Len leaves them empty and bothers no one. Not when someone stopped it on purpose.
+          if (lenMessage && asistente && !canceladoAProposito) {
+            const nota = registro.finalText.trim();
+            if (nota) {
+              await emailAgentNote({
+                personId: asistente.personId,
+                agent: { name: asistente.name, slug: asistente.slug },
+                projectTitle: lenMessage.projectTitle,
+                text: nota,
+                locale: typeof body?.idioma === "string" ? body.idioma.slice(0, 10) : "en",
+              }).catch((err: unknown) => console.warn("[agent-messages] the agent's note couldn't be emailed", err));
+              try {
+                const { scheduleNotification } = await import("@/lib/notifications/dispatch");
+                await scheduleNotification(
+                  avisoDelTurno({ projectId, userId, texto: nota, tarjetas: registro.tarjetas, asistente: { id: asistente.id, name: asistente.name, slug: asistente.slug } }),
+                  `len-turno:${filaId}`,
+                );
+              } catch (err) {
+                console.warn("[agent-messages] the agent's note couldn't be pushed", err);
+              }
+            }
+          }
         } else {
           if (filaAbierta) {
             try {
@@ -2079,6 +2136,11 @@ async function correrTurno(
           if (aperturaReclamada && asistente) {
             await releaseOpening(asistente.id).catch((err: unknown) => console.warn("[agent] couldn't give back an agent's opening", err));
           }
+        }
+        // What waited from Len and this turn claimed: kept as read only if the model got it AND the row it is marked
+        // read by exists; otherwise it waits for the agent's next turn.
+        if (rideAlong && (!rowWritten || !rideAlongHanded)) {
+          await giveBackRideAlong(rideAlong.ids).catch((err: unknown) => console.warn("[agent-messages] what waited from Len couldn't be given back", err));
         }
       };
       let closingRow: Promise<void> | null = null;
@@ -2475,6 +2537,17 @@ async function correrTurno(
             sinCobro: "host",
           };
         };
+        // WHAT WAITED FROM LEN rides with the agent's turn its person started (decision 9 of «Len y el agente conversan»):
+        // held messages never wake anyone, so this turn claims them — now that it really starts, past the credit gate —
+        // and the agent reads them before its first call, after how its ask_len requests ended. A turn the server started
+        // has none to take (Len's message woke it and its own start claimed them; a scheduled task is not its person).
+        // Fail-soft: a mailbox that can't be read leaves them waiting.
+        if (asistente && !programadaDelTurno && !compactCommand) {
+          rideAlong = await claimRideAlongForAgent(asistente.id, filaId, new Date()).catch((err: unknown) => {
+            console.warn("[agent-messages] what waited from Len couldn't be claimed", err);
+            return null;
+          });
+        }
         // THE IDLE SUMMARY: what this turn is given, before the loop adds to it. With the turn's own transcript
         // behind, it is the request the provider will have cached when the turn ends (pinned in loop.test.ts).
         const messagesBeforeLoop = [...messages];
@@ -2509,7 +2582,10 @@ async function correrTurno(
                   if (handed.length > 0) {
                     void markAssistantNoticesHeard(asistente.id, handed.map((n) => n.id), new Date()).catch((err: unknown) => console.warn("[assistants] heard notices weren't marked", err));
                   }
-                  return handed.map(noticeText);
+                  // And what waited from Len (claimed above), once: its own user message, framed per project.
+                  const fromLen = rideAlong && !rideAlongHanded ? [rideAlong.framing] : [];
+                  if (fromLen.length > 0) rideAlongHanded = true;
+                  return [...handed.map(noticeText), ...fromLen];
                 },
               }
             : {}),
@@ -3168,7 +3244,8 @@ async function correrTurno(
         // correo lo salta), con la clave de la fila para no repetir. El módulo
         // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
         // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
-        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
+        // A turn Len's message woke has its own push, at its close, only when it has something for its person.
+        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && !lenMessage && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(

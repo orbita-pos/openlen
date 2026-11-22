@@ -217,6 +217,11 @@
       "perdidaAgente": "Não a fiz: o OpenLen não estava disponível no horário agendado e já passou mais de um dia. Se ainda precisar, peça a {agente}.",
       "pieSinAgente": "Tarefa agendada «{title}» de um agente que já não existe.",
       "sinAccesoAgente": "Não fiz: quem criou esta tarefa já não tem acesso ao projeto onde {agente} vive. A tarefa ficou parada."
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}: sobre {proyecto}",
+      "abrir": "Abrir {agente}",
+      "pie": "Quem escreve é {agente}, seu agente do OpenLen."
     }
   },
   "envVars": {

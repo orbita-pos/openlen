@@ -3,6 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  agentNoteEmail,
   correoDeInvitacion,
   correoDeMencion,
   fraseDeFalloDelHilo,
@@ -159,5 +160,37 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
     it("🔴 the route's «not found» for an agent's turn says the agent is gone, in the person's language", () => {
       expect(fraseDeFalloPorCorreo("es", { motivo: "assistant not found", code: "not_found" }, true)).toBe(scheduledTaskPhrase("es", "agent_gone"));
     });
+  });
+});
+
+// LEN AND THE AGENT TALK (spec local 2026-11-21-len-y-el-agente-conversan, decision 12): a turn Len's message woke that
+// ends with something for the person emails them, in the agent's name, with a link to its place.
+describe("the agent's note to its person", () => {
+  const NOTE = { agentName: "Finanzas", projectTitle: "Presupuesto <2027>", texto: "Len pregunta si el tope es 500 €.\n¿Se lo confirmo?", url: "https://openlen.com/es/assistant/finanzas?x=1&y=2" };
+
+  it("🔴 in Spanish: «{agente}: sobre {proyecto}», the text, «Abrir a {agente}» and its footer", () => {
+    const es = agentNoteEmail(NOTE, "es");
+    expect(es.subject).toBe("Finanzas: sobre Presupuesto <2027>");
+    expect(es.html).toContain("Abrir a Finanzas");
+    expect(es.html).toContain("Te escribe Finanzas, tu agente de OpenLen.");
+    expect(es.html).toContain("Len pregunta si el tope es 500 €.");
+    expect(es.html).toContain('href="https://openlen.com/es/assistant/finanzas?x=1&amp;y=2"');
+    expect(es.html).not.toContain("<2027>");
+    expect(es.text).toBe("Len pregunta si el tope es 500 €.\n¿Se lo confirmo?\n\n—\nTe escribe Finanzas, tu agente de OpenLen.\nhttps://openlen.com/es/assistant/finanzas?x=1&y=2");
+  });
+
+  it.each(["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"] as const)("🔴 renders its subject and button in %s, naming the agent and the project", (idioma) => {
+    const c = agentNoteEmail(NOTE, idioma);
+    expect(c.subject).toContain("Finanzas");
+    expect(c.subject).toContain("Presupuesto <2027>");
+    expect(c.subject).not.toMatch(/[{}]/);
+    expect(c.html).toContain(`lang="${idioma}"`);
+    expect(c.html).toContain("Finanzas");
+    expect(c.text).not.toMatch(/\{agente\}|\{proyecto\}/);
+    expect(c.html).not.toMatch(/notaDelAgente|miembros\./);
+  });
+
+  it("a blank title is OpenLen", () => {
+    expect(agentNoteEmail({ ...NOTE, projectTitle: " " }, "en").subject).toBe("Finanzas: about OpenLen");
   });
 });

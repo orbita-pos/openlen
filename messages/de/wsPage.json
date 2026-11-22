@@ -69,6 +69,7 @@
       "create_assistant": "Assistent erstellen",
       "propose_skills": "Skills vorschlagen",
       "ask_len": "An Len weitergeben",
+      "message_len": "An Len schreiben",
       "schedule_create": "Aufgabe planen",
       "schedule_list": "Geplante Aufgaben ansehen",
       "schedule_delete": "Geplante Aufgabe löschen",

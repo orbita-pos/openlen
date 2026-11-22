@@ -217,6 +217,11 @@
       "perdidaAgente": "I didn't do it: OpenLen wasn't available at the scheduled time and more than a day has passed. If you still need it, ask {agente}.",
       "pieSinAgente": "Scheduled task «{title}» of an agent that no longer exists.",
       "sinAccesoAgente": "I didn't do it: whoever created this task no longer has access to the project where {agente} lives. The task is stopped."
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}: about {proyecto}",
+      "abrir": "Open {agente}",
+      "pie": "{agente}, your OpenLen agent, is writing to you."
     }
   },
   "envVars": {

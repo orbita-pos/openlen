@@ -217,6 +217,11 @@
       "perdidaAgente": "하지 않았어요: 예약 시간에 OpenLen을 쓸 수 없었고 하루가 넘게 지났어요. 아직 필요하면 {agente}에게 부탁해 주세요.",
       "pieSinAgente": "더 이상 없는 에이전트의 예약 작업 «{title}».",
       "sinAccesoAgente": "실행하지 않았어요: 이 작업을 만든 사람이 {agente}이(가) 있는 프로젝트에 더 이상 접근할 수 없어요. 작업이 중지되었어요."
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}: {proyecto} 관련",
+      "abrir": "{agente} 열기",
+      "pie": "OpenLen 에이전트 {agente}이(가) 보낸 메시지예요."
     }
   },
   "envVars": {

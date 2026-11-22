@@ -311,6 +311,15 @@ const assistantProjects = vi.hoisted(() => ({
   titlesOf: vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, `Title of ${id}`]))),
 }));
 vi.mock("@/lib/assistants/projects", () => assistantProjects);
+// Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): the mailbox's side the route touches — what
+// waited for an agent, claimed by its person's turn — and the agent's email to its person. Nothing waits unless a test says so.
+const agentMessages = vi.hoisted(() => ({
+  claimForAgent: vi.fn(async (_assistantId: string, _rowId: string, _at: Date): Promise<Record<string, unknown>[]> => []),
+  releaseToHeld: vi.fn(async (_ids: readonly string[], _reason: string) => {}),
+}));
+vi.mock("@/lib/assistants/messages/store", () => agentMessages);
+const agentNote = vi.hoisted(() => ({ emailAgentNote: vi.fn(async (_note: Record<string, unknown>) => true) }));
+vi.mock("@/lib/assistants/messages/note", () => agentNote);
 // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant's agent file, none unless a test gives one.
 const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: string, _agentType: string): Promise<Record<string, unknown> | null> => null) }));
 vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
@@ -5458,6 +5467,212 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await runner()("u1", { projectId: "p1", prompt: "", turnId: "77777777-7777-4777-8777-777777777772", assistantId: "a1" }, where, { scheduled: { framing: "Background subagent r1 finished.", origin, onReply: vi.fn(async () => {}) } }));
       expect(mocks.turnosParaElHistorial).not.toHaveBeenCalledWith("p1", "assistant:a1");
     });
+
+    // LEN AND THE AGENT TALK (spec local 2026-11-21-len-y-el-agente-conversan, §2 and decisions 8 and 12): Len's message
+    // wakes the agent's turn in its home (lib/assistants/messages/wake.ts) — the agent's, with what needs its person's
+    // words refused (lib/agent/tools.ts), and a word to its person only when it has one.
+    describe("woken by Len's message", () => {
+      const origin = { kind: "len-message" as const, projectId: "p9", projectTitle: "Presupuesto" };
+      const framing = "Len, OpenLen's agent, sent you a message about «Presupuesto» (id: p9).\n\n<len-message project=\"p9\">\n¿Cuál es el tope?\n</len-message>";
+      const ROW = "77777777-7777-4777-8777-777777777781";
+      const wake = (body: Record<string, unknown> = { assistantId: "a1" }) =>
+        runner()("u1", { projectId: "p1", prompt: "¿Cuál es el tope?", turnId: ROW, idioma: "es", ...body }, where, { scheduled: { framing, origin, onReply: vi.fn(async () => {}) } });
+      const session = () => (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ readOnly?: true; assistant?: Record<string, unknown> }])[0];
+
+      it("🔴 a turn woken by Len runs as the agent, in its conversation, woken", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          await args.runTool("Read", { file_path: "/index.html" });
+          return cierre();
+        });
+        await readEvents(await wake());
+        expect(mocks.turnosParaElHistorial).toHaveBeenCalledWith("p1", "assistant:a1");
+        expect(mocks.abrirFilaDelTurno).toHaveBeenCalledWith("p1", expect.objectContaining({ id: ROW, origen: origin }), "assistant:a1");
+        // What the model reads is Len's message framed, never as the person's words.
+        expect((mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt).toContain(framing);
+        expect(session().readOnly).toBe(true);
+        expect(session().assistant).toMatchObject({ id: "a1", name: "Lucía", woken: true });
+        // Its tools are every agent turn's: the refusals are at execution, so its cached prefix stays the same.
+        expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
+        // What Len sent it, it claimed when it started (its own `resolveAtStart`): nothing is claimed here again.
+        expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
+      });
+
+      it("🔴 never as Len: a turn Len's message started without the agent's id runs nothing", async () => {
+        const res = await wake({});
+        expect(res.status).toBe(404);
+        expect(mocks.runAgentLoop).not.toHaveBeenCalled();
+      });
+
+      it("a person's turn with the agent, and its scheduled task, are not woken", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          await args.runTool("Read", { file_path: "/index.html" });
+          return cierre();
+        });
+        await readEvents(await pedir({ assistantId: "a1" }));
+        expect(session().assistant?.woken).toBeUndefined();
+        const task = { kind: "scheduled" as const, taskId: "t1", title: "Palabras", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+        await readEvents(await runner()("u1", { projectId: "p1", prompt: "Mándame 5 palabras", turnId: "77777777-7777-4777-8777-777777777782", assistantId: "a1" }, where, { scheduled: { framing: "[SCHEDULE REMINDER]\nMándame 5 palabras", origin: task, onReply: vi.fn(async () => {}) } }));
+        expect(session().assistant?.woken).toBeUndefined();
+      });
+
+      it("🔴 a woken turn that ends with text emails the person and pushes, in the agent's name", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          args.emit({ type: "text", text: "Len pregunta si el tope es 500 €. ¿Se lo confirmo?" });
+          return cierre();
+        });
+        await readEvents(await wake());
+        expect(agentNote.emailAgentNote).toHaveBeenCalledTimes(1);
+        expect(agentNote.emailAgentNote).toHaveBeenCalledWith({
+          personId: "u1",
+          agent: { name: "Lucía", slug: "lucia" },
+          projectTitle: "Presupuesto",
+          text: "Len pregunta si el tope es 500 €. ¿Se lo confirmo?",
+          locale: "es",
+        });
+        expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
+        const [evento, key] = mocks.scheduleNotification.mock.calls[0] as unknown as [Record<string, unknown>, string];
+        expect(evento).toMatchObject({ type: "len_turno", projectId: "p1", recipientUserId: "u1", preview: "Len pregunta si el tope es 500 €. ¿Se lo confirmo?", asistente: { id: "a1", name: "Lucía", slug: "lucia" } });
+        expect(key).toBe(`len-turno:${ROW}`);
+      });
+
+      // Ruling R4-1: the framing tells the agent to leave its final text empty when it only answered Len. Its row stays —
+      // its transcript holds the exchange, and the mailbox's `readByRow` points at it — and nobody is bothered.
+      it("🔴 one with empty text does neither, and keeps its row", async () => {
+        mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), finalText: "", transcripcion: [{ role: "assistant", content: "" }] }));
+        await readEvents(await wake());
+        expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+        expect(mocks.registrarTurnoDelServidor.mock.calls[0] as unknown[]).toEqual(["p1", expect.objectContaining({ id: ROW }), "assistant:a1"]);
+        expect(mocks.quitarFilaDelTurno).not.toHaveBeenCalled();
+        expect(agentNote.emailAgentNote).not.toHaveBeenCalled();
+        expect(mocks.scheduleNotification).not.toHaveBeenCalled();
+      });
+
+      it("one that only answered Len (its card, no text) keeps its row and sends nothing", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          args.emit({ type: "action", tool: "message_len", status: "running", summary: "" });
+          args.emit({ type: "action", tool: "message_len", status: "done", summary: "" });
+          return { ...cierre(), finalText: "" };
+        });
+        await readEvents(await wake());
+        expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+        expect(agentNote.emailAgentNote).not.toHaveBeenCalled();
+        expect(mocks.scheduleNotification).not.toHaveBeenCalled();
+      });
+
+      it("one that never got to answer (the provider down) leaves no row, so its messages go back to waiting", async () => {
+        mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), finalText: "", terminalError: true, errorCode: "upstream", transcripcion: [] }));
+        await readEvents(await wake());
+        expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+        expect(agentNote.emailAgentNote).not.toHaveBeenCalled();
+      });
+    });
+
+    // Ruling R4-1, Len's side: Len's turn an agent's message woke (`message: true`) keeps its row with no text too.
+    it("🔴 Len's turn woken by an agent's message keeps its row with no text", async () => {
+      const origin = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía", message: true as const };
+      mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), finalText: "", transcripcion: [{ role: "assistant", content: "" }] }));
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "Ya está el tope: 500 €.", turnId: "77777777-7777-4777-8777-777777777783" }, where, { scheduled: { framing: "Lucía, your owner's own agent, sent you a message.", origin, onReply: vi.fn(async () => {}) } }));
+      expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+      expect((mocks.registrarTurnoDelServidor.mock.calls[0] as unknown[]).length).toBe(2);
+      expect(mocks.quitarFilaDelTurno).not.toHaveBeenCalled();
+      // A request for work that wrote nothing is still a turn that left nothing: its row goes, as always.
+      mocks.registrarTurnoDelServidor.mockClear();
+      const request = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía" };
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "Hazme un botón", turnId: "77777777-7777-4777-8777-777777777784" }, where, { scheduled: { framing: "Lucía passed you a request.", origin: request, onReply: vi.fn(async () => {}) } }));
+      expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+      expect(mocks.quitarFilaDelTurno).toHaveBeenCalled();
+    });
+  });
+
+  // Decision 9 of «Len y el agente conversan»: a message from Len kept without waking the agent (the cap, no credits,
+  // agents off) rides with its person's next turn, like ask_len's notes — read before the turn's first call.
+  describe("what waited from Len rides with the person's own turn", () => {
+    const at = new Date("2026-11-21T12:00:00Z");
+    const held = (id: string, projectId: string, text: string, minute: number) => ({
+      id, assistantId: "a1", projectId, direction: "to_agent", text, ownerWords: null, status: "delivered", heldReason: null,
+      createdAt: new Date(at.getTime() + minute * 60_000), deliveringAt: null, deliveredAt: at,
+    });
+    const ROW = "77777777-7777-4777-8777-777777777791";
+
+    it("🔴 claimed by the turn's row and read before its first call, each project framed apart", async () => {
+      const { rideAlongForAgent } = await import("@/lib/assistants/messages/policy");
+      agentMessages.claimForAgent.mockResolvedValueOnce([held("m1", "p9", "¿Cuál es el tope?", 1), held("m2", "p7", "Publiqué la tienda.", 2), held("m3", "p9", "¿Y el plazo?", 3)]);
+      let first: readonly string[] = [];
+      let second: readonly string[] = ["x"];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        first = args.takeAgentNotices!();
+        second = args.takeAgentNotices!();
+        args.emit({ type: "text", text: "Len pregunta por el tope." });
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      expect(agentMessages.claimForAgent).toHaveBeenCalledWith("a1", ROW, expect.any(Date));
+      expect(first).toEqual([
+        [
+          rideAlongForAgent({ projectTitle: "Title of p9", projectId: "p9", messages: [{ text: "¿Cuál es el tope?" }, { text: "¿Y el plazo?" }] }),
+          rideAlongForAgent({ projectTitle: "Title of p7", projectId: "p7", messages: [{ text: "Publiqué la tienda." }] }),
+        ].join("\n\n"),
+      ]);
+      expect(second).toEqual([]);
+      expect(agentMessages.releaseToHeld).not.toHaveBeenCalled();
+      // The person's turn is not a woken one: what it passes to Len carries their words.
+      expect(agentNote.emailAgentNote).not.toHaveBeenCalled();
+    });
+
+    it("they come after how its ask_len requests ended", async () => {
+      assistantStore.readyAssistantNotices.mockResolvedValueOnce([{ id: "n1", request: "botón", status: "done", at: "2026-11-07T00:00:00.000Z", closing: "Listo." }]);
+      agentMessages.claimForAgent.mockResolvedValueOnce([held("m1", "p9", "¿Cuál es el tope?", 1)]);
+      let first: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        first = args.takeAgentNotices!();
+        args.emit({ type: "text", text: "ok" });
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      expect(first).toHaveLength(2);
+      expect(first[0]).toContain("botón");
+      expect(first[1]).toContain('<len-message project="p9">');
+    });
+
+    it("🔴 what the model never got goes back to waiting; so does all of it when the turn leaves no row", async () => {
+      agentMessages.claimForAgent.mockResolvedValueOnce([held("m1", "p9", "¿Cuál es el tope?", 1)]);
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.emit({ type: "text", text: "Hola." });
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m1"], "no_credits");
+      agentMessages.releaseToHeld.mockClear();
+      // Handed to the model, but the turn wrote nothing: no row points at them, so they wait for the next one.
+      agentMessages.claimForAgent.mockResolvedValueOnce([held("m2", "p9", "¿Y el plazo?", 2)]);
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.takeAgentNotices!();
+        return { ...cierre(), terminalError: true, errorCode: "upstream", transcripcion: [] };
+      });
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m2"], "no_credits");
+    });
+
+    it("a turn refused for credits claims nothing", async () => {
+      mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 100, refillsAt: null });
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
+    });
+
+    it("Len's own turn claims nothing for an agent, and if the mailbox can't be read the turn goes on", async () => {
+      await readEvents(await pedir({}));
+      expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
+      agentMessages.claimForAgent.mockRejectedValueOnce(new Error("db down"));
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        expect(args.takeAgentNotices!()).toEqual([]);
+        args.emit({ type: "text", text: "ok" });
+        return cierre();
+      });
+      const res = await pedir({ assistantId: "a1", turnId: ROW });
+      expect(res.status).toBe(200);
+      await readEvents(res);
+      expect(mocks.runAgentLoop).toHaveBeenCalled();
+    });
   });
 
   it("runs in its own conversation, with Len's prompt plus its own and Len's tools minus what builds", async () => {
@@ -5471,7 +5686,8 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(system.startsWith("LEN SYSTEM PROMPT")).toBe(true);
     expect(system).toContain("Your name is Lucía");
     // Write and Edit stay for her memory (10/11, spec §8; her read-only session refuses every other file).
-    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len"]);
+    // And `message_len` after it (spec local 2026-11-21-len-y-el-agente-conversan): every agent turn may write to Len.
+    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
   });
 
   it("its session is read-only, and in phase 1 it launches no subagents (their notices would wake Len)", async () => {
@@ -5785,6 +6001,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(String(loopArgs().messages[0]!.content)).toBe("LEN SYSTEM PROMPT");
     expect(toolNames()).toContain("Write");
     expect(toolNames()).not.toContain("ask_len");
+    expect(toolNames()).not.toContain("message_len");
     expect((mocks.createSubagentLauncher.mock.calls.at(-1)![0] as { readOnly?: true }).readOnly).toBeUndefined();
   });
 });

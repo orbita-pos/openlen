@@ -266,6 +266,44 @@ export function scheduledTaskEmail(
   return { subject, html, text };
 }
 
+// ─── The agent's note to its person (spec local 2026-11-21-len-y-el-agente-conversan, decision 12) ───
+
+export interface DatosDeLaNotaDelAgente {
+  /** The person's agent: the email is in its name and links to its place. */
+  readonly agentName: string;
+  /** The project Len wrote to it about. */
+  readonly projectTitle: string;
+  /** What the agent said last in the turn Len's message woke. */
+  readonly texto: string;
+  /** Its place (`/<locale>/assistant/<slug>`). */
+  readonly url: string;
+}
+
+/** A turn Len's message woke ended with something for the person: the agent says it, as its scheduled task's email does,
+ *  and never in Len's name. */
+export function agentNoteEmail(
+  d: DatosDeLaNotaDelAgente,
+  idioma: IdiomaDelCorreo,
+): { readonly subject: string; readonly html: string; readonly text: string } {
+  const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.notaDelAgente" });
+  const agente = d.agentName.trim() || "OpenLen";
+  const proyecto = d.projectTitle.trim() || "OpenLen";
+  const subject = t("asunto", { agente, proyecto });
+  const pie = t("pie", { agente });
+  const cuerpo = d.texto.trim();
+  const html = marco(idioma, {
+    titulo: agente,
+    parrafos: [],
+    cuerpo,
+    boton: t("abrir", { agente }),
+    url: d.url,
+    pegar: createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros" })("email.pegar"),
+    pie,
+  });
+  const text = [cuerpo, "", "—", pie, d.url].join("\n");
+  return { subject, html, text };
+}
+
 /** Why a scheduled task was not done, when it never reached Len. */
 export function scheduledTaskPhrase(idioma: IdiomaDelCorreo, why: "plan_required" | "no_access" | "missed" | "agent_gone", agentName?: string | null): string {
   const t = createTranslator({ locale: idioma, messages: MENSAJES[idioma], namespace: "miembros.programada" });

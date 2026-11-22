@@ -3239,3 +3239,47 @@ describe("the dispatcher: send_message is Len's subagent tool, the agents' messa
     assert.match(String(out.response.message), /Finanzas/);
   });
 });
+
+// Task 6 of «Len y el agente conversan» (decision 8, ruling P2): a turn Len's message woke runs as the agent with no person
+// in it, so what needs the person's own words — work for Len, a scheduled task, anything connected outside — is refused
+// at execution (still declared: the agent's tool list, and so its cached prefix, is the same in every turn).
+describe("🔴 a woken turn can't ask_len, schedule or connect; a person's turn can", () => {
+  const WOKEN = "This turn was started by Len's message, not by your owner: that needs your owner's own words. Tell them in your reply.";
+  const REFUSED: [string, Record<string, unknown>][] = [
+    ["ask_len", { request: "Build me a budget page." }],
+    ["schedule_create", { title: "Budget", prompt: "Check the budget", rrule: "FREQ=WEEKLY" }],
+    ["schedule_update", { id: "schedule-1", title: "Other" }],
+    ["schedule_delete", { id: "schedule-1" }],
+    ["mcp__drive__search", { query: "budget" }],
+    ["mcp__cal__authenticate", {}],
+    ["suggest_connectors", {}],
+  ];
+  const agentSession = (woken: boolean) =>
+    ({ ...makeSession(), readOnly: true, assistant: { id: "a1", name: "Finanzas", ...(woken ? { woken: true } : {}) } }) as AgentSession;
+
+  for (const [name, args] of REFUSED) {
+    it(`${name}: refused in a woken turn, with the sentence that says why`, async () => {
+      const { deps } = makeDeps();
+      const out = await runAgentTool(agentSession(true), deps as unknown as AgentDeps, name, args);
+      assert.equal(out.response.ok, false);
+      assert.equal(out.response.error, "needs_owner");
+      assert.equal(out.response.tool_result, WOKEN);
+      assert.equal(out.mutoDurable, undefined);
+    });
+
+    it(`${name}: a person's turn reaches the tool itself`, async () => {
+      const { deps } = makeDeps();
+      const out = await runAgentTool(agentSession(false), deps as unknown as AgentDeps, name, name === "ask_len" ? { request: "" } : args);
+      assert.notEqual(out.response.error, "needs_owner");
+      assert.notEqual(out.response.tool_result, WOKEN);
+    });
+  }
+
+  it("a woken turn still answers Len and reads: message_len and Read are not refused", async () => {
+    const { deps } = makeDeps();
+    const answer = await runAgentTool(agentSession(true), deps as unknown as AgentDeps, "message_len", { message: "Hi." });
+    assert.equal(answer.response.error, "invalid_arguments");
+    const read = await runAgentTool(agentSession(true), deps as unknown as AgentDeps, "Read", { file_path: "/index.html" });
+    assert.notEqual(read.response.error, "needs_owner");
+  });
+});

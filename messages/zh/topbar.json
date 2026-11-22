@@ -217,6 +217,11 @@
       "perdidaAgente": "未执行：预定时间 OpenLen 不可用，且已过去一天以上。如仍需要，请让 {agente} 来做。",
       "pieSinAgente": "一个已不存在的智能体的定时任务「{title}」。",
       "sinAccesoAgente": "没有执行：创建此任务的人已无法访问 {agente} 所在的项目。任务已停止。"
+    },
+    "notaDelAgente": {
+      "asunto": "{agente}：关于 {proyecto}",
+      "abrir": "打开 {agente}",
+      "pie": "这是你在 OpenLen 的智能体 {agente} 发来的消息。"
     }
   },
   "envVars": {

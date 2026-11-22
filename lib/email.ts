@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import {
+  agentNoteEmail,
   correoDeInvitacion,
   correoDeLen,
   correoDeMencion,
@@ -7,6 +8,7 @@ import {
   scheduledTaskEmail,
   type DatosDeLaInvitacion,
   type DatosDeLaMencion,
+  type DatosDeLaNotaDelAgente,
   type DatosDeLaRespuestaDeLen,
   type DatosDeLaTareaProgramada,
   type IdiomaDelCorreo,
@@ -707,10 +709,10 @@ export async function sendScheduledTaskEmail(
 ): Promise<void> {
   const correo = scheduledTaskEmail(input, input.idioma);
   const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
-  // An agent's task comes in its name (spec local 2026-11-19-agentes-para-todos, §6.4): a person chose that name, so what
-  // could break the header goes, and it travels quoted. One whose agent was deleted is in no one's name: Len didn't write it.
-  const agentName = input.agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
-  const sender = agentName ? `"${agentName}" <${address}>` : input.agentGone ? `OpenLen <${address}>` : `Len <${address}>`;
+  // An agent's task comes in its name (spec local 2026-11-19-agentes-para-todos, §6.4). One whose agent was deleted is in
+  // no one's name: Len didn't write it.
+  const agentSender = senderInTheNameOf(input.agentName, address);
+  const sender = agentSender ?? (input.agentGone ? `OpenLen <${address}>` : `Len <${address}>`);
   const live = liveClientOrWarn("scheduled task email");
   if (!live) {
     if (process.env.NODE_ENV !== "production") {
@@ -728,6 +730,33 @@ export async function sendScheduledTaskEmail(
     ...correo,
     ...(input.attachments.length > 0 ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
   });
+}
+
+/** An email in the name of the person's agent: a person chose that name, so what could break the header goes, and it
+ *  travels quoted. Null without a name. */
+function senderInTheNameOf(agentName: string | null | undefined, address: string): string | null {
+  const name = agentName?.replace(/["<>\\\r\n]/g, "").replace(/\s+/g, " ").trim().slice(0, 64);
+  return name ? `"${name}" <${address}>` : null;
+}
+
+/**
+ * THE AGENT'S NOTE TO ITS PERSON (spec local 2026-11-21-len-y-el-agente-conversan, decision 12): a turn Len's message
+ * woke ended with something for them. In the agent's name and with no Reply-To, as its scheduled task's email: replying
+ * would start a Len turn, not the agent's. The link goes to its place.
+ */
+export async function sendAgentNoteEmail(input: DatosDeLaNotaDelAgente & { to: string; idioma: IdiomaDelCorreo }): Promise<void> {
+  const correo = agentNoteEmail(input, input.idioma);
+  const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
+  const sender = senderInTheNameOf(input.agentName, address) ?? `OpenLen <${address}>`;
+  const live = liveClientOrWarn("agent note email");
+  if (!live) {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.log(`\n  📧 [DEV] ${correo.subject} → ${input.to} (from: ${sender})\n     ${correo.text.split("\n").join("\n     ")}\n`);
+    }
+    return;
+  }
+  await enviar(live, "agent note email", { from: sender, to: input.to, ...correo });
 }
 
 // ─── Chat — offline-owner notification ───────────────────────────────────────

@@ -154,6 +154,7 @@ import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/wid
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
+import { needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -1432,7 +1433,8 @@ export interface AgentSession {
      *  `~/.assistant/CUSTOMERS.md`, never its memory, and that file is its to write. */
     readonly withAgentFile?: boolean;
     /** A message from Len woke this turn (spec local 2026-11-21-len-y-el-agente-conversan, decision 8): no person spoke in
-     *  it, so `message_len` carries no owner words, and it can't `ask_len` or schedule anything. Absent in a person's turn. */
+     *  it, so `message_len` carries no owner words, and it can't `ask_len`, schedule or connect anything
+     *  (lib/assistants/messages/woken.ts). Set by the route for a `len-message` turn; absent in a person's turn. */
     readonly woken?: true;
   };
   /** LEN'S side of the messages (`message_agent`; spec local 2026-11-21-len-y-el-agente-conversan, §1): the agents of
@@ -3227,6 +3229,9 @@ async function ejecutarHerramienta(
   name: string,
   args: Record<string, unknown>,
 ): Promise<ToolOutcome> {
+  // A turn Len's message woke runs with no person in it: what needs the person's own words is refused here, at execution,
+  // and stays declared (lib/assistants/messages/woken.ts).
+  if (session.assistant?.woken && needsOwnersWords(name)) return wokenRefusal();
   if (ARTIFACT_TOOLS.some(tool=>tool===name)) {
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }

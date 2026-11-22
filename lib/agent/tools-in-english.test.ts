@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import { buildFunctionDeclarations } from "./catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./manual-de-la-plataforma";
 import { TOOL_RENAMES } from "./tool-renames";
+import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
+import { MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 
 // Lo que se retiró: nombres de herramienta, claves y valores en español.
 const VIEJOS_NOMBRES = Object.keys(TOOL_RENAMES);
@@ -42,6 +44,17 @@ describe("las herramientas de Len, en inglés (como DeepSeek)", () => {
       }
     });
   }
+
+  // The ones the route adds only to the person's agent, after Len's (app/api/agent/route.ts): `ask_len` and `message_len`
+  // (spec local 2026-11-21-len-y-el-agente-conversan). They aren't in the catalog, so they are walked here.
+  it("ni las que sólo tiene el agente de la persona", () => {
+    const keys: string[] = [];
+    const values: string[] = [];
+    for (const d of [ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION]) walk(d.parameters, keys, values);
+    expect(keys).toEqual(expect.arrayContaining(["request", "project", "message"]));
+    expect(keys.filter((k) => VIEJAS_CLAVES.includes(k))).toEqual([]);
+    expect(values.filter((v) => VIEJOS_VALORES.includes(v))).toEqual([]);
+  });
 
   it("el manual tampoco nombra las viejas", () => {
     const textos = [buildManualDeLaPlataforma({}), ...Object.values(documentosDeLaPlataforma())];

@@ -69,6 +69,7 @@
       "create_assistant": "Création de votre assistant",
       "propose_skills": "Proposition de skills",
       "ask_len": "Transmission à Len",
+      "message_len": "Message à Len",
       "schedule_create": "Planification d'une tâche",
       "schedule_list": "Consultation des tâches planifiées",
       "schedule_delete": "Suppression d'une tâche planifiée",

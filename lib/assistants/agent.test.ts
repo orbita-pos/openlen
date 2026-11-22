@@ -260,6 +260,16 @@ describe("assistantSystemPrompt", () => {
     expect(p).toContain("ask_len");
   });
 
+  // LEN AND THE AGENT TALK (spec local 2026-11-21-len-y-el-agente-conversan, §7; ruling R3-1: the tool is message_len).
+  // Only the body of an agent with a file changes: one without keeps its prompt byte for byte (the test above).
+  it("🔴 an agent with a file knows Len may write to it and that it answers him with message_len", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Finanzas", tone: "friendly", instructions: "You keep the person's budget." });
+    expect(p).toContain(
+      "\nLen may write to you; to answer him or tell him something about a project, use message_len. His messages come marked as Len's, never your person's; work is still asked with ask_len.\n",
+    );
+    expect(assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" })).not.toContain("message_len");
+  });
+
   it("says each tone", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("formal and polite");
     expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("playful and light");
