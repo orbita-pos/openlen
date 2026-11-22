@@ -472,6 +472,23 @@ describe("buildAgentSystemPrompt", () => {
     expect(p).not.toContain("OpenLen NO ejecuta JavaScript de la página");
   });
 
+  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): Jesús wants them for more life in the messages. In the chat, now and
+  // then and in TONE; in files, the rule that was already there, unchanged and below; and none in what Len writes for
+  // others —a commit, a draft reply that a customer reads in the owner's voice.
+  it("🔴 in the chat, an emoji now and then; in files, their own rule below; none in what goes to others", () => {
+    const p = buildAgentSystemPrompt();
+    expect(p.indexOf("TONE:")).toBeGreaterThan(0);
+    expect(p.indexOf("HOW TO WORK:")).toBeGreaterThan(p.indexOf("TONE:"));
+    const tone = p.slice(p.indexOf("TONE:"), p.indexOf("HOW TO WORK:"));
+    expect(tone).toContain(EMOJIS_IN_CHAT);
+    expect(EMOJIS_IN_CHAT).toMatch(/^- In the chat, an emoji now and then/);
+    expect(EMOJIS_IN_CHAT).toContain("in a whole answer at most");
+    expect(EMOJIS_IN_CHAT).toContain("commit messages");
+    expect(EMOJIS_IN_CHAT).toContain("a draft reply to a customer");
+    const fileRule = "No emojis in the files unless the user asks for them.";
+    expect(p.indexOf(fileRule)).toBeGreaterThan(p.indexOf(EMOJIS_IN_CHAT));
+  });
+
   // EL PROMPT NO PUEDE OFRECER LO QUE NO EXISTE. Hasta el 2026-08-27 abría con
   // «los módulos (reservas, cuentas, chat, catálogo…) son features REALES ya
   // construidas» y quince líneas más abajo, en el mismo prompt, decía que
@@ -480,16 +497,6 @@ describe("buildAgentSystemPrompt", () => {
   // ya leyó que son una feature real. Desde la auditoría del 2026-09-29 la
   // apertura no nombra ningún módulo: los que existen van en su bloque, que se
   // deriva de `AGENT_MODULES` (ver «cada módulo que el prompt enumera…»).
-  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): Jesús wants them for more life in the messages. In the chat, now and
-  // then and in TONE; in files, the rule that was already there, unchanged.
-  it("🔴 in the chat, an emoji now and then; in files, their own rule", () => {
-    const p = buildAgentSystemPrompt();
-    const tone = p.slice(p.indexOf("TONE:"), p.indexOf("HOW TO WORK:"));
-    expect(tone).toContain(EMOJIS_IN_CHAT);
-    expect(EMOJIS_IN_CHAT).toContain("an emoji now and then");
-    expect(p).toContain("No emojis in the files unless the user asks for them.");
-  });
-
   it("la frase de apertura no ofrece ningún módulo retirado", () => {
     const p = buildAgentSystemPrompt();
     // Hasta el primer encabezado (TONO:). Medía hasta «REGLAS DURAS», que H4

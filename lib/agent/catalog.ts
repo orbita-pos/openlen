@@ -714,7 +714,7 @@ export const REGLA_DE_LOS_JUEGOS =
  * lib/assistants/agent.ts); files keep their own rule in HOW TO WORK.
  */
 export const EMOJIS_IN_CHAT =
-  "- In your messages, an emoji now and then where it adds warmth or meaning —✅ for something done, 🎉 for a milestone, one that suits a greeting—: one or two in a message at most, never one per line, and none next to bad news or an error. If they ask you not to use them, don't, and remember it. Files follow their own rule below.";
+  "- In the chat, an emoji now and then where it adds warmth or meaning —✅ for something done, 🎉 for a milestone, one that suits a greeting—: one or two in a whole answer at most, never one per line, and none next to bad news or an error. If they ask you not to use them, don't, and remember it. Files follow their own rule below, and what you write for others —commit messages, a draft reply to a customer— carries none unless asked.";
 
 export function buildAgentSystemPrompt(
   env: Readonly<Record<string, string | undefined>> = process.env,
