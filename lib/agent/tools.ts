@@ -151,6 +151,8 @@ import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
 import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
 import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
+import type { HeldVisualState } from "@/lib/agent/visuals/model-context";
+import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/read-widget-context";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
@@ -1451,6 +1453,9 @@ export interface AgentSession {
    *  that serves it, one that started it — with the home each one's turn runs in. Absent for an agent, and when none
    *  is related. */
   relatedAgents?: readonly { readonly id: string; readonly name: string; readonly homeProjectId: string }[];
+  /** What the visuals of this conversation shared with the person's message (spec local 2026-11-22-visuales-de-verdad,
+   *  §2): read when `read_widget_context` runs, since a correction or an answer can replace them while the turn runs. */
+  visualStates?: () => readonly HeldVisualState[];
   /** Her turn: the photos and files of the owner's message, for the Len turn her `ask_len` starts (spec local
    *  2026-11-16-movil-es-tu-asistente, §5.4.7). Absent for Len, and when the message had none. */
   ownerAttachments?: {
@@ -3308,6 +3313,8 @@ async function ejecutarHerramienta(
         return await toolPresent(session, deps, args);
       case SHOW_WIDGET:
         return toolShowWidget(args);
+      case READ_WIDGET_CONTEXT:
+        return toolReadWidgetContext(args, session.visualStates?.() ?? []);
       // The person's own assistant passes what builds to Len (lib/assistants/ask-len.ts); for Len it isn't there.
       case ASK_LEN:
         return await runAskLen(session, args);

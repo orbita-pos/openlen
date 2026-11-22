@@ -17,6 +17,7 @@
       "skill": "스킬 불러오는 중",
       "present": "파일 전달 중",
       "show_widget": "시각 자료를 그리는 중",
+      "read_widget_context": "시각 자료에서 한 일을 읽는 중",
       "editar_pagina": "페이지를 편집하는 중",
       "editar_texto": "텍스트를 변경하는 중",
       "editar_atributos": "요소를 조정하는 중",

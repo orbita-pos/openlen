@@ -17,6 +17,7 @@
       "skill": "スキルを読み込み中",
       "present": "ファイルを渡しています",
       "show_widget": "ビジュアルを描画中",
+      "read_widget_context": "ビジュアルでの操作を確認中",
       "editar_pagina": "ページを編集中",
       "editar_texto": "テキストを変更しています",
       "editar_atributos": "要素を調整しています",

@@ -73,6 +73,7 @@ import {
 } from "@/lib/agent/subagents/tool";
 import { TODO_WRITE_DECLARATION } from "@/lib/agent/todo-write";
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
+import { READ_WIDGET_CONTEXT_DECLARATION } from "@/lib/agent/visuals/read-widget-context";
 import { CREATE_ASSISTANT, CREATE_ASSISTANT_DECLARATION } from "@/lib/assistants/create-tool";
 import { abTestingEnabled } from "@/lib/ab/enabled";
 import { CREATE_AB_VARIANT, CREATE_AB_VARIANT_DECLARATION } from "@/lib/agent/tools-ab";
@@ -553,6 +554,8 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     // palabras nuestras (`lib/agent/visuals/tools.ts`).
     READ_ME_DECLARATION,
     SHOW_WIDGET_DECLARATION,
+    // What the visuals shared (spec local 2026-11-22-visuales-de-verdad): Claude Code's ReadWidgetContext, always declared.
+    READ_WIDGET_CONTEXT_DECLARATION,
     // SKILLS (spec local 2026-10-26-len-skills): DeepSeek's `skill`, the one that loads a skill of the catalog.
     DECLARACION_SKILL,
     DECLARACION_PRESENT,

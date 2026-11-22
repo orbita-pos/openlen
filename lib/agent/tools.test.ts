@@ -3345,3 +3345,23 @@ describe("🔴 Len's turn woken by an agent with no owner words can't schedule o
     assert.notEqual(read.response.error, "needs_owner");
   });
 });
+
+// WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2): `read_widget_context` reads the states the turn
+// holds now, through the session's getter (a correction can replace them while the turn runs).
+describe("read_widget_context reads what the turn holds", () => {
+  it("a session with held states gets them back", async () => {
+    const { deps } = makeDeps();
+    const held = [{ widgetId: "widget_aaaa1111", state: "3 of 5", cut: false, title: "dutch_exercises" }];
+    const session = { ...makeSession(), visualStates: () => held } as AgentSession;
+    const out = await runAgentTool(session, deps as unknown as AgentDeps, "read_widget_context", {});
+    assert.equal(out.response.ok, true);
+    assert.deepEqual(JSON.parse(String(out.response.tool_result)), [{ widget_id: "widget_aaaa1111", title: "dutch_exercises", widget_reported_state: "3 of 5" }]);
+  });
+
+  it("a session without them is told no visual shared a state", async () => {
+    const { deps } = makeDeps();
+    const out = await runAgentTool(makeSession(), deps as unknown as AgentDeps, "read_widget_context", {});
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.response.tool_result), /No visual in this conversation shared a state/);
+  });
+});

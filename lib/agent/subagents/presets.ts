@@ -27,6 +27,7 @@ import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { PROPOSE_SKILLS } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
 import { MESSAGE_AGENT } from "@/lib/assistants/messages/tool";
+import { READ_WIDGET_CONTEXT } from "@/lib/agent/visuals/read-widget-context";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";
@@ -84,6 +85,9 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   // the project's chat, never the child that wrote, so only the main conversation asks it anything. A fork keeps it
   // declared, for the cache, and not allowed.
   MESSAGE_AGENT,
+  // And what the visuals shared (spec local 2026-11-22-visuales-de-verdad): it rides with the person's message to the main
+  // turn; a child has no visual and no state to read.
+  READ_WIDGET_CONTEXT,
 ]);
 
 /** The artifact tools that only read. */

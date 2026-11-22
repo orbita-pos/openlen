@@ -217,6 +217,8 @@ export const KNOWN_TOOLS = new Set([
   "skill",
   "present",
   "show_widget",
+  // What the visuals shared (spec local 2026-11-22-visuales-de-verdad): a step, like read_me.
+  "read_widget_context",
   // Len's subagents (spec local 2026-11-01-subagentes-de-len): a launch is its card; a refused one stays a step.
   "subagent",
   // Phase 2: the fork launches like `subagent`; a message that wakes a child shows its card.

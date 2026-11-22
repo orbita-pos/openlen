@@ -17,6 +17,7 @@
       "skill": "正在加载技能",
       "present": "正在交付文件",
       "show_widget": "正在绘制图示",
+      "read_widget_context": "正在读取你在图示中的操作",
       "editar_pagina": "正在编辑页面",
       "editar_texto": "正在修改文字",
       "editar_atributos": "正在调整元素",
