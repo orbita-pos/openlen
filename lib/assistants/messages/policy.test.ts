@@ -8,6 +8,7 @@ import {
   MESSAGE_CAP,
   MESSAGE_MAX,
   RESUME_HOURS,
+  relatedAgentsLine,
   rideAlongForAgent,
   rideAlongForLen,
 } from "./policy";
@@ -155,5 +156,23 @@ describe("what rides along with a person's turn", () => {
     expect(rideAlongForLen([finanzas, lucia])).toBe(`${framingForLen(finanzas)}\n\n${framingForLen(lucia)}`);
     expect(rideAlongForLen([finanzas])).toBe(framingForLen(finanzas));
     expect(rideAlongForLen([])).toBe("");
+  });
+});
+
+// Len's side (spec local 2026-11-21-len-y-el-agente-conversan, §1): one line of his turn's context names who he may write
+// to, and why each one is related to the project.
+describe("relatedAgentsLine", () => {
+  it("🔴 names each agent with why it is related, in the order given", () => {
+    expect(
+      relatedAgentsLine([
+        { name: "Finanzas", why: "asked" },
+        { name: "Lucía", why: "serves" },
+        { name: "Ventas", why: "started" },
+      ]),
+    ).toBe("Agents of this project you can write to with message_agent: Finanzas (it asked for this turn), Lucía (it serves this project), Ventas (it started this project).");
+  });
+
+  it("one agent", () => {
+    expect(relatedAgentsLine([{ name: "Lucía", why: "serves" }])).toBe("Agents of this project you can write to with message_agent: Lucía (it serves this project).");
   });
 });

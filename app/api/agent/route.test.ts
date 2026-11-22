@@ -315,9 +315,17 @@ vi.mock("@/lib/assistants/projects", () => assistantProjects);
 // waited for an agent, claimed by its person's turn — and the agent's email to its person. Nothing waits unless a test says so.
 const agentMessages = vi.hoisted(() => ({
   claimForAgent: vi.fn(async (_assistantId: string, _rowId: string, _at: Date): Promise<Record<string, unknown>[]> => []),
+  // And Len's side: what waited for him in the project, claimed by a person's turn there.
+  claimForLen: vi.fn(async (_projectId: string, _rowId: string, _at: Date): Promise<Record<string, unknown>[]> => []),
   releaseToHeld: vi.fn(async (_ids: readonly string[], _reason: string) => {}),
 }));
 vi.mock("@/lib/assistants/messages/store", () => agentMessages);
+// Len's side: the owner's agents related to the project, whom Len may write to with message_agent. None unless a test
+// gives some: every other test keeps Len's tool list and context byte for byte.
+const relatedMessages = vi.hoisted(() => ({
+  relatedAgentsOf: vi.fn(async (_projectId: string, _ownerId: string, _originAssistantId: string | null): Promise<{ id: string; name: string; homeProjectId: string; why: "asked" | "serves" | "started" }[]> => []),
+}));
+vi.mock("@/lib/assistants/messages/related", () => relatedMessages);
 const agentNote = vi.hoisted(() => ({ emailAgentNote: vi.fn(async (_note: Record<string, unknown>) => true) }));
 vi.mock("@/lib/assistants/messages/note", () => agentNote);
 // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant's agent file, none unless a test gives one.
@@ -5690,6 +5698,208 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(res.status).toBe(200);
       await readEvents(res);
       expect(mocks.runAgentLoop).toHaveBeenCalled();
+    });
+  });
+
+  // LEN'S SIDE (spec local 2026-11-21-len-y-el-agente-conversan, §1 and decisions 9 and 11): in a project with agents of
+  // its owner related to it, Len may write to them with message_agent — declared LAST, so a project with none keeps his
+  // request byte for byte —, his turn's context names them, and what they wrote that waited for him rides with the next
+  // turn a person starts there, read before his first call.
+  describe("Len's side: the agents related to the project", () => {
+    const LINE = "Agents of this project you can write to with message_agent: Lucía (it serves this project).";
+    const SERVES = [{ id: "a1", name: "Lucía", homeProjectId: "p1", why: "serves" as const }];
+    const ROW = "77777777-7777-4777-8777-7777777777a1";
+    const runner = () => mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+    const where = { url: "http://x/api/agent", signal: new AbortController().signal };
+    const sent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [Record<string, unknown>])[0];
+    const session = () => (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ relatedAgents?: unknown }])[0];
+    const reads = () =>
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("Read", { file_path: "/index.html" });
+        args.emit({ type: "text", text: "Listo." });
+        return cierre();
+      });
+    const forLen = (id: string, text: string, minute: number, ownerWords: string | null = null) => ({
+      id, assistantId: "a1", projectId: "p1", direction: "to_len", text, ownerWords, status: "delivered", heldReason: null,
+      createdAt: new Date(Date.UTC(2026, 10, 21, 12, minute)), deliveringAt: null, deliveredAt: new Date(Date.UTC(2026, 10, 21, 12, 30)),
+    });
+
+    it("🔴 with an agent related, Len gets message_agent LAST — after the connectors' tools — and the line naming it", async () => {
+      const { MESSAGE_AGENT_DECLARATION } = await import("@/lib/assistants/messages/tool");
+      relatedMessages.relatedAgentsOf.mockResolvedValueOnce(SERVES);
+      connectorDeps.readConfig.mockImplementation(async () => ({ text: JSON.stringify({ servers: { notion: connectorDeps.entry } }), approved: {}, version: 1 }));
+      reads();
+      try {
+        await readEvents(await pedir({}));
+      } finally {
+        connectorDeps.readConfig.mockImplementation(async () => ({ text: connectorDeps.none, approved: {}, version: 0 }));
+      }
+      expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledWith("p1", "u1", null);
+      const names = toolNames();
+      expect(names.at(-1)).toBe("message_agent");
+      expect(names.indexOf("mcp__notion__search")).toBeGreaterThan(-1);
+      expect(names.indexOf("mcp__notion__search")).toBeLessThan(names.indexOf("message_agent"));
+      expect(loopArgs().tools.at(-1)).toEqual(MESSAGE_AGENT_DECLARATION);
+      // In his turn's context, never in his prompt.
+      expect(sent().relatedAgents).toBe(LINE);
+      expect(String(loopArgs().messages[0]!.content)).toBe("LEN SYSTEM PROMPT");
+      // And the session the tool reads: whom he may write to, with the home each one's turn runs in.
+      expect(session().relatedAgents).toEqual([{ id: "a1", name: "Lucía", homeProjectId: "p1" }]);
+    });
+
+    it("🔴 with none, Len's declarations and context are as before: what a turn with agents off sends", async () => {
+      // The hour moves between two requests; everything else they send must not.
+      const sentWithoutTheHour = () => {
+        const { timeContext: _hour, ...rest } = sent();
+        return rest;
+      };
+      reads();
+      vi.stubEnv("OPENLEN_ASSISTANT", "0");
+      await readEvents(await pedir({}));
+      expect(relatedMessages.relatedAgentsOf).not.toHaveBeenCalled();
+      const before = { tools: loopArgs().tools, sent: sentWithoutTheHour() };
+      vi.stubEnv("OPENLEN_ASSISTANT", "");
+      // Nobody related, and a lookup that fails: the same request, byte for byte.
+      relatedMessages.relatedAgentsOf.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("db down"));
+      for (let i = 0; i < 2; i++) {
+        await readEvents(await pedir({}));
+        expect(loopArgs().tools).toEqual(before.tools);
+        expect(toolNames()).not.toContain("message_agent");
+        expect(sentWithoutTheHour()).toEqual(before.sent);
+        expect("relatedAgents" in sent()).toBe(false);
+        expect(session().relatedAgents).toBeUndefined();
+      }
+      expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledTimes(2);
+    });
+
+    it("🔴 a turn an agent's message woke gets it too, the agent that woke it first", async () => {
+      const origin = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía", message: true as const };
+      relatedMessages.relatedAgentsOf.mockResolvedValueOnce([{ id: "a1", name: "Lucía", homeProjectId: "p1", why: "asked" }]);
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "Ya está el tope: 500 €.", turnId: "77777777-7777-4777-8777-7777777777a2" }, where, { scheduled: { framing: "Lucía, your owner's own agent, sent you a message.", origin, onReply: vi.fn(async () => {}) } }));
+      expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledWith("p1", "u1", "a1");
+      expect(toolNames().at(-1)).toBe("message_agent");
+      expect(sent().relatedAgents).toBe("Agents of this project you can write to with message_agent: Lucía (it asked for this turn).");
+      // What it woke him with, its own start claimed (lib/assistants/messages/wake.ts): nothing is claimed here again.
+      expect(agentMessages.claimForLen).not.toHaveBeenCalled();
+    });
+
+    it("🔴 a member speaking still only sees the owner's agents", async () => {
+      mocks.cabeEnElTope.mockResolvedValue(true);
+      mocks.margenDeMiembros.mockResolvedValue(null);
+      mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+      fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
+      relatedMessages.relatedAgentsOf.mockResolvedValueOnce(SERVES);
+      try {
+        await readEvents(await pedir({}));
+      } finally {
+        fijarAccesoDePrueba(null);
+      }
+      expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledWith("p1", "u1", null);
+      expect(relatedMessages.relatedAgentsOf).not.toHaveBeenCalledWith("p1", "ana", expect.anything());
+      expect(toolNames().at(-1)).toBe("message_agent");
+    });
+
+    it("an agent's own turn never gets message_agent nor the line: it has message_len", async () => {
+      relatedMessages.relatedAgentsOf.mockResolvedValue(SERVES);
+      try {
+        await readEvents(await pedir({ assistantId: "a1" }));
+      } finally {
+        relatedMessages.relatedAgentsOf.mockResolvedValue([]);
+      }
+      expect(relatedMessages.relatedAgentsOf).not.toHaveBeenCalled();
+      expect(toolNames()).not.toContain("message_agent");
+      expect("relatedAgents" in sent()).toBe(false);
+    });
+
+    it("🔴 held messages for the project ride with the person's turn: claimed by its row, read before his first call, once", async () => {
+      const { rideAlongForLen } = await import("@/lib/assistants/messages/policy");
+      relatedMessages.relatedAgentsOf.mockResolvedValueOnce(SERVES);
+      agentMessages.claimForLen.mockResolvedValueOnce([forLen("m1", "¿Cuál es el tope?", 1, "dile que 500"), forLen("m2", "¿Y el plazo?", 2)]);
+      let first: readonly string[] = [];
+      let second: readonly string[] = ["x"];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        first = args.takeAgentNotices!();
+        second = args.takeAgentNotices!();
+        args.emit({ type: "text", text: "Le contesto a Lucía." });
+        return cierre();
+      });
+      await readEvents(await pedir({ turnId: ROW }));
+      expect(agentMessages.claimForLen).toHaveBeenCalledWith("p1", ROW, expect.any(Date));
+      expect(first).toEqual([
+        rideAlongForLen([{ agentName: "Lucía", messages: [{ text: "¿Cuál es el tope?", ownerWords: "dile que 500" }, { text: "¿Y el plazo?", ownerWords: null }] }]),
+      ]);
+      expect(second).toEqual([]);
+      // Kept as read: the model got it and the row it is marked read by was written.
+      expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
+      expect(agentMessages.releaseToHeld).not.toHaveBeenCalled();
+    });
+
+    it("🔴 with the subagents off, they still ride: the loop gets a notices hook only for them", async () => {
+      vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+      agentMessages.claimForLen.mockResolvedValueOnce([forLen("m1", "¿Cuál es el tope?", 1)]);
+      let first: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        first = args.takeAgentNotices!();
+        args.emit({ type: "text", text: "ok" });
+        return cierre();
+      });
+      await readEvents(await pedir({ turnId: ROW }));
+      // An agent no longer related is still named: its row is looked up.
+      expect(first).toHaveLength(1);
+      expect(first[0]).toContain('<agent-message from="Lucía">');
+      expect(loopArgs().awaitAgentNotices).toBeUndefined();
+      // Nothing held: no hook at all, as before.
+      mocks.runAgentLoop.mockImplementation(async () => cierre());
+      await readEvents(await pedir({}));
+      expect(loopArgs().takeAgentNotices).toBeUndefined();
+    });
+
+    it("🔴 what the model never got goes back to waiting; so does all of it when the turn leaves no row", async () => {
+      agentMessages.claimForLen.mockResolvedValueOnce([forLen("m1", "¿Cuál es el tope?", 1)]);
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.emit({ type: "text", text: "Hola." });
+        return cierre();
+      });
+      await readEvents(await pedir({ turnId: ROW }));
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m1"], "no_credits");
+      agentMessages.releaseToHeld.mockClear();
+      mocks.registrarTurnoDelServidor.mockClear();
+      // Handed to the model, but the turn wrote nothing: no row points at them, so they wait for the next one.
+      agentMessages.claimForLen.mockResolvedValueOnce([forLen("m2", "¿Y el plazo?", 2)]);
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.takeAgentNotices!();
+        return { ...cierre(), terminalError: true, errorCode: "upstream", transcripcion: [] };
+      });
+      await readEvents(await pedir({ turnId: ROW }));
+      expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m2"], "no_credits");
+    });
+
+    it("nothing is claimed by a turn refused for credits, an agent's turn, a turn the server started, or with agents off", async () => {
+      mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 100, refillsAt: null });
+      await readEvents(await pedir({ turnId: ROW }));
+      await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      // Lucía's request for work (ask_len) and Len's scheduled task: no person started them.
+      const request = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía" };
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "Hazme un botón", turnId: "77777777-7777-4777-8777-7777777777a3" }, where, { scheduled: { framing: "Lucía passed you a request.", origin: request, onReply: vi.fn(async () => {}) } }));
+      const task = { kind: "scheduled" as const, taskId: "t1", title: "Informe", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+      await readEvents(await runner()("u1", { projectId: "p1", prompt: "El informe", turnId: "77777777-7777-4777-8777-7777777777a4" }, where, { scheduled: { framing: "[SCHEDULE REMINDER]\nEl informe", origin: task, onReply: vi.fn(async () => {}) } }));
+      vi.stubEnv("OPENLEN_ASSISTANT", "0");
+      await readEvents(await pedir({ turnId: ROW }));
+      expect(agentMessages.claimForLen).not.toHaveBeenCalled();
+    });
+
+    it("if the mailbox can't be read, Len's turn goes on", async () => {
+      agentMessages.claimForLen.mockRejectedValueOnce(new Error("db down"));
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        args.emit({ type: "text", text: "ok" });
+        return cierre();
+      });
+      const res = await pedir({ turnId: ROW });
+      expect(res.status).toBe(200);
+      await readEvents(res);
+      expect(mocks.runAgentLoop).toHaveBeenCalled();
+      expect(agentMessages.releaseToHeld).not.toHaveBeenCalled();
     });
   });
 

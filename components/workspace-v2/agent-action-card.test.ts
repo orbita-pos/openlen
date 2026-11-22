@@ -14,7 +14,7 @@ import type { AgentAction } from "./agent-action-card";
 import { KNOWN_TOOLS } from "./agent-action-card";
 import { buildFunctionDeclarations } from "@/lib/agent/catalog";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
-import { MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
+import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 import { OWNER_REASON_CODES, type OwnerReasonCode } from "@/lib/agent/owner-reason";
 import { LEGACY_TOOL_NAMES_FOR_CARDS } from "@/lib/agent/tool-renames";
 import { readFileSync } from "node:fs";
@@ -97,10 +97,11 @@ describe("toda herramienta que deja tarjeta tiene NOMBRE", () => {
   // CON Y SIN las palancas: `bash` sólo existe con OPENLEN_TERMINAL=1, y por mirar
   // sólo el catálogo de siempre su tarjeta salió con el nombre crudo.
   // Y las que la ruta añade sólo al agente de la persona, detrás de las de Len (app/api/agent/route.ts): `ask_len` y,
-  // desde «Len y el agente conversan», `message_len`. No salen del catálogo, así que se nombran aquí.
+  // desde «Len y el agente conversan», `message_len`; y la que la ruta añade a Len, la última, sólo en un proyecto con
+  // agentes relacionados: `message_agent`. No salen del catálogo, así que se nombran aquí.
   const declaradas = [
     ...new Set(
-      [...buildFunctionDeclarations({}), ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }), ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION].map((d) => String(d.name)),
+      [...buildFunctionDeclarations({}), ...buildFunctionDeclarations({ OPENLEN_TERMINAL: "1" }), ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION, MESSAGE_AGENT_DECLARATION].map((d) => String(d.name)),
     ),
   ];
 

@@ -70,6 +70,7 @@
       "propose_skills": "Proposta di skill",
       "ask_len": "Lo passo a Len",
       "message_len": "Scrivo a Len",
+      "message_agent": "Scrivo a un agente",
       "schedule_create": "Programmo un'attività",
       "schedule_list": "Controllo le attività programmate",
       "schedule_delete": "Elimino un'attività programmata",

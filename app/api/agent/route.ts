@@ -13,8 +13,10 @@ import { createAgentBrain } from "@/lib/agent/brain";
 import { assistantSystemPrompt, assistantTools } from "@/lib/assistants/agent";
 import { agentPreloads, loadAgentOf, warnBrokenAgentFile } from "@/lib/assistants/agent-file";
 import { emailAgentNote } from "@/lib/assistants/messages/note";
-import { claimRideAlongForAgent, giveBackRideAlong, type HeldForAgent } from "@/lib/assistants/messages/ride-along";
-import { MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
+import { relatedAgentsLine } from "@/lib/assistants/messages/policy";
+import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/related";
+import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
+import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -595,6 +597,19 @@ async function correrTurno(
   const proyectoEnElTelefono: ViewingProject | null = asistente ? await projectOnThePhone(body?.viewingProjectId, proyectosDelAsistente, quien, asistente.id).catch(() => null) : null;
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
   const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
+  /** LEN'S SIDE of the messages (spec local 2026-11-21-len-y-el-agente-conversan, §1 and decision 11): the agents of the
+   *  project's OWNER (`userId` from here on, whoever speaks) related to it — the one whose request or message started
+   *  this turn, the one serving it, the ones that started it —, whom Len may write to with `message_agent`. Read while
+   *  the project loads, awaited where the tools are declared. Fail-soft: none when they can't be read, and with agents off
+   *  none at all, so his turn is as before. Never for an agent's own turn: it has `message_len`. */
+  const agenteDelOrigen = opts.scheduled && isAssistantRequestOrigin(opts.scheduled.origin) ? opts.scheduled.origin.assistantId : null;
+  const agentesRelacionadosLeidos: Promise<RelatedAgent[]> =
+    !asistente && assistantsEnabled()
+      ? relatedAgentsOf(projectId, userId, agenteDelOrigen).catch((err: unknown) => {
+          console.warn("[agent-messages] the project's agents couldn't be read; Len's turn goes on without them", err);
+          return [];
+        })
+      : Promise.resolve([]);
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
   // (lib/agent/turnos-desde-el-servidor.ts), nunca el cuerpo de una petición.
   // Al cerrar, Len contesta en el hilo; el contexto del hilo va sólo al modelo.
@@ -896,6 +911,7 @@ async function correrTurno(
       },
     };
   }
+  const agentesRelacionados = await agentesRelacionadosLeidos;
   const conPostura = (d: Record<string, unknown>[]) => {
     const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
@@ -909,7 +925,10 @@ async function correrTurno(
     // what builds it passes to Len. Then `message_len` (spec local 2026-11-21-len-y-el-agente-conversan): every agent
     // turn may write to Len — the same list whether a person or Len's message started it, so the cached prefix holds;
     // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts).
-    return asistente ? [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }] : todas;
+    if (asistente) return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }];
+    // And Len's `message_agent`, LAST — after the operations and the connectors — and only in a project with agents
+    // related to it: in one with none, his declarations are byte for byte as before.
+    return agentesRelacionados.length > 0 ? [...todas, { ...MESSAGE_AGENT_DECLARATION }] : todas;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
@@ -1482,6 +1501,8 @@ async function correrTurno(
     timeContext: timeContextDelTurno,
     // Her turn from the phone: the project on the owner's screen, right after the hour (only when sent).
     ...(proyectoEnElTelefono ? { assistantViewing: viewingLine(proyectoEnElTelefono) } : {}),
+    // Len's, in a project with agents related to it: whom he may write to, in his turn's context (never his prompt).
+    ...(agentesRelacionados.length > 0 ? { relatedAgents: relatedAgentsLine(agentesRelacionados) } : {}),
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
@@ -1737,6 +1758,8 @@ async function correrTurno(
           ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),
         }
       : {}),
+    // Len's side: whom `message_agent` may reach, with the home each one's turn runs in.
+    ...(agentesRelacionados.length > 0 ? { relatedAgents: agentesRelacionados.map(({ id, name, homeProjectId }) => ({ id, name, homeProjectId })) } : {}),
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).
@@ -1908,10 +1931,10 @@ async function correrTurno(
       let filaCerrada = false;
       /** The person's own assistant was deleted while it answered: no row, no push (see `closeRowOnce`). */
       let asistenteBorrado = false;
-      /** What waited for the agent from Len, claimed by this turn's row (a turn its person started, decision 9 of
-       *  «Len y el agente conversan»), and whether the model was handed it. What it never got, or what a turn that left
-       *  no row claimed, goes back to waiting (`closeRowOnce`). */
-      let rideAlong: HeldForAgent | null = null;
+      /** What waited for this turn's recipient — the agent, from Len; or Len, from the project's agents —, claimed by this
+       *  turn's row (a turn a person started, decision 9 of «Len y el agente conversan»), and whether the model was handed
+       *  it. What it never got, or what a turn that left no row claimed, goes back to waiting (`closeRowOnce`). */
+      let rideAlong: HeldMessages | null = null;
       let rideAlongHanded = false;
       /** The turn's row was written at its close (`closeRowOnce`). */
       let rowWritten = false;
@@ -2138,10 +2161,10 @@ async function correrTurno(
             await releaseOpening(asistente.id).catch((err: unknown) => console.warn("[agent] couldn't give back an agent's opening", err));
           }
         }
-        // What waited from Len and this turn claimed: kept as read only if the model got it AND the row it is marked
-        // read by exists; otherwise it waits for the agent's next turn.
+        // What waited and this turn claimed: kept as read only if the model got it AND the row it is marked read by
+        // exists; otherwise it waits for the recipient's next turn.
         if (rideAlong && (!rowWritten || !rideAlongHanded)) {
-          await giveBackRideAlong(rideAlong.ids).catch((err: unknown) => console.warn("[agent-messages] what waited from Len couldn't be given back", err));
+          await giveBackRideAlong(rideAlong.ids).catch((err: unknown) => console.warn("[agent-messages] what waited couldn't be given back", err));
         }
       };
       let closingRow: Promise<void> | null = null;
@@ -2549,6 +2572,16 @@ async function correrTurno(
             return null;
           });
         }
+        // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him and was kept rides with
+        // the next turn a PERSON starts here — not one the server started (an agent's request or message claimed its own
+        // when it started, lib/assistants/messages/wake.ts; a scheduled task, Len Watch or a goal round has no person) —,
+        // read before his first call after his subagents' notices. With agents off, they keep waiting.
+        if (!asistente && !programadaDelTurno && !opts.round && !compactCommand && assistantsEnabled()) {
+          rideAlong = await claimRideAlongForLen(projectId, filaId, new Date(), new Map(agentesRelacionados.map((a) => [a.id, a.name] as const))).catch((err: unknown) => {
+            console.warn("[agent-messages] what waited for Len couldn't be claimed", err);
+            return null;
+          });
+        }
         // THE IDLE SUMMARY: what this turn is given, before the loop adds to it. With the turn's own transcript
         // behind, it is the request the provider will have cached when the turn ends (pinned in loop.test.ts).
         const messagesBeforeLoop = [...messages];
@@ -2590,19 +2623,27 @@ async function correrTurno(
                 },
               }
             : {}),
-          ...(subagentsOn
+          ...(subagentsOn || (!asistente && rideAlong)
             ? {
                 // LEN'S SUBAGENTS: their notices, before each call and before closing; a settlement is marked
                 // delivered once, a child's message never (a restart must still tell how its run ended).
-                takeAgentNotices: () =>
-                  takeNotices(projectId).map((n) => {
-                    if (!n.message) void markNoticeDelivered(n.id).catch(() => false);
-                    return n.text;
-                  }),
+                // And what waited for Len from the project's agents (claimed above), once, after them: its own user
+                // message, each agent framed apart — so he still has it in the next turn. Without either, no hook.
+                takeAgentNotices: () => {
+                  const fromChildren = subagentsOn
+                    ? takeNotices(projectId).map((n) => {
+                        if (!n.message) void markNoticeDelivered(n.id).catch(() => false);
+                        return n.text;
+                      })
+                    : [];
+                  const fromAgents = rideAlong && !rideAlongHanded ? [rideAlong.framing] : [];
+                  if (fromAgents.length > 0) rideAlongHanded = true;
+                  return [...fromChildren, ...fromAgents];
+                },
                 // A turn nobody watches waits for its children before closing (DeepSeek's headless hosts). Waiting
                 // is work: the silence watchdog is kept from firing meanwhile. Not the notices' own turn: it has
                 // nobody to answer, and in the chat nobody waits (the next notice brings its own turn).
-                ...(hiloDelTurno || correoDelTurno || (programadaDelTurno && programadaDelTurno.origin.kind !== "subagents")
+                ...(subagentsOn && (hiloDelTurno || correoDelTurno || (programadaDelTurno && programadaDelTurno.origin.kind !== "subagents"))
                   ? {
                       awaitAgentNotices: async () => {
                         if (liveCount(projectId) === 0) return false;

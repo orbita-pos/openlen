@@ -7,7 +7,7 @@ import { buildFunctionDeclarations } from "./catalog";
 import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./manual-de-la-plataforma";
 import { TOOL_RENAMES } from "./tool-renames";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
-import { MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
+import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 
 // Lo que se retiró: nombres de herramienta, claves y valores en español.
 const VIEJOS_NOMBRES = Object.keys(TOOL_RENAMES);
@@ -54,6 +54,18 @@ describe("las herramientas de Len, en inglés (como DeepSeek)", () => {
     expect(keys).toEqual(expect.arrayContaining(["request", "project", "message"]));
     expect(keys.filter((k) => VIEJAS_CLAVES.includes(k))).toEqual([]);
     expect(values.filter((v) => VIEJOS_VALORES.includes(v))).toEqual([]);
+  });
+
+  // And the one the route adds to Len LAST, only in a project with agents related to it: `message_agent`.
+  it("ni la que la ruta le añade a Len con agentes relacionados", () => {
+    const keys: string[] = [];
+    const values: string[] = [];
+    walk(MESSAGE_AGENT_DECLARATION.parameters, keys, values);
+    expect(MESSAGE_AGENT_DECLARATION.name).toBe("message_agent");
+    expect(keys).toEqual(["to", "message"]);
+    expect(keys.filter((k) => VIEJAS_CLAVES.includes(k))).toEqual([]);
+    expect(values.filter((v) => VIEJOS_VALORES.includes(v))).toEqual([]);
+    for (const viejo of VIEJOS_NOMBRES) expect(MESSAGE_AGENT_DECLARATION.description).not.toContain(viejo);
   });
 
   it("el manual tampoco nombra las viejas", () => {

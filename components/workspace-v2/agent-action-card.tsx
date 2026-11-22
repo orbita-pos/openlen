@@ -259,8 +259,9 @@ export const KNOWN_TOOLS = new Set([
   // The person's own assistant (spec local 2026-11-06-asistente-propio): Len creates her; she passes work to him.
   "create_assistant",
   "ask_len",
-  // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): the agent's message to Len.
+  // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): the agent's message to Len, and Len's to it.
   "message_len",
+  "message_agent",
   // The review card of the person's own skills (spec local 2026-11-19-agentes-para-todos, §6.6).
   "propose_skills",
 ]);

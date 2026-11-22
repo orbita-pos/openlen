@@ -78,3 +78,19 @@ export function rideAlongForLen(groups: readonly FramingForLen[]): string {
 export function rideAlongForAgent(o: FramingForAgent): string {
   return framingForAgent(o);
 }
+
+/** Why an agent of the project's owner is one Len may write to in the project (lib/assistants/messages/related.ts). */
+export type RelatedWhy = "asked" | "serves" | "started";
+
+const WHY: Readonly<Record<RelatedWhy, string>> = {
+  asked: "it asked for this turn",
+  serves: "it serves this project",
+  started: "it started this project",
+};
+
+/** The line of Len's turn context that names whom he may write to with `message_agent`, and why each one: in his turn's
+ *  context, never in his prompt, so a project with no agent related keeps his request byte for byte. Never called with
+ *  an empty list. */
+export function relatedAgentsLine(agents: readonly { readonly name: string; readonly why: RelatedWhy }[]): string {
+  return `Agents of this project you can write to with message_agent: ${agents.map((a) => `${a.name} (${WHY[a.why]})`).join(", ")}.`;
+}

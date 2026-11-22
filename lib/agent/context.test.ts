@@ -90,6 +90,24 @@ describe("buildAgentContext", () => {
     expect(buildAgentContext({ state: {}, now, timeContext: "THE HOUR" })).not.toContain("looking at");
   });
 
+  // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan, §1): in a project with agents related to it,
+  // Len's turn names who he may write to — in his turn's context, never in his prompt.
+  it("🔴 Len's turn names the agents he may write to right after the hour; without them, nothing changes", () => {
+    const now = new Date("2026-11-21T12:00:00.000Z");
+    const line = "Agents of this project you can write to with message_agent: Lucía (it serves this project).";
+    const s = buildAgentContext({ state: {}, now, timeContext: "THE HOUR", relatedAgents: line });
+    expect(s).toContain(`THE HOUR\n\n${line}\n\n`);
+    expect(buildAgentContext({ state: {}, now, timeContext: "THE HOUR" })).toBe(buildAgentContext({ state: {}, now, timeContext: "THE HOUR", relatedAgents: null }));
+    expect(buildAgentContext({ state: {}, now, timeContext: "THE HOUR" })).not.toContain("message_agent");
+  });
+
+  it("buildAgentMessages carries the line into the context block, not the system prompt", () => {
+    const line = "Agents of this project you can write to with message_agent: Lucía (it serves this project).";
+    const built = buildAgentMessages({ state: {}, prompt: "hola", history: [], maxPromptTokens: 1_000_000, relatedAgents: line });
+    expect(built.contextBlock).toContain(line);
+    expect(built.systemPrompt).not.toContain("message_agent");
+  });
+
   it("omits the attached-image block when attachedImage is absent", () => {
     const s = buildAgentContext({ state: {} });
     expect(s).not.toContain("IMAGE ATTACHED BY THE USER");

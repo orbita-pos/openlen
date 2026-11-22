@@ -16,7 +16,7 @@ const all = [
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
   "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
   "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
-  "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events", "propose_skills",
+  "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events", "propose_skills", "message_agent",
 ].map((name) => ({ name }));
 const names = (p: SubagentPreset, plan = false) => childToolDeclarations(all, p, plan).map((d) => d.name);
 
@@ -57,6 +57,16 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
   it("🔴 no child proposes skills: propose_skills is the main conversation's", () => {
     for (const p of SUBAGENT_PRESETS) {
       for (const plan of [false, true]) expect(names(p, plan)).not.toContain("propose_skills");
+    }
+  });
+
+  // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): a message to the person's agent wakes it, and
+  // its answer wakes Len in the project's chat — never the child that wrote. Only the main conversation writes to it.
+  it("🔴 no child writes to the person's agents: message_agent is the main conversation's", async () => {
+    const { MESSAGE_AGENT } = await import("@/lib/assistants/messages/tool");
+    expect(MESSAGE_AGENT).toBe("message_agent");
+    for (const p of SUBAGENT_PRESETS) {
+      for (const plan of [false, true]) expect(names(p, plan)).not.toContain(MESSAGE_AGENT);
     }
   });
 

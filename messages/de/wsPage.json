@@ -70,6 +70,7 @@
       "propose_skills": "Skills vorschlagen",
       "ask_len": "An Len weitergeben",
       "message_len": "An Len schreiben",
+      "message_agent": "An einen Agenten schreiben",
       "schedule_create": "Aufgabe planen",
       "schedule_list": "Geplante Aufgaben ansehen",
       "schedule_delete": "Geplante Aufgabe löschen",

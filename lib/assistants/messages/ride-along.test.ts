@@ -2,8 +2,8 @@
 // 9): the held messages from Len, claimed by the turn's row and framed per project — they may come from several.
 import { describe, expect, it, vi } from "vitest";
 
-import { rideAlongForAgent } from "./policy";
-import { claimRideAlongForAgent, giveBackRideAlong, type RideAlongDeps } from "./ride-along";
+import { rideAlongForAgent, rideAlongForLen } from "./policy";
+import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type LenRideAlongDeps, type RideAlongDeps } from "./ride-along";
 import type { AgentLenMessage } from "./store";
 
 const AT = new Date("2026-11-21T12:00:00Z");
@@ -68,6 +68,49 @@ describe("claimRideAlongForAgent", () => {
     expect((await claimRideAlongForAgent("a1", "row-1", AT, blank))?.framing).toContain("about «p9» (id: p9)");
     const failing: RideAlongDeps = { claimForAgent: async () => [msg("m1", "p9", "Hola.", 1)], titlesOf: async () => { throw new Error("db down"); } };
     expect((await claimRideAlongForAgent("a1", "row-1", AT, failing))?.framing).toContain("about «p9» (id: p9)");
+  });
+});
+
+// And Len's side (same decision): what agents wrote to Len about THIS project and was kept without waking him rides with
+// the next turn a person starts there — each agent framed apart, under its own name, with the owner's words it passed on.
+describe("claimRideAlongForLen", () => {
+  function forLen(id: string, assistantId: string, text: string, minute: number, ownerWords: string | null = null): AgentLenMessage {
+    return { ...msg(id, "p1", text, minute), assistantId, direction: "to_len", ownerWords };
+  }
+  function lenDeps(rows: AgentLenMessage[], names: Record<string, string | null> = {}): LenRideAlongDeps & { claimForLen: ReturnType<typeof vi.fn>; nameOf: ReturnType<typeof vi.fn> } {
+    return {
+      claimForLen: vi.fn(async () => rows),
+      nameOf: vi.fn(async (id: string) => names[id] ?? null),
+    };
+  }
+
+  it("🔴 claims what waited for Len in the project with this turn's row, and frames each agent apart, under its name", async () => {
+    const d = lenDeps([forLen("m1", "a1", "¿Cuál es el tope?", 1, "dile que 500"), forLen("m2", "a2", "Publiqué la tienda.", 2), forLen("m3", "a1", "¿Y el plazo?", 3)], { a2: "Ventas" });
+    const got = await claimRideAlongForLen("p1", "row-1", AT, new Map([["a1", "Finanzas"]]), d);
+    expect(d.claimForLen).toHaveBeenCalledWith("p1", "row-1", AT);
+    expect(got).toEqual({
+      ids: ["m1", "m2", "m3"],
+      framing: rideAlongForLen([
+        { agentName: "Finanzas", messages: [{ text: "¿Cuál es el tope?", ownerWords: "dile que 500" }, { text: "¿Y el plazo?", ownerWords: null }] },
+        { agentName: "Ventas", messages: [{ text: "Publiqué la tienda.", ownerWords: null }] },
+      ]),
+    });
+    // A name the turn already knew is not looked up again.
+    expect(d.nameOf).toHaveBeenCalledTimes(1);
+    expect(d.nameOf).toHaveBeenCalledWith("a2");
+  });
+
+  it("nothing waited: null, and nobody's name is looked up", async () => {
+    const d = lenDeps([]);
+    expect(await claimRideAlongForLen("p1", "row-1", AT, new Map(), d)).toBeNull();
+    expect(d.nameOf).not.toHaveBeenCalled();
+  });
+
+  it("an agent whose name can't be read is «an agent»: a lookup that fails never stops the turn", async () => {
+    const gone = lenDeps([forLen("m1", "a9", "Hola.", 1)]);
+    expect((await claimRideAlongForLen("p1", "row-1", AT, new Map(), gone))?.framing).toContain('<agent-message from="an agent">');
+    const failing: LenRideAlongDeps = { claimForLen: async () => [forLen("m1", "a9", "Hola.", 1)], nameOf: async () => { throw new Error("db down"); } };
+    expect((await claimRideAlongForLen("p1", "row-1", AT, new Map(), failing))?.framing).toContain('<agent-message from="an agent">');
   });
 });
 

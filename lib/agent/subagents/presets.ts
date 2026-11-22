@@ -26,6 +26,7 @@ import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { PROPOSE_SKILLS } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT } from "@/lib/agent/tools-ab-name";
+import { MESSAGE_AGENT } from "@/lib/assistants/messages/tool";
 
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import type { AgentTypeSet, ResolvedAgentType } from "./agent-registry";
@@ -79,6 +80,10 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   PROPOSE_SKILLS,
   // Creating A/B worktree drafts belongs to Len's main thread.
   CREATE_AB_VARIANT,
+  // And writing to the person's agents (spec local 2026-11-21-len-y-el-agente-conversan): the agent's answer wakes Len in
+  // the project's chat, never the child that wrote, so only the main conversation asks it anything. A fork keeps it
+  // declared, for the cache, and not allowed.
+  MESSAGE_AGENT,
 ]);
 
 /** The artifact tools that only read. */

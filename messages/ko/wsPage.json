@@ -70,6 +70,7 @@
       "propose_skills": "스킬 제안 중",
       "ask_len": "Len에게 전달",
       "message_len": "Len에게 메시지",
+      "message_agent": "에이전트에게 메시지",
       "schedule_create": "예약 작업 만들기",
       "schedule_list": "예약 작업 확인",
       "schedule_delete": "예약 작업 삭제",
