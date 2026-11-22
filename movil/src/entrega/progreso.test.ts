@@ -34,4 +34,13 @@ describe("progreso real", () => {
     ]);
     expect(pasos).toEqual([{ texto: "Arreglar el menú", estado: "done" }]);
   });
+
+  it("show_widget, read_me and read_widget_context are not work steps", () => {
+    const pasos = pasosDelTrabajo([
+      { tool: "read_me", status: "done", summary: "" },
+      { tool: "show_widget", status: "done", summary: "Gasto" },
+      { tool: "read_widget_context", status: "done", summary: "" },
+    ]);
+    expect(pasos).toEqual([]);
+  });
 });

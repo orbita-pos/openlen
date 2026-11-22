@@ -11,8 +11,12 @@ import { currentToolName } from "@/lib/agent/tool-renames";
 import { ASK_USER_QUESTION } from "@/lib/agent/ask-user-question";
 import type { EventoSse } from "@/lib/len-bench/sse";
 import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
+import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
 import { lenRequestRefFrom, type LenRequestRef } from "@/lib/assistants/len-request-ref";
 import { mcpApprovalFrom } from "@/lib/mcp-connectors/approval-card";
+import { splitReplyAtWidgets, type ReplyWidget } from "@/lib/visuals/split-reply";
+import { widgetIdOf } from "@/lib/visuals/widget-id";
+import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
 
 export type EstadoLocal = "ok" | "enviando" | "noSeEnvio" | "noSeSubio" | "transcribiendo" | "noSeEntendio";
 
@@ -41,7 +45,9 @@ export type ElementoDelHilo =
   | { clave: string; t: number; tipo: "aviso"; aviso: "sinMicro" | "tope" }
   | { clave: string; t: number; tipo: "dia"; dia: string }
   // Lo que Len entregó con `present` (spec local 2026-10-31-len-movil, §5.1): se abre en el visor.
-  | { clave: string; t: number; tipo: "entregado"; archivos: readonly DeliveredFile[] };
+  | { clave: string; t: number; tipo: "entregado"; archivos: readonly DeliveredFile[] }
+  // Inline visuals (spec local 2026-11-22-visuales-de-verdad, §1): `clave = "visual:" + widgetId`, same live and stored.
+  | { clave: string; t: number; tipo: "visual"; widgetId: string; widget: ReplyWidget; final: boolean };
 
 export interface TurnoEnVivo {
   acciones?: NonNullable<StoredChatTurn["actions"]>;
@@ -50,6 +56,10 @@ export interface TurnoEnVivo {
   /** El del servidor, para corregirle el rumbo (`dirigir`): no es el de la fila. */
   turnoId: string | null;
   texto: string;
+  /** The visual being written right now (`widget_preview`), anchored to its raw text offset. */
+  liveWidget?: { title: string | null; loadingMessages: readonly string[]; code: string; textOffset: number };
+  /** Tracks raw text offsets for incoming `widget_preview` and `show_widget` cards in this live turn. */
+  widgetOffsets?: ReturnType<typeof createWidgetOffsets>;
   /** La herramienta que corre (o la última que corrió): la línea bajo su nombre. */
   avance: string | null;
   pregunta: boolean;
@@ -97,6 +107,53 @@ function deliveredOf(actions: StoredChatTurn["actions"] | undefined): DeliveredF
   return (actions ?? []).filter((a) => a.tool === "present").flatMap((a) => deliveredFrom(a.delivered) ?? []);
 }
 
+/** Splits a reply's RAW text at its `show_widget` offsets BEFORE running `parrafos()` on each text slice:
+ *  `parrafos()` strips markdown so offsets only match the raw string. Visual keys are `visual:<widgetId>` both live
+ *  and stored so the iframe is never remounted at the hand-off. */
+function elementosDeRespuesta(
+  filaId: string,
+  texto: string,
+  acciones: StoredChatTurn["actions"] | undefined,
+  liveWidget: TurnoEnVivo["liveWidget"],
+  t: number,
+  prefijoLen: string,
+): ElementoDelHilo[] {
+  const stored = (acciones ?? []).filter((a) => a.tool === SHOW_WIDGET && a.widget);
+  const widgets: { key: string; offset: number | undefined; widget: ReplyWidget; live: boolean }[] = stored.map((a, k) => ({
+    key: widgetIdOf(filaId, k),
+    offset: a.textOffset,
+    widget: a.widget!,
+    live: false,
+  }));
+  if (liveWidget) {
+    widgets.push({
+      key: widgetIdOf(filaId, stored.length),
+      offset: liveWidget.textOffset,
+      widget: { title: liveWidget.title, loadingMessages: liveWidget.loadingMessages, code: liveWidget.code },
+      live: true,
+    });
+  }
+  const out: ElementoDelHilo[] = [];
+  let nParrafo = 0;
+  for (const part of splitReplyAtWidgets(texto, widgets)) {
+    if (part.kind === "text") {
+      for (const p of parrafos(part.text)) {
+        out.push({ clave: `${prefijoLen}:${nParrafo++}`, t, tipo: "len", texto: p });
+      }
+    } else {
+      out.push({
+        clave: `visual:${part.key}`,
+        t,
+        tipo: "visual",
+        widgetId: part.key,
+        widget: part.widget,
+        final: !part.live,
+      });
+    }
+  }
+  return out;
+}
+
 export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): ElementoDelHilo[] {
   const salida: ElementoDelHilo[] = [];
   for (const turno of turnos) {
@@ -111,7 +168,7 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
     // En curso: lo que lleva dicho lo pinta el turno en vivo (o el reenganche).
     if (turno.enCurso) continue;
     if (turno.origen && isSubagentOrigin(turno.origen)) salida.push({ clave: `${turno.id}:origen`, t, tipo: "origen", origen: "subagentes" });
-    parrafos(turno.assistantReasoning).forEach((texto, i) => salida.push({ clave: `${turno.id}:len:${i}`, t, tipo: "len", texto }));
+    salida.push(...elementosDeRespuesta(turno.id, turno.assistantReasoning, turno.actions, undefined, t, `${turno.id}:len`));
     const refs = subagentRefsOf(turno.actions);
     if (refs.length) salida.push({ clave: `${turno.id}:subagentes`, t, tipo: "subagentes", fila: turno.id, refs });
     const pedidos = lenRequestRefsOf(turno.actions);
@@ -139,7 +196,7 @@ export function pendingQuestionOf(turn: StoredChatTurn): Accion | null {
 }
 
 export function turnoNuevo(fila: string | null = null): TurnoEnVivo {
-  return { fila, turnoId: null, texto: "", avance: null, pregunta: false, tarjetas: [], cambioLaPagina: false, error: false, terminado: false };
+  return { fila, turnoId: null, texto: "", widgetOffsets: createWidgetOffsets(), avance: null, pregunta: false, tarjetas: [], cambioLaPagina: false, error: false, terminado: false };
 }
 
 /** Un evento del stream de /api/agent (los de `AgentStreamEvent` en lib/agent/loop.ts). */
@@ -150,25 +207,51 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
       return typeof d.turnoId === "string" ? { ...v, turnoId: d.turnoId } : v;
     case "text":
       return typeof d.text === "string" ? { ...v, texto: v.texto + d.text } : v;
+    case "widget_preview": {
+      const code = typeof d.code === "string" ? d.code : "";
+      if (!code) return v;
+      const callIndex = typeof d.callIndex === "number" ? d.callIndex : 0;
+      const offsets = v.widgetOffsets ?? createWidgetOffsets();
+      const textOffset = offsets.preview(callIndex, v.texto.length);
+      const loadingMessages = Array.isArray(d.loadingMessages)
+        ? d.loadingMessages.filter((m): m is string => typeof m === "string")
+        : [];
+      return {
+        ...v,
+        widgetOffsets: offsets,
+        liveWidget: {
+          title: typeof d.title === "string" ? d.title : null,
+          loadingMessages,
+          code,
+          textOffset,
+        },
+      };
+    }
     case "action": {
       if (typeof d.tool !== "string") return v;
       const status = d.status === "running" || d.status === "error" || d.status === "warning" ? d.status : "done";
       const entregado = d.tool === "present" ? deliveredFrom(d.delivered) : null;
       const ref = subagentRefFrom(d.subagent);
       const pedido = d.tool === "ask_len" ? lenRequestRefFrom(d.lenRequest) : null;
+      const isFinalWidget = d.tool === SHOW_WIDGET && status !== "running";
+      const widget = isFinalWidget ? widgetFrom(d.widget) : null;
+      const offsets = isFinalWidget ? (v.widgetOffsets ?? createWidgetOffsets()) : v.widgetOffsets;
+      const textOffset = isFinalWidget ? offsets!.card(v.texto.length) : null;
       const accion: NonNullable<StoredChatTurn["actions"]>[number] = {
         tool: d.tool, status, summary: typeof d.summary === "string" ? d.summary : "",
         ...(entregado ? { delivered: entregado } : {}),
         ...(ref ? { subagent: ref } : {}),
         ...(pedido ? { lenRequest: pedido } : {}),
+        ...(widget ? { widget } : {}),
+        ...(textOffset !== null ? { textOffset } : {}),
         ...(Array.isArray(d.todos) ? { todos: d.todos.filter((x): x is { content: string; status: "pending" | "in_progress" | "completed" } => !!x && typeof x === "object" && typeof x.content === "string" && ["pending", "in_progress", "completed"].includes(x.status)) } : {}),
       };
       const acciones = [...(v.acciones ?? [])];
-      let i = acciones.length - 1;
-      while (i >= 0 && !(acciones[i].tool === accion.tool && acciones[i].status === "running")) i--;
+      // Same rule as `upsertActionInto`: a final card replaces the oldest matching `running` card so parallel calls keep server order.
+      const i = accion.status !== "running" ? acciones.findIndex((a) => a.tool === accion.tool && a.status === "running") : -1;
       if (i >= 0) acciones[i] = accion;
       else acciones.push(accion);
-      v = { ...v, acciones };
+      v = { ...v, acciones, ...(offsets ? { widgetOffsets: offsets } : {}), ...(isFinalWidget ? { liveWidget: undefined } : {}) };
       if (currentToolName(d.tool) === ASK_USER_QUESTION) return { ...v, pregunta: d.status !== "error" && !d.respuesta && !d.dismissed, avance: null };
       // La línea la cambia la siguiente herramienta, no el final de ésta: así no parpadea vacía entre una y otra.
       return d.status === "running" || v.avance === null ? { ...v, avance: d.tool } : v;
@@ -194,7 +277,7 @@ export function conEvento(v: TurnoEnVivo, e: EventoSse): TurnoEnVivo {
 
 /** Lo que el turno en vivo pone en el hilo. `t`: ahora — el turno que corre es siempre lo último. */
 export function elementosDelTurno(v: TurnoEnVivo, t: number): ElementoDelHilo[] {
-  const s: ElementoDelHilo[] = parrafos(v.texto).map((texto, i): ElementoDelHilo => ({ clave: `vivo:len:${i}`, t, tipo: "len", texto }));
+  const s: ElementoDelHilo[] = elementosDeRespuesta(v.fila ?? "vivo", v.texto, v.acciones, v.liveWidget, t, "vivo:len");
   const refs = subagentRefsOf(v.acciones);
   if (refs.length && v.fila) s.push({ clave: "vivo:subagentes", t, tipo: "subagentes", fila: v.fila, refs });
   const pedidos = lenRequestRefsOf(v.acciones);

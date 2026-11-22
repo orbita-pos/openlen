@@ -115,11 +115,14 @@ export function useChat(o: OpcionesDelChat) {
     const { cliente, projectId, assistantId, viewingProjectId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
-    vivoRef.current = turnoNuevo(fila);
-    setVivo(vivoRef.current);
+    let estado = turnoNuevo(fila);
+    vivoRef.current = estado;
+    setVivo(estado);
     const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}), ...(opening ? { opening: true } : {}) } : {}) }, (e) => {
       if (actual !== epoca.current) return;
-      setVivo((v) => (v ? conEvento(v, e) : v));
+      estado = conEvento(estado, e);
+      vivoRef.current = estado;
+      setVivo(estado);
       if (e.nombre === "turno" && typeof (e.datos as { turnoId?: unknown } | null)?.turnoId === "string") {
         setLocales(ls => ls.map(x => (x.tipo === "tu" || x.tipo === "voz") && x.fila === fila && x.estado === "enviando" ? { ...x, estado: "ok" } : x));
       }
@@ -324,7 +327,11 @@ export function useChat(o: OpcionesDelChat) {
 
   const elementos = useMemo(() => {
     const ahora = Date.now();
-    const delTurno = vivo ? elementosDelTurno(vivo, ahora) : reenganche ? elementosDelTurno({ ...turnoNuevo(), texto: reenganche.texto }, ahora) : [];
+    const delTurno = vivo
+      ? elementosDelTurno(vivo, ahora)
+      : reenganche
+        ? elementosDelTurno({ ...turnoNuevo(reenganche.fila), texto: reenganche.texto, acciones: reenganche.acciones }, ahora)
+        : [];
     return hiloCompleto([hiloDesdeElHistorial(o.historial, ahora), locales, delTurno], diaLocal);
   }, [o.historial, locales, vivo, reenganche]);
 

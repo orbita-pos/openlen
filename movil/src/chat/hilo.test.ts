@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StoredChatTurn } from "@/lib/projects/types";
+import { widgetIdOf } from "@/lib/visuals/widget-id";
 import {
   claveDeAvance,
   conEvento,
@@ -310,5 +311,133 @@ describe("her requests to Len in her thread", () => {
   it("a malformed request is no card", () => {
     const v = conEvento(turnoNuevo("t2"), ev("action", { tool: "ask_len", status: "done", summary: "x", lenRequest: { filaId: 3 } }));
     expect(tipos(elementosDelTurno(v, Date.now()))).not.toContain("lenPedidos");
+  });
+});
+
+// Inline visuals in the phone's chat (spec local 2026-11-22-visuales-de-verdad, §1): split on raw text BEFORE parrafos(),
+// same clave (`visual:<widgetId>`) live and stored so the frame isn't remounted at the hand-off.
+describe("visuals in the phone thread", () => {
+  const w1 = { title: "Gasto", loadingMessages: ["Dibujando"], code: "<svg>1</svg>" };
+  const w2 = { title: "Ejercicios", loadingMessages: [], code: "<div>2</div>" };
+
+  it("🔴 stored turn: splits raw text BEFORE parrafos() and puts visuals at their offsets with visual:<widgetId>", () => {
+    // Raw markdown "**Uno**" is 7 chars; parrafos() strips "**" to "Uno" (3 chars).
+    // Cutting after parrafos() would put the visual past the end instead of between Uno and Dos!
+    const raw = "**Uno**\n\n**Dos**\n\nTres";
+    const offset1 = "**Uno**".length;
+    const offset2 = "**Uno**\n\n**Dos**".length;
+    const h = hiloDesdeElHistorial(
+      [
+        turno({
+          id: "row-1",
+          userText: "Muéstrame",
+          assistantReasoning: raw,
+          noDocChange: true,
+          appliedAt: 100,
+          actions: [
+            { tool: "show_widget", status: "done", summary: "Gasto", widget: w1, textOffset: offset1 },
+            { tool: "show_widget", status: "done", summary: "Ejercicios", widget: w2, textOffset: offset2 },
+          ],
+        }),
+      ],
+      999,
+    );
+    expect(tipos(h)).toEqual(["tu", "len", "visual", "len", "visual", "len"]);
+    expect(h[1]).toMatchObject({ tipo: "len", texto: "Uno" });
+    expect(h[2]).toEqual({
+      clave: `visual:${widgetIdOf("row-1", 0)}`,
+      t: 100,
+      tipo: "visual",
+      widgetId: widgetIdOf("row-1", 0),
+      widget: w1,
+      final: true,
+    });
+    expect(h[3]).toMatchObject({ tipo: "len", texto: "Dos" });
+    expect(h[4]).toEqual({
+      clave: `visual:${widgetIdOf("row-1", 1)}`,
+      t: 100,
+      tipo: "visual",
+      widgetId: widgetIdOf("row-1", 1),
+      widget: w2,
+      final: true,
+    });
+    expect(h[5]).toMatchObject({ tipo: "len", texto: "Tres" });
+  });
+
+  it("a stored visual without textOffset goes at the end; a failed card without widget draws nothing and keeps k", () => {
+    const h = hiloDesdeElHistorial(
+      [
+        turno({
+          id: "row-2",
+          assistantReasoning: "Aquí va.",
+          noDocChange: true,
+          appliedAt: 200,
+          actions: [
+            { tool: "show_widget", status: "error", summary: "bad args" },
+            { tool: "show_widget", status: "done", summary: "Gasto", widget: w1 },
+          ],
+        }),
+      ],
+      999,
+    );
+    expect(tipos(h)).toEqual(["len", "visual"]);
+    expect(h[1]).toMatchObject({
+      clave: `visual:${widgetIdOf("row-2", 0)}`,
+      widgetId: widgetIdOf("row-2", 0),
+      widget: w1,
+      final: true,
+    });
+  });
+
+  it("🔴 live turn: widget_preview renders non-final at its raw offset, then its action card finalizes with the exact same clave", () => {
+    let v = turnoNuevo("row-live");
+    v = conEvento(v, ev("text", { text: "**Antes**" }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "running", summary: "" }));
+    v = conEvento(v, ev("widget_preview", { callIndex: 0, title: "Gasto", loadingMessages: ["Dibujando"], code: "<svg>parcial" }));
+    const liveItems = elementosDelTurno(v, 50);
+    expect(tipos(liveItems)).toEqual(["len", "visual"]);
+    expect(liveItems[1]).toEqual({
+      clave: `visual:${widgetIdOf("row-live", 0)}`,
+      t: 50,
+      tipo: "visual",
+      widgetId: widgetIdOf("row-live", 0),
+      widget: { title: "Gasto", loadingMessages: ["Dibujando"], code: "<svg>parcial" },
+      final: false,
+    });
+
+    v = conEvento(v, ev("text", { text: "\n\nDespués" }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "done", summary: "Gasto", widget: w1 }));
+    const finalItems = elementosDelTurno(v, 60);
+    expect(tipos(finalItems)).toEqual(["len", "visual", "len"]);
+    expect(finalItems[0]).toMatchObject({ tipo: "len", texto: "Antes" });
+    expect(finalItems[1]).toEqual({
+      clave: `visual:${widgetIdOf("row-live", 0)}`,
+      t: 60,
+      tipo: "visual",
+      widgetId: widgetIdOf("row-live", 0),
+      widget: w1,
+      final: true,
+    });
+    expect(finalItems[2]).toMatchObject({ tipo: "len", texto: "Después" });
+  });
+
+  it("a failed show_widget action clears its preview and leaves no visual", () => {
+    let v = turnoNuevo("row-fail");
+    v = conEvento(v, ev("widget_preview", { callIndex: 0, title: "X", loadingMessages: [], code: "<svg/>" }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "error", summary: "bad" }));
+    expect(tipos(elementosDelTurno(v, 10))).toEqual([]);
+  });
+
+  it("two parallel show_widget calls keep their order (k = 0, 1) matching the server", () => {
+    let v = turnoNuevo("row-par");
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "running", summary: "" }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "running", summary: "" }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "done", summary: "Gasto", widget: w1 }));
+    v = conEvento(v, ev("action", { tool: "show_widget", status: "done", summary: "Ejercicios", widget: w2 }));
+    const items = elementosDelTurno(v, 10);
+    expect(items).toEqual([
+      { clave: `visual:${widgetIdOf("row-par", 0)}`, t: 10, tipo: "visual", widgetId: widgetIdOf("row-par", 0), widget: w1, final: true },
+      { clave: `visual:${widgetIdOf("row-par", 1)}`, t: 10, tipo: "visual", widgetId: widgetIdOf("row-par", 1), widget: w2, final: true },
+    ]);
   });
 });

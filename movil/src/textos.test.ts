@@ -43,6 +43,18 @@ describe("los textos de la app", () => {
       for (const k of ["title", "body", "ok"]) expect(m.abDecisionInProgress?.[k], `${i}.abDecisionInProgress.${k}`).toBeTruthy();
     }
   });
+  it("🔴 the phone exposes panelsChat's five visual keys as movil.visual in all 10 languages", () => {
+    const fuente = fs.readFileSync(path.join(process.cwd(), "movil/src/textos.tsx"), "utf8");
+    for (const k of ["visualLabel", "visualLoading", "visualLinkTitle", "visualLinkOpen", "visualLinkCancel"]) {
+      expect(fuente).toContain(k);
+    }
+    for (const i of IDIOMAS) {
+      const m = JSON.parse(fs.readFileSync(path.join(process.cwd(), "messages", i, "panelsChat.json"), "utf8")) as Record<string, string>;
+      for (const k of ["visualLabel", "visualLoading", "visualLinkTitle", "visualLinkOpen", "visualLinkCancel"]) {
+        expect(typeof m[k] === "string" && m[k].trim().length > 0, `${i}.panelsChat.${k}`).toBe(true);
+      }
+    }
+  });
   it("el chat tiene sus textos", () => {
     expect(es).toContain("chat.pedirCambio");
     expect(es).toContain("chat.avance.trabajando");

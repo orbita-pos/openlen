@@ -257,3 +257,31 @@ it("the new keys exist in all 10 locales, with the web's words", () => {
   expect(movil).toMatchObject({ status: web.subagent.status, steps: web.subagent.steps, stop: web.subagent.stop, trabajando: web.subagent.liveBar, worktree: web.subagent.worktree, origen: web.turn.fromSubagents });
  }
 });
+
+it("🔴 a visual item renders in the phone chat and forwards sendPrompt to chat.mandar", async () => {
+ cliente.pedir.mockResolvedValue(Response.json({ url: "https://lienzo-visuals.openlen.app/" }));
+ const mandar = vi.fn();
+ const visual = {
+  clave: "visual:widget_aaaa1111",
+  t: 2,
+  tipo: "visual",
+  widgetId: "widget_aaaa1111",
+  widget: { title: "Gasto", loadingMessages: [], code: "<svg/>" },
+  final: true,
+ } as unknown as ElementoDelHilo;
+ const chat = { elementos: [mensaje(), visual], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar, reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ await act(async () => {
+  root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} />);
+ });
+ const row = host.querySelector('[data-clave="visual:widget_aaaa1111"]');
+ expect(row).not.toBeNull();
+ expect(row!.classList.contains("is-visual")).toBe(true);
+ const iframe = row!.querySelector("iframe")!;
+ expect(iframe).not.toBeNull();
+ vi.spyOn(document, "activeElement", "get").mockReturnValue(iframe);
+ act(() => { window.dispatchEvent(new Event("blur")); });
+ act(() => {
+  window.dispatchEvent(new MessageEvent("message", { data: { kind: "ol-visual:prompt", text: "Listo" }, origin: "https://lienzo-visuals.openlen.app", source: iframe.contentWindow }));
+ });
+ expect(mandar).toHaveBeenCalledWith("Listo");
+});

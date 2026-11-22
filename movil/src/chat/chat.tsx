@@ -30,10 +30,11 @@ import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
 import { AvisosDeLen } from "./avisos";
 import { TarjetasDeHerramientas } from "../herramientas/tool-cards";
+import { VisualDelChat } from "./visual";
 
 const reloj = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 const ladoDe = (e: ElementoDelHilo): "me" | "len" | null =>
-  e.tipo === "tu" || e.tipo === "voz" ? "me" : e.tipo === "len" || e.tipo === "verEnTuPagina" || e.tipo === "fallo" || e.tipo === "tarjeta" ? "len" : null;
+  e.tipo === "tu" || e.tipo === "voz" ? "me" : e.tipo === "len" || e.tipo === "visual" || e.tipo === "verEnTuPagina" || e.tipo === "fallo" || e.tipo === "tarjeta" ? "len" : null;
 
 interface Props {
   abierto: boolean;
@@ -233,15 +234,15 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       );
     }
     const quien = ladoDe(e) ?? "len";
-    const cls = ["ch-row", `is-${quien}`, previo === quien && "is-cont", i >= vistos.current && "is-new", (e.tipo === "verEnTuPagina" || e.tipo === "tarjeta") && "is-card"]
+    const cls = ["ch-row", `is-${quien}`, previo === quien && "is-cont", i >= vistos.current && "is-new", (e.tipo === "verEnTuPagina" || e.tipo === "tarjeta") && "is-card", e.tipo === "visual" && "is-visual"]
       .filter(Boolean)
       .join(" ");
     previo = quien;
     const recibido = (e.tipo === "tu" || e.tipo === "voz") && e.estado === "ok";
-    const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "verEnTuPagina"));
+    const leido = i === ultimoMio && recibido && (!!chat.turnoId || chat.elementos.slice(i + 1).some(x => x.tipo === "len" || x.tipo === "visual" || x.tipo === "verEnTuPagina"));
     return (
       <div key={e.clave} className={cls} data-clave={e.clave}>
-        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} onInstalada={() => onHerramientasCambiaron?.()} />
+        <Burbuja e={e} chat={chat} cliente={cliente} projectId={projectId} idioma={idioma} onVerPagina={onVerPagina} onInstalada={() => onHerramientasCambiaron?.()} onPromptVisual={(text) => { alFinal(); chat.mandar(text); }} />
         {leido && <span className="ch-rcpt">{t("leido")}</span>}
       </div>
     );
@@ -384,7 +385,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   );
 }
 
-function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada }: {
+function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada, onPromptVisual }: {
   e: ElementoDelHilo;
   chat: Chat;
   cliente: ClienteDeOpenLen;
@@ -393,6 +394,8 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada
   onVerPagina?: () => void;
   /** A tool installed from a card here: the app reads the person's tools again. */
   onInstalada: () => void;
+  /** A visual's `sendPrompt`: goes as the person's message (or correction while a turn runs). */
+  onPromptVisual: (text: string) => void;
 }) {
   const t = useTranslations("movil.chat");
   const ta = useTranslations("movil.adjuntos");
@@ -474,6 +477,8 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada
       );
     case "entregado":
       return <DeliveredCards cliente={cliente} archivos={e.archivos} />;
+    case "visual":
+      return <VisualDelChat widgetId={e.widgetId} widget={e.widget} final={e.final} cliente={cliente} onPrompt={onPromptVisual} />;
     default:
       return null;
   }

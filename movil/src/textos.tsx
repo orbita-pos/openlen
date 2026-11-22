@@ -35,7 +35,15 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
   const herramientas = { ...textosHerramientas[idioma], tools: sub(wsChrome.default, "tools"), installCard: sub(panelsChat.default, "installCard"), toolCard: sub(panelsChat.default, "toolCard"), mcpApproval: sub(panelsChat.default, "mcpApproval") };
   // The person's own assistant's tab (phase 5): her place's texts are the web's own (`own`).
   const asistente = { ...textosAsistente[idioma], own: sub(panelsChat.default, "ownAssistant") };
-  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion, avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente }, llamada: llamada.default };
+  // Inline visuals in the phone's chat (spec local 2026-11-22-visuales-de-verdad, §1): reuse panelsChat's texts.
+  const visual = {
+    visualLabel: panelsChat.default.visualLabel,
+    visualLoading: panelsChat.default.visualLoading,
+    visualLinkTitle: panelsChat.default.visualLinkTitle,
+    visualLinkOpen: panelsChat.default.visualLinkOpen,
+    visualLinkCancel: panelsChat.default.visualLinkCancel,
+  };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion, avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente, visual }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {

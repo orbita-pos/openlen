@@ -3,10 +3,12 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useChat, type Chat } from "./use-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
-const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn(), foto: vi.fn() }));
+import { widgetIdOf } from "@/lib/visuals/widget-id";
+const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn(), foto: vi.fn(), leerTurno: vi.fn() }));
 vi.mock("./archivos", async importar => ({...await importar<typeof import("./archivos")>(), subirArchivo:m.archivo}));
 vi.mock("./foto", () => ({ achicarFoto: async (foto: Blob) => foto }));
 vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: vi.fn(), subirFoto: m.foto, transcribir: vi.fn() }));
+vi.mock("../api/proyectos", () => ({ leerTurno: m.leerTurno }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root;
 let host: HTMLDivElement;
@@ -156,4 +158,29 @@ it("mantiene enviando hasta que el servidor confirma el turno", async () => {
     await act(async () => evento({ nombre: "turno", datos: { turnoId: "servidor" } }));
     expect(chat.elementos.find(e => e.tipo === "tu")).toMatchObject({ estado: "ok" });
   } finally { await act(async () => terminar("terminado")); }
+});
+
+it("🔴 re-hooking a turn in flight keeps its row id and show_widget actions so visuals render with their stable clave", async () => {
+  const widget = { title: "Gasto", loadingMessages: [], code: "<svg/>" };
+  m.leerTurno.mockResolvedValue({
+    turnoId: "srv-1",
+    turno: {
+      id: "fila-9",
+      userText: "Muéstrame",
+      assistantReasoning: "Aquí va",
+      status: "applied",
+      enCurso: true,
+      actions: [{ tool: "show_widget", status: "done", summary: "Gasto", widget, textOffset: 7 }],
+    },
+  });
+  const historial: StoredChatTurn[] = [{ id: "fila-9", userText: "Muéstrame", assistantReasoning: "", status: "applied", enCurso: true }];
+  await act(async () => root.render(<Pantalla id="p1" historial={historial} />));
+  const vis = chat.elementos.find((e) => e.tipo === "visual");
+  expect(vis).toMatchObject({
+    clave: `visual:${widgetIdOf("fila-9", 0)}`,
+    tipo: "visual",
+    widgetId: widgetIdOf("fila-9", 0),
+    widget,
+    final: true,
+  });
 });

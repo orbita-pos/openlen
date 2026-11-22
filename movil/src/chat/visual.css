@@ -1,0 +1,14 @@
+/* Inline visuals in the phone's chat (spec local 2026-11-22-visuales-de-verdad, §1): full width of the chat column,
+   transparent over the chat background, and 44 px targets on the link confirmation dialog. */
+.ch-row.is-visual { width: 100%; max-width: 100%; align-items: stretch; }
+.ch-visual { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.ch-visual-frame { width: 100%; border: 0; background: transparent; display: block; }
+.ch-visual-loading { margin: 0; font-size: 12px; color: var(--c-dim); }
+.ch-visual-link { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--c-line); border-radius: 16px; background: var(--c-len); color: var(--c-ink); font-size: 13px; }
+.ch-visual-link-title { margin: 0; font-weight: 600; }
+.ch-visual-link-href { margin: 0; color: var(--c-dim); word-break: break-all; }
+.ch-visual-link-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.ch-visual-link-actions button { min-height: 44px; padding: 0 16px; border-radius: 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.ch-visual-link-actions button:focus-visible { outline: 2px solid var(--c-qr); outline-offset: 2px; }
+.ch-visual-link-cancel { border: 1px solid var(--c-line); background: transparent; color: var(--c-ink); }
+.ch-visual-link-open { border: 0; background: var(--c-me); color: var(--c-me-ink); }
