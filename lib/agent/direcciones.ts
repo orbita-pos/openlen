@@ -192,15 +192,17 @@ export function dirigir(
   turnoId: string,
   userId: string,
   texto: string,
-  /** A correction that must not be lost: `alCerrarSinLeer` runs with it if the turn closes before reading it. */
-  o: { readonly alCerrarSinLeer?: (texto: string) => void } = {},
+  /** A correction that must not be lost: `alCerrarSinLeer` runs with it if the turn closes before reading it.
+   *  `append`: what the server adds after the person's words (the line naming what the visuals shared, spec local
+   *  2026-11-22-visuales-de-verdad), outside their cap. */
+  o: { readonly alCerrarSinLeer?: (texto: string) => void; readonly append?: string } = {},
 ): ResultadoDirigir {
   const limpio = texto.trim().slice(0, MAX_DIRECCION);
   if (!limpio) return "vacio";
   const turno = abiertos.get(turnoId);
   if (!turno) return "no_existe";
   if (turno.userId !== userId) return "ajeno";
-  turno.pendientes.push(limpio);
+  turno.pendientes.push(`${limpio}${o.append ?? ""}`);
   if (o.alCerrarSinLeer) {
     const lista = turno.respaldos ?? [];
     lista.push({ texto: limpio, alCerrarSinLeer: o.alCerrarSinLeer });

@@ -15,7 +15,8 @@
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { dismissQuestion, responder } from "@/lib/agent/direcciones";
+import { dismissQuestion, responder, setVisualStates } from "@/lib/agent/direcciones";
+import { visualStatesForOpenTurn } from "@/lib/agent/visuals/turn-states";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     return json({ error: "cuerpo_invalido" }, 400);
   }
 
-  const { turnoId, answers, dismiss } = (cuerpo ?? {}) as { turnoId?: unknown; answers?: unknown; dismiss?: unknown };
+  const { turnoId, answers, dismiss, visualStates } = (cuerpo ?? {}) as { turnoId?: unknown; answers?: unknown; dismiss?: unknown; visualStates?: unknown };
   if (typeof turnoId !== "string" || !turnoId) return json({ error: "falta_turno" }, 400);
 
   // LOTE 7-8 · «Pedir cambios» en la revisión del plan: se descarta la espera
@@ -50,8 +51,14 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     return json({ error: "turno_no_encontrado" }, 404);
   }
 
+  // What the visuals shared comes with the answer too (spec local 2026-11-22-visuales-de-verdad): it replaces what the
+  // turn held. Read before answering, while the turn is surely still open.
+  const estados = await visualStatesForOpenTurn(turnoId, userId, visualStates);
   const r = responder(turnoId, userId, answers);
-  if (r === "ok") return json({ ok: true });
+  if (r === "ok") {
+    if (estados) setVisualStates(turnoId, estados);
+    return json({ ok: true });
+  }
   if (r === "invalida") return json({ error: "respuesta_invalida" }, 400);
   if (r === "sin_pregunta" || r === "ya_respondida") return json({ error: r }, 409);
   return json({ error: "turno_no_encontrado" }, 404);

@@ -18,7 +18,9 @@
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { dirigir, MAX_DIRECCION } from "@/lib/agent/direcciones";
+import { dirigir, MAX_DIRECCION, setVisualStates } from "@/lib/agent/direcciones";
+import { visualStatesReminder } from "@/lib/agent/visuals/model-context";
+import { visualStatesForOpenTurn } from "@/lib/agent/visuals/turn-states";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,15 +43,19 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
     return json({ error: "cuerpo_invalido" }, 400);
   }
 
-  const { turnoId, texto } = (cuerpo ?? {}) as { turnoId?: unknown; texto?: unknown };
+  const { turnoId, texto, visualStates } = (cuerpo ?? {}) as { turnoId?: unknown; texto?: unknown; visualStates?: unknown };
   if (typeof turnoId !== "string" || !turnoId) return json({ error: "falta_turno" }, 400);
   if (typeof texto !== "string") return json({ error: "falta_texto" }, 400);
 
-  const r = dirigir(turnoId, userId, texto);
+  // What the visuals shared comes with the correction too (spec local 2026-11-22-visuales-de-verdad): it replaces what
+  // the turn held, and the correction names the visuals that shared a state — never the states themselves.
+  const estados = await visualStatesForOpenTurn(turnoId, userId, visualStates);
+  const r = dirigir(turnoId, userId, texto, estados?.length ? { append: visualStatesReminder(estados) } : {});
   if (r === "vacio") return json({ error: "texto_vacio" }, 400);
   // `ajeno` y `no_existe` responden LO MISMO a propósito: distinguirlos le diría
   // a quien prueba ids cuáles existen.
   if (r !== "ok") return json({ error: "turno_no_encontrado" }, 404);
+  if (estados) setVisualStates(turnoId, estados);
 
   // El bucle la recogerá entre vueltas. No se espera a que lo haga: bloquear
   // aquí ataría la respuesta del taller a la velocidad del modelo.

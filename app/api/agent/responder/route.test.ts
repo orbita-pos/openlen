@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const quien = vi.hoisted(() => ({ userId: "u1" as string | null }));
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: async () => quien.userId }));
+vi.mock("@/lib/projects/chat", () => ({ widgetsOfConversation: vi.fn(async () => new Map()) }));
 
 import { POST } from "./route";
-import { _vaciarTodo, abrirTurno, esperarRespuesta } from "@/lib/agent/direcciones";
+import { _vaciarTodo, abrirTurno, esperarRespuesta, noteWidgetDrawn, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
 import { QUESTION_DISMISSED } from "@/lib/agent/ask-user-question";
 
 const pedir = (cuerpo: unknown) =>
@@ -79,5 +80,27 @@ describe("POST /api/agent/responder", () => {
     abrirTurno("t1", "u1");
     void esperarRespuesta("t1", { timeoutMs: 60_000 });
     expect((await pedir({ turnoId: "t1", answers: "48 horas" })).status).toBe(400);
+  });
+});
+
+// What the visuals shared (spec local 2026-11-22-visuales-de-verdad, §2): an answer brings the latest state of each visual
+// too, and replaces what the turn held; without them, what was held stays.
+describe("an answer brings what the visuals shared", () => {
+  it("with states of a visual the turn drew, the turn holds them", async () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1" });
+    noteWidgetDrawn("t1", "widget_nnnn0000", "plan_options");
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect((await pedir({ turnoId: "t1", answers: respuesta, visualStates: [{ widgetId: "widget_nnnn0000", state: "picked B" }] })).status).toBe(200);
+    await espera;
+    expect(visualStatesOf("t1")).toEqual([{ widgetId: "widget_nnnn0000", state: "picked B", cut: false, title: "plan_options" }]);
+  });
+
+  it("BRAZO DE CONTROL: without them, what was held stays", async () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1" });
+    setVisualStates("t1", [{ widgetId: "widget_nnnn0000", state: "kept", cut: false, title: null }]);
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    await pedir({ turnoId: "t1", answers: respuesta });
+    await espera;
+    expect(visualStatesOf("t1")).toEqual([{ widgetId: "widget_nnnn0000", state: "kept", cut: false, title: null }]);
   });
 });
