@@ -579,6 +579,11 @@ async function correrTurno(
    *  what it read lives only in its transcript, so its row stays even when it says nothing (ruling R4-1). */
   const wokenByMessage =
     wokenByLen || (opts.scheduled !== undefined && isAssistantRequestOrigin(opts.scheduled.origin) && opts.scheduled.origin.message === true);
+  /** LEN's turn an agent's message woke with none of the owner's words in what it claimed (wake.ts leaves
+   *  `withOwnerWords` off the origin): it runs as the owner with no owner in it, so what needs their words is refused
+   *  when it runs (lib/assistants/messages/woken.ts; final review I2). */
+  const wokenByAgent =
+    wokenByMessage && !wokenByLen && opts.scheduled !== undefined && isAssistantRequestOrigin(opts.scheduled.origin) && opts.scheduled.origin.withOwnerWords !== true;
   /** Its agent file (spec local 2026-11-19-agentes-para-todos, §6.4): its instructions, its skills. A file that is gone
    *  or broken leaves the plain assistant — the turn still runs. */
   const agenteDelAsistente = asistente?.agentType
@@ -1758,6 +1763,8 @@ async function correrTurno(
             ...(asistente.agentType ? { withAgentFile: true } : {}),
             // Len's message started it, not its person: what needs their words is refused (lib/agent/tools.ts).
             ...(wokenByLen ? { woken: true as const } : {}),
+            // Nobody typed it — its scheduled task, or Len's message —: `message_len` passes no owner words.
+            ...(opts.scheduled ? { serverStarted: true as const } : {}),
           },
           // What the owner attached travels with the request she passes to Len (spec local 2026-11-16, §5.4.7).
           ...(attachedImages.length || attachedFiles.length ? { ownerAttachments: { images: attachedImages, files: attachedFiles } } : {}),
@@ -1765,6 +1772,8 @@ async function correrTurno(
       : {}),
     // Len's side: whom `message_agent` may reach, with the home each one's turn runs in.
     ...(relatedAgents.length > 0 ? { relatedAgents: relatedAgents.map(({ id, name, homeProjectId }) => ({ id, name, homeProjectId })) } : {}),
+    // And an agent's message woke him with none of his owner's words: what needs them is refused (lib/agent/tools.ts).
+    ...(wokenByAgent ? { wokenByAgent: true as const } : {}),
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).
@@ -3293,12 +3302,15 @@ async function correrTurno(
         // correo lo salta), con la clave de la fila para no repetir. El módulo
         // se carga sólo aquí: la inmensa mayoría de turnos no lo necesita.
         // FAIL-SOFT: un aviso que no sale no le cuesta el turno a nadie.
-        // A turn Len's message woke has its own push, at its close, only when it has something for its person.
-        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && !lenMessage && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
+        // A turn Len's message woke has its own push, at its close, only when it has something for its person. And Len's
+        // turn an agent's message woke tells the owner only its CLOSING, never a turn that only answered the agent
+        // (decision 12 and ruling R6-1, Len's side; final review m4).
+        const wokenClosing = wokenByMessage ? registro.afterLastStep.trim() : null;
+        if (clienteSeFue && !canceladoAProposito && !asistenteBorrado && !lenMessage && wokenClosing !== "" && registro.hayAlgo(mutoDurable) && siguienteFila === null) {
           try {
             const { scheduleNotification } = await import("@/lib/notifications/dispatch");
             await scheduleNotification(
-              avisoDelTurno({ projectId, userId, texto: registro.texto, tarjetas: registro.tarjetas, ...(asistente ? { asistente: { id: asistente.id, name: asistente.name, slug: asistente.slug } } : {}) }),
+              avisoDelTurno({ projectId, userId, texto: wokenClosing ?? registro.texto, tarjetas: registro.tarjetas, ...(asistente ? { asistente: { id: asistente.id, name: asistente.name, slug: asistente.slug } } : {}) }),
               `len-turno:${filaId}`,
             );
           } catch (err) {

@@ -173,7 +173,7 @@ describe("a whole conversation between Len and an agent", () => {
 
     // 1. Len asks the agent. The message is written, and it wakes the agent in its home, as itself.
     const one = await lenWrites("¿De qué color va la factura?");
-    expect(one.response).toEqual({ ok: true, status: "waking", tool_result: "Sent to Finanzas; it reads it now." });
+    expect(one.response).toEqual({ ok: true, status: "waking", tool_result: "Sent to Finanzas; it reads it with its next turn, which starts now if it can." });
     expect(lenLaunches).toHaveLength(0);
     expect(agentLaunches).toHaveLength(1);
     expect(agentLaunches[0]).toMatchObject({
@@ -196,7 +196,7 @@ describe("a whole conversation between Len and an agent", () => {
 
     // 2. The agent answers Len. Its turn was woken, so its owner's words are not carried: the message that started it was Len's.
     const two = await agentWrites("Azul, #1E40AF.", agentSession({ woken: true, lenSaid: "¿De qué color va la factura?" }));
-    expect(two.response).toEqual({ ok: true, status: "waking", tool_result: "Sent to Len; it reads it now." });
+    expect(two.response).toEqual({ ok: true, status: "waking", tool_result: "Sent to Len; it reads it with its next turn, which starts now if it can." });
     expect(agentLaunches).toHaveLength(1);
     expect(lenLaunches).toHaveLength(1);
     expect(lenLaunches[0]!.turn).toMatchObject({

@@ -204,10 +204,22 @@ describe("waking Len: an agent wrote to him", () => {
     expect(t.lenOptions).toEqual([{ quietWhenNoReply: true }]);
     const resolved = await p.resolveAtStart!();
     expect(t.store.claimForLen).toHaveBeenCalledWith("p1", "row-1", NOW);
+    // One of the messages it claimed carries the owner's words: the route lets this turn do what they ask (I2).
     expect(resolved).toEqual({
       framing: framingForLen({ agentName: "Finanzas", messages: [{ text: "The invoice goes in blue.", ownerWords: "make it blue" }] }),
-      origin: { kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true },
+      origin: { kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true, withOwnerWords: true },
     });
+  });
+
+  // Final review, I2: what the route needs to know of the claim — whether any message carries the owner's words — rides
+  // in the origin the turn starts with; without it, the turn refuses what needs them (lib/assistants/messages/woken.ts).
+  it("🔴 with no owner words in any claimed message, the origin says nothing of them", async () => {
+    const m1 = msg({ id: "m1", direction: "to_len", text: "The invoice is ready." });
+    const m2 = msg({ id: "m2", direction: "to_len", assistantId: "a2", text: "So is the report.", ownerWords: "" });
+    const t = setup([m1, m2]);
+    await wakeRecipient(m1, CTX_A1, t.deps);
+    const resolved = await t.lenLaunches[0]!.resolveAtStart!();
+    expect(resolved?.origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true });
   });
 
   it("frames each agent's messages under its own name when two wrote before the turn started", async () => {
@@ -222,7 +234,8 @@ describe("waking Len: an agent wrote to him", () => {
         { agentName: "Ventas", messages: [{ text: "from ventas", ownerWords: "the owner's words" }] },
       ]),
     );
-    expect(resolved?.origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true });
+    // Ventas's message carries the owner's words: one is enough.
+    expect(resolved?.origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true, withOwnerWords: true });
   });
 });
 
@@ -390,6 +403,27 @@ describe("what a restart left", () => {
     expect(await resumeAgentLenMessages(NOW, t.deps)).toBe(1);
     expect(t.agentLaunches.map((p) => p.projectId)).toEqual(["home-a2"]);
     warn.mockRestore();
+  });
+
+  // Final review, m7 (M4-5): the group's turn is woken from its first message, but every message of the group was on its
+  // way. A turn that fails before its claim gives them ALL back as held, not only the first: the others would stay
+  // delivering until a later restart expired them.
+  it("🔴 a resumed group whose turn fails before its claim holds every message of the group", async () => {
+    const rows = [
+      msg({ id: "m1", direction: "to_len", assistantId: "a1", projectId: "p1", status: "delivering", deliveringAt: NOW }),
+      msg({ id: "m2", direction: "to_len", assistantId: "a2", projectId: "p1", status: "delivering", deliveringAt: NOW }),
+      msg({ id: "m3", direction: "to_agent", assistantId: "a1", projectId: "p1", status: "delivering", deliveringAt: NOW }),
+      msg({ id: "m4", direction: "to_agent", assistantId: "a1", projectId: "p2", status: "delivering", deliveringAt: NOW }),
+    ];
+    const t = setup(rows);
+    expect(await resumeAgentLenMessages(NOW, t.deps)).toBe(2);
+    await t.lenLaunches[0]!.fail(null, false);
+    await t.agentLaunches[0]!.fail(null, false);
+    expect(t.calls.held).toEqual([
+      { ids: ["m1", "m2"], reason: "no_credits" },
+      { ids: ["m3", "m4"], reason: "no_credits" },
+    ]);
+    expect(t.rows.map((r) => r.status)).toEqual(["held", "held", "held", "held"]);
   });
 
   it("nothing to resume wakes nothing", async () => {

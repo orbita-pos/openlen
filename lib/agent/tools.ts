@@ -154,7 +154,7 @@ import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/wid
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
-import { needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
+import { lenNeedsOwnersWords, lenWokenRefusal, needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -1436,7 +1436,16 @@ export interface AgentSession {
      *  it, so `message_len` carries no owner words, and it can't `ask_len`, schedule or connect anything
      *  (lib/assistants/messages/woken.ts). Set by the route for a `len-message` turn; absent in a person's turn. */
     readonly woken?: true;
+    /** The server started this turn — its scheduled task, or Len's message (`woken` too): nobody typed it, so
+     *  `message_len` passes no owner words (a scheduled run's `mensajeDelUsuario` is the task's prompt). Absent in a
+     *  turn the person typed. */
+    readonly serverStarted?: true;
   };
+  /** LEN's turn an agent's message woke, when none of the messages it claimed carries the owner's words (spec local
+   *  2026-11-21-len-y-el-agente-conversan, decision 8; final review I2): it runs as the owner with no owner in it, so
+   *  scheduling and anything connected are refused (lib/assistants/messages/woken.ts). The page stays his to edit: the
+   *  framing guards it. Set by the route; absent in every other turn. */
+  wokenByAgent?: true;
   /** LEN'S side of the messages (`message_agent`; spec local 2026-11-21-len-y-el-agente-conversan, §1): the agents of
    *  the person (the project's owner, whoever speaks) related to THIS project — the one that asked for the turn, one
    *  that serves it, one that started it — with the home each one's turn runs in. Absent for an agent, and when none
@@ -3232,6 +3241,8 @@ async function ejecutarHerramienta(
   // A turn Len's message woke runs with no person in it: what needs the person's own words is refused here, at execution,
   // and stays declared (lib/assistants/messages/woken.ts).
   if (session.assistant?.woken && needsOwnersWords(name)) return wokenRefusal();
+  // And Len's turn an agent's message woke, with none of its owner's words in what it claimed (final review, I2).
+  if (session.wokenByAgent && lenNeedsOwnersWords(name)) return lenWokenRefusal();
   if (ARTIFACT_TOOLS.some(tool=>tool===name)) {
     return deps.artifactAgent ? deps.artifactAgent.execute(name, args, { alive: deps.stillWorking, signal: deps.turnSignal }) : { response: { ok: false, error: "feature_disabled" } };
   }

@@ -382,6 +382,9 @@ export interface AssistantRequestOrigin {
   /** Not a request for work but a MESSAGE of the agent's to Len (spec local 2026-11-21-len-y-el-agente-conversan): the
    *  row says «De <agent>» as a message, not as «Lucía, dile a Len…». */
   message?: true;
+  /** With `message`: one of the messages the turn claimed carries the owner's own words, passed on verbatim. Without it,
+   *  the turn has no owner in it and refuses what needs their words (lib/assistants/messages/woken.ts). */
+  withOwnerWords?: true;
 }
 
 /** A message from Len to one of the person's agents (spec local 2026-11-21-len-y-el-agente-conversan): the agent's turn

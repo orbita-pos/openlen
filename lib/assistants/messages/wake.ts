@@ -94,8 +94,10 @@ const lenOrigin = (assistantId: string, assistantName: string): AssistantRequest
 
 /** Starts the recipient's turn for a message already in the mailbox: the real `Waker` (lib/assistants/messages/tool.ts, the
  *  default of `runSendMessage`). `ctx` is the AGENT's home and name, whichever side wrote. Returns once the turn is queued:
- *  whether the person can pay for it is only known when it starts, and then its `fail` gives the messages back as held. */
-export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1], deps?: WakeDeps): ReturnType<Waker> {
+ *  whether the person can pay for it is only known when it starts, and then its `fail` gives the messages back as held.
+ *  `onTheirWay`: every message this turn was woken for (a restart's group, `m` among them), held when it fails before
+ *  its claim; by default only `m`. */
+export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1], deps?: WakeDeps, onTheirWay: readonly string[] = [m.id]): ReturnType<Waker> {
   const d = deps ?? (await liveDeps());
   const agent = await d.agentOf(m.assistantId);
   if (!agent) throw new Error(`the agent ${m.assistantId} no longer exists: nothing to wake for message ${m.id}`);
@@ -115,11 +117,13 @@ export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1
     reply: async () => {},
     onStart: async () => {},
     // The turn didn't answer (no credits, a rejection, Len busy for too long): the messages go back to waiting for the
-    // recipient's next turn. One cut in the middle had read them already.
+    // recipient's next turn — what its claim took, or, before it claimed, every message it was woken for (a restart's
+    // group: the others would stay delivering until a later restart, final review m7). One cut in the middle had read
+    // them already.
     fail: async (_fallo: unknown, cut: boolean) => {
       if (cut) return;
       if (taken.length > 0) await d.store.releaseToHeld(taken, "no_credits");
-      else await d.store.hold([m.id], "no_credits");
+      else await d.store.hold(onTheirWay, "no_credits");
     },
   };
 
@@ -140,7 +144,10 @@ export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1
           for (const id of byAgent.keys()) if (!names.has(id)) names.set(id, (await d.agentOf(id).catch(() => null))?.name ?? "an agent");
           const groups: FramingForLen[] = [...byAgent].map(([id, mine]) => ({ agentName: names.get(id)!, messages: mine.map((r) => ({ text: r.text, ownerWords: r.ownerWords })) }));
           const first = rows[0]!;
-          return { framing: rideAlongForLen(groups), origin: lenOrigin(first.assistantId, names.get(first.assistantId)!) };
+          // Whether any of them carries the owner's words (the framing's own test): without them the route lets this turn
+          // do nothing that needs them (final review, I2).
+          const withOwnerWords = rows.some((r) => r.ownerWords);
+          return { framing: rideAlongForLen(groups), origin: { ...lenOrigin(first.assistantId, names.get(first.assistantId)!), ...(withOwnerWords ? { withOwnerWords: true as const } : {}) } };
         },
       },
       // Len read them and wrote nothing: that is a turn that ran, not one that didn't.
@@ -203,14 +210,15 @@ export async function resumeAgentLenMessages(now: Date = new Date(), deps?: Wake
   }
 }
 
-/** One recipient's turn, started from its oldest message whose agent still exists. */
+/** One recipient's turn, started from its oldest message whose agent still exists. Its claim would take the whole group,
+ *  so a turn that fails before claiming holds the whole group too. */
 async function wakeGroup(d: WakeDeps, group: readonly AgentLenMessage[]): Promise<boolean> {
   // Len's messages in one project share it: a project that is gone has no one to wake.
   if (group[0]!.direction === "to_len" && !(await d.titlesOf([group[0]!.projectId])).has(group[0]!.projectId)) return false;
   for (const m of group) {
     const agent = await d.agentOf(m.assistantId);
     if (!agent) continue;
-    await wakeRecipient(m, { homeProjectId: agent.homeProjectId, agentName: agent.name }, d);
+    await wakeRecipient(m, { homeProjectId: agent.homeProjectId, agentName: agent.name }, d, group.map((r) => r.id));
     return true;
   }
   return false;

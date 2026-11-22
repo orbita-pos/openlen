@@ -111,7 +111,7 @@ describe("the declarations", () => {
     expect(MESSAGE_AGENT).toBe("message_agent");
     expect(MESSAGE_LEN_DECLARATION.name).toBe("message_len");
     expect(MESSAGE_LEN_DECLARATION.description).toBe(
-      "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. The answer, if any, comes later as a message from Len.",
+      "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. Never just to thank. It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. What you write to Len shows in that project's chat, which everyone the project is shared with can read. The answer, if any, comes later as a message from Len.",
     );
     expect(Object.keys(MESSAGE_LEN_DECLARATION.parameters.properties)).toEqual(["project", "message"]);
     expect(MESSAGE_LEN_DECLARATION.parameters.required).toEqual(["project", "message"]);
@@ -129,7 +129,7 @@ describe("an agent writes to Len", () => {
     const store = fakeStore();
     const wake = vi.fn<Waker>(waking);
     const out = await runSendMessage(agentSession(), { project: "p1", message: "  The invoice goes in blue.  " }, { store, wake });
-    expect(out.response).toMatchObject({ ok: true, status: "waking", tool_result: "Sent to Len; it reads it now." });
+    expect(out.response).toMatchObject({ ok: true, status: "waking", tool_result: "Sent to Len; it reads it with its next turn, which starts now if it can." });
     expect(store.messages).toHaveLength(1);
     expect(store.messages[0]).toMatchObject({ assistantId: "a1", projectId: "p1", direction: "to_len", text: "The invoice goes in blue.", status: "pending" });
     // The waker learns the agent's home and name from the session: an agent's turn runs in its home.
@@ -157,6 +157,14 @@ describe("an agent writes to Len", () => {
     const absent = fakeStore();
     await runSendMessage(agentSession({}, { mensajeDelUsuario: undefined }), { project: "p1", message: "Blue." }, { store: absent, wake: waking });
     expect(absent.messages[0]!.ownerWords).toBeNull();
+  });
+
+  // Final review, m3: only a turn the person TYPED carries their words. In a turn the server started — its scheduled
+  // task, whose `mensajeDelUsuario` is the task's prompt, or one Len's message woke — nobody spoke.
+  it("🔴 carries none in a turn the server started (its scheduled task): the task's prompt isn't the owner speaking", async () => {
+    const scheduled = fakeStore();
+    await runSendMessage(agentSession({ serverStarted: true }, { mensajeDelUsuario: "Every Monday, tell Len the week's budget" }), { project: "p1", message: "Budget: 500 €." }, { store: scheduled, wake: waking });
+    expect(scheduled.messages[0]!.ownerWords).toBeNull();
   });
 
   it("takes a project it started, from the turn's list", async () => {
@@ -226,7 +234,7 @@ describe("Len writes to an agent", () => {
     const store = fakeStore();
     const wake = vi.fn<Waker>(waking);
     const out = await runSendMessage(LEN_SESSION, { to: "Finanzas", message: "Which currency is the invoice in?" }, { store, wake });
-    expect(out.response).toMatchObject({ ok: true, status: "waking", tool_result: "Sent to Finanzas; it reads it now." });
+    expect(out.response).toMatchObject({ ok: true, status: "waking", tool_result: "Sent to Finanzas; it reads it with its next turn, which starts now if it can." });
     expect(store.messages[0]).toMatchObject({ assistantId: "a1", projectId: "p1", direction: "to_agent", text: "Which currency is the invoice in?", ownerWords: null });
     // The agent's home and name come from the matched entry, never from the session: Len's turn runs in the project.
     expect(wake.mock.calls[0]![1]).toEqual({ homeProjectId: "home", agentName: "Finanzas" });
@@ -237,7 +245,7 @@ describe("Len writes to an agent", () => {
     const store = fakeStore();
     const wake = vi.fn<Waker>(waking);
     const out = await runSendMessage(LEN_SESSION, { to: "  vENTAS ", message: "Hi." }, { store, wake });
-    expect(out.response).toMatchObject({ ok: true, tool_result: "Sent to Ventas; it reads it now." });
+    expect(out.response).toMatchObject({ ok: true, tool_result: "Sent to Ventas; it reads it with its next turn, which starts now if it can." });
     expect(store.messages[0]).toMatchObject({ assistantId: "a2", projectId: "p1" });
     expect(wake.mock.calls[0]![1]).toEqual({ homeProjectId: "home2", agentName: "Ventas" });
   });

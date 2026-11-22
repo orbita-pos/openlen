@@ -25,8 +25,9 @@ export const MESSAGE_AGENT = "message_agent";
 export const MESSAGE_LEN_DECLARATION = {
   name: MESSAGE_LEN,
   description:
-    "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. " +
-    "It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. The answer, if any, comes later as a message from Len.",
+    "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. Never just to thank. " +
+    "It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. " +
+    "What you write to Len shows in that project's chat, which everyone the project is shared with can read. The answer, if any, comes later as a message from Len.",
   parameters: {
     type: "OBJECT",
     properties: {
@@ -125,9 +126,11 @@ async function routeFromAgent(session: AgentSession, args: Record<string, unknow
   if (!known) {
     return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve or started: see ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md." } };
   }
-  // Her own words ride along only when a person spoke this turn: a turn Len woke has none (decision 8).
+  // Her own words ride along only when a person TYPED this turn (decision 8): a turn the server started has none — one
+  // Len's message woke, or its scheduled task, whose `mensajeDelUsuario` is the task's prompt (final review, m3).
   const said = session.mensajeDelUsuario;
-  const ownerWords = !assistant.woken && typeof said === "string" && said.trim() !== "" ? said : null;
+  const typed = !assistant.woken && !assistant.serverStarted;
+  const ownerWords = typed && typeof said === "string" && said.trim() !== "" ? said : null;
   return {
     assistantId: assistant.id,
     projectId: named,
@@ -213,5 +216,7 @@ async function handOver(store: MessageStore, wake: Waker, message: AgentLenMessa
     await store.hold([message.id], "no_credits");
     return held("no_credits", `Not enough credits to run ${route.recipient}'s turn now; the message is kept and ${route.recipient} reads it with its next turn.`);
   }
-  return { response: { ok: true, status: "waking", tool_result: `Sent to ${route.recipient}; it reads it now.` } };
+  // Whether the person can pay for that turn is only known when it starts (ruling F-6: no balance is read here), so the
+  // sentence never promises «now»: a turn that can't run leaves the message for the recipient's next one.
+  return { response: { ok: true, status: "waking", tool_result: `Sent to ${route.recipient}; it reads it with its next turn, which starts now if it can.` } };
 }

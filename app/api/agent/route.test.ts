@@ -5523,6 +5523,22 @@ describe("POST /api/agent — the person's own assistant", () => {
         expect(session().assistant?.woken).toBeUndefined();
       });
 
+      // Final review, m3: only a turn the person TYPED carries their words to Len. Its scheduled task's prompt, and Len's
+      // message, are the server's: `message_len` passes no owner words from them (lib/assistants/messages/tool.ts).
+      it("🔴 its scheduled task and Len's message are started by the server; a person's turn is not", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          await args.runTool("Read", { file_path: "/index.html" });
+          return cierre();
+        });
+        const task = { kind: "scheduled" as const, taskId: "t1", title: "Palabras", occurrenceAt: "2026-11-02T15:03:00.000Z" };
+        await readEvents(await runner()("u1", { projectId: "p1", prompt: "Mándame 5 palabras", turnId: "77777777-7777-4777-8777-77777777778a", assistantId: "a1" }, where, { scheduled: { framing: "[SCHEDULE REMINDER]\nMándame 5 palabras", origin: task, onReply: vi.fn(async () => {}) } }));
+        expect(session().assistant).toMatchObject({ id: "a1", serverStarted: true });
+        await readEvents(await wake());
+        expect(session().assistant).toMatchObject({ id: "a1", woken: true, serverStarted: true });
+        await readEvents(await pedir({ assistantId: "a1" }));
+        expect(session().assistant?.serverStarted).toBeUndefined();
+      });
+
       it("🔴 a woken turn that ends with text emails the person and pushes, in the agent's name", async () => {
         mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
           args.emit({ type: "text", text: "Len pregunta si el tope es 500 €. ¿Se lo confirmo?" });
@@ -5607,6 +5623,87 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await runner()("u1", { projectId: "p1", prompt: "Hazme un botón", turnId: "77777777-7777-4777-8777-777777777784" }, where, { scheduled: { framing: "Lucía passed you a request.", origin: request, onReply: vi.fn(async () => {}) } }));
       expect(mocks.registrarTurnoDelServidor).not.toHaveBeenCalled();
       expect(mocks.quitarFilaDelTurno).toHaveBeenCalled();
+    });
+
+    // Final review, I2: Len's turn an agent's message woke runs as the owner with no owner in it. When none of the
+    // messages it claimed carries their words (wake.ts leaves `withOwnerWords` off the origin), what needs them is
+    // refused at execution (lib/agent/tools.ts) — the session says so; with their words, or in the owner's own turn, not.
+    describe("Len's turn woken by an agent's message: the owner's words", () => {
+      const lenSession = () => (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ wokenByAgent?: true; assistant?: unknown }])[0];
+      const reads = () =>
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          await args.runTool("Read", { file_path: "/index.html" });
+          return cierre();
+        });
+      const wakeLen = (origin: Record<string, unknown>, turnId: string) =>
+        runner()("u1", { projectId: "p1", prompt: "Ya está el tope: 500 €.", turnId }, where, { scheduled: { framing: "Lucía, your owner's own agent, sent you a message.", origin, onReply: vi.fn(async () => {}) } });
+
+      it("🔴 with no owner words in its messages, its session is woken by an agent", async () => {
+        reads();
+        await readEvents(await wakeLen({ kind: "assistant", assistantId: "a1", assistantName: "Lucía", message: true }, "77777777-7777-4777-8777-777777777785"));
+        expect(lenSession().wokenByAgent).toBe(true);
+        // Len's turn, not the agent's.
+        expect(lenSession().assistant).toBeUndefined();
+      });
+
+      it("with the owner's words in one of them, it isn't: those words are the owner's authority", async () => {
+        reads();
+        await readEvents(await wakeLen({ kind: "assistant", assistantId: "a1", assistantName: "Lucía", message: true, withOwnerWords: true }, "77777777-7777-4777-8777-777777777786"));
+        expect(lenSession().wokenByAgent).toBeUndefined();
+      });
+
+      it("nor a request ask_len passed, nor the owner's own turn", async () => {
+        reads();
+        await readEvents(await runner()("u1", { projectId: "p1", prompt: "Hazme un botón", turnId: "77777777-7777-4777-8777-777777777787" }, where, { scheduled: { framing: "Lucía passed you a request.", origin: { kind: "assistant", assistantId: "a1", assistantName: "Lucía" }, onReply: vi.fn(async () => {}) } }));
+        expect(lenSession().wokenByAgent).toBeUndefined();
+        reads();
+        await readEvents(await pedir({}));
+        expect(lenSession().wokenByAgent).toBeUndefined();
+      });
+    });
+
+    // Final review, m4 (decision 12 and ruling R6-1, applied to Len's side): what Len's woken turn would push is only its
+    // CLOSING — what he wrote after his last tool call. «I'll tell Lucía…» before a message_agent call is narration, and a
+    // turn that only answered the agent bothers no one. (A server turn reads its own stream to the end, so this push needs
+    // the stream to be left early, as the tests of a person who closed the tab do.)
+    describe("Len's turn woken by an agent's message: the push", () => {
+      const wokenWhileNobodyReads = async (loop: (args: AgentLoopArgs) => Promise<void>, closing: string) => {
+        let soltar: (() => void) | undefined;
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          args.emit({ type: "text", text: "I'll tell Lucía the budget." });
+          await new Promise<void>((r) => (soltar = r));
+          await loop(args);
+          return { ...cierre(), finalText: closing };
+        });
+        const origin = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía", message: true as const };
+        const res = await runner()("u1", { projectId: "p1", prompt: "¿Cuál es el tope?", turnId: "77777777-7777-4777-8777-777777777788" }, where, { scheduled: { framing: "Lucía, your owner's own agent, sent you a message.", origin, onReply: vi.fn(async () => {}) } });
+        const lector = res.body!.getReader();
+        await lector.read();
+        await lector.cancel();
+        for (let i = 0; i < 200 && !soltar; i++) await new Promise((r) => setTimeout(r, 0));
+        soltar!();
+        await vi.waitFor(() => expect(mocks.registrarTurnoDelServidor).toHaveBeenCalled());
+        for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+      };
+      const answersLucia = async (args: AgentLoopArgs) => {
+        args.emit({ type: "action", tool: "message_agent", status: "running", summary: "" });
+        args.emit({ type: "action", tool: "message_agent", status: "done", summary: "" });
+      };
+
+      it("🔴 narration, then message_agent, then an empty closing: nothing is pushed", async () => {
+        await wokenWhileNobodyReads(answersLucia, "");
+        expect(mocks.scheduleNotification).not.toHaveBeenCalled();
+      });
+
+      it("with a closing, only the closing is pushed", async () => {
+        await wokenWhileNobodyReads(async (args) => {
+          await answersLucia(args);
+          args.emit({ type: "text", text: "Le dije a Lucía que el tope es 500 €." });
+        }, "Le dije a Lucía que el tope es 500 €.");
+        expect(mocks.scheduleNotification).toHaveBeenCalledTimes(1);
+        const [evento] = mocks.scheduleNotification.mock.calls[0] as unknown as [Record<string, unknown>];
+        expect(evento).toMatchObject({ type: "len_turno", recipientUserId: "u1", preview: "Le dije a Lucía que el tope es 500 €." });
+      });
     });
   });
 
