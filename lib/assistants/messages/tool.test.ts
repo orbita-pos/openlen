@@ -4,14 +4,18 @@ import type { AgentSession } from "@/lib/agent/tools";
 
 import { MESSAGE_CAP, MESSAGE_MAX } from "./policy";
 import type { AgentLenMessage, HeldReason, MessageDirection } from "./store";
-import { SEND_MESSAGE, SEND_MESSAGE_AGENT_DECLARATION, SEND_MESSAGE_LEN_DECLARATION, runSendMessage, type MessageStore, type Waker } from "./tool";
+import { MESSAGE_AGENT, MESSAGE_AGENT_DECLARATION, MESSAGE_LEN, MESSAGE_LEN_DECLARATION, runSendMessage, type MessageStore, type Waker } from "./tool";
 
-// `send_message` (spec local 2026-11-21-len-y-el-agente-conversan, §1, §6 and decisions 8, 9 and 11): one tool with two
-// sides. The agent writes to Len about a project it serves or started; Len writes to an agent related to the project. It
-// validates, resolves the recipient, writes the message to the mailbox, enforces the cap and hands it to a waker. Against
-// an in-memory mailbox: the tests never reach a database, and nothing wakes for real.
+// `message_len` and `message_agent` (spec local 2026-11-21-len-y-el-agente-conversan, §1, §6 and decisions 8, 9 and 11):
+// the two sides of one conversation. The agent writes to Len about a project it serves or started; Len writes to an agent
+// related to the project. `runSendMessage` validates, resolves the recipient, writes the message to the mailbox, enforces
+// the cap and hands it to a waker. Against an in-memory mailbox: the tests never reach a database, and nothing wakes for
+// real. (Not `send_message`: that is Len's subagent tool.)
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 interface Fake extends MessageStore {
   readonly messages: AgentLenMessage[];
@@ -19,6 +23,9 @@ interface Fake extends MessageStore {
   /** When the person last wrote, as the fake answers it. */
   personAt: Date | null;
   readonly lastPersonCalls: [string, string, string][];
+  /** What `hold` and `messagesSince` throw, when set: the mailbox failing after the message was written. */
+  holdError: Error | null;
+  countError: Error | null;
 }
 
 /** A mailbox that counts as the real one: every non-expired message of the pair after `since`, in either direction. */
@@ -32,6 +39,8 @@ function fakeStore(): Fake {
     held,
     personAt: null,
     lastPersonCalls,
+    holdError: null,
+    countError: null,
     async addMessage(m) {
       clock += 1000;
       const row: AgentLenMessage = {
@@ -55,9 +64,11 @@ function fakeStore(): Fake {
       return fake.personAt;
     },
     async messagesSince(assistantId, projectId, since) {
+      if (fake.countError) throw fake.countError;
       return messages.filter((m) => m.assistantId === assistantId && m.projectId === projectId && m.status !== "expired" && (!since || m.createdAt > since)).length;
     },
     async hold(ids, reason) {
+      if (fake.holdError) throw fake.holdError;
       held.push({ ids, reason });
     },
   };
@@ -95,19 +106,21 @@ const LEN_SESSION = {
 
 describe("the declarations", () => {
   it("are the names and the descriptions the plan fixed", () => {
-    expect(SEND_MESSAGE).toBe("send_message");
-    expect(SEND_MESSAGE_AGENT_DECLARATION.name).toBe("send_message");
-    expect(SEND_MESSAGE_AGENT_DECLARATION.description).toBe(
+    // By direction, never `send_message`: that name is Len's subagent tool (`{ agent_id, message }`).
+    expect(MESSAGE_LEN).toBe("message_len");
+    expect(MESSAGE_AGENT).toBe("message_agent");
+    expect(MESSAGE_LEN_DECLARATION.name).toBe("message_len");
+    expect(MESSAGE_LEN_DECLARATION.description).toBe(
       "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. The answer, if any, comes later as a message from Len.",
     );
-    expect(Object.keys(SEND_MESSAGE_AGENT_DECLARATION.parameters.properties)).toEqual(["project", "message"]);
-    expect(SEND_MESSAGE_AGENT_DECLARATION.parameters.required).toEqual(["project", "message"]);
-    expect(SEND_MESSAGE_LEN_DECLARATION.name).toBe("send_message");
-    expect(SEND_MESSAGE_LEN_DECLARATION.description).toBe(
+    expect(Object.keys(MESSAGE_LEN_DECLARATION.parameters.properties)).toEqual(["project", "message"]);
+    expect(MESSAGE_LEN_DECLARATION.parameters.required).toEqual(["project", "message"]);
+    expect(MESSAGE_AGENT_DECLARATION.name).toBe("message_agent");
+    expect(MESSAGE_AGENT_DECLARATION.description).toBe(
       "Sends a message to one of the agents of this project (listed in your context): to ask it something only it or its person knows to finish what it asked, or to tell it something it must act on. Never just to thank. Its answer, if any, comes later as a message.",
     );
-    expect(Object.keys(SEND_MESSAGE_LEN_DECLARATION.parameters.properties)).toEqual(["to", "message"]);
-    expect(SEND_MESSAGE_LEN_DECLARATION.parameters.required).toEqual(["to", "message"]);
+    expect(Object.keys(MESSAGE_AGENT_DECLARATION.parameters.properties)).toEqual(["to", "message"]);
+    expect(MESSAGE_AGENT_DECLARATION.parameters.required).toEqual(["to", "message"]);
   });
 });
 
@@ -358,14 +371,85 @@ describe("what keeps a message without waking anyone", () => {
     expect(String(fromLen.response.tool_result)).toMatch(/Finanzas/);
   });
 
-  it("a waker that throws leaves the message pending (the recipient's next turn still reads it) and the error is the tool's", async () => {
+});
+
+// Once the message is in the mailbox it is the recipient's: a failure after that is never a failed tool, because the
+// sender would send it again — a duplicate that also uses up the cap (review of Task 3).
+describe("a failure after the message was written", () => {
+  const KEPT_TO_LEN = "The message is kept and Len reads it with its next turn; don't send it again.";
+  const KEPT_TO_AGENT = "The message is kept and Finanzas reads it with its next turn; don't send it again.";
+
+  it("a waker that throws is not a tool failure: the message stays, pending, and the sender is told not to send it again", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = fakeStore();
     const wake: Waker = async () => {
       throw new Error("queue is down");
     };
-    await expect(runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store, wake })).rejects.toThrow("queue is down");
+    const out = await runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store, wake });
+    expect(out.response).toEqual({ ok: true, status: "kept", tool_result: KEPT_TO_LEN });
+    expect(store.messages).toHaveLength(1);
     expect(store.messages[0]!.status).toBe("pending");
     expect(store.held).toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    const fromLen = await runSendMessage(LEN_SESSION, { to: "Finanzas", message: "Hi." }, { store, wake });
+    expect(fromLen.response).toEqual({ ok: true, status: "kept", tool_result: KEPT_TO_AGENT });
+  });
+
+  it("a hold that throws (no credits, the cap, agents off) is the same: kept, not failed", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // No credits: the waker answers, then the hold fails.
+    const noCredits = fakeStore();
+    noCredits.holdError = new Error("db down");
+    const a = await runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store: noCredits, wake: async () => "no_credits" });
+    expect(a.response).toEqual({ ok: true, status: "kept", tool_result: KEPT_TO_LEN });
+    // The cap: the fifth message is to be held, and the hold fails.
+    const capped = fakeStore();
+    await exchanged(capped, MESSAGE_CAP);
+    capped.holdError = new Error("db down");
+    const wake = vi.fn<Waker>(waking);
+    const b = await runSendMessage(LEN_SESSION, { to: "Finanzas", message: "Fifth." }, { store: capped, wake });
+    expect(b.response).toEqual({ ok: true, status: "kept", tool_result: KEPT_TO_AGENT });
+    expect(wake).not.toHaveBeenCalled();
+    expect(capped.messages.at(-1)).toMatchObject({ text: "Fifth.", status: "pending" });
+    // Agents off.
+    vi.stubEnv("OPENLEN_ASSISTANT", "0");
+    const off = fakeStore();
+    off.holdError = new Error("db down");
+    const c = await runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store: off, wake: waking });
+    expect(c.response).toEqual({ ok: true, status: "kept", tool_result: KEPT_TO_LEN });
+    expect(warn).toHaveBeenCalledTimes(3);
+  });
+
+  it("a count that can't be read is the same: the message is written and nothing is woken", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = fakeStore();
+    store.countError = new Error("db down");
+    const wake = vi.fn<Waker>(waking);
+    const out = await runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store, wake });
+    expect(out.response).toMatchObject({ ok: true, status: "kept" });
+    expect(wake).not.toHaveBeenCalled();
+    expect(store.messages).toHaveLength(1);
+  });
+
+  it("the sentence for a kept message names no reply and none of the message", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = fakeStore();
+    const out = await runSendMessage(agentSession(), { project: "p1", message: "A secret question." }, { store, wake: async () => Promise.reject(new Error("x")) });
+    expect(Object.keys(out.response).sort()).toEqual(["ok", "status", "tool_result"]);
+    expect(JSON.stringify(out.response)).not.toContain("A secret question.");
+  });
+
+  it("but a message that couldn't be written is a failed tool: nothing was stored, so sending it again is right", async () => {
+    const store = fakeStore();
+    const broken: MessageStore = {
+      ...store,
+      addMessage: async () => {
+        throw new Error("db down");
+      },
+    };
+    const wake = vi.fn<Waker>(waking);
+    await expect(runSendMessage(agentSession(), { project: "p1", message: "Hi." }, { store: broken, wake })).rejects.toThrow("db down");
+    expect(wake).not.toHaveBeenCalled();
   });
 });
 

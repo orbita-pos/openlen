@@ -1,7 +1,10 @@
-// `send_message`, TWO SIDES (spec local 2026-11-21-len-y-el-agente-conversan, §1 and §6 and decisions 8, 9 and 11): the
-// person's own agent writes to Len about a project it serves or started, and Len writes to an agent related to the
-// project he is in. As Claude Code's SendMessage and DeepSeek's send_message do: the result says only whether it was
-// handed over or left waiting, never the reply — a reply is another explicitly addressed message.
+// THE MESSAGES BETWEEN LEN AND THE PERSON'S AGENTS, TWO SIDES (spec local 2026-11-21-len-y-el-agente-conversan, §1 and §6
+// and decisions 8, 9 and 11): the person's own agent writes to Len about a project it serves or started (`message_len`),
+// and Len writes to an agent related to the project he is in (`message_agent`). As Claude Code's SendMessage and
+// DeepSeek's send_message do: the result says only whether it was handed over or left waiting, never the reply — a reply
+// is another explicitly addressed message. 🔴 Not named `send_message`: that is Len's subagent tool (`{ agent_id,
+// message }`, lib/agent/subagents/), and a second tool under the same name shadowed it in the dispatcher. One function
+// serves both names: the session tells the sides apart (`session.assistant`).
 //
 // This is the tool and nothing else: validate, resolve the recipient, write the message to the mailbox BEFORE anything
 // happens to it, enforce the cap of four, and hand it to a `Waker` (lib/assistants/messages/wake.ts, which starts the
@@ -13,11 +16,14 @@ import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { capReached, MESSAGE_CAP, MESSAGE_MAX } from "./policy";
 import type { AgentLenMessage, HeldReason, MessageDirection } from "./store";
 
-export const SEND_MESSAGE = "send_message";
+/** The agent's tool: a message to Len. */
+export const MESSAGE_LEN = "message_len";
+/** Len's tool: a message to one of the agents of the project. */
+export const MESSAGE_AGENT = "message_agent";
 
 /** The agent's side: Len is the only one it can write to, so the tool names the project, never the recipient. */
-export const SEND_MESSAGE_AGENT_DECLARATION = {
-  name: SEND_MESSAGE,
+export const MESSAGE_LEN_DECLARATION = {
+  name: MESSAGE_LEN,
   description:
     "Sends a message to Len, OpenLen's agent, about a project you serve or started: to answer him or tell him something. " +
     "It isn't how you ask for work — that is ask_len. Len reads it as yours, not your owner's. The answer, if any, comes later as a message from Len.",
@@ -35,8 +41,8 @@ export const SEND_MESSAGE_AGENT_DECLARATION = {
 } as const;
 
 /** Len's side: he names the agent; the project is the one he is in. */
-export const SEND_MESSAGE_LEN_DECLARATION = {
-  name: SEND_MESSAGE,
+export const MESSAGE_AGENT_DECLARATION = {
+  name: MESSAGE_AGENT,
   description:
     "Sends a message to one of the agents of this project (listed in your context): to ask it something only it or its person knows to finish what it asked, " +
     "or to tell it something it must act on. Never just to thank. Its answer, if any, comes later as a message.",
@@ -81,9 +87,10 @@ async function realStore(): Promise<MessageStore> {
 }
 
 // The real waker is Task 4's (the recipient's turn, through the queue every turn already waits in). Until it is wired
-// this fails loudly instead of telling the sender a turn is reading its message that nobody started.
+// this throws instead of telling the sender a turn is reading its message that nobody started: the failure is logged
+// and the sender is told the message is kept (it is, pending, and the recipient's next turn reads it).
 const unwiredWaker: Waker = async () => {
-  throw new Error(`${SEND_MESSAGE}: nothing wakes the recipient yet`);
+  throw new Error(`${MESSAGE_LEN}/${MESSAGE_AGENT}: nothing wakes the recipient yet`);
 };
 
 const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("../projects")).startedTitleOf(assistantId, projectId);
@@ -178,8 +185,21 @@ export async function runSendMessage(session: AgentSession, args: Record<string,
   const store = deps?.store ?? (await realStore());
   const wake = deps?.wake ?? unwiredWaker;
   // Written before anything else happens to it: a message that wakes nobody is still there for the recipient's next turn.
+  // A failure of THIS call is a failed tool: nothing was stored, so sending it again is right.
   const message = await store.addMessage({ assistantId: route.assistantId, projectId: route.projectId, direction: route.direction, text, ownerWords: route.ownerWords });
 
+  // From here the message is the recipient's, `pending` at the worst — its next turn reads it. A failure that is never the
+  // sender's: told the tool failed, it would send it again, and the copy would also use up the cap.
+  try {
+    return await handOver(store, wake, message, route);
+  } catch (err) {
+    console.warn("[agent-messages] a message was kept but couldn't be handed over", err);
+    return { response: { ok: true, status: "kept", tool_result: `The message is kept and ${route.recipient} reads it with its next turn; don't send it again.` } };
+  }
+}
+
+/** What happens to a message once it is written: kept without waking anyone (agents off, the cap) or handed to the waker. */
+async function handOver(store: MessageStore, wake: Waker, message: AgentLenMessage, route: Route): Promise<ToolOutcome> {
   if (!assistantsEnabled()) {
     await store.hold([message.id], "agents_off");
     return held("agents_off", `Agents are off right now; the message is kept and ${route.recipient} reads it with its next turn.`);

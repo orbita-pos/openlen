@@ -14,6 +14,7 @@ import { buildFunctionDeclarations } from "./catalog";
 import { resolveSkills } from "./skills/registry";
 import { bundledSkills } from "./skills/bundled";
 import { attachmentsForBox } from "./terminal/herramienta";
+import { messageDeliveredLine } from "./subagents/tool";
 import type { ProjectData } from "@/lib/projects/types";
 import type { VisitSignIn } from "@/lib/backend/auth/visit-session";
 
@@ -3203,5 +3204,38 @@ describe("attachments into the box are downloaded once per turn", () => {
     const d = { ...deps, readAttachment: async () => (reads++ === 0 ? null : new Uint8Array([9])) } as unknown as AgentDeps;
     assert.deepEqual(Object.keys(await attachmentsForBox(session, d)), []);
     assert.deepEqual(Object.keys(await attachmentsForBox(session, d)), ["/.openlen/attachments/a1/ventas.xlsx"]);
+  });
+});
+
+// Review of Task 3 of «Len y el agente conversan»: the messages between Len and a person's agent went first under the name
+// `send_message`, which is Len's subagent tool (`{ agent_id, message }`) — the new case shadowed the old one. They go by
+// direction now, `message_len` (an agent to Len) and `message_agent` (Len to an agent), and `send_message` is the
+// subagents' again. Through the dispatcher, with nothing that reaches a database.
+describe("the dispatcher: send_message is Len's subagent tool, the agents' messages are message_len and message_agent", () => {
+  it("send_message with an agent_id reaches the subagent path, never the mailbox", async () => {
+    const { deps } = makeDeps();
+    const sent: { id: string; message: string }[] = [];
+    const d = { ...deps, subagents: { send: async (m: { id: string; message: string }) => (sent.push(m), { ok: true as const, resumed: false }) } } as unknown as AgentDeps;
+    const out = await runAgentTool(makeSession(), d, "send_message", { agent_id: "r1", message: "Also the footer." });
+    assert.deepEqual(sent, [{ id: "r1", message: "Also the footer." }]);
+    assert.deepEqual(out.response, { ok: true, tool_result: messageDeliveredLine("r1") });
+  });
+
+  it("message_len reaches the mailbox, as an agent's: it asks for the project it is about", async () => {
+    const { deps } = makeDeps();
+    const session = { ...makeSession(), assistant: { id: "a1", name: "Finanzas" } } as AgentSession;
+    const out = await runAgentTool(session, deps as unknown as AgentDeps, "message_len", { message: "Hi." });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "invalid_arguments");
+    assert.match(String(out.response.message), /^project is required/);
+  });
+
+  it("message_agent reaches the mailbox, as Len's: it names the agents of the project when the name is none of them", async () => {
+    const { deps } = makeDeps();
+    const session = { ...makeSession(), relatedAgents: [{ id: "a1", name: "Finanzas", homeProjectId: "home" }] } as AgentSession;
+    const out = await runAgentTool(session, deps as unknown as AgentDeps, "message_agent", { to: "Marketing", message: "Hi." });
+    assert.equal(out.response.ok, false);
+    assert.equal(out.response.error, "unknown_agent");
+    assert.match(String(out.response.message), /Finanzas/);
   });
 });

@@ -153,7 +153,7 @@ import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
-import { SEND_MESSAGE, runSendMessage } from "@/lib/assistants/messages/tool";
+import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
 import type { ChatRowForSearch } from "@/lib/agent/session-query";
@@ -1432,12 +1432,13 @@ export interface AgentSession {
      *  `~/.assistant/CUSTOMERS.md`, never its memory, and that file is its to write. */
     readonly withAgentFile?: boolean;
     /** A message from Len woke this turn (spec local 2026-11-21-len-y-el-agente-conversan, decision 8): no person spoke in
-     *  it, so `send_message` carries no owner words, and it can't `ask_len` or schedule anything. Absent in a person's turn. */
+     *  it, so `message_len` carries no owner words, and it can't `ask_len` or schedule anything. Absent in a person's turn. */
     readonly woken?: true;
   };
-  /** LEN'S side of `send_message` (spec local 2026-11-21-len-y-el-agente-conversan, §1): the agents of the person (the
-   *  project's owner, whoever speaks) related to THIS project — the one that asked for the turn, one that serves it, one
-   *  that started it — with the home each one's turn runs in. Absent for an agent, and when none is related. */
+  /** LEN'S side of the messages (`message_agent`; spec local 2026-11-21-len-y-el-agente-conversan, §1): the agents of
+   *  the person (the project's owner, whoever speaks) related to THIS project — the one that asked for the turn, one
+   *  that serves it, one that started it — with the home each one's turn runs in. Absent for an agent, and when none
+   *  is related. */
   relatedAgents?: readonly { readonly id: string; readonly name: string; readonly homeProjectId: string }[];
   /** Her turn: the photos and files of the owner's message, for the Len turn her `ask_len` starts (spec local
    *  2026-11-16-movil-es-tu-asistente, §5.4.7). Absent for Len, and when the message had none. */
@@ -3294,8 +3295,10 @@ async function ejecutarHerramienta(
       // The person's own assistant passes what builds to Len (lib/assistants/ask-len.ts); for Len it isn't there.
       case ASK_LEN:
         return await runAskLen(session, args);
-      // Len and the person's agents write to each other (lib/assistants/messages/tool.ts): two sides of one tool.
-      case SEND_MESSAGE:
+      // Len and the person's agents write to each other (lib/assistants/messages/tool.ts): one function, two names by
+      // direction — never `send_message`, which is Len's subagent tool (below).
+      case MESSAGE_LEN:
+      case MESSAGE_AGENT:
         return await runSendMessage(session, args);
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
