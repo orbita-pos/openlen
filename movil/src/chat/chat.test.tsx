@@ -258,9 +258,10 @@ it("the new keys exist in all 10 locales, with the web's words", () => {
  }
 });
 
-it("🔴 a visual item renders in the phone chat and forwards sendPrompt to chat.mandar", async () => {
+it("🔴 a visual item renders in the phone chat and forwards sendPrompt and updateModelContext to chat", async () => {
  cliente.pedir.mockResolvedValue(Response.json({ url: "https://lienzo-visuals.openlen.app/" }));
  const mandar = vi.fn();
+ const reportVisualState = vi.fn();
  const visual = {
   clave: "visual:widget_aaaa1111",
   t: 2,
@@ -269,7 +270,7 @@ it("🔴 a visual item renders in the phone chat and forwards sendPrompt to chat
   widget: { title: "Gasto", loadingMessages: [], code: "<svg/>" },
   final: true,
  } as unknown as ElementoDelHilo;
- const chat = { elementos: [mensaje(), visual], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar, reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
+ const chat = { elementos: [mensaje(), visual], trabajando: false, turnoId: null, pregunta: false, avance: null, progreso: [], mandar, reportVisualState, reintentar: vi.fn(), borrar: vi.fn() } as unknown as Chat;
  await act(async () => {
   root.render(<PantallaChat abierto chat={chat} cliente={cliente} projectId="p1" idioma="es" conPip={false} onCerrar={cerrar} onLlamar={vi.fn()} onVerPagina={vi.fn()} />);
  });
@@ -278,6 +279,10 @@ it("🔴 a visual item renders in the phone chat and forwards sendPrompt to chat
  expect(row!.classList.contains("is-visual")).toBe(true);
  const iframe = row!.querySelector("iframe")!;
  expect(iframe).not.toBeNull();
+ act(() => {
+  window.dispatchEvent(new MessageEvent("message", { data: { kind: "ol-visual:context", text: "3 of 5" }, origin: "https://lienzo-visuals.openlen.app", source: iframe.contentWindow }));
+ });
+ expect(reportVisualState).toHaveBeenCalledWith("widget_aaaa1111", "3 of 5");
  vi.spyOn(document, "activeElement", "get").mockReturnValue(iframe);
  act(() => { window.dispatchEvent(new Event("blur")); });
  act(() => {

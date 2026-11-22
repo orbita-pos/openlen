@@ -29,4 +29,12 @@ describe("la llamada usa el cliente inyectado", () => {
     expect(src).not.toMatch(/\bfetch\(/);
     expect(src).not.toMatch(/sendBeacon/);
   });
+
+  // Voice call cannot draw visuals (spec local 2026-11-22-visuales-de-verdad, §1–2; Review Focus 5): it never sends
+  // `drawsVisuals` nor `visualStates`.
+  it("🔴 use-llamada.ts sends neither drawsVisuals nor visualStates", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "components/llamada/use-llamada.ts"), "utf8");
+    expect(src).not.toContain("drawsVisuals");
+    expect(src).not.toContain("visualStates");
+  });
 });

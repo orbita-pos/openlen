@@ -4,10 +4,10 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { useChat, type Chat } from "./use-chat";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { widgetIdOf } from "@/lib/visuals/widget-id";
-const m = vi.hoisted(() => ({ mandar: vi.fn(), archivo: vi.fn(), foto: vi.fn(), leerTurno: vi.fn() }));
+const m = vi.hoisted(() => ({ mandar: vi.fn(), dirigir: vi.fn(), archivo: vi.fn(), foto: vi.fn(), transcribir: vi.fn(), leerTurno: vi.fn() }));
 vi.mock("./archivos", async importar => ({...await importar<typeof import("./archivos")>(), subirArchivo:m.archivo}));
 vi.mock("./foto", () => ({ achicarFoto: async (foto: Blob) => foto }));
-vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: vi.fn(), subirFoto: m.foto, transcribir: vi.fn() }));
+vi.mock("../api/chat", () => ({ mandarALen: m.mandar, dirigirA: m.dirigir, subirFoto: m.foto, transcribir: m.transcribir }));
 vi.mock("../api/proyectos", () => ({ leerTurno: m.leerTurno }));
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root;
@@ -183,4 +183,93 @@ it("🔴 re-hooking a turn in flight keeps its row id and show_widget actions so
     widget,
     final: true,
   });
+});
+
+// Task 9 (spec local 2026-11-22-visuales-de-verdad, §2): the phone keeps the latest state of each visual of the open
+// chat and sends them with every message, correction and voice note; switching project or agent clears them.
+const WA = "widget_aaaa1111";
+const WB = "widget_bbbb2222";
+
+it("🔴 sends the latest state of each visual (300 reports → 1; empty removes) and keeps them across messages", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => {
+    for (let i = 0; i < 300; i++) chat.reportVisualState(WA, `step ${i}`);
+    chat.reportVisualState(WB, "Marzo");
+    chat.reportVisualState(WB, "");
+  });
+  await act(async () => chat.mandar("ya"));
+  expect(m.mandar.mock.calls[0]![1]).toMatchObject({ prompt: "ya", visualStates: [{ widgetId: WA, state: "step 299" }] });
+  await act(async () => chat.mandar("otra"));
+  expect(m.mandar.mock.calls[1]![1]).toMatchObject({ prompt: "otra", visualStates: [{ widgetId: WA, state: "step 299" }] });
+});
+
+it("🔴 a correction while a turn runs carries the latest visualStates to dirigirA", async () => {
+  let terminar!: (v: string) => void;
+  m.mandar.mockImplementation(() => new Promise((r) => { terminar = r; }));
+  m.dirigir.mockResolvedValue(true);
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => chat.mandar("hazme ejercicios"));
+  try {
+    const evento = m.mandar.mock.calls[0]![2];
+    await act(async () => evento({ nombre: "turno", datos: { turnoId: "srv-7" } }));
+    await act(async () => chat.reportVisualState(WA, "3 of 5"));
+    await act(async () => chat.mandar("ya"));
+    expect(m.dirigir).toHaveBeenCalledWith(cliente, "srv-7", "ya", [{ widgetId: WA, state: "3 of 5" }]);
+  } finally {
+    await act(async () => terminar("terminado"));
+  }
+});
+
+it("🔴 a voice note carries visualStates (both idle and as a correction)", async () => {
+  m.mandar.mockResolvedValueOnce("terminado");
+  m.transcribir.mockResolvedValueOnce({ texto: "ya terminé" });
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => chat.reportVisualState(WA, "5 of 5"));
+  await act(async () => chat.mandarNota({ audio: new Blob(["x"]), url: "blob:n", barras: [50], segundos: 2 }));
+  expect(m.mandar.mock.calls[0]![1]).toMatchObject({ prompt: "ya terminé", visualStates: [{ widgetId: WA, state: "5 of 5" }] });
+
+  let terminar!: (v: string) => void;
+  m.mandar.mockImplementationOnce(() => new Promise((r) => { terminar = r; }));
+  m.transcribir.mockResolvedValueOnce({ texto: "cambié la última" });
+  m.dirigir.mockResolvedValue(true);
+  await act(async () => chat.mandar("revisa"));
+  try {
+    const evento = m.mandar.mock.calls[1]![2];
+    await act(async () => evento({ nombre: "turno", datos: { turnoId: "srv-8" } }));
+    await act(async () => chat.reportVisualState(WA, "5 of 5 (fixed)"));
+    await act(async () => chat.mandarNota({ audio: new Blob(["y"]), url: "blob:n2", barras: [50], segundos: 2 }));
+    expect(m.dirigir).toHaveBeenCalledWith(cliente, "srv-8", "cambié la última", [{ widgetId: WA, state: "5 of 5 (fixed)" }]);
+  } finally {
+    await act(async () => terminar("terminado"));
+  }
+});
+
+it("🔴 Review Focus 1: switching to another project OR another agent in the same space clears visualStates", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="space" assistantId="ana" />));
+  await act(async () => chat.reportVisualState(WA, "3 of 5"));
+  // Switch to another agent in the SAME space projectId!
+  await act(async () => root.render(<Pantalla id="space" assistantId="rosa" />));
+  await act(async () => chat.mandar("hola Rosa"));
+  expect(m.mandar.mock.calls[0]![1]).not.toHaveProperty("visualStates");
+
+  // Report in Rosa's chat, then switch project:
+  await act(async () => chat.reportVisualState(WB, "4 porciones"));
+  await act(async () => root.render(<Pantalla id="p2" />));
+  await act(async () => chat.mandar("hola Len"));
+  expect(m.mandar.mock.calls[1]![1]).not.toHaveProperty("visualStates");
+});
+
+it("keeps at most 256 visual states, dropping the oldest so the server cap never drops them all", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => {
+    for (let i = 0; i < 260; i++) chat.reportVisualState(widgetIdOf("row", i), `s${i}`);
+  });
+  await act(async () => chat.mandar("hola"));
+  const sent = m.mandar.mock.calls[0]![1].visualStates as { widgetId: string; state: string }[];
+  expect(sent).toHaveLength(256);
+  expect(sent[0]).toEqual({ widgetId: widgetIdOf("row", 4), state: "s4" });
+  expect(sent.at(-1)).toEqual({ widgetId: widgetIdOf("row", 259), state: "s259" });
 });

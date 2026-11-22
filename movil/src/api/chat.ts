@@ -8,13 +8,19 @@ import type { ArchivoAdjunto } from "../chat/archivos";
 /** «cortado»: se fue la conexión a media respuesta — el turno sigue en el servidor y la app se vuelve a enganchar. */
 export type FinDelTurno = "terminado" | "cortado" | "sinRed" | { status: number; code?: string };
 
+export interface VisualStatePayload {
+  readonly widgetId: string;
+  readonly state: string;
+}
+
 export async function mandarALen(
   c: ClienteDeOpenLen,
   /** `turnId`: el id de la fila — el servidor guarda el turno con él, como en la web, y la app sabe cuándo la conversación ya lo trae. */
   /** `assistantId`: a message to the person's own assistant, not Len (phase 5; the project is her home). */
   /** `viewingProjectId`: with her, the project on the phone's screen (spec local 2026-11-16-movil-es-tu-asistente, §5.3). */
   /** `opening`: her file's first message, which the server lets go once (spec local 2026-11-19-agentes-para-todos, §6.4). */
-  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string; viewingProjectId?: string; opening?: boolean },
+  /** `visualStates`: what each visual of the open conversation shared (spec local 2026-11-22-visuales-de-verdad, §2). */
+  cuerpo: { projectId: string; prompt: string; foto?: string; archivos?: readonly ArchivoAdjunto[]; turnId?: string; goal?: "create" | "resume"; assistantId?: string; viewingProjectId?: string; opening?: boolean; visualStates?: readonly VisualStatePayload[] },
   alEvento: (e: EventoSse) => void,
 ): Promise<FinDelTurno> {
   let res: Response;
@@ -30,6 +36,11 @@ export async function mandarALen(
         ...(cuerpo.assistantId && cuerpo.viewingProjectId ? { viewingProjectId: cuerpo.viewingProjectId } : {}),
         ...(cuerpo.assistantId && cuerpo.opening ? { opening: true } : {}),
         zonaHoraria: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        // Inline visuals on the phone (spec local 2026-11-22-visuales-de-verdad, §1–2): the chat draws them and gives
+        // `read_me` the phone width; the voice call sends neither.
+        dispositivo: "mobile",
+        drawsVisuals: true,
+        ...(cuerpo.visualStates?.length ? { visualStates: cuerpo.visualStates } : {}),
         ...(cuerpo.turnId ? { turnId: cuerpo.turnId } : {}),
         ...(cuerpo.foto ? { attachedImage: { url: cuerpo.foto } } : {}),
         ...(cuerpo.archivos?.length ? { attachedFiles: cuerpo.archivos } : {}),
@@ -60,12 +71,17 @@ export async function mandarALen(
 }
 
 /** Lo que escribes con Len trabajando le corrige el rumbo, sin pararlo. */
-export async function dirigirA(c: ClienteDeOpenLen, turnoId: string, texto: string): Promise<boolean> {
+export async function dirigirA(
+  c: ClienteDeOpenLen,
+  turnoId: string,
+  texto: string,
+  visualStates?: readonly VisualStatePayload[],
+): Promise<boolean> {
   try {
     const r = await c.pedir("/api/agent/dirigir", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ turnoId, texto }),
+      body: JSON.stringify({ turnoId, texto, ...(visualStates?.length ? { visualStates } : {}) }),
     });
     return r.ok;
   } catch {

@@ -478,7 +478,7 @@ function Burbuja({ e, chat, cliente, projectId, idioma, onVerPagina, onInstalada
     case "entregado":
       return <DeliveredCards cliente={cliente} archivos={e.archivos} />;
     case "visual":
-      return <VisualDelChat widgetId={e.widgetId} widget={e.widget} final={e.final} cliente={cliente} onPrompt={onPromptVisual} />;
+      return <VisualDelChat widgetId={e.widgetId} widget={e.widget} final={e.final} cliente={cliente} onPrompt={onPromptVisual} onState={chat.reportVisualState} />;
     default:
       return null;
   }

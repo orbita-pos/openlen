@@ -46,9 +46,23 @@ describe("mandarALen", () => {
     const [ruta, init] = pedir.mock.calls[0]!;
     expect(ruta).toBe("/api/agent");
     const cuerpo = JSON.parse(String(init!.body));
-    expect(cuerpo).toMatchObject({ projectId: "p1", prompt: "Pon azul" });
+    expect(cuerpo).toMatchObject({ projectId: "p1", prompt: "Pon azul", dispositivo: "mobile", drawsVisuals: true });
+    expect(cuerpo.visualStates).toBeUndefined();
     expect(typeof cuerpo.zonaHoraria).toBe("string");
     expect(cuerpo.attachedImage).toBeUndefined();
+  });
+
+  it("🔴 sends visualStates, dispositivo: mobile and drawsVisuals: true when visuals shared state", async () => {
+    const { c, pedir } = cliente(async () => trozos(""));
+    const visualStates = [{ widgetId: "widget_aaaa1111", state: "3 of 5" }];
+    await mandarALen(c, { projectId: "p1", prompt: "ya", visualStates }, () => {});
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toMatchObject({
+      projectId: "p1",
+      prompt: "ya",
+      dispositivo: "mobile",
+      drawsVisuals: true,
+      visualStates,
+    });
   });
 
   it("el turno lleva el id de su fila: el servidor guarda la conversación con él", async () => {
@@ -109,6 +123,15 @@ describe("dirigirA", () => {
     expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toEqual({ turnoId: "x1", texto: "mejor verde" });
     expect(await dirigirA(cliente(async () => new Response(null, { status: 404 })).c, "x", "y")).toBe(false);
     expect(await dirigirA(cliente(sinRed).c, "x", "y")).toBe(false);
+  });
+
+  it("🔴 carries visualStates when provided, omits them when empty", async () => {
+    const { c, pedir } = cliente(async () => Response.json({ ok: true }));
+    const states = [{ widgetId: "widget_aaaa1111", state: "3 of 5" }];
+    expect(await dirigirA(c, "x1", "ya", states)).toBe(true);
+    expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toEqual({ turnoId: "x1", texto: "ya", visualStates: states });
+    await dirigirA(c, "x1", "sin", []);
+    expect(JSON.parse(String(pedir.mock.calls[1]![1]!.body))).toEqual({ turnoId: "x1", texto: "sin" });
   });
 });
 

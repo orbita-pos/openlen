@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
+import { cleanVisualContext, VISUAL_STATES_MAX } from "@/lib/agent/visuals/model-context";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { dirigirA, mandarALen, subirFoto, transcribir } from "../api/chat";
 import { leerTurno } from "../api/proyectos";
@@ -80,6 +81,25 @@ export function useChat(o: OpcionesDelChat) {
   const subiendoRef = useRef(false);
   const [subiendo, setSubiendo] = useState(false);
   const notas = useRef(new Map<string, NotaGrabada>());
+  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2): latest state per widget_id of THIS chat
+  // (project or agent), capped at VISUAL_STATES_MAX dropping the oldest. Cleared when projectId OR assistantId changes
+  // (two agents in the person's space share the same projectId).
+  const visualStatesRef = useRef(new Map<string, string>());
+  useLayoutEffect(() => {
+    visualStatesRef.current = new Map();
+  }, [o.projectId, o.assistantId]);
+  const reportVisualState = useCallback((widgetId: string, state: string) => {
+    const held = visualStatesRef.current;
+    const clean = cleanVisualContext(state);
+    held.delete(widgetId);
+    if (!clean) return;
+    held.set(widgetId, clean);
+    while (held.size > VISUAL_STATES_MAX) held.delete(held.keys().next().value!);
+  }, []);
+  const visualStatesForBody = useCallback(
+    () => (visualStatesRef.current.size > 0 ? [...visualStatesRef.current].map(([widgetId, state]) => ({ widgetId, state })) : undefined),
+    [],
+  );
 
   const limpiarAdjuntos = useCallback((k: string) => {
     const url=vistasFoto.current.get(k);if(url)URL.revokeObjectURL(url);
@@ -115,10 +135,11 @@ export function useChat(o: OpcionesDelChat) {
     const { cliente, projectId, assistantId, viewingProjectId } = op.current;
     if (!projectId) return false;
     const actual = epoca.current;
+    const visualStates = visualStatesForBody();
     let estado = turnoNuevo(fila);
     vivoRef.current = estado;
     setVivo(estado);
-    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}), ...(opening ? { opening: true } : {}) } : {}) }, (e) => {
+    const fin = await mandarALen(cliente, { projectId, prompt, foto, archivos: documentos, turnId: fila, goal, ...(visualStates ? { visualStates } : {}), ...(assistantId ? { assistantId, ...(viewingProjectId ? { viewingProjectId } : {}), ...(opening ? { opening: true } : {}) } : {}) }, (e) => {
       if (actual !== epoca.current) return;
       estado = conEvento(estado, e);
       vivoRef.current = estado;
@@ -141,7 +162,7 @@ export function useChat(o: OpcionesDelChat) {
     setVivo((v) => (v?.terminado ? v : null));
     op.current.alCambiarLaPagina();
     return true;
-  }, []);
+  }, [visualStatesForBody]);
 
   const enviar = useCallback(
     async (k: string, texto: string, foto?: Blob, goal?: "create" | "resume", documentos: readonly File[] = [], opening = false) => {
@@ -156,7 +177,8 @@ export function useChat(o: OpcionesDelChat) {
         // Len trabaja: lo que escribes le corrige el rumbo, sin pararlo.
         const turnoId = v?.turnoId ?? r?.turnoId ?? null;
         const fila = v?.fila ?? r?.fila;
-        const ok = turnoId ? await dirigirA(cliente, turnoId, texto) : false;
+        const visualStates = visualStatesForBody();
+        const ok = turnoId ? await dirigirA(cliente, turnoId, texto, visualStates) : false;
         if (actual !== epoca.current) return;
         setLocales((ls) => marcar(ls, k, ok ? { estado: "ok", fila, correccion: true } : { estado: "noSeEnvio" }));
         return;
@@ -199,7 +221,7 @@ export function useChat(o: OpcionesDelChat) {
       }
       setLocales((ls) => marcar(ls, k, { estado: ok ? "ok" : "noSeEnvio" }));
     },
-    [correr],
+    [correr, visualStatesForBody],
   );
 
   const mandar = useCallback(
@@ -375,6 +397,7 @@ export function useChat(o: OpcionesDelChat) {
     borrar,
     agregarLlamada,
     avisar,
+    reportVisualState,
   };
 }
 
