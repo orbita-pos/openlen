@@ -86,12 +86,10 @@ async function realStore(): Promise<MessageStore> {
   return { addMessage: s.addMessage, lastPersonMessageAt: s.lastPersonMessageAt, messagesSince: s.messagesSince, hold: s.hold };
 }
 
-// The real waker is Task 4's (the recipient's turn, through the queue every turn already waits in). Until it is wired
-// this throws instead of telling the sender a turn is reading its message that nobody started: the failure is logged
-// and the sender is told the message is kept (it is, pending, and the recipient's next turn reads it).
-const unwiredWaker: Waker = async () => {
-  throw new Error(`${MESSAGE_LEN}/${MESSAGE_AGENT}: nothing wakes the recipient yet`);
-};
+// The real waker (lib/assistants/messages/wake.ts: the recipient's turn, through the queue every turn already waits in).
+// Loaded when a message is first handed over, so this file stays clear of the server-turn road. A failure to start the
+// turn is logged and the sender is told the message is kept (it is, pending, and the recipient's next turn reads it).
+const liveWaker: Waker = async (m, ctx) => (await import("./wake")).wakeRecipient(m, ctx);
 
 const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("../projects")).startedTitleOf(assistantId, projectId);
 const NO_LOOKUP: StartedLookup = async () => null;
@@ -183,7 +181,7 @@ export async function runSendMessage(session: AgentSession, args: Record<string,
   if ("response" in route) return route;
 
   const store = deps?.store ?? (await realStore());
-  const wake = deps?.wake ?? unwiredWaker;
+  const wake = deps?.wake ?? liveWaker;
   // Written before anything else happens to it: a message that wakes nobody is still there for the recipient's next turn.
   // A failure of THIS call is a failed tool: nothing was stored, so sending it again is right.
   const message = await store.addMessage({ assistantId: route.assistantId, projectId: route.projectId, direction: route.direction, text, ownerWords: route.ownerWords });

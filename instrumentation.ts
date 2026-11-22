@@ -47,6 +47,11 @@ export async function register() {
       void import("@/lib/len-email/run")
         .then((m) => m.resumeEmailRequests())
         .catch((err) => console.error("[len-email] no se pudieron retomar los correos a Len", err));
+      // And the messages between Len and the person's agents that a restart left on their way (spec local
+      // 2026-11-21-len-y-el-agente-conversan, decision 9): each recipient is woken once; what was held waits for its next turn.
+      void import("@/lib/assistants/messages/wake")
+        .then((m) => m.resumeAgentLenMessages())
+        .catch((err) => console.error("[agent-messages] no se pudieron retomar los mensajes entre Len y los agentes", err));
       // Len's scheduled tasks (spec local 2026-10-29-tareas-programadas): what a restart left, then a
       // pass every 30 s. OPENLEN_SCHEDULE=0 leaves it off.
       void import("@/lib/scheduled-tasks/scheduler")

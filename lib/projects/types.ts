@@ -379,13 +379,28 @@ export interface AssistantRequestOrigin {
   kind: "assistant";
   assistantId: string;
   assistantName: string;
+  /** Not a request for work but a MESSAGE of the agent's to Len (spec local 2026-11-21-len-y-el-agente-conversan): the
+   *  row says «De <agent>» as a message, not as «Lucía, dile a Len…». */
+  message?: true;
+}
+
+/** A message from Len to one of the person's agents (spec local 2026-11-21-len-y-el-agente-conversan): the agent's turn
+ *  it woke, in the agent's own conversation. `projectId` is the project they talk about. */
+export interface LenMessageOrigin {
+  kind: "len-message";
+  projectId: string;
+  projectTitle: string;
 }
 
 /** Where a turn the person did not type in the chat came from. A thread's has no `kind`: rows before tasks. */
-export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin;
+export type TurnOrigin = ThreadOrigin | ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin | LenMessageOrigin;
 
 export function isAssistantRequestOrigin(o: TurnOrigin): o is AssistantRequestOrigin {
   return (o as { kind?: string }).kind === "assistant";
+}
+
+export function isLenMessageOrigin(o: TurnOrigin): o is LenMessageOrigin {
+  return (o as { kind?: string }).kind === "len-message";
 }
 
 export function isToolCreationOrigin(o: TurnOrigin): o is ToolCreationOrigin {

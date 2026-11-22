@@ -220,7 +220,9 @@ export function UserMessage({
               <MessageCircleHeart size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.fromAssistant", { name: turn.origen.assistantName })}</span>
             </div>
-          ) : turn.origen && (
+          ) : turn.origen && "ruta" in turn.origen && (
+            // A thread's origin is the one with a file (`ruta`): the narrowing the rows of Len's messages to an agent
+            // (`len-message`, labelled by Task 7) must not fall into.
             <button
               type="button"
               onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}

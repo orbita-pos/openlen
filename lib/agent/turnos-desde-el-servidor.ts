@@ -25,7 +25,7 @@
 import "server-only";
 
 import { hayTurnoVivoEnElProyecto } from "@/lib/agent/direcciones";
-import type { AssistantRequestOrigin, EventTaskOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin, ToolCreationOrigin } from "@/lib/projects/types";
+import type { AssistantRequestOrigin, EventTaskOrigin, LenMessageOrigin, LenWatchOrigin, ScheduledOrigin, StoredChatTurn, SubagentOrigin, ToolCreationOrigin } from "@/lib/projects/types";
 
 /** The cards a turn left (`registro.tarjetas`): what a scheduled task's email reads its files and waits from. */
 export type Tarjetas = NonNullable<StoredChatTurn["actions"]>;
@@ -56,13 +56,16 @@ export interface EmailRequest {
   readonly onReply: (text: string) => Promise<void>;
 }
 
+/** Where a framed server turn came from: every origin the server starts a turn for. */
+type FramedOrigin = ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin | LenMessageOrigin;
+
 /** A SCHEDULED TASK's run (spec local 2026-10-29-tareas-programadas, §7.5): the model reads DeepSeek's
  *  `[SCHEDULE REMINDER]` framing instead of the prompt; the row keeps the prompt with its origin. */
 export interface ScheduledRequest {
   readonly framing: string;
   /** A scheduled task's run, a Len Watch turn (spec local 2026-10-30-len-watch) or the subagents' notices
    *  (spec local 2026-11-01-subagentes-de-len): all arrive framed. */
-  readonly origin: ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin;
+  readonly origin: FramedOrigin;
   /** What Len said at the end and the turn's cards (their `present` files go in the email);
    *  `finalText` is only its last message (`RegistroDelTurno.finalText`). */
   readonly onReply: (text: string, cards: Tarjetas, finalText?: string) => Promise<void>;
@@ -297,9 +300,23 @@ export function launchEventTaskTurn(p: FramedTurn<EventTaskOrigin>): void {
  * «LUCÍA, DILE A LEN…» (spec local 2026-11-06-asistente-propio, §4.2): the person's own assistant passes on what its
  * owner asked to be built (`ask_len`, lib/assistants/ask-len.ts). The owner's words, so it runs at once like «Hazlo»:
  * as the owner, in the project's chat, waiting its turn in the project's queue.
+ *
+ * It is also how an agent's MESSAGE wakes Len (spec local 2026-11-21-len-y-el-agente-conversan, §2): `resolveAtStart`
+ * claims what is waiting when the turn starts, and `quietWhenNoReply` keeps a turn that read it and wrote nothing from
+ * being reported as one that didn't run.
  */
-export function launchAssistantRequestTurn(p: FramedTurn<AssistantRequestOrigin>): void {
-  launchFramedTurn(p, "assistant-request");
+export function launchAssistantRequestTurn(p: FramedTurn<AssistantRequestOrigin>, o: { readonly quietWhenNoReply?: boolean } = {}): void {
+  launchFramedTurn(p, "assistant-request", o);
+}
+
+/**
+ * LEN'S MESSAGE TO AN AGENT (spec local 2026-11-21-len-y-el-agente-conversan, §2): the agent's turn it woke, as the
+ * agent — `extraBody: { assistantId }` is how the route knows, as for its scheduled tasks — in its own conversation, in
+ * the queue of its home. `resolveAtStart` claims the messages waiting for the agent when the turn starts, and a turn
+ * that read them and left no reply is not a failure: the agent answers Len with its tool and keeps its final text empty.
+ */
+export function launchLenMessageTurn(p: FramedTurn<LenMessageOrigin>): void {
+  launchFramedTurn(p, "len-message", { quietWhenNoReply: true });
 }
 
 /**
@@ -386,7 +403,7 @@ export function launchSubagentNoticeTurn(p: {
   );
 }
 
-interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin> {
+interface FramedTurn<O extends FramedOrigin> {
   readonly userId: string;
   readonly projectId: string;
   /** What the chat row shows as the person's message. */
@@ -404,8 +421,9 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   /** The chat the row goes to when `projectId` is a worktree (`ScheduledRequest.chatProjectId`). */
   readonly chatProjectId?: string;
   /** Read right after `onStart` instead of `framing` and `origin` (the subagents' notices, taken when the
-   *  turn starts); `null`: the turn does not run. */
-  readonly resolveAtStart?: () => { framing: string; origin: O } | null;
+   *  turn starts; the messages between Len and an agent, claimed from the mailbox — a database call, so it may
+   *  return a promise); `null`: the turn does not run. */
+  readonly resolveAtStart?: () => { framing: string; origin: O } | null | Promise<{ framing: string; origin: O } | null>;
   /** More of the request's body (the subagents' turn: the launching turn's effort and mode). */
   readonly extraBody?: Readonly<Record<string, unknown>>;
   /** `ScheduledRequest.ceilingCentis`. */
@@ -414,7 +432,7 @@ interface FramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin
   readonly sentText?: string;
 }
 
-function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentOrigin | EventTaskOrigin | ToolCreationOrigin | AssistantRequestOrigin>(
+function launchFramedTurn<O extends FramedOrigin>(
   p: FramedTurn<O>,
   label: string,
   o: { readonly quietWhenNoReply?: boolean } = {},
@@ -429,7 +447,7 @@ function launchFramedTurn<O extends ScheduledOrigin | LenWatchOrigin | SubagentO
         return;
       }
       await p.onStart();
-      const resolved = p.resolveAtStart ? p.resolveAtStart() : { framing: p.framing, origin: p.origin };
+      const resolved = p.resolveAtStart ? await p.resolveAtStart() : { framing: p.framing, origin: p.origin };
       if (!resolved) return;
       let replied = false;
       const scheduled: ScheduledRequest = {

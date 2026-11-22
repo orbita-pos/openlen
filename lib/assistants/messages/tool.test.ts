@@ -461,3 +461,24 @@ describe("what the sender reads back", () => {
     expect(JSON.stringify(out.response)).not.toContain("A secret question.");
   });
 });
+
+describe("with no test seam at all", () => {
+  it("the message goes to the real mailbox and its recipient is woken by the real waker (wake.ts)", async () => {
+    vi.resetModules();
+    const store = fakeStore();
+    const wakeRecipient = vi.fn(async () => "waking" as const);
+    vi.doMock("./store", () => ({ addMessage: store.addMessage, lastPersonMessageAt: store.lastPersonMessageAt, messagesSince: store.messagesSince, hold: store.hold }));
+    vi.doMock("./wake", () => ({ wakeRecipient }));
+    try {
+      const { runSendMessage: run } = await import("./tool");
+      const out = await run(LEN_SESSION, { to: "Finanzas", message: "What color is the invoice?" });
+      expect(out.response).toMatchObject({ ok: true, status: "waking" });
+      expect(wakeRecipient).toHaveBeenCalledTimes(1);
+      expect(wakeRecipient).toHaveBeenCalledWith(expect.objectContaining({ id: "m1", direction: "to_agent" }), { homeProjectId: "home", agentName: "Finanzas" });
+    } finally {
+      vi.doUnmock("./store");
+      vi.doUnmock("./wake");
+      vi.resetModules();
+    }
+  });
+});

@@ -24,7 +24,9 @@ vi.mock("@/lib/projects/hilos", () => ({
 }));
 
 import {
+  launchAssistantRequestTurn,
   launchEmailTurn,
+  launchLenMessageTurn,
   launchLenWatchTurn,
   launchScheduledTurn,
   launchSubagentNoticeTurn,
@@ -339,5 +341,108 @@ describe("a Len Watch turn, on the server (spec local 2026-10-30-len-watch, §5.
     launch({ fail: async (f, cut) => void fails.push({ f, cut }) });
     await hasta(() => fails.length > 0);
     expect(fails).toEqual([{ f: { motivo: "sin créditos", code: "no_credits" }, cut: false }]);
+  });
+});
+
+describe("the turns a message between Len and an agent wakes (spec local 2026-11-21-len-y-el-agente-conversan, §2)", () => {
+  const origin = { kind: "len-message" as const, projectId: "p-x", projectTitle: "Presupuesto" };
+  type Resolved = { framing: string; origin: typeof origin } | null;
+  const launchAgent = (o: { resolve?: () => Resolved | Promise<Resolved>; fail?: (f: unknown, cut: boolean) => Promise<void>; onStart?: () => Promise<void> } = {}) =>
+    launchLenMessageTurn({
+      userId: "ana",
+      projectId: "home-1",
+      texto: "What color is the invoice?",
+      framing: "",
+      origin,
+      timeZone: "Europe/Madrid",
+      locale: "es",
+      filaId: "row-m",
+      extraBody: { assistantId: "a1" },
+      reply: async () => {},
+      fail: o.fail ?? (async () => {}),
+      onStart: o.onStart ?? (async () => {}),
+      ...(o.resolve ? { resolveAtStart: o.resolve } : {}),
+    });
+
+  it("🔴 runs as the agent: its id rides in the body, and the model reads what the claim returned, awaited", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    const order: string[] = [];
+    launchAgent({
+      onStart: async () => void order.push("start"),
+      // The claim is a database call: it may take its time, and the turn waits for it.
+      resolve: async () => {
+        await new Promise((r) => setTimeout(r, 15));
+        order.push("claimed");
+        return { framing: "Len sent you a message", origin };
+      },
+    });
+    await hasta(() => corredor.mock.calls.length > 0);
+    expect(order).toEqual(["start", "claimed"]);
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      { projectId: "home-1", prompt: "What color is the invoice?", turnId: "row-m", answersQuestions: false, zonaHoraria: "Europe/Madrid", idioma: "es", assistantId: "a1" },
+      expect.anything(),
+      { scheduled: expect.objectContaining({ framing: "Len sent you a message", origin }) },
+    );
+  });
+
+  it("does not run when the claim finds nothing (another turn already read the messages)", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    const fails: unknown[] = [];
+    launchAgent({ resolve: async () => null, fail: async (f) => void fails.push(f) });
+    await new Promise((r) => setTimeout(r, 60));
+    expect(corredor).not.toHaveBeenCalled();
+    expect(fails).toEqual([]);
+  });
+
+  it("🔴 a turn that read its messages and left no reply is not a failure (the agent only answered Len)", async () => {
+    registrarCorredorDeTurnos(async () => sse([["done", {}]]));
+    const fails: unknown[] = [];
+    launchAgent({ resolve: async () => ({ framing: "x", origin }), fail: async (f) => void fails.push(f) });
+    await new Promise((r) => setTimeout(r, 60));
+    expect(fails).toEqual([]);
+  });
+
+  it("a turn that failed without running says why", async () => {
+    registrarCorredorDeTurnos(async () => sse([["error", { message: "no credits", code: "no_credits" }]]));
+    const fails: unknown[] = [];
+    launchAgent({ resolve: async () => ({ framing: "x", origin }), fail: async (f, cut) => void fails.push({ f, cut }) });
+    await hasta(() => fails.length > 0);
+    expect(fails).toEqual([{ f: { motivo: "no credits", code: "no_credits" }, cut: false }]);
+  });
+
+  it("Len's turn for an agent's message may also claim at its start, and stay quiet when it left no reply", async () => {
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
+    const fails: unknown[] = [];
+    const lenOrigin = { kind: "assistant" as const, assistantId: "a1", assistantName: "Finanzas", message: true as const };
+    launchAssistantRequestTurn(
+      {
+        userId: "ana",
+        projectId: "p-x",
+        texto: "The invoice goes in blue.",
+        framing: "",
+        origin: lenOrigin,
+        timeZone: "Europe/Madrid",
+        locale: "es",
+        filaId: "row-l",
+        reply: async () => {},
+        fail: async (f) => void fails.push(f),
+        onStart: async () => {},
+        resolveAtStart: async () => ({ framing: "Finanzas sent you a message", origin: lenOrigin }),
+      },
+      { quietWhenNoReply: true },
+    );
+    await hasta(() => corredor.mock.calls.length > 0);
+    expect(corredor).toHaveBeenCalledWith(
+      "ana",
+      { projectId: "p-x", prompt: "The invoice goes in blue.", turnId: "row-l", answersQuestions: false, zonaHoraria: "Europe/Madrid", idioma: "es" },
+      expect.anything(),
+      { scheduled: expect.objectContaining({ framing: "Finanzas sent you a message", origin: lenOrigin }) },
+    );
+    await new Promise((r) => setTimeout(r, 40));
+    expect(fails).toEqual([]);
   });
 });
