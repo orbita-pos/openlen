@@ -307,6 +307,7 @@ const assistantProjects = vi.hoisted(() => ({
   projectsOfAssistant: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
   // The projects an agent started (spec local 2026-11-21-agente-sigue-su-proyecto).
   startedProjectsOf: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
+  startedTitleOf: vi.fn(async (_assistantId: string, _projectId: string): Promise<string | null> => null),
   titlesOf: vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, `Title of ${id}`]))),
 }));
 vi.mock("@/lib/assistants/projects", () => assistantProjects);
@@ -5657,6 +5658,17 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await pedir({ assistantId: "a1" }));
       expect(session().assistant?.viewing).toBeUndefined();
       expect(sent().assistantViewing ?? null).toBeNull();
+    });
+
+    // Spec local 2026-11-21-agente-sigue-su-proyecto, final review finding 3: one it started is its to follow, checked
+    // live (the turn's list holds only the 30 most recent).
+    it("🔴 a project it started: hers to follow, by name, and a request naming none goes there", async () => {
+      served();
+      assistantProjects.startedTitleOf.mockImplementationOnce(async (_a: string, id: string) => (id === "s1" ? "Presupuesto" : null));
+      await readEvents(await pedir({ assistantId: "a1", viewingProjectId: "s1" }));
+      expect(assistantProjects.startedTitleOf).toHaveBeenCalledWith("a1", "s1");
+      expect(session().assistant?.viewing).toEqual({ id: "s1", title: "Presupuesto", served: false, started: true });
+      expect(sent().assistantViewing).toContain("a project you started");
     });
 
     it("Len's own turn ignores it", async () => {

@@ -17,8 +17,8 @@ import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { projectsOfAssistant, startedProjectsOf, titlesOf, type ServedProject, type StartedProject } from "@/lib/assistants/projects";
-import { ASSISTANT_STARTED_PATH, STARTED_TEXT_MAX, startedText } from "@/lib/assistants/started-text";
+import { projectsOfAssistant, startedProjectsOf, startedTitleOf, titlesOf, type ServedProject, type StartedProject } from "@/lib/assistants/projects";
+import { STARTED_TEXT_MAX, startedMemoryFiles } from "@/lib/assistants/started-text";
 import { viewingLine, type ViewingProject } from "@/lib/assistants/viewing";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
 import { assistantById, claimOpening, markAssistantNoticesHeard, releaseOpening, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
@@ -429,10 +429,14 @@ type CuerpoDelTurno = {
 /** The project on her owner's phone: hers (`served`); the owner's own she doesn't serve, by name; someone else's shared
  *  with the owner, nameless (final review, I4: she must know it isn't hers, never what it is called); one the owner
  *  can't see, nothing. */
-async function projectOnThePhone(raw: unknown, served: readonly ServedProject[], personId: string): Promise<ViewingProject | null> {
+async function projectOnThePhone(raw: unknown, served: readonly ServedProject[], personId: string, assistantId: string): Promise<ViewingProject | null> {
   if (typeof raw !== "string" || !raw || raw.length > 100) return null;
   const hers = served.find((p) => p.projectId === raw);
   if (hers) return { id: raw, title: hers.title?.trim() || raw, served: true };
+  // One it STARTED (spec local 2026-11-21-agente-sigue-su-proyecto, final review finding 3): its to follow, not foreign —
+  // checked live, as the turn's list holds only the most recent.
+  const started = await startedTitleOf(assistantId, raw).catch(() => null);
+  if (started !== null) return { id: raw, title: started, served: false, started: true };
   const acceso = await accesoAlProyecto(raw, personId).catch(() => null);
   if (!acceso) return null;
   if (acceso.rol !== "dueno") return { id: raw, title: "", served: false };
@@ -569,10 +573,11 @@ async function correrTurno(
   /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
   const proyectosDelAsistente: ServedProject[] = asistente ? await projectsOfAssistant(asistente.id).catch(() => []) : [];
   /** The projects it STARTED with ask_len's new_project (spec local 2026-11-21-agente-sigue-su-proyecto): what
-   *  ~/.assistant/STARTED.md lists and ask_len may follow — fail-soft, the turn goes on without them. */
-  const proyectosEmpezados: StartedProject[] = asistente ? await startedProjectsOf(asistente.id).catch(() => []) : [];
+   *  ~/.assistant/STARTED.md lists and ask_len may follow — fail-soft: null when they can't be read, and the turn goes
+   *  on with what the agent saw before (ask_len checks an id it names live). */
+  const proyectosEmpezados: StartedProject[] | null = asistente ? await startedProjectsOf(asistente.id).catch(() => null) : [];
   /** The project on her owner's phone (spec local 2026-11-16-movil-es-tu-asistente, §5.3) — fail-soft. */
-  const proyectoEnElTelefono: ViewingProject | null = asistente ? await projectOnThePhone(body?.viewingProjectId, proyectosDelAsistente, quien).catch(() => null) : null;
+  const proyectoEnElTelefono: ViewingProject | null = asistente ? await projectOnThePhone(body?.viewingProjectId, proyectosDelAsistente, quien, asistente.id).catch(() => null) : null;
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
   const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   // HILOS EN EL CÓDIGO: un `@Len` desde un hilo lo lanza el SERVIDOR
@@ -1343,11 +1348,7 @@ async function correrTurno(
             label: "the projects you serve and what each one published — read-only; it changes when your owner publishes",
             text: projectsText(proyectosDelAsistente),
           },
-          {
-            path: ASSISTANT_STARTED_PATH,
-            label: "the projects you started with Len — read-only; pass an id in ask_len's project to change one",
-            text: startedText(proyectosEmpezados),
-          },
+          ...startedMemoryFiles(proyectosEmpezados),
         ],
         historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
         PROJECT_MEMORY_MAX + PROJECTS_TEXT_MAX + STARTED_TEXT_MAX,
@@ -1707,7 +1708,7 @@ async function correrTurno(
             id: asistente.id,
             name: asistente.name,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
-            started: proyectosEmpezados.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
+            started: (proyectosEmpezados ?? []).map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
             // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
             inSpace: espacioDelTurno,
