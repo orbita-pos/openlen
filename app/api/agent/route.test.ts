@@ -305,6 +305,8 @@ vi.mock("@/lib/assistants/store", () => assistantStore);
 // Phase 4: the projects she serves, read for her turn.
 const assistantProjects = vi.hoisted(() => ({
   projectsOfAssistant: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
+  // The projects an agent started (spec local 2026-11-21-agente-sigue-su-proyecto).
+  startedProjectsOf: vi.fn(async (_id: string): Promise<Record<string, unknown>[]> => []),
   titlesOf: vi.fn(async (ids: readonly string[]) => new Map(ids.map((id) => [id, `Title of ${id}`]))),
 }));
 vi.mock("@/lib/assistants/projects", () => assistantProjects);
@@ -5479,7 +5481,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ readOnly?: true; assistant?: { id: string; name: string } }];
     expect(session.readOnly).toBe(true);
-    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [], inSpace: false });
+    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [], started: [], inSpace: false });
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
   });
 
@@ -5678,6 +5680,32 @@ describe("POST /api/agent — the person's own assistant", () => {
   });
 
   // Phase 4: she knows each project she serves — what it published, read-only — and passes requests to the right one.
+  it("🔴 her turn's durable message carries ~/.assistant/STARTED.md, and the session knows the projects she started", async () => {
+    assistantProjects.startedProjectsOf.mockResolvedValueOnce([{ projectId: "s1", title: "Presupuesto", subdomain: null, startedAt: new Date("2026-11-21T12:00:00Z") }]);
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(assistantProjects.startedProjectsOf).toHaveBeenCalledWith("a1");
+    const enviado = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ memoryMessage: string | null }])[0];
+    expect(enviado.memoryMessage).toContain("~/.assistant/STARTED.md");
+    expect(enviado.memoryMessage).toContain("# Presupuesto\n(id: s1)");
+    const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { started?: unknown } }];
+    expect(session.assistant?.started).toEqual([{ id: "s1", title: "Presupuesto" }]);
+  });
+
+  it("🔴 if the projects she started can't be read, her turn goes on without them", async () => {
+    assistantProjects.startedProjectsOf.mockRejectedValueOnce(new Error("db down"));
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return cierre();
+    });
+    await readEvents(await pedir({ assistantId: "a1" }));
+    const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ assistant?: { started?: unknown } }];
+    expect(session.assistant?.started).toEqual([]);
+  });
+
   it("her turn's durable message carries ~/.assistant/PROJECTS.md with each project she serves", async () => {
     const at = new Date("2026-11-09T12:00:00Z");
     assistantProjects.projectsOfAssistant.mockResolvedValueOnce([

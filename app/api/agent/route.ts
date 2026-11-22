@@ -17,7 +17,8 @@ import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
 import { CREATE_ASSISTANT } from "@/lib/assistants/create-tool";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
-import { projectsOfAssistant, titlesOf, type ServedProject } from "@/lib/assistants/projects";
+import { projectsOfAssistant, startedProjectsOf, titlesOf, type ServedProject, type StartedProject } from "@/lib/assistants/projects";
+import { ASSISTANT_STARTED_PATH, STARTED_TEXT_MAX, startedText } from "@/lib/assistants/started-text";
 import { viewingLine, type ViewingProject } from "@/lib/assistants/viewing";
 import { ASSISTANT_PROJECTS_PATH, PROJECTS_TEXT_MAX, projectsText } from "@/lib/assistants/projects-text";
 import { assistantById, claimOpening, markAssistantNoticesHeard, releaseOpening, readyAssistantNotices, type AssistantRow } from "@/lib/assistants/store";
@@ -567,6 +568,9 @@ async function correrTurno(
   const enLaCharla: [] | [string] = asistente ? [assistantConversationKey(asistente.id)] : [];
   /** The projects she serves, her home first (phase 4): what each published, and where ask_len may go — fail-soft. */
   const proyectosDelAsistente: ServedProject[] = asistente ? await projectsOfAssistant(asistente.id).catch(() => []) : [];
+  /** The projects it STARTED with ask_len's new_project (spec local 2026-11-21-agente-sigue-su-proyecto): what
+   *  ~/.assistant/STARTED.md lists and ask_len may follow — fail-soft, the turn goes on without them. */
+  const proyectosEmpezados: StartedProject[] = asistente ? await startedProjectsOf(asistente.id).catch(() => []) : [];
   /** The project on her owner's phone (spec local 2026-11-16-movil-es-tu-asistente, §5.3) — fail-soft. */
   const proyectoEnElTelefono: ViewingProject | null = asistente ? await projectOnThePhone(body?.viewingProjectId, proyectosDelAsistente, quien).catch(() => null) : null;
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
@@ -1339,9 +1343,14 @@ async function correrTurno(
             label: "the projects you serve and what each one published — read-only; it changes when your owner publishes",
             text: projectsText(proyectosDelAsistente),
           },
+          {
+            path: ASSISTANT_STARTED_PATH,
+            label: "the projects you started with Len — read-only; pass an id in ask_len's project to change one",
+            text: startedText(proyectosEmpezados),
+          },
         ],
         historialDeLaBase ? foldMemoryDigests(filasDelHistorial) : null,
-        PROJECT_MEMORY_MAX + PROJECTS_TEXT_MAX,
+        PROJECT_MEMORY_MAX + PROJECTS_TEXT_MAX + STARTED_TEXT_MAX,
       )
     : memoryMessageForTurn(
     [
@@ -1698,6 +1707,7 @@ async function correrTurno(
             id: asistente.id,
             name: asistente.name,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
+            started: proyectosEmpezados.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),
             // Its home is the person's space (spec local 2026-11-19-agentes-para-todos, §6.4): it may write there.
             inSpace: espacioDelTurno,
