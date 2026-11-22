@@ -140,9 +140,10 @@ describe("buildFunctionDeclarations", () => {
       "request_secrets",
       // Shopify without a key (spec local 2026-10-22-shopify-storefront): on by default.
       "connect_shopify_store",
-      // Los visuales de Len (spec local 2026-10-16): las dos de Claude.
+      // Los visuales de Len (spec local 2026-10-16; spec local 2026-11-22-visuales-de-verdad).
       "read_me",
       "show_widget",
+      "read_widget_context",
       // Skills (spec local 2026-10-26-len-skills): DeepSeek's, the one that loads a skill,
       // and the one that delivers the files Len makes.
       "skill",
@@ -192,10 +193,11 @@ describe("buildFunctionDeclarations", () => {
     expect(buildFunctionDeclarations({ OPENLEN_ASSISTANT: "0" }).map((d) => d.name)).not.toContain("create_assistant");
   });
 
-  it("LOS VISUALES: en una app también se declaran read_me y show_widget", () => {
+  it("LOS VISUALES: en una app también se declaran read_me, show_widget y read_widget_context", () => {
     const names = buildFunctionDeclarations(undefined, {}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" }).map((d) => d.name);
     expect(names).toContain("read_me");
     expect(names).toContain("show_widget");
+    expect(names).toContain("read_widget_context");
   });
 
   // LA LÁPIDA DE H2 (Len 2.1, 2026-09-30). Las diferidas y ToolSearch se

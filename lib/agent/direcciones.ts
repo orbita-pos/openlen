@@ -39,8 +39,9 @@ interface TurnoAbierto {
   readonly userId: string;
   readonly abiertoEn: number;
   /** En cola: si el usuario escribe dos veces antes de la siguiente vuelta, se
-   *  leen las dos, en orden. Perder la primera sería peor que juntarlas. */
-  readonly pendientes: string[];
+   *  leen las dos, en orden. Perder la primera sería peor que juntarlas.
+   *  `append` (the visual-states reminder) is model-only and never leaks into the user's text. */
+  readonly pendientes: { readonly texto: string; readonly append?: string }[];
   /** The fallbacks of corrections that must not be lost (her `ask_len`, spec local 2026-11-16-movil-es-tu-asistente,
    *  §5.4.8): if the turn closes with them unread, each runs with its text. Read with the rest, they are dropped. */
   readonly respaldos?: { readonly texto: string; readonly alCerrarSinLeer: (texto: string) => void }[];
@@ -202,7 +203,7 @@ export function dirigir(
   const turno = abiertos.get(turnoId);
   if (!turno) return "no_existe";
   if (turno.userId !== userId) return "ajeno";
-  turno.pendientes.push(`${limpio}${o.append ?? ""}`);
+  turno.pendientes.push({ texto: limpio, ...(o.append !== undefined ? { append: o.append } : {}) });
   if (o.alCerrarSinLeer) {
     const lista = turno.respaldos ?? [];
     lista.push({ texto: limpio, alCerrarSinLeer: o.alCerrarSinLeer });
@@ -217,21 +218,39 @@ export function queuedDirections(turnoId: string): number {
   return abiertos.get(turnoId)?.pendientes.length ?? 0;
 }
 
+/** A mid-turn correction split into what the person wrote (`texto`, for the bubble, saved `userText`, `userPrompt`,
+ *  and language detection) and what the model reads (`paraElModelo`, which may end with the visual-states reminder). */
+export interface DireccionLeida {
+  readonly texto: string;
+  readonly paraElModelo: string;
+}
+
 /**
- * Lo que haya pendiente, y se CONSUME.
+ * Lo que haya pendiente, y se CONSUME, separando las palabras de la persona del
+ * aviso de visuales que sólo lee el modelo.
+ */
+export function leerDireccionConAviso(turnoId: string): DireccionLeida | null {
+  const turno = abiertos.get(turnoId);
+  if (!turno || turno.pendientes.length === 0) return null;
+  const items = turno.pendientes.splice(0);
+  // Read: nothing of it is lost any more.
+  turno.respaldos?.splice(0);
+  const texto = items.map((x) => x.texto).join("\n");
+  // Only the latest explicit append applies: a later correction replaced (or cleared, with `""`) the held visual states.
+  let ultimoAppend = "";
+  for (const x of items) if (x.append !== undefined) ultimoAppend = x.append;
+  return { texto, paraElModelo: ultimoAppend ? `${texto}${ultimoAppend}` : texto };
+}
+
+/**
+ * Lo que haya pendiente (sólo las palabras de la persona), y se CONSUME.
  *
  * Consumir es lo correcto: si se quedara, el bucle lo reinyectaría en cada
  * vuelta y el modelo leería la misma corrección cinco veces, cada una como si
  * fuera nueva.
  */
 export function leerDireccion(turnoId: string): string | null {
-  const turno = abiertos.get(turnoId);
-  if (!turno || turno.pendientes.length === 0) return null;
-  const juntas = turno.pendientes.join("\n");
-  turno.pendientes.length = 0;
-  // Read: nothing of it is lost any more.
-  turno.respaldos?.splice(0);
-  return juntas;
+  return leerDireccionConAviso(turnoId)?.texto ?? null;
 }
 
 /** Lo que acepta una respuesta: lo que el dueño escribe en «otra» es DATO para

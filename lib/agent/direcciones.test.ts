@@ -401,4 +401,39 @@ describe("the visual states of a running turn", () => {
     expect(openTurnOf("t1", "u2")).toBeNull();
     expect(openTurnOf("nope", "u1")).toBeNull();
   });
+
+  // Final review Critical #1: the visual-states reminder must NEVER leak into the person's text (SSE bubble, saved
+  // userText, userPrompt, language detector) — only into what the model reads.
+  it("🔴 leerDireccionConAviso keeps the person's words clean and puts the reminder only in paraElModelo", async () => {
+    const { leerDireccionConAviso } = await import("./direcciones");
+    abrirTurno("t1", "u1");
+    dirigir("t1", "u1", "ya", { append: "\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
+    const leida = leerDireccionConAviso("t1");
+    expect(leida).toEqual({
+      texto: "ya",
+      paraElModelo: "ya\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>",
+    });
+    expect(leerDireccionConAviso("t1")).toBeNull();
+
+    // Two queued corrections: user words join with newline, model gets ONLY the latest reminder (latest states replaced earlier ones).
+    dirigir("t1", "u1", "primera", { append: "\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
+    dirigir("t1", "u1", "segunda", { append: "\n\n<system-reminder>\nwidget_bbbb2222\n</system-reminder>" });
+    const ambas = leerDireccionConAviso("t1");
+    expect(ambas).toEqual({
+      texto: "primera\nsegunda",
+      paraElModelo: "primera\nsegunda\n\n<system-reminder>\nwidget_bbbb2222\n</system-reminder>",
+    });
+
+    // A later correction that explicitly cleared all visual states (`append: ""`) drops the earlier queued reminder.
+    dirigir("t1", "u1", "primera", { append: "\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
+    dirigir("t1", "u1", "borre todo", { append: "" });
+    expect(leerDireccionConAviso("t1")).toEqual({
+      texto: "primera\nborre todo",
+      paraElModelo: "primera\nborre todo",
+    });
+
+    // leerDireccion returns ONLY the person's words, never the reminder.
+    dirigir("t1", "u1", "listo", { append: "\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
+    expect(leerDireccion("t1")).toBe("listo");
+  });
 });

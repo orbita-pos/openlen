@@ -87,6 +87,19 @@ export function heldVisualStates(states: readonly VisualState[], known: Readonly
   return states.filter((s) => known.has(s.widgetId)).map((s) => ({ ...s, title: known.get(s.widgetId) ?? null }));
 }
 
+/** Client-side payload builder: serializes the chat's held map, returning `[]` if it exceeds `VISUAL_STATES_MAX` or
+ *  `VISUAL_STATES_MAX_BYTES` (UTF-8 JSON bytes) so over-cap payloads are never sent over the wire. */
+export function visualStatesPayload(held: ReadonlyMap<string, string>): { readonly widgetId: string; readonly state: string }[] {
+  if (held.size === 0 || held.size > VISUAL_STATES_MAX) return [];
+  const list = [...held].map(([widgetId, state]) => ({ widgetId, state }));
+  try {
+    if (new TextEncoder().encode(JSON.stringify(list)).length > VISUAL_STATES_MAX_BYTES) return [];
+  } catch {
+    return [];
+  }
+  return list;
+}
+
 /** The line beside the person's message naming the visuals that shared a state; nothing when none did. The states stay
  *  out of it: the model reads them with the tool only when the message is about them. */
 export function visualStatesReminder(states: readonly HeldVisualState[]): string {

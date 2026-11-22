@@ -81,7 +81,7 @@ export async function dirigirA(
     const r = await c.pedir("/api/agent/dirigir", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ turnoId, texto, ...(visualStates?.length ? { visualStates } : {}) }),
+      body: JSON.stringify({ turnoId, texto, ...(visualStates !== undefined ? { visualStates } : {}) }),
     });
     return r.ok;
   } catch {

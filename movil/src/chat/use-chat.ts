@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import type { TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
-import { cleanVisualContext, VISUAL_STATES_MAX } from "@/lib/agent/visuals/model-context";
+import { cleanVisualContext, VISUAL_STATES_MAX, visualStatesPayload } from "@/lib/agent/visuals/model-context";
 import type { StoredChatTurn } from "@/lib/projects/types";
 import { dirigirA, mandarALen, subirFoto, transcribir } from "../api/chat";
 import { leerTurno } from "../api/proyectos";
@@ -59,20 +59,26 @@ export function useChat(o: OpcionesDelChat) {
   const [vivo, setVivo] = useState<TurnoEnVivo | null>(null);
   const [reenganche, setReenganche] = useState<{ fila: string; turnoId: string | null; texto: string; acciones?: StoredChatTurn["actions"] } | null>(null);
   const epoca = useRef(0);
-  useLayoutEffect(() => {
-    const contador = epoca;
-    contador.current++;
-    return () => { contador.current++; };
-  }, [o.projectId]);
   const vivoRef = useRef(vivo);
   const reengancheRef = useRef(reenganche);
   const localesRef = useRef(locales);
+  const visualStatesRef = useRef(new Map<string, string>());
   useLayoutEffect(() => {
     op.current = o;
     vivoRef.current = vivo;
     reengancheRef.current = reenganche;
     localesRef.current = locales;
   });
+  // Switching project OR agent (two agents in the person's space share projectId): runs AFTER the ref-sync effect so
+  // live refs and visual states clear synchronously on the switch render before the reset effect commits.
+  useLayoutEffect(() => {
+    const contador = epoca;
+    contador.current++;
+    vivoRef.current = null;
+    reengancheRef.current = null;
+    visualStatesRef.current = new Map();
+    return () => { contador.current++; };
+  }, [o.projectId, o.assistantId]);
   const fotos = useRef(new Map<string, Blob>());
   const vistasFoto = useRef(new Map<string,string>());
   const fotosSubidas = useRef(new Map<string,string>());
@@ -82,12 +88,7 @@ export function useChat(o: OpcionesDelChat) {
   const [subiendo, setSubiendo] = useState(false);
   const notas = useRef(new Map<string, NotaGrabada>());
   // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2): latest state per widget_id of THIS chat
-  // (project or agent), capped at VISUAL_STATES_MAX dropping the oldest. Cleared when projectId OR assistantId changes
-  // (two agents in the person's space share the same projectId).
-  const visualStatesRef = useRef(new Map<string, string>());
-  useLayoutEffect(() => {
-    visualStatesRef.current = new Map();
-  }, [o.projectId, o.assistantId]);
+  // (project or agent), capped at VISUAL_STATES_MAX dropping the oldest.
   const reportVisualState = useCallback((widgetId: string, state: string) => {
     const held = visualStatesRef.current;
     const clean = cleanVisualContext(state);
@@ -96,10 +97,10 @@ export function useChat(o: OpcionesDelChat) {
     held.set(widgetId, clean);
     while (held.size > VISUAL_STATES_MAX) held.delete(held.keys().next().value!);
   }, []);
-  const visualStatesForBody = useCallback(
-    () => (visualStatesRef.current.size > 0 ? [...visualStatesRef.current].map(([widgetId, state]) => ({ widgetId, state })) : undefined),
-    [],
-  );
+  const visualStatesForBody = useCallback(() => {
+    const list = visualStatesPayload(visualStatesRef.current);
+    return list.length > 0 ? list : undefined;
+  }, []);
 
   const limpiarAdjuntos = useCallback((k: string) => {
     const url=vistasFoto.current.get(k);if(url)URL.revokeObjectURL(url);
@@ -109,7 +110,7 @@ export function useChat(o: OpcionesDelChat) {
     for(const k of new Set([...fotos.current.keys(),...archivos.current.keys()]))limpiarAdjuntos(k);
   },[limpiarAdjuntos]);
 
-  // Otra página, otra conversación.
+  // Otra página u otro agente, otra conversación.
   useEffect(() => {
     setLocales([]);
     setVivo(null);
@@ -118,7 +119,7 @@ export function useChat(o: OpcionesDelChat) {
     fotos.current.clear();
     archivos.current.clear(); subidos.current.clear(); subiendoRef.current = false; setSubiendo(false);
     notas.current.clear();
-  }, [o.projectId, limpiarAdjuntos]);
+  }, [o.projectId, o.assistantId, limpiarAdjuntos]);
 
   // Releída la conversación (al acabar un turno): lo enviado que ya trae, lo
   // pinta ella.
@@ -177,7 +178,8 @@ export function useChat(o: OpcionesDelChat) {
         // Len trabaja: lo que escribes le corrige el rumbo, sin pararlo.
         const turnoId = v?.turnoId ?? r?.turnoId ?? null;
         const fila = v?.fila ?? r?.fila;
-        const visualStates = visualStatesForBody();
+        // Always include `visualStates` (even `[]`) so clearing the last visual on screen replaces stale state on the server.
+        const visualStates = visualStatesForBody() ?? [];
         const ok = turnoId ? await dirigirA(cliente, turnoId, texto, visualStates) : false;
         if (actual !== epoca.current) return;
         setLocales((ls) => marcar(ls, k, ok ? { estado: "ok", fila, correccion: true } : { estado: "noSeEnvio" }));
@@ -345,7 +347,7 @@ export function useChat(o: OpcionesDelChat) {
       vigente = false;
       clearInterval(reloj);
     };
-  }, [filaEnCurso, hayVivo, o.projectId]);
+  }, [filaEnCurso, hayVivo, o.projectId, o.assistantId]);
 
   const elementos = useMemo(() => {
     const ahora = Date.now();

@@ -149,7 +149,7 @@ import { artifactsEnabled, getArtifactRuntime } from "@/lib/artifacts/runtime";
 import { availableArtifactKinds } from "@/lib/artifacts/capabilities";
 import { createArtifactAgent } from "@/lib/artifacts/tools";
 
-import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccion, noteWidgetDrawn, rondaSiguiente, queuedDirections, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
+import { abrirTurno, cerrarTurno, esperarRespuesta, hayTurnoVivoEnElProyecto, leerDireccionConAviso, noteWidgetDrawn, rondaSiguiente, queuedDirections, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
 import { ASK_USER_TIMEOUT_MS, type UserQuestion } from "@/lib/agent/ask-user-question";
 import { materializeSystemUpdates, planInHistoryEnabled, planModeFromRows, resolveTurnPlanMode, systemUpdateFor, withPlanSection } from "@/lib/agent/plan-mode";
 import {
@@ -1533,9 +1533,10 @@ async function correrTurno(
     // LOS VISUALES (spec local 2026-10-16): si lee en un teléfono, para la
     // plataforma de `read_me`. Sólo esos dos literales; otro valor no cuenta.
     ...(body?.dispositivo === "mobile" ? { dispositivo: "mobile" as const } : body?.dispositivo === "desktop" ? { dispositivo: "desktop" as const } : {}),
-    // A screen that can't draw visuals (spec local 2026-11-22-visuales-de-verdad, §1): the phone app's key without
-    // `drawsVisuals` — an older app, or the voice call. Never the web, never a turn the server started.
-    ...(req.appKey === true && body?.drawsVisuals !== true && !opts.round && !opts.hilo && !opts.email && !opts.scheduled ? { visualsHidden: true as const } : {}),
+    // A screen that can't draw visuals (spec local 2026-11-22-visuales-de-verdad, §1): an older phone app (app key
+    // without `drawsVisuals: true`) or any voice call (`drawsVisuals: false`, phone or web). Never the web chat, never
+    // a turn the server started.
+    ...((body?.drawsVisuals === false || (req.appKey === true && body?.drawsVisuals !== true)) && !opts.round && !opts.hilo && !opts.email && !opts.scheduled ? { visualsHidden: true as const } : {}),
     // Y el que ESCRIBE, que manda sobre el de la interfaz (Holi, 10/10): de sus
     // palabras de ahora y de las de antes en esta charla, no del historial del
     // modelo, donde van pegadas a avisos en inglés.
@@ -2794,7 +2795,7 @@ async function correrTurno(
           // vueltas; lo que el usuario haya escrito entra como mensaje suyo y
           // el turno gana margen para actuar sobre ello.
           leerDireccion: () => {
-            const direccion = leerDireccion(turnoId);
+            const direccion = leerDireccionConAviso(turnoId);
             // 🔴 Y EL OBJETIVO DEL TURNO SE MUEVE CON ELLA.
             //
             // `userPrompt` se fijaba una vez, con lo que venía en el cuerpo de
@@ -2810,10 +2811,12 @@ async function correrTurno(
             // entero («cambia sólo el botón» no dice de qué página habla), y
             // los ojos necesitan las dos mitades para juzgar. El marbete dice
             // cuál manda, que es lo único que el texto suelto no puede decir.
+            // Only the person's own words (`direccion.texto`) join `correcciones` / `userPrompt` — never the
+            // model-only visual-states reminder (`direccion.paraElModelo`).
             if (direccion) {
-              correcciones.push(direccion);
+              correcciones.push(direccion.texto);
               avance.tocar();
-              const corregido = `${agentSession.userPrompt ?? ""}\n\n[Corrección posterior del usuario — manda sobre lo anterior] ${direccion}`;
+              const corregido = `${agentSession.userPrompt ?? ""}\n\n[Corrección posterior del usuario — manda sobre lo anterior] ${direccion.texto}`;
               agentSession.userPrompt = corregido;
               // La misma corrección, para quien lee el OTRO campo: `publicar`
               // mira `mensajeDelUsuario` para no reclamar un subdominio que

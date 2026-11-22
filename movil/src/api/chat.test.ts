@@ -125,13 +125,13 @@ describe("dirigirA", () => {
     expect(await dirigirA(cliente(sinRed).c, "x", "y")).toBe(false);
   });
 
-  it("🔴 carries visualStates when provided, omits them when empty", async () => {
+  it("🔴 carries visualStates when provided (including [] to clear held states), omits when undefined", async () => {
     const { c, pedir } = cliente(async () => Response.json({ ok: true }));
     const states = [{ widgetId: "widget_aaaa1111", state: "3 of 5" }];
     expect(await dirigirA(c, "x1", "ya", states)).toBe(true);
     expect(JSON.parse(String(pedir.mock.calls[0]![1]!.body))).toEqual({ turnoId: "x1", texto: "ya", visualStates: states });
-    await dirigirA(c, "x1", "sin", []);
-    expect(JSON.parse(String(pedir.mock.calls[1]![1]!.body))).toEqual({ turnoId: "x1", texto: "sin" });
+    await dirigirA(c, "x1", "borré todo", []);
+    expect(JSON.parse(String(pedir.mock.calls[1]![1]!.body))).toEqual({ turnoId: "x1", texto: "borré todo", visualStates: [] });
   });
 });
 

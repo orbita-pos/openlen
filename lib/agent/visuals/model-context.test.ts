@@ -11,6 +11,7 @@ import {
   VISUAL_CONTEXT_MAX_CHARS,
   VISUAL_STATES_MAX,
   VISUAL_STATES_MAX_BYTES,
+  visualStatesPayload,
   visualStatesReminder,
 } from "./model-context";
 
@@ -130,5 +131,18 @@ describe("visualStatesReminder", () => {
     expect(out).toContain("widget_bbbb2222");
     expect(out).toContain("read_widget_context");
     expect(out).not.toContain("a, b");
+  });
+});
+
+// Final review Important #7: client-side UTF-8 byte cap before sending over the wire.
+describe("visualStatesPayload", () => {
+  it("🔴 returns [] when the UTF-8 JSON exceeds 1 MiB (e.g. 256 × 1500 multi-byte chars)", () => {
+    const small = new Map([["widget_aaaa1111", "3 of 5"]]);
+    expect(visualStatesPayload(small)).toEqual([{ widgetId: "widget_aaaa1111", state: "3 of 5" }]);
+
+    // 256 entries × 1500 CJK chars (3 bytes each in UTF-8) = ~1.15 MiB > VISUAL_STATES_MAX_BYTES.
+    const big = new Map<string, string>();
+    for (let i = 0; i < VISUAL_STATES_MAX; i++) big.set(`widget_${String(i).padStart(8, "0")}`, "あ".repeat(VISUAL_CONTEXT_MAX_CHARS));
+    expect(visualStatesPayload(big)).toEqual([]);
   });
 });

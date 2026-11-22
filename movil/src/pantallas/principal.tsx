@@ -191,7 +191,10 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
   // page. Her conversation with her owner, read when she becomes the app's and after each of her turns.
   const ella = modo.kind === "assistant" ? modo.assistant : null;
   const suId = ella?.id ?? null;
-  const [suHistorial, setSuHistorial] = useState<StoredChatTurn[]>(SIN_HISTORIAL);
+  // Tagged with its owning assistantId so switching between two space agents drops the previous agent's turns (and
+  // unmounts her visuals) synchronously on the same render instead of waiting for the effect.
+  const [suHistorialGuardado, setSuHistorialGuardado] = useState<{ readonly id: string; readonly turnos: StoredChatTurn[] } | null>(null);
+  const suHistorial = suHistorialGuardado?.id === suId ? suHistorialGuardado.turnos : SIN_HISTORIAL;
   // An agent whose conversation hasn't started: her file's first message, sent when her chat opens (as her place does).
   // Whose it is goes with it: read for one agent, it never goes to the next one tapped (final review of this pass).
   const [suInicio, setSuInicio] = useState<{ readonly id: string; readonly texto: string } | null>(null);
@@ -201,12 +204,12 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
     if (!suId) return;
     void leerSuChatYSuInicio(cliente, suId).then(({ historial, inicio }) => {
       if (suIdActual.current !== suId) return;
-      setSuHistorial(historial);
+      setSuHistorialGuardado({ id: suId, turnos: historial });
       setSuInicio(inicio ? { id: suId, texto: inicio } : null);
     }, () => {});
   }, [cliente, suId]);
   useEffect(() => {
-    setSuHistorial(SIN_HISTORIAL);
+    setSuHistorialGuardado(null);
     setSuInicio(null);
     recargarSuChat();
   }, [recargarSuChat]);

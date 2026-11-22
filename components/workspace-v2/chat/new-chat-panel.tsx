@@ -146,9 +146,9 @@ const GAME_SUGGESTIONS = ["screens", "touch", "play", "publish"] as const;
 export function NewChatPanel(props: NewChatPanelProps) {
   const { flatProjectId, onFlatHtmlUpdate, flatProjectPage = null, projectLoading = false } = props;
   if (flatProjectId && onFlatHtmlUpdate) {
-    // La charla es una para todo el sitio; cambiar de página remonta el panel
+    // La charla es una para todo el sitio; cambiar de página o de agente remonta el panel
     // (como el de hoy) y la convergencia la vuelve a traer entera.
-    return <AgentChatView key={`${flatProjectId}:${flatProjectPage ?? ""}`} {...props} projectId={flatProjectId} onLocalUpdate={onFlatHtmlUpdate} />;
+    return <AgentChatView key={`${flatProjectId}:${flatProjectPage ?? ""}:${props.assistant?.id ?? ""}`} {...props} projectId={flatProjectId} onLocalUpdate={onFlatHtmlUpdate} />;
   }
   return <NoProject loading={projectLoading} />;
 }

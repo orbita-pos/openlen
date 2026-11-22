@@ -103,4 +103,13 @@ describe("an answer brings what the visuals shared", () => {
     await espera;
     expect(visualStatesOf("t1")).toEqual([{ widgetId: "widget_nnnn0000", state: "kept", cut: false, title: null }]);
   });
+
+  it("🔴 an explicit empty visualStates array clears previously held states", async () => {
+    abrirTurno("t1", "u1", Date.now(), { projectId: "p1" });
+    setVisualStates("t1", [{ widgetId: "widget_nnnn0000", state: "stale", cut: false, title: null }]);
+    const espera = esperarRespuesta("t1", { timeoutMs: 60_000 });
+    expect((await pedir({ turnoId: "t1", answers: respuesta, visualStates: [] })).status).toBe(200);
+    await espera;
+    expect(visualStatesOf("t1")).toEqual([]);
+  });
 });

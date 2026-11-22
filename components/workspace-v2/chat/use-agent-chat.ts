@@ -53,7 +53,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
-import { cleanVisualContext, VISUAL_STATES_MAX } from "@/lib/agent/visuals/model-context";
+import { cleanVisualContext, VISUAL_STATES_MAX, visualStatesPayload } from "@/lib/agent/visuals/model-context";
 import { deliveredFrom } from "@/lib/agent/skills/present";
 import { screenshotsFrom } from "@/lib/agent/step-screenshots";
 import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
@@ -390,11 +390,11 @@ export function useAgentChat({
     held.set(widgetId, clean);
     while (held.size > VISUAL_STATES_MAX) held.delete(held.keys().next().value!);
   }, []);
-  const visualStatesForBody = useCallback(
-    () => (visualStatesRef.current.size > 0 ? [...visualStatesRef.current].map(([widgetId, state]) => ({ widgetId, state })) : undefined),
-    [],
-  );
-  useEffect(() => {
+  const visualStatesForBody = useCallback(() => {
+    const list = visualStatesPayload(visualStatesRef.current);
+    return list.length > 0 ? list : undefined;
+  }, []);
+  useLayoutEffect(() => {
     visualStatesRef.current = new Map();
   }, [projectId, assistantId]);
   const [draft, setDraft] = useState("");
@@ -2585,12 +2585,13 @@ export function useAgentChat({
     async (texto: string): Promise<boolean> => {
       const turnoId = turnoIdRef.current;
       if (!texto || !turnoId) return false;
-      const estadosVisuales = visualStatesForBody();
+      // Always include `visualStates` (even `[]`) so clearing the last visual on screen replaces stale state on the server.
+      const estadosVisuales = visualStatesForBody() ?? [];
       try {
         const r = await fetch("/api/agent/dirigir", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ turnoId, texto, ...(estadosVisuales ? { visualStates: estadosVisuales } : {}) }),
+          body: JSON.stringify({ turnoId, texto, visualStates: estadosVisuales }),
         });
         return r.ok;
       } catch {
@@ -2653,12 +2654,12 @@ export function useAgentChat({
       );
       if (turnoId) {
         try {
-          // With what the visuals shared now (spec local 2026-11-22-visuales-de-verdad): it replaces what the turn held.
-          const estadosVisuales = visualStatesForBody();
+          // With what the visuals shared now (spec local 2026-11-22-visuales-de-verdad): always send (even `[]`) so it replaces what the turn held.
+          const estadosVisuales = visualStatesForBody() ?? [];
           const r = await fetch("/api/agent/responder", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ turnoId, answers, ...(estadosVisuales ? { visualStates: estadosVisuales } : {}) }),
+            body: JSON.stringify({ turnoId, answers, visualStates: estadosVisuales }),
           });
           const code = r.ok ? undefined : ((await r.json().catch(() => ({}))) as { error?: string }).error;
           if (outcomeOfResponder(r.status, code) !== "fallback") {

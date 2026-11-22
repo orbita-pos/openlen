@@ -45,6 +45,7 @@ import type { CompactionPolicy } from "./compaction/policy";
 import { createWritePreview } from "./write-preview";
 import { createWidgetPreview } from "./visuals/widget-preview";
 import { READ_ME, type VisualWidget } from "./visuals/widget";
+import { READ_WIDGET_CONTEXT } from "./visuals/read-widget-context";
 import type { DeliveredFile } from "./skills/present";
 
 // F2 Task 10: a coded error lets the panel show a localized message instead
@@ -349,7 +350,7 @@ export interface AgentLoopArgs {
    *  (ver `lib/agent/direcciones.ts`): si se quedara, el modelo leería la misma
    *  corrección en cada vuelta como si fuera nueva. Ausente ⇒ el bucle se
    *  comporta exactamente como antes de que esto existiera. */
-  leerDireccion?(): string | null;
+  leerDireccion?(): string | { readonly texto: string; readonly paraElModelo: string } | null;
   /** LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len, §4.6): the settlement notices of the
    *  children this turn launched, taken (and so consumed) before each model call and once more before
    *  the turn closes. Each one enters as its own user message, as DeepSeek's harness sends it. */
@@ -885,10 +886,11 @@ const READ_ONLY_TOOLS = new Set([
   "session_search",
   "session_event_search",
   "session_event_read",
-  // LOS VISUALES: leer el manual es una lectura, como `Read`. Hasta el
+  // LOS VISUALES: leer el manual y el estado de los visuales son lecturas, como `Read`. Hasta el
   // 2026-10-17 le gastaba a Len una vuelta de trabajo como si editara; Claude
   // Code no cuenta las lecturas. `show_widget` sigue contando: dibuja.
   READ_ME,
+  READ_WIDGET_CONTEXT,
   // ⚰️ Aquí iba `ToolSearch` (H2), retirada con las diferidas en Len 2.1, y
   // `TodoWrite`, retirada en F4 (plans/len-agente-2026).
 ]);
@@ -905,6 +907,13 @@ const VUELTAS_POR_DIRECCION = 2;
  *  alrededor sólo lo que el modelo no puede saber por su cuenta —que llegó
  *  mientras trabajaba, no al principio—. Una sola redacción para los dos sitios
  *  donde se recoge: entre vueltas y al cerrar. */
+function normalizarDireccion(
+  raw: string | { readonly texto: string; readonly paraElModelo: string } | null | undefined,
+): { readonly texto: string; readonly paraElModelo: string } | null {
+  if (!raw) return null;
+  return typeof raw === "string" ? { texto: raw, paraElModelo: raw } : raw;
+}
+
 function steerMessage(texto: string): Message {
   return {
     role: "user",
@@ -1502,15 +1511,15 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     //
     // Y ANTES del tope, no después: si la corrección llega justo cuando se
     // acaba el presupuesto, leerla y salir sería lo peor de los dos mundos.
-    const direccion = args.leerDireccion?.() ?? null;
+    const direccion = normalizarDireccion(args.leerDireccion?.());
     if (direccion) {
-      messages.push(steerMessage(direccion));
+      messages.push(steerMessage(direccion.paraElModelo));
       repeticiones.reset();
       unlockEffortNextStep = false;
       consecutiveStallSteps = 0;
       silencio.reset();
       relojDesde = ahora();
-      args.emit({ type: "direccion", texto: direccion });
+      args.emit({ type: "direccion", texto: direccion.texto });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
     for (const notice of args.takeAgentNotices?.() ?? []) messages.push({ role: "user", content: notice });
@@ -1853,16 +1862,16 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
       // chat nuevo). Como en Claude Code, lo que el usuario escribe mientras el
       // agente trabaja no se pierde: aquí el turno no cierra, Len la lee con lo
       // que acaba de decir delante y sigue, con el mismo margen que entre vueltas.
-      const tardia = args.leerDireccion?.() ?? null;
+      const tardia = normalizarDireccion(args.leerDireccion?.());
       if (tardia) {
         if (turnText.trim()) messages.push(delAsistente(turnText));
-        messages.push(steerMessage(tardia));
+        messages.push(steerMessage(tardia.paraElModelo));
         repeticiones.reset();
         unlockEffortNextStep = false;
         consecutiveStallSteps = 0;
         silencio.reset();
         relojDesde = ahora();
-        args.emit({ type: "direccion", texto: tardia });
+        args.emit({ type: "direccion", texto: tardia.texto });
         maxTurns += VUELTAS_POR_DIRECCION;
         continue;
       }
@@ -2319,7 +2328,7 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // (`agent-loop/src/agent.ts`: `if (turnEnds && this.inbox.nextStep.length
     // === 0) break`): con una pendiente, la tanda se apunta como siempre y Len
     // la lee detrás, como la corrección tardía del cierre normal.
-    const pendiente = ownerTookOver || pregunta ? (args.leerDireccion?.() ?? null) : null;
+    const pendiente = ownerTookOver || pregunta ? normalizarDireccion(args.leerDireccion?.()) : null;
     if (ownerTookOver && !pendiente) {
       messages.push(delAsistente(turnText, calls));
       messages.push({ role: "user", content: "", functionResponses });
@@ -2442,13 +2451,13 @@ export async function runAgentLoop(args: AgentLoopArgs): Promise<AgentLoopResult
     // Lote 7-8 (2): lo que el dueño escribió mientras la pregunta esperaba, detrás
     // de la tanda; como la corrección tardía, con su margen de vueltas.
     if (pendiente) {
-      messages.push(steerMessage(pendiente));
+      messages.push(steerMessage(pendiente.paraElModelo));
       repeticiones.reset();
       unlockEffortNextStep = false;
       consecutiveStallSteps = 0;
       silencio.reset();
       relojDesde = ahora();
-      args.emit({ type: "direccion", texto: pendiente });
+      args.emit({ type: "direccion", texto: pendiente.texto });
       maxTurns += VUELTAS_POR_DIRECCION;
     }
     // H12 · quien insiste en lo que se le rechaza no avanza: se le cierra.

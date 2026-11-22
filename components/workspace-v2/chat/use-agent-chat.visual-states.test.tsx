@@ -66,15 +66,18 @@ function stubAgent(opts: { hold?: boolean; first?: string[] } = {}) {
   return { agent, steer, answers, release: () => release() };
 }
 
-async function render(capture: (c: ReturnType<typeof useAgentChat>) => void) {
-  function Chat() {
-    capture(useAgentChat({ projectId: "p1", projectHtml: "", onLocalUpdate: () => {} } as Parameters<typeof useAgentChat>[0]));
+async function render(capture: (c: ReturnType<typeof useAgentChat>) => void, extra: { projectId?: string; assistantId?: string } = {}) {
+  function Chat(p: { projectId?: string; assistantId?: string }) {
+    capture(useAgentChat({ projectId: p.projectId ?? "p1", assistantId: p.assistantId, projectHtml: "", onLocalUpdate: () => {} } as Parameters<typeof useAgentChat>[0]));
     return null;
   }
   const host = document.createElement("div");
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => root!.render(<Chat />));
+  await act(async () => root!.render(<Chat {...extra} />));
+  return async (next: { projectId?: string; assistantId?: string }) => {
+    await act(async () => root!.render(<Chat {...next} />));
+  };
 }
 const tick = () => act(async () => void (await new Promise((r) => setTimeout(r, 50))));
 
@@ -194,5 +197,54 @@ describe("what the visuals shared, going with what the person sends", () => {
     expect(calls.answers[0]!.visualStates).toEqual([{ widgetId: A, state: "picked B" }]);
     await act(async () => calls.release());
     await tick();
+  });
+
+  // Final review Critical #2 (Review Focus 4): clearing the last visual's state mid-turn sends `visualStates: []` on
+  // corrections and answers so the server replaces (clears) its previously held state.
+  it("🔴 clearing the last visual mid-turn sends visualStates: [] on correction and answer", async () => {
+    const questions = [{ id: "q1", question: "¿Seguimos?", options: [{ label: "Sí" }] }];
+    const calls = stubAgent({ hold: true, first: [sse("question", { questions })] });
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render((c) => (chat = c));
+    await act(async () => chat!.reportVisualState(A, "3 of 5"));
+    await act(async () => chat!.setDraft("empieza"));
+    await act(async () => chat!.submit());
+    await tick();
+    await act(async () => chat!.reportVisualState(A, ""));
+    await act(async () => chat!.setDraft("lo borré"));
+    await act(async () => chat!.submit());
+    await tick();
+    expect(calls.steer[0]).toEqual({ turnoId: "t1", texto: "lo borré", visualStates: [] });
+    const turnId = chat!.turns.at(-1)!.id;
+    await act(async () => void (await chat!.answerQuestion(turnId, chat!.turns.at(-1)!.pendingQuestions ?? [], [{ id: "q1", selected: ["Sí"] }])));
+    await tick();
+    expect(calls.answers[0]!.visualStates).toEqual([]);
+    await act(async () => calls.release());
+    await tick();
+  });
+
+  // Final review Important #7 (Review Focus 3): over 1 MiB UTF-8 JSON bytes, client sends none instead of over-cap bytes.
+  it("🔴 over 1 MiB of multi-byte UTF-8 states, client sends no visualStates", async () => {
+    const calls = stubAgent();
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    await render((c) => (chat = c));
+    await act(async () => {
+      for (let i = 0; i < 256; i++) chat!.reportVisualState(`widget_${String(i).padStart(8, "0")}`, "あ".repeat(1500));
+    });
+    await act(async () => void chat!.send("hola"));
+    await tick();
+    expect(calls.agent[0]).not.toHaveProperty("visualStates");
+  });
+
+  // Final review Important #8 (Review Focus 1): switching assistantId on the same space projectId clears visualStates.
+  it("🔴 switching assistantId on the same projectId clears visual states", async () => {
+    const calls = stubAgent();
+    let chat: ReturnType<typeof useAgentChat> | null = null;
+    const rerender = await render((c) => (chat = c), { projectId: "space", assistantId: "ana" });
+    await act(async () => chat!.reportVisualState(A, "3 of 5"));
+    await rerender({ projectId: "space", assistantId: "rosa" });
+    await act(async () => void chat!.send("hola Rosa"));
+    await tick();
+    expect(calls.agent[0]).not.toHaveProperty("visualStates");
   });
 });

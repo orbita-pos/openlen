@@ -46,11 +46,17 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const { turnoId, texto, visualStates } = (cuerpo ?? {}) as { turnoId?: unknown; texto?: unknown; visualStates?: unknown };
   if (typeof turnoId !== "string" || !turnoId) return json({ error: "falta_turno" }, 400);
   if (typeof texto !== "string") return json({ error: "falta_texto" }, 400);
+  if (!texto.trim()) return json({ error: "texto_vacio" }, 400);
 
   // What the visuals shared comes with the correction too (spec local 2026-11-22-visuales-de-verdad): it replaces what
   // the turn held, and the correction names the visuals that shared a state — never the states themselves.
   const estados = await visualStatesForOpenTurn(turnoId, userId, visualStates);
-  const r = dirigir(turnoId, userId, texto, estados?.length ? { append: visualStatesReminder(estados) } : {});
+  const r = dirigir(
+    turnoId,
+    userId,
+    texto,
+    estados !== null ? { append: estados.length ? visualStatesReminder(estados) : "" } : {},
+  );
   if (r === "vacio") return json({ error: "texto_vacio" }, 400);
   // `ajeno` y `no_existe` responden LO MISMO a propósito: distinguirlos le diría
   // a quien prueba ids cuáles existen.

@@ -273,3 +273,58 @@ it("keeps at most 256 visual states, dropping the oldest so the server cap never
   expect(sent[0]).toEqual({ widgetId: widgetIdOf("row", 4), state: "s4" });
   expect(sent.at(-1)).toEqual({ widgetId: widgetIdOf("row", 259), state: "s259" });
 });
+
+// Final review Critical #2: clearing the last visual state mid-turn sends [] to dirigirA so the server clears stale state.
+it("🔴 clearing the last visual state mid-turn sends [] to dirigirA", async () => {
+  let terminar!: (v: string) => void;
+  m.mandar.mockImplementation(() => new Promise((r) => { terminar = r; }));
+  m.dirigir.mockResolvedValue(true);
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => chat.reportVisualState(WA, "3 of 5"));
+  await act(async () => chat.mandar("empieza"));
+  try {
+    const evento = m.mandar.mock.calls[0]![2];
+    await act(async () => evento({ nombre: "turno", datos: { turnoId: "srv-9" } }));
+    await act(async () => chat.reportVisualState(WA, ""));
+    await act(async () => chat.mandar("borré todo"));
+    expect(m.dirigir).toHaveBeenCalledWith(cliente, "srv-9", "borré todo", []);
+  } finally {
+    await act(async () => terminar("terminado"));
+  }
+});
+
+// Final review Critical #3 (Review Focus 1): switching between two agents sharing the same space projectId while
+// Agent A has a live turn running MUST reset vivo/epoca so Agent A's stream & visuals don't stay mounted in Agent B
+// and writing to Agent B starts a new turn for B instead of steering A.
+it("🔴 Review Focus 1: switching agent on the same space projectId while a live turn runs resets vivo and never steers the old agent", async () => {
+  let terminarAna!: (v: string) => void;
+  m.mandar.mockImplementationOnce(() => new Promise((r) => { terminarAna = r; })).mockResolvedValueOnce("terminado");
+  await act(async () => root.render(<Pantalla id="space" assistantId="ana" />));
+  await act(async () => chat.mandar("ejercicios"));
+  const eventoAna = m.mandar.mock.calls[0]![2];
+  await act(async () => eventoAna({ nombre: "turno", datos: { turnoId: "srv-ana" } }));
+  await act(async () => eventoAna({ nombre: "text", datos: { text: "Respuesta de Ana" } }));
+  expect(chat.trabajando).toBe(true);
+
+  await act(async () => root.render(<Pantalla id="space" assistantId="rosa" />));
+  expect(chat.trabajando).toBe(false);
+  await act(async () => eventoAna({ nombre: "text", datos: { text: "tardío de Ana" } }));
+  expect(chat.elementos.some((e) => e.tipo === "len" && e.texto.includes("Ana"))).toBe(false);
+
+  await act(async () => chat.mandar("hola Rosa"));
+  expect(m.dirigir).not.toHaveBeenCalled();
+  expect(m.mandar).toHaveBeenCalledTimes(2);
+  expect(m.mandar.mock.calls[1]![1]).toMatchObject({ projectId: "space", assistantId: "rosa", prompt: "hola Rosa" });
+  await act(async () => terminarAna("terminado"));
+});
+
+// Final review Important #7 (Review Focus 3): over 1 MiB UTF-8 JSON bytes, phone sends no visualStates.
+it("🔴 over 1 MiB of multi-byte UTF-8 states, phone sends no visualStates", async () => {
+  m.mandar.mockResolvedValue("terminado");
+  await act(async () => root.render(<Pantalla id="p1" />));
+  await act(async () => {
+    for (let i = 0; i < 256; i++) chat.reportVisualState(widgetIdOf("row", i), "あ".repeat(1500));
+  });
+  await act(async () => chat.mandar("hola"));
+  expect(m.mandar.mock.calls[0]![1]).not.toHaveProperty("visualStates");
+});

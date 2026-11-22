@@ -5001,3 +5001,58 @@ describe("Plan Ruta 98 % (P4b): auto-unlock effort after stall", () => {
     expect((await runWith(3, outcome)).filter((o) => o !== undefined)).toHaveLength(1);
   });
 });
+
+// Final review fixes (spec local 2026-11-22-visuales-de-verdad):
+// - Critical #1: a correction with a visual-states reminder emits ONLY the person's text to the UI (`direccion` event),
+//   while the model receives `paraElModelo` (text + reminder).
+// - Important #6: `read_widget_context` is read-only and does not consume a mutating turn.
+describe("visuals final review: correction reminder and read_widget_context read-only", () => {
+  it("🔴 structured correction emits clean user text to SSE while sending paraElModelo to the model", async () => {
+    const emitted: AgentStreamEvent[] = [];
+    const seenMsgs: Message[][] = [];
+    let given = false;
+    const baseOpen = scripted(
+      [{ type: "function_call", name: "Read", args: { file_path: "/a" } }, done],
+      [{ type: "text_delta", text: "ok" }, done],
+    );
+    await runAgentLoop({
+      messages: [{ role: "user", content: "empieza" }],
+      tools: [],
+      openStream: (msgs) => {
+        seenMsgs.push([...msgs]);
+        return baseOpen(msgs);
+      },
+      runTool: async () => ({ response: { ok: true } }),
+      leerDireccion: () => {
+        if (seenMsgs.length >= 1 && !given) {
+          given = true;
+          return { texto: "ya", paraElModelo: "ya\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" };
+        }
+        return null;
+      },
+      emit: (e) => emitted.push(e),
+    });
+    const dirEvents = emitted.filter((e): e is Extract<AgentStreamEvent, { type: "direccion" }> => e.type === "direccion");
+    expect(dirEvents).toEqual([{ type: "direccion", texto: "ya" }]);
+    const secondCallUser = seenMsgs[1]!.map((m) => m.content).join("\n");
+    expect(secondCallUser).toContain("<system-reminder>\nwidget_aaaa1111\n</system-reminder>");
+  });
+
+  it("🔴 read_widget_context is read-only and does not consume a mutating turn or tool budget", async () => {
+    const r = await runAgentLoop({
+      messages: [{ role: "user", content: "ya" }],
+      tools: [],
+      maxTurns: 1,
+      maxToolCalls: 1,
+      openStream: scripted(
+        [{ type: "function_call", name: "read_widget_context", args: { widget_id: "widget_a" } }, done],
+        [{ type: "function_call", name: "read_widget_context", args: { widget_id: "widget_b" } }, done],
+        [{ type: "text_delta", text: "Hecho." }, done],
+      ),
+      runTool: async () => ({ response: { ok: true } }),
+      emit: () => {},
+    });
+    expect(r.topeAlcanzado).toBeNull();
+    expect(r.finalText).toBe("Hecho.");
+  });
+});

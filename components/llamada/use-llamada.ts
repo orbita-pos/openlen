@@ -123,7 +123,7 @@ export function useLlamada(o: { projectId: string; idioma: string; cliente?: Cli
         const res = await clienteRef.current.pedir("/api/agent", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ projectId: o.projectId, prompt, zonaHoraria }),
+          body: JSON.stringify({ projectId: o.projectId, prompt, zonaHoraria, drawsVisuals: false }),
         });
         if (!res.ok || !res.body) throw new Error(`/api/agent respondió ${res.status}`);
         const lector = crearLectorSse();

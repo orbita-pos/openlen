@@ -9,7 +9,7 @@ const conversation = vi.hoisted(() => ({ widgets: new Map<string, string | null>
 vi.mock("@/lib/projects/chat", () => ({ widgetsOfConversation: vi.fn(async () => conversation.widgets) }));
 
 import { POST } from "./route";
-import { _vaciarTodo, abrirTurno, leerDireccion, noteWidgetDrawn, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
+import { _vaciarTodo, abrirTurno, leerDireccion, leerDireccionConAviso, noteWidgetDrawn, setVisualStates, visualStatesOf } from "@/lib/agent/direcciones";
 
 const pedir = (cuerpo: unknown) =>
   POST(new Request("http://localhost/api/agent/dirigir", { method: "POST", body: JSON.stringify(cuerpo), headers: { "content-type": "application/json" } }));
@@ -24,15 +24,24 @@ beforeEach(() => {
 });
 
 describe("a correction brings what the visuals shared", () => {
-  it("🔴 a visual this very turn drew counts, and the correction says the visuals shared a state", async () => {
+  it("🔴 a visual this very turn drew counts, the model gets the reminder, and the person's text stays clean", async () => {
     noteWidgetDrawn("t1", DRAWN_NOW, "dutch_exercises");
     const r = await pedir({ turnoId: "t1", texto: "ya", visualStates: [{ widgetId: DRAWN_NOW, state: "3 of 5" }] });
     expect(r.status).toBe(200);
     expect(visualStatesOf("t1")).toEqual([{ widgetId: DRAWN_NOW, state: "3 of 5", cut: false, title: "dutch_exercises" }]);
-    const leida = leerDireccion("t1") ?? "";
-    expect(leida.startsWith("ya\n\n<system-reminder>")).toBe(true);
-    expect(leida).toContain(DRAWN_NOW);
-    expect(leida).not.toContain("3 of 5");
+    const leida = leerDireccionConAviso("t1");
+    expect(leida?.texto).toBe("ya");
+    expect(leida?.paraElModelo.startsWith("ya\n\n<system-reminder>")).toBe(true);
+    expect(leida?.paraElModelo).toContain(DRAWN_NOW);
+    expect(leida?.paraElModelo).not.toContain("3 of 5");
+  });
+
+  it("🔴 an explicit empty visualStates array clears what the turn previously held (Review Focus 4)", async () => {
+    setVisualStates("t1", [{ widgetId: STORED, state: "first", cut: false, title: "budget" }]);
+    const r = await pedir({ turnoId: "t1", texto: "ya lo borré", visualStates: [] });
+    expect(r.status).toBe(200);
+    expect(visualStatesOf("t1")).toEqual([]);
+    expect(leerDireccion("t1")).toBe("ya lo borré");
   });
 
   it("🔴 a new state replaces what the turn held, so the next read gets it", async () => {

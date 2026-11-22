@@ -80,7 +80,7 @@ const mocks = vi.hoisted(() => {
   // Lo que mira Len cuando lo pide (`view_page`). El doble no mira nada
   // salvo que una prueba le dé cuerpo.
   observarPagina: vi.fn(async (_p: unknown, _i?: unknown): Promise<unknown> => null),
-  leerDireccion: vi.fn(() => null as string | null),
+  leerDireccion: vi.fn(() => null as string | { readonly texto: string; readonly paraElModelo: string } | null),
   abrirTurno: vi.fn(),
   esperarRespuesta: vi.fn(async (_turnoId: string, _o: { timeoutMs: number; signal?: AbortSignal }) => null as unknown),
   rondaSiguiente: vi.fn(),
@@ -413,6 +413,10 @@ vi.mock("@/lib/agent/direcciones", () => ({
   abrirTurno: mocks.abrirTurno,
   cerrarTurno: vi.fn(),
   leerDireccion: mocks.leerDireccion,
+  leerDireccionConAviso: () => {
+    const v = mocks.leerDireccion();
+    return typeof v === "string" ? { texto: v, paraElModelo: v } : v;
+  },
   esperarRespuesta: mocks.esperarRespuesta,
   // Pieza 8: la ronda siguiente de una fila (el sondeo del chat la lee).
   rondaSiguiente: mocks.rondaSiguiente,
@@ -3194,13 +3198,22 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
         expect(hidden()).toBeUndefined();
       });
 
-      it("BRAZO DE CONTROL: the web (a session, no key) never, with or without the flag", async () => {
+      it("BRAZO DE CONTROL: the web (a session, no key) never, with or without drawsVisuals: true", async () => {
         turno();
         mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
         await readEvents(await sinLlave({}));
         expect(hidden()).toBeUndefined();
         await readEvents(await sinLlave({ drawsVisuals: true }));
         expect(hidden()).toBeUndefined();
+      });
+
+      // Final review Important #5: the web voice call (`/{locale}/llamada`) uses a cookie session (no app key) and
+      // cannot draw visuals, so it explicitly sends `drawsVisuals: false`.
+      it("🔴 a cookie session with drawsVisuals: false (web voice call) tells the agent visuals are hidden", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await sinLlave({ drawsVisuals: false }));
+        expect(hidden()).toBe(true);
       });
 
       it("a turn the server started never", async () => {
@@ -3884,6 +3897,27 @@ describe("POST /api/agent — la fila del turno se abre al empezar y se cierra a
     await readEvents(await pedir());
     const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { userText: string }])[1];
     expect(fila.userText).toBe("cambia el título\n↳ sólo el botón");
+  });
+
+  // Final review Critical #1: a correction's visual-states reminder must NEVER leak into the persisted userText or userPrompt.
+  it("🔴 a mid-turn correction with a visual-states reminder keeps userText and userPrompt free of <system-reminder>", async () => {
+    mocks.leerDireccion.mockReturnValueOnce({ texto: "ya", paraElModelo: "ya\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
+    mocks.runAgentTool.mockResolvedValueOnce({ response: { ok: true } });
+    let seenByLoop: unknown = null;
+    let seenPrompt: string | undefined;
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      seenByLoop = args.leerDireccion?.();
+      await args.runTool("Read", { file_path: "/index.html" });
+      seenPrompt = (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ userPrompt?: string }])[0].userPrompt;
+      return limpio()(args);
+    });
+    await readEvents(await pedir());
+    const fila = (mocks.registrarTurnoDelServidor.mock.calls[0] as unknown as [string, { userText: string }])[1];
+    expect(fila.userText).toBe("cambia el título\n↳ ya");
+    expect(fila.userText).not.toContain("<system-reminder>");
+    expect(seenPrompt).toContain("ya");
+    expect(seenPrompt).not.toContain("<system-reminder>");
+    expect(seenByLoop).toEqual({ texto: "ya", paraElModelo: "ya\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
   });
 
   // A7 de Len 3.1, como el `steering/message` de DeepSeek: la corrección es su
