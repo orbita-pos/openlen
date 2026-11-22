@@ -28,11 +28,19 @@ export function visualFrameUrl(input: { hostDeLaPeticion: string | null }, env: 
   return `http://${VISUALS_LABEL}.localhost${port ? `:${port}` : ""}/`;
 }
 
+/** The phone app's origins that may frame the visuals host and talk to it (spec local 2026-11-22-visuales-de-verdad,
+ *  §1): the packaged app's (`https://localhost`, `capacitor://localhost`) always; its plain-http dev server
+ *  (`http://localhost:5173`) only outside production or for a local request — as the web's own localhost origins. */
+export function phoneAppFrameOrigins(input: { hostDeLaPeticion: string | null }, env: Env = process.env): string[] {
+  if (!esProduccion(env) || esPeticionLocal(input.hostDeLaPeticion)) return [...ORIGENES_DE_LA_APP];
+  return ORIGENES_DE_LA_APP.filter((o) => !o.startsWith("http://"));
+}
+
 /** The origins the frame takes messages from: the web app, the phone app's
- *  origins, and locally also the workspace on localhost / 127.0.0.1 at the
- *  request's port. */
+ *  (`phoneAppFrameOrigins`), and locally also the workspace on localhost /
+ *  127.0.0.1 at the request's port. */
 export function visualFrameParentOrigins(input: { hostDeLaPeticion: string | null }, env: Env = process.env): string[] {
-  const origins = [origenDeLaApp(env), ...ORIGENES_DE_LA_APP];
+  const origins = [origenDeLaApp(env), ...phoneAppFrameOrigins(input, env)];
   if (!esProduccion(env) || esPeticionLocal(input.hostDeLaPeticion)) {
     const port = portOf(input.hostDeLaPeticion);
     const suffix = port ? `:${port}` : "";

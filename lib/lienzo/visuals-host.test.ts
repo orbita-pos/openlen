@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { etiquetaDelHost, isVisualsHost } from "./prefijo";
-import { visualFrameParentOrigins, visualFrameUrl } from "./visuals-host";
+import { phoneAppFrameOrigins, visualFrameParentOrigins, visualFrameUrl } from "./visuals-host";
 
 const PROD = { NODE_ENV: "production", LIENZO_BASE_HOST: "openlen.app", NEXT_PUBLIC_SITE_URL: "https://openlen.com" };
 const DEV = { NODE_ENV: "development", NEXT_PUBLIC_SITE_URL: "https://openlen.com" };
@@ -26,10 +26,11 @@ describe("visualFrameUrl", () => {
 });
 
 describe("visualFrameParentOrigins", () => {
-  it("in production, the web app plus the phone app origins", () => {
+  it("🔴 in production, the web app plus the PACKAGED phone app — never its dev server", () => {
     expect(visualFrameParentOrigins({ hostDeLaPeticion: "lienzo-visuals.openlen.app" }, PROD)).toEqual([
       "https://openlen.com",
-      ...ORIGENES_DE_LA_APP,
+      "https://localhost",
+      "capacitor://localhost",
     ]);
   });
 
@@ -64,5 +65,18 @@ describe("isVisualsHost", () => {
 
   it("the lienzo label reader still ignores it", () => {
     expect(etiquetaDelHost("lienzo-visuals.openlen.app")).toBeNull();
+  });
+});
+
+// The phone app may frame the visuals host (spec local 2026-11-22-visuales-de-verdad, §1): the packaged app always; its
+// Vite dev server (`http://localhost:5173`) only outside production, as the web's own localhost origins.
+describe("phoneAppFrameOrigins", () => {
+  it("🔴 in production, only the packaged app's origins", () => {
+    expect(phoneAppFrameOrigins({ hostDeLaPeticion: "lienzo-visuals.openlen.app" }, PROD)).toEqual(["https://localhost", "capacitor://localhost"]);
+  });
+
+  it("locally, or a local request in production, all of them, the dev server too", () => {
+    expect(phoneAppFrameOrigins({ hostDeLaPeticion: "lienzo-visuals.localhost:3000" }, DEV)).toEqual([...ORIGENES_DE_LA_APP]);
+    expect(phoneAppFrameOrigins({ hostDeLaPeticion: "lienzo-visuals.localhost:3000" }, PROD)).toEqual([...ORIGENES_DE_LA_APP]);
   });
 });

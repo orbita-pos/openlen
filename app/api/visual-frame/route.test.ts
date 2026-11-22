@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { GET } from "./route";
 
@@ -21,6 +21,25 @@ describe("GET /api/visual-frame", () => {
     expect(html).toContain('<div id="root"></div>');
     expect(html).not.toContain("http-equiv");
     for (const origin of ORIGENES_DE_LA_APP) expect(html).toContain(origin);
+  });
+
+  // In production the phone app frames it as the packaged app only: its dev server is no parent there.
+  describe("🔴 in production", () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it("the packaged phone app may frame it and talk to it; its dev server may not", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("LIENZO_BASE_HOST", "openlen.app");
+      vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://openlen.com");
+      const res = await pide("lienzo-visuals.openlen.app");
+      const ancestors = (res.headers.get("content-security-policy") ?? "").split(";").find((d) => d.trim().startsWith("frame-ancestors ")) ?? "";
+      expect(ancestors).toContain("https://localhost");
+      expect(ancestors).toContain("capacitor://localhost");
+      expect(ancestors).not.toContain("http://localhost:5173");
+      const html = await res.text();
+      expect(html).toContain("capacitor://localhost");
+      expect(html).not.toContain("http://localhost:5173");
+    });
   });
 
   it("on any other host, 404: the frame never runs on openlen.com", async () => {
