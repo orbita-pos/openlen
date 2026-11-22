@@ -3324,6 +3324,19 @@ describe("🔴 Len's turn woken by an agent with no owner words can't schedule o
     });
   }
 
+  // Fix 2b: a child of that turn keeps the connectors' resource tools (lib/agent/subagents/presets.ts leaves out only
+  // `mcp__` and schedule tools); its session, spread from the turn's `sessionBase` as run.ts builds it, refuses them.
+  for (const [name, args] of REFUSED.filter(([n]) => n === "list_mcp_resources" || n === "list_mcp_resource_templates" || n === "read_mcp_resource")) {
+    it(`${name}: refused in a child of Len's woken turn too`, async () => {
+      const { deps } = makeDeps();
+      const sessionBase = { ownerEmail: null, wokenByAgent: true as const };
+      const child = { ...makeSession(), ...sessionBase, isSubagent: true as const, terminalHolderId: "r1", page: null } as AgentSession;
+      const out = await runAgentTool(child, deps as unknown as AgentDeps, name, args);
+      assert.equal(out.response.error, "needs_owner");
+      assert.equal(out.response.tool_result, LEN_WOKEN);
+    });
+  }
+
   it("Len's woken turn still answers the agent and reads: message_agent and Read are not refused", async () => {
     const { deps } = makeDeps();
     const answer = await runAgentTool(lenSession(true), deps as unknown as AgentDeps, "message_agent", { message: "Hi." });

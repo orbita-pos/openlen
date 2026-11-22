@@ -4863,6 +4863,21 @@ describe("POST /api/agent — Len's subagents", () => {
     expect((launcherArgs()[0] as unknown as { sessionBase: { tool?: boolean } }).sessionBase.tool).toBe(true);
   });
 
+  // Final review I2, its residual (fix 2b): a child of Len's turn an agent's message woke, with none of the owner's words,
+  // has no owner in it either. Its session is built from `sessionBase` (lib/agent/subagents/run.ts), and it keeps the
+  // connectors' resource tools, so the flag must travel there or `read_mcp_resource` runs for it.
+  it("🔴 a child of Len's turn an agent woke with no owner words carries wokenByAgent; with them, or the owner's turn, none", async () => {
+    const wakeLen = (origin: Record<string, unknown>, turnId: string) =>
+      corredor()("u1", { projectId: "p1", prompt: "Ya está el tope: 500 €.", turnId }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "Lucía, your owner's own agent, sent you a message.", origin, onReply: vi.fn(async () => {}) } });
+    const base = () => (launcherArgs()[0] as unknown as { sessionBase: { wokenByAgent?: true } }).sessionBase;
+    await readEvents(await wakeLen({ kind: "assistant", assistantId: "a1", assistantName: "Lucía", message: true }, "77777777-7777-4777-8777-7777777777b1"));
+    expect(base().wokenByAgent).toBe(true);
+    await readEvents(await wakeLen({ kind: "assistant", assistantId: "a1", assistantName: "Lucía", message: true, withOwnerWords: true }, "77777777-7777-4777-8777-7777777777b2"));
+    expect(base().wokenByAgent).toBeUndefined();
+    await pedir();
+    expect(base().wokenByAgent).toBeUndefined();
+  });
+
   it("in a game project, a child's session knows it is one and is offered game-development (spec local 2026-11-05-modo-juego-design, §8.4)", async () => {
     mocks.loadProject.mockResolvedValue({
       title: "Naves", subdomain: null, publishedAt: null, userBrief: "", brief: null,

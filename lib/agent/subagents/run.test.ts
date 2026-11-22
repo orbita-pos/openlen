@@ -62,6 +62,8 @@ function setup(
   o: {
     /** A tool project (spec local 2026-11-04-herramientas-hechas-por-len, §4.8). */
     tool?: boolean;
+    /** Len's turn an agent's message woke, with none of the owner's words (final review I2). */
+    wokenByAgent?: boolean;
     scripts?: StreamEvent[][];
     agentTypes?: AgentTypeSet;
     skills?: AgentSession["skills"];
@@ -207,7 +209,7 @@ function setup(
     forkSeed: o.forkSeed ?? [],
     declarations: (o.declarations ?? ["Read", "Edit", "Write", "skill", "publish", "subagent", "send_message", "subagent_fork", "interrupt_agent", "list_agents"]).map((name) => ({ name })),
     deps: {} as AgentDeps,
-    sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null, ...(o.tool ? { tool: true } : {}) },
+    sessionBase: { skills: o.skills ?? new Map() as never, ownerEmail: null, ...(o.tool ? { tool: true } : {}), ...(o.wokenByAgent ? { wokenByAgent: true as const } : {}) },
     spend: createTurnSpend(o.spendCap ?? 10_000, () => lenSpent),
     emit: (ev) => void events.push(ev),
     isMember: false,
@@ -346,6 +348,19 @@ describe("the launcher of Len's subagents", () => {
     await s.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
     await s.settled("r1");
     expect(s.sessions[0]!.tool).toBe(true);
+  });
+
+  // Final review I2, fix 2b: a child keeps the connectors' resource tools (not `mcp__`, not out for every child), so it
+  // must carry what its launching turn knows — no owner in it — for those calls to be refused.
+  it("a child of Len's turn an agent woke with no owner words is woken by an agent too; any other child is not", async () => {
+    const woken = setup({ wokenByAgent: true, scripts: [llama("Read", { file_path: "/index.html" }), dice("ok")] });
+    await woken.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await woken.settled("r1");
+    expect(woken.sessions[0]!.wokenByAgent).toBe(true);
+    const plain = setup({ scripts: [llama("Read", { file_path: "/index.html" }), dice("ok")] });
+    await plain.launcher.launch({ description: "a", prompt: "b", preset: "general-purpose" });
+    await plain.settled("r1");
+    expect(plain.sessions[0]!.wokenByAgent).toBeUndefined();
   });
 
   it("each child gets a fresh leidos, the same skills, its own loaded skills, and read-only when it only reads", async () => {

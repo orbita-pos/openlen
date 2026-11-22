@@ -2507,6 +2507,9 @@ async function correrTurno(
                   // A child in a tool project installs and opens the installed tool, as Len does.
                   ...(toolDelTurno ? { tool: true } : {}),
                   ...(gameDelTurno ? { game: true } : {}),
+                  // A child of Len's turn an agent's message woke, with none of the owner's words, has no owner in it
+                  // either: it keeps the connectors' resource tools, and they are refused for it (final review I2, 2b).
+                  ...(agentSession.wokenByAgent ? { wokenByAgent: true as const } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.

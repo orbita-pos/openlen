@@ -101,7 +101,7 @@ export interface LaunchContext {
   readonly declarations: readonly Record<string, unknown>[];
   /** Len's deps, without what only the turn has (questions, plan mode, goal, scheduled tasks). */
   readonly deps: AgentDeps;
-  readonly sessionBase: Pick<AgentSession, "skills" | "attachments" | "uiLocale" | "zonaHoraria" | "ownerEmail" | "tool" | "game" | "ownerPaid">;
+  readonly sessionBase: Pick<AgentSession, "skills" | "attachments" | "uiLocale" | "zonaHoraria" | "ownerEmail" | "tool" | "game" | "ownerPaid" | "wokenByAgent">;
   readonly spend: TurnSpend;
   /** While the launching turn's stream is open. */
   readonly emit?: (ev: SubagentEvent) => void;
