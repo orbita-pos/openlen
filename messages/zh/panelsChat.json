@@ -279,7 +279,8 @@
       "asking": "正在准备一个问题",
       "working": "工作中",
       "readingFile": "正在读取文件",
-      "editingFile": "正在编写文件"
+      "editingFile": "正在编写文件",
+      "readingVisual": "正在读取你在图示中的操作"
     },
     "live": {
       "thinking": "思考中",

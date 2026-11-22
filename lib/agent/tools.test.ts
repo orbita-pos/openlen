@@ -3364,4 +3364,36 @@ describe("read_widget_context reads what the turn holds", () => {
     assert.equal(out.response.ok, true);
     assert.match(String(out.response.tool_result), /No visual in this conversation shared a state/);
   });
+
+  // Minor #4: when an ask_user_question answer resolves with held visual states, the tool outcome carries a reminder notice.
+  it("🔴 ask_user_question attaches a visual-states reminder notice when the turn holds states on answer", async () => {
+    const { deps } = makeDeps();
+    let held: { widgetId: string; state: string; cut: boolean; title: string | null }[] = [];
+    const session = { ...makeSession(), visualStates: () => held } as AgentSession;
+    const withAnswer = {
+      ...deps,
+      askUser: async () => {
+        held = [{ widgetId: "widget_nnnn0000", state: "picked B", cut: false, title: "plan_options" }];
+        return [{ id: "q1", selected: ["Go on"] }];
+      },
+    } as unknown as AgentDeps;
+    const out = await runAgentTool(session, withAnswer, "ask_user_question", {
+      questions: [{ id: "q1", question: "Ready?", options: [{ label: "Go on" }] }],
+    });
+    assert.equal(out.response.ok, true);
+    assert.match(String(out.notice ?? ""), /<system-reminder>[\s\S]*widget_nnnn0000[\s\S]*read_widget_context[\s\S]*<\/system-reminder>/);
+
+    // Control arm: when held states are empty on answer, no notice is attached.
+    const emptyAnswer = {
+      ...deps,
+      askUser: async () => {
+        held = [];
+        return [{ id: "q1", selected: ["Go on"] }];
+      },
+    } as unknown as AgentDeps;
+    const none = await runAgentTool(session, emptyAnswer, "ask_user_question", {
+      questions: [{ id: "q1", question: "Ready?", options: [{ label: "Go on" }] }],
+    });
+    assert.equal(none.notice, undefined);
+  });
 });

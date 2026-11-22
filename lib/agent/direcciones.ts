@@ -325,7 +325,12 @@ function respuestasValidas(raw: unknown): QuestionAnswer[] | null {
  * `dirigir` y por lo mismo. Se resuelve UNA vez: la segunda respuesta (doble
  * clic, dos pestañas) es `ya_respondida` y no toca nada.
  */
-export function responder(turnoId: string, userId: string, raw: unknown): ResultadoResponder {
+export function responder(
+  turnoId: string,
+  userId: string,
+  raw: unknown,
+  o: { readonly visualStates?: readonly HeldVisualState[] } = {},
+): ResultadoResponder {
   const turno = abiertos.get(turnoId);
   if (!turno) return "no_existe";
   if (turno.userId !== userId) return "ajeno";
@@ -334,6 +339,8 @@ export function responder(turnoId: string, userId: string, raw: unknown): Result
   const respuestas = respuestasValidas(raw);
   if (!respuestas) return "invalida";
   turno.pregunta.respondida = true;
+  // Apply updated visual states atomically before resolving so the resumed `ask_user_question` sees them immediately.
+  if (o.visualStates) turno.visualStates = [...o.visualStates];
   resolver(respuestas);
   return "ok";
 }

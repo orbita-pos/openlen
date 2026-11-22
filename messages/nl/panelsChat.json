@@ -279,7 +279,8 @@
       "asking": "Bereidt een vraag voor",
       "working": "Bezig",
       "readingFile": "Leest een bestand",
-      "editingFile": "Schrijft een bestand"
+      "editingFile": "Schrijft een bestand",
+      "readingVisual": "Leest wat je in de visual deed"
     },
     "live": {
       "thinking": "Denkt na",

@@ -116,6 +116,32 @@ describe("VisualFrame", () => {
     expect(onPrompt).toHaveBeenCalledWith("¿y en marzo?");
   });
 
+  // Minor #1: staying focused in a multi-card visual past 5 s still lets Done ↗ through once, unless the tab hides or focus leaves.
+  it("🔴 a prompt past 5 s succeeds once while the iframe stays focused on a visible page", () => {
+    let now = 1_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const onPrompt = vi.fn();
+    const m = mount({ onPrompt });
+    const active = vi.spyOn(document, "activeElement", "get").mockReturnValue(m.iframe());
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    now += 30_000;
+    m.fromFrame({ kind: "ol-visual:prompt", text: "Done ↗" });
+    expect(onPrompt).toHaveBeenCalledTimes(1);
+    expect(onPrompt).toHaveBeenCalledWith("Done ↗");
+
+    // Re-tap, then hide the tab and wait 6 s: rejected.
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    now += 6_000;
+    m.fromFrame({ kind: "ol-visual:prompt", text: "while hidden" });
+    expect(onPrompt).toHaveBeenCalledTimes(1);
+    active.mockRestore();
+  });
+
   it("a link asks first, then opens in a new tab; only http(s)", () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const m = mount();

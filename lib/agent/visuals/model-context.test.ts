@@ -88,9 +88,12 @@ describe("cleanVisualStates", () => {
     expect(cleanVisualStates([{ widgetId: "x", state: "a" }, { widgetId: "widget_ABCD1234", state: "a" }, { widgetId: ID, state: "   " }, { widgetId: ID }, "nope", null])).toEqual([]);
   });
 
-  it("the last entry for a visual wins", () => {
+  it("the last entry for a visual wins — including an empty state that clears an earlier one", () => {
     expect(cleanVisualStates([{ widgetId: ID, state: "first" }, { widgetId: "widget_zzzz9999", state: "other" }, { widgetId: ID, state: "last" }])).toEqual([
       { widgetId: ID, state: "last", cut: false },
+      { widgetId: "widget_zzzz9999", state: "other", cut: false },
+    ]);
+    expect(cleanVisualStates([{ widgetId: ID, state: "first" }, { widgetId: "widget_zzzz9999", state: "other" }, { widgetId: ID, state: "   " }])).toEqual([
       { widgetId: "widget_zzzz9999", state: "other", cut: false },
     ]);
   });
@@ -131,6 +134,25 @@ describe("visualStatesReminder", () => {
     expect(out).toContain("widget_bbbb2222");
     expect(out).toContain("read_widget_context");
     expect(out).not.toContain("a, b");
+  });
+
+  // Minor #3: large state lists cap explicit widget_ids with "(and N more)", keeping the most recent visuals named.
+  it("🔴 caps long lists at the most recent visuals with '(and N more)'", () => {
+    const many = Array.from({ length: 15 }, (_, i) => ({
+      widgetId: `widget_${String(i).padStart(8, "0")}`,
+      state: `s${i}`,
+      cut: false,
+      title: null,
+    }));
+    const out = visualStatesReminder(many);
+    expect(out).toContain("(and 3 more)");
+    expect(out).toContain("widget_00000014");
+    expect(out).toContain("widget_00000003");
+    expect(out).not.toContain("widget_00000000");
+    expect(out).not.toContain("widget_00000002");
+    expect(out).toContain("with no arguments it returns all of them");
+    // Exactly at the cap (12): no truncation suffix.
+    expect(visualStatesReminder(many.slice(0, 12))).not.toContain("more");
   });
 });
 

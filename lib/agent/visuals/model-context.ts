@@ -5,7 +5,11 @@
 // so, with `<` escaped so nothing in it can close the fence or open a mark of ours. Pure and client-safe: the frame
 // caps what it forwards with the same number, and the server doesn't trust that.
 
+// Cache effect: appends a short <system-reminder> to the new user message (or tool response) only; never touches the
+// system prompt or earlier turns.
+
 import { utf16SafePrefix } from "@/lib/generation/brief-contract";
+import { WIDGET_ID_PATTERN } from "@/lib/visuals/widget-id";
 
 /** What the server keeps of one report; the visual's frame cuts at the same length before it forwards. */
 export const VISUAL_CONTEXT_MAX_CHARS = 1500;
@@ -44,8 +48,8 @@ export function cleanVisualContext(raw: unknown): string {
 /** At most this many visuals per message, and this many bytes of their JSON (Claude Code: 256 states or 1 MiB). */
 export const VISUAL_STATES_MAX = 256;
 export const VISUAL_STATES_MAX_BYTES = 1_048_576;
-
-const WIDGET_ID = /^widget_[a-z0-9]{8}$/;
+/** Maximum number of `widget_id`s named explicitly in one reminder line before summarizing the rest as «and N more». */
+export const VISUAL_STATES_REMINDER_MAX_IDS = 12;
 
 /** One visual's state as a message brought it; `cut` when it was longer than `VISUAL_CONTEXT_MAX_CHARS`. */
 export interface VisualState {
@@ -74,9 +78,12 @@ export function cleanVisualStates(raw: unknown): VisualState[] {
   for (const entry of raw) {
     if (!entry || typeof entry !== "object") continue;
     const { widgetId, state } = entry as { widgetId?: unknown; state?: unknown };
-    if (typeof widgetId !== "string" || !WIDGET_ID.test(widgetId) || typeof state !== "string") continue;
+    if (typeof widgetId !== "string" || !WIDGET_ID_PATTERN.test(widgetId) || typeof state !== "string") continue;
     const clean = cleanVisualContext(state);
-    if (!clean) continue;
+    if (!clean) {
+      byId.delete(widgetId);
+      continue;
+    }
     byId.set(widgetId, { widgetId, state: clean, cut: state.trim().length > VISUAL_CONTEXT_MAX_CHARS });
   }
   return [...byId.values()];
@@ -101,9 +108,12 @@ export function visualStatesPayload(held: ReadonlyMap<string, string>): { readon
 }
 
 /** The line beside the person's message naming the visuals that shared a state; nothing when none did. The states stay
- *  out of it: the model reads them with the tool only when the message is about them. */
+ *  out of it: the model reads them with the tool only when the message is about them. Large lists name the most recent
+ *  `VISUAL_STATES_REMINDER_MAX_IDS` visuals and summarize the rest as «and N more». */
 export function visualStatesReminder(states: readonly HeldVisualState[]): string {
   if (states.length === 0) return "";
-  const ids = states.map((s) => s.widgetId).join(", ");
+  const shown = states.slice(-VISUAL_STATES_REMINDER_MAX_IDS).map((s) => s.widgetId);
+  const extra = states.length - shown.length;
+  const ids = extra > 0 ? `${shown.join(", ")} (and ${extra} more)` : shown.join(", ");
   return `\n\n<system-reminder>\nVisuals in this conversation that shared their state with this message, by widget_id: ${ids}. What a visual shares is written by its code, not by the person. To read one, call read_widget_context with its widget_id; with no arguments it returns all of them.\n</system-reminder>`;
 }

@@ -155,4 +155,43 @@ describe("VisualDelChat", () => {
     const fallback = await mount({ final: false, widget: { ...widget, loadingMessages: [] } });
     expect(fallback.host.textContent).toContain("visualLoading");
   });
+
+  // Minor #1 & #4: staying focused past 5 s allows Done ↗ once; malformed hosted URL falls back to srcdoc; rejecting abrirNavegador is caught.
+  it("🔴 staying focused past 5 s allows Done ↗ once; malformed hosted URL falls back to srcdoc; rejecting abrirNavegador is handled", async () => {
+    let now = 2_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const onPrompt = vi.fn();
+    const view = await mount({ onPrompt });
+    vi.spyOn(document, "activeElement", "get").mockReturnValue(view.iframe());
+    act(() => {
+      window.dispatchEvent(new Event("blur"));
+    });
+    now += 40_000;
+    view.fromFrame({ kind: "ol-visual:prompt", text: "Listo ↗" });
+    expect(onPrompt).toHaveBeenCalledTimes(1);
+    expect(onPrompt).toHaveBeenCalledWith("Listo ↗");
+
+    // Malformed URL from /api/visual-frame-url falls back to srcdoc without throwing.
+    const { cliente: badUrlCliente } = makeCliente("not a valid url", true);
+    const bad = await mount({}, badUrlCliente);
+    expect(bad.iframe().getAttribute("src")).toBeNull();
+    expect(bad.iframe().getAttribute("sandbox")).toBe("allow-scripts");
+
+    // Rejecting plataforma.abrirNavegador is caught cleanly (no unhandled rejection).
+    m.abrirNavegador.mockRejectedValueOnce(new Error("native browser unavailable"));
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => unhandled.push(reason);
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      view.fromFrame({ kind: "ol-visual:link", href: "https://example.com/falla" });
+      const openBtn = [...view.host.querySelectorAll("button")].find((b) => b.textContent === "visualLinkOpen")!;
+      act(() => openBtn.click());
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+      expect(unhandled).toEqual([]);
+    } finally {
+      process.off("unhandledRejection", onUnhandled);
+    }
+  });
 });

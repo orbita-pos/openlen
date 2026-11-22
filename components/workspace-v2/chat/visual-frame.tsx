@@ -62,7 +62,15 @@ export function VisualFrame({
   const t = useTranslations("panelsChat");
   const hostedUrl = useVisualFrameUrl();
   const url = isolated ? null : hostedUrl;
-  const frameOrigin = useMemo(() => (url ? new URL(url).origin : null), [url]);
+  const hosted = useMemo(() => {
+    if (!url) return null;
+    try {
+      return { url, origin: new URL(url).origin };
+    } catch {
+      return null;
+    }
+  }, [url]);
+  const frameOrigin = hosted?.origin ?? null;
   const srcdoc = useMemo(() => buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true, ...(isolated ? { closed: true } : {}) }), [isolated]);
   const loads = useRef(0);
   const [gone, setGone] = useState(false);
@@ -84,6 +92,7 @@ export function VisualFrame({
         frameOrigin,
         isolated,
         now: () => Date.now(),
+        isFocused: () => document.activeElement === ref.current && document.visibilityState !== "hidden",
         onReady: () => setReady(true),
         onHeight: (h) => setHeight(h),
         onLink: (href) => setLink(href),
@@ -158,8 +167,8 @@ export function VisualFrame({
         <iframe
           ref={ref}
           title={t("visualLabel", { title: widget.title || "" })}
-          {...(url ? { src: url } : { srcDoc: srcdoc })}
-          sandbox={url ? "allow-scripts allow-same-origin" : "allow-scripts"}
+          {...(hosted ? { src: hosted.url } : { srcDoc: srcdoc })}
+          sandbox={hosted ? "allow-scripts allow-same-origin" : "allow-scripts"}
           referrerPolicy="no-referrer"
           className="w-full border-0 bg-transparent block"
           style={{ height: `${height}px` }}

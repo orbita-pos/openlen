@@ -20,6 +20,8 @@ export type Activity =
   /** Reading or writing a file that isn't a page (an agent's, a skill, notes): lib/workspace-v2/step-file.ts. */
   | "readingFile"
   | "editingFile"
+  /** Reading what the person did inside a visual (`read_widget_context`). */
+  | "readingVisual"
   | "terminal"
   | "photos"
   | "image"
@@ -99,6 +101,8 @@ const ACTIVITY_OF: Readonly<Record<string, Activity>> = {
   session_search: "reading",
   session_event_search: "reading",
   session_event_read: "reading",
+  // Visuals: reading what the person did in a visual has its own wording (never «Reading your page»).
+  read_widget_context: "readingVisual",
 };
 
 export function activityOf(tool: string): Activity {
@@ -111,6 +115,7 @@ const FACE_OF: Readonly<Record<Activity, FaceState>> = {
   editing: "escribiendo",
   readingFile: "mirando",
   editingFile: "escribiendo",
+  readingVisual: "mirando",
   terminal: "escribiendo",
   photos: "buscando",
   image: "escribiendo",

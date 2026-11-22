@@ -55,6 +55,7 @@ const ICON_OF: Readonly<Record<Activity, LucideIcon>> = {
   editing: PenLine,
   readingFile: Eye,
   editingFile: PenLine,
+  readingVisual: Eye,
   terminal: SquareTerminal,
   photos: ImageIcon,
   image: ImageIcon,

@@ -15,7 +15,7 @@
 
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
-import { dismissQuestion, responder, setVisualStates } from "@/lib/agent/direcciones";
+import { dismissQuestion, responder } from "@/lib/agent/direcciones";
 import { visualStatesForOpenTurn } from "@/lib/agent/visuals/turn-states";
 
 export const runtime = "nodejs";
@@ -52,13 +52,10 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   }
 
   // What the visuals shared comes with the answer too (spec local 2026-11-22-visuales-de-verdad): it replaces what the
-  // turn held. Read before answering, while the turn is surely still open.
+  // turn held atomically before the waiting `ask_user_question` resumes.
   const estados = await visualStatesForOpenTurn(turnoId, userId, visualStates);
-  const r = responder(turnoId, userId, answers);
-  if (r === "ok") {
-    if (estados) setVisualStates(turnoId, estados);
-    return json({ ok: true });
-  }
+  const r = responder(turnoId, userId, answers, estados ? { visualStates: estados } : undefined);
+  if (r === "ok") return json({ ok: true });
   if (r === "invalida") return json({ error: "respuesta_invalida" }, 400);
   if (r === "sin_pregunta" || r === "ya_respondida") return json({ error: r }, 409);
   return json({ error: "turno_no_encontrado" }, 404);

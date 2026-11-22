@@ -234,4 +234,14 @@ describe("la barra viva", () => {
     expect(activityOf("bash")).toBe("terminal");
     expect(activityOf("web_search")).toBe("web");
   });
+
+  // Minor #4: read_widget_context gets its own reading activity ("readingVisual") and looking face instead of generic "working".
+  it("🔴 read_widget_context shows readingVisual with face mirando instead of working", () => {
+    expect(activityOf("read_widget_context")).toBe("readingVisual");
+    const s = liveStatus(
+      turn({ status: "streaming", startedAt: 1, actions: [{ tool: "read_widget_context", status: "running", summary: "" }] }),
+      { busy: true },
+    );
+    expect(s).toMatchObject({ kind: "working", activity: "readingVisual", face: "mirando" });
+  });
 });

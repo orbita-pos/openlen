@@ -279,7 +279,8 @@
       "asking": "Preparing a question",
       "working": "Working",
       "readingFile": "Reading a file",
-      "editingFile": "Writing a file"
+      "editingFile": "Writing a file",
+      "readingVisual": "Reading what you did in the visual"
     },
     "live": {
       "thinking": "Thinking",

@@ -7,7 +7,7 @@ import { createVisualFrameHost } from "./frame-host";
 
 const ORIGIN = "https://lienzo-visuals.example";
 
-function setup(o: { isolated?: boolean; frameOrigin?: string | null } = {}) {
+function setup(o: { isolated?: boolean; frameOrigin?: string | null; isFocused?: () => boolean } = {}) {
   let now = 1_000_000;
   const frame = {} as Window;
   const calls = { ready: 0, heights: [] as number[], links: [] as string[], prompts: [] as string[], states: [] as string[] };
@@ -15,6 +15,7 @@ function setup(o: { isolated?: boolean; frameOrigin?: string | null } = {}) {
     frameOrigin: o.frameOrigin === undefined ? ORIGIN : o.frameOrigin,
     isolated: o.isolated ?? false,
     now: () => now,
+    ...(o.isFocused ? { isFocused: o.isFocused } : {}),
     onReady: () => void calls.ready++,
     onHeight: (h) => void calls.heights.push(h),
     onLink: (href) => void calls.links.push(href),
@@ -80,5 +81,35 @@ describe("createVisualFrameHost", () => {
     t.send("text");
     expect(JSON.stringify(t.calls)).toBe(before);
     vi.restoreAllMocks();
+  });
+
+  // Minor #1: multi-card visuals (e.g. 5–8 language exercises) keep focus inside the iframe past 5 s before Done ↗.
+  it("🔴 a prompt after 5 s still counts once while the frame stays focused after a tap, never without a tap or after leaving focus", () => {
+    let focused = true;
+    const t = setup({ isFocused: () => focused });
+    // Even if focused, never before a tap.
+    t.send({ kind: "ol-visual:prompt", text: "no tap" });
+    expect(t.calls.prompts).toEqual([]);
+
+    // Tap, work inside the visual for 45 s, then tap Done ↗: allowed once.
+    t.host.markClick();
+    t.advance(45_000);
+    t.send({ kind: "ol-visual:prompt", text: "Done ↗" });
+    t.send({ kind: "ol-visual:prompt", text: "second" });
+    expect(t.calls.prompts).toEqual(["Done ↗"]);
+
+    // Once focus leaves the frame (or tab hides), past 5 s is still rejected.
+    t.host.markClick();
+    focused = false;
+    t.advance(6_000);
+    t.send({ kind: "ol-visual:prompt", text: "after leaving" });
+    expect(t.calls.prompts).toEqual(["Done ↗"]);
+
+    // Even staying focused, an abandoned session past the focused window expires.
+    focused = true;
+    t.host.markClick();
+    t.advance(11 * 60_000);
+    t.send({ kind: "ol-visual:prompt", text: "too late" });
+    expect(t.calls.prompts).toEqual(["Done ↗"]);
   });
 });

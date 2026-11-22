@@ -64,7 +64,15 @@ export function VisualDelChat({
     };
   }, [cliente]);
 
-  const frameOrigin = useMemo(() => (url ? new URL(url).origin : null), [url]);
+  const hosted = useMemo(() => {
+    if (!url) return null;
+    try {
+      return { url, origin: new URL(url).origin };
+    } catch {
+      return null;
+    }
+  }, [url]);
+  const frameOrigin = hosted?.origin ?? null;
   const srcdoc = useMemo(() => buildVisualFrameDocument({ parentOrigins: [], cspInMeta: true }), []);
 
   const host = useMemo(
@@ -73,6 +81,7 @@ export function VisualDelChat({
         frameOrigin,
         isolated: false,
         now: () => Date.now(),
+        isFocused: () => document.activeElement === ref.current && document.visibilityState !== "hidden",
         onReady: () => setReady(true),
         onHeight: (h) => setHeight(h),
         onLink: (href) => setLink(href),
@@ -141,8 +150,8 @@ export function VisualDelChat({
         <iframe
           ref={ref}
           title={t("visualLabel", { title: widget.title || "" })}
-          {...(url ? { src: url } : { srcDoc: srcdoc })}
-          sandbox={url ? "allow-scripts allow-same-origin" : "allow-scripts"}
+          {...(hosted ? { src: hosted.url } : { srcDoc: srcdoc })}
+          sandbox={hosted ? "allow-scripts allow-same-origin" : "allow-scripts"}
           referrerPolicy="no-referrer"
           className="ch-visual-frame"
           style={{ height: `${height}px` }}
@@ -167,7 +176,7 @@ export function VisualDelChat({
               onClick={() => {
                 const href = link;
                 setLink(null);
-                void plataforma.abrirNavegador(href);
+                void plataforma.abrirNavegador(href).catch(() => {});
               }}
             >
               {t("visualLinkOpen")}

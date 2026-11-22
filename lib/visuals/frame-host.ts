@@ -12,14 +12,18 @@ import { isFrameToParent } from "./protocol";
 
 /** The tallest a visual is drawn. */
 export const VISUAL_MAX_HEIGHT_PX = 2000;
-/** How long after a tap into the frame a prompt from it still counts. */
+/** How long after a tap into the frame a prompt from it still counts once focus has left the frame. */
 export const VISUAL_CLICK_WINDOW_MS = 5000;
+/** How long a prompt still counts while the person stays focused inside the frame (e.g. a multi-card exercise set). */
+export const VISUAL_FOCUSED_WINDOW_MS = 10 * 60_000;
 
 export interface VisualFrameHostOptions {
   /** The frame's origin, or null for a `srcdoc` frame (its messages come from "null"). */
   readonly frameOrigin: string | null;
   readonly isolated: boolean;
   readonly now: () => number;
+  /** Whether this frame is still the active focused element in a visible page. When omitted, only `VISUAL_CLICK_WINDOW_MS` applies. */
+  readonly isFocused?: () => boolean;
   onReady(): void;
   onHeight(h: number): void;
   onLink(href: string): void;
@@ -28,7 +32,7 @@ export interface VisualFrameHostOptions {
 }
 
 export function createVisualFrameHost(o: VisualFrameHostOptions): { onMessage(e: MessageEvent, frame: Window | null): void; markClick(): void } {
-  let tappedAt = 0;
+  let tappedAt: number | null = null;
   return {
     markClick() {
       tappedAt = o.now();
@@ -43,8 +47,10 @@ export function createVisualFrameHost(o: VisualFrameHostOptions): { onMessage(e:
       else if (d.kind === "ol-visual:link") {
         if (!o.isolated && /^https?:\/\//i.test(d.href)) o.onLink(d.href);
       } else if (d.kind === "ol-visual:prompt") {
-        if (o.onPrompt && o.now() - tappedAt < VISUAL_CLICK_WINDOW_MS) {
-          tappedAt = 0;
+        const elapsed = tappedAt !== null ? o.now() - tappedAt : Infinity;
+        const allowed = elapsed < VISUAL_CLICK_WINDOW_MS || (Boolean(o.isFocused?.()) && elapsed < VISUAL_FOCUSED_WINDOW_MS);
+        if (o.onPrompt && allowed) {
+          tappedAt = null;
           o.onPrompt(d.text);
         }
       } else if (d.kind === "ol-visual:context") {

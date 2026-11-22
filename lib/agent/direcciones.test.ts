@@ -436,4 +436,18 @@ describe("the visual states of a running turn", () => {
     dirigir("t1", "u1", "listo", { append: "\n\n<system-reminder>\nwidget_aaaa1111\n</system-reminder>" });
     expect(leerDireccion("t1")).toBe("listo");
   });
+
+  // Minor #4: responder with visualStates updates visualStatesOf atomically before resolving the awaiting turn.
+  it("🔴 responder updates held visual states before the awaiting ask_user_question resumes", async () => {
+    abrirTurno("t1", "u1");
+    const seenOnResume: unknown[] = [];
+    const wait = esperarRespuesta("t1", { timeoutMs: 60_000 }).then((ans) => {
+      seenOnResume.push(visualStatesOf("t1"));
+      return ans;
+    });
+    const next = [{ widgetId: "widget_aaaa1111", state: "picked B", cut: false, title: "quiz" }];
+    expect(responder("t1", "u1", [{ id: "q1", selected: ["B"] }], { visualStates: next })).toBe("ok");
+    await wait;
+    expect(seenOnResume).toEqual([next]);
+  });
 });
