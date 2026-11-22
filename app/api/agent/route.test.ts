@@ -5547,8 +5547,11 @@ describe("POST /api/agent — the person's own assistant", () => {
         expect(mocks.scheduleNotification).not.toHaveBeenCalled();
       });
 
-      it("one that only answered Len (its card, no text) keeps its row and sends nothing", async () => {
+      // Ruling R6-1: the note is its closing — what it wrote after its last tool call. «I'll answer Len…» before the
+      // message_len call is narration, not a note to its person.
+      it("🔴 narration, then message_len, then an empty closing: the row stays and nothing is sent", async () => {
         mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          args.emit({ type: "text", text: "I'll answer Len with the budget." });
           args.emit({ type: "action", tool: "message_len", status: "running", summary: "" });
           args.emit({ type: "action", tool: "message_len", status: "done", summary: "" });
           return { ...cierre(), finalText: "" };
@@ -5557,6 +5560,21 @@ describe("POST /api/agent — the person's own assistant", () => {
         expect(mocks.registrarTurnoDelServidor).toHaveBeenCalledTimes(1);
         expect(agentNote.emailAgentNote).not.toHaveBeenCalled();
         expect(mocks.scheduleNotification).not.toHaveBeenCalled();
+      });
+
+      it("🔴 narration, then message_len, then a closing: only the closing is emailed and pushed", async () => {
+        mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+          args.emit({ type: "text", text: "I'll answer Len with the budget." });
+          args.emit({ type: "action", tool: "message_len", status: "running", summary: "" });
+          args.emit({ type: "action", tool: "message_len", status: "done", summary: "" });
+          args.emit({ type: "text", text: "Le pregunté a Len si el tope de 500 € incluye el envío." });
+          return cierre();
+        });
+        await readEvents(await wake());
+        expect(agentNote.emailAgentNote).toHaveBeenCalledTimes(1);
+        expect(agentNote.emailAgentNote).toHaveBeenCalledWith(expect.objectContaining({ text: "Le pregunté a Len si el tope de 500 € incluye el envío." }));
+        const [evento] = mocks.scheduleNotification.mock.calls[0] as unknown as [Record<string, unknown>];
+        expect(evento).toMatchObject({ preview: "Le pregunté a Len si el tope de 500 € incluye el envío." });
       });
 
       it("one that never got to answer (the provider down) leaves no row, so its messages go back to waiting", async () => {

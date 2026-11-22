@@ -3253,6 +3253,10 @@ describe("🔴 a woken turn can't ask_len, schedule or connect; a person's turn 
     ["mcp__drive__search", { query: "budget" }],
     ["mcp__cal__authenticate", {}],
     ["suggest_connectors", {}],
+    // Ruling P2b: reading a connected server's resources is the same reach.
+    ["list_mcp_resources", {}],
+    ["list_mcp_resource_templates", {}],
+    ["read_mcp_resource", { server: "drive", uri: "file:///budget" }],
   ];
   const agentSession = (woken: boolean) =>
     ({ ...makeSession(), readOnly: true, assistant: { id: "a1", name: "Finanzas", ...(woken ? { woken: true } : {}) } }) as AgentSession;

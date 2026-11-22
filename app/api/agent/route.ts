@@ -2100,10 +2100,11 @@ async function correrTurno(
           }
           // THE AGENT'S NOTE TO ITS PERSON (decision 12 of «Len y el agente conversan»): nobody watches the turn Len's
           // message woke, so what it ended saying for its person goes to them — by email in its name, and by the push
-          // an unattended turn sends — as its scheduled task's result does. Its last words, and only when it has some:
-          // one that only answered Len leaves them empty and bothers no one. Not when someone stopped it on purpose.
+          // an unattended turn sends — as its scheduled task's result does. Only its CLOSING, what it wrote after its last
+          // tool call (ruling R6-1): «I'll answer Len…» before a message_len call is narration, and one that only answered
+          // Len leaves its closing empty and bothers no one. Not when someone stopped it on purpose.
           if (lenMessage && asistente && !canceladoAProposito) {
-            const nota = registro.finalText.trim();
+            const nota = registro.afterLastStep.trim();
             if (nota) {
               await emailAgentNote({
                 personId: asistente.personId,

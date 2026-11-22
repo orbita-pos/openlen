@@ -58,6 +58,10 @@ export interface RegistroDelTurno {
    *  last thing it said). Claude Code hands a run's final message back as its result, not the notes
    *  between steps. */
   readonly finalText: string;
+  /** What Len wrote AFTER its last tool call — its closing — and "" when the turn ended on a tool call. Unlike
+   *  `finalText`, the words before a step never count: what a turn Len's message woke tells its person is only this
+   *  (ruling R6-1 of «Len y el agente conversan»; narration before a `message_len` call is not a note to anyone). */
+  readonly afterLastStep: string;
   readonly tarjetas: Tarjetas;
   readonly cambioDocumento: boolean;
   /** ¿Merece fila? Un turno que no produjo nada —sin créditos, un rechazo
@@ -170,6 +174,10 @@ export function crearRegistroDelTurno(): RegistroDelTurno {
     },
     get finalText() {
       return sinceStep.trim() ? sinceStep : beforeStep;
+    },
+    get afterLastStep() {
+      // A step after the last text: nothing was said after it (`sinceStep` still holds the words before it).
+      return stepSinceText ? "" : sinceStep;
     },
     tarjetas,
     get cambioDocumento() {

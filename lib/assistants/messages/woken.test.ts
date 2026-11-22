@@ -12,8 +12,15 @@ describe("a turn woken by Len's message", () => {
     }
   });
 
+  // Ruling P2b: reading the person's connected services in a turn they didn't start is the same reach as the mcp__ calls.
+  it("🔴 and the three tools that read a connected server's resources", () => {
+    for (const name of ["list_mcp_resources", "list_mcp_resource_templates", "read_mcp_resource"]) {
+      expect(needsOwnersWords(name), name).toBe(true);
+    }
+  });
+
   it("keeps everything else: answering Len, reading, remembering, listing its tasks", () => {
-    for (const name of ["message_len", "Read", "Write", "Edit", "Grep", "schedule_list", "web_search", "list_messages", "present", "bash", "list_mcp_resources"]) {
+    for (const name of ["message_len", "Read", "Write", "Edit", "Grep", "schedule_list", "web_search", "list_messages", "present", "bash"]) {
       expect(needsOwnersWords(name), name).toBe(false);
     }
   });

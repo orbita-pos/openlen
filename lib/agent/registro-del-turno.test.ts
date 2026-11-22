@@ -79,6 +79,26 @@ describe("la fila del turno que escribe el servidor", () => {
     expect(r.finalText).toBe("All good.");
   });
 
+  // Ruling R6-1 of «Len y el agente conversan»: what a turn Len's message woke says to its person is its CLOSING — what it
+  // wrote after its last tool call. The words before a `message_len` call are narration, not a note to anyone.
+  it("🔴 afterLastStep is only what came after the last tool call: empty when the turn ended on one", () => {
+    const r = crearRegistroDelTurno();
+    expect(r.afterLastStep).toBe("");
+    r.observar({ type: "text", text: "I'll answer Len." });
+    expect(r.afterLastStep).toBe("I'll answer Len.");
+    r.observar({ type: "action", tool: "message_len", status: "running", summary: "" });
+    r.observar({ type: "action", tool: "message_len", status: "done", summary: "" });
+    expect(r.afterLastStep).toBe("");
+    // finalText keeps its last words, as it always did; the closing doesn't.
+    expect(r.finalText).toBe("I'll answer Len.");
+    r.observar({ type: "text", text: "Le pregunté a Len " });
+    r.observar({ type: "text", text: "por el tope." });
+    expect(r.afterLastStep).toBe("Le pregunté a Len por el tope.");
+    r.observar({ type: "text", text: " Y algo m" });
+    r.observar({ type: "retry", attempt: 1, maxAttempts: 3, delayMs: 0, discardChars: 9 });
+    expect(r.afterLastStep).toBe("Le pregunté a Len por el tope.");
+  });
+
   const base ={ terminalError: true, topeAlcanzado: null, errorCode: "cancelled" as const, mutoDurable: true };
 
   it("🔴 H05 · cortado a medias habiendo escrito: se guarda como cortado", () => {

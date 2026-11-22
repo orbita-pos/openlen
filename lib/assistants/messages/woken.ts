@@ -16,10 +16,20 @@ import { SUGGEST_CONNECTORS_TOOL } from "@/lib/mcp-connectors/tool-names";
 export const WOKEN_REFUSAL =
   "This turn was started by Len's message, not by your owner: that needs your owner's own words. Tell them in your reply.";
 
-const NEEDS_OWNER: ReadonlySet<string> = new Set([ASK_LEN, SCHEDULE_CREATE, SCHEDULE_UPDATE, SCHEDULE_DELETE, SUGGEST_CONNECTORS_TOOL]);
+const NEEDS_OWNER: ReadonlySet<string> = new Set([
+  ASK_LEN,
+  SCHEDULE_CREATE,
+  SCHEDULE_UPDATE,
+  SCHEDULE_DELETE,
+  SUGGEST_CONNECTORS_TOOL,
+  // Ruling P2b: DeepSeek's resource tools read the person's connected servers — the same reach as their `mcp__` calls.
+  "list_mcp_resources",
+  "list_mcp_resource_templates",
+  "read_mcp_resource",
+]);
 
-/** True for a tool a woken turn refuses: the four above, `suggest_connectors`, and every MCP tool (`mcp__…`: the
- *  person's connectors, their sign-in, an installed tool's operations). */
+/** True for a tool a woken turn refuses: the four above, `suggest_connectors`, the three that read a connected server's
+ *  resources, and every MCP tool (`mcp__…`: the person's connectors, their sign-in, an installed tool's operations). */
 export function needsOwnersWords(name: string): boolean {
   return NEEDS_OWNER.has(name) || name.startsWith("mcp__");
 }
