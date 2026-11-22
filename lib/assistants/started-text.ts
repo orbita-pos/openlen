@@ -5,6 +5,7 @@
 // when a project is started, renamed, published or deleted: the durable message re-sends it then, and only then.
 //
 // Pure.
+import type { MemoryFile } from "@/lib/agent/memory/memory-messages";
 import { publishedHost } from "@/lib/publish/base-host";
 
 import type { StartedProject } from "./projects";
@@ -12,10 +13,18 @@ import type { StartedProject } from "./projects";
 export const ASSISTANT_STARTED_PATH = "~/.assistant/STARTED.md";
 /** The whole file: 30 projects of a long name fit with room to spare. */
 export const STARTED_TEXT_MAX = 4_000;
+export const STARTED_LABEL = "the projects you started with Len — read-only; pass an id in ask_len's project to change one";
 
 function block(p: StartedProject): string {
   const facts = [`id: ${p.projectId}`, ...(p.subdomain ? [publishedHost(p.subdomain)] : [])];
-  return `# ${p.title?.trim() || p.projectId}\n(${facts.join(" · ")})`;
+  // One line, whatever the title holds: a line break would break the block.
+  return `# ${p.title?.replace(/\s+/g, " ").trim() || p.projectId}\n(${facts.join(" · ")})`;
+}
+
+/** Its entry in the agent's durable message. A list that couldn't be read (null) adds none: what the agent saw before
+ *  stands, instead of hearing the file is now empty and starting the project again. */
+export function startedMemoryFiles(projects: readonly StartedProject[] | null): MemoryFile[] {
+  return projects === null ? [] : [{ path: ASSISTANT_STARTED_PATH, label: STARTED_LABEL, text: startedText(projects) }];
 }
 
 export function startedText(projects: readonly StartedProject[]): string {

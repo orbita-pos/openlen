@@ -213,6 +213,8 @@ describe("ask_len", () => {
       const launch = vi.fn();
       const out = await runAskLen(TWO, { request: "cambia el botón" }, launch);
       expect(out.response).toMatchObject({ ok: false, error: "which_project", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] });
+      // It also says where the ones it started are, and how to start a new one (final review, minor).
+      expect(String((out.response as { message?: string }).message)).toMatch(/STARTED\.md[\s\S]*new_project/);
       expect(launch).not.toHaveBeenCalled();
     });
 
@@ -322,10 +324,61 @@ describe("ask_len", () => {
       expect(launch).not.toHaveBeenCalled();
     });
 
+    // Final review, finding 2: the turn's list is a snapshot — a project started earlier in this very turn, one past the
+    // 30 listed, or a list that couldn't be read is checked live before it is refused.
+    it("🔴 a project it started that the turn's list doesn't have is checked live, and accepted", async () => {
+      const launch = vi.fn();
+      const lookup = vi.fn(async (_a: string, id: string) => (id === "fresh" ? "Presupuesto" : null));
+      const out = await runAskLen(inSpace(), { request: "mejor en azul", project: "fresh" }, launch, undefined, undefined, vi.fn(async () => "x"), lookup);
+      expect(lookup).toHaveBeenCalledWith("a1", "fresh");
+      expect(launch.mock.calls[0]![0].projectId).toBe("fresh");
+      expect(resultOf(out)).toContain("«Presupuesto»");
+      const refused = await runAskLen(inSpace(), { request: "x", project: "nope" }, launch, undefined, undefined, vi.fn(async () => "x"), lookup);
+      expect(refused.response).toMatchObject({ ok: false, error: "not_your_project" });
+    });
+
+    // Final review, finding 3: on the phone, the project it started is the one in front of the owner.
+    it("🔴 on the phone, looking at a project it started, a request naming none goes there", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      const session = { ...inSpace(), assistant: { ...inSpace().assistant!, viewing: { id: "s1", title: "Presupuesto", served: false, started: true } } } as AgentSession;
+      const out = await runAskLen(session, { request: "cámbiale el color a azul" }, launch, undefined, undefined, startProject);
+      expect(launch.mock.calls[0]![0].projectId).toBe("s1");
+      expect(startProject).not.toHaveBeenCalled();
+      expect(resultOf(out)).toContain("«Presupuesto»");
+    });
+
+    it("an empty new_project is no new_project: with project it goes there; alone it asks for a name", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "azul", project: "s1", new_project: "" }, launch, undefined, undefined, startProject);
+      expect(launch.mock.calls[0]![0].projectId).toBe("s1");
+      const alone = await runAskLen(inSpace(), { request: "algo", new_project: "   " }, launch, undefined, undefined, startProject);
+      expect(alone.response).toMatchObject({ ok: false, error: "new_project_needed" });
+      expect(startProject).not.toHaveBeenCalled();
+    });
+
+    it("a new project's name is one line", async () => {
+      const startProject = vi.fn(async () => "fresh");
+      await runAskLen(inSpace(), { request: "x", new_project: "Presu\n\npuesto   mensual" }, vi.fn(), undefined, undefined, startProject);
+      expect(startProject).toHaveBeenCalledWith("u1", "a1", "Presu puesto mensual");
+    });
+
+    // The reviewer's recommendation: the feature's main failure — a new project for a change to one it started — caught
+    // whatever the model does.
+    it("🔴 a new_project named like one it started is refused with that one's id", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      const out = await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "otra vez", new_project: " presupuesto " }, launch, undefined, undefined, startProject);
+      expect(out.response).toMatchObject({ ok: false, error: "already_started", project: { id: "s1", title: "Presupuesto" } });
+      expect(startProject).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    });
+
     it("project and new_project together, or a bad name, are refused", async () => {
       const launch = vi.fn();
       const startProject = vi.fn(async () => "fresh");
-      for (const args of [{ project: "s1", new_project: "Otra" }, { new_project: "   " }, { new_project: "x".repeat(NEW_PROJECT_NAME_MAX + 1) }]) {
+      for (const args of [{ project: "s1", new_project: "Otra" }, { new_project: "x".repeat(NEW_PROJECT_NAME_MAX + 1) }]) {
         const out = await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "hazme algo", ...args }, launch, undefined, undefined, startProject);
         expect(out.response, JSON.stringify(args)).toMatchObject({ ok: false, error: "invalid_arguments" });
       }

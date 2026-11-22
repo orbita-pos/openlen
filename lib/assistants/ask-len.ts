@@ -121,6 +121,15 @@ const startNewProject: StartProject = async (personId, assistantId, name) => {
   return id;
 };
 
+/** Whether the agent started a project, checked live (`startedTitleOf`): its title, or null. */
+export type StartedLookup = (assistantId: string, projectId: string) => Promise<string | null>;
+
+const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("./projects")).startedTitleOf(assistantId, projectId);
+const NO_LOOKUP: StartedLookup = async () => null;
+
+/** One line, its spaces collapsed: a name is a title, and a title has no line breaks. */
+const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
+
 export async function runAskLen(
   session: AgentSession,
   args: Record<string, unknown>,
@@ -128,6 +137,7 @@ export async function runAskLen(
   notes?: AskLenNotes,
   steer: SteerLen = steerLiveTurn,
   startProject: StartProject = startNewProject,
+  startedLookup?: StartedLookup,
 ): Promise<ToolOutcome> {
   const assistant = session.assistant;
   if (!assistant) return { response: { ok: false, error: "not_available", message: `${ASK_LEN} is the person's own assistant's tool.` } };
@@ -136,20 +146,40 @@ export async function runAskLen(
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
   const named = typeof args.project === "string" ? args.project.trim() : "";
-  const wantsNew = args.new_project !== undefined && args.new_project !== null;
-  const newName = typeof args.new_project === "string" ? args.new_project.trim() : "";
+  // An empty new_project is no new_project, as an empty project is no project: models fill optional fields with "".
+  const newName = typeof args.new_project === "string" ? oneLine(args.new_project) : "";
+  const wantsNew = newName !== "";
   if (named && wantsNew) {
     return { response: { ok: false, error: "invalid_arguments", message: "Pass project or new_project, not both: project changes one that exists, new_project starts a separate one." } };
   }
-  if (wantsNew && (!newName || newName.length > NEW_PROJECT_NAME_MAX)) {
+  if (newName.length > NEW_PROJECT_NAME_MAX) {
     return { response: { ok: false, error: "invalid_arguments", message: `new_project is the new project's short name: 1 to ${NEW_PROJECT_NAME_MAX} characters.` } };
   }
   const started = assistant.started ?? [];
   // A NEW, SEPARATE PROJECT, asked for by name: started here, linked to the agent, and named with its id in the result —
   // as Claude Code's new session and DeepSeek's «started subagent <name>» — so the agent can follow it later.
   if (wantsNew) {
+    // The feature's main failure caught whatever the model does: a «new» project named like one it started is most
+    // likely a change to that one (the reviewer's recommendation). Its id comes back, to pass in project.
+    const same = started.find((p) => oneLine(p.title).toLowerCase() === newName.toLowerCase());
+    if (same) {
+      return {
+        response: {
+          ok: false,
+          error: "already_started",
+          project: { id: same.id, title: same.title },
+          message: `You already started «${same.title}» (id: ${same.id}). To change it, pass that id in project; if your owner really wants another, separate one, give it a different name.`,
+        },
+      };
+    }
     const id = await startProject(session.userId, assistant.id, newName);
     return passToLen(session, request, { id, title: newName }, newName, launch, notes, steer, newName);
+  }
+  // On the phone, looking at a project it STARTED (final review, finding 3): that one is in front of the owner, and a
+  // request that names none goes there — as one she serves does.
+  if (!named && assistant.viewing?.started) {
+    const v = assistant.viewing;
+    return passToLen(session, request, { id: v.id, title: v.title }, v.title.trim() || v.id, launch, notes, steer);
   }
   // Looking on the phone at a project she doesn't serve (spec local 2026-11-16-movil-es-tu-asistente, §5.6): a request
   // that names none can't go to one of hers by default — it would change a page the owner isn't looking at. First, before
@@ -185,7 +215,15 @@ export async function runAskLen(
   const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
   // Named, or the only one, or (§5.3) the one on her owner's phone. A named one may also be one it started.
   const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
-  const target = named ? (served.find((p) => p.id === named) ?? started.find((p) => p.id === named)) : served.length === 1 ? served[0] : onPhone;
+  let target = named ? (served.find((p) => p.id === named) ?? started.find((p) => p.id === named)) : served.length === 1 ? served[0] : onPhone;
+  // Not in the turn's lists: the list of the ones it started is a snapshot (final review, finding 2) — one started
+  // earlier in this very turn, one past the 30 listed, a list that couldn't be read — so it is checked live first. Only in
+  // production (no injected launch), as the notes are: tests never reach the database.
+  if (named && !target) {
+    const lookup = startedLookup ?? (launch ? NO_LOOKUP : liveStartedLookup);
+    const title = await lookup(assistant.id, named).catch(() => null);
+    if (title !== null) target = { id: named, title };
+  }
   if (named && !target) {
     return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve or started: see ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md." } };
   }
@@ -195,7 +233,8 @@ export async function runAskLen(
         ok: false,
         error: "which_project",
         projects: served.map((p) => ({ id: p.id, title: p.title })),
-        message: "You serve more than one project: pass the id of the one this is about in project. If it isn't clear which, ask your owner.",
+        message:
+          "You serve more than one project: pass the id of the one this is about in project. A project you started (~/.assistant/STARTED.md) takes its id too; for a new, separate one, pass new_project. If it isn't clear which, ask your owner.",
       },
     };
   }
