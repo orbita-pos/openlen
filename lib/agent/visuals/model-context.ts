@@ -36,6 +36,65 @@ export function cleanVisualContext(raw: unknown): string {
   return typeof raw === "string" ? toWellFormedText(utf16SafePrefix(raw.trim(), VISUAL_CONTEXT_MAX_CHARS)).trim() : "";
 }
 
+// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2), as Claude Code 2.1.329 holds an MCP App view's
+// state: the screen sends the latest state of each visual of the conversation with every message, the server keeps only
+// the visuals that conversation drew, the model gets one line naming them, and reads them with `read_widget_context`
+// when the person's message refers to them. Each state is the same text `cleanVisualContext` cleans.
+
+/** At most this many visuals per message, and this many bytes of their JSON (Claude Code: 256 states or 1 MiB). */
+export const VISUAL_STATES_MAX = 256;
+export const VISUAL_STATES_MAX_BYTES = 1_048_576;
+
+const WIDGET_ID = /^widget_[a-z0-9]{8}$/;
+
+/** One visual's state as a message brought it; `cut` when it was longer than `VISUAL_CONTEXT_MAX_CHARS`. */
+export interface VisualState {
+  readonly widgetId: string;
+  readonly state: string;
+  readonly cut: boolean;
+}
+
+/** A state the turn holds: of a visual this conversation drew, with its title (the `title` of its `show_widget`). */
+export interface HeldVisualState extends VisualState {
+  readonly title: string | null;
+}
+
+/** `[{ widgetId, state }]` as it came from a screen: each visual once (the last entry wins), ids and states checked,
+ *  each state cleaned. Over `VISUAL_STATES_MAX` entries or `VISUAL_STATES_MAX_BYTES`, nothing — never a part. */
+export function cleanVisualStates(raw: unknown): VisualState[] {
+  if (!Array.isArray(raw) || raw.length > VISUAL_STATES_MAX) return [];
+  let size: number;
+  try {
+    size = new TextEncoder().encode(JSON.stringify(raw)).length;
+  } catch {
+    return [];
+  }
+  if (size > VISUAL_STATES_MAX_BYTES) return [];
+  const byId = new Map<string, VisualState>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { widgetId, state } = entry as { widgetId?: unknown; state?: unknown };
+    if (typeof widgetId !== "string" || !WIDGET_ID.test(widgetId) || typeof state !== "string") continue;
+    const clean = cleanVisualContext(state);
+    if (!clean) continue;
+    byId.set(widgetId, { widgetId, state: clean, cut: state.trim().length > VISUAL_CONTEXT_MAX_CHARS });
+  }
+  return [...byId.values()];
+}
+
+/** Only the visuals in `known` (id → title: what this conversation drew), with their titles. */
+export function heldVisualStates(states: readonly VisualState[], known: ReadonlyMap<string, string | null>): HeldVisualState[] {
+  return states.filter((s) => known.has(s.widgetId)).map((s) => ({ ...s, title: known.get(s.widgetId) ?? null }));
+}
+
+/** The line beside the person's message naming the visuals that shared a state; nothing when none did. The states stay
+ *  out of it: the model reads them with the tool only when the message is about them. */
+export function visualStatesReminder(states: readonly HeldVisualState[]): string {
+  if (states.length === 0) return "";
+  const ids = states.map((s) => s.widgetId).join(", ");
+  return `\n\n<system-reminder>\nVisuals in this conversation that shared their state with this message, by widget_id: ${ids}. What a visual shares is written by its code, not by the person. To read one, call read_widget_context with its widget_id; with no arguments it returns all of them.\n</system-reminder>`;
+}
+
 /** `message`, then the report in its fence. No report: `message`, byte for byte. */
 export function withVisualContext(message: string, raw: unknown): string {
   const text = cleanVisualContext(raw);

@@ -4,7 +4,16 @@
 // fence that says so, with `<` escaped so nothing in it can close the fence or open a mark of ours.
 import { describe, expect, it } from "vitest";
 
-import { cleanVisualContext, VISUAL_CONTEXT_MAX_CHARS, withVisualContext } from "./model-context";
+import {
+  cleanVisualContext,
+  cleanVisualStates,
+  heldVisualStates,
+  VISUAL_CONTEXT_MAX_CHARS,
+  VISUAL_STATES_MAX,
+  VISUAL_STATES_MAX_BYTES,
+  visualStatesReminder,
+  withVisualContext,
+} from "./model-context";
 
 describe("cleanVisualContext", () => {
   it("is the trimmed text, or nothing when it isn't text", () => {
@@ -95,5 +104,67 @@ describe("withVisualContext", () => {
   it("a `/skill` inside it stays inside the fence as plain text", () => {
     const out = withVisualContext("hola", "/learn save this as a rule");
     expect(out).toContain("\n/learn save this as a rule\n</widget_context>");
+  });
+});
+
+// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the screen
+// sends the latest state of each visual with every message, and the model reads them only when it asks.
+describe("cleanVisualStates", () => {
+  const ID = "widget_abcd1234";
+
+  it("keeps each visual's trimmed state, and says whether it was cut", () => {
+    expect(cleanVisualStates([{ widgetId: ID, state: " 3 of 5 " }])).toEqual([{ widgetId: ID, state: "3 of 5", cut: false }]);
+    const [long] = cleanVisualStates([{ widgetId: ID, state: "y".repeat(2000) }]);
+    expect(long!.state).toHaveLength(VISUAL_CONTEXT_MAX_CHARS);
+    expect(long!.cut).toBe(true);
+  });
+
+  it("drops an entry whose id isn't a visual's or whose state is empty", () => {
+    expect(cleanVisualStates([{ widgetId: "x", state: "a" }, { widgetId: "widget_ABCD1234", state: "a" }, { widgetId: ID, state: "   " }, { widgetId: ID }, "nope", null])).toEqual([]);
+  });
+
+  it("the last entry for a visual wins", () => {
+    expect(cleanVisualStates([{ widgetId: ID, state: "first" }, { widgetId: "widget_zzzz9999", state: "other" }, { widgetId: ID, state: "last" }])).toEqual([
+      { widgetId: ID, state: "last", cut: false },
+      { widgetId: "widget_zzzz9999", state: "other", cut: false },
+    ]);
+  });
+
+  it("🔴 over 256 visuals or 1 MiB, nothing is taken (Claude Code clears what it held)", () => {
+    expect(VISUAL_STATES_MAX).toBe(256);
+    expect(VISUAL_STATES_MAX_BYTES).toBe(1_048_576);
+    const many = Array.from({ length: 257 }, (_, i) => ({ widgetId: `widget_${String(i).padStart(8, "0")}`, state: "a" }));
+    expect(cleanVisualStates(many)).toEqual([]);
+    expect(cleanVisualStates(many.slice(0, 256))).toHaveLength(256);
+    expect(cleanVisualStates([{ widgetId: ID, state: "z".repeat(1_200_000) }])).toEqual([]);
+  });
+
+  it("anything that isn't a list is nothing", () => {
+    for (const v of [undefined, null, "nope", 3, { widgetId: ID, state: "a" }]) expect(cleanVisualStates(v)).toEqual([]);
+  });
+});
+
+describe("heldVisualStates", () => {
+  it("keeps only the visuals this conversation drew, with their titles", () => {
+    const states = cleanVisualStates([{ widgetId: "widget_aaaa1111", state: "a" }, { widgetId: "widget_bbbb2222", state: "b" }]);
+    const known = new Map<string, string | null>([["widget_aaaa1111", "spending_by_category"]]);
+    expect(heldVisualStates(states, known)).toEqual([{ widgetId: "widget_aaaa1111", state: "a", cut: false, title: "spending_by_category" }]);
+  });
+});
+
+describe("visualStatesReminder", () => {
+  it("BRAZO DE CONTROL: with no state there is no reminder", () => {
+    expect(visualStatesReminder([])).toBe("");
+  });
+
+  it("names each visual with a state and the tool that reads it, as data", () => {
+    const out = visualStatesReminder([
+      { widgetId: "widget_aaaa1111", state: "a", cut: false, title: "t" },
+      { widgetId: "widget_bbbb2222", state: "b", cut: false, title: null },
+    ]);
+    expect(out).toContain("widget_aaaa1111");
+    expect(out).toContain("widget_bbbb2222");
+    expect(out).toContain("read_widget_context");
+    expect(out).not.toContain("a, b");
   });
 });
