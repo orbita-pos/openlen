@@ -151,6 +151,39 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "customerNote" text NOT NULL DEFAULT '';`,
   // When its file's first message went: claimed once (two tabs, or the web and the phone, would both send it).
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "openedAt" timestamp;`,
+  // The tool that lives inside an agent (spec local 2026-11-22-herramienta-dentro-del-agente, §1–§3): its tools, and the
+  // small database each one shares with the agent. "releaseSha" names a "toolReleases" row by convention only — that table
+  // belongs to tools:migrate, which may run after this one. Gone with the agent, the person or the space.
+  `CREATE TABLE IF NOT EXISTS "agentTools" (
+    "id" text PRIMARY KEY,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "personId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
+    "spaceProjectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "slug" text NOT NULL,
+    "title" text NOT NULL,
+    "folder" text NOT NULL,
+    "releaseSha" text NOT NULL,
+    "hostLabel" text NOT NULL,
+    "phoneHostLabel" text,
+    "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
+    "updatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+    "dataChangedAt" timestamp with time zone,
+    "agentSeenAt" timestamp with time zone
+  );`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_assistant_slug_idx" ON "agentTools" ("assistantId", "slug");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_hostLabel_idx" ON "agentTools" ("hostLabel");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_phoneHostLabel_idx" ON "agentTools" ("phoneHostLabel");`,
+  `CREATE INDEX IF NOT EXISTS "agentTools_personId_idx" ON "agentTools" ("personId");`,
+  `CREATE TABLE IF NOT EXISTS "agentToolDocs" (
+    "toolId" text NOT NULL REFERENCES "agentTools"("id") ON DELETE CASCADE,
+    "collection" text NOT NULL,
+    "docId" text NOT NULL,
+    "data" jsonb NOT NULL,
+    "bytes" integer NOT NULL,
+    "updatedAt" timestamp with time zone NOT NULL DEFAULT now(),
+    "updatedBy" text NOT NULL,
+    PRIMARY KEY ("toolId", "collection", "docId")
+  );`,
 ];
 
 /** An agent's scheduled tasks (spec local 2026-11-19-agentes-para-todos, §6.4, delivery 3): `scheduledTasks.assistantId`

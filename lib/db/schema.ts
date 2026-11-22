@@ -1678,6 +1678,58 @@ export const agentLenMessages = pgTable(
   (t) => [index("agentLenMessages_pair_idx").on(t.assistantId, t.projectId, t.createdAt), index("agentLenMessages_status_idx").on(t.status)],
 );
 
+/** THE TOOLS AN AGENT MADE FOR ITS PERSON (spec local 2026-11-22-herramienta-dentro-del-agente, §1, §2): a page in the
+ *  agent's folder of the person's space (`/tools/<agent>/<tool>/`), published as a VERSION (`releaseSha`, a `toolReleases`
+ *  row by convention — no foreign key: that table belongs to `tools:migrate`) and served on its own private labels, one
+ *  for the web and one for the phone. Deleting the agent, the person or the space deletes its tools and their data.
+ *  Created by `npm run assistants:migrate`. */
+export const agentTools = pgTable(
+  "agentTools",
+  {
+    id: text("id").primaryKey(),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    spaceProjectId: text("spaceProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The tool's folder name under the agent's, unique per agent: its identity across republishes. */
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    folder: text("folder").notNull(),
+    releaseSha: text("releaseSha").notNull(),
+    /** The web's private label; fixed for the row's life. */
+    hostLabel: text("hostLabel").notNull(),
+    /** The phone's own private label (framed only by the phone app); null until it has one. */
+    phoneHostLabel: text("phoneHostLabel"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    /** The last write to its data BY THE PERSON (the tool's own screen): what the agent is told changed. */
+    dataChangedAt: timestamp("dataChangedAt", { mode: "date", withTimezone: true }),
+    /** The last time the agent read or wrote its data (`tool_data`). */
+    agentSeenAt: timestamp("agentSeenAt", { mode: "date", withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("agentTools_assistant_slug_idx").on(t.assistantId, t.slug),
+    uniqueIndex("agentTools_hostLabel_idx").on(t.hostLabel),
+    uniqueIndex("agentTools_phoneHostLabel_idx").on(t.phoneHostLabel),
+    index("agentTools_personId_idx").on(t.personId),
+  ],
+);
+
+/** The small database a tool shares with its agent: JSON documents in collections (`collection/docId`), per tool.
+ *  `bytes` is the UTF-8 length of the document's JSON, kept so the caps are checked without reading the documents. */
+export const agentToolDocs = pgTable(
+  "agentToolDocs",
+  {
+    toolId: text("toolId").notNull().references(() => agentTools.id, { onDelete: "cascade" }),
+    collection: text("collection").notNull(),
+    docId: text("docId").notNull(),
+    data: jsonb("data").$type<unknown>().notNull(),
+    bytes: integer("bytes").notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    updatedBy: text("updatedBy").$type<"agent" | "person">().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.toolId, t.collection, t.docId] })],
+);
+
 /** A table or view of a project's production base that `anon` can read, with its columns. */
 export interface PublicTable {
   name: string;
