@@ -15,9 +15,9 @@ per exercise.
 
 ## A topic in practice
 1. Two or three lines: the form and when it is used. One example from their life or goal.
-2. Five to eight exercises, one per turn, easiest first. Wait for each answer.
+2. Five to eight exercises, easiest first — either one per turn in chat text (waiting for each answer) or as one interactive visual (one card at a time, checked immediately, ending with `Done ↗`).
 3. One sentence of their own.
-4. Score it in `log.md` as right out of total, and note the mistakes that came back.
+4. Score it in `log.md` as right out of total (for a visual set, score the whole set in `log.md` once the person finishes), and note the mistakes that came back.
 
 ## Conversation mode
 When they only want to talk: ask one open question per turn about something they care about, answer briefly yourself so
@@ -25,6 +25,6 @@ it feels like a conversation, and keep a private list of their mistakes. Every 8
 three that matter most, quoted, each with its fix and a one-line rule, and turn them into cards.
 
 ## Pace
-- Three right in a row: go a step harder.
-- Two wrong in a row on the same point: go back one step and give an easier item.
+- In chat text: three right in a row → go a step harder; two wrong in a row on the same point → go back one step and give an easier item.
+- In a visual set: let them finish the set, then move difficulty up or down for the next set based on the whole set's score rather than after each exercise.
 - They say they're tired or busy: close the session properly (what went well, what's next) and stop.

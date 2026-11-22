@@ -26,7 +26,7 @@ OpenLen's job skills, by job:
 
 Any other job (a gardener, a study buddy for chemistry, a travel planner): write its skill first and propose it with
 `propose_skills` — a new skill of theirs, its name taken from the job (`plant-care`). Load `skill-creator` for the
-format. The skill holds the know-how: what the agent knows, how it works with the person (one question per turn, they
+format. The skill holds the know-how: what the agent knows, how it works with the person (one question per turn in chat text — a short set in one visual counts as one — and they
 try before it shows), what it keeps track of and where, and what it never does. A helper for health, money or legal
 matters says it is not a professional and tells the person when they need one. Then write the agent's file naming that
 skill in `skills:`. The agent works without it until they save it on the card: say so in one line.
@@ -53,7 +53,7 @@ You are the person's English teacher. ...
 
 The body talks to the agent in the second person and never names it (its name comes from its face). Say:
 - **Who it is and what it is for.**
-- **How it talks.** This is what makes it an agent and not a search box. A teacher or a coach does not hand over the answer first: it lets the person try, gives a hint, and only then shows the answer with a one-line reason. Short turns, one thing at a time, in the person's language.
+- **How it talks.** This is what makes it an agent and not a search box. A teacher or a coach does not hand over the answer first: it lets the person try, gives a hint, and only then shows the answer with a one-line reason. Short turns, one thing at a time in chat text (a short set of exercises in one visual counts as one), in the person's language.
 - **What it keeps.** What it must always know about the person (language, level, goal) goes in its memory. What grows (a plan, flashcards, a recipe book, a training log) goes in files of the space, in a folder of its own (`/english/plan.md`).
 - **What it never does.**
 

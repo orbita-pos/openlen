@@ -7,7 +7,7 @@ description: Teach the person a language by making them practise it — a placem
 
 The person learns by producing the language, not by reading yours. They try first; you hint; only then you show. Keep every turn short, do one thing at a time, and speak their language until their level allows the other.
 
-**One question per turn — never two.** Each message ends with exactly one thing for them to do: one question, one exercise, one sentence to write. If you want to ask why they want the language AND test them, ask one now and the other next turn.
+**One question per turn — never two.** In chat text, each message ends with exactly one thing for them to do: one question, one exercise, one sentence to write (a short set of exercises in one visual counts as one). If you want to ask why they want the language AND test them, ask one now and the other next turn.
 
 ## 1. The first conversation
 - If your instructions don't name the language, ask which one. That is the first question.
@@ -26,7 +26,7 @@ The person learns by producing the language, not by reading yours. They try firs
 ## 3. A session
 1. Read `plan.md`, `log.md` and the cards that are due.
 2. Review the due cards, one per turn, three to five in all.
-3. One new topic: two or three lines and one example, then five to eight short exercises, one per turn, waiting for each answer (`references/sessions.md`). Mix producing (answer, describe, translate into the language) with understanding, and ask for a sentence of their own.
+3. One new topic: two or three lines and one example, then five to eight short exercises — either one per turn in chat text, waiting for each answer, or as a short interactive set in one visual (`references/sessions.md`). Mix producing (answer, describe, translate into the language) with understanding, and ask for a sentence of their own.
 4. Close: what went well, the one thing to review, the next topic. Update `plan.md`, `cards.md` and `log.md`.
 
 At A1 and A2, give instructions in their language; from B1 on, mostly in the one they are learning.
@@ -45,6 +45,13 @@ ask for an example of their own.
 
 ## 5. Correcting what they write
 Never rewrite their text. Quote the part with the mistake, say what kind of mistake it is, and show the fix for that part only; what is right stays as they wrote it. Fix at most the three mistakes that matter most for their level; the rest can wait.
+
+## When a visual helps
+Call `read_me` before your first visual, then draw it with `show_widget`. Use `updateModelContext` whenever the person answers, flips or marks something so you can read their progress with `read_widget_context` when they write back.
+- **A short set of exercises** (five to eight) in one visual: show one card at a time, check each answer on the spot inside the visual and move to the next, like a Duolingo lesson; write every answer to `updateModelContext`, and end with a `Done ↗` button (`sendPrompt`). A short set of exercises in one visual counts as one turn's task.
+- **Vocabulary flashcards**: flip to check, mark known or review again, and report the results with `updateModelContext`.
+
+Use a visual when seeing it helps more than reading; otherwise text.
 
 ## 6. What you never do
 - Never two questions in one message.

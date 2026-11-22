@@ -27,6 +27,18 @@ function shape(name: string) {
     expect(named.length).toBeGreaterThan(0);
     for (const rel of named) expect(reference(name, rel), `${name}/references/${rel}`).toBeTypeOf("string");
   });
+
+  // Idea 2 (spec local 2026-11-22-visuales-de-verdad, §3): each trade skill knows when a visual helps.
+  it("🔴 says when a visual helps, naming read_me, show_widget, updateModelContext, and when to stay in text", () => {
+    const text = skillMd(name);
+    const match = /^## When a visual helps\b[\s\S]*?(?=^## |\Z|$)/m.exec(text);
+    expect(match, `${name} missing "## When a visual helps"`).not.toBeNull();
+    const section = text.slice(text.indexOf("## When a visual helps")).split(/\n## /)[0]!;
+    expect(section).toContain("read_me");
+    expect(section).toContain("show_widget");
+    expect(section).toContain("updateModelContext");
+    expect(section).toMatch(/seeing it helps more than reading[^.\n]*otherwise text/i);
+  });
 }
 
 describe("language-teacher", () => {
@@ -42,6 +54,18 @@ describe("language-teacher", () => {
     const table = (reference("language-teacher", "placement.md") ?? "").split("\n").filter((l) => /^\| \d /.test(l));
     expect(table.length).toBeGreaterThan(4);
     for (const row of table) expect((row.match(/\?/g) ?? []).length, row).toBeLessThanOrEqual(1);
+  });
+
+  it("🔴 a short set of exercises in one visual counts as one (5–8, one card at a time, checked by the visual, Done ↗), and sessions.md scores and paces between sets", () => {
+    const t = skillMd("language-teacher");
+    expect(t).toMatch(/set of exercises in one visual counts as one/i);
+    expect(t).toMatch(/five to eight/i);
+    expect(t).toMatch(/one card at a time/i);
+    expect(t).toMatch(/Done ↗/);
+    expect(t).toMatch(/flashcards/i);
+    const sessions = reference("language-teacher", "sessions.md") ?? "";
+    expect(sessions).toMatch(/whole set[^.\n]*log\.md|score[^.\n]*set[^.\n]*log\.md/i);
+    expect(sessions).toMatch(/next set/i);
   });
 });
 
@@ -61,6 +85,12 @@ describe("fitness-coach", () => {
       expect(text).toMatch(/chest pain[^.\n]*(faint|dizz)[^.\n]*no exercise at all|no exercise at all[^.\n]*chest pain/i);
     }
   });
+
+  it("its visuals cover the training week table and progress when there is data", () => {
+    const section = skillMd("fitness-coach").slice(skillMd("fitness-coach").indexOf("## When a visual helps")).split(/\n## /)[0]!;
+    expect(section).toMatch(/week[^.\n]*table|table[^.\n]*week/i);
+    expect(section).toMatch(/progress[^.\n]*data/i);
+  });
 });
 
 describe("personal-finance", () => {
@@ -72,6 +102,14 @@ describe("personal-finance", () => {
     expect(t).toMatch(/\[VERIFY/);
     expect(t).toMatch(/tax[^.\n]*country|country[^.\n]*tax/i);
     expect(t).toMatch(/starting balance|what (they|the person) (has|have) now/i);
+  });
+
+  it("🔴 its visuals section uses only the figures the person gave", () => {
+    const t = skillMd("personal-finance");
+    const section = t.slice(t.indexOf("## When a visual helps")).split(/\n## /)[0]!;
+    expect(section).toMatch(/chart/i);
+    expect(section).toMatch(/recalculat/i);
+    expect(section).toMatch(/only[^.\n]*figures[^.\n]*(person|they) gave/i);
   });
 });
 
@@ -85,6 +123,14 @@ describe("legal-helper", () => {
     for (const stake of [/eviction/i, /court/i, /criminal/i, /immigration/i]) expect(t).toMatch(stake);
     expect(t).toMatch(/\[VERIFY/);
     expect(t).toMatch(/Urgent/);
+  });
+
+  it("🔴 its visuals section allows at most steps or a timeline, never something that looks like an official document", () => {
+    const t = skillMd("legal-helper");
+    const section = t.slice(t.indexOf("## When a visual helps")).split(/\n## /)[0]!;
+    expect(section).toMatch(/steps|checklist/i);
+    expect(section).toMatch(/timeline/i);
+    expect(section).toMatch(/never[^.\n]*looks like an official document/i);
   });
 });
 
@@ -111,6 +157,11 @@ describe("agent-creation", () => {
     expect(t.indexOf("propose_skills")).toBeLessThan(t.indexOf("## 3. Write the file"));
     expect(t).toMatch(/card/i);
   });
+
+  it("🔴 its one-question-per-turn rule says a set in a visual counts as one", () => {
+    const t = skillMd("agent-creation");
+    expect(t).toMatch(/set[^.\n]*visual counts as one/i);
+  });
 });
 
 describe("cooking", () => {
@@ -120,6 +171,13 @@ describe("cooking", () => {
     expect(t).toMatch(/before the first recipe[^.]*allerg/i);
     expect(t).toMatch(/allergies and diets[^.]*memory|memory[^.]*allergies/i);
     expect(t).toMatch(/allergen is never "probably fine"/i);
+  });
+
+  it("its visuals cover a servings control that recalculates and a shopping list to check off", () => {
+    const t = skillMd("cooking");
+    const section = t.slice(t.indexOf("## When a visual helps")).split(/\n## /)[0]!;
+    expect(section).toMatch(/servings[^.\n]*recalculat/i);
+    expect(section).toMatch(/shopping list/i);
   });
 
   // Final review (re-graded): who is at higher risk, and a reaction happening now.
