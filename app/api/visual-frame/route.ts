@@ -6,6 +6,7 @@
 import { frameAncestors } from "@/lib/lienzo/host";
 import { isVisualsHost } from "@/lib/lienzo/prefijo";
 import { visualFrameParentOrigins } from "@/lib/lienzo/visuals-host";
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { buildVisualFrameDocument, visualFrameCsp } from "@/lib/visuals/frame-document";
 
 export const runtime = "nodejs";
@@ -14,10 +15,11 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request): Promise<Response> {
   const host = req.headers.get("host");
   if (!isVisualsHost(host)) return new Response("Not found", { status: 404 });
+  const ancestors = [...new Set([...frameAncestors().split(" "), ...ORIGENES_DE_LA_APP])].join(" ");
   return new Response(buildVisualFrameDocument({ parentOrigins: visualFrameParentOrigins({ hostDeLaPeticion: host }), cspInMeta: false }), {
     headers: {
       "content-type": "text/html; charset=utf-8",
-      "content-security-policy": visualFrameCsp(frameAncestors()),
+      "content-security-policy": visualFrameCsp(ancestors),
       "cache-control": "public, max-age=300",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",

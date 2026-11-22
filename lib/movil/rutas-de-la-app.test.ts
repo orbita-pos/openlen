@@ -126,6 +126,11 @@ describe("las rutas de la app", () => {
     }
   });
 
+  it("🔴 the visuals frame url route is on the list", () => {
+    const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
+    expect(listed.get("app/api/visual-frame-url/route.ts")).toEqual(["GET"]);
+  });
+
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {
     const src = leer("app/api/projects/[id]/versions/route.ts");
     expect(src).not.toContain("usuarioDeLaPeticion");

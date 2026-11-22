@@ -621,6 +621,7 @@ export default defineConfig({
       "lib/agent/visuals/**/*.test.ts",
       "lib/visuals/**/*.test.ts",
       "app/api/visual-frame/**/*.test.ts",
+      "app/api/visual-frame-url/**/*.test.ts",
       "lib/projects/chat-row.test.ts",
       // Lote 7-8: el SQL de jsonb del estado de la charla contra PGlite.
       "lib/projects/chat-estado.pglite.test.ts",

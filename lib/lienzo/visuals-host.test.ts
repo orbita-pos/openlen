@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { etiquetaDelHost, isVisualsHost } from "./prefijo";
 import { visualFrameParentOrigins, visualFrameUrl } from "./visuals-host";
 
@@ -25,13 +26,17 @@ describe("visualFrameUrl", () => {
 });
 
 describe("visualFrameParentOrigins", () => {
-  it("in production, only the app", () => {
-    expect(visualFrameParentOrigins({ hostDeLaPeticion: "lienzo-visuals.openlen.app" }, PROD)).toEqual(["https://openlen.com"]);
+  it("in production, the web app plus the phone app origins", () => {
+    expect(visualFrameParentOrigins({ hostDeLaPeticion: "lienzo-visuals.openlen.app" }, PROD)).toEqual([
+      "https://openlen.com",
+      ...ORIGENES_DE_LA_APP,
+    ]);
   });
 
-  it("locally, the app plus localhost and 127.0.0.1 on the request's port", () => {
+  it("locally, the app, the phone origins, plus localhost and 127.0.0.1 on the request's port", () => {
     expect(visualFrameParentOrigins({ hostDeLaPeticion: "lienzo-visuals.localhost:3000" }, DEV)).toEqual([
       "https://openlen.com",
+      ...ORIGENES_DE_LA_APP,
       "http://localhost:3000",
       "http://127.0.0.1:3000",
     ]);
@@ -40,7 +45,7 @@ describe("visualFrameParentOrigins", () => {
   it("no duplicates when the app itself is localhost", () => {
     expect(
       visualFrameParentOrigins({ hostDeLaPeticion: "lienzo-visuals.localhost:3000" }, { NODE_ENV: "development", NEXT_PUBLIC_SITE_URL: "http://localhost:3000" }),
-    ).toEqual(["http://localhost:3000", "http://127.0.0.1:3000"]);
+    ).toEqual(["http://localhost:3000", ...ORIGENES_DE_LA_APP, "http://127.0.0.1:3000"]);
   });
 });
 

@@ -77,4 +77,6 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   // Only the sign-in: «Desconectar» (DELETE) is the Herramientas page's, on the web (final review M5).
   { fichero: "app/api/mcp-connectors/[name]/oauth/route.ts", metodos: ["POST"] },
   { fichero: "app/api/mcp-connectors/directory/[id]/route.ts", metodos: ["POST"] },
+  // Inline visuals in the phone's chat (spec local 2026-11-22-visuales-de-verdad, §1).
+  { fichero: "app/api/visual-frame-url/route.ts", metodos: ["GET"] },
 ];

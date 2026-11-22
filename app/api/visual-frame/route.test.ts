@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { GET } from "./route";
 
 const pide = (host: string) => GET(new Request(`https://${host}/`, { headers: { host } }));
@@ -11,12 +12,15 @@ describe("GET /api/visual-frame", () => {
     const csp = res.headers.get("content-security-policy") ?? "";
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("frame-ancestors");
+    const ancestors = csp.split(";").find((d) => d.trim().startsWith("frame-ancestors ")) ?? "";
+    for (const origin of ORIGENES_DE_LA_APP) expect(ancestors).toContain(origin);
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
     expect(res.headers.get("set-cookie")).toBeNull();
     const html = await res.text();
     expect(html).toContain('<div id="root"></div>');
     expect(html).not.toContain("http-equiv");
+    for (const origin of ORIGENES_DE_LA_APP) expect(html).toContain(origin);
   });
 
   it("on any other host, 404: the frame never runs on openlen.com", async () => {

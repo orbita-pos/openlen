@@ -6,6 +6,7 @@
  * files, no cookies of the app). Locally it is `lienzo-visuals.localhost`, the
  * way the lienzo runs locally. Server-only, like `host.ts`.
  */
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { esPeticionLocal, esProduccion, lienzoApagado, lienzoBaseHost, origenDeLaApp } from "./host";
 import { VISUALS_LABEL } from "./prefijo";
 
@@ -27,10 +28,11 @@ export function visualFrameUrl(input: { hostDeLaPeticion: string | null }, env: 
   return `http://${VISUALS_LABEL}.localhost${port ? `:${port}` : ""}/`;
 }
 
-/** The origins the frame takes messages from: the app, and locally also the
- *  workspace on localhost / 127.0.0.1 at the request's port. */
+/** The origins the frame takes messages from: the web app, the phone app's
+ *  origins, and locally also the workspace on localhost / 127.0.0.1 at the
+ *  request's port. */
 export function visualFrameParentOrigins(input: { hostDeLaPeticion: string | null }, env: Env = process.env): string[] {
-  const origins = [origenDeLaApp(env)];
+  const origins = [origenDeLaApp(env), ...ORIGENES_DE_LA_APP];
   if (!esProduccion(env) || esPeticionLocal(input.hostDeLaPeticion)) {
     const port = portOf(input.hostDeLaPeticion);
     const suffix = port ? `:${port}` : "";
