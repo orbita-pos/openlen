@@ -11,6 +11,7 @@ import {
   VISUAL_CONTEXT_MAX_CHARS,
   VISUAL_STATES_MAX,
   VISUAL_STATES_MAX_BYTES,
+  VISUAL_STATES_REMINDER_MAX_IDS,
   visualStatesPayload,
   visualStatesReminder,
 } from "./model-context";
@@ -136,23 +137,23 @@ describe("visualStatesReminder", () => {
     expect(out).not.toContain("a, b");
   });
 
-  // Minor #3: large state lists cap explicit widget_ids with "(and N more)", keeping the most recent visuals named.
-  it("🔴 caps long lists at the most recent visuals with '(and N more)'", () => {
-    const many = Array.from({ length: 15 }, (_, i) => ({
+  // Claude Code 2.1.329: names up to 64 widget_ids (slice(0, 64)) and summarizes the rest as ", and N more".
+  it("🔴 caps long lists at 64 widget_ids with ', and N more' as in Claude Code 2.1.329", () => {
+    expect(VISUAL_STATES_REMINDER_MAX_IDS).toBe(64);
+    const many = Array.from({ length: 67 }, (_, i) => ({
       widgetId: `widget_${String(i).padStart(8, "0")}`,
       state: `s${i}`,
       cut: false,
       title: null,
     }));
     const out = visualStatesReminder(many);
-    expect(out).toContain("(and 3 more)");
-    expect(out).toContain("widget_00000014");
-    expect(out).toContain("widget_00000003");
-    expect(out).not.toContain("widget_00000000");
-    expect(out).not.toContain("widget_00000002");
+    expect(out).toContain("widget_00000063, and 3 more.");
+    expect(out).toContain("widget_00000000");
+    expect(out).not.toContain("widget_00000064");
+    expect(out).not.toContain("widget_00000066");
     expect(out).toContain("with no arguments it returns all of them");
-    // Exactly at the cap (12): no truncation suffix.
-    expect(visualStatesReminder(many.slice(0, 12))).not.toContain("more");
+    // Exactly at the cap (64): no truncation suffix.
+    expect(visualStatesReminder(many.slice(0, 64))).not.toContain("more");
   });
 });
 

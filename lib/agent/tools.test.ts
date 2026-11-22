@@ -3365,8 +3365,9 @@ describe("read_widget_context reads what the turn holds", () => {
     assert.match(String(out.response.tool_result), /No visual in this conversation shared a state/);
   });
 
-  // Minor #4: when an ask_user_question answer resolves with held visual states, the tool outcome carries a reminder notice.
-  it("🔴 ask_user_question attaches a visual-states reminder notice when the turn holds states on answer", async () => {
+  // Claude Code 2.1.329: only user messages and queued corrections carry the visual-states reminder — never a tool
+  // result like ask_user_question (held states updated on the answer are still read when read_widget_context is called).
+  it("🔴 ask_user_question does not attach a visual-states reminder notice on answer (Claude Code 2.1.329)", async () => {
     const { deps } = makeDeps();
     let held: { widgetId: string; state: string; cut: boolean; title: string | null }[] = [];
     const session = { ...makeSession(), visualStates: () => held } as AgentSession;
@@ -3381,19 +3382,11 @@ describe("read_widget_context reads what the turn holds", () => {
       questions: [{ id: "q1", question: "Ready?", options: [{ label: "Go on" }] }],
     });
     assert.equal(out.response.ok, true);
-    assert.match(String(out.notice ?? ""), /<system-reminder>[\s\S]*widget_nnnn0000[\s\S]*read_widget_context[\s\S]*<\/system-reminder>/);
-
-    // Control arm: when held states are empty on answer, no notice is attached.
-    const emptyAnswer = {
-      ...deps,
-      askUser: async () => {
-        held = [];
-        return [{ id: "q1", selected: ["Go on"] }];
-      },
-    } as unknown as AgentDeps;
-    const none = await runAgentTool(session, emptyAnswer, "ask_user_question", {
-      questions: [{ id: "q1", question: "Ready?", options: [{ label: "Go on" }] }],
-    });
-    assert.equal(none.notice, undefined);
+    assert.equal(out.notice, undefined);
+    // And read_widget_context sees the updated state right after.
+    const read = await runAgentTool(session, deps as unknown as AgentDeps, "read_widget_context", {});
+    assert.deepEqual(JSON.parse(String(read.response.tool_result)), [
+      { widget_id: "widget_nnnn0000", title: "plan_options", widget_reported_state: "picked B" },
+    ]);
   });
 });

@@ -46,4 +46,10 @@ describe("isConcurrencySafe", () => {
     expect(isConcurrencySafe("use_page", { steps: [null] })).toBe(false);
     expect(isConcurrencySafe("use_page", { steps: [{ read: "x" }], sign_in_as: "" })).toBe(true);
   });
+
+  // Claude Code 2.1.329: ReadWidgetContext declares isConcurrencySafe() { return true }.
+  it("🔴 read_widget_context is concurrency-safe", () => {
+    expect(isConcurrencySafe("read_widget_context", {})).toBe(true);
+    expect(isConcurrencySafe("read_widget_context", { widget_id: "widget_aaaa1111" })).toBe(true);
+  });
 });

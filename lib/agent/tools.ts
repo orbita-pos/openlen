@@ -151,7 +151,7 @@ import { toolReadMe, toolShowWidget } from "@/lib/agent/visuals/tools";
 import { SKILL_TOOL, toolSkill } from "@/lib/agent/skills/tool";
 import { PRESENT_TOOL, toolPresent } from "@/lib/agent/skills/present";
 import { READ_ME, SHOW_WIDGET, type VisualWidget } from "@/lib/agent/visuals/widget";
-import { visualStatesReminder, type HeldVisualState } from "@/lib/agent/visuals/model-context";
+import type { HeldVisualState } from "@/lib/agent/visuals/model-context";
 import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/read-widget-context";
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
@@ -3001,13 +3001,7 @@ async function toolAskUserQuestion(
       // `publish` lo lee para no tomar por inventada la dirección que acaba de dar.
       const said = answers.flatMap((a) => [...a.selected.map((s) => s.replace(RECOMMENDED_SUFFIX, "")), ...(a.custom ? [a.custom] : [])]).filter((s) => s.trim());
       if (said.length > 0) session.answeredThisTurn = [...(session.answeredThisTurn ?? []), ...said];
-      const visualNotice = visualStatesReminder(session.visualStates?.() ?? []).trim();
-      return {
-        response: { ok: true, answers },
-        preguntas: v.questions,
-        respuesta: answerSummary(answers),
-        ...(visualNotice ? { notice: visualNotice } : {}),
-      };
+      return { response: { ok: true, answers }, preguntas: v.questions, respuesta: answerSummary(answers) };
     }
   }
   return {
