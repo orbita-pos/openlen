@@ -34,6 +34,24 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     PRIMARY KEY ("assistantId", "projectId")
   );`,
   `CREATE INDEX IF NOT EXISTS "assistantStartedProjects_projectId_idx" ON "assistantStartedProjects" ("projectId");`,
+  // The mailbox between Len and the person's agents (spec local 2026-11-21-len-y-el-agente-conversan, §3): a message is
+  // written here before anything wakes, and is delivered only when a turn reads it. Gone with the agent or the project.
+  `CREATE TABLE IF NOT EXISTS "agentLenMessages" (
+    "id" text PRIMARY KEY,
+    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "direction" text NOT NULL,
+    "text" text NOT NULL,
+    "ownerWords" text,
+    "status" text NOT NULL DEFAULT 'pending',
+    "heldReason" text,
+    "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
+    "deliveringAt" timestamp with time zone,
+    "deliveredAt" timestamp with time zone,
+    "readByRow" text
+  );`,
+  `CREATE INDEX IF NOT EXISTS "agentLenMessages_pair_idx" ON "agentLenMessages" ("assistantId", "projectId", "createdAt");`,
+  `CREATE INDEX IF NOT EXISTS "agentLenMessages_status_idx" ON "agentLenMessages" ("status");`,
   // Phase 2A — visitors (spec §4.4.5, §4.7, §6.5): on the page, what it knows, visits, the month's spend, the cap.
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "onPage" boolean NOT NULL DEFAULT false;`,
   `ALTER TABLE "assistantProjects" ADD COLUMN IF NOT EXISTS "knowledge" text;`,

@@ -1652,6 +1652,32 @@ export const assistantStartedProjects = pgTable(
   (t) => [primaryKey({ columns: [t.assistantId, t.projectId] }), index("assistantStartedProjects_projectId_idx").on(t.projectId)],
 );
 
+/** THE MAILBOX between Len and the person's agents (spec local 2026-11-21-len-y-el-agente-conversan, §3): a message is
+ *  written here before anything wakes, and is delivered only when a turn reads it. `projectId` is the project they talk
+ *  about; `direction` says who it is for. Gone with the agent or the project (lib/assistants/messages/store.ts). */
+export const agentLenMessages = pgTable(
+  "agentLenMessages",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    direction: text("direction").$type<"to_len" | "to_agent">().notNull(),
+    text: text("text").notNull(),
+    /** The person's own words, when the sender's turn carried one: what lets Len do what they ask. */
+    ownerWords: text("ownerWords"),
+    status: text("status").$type<"pending" | "delivering" | "delivered" | "held" | "expired">().notNull().default("pending"),
+    /** Why it was kept without waking anyone: `cap`, `no_credits` or `agents_off`. */
+    heldReason: text("heldReason"),
+    createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+    /** When it woke a turn; set while `delivering`. */
+    deliveringAt: timestamp("deliveringAt", { mode: "date", withTimezone: true }),
+    deliveredAt: timestamp("deliveredAt", { mode: "date", withTimezone: true }),
+    /** The chat row of the turn that read it, once `delivered`. */
+    readByRow: text("readByRow"),
+  },
+  (t) => [index("agentLenMessages_pair_idx").on(t.assistantId, t.projectId, t.createdAt), index("agentLenMessages_status_idx").on(t.status)],
+);
+
 /** A table or view of a project's production base that `anon` can read, with its columns. */
 export interface PublicTable {
   name: string;
