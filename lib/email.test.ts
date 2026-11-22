@@ -143,3 +143,52 @@ describe("the sender of a scheduled task's email", () => {
     expect(String(send.mock.calls[0]![0].from)).toMatch(/^OpenLen </);
   });
 });
+
+// Deferred minor M6-3 (spec local 2026-11-21-len-y-el-agente-conversan, decision 12): sendAgentNoteEmail sends in the
+// agent's name (cleaned), with no Reply-To (replying would start a Len turn), and falls back to OpenLen without a name.
+describe("the agent's note email (sendAgentNoteEmail)", () => {
+  const NOTE = {
+    to: "ana@example.com",
+    idioma: "es" as const,
+    agentName: "Finanzas",
+    projectTitle: "Presupuesto",
+    texto: "Len pregunta si el tope es 500 €.",
+    url: "https://openlen.com/es/assistant/finanzas",
+  };
+  beforeEach(() => send.mockReset().mockResolvedValue({ data: { id: "e1" }, error: null }));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("🔴 sends in the agent's name (cleaned), with no Reply-To, and falls back to OpenLen when the name is blank", async () => {
+    const { sendAgentNoteEmail } = await cargar();
+    await sendAgentNoteEmail(NOTE);
+    expect(send).toHaveBeenCalledTimes(1);
+    const first = send.mock.calls[0]![0];
+    expect(String(first.from)).toMatch(/^"Finanzas" </);
+    expect(first.replyTo).toBeUndefined();
+    expect(first.to).toBe("ana@example.com");
+    expect(first.subject).toBe("Finanzas: sobre Presupuesto");
+
+    await sendAgentNoteEmail({ ...NOTE, agentName: 'Finanzas "X" <bad@x.com>\r\n' });
+    const cleaned = String(send.mock.calls[1]![0].from);
+    expect(cleaned).not.toContain("bad@x.com>");
+    expect(cleaned).not.toMatch(/[\r\n]/);
+
+    await sendAgentNoteEmail({ ...NOTE, agentName: ' "<> ' });
+    expect(String(send.mock.calls[2]![0].from)).toMatch(/^OpenLen </);
+  });
+
+  it("without a Resend key, logs the note in development with the sender", async () => {
+    vi.resetModules();
+    vi.stubEnv("RESEND_API_KEY", "");
+    const logged = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { sendAgentNoteEmail } = await import("./email");
+    await sendAgentNoteEmail(NOTE);
+    expect(send).not.toHaveBeenCalled();
+    const out = logged.mock.calls.flat().join(" ");
+    expect(out).toContain("Finanzas: sobre Presupuesto");
+    expect(out).toContain('"Finanzas" <');
+    logged.mockRestore();
+    warned.mockRestore();
+  });
+});

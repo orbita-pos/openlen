@@ -184,6 +184,22 @@ describe("ask_len", () => {
     expect(framing).toMatch(/only what the owner's own message asks/i);
   });
 
+  // Follow-up of ruling F-10 (rule 13): in a turn the server started (an agent's scheduled task), `mensajeDelUsuario` is
+  // the task's prompt, not words the owner typed in the chat — `ask_len` must not frame it as the owner's own message.
+  it("🔴 in a turn the server started (an agent's scheduled task), the task's prompt is not framed as the owner's own message", async () => {
+    const launch = vi.fn();
+    const session = {
+      ...ASSISTANT_SESSION,
+      mensajeDelUsuario: "Every Monday, update the weekly specials on the page",
+      assistant: { ...ASSISTANT_SESSION.assistant!, serverStarted: true },
+    } as AgentSession;
+    await runAskLen(session, { request: "pon el menú de lunes" }, launch);
+    const framing = String(launch.mock.calls[0]![0].framing);
+    expect(framing).toContain("The owner's own message to Lucía, verbatim:\n(not available)");
+    expect(framing).not.toContain("Every Monday, update the weekly specials on the page");
+    expect(framing).toContain("pon el menú de lunes");
+  });
+
   it("🔴 keeps the request as queued, then how Len's turn ended — finished with his closing words, or failed with why", async () => {
     const launch = vi.fn();
     const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };

@@ -104,4 +104,26 @@ describe("a message from Len, in the agent's own chat", () => {
     expect(host.querySelector("[data-origen-del-turno]")?.textContent).toContain("turn.desdeElHilo");
     expect(host.querySelector("[data-len-message-turn]")).toBeNull();
   });
+
+  // Deferred minor of Task 7: an unrecognized origin object without `ruta` must not throw on `.ruta.replace(...)`,
+  // and the real panelsChat.json copy says «De Len · {project}» / «From Len · {project}».
+  it("🔴 an unrecognized origin object renders the message without crashing, and panelsChat carries the copy", async () => {
+    const turn = restoreTurn({
+      id: "msg-4",
+      userText: "Hola",
+      assistantReasoning: "",
+      status: "applied",
+      appliedAt: 0,
+      origen: { kind: "future-origin" } as unknown as NonNullable<Parameters<typeof restoreTurn>[0]["origen"]>,
+    });
+    const host = paint(turn);
+    expect(host.textContent).toContain("Hola");
+    expect(host.querySelector("[data-origen-del-turno]")).toBeNull();
+    const es = (await import("@/messages/es/panelsChat.json")).default;
+    const en = (await import("@/messages/en/panelsChat.json")).default;
+    expect(es.turn.fromLen).toBe("De Len · {project}");
+    expect(en.turn.fromLen).toBe("From Len · {project}");
+    expect(es.turn.fromAssistant).toBe("De {name}");
+    expect(en.turn.fromAssistant).toBe("From {name}");
+  });
 });

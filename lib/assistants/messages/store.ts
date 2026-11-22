@@ -8,17 +8,14 @@
 // count's cap, no credits, agents off) and goes with the recipient's next turn; `expired` when nobody read it in time.
 import "server-only";
 
-import { and, asc, eq, gt, gte, inArray, isNull, lt, max, ne, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, max, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
 import { assistantConversationKey } from "../conversation";
-import { HELD_DAYS, RESUME_HOURS } from "./policy";
+import { HELD_DAYS, RESUME_HOURS, type HeldReason, type MessageDirection, type MessageStatus } from "./policy";
 
-export type MessageDirection = "to_len" | "to_agent";
-export type MessageStatus = "pending" | "delivering" | "delivered" | "held" | "expired";
-/** Why a message was kept without waking anyone. */
-export type HeldReason = "cap" | "no_credits" | "agents_off";
+export type { HeldReason, MessageDirection, MessageStatus };
 
 export interface AgentLenMessage {
   readonly id: string;
@@ -29,7 +26,7 @@ export interface AgentLenMessage {
   /** The person's own words, when the turn that sent it carried one. */
   readonly ownerWords: string | null;
   readonly status: MessageStatus;
-  readonly heldReason: string | null;
+  readonly heldReason: HeldReason | null;
   readonly createdAt: Date;
   readonly deliveringAt: Date | null;
   readonly deliveredAt: Date | null;
@@ -91,12 +88,22 @@ export async function lastPersonMessageAt(assistantId: string, projectId: string
 }
 
 /** How many messages the pair has exchanged since `since` (all of them when null), in either direction: the count the
- *  cap of four is read from. One that expired never counts. */
-export async function messagesSince(assistantId: string, projectId: string, since: Date | null): Promise<number> {
+ *  cap of four is read from. One that expired never counts — including a held or pending row older than `HELD_DAYS` that
+ *  `toResume` hasn't marked expired yet. */
+export async function messagesSince(assistantId: string, projectId: string, since: Date | null, now: Date = new Date()): Promise<number> {
+  const keptUntil = new Date(now.getTime() - HELD_DAYS * DAY);
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(m)
-    .where(and(eq(m.assistantId, assistantId), eq(m.projectId, projectId), ne(m.status, "expired"), since ? gt(m.createdAt, since) : undefined));
+    .where(
+      and(
+        eq(m.assistantId, assistantId),
+        eq(m.projectId, projectId),
+        ne(m.status, "expired"),
+        or(notInArray(m.status, ["held", "pending"]), gte(m.createdAt, keptUntil)),
+        since ? gt(m.createdAt, since) : undefined,
+      ),
+    );
   return row?.n ?? 0;
 }
 

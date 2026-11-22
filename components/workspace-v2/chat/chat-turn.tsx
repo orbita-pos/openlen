@@ -228,7 +228,7 @@ export function UserMessage({
               <MessageSquareText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.fromLen", { project: turn.origen.projectTitle })}</span>
             </div>
-          ) : turn.origen && (
+          ) : turn.origen && "ruta" in turn.origen && typeof turn.origen.ruta === "string" ? (
             <button
               type="button"
               onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}
@@ -240,7 +240,7 @@ export function UserMessage({
                 {t("turn.desdeElHilo", { donde: `${turn.origen.ruta.replace(/^\/+/, "")}:${turn.origen.linea}` })}
               </span>
             </button>
-          )}
+          ) : null}
           {ronda && (
             <div className="mb-1 flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--nc-accent-text)]">
               <Flag size={12} className="shrink-0" />

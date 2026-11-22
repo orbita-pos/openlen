@@ -174,8 +174,23 @@ describe("waking an agent: Len wrote to it", () => {
         framingForAgent({ projectTitle: "Informe", projectId: "p2", messages: [{ text: "about the report" }] }),
       ].join("\n\n"),
     );
-    // The row is labelled from the oldest message.
+    // The row is labelled from the message that woke the turn (whose text is on the row).
     expect(resolved?.origin).toEqual({ kind: "len-message", projectId: "p1", projectTitle: "Presupuesto" });
+  });
+
+  // Deferred minor M4-3: when an older held message from another project rides along with a waking turn, the row's
+  // origin label matches the waking message (whose text `m.text` sits on the row), not the older held one.
+  it("🔴 labels the row from the waking message when an older held message from another project rides along", async () => {
+    const heldEarlier = msg({ id: "m-held", direction: "to_agent", projectId: "p2", text: "old held report", status: "held", heldReason: "cap" });
+    const waking = msg({ id: "m-wake", direction: "to_agent", projectId: "p1", text: "new budget question" });
+    const t = setup([heldEarlier, waking]);
+    await wakeRecipient(waking, CTX_A1, t.deps);
+    const p = t.agentLaunches[0]!;
+    expect(p.texto).toBe("new budget question");
+    const resolved = await p.resolveAtStart!();
+    expect(resolved?.origin).toEqual({ kind: "len-message", projectId: "p1", projectTitle: "Presupuesto" });
+    expect(resolved?.framing).toContain("old held report");
+    expect(resolved?.framing).toContain("new budget question");
   });
 });
 
@@ -236,6 +251,21 @@ describe("waking Len: an agent wrote to him", () => {
     );
     // Ventas's message carries the owner's words: one is enough.
     expect(resolved?.origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true, withOwnerWords: true });
+  });
+
+  // Deferred minor M4-3, Len's side: when an older held message from another agent rides along, the row's origin label
+  // names the agent whose message woke Len (and whose text sits on the row).
+  it("🔴 labels Len's row from the waking agent when an older held message from another agent rides along", async () => {
+    const heldEarlier = msg({ id: "m-held", direction: "to_len", assistantId: "a2", text: "old from ventas", status: "held", heldReason: "cap" });
+    const waking = msg({ id: "m-wake", direction: "to_len", assistantId: "a1", text: "new from finanzas" });
+    const t = setup([heldEarlier, waking]);
+    await wakeRecipient(waking, CTX_A1, t.deps);
+    const p = t.lenLaunches[0]!;
+    expect(p.texto).toBe("new from finanzas");
+    const resolved = await p.resolveAtStart!();
+    expect(resolved?.origin).toEqual({ kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true });
+    expect(resolved?.framing).toContain("old from ventas");
+    expect(resolved?.framing).toContain("new from finanzas");
   });
 });
 
@@ -373,6 +403,19 @@ describe("what a restart left", () => {
     const t = setup(rows);
     expect(await resumeAgentLenMessages(NOW, t.deps)).toBe(0);
     expect(t.lenLaunches).toEqual([]);
+  });
+
+  // Deferred minor M4-6: if `titlesOf` fails during the boot resume, wakeGroup fails softly and still wakes Len rather
+  // than dropping a group that will not be retried until the next restart.
+  it("🔴 a titlesOf lookup that throws on resume fails softly and still wakes Len", async () => {
+    const rows = [msg({ id: "m1", direction: "to_len", projectId: "p1", status: "delivering", deliveringAt: NOW })];
+    const t = setup(rows, {
+      titlesOf: vi.fn(async () => {
+        throw new Error("db hiccup");
+      }),
+    });
+    expect(await resumeAgentLenMessages(NOW, t.deps)).toBe(1);
+    expect(t.lenLaunches).toHaveLength(1);
   });
 
   it("with agents off, what was on its way is kept, not woken", async () => {

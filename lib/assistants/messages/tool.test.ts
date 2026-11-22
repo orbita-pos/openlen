@@ -147,6 +147,14 @@ describe("an agent writes to Len", () => {
     expect(store.messages[0]!.ownerWords).toBe("tell Len the invoice goes in blue");
   });
 
+  // Deferred minor M3-5: ownerWords is trimmed and capped at MESSAGE_MAX, matching `text`.
+  it("🔴 trims the owner's words and caps them at MESSAGE_MAX", async () => {
+    const store = fakeStore();
+    const longWords = `  ${"w".repeat(MESSAGE_MAX + 50)}  `;
+    await runSendMessage(agentSession({}, { mensajeDelUsuario: longWords }), { project: "p1", message: "Blue." }, { store, wake: waking });
+    expect(store.messages[0]!.ownerWords).toBe("w".repeat(MESSAGE_MAX));
+  });
+
   it("carries none in a turn Len woke (no person spoke), nor when the person's message is empty", async () => {
     const woken = fakeStore();
     await runSendMessage(agentSession({ woken: true }), { project: "p1", message: "Blue." }, { store: woken, wake: waking });
@@ -248,6 +256,21 @@ describe("Len writes to an agent", () => {
     expect(out.response).toMatchObject({ ok: true, tool_result: "Sent to Ventas; it reads it with its next turn, which starts now if it can." });
     expect(store.messages[0]).toMatchObject({ assistantId: "a2", projectId: "p1" });
     expect(wake.mock.calls[0]![1]).toEqual({ homeProjectId: "home2", agentName: "Ventas" });
+  });
+
+  // Deferred minor M3-4: when two related agents share a name up to case, an exact-case match wins over list order.
+  it("🔴 prefers an exact-case match when two related agents differ only in casing", async () => {
+    const store = fakeStore();
+    const session = {
+      projectId: "p1",
+      userId: "u1",
+      relatedAgents: [
+        { id: "a-lower", name: "finanzas", homeProjectId: "home1" },
+        { id: "a-upper", name: "Finanzas", homeProjectId: "home2" },
+      ],
+    } as unknown as AgentSession;
+    await runSendMessage(session, { to: "Finanzas", message: "Hi." }, { store, wake: waking });
+    expect(store.messages[0]!.assistantId).toBe("a-upper");
   });
 
   it("refuses a name that is not one of the project's agents, lists the names, and writes nothing", async () => {

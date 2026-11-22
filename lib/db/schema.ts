@@ -1661,13 +1661,13 @@ export const agentLenMessages = pgTable(
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
     projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
-    direction: text("direction").$type<"to_len" | "to_agent">().notNull(),
+    direction: text("direction").$type<import("@/lib/assistants/messages/policy").MessageDirection>().notNull(),
     text: text("text").notNull(),
     /** The person's own words, when the sender's turn carried one: what lets Len do what they ask. */
     ownerWords: text("ownerWords"),
-    status: text("status").$type<"pending" | "delivering" | "delivered" | "held" | "expired">().notNull().default("pending"),
+    status: text("status").$type<import("@/lib/assistants/messages/policy").MessageStatus>().notNull().default("pending"),
     /** Why it was kept without waking anyone: `cap`, `no_credits` or `agents_off`. */
-    heldReason: text("heldReason"),
+    heldReason: text("heldReason").$type<import("@/lib/assistants/messages/policy").HeldReason>(),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     /** When it woke a turn; set while `delivering`. */
     deliveringAt: timestamp("deliveringAt", { mode: "date", withTimezone: true }),

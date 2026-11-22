@@ -5791,9 +5791,10 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m2"], "no_credits");
     });
 
-    it("a turn refused for credits claims nothing", async () => {
+    it("a turn refused for credits, or a /compact turn, claims nothing", async () => {
       mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 100, refillsAt: null });
       await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      await readEvents(await pedir({ assistantId: "a1", prompt: "/compact", turnId: ROW }));
       expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
     });
 
@@ -6008,10 +6009,41 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m2"], "no_credits");
     });
 
-    it("nothing is claimed by a turn refused for credits, an agent's turn, a turn the server started, or with agents off", async () => {
+    // Deferred minor M6-4: if the process exits (flushLiveTurns) after a turn claimed ride-along messages but before
+    // `takeAgentNotices` handed them to the model, the exit flush releases them back to `held`.
+    it("🔴 a deploy exit before the model is handed what was claimed gives the messages back immediately", async () => {
+      const { flushLiveTurns } = await import("@/lib/agent/exit-flush");
+      agentMessages.claimForLen.mockResolvedValueOnce([forLen("m-exit", "¿Cuál es el tope?", 1)]);
+      let releasedOnExit = false;
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await flushLiveTurns(5_000);
+        releasedOnExit = agentMessages.releaseToHeld.mock.calls.length === 1;
+        // Once given back on exit, a later look does not hand them over.
+        expect(args.takeAgentNotices!()).toEqual([]);
+        args.emit({ type: "text", text: "ok" });
+        return cierre();
+      });
+      await readEvents(await pedir({ turnId: ROW }));
+      expect(releasedOnExit).toBe(true);
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledTimes(1);
+      expect(agentMessages.releaseToHeld).toHaveBeenCalledWith(["m-exit"], "no_credits");
+    });
+
+    it("nothing is claimed by a turn refused for credits, an agent's turn, a turn the server started, a /compact turn, a goal round, or with agents off", async () => {
       mocks.getCreditState.mockResolvedValueOnce({ plan: "free", balance: 0, allotment: 100, refillsAt: null });
       await readEvents(await pedir({ turnId: ROW }));
       await readEvents(await pedir({ assistantId: "a1", turnId: ROW }));
+      await readEvents(await pedir({ prompt: "/compact", turnId: ROW }));
+      // A goal round (`opts.round`).
+      mocks.turnosParaElHistorial.mockResolvedValueOnce([
+        { userText: "antes", assistantReasoning: "", transcript: { mensajes: [{ role: "assistant", content: "hecho" }], leidos: [], goal: { id: "goal-r", revision: 1, objective: "x", phase: "active", maxGoalRounds: 256, roundsStarted: 1 } } },
+      ]);
+      armGoal("p1", "goal-r");
+      try {
+        await readEvents(await runner()("u1", { projectId: "p1", prompt: "", turnId: "77777777-7777-4777-8777-7777777777a9" }, where, { round: { goalId: "goal-r", revision: 1, round: 2, artifactMessageId: null } }));
+      } finally {
+        _resetGoalActivation();
+      }
       // Lucía's request for work (ask_len) and Len's scheduled task: no person started them.
       const request = { kind: "assistant" as const, assistantId: "a1", assistantName: "Lucía" };
       await readEvents(await runner()("u1", { projectId: "p1", prompt: "Hazme un botón", turnId: "77777777-7777-4777-8777-7777777777a3" }, where, { scheduled: { framing: "Lucía passed you a request.", origin: request, onReply: vi.fn(async () => {}) } }));

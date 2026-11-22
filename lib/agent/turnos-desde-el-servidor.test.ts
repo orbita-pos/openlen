@@ -293,8 +293,13 @@ describe("the turn that wakes Len with its subagents' notices (spec local 2026-1
     const corredor = vi.fn(async () => sse([["done", {}]]));
     registrarCorredorDeTurnos(corredor);
     const fails: unknown[] = [];
-    launch(() => [], async (f) => void fails.push(f));
-    await new Promise((r) => setTimeout(r, 60));
+    let checked = false;
+    launch(() => {
+      checked = true;
+      return [];
+    }, async (f) => void fails.push(f));
+    await hasta(() => checked);
+    await new Promise((r) => setTimeout(r, 15));
     expect(corredor).not.toHaveBeenCalled();
     expect(fails).toEqual([]);
   });
@@ -391,17 +396,27 @@ describe("the turns a message between Len and an agent wakes (spec local 2026-11
     const corredor = vi.fn(async () => sse([["done", {}]]));
     registrarCorredorDeTurnos(corredor);
     const fails: unknown[] = [];
-    launchAgent({ resolve: async () => null, fail: async (f) => void fails.push(f) });
-    await new Promise((r) => setTimeout(r, 60));
+    let resolved = false;
+    launchAgent({
+      resolve: async () => {
+        resolved = true;
+        return null;
+      },
+      fail: async (f) => void fails.push(f),
+    });
+    await hasta(() => resolved);
+    await new Promise((r) => setTimeout(r, 15));
     expect(corredor).not.toHaveBeenCalled();
     expect(fails).toEqual([]);
   });
 
   it("🔴 a turn that read its messages and left no reply is not a failure (the agent only answered Len)", async () => {
-    registrarCorredorDeTurnos(async () => sse([["done", {}]]));
+    const corredor = vi.fn(async () => sse([["done", {}]]));
+    registrarCorredorDeTurnos(corredor);
     const fails: unknown[] = [];
     launchAgent({ resolve: async () => ({ framing: "x", origin }), fail: async (f) => void fails.push(f) });
-    await new Promise((r) => setTimeout(r, 60));
+    await hasta(() => corredor.mock.calls.length > 0);
+    await new Promise((r) => setTimeout(r, 15));
     expect(fails).toEqual([]);
   });
 

@@ -168,15 +168,15 @@ describe("a scheduled task's email (spec local 2026-10-29-tareas-programadas, §
 describe("the agent's note to its person", () => {
   const NOTE = { agentName: "Finanzas", projectTitle: "Presupuesto <2027>", texto: "Len pregunta si el tope es 500 €.\n¿Se lo confirmo?", url: "https://openlen.com/es/assistant/finanzas?x=1&y=2" };
 
-  it("🔴 in Spanish: «{agente}: sobre {proyecto}», the text, «Abrir a {agente}» and its footer", () => {
-    const es = agentNoteEmail(NOTE, "es");
+  it("🔴 in Spanish: «{agente}: sobre {proyecto}», the text (escaped in HTML), «Abrir a {agente}» and its footer", () => {
+    const es = agentNoteEmail({ ...NOTE, texto: "Len pregunta si el tope es <500> €.\n¿Se lo confirmo?" }, "es");
     expect(es.subject).toBe("Finanzas: sobre Presupuesto <2027>");
     expect(es.html).toContain("Abrir a Finanzas");
     expect(es.html).toContain("Te escribe Finanzas, tu agente de OpenLen.");
-    expect(es.html).toContain("Len pregunta si el tope es 500 €.");
+    expect(es.html).toContain("Len pregunta si el tope es &lt;500&gt; €.");
+    expect(es.html).not.toContain("<500>");
     expect(es.html).toContain('href="https://openlen.com/es/assistant/finanzas?x=1&amp;y=2"');
-    expect(es.html).not.toContain("<2027>");
-    expect(es.text).toBe("Len pregunta si el tope es 500 €.\n¿Se lo confirmo?\n\n—\nTe escribe Finanzas, tu agente de OpenLen.\nhttps://openlen.com/es/assistant/finanzas?x=1&y=2");
+    expect(es.text).toBe("Len pregunta si el tope es <500> €.\n¿Se lo confirmo?\n\n—\nTe escribe Finanzas, tu agente de OpenLen.\nhttps://openlen.com/es/assistant/finanzas?x=1&y=2");
   });
 
   it.each(["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"] as const)("🔴 renders its subject and button in %s, naming the agent and the project", (idioma) => {

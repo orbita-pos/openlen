@@ -143,11 +143,13 @@ export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1
           const names = new Map([[agent.id, ctx.agentName]]);
           for (const id of byAgent.keys()) if (!names.has(id)) names.set(id, (await d.agentOf(id).catch(() => null))?.name ?? "an agent");
           const groups: FramingForLen[] = [...byAgent].map(([id, mine]) => ({ agentName: names.get(id)!, messages: mine.map((r) => ({ text: r.text, ownerWords: r.ownerWords })) }));
-          const first = rows[0]!;
+          // The row's text is `m.text` (the message that woke the turn), so its label comes from `m` when `m` is among
+          // the claimed rows — an older held message from another agent that rode along must not mislabel `m.text`.
+          const woken = rows.find((r) => r.id === m.id) ?? rows[0]!;
           // Whether any of them carries the owner's words (the framing's own test): without them the route lets this turn
           // do nothing that needs them (final review, I2).
           const withOwnerWords = rows.some((r) => r.ownerWords);
-          return { framing: rideAlongForLen(groups), origin: { ...lenOrigin(first.assistantId, names.get(first.assistantId)!), ...(withOwnerWords ? { withOwnerWords: true as const } : {}) } };
+          return { framing: rideAlongForLen(groups), origin: { ...lenOrigin(woken.assistantId, names.get(woken.assistantId)!), ...(withOwnerWords ? { withOwnerWords: true as const } : {}) } };
         },
       },
       // Len read them and wrote nothing: that is a turn that ran, not one that didn't.
@@ -175,7 +177,8 @@ export async function wakeRecipient(m: AgentLenMessage, ctx: Parameters<Waker>[1
       const missing = [...byProject.keys()].filter((id) => !titles.has(id));
       if (missing.length > 0) for (const [id, title] of await titlesFor(d, missing)) titles.set(id, title);
       const framing = [...byProject].map(([projectId, mine]) => framingForAgent({ projectTitle: titles.get(projectId) ?? projectId, projectId, messages: mine.map((r) => ({ text: r.text })) })).join("\n\n");
-      return { framing, origin: originOf(rows[0]!.projectId) };
+      const woken = rows.find((r) => r.id === m.id) ?? rows[0]!;
+      return { framing, origin: originOf(woken.projectId) };
     },
   });
   return "waking";
@@ -213,8 +216,12 @@ export async function resumeAgentLenMessages(now: Date = new Date(), deps?: Wake
 /** One recipient's turn, started from its oldest message whose agent still exists. Its claim would take the whole group,
  *  so a turn that fails before claiming holds the whole group too. */
 async function wakeGroup(d: WakeDeps, group: readonly AgentLenMessage[]): Promise<boolean> {
-  // Len's messages in one project share it: a project that is gone has no one to wake.
-  if (group[0]!.direction === "to_len" && !(await d.titlesOf([group[0]!.projectId])).has(group[0]!.projectId)) return false;
+  // Len's messages in one project share it: a project that is gone has no one to wake. Fail-soft: a lookup that can't be
+  // read never drops a group that only runs once at startup.
+  if (group[0]!.direction === "to_len") {
+    const found = await d.titlesOf([group[0]!.projectId]).catch(() => null);
+    if (found && !found.has(group[0]!.projectId)) return false;
+  }
   for (const m of group) {
     const agent = await d.agentOf(m.assistantId);
     if (!agent) continue;

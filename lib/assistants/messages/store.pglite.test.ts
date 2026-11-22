@@ -184,9 +184,20 @@ describe("the count of messages back and forth", () => {
     await put({ at: ago(HOUR), status: "expired" });
     await put({ at: ago(HOUR), projectId: "other" });
     await put({ at: ago(HOUR), assistantId: lucia });
-    expect(await mailbox.messagesSince(finanzas, "budget", null)).toBe(2);
-    expect(await mailbox.messagesSince(finanzas, "budget", ago(2 * HOUR))).toBe(2);
-    expect(await mailbox.messagesSince(finanzas, "budget", NOW)).toBe(0);
+    expect(await mailbox.messagesSince(finanzas, "budget", null, NOW)).toBe(2);
+    expect(await mailbox.messagesSince(finanzas, "budget", ago(2 * HOUR), NOW)).toBe(2);
+    expect(await mailbox.messagesSince(finanzas, "budget", NOW, NOW)).toBe(0);
+  });
+
+  // Deferred minor of Task 1: a held or pending row older than HELD_DAYS has already expired even if the server hasn't
+  // restarted to run `toResume` yet — it must not keep counting against the cap.
+  it("🔴 held or pending rows older than HELD_DAYS do not count, even before toResume marks them expired", async () => {
+    await put({ at: ago(HELD_DAYS * DAY + HOUR), status: "held" });
+    await put({ at: ago(HELD_DAYS * DAY + HOUR), status: "pending" });
+    await put({ at: ago(HELD_DAYS * DAY - HOUR), status: "held" });
+    // One already delivered over 7 days ago WAS read: it still counts until the person speaks.
+    await put({ at: ago(HELD_DAYS * DAY + HOUR), status: "delivered" });
+    expect(await mailbox.messagesSince(finanzas, "budget", null, NOW)).toBe(2);
   });
 });
 

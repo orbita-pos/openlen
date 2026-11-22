@@ -124,8 +124,25 @@ const startNewProject: StartProject = async (personId, assistantId, name) => {
 /** Whether the agent started a project, checked live (`startedTitleOf`): its title, or null. */
 export type StartedLookup = (assistantId: string, projectId: string) => Promise<string | null>;
 
-const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("./projects")).startedTitleOf(assistantId, projectId);
-const NO_LOOKUP: StartedLookup = async () => null;
+export const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("./projects")).startedTitleOf(assistantId, projectId);
+export const NO_LOOKUP: StartedLookup = async () => null;
+
+/** Resolves a project `named` by id among the ones the agent serves or started, checking `lookup` live when the turn's
+ *  snapshot doesn't list it (one started earlier in this very turn, or past the 30 listed). Null when it is neither. */
+export async function resolveAgentProject(
+  session: AgentSession,
+  named: string,
+  lookup: StartedLookup,
+): Promise<{ readonly id: string; readonly title: string } | null> {
+  const assistant = session.assistant;
+  if (!assistant) return null;
+  const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
+  const started = assistant.started ?? [];
+  const known = served.find((p) => p.id === named) ?? started.find((p) => p.id === named);
+  if (known) return known;
+  const title = await lookup(assistant.id, named).catch(() => null);
+  return title !== null ? { id: named, title } : null;
+}
 
 /** One line, its spaces collapsed: a name is a title, and a title has no line breaks. */
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -213,17 +230,11 @@ export async function runAskLen(
   // Which project (phase 4): hers only, and the one the request names when she serves more than one. In the person's
   // space her home is never one of them.
   const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
-  // Named, or the only one, or (§5.3) the one on her owner's phone. A named one may also be one it started.
+  // Named, or the only one, or (§5.3) the one on her owner's phone. A named one may also be one it started: not in the
+  // turn's snapshot, it is checked live first — only in production (no injected launch), so tests never reach the database.
   const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
-  let target = named ? (served.find((p) => p.id === named) ?? started.find((p) => p.id === named)) : served.length === 1 ? served[0] : onPhone;
-  // Not in the turn's lists: the list of the ones it started is a snapshot (final review, finding 2) — one started
-  // earlier in this very turn, one past the 30 listed, a list that couldn't be read — so it is checked live first. Only in
-  // production (no injected launch), as the notes are: tests never reach the database.
-  if (named && !target) {
-    const lookup = startedLookup ?? (launch ? NO_LOOKUP : liveStartedLookup);
-    const title = await lookup(assistant.id, named).catch(() => null);
-    if (title !== null) target = { id: named, title };
-  }
+  const lookup = startedLookup ?? (launch ? NO_LOOKUP : liveStartedLookup);
+  const target = named ? await resolveAgentProject(session, named, lookup) : served.length === 1 ? served[0] : onPhone;
   if (named && !target) {
     return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve or started: see ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md." } };
   }
@@ -264,7 +275,10 @@ async function passToLen(
   const keep = notes ?? (launch ? NO_NOTES : await storeNotes().catch(() => NO_NOTES));
   const summary = request.length > 80 ? `${request.slice(0, 79)}…` : request;
   const extraBody = attachmentsFor(session, target.id);
-  const framing = framingOf(assistant.name, request, session.mensajeDelUsuario ?? null);
+  // Her owner's own words ride along only when a person TYPED this turn (ruling F-10): in a turn the server started
+  // (her scheduled task, whose `mensajeDelUsuario` is the task's prompt) nobody spoke.
+  const ownerMessage = !assistant.woken && !assistant.serverStarted ? (session.mensajeDelUsuario ?? null) : null;
+  const framing = framingOf(assistant.name, request, ownerMessage);
   /** The request as a Len turn of its own, in the project's queue; its note says how it ends. Returns Len's row. */
   const queue = async (): Promise<string> => {
     const noticeId = randomUUID();

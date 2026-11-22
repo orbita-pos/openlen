@@ -9,7 +9,7 @@
 // This is the tool and nothing else: validate, resolve the recipient, write the message to the mailbox BEFORE anything
 // happens to it, enforce the cap of four, and hand it to a `Waker` (lib/assistants/messages/wake.ts, which starts the
 // recipient's turn). What each side reads of the other's message is `policy.ts`'s framing.
-import type { StartedLookup } from "@/lib/assistants/ask-len";
+import { liveStartedLookup, NO_LOOKUP, resolveAgentProject, type StartedLookup } from "@/lib/assistants/ask-len";
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 
@@ -92,9 +92,6 @@ async function realStore(): Promise<MessageStore> {
 // turn is logged and the sender is told the message is kept (it is, pending, and the recipient's next turn reads it).
 const liveWaker: Waker = async (m, ctx) => (await import("./wake")).wakeRecipient(m, ctx);
 
-const liveStartedLookup: StartedLookup = async (assistantId, projectId) => (await import("../projects")).startedTitleOf(assistantId, projectId);
-const NO_LOOKUP: StartedLookup = async () => null;
-
 function invalid(message: string): ToolOutcome {
   return { response: { ok: false, error: "invalid_arguments", message } };
 }
@@ -113,24 +110,20 @@ interface Route {
   readonly person: string;
 }
 
-/** The agent's side: `project` is one it serves or started, as `ask_len` decides it. */
-async function routeFromAgent(session: AgentSession, args: Record<string, unknown>, lookup: () => StartedLookup): Promise<Route | ToolOutcome> {
+/** The agent's side: `project` is one it serves or started, as `ask_len` decides it (`resolveAgentProject`). */
+async function routeFromAgent(session: AgentSession, args: Record<string, unknown>, lookup: StartedLookup): Promise<Route | ToolOutcome> {
   const assistant = session.assistant!;
   const named = typeof args.project === "string" ? args.project.trim() : "";
   if (!named) return invalid("project is required: the id of the project this is about (~/.assistant/PROJECTS.md or ~/.assistant/STARTED.md).");
-  // Hers when it is in her list; with no list she serves her home, as in ask_len — except in the person's space, where she serves none.
-  const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId }];
-  let known = served.some((p) => p.id === named) || (assistant.started ?? []).some((p) => p.id === named);
-  // The turn's list of the projects it started is a snapshot (one started this very turn, one past the 30 listed): checked live.
-  if (!known) known = (await lookup()(assistant.id, named).catch(() => null)) !== null;
-  if (!known) {
+  const target = await resolveAgentProject(session, named, lookup);
+  if (!target) {
     return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve or started: see ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md." } };
   }
   // Her own words ride along only when a person TYPED this turn (decision 8): a turn the server started has none — one
   // Len's message woke, or its scheduled task, whose `mensajeDelUsuario` is the task's prompt (final review, m3).
-  const said = session.mensajeDelUsuario;
+  const said = typeof session.mensajeDelUsuario === "string" ? session.mensajeDelUsuario.trim() : "";
   const typed = !assistant.woken && !assistant.serverStarted;
-  const ownerWords = typed && typeof said === "string" && said.trim() !== "" ? said : null;
+  const ownerWords = typed && said !== "" ? said.slice(0, MESSAGE_MAX) : null;
   return {
     assistantId: assistant.id,
     projectId: named,
@@ -148,7 +141,7 @@ function routeFromLen(session: AgentSession, args: Record<string, unknown>): Rou
   const to = typeof args.to === "string" ? args.to.trim() : "";
   if (!to) return invalid("to is required: the name of the agent, as listed in your context.");
   const related = session.relatedAgents ?? [];
-  const agent = related.find((a) => a.name.trim().toLowerCase() === to.toLowerCase());
+  const agent = related.find((a) => a.name.trim() === to) ?? related.find((a) => a.name.trim().toLowerCase() === to.toLowerCase());
   if (!agent) {
     const names = related.map((a) => a.name);
     return {
@@ -179,7 +172,7 @@ export async function runSendMessage(session: AgentSession, args: Record<string,
   const text = typeof args.message === "string" ? args.message.trim() : "";
   if (!text || text.length > MESSAGE_MAX) return invalid(`message is required: what you tell the other side, in your own words (up to ${MESSAGE_MAX} characters).`);
   // With a test seam the live check is only what the seam gives; without one, the real one — as ask_len does.
-  const lookup = () => deps?.started ?? (deps ? NO_LOOKUP : liveStartedLookup);
+  const lookup = deps?.started ?? (deps ? NO_LOOKUP : liveStartedLookup);
   const route = session.assistant ? await routeFromAgent(session, args, lookup) : routeFromLen(session, args);
   if ("response" in route) return route;
 

@@ -91,7 +91,7 @@ export async function claimRideAlongForLen(
 
 /** The turn that claimed them never handed them to the model, or left no row to point at: they go back to waiting for
  *  the recipient's next turn, the agent's or Len's (the store's `releaseToHeld`, which moves only what is still marked
- *  read). */
+ *  read, using `no_credits` as the store's pre-delivery release reason; `heldReason` is never shown to the person). */
 export async function giveBackRideAlong(ids: readonly string[], deps?: Pick<typeof import("./store"), "releaseToHeld">): Promise<void> {
   if (ids.length === 0) return;
   const d = deps ?? (await import("./store"));

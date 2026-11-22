@@ -2191,7 +2191,11 @@ async function correrTurno(
       let closingTerminal: Promise<unknown> | null = null;
       const stopFlushOnExit = flushOnExit(async () => {
         closingTerminal ??= cerrarTerminalDeLaSesion(agentSession).catch(() => undefined);
-        await Promise.all([closingRow ?? avance.flush(), stepRecorder?.flush(), closingTerminal]);
+        // If the process exits before `closeRowOnce` runs and what waited was claimed but never handed to the model (or
+        // the row never opened), give it back now so it doesn't stay marked read on a row whose transcript lacks it.
+        const unclaimed = !closingRow && rideAlong && (!filaAbierta || !rideAlongHanded) ? rideAlong.ids : null;
+        if (unclaimed) rideAlong = null;
+        await Promise.all([closingRow ?? avance.flush(), stepRecorder?.flush(), closingTerminal, unclaimed ? giveBackRideAlong(unclaimed).catch(() => undefined) : undefined]);
       });
       // EL GRABADOR DE TURNOS. Apagado salvo que `OPENLEN_AGENT_RECORD_DIR`
       // diga dónde escribir — OPT-IN de verdad, porque el fixture lleva dentro
@@ -2579,22 +2583,22 @@ async function correrTurno(
           };
         };
         // WHAT WAITED FROM LEN rides with the agent's turn its person started (decision 9 of «Len y el agente conversan»):
-        // held messages never wake anyone, so this turn claims them — now that it really starts, past the credit gate —
-        // and the agent reads them before its first call, after how its ask_len requests ended. A turn the server started
-        // has none to take (Len's message woke it and its own start claimed them; a scheduled task is not its person).
-        // Fail-soft: a mailbox that can't be read leaves them waiting.
+        // held messages never wake anyone, so this turn claims everything unread for it (held, pending or delivering) — now
+        // that it really starts, past the credit gate — and the agent reads it before its first call, after how its ask_len
+        // requests ended. A turn the server started has none to take (Len's message woke it and its own start claimed them;
+        // a scheduled task is not its person). Fail-soft: a mailbox that can't be read leaves them waiting.
         if (asistente && !programadaDelTurno && !compactCommand) {
           rideAlong = await claimRideAlongForAgent(asistente.id, filaId, new Date()).catch((err: unknown) => {
             console.warn("[agent-messages] what waited from Len couldn't be claimed", err);
             return null;
           });
         }
-        // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him and was kept rides with
-        // the next turn a PERSON starts here — not one the server started (an agent's request or message claimed its own
-        // when it started, lib/assistants/messages/wake.ts; a scheduled task, Len Watch or a goal round has no person) —,
-        // read before his first call after his subagents' notices. With agents off, they keep waiting; and in a MEMBER's
-        // turn too (ruling R5-1): what the owner's agent wrote may carry the owner's data, so it waits for the owner's own
-        // turn or for a turn a message wakes, which run as the owner.
+        // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him that is still unread
+        // (held, pending or delivering) rides with the next turn a PERSON starts here — not one the server started (an
+        // agent's request or message claimed its own when it started, lib/assistants/messages/wake.ts; a scheduled task,
+        // Len Watch or a goal round has no person) —, read before his first call after his subagents' notices. With agents
+        // off, they keep waiting; and in a MEMBER's turn too (ruling R5-1): what the owner's agent wrote may carry the
+        // owner's data, so it waits for the owner's own turn or for a turn a message wakes, which run as the owner.
         if (!asistente && !miembro && !programadaDelTurno && !opts.round && !compactCommand && assistantsEnabled()) {
           rideAlong = await claimRideAlongForLen(projectId, filaId, new Date(), new Map(relatedAgents.map((a) => [a.id, a.name] as const))).catch((err: unknown) => {
             console.warn("[agent-messages] what waited for Len couldn't be claimed", err);
