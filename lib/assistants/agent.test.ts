@@ -15,7 +15,7 @@ import { ASSISTANT_AGENT_TYPE } from "@/lib/agent/subagents/bundled-types";
 import { READ_ME, SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { PROPOSE_ACTION } from "@/lib/tools/cards/types";
 
-import { assistantSystemPrompt, assistantTools } from "./agent";
+import { assistantSystemPrompt, assistantTools, toneKeyOf } from "./agent";
 
 const LEN = [
   "Read", "Glob", "Grep", "bash", "view_page", "use_page", "Write", "Edit", "edit_image", "toggle_module", "draft_reply",
@@ -276,6 +276,7 @@ describe("assistantSystemPrompt", () => {
 
   it("a formal agent's «no emojis» comes after Len's line, so the later one wins", () => {
     const p = assistantSystemPrompt(`TONE:\n${EMOJIS_IN_CHAT}`, { name: "A", tone: "formal" });
+    expect(p).toContain(EMOJIS_IN_CHAT);
     expect(p.indexOf("Formal means no emojis")).toBeGreaterThan(p.indexOf(EMOJIS_IN_CHAT));
   });
 
@@ -283,6 +284,13 @@ describe("assistantSystemPrompt", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "grumpy" })).toBe(assistantSystemPrompt("L", { name: "A", tone: "friendly" }));
     // Not even a name every object has.
     expect(assistantSystemPrompt("L", { name: "A", tone: "toString" })).toBe(assistantSystemPrompt("L", { name: "A", tone: "friendly" }));
+  });
+
+  it("one rule picks the tone for the owner's chat and for the visitors': toneKeyOf", () => {
+    expect(toneKeyOf("formal")).toBe("formal");
+    expect(toneKeyOf("playful")).toBe("playful");
+    expect(toneKeyOf("grumpy")).toBe("friendly");
+    expect(toneKeyOf("toString")).toBe("friendly");
   });
 });
 

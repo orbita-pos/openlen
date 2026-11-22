@@ -12,7 +12,7 @@ import { ASSISTANT_VISITOR_AGENT_TYPE } from "@/lib/agent/subagents/bundled-type
 import { READ_ME_DECLARATION, SHOW_WIDGET_DECLARATION } from "@/lib/agent/visuals/tools";
 import type { PublicTable } from "@/lib/db/schema";
 
-import { TONES } from "../agent";
+import { TONES, toneKeyOf } from "../agent";
 import type { AssistantTone } from "../names";
 import { NOTE_REQUEST, NOTE_REQUEST_DECLARATION } from "../requests/note";
 import { READ_PUBLIC_DATA, READ_PUBLIC_DATA_DECLARATION } from "./read-public-data";
@@ -89,8 +89,8 @@ function publicDataBlock(tables: readonly PublicTable[]): string {
 /** EMOJIS WITH A VISITOR (spec local 2026-11-21-emojis-en-el-chat): the bubble doesn't carry Len's prompt, so its Style
  *  says its own, by the tone the owner chose. */
 export const VISITOR_EMOJIS: Readonly<Record<AssistantTone, string>> = {
-  friendly: "- An emoji now and then where it adds warmth, one in a message at most, and none next to a «no» or a problem.",
-  playful: "- An emoji or two where it adds warmth, and none next to a «no» or a problem.",
+  friendly: "- An emoji now and then where it adds warmth, one in a message at most, none next to a «no» or a problem, and none at all if the visitor asks.",
+  playful: "- An emoji or two where it adds warmth, none next to a «no» or a problem, and none at all if the visitor asks.",
   formal: "- No emojis.",
 };
 
@@ -106,7 +106,7 @@ export function visitorSystemPrompt(p: {
   /** The business's other sites she serves (phase 4); none = the prompt is what it was. */
   readonly otherSites?: readonly OtherSite[];
 }): string {
-  const toneKey: AssistantTone = Object.hasOwn(TONES, p.tone) ? p.tone : "friendly";
+  const toneKey = toneKeyOf(p.tone);
   const tone = TONES[toneKey];
   const tables = p.publicData ?? [];
   const sources = tables.length ? `<business>, <memory> or what ${READ_PUBLIC_DATA} returns` : "<business> and <memory>";

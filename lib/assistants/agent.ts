@@ -78,6 +78,12 @@ export const TONES: Readonly<Record<AssistantTone, string>> = {
   playful: "playful and light",
 };
 
+/** The tone a stored value names, or `friendly`: the store's value is a string, and only an own key counts (a name every
+ *  object has, like «toString», would reach the prototype). Her chat and the visitors' bubble use this same rule. */
+export function toneKeyOf(tone: string): AssistantTone {
+  return Object.hasOwn(TONES, tone) ? (tone as AssistantTone) : "friendly";
+}
+
 /** EMOJIS BY TONE (spec local 2026-11-21-emojis-en-el-chat): the agent inherits Len's line in TONE (`EMOJIS_IN_CHAT`),
  *  and this, said after it, adjusts it — friendly is Len's, so it adds nothing and its prompt stays what it was. */
 export const TONE_EMOJIS: Readonly<Record<AssistantTone, string>> = {
@@ -101,7 +107,7 @@ If you attend a page listed in ~/.assistant/PROJECTS.md, its visitors never see 
 /** Len's prompt, then the assistant's section and who it is — and, for an agent with a file, its instructions last, as
  *  Claude Code appends an agent's prompt after its own (`appendSystemPrompt`; we keep Len's: Jesús, 06/11). */
 export function assistantSystemPrompt(lenSystemPrompt: string, a: { name: string; tone: string; instructions?: string | null }): string {
-  const toneKey: AssistantTone = Object.hasOwn(TONES, a.tone) ? (a.tone as AssistantTone) : "friendly";
+  const toneKey = toneKeyOf(a.tone);
   const tone = TONES[toneKey];
   const withFile = typeof a.instructions === "string" && a.instructions.trim() !== "";
   return [

@@ -77,6 +77,15 @@ describe("the visitor definition", () => {
     expect(VISITOR_EMOJIS.formal).toBe("- No emojis.");
   });
 
+  it("🔴 a visitor who asks for no emojis gets none: asking isn't changing the rules", () => {
+    expect(VISITOR_EMOJIS.friendly).toContain("none at all if the visitor asks");
+    expect(VISITOR_EMOJIS.playful).toContain("none at all if the visitor asks");
+  });
+
+  it("a tone the store doesn't know is friendly here too", () => {
+    expect(visitorSystemPrompt({ ...BUSINESS, tone: "grumpy" as never })).toBe(visitorSystemPrompt({ ...BUSINESS, tone: "friendly" }));
+  });
+
   it("🔴 the same business sends the same prefix, with or without visuals in the conversation", () => {
     expect(visitorSystemPrompt(BUSINESS)).toBe(visitorSystemPrompt({ ...BUSINESS }));
     expect(visitorSystemPrompt({ ...BUSINESS, publicData: TABLES })).toBe(visitorSystemPrompt({ ...BUSINESS, publicData: [...TABLES] }));
