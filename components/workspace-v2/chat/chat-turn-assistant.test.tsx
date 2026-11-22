@@ -47,4 +47,61 @@ describe("a request from the person's own assistant, in Len's chat", () => {
     expect(label.textContent).toContain('"name":"Lucía"');
     expect(host.querySelector("[data-origen-del-turno]")).toBeNull();
   });
+
+  // An agent's MESSAGE to Len (spec local 2026-11-21-len-y-el-agente-conversan): its turn in Len's chat carries the same
+  // `assistant` origin plus `message: true`, and its row says «De <agent>» exactly as a request does.
+  it("an agent's message to Len shows «De <agent>» as a request does", () => {
+    const turn = restoreTurn({
+      id: "msg-1",
+      userText: "¿Cuál es el tope de gasto de la página?",
+      assistantReasoning: "",
+      status: "applied",
+      appliedAt: 0,
+      origen: { kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true },
+    });
+    const host = paint(turn);
+    expect(host.textContent).toContain("¿Cuál es el tope de gasto de la página?");
+    const label = host.querySelector<HTMLElement>("[data-assistant-request-turn]")!;
+    expect(label).not.toBeNull();
+    expect(label.textContent).toContain("turn.fromAssistant");
+    expect(label.textContent).toContain('"name":"Finanzas"');
+    expect(host.querySelector("[data-len-message-turn]")).toBeNull();
+    expect(host.querySelector("[data-origen-del-turno]")).toBeNull();
+  });
+});
+
+describe("a message from Len, in the agent's own chat", () => {
+  it("shows the message with a «from Len» label naming the project, not the thread's button", () => {
+    const turn = restoreTurn({
+      id: "msg-2",
+      userText: "¿Puedes revisar el presupuesto de la página?",
+      assistantReasoning: "",
+      status: "applied",
+      appliedAt: 0,
+      origen: { kind: "len-message", projectId: "p1", projectTitle: "Presupuesto" },
+    });
+    const host = paint(turn);
+    expect(host.textContent).toContain("¿Puedes revisar el presupuesto de la página?");
+    const label = host.querySelector<HTMLElement>("[data-len-message-turn]")!;
+    expect(label).not.toBeNull();
+    expect(label.textContent).toContain("turn.fromLen");
+    expect(label.textContent).toContain('"project":"Presupuesto"');
+    // It is not a thread's origin (that one has a file and opens it), and not an agent's request either.
+    expect(host.querySelector("[data-origen-del-turno]")).toBeNull();
+    expect(host.querySelector("[data-assistant-request-turn]")).toBeNull();
+  });
+
+  it("a thread's origin still opens its file", () => {
+    const turn = restoreTurn({
+      id: "msg-3",
+      userText: "@Len esto",
+      assistantReasoning: "",
+      status: "applied",
+      appliedAt: 0,
+      origen: { hiloId: "h1", ruta: "/index.html", linea: 7 },
+    });
+    const host = paint(turn);
+    expect(host.querySelector("[data-origen-del-turno]")?.textContent).toContain("turn.desdeElHilo");
+    expect(host.querySelector("[data-len-message-turn]")).toBeNull();
+  });
 });

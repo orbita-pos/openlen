@@ -26,7 +26,8 @@
     "lenWatch": "Len Watch · 公開中のサイトが表示されていませんでした",
     "fromSubagents": "サブエージェントの結果",
     "toolCreation": "ツールを作成",
-    "fromAssistant": "{name} から"
+    "fromAssistant": "{name} から",
+    "fromLen": "Len から · {project}"
   },
   "proceso": {
     "completadoEn": "<d>{duracion}</d>で完了",

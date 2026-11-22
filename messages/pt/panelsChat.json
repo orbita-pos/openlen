@@ -26,7 +26,8 @@
     "lenWatch": "Len Watch · seu site publicado não carregava",
     "fromSubagents": "Resultados dos subagentes",
     "toolCreation": "Criar ferramenta",
-    "fromAssistant": "De {name}"
+    "fromAssistant": "De {name}",
+    "fromLen": "De Len · {project}"
   },
   "proceso": {
     "completadoEn": "Concluído em <d>{duracion}</d>",

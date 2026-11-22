@@ -67,6 +67,7 @@
     "asunto": "Reply to your message"
   },
   "chat": {
+    "deLen": "From Len · {project}",
     "subagentes": {
       "status": {
         "running": "working",

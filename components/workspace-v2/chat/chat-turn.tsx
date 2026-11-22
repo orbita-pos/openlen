@@ -11,8 +11,8 @@
 import { DeliveredFiles } from "./delivered-files";
 import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, MessageCircleHeart, ShieldAlert, Wrench } from "lucide-react";
-import { isAssistantRequestOrigin, isEventTaskOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
+import { AlarmClock, AtSign, Bell, Bot, Crosshair, CornerDownRight, FileText, Film, Flag, MessageCircleHeart, MessageSquareText, ShieldAlert, Wrench } from "lucide-react";
+import { isAssistantRequestOrigin, isEventTaskOrigin, isLenMessageOrigin, isLenWatchOrigin, isScheduledOrigin, isSubagentOrigin, isToolCreationOrigin } from "@/lib/projects/types";
 import { isVideoFile } from "@/lib/projects/chat-files";
 
 import { AvatarContent } from "../avatar-content";
@@ -220,9 +220,15 @@ export function UserMessage({
               <MessageCircleHeart size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
               <span className="min-w-0 truncate">{t("turn.fromAssistant", { name: turn.origen.assistantName })}</span>
             </div>
-          ) : turn.origen && "ruta" in turn.origen && (
-            // A thread's origin is the one with a file (`ruta`): the narrowing the rows of Len's messages to an agent
-            // (`len-message`, labelled by Task 7) must not fall into.
+          ) : turn.origen && isLenMessageOrigin(turn.origen) ? (
+            // LEN'S MESSAGE TO AN AGENT (spec local 2026-11-21-len-y-el-agente-conversan): the agent's turn it woke, in the
+            // agent's own conversation. The row's text is Len's message; the label says from where («De Len · <page>»).
+            // An agent's message to Len is the `assistant` origin above (`message: true`), «De <agent>» as ever.
+            <div className="mb-1.5 flex min-w-0 max-w-full items-center gap-1.5 text-[11.5px] fg-muted" data-len-message-turn="">
+              <MessageSquareText size={12} className="shrink-0 text-[var(--nc-accent-text)]" />
+              <span className="min-w-0 truncate">{t("turn.fromLen", { project: turn.origen.projectTitle })}</span>
+            </div>
+          ) : turn.origen && (
             <button
               type="button"
               onClick={() => onAbrirOrigen?.((turn.origen as { ruta: string }).ruta)}

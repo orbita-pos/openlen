@@ -67,6 +67,7 @@
     "asunto": "回复你的消息"
   },
   "chat": {
+    "deLen": "来自 Len · {project}",
     "subagentes": {
       "status": {
         "running": "进行中",

@@ -67,6 +67,7 @@
     "asunto": "메시지에 대한 답장"
   },
   "chat": {
+    "deLen": "Len에게서 · {project}",
     "subagentes": {
       "status": {
         "running": "작업 중",

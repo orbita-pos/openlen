@@ -67,6 +67,7 @@
     "asunto": "メッセージへの返信"
   },
   "chat": {
+    "deLen": "Len から · {project}",
     "subagentes": {
       "status": {
         "running": "作業中",

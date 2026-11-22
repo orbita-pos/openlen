@@ -67,6 +67,7 @@
     "asunto": "Antwort auf deine Nachricht"
   },
   "chat": {
+    "deLen": "Von Len · {project}",
     "subagentes": {
       "status": {
         "running": "arbeitet",

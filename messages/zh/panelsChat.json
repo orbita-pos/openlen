@@ -26,7 +26,8 @@
     "lenWatch": "Len Watch · 你发布的网站无法加载",
     "fromSubagents": "子代理的结果",
     "toolCreation": "创建工具",
-    "fromAssistant": "来自 {name}"
+    "fromAssistant": "来自 {name}",
+    "fromLen": "来自 Len · {project}"
   },
   "proceso": {
     "completadoEn": "用时 <d>{duracion}</d> 完成",

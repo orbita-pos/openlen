@@ -202,7 +202,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
       {e.refs.map((r) => <LenRequestCard key={r.filaId} view={lenCards?.byFila.get(r.filaId)} lenRef={r} projectTitle={lenCards?.projectTitle(r.projectId) ?? ""} gone={lenCards?.projectGone?.(r.projectId) ?? false} name={asistente?.name ?? ""}
         onStop={(turno) => lenCards?.onStop(turno)} onCompare={() => lenCards?.onCompare(r)} onPublish={() => lenCards?.onPublish(r)} onOpen={() => lenCards?.onOpen?.(r)} />)}
     </div>;
-    if (e.tipo === "origen") return <div className="ch-day" key={e.clave}>{t("subagentes.origen")}</div>;
+    if (e.tipo === "origen") return <div className="ch-day" key={e.clave}>{e.origen === "len" ? t("deLen", { project: e.proyecto }) : t("subagentes.origen")}</div>;
     if (e.tipo === "dia") {
       previo = null;
       const c = cualDia(e.dia, hoy);

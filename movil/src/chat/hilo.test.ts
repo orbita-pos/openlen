@@ -33,6 +33,20 @@ describe("a turn's children", () => {
     expect(tipos(h)).toEqual(["origen", "len"]);
     expect(h[0]).toMatchObject({ origen: "subagentes" });
   });
+  // Len's message to this agent (spec local 2026-11-21-len-y-el-agente-conversan): the row's text is HIS words, so the label
+  // comes first, naming the page they talk about — also while the agent's turn is still running.
+  it("a turn Len's message woke is labelled with its project, before his words", () => {
+    const origen = { kind: "len-message" as const, projectId: "p1", projectTitle: "Presupuesto" };
+    const h = hiloDesdeElHistorial([turno({ id: "a", userText: "¿Puedes revisarlo?", assistantReasoning: "Lo reviso.", noDocChange: true, origen })], 9);
+    expect(tipos(h)).toEqual(["origen", "tu", "len"]);
+    expect(h[0]).toMatchObject({ clave: "a:origen", origen: "len", proyecto: "Presupuesto" });
+    const enCurso = hiloDesdeElHistorial([turno({ id: "b", userText: "¿Y el tope?", enCurso: true, origen })], 9);
+    expect(tipos(enCurso)).toEqual(["origen", "tu"]);
+  });
+  it("a request of an agent to Len is not labelled on the phone's agent chat (only Len's message to it is)", () => {
+    const h = hiloDesdeElHistorial([turno({ id: "a", userText: "hola", assistantReasoning: "Hecho.", noDocChange: true, origen: { kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true } })], 9);
+    expect(tipos(h)).toEqual(["tu", "len"]);
+  });
   it("the live turn keeps the refs it heard", () => {
     const v = conEvento(turnoNuevo("f1"), ev("action", { tool: "subagent", status: "done", subagent: refs[0] }));
     expect(v.acciones?.[0]?.subagent).toEqual(refs[0]);

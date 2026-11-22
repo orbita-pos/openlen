@@ -67,6 +67,7 @@
     "asunto": "Antwoord op je bericht"
   },
   "chat": {
+    "deLen": "Van Len · {project}",
     "subagentes": {
       "status": {
         "running": "bezig",

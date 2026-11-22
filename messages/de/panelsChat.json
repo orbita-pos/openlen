@@ -26,7 +26,8 @@
     "lenWatch": "Len Watch · deine veröffentlichte Seite lud nicht",
     "fromSubagents": "Ergebnisse der Subagenten",
     "toolCreation": "Tool erstellen",
-    "fromAssistant": "Von {name}"
+    "fromAssistant": "Von {name}",
+    "fromLen": "Von Len · {project}"
   },
   "proceso": {
     "completadoEn": "Abgeschlossen in <d>{duracion}</d>",

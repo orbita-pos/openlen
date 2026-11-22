@@ -45,6 +45,15 @@ describe("what Len did, to read (spec local 2026-11-16-movil-es-tu-asistente, §
     expect(host.querySelector("textarea, input")).toBeNull();
   });
 
+  // An agent's MESSAGE to Len (spec local 2026-11-21-len-y-el-agente-conversan) is read like a request: «De <agent>».
+  it("🔴 the turn an agent's message woke says who it is from", async () => {
+    m.leer.mockResolvedValue({ turno: turn({ userText: "¿Cuál es el tope?", origen: { kind: "assistant", assistantId: "a1", assistantName: "Finanzas", message: true } as StoredChatTurn["origen"] }) });
+    await paint();
+    const text = host.textContent ?? "";
+    expect(text).toContain("deElla:Finanzas");
+    expect(text).toContain("¿Cuál es el tope?");
+  });
+
   it("rereads while Len works and stops when he's done", async () => {
     m.leer.mockResolvedValueOnce({ turno: turn({ enCurso: true }), turnoId: "t1" }).mockResolvedValueOnce({ turno: turn() });
     await paint();

@@ -9,7 +9,7 @@ vi.mock("use-intl", async (original) => {
  const real = await original<typeof import("use-intl")>();
  const es = (await import("@/messages/es/movil.json")).default;
  const t = real.createTranslator({ locale: "es", messages: { movil: es } });
- return { ...real, useTranslations: (ns: string) => (s: string, v?: Record<string, string | number>) => ns === "movil.chat.subagentes" || s.startsWith("subagentes.") ? t(`${ns}.${s}` as never, v as never) : s };
+ return { ...real, useTranslations: (ns: string) => (s: string, v?: Record<string, string | number>) => ns === "movil.chat.subagentes" || s.startsWith("subagentes.") || s === "deLen" ? t(`${ns}.${s}` as never, v as never) : s };
 });
 vi.mock("../cara", () => ({ Cara: () => null }));
 vi.mock("../atras", () => ({ useAtras: () => {} }));
@@ -231,6 +231,23 @@ it("an isolated child says en su copia, then what it brought", async () => {
 it("the turn that woke Len says Resultados de los subagentes", () => {
  pintar([{ tipo: "origen", clave: "f2:origen", t: 3, origen: "subagentes" }, respuesta()]);
  expect(host.textContent).toContain("Resultados de los subagentes");
+});
+
+it("🔴 Len's message to this agent says «De Len · <page>» before his words", () => {
+ pintar([{ tipo: "origen", clave: "f3:origen", t: 3, origen: "len", proyecto: "Presupuesto" }, { tipo: "tu", clave: "f3:tu", t: 3, texto: "¿Puedes revisarlo?", estado: "ok" }, respuesta()]);
+ const filas = [...host.querySelectorAll(".ch-log .ch-day, .ch-log .ch-row")].map((f) => f.textContent ?? "");
+ expect(filas[0]).toBe("De Len · Presupuesto");
+ expect(filas[1]).toContain("¿Puedes revisarlo?");
+});
+
+it("🔴 «De Len · <page>» exists in all 10 locales, with the web's words", () => {
+ for (const l of ["en", "es", "pt", "fr", "de", "it", "ja", "ko", "zh", "nl"]) {
+  const movil = JSON.parse(readFileSync(`messages/${l}/movil.json`, "utf8")).chat.deLen;
+  const web = JSON.parse(readFileSync(`messages/${l}/panelsChat.json`, "utf8")).turn.fromLen;
+  expect(web).toContain("{project}");
+  expect(web).toContain("Len");
+  expect(movil).toBe(web);
+ }
 });
 
 it("the new keys exist in all 10 locales, with the web's words", () => {

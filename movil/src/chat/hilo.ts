@@ -3,7 +3,7 @@
 // notas, la llamada) y el turno que corre ahora. Puro: la pantalla sólo pinta.
 // Sin pasos ni herramientas: el chat del móvil no es el de la web.
 import { archivosDelHistorial, type ArchivoAdjunto } from "./archivos";
-import { isSubagentOrigin, type StoredChatTurn } from "@/lib/projects/types";
+import { isLenMessageOrigin, isSubagentOrigin, type StoredChatTurn } from "@/lib/projects/types";
 import { subagentRefFrom, type SubagentRef } from "@/lib/agent/subagents/card";
 import { subagentRefsOf } from "./subagentes";
 import { tarjetaDeConfirmacion, type TarjetaDeLlamada } from "@/components/llamada/puente-a-len";
@@ -32,6 +32,8 @@ export type ElementoDelHilo =
   // Her requests to Len (spec local 2026-11-16-movil-es-tu-asistente, §5.4): one card per row of his, in her chat.
   | { clave: string; t: number; tipo: "lenPedidos"; refs: readonly LenRequestRef[] }
   | { clave: string; t: number; tipo: "origen"; origen: "subagentes" }
+  // Len's message to this agent (spec local 2026-11-21-len-y-el-agente-conversan): the label of the turn it woke, naming the page they talk about.
+  | { clave: string; t: number; tipo: "origen"; origen: "len"; proyecto: string }
   | { clave: string; t: number; tipo: "verEnTuPagina" }
   | { clave: string; t: number; tipo: "fallo" }
   | { clave: string; t: number; tipo: "tarjeta"; tarjeta: TarjetaDeLlamada }
@@ -101,6 +103,8 @@ export function hiloDesdeElHistorial(turnos: StoredChatTurn[], ahora: number): E
     if (turno.tipo === "persona") continue;
     const t = turno.appliedAt ?? ahora;
     const archivos = archivosDelHistorial((turno as StoredChatTurn & {attachedFiles?:unknown}).attachedFiles);
+    // Len's message to this agent: the row's text is HIS words, so the label comes first — also while the agent's turn runs.
+    if (turno.origen && isLenMessageOrigin(turno.origen)) salida.push({ clave: `${turno.id}:origen`, t, tipo: "origen", origen: "len", proyecto: turno.origen.projectTitle });
     if (turno.userText.trim() || turno.attachedImage || archivos.length) {
       salida.push({ clave: `${turno.id}:tu`, t, tipo: "tu", texto: turno.userText.trim(), foto: turno.attachedImage?.url, ...(archivos.length ? {archivos} : {}), estado: "ok" });
     }
