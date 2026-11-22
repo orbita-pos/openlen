@@ -184,9 +184,10 @@ describe("ask_len", () => {
     expect(framing).toMatch(/only what the owner's own message asks/i);
   });
 
-  // Follow-up of ruling F-10 (rule 13): in a turn the server started (an agent's scheduled task), `mensajeDelUsuario` is
-  // the task's prompt, not words the owner typed in the chat — `ask_len` must not frame it as the owner's own message.
-  it("🔴 in a turn the server started (an agent's scheduled task), the task's prompt is not framed as the owner's own message", async () => {
+  // Follow-up of ruling F-10 (rule 13): in an agent's scheduled task (a turn the server started), `mensajeDelUsuario` is
+  // the task's saved prompt — what the owner asked for when they scheduled it, as DeepSeek's reminder says («a scheduled
+  // message from the user»), not words typed just now. Len gets it under its own name, and may do what it asks.
+  it("🔴 in an agent's scheduled task, Len gets the task as the owner scheduled it, never as words typed just now", async () => {
     const launch = vi.fn();
     const session = {
       ...ASSISTANT_SESSION,
@@ -195,8 +196,10 @@ describe("ask_len", () => {
     } as AgentSession;
     await runAskLen(session, { request: "pon el menú de lunes" }, launch);
     const framing = String(launch.mock.calls[0]![0].framing);
-    expect(framing).toContain("The owner's own message to Lucía, verbatim:\n(not available)");
-    expect(framing).not.toContain("Every Monday, update the weekly specials on the page");
+    expect(framing).toContain("The task Lucía's owner scheduled, as it was saved:\nEvery Monday, update the weekly specials on the page");
+    expect(framing).toMatch(/Do only what that task asks/);
+    expect(framing).not.toContain("verbatim");
+    expect(framing).not.toContain("(not available)");
     expect(framing).toContain("pon el menú de lunes");
   });
 
