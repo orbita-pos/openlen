@@ -18,6 +18,7 @@ import { flushLiveTurns } from "@/lib/agent/exit-flush";
 // al cerrar (`verifyEditedPage`), que se fueron con `verifyTurn` el 2026-10-06
 // (plans/crear-es-len).
 
+const APP_KEY = vi.hoisted(() => "phone-app-key-0123456789");
 const mocks = vi.hoisted(() => {
   // EL SEGUNDO PROVEEDOR (spec local 2026-10-16-second-provider): lo que la ruta
   // le lee al cerebro al cerrar. Por defecto, un turno en Fireworks sin respaldo.
@@ -194,6 +195,8 @@ vi.mock("@/auth", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/movil/llaves", async (real) => ({
   ...(await real<typeof import("@/lib/movil/llaves")>()),
   correoDelUsuario: async () => null,
+  // The phone app's key (spec local 2026-11-22-visuales-de-verdad): one known test key is u1's.
+  usuarioDeLaLlave: async (k: string) => (k === APP_KEY ? "u1" : null),
 }));
 vi.mock("@/lib/agent/herramientas-de-ficheros", async (real) => ({
   ...(await real<typeof import("@/lib/agent/herramientas-de-ficheros")>()),
@@ -3165,6 +3168,50 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
           [widgetIdOf(FILA, 0), "first"],
           [widgetIdOf(FILA, 1), "second"],
         ]);
+      });
+    });
+
+    // A screen that can't draw visuals (spec local 2026-11-22-visuales-de-verdad, §1): the phone app before this version, and
+    // the voice call, come with the app's key and without `drawsVisuals`. The web never gets the line.
+    describe("the screen that can't show visuals", () => {
+      const conLlave = (extra: Record<string, unknown>) =>
+        POST(new Request("http://localhost/api/agent", { method: "POST", headers: { authorization: `Bearer ${APP_KEY}` }, body: JSON.stringify({ projectId: "p1", prompt: "hola", ...extra }) }));
+      const sinLlave = (extra: Record<string, unknown>) =>
+        POST(new Request("http://localhost/api/agent", { method: "POST", body: JSON.stringify({ projectId: "p1", prompt: "hola", ...extra }) }));
+      const hidden = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ visualsHidden?: true }])[0].visualsHidden;
+
+      it("the app's key without drawsVisuals (an old app, the voice call): the agent is told", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await conLlave({}));
+        expect(hidden()).toBe(true);
+      });
+
+      it("the app's key with drawsVisuals: nothing to say", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await conLlave({ drawsVisuals: true }));
+        expect(hidden()).toBeUndefined();
+      });
+
+      it("BRAZO DE CONTROL: the web (a session, no key) never, with or without the flag", async () => {
+        turno();
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        await readEvents(await sinLlave({}));
+        expect(hidden()).toBeUndefined();
+        await readEvents(await sinLlave({ drawsVisuals: true }));
+        expect(hidden()).toBeUndefined();
+      });
+
+      it("a turn the server started never", async () => {
+        mocks.turnosParaElHistorial.mockResolvedValue([TRANSCRITO]);
+        const corredor = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+        await readEvents(
+          await corredor("u1", { projectId: "p1", prompt: "Daily" }, { url: "http://x/api/agent", signal: new AbortController().signal }, {
+            scheduled: { framing: "[SCHEDULE REMINDER]", origin: { kind: "scheduled", taskId: "t1", title: "Daily", occurrenceAt: "2026-11-22T09:00:00.000Z" }, onReply: vi.fn(async () => {}) },
+          }),
+        );
+        expect(hidden()).toBeUndefined();
       });
     });
 

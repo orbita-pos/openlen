@@ -252,6 +252,16 @@ describe("buildAgentContext", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, dispositivo: "mobile" });
     expect(JSON.stringify(r)).toContain("DEVICE: the user is reading on a phone");
   });
+  // A screen that can't draw them (spec local 2026-11-22-visuales-de-verdad, §1): an old phone app or the voice call.
+  it("VISUALS: on a screen that can't show them, the context says so, right after the device", () => {
+    const c = buildAgentContext({ state: {}, idioma: "es", dispositivo: "mobile", visualsHidden: true });
+    expect(c).toContain("DEVICE: the user is reading on a phone (about 360px wide).\n\nVISUALS: this screen can't show visuals: answer in text, without show_widget.\n\n");
+  });
+  it("VISUALS: without it, the context is byte for byte what it was", () => {
+    const sin = buildAgentContext({ state: {}, now: new Date("2026-10-01T12:00:00Z"), idioma: "es" });
+    expect(sin).not.toContain("VISUALS:");
+    expect(JSON.stringify(buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, visualsHidden: true }))).toContain("this screen can't show visuals");
+  });
   it("buildAgentMessages hace llegar el idioma hasta el contexto", () => {
     const r = buildAgentMessages({ state: {}, history: [], prompt: "hola", maxPromptTokens: 60_000, idioma: "pt" });
     expect(JSON.stringify(r)).toContain("the user's interface is in Portuguese");

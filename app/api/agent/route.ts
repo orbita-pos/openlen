@@ -365,7 +365,9 @@ export const POST = paraLaApp(async (req: Request): Promise<Response> => {
   const body = (await req.json().catch(() => null)) as CuerpoDelTurno | null;
   // Lo que el turno guarde (versiones de páginas y ficheros) lleva el nombre de
   // quien lo pidió: un miembro, si no fue el dueño (lib/projects/autor-del-cambio.ts).
-  return conAutor(userId, () => correrTurno(userId, body, { url: req.url, signal: req.signal }));
+  // Whether the phone app sent it (its key, not a session): a screen that may not draw visuals (spec local
+  // 2026-11-22-visuales-de-verdad, §1).
+  return conAutor(userId, () => correrTurno(userId, body, { url: req.url, signal: req.signal, appKey: Boolean(req.headers.get("authorization")) }));
 });
 
 /** Lo que manda el cliente en el cuerpo de un turno. Todo entra de fuera y se sanea abajo. */
@@ -421,6 +423,9 @@ type CuerpoDelTurno = {
   idioma?: unknown;
   /** LOS VISUALES: si la persona lee en un teléfono (`mobile`) o no (`desktop`). */
   dispositivo?: unknown;
+  /** The phone app that draws visuals says so (spec local 2026-11-22-visuales-de-verdad, §1); one that doesn't, and the voice
+   *  call, don't. */
+  drawsVisuals?: unknown;
   /** What each visual of the conversation shared with THIS message (spec local 2026-11-22-visuales-de-verdad, §2):
    *  `[{ widgetId, state }]`, data from code that may be showing a visitor's words — never part of `prompt`. See
    *  `cleanVisualStates` and `visualStatesReminder`. */
@@ -465,7 +470,7 @@ type RondaDelEncargo = { goalId: string; revision: number; round: number; artifa
 async function correrTurno(
   userId: string,
   body: CuerpoDelTurno | null,
-  req: { url: string; signal: AbortSignal },
+  req: { url: string; signal: AbortSignal; appKey?: boolean },
   opts: { round?: RondaDelEncargo; hilo?: PedidoDelHilo; email?: EmailRequest; scheduled?: ScheduledRequest } = {},
 ): Promise<Response> {
   const projectId = typeof body?.projectId === "string" ? body.projectId.trim() : "";
@@ -1528,6 +1533,9 @@ async function correrTurno(
     // LOS VISUALES (spec local 2026-10-16): si lee en un teléfono, para la
     // plataforma de `read_me`. Sólo esos dos literales; otro valor no cuenta.
     ...(body?.dispositivo === "mobile" ? { dispositivo: "mobile" as const } : body?.dispositivo === "desktop" ? { dispositivo: "desktop" as const } : {}),
+    // A screen that can't draw visuals (spec local 2026-11-22-visuales-de-verdad, §1): the phone app's key without
+    // `drawsVisuals` — an older app, or the voice call. Never the web, never a turn the server started.
+    ...(req.appKey === true && body?.drawsVisuals !== true && !opts.round && !opts.hilo && !opts.email && !opts.scheduled ? { visualsHidden: true as const } : {}),
     // Y el que ESCRIBE, que manda sobre el de la interfaz (Holi, 10/10): de sus
     // palabras de ahora y de las de antes en esta charla, no del historial del
     // modelo, donde van pegadas a avisos en inglés.

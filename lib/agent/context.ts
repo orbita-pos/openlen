@@ -327,6 +327,9 @@ export function buildAgentContext(args: {
   /** LOS VISUALES (spec local 2026-10-16-len-inline-visuals): si la persona lee
    *  en un teléfono, lo que manda el panel. Sin él, o `desktop`, nada cambia. */
   dispositivo?: "mobile" | "desktop";
+  /** The screen can't draw visuals (spec local 2026-11-22-visuales-de-verdad, §1): the phone app before it drew them, or
+   *  the voice call. Without it, nothing changes. */
+  visualsHidden?: true;
   /** El idioma en que ESCRIBE (`userWritingLanguage`). Si lo hay, se nombra
    *  éste y no el de la interfaz. */
   writingLanguage?: string | null;
@@ -422,6 +425,8 @@ When asked to add the image, place it using this EXACT URL (verbatim) as the src
       : "";
   // LOS VISUALES: `read_me` pide la plataforma; en un teléfono, Len lo sabe.
   const dispositivoBlock = args.dispositivo === "mobile" ? "DEVICE: the user is reading on a phone (about 360px wide).\n\n" : "";
+  // And whether the screen draws them at all: a visual nobody would see is a turn that says nothing.
+  const visualsBlock = args.visualsHidden ? "VISUALS: this screen can't show visuals: answer in text, without show_widget.\n\n" : "";
 
   // ⚰️ EL AVISO DE QUE NO LO VE TODO y LAS PALABRAS QUE SE CAYERON (H08-a) se
   // fueron con A11: Len ve la charla entera desde el último resumen, como Claude
@@ -439,7 +444,7 @@ When asked to add the image, place it using this EXACT URL (verbatim) as the src
   // buscando con Grep—, igual que Claude Code, que no recibe los ficheros
   // pegados al mensaje. Qué ficheros hay y cuál tiene abierto el dueño va en el
   // ESTADO (`ficheros`, `abierta_en_el_editor`).
-  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${args.assistantViewing ? `${args.assistantViewing}\n\n` : ""}${args.relatedAgents ? `${args.relatedAgents}\n\n` : ""}${idiomaBlock}${dispositivoBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
+  return `${args.equipo ? REGLA_DEL_EQUIPO : ""}${memoriaBlock}${hoy}${args.timeContext ? `${args.timeContext}\n\n` : ""}${args.assistantViewing ? `${args.assistantViewing}\n\n` : ""}${args.relatedAgents ? `${args.relatedAgents}\n\n` : ""}${idiomaBlock}${dispositivoBlock}${visualsBlock}PROJECT STATE (real, read from the server just now):\n${JSON.stringify(args.state, null, 2)}\n\n${seleccionesBlock(args.selecciones ?? (args.seleccion ? [args.seleccion] : []))}${mentionedFilesBlock(args.mentionedFiles ?? [])}${args.design ?? ""}${imageBlock}${changelogBlock(args.cambios ?? [])}${cambiosDelDuenoBlock(args.cambiosDelDueno ?? [])}${gitStatusBlock(args.gitStatus)}${args.artifactIndex ? `${args.artifactIndex}\n` : ""}${args.personalSkills ?? ""}${args.connectors ?? ""}`;
 }
 
 
@@ -493,6 +498,8 @@ export interface BuildAgentMessagesArgs {
   idioma?: string;
   /** Si lee en un teléfono (ver buildAgentContext.dispositivo). */
   dispositivo?: "mobile" | "desktop";
+  /** Ver buildAgentContext.visualsHidden. */
+  visualsHidden?: true;
   /** Ver buildAgentContext.writingLanguage. */
   writingLanguage?: string | null;
   /** Ver `avisosDelTurno.todoRestore`. */
@@ -601,6 +608,7 @@ export function buildAgentMessages(args: BuildAgentMessagesArgs): BuildAgentMess
     relatedAgents: args.relatedAgents,
     idioma: args.idioma,
     dispositivo: args.dispositivo,
+    ...(args.visualsHidden ? { visualsHidden: true as const } : {}),
     writingLanguage: args.writingLanguage,
     state: args.state,
     userMemory: args.userMemory,
