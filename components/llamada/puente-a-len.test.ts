@@ -170,6 +170,13 @@ describe("recortarParaLaVoz", () => {
     const t = "Primera frase. Segunda frase que no cabe entera.";
     expect(recortarParaLaVoz(t, 30)).toBe("Primera frase. …");
   });
+
+  // EMOJIS (spec local 2026-11-21-emojis-en-el-chat): Len's chat has them now; the voice doesn't read them out.
+  it("quita los emojis, también los compuestos y con tono de piel, y deja los números", () => {
+    expect(recortarParaLaVoz("Listo ✅ ya está publicada 🎉")).toBe("Listo ya está publicada");
+    expect(recortarParaLaVoz("Hola 👋🏽 equipo 👩‍💻 y 1️⃣ paso")).toBe("Hola equipo y 1 paso");
+    expect(recortarParaLaVoz("312 visitas, 4 pedidos")).toBe("312 visitas, 4 pedidos");
+  });
 });
 
 describe("fraseDeAvance", () => {

@@ -60,6 +60,9 @@ export function recortarParaLaVoz(texto: string, max = MAX_CARACTERES_PARA_LA_VO
     .replace(/[*_`#]/g, "")
     .replace(/^\s*>\s?/gm, "")
     .replace(/^\s*[-•]\s+/gm, "")
+    // Emojis (Len's chat has them since 2026-11-21): the voice doesn't read them out. With their joiners, skin tones,
+    // variation selectors and the keycap mark, so «1️⃣» leaves its «1».
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|[‍︎️⃣]/gu, "")
     .replace(/\s+/g, " ")
     .trim();
   if (limpio.length <= max) return limpio;
