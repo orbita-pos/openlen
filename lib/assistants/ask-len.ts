@@ -14,20 +14,31 @@ import { CLOSING_MAX, type AskLenNotice } from "./notices";
 export const ASK_LEN = "ask_len";
 /** As long as a message to Len. */
 export const ASK_LEN_MAX = 2_000;
+/** A new project's name, which becomes its title (spec local 2026-11-21-agente-sigue-su-proyecto). */
+export const NEW_PROJECT_NAME_MAX = 60;
 
+// STARTING AND FOLLOWING ARE TWO VERBS (spec local 2026-11-21-agente-sigue-su-proyecto): `new_project` starts a separate
+// project, as Claude Code opens a session and DeepSeek starts a subagent; `project` follows one, as their SendMessage and
+// send_message do — never a new one for a change to one it started.
 export const ASK_LEN_DECLARATION = {
   name: ASK_LEN,
   description:
-    "Passes to Len, OpenLen's agent, something your owner asked to be built or changed in this project: a page, a section, a button, a text, the app. " +
-    "You never change the project yourself. Write the request in your owner's own words, with what they told you. " +
-    "Len does it in the project's chat, where your owner sees it; tell them you passed it on.",
+    "Passes to Len, OpenLen's agent, something your owner asked to be built or changed: a page, a section, a button, a text, an app. " +
+    "You never change a project yourself. Write the request in your owner's own words, with what they told you. " +
+    "To change a project you serve or one you started, pass its id in project (they are in ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md). " +
+    "For a new, separate project, pass new_project with a short name instead; never start a new one for a change to a project you started. " +
+    "Len does it in that project's chat, where your owner sees it; tell them you passed it on.",
   parameters: {
     type: "OBJECT",
     properties: {
       request: { type: "STRING", description: "What your owner asked for, in their own words." },
       project: {
         type: "STRING",
-        description: "The id of the project, from ~/.assistant/PROJECTS.md, when you serve more than one; if it isn't clear which, ask your owner first.",
+        description: "The id of the project: one you serve (~/.assistant/PROJECTS.md) or one you started (~/.assistant/STARTED.md). If it isn't clear which, ask your owner first.",
+      },
+      new_project: {
+        type: "STRING",
+        description: "A short name (up to 60 characters) for a NEW project of your owner's, when they ask for something separate from the projects you serve or started. Not together with project.",
       },
     },
     required: ["request"],
@@ -98,10 +109,17 @@ function framingOf(name: string, request: string, ownerMessage: string | null): 
   ].join("\n\n");
 }
 
-/** A project of the person's for a request from their space: their blank project, or a new one. */
-type NewProjectFor = (personId: string) => Promise<string>;
+/** A NEW project of the person's for a request (spec local 2026-11-21-agente-sigue-su-proyecto): always a fresh one — never
+ *  their blank project, which they may be using in /new, nor one an earlier request is still about to fill — named with
+ *  `name`, and linked to the agent that started it. Returns its id. */
+export type StartProject = (personId: string, assistantId: string, name: string) => Promise<string>;
 
-const blankProjectOf: NewProjectFor = async (personId) => (await import("@/lib/projects")).findOrCreateBlankProject(personId);
+const startNewProject: StartProject = async (personId, assistantId, name) => {
+  const id = await (await import("@/lib/projects")).createProject(personId, { brief: "", html: "", title: name });
+  // A link that can't be kept never stops the request: the result still gives the agent the id.
+  await (await import("./projects")).linkStartedProject(assistantId, id).catch((err: unknown) => console.warn("[assistants] the started project's link wasn't kept", err));
+  return id;
+};
 
 export async function runAskLen(
   session: AgentSession,
@@ -109,7 +127,7 @@ export async function runAskLen(
   launch?: LaunchAssistantRequest,
   notes?: AskLenNotes,
   steer: SteerLen = steerLiveTurn,
-  newProject: NewProjectFor = blankProjectOf,
+  startProject: StartProject = startNewProject,
 ): Promise<ToolOutcome> {
   const assistant = session.assistant;
   if (!assistant) return { response: { ok: false, error: "not_available", message: `${ASK_LEN} is the person's own assistant's tool.` } };
@@ -118,9 +136,24 @@ export async function runAskLen(
     return { response: { ok: false, error: "invalid_arguments", message: `request is required: what your owner asked for, in their own words (up to ${ASK_LEN_MAX} characters).` } };
   }
   const named = typeof args.project === "string" ? args.project.trim() : "";
+  const wantsNew = args.new_project !== undefined && args.new_project !== null;
+  const newName = typeof args.new_project === "string" ? args.new_project.trim() : "";
+  if (named && wantsNew) {
+    return { response: { ok: false, error: "invalid_arguments", message: "Pass project or new_project, not both: project changes one that exists, new_project starts a separate one." } };
+  }
+  if (wantsNew && (!newName || newName.length > NEW_PROJECT_NAME_MAX)) {
+    return { response: { ok: false, error: "invalid_arguments", message: `new_project is the new project's short name: 1 to ${NEW_PROJECT_NAME_MAX} characters.` } };
+  }
+  const started = assistant.started ?? [];
+  // A NEW, SEPARATE PROJECT, asked for by name: started here, linked to the agent, and named with its id in the result —
+  // as Claude Code's new session and DeepSeek's «started subagent <name>» — so the agent can follow it later.
+  if (wantsNew) {
+    const id = await startProject(session.userId, assistant.id, newName);
+    return passToLen(session, request, { id, title: newName }, newName, launch, notes, steer, newName);
+  }
   // Looking on the phone at a project she doesn't serve (spec local 2026-11-16-movil-es-tu-asistente, §5.6): a request
   // that names none can't go to one of hers by default — it would change a page the owner isn't looking at. First, before
-  // the space's new project below: «add a form here» is about the page on the phone, never a new one.
+  // the space's rule below: «add a form here» is about the page on the phone, never a new one.
   if (!named && assistant.viewing && !assistant.viewing.served) {
     return {
       response: {
@@ -131,17 +164,31 @@ export async function runAskLen(
     };
   }
   // FROM THE PERSON'S SPACE (spec local 2026-11-19-agentes-para-todos, §6.4): Len never builds there. Attending no page,
-  // a request that names none starts Len in a project of the person's own — their blank one, or a new one.
+  // a request that names nothing starts nothing (spec local 2026-11-21-agente-sigue-su-proyecto): it would have to guess
+  // between a new project and one it started — DeepSeek's superagent attaches «only when the message points at that
+  // ticket explicitly».
   if (assistant.inSpace && !assistant.projects?.length && !named) {
-    return passToLen(session, request, { id: await newProject(session.userId), title: "" }, "a new project", launch, notes, steer);
+    if (started.length === 0) {
+      return { response: { ok: false, error: "new_project_needed", message: "Nothing names the project: pass new_project with a short name for a new project of your owner's." } };
+    }
+    return {
+      response: {
+        ok: false,
+        error: "which_project",
+        projects: started.map((p) => ({ id: p.id, title: p.title })),
+        message: "Pass the id of the project you started that this is about in project, or new_project with a short name if your owner wants a new, separate one. If it isn't clear which, ask your owner.",
+      },
+    };
   }
   // Which project (phase 4): hers only, and the one the request names when she serves more than one. In the person's
   // space her home is never one of them.
   const served = assistant.projects?.length || assistant.inSpace ? (assistant.projects ?? []) : [{ id: session.projectId, title: "" }];
-  // Named, or the only one, or (§5.3) the one on her owner's phone.
+  // Named, or the only one, or (§5.3) the one on her owner's phone. A named one may also be one it started.
   const onPhone = assistant.viewing?.served ? served.find((p) => p.id === assistant.viewing?.id) : undefined;
-  const target = named ? served.find((p) => p.id === named) : served.length === 1 ? served[0] : onPhone;
-  if (named && !target) return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve: see ~/.assistant/PROJECTS.md." } };
+  const target = named ? (served.find((p) => p.id === named) ?? started.find((p) => p.id === named)) : served.length === 1 ? served[0] : onPhone;
+  if (named && !target) {
+    return { response: { ok: false, error: "not_your_project", message: "That isn't one of the projects you serve or started: see ~/.assistant/PROJECTS.md and ~/.assistant/STARTED.md." } };
+  }
   if (!target) {
     return {
       response: {
@@ -152,13 +199,15 @@ export async function runAskLen(
       },
     };
   }
-  // Serving more than one, the result and the note name where it went, as Claude Code's Write names the path it wrote:
-  // she can tell her owner which project she took it to, and they can correct her (phase 4, task 8).
-  return passToLen(session, request, target, served.length > 1 ? target.title?.trim() || target.id : null, launch, notes, steer);
+  // Serving more than one, or to a project it started, the result and the note name where it went, as Claude Code's
+  // Write names the path it wrote: she can tell her owner which project she took it to, and they can correct her
+  // (phase 4, task 8).
+  const toStarted = !served.some((p) => p.id === target.id);
+  return passToLen(session, request, target, served.length > 1 || toStarted ? target.title?.trim() || target.id : null, launch, notes, steer);
 }
 
 /** The request as Len's turn in `target`. `where`, when said, names it in the result and the note: a project of
- *  several, or «a new project» for a request from the person's space. */
+ *  several, or one it started. `newName`: the project was started for this request — the result names it with its id. */
 async function passToLen(
   session: AgentSession,
   request: string,
@@ -167,6 +216,7 @@ async function passToLen(
   launch: LaunchAssistantRequest | undefined,
   notes: AskLenNotes | undefined,
   steer: SteerLen,
+  newName?: string,
 ): Promise<ToolOutcome> {
   const assistant = session.assistant!;
   const go = launch ?? (await import("@/lib/agent/turnos-desde-el-servidor")).launchAssistantRequestTurn;
@@ -211,7 +261,8 @@ async function passToLen(
   // while he works does (spec local 2026-11-16-movil-es-tu-asistente, §5.4.8). Not with photos or files (a correction
   // carries only text), nor when it wouldn't fit whole in one: those go as a request of their own. And if Len's turn
   // closes before reading it, it goes as one too (final review, I3) — never lost while her result says it arrived.
-  if (!extraBody && framing.length <= MAX_DIRECCION) {
+  // A project started for this very request has no turn of Len's to correct.
+  if (newName === undefined && !extraBody && framing.length <= MAX_DIRECCION) {
     const running = await keep.runningFor?.(assistant.id, target.id).catch(() => null);
     const onUnread = () => void queue().catch((err: unknown) => console.warn("[assistants] an unread correction couldn't be queued", err));
     if (running && steer(running, session.userId, framing, onUnread)) {
@@ -227,6 +278,18 @@ async function passToLen(
     }
   }
   const filaId = await queue();
+  if (newName !== undefined) {
+    return {
+      response: {
+        ok: true,
+        queued: true,
+        project: { id: target.id, name: newName },
+        tool_result: `Len is starting «${newName}» (id: ${target.id}), a new project of your owner's, and will do it in its chat, where your owner sees it. To change it later, pass that id in project.`,
+      },
+      action: { tool: ASK_LEN, ok: true, summary },
+      lenRequest: { filaId, projectId: target.id },
+    };
+  }
   return {
     response: {
       ok: true,

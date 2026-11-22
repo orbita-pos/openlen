@@ -1418,6 +1418,9 @@ export interface AgentSession {
     readonly name: string;
     /** The projects she serves, her home first (phase 4): `ask_len` passes a request to one of them. */
     readonly projects?: readonly { readonly id: string; readonly title: string }[];
+    /** The projects it STARTED with `ask_len`'s `new_project` (spec local 2026-11-21-agente-sigue-su-proyecto), oldest
+     *  first, as ~/.assistant/STARTED.md lists them: `ask_len` takes their ids too. Not served: none of their files. */
+    readonly started?: readonly { readonly id: string; readonly title: string }[];
     /** The project on her owner's phone (spec local 2026-11-16-movil-es-tu-asistente, §5.3): `ask_len`'s default when
      *  she serves it. Absent outside the phone. */
     readonly viewing?: import("@/lib/assistants/viewing").ViewingProject;

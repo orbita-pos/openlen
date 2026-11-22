@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { _vaciarTodo, abrirTurno, cerrarTurno, leerDireccion } from "@/lib/agent/direcciones";
 import type { AgentSession } from "@/lib/agent/tools";
 
-import { ASK_LEN, ASK_LEN_DECLARATION, runAskLen } from "./ask-len";
+import { ASK_LEN, ASK_LEN_DECLARATION, NEW_PROJECT_NAME_MAX, runAskLen } from "./ask-len";
 
 const ASSISTANT_SESSION = { projectId: "p1", userId: "u1", zonaHoraria: "America/Mexico_City", uiLocale: "es", assistant: { id: "a1", name: "Lucía" } } as unknown as AgentSession;
 const LEN_SESSION = { projectId: "p1", userId: "u1" } as unknown as AgentSession;
@@ -202,9 +202,10 @@ describe("ask_len", () => {
   describe("serving several projects", () => {
     const TWO = { ...ASSISTANT_SESSION, assistant: { id: "a1", name: "Lucía", projects: [{ id: "p1", title: "Pastelería Canela" }, { id: "p2", title: "Canela Tienda" }] } } as unknown as AgentSession;
 
-    it("declares an optional project", () => {
+    it("declares an optional project, and an optional new_project", () => {
       const params = ASK_LEN_DECLARATION.parameters as unknown as { properties: Record<string, { type: string }>; required: string[] };
       expect(params.properties.project?.type).toBe("STRING");
+      expect(params.properties.new_project?.type).toBe("STRING");
       expect(params.required).toEqual(["request"]);
     });
 
@@ -259,17 +260,95 @@ describe("ask_len", () => {
 
   // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.4): from the person's space, Len never builds there.
   describe("from the person's space", () => {
-    const inSpace = (projects: { id: string; title: string }[] = []) =>
-      ({ ...ASSISTANT_SESSION, projectId: "space", assistant: { id: "a1", name: "Mr. Smith", projects, inSpace: true } }) as unknown as AgentSession;
+    const inSpace = (projects: { id: string; title: string }[] = [], started: { id: string; title: string }[] = []) =>
+      ({ ...ASSISTANT_SESSION, projectId: "space", assistant: { id: "a1", name: "Mr. Smith", projects, started, inSpace: true } }) as unknown as AgentSession;
+    const resultOf = (out: { response: unknown }) => String((out.response as { tool_result?: string }).tool_result);
 
-    it("🔴 an agent with no pages starts Len in a new project of the person's", async () => {
+    // THE AGENT FOLLOWS THE PROJECT IT STARTED (spec local 2026-11-21-agente-sigue-su-proyecto): starting and following
+    // are two verbs, as in Claude Code (a new session, then SendMessage to it) and DeepSeek (subagent, then send_message).
+    it("🔴 an agent with no pages and nothing named creates nothing: it asks for new_project", async () => {
       const launch = vi.fn();
-      const newProject = vi.fn(async () => "fresh");
-      const out = await runAskLen(inSpace(), { request: "hazme una app de tarjetas de vocabulario" }, launch, undefined, undefined, newProject);
-      expect(out.response).toMatchObject({ ok: true, queued: true });
-      expect(String((out.response as { tool_result?: string }).tool_result)).toMatch(/new project/);
-      expect(newProject).toHaveBeenCalledWith("u1");
+      const startProject = vi.fn(async () => "fresh");
+      const out = await runAskLen(inSpace(), { request: "hazme una app de tarjetas de vocabulario" }, launch, undefined, undefined, startProject);
+      expect(out.response).toMatchObject({ ok: false, error: "new_project_needed" });
+      expect(startProject).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("🔴 with projects it started, a request naming none lists them and offers new_project", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      const out = await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "cámbiale el color" }, launch, undefined, undefined, startProject);
+      expect(out.response).toMatchObject({ ok: false, error: "which_project", projects: [{ id: "s1", title: "Presupuesto" }] });
+      expect(String((out.response as { message?: string }).message)).toContain("new_project");
+      expect(startProject).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("🔴 new_project starts a new project with that name, links it, and the result names it with its id", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };
+      const startProject = vi.fn(async () => "fresh");
+      const out = await runAskLen(inSpace(), { request: "hazme una página de presupuesto", new_project: "  Presupuesto  " }, launch, notes, undefined, startProject);
+      expect(startProject).toHaveBeenCalledWith("u1", "a1", "Presupuesto");
       expect(launch.mock.calls[0]![0].projectId).toBe("fresh");
+      expect(out.response).toMatchObject({ ok: true, queued: true, project: { id: "fresh", name: "Presupuesto" } });
+      expect(resultOf(out)).toContain("«Presupuesto»");
+      expect(resultOf(out)).toContain("fresh");
+      expect(notes.queued).toHaveBeenCalledWith("a1", expect.objectContaining({ project: "Presupuesto", projectId: "fresh" }));
+    });
+
+    it("🔴 two new_project requests are two projects", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn().mockResolvedValueOnce("f1").mockResolvedValueOnce("f2");
+      await runAskLen(inSpace(), { request: "una página de presupuesto", new_project: "Presupuesto" }, launch, undefined, undefined, startProject);
+      await runAskLen(inSpace(), { request: "otra de ahorros", new_project: "Ahorros" }, launch, undefined, undefined, startProject);
+      expect(launch.mock.calls.map((c) => c[0].projectId)).toEqual(["f1", "f2"]);
+    });
+
+    it("🔴 a project it started is accepted by id; nothing is created", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "cámbiale el color a azul", project: "s1" }, launch, undefined, undefined, startProject);
+      expect(launch.mock.calls[0]![0].projectId).toBe("s1");
+      expect(startProject).not.toHaveBeenCalled();
+    });
+
+    it("🔴 a started project that is gone is refused, and nothing launches", async () => {
+      const launch = vi.fn();
+      const out = await runAskLen(inSpace(), { request: "cámbiale el color", project: "s1" }, launch, undefined, undefined, vi.fn(async () => "fresh"));
+      expect(out.response).toMatchObject({ ok: false, error: "not_your_project" });
+      expect(String((out.response as { message?: string }).message)).toContain("STARTED.md");
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("project and new_project together, or a bad name, are refused", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      for (const args of [{ project: "s1", new_project: "Otra" }, { new_project: "   " }, { new_project: "x".repeat(NEW_PROJECT_NAME_MAX + 1) }]) {
+        const out = await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "hazme algo", ...args }, launch, undefined, undefined, startProject);
+        expect(out.response, JSON.stringify(args)).toMatchObject({ ok: false, error: "invalid_arguments" });
+      }
+      expect(NEW_PROJECT_NAME_MAX).toBe(60);
+      expect(startProject).not.toHaveBeenCalled();
+      expect(launch).not.toHaveBeenCalled();
+    });
+
+    it("an agent that attends a page can start a new project too", async () => {
+      const launch = vi.fn();
+      const startProject = vi.fn(async () => "fresh");
+      await runAskLen(inSpace([{ id: "p1", title: "Pan" }]), { request: "hazme otra página aparte", new_project: "Otra" }, launch, undefined, undefined, startProject);
+      expect(launch.mock.calls[0]![0].projectId).toBe("fresh");
+    });
+
+    it("🔴 Len working in a project it started: a new request steers it", async () => {
+      const launch = vi.fn();
+      const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}), runningFor: vi.fn(async () => "f1") };
+      const steer = vi.fn(() => true);
+      const out = await runAskLen(inSpace([], [{ id: "s1", title: "Presupuesto" }]), { request: "mejor en azul", project: "s1" }, launch, notes, steer, vi.fn(async () => "fresh"));
+      expect(notes.runningFor).toHaveBeenCalledWith("a1", "s1");
+      expect(out.response).toMatchObject({ ok: true, steered: true });
+      expect(launch).not.toHaveBeenCalled();
     });
 
     it("🔴 naming the space is not one of its projects", async () => {
