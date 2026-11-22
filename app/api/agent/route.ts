@@ -598,14 +598,18 @@ async function correrTurno(
   /** How its ask_len requests ended (lib/assistants/notices.ts), heard with this request — fail-soft. */
   const avisosDelAsistente: ReadyNotice[] = asistente ? await readyAssistantNotices(asistente.id, new Date()).catch(() => []) : [];
   /** LEN'S SIDE of the messages (spec local 2026-11-21-len-y-el-agente-conversan, §1 and decision 11): the agents of the
-   *  project's OWNER (`userId` from here on, whoever speaks) related to it — the one whose request or message started
-   *  this turn, the one serving it, the ones that started it —, whom Len may write to with `message_agent`. Read while
-   *  the project loads, awaited where the tools are declared. Fail-soft: none when they can't be read, and with agents off
-   *  none at all, so his turn is as before. Never for an agent's own turn: it has `message_len`. */
-  const agenteDelOrigen = opts.scheduled && isAssistantRequestOrigin(opts.scheduled.origin) ? opts.scheduled.origin.assistantId : null;
-  const agentesRelacionadosLeidos: Promise<RelatedAgent[]> =
-    !asistente && assistantsEnabled()
-      ? relatedAgentsOf(projectId, userId, agenteDelOrigen).catch((err: unknown) => {
+   *  project's OWNER (`userId` from here on) related to it — the one whose request or message started this turn, the one
+   *  serving it, the ones that started it —, whom Len may write to with `message_agent`. Read while the project loads,
+   *  awaited where the tools are declared. Fail-soft: none when they can't be read, and with agents off none at all, so
+   *  his turn is as before. Never for an agent's own turn: it has `message_len`.
+   *  🔴 Never in a MEMBER's turn (ruling R5-1), as `create_assistant` isn't offered to one: the owner's agent runs as the
+   *  owner — their visitors' messages, results, its memory — and answers in the project's shared chat, so writing to it
+   *  would be a member reading through Len what this route keeps from members (`resultados: undefined`). No tool, no
+   *  line, no session field; and what waited for Len waits for the owner's own turn (below). */
+  const originAgentId = opts.scheduled && isAssistantRequestOrigin(opts.scheduled.origin) ? opts.scheduled.origin.assistantId : null;
+  const relatedAgentsRead: Promise<RelatedAgent[]> =
+    !asistente && !miembro && assistantsEnabled()
+      ? relatedAgentsOf(projectId, userId, originAgentId).catch((err: unknown) => {
           console.warn("[agent-messages] the project's agents couldn't be read; Len's turn goes on without them", err);
           return [];
         })
@@ -911,7 +915,7 @@ async function correrTurno(
       },
     };
   }
-  const agentesRelacionados = await agentesRelacionadosLeidos;
+  const relatedAgents = await relatedAgentsRead;
   const conPostura = (d: Record<string, unknown>[]) => {
     const conLaDeHerramienta = toolDelTurno ? declarationsOfTool(d) : d;
     const conLaTarjeta = ofrecerSugerencias ? [...conLaDeHerramienta, { ...DECLARACION_PROPOSE_ACTION }] : conLaDeHerramienta;
@@ -927,8 +931,9 @@ async function correrTurno(
     // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts).
     if (asistente) return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }];
     // And Len's `message_agent`, LAST — after the operations and the connectors — and only in a project with agents
-    // related to it: in one with none, his declarations are byte for byte as before.
-    return agentesRelacionados.length > 0 ? [...todas, { ...MESSAGE_AGENT_DECLARATION }] : todas;
+    // related to it (never in a member's turn: none are read for one): in one with none, his declarations are byte for
+    // byte as before.
+    return relatedAgents.length > 0 ? [...todas, { ...MESSAGE_AGENT_DECLARATION }] : todas;
   };
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
   let typesRefresh = Promise.resolve();
@@ -1502,7 +1507,7 @@ async function correrTurno(
     // Her turn from the phone: the project on the owner's screen, right after the hour (only when sent).
     ...(proyectoEnElTelefono ? { assistantViewing: viewingLine(proyectoEnElTelefono) } : {}),
     // Len's, in a project with agents related to it: whom he may write to, in his turn's context (never his prompt).
-    ...(agentesRelacionados.length > 0 ? { relatedAgents: relatedAgentsLine(agentesRelacionados) } : {}),
+    ...(relatedAgents.length > 0 ? { relatedAgents: relatedAgentsLine(relatedAgents) } : {}),
     // El idioma de su interfaz, nombrado en el contexto (ensayo de caja del
     // 09/10: en un turno largo Len narró en inglés a quien escribía en español).
     ...(typeof body?.idioma === "string" ? { idioma: body.idioma.slice(0, 10) } : {}),
@@ -1759,7 +1764,7 @@ async function correrTurno(
         }
       : {}),
     // Len's side: whom `message_agent` may reach, with the home each one's turn runs in.
-    ...(agentesRelacionados.length > 0 ? { relatedAgents: agentesRelacionados.map(({ id, name, homeProjectId }) => ({ id, name, homeProjectId })) } : {}),
+    ...(relatedAgents.length > 0 ? { relatedAgents: relatedAgents.map(({ id, name, homeProjectId }) => ({ id, name, homeProjectId })) } : {}),
   };
   // LEN'S SUBAGENTS (spec local 2026-11-01-subagentes-de-len): on unless OPENLEN_SUBAGENTS=0, and not in a Len Watch
   // worktree (its row lives in another project's chat, where no notice turn could follow it).
@@ -2575,9 +2580,11 @@ async function correrTurno(
         // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him and was kept rides with
         // the next turn a PERSON starts here — not one the server started (an agent's request or message claimed its own
         // when it started, lib/assistants/messages/wake.ts; a scheduled task, Len Watch or a goal round has no person) —,
-        // read before his first call after his subagents' notices. With agents off, they keep waiting.
-        if (!asistente && !programadaDelTurno && !opts.round && !compactCommand && assistantsEnabled()) {
-          rideAlong = await claimRideAlongForLen(projectId, filaId, new Date(), new Map(agentesRelacionados.map((a) => [a.id, a.name] as const))).catch((err: unknown) => {
+        // read before his first call after his subagents' notices. With agents off, they keep waiting; and in a MEMBER's
+        // turn too (ruling R5-1): what the owner's agent wrote may carry the owner's data, so it waits for the owner's own
+        // turn or for a turn a message wakes, which run as the owner.
+        if (!asistente && !miembro && !programadaDelTurno && !opts.round && !compactCommand && assistantsEnabled()) {
+          rideAlong = await claimRideAlongForLen(projectId, filaId, new Date(), new Map(relatedAgents.map((a) => [a.id, a.name] as const))).catch((err: unknown) => {
             console.warn("[agent-messages] what waited for Len couldn't be claimed", err);
             return null;
           });

@@ -5783,20 +5783,41 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(agentMessages.claimForLen).not.toHaveBeenCalled();
     });
 
-    it("🔴 a member speaking still only sees the owner's agents", async () => {
-      mocks.cabeEnElTope.mockResolvedValue(true);
-      mocks.margenDeMiembros.mockResolvedValue(null);
-      mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
-      fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
-      relatedMessages.relatedAgentsOf.mockResolvedValueOnce(SERVES);
+    // Ruling R5-1: the owner's agent runs as the owner — their visitors' messages, results and memory — and answers in the
+    // project's SHARED chat, so a member writing to it through Len would read what the route keeps from members
+    // (`resultados: undefined`). A member's turn has none of Len's side; the owner's turn in the same project has it all.
+    it("🔴 a member's turn has no message_agent, no line, no related agents and claims nothing; the owner's has them", async () => {
+      relatedMessages.relatedAgentsOf.mockResolvedValue(SERVES);
+      agentMessages.claimForLen.mockResolvedValue([forLen("m1", "¿Cuál es el tope?", 1)]);
+      reads();
       try {
-        await readEvents(await pedir({}));
+        mocks.cabeEnElTope.mockResolvedValue(true);
+        mocks.margenDeMiembros.mockResolvedValue(null);
+        mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+        fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
+        try {
+          await readEvents(await pedir({ turnId: ROW }));
+        } finally {
+          fijarAccesoDePrueba(null);
+        }
+        expect(relatedMessages.relatedAgentsOf).not.toHaveBeenCalledWith("p1", "ana", expect.anything());
+        expect(toolNames()).not.toContain("message_agent");
+        expect("relatedAgents" in sent()).toBe(false);
+        expect(session().relatedAgents).toBeUndefined();
+        expect(agentMessages.claimForLen).not.toHaveBeenCalled();
+
+        // The owner, in the same project.
+        mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+        await readEvents(await pedir({ turnId: ROW }));
+        expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledWith("p1", "u1", null);
+        expect(toolNames().at(-1)).toBe("message_agent");
+        expect(sent().relatedAgents).toBe(LINE);
+        expect(session().relatedAgents).toEqual([{ id: "a1", name: "Lucía", homeProjectId: "p1" }]);
+        expect(agentMessages.claimForLen).toHaveBeenCalledWith("p1", ROW, expect.any(Date));
       } finally {
-        fijarAccesoDePrueba(null);
+        relatedMessages.relatedAgentsOf.mockResolvedValue([]);
+        agentMessages.claimForLen.mockResolvedValue([]);
       }
-      expect(relatedMessages.relatedAgentsOf).toHaveBeenCalledWith("p1", "u1", null);
-      expect(relatedMessages.relatedAgentsOf).not.toHaveBeenCalledWith("p1", "ana", expect.anything());
-      expect(toolNames().at(-1)).toBe("message_agent");
     });
 
     it("an agent's own turn never gets message_agent nor the line: it has message_len", async () => {
