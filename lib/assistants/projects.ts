@@ -62,6 +62,37 @@ export async function projectsOfAssistant(assistantId: string): Promise<ServedPr
   return rows.map((r) => ({ ...r, isHome: Boolean(r.isHome), publicData: r.publicData ?? [] }));
 }
 
+/** A project an agent STARTED with ask_len's `new_project` (spec local 2026-11-21-agente-sigue-su-proyecto). Its title and
+ *  address are the project's own, read live: a project the person renamed shows its new name. */
+export interface StartedProject {
+  readonly projectId: string;
+  readonly title: string | null;
+  readonly subdomain: string | null;
+  readonly startedAt: Date;
+}
+
+/** How many of them her ~/.assistant/STARTED.md lists: the most recent. */
+export const STARTED_LISTED = 30;
+
+const sp = schema.assistantStartedProjects;
+
+/** Keeps the link from an agent to a project it started; a second one is the same link. */
+export async function linkStartedProject(assistantId: string, projectId: string): Promise<void> {
+  await db.insert(sp).values({ assistantId, projectId }).onConflictDoNothing();
+}
+
+/** The `STARTED_LISTED` most recent projects it started, oldest first — so a new one goes at the end of her file. */
+export async function startedProjectsOf(assistantId: string): Promise<StartedProject[]> {
+  const rows = await db
+    .select({ projectId: sp.projectId, title: p.title, subdomain: p.subdomain, startedAt: sp.startedAt })
+    .from(sp)
+    .innerJoin(p, eq(p.id, sp.projectId))
+    .where(eq(sp.assistantId, assistantId))
+    .orderBy(desc(sp.startedAt), desc(sp.projectId))
+    .limit(STARTED_LISTED);
+  return rows.reverse();
+}
+
 /** The projects each of these assistants serves (the person's list: a card knows whether this project has her). */
 export async function projectIdsOf(assistantIds: readonly string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>(assistantIds.map((id) => [id, []]));

@@ -1640,6 +1640,18 @@ export const assistantProjects = pgTable("assistantProjects", {
   publicData: jsonb("publicData").$type<PublicTable[]>(),
 }, (t) => [index("assistantProjects_assistant_idx").on(t.assistantId)]);
 
+/** The projects an agent STARTED with ask_len's `new_project` (spec local 2026-11-21-agente-sigue-su-proyecto): a link,
+ *  not serving — it reads none of their files and isn't on their pages. Gone with the project or the agent. */
+export const assistantStartedProjects = pgTable(
+  "assistantStartedProjects",
+  {
+    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    startedAt: timestamp("startedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.assistantId, t.projectId] }), index("assistantStartedProjects_projectId_idx").on(t.projectId)],
+);
+
 /** A table or view of a project's production base that `anon` can read, with its columns. */
 export interface PublicTable {
   name: string;

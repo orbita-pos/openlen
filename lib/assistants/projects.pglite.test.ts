@@ -259,3 +259,42 @@ describe("when her home project is deleted", () => {
     expect(await herRows("p1")).toEqual(["m1", "m2"]);
   });
 });
+
+// THE PROJECTS AN AGENT STARTED (spec local 2026-11-21-agente-sigue-su-proyecto): a link, not «serving» — as Claude Code's
+// linked sessions and DeepSeek's subagent catalog. Gone with the project or the agent.
+describe("the projects an agent started", () => {
+  it("🔴 a project it started is listed with its current title and address", async () => {
+    await projects.linkStartedProject(lucia, "p4");
+    await pg.query(`update "projects" set "title" = 'Presupuesto mensual' where "id" = 'p4'`);
+    const started = await projects.startedProjectsOf(lucia);
+    expect(started.map((p) => [p.projectId, p.title, p.subdomain])).toEqual([["p4", "Presupuesto mensual", "otra"]]);
+    expect(started[0]!.startedAt).toBeInstanceOf(Date);
+  });
+
+  it("linking twice is one link", async () => {
+    await projects.linkStartedProject(lucia, "p4");
+    await projects.linkStartedProject(lucia, "p4");
+    expect((await projects.startedProjectsOf(lucia)).map((p) => p.projectId)).toEqual(["p4"]);
+  });
+
+  it("🔴 deleting the project or the agent removes the link", async () => {
+    await projects.linkStartedProject(lucia, "p3");
+    await projects.linkStartedProject(lucia, "p4");
+    await pg.query(`delete from "projects" where "id" = 'p4'`);
+    expect((await projects.startedProjectsOf(lucia)).map((p) => p.projectId)).toEqual(["p3"]);
+    await pg.query(`delete from "assistants" where "id" = $1`, [lucia]);
+    expect((await pg.query(`select 1 from "assistantStartedProjects"`)).rows).toEqual([]);
+  });
+
+  it("only the 30 most recent, oldest first", async () => {
+    for (let i = 1; i <= 31; i++) {
+      await pg.query(`insert into "projects" ("id", "userId", "title") values ($1, 'u1', $1)`, [`s${i}`]);
+      await pg.query(`insert into "assistantStartedProjects" ("assistantId", "projectId", "startedAt") values ($1, $2, $3)`, [lucia, `s${i}`, new Date(NOW.getTime() + i * 60_000)]);
+    }
+    const started = await projects.startedProjectsOf(lucia);
+    expect(started).toHaveLength(projects.STARTED_LISTED);
+    expect(projects.STARTED_LISTED).toBe(30);
+    expect(started[0]!.projectId).toBe("s2");
+    expect(started.at(-1)!.projectId).toBe("s31");
+  });
+});
