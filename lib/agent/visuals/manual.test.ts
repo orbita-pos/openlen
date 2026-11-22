@@ -71,12 +71,21 @@ describe("buildVisualsManual — the surface", () => {
   const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
   it("the chat's manual is byte for byte today's", () => {
-    // Pinned after A5 added updateModelContext(text) to chat visuals (still omitted in bubble).
-    expect(sha(buildVisualsManual([...VISUAL_MODULES], "desktop"))).toBe("b2a1a07075004600f387d9daa6937f3f4b57b9e88978af13bb28fa6dd9be26ba");
-    expect(sha(buildVisualsManual([], "unknown"))).toBe("da764280378aca16284abea083dcaeab611cbbde8098dd5ccfea54db63ee871e");
-    expect(sha(buildVisualsManual(["chart"], "mobile"))).toBe("d50d2e486f97a372f9a726dc4e13f6bd6f2ec032c4fac6a15907db5c67e66fbd");
+    // Pinned after updateModelContext(text) switched to holding state read via read_widget_context (still omitted in bubble).
+    expect(sha(buildVisualsManual([...VISUAL_MODULES], "desktop"))).toBe("56c72f807f47f3c5c12c27de7ccc2c720b057b8f50e32f0a0533d7598ed1455a");
+    expect(sha(buildVisualsManual([], "unknown"))).toBe("bb4f444d6c8c95e52804884353ef7646375fa09d8bcdf4a5b5f5da4d949a7c76");
+    expect(sha(buildVisualsManual(["chart"], "mobile"))).toBe("5b51a7a22f21fc148da20cae7109f65d4d9c1f8b2fcea211ed1c2c475602098d");
     expect(buildVisualsManual(["chart"], "mobile", "chat")).toBe(buildVisualsManual(["chart"], "mobile"));
     expect(buildVisualsManual([], "desktop", "chat")).toContain("updateModelContext(text)");
+  });
+
+  // What a visual shares is its state now (spec local 2026-11-22-visuales-de-verdad, §2): kept by the chat, read with
+  // read_widget_context when the person refers to it — never «for their next message».
+  it("updateModelContext keeps the visual's state, read with read_widget_context", () => {
+    const m = buildVisualsManual([], "desktop", "chat");
+    expect(m).toContain("updateModelContext(text) keeps the visual's current state");
+    expect(m).toContain("read_widget_context");
+    expect(m).not.toContain("for their next message");
   });
 
   it("the bubble's manual speaks of the business's bubble and its color", () => {

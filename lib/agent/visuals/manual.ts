@@ -89,7 +89,7 @@ An HTML visual starts with <h2 class="sr-only"> and one sentence that says what 
 
 ## Talking to the chat
 - sendPrompt(text) sends text to you as a message from the person. It only works as the answer to their click, once per click. Use it for a next step that needs you to think ("Compare with last month"); filtering, sorting and recalculating happen in the visual's own JavaScript.
-- updateModelContext(text) attaches the person's current selection or filter summary silently for their next message without starting a new turn (pass "" to clear). Use it when the person picks rows, options or parameters they may ask about next.
+- updateModelContext(text) keeps the visual's current state — what the person chose, answered or filtered — and you read it with read_widget_context when they refer to it; it never starts a turn nor becomes a message by itself (pass "" to clear). Call it whenever that state changes.
 - Links (<a href="https://…">) and openLink(url) ask the person to confirm, then open in a new tab. The visual never navigates.
 
 ## Don't
@@ -146,7 +146,7 @@ const BUBBLE_EDITS: readonly (readonly [string, string])[] = [
   ["## Talking to the chat", "## Talking to the bubble"],
   ["sendPrompt(text) sends text to you as a message from the person.", "sendPrompt(text) sends text to you as a message from the visitor."],
   [
-    "\n- updateModelContext(text) attaches the person's current selection or filter summary silently for their next message without starting a new turn (pass \"\" to clear). Use it when the person picks rows, options or parameters they may ask about next.",
+    "\n- updateModelContext(text) keeps the visual's current state — what the person chose, answered or filtered — and you read it with read_widget_context when they refer to it; it never starts a turn nor becomes a message by itself (pass \"\" to clear). Call it whenever that state changes.",
     "",
   ],
   [

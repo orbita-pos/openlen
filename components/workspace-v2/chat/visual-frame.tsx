@@ -7,21 +7,21 @@
  * `allow-same-origin` where there is no isolated host), fed by postMessage:
  * the workspace colors, resolved here, and the code — chunk by chunk while Len
  * writes it, then whole. What comes back from the frame is trusted only from
- * that frame: its height, a link (asked about before opening), and a prompt
- * (sent only right after the person clicked into the frame, once per click).
+ * that frame: its height, a link (asked about before opening), a prompt (sent
+ * only right after the person clicked into the frame, once per click), and what
+ * the visual shares about itself — its state, kept by the chat by widget_id (spec
+ * local 2026-11-22-visuales-de-verdad). The checks live in `lib/visuals/frame-host.ts`,
+ * which the phone's frame uses too.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { VISUAL_TOKENS } from "@/lib/agent/visuals/manual";
-import { cleanVisualContext } from "@/lib/agent/visuals/model-context";
 import { buildVisualFrameDocument } from "@/lib/visuals/frame-document";
-import { isFrameToParent, type ParentToFrame } from "@/lib/visuals/protocol";
+import { createVisualFrameHost } from "@/lib/visuals/frame-host";
+import type { ParentToFrame } from "@/lib/visuals/protocol";
 import type { ReplyWidget } from "@/lib/visuals/split-reply";
 import { useVisualFrameUrl } from "@/lib/visuals/use-visual-frame-url";
 
-const MAX_HEIGHT_PX = 2000;
-/** How long after a click into the frame a prompt from it still counts. */
-const CLICK_WINDOW_MS = 5000;
 const LOADING_ROTATE_MS = 2500;
 
 function readTheme(): "light" | "dark" {
@@ -42,15 +42,18 @@ export function VisualFrame({
   widget,
   final,
   onPrompt,
-  onContext,
+  onState,
+  widgetId,
   isolated = false,
 }: {
   widget: ReplyWidget;
   final: boolean;
+  /** Its name in the conversation (`widgetIdOf(row, k)`), for what it shares about itself. */
+  widgetId?: string;
   /** Absent for whoever can't write in the chat: the visual can't send then. */
   onPrompt?: (text: string) => void;
-  /** Silent context attached for the person's next message (updateModelContext, MCP Apps SEP-1865). */
-  onContext?: (text: string) => void;
+  /** What the visual shared about itself (updateModelContext, MCP Apps SEP-1865): its latest state, by `widgetId`. */
+  onState?: (widgetId: string, state: string) => void;
   /** Code someone else could steer (a visitor of the owner's assistant, phase 2B of the spec local
    *  2026-11-06-asistente-propio): never on the visuals origin next to the owner's own visuals — a closed srcdoc with a
    *  null origin, no links, and taken down if it navigates its own frame. */
@@ -70,63 +73,51 @@ export function VisualFrame({
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [link, setLink] = useState<string | null>(null);
   const [loadingIndex, setLoadingIndex] = useState(0);
-  const clickedAt = useRef(0);
-  /** The last click into the frame, used up by the report it lets through (a prompt doesn't touch it): what updateModelContext is gated by. */
-  const lastClickAt = useRef(0);
   const onPromptRef = useRef(onPrompt);
   onPromptRef.current = onPrompt;
-  const onContextRef = useRef(onContext);
-  onContextRef.current = onContext;
+  const onStateRef = useRef(onState);
+  onStateRef.current = onState;
+  /** The core that checks what the frame says (one per frame origin). */
+  const host = useMemo(
+    () =>
+      createVisualFrameHost({
+        frameOrigin,
+        isolated,
+        now: () => Date.now(),
+        onReady: () => setReady(true),
+        onHeight: (h) => setHeight(h),
+        onLink: (href) => setLink(href),
+        onPrompt: (text) => onPromptRef.current?.(text),
+        onState: (text) => {
+          if (widgetId) onStateRef.current?.(widgetId, text);
+        },
+      }),
+    [frameOrigin, isolated, widgetId],
+  );
 
   const post = (message: ParentToFrame) => {
     ref.current?.contentWindow?.postMessage(message, frameOrigin ?? "*");
   };
 
-  // What the frame says, only from this frame.
+  // What the frame says, only from this frame (`createVisualFrameHost`).
   useEffect(() => {
-    function onMessage(e: MessageEvent) {
-      const frame = ref.current?.contentWindow;
-      if (!frame || e.source !== frame) return;
-      if (e.origin !== (frameOrigin ?? "null")) return;
-      if (!isFrameToParent(e.data)) return;
-      const d = e.data;
-      if (d.kind === "ol-visual:ready") setReady(true);
-      else if (d.kind === "ol-visual:height") setHeight(Math.min(MAX_HEIGHT_PX, Math.max(0, Math.round(d.height))));
-      else if (d.kind === "ol-visual:link") {
-        if (!isolated && /^https?:\/\//i.test(d.href)) setLink(d.href);
-      } else if (d.kind === "ol-visual:prompt") {
-        const send = onPromptRef.current;
-        if (send && Date.now() - clickedAt.current < CLICK_WINDOW_MS) {
-          clickedAt.current = 0;
-          send(d.text);
-        }
-      } else if (d.kind === "ol-visual:context") {
-        // What it reports goes with the person's next message, so it is gated like a prompt: only right after they
-        // clicked into the frame, and one click is one report: the mark is used up once a report is taken, so a visual
-        // can't keep writing for the rest of the 5 s window. The prompt has its own mark (a visual reports its
-        // selection, then may ask Len something in the same click).
-        if (!isolated && Date.now() - lastClickAt.current < CLICK_WINDOW_MS) {
-          lastClickAt.current = 0;
-          onContextRef.current?.(cleanVisualContext(d.text));
-        }
-      }
-    }
+    const onMessage = (e: MessageEvent) => host.onMessage(e, ref.current?.contentWindow ?? null);
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [frameOrigin, isolated]);
+  }, [host]);
 
   // A click into a cross-origin frame blurs this window and focuses the frame.
   useEffect(() => {
     function onBlur() {
       const mark = () => {
-        if (document.activeElement === ref.current) clickedAt.current = lastClickAt.current = Date.now();
+        if (document.activeElement === ref.current) host.markClick();
       };
       mark();
       setTimeout(mark, 0);
     }
     window.addEventListener("blur", onBlur);
     return () => window.removeEventListener("blur", onBlur);
-  }, []);
+  }, [host]);
 
   // The workspace theme, followed live.
   useEffect(() => {

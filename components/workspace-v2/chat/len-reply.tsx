@@ -12,6 +12,7 @@
 import { TextoDeLen } from "../texto-de-len";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { splitReplyAtWidgets, type ReplyWidget } from "@/lib/visuals/split-reply";
+import { widgetIdOf } from "@/lib/visuals/widget-id";
 import type { DesignTurn } from "./use-agent-chat";
 import { VisualFrame } from "./visual-frame";
 
@@ -26,7 +27,7 @@ export function LenReply({
   paths,
   onOpenFile,
   onPrompt,
-  onContext,
+  onState,
 }: {
   turn: DesignTurn;
   /** The text to show (the turn's, without a trailing question already in its card). */
@@ -36,8 +37,9 @@ export function LenReply({
   onOpenFile?: (path: string) => void;
   /** Sends a visual's prompt as the person's message; absent for a reader. */
   onPrompt?: (text: string) => void;
-  /** Updates silent context attached for the person's next message (updateModelContext). */
-  onContext?: (text: string) => void;
+  /** What a visual shared about itself (updateModelContext), by its widget_id: the k-th visual of this row is
+   *  `widgetIdOf(turn.id, k)`, as the server names it (spec local 2026-11-22-visuales-de-verdad). */
+  onState?: (widgetId: string, state: string) => void;
 }) {
   const stored = (turn.actions ?? []).filter((a) => a.tool === SHOW_WIDGET && a.widget);
   const widgets: { key: string; offset: number | undefined; widget: ReplyWidget; live: boolean }[] = stored.map((a, k) => ({
@@ -65,7 +67,14 @@ export function LenReply({
             />
           </div>
         ) : (
-          <VisualFrame key={p.key} widget={p.widget} final={!p.live} {...(onPrompt ? { onPrompt } : {})} {...(onContext ? { onContext } : {})} />
+          <VisualFrame
+            key={p.key}
+            widget={p.widget}
+            final={!p.live}
+            widgetId={widgetIdOf(turn.id, Number(p.key.slice("visual-".length)))}
+            {...(onPrompt ? { onPrompt } : {})}
+            {...(onState ? { onState } : {})}
+          />
         ),
       )}
     </>

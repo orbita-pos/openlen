@@ -53,7 +53,7 @@ import type { AgentErrorCode, AgentStreamEvent } from "@/lib/agent/loop";
 import { accionesAlRecargar, historialParaElAgente, type HistoryEntry } from "@/lib/chat/historial-del-agente";
 import { todosFrom } from "@/lib/agent/todo-list";
 import { SHOW_WIDGET, widgetFrom } from "@/lib/agent/visuals/widget";
-import { cleanVisualContext } from "@/lib/agent/visuals/model-context";
+import { cleanVisualContext, VISUAL_STATES_MAX } from "@/lib/agent/visuals/model-context";
 import { deliveredFrom } from "@/lib/agent/skills/present";
 import { screenshotsFrom } from "@/lib/agent/step-screenshots";
 import { createWidgetOffsets } from "@/lib/visuals/widget-offsets";
@@ -377,6 +377,26 @@ export function useAgentChat({
   const [turns, setTurns] = useState<DesignTurn[]>(() =>
     (initialChat ?? []).map(restoreTurn),
   );
+  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the latest
+  // state of each visual of THIS conversation, by its widget_id, sent with every message, correction and answer. A visual
+  // that reports again moves to the end; past `VISUAL_STATES_MAX` the oldest goes, so the server's cap never drops them
+  // all. Another conversation, project or agent starts with none.
+  const visualStatesRef = useRef(new Map<string, string>());
+  const reportVisualState = useCallback((widgetId: string, state: string) => {
+    const held = visualStatesRef.current;
+    const clean = cleanVisualContext(state);
+    held.delete(widgetId);
+    if (!clean) return;
+    held.set(widgetId, clean);
+    while (held.size > VISUAL_STATES_MAX) held.delete(held.keys().next().value!);
+  }, []);
+  const visualStatesForBody = useCallback(
+    () => (visualStatesRef.current.size > 0 ? [...visualStatesRef.current].map(([widgetId, state]) => ({ widgetId, state })) : undefined),
+    [],
+  );
+  useEffect(() => {
+    visualStatesRef.current = new Map();
+  }, [projectId, assistantId]);
   const [draft, setDraft] = useState("");
   // THE CHAT'S «@» (spec local 2026-10-27): what the message points at. A mention
   // lives while its label is in the draft; it goes with the turn that carries it.
@@ -1263,15 +1283,11 @@ export function useAgentChat({
         readonly design?: DesignRequest | null;
         /** An agent's first message: `opening` in the body, claimed once by the server. */
         readonly opening?: boolean;
-        /** What a visual on screen reported with updateModelContext: a field of its own in the body, never part of `prompt`
-         *  (the server reads `prompt` as what the person wrote). Cut here at the server's cap too. */
-        readonly visualContext?: string;
-        /** The server accepted this request: the context above can be let go. Not called when the send never happened. */
-        readonly onAccepted?: () => void;
       },
     ) => {
       const escrito = rawPrompt.trim();
-      const visualContext = cleanVisualContext(opciones?.visualContext);
+      // What the visuals of this conversation shared, as they are now (spec local 2026-11-22-visuales-de-verdad).
+      const estadosVisuales = visualStatesForBody();
       // Lo que escribes tiene su tope; con los comentarios, el del mensaje entero.
       if (escrito.length > (opciones?.comentarios ? MAX_TEXTO_ESCRITO : MAX_PROMPT)) return;
       const comentarios = opciones?.comentarios ?? [];
@@ -1563,8 +1579,8 @@ export function useAgentChat({
               ...camposDeNacer(opciones),
               // AN AGENT'S FIRST MESSAGE: the server lets it go once.
               ...(opciones?.opening ? { opening: true } : {}),
-              // WHAT A VISUAL REPORTED (updateModelContext): data, in its own field.
-              ...(visualContext ? { visualContext } : {}),
+              // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad): data, in its own field.
+              ...(estadosVisuales ? { visualStates: estadosVisuales } : {}),
             }),
             signal: abort.signal,
           });
@@ -1589,9 +1605,6 @@ export function useAgentChat({
             updateTurn(turnId, { status: "error", errorText: t(texto.key, texto.values) });
             return;
           }
-          // The server took the turn: what was kept for it (a visual's context) goes now, not before.
-          opciones?.onAccepted?.();
-
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
           let sseBuf = "";
@@ -2566,22 +2579,31 @@ export function useAgentChat({
    * es el cuadrado y llama a `handleCancel`. Vale igual para un turno que
    * sigue en el servidor (Len 2.1).
    */
+  /** A correction to the turn in flight, with what the visuals shared now (spec local 2026-11-22-visuales-de-verdad): the
+   *  server replaces what the turn held, and the correction names those visuals. Resolves whether the server took it. */
+  const correct = useCallback(
+    async (texto: string): Promise<boolean> => {
+      const turnoId = turnoIdRef.current;
+      if (!texto || !turnoId) return false;
+      const estadosVisuales = visualStatesForBody();
+      try {
+        const r = await fetch("/api/agent/dirigir", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ turnoId, texto, ...(estadosVisuales ? { visualStates: estadosVisuales } : {}) }),
+        });
+        return r.ok;
+      } catch {
+        return false;
+      }
+    },
+    [visualStatesForBody],
+  );
+
   const submit = useCallback(
-    (extra?: {
-      /** What a visual on screen reported for this message (updateModelContext): its own field of the request, never part of the text. */
-      readonly visualContext?: string;
-      /** The server accepted the turn: the one who kept that context can let it go. */
-      readonly onAccepted?: () => void;
-    }) => {
-      // `onClick={submit}` hands over a click event: only options of ours count.
-      const visualContext = typeof extra?.visualContext === "string" ? extra.visualContext : undefined;
-      const onAccepted = typeof extra?.onAccepted === "function" ? extra.onAccepted : undefined;
+    () => {
       if (sending || reenganche) {
-        // A correction to the turn in flight carries only what you typed. A visual's context has no place in it (it
-        // would be one more way for text that isn't yours to steer a turn): it waits, with its chip, for the next message.
         const texto = draft.trim();
-        const turnoId = turnoIdRef.current;
-        if (!texto || !turnoId) return;
         // NO SE LIMPIA POR ADELANTADO. La primera version limpiaba la caja
         // y devolvia el texto desde un `.catch` — pero `.catch` solo salta
         // con un fallo de RED: un 404 (el turno acabo entre tu clic y la
@@ -2591,32 +2613,28 @@ export function useAgentChat({
         //
         // Se limpia SOLO cuando el servidor confirma. Si algo falla, el
         // texto se queda donde estaba: verlo seguir ahi es el aviso.
-        void fetch("/api/agent/dirigir", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ turnoId, texto }),
-        })
-          .then((r) => {
-            // Y solo si no has seguido escribiendo mientras iba.
-            if (r.ok) setDraft((d) => (d.trim() === texto ? "" : d));
-          })
-          .catch(() => {});
+        void correct(texto).then((ok) => {
+          // Y solo si no has seguido escribiendo mientras iba.
+          if (ok) setDraft((d) => (d.trim() === texto ? "" : d));
+        });
         return;
       }
-      void send(draft, undefined, { comentarios, ...(visualContext ? { visualContext, ...(onAccepted ? { onAccepted } : {}) } : {}) });
+      void send(draft, undefined, { comentarios });
     },
-    [comentarios, draft, reenganche, send, sending],
+    [comentarios, correct, draft, reenganche, send, sending],
   );
 
-  /** LA LISTA DE PROGRESO (spec local 2026-10-15): «Sí, sigue con…» manda ese
-   *  texto como un mensaje normal del dueño. Con un turno en vuelo no hace nada:
-   *  el botón sólo sale con el turno cerrado. */
+  /** LA LISTA DE PROGRESO (spec local 2026-10-15) and A VISUAL'S «↗» (`sendPrompt`): that text goes as the owner's
+   *  message. With a turn in flight it steers it, as typing in the box does (spec local 2026-11-22-visuales-de-verdad). */
   const continueWith = useCallback(
     (text: string) => {
-      if (sending || reenganche) return;
+      if (sending || reenganche) {
+        void correct(text.trim());
+        return;
+      }
       void send(text);
     },
-    [reenganche, send, sending],
+    [correct, reenganche, send, sending],
   );
 
   /**
@@ -2635,10 +2653,12 @@ export function useAgentChat({
       );
       if (turnoId) {
         try {
+          // With what the visuals shared now (spec local 2026-11-22-visuales-de-verdad): it replaces what the turn held.
+          const estadosVisuales = visualStatesForBody();
           const r = await fetch("/api/agent/responder", {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ turnoId, answers }),
+            body: JSON.stringify({ turnoId, answers, ...(estadosVisuales ? { visualStates: estadosVisuales } : {}) }),
           });
           const code = r.ok ? undefined : ((await r.json().catch(() => ({}))) as { error?: string }).error;
           if (outcomeOfResponder(r.status, code) !== "fallback") {
@@ -2676,7 +2696,7 @@ export function useAgentChat({
       }
       void send(mensaje);
     },
-    [reenganche, send, sending, t, updateTurn],
+    [reenganche, send, sending, t, updateTurn, visualStatesForBody],
   );
   useEffect(() => {
     if (sending || reenganche !== null || !respuestaEnColaRef.current) return;
@@ -2740,6 +2760,8 @@ export function useAgentChat({
    */
   const conversationChanged = useCallback(() => {
     setTurns([]);
+    // Y sus visuales: lo que compartieron los de la charla vieja no va con la nueva.
+    visualStatesRef.current = new Map();
     // La charla nueva tiene su propio «antes».
     olderRef.current = "idle";
     // Una charla nueva empieza sin modo plan (el servidor pliega de sus filas).
@@ -2766,8 +2788,10 @@ export function useAgentChat({
     reenganche,
     /** Hay un turno trabajando, propio o reenganchado: ■ y corregir valen. */
     busy: sending || reenganche !== null,
-    /** «Sí, sigue con…» de la lista de progreso. */
+    /** «Sí, sigue con…» de la lista de progreso, y el «↗» de un visual. */
     continueWith,
+    /** What a visual shared about itself (spec local 2026-11-22-visuales-de-verdad): its latest state, by widget_id. */
+    reportVisualState,
     latest,
     showThinkingDots: Boolean(showThinkingDots),
     taRef,

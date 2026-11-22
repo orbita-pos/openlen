@@ -462,8 +462,6 @@
   "visualLinkTitle": "¿Abrir este enlace?",
   "visualLinkOpen": "Abrir",
   "visualLinkCancel": "Cancelar",
-  "visualContextLabel": "De un visual:",
-  "visualContextClear": "Quitar el contexto del visual",
   "emailDomain": {
     "cardLabel": "Dominio del correo",
     "cardHint": "Los correos del proyecto saldrán de una dirección de este dominio. Las líneas del DNS que añadir estarán en la pestaña Correos.",

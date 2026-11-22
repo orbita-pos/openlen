@@ -145,10 +145,10 @@ describe("VisualFrame", () => {
     expect(mount({ final: false, widget: { ...widget, loadingMessages: [] } }).host.textContent).toContain("visualLoading");
   });
 
-  // What a visual reports with updateModelContext reaches the person's next message, so it is gated like sendPrompt:
-  // only right after the person clicked into the frame: one click, one report. (Its own mark: a visual may report its
-  // selection and then ask Len something in the same click, because sendPrompt reads its own.)
-  describe("🔴 updateModelContext is forwarded only after a click into the frame", () => {
+  // What a visual shares about itself with updateModelContext is its STATE (spec local 2026-11-22-visuales-de-verdad, §2;
+  // Claude Code's held views): the chat keeps the latest one by widget_id and sends it with what the person sends; the agent
+  // reads it only when it asks. No tap needed — it never becomes a message by itself. sendPrompt still needs one.
+  describe("🔴 updateModelContext is the visual's state, by its widget_id", () => {
     const clickInto = (m: ReturnType<typeof mount>) => {
       vi.spyOn(document, "activeElement", "get").mockReturnValue(m.iframe());
       act(() => {
@@ -156,97 +156,65 @@ describe("VisualFrame", () => {
       });
     };
 
-    it("without a click it is ignored — a visual that runs by itself can't write into the person's next message", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
-      expect(onContext).not.toHaveBeenCalled();
-    });
-
-    it("after a click it is forwarded, trimmed", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      clickInto(m);
+    it("it is forwarded with no tap, trimmed, under the visual's id", () => {
+      const onState = vi.fn();
+      const m = mount({ onState, widgetId: "widget_aaaa1111" });
       m.fromFrame({ kind: "ol-visual:context", text: "  Selected: Marzo  " });
-      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
-    });
-
-    it("🔴 one click is one report: the next one, without a new click, is ignored — and a new click opens the window again", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      clickInto(m);
-      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
       m.fromFrame({ kind: "ol-visual:context", text: "Selected: Mayo" });
-      m.fromFrame({ kind: "ol-visual:context", text: "" });
-      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
-      clickInto(m);
-      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Mayo" });
-      expect(onContext.mock.calls).toEqual([["Selected: Marzo"], ["Selected: Mayo"]]);
+      expect(onState.mock.calls).toEqual([
+        ["widget_aaaa1111", "Selected: Marzo"],
+        ["widget_aaaa1111", "Selected: Mayo"],
+      ]);
     });
 
-    it("a report that wasn't forwarded (no click) doesn't use up a later click", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      m.fromFrame({ kind: "ol-visual:context", text: "too early" });
-      clickInto(m);
+    it("a frame with no id reports nothing (there is nowhere to keep it)", () => {
+      const onState = vi.fn();
+      const m = mount({ onState });
       m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
-      expect(onContext.mock.calls).toEqual([["Selected: Marzo"]]);
+      expect(onState).not.toHaveBeenCalled();
     });
 
-    it("a report followed by sendPrompt in the same click: both go", () => {
-      const onContext = vi.fn();
-      const onPrompt = vi.fn();
-      const m = mount({ onContext, onPrompt });
-      clickInto(m);
-      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
-      m.fromFrame({ kind: "ol-visual:prompt", text: "compara" });
-      expect(onContext).toHaveBeenCalledWith("Selected: Marzo");
-      expect(onPrompt).toHaveBeenCalledWith("compara");
-    });
-
-    it("the click's window runs out", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      const now = vi.spyOn(Date, "now");
-      now.mockReturnValue(1_000_000);
-      clickInto(m);
-      now.mockReturnValue(1_000_000 + 5_001);
-      m.fromFrame({ kind: "ol-visual:context", text: "late" });
-      expect(onContext).not.toHaveBeenCalled();
-    });
-
-    it("an empty report clears, and it also needs the click; the frame's text is cut at the server's cap", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
+    it("an empty report clears; the frame's text is cut at the server's cap", () => {
+      const onState = vi.fn();
+      const m = mount({ onState, widgetId: "widget_aaaa1111" });
       m.fromFrame({ kind: "ol-visual:context", text: "" });
-      expect(onContext).not.toHaveBeenCalled();
-      clickInto(m);
-      m.fromFrame({ kind: "ol-visual:context", text: "" });
-      clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "z".repeat(4000) });
-      expect(onContext.mock.calls[0]).toEqual([""]);
-      expect((onContext.mock.calls[1]![0] as string).length).toBe(1500);
+      expect(onState.mock.calls[0]).toEqual(["widget_aaaa1111", ""]);
+      expect((onState.mock.calls[1]![1] as string).length).toBe(1500);
     });
 
     it("🔴 the cut at the cap never splits an emoji, and a lone surrogate from the frame is replaced", () => {
-      const onContext = vi.fn();
-      const m = mount({ onContext });
-      clickInto(m);
+      const onState = vi.fn();
+      const m = mount({ onState, widgetId: "widget_aaaa1111" });
       m.fromFrame({ kind: "ol-visual:context", text: "x".repeat(1499) + "😀" + "tail" });
-      clickInto(m);
       m.fromFrame({ kind: "ol-visual:context", text: "a" + String.fromCharCode(0xd83d) + "b" });
-      expect(onContext.mock.calls).toEqual([["x".repeat(1499)], ["a" + String.fromCharCode(0xfffd) + "b"]]);
+      expect(onState.mock.calls).toEqual([
+        ["widget_aaaa1111", "x".repeat(1499)],
+        ["widget_aaaa1111", "a" + String.fromCharCode(0xfffd) + "b"],
+      ]);
     });
 
-    it("an isolated frame (a visitor's own code) never reports context, click or not", () => {
-      const onContext = vi.fn();
-      const iso = mount({ isolated: true, onContext });
+    it("a report and sendPrompt in the same tap: both go; a prompt without a tap doesn't", () => {
+      const onState = vi.fn();
+      const onPrompt = vi.fn();
+      const m = mount({ onState, onPrompt, widgetId: "widget_aaaa1111" });
+      m.fromFrame({ kind: "ol-visual:prompt", text: "too early" });
+      clickInto(m);
+      m.fromFrame({ kind: "ol-visual:context", text: "Selected: Marzo" });
+      m.fromFrame({ kind: "ol-visual:prompt", text: "compara" });
+      expect(onState).toHaveBeenCalledWith("widget_aaaa1111", "Selected: Marzo");
+      expect(onPrompt.mock.calls).toEqual([["compara"]]);
+    });
+
+    it("an isolated frame (a visitor's own code) never reports a state, tap or not", () => {
+      const onState = vi.fn();
+      const iso = mount({ isolated: true, onState, widgetId: "widget_aaaa1111" });
       vi.spyOn(document, "activeElement", "get").mockReturnValue(iso.iframe());
       act(() => {
         window.dispatchEvent(new Event("blur"));
       });
       iso.fromFrame({ kind: "ol-visual:context", text: "Should be ignored" }, "null");
-      expect(onContext).not.toHaveBeenCalled();
+      expect(onState).not.toHaveBeenCalled();
     });
   });
 });

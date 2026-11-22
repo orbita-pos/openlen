@@ -462,8 +462,6 @@
   "visualLinkTitle": "이 링크를 여시겠어요?",
   "visualLinkOpen": "열기",
   "visualLinkCancel": "취소",
-  "visualContextLabel": "시각 자료에서:",
-  "visualContextClear": "시각 자료 컨텍스트 지우기",
   "emailDomain": {
     "cardLabel": "이메일 도메인",
     "cardHint": "프로젝트의 이메일이 이 도메인의 주소에서 발송됩니다. 추가할 DNS 줄은 이메일 탭에 표시됩니다.",

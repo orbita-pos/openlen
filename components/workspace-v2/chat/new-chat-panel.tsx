@@ -40,7 +40,6 @@ import { ChatHeader } from "./chat-header";
 import { ScheduledTasksMenu } from "./scheduled-tasks-menu";
 import { inicialDe, LenTurn, UserMessage } from "./chat-turn";
 import { LiveBar } from "./live-bar";
-import { VisualContextChip } from "./visual-context-chip";
 import { GoalCardView } from "./goal-card";
 import { isRunning, liveStatus } from "./live-status";
 import { useAgentChat, type PendingAttachments } from "./use-agent-chat";
@@ -496,16 +495,13 @@ function AgentChatView({
       setEnviandoEquipo(false);
     }
   };
-  const [visualContext, setVisualContext] = useState("");
   const enviar = async () => {
     if (equipo.compartido) {
       if (!permitido(destino, equipo.puedeLen)) return;
       if (await enviarAlEquipo()) return;
     }
-    // What a visual reported goes with this message as a field of its own — never inside the text — and is let go
-    // only once the server accepted the turn (and only if the visual hasn't reported something newer meanwhile).
-    const ctx = visualContext.trim();
-    chat.submit(ctx ? { visualContext: ctx, onAccepted: () => setVisualContext((now) => (now.trim() === ctx ? "" : now)) } : undefined);
+    // What the visuals shared goes with it, from the chat itself (spec local 2026-11-22-visuales-de-verdad).
+    chat.submit();
   };
   // Los mensajes entre personas no son turnos: la pregunta de Len la contesta
   // su turno siguiente, no lo que se digan dos personas en medio.
@@ -639,7 +635,7 @@ function AgentChatView({
                 onRate={(rating, reasons, note) => feedback.rate(turn.id, rating, reasons ?? [], note ?? null)}
                 onClearRate={() => feedback.clear(turn.id)}
                 goalRunsOn={chat.goal?.activation === "armed" && chat.goal.phase === "active"}
-                {...(soloLectura ? {} : { onContinue: chat.continueWith, onVisualContext: setVisualContext })}
+                {...(soloLectura ? {} : { onContinue: chat.continueWith, onVisualState: chat.reportVisualState })}
                 esApp={esApp}
                 noPage={noPage || Boolean(assistant)}
                 {...(assistant ? { speaker: { name: assistant.name, face: <AssistantFigure look={assistant.look} size={18} /> } } : {})}
@@ -669,7 +665,6 @@ function AgentChatView({
             onClear={() => void chat.clearGoal()}
           />
         )}
-        {visualContext.trim().length > 0 && !soloLectura && <VisualContextChip text={visualContext.trim()} onClear={() => setVisualContext("")} />}
         {soloLectura && !equipo.compartido ? (
           <p className="m-3 rounded-xl border bd bg-elev px-3 py-2.5 text-[12.5px] fg-muted" data-solo-lectura="">
             {t("composer.soloLectura")}

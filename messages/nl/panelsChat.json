@@ -462,8 +462,6 @@
   "visualLinkTitle": "Deze link openen?",
   "visualLinkOpen": "Openen",
   "visualLinkCancel": "Annuleren",
-  "visualContextLabel": "Van een visual:",
-  "visualContextClear": "Context van de visual wissen",
   "emailDomain": {
     "cardLabel": "E-maildomein",
     "cardHint": "De e-mails van het project gaan vanaf een adres op dit domein. De DNS-regels die je moet toevoegen staan in de tab E-mails.",
