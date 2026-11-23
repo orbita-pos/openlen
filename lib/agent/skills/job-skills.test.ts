@@ -40,13 +40,13 @@ function shape(name: string) {
     expect(section).toMatch(/seeing it helps more than reading[^.\n]*otherwise text/i);
   });
 
-  // Idea 1 (spec local 2026-11-22-herramienta-dentro-del-agente, §6): each trade skill knows when an agent tool helps.
-  it("🔴 says when an agent tool helps, naming agent-tools and tool_data", () => {
+  // Len's artifacts (spec local 2026-11-22-artifacts-de-len, §7): each trade skill knows when an artifact helps.
+  it("🔴 says when an artifact helps, naming artifacts and artifact_data", () => {
     const text = skillMd(name);
-    expect(text, `${name} missing "## When a tool helps"`).toContain("## When a tool helps");
-    const section = text.slice(text.indexOf("## When a tool helps")).split(/\n## /)[0]!;
-    expect(section).toContain("agent-tools");
-    expect(section).toContain("tool_data");
+    expect(text, `${name} missing "## When an artifact helps"`).toContain("## When an artifact helps");
+    const section = text.slice(text.indexOf("## When an artifact helps")).split(/\n## /)[0]!;
+    expect(section).toContain("artifacts");
+    expect(section).toContain("artifact_data");
   });
 }
 
@@ -77,8 +77,8 @@ describe("language-teacher", () => {
     expect(sessions).toMatch(/next set/i);
   });
 
-  it("suggests a course path tool for a long course", () => {
-    const section = skillMd("language-teacher").slice(skillMd("language-teacher").indexOf("## When a tool helps")).split(/\n## /)[0]!;
+  it("suggests a course path artifact for a long course", () => {
+    const section = skillMd("language-teacher").slice(skillMd("language-teacher").indexOf("## When an artifact helps")).split(/\n## /)[0]!;
     expect(section).toMatch(/long course|course path/i);
   });
 });
@@ -106,8 +106,8 @@ describe("fitness-coach", () => {
     expect(section).toMatch(/progress[^.\n]*data/i);
   });
 
-  it("suggests a living week-plan tool after the health check", () => {
-    const section = skillMd("fitness-coach").slice(skillMd("fitness-coach").indexOf("## When a tool helps")).split(/\n## /)[0]!;
+  it("suggests a living week-plan artifact after the health check", () => {
+    const section = skillMd("fitness-coach").slice(skillMd("fitness-coach").indexOf("## When an artifact helps")).split(/\n## /)[0]!;
     expect(section).toMatch(/week/i);
     expect(section).toMatch(/health check/i);
   });
@@ -132,8 +132,8 @@ describe("personal-finance", () => {
     expect(section).toMatch(/only[^.\n]*figures[^.\n]*(person|they) gave/i);
   });
 
-  it("suggests a living budget tool using only their real figures", () => {
-    const section = skillMd("personal-finance").slice(skillMd("personal-finance").indexOf("## When a tool helps")).split(/\n## /)[0]!;
+  it("suggests a living budget artifact using only their real figures", () => {
+    const section = skillMd("personal-finance").slice(skillMd("personal-finance").indexOf("## When an artifact helps")).split(/\n## /)[0]!;
     expect(section).toMatch(/living[^.\n]*budget|monthly budget/i);
     expect(section).toMatch(/only[^.\n]*figures[^.\n]*(person|they) gave/i);
   });

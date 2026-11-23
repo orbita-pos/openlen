@@ -79,11 +79,11 @@ function generated(ctx: BundledContext): { skills: BundledSkill[]; files: Record
 
 const DEFAULT_CONTEXT = (): BundledContext => ({ app: null, env: process.env });
 
-/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off, `agent-tools` with agent tools off. */
+/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off, `artifacts` with Len's artifacts off. */
 function offHere(ctx: BundledContext): ReadonlySet<string> {
   return new Set([
     ...(scheduleEnabled(ctx.env) ? [] : ["schedule"]),
-    ...(lenArtifactsEnabled(ctx.env) ? [] : ["agent-tools"]),
+    ...(lenArtifactsEnabled(ctx.env) ? [] : ["artifacts"]),
   ]);
 }
 

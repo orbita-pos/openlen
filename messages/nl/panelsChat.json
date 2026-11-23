@@ -124,7 +124,7 @@
     "noSkills": "Geen skill komt overeen",
     "skillDescriptions": {
       "agent-creation": "Een van je eigen agents maken of wijzigen",
-      "agent-tools": "Een eigen tool in deze agent maken of bijwerken",
+      "artifacts": "Een privé interactief artifact met live gegevens maken of bijwerken",
       "artifact-audio": "Een audio of voice-over maken",
       "artifact-dashboard": "Een datadashboard maken",
       "artifact-image": "Een promotieafbeelding maken",

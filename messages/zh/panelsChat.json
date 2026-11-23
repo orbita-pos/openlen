@@ -124,7 +124,7 @@
     "noSkills": "没有匹配的技能",
     "skillDescriptions": {
       "agent-creation": "创建或修改你自己的智能体",
-      "agent-tools": "在此智能体内创建或更新专属工具",
+      "artifacts": "创建或更新带实时数据的私密交互式 Artifact",
       "artifact-audio": "制作音频或旁白",
       "artifact-dashboard": "制作数据看板",
       "artifact-image": "制作宣传图片",

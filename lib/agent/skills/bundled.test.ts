@@ -31,7 +31,7 @@ describe("bundled skills", () => {
   it("ships the seven office skills, pdf, research, charts, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
       "agent-creation",
-      "agent-tools",
+      "artifacts",
       "convert-to-app",
       "cooking",
       "dataviz",
@@ -157,26 +157,33 @@ describe("bundled skills", () => {
     expect(files[`${BUNDLED_SKILLS_DIR}/tool-development/SKILL.md`]!).toContain("references/functions.md");
   });
 
-  // AN AGENT'S OWN TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §6): how a space agent builds,
-  // publishes, verifies and syncs its own tool in `/tools/<slug>/<tool>/`.
-  describe("agent-tools", () => {
-    it("is offered unless OPENLEN_LEN_ARTIFACTS=0, and its name stays reserved", () => {
-      const skill = bundledSkills().find((b) => b.skill.name === "agent-tools")!.skill;
-      expect(skill.description).toMatch(/publish_tool|tool/i);
+  // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §5, §7): how Len (and the assistants that inherit it)
+  // builds, publishes, verifies and syncs a private artifact in `/.artifacts/<name>/` (or `/.artifacts/<slug>/<name>/`).
+  describe("artifacts", () => {
+    it("is offered unless OPENLEN_LEN_ARTIFACTS=0, and its name stays reserved (agent-tools is gone)", () => {
+      expect(bundledSkillNames().has("artifacts")).toBe(true);
+      expect(bundledSkillNames().has("agent-tools")).toBe(false);
+      const skill = bundledSkills().find((b) => b.skill.name === "artifacts")!.skill;
+      expect(skill.description).toMatch(/publish_artifact|artifact/i);
       vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
-      expect(bundledSkills().map((b) => b.skill.name)).not.toContain("agent-tools");
-      expect(Object.keys(bundledSkillFiles()).some((p) => p.includes("/agent-tools/"))).toBe(false);
-      expect(bundledSkillNames().has("agent-tools")).toBe(true);
+      expect(bundledSkills().map((b) => b.skill.name)).not.toContain("artifacts");
+      expect(Object.keys(bundledSkillFiles()).some((p) => p.includes("/artifacts/"))).toBe(false);
+      expect(bundledSkillNames().has("artifacts")).toBe(true);
       vi.unstubAllEnvs();
     });
 
-    it("teaches every data method, exact shapes, CSP limits, bridge injection, rename, verification, and caps", () => {
-      const text = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/agent-tools/SKILL.md`]!;
+    it("teaches every data method, exact shapes, folder forms, when to make an artifact, CSP limits, bridge injection, rename, verification, and caps", () => {
+      const text = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/artifacts/SKILL.md`]!;
       for (const must of [
-        "publish_tool",
-        "tool_data",
+        "publish_artifact",
+        "artifact_data",
+        "/.artifacts/",
+        "/.artifacts/<your slug>/",
         "view_page",
         "use_page",
+        "artifact:",
+        "show_widget",
+        "present",
         "window.openlen.context",
         "window.openlen.sendPrompt",
         "window.openlen.data",
@@ -191,6 +198,7 @@ describe("bundled skills", () => {
         "{ docs }",
         "{ ok, doc }",
         "{ ok: true, doc: null }",
+        "Treat received doc objects as read-only",
         "--bg",
         "--accent",
         "ctx.theme.mode",
@@ -206,6 +214,8 @@ describe("bundled skills", () => {
         "unsafe-eval",
         "blob:",
         "connect-src 'self'",
+        "No new windows",
+        "No camera, microphone, location or payments",
         "/index.html",
         "republish",
         "renamed",
@@ -218,6 +228,27 @@ describe("bundled skills", () => {
         expect(text, must).toContain(must);
       }
       expect(text).not.toMatch(/\bstores?\b/);
+    });
+
+    it("🔴 no prompt or skill in lib/agent or lib/assistants still says publish_tool or tool_data", async () => {
+      const { readdirSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const offenders: string[] = [];
+      const walk = (dir: string) => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+            continue;
+          }
+          if (!/\.(ts|md)$/.test(entry.name) || /\.test\.ts$|\.spec\.ts$/.test(entry.name)) continue;
+          const content = readFileSync(full, "utf8");
+          if (/\b(publish_tool|tool_data)\b/.test(content)) offenders.push(full);
+        }
+      };
+      walk("lib/agent");
+      walk("lib/assistants");
+      expect(offenders).toEqual([]);
     });
   });
 

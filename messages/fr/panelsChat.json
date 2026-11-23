@@ -124,7 +124,7 @@
     "noSkills": "Aucune skill ne correspond",
     "skillDescriptions": {
       "agent-creation": "Créer ou modifier l'un de vos agents",
-      "agent-tools": "Créer ou mettre à jour un outil intégré à cet agent",
+      "artifacts": "Créer ou mettre à jour un artifact privé interactif avec des données en direct",
       "artifact-audio": "Créer un audio ou une narration",
       "artifact-dashboard": "Créer un tableau de bord",
       "artifact-image": "Créer une image promotionnelle",
