@@ -1053,5 +1053,14 @@
     "failed": "无法保存。请重试。",
     "limit": "你的技能已达上限。请让 Len 删除一个不再使用的技能，然后再保存这个。",
     "reserved": "这个名字属于 OpenLen 自带的技能。请让 Len 换个名字重新提出。"
+  },
+  "lenArtifacts": {
+    "menu": "Artifact 选项",
+    "remove": "移除",
+    "removeTitle": "要移除 {title} 吗？",
+    "removeBody": "这将移除 {title} 并永久删除其所有已保存的数据。文件夹中的文件会保留。",
+    "removeConfirm": "移除",
+    "removeCancel": "取消",
+    "removeFailed": "无法移除。请再试一次。"
   }
 }

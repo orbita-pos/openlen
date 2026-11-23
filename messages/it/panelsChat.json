@@ -1053,5 +1053,14 @@
     "failed": "Impossibile salvarla. Riprova.",
     "limit": "Hai già il numero massimo di skill. Chiedi a Len di rimuoverne una che non usi più, poi salva di nuovo questa.",
     "reserved": "Quel nome è di una skill di OpenLen. Chiedi a Len di proporla con un altro nome."
+  },
+  "lenArtifacts": {
+    "menu": "Opzioni dell'artifact",
+    "remove": "Rimuovi",
+    "removeTitle": "Rimuovere {title}?",
+    "removeBody": "Questo rimuove {title} ed elimina definitivamente tutti i suoi dati salvati. I file restano nella cartella.",
+    "removeConfirm": "Rimuovi",
+    "removeCancel": "Annulla",
+    "removeFailed": "Impossibile rimuoverlo. Riprova."
   }
 }

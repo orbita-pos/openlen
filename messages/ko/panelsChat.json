@@ -1053,5 +1053,14 @@
     "failed": "저장하지 못했어요. 다시 시도해 주세요.",
     "limit": "저장할 수 있는 스킬이 최대예요. 더 이상 쓰지 않는 스킬을 Len에게 지워 달라고 한 뒤 이 스킬을 다시 저장하세요.",
     "reserved": "그 이름은 OpenLen 스킬의 이름이에요. 다른 이름으로 제안해 달라고 Len에게 요청하세요."
+  },
+  "lenArtifacts": {
+    "menu": "Artifact 옵션",
+    "remove": "제거",
+    "removeTitle": "{title}을(를) 제거할까요?",
+    "removeBody": "{title}을(를) 제거하고 저장된 모든 데이터를 영구적으로 삭제합니다. 폴더의 파일은 그대로 남습니다.",
+    "removeConfirm": "제거",
+    "removeCancel": "취소",
+    "removeFailed": "제거하지 못했습니다. 다시 시도해 주세요."
   }
 }

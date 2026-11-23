@@ -1053,5 +1053,14 @@
     "failed": "It couldn't be saved. Try again.",
     "limit": "You already have the most skills you can keep. Ask Len to remove one you no longer use, then save this one again.",
     "reserved": "That name belongs to one of OpenLen’s own skills. Ask Len to propose it under another name."
+  },
+  "lenArtifacts": {
+    "menu": "Artifact options",
+    "remove": "Remove",
+    "removeTitle": "Remove {title}?",
+    "removeBody": "This removes {title} and deletes all of its saved data for good. Its files stay in the folder.",
+    "removeConfirm": "Remove",
+    "removeCancel": "Cancel",
+    "removeFailed": "Couldn't remove it. Try again."
   }
 }

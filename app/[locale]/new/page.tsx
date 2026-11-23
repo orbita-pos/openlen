@@ -57,6 +57,7 @@ import { projectToolItems, railToolItems, toolPromptDraft } from "@/components/w
 import { ToolView } from "@/components/workspace-v2/tools/tool-view";
 import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
 import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
+import { artifactIdOfLens, useArtifactTurnSync, useLenArtifacts } from "@/components/workspace-v2/artifacts/use-len-artifacts";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -542,6 +543,17 @@ function NewV2Inner() {
     setMode("chat");
     setLeftCollapsed(false);
   }, [setCenterView]);
+  /** An artifact's `sendPrompt` (spec local 2026-11-22-artifacts-de-len, §7): fills Len's composer, never auto-sends. */
+  const artifactPrompt = useCallback(
+    (text: string) => {
+      setCenterView("page");
+      setPendingChatAutoSend(false);
+      setPendingChatDraft(text);
+      setMode("chat");
+      setLeftCollapsed(false);
+    },
+    [setCenterView],
+  );
   /**
    * QUÉ LENTE SE MIRA — la página, su código, su terminal o sus cambios.
    *
@@ -748,6 +760,22 @@ function NewV2Inner() {
   // Len's latest turn, as the chat tells it: an app being born shows his
   // workshop on the canvas (`useAppBirth`, below).
   const [latestTurn, setLatestTurn] = useState<LatestTurn | null>(null);
+  // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §4): owner-only lenses of the project's canvas;
+  // opens automatically when `publish_artifact` finishes `done`, and refreshes when a streaming turn settles.
+  const lenArtifacts = useLenArtifacts(loadedProjectId);
+  const openArtifactLens = useCallback(
+    (lens: Lente) => {
+      setCenterView("page");
+      setLente(lens);
+    },
+    [setCenterView],
+  );
+  useArtifactTurnSync({
+    projectId: loadedProjectId,
+    latestTurn,
+    artifacts: lenArtifacts,
+    onOpenArtifact: openArtifactLens,
+  });
   // True mientras el chat dripea HTML crudo del modelo (ai-design Modo B, aún
   // sin sanitizar). Ver buildUntrustedSrcDoc en preview-prelude.ts.
   const [chatUntrustedDoc, setChatUntrustedDoc] = useState(false);
@@ -3573,6 +3601,7 @@ function NewV2Inner() {
     !pantallaDeInicio &&
     !!loadedProject &&
     centro === "conversation" &&
+    lenArtifacts.items.length === 0 &&
     normalizedCenterView === "page" &&
     mode === "chat" &&
     !leftCollapsed &&
@@ -3753,6 +3782,7 @@ function NewV2Inner() {
             const id = loadedProject?.id;
             if (id) {
               void refetchProject(id);
+              void lenArtifacts.reload();
               syncChannelRef.current?.postMessage({ projectId: id });
             }
           }}
@@ -3964,7 +3994,7 @@ function NewV2Inner() {
           // Con el primer mensaje mandado, el lienzo aparece VACÍO y se va
           // llenando con la página a medias que Len escribe (`page_preview`).
           (loadedProject && !centroPorSaber && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
-            centro === "deliverable" && workspaceArtifacts ? (
+            centro === "deliverable" && workspaceArtifacts && !artifactIdOfLens(lente) ? (
               <ArtifactStage
                 projectId={loadedProject.id}
                 items={workspaceArtifacts.items}
@@ -3980,10 +4010,13 @@ function NewV2Inner() {
                 lente={lente}
                 onLente={setLente}
                 projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
+                lenArtifacts={lenArtifacts.items}
                 toolPerson={{ name: installedTools.person.name, locale }}
                 toolProjectTitle={loadedProject?.title ?? ""}
                 isTool={loadedProject?.tool === true}
                 onToolPrompt={toolPrompt}
+                onArtifactPrompt={artifactPrompt}
+                onArtifactRemoved={lenArtifacts.remove}
                 projectId={loadedProject.id}
                 pagina={activeSitePage ?? null}
                 docKey={`${loadedProject.id}:${activeSitePage ?? ""}:u${undoEpoch}`}

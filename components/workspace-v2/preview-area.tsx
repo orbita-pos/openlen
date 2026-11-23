@@ -28,11 +28,13 @@ import { useToolDialogs } from "./tools/use-tool-dialogs";
 
 const NEVER_CONFIRM = async (): Promise<boolean> => false;
 import { toolIdOfLens, toolLens } from "./tools/tool-items";
+import { ArtifactPane, type LenArtifactListItem } from "./artifacts/artifact-pane";
+import { artifactIdOfLens, artifactLens } from "./artifacts/use-len-artifacts";
 import { CodeView } from "./code-view";
 import { useCodeViewLabels } from "./code-view-labels";
 import { TestDataBadge } from "./test-data-badge";
 import { rutaDePagina } from "@/lib/agent/ficheros/sitio";
-import { FileDiff, Maximize, MousePointerClick, Terminal as TerminalIcon } from "lucide-react";
+import { FileDiff, FileText, Maximize, MousePointerClick, Terminal as TerminalIcon } from "lucide-react";
 import { TerminalView } from "./terminal-view";
 import { CambiosView } from "./cambios-view";
 import { cambiosEnVivo, type CambiosDeUnTurno } from "@/lib/workspace-v2/cambios-en-vivo";
@@ -74,12 +76,18 @@ interface PreviewAreaProps {
   onLente: (l: Lente) => void;
   /** The person's installed `project` tools that can open (spec local 2026-11-04-herramientas-hechas-por-len, §4.3). */
   projectTools?: readonly InstalledToolView[];
+  /** Artifacts Len made in this project (spec local 2026-11-22-artifacts-de-len, §4): one lens each after projectTools. */
+  lenArtifacts?: readonly LenArtifactListItem[];
   /** Who uses them, for their `context()`. */
   toolPerson?: { readonly name: string; readonly locale: string };
   /** The open project's title, for a project tool's `context()`. */
   toolProjectTitle?: string;
   /** A tool's `sendPrompt`: the text goes to Len's composer, never sent. Absent = no chat to write in. */
   onToolPrompt?: (text: string, toolTitle: string) => void;
+  /** An artifact's `sendPrompt`: fills Len's composer, never sent. */
+  onArtifactPrompt?: (text: string) => void;
+  /** Called when an artifact is removed (by «Quitar» or `event: gone`) so the parent drops it from its list. */
+  onArtifactRemoved?: (artifactId: string) => void;
   /** The project is a TOOL being built (`data.tool`): its canvas calls `window.openlen`, answered here as the draft. */
   isTool?: boolean;
   /** When set, the iframe loads this URL directly (a curated template from
@@ -269,18 +277,23 @@ function injectCanvasScrollbar(html: string): string {
 
 // ⚰️ «datos»: la lente de los almacenes `data-ol-stores`, retirada el 2026-10-04.
 // TOOLS MADE BY LEN (spec local 2026-11-04-herramientas-hechas-por-len, §4.3): a `project` tool is one more lens.
-export type Lente = "pagina" | "codigo" | "terminal" | "cambios" | `tool:${string}`;
+// LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §4): each artifact Len made in this project is one more lens.
+export type Lente = "pagina" | "codigo" | "terminal" | "cambios" | `tool:${string}` | `artifact:${string}`;
 
 const SIN_TURNOS: readonly CambiosDeUnTurno[] = [];
 const NO_TOOLS: readonly InstalledToolView[] = [];
+const NO_ARTIFACTS: readonly LenArtifactListItem[] = [];
 
 export function PreviewArea({
   lente,
   onLente,
   projectTools = NO_TOOLS,
+  lenArtifacts = NO_ARTIFACTS,
   toolPerson,
   toolProjectTitle,
   onToolPrompt,
+  onArtifactPrompt,
+  onArtifactRemoved,
   isTool = false,
   doc,
   previewUrl,
@@ -360,6 +373,7 @@ export function PreviewArea({
   // hay nada que enseñar, ni proyecto del que leer.
   const hayCodigo = !previewUrl && doc.length > 0;
   const hayProyecto = hayCodigo && !!projectId;
+  const hayArtifacts = !previewUrl && !!projectId && lenArtifacts.length > 0;
   // LA TERMINAL DE LEN (F6a). Sólo se ofrece si existe algo que enseñar: la
   // palanca encendida en el servidor o comandos ya guardados en este proyecto.
   const terminal = useTerminalDeLen(hayProyecto ? projectId : null);
@@ -390,7 +404,9 @@ export function PreviewArea({
     if (lente === "cambios" && !hayCambios) setLente("pagina");
     const openTool = toolIdOfLens(lente);
     if (openTool && !projectTools.some((tool) => tool.id === openTool)) setLente("pagina");
-  }, [lente, hayCodigo, hayTerminal, terminal.cargando, hayCambios, projectTools]);
+    const openArtifact = artifactIdOfLens(lente);
+    if (openArtifact && !lenArtifacts.some((a) => a.id === openArtifact)) setLente("pagina");
+  }, [lente, hayCodigo, hayTerminal, terminal.cargando, hayCambios, projectTools, lenArtifacts]);
   // Una fila de la tarjeta del turno pide la lente «Cambios»: se abre. La
   // propia lente sigue la petición hasta su fichero.
   // Sólo una petición NUEVA: al volver a montarse, la de antes ya se atendió.
@@ -959,7 +975,7 @@ export function PreviewArea({
             columna tiene que existir o la dirección se correría a la izquierda
             cada vez que se abre una plantilla. */}
         <div className="flex items-center">
-          {hayCodigo && (
+          {(hayCodigo || hayArtifacts) && (
             <Segmented<Lente>
               size="sm"
               // Cinco lentes con su nombre no caben en un móvil: allí, el icono.
@@ -969,15 +985,17 @@ export function PreviewArea({
               options={[
                 // En una app, el CÓDIGO va el primero: es lo que se edita (la
                 // app corriendo no se toca a mano), y su lente se llama «App».
-                ...(esApp
-                  ? [
-                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
-                      { value: "pagina" as const, label: t(esJuego ? "preview.lente.game" : "preview.lente.app"), icon: Eye },
-                    ]
-                  : [
-                      { value: "pagina" as const, label: t("preview.lente.pagina"), icon: Eye },
-                      { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
-                    ]),
+                ...(hayCodigo
+                  ? esApp
+                    ? [
+                        { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                        { value: "pagina" as const, label: t(esJuego ? "preview.lente.game" : "preview.lente.app"), icon: Eye },
+                      ]
+                    : [
+                        { value: "pagina" as const, label: t("preview.lente.pagina"), icon: Eye },
+                        { value: "codigo" as const, label: t("preview.lente.codigo"), icon: Code2 },
+                      ]
+                  : [{ value: "pagina" as const, label: t(esApp ? (esJuego ? "preview.lente.game" : "preview.lente.app") : "preview.lente.pagina"), icon: Eye }]),
                 ...(hayTerminal
                   ? [{ value: "terminal" as const, label: t("preview.lente.terminal"), icon: TerminalIcon }]
                   : []),
@@ -985,6 +1003,7 @@ export function PreviewArea({
                   ? [{ value: "cambios" as const, label: t("preview.lente.cambios"), icon: FileDiff }]
                   : []),
                 ...(hayProyecto ? projectTools.map((tool) => ({ value: toolLens(tool.id), label: tool.title, icon: ToolsIcon })) : []),
+                ...(hayArtifacts ? lenArtifacts.map((artifact) => ({ value: artifactLens(artifact.id), label: artifact.title, icon: FileText })) : []),
               ]}
             />
           )}
@@ -1283,6 +1302,25 @@ export function PreviewArea({
                 }}
                 onPrompt={onToolPrompt ? (text) => onToolPrompt(text, tool.title) : null}
                 title={tool.title}
+              />
+            </div>
+          );
+        })()}
+        {(() => {
+          const artifact = lenArtifacts.find((x) => artifactLens(x.id) === lente);
+          if (!artifact || !projectId) return null;
+          return (
+            <div className="absolute inset-0 z-10 flex flex-col bg-app" data-artifact-lens={artifact.id}>
+              <ArtifactPane
+                key={artifact.id}
+                artifact={artifact}
+                locale={toolPerson?.locale ?? "en"}
+                personName={toolPerson?.name ?? ""}
+                onPrompt={(text) => onArtifactPrompt?.(text)}
+                onRemoved={(id) => {
+                  onArtifactRemoved?.(id);
+                  setLente("pagina");
+                }}
               />
             </div>
           );

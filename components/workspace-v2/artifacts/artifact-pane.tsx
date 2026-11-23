@@ -1,10 +1,11 @@
 "use client";
 
-// AN AGENT'S TOOL IN ITS PLACE ON THE WEB (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): frames the
-// tool's published version (`frameUrl`), answers its restricted bridge (`LEN_ARTIFACT_BRIDGE_METHODS`), opens one SSE
-// follow stream on `data.subscribe` (restarting on every `data.subscribe` and reconnecting with backoff if the stream
-// drops so a fresh baseline always arrives; stopping and removing the tab only on `event: gone`), fills the agent's
-// composer without sending on `sendPrompt`, and offers the person-only «Quitar» menu with confirmation.
+// A LEN ARTIFACT ON THE WEB (spec local 2026-11-22-artifacts-de-len, §4, §7): frames the artifact's published version
+// (`frameUrl`), answers its restricted bridge (`LEN_ARTIFACT_BRIDGE_METHODS`), opens one SSE follow stream on
+// `data.subscribe` (restarting on every `data.subscribe` and reconnecting with backoff if the stream drops so a fresh
+// baseline always arrives; stopping and removing the tab/lens only on `event: gone`), fills the maker's composer
+// without sending on `sendPrompt`, and offers the owner-only «Quitar» menu with confirmation. Shared by the project
+// workspace's lens (`PreviewArea`) and an assistant's place (`AssistantHome`).
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
@@ -14,15 +15,17 @@ import type { DataChangedParams } from "@/lib/tools/bridge/protocol";
 
 import { ALLOW_HERRAMIENTA_AGENTE, SANDBOX_HERRAMIENTA_AGENTE } from "../sandbox-del-lienzo";
 import { readToolTheme } from "../tools/use-tool-bridge-host";
-import { HER_QUIET, HER_ROW, HerSheet } from "./her-sheet";
+import { HER_QUIET, HER_ROW, HerSheet } from "../assistant/her-sheet";
 
 export interface LenArtifactListItem {
   readonly id: string;
   readonly slug: string;
   readonly title: string;
   readonly frameUrl: string;
-  /** The published version the tab shows (its context's `tool.version`). */
+  /** The published version the tab/lens shows (its context's `tool.version`). */
   readonly releaseSha?: string;
+  /** When this artifact was last published (ISO timestamp). */
+  readonly updatedAt?: string;
   readonly frameOrigin: string;
 }
 
@@ -41,19 +44,19 @@ function parseDataChanged(raw: string): DataChangedParams | null {
   return null;
 }
 
-export function LenArtifactPane({
-  tool,
+export function ArtifactPane({
+  artifact,
   locale,
   onPrompt,
   onRemoved,
   personName = "",
 }: {
-  tool: LenArtifactListItem;
+  artifact: LenArtifactListItem;
   locale: string;
-  /** The signed-in person's name, for the tool's context (as an installed tool gets it). */
+  /** The signed-in person's name, for the artifact's context (as an installed tool gets it). */
   personName?: string;
   onPrompt: (text: string) => void;
-  onRemoved: (toolId: string) => void;
+  onRemoved: (artifactId: string) => void;
 }) {
   const t = useTranslations("panelsChat");
   const iframe = useRef<HTMLIFrameElement>(null);
@@ -65,10 +68,10 @@ export function LenArtifactPane({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  const latest = useRef({ tool, locale, onPrompt, onRemoved, personName });
-  latest.current = { tool, locale, onPrompt, onRemoved, personName };
+  const latest = useRef({ artifact, locale, onPrompt, onRemoved, personName });
+  latest.current = { artifact, locale, onPrompt, onRemoved, personName };
 
-  // Follow stream lifecycle — kept in refs so `onDataSubscribe` stays strictly synchronous (Ruling T5 / M5-1).
+  // Follow stream lifecycle — kept in refs so `onDataSubscribe` stays strictly synchronous.
   const followRef = useRef<{
     es: EventSource | null;
     timer: ReturnType<typeof setTimeout> | null;
@@ -106,7 +109,7 @@ export function LenArtifactPane({
     }
     if (typeof EventSource === "undefined") return;
 
-    const toolId = latest.current.tool.id;
+    const artifactId = latest.current.artifact.id;
     const scheduleReconnect = () => {
       if (f.stopped || f.timer !== null) return;
       const wait = f.delayMs;
@@ -119,7 +122,7 @@ export function LenArtifactPane({
 
     let es: EventSource;
     try {
-      es = new EventSource(`/api/len-artifacts/${encodeURIComponent(toolId)}/follow`);
+      es = new EventSource(`/api/len-artifacts/${encodeURIComponent(artifactId)}/follow`);
     } catch {
       scheduleReconnect();
       return;
@@ -140,7 +143,7 @@ export function LenArtifactPane({
     const onGone = () => {
       if (f.es !== es || f.stopped) return;
       stopFollow(true, true);
-      latest.current.onRemoved(toolId);
+      latest.current.onRemoved(artifactId);
     };
 
     es.addEventListener("baseline", onBaseline);
@@ -156,7 +159,7 @@ export function LenArtifactPane({
   }, [stopFollow]);
 
   // Synchronous onDataSubscribe: restarts the follow stream on every `data.subscribe` (initial load, reload, navigation),
-  // unless the tool is already permanently `gone`.
+  // unless the artifact is already permanently `gone`.
   const onDataSubscribe = useCallback(() => {
     if (followRef.current.gone) return;
     followRef.current.stopped = false;
@@ -168,14 +171,14 @@ export function LenArtifactPane({
     () =>
       createToolBridgeHost({
         frame: () => iframe.current?.contentWindow ?? null,
-        frameOrigin: tool.frameOrigin,
-        caller: { lenArtifactId: tool.id },
+        frameOrigin: artifact.frameOrigin,
+        caller: { lenArtifactId: artifact.id },
         methods: LEN_ARTIFACT_BRIDGE_METHODS,
         context: () => ({
           person: { name: latest.current.personName, locale: latest.current.locale },
           project: null,
           // The published version it shows (an older list without it: the version the frame's URL carries).
-          tool: { id: latest.current.tool.id, version: latest.current.tool.releaseSha ?? new URL(latest.current.tool.frameUrl).searchParams.get("v") ?? "" },
+          tool: { id: latest.current.artifact.id, version: latest.current.artifact.releaseSha ?? new URL(latest.current.artifact.frameUrl).searchParams.get("v") ?? "" },
           environment: "installed",
         }),
         theme: readToolTheme,
@@ -188,7 +191,7 @@ export function LenArtifactPane({
         locale,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tool.id, tool.frameOrigin, onDataSubscribe],
+    [artifact.id, artifact.frameOrigin, onDataSubscribe],
   );
   hostRef.current = host;
 
@@ -224,14 +227,14 @@ export function LenArtifactPane({
     setRemoving(true);
     setRemoveError(false);
     try {
-      const res = await fetch(`/api/len-artifacts/${encodeURIComponent(tool.id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/len-artifacts/${encodeURIComponent(artifact.id)}`, { method: "DELETE" });
       if (!res.ok && res.status !== 404) {
         setRemoveError(true);
         return;
       }
       stopFollow(true, true);
       setConfirmOpen(false);
-      onRemoved(tool.id);
+      onRemoved(artifact.id);
     } catch {
       setRemoveError(true);
     } finally {
@@ -240,17 +243,17 @@ export function LenArtifactPane({
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col pr-2 pb-2" data-agent-tool-pane={tool.id}>
+    <div className="flex min-h-0 flex-1 flex-col px-2 pb-2" data-agent-tool-pane={artifact.id} data-artifact-pane={artifact.id}>
       <div className="flex h-10 shrink-0 items-center justify-between px-2">
-        <span className="truncate text-[13px] font-medium fg">{tool.title}</span>
+        <span className="truncate text-[13px] font-medium fg">{artifact.title}</span>
         <div ref={menuRef} className="relative">
           <button
             ref={menuButtonRef}
             type="button"
             data-agent-tool-menu=""
             aria-expanded={menuOpen}
-            aria-label={t("ownAssistant.tools.menu")}
-            title={t("ownAssistant.tools.menu")}
+            aria-label={t("lenArtifacts.menu")}
+            title={t("lenArtifacts.menu")}
             onClick={() => setMenuOpen((o) => !o)}
             className={`her-ring flex h-7 w-7 items-center justify-center rounded-full transition-colors ${menuOpen ? "bg-hover fg" : "fg-muted hover:bg-hover hover:fg"}`}
           >
@@ -270,7 +273,7 @@ export function LenArtifactPane({
                 className={`${HER_ROW} text-red-500 hover:text-red-400`}
               >
                 <Trash2 size={14} aria-hidden="true" />
-                {t("ownAssistant.tools.remove")}
+                {t("lenArtifacts.remove")}
               </button>
             </div>
           )}
@@ -279,13 +282,13 @@ export function LenArtifactPane({
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-[14px] border bd bg-[var(--bg)]">
         <iframe
           ref={iframe}
-          src={tool.frameUrl}
-          title={tool.title}
+          src={artifact.frameUrl}
+          title={artifact.title}
           sandbox={SANDBOX_HERRAMIENTA_AGENTE}
           allow={ALLOW_HERRAMIENTA_AGENTE}
           className="h-full w-full border-0 bg-[var(--bg)]"
-          data-tool-frame={tool.id}
-          data-agent-tool-frame={tool.id}
+          data-tool-frame={artifact.id}
+          data-agent-tool-frame={artifact.id}
         />
       </div>
       <HerSheet
@@ -293,13 +296,13 @@ export function LenArtifactPane({
         onClose={() => !removing && setConfirmOpen(false)}
         dismissable={!removing}
         titleId={titleId}
-        title={t("ownAssistant.tools.removeTitle", { title: tool.title })}
-        note={t("ownAssistant.tools.removeBody", { title: tool.title })}
+        title={t("lenArtifacts.removeTitle", { title: artifact.title })}
+        note={t("lenArtifacts.removeBody", { title: artifact.title })}
       >
-        {removeError && <p className="mb-3 text-center text-[12px] text-red-500">{t("ownAssistant.tools.removeFailed")}</p>}
+        {removeError && <p className="mb-3 text-center text-[12px] text-red-500">{t("lenArtifacts.removeFailed")}</p>}
         <div className="flex justify-end gap-2">
           <button type="button" disabled={removing} onClick={() => setConfirmOpen(false)} className={HER_QUIET}>
-            {t("ownAssistant.tools.removeCancel")}
+            {t("lenArtifacts.removeCancel")}
           </button>
           <button
             type="button"
@@ -308,7 +311,7 @@ export function LenArtifactPane({
             onClick={() => void confirmRemove()}
             className="inline-flex h-9 items-center justify-center rounded-[10px] bg-red-600 px-4 text-[13px] font-semibold text-white transition hover:bg-red-500 active:scale-[0.98] disabled:opacity-45"
           >
-            {t("ownAssistant.tools.removeConfirm")}
+            {t("lenArtifacts.removeConfirm")}
           </button>
         </div>
       </HerSheet>

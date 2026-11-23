@@ -21,7 +21,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
-import { LenArtifactPane, type LenArtifactListItem } from "./agent-tool-pane";
+import { ArtifactPane, type LenArtifactListItem } from "../artifacts/artifact-pane";
 import { ChangeFigure } from "./change-figure";
 import { HerPage } from "./her-page";
 import { HerProjects } from "./her-projects";
@@ -393,8 +393,8 @@ export function AssistantHome({
               if (!seen.has(k)) return null;
               return (
                 <div key={tool.id} className={tab === k ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-                  <LenArtifactPane
-                    tool={tool}
+                  <ArtifactPane
+                    artifact={tool}
                     locale={locale}
                     personName={personName}
                     onPrompt={(text) => handleToolPrompt(tool.id, text)}

@@ -39,7 +39,7 @@ vi.mock("../chat/new-chat-panel", () => ({
 }));
 
 import { AssistantHome } from "./assistant-home";
-import { LenArtifactPane, type LenArtifactListItem } from "./agent-tool-pane";
+import { ArtifactPane, type LenArtifactListItem } from "../artifacts/artifact-pane";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -174,7 +174,7 @@ function sendFromFrame(win: Window, origin: string, id: number, method: string, 
 
 describe("what the tool is told, and who asks for tools", () => {
   it("the tool's context names the signed-in person and the published version it shows", async () => {
-    const host = mount(<LenArtifactPane tool={{ ...TOOL_1, releaseSha: "sha-real" }} locale="es" personName="Jesús" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const host = mount(<ArtifactPane artifact={{ ...TOOL_1, releaseSha: "sha-real" }} locale="es" personName="Jesús" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
     const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
     const { win, posted } = stubIframeWindow(iframe);
     sendFromFrame(win, TOOL_1.frameOrigin, 1, "context");
@@ -185,7 +185,7 @@ describe("what the tool is told, and who asks for tools", () => {
   });
 
   it("a list without the version still names it, from the frame's address", async () => {
-    const host = mount(<LenArtifactPane tool={TOOL_1} locale="es" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const host = mount(<ArtifactPane artifact={TOOL_1} locale="es" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
     const { win, posted } = stubIframeWindow(host.querySelector<HTMLIFrameElement>("iframe")!);
     sendFromFrame(win, TOOL_1.frameOrigin, 2, "context");
     await flush();
@@ -252,7 +252,7 @@ describe("AssistantHome + LenArtifactPane", () => {
 
     const onPrompt = vi.fn();
     const onRemoved = vi.fn();
-    const host = mount(<LenArtifactPane tool={TOOL_1} locale="es" onPrompt={onPrompt} onRemoved={onRemoved} />);
+    const host = mount(<ArtifactPane artifact={TOOL_1} locale="es" onPrompt={onPrompt} onRemoved={onRemoved} />);
 
     const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
     expect(iframe).not.toBeNull();
@@ -398,8 +398,8 @@ describe("AssistantHome + LenArtifactPane", () => {
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')!;
     expect(dialog).not.toBeNull();
     expect(dialog.textContent).toContain("Recorrido");
-    expect(dialog.textContent).toContain("ownAssistant.tools.removeTitle");
-    expect(dialog.textContent).toContain("ownAssistant.tools.removeBody");
+    expect(dialog.textContent).toContain("lenArtifacts.removeTitle");
+    expect(dialog.textContent).toContain("lenArtifacts.removeBody");
     expect(deletes).toEqual([]);
 
     await act(async () => {

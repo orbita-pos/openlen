@@ -1053,5 +1053,14 @@
     "failed": "Opslaan lukte niet. Probeer het opnieuw.",
     "limit": "Je hebt al het maximale aantal skills. Vraag Len er een te verwijderen die je niet meer gebruikt en sla deze daarna opnieuw op.",
     "reserved": "Die naam is van een skill van OpenLen. Vraag Len hem onder een andere naam voor te stellen."
+  },
+  "lenArtifacts": {
+    "menu": "Opties voor artifact",
+    "remove": "Verwijderen",
+    "removeTitle": "{title} verwijderen?",
+    "removeBody": "Hiermee wordt {title} verwijderd en worden alle opgeslagen gegevens definitief gewist. De bestanden blijven in de map staan.",
+    "removeConfirm": "Verwijderen",
+    "removeCancel": "Annuleren",
+    "removeFailed": "Verwijderen is niet gelukt. Probeer het opnieuw."
   }
 }

@@ -1053,5 +1053,14 @@
     "failed": "Impossible de l’enregistrer. Réessayez.",
     "limit": "Vous avez déjà le maximum de skills. Demandez à Len d’en supprimer une que vous n’utilisez plus, puis enregistrez celle-ci à nouveau.",
     "reserved": "Ce nom est celui d’une skill d’OpenLen. Demandez à Len de la proposer sous un autre nom."
+  },
+  "lenArtifacts": {
+    "menu": "Options de l'artifact",
+    "remove": "Retirer",
+    "removeTitle": "Retirer {title} ?",
+    "removeBody": "Cela retire {title} et supprime définitivement toutes ses données enregistrées. Ses fichiers restent dans le dossier.",
+    "removeConfirm": "Retirer",
+    "removeCancel": "Annuler",
+    "removeFailed": "Impossible de le retirer. Réessayez."
   }
 }

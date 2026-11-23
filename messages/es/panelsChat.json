@@ -1053,5 +1053,14 @@
     "failed": "No se pudo guardar. Inténtalo otra vez.",
     "limit": "Ya tienes el máximo de skills. Pídele a Len que borre una que ya no uses y vuelve a guardar esta.",
     "reserved": "Ese nombre es de una skill de OpenLen. Pídele a Len que la proponga con otro nombre."
+  },
+  "lenArtifacts": {
+    "menu": "Opciones del artifact",
+    "remove": "Quitar",
+    "removeTitle": "¿Quitar {title}?",
+    "removeBody": "Se quitará {title} y se borrarán para siempre todos sus datos guardados. Sus ficheros se quedan en la carpeta.",
+    "removeConfirm": "Quitar",
+    "removeCancel": "Cancelar",
+    "removeFailed": "No se pudo quitar. Inténtalo otra vez."
   }
 }

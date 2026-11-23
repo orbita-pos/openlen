@@ -1053,5 +1053,14 @@
     "failed": "Konnte nicht gespeichert werden. Versuch es noch einmal.",
     "limit": "Du hast schon die meisten Skills, die du behalten kannst. Bitte Len, einen zu entfernen, den du nicht mehr nutzt, und speichere diesen dann erneut.",
     "reserved": "Dieser Name gehört zu einem Skill von OpenLen. Bitte Len, ihn unter einem anderen Namen vorzuschlagen."
+  },
+  "lenArtifacts": {
+    "menu": "Artifact-Optionen",
+    "remove": "Entfernen",
+    "removeTitle": "{title} entfernen?",
+    "removeBody": "Dadurch wird {title} entfernt und alle gespeicherten Daten werden dauerhaft gelöscht. Die Dateien bleiben im Ordner.",
+    "removeConfirm": "Entfernen",
+    "removeCancel": "Abbrechen",
+    "removeFailed": "Konnte nicht entfernt werden. Versuch es erneut."
   }
 }
