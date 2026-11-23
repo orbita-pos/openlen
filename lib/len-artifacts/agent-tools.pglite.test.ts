@@ -78,20 +78,20 @@ describe("publish_tool against the real store", () => {
   it("🔴 publishes a tool with real private addresses, and publishing it again keeps its id, both addresses and its data", async () => {
     const first = await publish("/tools/ana/lessons/", "Lessons");
     expect(first.response.ok).toBe(true);
-    const [row] = await store.lenArtifactsOf("teacher");
-    expect(row).toMatchObject({ slug: "lessons", title: "Lessons", folder: "/tools/ana/lessons", personId: "u1", spaceProjectId: "space" });
+    const [row] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
+    expect(row).toMatchObject({ slug: "lessons", title: "Lessons", folder: "/tools/ana/lessons", personId: "u1", projectId: "space" });
     expect(row!.hostLabel).toMatch(/^lienzo-[0-9a-f]{32}$/);
     expect(row!.phoneHostLabel).toMatch(/^lienzo-[0-9a-f]{32}$/);
     expect(row!.phoneHostLabel).not.toBe(row!.hostLabel);
     expect(row!.releaseSha).toBe(releases[0]);
-    expect(row!.agentSeenAt).toBeInstanceOf(Date);
+    expect(row!.makerSeenAt).toBeInstanceOf(Date);
 
     await data({ tool: "lessons", action: "set", collection: "students", doc_id: "luis", data: { level: "B1" } });
     files["/tools/ana/lessons/index.html"] = "<h1>changed</h1>";
     const again = await publish("/tools/ana/lessons/index.html", "Lessons 2");
     expect(again.response.ok).toBe(true);
 
-    const tools = await store.lenArtifactsOf("teacher");
+    const tools = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
     expect(tools).toHaveLength(1);
     expect(tools[0]).toMatchObject({ id: row!.id, hostLabel: row!.hostLabel, phoneHostLabel: row!.phoneHostLabel, title: "Lessons 2" });
     expect(tools[0]!.releaseSha).toBe(releases[1]);
@@ -108,7 +108,7 @@ describe("publish_tool against the real store", () => {
     files["/tools/ana/t6/index.html"] = "x";
     const sixth = await publish("/tools/ana/t6", "T6");
     expect(sixth.response).toMatchObject({ ok: false, error: "too_many_tools" });
-    expect(await store.lenArtifactsOf("teacher")).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
+    expect(await store.lenArtifactsOf({ maker: { assistantId: "teacher" } })).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
     // …but republishing one of them goes through.
     expect((await publish("/tools/ana/t3", "T3 again")).response.ok).toBe(true);
 
@@ -198,7 +198,7 @@ describe("tool_data against the real store", () => {
       id: "bob-tool",
       assistantId: "finance",
       personId: "u1",
-      spaceProjectId: "space",
+      projectId: "space",
       slug: "budget",
       title: "Budget",
       folder: "/tools/bob/budget",
@@ -214,9 +214,9 @@ describe("tool_data against the real store", () => {
   });
 
   it("marks the tool as seen by the agent on a read and on a write — never as changed by the person", async () => {
-    const [tool] = await store.lenArtifactsOf("teacher");
-    await pg.query(`update "lenArtifacts" set "agentSeenAt" = null where "id" = $1`, [tool!.id]);
-    const seen = async () => (await pg.query<{ s: Date | null; d: Date | null }>(`select "agentSeenAt" as s, "dataChangedAt" as d from "lenArtifacts" where "id" = $1`, [tool!.id])).rows[0]!;
+    const [tool] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
+    await pg.query(`update "lenArtifacts" set "makerSeenAt" = null where "id" = $1`, [tool!.id]);
+    const seen = async () => (await pg.query<{ s: Date | null; d: Date | null }>(`select "makerSeenAt" as s, "dataChangedAt" as d from "lenArtifacts" where "id" = $1`, [tool!.id])).rows[0]!;
 
     await data({ tool: "lessons", action: "list" });
     const afterRead = (await seen()).s;
@@ -230,7 +230,7 @@ describe("tool_data against the real store", () => {
   });
 
   it("a real write reaches whoever follows the tool on the bus, with the documents and what was deleted", async () => {
-    const [tool] = await store.lenArtifactsOf("teacher");
+    const [tool] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
     const heard: unknown[] = [];
     const off = subscribeArtifactChanges(tool!.id, (change) => heard.push(change));
     await data({ tool: "lessons", action: "set", collection: "c", doc_id: "a", data: { n: 1 } });

@@ -235,7 +235,7 @@ describe("a whole tool between an agent and its person", () => {
     //    (a) open follow stream receives the change live,
     //    (b) active mid-turn watcher receives a notice,
     //    (c) next turn's reminder line names recorrido and progress.
-    const watcher = watchLenArtifactChanges(await store.lenArtifactsOf("teacher"));
+    const watcher = watchLenArtifactChanges(await store.lenArtifactsOf({ maker: { assistantId: "teacher" } }));
     try {
       const personWrite = await dataRoute.POST(
         new Request(`https://openlen.com/api/len-artifacts/${toolId}/data`, {

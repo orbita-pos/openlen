@@ -6242,7 +6242,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       id: "tool-1",
       assistantId: "a1",
       personId: "u1",
-      spaceProjectId: "p1",
+      projectId: "p1",
       slug: "recorrido",
       title: "Recorrido",
       folder: "/tools/lucia/recorrido",
@@ -6252,7 +6252,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       createdAt: new Date("2026-11-22T10:00:00Z"),
       updatedAt: new Date("2026-11-22T10:00:00Z"),
       dataChangedAt: new Date("2026-11-22T12:00:00Z"),
-      agentSeenAt: new Date("2026-11-22T11:00:00Z"),
+      makerSeenAt: new Date("2026-11-22T11:00:00Z"),
       ...over,
     });
     const promptSent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
@@ -6288,9 +6288,9 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(savedRow().transcript?.sentText).toContain("progress");
     });
 
-    it("omits the line once agentSeenAt has caught up with dataChangedAt", async () => {
+    it("omits the line once makerSeenAt has caught up with dataChangedAt", async () => {
       lenArtifactStore.lenArtifactsOf.mockResolvedValue([
-        toolRow({ dataChangedAt: new Date("2026-11-22T11:00:00Z"), agentSeenAt: new Date("2026-11-22T12:00:00Z") }),
+        toolRow({ dataChangedAt: new Date("2026-11-22T11:00:00Z"), makerSeenAt: new Date("2026-11-22T12:00:00Z") }),
       ]);
       await readEvents(await pedir({ assistantId: "a1", prompt: "ya" }));
       expect(promptSent()).toBe("ya");
@@ -6360,7 +6360,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(first).toHaveLength(1);
       expect(first[0]).toContain("late");
       const sinceAsked = lenArtifactStore.personChangedCollections.mock.calls.map((c) => c[1] as Date | null);
-      // once for the line (from agentSeenAt), once for the catch-up (from when the line was read)
+      // once for the line (from makerSeenAt), once for the catch-up (from when the line was read)
       expect(sinceAsked[0]!.toISOString()).toBe("2026-11-22T11:00:00.000Z");
       expect(sinceAsked.at(-1)!.getTime()).toBeGreaterThan(new Date("2026-11-22T12:00:00Z").getTime());
     });

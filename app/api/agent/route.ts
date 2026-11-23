@@ -1507,7 +1507,7 @@ async function correrTurno(
   // `/compact` is no message of the person's: it carries no line and follows nothing.
   const vigilaHerramientas =
     asistente !== null && espacioDelTurno && lenArtifactsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno && !parseCompactCommand(prompt);
-  const herramientasDelAgente: LenArtifactRow[] = vigilaHerramientas ? await lenArtifactsOf(asistente!.id).catch(() => []) : [];
+  const herramientasDelAgente: LenArtifactRow[] = vigilaHerramientas ? await lenArtifactsOf({ projectId, maker: { assistantId: asistente!.id } }).catch(() => []) : [];
   // When the line below was read: the turn's watcher looks in the store for what landed after it, before it subscribed.
   const cambiosLeidosEn = new Date();
   const cambiosDeHerramientas =

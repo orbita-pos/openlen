@@ -66,7 +66,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     id: o.id,
     assistantId: o.assistantId ?? "teacher",
     personId: o.personId ?? "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
     folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
@@ -183,8 +183,9 @@ beforeAll(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
-  await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2')`);
+  // u3 is a MEMBER of u1's `site` (invited to it), never its owner.
+  await pg.query(`insert into "users" values ('u1'), ('u2'), ('u3')`);
+  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2'), ('site', 'u1')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   for (const [id, person, project] of [["teacher", "u1", "space"], ["stranger", "u2", "other-space"]]) {
     await pg.query(
@@ -586,6 +587,27 @@ describe("keeping the connection alive", () => {
 });
 
 describe("🔴 who may", () => {
+  it("🔴 a member of the project gets the same 404 as an artifact that doesn't exist, and nothing is followed", async () => {
+    await store.upsertLenArtifact({
+      id: "len-1",
+      projectId: "site",
+      personId: "u1",
+      assistantId: null,
+      slug: "board",
+      title: "Board",
+      folder: "/.artifacts/board",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-host-len-1",
+      phoneHostLabel: "lienzo-phone-len-1",
+    });
+    base.person = "u3";
+    const missing = await follow("no-such-tool");
+    const missingBody = await missing.res.text();
+    const member = await follow("len-1");
+    expect(member.res.status).toBe(404);
+    expect(await member.res.text()).toBe(missingBody);
+  });
+
   it("another person gets the same 404 as a tool that doesn't exist, and nothing is followed", async () => {
     await store.writeDocs("tool-1", [set("c", "d", { mine: true })], "agent");
     base.person = "u2";

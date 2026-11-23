@@ -18,9 +18,9 @@ export type LenArtifactRelease =
 
 /** The version's id: the space's project and every (path, content) pair in path order. Each piece goes in with its length,
  *  so `a` + `bc` and `ab` + `c` are two versions. */
-function shaOf(spaceProjectId: string, files: Readonly<Record<string, ToolReleaseFile>>): string {
+function shaOf(projectId: string, files: Readonly<Record<string, ToolReleaseFile>>): string {
   const h = createHash("sha256");
-  h.update(`${spaceProjectId.length}:${spaceProjectId}\n`);
+  h.update(`${projectId.length}:${projectId}\n`);
   for (const path of Object.keys(files).sort()) {
     const { content } = files[path]!;
     h.update(`${path.length}:${path}\n${content.length}:${content}\n`);
@@ -34,7 +34,7 @@ function shaOf(spaceProjectId: string, files: Readonly<Record<string, ToolReleas
  * A text file keeps its text and a binary its blob pointer (`lib/files/blob-pointer.ts`), like a published page's release.
  */
 export function buildLenArtifactRelease(p: {
-  readonly spaceProjectId: string;
+  readonly projectId: string;
   readonly folder: string;
   readonly files: Readonly<Record<string, string>>;
 }): LenArtifactRelease {
@@ -55,5 +55,5 @@ export function buildLenArtifactRelease(p: {
   if (Object.keys(files).length === 0) return { ok: false, error: "empty" };
   if (!files["/index.html"]) return { ok: false, error: "no_index" };
   if (bytes > LEN_ARTIFACT_VERSION_MAX_BYTES) return { ok: false, error: "too_big" };
-  return { ok: true, sha: shaOf(p.spaceProjectId, files), files };
+  return { ok: true, sha: shaOf(p.projectId, files), files };
 }

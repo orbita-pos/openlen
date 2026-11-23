@@ -39,7 +39,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     id: o.id,
     assistantId: o.assistantId ?? "teacher",
     personId: o.personId ?? "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
     folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
@@ -65,8 +65,9 @@ beforeAll(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
-  await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2')`);
+  // u3 is a MEMBER of u1's `site` (invited to it), never its owner.
+  await pg.query(`insert into "users" values ('u1'), ('u2'), ('u3')`);
+  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2'), ('site', 'u1')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   for (const [id, person, project] of [["teacher", "u1", "space"], ["stranger", "u2", "other-space"]]) {
     await pg.query(
@@ -291,6 +292,32 @@ describe("a call that is wrong", () => {
 
 describe("🔴 who may", () => {
   const body = { op: "set", collection: "c", docId: "d", data: { stolen: true } };
+
+  it("🔴 a member of the project gets the same 404 as an artifact that doesn't exist, for every op; its owner reads and writes", async () => {
+    await store.upsertLenArtifact({
+      id: "len-1",
+      projectId: "site",
+      personId: "u1",
+      assistantId: null,
+      slug: "board",
+      title: "Board",
+      folder: "/.artifacts/board",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-host-len-1",
+      phoneHostLabel: "lienzo-phone-len-1",
+    });
+    await store.writeDocs("len-1", [{ op: "set", collection: "c", docId: "d", data: { mine: true } }], "agent");
+    heard.length = 0;
+    base.person = "u3";
+    const missing = await call(body, "no-such-tool");
+    for (const op of ["get", "list", "query", "set", "update", "delete"]) {
+      expect(await call({ ...body, op }, "len-1"), op).toEqual(missing);
+    }
+    expect((await store.readDocs("len-1", "c"))[0]).toMatchObject({ data: { mine: true }, updatedBy: "agent" });
+    expect(heard).toEqual([]);
+    base.person = "u1";
+    expect((await call({ op: "list", collection: "c" }, "len-1")).status).toBe(200);
+  });
 
   it("another person gets the same 404 as a tool that doesn't exist, for every op", async () => {
     await store.writeDocs("tool-1", [{ op: "set", collection: "c", docId: "d", data: { mine: true } }], "agent");

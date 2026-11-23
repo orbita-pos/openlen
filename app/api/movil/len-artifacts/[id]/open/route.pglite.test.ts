@@ -33,7 +33,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     id: o.id,
     assistantId: o.assistantId ?? "teacher",
     personId: o.personId ?? "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
     folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
@@ -55,8 +55,9 @@ beforeAll(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
-  await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2')`);
+  // u3 is a MEMBER of u1's `site` (invited to it), never its owner.
+  await pg.query(`insert into "users" values ('u1'), ('u2'), ('u3')`);
+  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2'), ('site', 'u1')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
   for (const [id, person, project] of [["teacher", "u1", "space"], ["stranger", "u2", "other-space"]]) {
     await pg.query(
@@ -131,6 +132,25 @@ describe("opening a tool on the phone", () => {
 });
 
 describe("🔴 who may", () => {
+  it("🔴 a member of the project gets the same 404 as an artifact that doesn't exist", async () => {
+    await store.upsertLenArtifact({
+      id: "len-1",
+      projectId: "site",
+      personId: "u1",
+      assistantId: null,
+      slug: "board",
+      title: "Board",
+      folder: "/.artifacts/board",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-host-len-1",
+      phoneHostLabel: "lienzo-phone-len-1",
+    });
+    base.person = "u3";
+    const missing = await call("no-such-tool");
+    expect(missing).toEqual({ status: 404, body: { error: "not_found" } });
+    expect(await call("len-1")).toEqual(missing);
+  });
+
   it("another person gets the same 404 as a tool that doesn't exist", async () => {
     base.person = "u2";
     const missing = await call("no-such-tool");

@@ -47,6 +47,9 @@ interface World {
   files: Record<string, string>;
   readonly tools: LenArtifactRow[];
   readonly releases: { sha: string; projectId: string; files: Record<string, unknown> }[];
+  /** The versions `dropRelease` was asked to delete; `failDrop` makes it throw. */
+  readonly dropped: string[];
+  failDrop: boolean;
   readonly upserts: LenArtifactInput[];
   readonly seen: { toolId: string; at: Date }[];
   readonly changes: { toolId: string; change: LenArtifactChange }[];
@@ -68,6 +71,8 @@ function world(over: Partial<Pick<World, "files" | "enabled">> = {}): World {
     files: over.files ?? { ...MINIMAL },
     tools: [],
     releases: [],
+    dropped: [],
+    failDrop: false,
     upserts: [],
     seen: [],
     changes: [],
@@ -93,16 +98,22 @@ function world(over: Partial<Pick<World, "files" | "enabled">> = {}): World {
       w.order.push("saveRelease");
       w.releases.push({ sha, projectId, files });
     },
-    toolsOf: async (assistantId) => w.tools.filter((t) => t.assistantId === assistantId),
+    toolsOf: async (scope) =>
+      w.tools.filter((t) => scope.maker !== "len" && t.assistantId === scope.maker.assistantId && (scope.projectId === undefined || t.projectId === scope.projectId)),
+    dropRelease: async (sha) => {
+      w.order.push("dropRelease");
+      if (w.failDrop) throw new Error("the database is away");
+      w.dropped.push(sha);
+    },
     upsert: async (input) => {
       w.order.push("upsert");
       w.upserts.push(input);
-      const existing = w.tools.find((t) => t.assistantId === input.assistantId && t.slug === input.slug);
+      const existing = w.tools.find((t) => t.projectId === input.projectId && t.folder === input.folder);
       if (existing) {
         Object.assign(existing, { title: input.title, folder: input.folder, releaseSha: input.releaseSha, updatedAt: NOW });
         return existing;
       }
-      const row = { ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: NOW, updatedAt: NOW, dataChangedAt: null, agentSeenAt: null } as LenArtifactRow;
+      const row = { ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: NOW, updatedAt: NOW, dataChangedAt: null, makerSeenAt: null } as LenArtifactRow;
       w.tools.push(row);
       return row;
     },
@@ -149,7 +160,7 @@ function addTool(w: World, over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     id: `tool-x-${slug}`,
     assistantId: "a1",
     personId: "person-1",
-    spaceProjectId: SPACE,
+    projectId: SPACE,
     slug,
     title: slug,
     folder: `/tools/ana/${slug}`,
@@ -159,7 +170,7 @@ function addTool(w: World, over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     createdAt: NOW,
     updatedAt: NOW,
     dataChangedAt: null,
-    agentSeenAt: null,
+    makerSeenAt: null,
     ...over,
   } as LenArtifactRow;
   w.tools.push(row);
@@ -236,7 +247,7 @@ describe("publish_tool: what it publishes", () => {
       id: "tool-1",
       assistantId: "a1",
       personId: "person-1",
-      spaceProjectId: SPACE,
+      projectId: SPACE,
       slug: "recorrido",
       title: "Recorrido de verbos",
       folder: "/tools/ana/recorrido",
@@ -299,8 +310,8 @@ describe("publish_tool: what it publishes", () => {
   it("lists as one tool of the agent (the next call counts it)", async () => {
     const w = world();
     await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
-    expect(await w.deps.toolsOf("a1")).toHaveLength(1);
-    expect(await w.deps.toolsOf("another-agent")).toHaveLength(0);
+    expect(await w.deps.toolsOf({ projectId: SPACE, maker: { assistantId: "a1" } })).toHaveLength(1);
+    expect(await w.deps.toolsOf({ maker: { assistantId: "another-agent" } })).toHaveLength(0);
   });
 
   it("publishing it again keeps the tool's id and addresses, takes the new title and version, and is not a new tool", async () => {
@@ -323,6 +334,34 @@ describe("publish_tool: what it publishes", () => {
     expect(w.upserts[1]).toMatchObject({ id: first.id, hostLabel: first.hostLabel, phoneHostLabel: first.phoneHostLabel });
     expect(w.ids).toBe(1);
     expect(sentence(out)).toMatch(/republished|updated/i);
+  });
+
+  it("🔴 a republish keeps ONE version: the one it moved off is deleted after the row moved; the same version deletes nothing", async () => {
+    const w = world();
+    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "First" }, w.deps);
+    const first = w.tools[0]!.releaseSha;
+    expect(w.dropped).toEqual([]);
+    // Published again unchanged: the same version, nothing to delete.
+    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Same" }, w.deps);
+    expect(w.dropped).toEqual([]);
+    w.files["/tools/ana/recorrido/index.html"] = "<h1>changed</h1>";
+    w.order.length = 0;
+    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Second" }, w.deps);
+    expect(w.dropped).toEqual([first]);
+    expect(w.order.indexOf("dropRelease")).toBeGreaterThan(w.order.indexOf("upsert"));
+  });
+
+  it("a version that can't be deleted never fails the publish that moved off it", async () => {
+    const w = world();
+    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "First" }, w.deps);
+    w.files["/tools/ana/recorrido/index.html"] = "<h1>changed</h1>";
+    w.failDrop = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Second" }, w.deps);
+    expect(response(out).ok).toBe(true);
+    expect(w.tools[0]!.title).toBe("Second");
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
 

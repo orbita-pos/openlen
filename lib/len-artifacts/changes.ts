@@ -1,7 +1,7 @@
 // WHAT THE PERSON CHANGED IN AN AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4).
 //
 // Two doors, never waking the agent:
-// 1. At turn start, `changedSince(assistantId)` finds every tool whose `dataChangedAt` moved past `agentSeenAt` (or has
+// 1. At turn start, `changedSince(assistantId)` finds every tool whose `dataChangedAt` moved past `makerSeenAt` (or has
 //    never been seen) and lists the distinct collections the person wrote since; `artifactChangesLine` formats one short
 //    `<system-reminder>` appended inside `textoEnviado` (so the chat row keeps it as `sentText` and history replay
 //    rebuilds it byte for byte).
@@ -12,7 +12,7 @@
 // the system prompt or earlier turns.
 import { subscribeArtifactChanges, type LenArtifactChange, type ArtifactChangeListener } from "./bus";
 import { lenArtifactsEnabled } from "./enabled";
-import type { LenArtifactRow } from "./store";
+import type { LenArtifactRow, LenArtifactScope } from "./store";
 
 export interface ChangedLenArtifact {
   readonly title: string;
@@ -22,7 +22,7 @@ export interface ChangedLenArtifact {
 
 export interface ChangedSinceDeps {
   enabled(): boolean;
-  toolsOf(assistantId: string): Promise<readonly LenArtifactRow[]>;
+  toolsOf(scope: LenArtifactScope): Promise<readonly LenArtifactRow[]>;
   personChangedCollections(toolId: string, since: Date | null): Promise<string[]>;
 }
 
@@ -72,7 +72,7 @@ async function liveDeps(): Promise<ChangedSinceDeps> {
   return { enabled: () => lenArtifactsEnabled(), toolsOf: lenArtifactsOf, personChangedCollections };
 }
 
-/** Tools of `assistantId` whose `dataChangedAt` moved past `agentSeenAt` (or `agentSeenAt` is null and `dataChangedAt` is
+/** Tools of `assistantId` whose `dataChangedAt` moved past `makerSeenAt` (or `makerSeenAt` is null and `dataChangedAt` is
  *  non-null), each paired with the distinct collections the person wrote since. Tools whose `dataChangedAt` moved with
  *  only deletions carry an empty `collections` list. */
 export async function changedSince(
@@ -87,16 +87,16 @@ export async function changedSince(
     given.toolsOf && given.personChangedCollections
       ? { enabled, toolsOf: given.toolsOf, personChangedCollections: given.personChangedCollections }
       : { ...(await liveDeps()), ...given };
-  const rows = await d.toolsOf(assistantId);
+  const rows = await d.toolsOf({ maker: { assistantId } });
   const changed = rows.filter(
-    (t) => t.dataChangedAt !== null && (t.agentSeenAt === null || t.dataChangedAt.getTime() > t.agentSeenAt.getTime()),
+    (t) => t.dataChangedAt !== null && (t.makerSeenAt === null || t.dataChangedAt.getTime() > t.makerSeenAt.getTime()),
   );
   if (changed.length === 0) return [];
   return Promise.all(
     changed.map(async (t) => ({
       title: t.title,
       slug: t.slug,
-      collections: await d.personChangedCollections(t.id, t.agentSeenAt),
+      collections: await d.personChangedCollections(t.id, t.makerSeenAt),
     })),
   );
 }

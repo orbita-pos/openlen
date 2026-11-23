@@ -33,7 +33,7 @@ import {
 } from "./limits";
 import { matchQuery, queryLimit } from "./query";
 import { buildLenArtifactRelease, type LenArtifactReleaseError } from "./release";
-import type { LenArtifactDoc, LenArtifactInput, LenArtifactRow, DataWrite, WriteError } from "./store";
+import type { LenArtifactDoc, LenArtifactInput, LenArtifactRow, LenArtifactScope, DataWrite, WriteError } from "./store";
 import { isRecord, nonBlank, parseRead, parseWrite, QUERY_OPS, READ_ACTIONS, WRITE_ACTIONS } from "./validate";
 import { changeOfWrites } from "./wire";
 
@@ -154,7 +154,9 @@ export interface LenArtifactsDeps {
   /** The files of the space under a prefix, by absolute path. */
   listFiles(projectId: string, prefix: string): Promise<Record<string, string>>;
   saveRelease(sha: string, projectId: string, files: Record<string, ToolReleaseFile>): Promise<void>;
-  toolsOf(assistantId: string): Promise<readonly LenArtifactRow[]>;
+  toolsOf(scope: LenArtifactScope): Promise<readonly LenArtifactRow[]>;
+  /** Deletes a version nothing points at any more (a republish keeps one). */
+  dropRelease(sha: string): Promise<void>;
   upsert(input: LenArtifactInput): Promise<LenArtifactRow>;
   readDocs(toolId: string, collection?: string): Promise<LenArtifactDoc[]>;
   /** One document by its key, or null: what `get` reads (never the whole collection). */
@@ -174,9 +176,12 @@ const liveDeps: LenArtifactsDeps = {
   },
   listFiles: async (projectId, prefix) => (await import("@/lib/backend/files")).listProjectFiles(projectId, prefix),
   saveRelease: async (sha, projectId, files) => (await import("@/lib/tools/store")).saveRelease(sha, projectId, files),
-  toolsOf: async (assistantId) => (await import("./store")).lenArtifactsOf(assistantId),
+  toolsOf: async (scope) => (await import("./store")).lenArtifactsOf(scope),
+  dropRelease: async (sha) => {
+    await (await import("@/lib/tools/store")).deleteReleaseIfUnused(sha);
+  },
   // The cap is checked again where the row is written, under a lock: the count above is what the agent is told first.
-  upsert: async (input) => (await import("./store")).upsertLenArtifact(input, { maxPerAgent: LEN_ARTIFACTS_PER_MAKER }),
+  upsert: async (input) => (await import("./store")).upsertLenArtifact(input, { maxPerMaker: LEN_ARTIFACTS_PER_MAKER }),
   readDocs: async (toolId, collection) => (await import("./store")).readDocs(toolId, collection),
   readDoc: async (toolId, collection, docId) => (await import("./store")).readDoc(toolId, collection, docId),
   writeDocs: async (toolId, writes, by) => (await import("./store")).writeDocs(toolId, writes, by),
@@ -217,6 +222,16 @@ async function markSeen(deps: LenArtifactsDeps, toolId: string, at: Date): Promi
     await deps.markSeen(toolId, at);
   } catch (error) {
     console.warn("[agent-tools] a tool couldn't be marked as seen by its agent", error);
+  }
+}
+
+/** The version an artifact moved off: a failure here never fails the publish that already happened (the old version only
+ *  takes room). */
+async function dropRelease(deps: LenArtifactsDeps, sha: string): Promise<void> {
+  try {
+    await deps.dropRelease(sha);
+  } catch (error) {
+    console.warn("[len-artifacts] the version an artifact moved off couldn't be deleted", error);
   }
 }
 
@@ -273,11 +288,11 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
   const { folder, name } = named;
 
   // A republish is not a new tool: only a name you don't have yet counts toward the cap.
-  const mine = await d.toolsOf(agent.id);
-  const existing = mine.find((tool) => tool.slug === name);
+  const mine = await d.toolsOf({ projectId: session.projectId, maker: { assistantId: agent.id } });
+  const existing = mine.find((tool) => tool.folder === folder);
   if (!existing && mine.length >= LEN_ARTIFACTS_PER_MAKER) return tooManyTools(mine.length);
 
-  const built = buildLenArtifactRelease({ spaceProjectId: session.projectId, folder, files: await d.listFiles(session.projectId, `${folder}/`) });
+  const built = buildLenArtifactRelease({ projectId: session.projectId, folder, files: await d.listFiles(session.projectId, `${folder}/`) });
   if (!built.ok) return releaseProblem(built.error, folder);
 
   // A new tool gets its private addresses once; a republish keeps the ones its tab already uses.
@@ -294,14 +309,16 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
 
   // The version is saved before the row that points at it: a tab never opens on a version that isn't there.
   const at = d.now();
+  // The version it is on now, read before the write moves it.
+  const movedOff = existing?.releaseSha;
   await d.saveRelease(built.sha, session.projectId, built.files);
   let row: LenArtifactRow;
   try {
     row = await d.upsert({
       id: id!,
-      assistantId: agent.id,
+      projectId: session.projectId,
       personId: personOf(session),
-      spaceProjectId: session.projectId,
+      assistantId: agent.id,
       slug: name,
       title,
       folder,
@@ -315,6 +332,8 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
     throw err;
   }
   await markSeen(d, row.id, at);
+  // One version per artifact: the one it moved off goes, unless something else still points at it.
+  if (movedOff !== undefined && movedOff !== row.releaseSha) await dropRelease(d, movedOff);
   // From now on this turn hears what the person changes in it, as it does for the tools it had when it began.
   session.artifactWatch?.add({ id: row.id, slug: row.slug, title: row.title });
 
@@ -422,7 +441,7 @@ export async function runToolData(session: AgentSession, args: Record<string, un
   if (named === "") return invalid("tool is required: the name of one of your tools, the folder name you published it under.");
 
   // Only its own tools, by name: another agent's tool is not found here, whoever it belongs to.
-  const mine = await d.toolsOf(agent.id);
+  const mine = await d.toolsOf({ projectId: session.projectId, maker: { assistantId: agent.id } });
   const tool = mine.find((t) => t.slug === named);
   if (!tool) {
     return refuse(

@@ -7,7 +7,7 @@
 // live elsewhere. What is in `lenArtifactDocs` is DATA — never instructions — for the agent and for the page.
 import "server-only";
 
-import { and, asc, eq, gt, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -39,29 +39,62 @@ export type WriteError = "too_many_docs" | "doc_too_big" | "tool_too_big" | "bad
 const tools = schema.lenArtifacts;
 const docs = schema.lenArtifactDocs;
 
-/** A tool to keep. `id` is a fresh one for a new tool: when the agent already has a tool of that `slug` (publishing it
- *  again), the row keeps ITS id and labels and takes the new title, folder and version. */
-export type LenArtifactInput = Pick<LenArtifactRow, "id" | "assistantId" | "personId" | "spaceProjectId" | "slug" | "title" | "folder" | "releaseSha" | "hostLabel"> & {
+/** Who made an artifact: Len, or one of the person's agents. */
+export type LenArtifactMaker = "len" | { readonly assistantId: string };
+
+/** Which artifacts: a maker's in one project, or an agent's in every project it made them in. */
+export type LenArtifactScope =
+  | { readonly projectId: string; readonly maker: LenArtifactMaker }
+  | { readonly projectId?: undefined; readonly maker: { readonly assistantId: string } };
+
+const assistantIdOf = (maker: LenArtifactMaker): string | null => (maker === "len" ? null : maker.assistantId);
+
+/** `assistantId` is this maker's: `is null` for Len (an `=` with null is never true). */
+const madeBy = (assistantId: string | null): SQL => (assistantId === null ? isNull(tools.assistantId) : eq(tools.assistantId, assistantId));
+
+/** An artifact to keep. `id` is a fresh one for a new artifact: when its project already has one in that `folder`
+ *  (publishing it again), the row keeps ITS id and labels and takes the new title and version. */
+export type LenArtifactInput = Pick<LenArtifactRow, "id" | "projectId" | "personId" | "assistantId" | "slug" | "title" | "folder" | "releaseSha" | "hostLabel"> & {
   phoneHostLabel?: string | null;
 };
 
-/** Thrown by `upsertLenArtifact` when a NEW tool would pass `maxPerAgent`: the cap held under a race. */
+/** Thrown by `upsertLenArtifact` when a NEW artifact would pass `maxPerMaker`: the cap held under a race. */
 export class LenArtifactCapError extends Error {
   constructor(readonly max: number) {
-    super(`lenArtifacts: an agent has at most ${max} tools`);
+    super(`lenArtifacts: a maker has at most ${max} artifacts in a project`);
     this.name = "LenArtifactCapError";
   }
 }
 
-/** Keeps the tool. With `maxPerAgent`, a tool the agent doesn't have yet is refused (`LenArtifactCapError`) once it has that
- *  many: the agent's row is locked first, so two publishes at once are counted one after the other. */
-export async function upsertLenArtifact(input: LenArtifactInput, opts: { readonly maxPerAgent?: number } = {}): Promise<LenArtifactRow> {
-  const max = opts.maxPerAgent;
+/** Thrown by `upsertLenArtifact` when the folder already holds an artifact ANOTHER maker made: only its maker publishes
+ *  it again, and nothing is written. */
+export class LenArtifactMakerError extends Error {
+  constructor() {
+    super("lenArtifacts: that folder holds an artifact someone else made");
+    this.name = "LenArtifactMakerError";
+  }
+}
+
+/** Keeps the artifact. With `maxPerMaker`, one its maker doesn't have yet in that project is refused
+ *  (`LenArtifactCapError`) once it has that many: the project's row is locked first, so two publishes at once are counted
+ *  one after the other. Another maker's artifact in that folder is never written over (`LenArtifactMakerError`). */
+export async function upsertLenArtifact(input: LenArtifactInput, opts: { readonly maxPerMaker?: number } = {}): Promise<LenArtifactRow> {
+  const max = opts.maxPerMaker;
   if (max === undefined) return upsertRow(db, input);
   return db.transaction(async (tx) => {
-    await tx.select({ id: schema.assistants.id }).from(schema.assistants).where(eq(schema.assistants.id, input.assistantId)).for("update");
-    const mine = await tx.select({ slug: tools.slug }).from(tools).where(eq(tools.assistantId, input.assistantId));
-    if (!mine.some((t) => t.slug === input.slug) && mine.length >= max) throw new LenArtifactCapError(max);
+    await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, input.projectId)).for("update");
+    const [there] = await tx
+      .select({ assistantId: tools.assistantId })
+      .from(tools)
+      .where(and(eq(tools.projectId, input.projectId), eq(tools.folder, input.folder)));
+    if (there && there.assistantId !== input.assistantId) throw new LenArtifactMakerError();
+    if (!there) {
+      const [mine] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(tools)
+        .where(and(eq(tools.projectId, input.projectId), madeBy(input.assistantId)));
+      if (Number(mine?.n ?? 0) >= max) throw new LenArtifactCapError(max);
+    }
     return upsertRow(tx, input);
   });
 }
@@ -72,17 +105,34 @@ async function upsertRow(q: Pick<typeof db, "insert">, input: LenArtifactInput):
     .insert(tools)
     .values({ ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: now, updatedAt: now })
     .onConflictDoUpdate({
-      target: [tools.assistantId, tools.slug],
-      set: { title: input.title, folder: input.folder, releaseSha: input.releaseSha, updatedAt: now },
+      target: [tools.projectId, tools.folder],
+      set: { title: input.title, slug: input.slug, releaseSha: input.releaseSha, updatedAt: now },
+      // Only its maker writes over it: with another maker nothing is written and no row comes back.
+      setWhere: sql`${tools.assistantId} is not distinct from ${input.assistantId}`,
     })
     .returning();
-  if (!row) throw new Error("lenArtifacts: the upsert returned no row");
+  if (!row) throw new LenArtifactMakerError();
   return row;
 }
 
-/** The tools of an agent, in the order they were made. */
-export async function lenArtifactsOf(assistantId: string): Promise<LenArtifactRow[]> {
-  return db.select().from(tools).where(eq(tools.assistantId, assistantId)).orderBy(asc(tools.createdAt), asc(tools.id));
+/** The artifacts in `scope`, in the order they were made. */
+export async function lenArtifactsOf(scope: LenArtifactScope): Promise<LenArtifactRow[]> {
+  const maker = madeBy(assistantIdOf(scope.maker));
+  return db
+    .select()
+    .from(tools)
+    .where(scope.projectId === undefined ? maker : and(eq(tools.projectId, scope.projectId), maker))
+    .orderBy(asc(tools.createdAt), asc(tools.id));
+}
+
+/** The artifact in that folder of the project, whoever made it, or null. */
+export async function lenArtifactByFolder(projectId: string, folder: string): Promise<LenArtifactRow | null> {
+  const [row] = await db
+    .select()
+    .from(tools)
+    .where(and(eq(tools.projectId, projectId), eq(tools.folder, folder)))
+    .limit(1);
+  return row ?? null;
 }
 
 export async function lenArtifactById(id: string): Promise<LenArtifactRow | null> {
@@ -90,7 +140,7 @@ export async function lenArtifactById(id: string): Promise<LenArtifactRow | null
   return row ?? null;
 }
 
-/** Who frames a tool on a label: the workspace (`hostLabel`) or the phone app (`phoneHostLabel`). */
+/** Who frames an artifact on a label: the workspace (`hostLabel`) or the phone app (`phoneHostLabel`). */
 export async function lenArtifactByLabel(label: string): Promise<(LenArtifactRow & { servedTo: "workspace" | "phone" }) | null> {
   const [row] = await db
     .select()
@@ -100,15 +150,21 @@ export async function lenArtifactByLabel(label: string): Promise<(LenArtifactRow
   return row ? { ...row, servedTo: row.hostLabel === label ? "workspace" : "phone" } : null;
 }
 
-/** Deletes the tool and, with it, its data for good. Whether it was there. */
+/** Deletes the artifact and, with it, its data for good. Whether it was there. */
 export async function deleteLenArtifact(id: string): Promise<boolean> {
   const rows = await db.delete(tools).where(eq(tools.id, id)).returning({ id: tools.id });
   return rows.length > 0;
 }
 
-/** The last time the agent read or wrote this tool's data (`tool_data`). */
+/** The last time its maker read or wrote this artifact's data. */
 export async function markMakerSeen(toolId: string, at: Date): Promise<void> {
-  await db.update(tools).set({ agentSeenAt: at }).where(eq(tools.id, toolId));
+  await db.update(tools).set({ makerSeenAt: at }).where(eq(tools.id, toolId));
+}
+
+/** The owner of a project — the only person whose artifacts it has — or null when there is no such project. */
+export async function projectOwnerOf(projectId: string): Promise<string | null> {
+  const [row] = await db.select({ userId: schema.projects.userId }).from(schema.projects).where(eq(schema.projects.id, projectId)).limit(1);
+  return row?.userId ?? null;
 }
 
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

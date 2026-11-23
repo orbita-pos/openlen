@@ -42,7 +42,7 @@ beforeEach(async () => {
     id: "tool-1",
     assistantId: "ana",
     personId: "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: "recorrido",
     title: "Recorrido",
     folder: "/tools/ana/recorrido",

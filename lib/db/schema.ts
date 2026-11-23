@@ -1678,19 +1678,22 @@ export const agentLenMessages = pgTable(
   (t) => [index("agentLenMessages_pair_idx").on(t.assistantId, t.projectId, t.createdAt), index("agentLenMessages_status_idx").on(t.status)],
 );
 
-/** THE TOOLS AN AGENT MADE FOR ITS PERSON (spec local 2026-11-22-herramienta-dentro-del-agente, §1, §2): a page in the
- *  agent's folder of the person's space (`/tools/<agent>/<tool>/`), published as a VERSION (`releaseSha`, a `toolReleases`
- *  row by convention — no foreign key: that table belongs to `tools:migrate`) and served on its own private labels, one
- *  for the web and one for the phone. Deleting the agent, the person or the space deletes its tools and their data.
- *  Created by `npm run assistants:migrate`. */
+/** LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §2): a private page with a small database of its own that Len
+ *  — or one of the person's agents — made in a PROJECT, from a folder under `/.artifacts/`, published as a VERSION
+ *  (`releaseSha`, a `toolReleases` row by convention — no foreign key: that table belongs to `tools:migrate`) and served on
+ *  its own private labels, one for the web and one for the phone. Its maker is Len (`assistantId` null) or an agent; its
+ *  person is the project's owner, the only one who sees it. Deleting the project, the agent or the person deletes its
+ *  artifacts and their data. Created by `npm run assistants:migrate`. */
 export const lenArtifacts = pgTable(
   "lenArtifacts",
   {
     id: text("id").primaryKey(),
-    assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
+    projectId: text("projectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
+    /** The project's owner: the only person who sees, opens, writes to and removes it. */
     personId: text("personId").notNull().references(() => users.id, { onDelete: "cascade" }),
-    spaceProjectId: text("spaceProjectId").notNull().references(() => projects.id, { onDelete: "cascade" }),
-    /** The tool's folder name under the agent's, unique per agent: its identity across republishes. */
+    /** Who made it: null is Len, otherwise the agent. Only its maker publishes it again. */
+    assistantId: text("assistantId").references(() => assistants.id, { onDelete: "cascade" }),
+    /** Its folder's last name (`/.artifacts/…/<slug>`): what the model calls it. */
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     folder: text("folder").notNull(),
@@ -1701,18 +1704,19 @@ export const lenArtifacts = pgTable(
     phoneHostLabel: text("phoneHostLabel"),
     createdAt: timestamp("createdAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true }).notNull().defaultNow(),
-    /** The last write to its data BY THE PERSON (the tool's own screen): what the agent is told changed. */
+    /** The last write to its data BY THE PERSON (its own screen): what its maker is told changed. */
     dataChangedAt: timestamp("dataChangedAt", { mode: "date", withTimezone: true }),
-    /** The last time the agent read or wrote its data (`tool_data`). */
-    agentSeenAt: timestamp("agentSeenAt", { mode: "date", withTimezone: true }),
+    /** The last time its maker read or wrote its data. */
+    makerSeenAt: timestamp("makerSeenAt", { mode: "date", withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("lenArtifacts_assistant_slug_idx").on(t.assistantId, t.slug),
+    // Its folder in its project is its identity across republishes (the unique index also serves the project's lookups).
+    uniqueIndex("lenArtifacts_project_folder_idx").on(t.projectId, t.folder),
     uniqueIndex("lenArtifacts_hostLabel_idx").on(t.hostLabel),
     uniqueIndex("lenArtifacts_phoneHostLabel_idx").on(t.phoneHostLabel),
     index("lenArtifacts_personId_idx").on(t.personId),
-    // Deleting a space project cascades here: the index keeps that delete from reading the whole table.
-    index("lenArtifacts_spaceProjectId_idx").on(t.spaceProjectId),
+    // Deleting an agent cascades here, and an agent's place lists its own: the index keeps both from reading the table.
+    index("lenArtifacts_assistantId_idx").on(t.assistantId),
   ],
 );
 

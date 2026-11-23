@@ -21,27 +21,48 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
+const { CREATE_TOOLS } = await import("@/scripts/tools-migrate-sql");
 const { LEN_ARTIFACT_DATA_MAX_BYTES, LEN_ARTIFACT_DOC_MAX_BYTES, LEN_ARTIFACT_DOCS_MAX } = await import("./limits");
 const store = await import("./store");
+const toolStore = await import("@/lib/tools/store");
 
 let pg: PGlite;
 
-/** A tool of `teacher`, with its labels derived from the id here (the real ones are HMACs, in a later task). */
-function toolInput(o: { id?: string; assistantId?: string; slug?: string; title?: string; releaseSha?: string; hostLabel?: string; phoneHostLabel?: string | null } = {}) {
+/** An artifact: by default the `teacher` agent's in the person's space; `assistantId: null` is Len's, by default in the
+ *  project `site`. Its labels derive from the id here (the real ones are HMACs). */
+function toolInput(
+  o: {
+    id?: string;
+    projectId?: string;
+    personId?: string;
+    assistantId?: string | null;
+    slug?: string;
+    title?: string;
+    releaseSha?: string;
+    hostLabel?: string;
+    phoneHostLabel?: string | null;
+  } = {},
+) {
   const id = o.id ?? "tool-1";
+  const assistantId = o.assistantId === undefined ? "teacher" : o.assistantId;
+  const slug = o.slug ?? "lessons";
   return {
     id,
-    assistantId: o.assistantId ?? "teacher",
-    personId: "u1",
-    spaceProjectId: "space",
-    slug: o.slug ?? "lessons",
+    projectId: o.projectId ?? (assistantId === null ? "site" : "space"),
+    personId: o.personId ?? "u1",
+    assistantId,
+    slug,
     title: o.title ?? "Lessons",
-    folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
+    folder: assistantId === null ? `/.artifacts/${slug}` : `/.artifacts/${assistantId}/${slug}`,
     releaseSha: o.releaseSha ?? "sha-1",
     hostLabel: o.hostLabel ?? `lienzo-host-${id}`,
     ...(o.phoneHostLabel === undefined ? { phoneHostLabel: `lienzo-phone-${id}` } : { phoneHostLabel: o.phoneHostLabel }),
   };
 }
+
+const LEN = "len" as const;
+const teacher = { assistantId: "teacher" };
+const slugsOf = (rows: readonly { slug: string }[]) => rows.map((r) => r.slug);
 
 const set = (collection: string, docId: string, data: Record<string, unknown>) => ({ op: "set" as const, collection, docId, data });
 const update = (collection: string, docId: string, data: Record<string, unknown>) => ({ op: "update" as const, collection, docId, data });
@@ -69,8 +90,9 @@ beforeEach(async () => {
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
   await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2')`);
+  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2'), ('site', 'u1'), ('site-2', 'u1')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+  for (const statement of CREATE_TOOLS) await pg.query(statement);
   for (const [id, person, project, slug] of [["teacher", "u1", "space", "teacher"], ["finance", "u1", "space", "finance"], ["stranger", "u2", "other-space", "stranger"]]) {
     await pg.query(
       `insert into "assistants" ("id", "personId", "name", "slug", "shape", "color", "tone", "homeProjectId") values ($1, $2, $1, $3, 'drop', '#19c3b1', 'friendly', $4)`,
@@ -81,83 +103,175 @@ beforeEach(async () => {
   await store.upsertLenArtifact(toolInput());
 });
 
-describe("the tool rows", () => {
-  it("keeps a tool and finds it by id and by its agent, in the order it was made", async () => {
+describe("the artifact rows", () => {
+  it("keeps an artifact and finds it by id, and by its project and maker, in the order it was made", async () => {
     const row = await store.lenArtifactById("tool-1");
-    expect(row).toMatchObject({ id: "tool-1", assistantId: "teacher", personId: "u1", spaceProjectId: "space", slug: "lessons", title: "Lessons", folder: "/tools/teacher/lessons", releaseSha: "sha-1", dataChangedAt: null, agentSeenAt: null });
+    expect(row).toMatchObject({
+      id: "tool-1",
+      projectId: "space",
+      personId: "u1",
+      assistantId: "teacher",
+      slug: "lessons",
+      title: "Lessons",
+      folder: "/.artifacts/teacher/lessons",
+      releaseSha: "sha-1",
+      dataChangedAt: null,
+      makerSeenAt: null,
+    });
     expect(row!.createdAt).toBeInstanceOf(Date);
     expect(await store.lenArtifactById("nope")).toBeNull();
 
     await store.upsertLenArtifact(toolInput({ id: "tool-2", slug: "plan", title: "Plan" }));
     await store.upsertLenArtifact(toolInput({ id: "tool-3", assistantId: "finance", slug: "budget", title: "Budget" }));
-    expect((await store.lenArtifactsOf("teacher")).map((t) => t.slug)).toEqual(["lessons", "plan"]);
-    expect((await store.lenArtifactsOf("finance")).map((t) => t.slug)).toEqual(["budget"]);
-    expect(await store.lenArtifactsOf("stranger")).toEqual([]);
+    await store.upsertLenArtifact(toolInput({ id: "len-1", assistantId: null, slug: "board", title: "Board" }));
+    expect(slugsOf(await store.lenArtifactsOf({ projectId: "space", maker: teacher }))).toEqual(["lessons", "plan"]);
+    expect(slugsOf(await store.lenArtifactsOf({ projectId: "space", maker: { assistantId: "finance" } }))).toEqual(["budget"]);
+    expect(slugsOf(await store.lenArtifactsOf({ projectId: "site", maker: LEN }))).toEqual(["board"]);
+    // Len's are not an agent's, and an agent's are not Len's.
+    expect(await store.lenArtifactsOf({ projectId: "space", maker: LEN })).toEqual([]);
+    expect(await store.lenArtifactsOf({ projectId: "site", maker: teacher })).toEqual([]);
+    // An agent's in every project it made them in.
+    expect(slugsOf(await store.lenArtifactsOf({ maker: teacher }))).toEqual(["lessons", "plan"]);
+    expect(await store.lenArtifactsOf({ maker: { assistantId: "stranger" } })).toEqual([]);
   });
 
-  it("🔴 publishing again keeps the tool (its id, its address, its data) and moves the version", async () => {
+  it("finds an artifact by its project and folder", async () => {
+    await store.upsertLenArtifact(toolInput({ id: "len-1", assistantId: null, slug: "board" }));
+    expect(await store.lenArtifactByFolder("site", "/.artifacts/board")).toMatchObject({ id: "len-1", assistantId: null });
+    expect(await store.lenArtifactByFolder("space", "/.artifacts/teacher/lessons")).toMatchObject({ id: "tool-1" });
+    expect(await store.lenArtifactByFolder("site-2", "/.artifacts/board")).toBeNull();
+    expect(await store.lenArtifactByFolder("site", "/.artifacts/nope")).toBeNull();
+  });
+
+  it("🔴 publishing again keeps the artifact (its id, its address, its data) and moves the version", async () => {
     await store.writeDocs("tool-1", [set("c", "a", { n: 1 })], "agent");
     const again = await store.upsertLenArtifact(toolInput({ id: "another-id", title: "Lessons 2", releaseSha: "sha-2", hostLabel: "lienzo-other" }));
     expect(again).toMatchObject({ id: "tool-1", slug: "lessons", title: "Lessons 2", releaseSha: "sha-2", hostLabel: "lienzo-host-tool-1" });
     expect(again.phoneHostLabel).toBe("lienzo-phone-tool-1");
     expect(again.updatedAt.getTime()).toBeGreaterThanOrEqual(again.createdAt.getTime());
-    expect(await store.lenArtifactsOf("teacher")).toHaveLength(1);
+    expect(await store.lenArtifactsOf({ projectId: "space", maker: teacher })).toHaveLength(1);
     expect(await store.readDocs("tool-1")).toHaveLength(1);
   });
 
-  it("two agents can each have a tool of the same slug", async () => {
-    await store.upsertLenArtifact(toolInput({ id: "tool-f", assistantId: "finance" }));
-    expect((await store.lenArtifactsOf("finance")).map((t) => t.id)).toEqual(["tool-f"]);
-    expect((await store.lenArtifactsOf("teacher")).map((t) => t.id)).toEqual(["tool-1"]);
+  it("the folder in its project is the identity: the same folder in another project is another artifact", async () => {
+    await store.upsertLenArtifact(toolInput({ id: "len-a", assistantId: null, slug: "board" }));
+    await store.upsertLenArtifact(toolInput({ id: "len-b", assistantId: null, projectId: "site-2", slug: "board" }));
+    expect((await store.lenArtifactsOf({ projectId: "site", maker: LEN })).map((t) => t.id)).toEqual(["len-a"]);
+    expect((await store.lenArtifactsOf({ projectId: "site-2", maker: LEN })).map((t) => t.id)).toEqual(["len-b"]);
   });
 
-  it("finds a tool by the label of the workspace or of the phone, and says which one was asked", async () => {
+  it("🔴 nobody publishes over another maker's artifact: its folder in that project stays its maker's, and nothing changes", async () => {
+    const intruder = { ...toolInput({ id: "len-x", assistantId: null, projectId: "space", releaseSha: "sha-evil" }), folder: "/.artifacts/teacher/lessons" };
+    await expect(store.upsertLenArtifact(intruder)).rejects.toBeInstanceOf(store.LenArtifactMakerError);
+    await expect(store.upsertLenArtifact(intruder, { maxPerMaker: 5 })).rejects.toBeInstanceOf(store.LenArtifactMakerError);
+    const finance = { ...toolInput({ id: "fin-x", assistantId: "finance", releaseSha: "sha-evil" }), folder: "/.artifacts/teacher/lessons" };
+    await expect(store.upsertLenArtifact(finance, { maxPerMaker: 5 })).rejects.toBeInstanceOf(store.LenArtifactMakerError);
+    expect(await store.lenArtifactById("tool-1")).toMatchObject({ assistantId: "teacher", releaseSha: "sha-1", title: "Lessons" });
+    expect(await store.lenArtifactById("len-x")).toBeNull();
+    expect(await store.lenArtifactById("fin-x")).toBeNull();
+  });
+
+  it("finds an artifact by the label of the workspace or of the phone, and says which one was asked", async () => {
     expect(await store.lenArtifactByLabel("lienzo-host-tool-1")).toMatchObject({ id: "tool-1", servedTo: "workspace" });
     expect(await store.lenArtifactByLabel("lienzo-phone-tool-1")).toMatchObject({ id: "tool-1", servedTo: "phone" });
     expect(await store.lenArtifactByLabel("lienzo-unknown")).toBeNull();
   });
 
-  it("a tool without a phone label is still found by its workspace label", async () => {
+  it("an artifact without a phone label is still found by its workspace label", async () => {
     await store.upsertLenArtifact(toolInput({ id: "tool-9", slug: "nine", phoneHostLabel: null }));
     expect((await store.lenArtifactById("tool-9"))!.phoneHostLabel).toBeNull();
     expect(await store.lenArtifactByLabel("lienzo-host-tool-9")).toMatchObject({ id: "tool-9", servedTo: "workspace" });
   });
 
-  it("two tools without a phone label can both be kept (a missing label is no address to share)", async () => {
+  it("two artifacts without a phone label can both be kept (a missing label is no address to share)", async () => {
     await store.upsertLenArtifact(toolInput({ id: "tool-a", slug: "a", phoneHostLabel: null }));
     await store.upsertLenArtifact(toolInput({ id: "tool-b", slug: "b", phoneHostLabel: null }));
-    expect((await store.lenArtifactsOf("teacher")).filter((t) => t.phoneHostLabel === null).map((t) => t.id)).toEqual(["tool-a", "tool-b"]);
+    expect((await store.lenArtifactsOf({ projectId: "space", maker: teacher })).filter((t) => t.phoneHostLabel === null).map((t) => t.id)).toEqual(["tool-a", "tool-b"]);
   });
 
-  it("🔴 with maxPerAgent, a new tool past the cap is refused and nothing is written; republishing one at the cap is fine", async () => {
-    for (const i of [2, 3, 4, 5]) await store.upsertLenArtifact(toolInput({ id: `tool-${i}`, slug: `s${i}` }), { maxPerAgent: 5 });
-    expect(await store.lenArtifactsOf("teacher")).toHaveLength(5);
-    await expect(store.upsertLenArtifact(toolInput({ id: "tool-6", slug: "s6" }), { maxPerAgent: 5 })).rejects.toBeInstanceOf(store.LenArtifactCapError);
-    expect(await store.lenArtifactsOf("teacher")).toHaveLength(5);
-    expect(await store.upsertLenArtifact(toolInput({ id: "ignored", slug: "s3", title: "Again" }), { maxPerAgent: 5 })).toMatchObject({ id: "tool-3", title: "Again" });
-    // another agent's count is its own
-    expect(await store.upsertLenArtifact(toolInput({ id: "tool-f", assistantId: "finance", slug: "s6" }), { maxPerAgent: 5 })).toMatchObject({ id: "tool-f" });
+  it("🔴 with maxPerMaker, each maker of a project has its own five: the sixth of one is refused and nothing is written", async () => {
+    // Len and the teacher, both in `site`: five each.
+    for (const i of [1, 2, 3, 4, 5]) {
+      await store.upsertLenArtifact(toolInput({ id: `len-${i}`, assistantId: null, slug: `l${i}` }), { maxPerMaker: 5 });
+      await store.upsertLenArtifact(toolInput({ id: `tea-${i}`, projectId: "site", slug: `t${i}` }), { maxPerMaker: 5 });
+    }
+    expect(await store.lenArtifactsOf({ projectId: "site", maker: LEN })).toHaveLength(5);
+    expect(await store.lenArtifactsOf({ projectId: "site", maker: teacher })).toHaveLength(5);
+    await expect(store.upsertLenArtifact(toolInput({ id: "len-6", assistantId: null, slug: "l6" }), { maxPerMaker: 5 })).rejects.toBeInstanceOf(store.LenArtifactCapError);
+    await expect(store.upsertLenArtifact(toolInput({ id: "tea-6", projectId: "site", slug: "t6" }), { maxPerMaker: 5 })).rejects.toBeInstanceOf(store.LenArtifactCapError);
+    expect(await store.lenArtifactsOf({ projectId: "site", maker: LEN })).toHaveLength(5);
+    expect(await store.lenArtifactById("len-6")).toBeNull();
+    // Republishing one at the cap is not a new one.
+    expect(await store.upsertLenArtifact(toolInput({ id: "ignored", assistantId: null, slug: "l3", title: "Again" }), { maxPerMaker: 5 })).toMatchObject({ id: "len-3", title: "Again" });
+    // Another project's count is its own, and so is another agent's in the same project.
+    expect(await store.upsertLenArtifact(toolInput({ id: "len-other", assistantId: null, projectId: "site-2", slug: "l6" }), { maxPerMaker: 5 })).toMatchObject({ id: "len-other" });
+    expect(await store.upsertLenArtifact(toolInput({ id: "fin-1", assistantId: "finance", projectId: "site", slug: "f1" }), { maxPerMaker: 5 })).toMatchObject({ id: "fin-1" });
   });
 
-  it("🔴 two first publishes at once at four tools: one gets the fifth place, the other is refused", async () => {
+  it("🔴 two first publishes at once at four artifacts: one gets the fifth place, the other is refused", async () => {
     for (const i of [2, 3, 4]) await store.upsertLenArtifact(toolInput({ id: `tool-${i}`, slug: `s${i}` }));
     const results = await Promise.allSettled([
-      store.upsertLenArtifact(toolInput({ id: "tool-x", slug: "x" }), { maxPerAgent: 5 }),
-      store.upsertLenArtifact(toolInput({ id: "tool-y", slug: "y" }), { maxPerAgent: 5 }),
+      store.upsertLenArtifact(toolInput({ id: "tool-x", slug: "x" }), { maxPerMaker: 5 }),
+      store.upsertLenArtifact(toolInput({ id: "tool-y", slug: "y" }), { maxPerMaker: 5 }),
     ]);
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
     expect(results.filter((r) => r.status === "rejected").map((r) => (r as PromiseRejectedResult).reason)).toEqual([expect.any(store.LenArtifactCapError)]);
-    expect(await store.lenArtifactsOf("teacher")).toHaveLength(5);
+    expect(await store.lenArtifactsOf({ projectId: "space", maker: teacher })).toHaveLength(5);
   });
 
-  it("two tools cannot share an address", async () => {
+  it("two artifacts cannot share an address", async () => {
     await expect(store.upsertLenArtifact(toolInput({ id: "tool-8", slug: "eight", hostLabel: "lienzo-host-tool-1" }))).rejects.toThrow();
   });
 
-  it("marks when the agent last looked at its data", async () => {
+  it("marks when its maker last looked at its data", async () => {
     const at = new Date("2026-11-22T10:30:00Z");
     await store.markMakerSeen("tool-1", at);
-    expect((await store.lenArtifactById("tool-1"))!.agentSeenAt!.toISOString()).toBe(at.toISOString());
+    expect((await store.lenArtifactById("tool-1"))!.makerSeenAt!.toISOString()).toBe(at.toISOString());
+  });
+
+  it("knows who owns a project, and nobody for one that isn't there", async () => {
+    expect(await store.projectOwnerOf("site")).toBe("u1");
+    expect(await store.projectOwnerOf("other-space")).toBe("u2");
+    expect(await store.projectOwnerOf("nope")).toBeNull();
+  });
+});
+
+describe("🔴 a version nobody points at is deleted (republishing keeps one)", () => {
+  const release = (sha: string, projectId = "space") =>
+    pg.query(`insert into "toolReleases" ("sha", "projectId", "files") values ($1, $2, '{}'::jsonb)`, [sha, projectId]);
+  const releases = async () => (await pg.query<{ sha: string }>(`select "sha" from "toolReleases" order by "sha"`)).rows.map((r) => r.sha);
+
+  beforeEach(async () => {
+    for (const sha of ["sha-1", "sha-2", "sha-3"]) await release(sha);
+  });
+
+  it("deletes a version no artifact and no installed tool points at", async () => {
+    expect(await toolStore.deleteReleaseIfUnused("sha-2")).toBe(true);
+    expect(await releases()).toEqual(["sha-1", "sha-3"]);
+  });
+
+  it("keeps a version an artifact still points at", async () => {
+    expect(await toolStore.deleteReleaseIfUnused("sha-1")).toBe(false);
+    expect(await releases()).toEqual(["sha-1", "sha-2", "sha-3"]);
+  });
+
+  it("keeps a version ANOTHER artifact still points at, when one moved off it", async () => {
+    await store.upsertLenArtifact(toolInput({ id: "tool-2", slug: "plan", releaseSha: "sha-1" }));
+    await store.upsertLenArtifact(toolInput({ releaseSha: "sha-3" }));
+    expect(await toolStore.deleteReleaseIfUnused("sha-1")).toBe(false);
+    expect(await releases()).toContain("sha-1");
+  });
+
+  it("keeps a version an installed tool points at", async () => {
+    await pg.query(
+      `insert into "toolInstallations" ("id", "personId", "projectId", "releaseSha", "placement", "iconPath", "hostLabel") values ('i1', 'u1', 'site', 'sha-3', 'rail', '/icon.svg', 'lienzo-install-1')`,
+    );
+    expect(await toolStore.deleteReleaseIfUnused("sha-3")).toBe(false);
+    expect(await releases()).toContain("sha-3");
+  });
+
+  it("a version that isn't there is nothing to delete", async () => {
+    expect(await toolStore.deleteReleaseIfUnused("sha-none")).toBe(false);
   });
 });
 
@@ -440,11 +554,12 @@ describe("who wrote it", () => {
   });
 });
 
-describe("what a tool's data belongs to", () => {
+describe("what an artifact's data belongs to", () => {
   beforeEach(async () => {
     await store.upsertLenArtifact(toolInput({ id: "tool-2", slug: "plan" }));
     await store.upsertLenArtifact(toolInput({ id: "tool-f", assistantId: "finance", slug: "budget" }));
-    for (const id of ["tool-1", "tool-2", "tool-f"]) await store.writeDocs(id, [set("c", "a", { x: 1 })], "agent");
+    await store.upsertLenArtifact(toolInput({ id: "len-1", assistantId: null, slug: "board" }));
+    for (const id of ["tool-1", "tool-2", "tool-f", "len-1"]) await store.writeDocs(id, [set("c", "a", { x: 1 })], "agent");
   });
 
   it("🔴 deleting the tool deletes its data for good, and no other tool's", async () => {
@@ -458,15 +573,19 @@ describe("what a tool's data belongs to", () => {
 
   it("🔴 deleting the agent deletes its tools and their data, and no one else's", async () => {
     await pg.query(`delete from "assistants" where "id" = 'teacher'`);
-    expect(await store.lenArtifactsOf("teacher")).toEqual([]);
+    expect(await store.lenArtifactsOf({ maker: teacher })).toEqual([]);
     expect(await countDocs("tool-1")).toBe(0);
     expect(await countDocs("tool-2")).toBe(0);
-    expect((await store.lenArtifactsOf("finance")).map((t) => t.id)).toEqual(["tool-f"]);
+    expect((await store.lenArtifactsOf({ maker: { assistantId: "finance" } })).map((t) => t.id)).toEqual(["tool-f"]);
     expect(await countDocs("tool-f")).toBe(1);
+    expect(await countDocs("len-1")).toBe(1);
   });
 
-  it("deleting the person's space deletes the tools made in it", async () => {
+  it("deleting a project deletes the artifacts made in it, Len's and its agents', and no other project's", async () => {
     await pg.query(`delete from "projects" where "id" = 'space'`);
+    expect((await pg.query<{ id: string }>(`select "id" from "lenArtifacts"`)).rows.map((r) => r.id)).toEqual(["len-1"]);
+    expect(await countDocs("tool-1")).toBe(0);
+    await pg.query(`delete from "projects" where "id" = 'site'`);
     expect(await pg.query(`select 1 from "lenArtifacts"`).then((r) => r.rows)).toEqual([]);
     expect(await pg.query(`select 1 from "lenArtifactDocs"`).then((r) => r.rows)).toEqual([]);
   });

@@ -151,14 +151,14 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "customerNote" text NOT NULL DEFAULT '';`,
   // When its file's first message went: claimed once (two tabs, or the web and the phone, would both send it).
   `ALTER TABLE "assistants" ADD COLUMN IF NOT EXISTS "openedAt" timestamp;`,
-  // The tool that lives inside an agent (spec local 2026-11-22-herramienta-dentro-del-agente, §1–§3): its tools, and the
-  // small database each one shares with the agent. "releaseSha" names a "toolReleases" row by convention only — that table
-  // belongs to tools:migrate, which may run after this one. Gone with the agent, the person or the space.
+  // Len's artifacts (spec local 2026-11-22-artifacts-de-len, §2): a project's, made by Len ("assistantId" null) or one of
+  // the person's agents, and the small database each one keeps. "releaseSha" names a "toolReleases" row by convention only —
+  // that table belongs to tools:migrate, which may run after this one. Gone with the project, the agent or the person.
   `CREATE TABLE IF NOT EXISTS "lenArtifacts" (
     "id" text PRIMARY KEY,
-    "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
+    "projectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
     "personId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-    "spaceProjectId" text NOT NULL REFERENCES "projects"("id") ON DELETE CASCADE,
+    "assistantId" text REFERENCES "assistants"("id") ON DELETE CASCADE,
     "slug" text NOT NULL,
     "title" text NOT NULL,
     "folder" text NOT NULL,
@@ -168,13 +168,13 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "createdAt" timestamp with time zone NOT NULL DEFAULT now(),
     "updatedAt" timestamp with time zone NOT NULL DEFAULT now(),
     "dataChangedAt" timestamp with time zone,
-    "agentSeenAt" timestamp with time zone
+    "makerSeenAt" timestamp with time zone
   );`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_assistant_slug_idx" ON "lenArtifacts" ("assistantId", "slug");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_project_folder_idx" ON "lenArtifacts" ("projectId", "folder");`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_hostLabel_idx" ON "lenArtifacts" ("hostLabel");`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_phoneHostLabel_idx" ON "lenArtifacts" ("phoneHostLabel");`,
   `CREATE INDEX IF NOT EXISTS "lenArtifacts_personId_idx" ON "lenArtifacts" ("personId");`,
-  `CREATE INDEX IF NOT EXISTS "lenArtifacts_spaceProjectId_idx" ON "lenArtifacts" ("spaceProjectId");`,
+  `CREATE INDEX IF NOT EXISTS "lenArtifacts_assistantId_idx" ON "lenArtifacts" ("assistantId");`,
   `CREATE TABLE IF NOT EXISTS "lenArtifactDocs" (
     "toolId" text NOT NULL REFERENCES "lenArtifacts"("id") ON DELETE CASCADE,
     "collection" text NOT NULL,

@@ -10,7 +10,7 @@ function row(over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     id: "t1",
     assistantId: "a1",
     personId: "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: "recorrido",
     title: "Recorrido",
     folder: "/tools/ana/recorrido",
@@ -20,7 +20,7 @@ function row(over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     createdAt: now,
     updatedAt: now,
     dataChangedAt: null,
-    agentSeenAt: null,
+    makerSeenAt: null,
     ...over,
   };
 }
@@ -81,27 +81,27 @@ describe("changedSince", () => {
     expect(d.toolsOf).not.toHaveBeenCalled();
   });
 
-  it("ignores tools with null dataChangedAt or where agentSeenAt >= dataChangedAt", async () => {
+  it("ignores tools with null dataChangedAt or where makerSeenAt >= dataChangedAt", async () => {
     const t1 = new Date("2026-11-22T12:00:00Z");
     const t2 = new Date("2026-11-22T12:05:00Z");
     const d = deps({
       toolsOf: vi.fn(async () => [
-        row({ id: "none", dataChangedAt: null, agentSeenAt: null }),
-        row({ id: "equal", dataChangedAt: t1, agentSeenAt: t1 }),
-        row({ id: "seen", dataChangedAt: t1, agentSeenAt: t2 }),
+        row({ id: "none", dataChangedAt: null, makerSeenAt: null }),
+        row({ id: "equal", dataChangedAt: t1, makerSeenAt: t1 }),
+        row({ id: "seen", dataChangedAt: t1, makerSeenAt: t2 }),
       ]),
     });
     expect(await changedSince("a1", d)).toEqual([]);
     expect(d.personChangedCollections).not.toHaveBeenCalled();
   });
 
-  it("reports tools where dataChangedAt > agentSeenAt or agentSeenAt is null", async () => {
+  it("reports tools where dataChangedAt > makerSeenAt or makerSeenAt is null", async () => {
     const t1 = new Date("2026-11-22T12:00:00Z");
     const t2 = new Date("2026-11-22T12:05:00Z");
     const d = deps({
       toolsOf: vi.fn(async () => [
-        row({ id: "t1", slug: "recorrido", title: "Recorrido", dataChangedAt: t2, agentSeenAt: t1 }),
-        row({ id: "t2", slug: "vocab", title: "Vocab", dataChangedAt: t1, agentSeenAt: null }),
+        row({ id: "t1", slug: "recorrido", title: "Recorrido", dataChangedAt: t2, makerSeenAt: t1 }),
+        row({ id: "t2", slug: "vocab", title: "Vocab", dataChangedAt: t1, makerSeenAt: null }),
       ]),
       personChangedCollections: vi.fn(async (id: string) => (id === "t1" ? ["progress"] : [])),
     });

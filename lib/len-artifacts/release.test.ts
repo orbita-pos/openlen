@@ -9,11 +9,11 @@ import { buildLenArtifactRelease } from "./release";
 const SPACE = "9d1f7c0e-aaaa-4bbb-8ccc-000000000001";
 const FOLDER = "/tools/ana/recorrido";
 
-function build(files: Record<string, string>, over: { folder?: string; spaceProjectId?: string } = {}) {
-  return buildLenArtifactRelease({ spaceProjectId: over.spaceProjectId ?? SPACE, folder: over.folder ?? FOLDER, files });
+function build(files: Record<string, string>, over: { folder?: string; projectId?: string } = {}) {
+  return buildLenArtifactRelease({ projectId: over.projectId ?? SPACE, folder: over.folder ?? FOLDER, files });
 }
 
-function ok(files: Record<string, string>, over: { folder?: string; spaceProjectId?: string } = {}) {
+function ok(files: Record<string, string>, over: { folder?: string; projectId?: string } = {}) {
   const r = build(files, over);
   if (!r.ok) throw new Error(`expected ok, got ${r.error}`);
   return r;
@@ -132,7 +132,7 @@ describe("buildLenArtifactRelease: the version's sha", () => {
     const moved = { [`${FOLDER}/index.html`]: "<h1>x</h1>", [`${FOLDER}/b.js`]: "1" };
     expect(ok(moved).sha).not.toBe(ok(base).sha);
     expect(ok({ ...base, [`${FOLDER}/c.js`]: "" }).sha).not.toBe(ok(base).sha);
-    expect(ok(base, { spaceProjectId: "9d1f7c0e-aaaa-4bbb-8ccc-000000000002" }).sha).not.toBe(ok(base).sha);
+    expect(ok(base, { projectId: "9d1f7c0e-aaaa-4bbb-8ccc-000000000002" }).sha).not.toBe(ok(base).sha);
   });
 
   it("does not depend on where the folder is, only on what is in it", () => {

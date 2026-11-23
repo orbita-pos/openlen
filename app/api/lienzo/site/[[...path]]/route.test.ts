@@ -373,7 +373,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     id: "t1",
     assistantId: "a1",
     personId: "u1",
-    spaceProjectId: P2,
+    projectId: P2,
     slug: "recorrido",
     title: "Recorrido",
     folder: "/tools/ana/recorrido",
@@ -383,7 +383,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     dataChangedAt: null,
-    agentSeenAt: null,
+    makerSeenAt: null,
     servedTo,
     ...over,
   });

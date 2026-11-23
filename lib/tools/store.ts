@@ -5,7 +5,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, notExists, or, sql } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -44,6 +44,23 @@ export async function readReleaseJobs(sha: string): Promise<Record<string, strin
 export async function readRelease(sha: string): Promise<Record<string, ToolReleaseFile> | null> {
   const [row] = await db.select({ files: r.files }).from(r).where(eq(r.sha, sha)).limit(1);
   return row?.files ?? null;
+}
+
+/** Deletes a version nothing points at any more — no artifact of Len's (spec local 2026-11-22-artifacts-de-len, §6: a
+ *  republish keeps one version) and no installed tool. Whether it was deleted: a version still named somewhere stays. */
+export async function deleteReleaseIfUnused(sha: string): Promise<boolean> {
+  const a = schema.lenArtifacts;
+  const rows = await db
+    .delete(r)
+    .where(
+      and(
+        eq(r.sha, sha),
+        notExists(db.select({ one: sql`1` }).from(a).where(eq(a.releaseSha, sha))),
+        notExists(db.select({ one: sql`1` }).from(i).where(eq(i.releaseSha, sha))),
+      ),
+    )
+    .returning({ sha: r.sha });
+  return rows.length > 0;
 }
 
 /** A person's installation of a tool project, or null. */

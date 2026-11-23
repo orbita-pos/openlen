@@ -26,6 +26,7 @@ vi.mock("@/lib/db", async () => {
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => base.person) }));
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
+const { CREATE_TOOLS } = await import("@/scripts/tools-migrate-sql");
 const { subscribeArtifactChanges } = await import("@/lib/len-artifacts/bus");
 const store = await import("@/lib/len-artifacts/store");
 const route = await import("./route");
@@ -41,7 +42,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     id: o.id,
     assistantId: o.assistantId ?? "teacher",
     personId: o.personId ?? "u1",
-    spaceProjectId: "space",
+    projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
     folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
@@ -66,9 +67,11 @@ beforeAll(async () => {
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
   await pg.query(`create table "projects" ("id" text primary key, "userId" text)`);
-  await pg.query(`insert into "users" values ('u1'), ('u2')`);
-  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2')`);
+  // u3 is a MEMBER of u1's `site` (invited to it), never its owner.
+  await pg.query(`insert into "users" values ('u1'), ('u2'), ('u3')`);
+  await pg.query(`insert into "projects" values ('space', 'u1'), ('other-space', 'u2'), ('site', 'u1')`);
   for (const statement of CREATE_ASSISTANTS) await pg.query(statement);
+  for (const statement of CREATE_TOOLS) await pg.query(statement);
   for (const [id, person, project] of [["teacher", "u1", "space"], ["stranger", "u2", "other-space"]]) {
     await pg.query(
       `insert into "assistants" ("id", "personId", "name", "slug", "shape", "color", "tone", "homeProjectId") values ($1, $2, $1, $1, 'drop', '#19c3b1', 'friendly', $3)`,
@@ -170,7 +173,41 @@ describe("the person deletes a tool", () => {
   });
 });
 
+describe("its version (spec local 2026-11-22-artifacts-de-len, §6)", () => {
+  it("🔴 goes with it when nothing else points at it, and stays while another artifact names it", async () => {
+    await pg.query(`delete from "toolReleases"`);
+    await pg.query(`insert into "toolReleases" ("sha", "projectId", "files") values ('sha-1', 'space', '{}'::jsonb), ('sha-2', 'space', '{}'::jsonb)`);
+    await store.upsertLenArtifact({ ...toolInput({ id: "tool-2", slug: "plan" }), releaseSha: "sha-2" });
+    expect(await call("tool-2")).toEqual({ status: 200, body: { ok: true } });
+    expect(await call("tool-1")).toEqual({ status: 200, body: { ok: true } });
+    // tool-x still names sha-1.
+    expect((await pg.query<{ sha: string }>(`select "sha" from "toolReleases" order by "sha"`)).rows.map((r) => r.sha)).toEqual(["sha-1"]);
+  });
+});
+
 describe("🔴 who may", () => {
+  it("🔴 a member of the project gets the same 404 as an artifact that doesn't exist, and Len's artifact stays; its owner deletes it", async () => {
+    await store.upsertLenArtifact({
+      id: "len-1",
+      projectId: "site",
+      personId: "u1",
+      assistantId: null,
+      slug: "board",
+      title: "Board",
+      folder: "/.artifacts/board",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-host-len-1",
+      phoneHostLabel: "lienzo-phone-len-1",
+    });
+    base.person = "u3";
+    const missing = await call("no-such-tool");
+    expect(await call("len-1")).toEqual(missing);
+    expect(await store.lenArtifactById("len-1")).not.toBeNull();
+    expect(gone).toEqual([]);
+    base.person = "u1";
+    expect(await call("len-1")).toEqual({ status: 200, body: { ok: true } });
+  });
+
   it("another person gets the same 404 as a tool that doesn't exist, and nothing is deleted or told", async () => {
     base.person = "u2";
     const missing = await call("no-such-tool");

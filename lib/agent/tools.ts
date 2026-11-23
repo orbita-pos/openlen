@@ -2821,7 +2821,7 @@ async function defaultLoadLenArtifactForEyes(assistantId: string, slug: string):
     import("@/lib/files/blob-pointer"),
     import("@/lib/files/blob"),
   ]);
-  const row = (await lenArtifactsOf(assistantId)).find((r) => r.slug === slug);
+  const row = (await lenArtifactsOf({ maker: { assistantId } })).find((r) => r.slug === slug);
   if (!row) return null;
   const release = await readRelease(row.releaseSha);
   const indexFile = release && Object.prototype.hasOwnProperty.call(release, "/index.html") ? release["/index.html"] : undefined;

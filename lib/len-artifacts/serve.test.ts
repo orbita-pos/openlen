@@ -17,7 +17,7 @@ const ROW: LenArtifactRow & { servedTo: "workspace" | "phone" } = {
   id: "t1",
   assistantId: "a1",
   personId: "u1",
-  spaceProjectId: "p1",
+  projectId: "p1",
   slug: "recorrido",
   title: "Recorrido",
   folder: "/tools/ana/recorrido",
@@ -27,7 +27,7 @@ const ROW: LenArtifactRow & { servedTo: "workspace" | "phone" } = {
   createdAt: new Date(),
   updatedAt: new Date(),
   dataChangedAt: null,
-  agentSeenAt: null,
+  makerSeenAt: null,
   servedTo: "workspace",
 };
 
