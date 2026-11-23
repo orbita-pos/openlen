@@ -62,16 +62,18 @@ export interface LenArtifactsState {
 }
 
 export function useLenArtifacts(projectId: string | null): LenArtifactsState {
-  const [items, setItems] = useState<LenArtifactListItem[]>([]);
-  const [loaded, setLoaded] = useState<boolean>(projectId === null);
+  const [state, setState] = useState<{ forProjectId: string | null; items: LenArtifactListItem[]; loaded: boolean }>({
+    forProjectId: null,
+    items: [],
+    loaded: false,
+  });
   const [version, setVersion] = useState(0);
   const reqRef = useRef(0);
 
   const reload = useCallback(async (): Promise<LenArtifactListItem[] | null> => {
     if (!projectId) {
       reqRef.current += 1;
-      setItems([]);
-      setLoaded(true);
+      setState({ forProjectId: null, items: [], loaded: true });
       return [];
     }
     const reqId = ++reqRef.current;
@@ -79,39 +81,48 @@ export function useLenArtifacts(projectId: string | null): LenArtifactsState {
       const res = await fetch(`/api/len-artifacts?projectId=${encodeURIComponent(projectId)}`, { cache: "no-store" });
       if (reqId !== reqRef.current) return null;
       if (!res.ok) {
-        setItems([]);
-        setLoaded(true);
+        setState({ forProjectId: projectId, items: [], loaded: true });
         setVersion((v) => v + 1);
         return [];
       }
       const data: unknown = await res.json();
       if (reqId !== reqRef.current) return null;
       const list = Array.isArray(data) ? (data as LenArtifactListItem[]) : [];
-      setItems(list);
-      setLoaded(true);
+      setState({ forProjectId: projectId, items: list, loaded: true });
       setVersion((v) => v + 1);
       return list;
     } catch {
       // fail-soft: the workspace stays usable without the artifact lenses
-      if (reqId === reqRef.current) setLoaded(true);
+      if (reqId === reqRef.current) {
+        setState((prev) => (prev.forProjectId === projectId ? { ...prev, loaded: true } : { forProjectId: projectId, items: [], loaded: true }));
+      }
       return null;
     }
   }, [projectId]);
 
   useEffect(() => {
-    setItems([]);
     if (!projectId) {
-      setLoaded(true);
+      reqRef.current += 1;
+      setState({ forProjectId: null, items: [], loaded: true });
       return;
     }
-    setLoaded(false);
     void reload();
   }, [projectId, reload]);
 
-  const remove = useCallback((id: string) => {
-    reqRef.current += 1;
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
+  const remove = useCallback(
+    (id: string) => {
+      reqRef.current += 1;
+      setState((prev) =>
+        prev.forProjectId === projectId ? { ...prev, items: prev.items.filter((item) => item.id !== id) } : prev,
+      );
+    },
+    [projectId],
+  );
+
+  // Derive synchronously for the current projectId so null → p1 and p1 → p2 transitions never render a stale frame.
+  const matches = projectId !== null && state.forProjectId === projectId;
+  const items = matches ? state.items : [];
+  const loaded = projectId === null ? true : matches && state.loaded;
 
   return { items, loaded, reload, remove, version };
 }

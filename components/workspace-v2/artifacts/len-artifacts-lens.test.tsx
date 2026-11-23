@@ -238,29 +238,45 @@ describe("useLenArtifacts + useArtifactTurnSync", () => {
     expect(opened).toEqual(["artifact:art-2"]);
   });
 
-  it("🔴 exposes loaded = false while initial fetch is in flight and true once settled (or on projectId: null)", async () => {
-    let resolveFetch!: (r: Response) => void;
+  it("🔴 exposes loaded = false and items = [] synchronously on null → p1 and p1 → p2 transitions until that project's fetch settles", async () => {
+    const pending: Array<(r: Response) => void> = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve; })),
+      vi.fn(() => new Promise<Response>((resolve) => { pending.push(resolve); })),
     );
-    let snapshot = { loaded: true, count: 0 };
-    function Probe({ projectId }: { projectId: string | null }) {
+    const seen: Array<{ projectId: string | null; loaded: boolean; ids: string[] }> = [];
+    let setPid!: (id: string | null) => void;
+    function Probe() {
+      const [projectId, setProjectId] = useState<string | null>(null);
+      setPid = setProjectId;
       const a = useLenArtifacts(projectId);
-      snapshot = { loaded: a.loaded, count: a.items.length };
+      seen.push({ projectId, loaded: a.loaded, ids: a.items.map((x) => x.id) });
       return null;
     }
-    mount(<Probe projectId="p1" />);
-    expect(snapshot.loaded).toBe(false);
+    mount(<Probe />);
+    expect(seen.at(-1)).toEqual({ projectId: null, loaded: true, ids: [] });
+
+    // Transition null → p1: the VERY FIRST render of p1 must already see loaded: false, ids: [].
+    seen.length = 0;
+    act(() => setPid("p1"));
+    expect(seen[0]).toEqual({ projectId: "p1", loaded: false, ids: [] });
     await act(async () => {
-      resolveFetch(new Response(JSON.stringify([ART_1]), { status: 200 }));
+      pending.shift()!(new Response(JSON.stringify([ART_1]), { status: 200 }));
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(snapshot).toEqual({ loaded: true, count: 1 });
+    expect(seen.at(-1)).toEqual({ projectId: "p1", loaded: true, ids: ["art-1"] });
 
-    mount(<Probe projectId={null} />);
-    expect(snapshot.loaded).toBe(true);
+    // Transition p1 → p2: the VERY FIRST render of p2 must NOT see p1's stale items or loaded: true!
+    seen.length = 0;
+    act(() => setPid("p2"));
+    expect(seen[0]).toEqual({ projectId: "p2", loaded: false, ids: [] });
+    await act(async () => {
+      pending.shift()!(new Response(JSON.stringify([ART_2]), { status: 200 }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(seen.at(-1)).toEqual({ projectId: "p2", loaded: true, ids: ["art-2"] });
   });
 
   it("🔴 a failed reload after publish_artifact does not leave pending open armed to steal focus on a later unrelated turn", async () => {
@@ -453,7 +469,7 @@ describe("PreviewArea with Len's artifacts", () => {
     expect(getLens()).toBe("pagina");
   });
 
-  it("🔴 keeps the artifact lenses reachable when a no-page project renders a deliverableStage on the pagina lens", () => {
+  it("🔴 keeps the artifact lenses reachable when a no-page project renders a deliverableStage on the pagina lens, without dead page-only controls", () => {
     function DeliverableWrapper() {
       const [lente, setLente] = useState<Lente>("pagina");
       return (
@@ -462,6 +478,7 @@ describe("PreviewArea with Len's artifacts", () => {
           projectId="p1"
           lente={lente}
           onLente={setLente}
+          onToggleInspect={vi.fn()}
           toolPerson={{ name: "Jesús", locale: "es" }}
           lenArtifacts={[ART_1]}
           deliverableStage={<div data-deliverable-stage="">Mi presentación</div>}
@@ -470,6 +487,11 @@ describe("PreviewArea with Len's artifacts", () => {
     }
     const host = mount(<DeliverableWrapper />);
     expect(host.querySelector("[data-deliverable-stage]")?.textContent).toBe("Mi presentación");
+    // Page-only viewport/refresh/edit controls must not show over deliverableStage.
+    const labels = [...host.querySelectorAll("button")].map((b) => b.getAttribute("aria-label"));
+    expect(labels).not.toContain("preview.viewport.desktop");
+    expect(labels).not.toContain("preview.toolbar.refresh");
+    expect(labels).not.toContain("preview.toolbar.editPage");
     const budgetBtn = [...host.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Presupuesto")!;
     expect(budgetBtn).toBeDefined();
     act(() => budgetBtn.click());

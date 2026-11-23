@@ -1600,6 +1600,7 @@ function NewV2Inner() {
       if (centro === "deliverable") {
         setCenterArtifactId(item.id);
         setCenterView("page");
+        setLente("pagina");
       } else if (item.lastReadyRevision !== null) setViewerArtifact(item);
     },
     [centro, setCenterView],

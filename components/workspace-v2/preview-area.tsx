@@ -701,7 +701,7 @@ export function PreviewArea({
   // capacidades de la publicada. Excepciones: plantillas (`previewUrl`) y el
   // chat escribiendo (`untrustedDoc`), que siguen en local. Si el remoto no
   // responde, local con banda.
-  const remotoActivo = !previewUrl && !untrustedDoc && !!projectId;
+  const remotoActivo = !previewUrl && !untrustedDoc && !!projectId && !deliverableStage;
   const lienzo = useLienzoRemoto({ html: finalSrcDoc, projectId, pagina, activo: remotoActivo, recarga: refreshTick });
   const marcarListoRef = useRef(lienzo.marcarListo);
   marcarListoRef.current = lienzo.marcarListo;
@@ -1029,7 +1029,7 @@ export function PreviewArea({
             Abrir en otra pestaña SÍ se queda: apunta a la URL publicada, que
             existe se mire la lente que se mire. */}
         <div className="flex items-center gap-0.5 justify-self-end">
-          {lente === "pagina" && onToggleInspect && !esApp && (
+          {lente === "pagina" && !deliverableStage && onToggleInspect && !esApp && (
             <IconBtn
               label={
                 inspectMode
@@ -1045,7 +1045,7 @@ export function PreviewArea({
           )}
           {/* Its name on the button, not only in the tooltip: with the icon alone
               nobody found it (spec local 2026-10-27). */}
-          {lente === "pagina" && esApp && onToggleDesign && (
+          {lente === "pagina" && !deliverableStage && esApp && onToggleDesign && (
             <Tooltip label={designMode ? t("preview.toolbar.exitDesign") : t("preview.toolbar.design")}>
               <button
                 type="button"
@@ -1060,7 +1060,7 @@ export function PreviewArea({
               </button>
             </Tooltip>
           )}
-          {lente === "pagina" && (
+          {lente === "pagina" && !deliverableStage && (
             <IconBtn
               label={t("preview.toolbar.refresh")}
               size="sm"
@@ -1086,7 +1086,7 @@ export function PreviewArea({
       {/* EL ENCUADRE, en su propia fila y centrado. Sólo con la página delante:
           sobre el código o la terminal, cambiar de móvil a tablet no encuadra
           nada, y una fila entera de controles muertos es peor que su ausencia. */}
-      {lente === "pagina" && (
+      {lente === "pagina" && !deliverableStage && (
         <div className="relative z-10 h-9 shrink-0 flex items-center justify-center gap-2 border-b bd bg-app/60">
           <Segmented<Device>
             size="sm"
