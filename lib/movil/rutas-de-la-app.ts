@@ -79,4 +79,7 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   { fichero: "app/api/mcp-connectors/directory/[id]/route.ts", metodos: ["POST"] },
   // Inline visuals in the phone's chat (spec local 2026-11-22-visuales-de-verdad, §1).
   { fichero: "app/api/visual-frame-url/route.ts", metodos: ["GET"] },
+  // An agent's tool on the phone (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): its page's data.* reach the
+  // person's database through the app's bridge, with the phone's key.
+  { fichero: "app/api/agent-tools/[id]/data/route.ts", metodos: ["POST"] },
 ];

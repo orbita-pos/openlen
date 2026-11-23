@@ -31,9 +31,11 @@ import {
   AGENT_TOOL_VERSION_MAX_BYTES,
   AGENT_TOOLS_PER_AGENT,
 } from "./limits";
-import { matchQuery, queryLimit, type AgentToolQuery, type QueryOp } from "./query";
+import { matchQuery, queryLimit } from "./query";
 import { buildAgentToolRelease, type AgentToolReleaseError } from "./release";
 import type { AgentToolDoc, AgentToolInput, AgentToolRow, DataWrite, WriteError } from "./store";
+import { isRecord, nonBlank, parseRead, parseWrite, QUERY_OPS } from "./validate";
+import { changeOfWrites } from "./wire";
 
 export const PUBLISH_TOOL = "publish_tool";
 export const TOOL_DATA = "tool_data";
@@ -45,7 +47,6 @@ const TITLE_MAX = 80;
 
 const TOOL_DATA_ACTIONS = ["get", "list", "query", "set", "update", "delete", "batch"] as const;
 type ToolDataAction = (typeof TOOL_DATA_ACTIONS)[number];
-const QUERY_OPS = ["==", "!=", "<", "<=", ">", ">="] as const satisfies readonly QueryOp[];
 const WRITE_OPS = ["set", "update", "delete"] as const;
 
 const kb = (bytes: number) => `${bytes / 1024} KB`;
@@ -183,10 +184,6 @@ const depsOf = (over?: Partial<AgentToolsDeps>): AgentToolsDeps => (over ? { ...
 
 const refuse = (error: string, message: string): ToolOutcome => ({ response: { ok: false, error, message } });
 const invalid = (message: string): ToolOutcome => refuse("invalid_arguments", message);
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-/** Text that isn't blank, exactly as given (a collection or a document id is never trimmed). */
-const nonBlank = (value: unknown): string | null => (typeof value === "string" && value.trim() !== "" ? value : null);
 
 type AgentOfTurn = NonNullable<AgentSession["assistant"]>;
 
@@ -326,48 +323,6 @@ function withRows(body: Record<string, unknown>): ToolOutcome {
   return { response: { ok: true, [CLAVE_TOOL_RESULT]: `${ROWS_ARE_DATA}\n${JSON.stringify({ ok: true, ...body })}` } };
 }
 
-/** `query`, checked: `matchQuery` trusts its input, so a model's JSON is read here with a sentence for each way it can be wrong. */
-function parseQuery(raw: unknown): { query: AgentToolQuery } | { problem: string } {
-  if (raw === undefined) return { query: {} };
-  if (!isRecord(raw)) return { problem: "query must be an object like { where: [{ field, op, value }], orderBy: { field, direction }, limit }." };
-  for (const key of Object.keys(raw)) {
-    if (key !== "where" && key !== "orderBy" && key !== "limit") return { problem: `query has no "${key}": it takes where, orderBy and limit.` };
-  }
-  const query: AgentToolQuery = {};
-
-  if (raw.where !== undefined) {
-    if (!Array.isArray(raw.where)) return { problem: "query.where must be a list of conditions: [{ field, op, value }]." };
-    const where: { field: string; op: QueryOp; value: unknown }[] = [];
-    for (const [i, c] of raw.where.entries()) {
-      if (!isRecord(c)) return { problem: `query.where[${i}] must be an object like { field, op, value }.` };
-      const field = nonBlank(c.field);
-      if (field === null) return { problem: `query.where[${i}].field must be the path of a field, as text.` };
-      if (typeof c.op !== "string" || !(QUERY_OPS as readonly string[]).includes(c.op)) return { problem: `query.where[${i}].op must be one of ${QUERY_OPS.join(" ")}.` };
-      if (!("value" in c)) return { problem: `query.where[${i}].value is required: what the field is compared with.` };
-      where.push({ field, op: c.op as QueryOp, value: c.value });
-    }
-    query.where = where;
-  }
-
-  if (raw.orderBy !== undefined) {
-    if (!isRecord(raw.orderBy)) return { problem: 'query.orderBy must be an object like { field: "age", direction: "desc" }.' };
-    const field = nonBlank(raw.orderBy.field);
-    if (field === null) return { problem: "query.orderBy.field must be the path of a field, as text." };
-    const { direction } = raw.orderBy;
-    if (direction !== undefined && direction !== "asc" && direction !== "desc") return { problem: 'query.orderBy.direction must be "asc" or "desc".' };
-    query.orderBy = direction === undefined ? { field } : { field, direction };
-  }
-
-  if (raw.limit !== undefined) {
-    const { limit } = raw;
-    if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > AGENT_TOOL_QUERY_LIMIT_MAX) {
-      return { problem: `query.limit must be a whole number from 1 to ${AGENT_TOOL_QUERY_LIMIT_MAX}.` };
-    }
-    query.limit = limit;
-  }
-  return { query };
-}
-
 /** The writes of a `batch`, checked one by one: which one is wrong is said by its place in the list. */
 function parseWrites(raw: unknown): { writes: DataWrite[] } | { problem: string } {
   if (!Array.isArray(raw) || raw.length === 0) return { problem: `writes is required for batch: a list of 1 to ${AGENT_TOOL_BATCH_MAX} writes, each { op, collection, doc_id, data }.` };
@@ -448,17 +403,16 @@ export async function runToolData(session: AgentSession, args: Record<string, un
 }
 
 async function runAction(d: AgentToolsDeps, tool: AgentToolRow, action: ToolDataAction, args: Record<string, unknown>): Promise<ToolOutcome> {
-  const collection = nonBlank(args.collection);
-  const docId = nonBlank(args.doc_id);
+  // The same checks and sentences as the tool's own page gets (`validate.ts`); the agent's wire name for an id is `doc_id`.
+  const input = { collection: args.collection, docId: args.doc_id, data: args.data, query: args.query };
 
   switch (action) {
     case "get":
     case "list":
     case "query": {
-      if (action !== "list" && collection === null) return invalid(`collection is required for ${action}.`);
-      if (action === "get" && docId === null) return invalid("doc_id is required for get.");
-      const parsed = action === "query" ? parseQuery(args.query) : { query: {} as AgentToolQuery };
+      const parsed = parseRead(action, input);
       if ("problem" in parsed) return invalid(parsed.problem);
+      const { collection, docId } = parsed;
 
       // The mark is the time BEFORE the read: a change that lands while it runs is still one the agent hasn't seen.
       const at = d.now();
@@ -485,11 +439,9 @@ async function runAction(d: AgentToolsDeps, tool: AgentToolRow, action: ToolData
     case "set":
     case "update":
     case "delete": {
-      if (collection === null) return invalid(`collection is required for ${action}.`);
-      if (docId === null) return invalid(`doc_id is required for ${action}.`);
-      if (action !== "delete" && !isRecord(args.data)) return invalid(`data is required for ${action}: the document, a JSON object.`);
-      const write: DataWrite = action === "delete" ? { op: action, collection, docId } : { op: action, collection, docId, data: args.data as Record<string, unknown> };
-      return await applyWrites(d, tool, [write]);
+      const parsed = parseWrite(action, input);
+      if ("problem" in parsed) return invalid(parsed.problem);
+      return await applyWrites(d, tool, [parsed.write]);
     }
 
     case "batch": {
@@ -509,12 +461,6 @@ async function applyWrites(d: AgentToolsDeps, tool: AgentToolRow, writes: readon
 
   await markSeen(d, tool.id, at);
   const { changes } = result;
-  if (changes.length > 0) {
-    d.publish(tool.id, {
-      by: "agent",
-      docs: changes.filter((c) => c.data !== null),
-      deleted: changes.filter((c) => c.data === null).map((c) => ({ collection: c.collection, docId: c.docId })),
-    });
-  }
+  if (changes.length > 0) d.publish(tool.id, changeOfWrites("agent", changes));
   return { response: { ok: true, changed: changedOf(changes) } };
 }

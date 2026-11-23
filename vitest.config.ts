@@ -679,6 +679,7 @@ export default defineConfig({
       "lib/assistants/**/*.test.ts",
       // The tool that lives inside an agent (spec local 2026-11-22-herramienta-dentro-del-agente). LISTA BLANCA.
       "lib/agent-tools/**/*.test.ts",
+      "app/api/agent-tools/**/*.test.ts",
       // Agents for everyone: the person's space (spec local 2026-11-19-agentes-para-todos). LISTA BLANCA.
       "lib/space/**/*.test.ts",
       "app/api/space/**/*.test.ts",

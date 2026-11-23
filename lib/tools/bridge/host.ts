@@ -8,16 +8,41 @@
 // workspace's hook and the phone app both build on it.
 import {
   BRIDGE_CHANNEL,
+  METHOD_NOT_FOUND,
   isBridgeRequest,
   type BridgeError,
+  type BridgeMethod,
   type BridgeRequest,
   type DataChange,
+  type DataChangedParams,
   type ToolContext,
   type ToolJobAsk,
 } from "./protocol";
 import { JOB_REFUSALS, UPLOADS_PER_PICK, type ToolJobView } from "../jobs/types";
 
-export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string };
+/** Who the tool is: an installed tool, a tool project's draft, or (spec local 2026-11-22-herramienta-dentro-del-agente) a tool
+ *  an AGENT made, which talks only to its own data. */
+export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string } | { readonly agentToolId: string };
+
+/** What an agent's tool may ask its parent (spec §3): its context, the agent's prompt box and its own database. Nothing of the
+ *  person's projects, forms, visits, backend, jobs or files. The tool's code can `postMessage` any method, so this list —
+ *  enforced by the host itself — is the boundary, not what the tool's own client offers. */
+export const AGENT_TOOL_BRIDGE_METHODS: readonly BridgeMethod[] = [
+  "context",
+  "sendPrompt",
+  "data.get",
+  "data.set",
+  "data.update",
+  "data.delete",
+  "data.list",
+  "data.query",
+  "data.subscribe",
+];
+
+const DATA_OPS = ["get", "set", "update", "delete", "list", "query"] as const;
+type DataOp = (typeof DATA_OPS)[number];
+const dataOpOf = (method: BridgeMethod): DataOp | null => DATA_OPS.find((op) => method === `data.${op}`) ?? null;
+
 /** What OpenLen's dialog shows: the change, and the project's title when the bridge has seen it. */
 export type ToolChange = DataChange & { readonly projectId: string; readonly projectTitle?: string };
 
@@ -41,6 +66,13 @@ export interface BridgeHostOptions {
    *  a link inside the frame carries no key. */
   onDelivered?(file: { name: string; url: string; size: number }): void;
   fetchImpl?: typeof fetch;
+  /** The methods the frame may ask. A request outside it is answered `METHOD_NOT_FOUND` and nothing else happens. Absent, an
+   *  installed tool or a draft has its whole bridge; an agent's tool has `AGENT_TOOL_BRIDGE_METHODS`. */
+  methods?: readonly BridgeMethod[];
+  /** An agent's tool asked to follow its data (`data.subscribe`): called the FIRST time only, per host. The pane (or the phone
+   *  app) opens the stream then and forwards what it brings with `notifyData` — so the baseline can't reach a frame that hasn't
+   *  installed its listener yet. If it throws, the frame is told and its retry calls it again. */
+  onDataSubscribe?(): void;
   /** The origin a link the frame gets must name — where the person's session or key opens it. The workspace's own by
    *  default; the phone app gives openlen.com's (phase 5, §4.14). */
   linkOrigin?: string;
@@ -55,9 +87,17 @@ function record(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 }
 
-export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: MessageEvent): Promise<void>; notifyContext(): void } {
+export function createToolBridgeHost(o: BridgeHostOptions): {
+  onMessage(e: MessageEvent): Promise<void>;
+  notifyContext(): void;
+  /** Tells an agent's tool its data changed (`data.changed`): the baseline, or one change. */
+  notifyData(change: DataChangedParams): void;
+} {
   // Titles of the projects the tool has seen (its `projects()`), so the dialog names a project, not an id.
   const titles = new Map<string, string>();
+  // What the frame may ask: the list it was given, or, for an agent's tool, the agent's — never the whole bridge by default.
+  const allowed: readonly BridgeMethod[] | null = o.methods ?? ("agentToolId" in o.caller ? AGENT_TOOL_BRIDGE_METHODS : null);
+  let dataSubscribed = false;
   const doFetch = o.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const post = (message: unknown) => {
     const frame = o.frame();
@@ -73,6 +113,28 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
       });
       const data = record(await res.json().catch(() => ({})));
       if (!res.ok) return { error: { code: res.status, message: typeof data.error === "string" ? data.error : "bridge_failed" } };
+      return { result: data };
+    } catch {
+      return { error: { code: INTERNAL_ERROR, message: "bridge_failed" } };
+    }
+  };
+
+  // An agent's tool's database call: to ITS tool's route, with the call and nothing else — not the caller, the time zone or
+  // the locale `relay` adds for an installed tool (the route reads the tool from the address and the person from the session
+  // or the key). The route's answer is the result; a refusal is an error whose message is the route's code, and the sentence of
+  // a bad request travels as its data so the tool's author can read what was wrong.
+  const relayData = async (toolId: string, op: DataOp, p: Record<string, unknown>): Promise<{ result: unknown } | { error: BridgeError }> => {
+    try {
+      const res = await doFetch(`/api/agent-tools/${encodeURIComponent(toolId)}/data`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ op, collection: p.collection, docId: p.docId, data: p.data, query: p.query }),
+      });
+      const data = record(await res.json().catch(() => ({})));
+      if (!res.ok) {
+        const error: BridgeError = { code: res.status, message: typeof data.error === "string" ? data.error : "bridge_failed" };
+        return { error: typeof data.message === "string" ? { ...error, data: data.message } : error };
+      }
       return { result: data };
     } catch {
       return { error: { code: INTERNAL_ERROR, message: "bridge_failed" } };
@@ -168,6 +230,27 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
 
   async function handle(req: BridgeRequest): Promise<{ result: unknown } | { error: BridgeError }> {
     const p = record(req.params);
+    // The boundary: the frame can `postMessage` any method, so what it may ask is decided here, before anything is relayed,
+    // confirmed or opened.
+    if (allowed && !allowed.includes(req.method)) return { error: { code: METHOD_NOT_FOUND, message: "method_not_found" } };
+    // An agent's tool's own database. For any other tool `data.*` fall through to the bridge's server, which refuses them.
+    if ("agentToolId" in o.caller) {
+      if (req.method === "data.subscribe") {
+        // Answered at once, every time: the frame retries after a failure or a timeout, and a repeat is the same wish. The pane
+        // is told once, so there is one stream per host.
+        if (!dataSubscribed) {
+          try {
+            o.onDataSubscribe?.();
+            dataSubscribed = true;
+          } catch {
+            return { error: { code: INTERNAL_ERROR, message: "bridge_failed" } };
+          }
+        }
+        return { result: { ok: true } };
+      }
+      const op = dataOpOf(req.method);
+      if (op) return relayData(o.caller.agentToolId, op, p);
+    }
     switch (req.method) {
       case "context":
         return { result: { ...o.context(), theme: o.theme() } };
@@ -223,6 +306,9 @@ export function createToolBridgeHost(o: BridgeHostOptions): { onMessage(e: Messa
     },
     notifyContext() {
       post({ jsonrpc: "2.0", method: "context", params: { ...o.context(), theme: o.theme() }, channel: BRIDGE_CHANNEL });
+    },
+    notifyData(change: DataChangedParams) {
+      post({ jsonrpc: "2.0", method: "data.changed", params: change, channel: BRIDGE_CHANNEL });
     },
   };
 }
