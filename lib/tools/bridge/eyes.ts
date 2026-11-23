@@ -29,6 +29,7 @@ import {
   type ToolContext,
 } from "./protocol";
 import { handleBridgeCall, SERVER_METHODS, toolProjectOf, type BridgeCaller, type ServerMethod } from "./handlers";
+import { WORKSPACE_TOOL_THEME } from "./workspace-theme";
 
 export const EYES_BRIDGE_FUNCTION = "__openlenBridge";
 
@@ -44,30 +45,12 @@ export interface AgentToolEyesCaller {
 
 export type EyesCaller = BridgeCaller | AgentToolEyesCaller;
 
-/** The workspace's colours (app/[locale]/new/tokens.css), light and dark: what a tool sees in the eyes. */
-const LIGHT_TOKENS: Readonly<Record<string, string>> = {
-  "--bg": "oklch(97.2% 0.004 12)",
-  "--bg-elev": "oklch(99.2% 0.003 12)",
-  "--fg": "oklch(15% 0.01 12)",
-  "--fg-muted": "oklch(45% 0.01 12)",
-  "--fg-faint": "oklch(48% 0.01 12)",
-  "--border": "oklch(85% 0.005 12 / 0.6)",
-  "--border-strong": "oklch(78% 0.005 12 / 0.8)",
-  "--hover": "oklch(93.2% 0.006 12)",
-  "--accent": "#FF5A36",
-  "--accent-strong": "#D63916",
-};
-const DARK_TOKENS: Readonly<Record<string, string>> = {
-  ...LIGHT_TOKENS,
-  "--bg": "oklch(11% 0.01 12)",
-  "--bg-elev": "oklch(15% 0.01 12)",
-  "--fg": "oklch(96% 0.005 12)",
-  "--fg-muted": "oklch(65% 0.01 12)",
-  "--fg-faint": "oklch(64% 0.01 12)",
-  "--border": "oklch(25% 0.01 12 / 0.7)",
-  "--border-strong": "oklch(32% 0.01 12 / 0.9)",
-  "--hover": "oklch(18% 0.01 12)",
-};
+/** The workspace's colours, light and dark, as the phone gives them (`WORKSPACE_TOOL_THEME`, copied from
+ *  app/[locale]/new/tokens.css and pinned by its test): what a tool sees in the eyes, the same tokens as on the web and
+ *  the phone. `--font-sans` is the parent's own; the eyes have none, so a system stack. */
+const EYES_FONT = "ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif";
+const LIGHT_TOKENS: Readonly<Record<string, string>> = { ...WORKSPACE_TOOL_THEME.light, "--font-sans": EYES_FONT };
+const DARK_TOKENS: Readonly<Record<string, string>> = { ...WORKSPACE_TOOL_THEME.dark, "--font-sans": EYES_FONT };
 
 export interface EyesDeps {
   handle(caller: BridgeCaller, method: ServerMethod, params: unknown): Promise<{ result: unknown } | { error: BridgeError }>;

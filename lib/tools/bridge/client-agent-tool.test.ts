@@ -275,12 +275,15 @@ describe("window.openlen.data.subscribe", () => {
     expect(a.seen.at(-1)!.docs.map((d) => d.docId)).toEqual(["t2"]);
   });
 
-  it("a subscriber that arrives after a baseline is called at once with the current set", () => {
+  it("a subscriber that arrives after a baseline is called on the next microtask with the current set", async () => {
     const f = framed();
     snapshots(f);
     f.notify({ kind: "baseline", docs: [doc("tareas", "t1", { n: 1 })] });
     f.notify({ kind: "change", by: "agent", docs: [doc("tareas", "t2", { n: 2 })], deleted: [] });
     const late = snapshots(f);
+    // not inside subscribe: its unsubscribe isn't returned yet there
+    expect(late.seen).toEqual([]);
+    await Promise.resolve();
     expect(late.seen).toEqual([{ docs: [doc("tareas", "t1", { n: 1 }), doc("tareas", "t2", { n: 2 })], change: null }]);
     // and it didn't open a second stream
     expect(f.requests().filter((r) => r.method === "data.subscribe")).toHaveLength(1);
@@ -321,6 +324,50 @@ describe("window.openlen.data.subscribe", () => {
     const b = snapshots(f);
     f.notify({ kind: "baseline", docs: [doc("t", "1", {}), doc("t", "2", {})] });
     expect(b.seen[0]!.docs).toHaveLength(2);
+  });
+
+  it("changing a document's data deep inside one copy reaches neither the kept set, nor another subscriber, nor the change", () => {
+    const f = framed();
+    f.data.subscribe!((s: unknown) => {
+      const snap = s as { docs: Array<{ data: { deep: { n: number } } }>; change: { docs: Array<{ data: { deep: { n: number } } }> } | null };
+      for (const d of snap.docs) d.data.deep.n = 999;
+      if (snap.change) for (const d of snap.change.docs) d.data.deep.n = 999;
+    });
+    const b = snapshots(f);
+    const sent = doc("t", "1", { deep: { n: 1 } });
+    f.notify({ kind: "baseline", docs: [sent] });
+    f.notify({ kind: "change", by: "agent", docs: [doc("t", "2", { deep: { n: 2 } })], deleted: [] });
+    expect(b.seen.at(-1)!.docs.map((d) => d.data)).toEqual([{ deep: { n: 1 } }, { deep: { n: 2 } }]);
+    expect((b.seen.at(-1)!.change as { docs: Doc[] }).docs[0]!.data).toEqual({ deep: { n: 2 } });
+    // what the parent sent stays as it was sent, too
+    expect(sent.data).toEqual({ deep: { n: 1 } });
+    const later = snapshots(f);
+    return Promise.resolve().then(() => expect(later.seen[0]!.docs.map((d) => d.data)).toEqual([{ deep: { n: 1 } }, { deep: { n: 2 } }]));
+  });
+
+  it("a late subscriber can unsubscribe from inside its own first call", async () => {
+    const f = framed();
+    snapshots(f);
+    f.notify({ kind: "baseline", docs: [doc("t", "1", { n: 1 })] });
+    let calls = 0;
+    const off: () => void = f.data.subscribe!(() => {
+      calls += 1;
+      off();
+    }) as () => void;
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    f.notify({ kind: "change", by: "agent", docs: [doc("t", "2", { n: 2 })], deleted: [] });
+    expect(calls).toBe(1);
+  });
+
+  it("a late subscriber that unsubscribes before the microtask is never called", async () => {
+    const f = framed();
+    snapshots(f);
+    f.notify({ kind: "baseline", docs: [doc("t", "1", { n: 1 })] });
+    const late = snapshots(f);
+    late.off();
+    await Promise.resolve();
+    expect(late.seen).toEqual([]);
   });
 
   it("a malformed notification is ignored", () => {

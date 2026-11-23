@@ -203,17 +203,19 @@ describe("🔴 who may", () => {
   });
 
   it("there is no plan check on this path: free or paid, it deletes", async () => {
-    // The route runs here with no `users`/`credits` tables at all: reaching for either would throw.
+    // The route runs here with no credits or plan tables (its `users` table has no plan column): reaching for a plan would throw.
     expect((await call()).status).toBe(200);
   });
 
   it("🔴 the agent has no way to delete a tool: nothing the agent runs reaches `deleteAgentTool`", () => {
     const callers: string[] = [];
+    // Code only: a comment that names the function (this sentence, or a note in another file) is not a caller.
+    const withoutComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1");
     const walk = (dir: string) => {
       for (const e of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
         const rel = `${dir}/${e.name}`;
         if (e.isDirectory()) walk(rel);
-        else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) && fs.readFileSync(path.join(process.cwd(), rel), "utf8").includes("deleteAgentTool")) callers.push(rel);
+        else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name) && withoutComments(fs.readFileSync(path.join(process.cwd(), rel), "utf8")).includes("deleteAgentTool")) callers.push(rel);
       }
     };
     for (const dir of ["lib", "app"]) walk(dir);

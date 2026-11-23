@@ -250,6 +250,32 @@ describe("a call that is wrong", () => {
     }
   });
 
+  it("a body past 256 KB is a 413 and nothing is written, whether its content-length says so or not", async () => {
+    const big = JSON.stringify({ op: "set", collection: "c", docId: "d", data: { t: "x".repeat(256 * 1024) } });
+    const declared = await post(big);
+    expect(declared.status).toBe(413);
+    expect(await declared.json()).toEqual({ error: "payload_too_large" });
+    // A stream with no content-length is read no further than the cap.
+    const chunk = new TextEncoder().encode(big);
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(chunk);
+        c.close();
+      },
+    });
+    const streamed = await route.POST(
+      new Request("https://openlen.com/api/agent-tools/tool-1/data", { method: "POST", headers: { "content-type": "application/json" }, body: stream, duplex: "half" } as RequestInit),
+      { params: Promise.resolve({ id: "tool-1" }) },
+    );
+    expect(streamed.status).toBe(413);
+    expect(await countDocs()).toBe(0);
+    expect(heard).toEqual([]);
+    // Just under the cap is read and checked as usual (here the store's own 64 KB cap answers).
+    const under = await post({ op: "set", collection: "c", docId: "d", data: { t: "x".repeat(100 * 1024) } });
+    expect(under.status).toBe(400);
+    expect(((await under.json()) as { error: string }).error).toBe("doc_too_big");
+  });
+
   it("nothing a bad call does reaches the database", async () => {
     await bad({ op: "set", collection: "c", docId: "d", data: "x" });
     expect(await countDocs()).toBe(0);
@@ -301,7 +327,7 @@ describe("🔴 who may", () => {
   });
 
   it("there is no plan check on this path: the route never asks for the person's plan or credits", async () => {
-    // The route runs here with no `users`/`credits` tables at all: reaching for either would throw. Free or paid, it answers.
+    // The route runs here with no credits or plan tables (its `users` table has no plan column): reaching for a plan would throw. Free or paid, it answers.
     expect((await call(body)).status).toBe(200);
   });
 });

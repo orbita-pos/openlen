@@ -28,6 +28,7 @@
 import { subscribeToolChanges, type AgentToolChange } from "@/lib/agent-tools/bus";
 import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
 import { agentToolById, readDocs, readDocsByKeys } from "@/lib/agent-tools/store";
+import type { DataChangedParams } from "@/lib/tools/bridge/protocol";
 import { toBridgeDoc } from "@/lib/agent-tools/wire";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
@@ -77,7 +78,13 @@ function follow(toolId: string, controller: ReadableStreamDefaultController<Uint
   // One queue: the baseline first, then each change or the end, in the order the bus gave them.
   let queue: Promise<void> = Promise.resolve();
   const enqueue = (job: () => Promise<void>) => {
-    queue = queue.then(() => (closed ? undefined : job())).catch(stop);
+    queue = queue
+      .then(() => (closed ? undefined : job()))
+      .catch((err: unknown) => {
+        // A read that fails ends the stream: the screen reconnects for a baseline. Said here, so an outage shows.
+        console.warn("[agent-tools] follow closed", toolId, err);
+        stop();
+      });
   };
 
   const baseline = async () => {
@@ -88,7 +95,7 @@ function follow(toolId: string, controller: ReadableStreamDefaultController<Uint
       return;
     }
     const docs = await readDocs(toolId);
-    event("baseline", { kind: "baseline", docs: docs.map(toBridgeDoc) });
+    event("baseline", { kind: "baseline", docs: docs.map(toBridgeDoc) } satisfies DataChangedParams);
   };
 
   const change = async (c: AgentToolChange) => {
@@ -98,7 +105,7 @@ function follow(toolId: string, controller: ReadableStreamDefaultController<Uint
     const stored = await readDocsByKeys(toolId, [...keys.values()]);
     const there = new Set(stored.map(keyOf));
     const deleted = [...keys].filter(([key]) => !there.has(key)).map(([, k]) => k);
-    event("change", { kind: "change", by: c.by, docs: stored.map(toBridgeDoc), deleted });
+    event("change", { kind: "change", by: c.by, docs: stored.map(toBridgeDoc), deleted } satisfies DataChangedParams);
   };
 
   if (signal.aborted) {

@@ -41,6 +41,8 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
   const requestHost = req.headers.get("host");
   const tools = [];
   for (const tool of await agentToolsOf(agent.id)) {
+    // The same owner check as the tool's own routes (follow, open, delete): a tab that is listed always opens.
+    if (tool.personId !== userId) continue;
     const frameUrl = agentToolFrameUrl({ hostLabel: tool.hostLabel, releaseSha: tool.releaseSha, requestHost });
     if (!frameUrl) continue;
     tools.push({ id: tool.id, slug: tool.slug, title: tool.title, frameUrl, frameOrigin: new URL(frameUrl).origin });

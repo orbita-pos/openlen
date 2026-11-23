@@ -3485,6 +3485,26 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     assert.equal(seenUsar.length, 0);
   });
 
+  it("a tool that couldn't be loaded (the database or its version didn't answer) is not called missing", async () => {
+    const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
+    (eyesDeps as unknown as { loadAgentToolForEyes: () => Promise<never> }).loadAgentToolForEyes = async () => {
+      throw new Error("database is down");
+    };
+    const warned: unknown[][] = [];
+    const realWarn = console.warn;
+    console.warn = (...a: unknown[]) => void warned.push(a);
+    try {
+      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /couldn't be loaded/i);
+      assert.doesNotMatch(String(out.response.error), /no published tool|publish_tool first/i);
+    } finally {
+      console.warn = realWarn;
+    }
+    assert.equal(seenUsar.length, 0);
+    assert.equal(warned[0]?.[0], "[agent-tools] eyes couldn't load the tool");
+  });
+
   it("refuses Len (no assistant) and non-space assistants passing tool", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
     const lenView = await runAgentTool(makeSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });

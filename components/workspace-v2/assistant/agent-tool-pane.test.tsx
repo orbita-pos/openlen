@@ -221,6 +221,9 @@ describe("AssistantHome + AgentToolPane", () => {
     const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
     expect(iframe).not.toBeNull();
     expect(iframe.getAttribute("src")).toBe(TOOL_1.frameUrl);
+    // No popups (a window that escapes the tool's policy) and no camera, microphone or location.
+    expect(iframe.getAttribute("sandbox")).toBe("allow-scripts allow-same-origin allow-forms allow-modals allow-downloads allow-pointer-lock");
+    expect(iframe.getAttribute("allow")).toBe("clipboard-write; fullscreen");
     expect(iframe.getAttribute("data-tool-frame")).toBe("tool-1");
     expect(iframe.getAttribute("data-tool-frame")).not.toBe("draft");
 

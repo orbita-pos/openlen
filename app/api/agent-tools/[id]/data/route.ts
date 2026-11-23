@@ -6,7 +6,8 @@
 // Body { op: "get"|"list"|"query"|"set"|"update"|"delete", collection, docId?, data?, query? } — the same checks and
 // sentences as the agent's `tool_data` (`lib/agent-tools/validate.ts`); no `batch`, that is the agent's.
 // → 200 reads { doc } | { docs } · writes { ok: true, doc } (doc is null for a delete) · 400 `bad_request` with its sentence,
-//   or the store's code (`doc_too_big`, `too_many_docs`, `tool_too_big`, `bad_write`) · 404 `not_found`.
+//   or the store's code (`doc_too_big`, `too_many_docs`, `tool_too_big`, `bad_write`) · 404 `not_found` · 413
+//   `payload_too_large` for a body past 256 KB (read no further than that).
 //
 // 🔴 The tool's owner only, and ONE 404 for everything else — the tools are off, there is no such tool, nobody is signed in,
 // the tool is another person's — so a stranger can't tell a tool exists; and the body is read only after that, so a malformed
@@ -17,7 +18,7 @@
 import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
 import { publishToolChange } from "@/lib/agent-tools/bus";
 import { runQuery } from "@/lib/agent-tools/query";
-import { agentToolById, readDocs, writeDocs } from "@/lib/agent-tools/store";
+import { agentToolById, readDoc, readDocs, writeDocs } from "@/lib/agent-tools/store";
 import { isRecord, parseRead, parseWrite, type ReadAction, type WriteAction } from "@/lib/agent-tools/validate";
 import { changeOfWrites, toBridgeDoc } from "@/lib/agent-tools/wire";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
@@ -35,6 +36,32 @@ const badRequest = (message: string) => json({ error: "bad_request", message }, 
 const READ_OPS: readonly ReadAction[] = ["get", "list", "query"];
 const WRITE_OPS: readonly WriteAction[] = ["set", "update", "delete"];
 
+/** The most a call's body may weigh: one document is at most 64 KB, so four times that leaves room for its JSON's escapes
+ *  and a query — and a page can't make the server parse megabytes before the store's own check refuses them. */
+export const DATA_BODY_MAX_BYTES = 256 * 1024;
+const tooLarge = () => json({ error: "payload_too_large" }, 413);
+
+/** The body as text, or null once it is past `max` bytes — whatever its `content-length` says, read no further than that. */
+async function boundedText(req: Request, max: number): Promise<string | null> {
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > max) return null;
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 export const POST = paraLaApp(async (req: Request, { params }: { params: Promise<{ id: string }> }): Promise<Response> => {
   if (!agentToolsEnabled()) return notFound();
   const userId = await usuarioDeLaPeticion(req);
@@ -43,7 +70,14 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   const tool = await agentToolById(id);
   if (!tool || tool.personId !== userId) return notFound();
 
-  const body: unknown = await req.json().catch(() => null);
+  const text = await boundedText(req, DATA_BODY_MAX_BYTES).catch(() => "");
+  if (text === null) return tooLarge();
+  let body: unknown = null;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = null;
+  }
   if (!isRecord(body)) return badRequest("The body must be a JSON object like { op, collection, docId, data, query }.");
   const op = body.op;
   const input = { collection: body.collection, docId: body.docId, data: body.data, query: body.query };
@@ -55,11 +89,11 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
     // The page lists a collection it names; the agent's list of collections is its own.
     if (collection === null) return badRequest("collection is required for list.");
 
-    const docs = await readDocs(tool.id, collection);
     if (op === "get") {
-      const doc = docs.find((d) => d.docId === docId);
+      const doc = await readDoc(tool.id, collection, docId!);
       return json({ doc: doc ? toBridgeDoc(doc) : null });
     }
+    const docs = await readDocs(tool.id, collection);
     return json({ docs: (op === "list" ? docs : runQuery(docs, query)).map(toBridgeDoc) });
   }
 

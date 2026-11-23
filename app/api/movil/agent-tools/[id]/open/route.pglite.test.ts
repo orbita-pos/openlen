@@ -154,7 +154,7 @@ describe("🔴 who may", () => {
   });
 
   it("there is no plan check on this path: free or paid, it opens", async () => {
-    // The route runs here with no `users`/`credits` tables at all: reaching for either would throw.
+    // The route runs here with no credits or plan tables (its `users` table has no plan column): reaching for a plan would throw.
     expect((await call()).status).toBe(200);
   });
 });

@@ -109,6 +109,16 @@ export async function readDocs(toolId: string, collection?: string): Promise<Age
   );
 }
 
+/** One document of a tool by its key (the table's primary key), or null: a `get` never loads the whole collection. */
+export async function readDoc(toolId: string, collection: string, docId: string): Promise<AgentToolDoc | null> {
+  const rows = await db
+    .select()
+    .from(docs)
+    .where(and(eq(docs.toolId, toolId), eq(docs.collection, collection), eq(docs.docId, docId)))
+    .limit(1);
+  return asDocs(rows)[0] ?? null;
+}
+
 /** The documents of a tool at these keys, as they are stored NOW, in the order of `readDocs`; a key with no document is
  *  left out. What a stream re-reads after a change: it tells the screens what is stored, not what a writer meant to
  *  store (two writers to one document can publish out of the order they committed in). */
@@ -154,7 +164,9 @@ function plainObject(value: unknown): Record<string, unknown> | null {
     return null;
   }
   if (typeof json !== "string" || NOT_STORABLE.test(json)) return null;
-  return JSON.parse(json) as Record<string, unknown>;
+  // What goes back in must still be an object: a Date, or anything with a `toJSON` that returns a string or a list, isn't.
+  const parsed: unknown = JSON.parse(json);
+  return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
 }
 
 type Planned = { op: "set" | "update" | "delete"; collection: string; docId: string; data: Record<string, unknown> | null };

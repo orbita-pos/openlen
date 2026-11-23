@@ -1,4 +1,4 @@
-// THE PUBLISHED VERSION OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §3): what the agent wrote in
+// THE PUBLISHED VERSION OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §1): what the agent wrote in
 // `/tools/<agent slug>/<tool>/` is a folder of the space's project; publishing freezes it as a VERSION — the files
 // re-rooted at `/`, as the tool's own host serves them — and the tab shows that copy, never the folder mid-edit. This is the
 // pure half: the files come in, the version (or why not) goes out; nothing here reads the database or saves anything.

@@ -39,10 +39,11 @@ describe("agentToolPhoneHostLabel", () => {
   });
 });
 
-// The three hosts that one id could get must be three different origins: the workspace's is framed only by openlen.com,
-// the phone's only by the phone app, and an installed tool's is looked up in another table altogether.
+// The labels one id could get must be five different origins: the agent tool's workspace label is framed only by
+// openlen.com, its phone label only by the phone app, an installed tool's two labels are looked up in another table
+// altogether, and the canvas's is recomputed from a live document.
 describe("the labels never meet", () => {
-  it("the workspace's, the phone's, an installed tool's and the canvas's of the same id are four labels", () => {
+  it("the agent tool's two, an installed tool's two and the canvas's label of the same id are five labels", () => {
     const labels = [
       agentToolHostLabel(ID, ENV),
       agentToolPhoneHostLabel(ID, ENV),
@@ -51,6 +52,15 @@ describe("the labels never meet", () => {
       etiquetaDeLienzo(ID, ENV),
     ];
     expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+// A known answer: the HMAC domains are exactly "openlen-agent-tool:" and "openlen-agent-tool-phone:". A label is stored on the
+// tool's row, so a change of domain would quietly give new tools different addresses from the old ones.
+describe("the labels' known answer", () => {
+  it("pins both HMAC domains", () => {
+    expect(agentToolHostLabel(ID, ENV)).toBe("lienzo-e21a10dbc607dcfc3fad29657477e312");
+    expect(agentToolPhoneHostLabel(ID, ENV)).toBe("lienzo-beab6b1b9edbc0564fa52bbb68b80e34");
   });
 });
 

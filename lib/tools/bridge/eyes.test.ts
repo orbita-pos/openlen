@@ -8,6 +8,8 @@ import { describe, expect, it, vi } from "vitest";
 import type { ToolInstallationRow } from "../store";
 import { installEyesBridge } from "./eyes";
 import type { BridgeCaller } from "./handlers";
+import { TOOL_THEME_TOKENS } from "./protocol";
+import { WORKSPACE_TOOL_THEME } from "./workspace-theme";
 
 const base = { personId: "u1", personEmail: "ana@example.com", locale: "es", timeZone: "UTC" };
 const draft: BridgeCaller = { ...base, mode: "draft", toolProjectId: "tool" };
@@ -49,6 +51,16 @@ describe("installEyesBridge", () => {
     expect(theme.mode).toBe("dark");
     expect(theme.tokens["--bg"]).toBe("oklch(11% 0.01 12)");
     expect(theme.tokens["--fg"]).toBe("oklch(96% 0.005 12)");
+  });
+
+  it("the eyes give every token the skill names, the same ones the web and the phone give", async () => {
+    for (const mode of ["light", "dark"] as const) {
+      const i = await exposed({ ...installed, theme: mode });
+      const tokens = ((await i.call("context")).result as { theme: { tokens: Record<string, string> } }).theme.tokens;
+      expect(Object.keys(tokens).sort()).toEqual([...TOOL_THEME_TOKENS].sort());
+      for (const [name, value] of Object.entries(WORKSPACE_TOOL_THEME[mode])) expect(tokens[name]).toBe(value);
+      expect(tokens["--font-sans"]).toBeTruthy();
+    }
   });
 
   it("the caller is read on every call, so the same tab can look in light and then in dark", async () => {

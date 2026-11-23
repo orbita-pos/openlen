@@ -140,7 +140,7 @@ describe("mobile agent tools", () => {
 
     // Len's chat (no asistente) -> never fetches or shows agent tools button.
     const lenClient = {
-      pedir: vi.fn(async () => Response.json([])),
+      pedir: vi.fn(async (_ruta: string) => Response.json([])),
       avisarAlCerrar: vi.fn(),
     };
     const host3 = mount(
@@ -193,6 +193,9 @@ describe("mobile agent tools", () => {
     const iframe = document.querySelector<HTMLIFrameElement>('iframe[data-agent-tool-frame="t1"]')!;
     expect(iframe).not.toBeNull();
     expect(iframe.getAttribute("src")).toBe(`${PHONE_ORIGIN}/?v=sha1`);
+    // No popups (a window that escapes the tool's policy) and no camera, microphone or location.
+    expect(iframe.getAttribute("sandbox")).toBe("allow-scripts allow-same-origin allow-forms allow-modals allow-downloads allow-pointer-lock");
+    expect(iframe.getAttribute("allow")).toBe("clipboard-write; fullscreen");
 
     const posted: unknown[] = [];
     vi.spyOn(iframe.contentWindow!, "postMessage").mockImplementation((msg) => posted.push(msg));
@@ -333,6 +336,71 @@ describe("mobile agent tools", () => {
     expect(document.querySelector('iframe[data-agent-tool-frame="t1"]')).toBeNull();
     // Tool removed -> header button is gone!
     expect(host.querySelector("[data-agent-tools-btn]")).toBeNull();
+  });
+
+  it("while the DELETE runs the confirm sheet holds no Back entry, and it takes one again when the DELETE fails", async () => {
+    let finishDelete!: (r: Response) => void;
+    const cliente = {
+      pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
+        if (ruta === "/api/agent-tools?assistantId=a1") {
+          return Response.json([{ id: "t1", slug: "recorrido", title: "Recorrido", frameUrl: `${WORKSPACE_ORIGIN}/?v=1`, frameOrigin: WORKSPACE_ORIGIN }]);
+        }
+        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") {
+          return Response.json({ url: `${PHONE_ORIGIN}/?v=sha1`, origin: PHONE_ORIGIN });
+        }
+        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") {
+          return await new Promise<Response>((r) => {
+            finishDelete = r;
+          });
+        }
+        return Response.json({});
+      }),
+      avisarAlCerrar: vi.fn(),
+    };
+    // The Back entries the open layers hold (src/atras.ts keeps each layer's level in history.state).
+    const level = () => Number((history.state as Record<string, unknown> | null)?.lenCapa ?? 0);
+    const settle = async () => {
+      await flush();
+      await new Promise((r) => setTimeout(r, 20));
+      await flush();
+    };
+
+    const host = mount(
+      <PantallaChat abierto chat={makeChat()} cliente={cliente} projectId="space-1" idioma="es" conPip={false} onCerrar={vi.fn()} onLlamar={vi.fn()} asistente={{ id: "a1", name: "Ana", color: "#19c3b1" }} />,
+    );
+    await act(flush);
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>("[data-agent-tools-btn]")!.click();
+      await settle();
+    });
+    const withScreen = level();
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>("[data-agent-tool-remove]")!.click();
+      await settle();
+    });
+    expect(level()).toBe(withScreen + 1);
+
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>("[data-agent-tool-confirm-remove]")!.click();
+      await settle();
+    });
+    // the DELETE is running: the sheet is on screen, but its Back entry is given back
+    expect(document.querySelector("[data-agent-tool-confirm-sheet]")).not.toBeNull();
+    expect(level()).toBe(withScreen);
+
+    await act(async () => {
+      finishDelete(new Response(JSON.stringify({ error: "boom" }), { status: 500 }));
+      await settle();
+    });
+    // it failed: the sheet stays, with its own Back entry again, so one Back closes it and the screen stays
+    expect(document.querySelector("[data-agent-tool-confirm-sheet]")).not.toBeNull();
+    expect(level()).toBe(withScreen + 1);
+    await act(async () => {
+      history.back();
+      await settle();
+    });
+    expect(document.querySelector("[data-agent-tool-confirm-sheet]")).toBeNull();
+    expect(document.querySelector('[data-agent-tool-screen="t1"]')).not.toBeNull();
   });
 
   it("opens a picker sheet when the agent has multiple tools, relays data.* via cliente.pedir, and refreshes after a turn finishes", async () => {

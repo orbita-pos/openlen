@@ -126,6 +126,14 @@ describe("serveAgentTool — the page", () => {
     }
   });
 
+  it("every answer switches off DNS prefetching and the camera, microphone, location and payments", async () => {
+    for (const path of ["/", "/app.js", "/openlen/tool-bridge.js"]) {
+      const res = await serve(path);
+      expect(res.headers.get("x-dns-prefetch-control")).toBe("off");
+      expect(res.headers.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=(), payment=()");
+    }
+  });
+
   it("on the workspace's label the workspace frames it", async () => {
     const res = await serve("/");
     expect(directives(res.headers.get("content-security-policy")!)["frame-ancestors"]).toEqual(["https://openlen.com"]);

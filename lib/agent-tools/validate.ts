@@ -31,6 +31,9 @@ export function parseQuery(raw: unknown): { query: AgentToolQuery } | { problem:
     const where: { field: string; op: QueryOp; value: unknown }[] = [];
     for (const [i, c] of raw.where.entries()) {
       if (!isRecord(c)) return { problem: `query.where[${i}] must be an object like { field, op, value }.` };
+      for (const key of Object.keys(c)) {
+        if (key !== "field" && key !== "op" && key !== "value") return { problem: `query.where[${i}] has no "${key}": a condition takes field, op and value.` };
+      }
       const field = nonBlank(c.field);
       if (field === null) return { problem: `query.where[${i}].field must be the path of a field, as text.` };
       if (typeof c.op !== "string" || !(QUERY_OPS as readonly string[]).includes(c.op)) return { problem: `query.where[${i}].op must be one of ${QUERY_OPS.join(" ")}.` };
@@ -42,6 +45,9 @@ export function parseQuery(raw: unknown): { query: AgentToolQuery } | { problem:
 
   if (raw.orderBy !== undefined) {
     if (!isRecord(raw.orderBy)) return { problem: 'query.orderBy must be an object like { field: "age", direction: "desc" }.' };
+    for (const key of Object.keys(raw.orderBy)) {
+      if (key !== "field" && key !== "direction") return { problem: `query.orderBy has no "${key}": it takes field and direction.` };
+    }
     const field = nonBlank(raw.orderBy.field);
     if (field === null) return { problem: "query.orderBy.field must be the path of a field, as text." };
     const { direction } = raw.orderBy;

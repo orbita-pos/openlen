@@ -58,7 +58,7 @@ export const PUBLISH_TOOL_DECLARATION = {
     "Gives your person a tool of your own: a small page you wrote (an index.html, with the CSS, JS and images beside it) that opens as a tab of yours, next to your chat, on the web and on the phone. " +
     "First write its files with Write and Edit in /tools/<your slug>/<tool name>/ of your space, with an index.html there; then pass that folder as path. " +
     "Publishing saves a VERSION: the tab shows the copy you published, not the folder as you keep editing it, so after a change publish it again with the same path for the tab to change. " +
-    "The page runs apart from OpenLen: its scripts and styles load only from the allowed CDNs and its own files, and fetch/XHR can reach only its own files (connect-src 'self', no external network requests); what it keeps, it keeps with window.openlen.data, the small database it shares with you, which you read and write with tool_data. " +
+    "The page runs apart from OpenLen: its scripts and styles load only from the allowed CDNs and its own files, and fetch/XHR can reach only its own files (connect-src 'self', no external fetch/XHR or form requests); what it keeps, it keeps with window.openlen.data, the small database it shares with you, which you read and write with tool_data. " +
     `At most ${AGENT_TOOLS_PER_AGENT} tools, up to ${mb(AGENT_TOOL_VERSION_MAX_BYTES)} each. Only your person removes a tool, from its tab.`,
   parameters: {
     type: "OBJECT",
@@ -117,7 +117,7 @@ export const TOOL_DATA_DECLARATION = {
             },
             required: ["field"],
           },
-          limit: { type: "NUMBER", description: `A whole number from 1 to ${AGENT_TOOL_QUERY_LIMIT_MAX}; ${AGENT_TOOL_QUERY_LIMIT_MAX} when omitted.` },
+          limit: { type: "INTEGER", description: `A whole number from 1 to ${AGENT_TOOL_QUERY_LIMIT_MAX}; ${AGENT_TOOL_QUERY_LIMIT_MAX} when omitted.` },
         },
       },
       writes: {
@@ -154,6 +154,8 @@ export interface AgentToolsDeps {
   toolsOf(assistantId: string): Promise<readonly AgentToolRow[]>;
   upsert(input: AgentToolInput): Promise<AgentToolRow>;
   readDocs(toolId: string, collection?: string): Promise<AgentToolDoc[]>;
+  /** One document by its key, or null: what `get` reads (never the whole collection). */
+  readDoc(toolId: string, collection: string, docId: string): Promise<AgentToolDoc | null>;
   writeDocs(toolId: string, writes: readonly DataWrite[], by: "agent" | "person"): Promise<WriteResult>;
   markSeen(toolId: string, at: Date): Promise<void>;
   publish(toolId: string, change: AgentToolChange): void;
@@ -172,13 +174,21 @@ const liveDeps: AgentToolsDeps = {
   toolsOf: async (assistantId) => (await import("./store")).agentToolsOf(assistantId),
   upsert: async (input) => (await import("./store")).upsertAgentTool(input),
   readDocs: async (toolId, collection) => (await import("./store")).readDocs(toolId, collection),
+  readDoc: async (toolId, collection, docId) => (await import("./store")).readDoc(toolId, collection, docId),
   writeDocs: async (toolId, writes, by) => (await import("./store")).writeDocs(toolId, writes, by),
   markSeen: async (toolId, at) => (await import("./store")).markAgentSeen(toolId, at),
   publish: publishToolChange,
 };
 
 /** The real members, with `over` in place of some: a test injects what would reach a database or the clock. */
-const depsOf = (over?: Partial<AgentToolsDeps>): AgentToolsDeps => (over ? { ...liveDeps, ...over } : liveDeps);
+// A test that fakes `readDocs` alone gets a `readDoc` read from it, never the live database's.
+const depsOf = (over?: Partial<AgentToolsDeps>): AgentToolsDeps => {
+  if (!over) return liveDeps;
+  const fakeReadDocs = over.readDocs;
+  const readDoc: AgentToolsDeps["readDoc"] | undefined =
+    over.readDoc ?? (fakeReadDocs ? async (toolId, collection, docId) => (await fakeReadDocs(toolId, collection)).find((x) => x.docId === docId) ?? null : undefined);
+  return { ...liveDeps, ...over, ...(readDoc ? { readDoc } : {}) };
+};
 
 // ---- answers ---------------------------------------------------------------------------------------------------------
 
@@ -224,6 +234,12 @@ function releaseProblem(error: AgentToolReleaseError, folder: string): ToolOutco
   return refuse("too_big", `The files of ${folder}/ add up to more than ${mb(AGENT_TOOL_VERSION_MAX_BYTES)}, the most a tool can be. Make it smaller (images are the usual weight) and publish again.`);
 }
 
+/** Control characters (C0 and DEL): never in a tab's name. */
+const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
+/** What the model passed, as a refusal repeats it: cut, so a very long path doesn't fill its context. */
+const SHOWN_MAX = 200;
+const shown = (text: string): string => (text.length > SHOWN_MAX ? `${text.slice(0, SHOWN_MAX)}…` : text);
+
 export async function runPublishTool(session: AgentSession, args: Record<string, unknown>, deps?: Partial<AgentToolsDeps>): Promise<ToolOutcome> {
   const d = depsOf(deps);
   const allowed = gate(session, d);
@@ -234,12 +250,14 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
   if (typeof args.path !== "string") return invalid("path is required: the tool's folder, /tools/<your slug>/<tool name>/.");
   const title = typeof args.title === "string" ? args.title.trim() : "";
   if (title === "" || title.length > TITLE_MAX) return invalid(`title is required: the name your person reads on the tab, from 1 to ${TITLE_MAX} characters.`);
+  // A tab's name is one line of text: a control character (a NUL would even fail the database) has no place in it.
+  if (CONTROL_CHARACTER.test(title)) return invalid("title must be plain text on one line: no line breaks, tabs or other control characters.");
 
   const named = folderOf(args.path, agent.slug);
   if (!named) {
     return refuse(
       "bad_path",
-      `A tool lives in its own folder, /tools/${agent.slug}/<tool name>/ — the tool name in lowercase letters, digits and hyphens, up to 48 characters — and that folder is what you pass as path. "${args.path}" isn't one of yours.`,
+      `A tool lives in its own folder, /tools/${agent.slug}/<tool name>/ — the tool name in lowercase letters, digits and hyphens, up to 48 characters — and that folder is what you pass as path. "${shown(args.path)}" isn't one of yours.`,
     );
   }
   const { folder, name } = named;
@@ -416,13 +434,14 @@ async function runAction(d: AgentToolsDeps, tool: AgentToolRow, action: ToolData
 
       // The mark is the time BEFORE the read: a change that lands while it runs is still one the agent hasn't seen.
       const at = d.now();
+      if (action === "get") {
+        const doc = await d.readDoc(tool.id, collection!, docId!);
+        await markSeen(d, tool.id, at);
+        return doc ? withRows({ document: rowOf(doc) }) : { response: { ok: true, found: false, collection, doc_id: docId } };
+      }
       const docs = await d.readDocs(tool.id, collection ?? undefined);
       await markSeen(d, tool.id, at);
 
-      if (action === "get") {
-        const doc = docs.find((x) => x.docId === docId);
-        return doc ? withRows({ document: rowOf(doc) }) : { response: { ok: true, found: false, collection, doc_id: docId } };
-      }
       if (action === "list") {
         if (collection === null) {
           const counts = new Map<string, number>();

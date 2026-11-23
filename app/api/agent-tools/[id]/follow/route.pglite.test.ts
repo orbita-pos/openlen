@@ -22,6 +22,26 @@ vi.mock("@/lib/db", async () => {
   };
 });
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => base.person) }));
+// The real bus, with every subscription and every unsubscription counted: a stream that ends must leave the bus.
+const busTrack = vi.hoisted(() => ({ live: 0 }));
+vi.mock("@/lib/agent-tools/bus", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/agent-tools/bus")>();
+  return {
+    ...real,
+    subscribeToolChanges: (...args: Parameters<typeof real.subscribeToolChanges>) => {
+      const off = real.subscribeToolChanges(...args);
+      busTrack.live += 1;
+      let left = false;
+      return () => {
+        if (!left) {
+          left = true;
+          busTrack.live -= 1;
+        }
+        off();
+      };
+    },
+  };
+});
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { publishToolChange, publishToolGone } = await import("@/lib/agent-tools/bus");
@@ -457,19 +477,62 @@ describe("closing", () => {
   });
 
   it("🔴 a read that fails closes the stream, so the screen reconnects and gets a whole baseline", async () => {
+    const warn = spyOn(console, "warn").mockImplementation(() => undefined);
     const f = await feed();
     await f.next();
     spyOn(store, "readDocsByKeys").mockRejectedValue(new Error("database is down"));
     await write([set("c", "a", { x: 1 })]);
     await f.closed();
     expect(f.raw).not.toContain("event: change");
+    // and it is said, with the tool, so an outage shows as more than a silent reconnect
+    expect(warn).toHaveBeenCalledWith("[agent-tools] follow closed", "tool-1", expect.any(Error));
   });
 
   it("a baseline that can't be read closes the stream too", async () => {
+    spyOn(console, "warn").mockImplementation(() => undefined);
     spyOn(store, "readDocs").mockRejectedValue(new Error("database is down"));
     const f = await feed();
     await f.closed();
     expect(f.raw).toBe("");
+  });
+
+  it("🔴 every way a stream ends takes it off the bus: the screen leaving, the reader cancelled, a failed read, gone", async () => {
+    spyOn(console, "warn").mockImplementation(() => undefined);
+    expect(busTrack.live).toBe(0);
+
+    // the screen leaves (its request is aborted)
+    const left = await feed();
+    await left.next();
+    expect(busTrack.live).toBe(1);
+    left.stop();
+    await left.closed();
+    expect(busTrack.live).toBe(0);
+
+    // the reader is cancelled while the request stays open
+    const { res, controller } = await follow();
+    expect(busTrack.live).toBe(1);
+    await res.body!.cancel();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(busTrack.live).toBe(0);
+    controller.abort();
+
+    // a read fails
+    const failing = await feed();
+    await failing.next();
+    expect(busTrack.live).toBe(1);
+    spyOn(store, "readDocsByKeys").mockRejectedValue(new Error("database is down"));
+    await write([set("c", "a", { x: 1 })]);
+    await failing.closed();
+    expect(busTrack.live).toBe(0);
+    vi.mocked(store.readDocsByKeys).mockRestore();
+
+    // the tool is deleted
+    const told = await feed();
+    await told.next();
+    expect(busTrack.live).toBe(1);
+    publishToolGone("tool-1");
+    await told.closed();
+    expect(busTrack.live).toBe(0);
   });
 });
 
@@ -540,7 +603,7 @@ describe("🔴 who may", () => {
   });
 
   it("there is no plan check on this path: the route never asks for the person's plan or credits", async () => {
-    // The route runs here with no `users`/`credits` tables at all: reaching for either would throw. Free or paid, it follows.
+    // The route runs here with no credits or plan tables (its `users` table has no plan column): reaching for a plan would throw. Free or paid, it follows.
     expect((await feed()).ended).toBe(false);
   });
 

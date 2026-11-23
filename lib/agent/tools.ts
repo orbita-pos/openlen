@@ -2849,7 +2849,14 @@ async function resolveAgentToolEyes(
 > {
   const assistant = session.assistant!;
   const loader = deps.loadAgentToolForEyes ?? defaultLoadAgentToolForEyes;
-  const loaded = await loader(assistant.id, slug).catch(() => null);
+  // A tool that isn't there and a tool that couldn't be loaded are two answers: the second is no reason to publish again.
+  let loaded: Awaited<ReturnType<typeof loader>>;
+  try {
+    loaded = await loader(assistant.id, slug);
+  } catch (err) {
+    console.warn("[agent-tools] eyes couldn't load the tool", slug, err);
+    return { error: `Your tool "${slug}" couldn't be loaded just now (its published version or its data didn't answer). Try again in a moment; nothing was changed.` };
+  }
   if (!loaded) return { error: `You have no published tool named "${slug}". Call publish_tool first (or check its slug).` };
   return {
     html: loaded.html,

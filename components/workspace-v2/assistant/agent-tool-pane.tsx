@@ -12,7 +12,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { AGENT_TOOL_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
 import type { DataChangedParams } from "@/lib/tools/bridge/protocol";
 
-import { ALLOW_REMOTO, SANDBOX_REMOTO } from "../sandbox-del-lienzo";
+import { ALLOW_HERRAMIENTA_AGENTE, SANDBOX_HERRAMIENTA_AGENTE } from "../sandbox-del-lienzo";
 import { readToolTheme } from "../tools/use-tool-bridge-host";
 import { HER_QUIET, HER_ROW, HerSheet } from "./her-sheet";
 
@@ -275,8 +275,8 @@ export function AgentToolPane({
           ref={iframe}
           src={tool.frameUrl}
           title={tool.title}
-          sandbox={SANDBOX_REMOTO}
-          allow={ALLOW_REMOTO}
+          sandbox={SANDBOX_HERRAMIENTA_AGENTE}
+          allow={ALLOW_HERRAMIENTA_AGENTE}
           className="h-full w-full border-0 bg-[var(--bg)]"
           data-tool-frame={tool.id}
           data-agent-tool-frame={tool.id}

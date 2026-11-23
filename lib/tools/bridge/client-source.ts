@@ -104,22 +104,25 @@ const AGENT_TAIL = `  var docs = new Map();
 
   function docKey(d) { return JSON.stringify([d.collection, d.docId]); }
   function isDoc(d) { return !!d && typeof d.collection === "string" && typeof d.docId === "string"; }
+  // Documents are JSON: a deep copy kept here and another handed to each subscriber, so what one subscriber changes in its
+  // copy never reaches the set kept here or another subscriber's.
+  function copy(v) { return JSON.parse(JSON.stringify(v)); }
 
   // A document with null data is a removal, as the ones the parent names as deleted.
   function put(d) {
     if (!isDoc(d)) return;
-    if (d.data === null) docs.delete(docKey(d)); else docs.set(docKey(d), d);
+    if (d.data === null) docs.delete(docKey(d)); else docs.set(docKey(d), copy(d));
   }
 
   function current() {
     var all = [];
-    docs.forEach(function (d) { all.push(d); });
+    docs.forEach(function (d) { all.push(copy(d)); });
     return all;
   }
 
   function tell(change) {
     subscribers.slice().forEach(function (s) {
-      try { s.cb({ docs: current(), change: change }); } catch (_) {}
+      try { s.cb({ docs: current(), change: change === null ? null : copy(change) }); } catch (_) {}
     });
   }
 
@@ -137,7 +140,9 @@ const AGENT_TAIL = `  var docs = new Map();
     }
   }
 
-  // The first subscriber opens the parent's stream; the next ones share it. One that arrives after a baseline is told at once.
+  // The first subscriber opens the parent's stream; the next ones share it. One that arrives after a baseline is told on the
+  // next microtask — after subscribe has returned its unsubscribe, so "var off = subscribe(function () { off(); })" works —
+  // unless it unsubscribed first.
   function subscribe(cb) {
     if (typeof cb !== "function") throw new TypeError("openlen.data.subscribe needs a function");
     var s = { cb: cb };
@@ -149,7 +154,12 @@ const AGENT_TAIL = `  var docs = new Map();
         if (!framed && r && r.kind === "baseline") onDataChanged(r);
       }, function () { streaming = false; });
     }
-    if (baselineSeen) { try { cb({ docs: current(), change: null }); } catch (_) {} }
+    if (baselineSeen) {
+      Promise.resolve().then(function () {
+        if (subscribers.indexOf(s) < 0) return;
+        try { cb({ docs: current(), change: null }); } catch (_) {}
+      });
+    }
     return function () {
       var at = subscribers.indexOf(s);
       if (at >= 0) subscribers.splice(at, 1);

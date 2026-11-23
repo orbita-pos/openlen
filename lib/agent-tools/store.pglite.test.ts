@@ -235,6 +235,14 @@ describe("reading documents by their keys", () => {
     expect(await store.readDocsByKeys("tool-1", [{ collection: "a'); drop table \"agentToolDocs\"; --", docId: "9" }])).toEqual([]);
     expect(await countDocs()).toBe(4);
   });
+
+  it("readDoc gives one document by its key, only this tool's, or null", async () => {
+    expect(await store.readDoc("tool-1", "a", "9")).toEqual({ collection: "a", docId: "9", data: { n: 2 }, updatedAt: expect.any(Date), updatedBy: "agent" });
+    expect((await store.readDoc("tool-2", "a", "9"))!.data).toEqual({ from: "another tool" });
+    expect(await store.readDoc("tool-1", "b", "9")).toBeNull();
+    expect(await store.readDoc("tool-1", "a", "ghost")).toBeNull();
+    expect(await store.readDoc("tool-3", "a", "9")).toBeNull();
+  });
 });
 
 describe("the caps", () => {
@@ -346,6 +354,12 @@ describe("what is refused as a bad write", () => {
     cyclic.self = cyclic;
     expect(await bad({ op: "set", collection: "c", docId: "a", data: { n: BigInt(1) } })).toEqual({ ok: false, error: "bad_write" });
     expect(await bad({ op: "set", collection: "c", docId: "a", data: cyclic })).toEqual({ ok: false, error: "bad_write" });
+  });
+
+  it("an object whose JSON is not an object (a Date, a toJSON that returns a list) is a bad write", async () => {
+    expect(await bad({ op: "set", collection: "c", docId: "a", data: new Date(0) as unknown as Record<string, unknown> })).toEqual({ ok: false, error: "bad_write" });
+    expect(await bad({ op: "update", collection: "c", docId: "a", data: { toJSON: () => [1, 2] } })).toEqual({ ok: false, error: "bad_write" });
+    expect(await bad({ op: "set", collection: "c", docId: "a", data: { toJSON: () => "text" } })).toEqual({ ok: false, error: "bad_write" });
   });
 
   it("🔴 one bad write refuses the whole batch", async () => {

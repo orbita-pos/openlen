@@ -27,6 +27,16 @@ describe("parseQuery", () => {
     expect(parseQuery({ orderBy: { field: "a", direction: "up" } })).toEqual({ problem: expect.stringContaining('"asc" or "desc"') });
     expect(parseQuery({ limit: AGENT_TOOL_QUERY_LIMIT_MAX + 1 })).toEqual({ problem: expect.stringContaining(`from 1 to ${AGENT_TOOL_QUERY_LIMIT_MAX}`) });
   });
+
+  it("refuses what a condition or orderBy doesn't take: a typo would silently change the answer", () => {
+    expect(parseQuery({ where: [{ field: "a", op: "==", value: 1, opp: "!=" }] })).toEqual({
+      problem: 'query.where[0] has no "opp": a condition takes field, op and value.',
+    });
+    expect(parseQuery({ orderBy: { field: "age", dir: "desc" } })).toEqual({ problem: 'query.orderBy has no "dir": it takes field and direction.' });
+    expect(parseQuery({ where: [{ field: "a", op: "==", value: 1 }], orderBy: { field: "a", direction: "asc" } })).toEqual({
+      query: { where: [{ field: "a", op: "==", value: 1 }], orderBy: { field: "a", direction: "asc" } },
+    });
+  });
 });
 
 describe("parseRead", () => {

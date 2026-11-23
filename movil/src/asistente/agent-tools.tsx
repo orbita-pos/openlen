@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
-import { ALLOW_REMOTO, SANDBOX_REMOTO } from "@/components/workspace-v2/sandbox-del-lienzo";
+import { ALLOW_HERRAMIENTA_AGENTE, SANDBOX_HERRAMIENTA_AGENTE } from "@/components/workspace-v2/sandbox-del-lienzo";
 import { AGENT_TOOL_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
 import type { ToolContext } from "@/lib/tools/bridge/protocol";
 import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
@@ -65,9 +65,9 @@ export function PantallaHerramientaDeAgente({
   }, []);
 
   useAtras(true, closeScreen);
-  useAtras(confirmOpen, () => {
-    if (!latest.current.removing) setConfirmOpen(false);
-  });
+  // While the DELETE runs the sheet holds no history entry of its own: a Back then would use one up without closing the
+  // sheet, and the history would be one entry short of what is on screen if the DELETE failed and the sheet stayed.
+  useAtras(confirmOpen && !removing, () => setConfirmOpen(false));
 
   // Move focus into the full-screen dialog on mount and restore it on close; capture Escape at window level so it
   // dismisses only the topmost layer (confirm sheet -> tool screen) and never leaks to the chat underneath.
@@ -311,8 +311,8 @@ export function PantallaHerramientaDeAgente({
             data-agent-tool-frame={tool.id}
             src={marco.url}
             title={tool.title}
-            sandbox={SANDBOX_REMOTO}
-            allow={ALLOW_REMOTO}
+            sandbox={SANDBOX_HERRAMIENTA_AGENTE}
+            allow={ALLOW_HERRAMIENTA_AGENTE}
           />
         )}
       </div>

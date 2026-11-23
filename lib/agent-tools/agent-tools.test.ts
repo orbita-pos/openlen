@@ -112,6 +112,7 @@ function world(over: Partial<Pick<World, "files" | "enabled">> = {}): World {
         .map(([, doc]) => doc)
         .filter((doc) => collection === undefined || doc.collection === collection)
         .sort((a, b) => (a.collection + "\u0000" + a.docId < b.collection + "\u0000" + b.docId ? -1 : 1)),
+    readDoc: async (toolId, collection, docId) => w.docs.get(JSON.stringify([toolId, collection, docId])) ?? null,
     writeDocs: async (toolId, writes, by) => {
       if (w.failWrite) return { ok: false, error: w.failWrite };
       const changes: AgentToolDoc[] = [];
@@ -342,7 +343,7 @@ describe("publish_tool: what it refuses", () => {
   it("an agent whose slug this turn doesn't know: refused (never a guess at the folder)", async () => {
     const w = world();
     const out = await runPublishTool(session({ slug: undefined }), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
-    expect(response(out).ok).toBe(false);
+    expect(response(out)).toMatchObject({ ok: false, error: "no_folder" });
     expect(w.tools).toEqual([]);
   });
 
@@ -390,6 +391,10 @@ describe("publish_tool: what it refuses", () => {
     ["empty", ""],
     ["blank", "   "],
     ["81 characters", "x".repeat(81)],
+    ["with a line break", "Recorrido\nde inglés"],
+    ["with a tab", "Recorrido\tde inglés"],
+    ["with a NUL", "Recorrido\u0000"],
+    ["with a DEL", "Recorrido\u007f"],
   ])("a title that is %s: refused", async (_name, title) => {
     const w = world();
     const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title }, w.deps);
@@ -402,6 +407,15 @@ describe("publish_tool: what it refuses", () => {
     const w = world();
     const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "x".repeat(80) }, w.deps);
     expect(response(out).ok).toBe(true);
+  });
+
+  it("a very long path is repeated cut in the refusal, not whole", async () => {
+    const w = world();
+    const path = `/tools/bob/${"x".repeat(5000)}`;
+    const out = await runPublishTool(session(), { path, ...ASK }, w.deps);
+    expect(response(out)).toMatchObject({ ok: false, error: "bad_path" });
+    expect(sentence(out)).toContain(`${path.slice(0, 200)}…`);
+    expect(sentence(out).length).toBeLessThan(600);
   });
 
   it("a path that isn't text: refused", async () => {

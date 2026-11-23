@@ -69,8 +69,9 @@ beforeEach(async () => {
   base.db = drizzle(pg, { schema });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.unstubAllEnvs();
+  await pg.close();
 });
 
 describe("publish_tool against the real store", () => {
