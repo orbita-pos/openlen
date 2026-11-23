@@ -101,7 +101,6 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
-import { artifactFolderOf } from "@/lib/len-artifacts/folder";
 import { isLegacyMemoryPath, memoryLayerOf } from "@/lib/agent/ficheros/len-md";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
@@ -157,7 +156,7 @@ import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/len-artifacts/tools";
+import { ARTIFACT_DATA, PUBLISH_ARTIFACT, artifactEyesScope, runArtifactData, runPublishArtifact } from "@/lib/len-artifacts/tools";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { lenNeedsOwnersWords, lenWokenRefusal, needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
@@ -548,9 +547,9 @@ export interface AgentDeps {
     /** `installed: true`: the installed tool's private host. */
     installedUrl?: string;
   }): Promise<{ informe: string; images?: readonly InlineImage[]; noChange?: boolean }>;
-  /** Loads one of the agent's own published tools for `view_page` / `use_page` with `tool` (spec local
-   *  2026-11-22-herramienta-dentro-del-agente, §5). Absent → loads from Postgres + toolReleases. */
-  loadLenArtifactForEyes?(assistantId: string, slug: string): Promise<{
+  /** Loads one of this turn's maker's published artifacts for `view_page` / `use_page` with `artifact` (spec local
+   *  2026-11-22-artifacts-de-len, §7). Absent → loads from Postgres + toolReleases. */
+  loadLenArtifactForEyes?(scope: import("@/lib/len-artifacts/store").LenArtifactScope, slug: string): Promise<{
     tool: { id: string; slug: string; title: string; releaseSha: string };
     html: string;
     files: Record<string, string>;
@@ -1494,6 +1493,9 @@ export interface AgentSession {
   /** An isolated subagent (spec local 2026-11-02-subagentes-de-len-fase-4, §4): `projectId` is its copy, and this is
    *  the real project, whose LEN.md, memory, skills and agents it reads and writes. Absent otherwise. */
   parentProjectId?: string;
+  /** A turn that works on a COPY of the project (a Len Watch turn in its worktree, spec local 2026-10-31-len-watch):
+   *  what belongs to the project itself, like an artifact's row (spec local 2026-11-22-artifacts-de-len, §1), is refused. */
+  inProjectCopy?: true;
   /** Una línea que va delante de la salida del siguiente comando: la terminal de
    *  este turno es la limitada (o la caja se paró). Se dice una vez. */
   sandboxNotice?: string;
@@ -2130,10 +2132,10 @@ async function toolMirarPagina(
   }
   const enTelefono = args.viewport === "mobile";
 
-  // AN AGENT'S OWN PUBLISHED TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §5): opened with its real bridge
-  // running on a throwaway copy of its stored data; never requires the space project to have a `data.html`.
-  if (args.tool !== undefined) {
-    if (args.url !== undefined) return { response: { ok: false, error: '"tool" and "url" can\'t be used together.' } };
+  // ONE OF THIS TURN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §7): opened with its real bridge running on a
+  // throwaway copy of its stored data; never requires the project to have a `data.html`.
+  if (args.artifact !== undefined) {
+    if (args.url !== undefined) return { response: { ok: false, error: '"artifact" and "url" can\'t be used together.' } };
     const gate = checkLenArtifactEyesGate(session, args);
     if ("error" in gate) return { response: { ok: false, error: gate.error } };
     if (tipo === "medir" ? !deps.observarPagina : !deps.usarPagina) {
@@ -2152,7 +2154,7 @@ async function toolMirarPagina(
     // Increment synchronously before awaiting I/O so concurrent `view_page` calls cannot bypass the per-turn cap.
     if (tipo === "captura") session.screenshotsThisTurn = usadas + 1;
     else session.miradasMedirEsteTurno = usadas + 1;
-    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate.slug, args);
+    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate, args);
     if ("error" in lenArtifact) {
       if (tipo === "captura") session.screenshotsThisTurn = Math.max(0, (session.screenshotsThisTurn ?? 1) - 1);
       else session.miradasMedirEsteTurno = Math.max(0, (session.miradasMedirEsteTurno ?? 1) - 1);
@@ -2393,10 +2395,10 @@ async function toolUsarPagina(
   // La entrada se comprueba ANTES de abrir nada, como el ejecutor de Claude Code.
   const v = validarPasos(args.steps);
   if (!v.ok) return { response: { ok: false, error: v.error } };
-  if (args.tool !== undefined) {
-    if (args.url !== undefined) return { response: { ok: false, error: '"tool" and "url" can\'t be used together.' } };
+  if (args.artifact !== undefined) {
+    if (args.url !== undefined) return { response: { ok: false, error: '"artifact" and "url" can\'t be used together.' } };
     if (args.sign_in_as !== undefined) {
-      return { response: { ok: false, error: '"sign_in_as" is for pages with a Supabase backend, not an agent tool.' } };
+      return { response: { ok: false, error: '"sign_in_as" is for pages with a Supabase backend, not an artifact.' } };
     }
     const gate = checkLenArtifactEyesGate(session, args);
     if ("error" in gate) return { response: { ok: false, error: gate.error } };
@@ -2408,7 +2410,7 @@ async function toolUsarPagina(
         },
       };
     }
-    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate.slug, args);
+    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate, args);
     if ("error" in lenArtifact) return { response: { ok: false, error: lenArtifact.error } };
     const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
     const tab = (session.browserTab ??= newBrowserTabHolder());
@@ -2808,8 +2810,8 @@ async function toolEyesOf(
   return { toolBridge: { ...base, mode: "installed", installation: row }, installedUrl: url };
 }
 
-/** Loads an agent's own published tool from Postgres + toolReleases for `view_page` / `use_page` with `tool`. */
-async function defaultLoadLenArtifactForEyes(assistantId: string, slug: string): Promise<{
+/** Loads one of the turn's artifacts from Postgres + toolReleases for `view_page` / `use_page` with `artifact`. */
+async function defaultLoadLenArtifactForEyes(scope: import("@/lib/len-artifacts/store").LenArtifactScope, slug: string): Promise<{
   tool: { id: string; slug: string; title: string; releaseSha: string };
   html: string;
   files: Record<string, string>;
@@ -2822,7 +2824,7 @@ async function defaultLoadLenArtifactForEyes(assistantId: string, slug: string):
     import("@/lib/files/blob-pointer"),
     import("@/lib/files/blob"),
   ]);
-  const row = (await lenArtifactsOf({ maker: { assistantId } })).find((r) => r.slug === slug);
+  const row = (await lenArtifactsOf(scope)).find((r) => r.slug === slug);
   if (!row) return null;
   const release = await readRelease(row.releaseSha);
   const indexFile = release && Object.prototype.hasOwnProperty.call(release, "/index.html") ? release["/index.html"] : undefined;
@@ -2839,22 +2841,24 @@ async function defaultLoadLenArtifactForEyes(assistantId: string, slug: string):
   return { tool: { id: row.id, slug: row.slug, title: row.title, releaseSha: row.releaseSha }, html: indexFile.content, files, binaries, docs };
 }
 
-/** Synchronous access and input guard for `view_page` / `use_page` with `tool`, checked before consuming look budget. */
-function checkLenArtifactEyesGate(session: AgentSession, args: Record<string, unknown>): { slug: string } | { error: string } {
-  if (!session.assistant) return { error: '"tool" is only for an agent looking at one of its own published tools.' };
-  if (!session.assistant.inSpace) return { error: "Only an agent in the person's space has tools of its own." };
-  if (!lenArtifactsEnabled()) return { error: "Agent tools are turned off right now." };
-  const slug = typeof args.tool === "string" ? args.tool.trim() : "";
-  if (!slug) return { error: '"tool" must be the slug of one of your published tools.' };
-  return { slug };
+type ArtifactEyesGate = { readonly slug: string; readonly scope: import("@/lib/len-artifacts/store").LenArtifactScope; readonly base: string };
+
+/** Synchronous access and input guard for `view_page` / `use_page` with `artifact`, checked before consuming look budget:
+ *  the same rules as `publish_artifact` and `artifact_data`, as a read (lib/len-artifacts/tools.ts). */
+function checkLenArtifactEyesGate(session: AgentSession, args: Record<string, unknown>): ArtifactEyesGate | { error: string } {
+  const allowed = artifactEyesScope(session);
+  if ("error" in allowed) return allowed;
+  const slug = typeof args.artifact === "string" ? args.artifact.trim() : "";
+  if (!slug) return { error: '"artifact" must be the name of one of your published artifacts.' };
+  return { slug, ...allowed };
 }
 
-/** AN AGENT'S OWN TOOL IN THE EYES (spec local 2026-11-22-herramienta-dentro-del-agente, §5): only the agent itself, in
- *  the person's space, on its own published tool — never another agent's, never Len, and always on a copy of its data. */
+/** ONE OF THIS TURN'S ARTIFACTS IN THE EYES (spec local 2026-11-22-artifacts-de-len, §7): only its maker's own, in this
+ *  project, and always on a copy of its data. */
 async function resolveLenArtifactEyes(
   session: AgentSession,
   deps: AgentDeps,
-  slug: string,
+  gate: ArtifactEyesGate,
   args: Record<string, unknown>,
 ): Promise<
   | {
@@ -2866,22 +2870,22 @@ async function resolveLenArtifactEyes(
     }
   | { error: string }
 > {
-  const assistant = session.assistant!;
+  const { slug } = gate;
   const loader = deps.loadLenArtifactForEyes ?? defaultLoadLenArtifactForEyes;
   // A tool that isn't there and a tool that couldn't be loaded are two answers: the second is no reason to publish again.
   let loaded: Awaited<ReturnType<typeof loader>>;
   try {
-    loaded = await loader(assistant.id, slug);
+    loaded = await loader(gate.scope, slug);
   } catch (err) {
-    console.warn("[agent-tools] eyes couldn't load the tool", slug, err);
-    return { error: `Your tool "${slug}" couldn't be loaded just now (its published version or its data didn't answer). Try again in a moment; nothing was changed.` };
+    console.warn("[len-artifacts] eyes couldn't load the artifact", slug, err);
+    return { error: `Your artifact "${slug}" couldn't be loaded just now (its published version or its data didn't answer). Try again in a moment; nothing was changed.` };
   }
-  if (!loaded) return { error: `You have no published tool named "${slug}". Call publish_tool first (or check its slug).` };
+  if (!loaded) return { error: `You have no published artifact named "${slug}". Call publish_artifact first (or check its name).` };
   return {
     html: loaded.html,
     releaseFiles: loaded.files,
     releaseBinaries: loaded.binaries ?? {},
-    ruta: `${artifactFolderOf(session) ?? "/.artifacts/"}${loaded.tool.slug}/index.html`,
+    ruta: `${gate.base}${loaded.tool.slug}/index.html`,
     toolBridge: {
       mode: "lenArtifact",
       toolId: loaded.tool.id,
@@ -3569,12 +3573,12 @@ async function ejecutarHerramienta(
       case MESSAGE_LEN:
       case MESSAGE_AGENT:
         return await runSendMessage(session, args);
-      // The agent's own tools (lib/len-artifacts/tools.ts): it publishes a folder of its space as a tab, and reads and
-      // writes the small database that tool shares with it. Refused when they run, whoever calls them without being one.
-      case PUBLISH_TOOL:
-        return await runPublishTool(session, args);
-      case TOOL_DATA:
-        return await runToolData(session, args);
+      // Len's artifacts (lib/len-artifacts/tools.ts): he publishes a folder of the project as a tab of the canvas, and reads
+      // and writes the small database it keeps; his agents inherit both. What a turn can't do is refused when they run.
+      case PUBLISH_ARTIFACT:
+        return await runPublishArtifact(session, args);
+      case ARTIFACT_DATA:
+        return await runArtifactData(session, args);
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
         return await runCreateAssistant(session, args);

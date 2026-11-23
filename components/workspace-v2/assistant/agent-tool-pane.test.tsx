@@ -413,7 +413,7 @@ describe("AssistantHome + LenArtifactPane", () => {
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
-  it("refreshes the tool list when publish_tool finishes in a live turn and falls back to Talk if the active tool disappears", async () => {
+  it("refreshes the tool list when publish_artifact finishes in a live turn and falls back to Talk if the active tool disappears", async () => {
     let serverTools: LenArtifactListItem[] = [];
     vi.stubGlobal(
       "fetch",
@@ -429,11 +429,11 @@ describe("AssistantHome + LenArtifactPane", () => {
     await flush();
     expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(0);
 
-    // Live turn starts streaming, then publish_tool completes -> tab appears without reload.
+    // Live turn starts streaming, then publish_artifact completes -> tab appears without reload.
     serverTools = [TOOL_1];
     act(() => {
       panel.latestTurnChange?.({ id: "turn-1", status: "streaming", cut: false, isFirst: true, actions: [] });
-      panel.latestTurnChange?.({ id: "turn-1", status: "streaming", cut: false, isFirst: true, actions: [{ tool: "publish_tool", status: "done" }] });
+      panel.latestTurnChange?.({ id: "turn-1", status: "streaming", cut: false, isFirst: true, actions: [{ tool: "publish_artifact", status: "done" }] });
     });
     await flush();
     expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(1);
@@ -442,7 +442,7 @@ describe("AssistantHome + LenArtifactPane", () => {
     act(() => host.querySelector<HTMLButtonElement>('[data-agent-tool-tab="tool-1"]')!.click());
     serverTools = [];
     act(() => {
-      panel.latestTurnChange?.({ id: "turn-1", status: "applied", cut: false, isFirst: true, actions: [{ tool: "publish_tool", status: "done" }] });
+      panel.latestTurnChange?.({ id: "turn-1", status: "applied", cut: false, isFirst: true, actions: [{ tool: "publish_artifact", status: "done" }] });
     });
     await flush();
     expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(0);

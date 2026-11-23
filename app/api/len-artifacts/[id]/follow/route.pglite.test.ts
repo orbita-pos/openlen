@@ -45,7 +45,7 @@ vi.mock("@/lib/len-artifacts/bus", async (importOriginal) => {
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { publishArtifactChange, publishArtifactGone } = await import("@/lib/len-artifacts/bus");
-const { runToolData } = await import("@/lib/len-artifacts/tools");
+const { runArtifactData } = await import("@/lib/len-artifacts/tools");
 const { changeOfWrites, toBridgeDoc } = await import("@/lib/len-artifacts/wire");
 const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
 const store = await import("@/lib/len-artifacts/store");
@@ -372,9 +372,9 @@ describe("🔴 Review Focus 1: two writers to one document", () => {
 });
 
 describe("🔴 Review Focus 2: the agent writes with no screen open", () => {
-  it("a later follow's baseline has what the agent wrote with `tool_data`", async () => {
+  it("a later follow's baseline has what the agent wrote with `artifact_data`", async () => {
     const session = { projectId: "space", userId: "u1", assistant: { id: "teacher", name: "Ana", slug: "ana", inSpace: true } } as never;
-    const out = await runToolData(session, { tool: "lessons", action: "set", collection: "students", doc_id: "ana", data: { name: "Ana", level: "B1" } });
+    const out = await runArtifactData(session, { artifact: "lessons", action: "set", collection: "students", doc_id: "ana", data: { name: "Ana", level: "B1" } });
     expect(out.response.ok).toBe(true);
 
     const f = await feed();

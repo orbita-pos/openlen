@@ -131,7 +131,7 @@ describe("limit", () => {
   });
 });
 
-// The step before the cut (what `tool_data query` needs to say how many documents matched, not how many it returned):
+// The step before the cut (what `artifact_data query` needs to say how many documents matched, not how many it returned):
 // `runQuery` is exactly this step and then the limit.
 describe("matchQuery and queryLimit", () => {
   const MANY = Array.from({ length: 150 }, (_, i) => doc(`d${String(i).padStart(3, "0")}`, { n: i, even: i % 2 === 0 }));

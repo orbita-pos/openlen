@@ -3,7 +3,7 @@
 // address the screens already framed — and the small database it shares with its agent is JSON documents in collections
 // (`collection/docId`), per tool, as the `db` of Claude's artifacts.
 //
-// This is the storage only: who may write, what `tool_data` and the bridge are and how a change reaches an open screen
+// This is the storage only: who may write, what `artifact_data` and the bridge are and how a change reaches an open screen
 // live elsewhere. What is in `lenArtifactDocs` is DATA — never instructions — for the agent and for the page.
 import "server-only";
 

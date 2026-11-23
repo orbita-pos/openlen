@@ -8,7 +8,6 @@ import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./manual-de
 import { TOOL_RENAMES } from "./tool-renames";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/tools";
 
 // Lo que se retiró: nombres de herramienta, claves y valores en español.
 const VIEJOS_NOMBRES = Object.keys(TOOL_RENAMES);
@@ -47,13 +46,13 @@ describe("las herramientas de Len, en inglés (como DeepSeek)", () => {
   }
 
   // The ones the route adds only to the person's agent, after Len's (app/api/agent/route.ts): `ask_len` and `message_len`
-  // (spec local 2026-11-21-len-y-el-agente-conversan), then its own tools `publish_tool` and `tool_data` (spec local
-  // 2026-11-22-herramienta-dentro-del-agente). They aren't in the catalog, so they are walked here.
+  // (spec local 2026-11-21-len-y-el-agente-conversan). They aren't in the catalog, so they are walked here. (Its artifacts'
+  // tools are Len's, in the catalog, and walked with it: spec local 2026-11-22-artifacts-de-len.)
   it("ni las que sólo tiene el agente de la persona", () => {
     const keys: string[] = [];
     const values: string[] = [];
-    for (const d of [ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION, PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION]) walk(d.parameters, keys, values);
-    expect(keys).toEqual(expect.arrayContaining(["request", "project", "message", "path", "title", "tool", "action", "doc_id", "writes"]));
+    for (const d of [ASK_LEN_DECLARATION, MESSAGE_LEN_DECLARATION]) walk(d.parameters, keys, values);
+    expect(keys).toEqual(expect.arrayContaining(["request", "project", "message"]));
     expect(keys.filter((k) => VIEJAS_CLAVES.includes(k))).toEqual([]);
     expect(values.filter((v) => VIEJOS_VALORES.includes(v))).toEqual([]);
   });

@@ -1,7 +1,7 @@
 // WHERE AN ARTIFACT LIVES (spec local 2026-11-22-artifacts-de-len, §3): Len's in `/.artifacts/<name>/` of the project, an
 // agent's in `/.artifacts/<its slug>/<name>/` — the agents of one space share it, and their slugs keep them from writing over
 // each other's. The dot keeps it out of the site (`classifyFolderPath` gives it its own kind). This is the ONE place the
-// form is worked out from the turn: `publish_tool` reads it, and so does the guard of Write (`assistantMayWrite`).
+// form is worked out from the turn: `publish_artifact` reads it, and so does the guard of Write (`assistantMayWrite`).
 //
 // No imports beyond the folder rules: the file tools import it, and it must never pull the agent's runtime in.
 import { ARTIFACTS_ROOT } from "@/lib/agent/ficheros/folder";

@@ -3392,7 +3392,7 @@ describe("read_widget_context reads what the turn holds", () => {
 });
 
 // TASK 8: view_page / use_page with `tool` opens the agent's own published tool on a copy of its data.
-describe("agent tool eyes: view_page and use_page with tool", () => {
+describe("Len's artifacts in the eyes: view_page and use_page with artifact (spec local 2026-11-22-artifacts-de-len, §7)", () => {
   const spaceAgentSession = (): AgentSession => ({
     ...makeSession(),
     readOnly: true,
@@ -3409,18 +3409,18 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     const { deps } = makeDeps();
     const seenUsar: Record<string, unknown>[] = [];
     const seenObservar: Record<string, unknown>[] = [];
-    const loadedArgs: [string, string][] = [];
+    const loadedArgs: [unknown, string][] = [];
     const eyesDeps = {
       ...deps,
-      // Space project has empty data.html! Eyes for `tool` must still work using the tool's published release.
+      // Space project has empty data.html! Eyes for `artifact` must still work using the artifact's published release.
       loadProject: async () => ({
         title: "Space",
         subdomain: null,
         publishedAt: null,
         data: { html: "", space: { bornAt: "2026-11-19T00:00:00Z" } },
       }),
-      loadLenArtifactForEyes: async (assistantId: string, slug: string) => {
-        loadedArgs.push([assistantId, slug]);
+      loadLenArtifactForEyes: async (scope: unknown, slug: string) => {
+        loadedArgs.push([scope, slug]);
         return loaded && loaded.tool.slug === slug ? loaded : null;
       },
       usarPagina: async (input: Record<string, unknown>) => {
@@ -3442,14 +3442,14 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     docs: [{ collection: "lessons", docId: "1", data: { unlocked: true }, updatedAt: new Date("2026-11-22T10:00:00Z"), updatedBy: "agent" as const }],
   };
 
-  it("view_page screenshot and measure open the published tool with lenArtifact bridge and release files", async () => {
+  it("view_page screenshot and measure open the published artifact with lenArtifact bridge and release files", async () => {
     const { eyesDeps, seenUsar, seenObservar, loadedArgs } = makeToolDeps(SAMPLE);
-    const shot = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+    const shot = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", artifact: "recorrido" });
     assert.equal(shot.response.ok, true);
-    assert.equal(loadedArgs[0]?.[0], "a1");
-    assert.equal(loadedArgs[0]?.[1], "recorrido");
+    assert.deepEqual(loadedArgs[0], [{ projectId: makeSession().projectId, maker: { assistantId: "a1" } }, "recorrido"]);
     assert.equal(seenUsar.length, 1);
     assert.equal(seenUsar[0]!.html, SAMPLE.html);
+    assert.equal(seenUsar[0]!.ruta, "/.artifacts/ana/recorrido/index.html");
     assert.deepEqual(seenUsar[0]!.releaseFiles, SAMPLE.files);
     assert.deepEqual(seenUsar[0]!.toolBridge, {
       mode: "lenArtifact",
@@ -3460,7 +3460,7 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
       docs: SAMPLE.docs,
     });
 
-    const meas = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "measure", tool: "recorrido" });
+    const meas = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "measure", artifact: "recorrido" });
     assert.equal(meas.response.ok, true);
     assert.equal(seenObservar.length, 1);
     assert.equal(seenObservar[0]!.html, SAMPLE.html);
@@ -3468,24 +3468,35 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     assert.equal((seenObservar[0]!.toolBridge as { mode: string }).mode, "lenArtifact");
   });
 
-  it("use_page with tool runs steps on the published tool and passes lenArtifact bridge", async () => {
+  it("use_page with artifact runs steps on the published artifact and passes lenArtifact bridge", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
-    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "Recorrido" }] });
+    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { artifact: "recorrido", steps: [{ read: "Recorrido" }] });
     assert.equal(out.response.ok, true);
     assert.equal(seenUsar.length, 1);
     assert.equal(seenUsar[0]!.html, SAMPLE.html);
     assert.equal((seenUsar[0]!.toolBridge as { toolId: string }).toolId, "t1");
   });
 
-  it("refuses another agent's slug (not found for this assistantId)", async () => {
+  it("🔴 Len opens his own artifact in his project: the scope is his (maker len, this project), the path /.artifacts/<name>/", async () => {
+    const { eyesDeps, seenUsar, loadedArgs } = makeToolDeps(SAMPLE);
+    const len = { ...makeSession(), uiLocale: "es" } as AgentSession;
+    const view = await runAgentTool(len, eyesDeps, "view_page", { mode: "screenshot", artifact: "recorrido" });
+    assert.equal(view.response.ok, true);
+    assert.deepEqual(loadedArgs[0], [{ projectId: makeSession().projectId, maker: "len" }, "recorrido"]);
+    assert.equal(seenUsar[0]!.ruta, "/.artifacts/recorrido/index.html");
+    const use = await runAgentTool(len, eyesDeps, "use_page", { artifact: "recorrido", steps: [{ read: "x" }] });
+    assert.equal(use.response.ok, true);
+  });
+
+  it("refuses another maker's name (not found in this turn's scope)", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
-    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "someone-elses" });
+    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", artifact: "someone-elses" });
     assert.equal(out.response.ok, false);
-    assert.match(String(out.response.error), /no published tool/i);
+    assert.match(String(out.response.error), /no published artifact/i);
     assert.equal(seenUsar.length, 0);
   });
 
-  it("a tool that couldn't be loaded (the database or its version didn't answer) is not called missing", async () => {
+  it("an artifact that couldn't be loaded (the database or its version didn't answer) is not called missing", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
     (eyesDeps as unknown as { loadLenArtifactForEyes: () => Promise<never> }).loadLenArtifactForEyes = async () => {
       throw new Error("database is down");
@@ -3494,30 +3505,31 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     const realWarn = console.warn;
     console.warn = (...a: unknown[]) => void warned.push(a);
     try {
-      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", artifact: "recorrido" });
       assert.equal(out.response.ok, false);
       assert.match(String(out.response.error), /couldn't be loaded/i);
-      assert.doesNotMatch(String(out.response.error), /no published tool|publish_tool first/i);
+      assert.doesNotMatch(String(out.response.error), /no published artifact|publish_artifact first/i);
     } finally {
       console.warn = realWarn;
     }
     assert.equal(seenUsar.length, 0);
-    assert.equal(warned[0]?.[0], "[agent-tools] eyes couldn't load the tool");
+    assert.equal(warned[0]?.[0], "[len-artifacts] eyes couldn't load the artifact");
   });
 
-  it("refuses Len (no assistant) and non-space assistants passing tool", async () => {
+  it("🔴 refuses Len in the person's space, an agent outside it and a member, as publish_artifact does", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
-    const lenView = await runAgentTool(makeSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
-    assert.equal(lenView.response.ok, false);
-    assert.match(String(lenView.response.error), /only for an agent/i);
-    const lenUse = await runAgentTool(makeSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "x" }] });
-    assert.equal(lenUse.response.ok, false);
-    assert.match(String(lenUse.response.error), /only for an agent/i);
+    const lenInSpace = await runAgentTool({ ...makeSession(), space: true } as AgentSession, eyesDeps, "view_page", { mode: "screenshot", artifact: "recorrido" });
+    assert.equal(lenInSpace.response.ok, false);
+    assert.match(String(lenInSpace.response.error), /Artifacts live in your projects/);
 
     const notSpace: AgentSession = { ...spaceAgentSession(), assistant: { id: "a1", name: "Ana", slug: "ana", projects: [], inSpace: false } };
-    const nsOut = await runAgentTool(notSpace, eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+    const nsOut = await runAgentTool(notSpace, eyesDeps, "view_page", { mode: "screenshot", artifact: "recorrido" });
     assert.equal(nsOut.response.ok, false);
     assert.match(String(nsOut.response.error), /space/i);
+
+    const member = await runAgentTool({ ...makeSession(), personId: "a-member" } as AgentSession, eyesDeps, "use_page", { artifact: "recorrido", steps: [{ read: "x" }] });
+    assert.equal(member.response.ok, false);
+    assert.match(String(member.response.error), /owner/i);
     assert.equal(seenUsar.length, 0);
   });
 
@@ -3526,9 +3538,9 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     process.env.OPENLEN_LEN_ARTIFACTS = "0";
     try {
       const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
-      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "x" }] });
+      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { artifact: "recorrido", steps: [{ read: "x" }] });
       assert.equal(out.response.ok, false);
-      assert.match(String(out.response.error), /turned off/i);
+      assert.match(String(out.response.error), /switched off/i);
       assert.equal(seenUsar.length, 0);
     } finally {
       if (prev === undefined) delete process.env.OPENLEN_LEN_ARTIFACTS;

@@ -1,5 +1,5 @@
 // THE QUERY OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §3): `where` / `orderBy` / `limit`
-// over the documents of one collection, as the `query` of Claude's artifact database — the agent's `tool_data` and the
+// over the documents of one collection, as the `query` of Claude's artifact database — the agent's `artifact_data` and the
 // tool's own `window.openlen.data.query` answer through it. Pure: the caller hands over the collection's documents.
 //
 // Rules, each one pinned by `query.test.ts`:
@@ -90,7 +90,7 @@ export function queryLimit(q: LenArtifactQuery): number {
 }
 
 /** Every document that matches `where`, in `orderBy` order, with NO limit: what a caller needs to say how many matched (the
- *  `count` of `tool_data query`) before `queryLimit` cuts what it returns. */
+ *  `count` of `artifact_data query`) before `queryLimit` cuts what it returns. */
 export function matchQuery(docs: readonly LenArtifactDoc[], q: LenArtifactQuery): LenArtifactDoc[] {
   const conditions = q.where ?? [];
   let found = docs.filter((doc) => conditions.every((c) => matches(valueAt(doc.data, c.field), c.op, c.value)));

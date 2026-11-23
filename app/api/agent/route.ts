@@ -17,7 +17,7 @@ import { relatedAgentsLine } from "@/lib/assistants/messages/policy";
 import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/related";
 import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/tools";
+import { ARTIFACT_DATA, PUBLISH_ARTIFACT } from "@/lib/len-artifacts/tools";
 import { changedSince, artifactChangesLine, watchLenArtifactChanges } from "@/lib/len-artifacts/changes";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { lenArtifactsOf, type LenArtifactRow } from "@/lib/len-artifacts/store";
@@ -251,6 +251,9 @@ import { MAX_PROMPT } from "@/lib/workspace-v2/comentarios-de-lineas";
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const runtime = "nodejs";
+
+/** What only the project's owner is offered: a member's turn leaves these out of its list. */
+const ONLY_THE_OWNERS: ReadonlySet<string> = new Set([CREATE_ASSISTANT, PUBLISH_ARTIFACT, ARTIFACT_DATA]);
 
 // ⚰️ Aquí vivía `TURNOS_DEL_HISTORIAL = 12`, una ventana fija: el turno más viejo
 // caía a CADA turno nuevo y la petición dejaba de coincidir desde el principio,
@@ -939,17 +942,17 @@ async function correrTurno(
     // One `mcp__` namespace, sorted together: the operations' and the connectors' tools; then DeepSeek's resource tools.
     const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
     const conMcp = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
-    // Only the owner creates the project's assistant (POST /api/assistants, 403 solo_dueno): a member's turn isn't
-    // offered the tool at all, as Claude Code leaves a denied tool out of the list.
-    const todas = miembro ? conMcp.filter((d) => d.name !== CREATE_ASSISTANT) : conMcp;
+    // Only the owner creates the project's assistant (POST /api/assistants, 403 solo_dueno) and only the owner has artifacts
+    // (spec local 2026-11-22-artifacts-de-len, §1: «Sólo el dueño»): a member's turn isn't offered those tools at all, as
+    // Claude Code leaves a denied tool out of the list.
+    const todas = miembro ? conMcp.filter((d) => !ONLY_THE_OWNERS.has(String(d.name))) : conMcp;
     // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
     // what builds it passes to Len. Then `message_len` (spec local 2026-11-21-len-y-el-agente-conversan): every agent
     // turn may write to Len — the same list whether a person or Len's message started it, so the cached prefix holds;
-    // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts). Then its own tools
-    // (spec local 2026-11-22-herramienta-dentro-del-agente): `publish_tool` and `tool_data`, in every agent turn — in its
-    // space or not, with the tools on or off — and never Len's: what isn't allowed is refused when they run.
+    // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts). Its artifacts' tools are
+    // Len's, inherited with the rest (spec local 2026-11-22-artifacts-de-len, §1): nothing is appended for agents only.
     if (asistente) {
-      return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }, { ...PUBLISH_TOOL_DECLARATION }, { ...TOOL_DATA_DECLARATION }];
+      return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }];
     }
     // And Len's `message_agent`, LAST — after the operations and the connectors — and only in a project with agents
     // related to it (never in a member's turn: none are read for one): in one with none, his declarations are byte for
@@ -1731,6 +1734,9 @@ async function correrTurno(
     // The box is for the owner's paid plan (spec local 2026-11-05-modo-juego-design, §11).
     ownerPaid,
     ...(miembro ? { personId: quien } : {}),
+    // Len Watch works in a COPY of the project and writes in the parent's chat: what belongs to the project itself, like an
+    // artifact's row, is refused there (spec local 2026-11-22-artifacts-de-len, §1).
+    ...(proyectoDelChat !== projectId ? { inProjectCopy: true as const } : {}),
     mode,
     app: appDelTurno,
     tool: toolDelTurno,
@@ -1797,7 +1803,7 @@ async function correrTurno(
           assistant: {
             id: asistente.id,
             name: asistente.name,
-            // Its folder of artifacts is /.artifacts/<slug>/ (`artifactFolderOf`): the guard of Write and `publish_tool` read it here.
+            // Its folder of artifacts is /.artifacts/<slug>/ (`artifactFolderOf`): the guard of Write and `publish_artifact` read it here.
             slug: asistente.slug,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             started: (proyectosEmpezados ?? []).map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),

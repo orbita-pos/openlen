@@ -5,7 +5,7 @@ import { LEN_ARTIFACT_QUERY_LIMIT_MAX } from "./limits";
 import { parseQuery, parseRead, parseWrite } from "./validate";
 
 // THE CHECKS OF AN AGENT TOOL'S DATA CALL (spec local 2026-11-22-herramienta-dentro-del-agente, §3): one set of rules and
-// sentences for the agent's `tool_data` and for the tool's page (the route the bridge reaches). The wire names differ — the
+// sentences for the agent's `artifact_data` and for the tool's page (the route the bridge reaches). The wire names differ — the
 // agent says `doc_id`, the page `docId` — so the sentence names whichever the caller speaks.
 
 describe("parseQuery", () => {

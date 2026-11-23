@@ -4591,6 +4591,20 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     expect(onReply).toHaveBeenCalledTimes(1);
   });
 
+  it("🔴 a Len Watch turn works on a copy of the project: its session is marked inProjectCopy (artifacts are refused there); an ordinary turn's isn't", async () => {
+    const corredor = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+    const sessionOfTheTool = () => (mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ inProjectCopy?: true }])[0];
+    mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+      await args.runTool("Read", { file_path: "/index.html" });
+      return { finalText: "Hecho.", turns: 1, toolCalls: 1, usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 }, terminalError: false, mutoDurable: false };
+    });
+    const origin = { kind: "len_watch" as const, incidentId: "i1", worktree: true as const };
+    await readEvents(await corredor("ana", { projectId: "p1", prompt: "Tu sitio publicado no carga.", turnId: "55555555-5555-4555-8555-555555555551", zonaHoraria: "UTC" }, { url: "http://x/api/agent", signal: new AbortController().signal }, { scheduled: { framing: "[LEN WATCH] …", origin, onReply: vi.fn(async () => {}), chatProjectId: "parent-1" } }));
+    expect(sessionOfTheTool().inProjectCopy).toBe(true);
+    await readEvents(await pedir({}));
+    expect(sessionOfTheTool().inProjectCopy).toBeUndefined();
+  });
+
   it("🔴 con miembros, Len recibe lo que el equipo se dijo desde el último turno, quién pide y la regla; sin miembros, el prompt de siempre", async () => {
     mocks.runAgentLoop.mockResolvedValue({
       finalText: "Hecho.", turns: 1, toolCalls: 0,
@@ -5473,6 +5487,22 @@ describe("POST /api/agent — the person's own assistant", () => {
     }
   });
 
+  it("🔴 a member's turn has neither publish_artifact nor artifact_data: only the owner has artifacts (spec local 2026-11-22-artifacts-de-len, §1)", async () => {
+    mocks.buildFunctionDeclarations.mockReturnValue(["Read", "publish_artifact", "artifact_data", "Edit"].map((name) => ({ name })));
+    await readEvents(await pedir({}));
+    expect(toolNames()).toEqual(["Read", "publish_artifact", "artifact_data", "Edit"]);
+    mocks.cabeEnElTope.mockResolvedValue(true);
+    mocks.margenDeMiembros.mockResolvedValue(null);
+    mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+    fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
+    try {
+      await readEvents(await pedir({}));
+      expect(toolNames()).toEqual(["Read", "Edit"]);
+    } finally {
+      fijarAccesoDePrueba(null);
+    }
+  });
+
   it.each(["", "mira esta foto"])("le entrega la captura a la asistente y guarda el texto original (%j)", async (prompt) => {
     const url = "https://u/captura.jpg";
     const foto = { mimeType: "image/jpeg", dataBase64: "AAAA" };
@@ -5644,7 +5674,7 @@ describe("POST /api/agent — the person's own assistant", () => {
         expect(session().readOnly).toBe(true);
         expect(session().assistant).toMatchObject({ id: "a1", name: "Lucía", woken: true });
         // Its tools are every agent turn's: the refusals are at execution, so its cached prefix stays the same.
-        expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len", "publish_tool", "tool_data"]);
+        expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
         // What Len sent it, it claimed when it started (its own `resolveAtStart`): nothing is claimed here again.
         expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
       });
@@ -6209,30 +6239,18 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(system).toContain("Your name is Lucía");
     // Write and Edit stay for her memory (10/11, spec §8; her read-only session refuses every other file).
     // And `message_len` after it (spec local 2026-11-21-len-y-el-agente-conversan): every agent turn may write to Len.
-    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len", "publish_tool", "tool_data"]);
+    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
   });
 
-  // THE TOOL THAT LIVES INSIDE THE AGENT (spec local 2026-11-22-herramienta-dentro-del-agente): `publish_tool` and `tool_data`
-  // are declared in EVERY agent turn, right after `message_len` — in its space or not, with the tools on or off — so the cached
-  // prefix is the same in all of them; what isn't allowed is refused when they run. Never in Len's.
-  it("🔴 declares publish_tool and tool_data right after message_len in every agent turn, byte for byte the same whatever the turn", async () => {
-    const declared = () => loopArgs().tools.filter((d) => d.name === "publish_tool" || d.name === "tool_data");
-    const spaceProject = { title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } };
-
+  // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §1): `publish_artifact` and `artifact_data` are Len's — in his
+  // catalog — and an agent inherits them from it, in Len's place, with nothing appended for agents only.
+  it("🔴 an agent inherits publish_artifact and artifact_data from Len's list, in Len's order; nothing is appended for agents", async () => {
+    mocks.buildFunctionDeclarations.mockReturnValue(["Read", "publish_artifact", "artifact_data", "Edit"].map((name) => ({ name })));
     await readEvents(await pedir({ assistantId: "a1" }));
-    const outsideTheSpace = JSON.stringify(declared());
-    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
-
-    mocks.loadProject.mockResolvedValue(spaceProject);
-    await readEvents(await pedir({ assistantId: "a1" }));
-    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
-    expect(JSON.stringify(declared())).toBe(outsideTheSpace);
-
-    vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
-    await readEvents(await pedir({ assistantId: "a1" }));
-    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
-    expect(JSON.stringify(declared())).toBe(outsideTheSpace);
-    expect(declared()).toHaveLength(2);
+    expect(toolNames()).toEqual(["Read", "publish_artifact", "artifact_data", "Edit", "ask_len", "message_len"]);
+    // Len's own turn has them where his catalog has them.
+    await readEvents(await pedir({}));
+    expect(toolNames()).toEqual(["Read", "publish_artifact", "artifact_data", "Edit"]);
   });
 
   // Task 7: the agent hears what the person changed in its tools (turn-start line inside textoEnviado + mid-turn bus notice).
@@ -6283,7 +6301,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(toolIdx).toBeGreaterThan(visIdx);
       expect(sent).toContain("Recorrido");
       expect(sent).toContain("progress");
-      expect(sent).toContain("tool_data");
+      expect(sent).toContain("artifact_data");
       expect(savedRow().transcript?.sentText).toContain("recorrido");
       expect(savedRow().transcript?.sentText).toContain("progress");
     });
@@ -6369,13 +6387,13 @@ describe("POST /api/agent — the person's own assistant", () => {
       const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
       lenArtifactStore.lenArtifactsOf.mockResolvedValue([]);
       let notices: readonly string[] = [];
-      // publish_tool, as the tools see their session: it hands the new tool to the turn's watcher after saving its row
+      // publish_artifact, as the tools see their session: it hands the new tool to the turn's watcher after saving its row
       mocks.runAgentTool.mockImplementationOnce(async (session: { artifactWatch?: { add(t: object): void } }) => {
         session.artifactWatch!.add({ id: "tool-new", slug: "nuevo", title: "Nuevo" });
         return { response: { ok: true } };
       });
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-        await args.runTool("publish_tool", { path: "/.artifacts/lucia/nuevo", title: "Nuevo" });
+        await args.runTool("publish_artifact", { path: "/.artifacts/lucia/nuevo", title: "Nuevo" });
         publishArtifactChange("tool-new", {
           by: "person",
           docs: [{ collection: "answers", docId: "1", data: { a: 1 }, updatedAt: new Date(), updatedBy: "person" }],
@@ -6770,7 +6788,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(toolNames()).toContain("Write");
     expect(toolNames()).not.toContain("ask_len");
     expect(toolNames()).not.toContain("message_len");
-    // And none of the agent's own tools: Len's declarations don't change.
+    // And nothing appended for agents: Len's declarations are his catalog's.
     expect(toolNames()).not.toContain("publish_tool");
     expect(toolNames()).not.toContain("tool_data");
     expect((mocks.createSubagentLauncher.mock.calls.at(-1)![0] as { readOnly?: true }).readOnly).toBeUndefined();

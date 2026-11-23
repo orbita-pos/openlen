@@ -1,14 +1,14 @@
 /**
- * THE TOOL-SCHEMA PROBE (M3-1 of the agent's own tool, spec local 2026-11-22-herramienta-dentro-del-agente): does each of
- * Len's providers take `tool_data`'s declaration — whose `query.where[].value` and `data` carry no JSON type, because they
- * are any JSON value and any object — and does the model fill them so that `tool_data` itself accepts the call?
+ * THE TOOL-SCHEMA PROBE (M3-1 of the agent's own tool, spec local 2026-11-22-herramienta-dentro-del-agente; the tools are Len's
+ * artifacts' since spec local 2026-11-22-artifacts-de-len): does each of Len's providers take `artifact_data`'s declaration — whose `query.where[].value` and `data` carry no JSON type, because they
+ * are any JSON value and any object — and does the model fill them so that `artifact_data` itself accepts the call?
  *
  * Per provider, two calls through the real client and the real bridge (`toolsForFireworks`, as a turn sends them), with
- * the agent's own two declarations (`publish_tool`, `tool_data`) and the agent role's model:
+ * the two declarations (`publish_artifact`, `artifact_data`) and the agent role's model:
  *   · query — a `where` whose value is the boolean false;
  *   · set   — a `data` object with text, a boolean and a list.
- * Each is judged three ways: the provider answered (no refusal of the schema), the model called `tool_data` with those
- * values, and `parseRead` / `parseWrite` (lib/len-artifacts/validate.ts, what `tool_data` runs) take its arguments.
+ * Each is judged three ways: the provider answered (no refusal of the schema), the model called `artifact_data` with those
+ * values, and `parseRead` / `parseWrite` (lib/len-artifacts/validate.ts, what `artifact_data` runs) take its arguments.
  *
  * ⚠️ It spends real money on the accounts production uses. Without `--yes` it prints the plan and its worst case:
  *
@@ -23,7 +23,7 @@ import type { Message } from "@/lib/ai-gateway";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { resolveAgentProviders } from "@/lib/ai/providers";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/tools";
+import { ARTIFACT_DATA, ARTIFACT_DATA_DECLARATION, PUBLISH_ARTIFACT_DECLARATION } from "@/lib/len-artifacts/tools";
 import { parseRead, parseWrite } from "@/lib/len-artifacts/validate";
 import { WIRE_PROBE_PRICES, wireProbeCostUsd, type WireProvider } from "@/lib/measure/wire-probe";
 
@@ -47,7 +47,7 @@ const SYSTEM =
 interface Step {
   readonly id: "query" | "set";
   readonly ask: string;
-  /** What the call must carry for the step to pass, beyond `tool_data` accepting it. */
+  /** What the call must carry for the step to pass, beyond `artifact_data` accepting it. */
   check(args: Record<string, unknown>): string | null;
 }
 
@@ -55,7 +55,7 @@ const STEPS: readonly Step[] = [
   {
     id: "query",
     ask:
-      'Call tool_data with tool "recorrido", action "query", collection "tasks", and a query whose where has one condition: ' +
+      'Call artifact_data with artifact "recorrido", action "query", collection "tasks", and a query whose where has one condition: ' +
       'field "done", op "==", value false (the boolean, not text).',
     check(args) {
       const where = (args.query as { where?: Array<{ value?: unknown }> } | undefined)?.where;
@@ -65,7 +65,7 @@ const STEPS: readonly Step[] = [
   {
     id: "set",
     ask:
-      'Call tool_data with tool "recorrido", action "set", collection "tasks", doc_id "t1", and data ' +
+      'Call artifact_data with artifact "recorrido", action "set", collection "tasks", doc_id "t1", and data ' +
       '{"title": "Pay rent", "done": false, "tags": ["home"]}.',
     check(args) {
       const data = args.data as { title?: unknown; done?: unknown; tags?: unknown } | undefined;
@@ -75,7 +75,7 @@ const STEPS: readonly Step[] = [
   },
 ];
 
-/** What `tool_data` itself would say of these arguments: null when it takes them. */
+/** What `artifact_data` itself would say of these arguments: null when it takes them. */
 function toolDataTakes(step: Step, args: Record<string, unknown>): string | null {
   const input = { collection: args.collection, docId: args.doc_id, data: args.data, query: args.query };
   const parsed = step.id === "query" ? parseRead("query", input) : parseWrite("set", input);
@@ -119,7 +119,7 @@ async function main(): Promise<number> {
   }
 
   const runId = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
-  const tools = toolsForFireworks([PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION] as unknown as Parameters<typeof toolsForFireworks>[0]);
+  const tools = toolsForFireworks([PUBLISH_ARTIFACT_DECLARATION, ARTIFACT_DATA_DECLARATION] as unknown as Parameters<typeof toolsForFireworks>[0]);
   const outcomes: Outcome[] = [];
   let spent = 0;
   for (const p of providers) {
@@ -170,7 +170,7 @@ async function main(): Promise<number> {
       }
       const usd = wireProbeCostUsd(p.name, { ...usage, text: "", toolCalls: call ? 1 : 0, ms: 0 });
       spent += usd;
-      const called = call?.name === "tool_data";
+      const called = call?.name === ARTIFACT_DATA;
       const wrong = called ? step.check(call!.args) : null;
       const refused = called ? toolDataTakes(step, call!.args) : null;
       const outcome: Outcome = {

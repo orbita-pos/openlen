@@ -1,8 +1,8 @@
 // @vitest-environment node
 //
 // A WHOLE TOOL BETWEEN AN AGENT AND ITS PERSON, END TO END (spec local 2026-11-22-herramienta-dentro-del-agente,
-// Tasks 1–12): no model, real PGlite database (`CREATE_ASSISTANTS` + `toolReleases`), real bus, real `publish_tool` /
-// `tool_data`, real `changedSince` / `artifactChangesLine` / `watchLenArtifactChanges`, and the real route handlers
+// Tasks 1–12): no model, real PGlite database (`CREATE_ASSISTANTS` + `toolReleases`), real bus, real `publish_artifact` /
+// `artifact_data`, real `changedSince` / `artifactChangesLine` / `watchLenArtifactChanges`, and the real route handlers
 // (list, phone open, canvas serve, follow SSE, data, delete). Run this file alone.
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
@@ -25,7 +25,7 @@ vi.mock("@/lib/db", async () => {
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => state.person) }));
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { runPublishTool, runToolData } = await import("./tools");
+const { runPublishArtifact, runArtifactData } = await import("./tools");
 const { changedSince, artifactChangesLine, watchLenArtifactChanges } = await import("./changes");
 const store = await import("./store");
 const listRoute = await import("@/app/api/len-artifacts/route");
@@ -160,7 +160,7 @@ afterEach(async () => {
 describe("a whole tool between an agent and its person", () => {
   it("🔴 publish → list & serve → follow baseline → agent write → person write & notice → agent read clears reminder → delete sends gone and 404s", async () => {
     // 1. Agent writes `/.artifacts/ana/recorrido/index.html` and publishes it.
-    const pub = await runPublishTool(agentSession(), { path: "/.artifacts/ana/recorrido/", title: "Recorrido" }, { listFiles: listFilesDep });
+    const pub = await runPublishArtifact(agentSession(), { path: "/.artifacts/ana/recorrido/", title: "Recorrido" }, { listFiles: listFilesDep });
     expect(pub.response.ok).toBe(true);
 
     // 2. Web list route returns the tool with its workspace frameUrl; phone open returns its own distinct label.
@@ -213,8 +213,8 @@ describe("a whole tool between an agent and its person", () => {
     expect(baseline).toEqual({ nombre: "baseline", datos: { kind: "baseline", docs: [] } });
 
     // 5. Agent writes lessons/3 { unlocked: true } -> follow stream receives change live.
-    const agentSet = await runToolData(agentSession(), {
-      tool: "recorrido",
+    const agentSet = await runArtifactData(agentSession(), {
+      artifact: "recorrido",
       action: "set",
       collection: "lessons",
       doc_id: "3",
@@ -270,11 +270,11 @@ describe("a whole tool between an agent and its person", () => {
     expect(reminder).toContain("Recorrido");
     expect(reminder).toContain("recorrido");
     expect(reminder).toContain("progress");
-    expect(reminder).toContain("tool_data");
+    expect(reminder).toContain("artifact_data");
 
     // 7. Agent reads progress/3 -> gets the person's answers, and the change reminder is gone afterward.
-    const agentGet = await runToolData(agentSession(), {
-      tool: "recorrido",
+    const agentGet = await runArtifactData(agentSession(), {
+      artifact: "recorrido",
       action: "get",
       collection: "progress",
       doc_id: "3",

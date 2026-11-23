@@ -80,6 +80,8 @@ import { CREATE_AB_VARIANT, CREATE_AB_VARIANT_DECLARATION } from "@/lib/agent/to
 import { assistantsEnabled } from "@/lib/assistants/enabled";
 import { DECLARACION_SKILL, SKILL_TOOL } from "@/lib/agent/skills/tool";
 import { DECLARACION_PRESENT, PRESENT_TOOL } from "@/lib/agent/skills/present";
+import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
+import { ARTIFACT_DATA, ARTIFACT_DATA_DECLARATION, PUBLISH_ARTIFACT, PUBLISH_ARTIFACT_DECLARATION } from "@/lib/len-artifacts/tools";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { PROPOSE_SKILLS, PROPOSE_SKILLS_DECLARATION } from "@/lib/agent/skills/propose-tool";
 import { NO_AGENT_TYPES, type AgentTypeSet } from "@/lib/agent/subagents/agent-registry";
@@ -229,6 +231,13 @@ function declaracionesDelModo(
   }
   // THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): on unless OPENLEN_ASSISTANT=0, per server.
   if (!assistantsEnabled(_env)) fuera.add(CREATE_ASSISTANT);
+  // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len): on unless OPENLEN_LEN_ARTIFACTS=0, per server — and the eyes'
+  // `artifact` parameter goes with them (below).
+  const artifactsOn = lenArtifactsEnabled(_env);
+  if (!artifactsOn) {
+    fuera.add(PUBLISH_ARTIFACT);
+    fuera.add(ARTIFACT_DATA);
+  }
   // EDGE A/B TESTING (Plan 3): opt-in (`OPENLEN_AB_TESTING=1`), per server.
   if (!abTestingEnabled(_env)) fuera.add(CREATE_AB_VARIANT);
   // SKILLS (spec local 2026-10-26-len-skills): on unless OPENLEN_SKILLS=0, per server.
@@ -254,7 +263,8 @@ function declaracionesDelModo(
     : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env));
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): with games off, convert_to_app offers no `game`.
   const conJuegos = gamesEnabled(_env) ? declaraciones : declaraciones.map((d) => (d.name === CONVERTIR_EN_APP ? declaracionConvertirEnApp(false) : d));
-  return fuera.size === 0 ? conJuegos : conJuegos.filter((d) => !fuera.has(String(d.name)));
+  const conOjos = artifactsOn ? conJuegos : conJuegos.map((d) => (EYES.has(String(d.name)) ? withoutArtifactEyes(d) : d));
+  return fuera.size === 0 ? conOjos : conOjos.filter((d) => !fuera.has(String(d.name)));
 }
 
 /** El párrafo de `file_path` de las herramientas que actúan sobre UNA página
@@ -265,6 +275,22 @@ const FILE_PATH_OPCIONAL = {
   description:
     "The page file, e.g. /index.html or /menu/index.html. Omit it to use the page the user has open in the editor.",
 };
+
+/** LEN'S ARTIFACTS IN THE EYES (spec local 2026-11-22-artifacts-de-len, §7): view_page and use_page open one of the turn
+ *  maker's published artifacts, its bridge running on a throwaway copy of its data. Goes with the artifacts on this server. */
+const ARTIFACT_EYES_PARAM = {
+  type: "STRING",
+  description:
+    "Optional: the name of one of your published artifacts (the folder name under /.artifacts/). Opens its published version with window.openlen.data running on a throwaway copy of its real data — what you write while testing never touches the owner's data.",
+};
+const EYES = new Set(["view_page", "use_page"]);
+
+/** view_page or use_page without the `artifact` parameter: what the eyes are with the artifacts off on this server. */
+function withoutArtifactEyes(d: Record<string, unknown>): Record<string, unknown> {
+  const parameters = d.parameters as { properties: Record<string, unknown> };
+  const { artifact: _gone, ...properties } = parameters.properties;
+  return { ...d, parameters: { ...parameters, properties } };
+}
 
 // ⚰️ LAS DIFERIDAS Y `ToolSearch` (H2, 2026-09-25 → Len 2.1, 2026-09-30). El
 // modelo veía sólo su nombre y las cargaba con ToolSearch, como Claude Code.
@@ -320,6 +346,7 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
             description:
               'Optional, with mode="screenshot": the full address (https://…) of another site to look at instead of this project, for example one the user wants theirs to look like. You see it as it opens; take its look, never its text.',
           },
+          artifact: ARTIFACT_EYES_PARAM,
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["mode"],
@@ -409,6 +436,7 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
             type: "STRING",
             description: "Optional: the full address (https://…) of another site to use instead of this project's page. Take its look, never its text.",
           },
+          artifact: ARTIFACT_EYES_PARAM,
           file_path: FILE_PATH_OPCIONAL,
         },
         required: ["steps"],
@@ -559,6 +587,10 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     // SKILLS (spec local 2026-10-26-len-skills): DeepSeek's `skill`, the one that loads a skill of the catalog.
     DECLARACION_SKILL,
     DECLARACION_PRESENT,
+    // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §1): a private page for the owner, with its own small
+    // database, that opens as a tab of the canvas; his agents inherit both (lib/assistants/agent.ts).
+    PUBLISH_ARTIFACT_DECLARATION,
+    ARTIFACT_DATA_DECLARATION,
     // PIEZA 7 DE LEN 2.5: el modo plan — la entrada de Claude Code (el dueño
     // acepta) y la salida de DeepSeek (el plan se revisa) en
     // `lib/agent/plan-mode-tools.ts`. Siempre declaradas, como la de DeepSeek:

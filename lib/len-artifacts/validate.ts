@@ -1,5 +1,5 @@
 // THE CHECKS OF A CALL ON AN AGENT TOOL'S DATA (spec local 2026-11-22-herramienta-dentro-del-agente, §3): the agent's
-// `tool_data` and the tool's own page (`window.openlen.data`, through the bridge's route) reach the same database, so they
+// `artifact_data` and the tool's own page (`window.openlen.data`, through the bridge's route) reach the same database, so they
 // are checked by the same rules and with the same sentences — one copy. `matchQuery` and the store trust their input; what a
 // model or a page sends is read here, with a sentence for each way it can be wrong.
 //
@@ -65,7 +65,7 @@ export function parseQuery(raw: unknown): { query: LenArtifactQuery } | { proble
   return { query };
 }
 
-/** The reads and the writes of a tool's data, named once: the agent's `tool_data` (which adds `batch`) and the page's route. */
+/** The reads and the writes of a tool's data, named once: the agent's `artifact_data` (which adds `batch`) and the page's route. */
 export const READ_ACTIONS = ["get", "list", "query"] as const;
 export const WRITE_ACTIONS = ["set", "update", "delete"] as const;
 export type ReadAction = (typeof READ_ACTIONS)[number];

@@ -148,6 +148,9 @@ describe("buildFunctionDeclarations", () => {
       // and the one that delivers the files Len makes.
       "skill",
       "present",
+      // LEN'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §1): his, beside present.
+      "publish_artifact",
+      "artifact_data",
       // Pieza 7: el modo plan — la entrada de Claude Code, la salida de DeepSeek.
       "enter_plan_mode",
       "exit_plan_mode",
@@ -187,6 +190,38 @@ describe("buildFunctionDeclarations", () => {
       // La terminal (F1), encendida por defecto (N45).
       "bash",
     ]);
+  });
+
+  it("🔴 LEN'S ARTIFACTS: publish_artifact and artifact_data are Len's, right after present, and the eyes take `artifact`", () => {
+    const decls = buildFunctionDeclarations({});
+    const names = decls.map((d) => d.name);
+    expect(names.slice(names.indexOf("present"), names.indexOf("present") + 3)).toEqual(["present", "publish_artifact", "artifact_data"]);
+    for (const eye of ["view_page", "use_page"]) {
+      const props = (decls.find((d) => d.name === eye)!.parameters as { properties: Record<string, { type: string; description: string }> }).properties;
+      expect(props.artifact, eye).toMatchObject({ type: "STRING" });
+      expect(props.artifact!.description, eye).toMatch(/throwaway copy/);
+      // The old agent-only name is gone.
+      expect(props.tool, eye).toBeUndefined();
+    }
+  });
+
+  it("🔴 LEN'S ARTIFACTS: in an app too (and so in a game, which is an app)", () => {
+    const names = buildFunctionDeclarations({}, {}, "len", { catalogo: "2026-11", entrada: "/src/main.tsx" }).map((d) => d.name);
+    expect(names).toContain("publish_artifact");
+    expect(names).toContain("artifact_data");
+  });
+
+  it("🔴 LEN'S ARTIFACTS: off on this server with OPENLEN_LEN_ARTIFACTS=0 — both tools and the eyes' parameter go", () => {
+    const decls = buildFunctionDeclarations({ OPENLEN_LEN_ARTIFACTS: "0" });
+    const names = decls.map((d) => d.name);
+    expect(names).not.toContain("publish_artifact");
+    expect(names).not.toContain("artifact_data");
+    for (const eye of ["view_page", "use_page"]) {
+      const props = (decls.find((d) => d.name === eye)!.parameters as { properties: Record<string, unknown> }).properties;
+      expect(props.artifact, eye).toBeUndefined();
+    }
+    // Only the literal "0" turns them off.
+    expect(buildFunctionDeclarations({ OPENLEN_LEN_ARTIFACTS: "false" }).map((d) => d.name)).toContain("publish_artifact");
   });
 
   it("create_assistant goes with OPENLEN_ASSISTANT=0", () => {

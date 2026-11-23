@@ -2,7 +2,7 @@
 // GET /api/len-artifacts/[id]/follow — every open screen follows one tool's data (spec local
 // 2026-11-22-herramienta-dentro-del-agente, §4), the way DeepSeek's screens follow a session: ONE connection per open tool; on
 // opening a complete baseline, then each change as it happens, and on reconnect the baseline again. What the agent writes
-// with `tool_data` and what the person changes on another screen (the phone and the web at once) show up without reloading.
+// with `artifact_data` and what the person changes on another screen (the phone and the web at once) show up without reloading.
 //
 //   event: baseline   data: {"kind":"baseline","docs":[…]}
 //   event: change     data: {"kind":"change","by":"agent"|"person","docs":[…],"deleted":[{"collection","docId"}]}

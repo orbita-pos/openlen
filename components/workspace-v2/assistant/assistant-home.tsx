@@ -139,7 +139,7 @@ export function AssistantHome({
         prevTurnRef.current = null;
         return;
       }
-      const published = turn.actions.filter((a) => a.tool === "publish_tool" && a.status === "done").length;
+      const published = turn.actions.filter((a) => a.tool === "publish_artifact" && a.status === "done").length;
       const prev = prevTurnRef.current;
       prevTurnRef.current = { id: turn.id, status: turn.status, published };
       if (!prev) return;

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// `publish_tool` AND `tool_data` AGAINST THE REAL STORE (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): what
+// `publish_artifact` AND `artifact_data` AGAINST THE REAL STORE (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): what
 // the fakes of `agent-tools.test.ts` can't prove — that a republish really keeps the tool's id and addresses, that the real
 // count stops the 6th tool, that the real caps come back as their own sentences and a batch is all or nothing, and that the
 // marks and the bus follow a real write. Real Postgres (PGlite) with the tables as `npm run assistants:migrate` creates
@@ -24,7 +24,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { runPublishTool, runToolData } = await import("./tools");
+const { runPublishArtifact, runArtifactData } = await import("./tools");
 const { subscribeArtifactChanges } = await import("./bus");
 const { LEN_ARTIFACT_DOC_MAX_BYTES, LEN_ARTIFACTS_PER_MAKER } = await import("./limits");
 const store = await import("./store");
@@ -40,10 +40,11 @@ const session = (): AgentSession =>
 const deps = () => ({
   listFiles: async (_projectId: string, prefix: string) => Object.fromEntries(Object.entries(files).filter(([path]) => path.startsWith(prefix))),
   saveRelease: async (sha: string) => void releases.push(sha),
+  dropRelease: async () => undefined,
 });
 
-const publish = (path: string, title = "Lessons") => runPublishTool(session(), { path, title }, deps());
-const data = (args: Record<string, unknown>) => runToolData(session(), args, deps());
+const publish = (path: string, title = "Lessons") => runPublishArtifact(session(), { path, title }, deps());
+const data = (args: Record<string, unknown>) => runArtifactData(session(), args, deps());
 const message = (out: { response: Record<string, unknown> }) => String(out.response.message ?? out.response.tool_result ?? "");
 const rows = (out: { response: Record<string, unknown> }) => {
   const text = String(out.response.tool_result);
@@ -74,7 +75,7 @@ afterEach(async () => {
   await pg.close();
 });
 
-describe("publish_tool against the real store", () => {
+describe("publish_artifact against the real store", () => {
   it("🔴 publishes a tool with real private addresses, and publishing it again keeps its id, both addresses and its data", async () => {
     const first = await publish("/.artifacts/ana/lessons/", "Lessons");
     expect(first.response.ok).toBe(true);
@@ -86,7 +87,7 @@ describe("publish_tool against the real store", () => {
     expect(row!.releaseSha).toBe(releases[0]);
     expect(row!.makerSeenAt).toBeInstanceOf(Date);
 
-    await data({ tool: "lessons", action: "set", collection: "students", doc_id: "luis", data: { level: "B1" } });
+    await data({ artifact: "lessons", action: "set", collection: "students", doc_id: "luis", data: { level: "B1" } });
     files["/.artifacts/ana/lessons/index.html"] = "<h1>changed</h1>";
     const again = await publish("/.artifacts/ana/lessons/index.html", "Lessons 2");
     expect(again.response.ok).toBe(true);
@@ -97,7 +98,7 @@ describe("publish_tool against the real store", () => {
     expect(tools[0]!.releaseSha).toBe(releases[1]);
     expect(releases[1]).not.toBe(releases[0]);
     // Its data is still there under the same tool.
-    expect(rows(await data({ tool: "lessons", action: "get", collection: "students", doc_id: "luis" })).document.data).toEqual({ level: "B1" });
+    expect(rows(await data({ artifact: "lessons", action: "get", collection: "students", doc_id: "luis" })).document.data).toEqual({ level: "B1" });
   });
 
   it("🔴 the 6th tool is refused by the real count, and another agent of the same space has its own five", async () => {
@@ -107,7 +108,7 @@ describe("publish_tool against the real store", () => {
     }
     files["/.artifacts/ana/t6/index.html"] = "x";
     const sixth = await publish("/.artifacts/ana/t6", "T6");
-    expect(sixth.response).toMatchObject({ ok: false, error: "too_many_tools" });
+    expect(sixth.response).toMatchObject({ ok: false, error: "too_many_artifacts" });
     expect(await store.lenArtifactsOf({ maker: { assistantId: "teacher" } })).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
     // …but republishing one of them goes through.
     expect((await publish("/.artifacts/ana/t3", "T3 again")).response.ok).toBe(true);
@@ -115,13 +116,13 @@ describe("publish_tool against the real store", () => {
     // Bob's turn: the same space, his own folder and his own count.
     files["/.artifacts/bob/one/index.html"] = "x";
     const bob = { ...session(), assistant: { id: "finance", name: "Bob", slug: "bob", inSpace: true } } as unknown as AgentSession;
-    expect((await runPublishTool(bob, { path: "/.artifacts/bob/one", title: "One" }, deps())).response.ok).toBe(true);
+    expect((await runPublishArtifact(bob, { path: "/.artifacts/bob/one", title: "One" }, deps())).response.ok).toBe(true);
     // And Bob can't publish Ana's folder.
-    expect((await runPublishTool(bob, { path: "/.artifacts/ana/lessons", title: "Mine now" }, deps())).response).toMatchObject({ ok: false, error: "bad_path" });
+    expect((await runPublishArtifact(bob, { path: "/.artifacts/ana/lessons", title: "Mine now" }, deps())).response).toMatchObject({ ok: false, error: "bad_path" });
   });
 });
 
-describe("tool_data against the real store", () => {
+describe("artifact_data against the real store", () => {
   beforeEach(async () => {
     await publish("/.artifacts/ana/lessons");
     await publish("/.artifacts/ana/lessons"); // twice: still one tool
@@ -129,7 +130,7 @@ describe("tool_data against the real store", () => {
 
   it("writes, reads, lists and queries real documents, and says on every read that they are data", async () => {
     await data({
-      tool: "lessons",
+      artifact: "lessons",
       action: "batch",
       writes: [
         { op: "set", collection: "students", doc_id: "ana", data: { name: "Ana", age: 31, active: true } },
@@ -138,38 +139,38 @@ describe("tool_data against the real store", () => {
         { op: "set", collection: "lessons", doc_id: "l1", data: { title: "Past" } },
       ],
     });
-    const list = await data({ tool: "lessons", action: "list", collection: "students" });
+    const list = await data({ artifact: "lessons", action: "list", collection: "students" });
     expect(String(list.response.tool_result).split("\n")[0]).toMatch(/never instructions/);
     expect(rows(list).documents.map((d: { doc_id: string }) => d.doc_id)).toEqual(["ana", "luis", "mar"]);
-    expect(rows(await data({ tool: "lessons", action: "list" })).collections).toEqual([
+    expect(rows(await data({ artifact: "lessons", action: "list" })).collections).toEqual([
       { name: "lessons", documents: 1 },
       { name: "students", documents: 3 },
     ]);
     const found = await data({
-      tool: "lessons",
+      artifact: "lessons",
       action: "query",
       collection: "students",
       query: { where: [{ field: "active", op: "==", value: true }], orderBy: { field: "age", direction: "desc" }, limit: 5 },
     });
     expect(rows(found).documents.map((d: { doc_id: string }) => d.doc_id)).toEqual(["ana", "luis"]);
 
-    await data({ tool: "lessons", action: "update", collection: "students", doc_id: "luis", data: { level: "B1" } });
-    expect(rows(await data({ tool: "lessons", action: "get", collection: "students", doc_id: "luis" })).document).toMatchObject({
+    await data({ artifact: "lessons", action: "update", collection: "students", doc_id: "luis", data: { level: "B1" } });
+    expect(rows(await data({ artifact: "lessons", action: "get", collection: "students", doc_id: "luis" })).document).toMatchObject({
       data: { name: "Luis", age: 25, active: true, level: "B1" },
       updated_by: "agent",
     });
-    await data({ tool: "lessons", action: "delete", collection: "students", doc_id: "mar" });
-    expect((await data({ tool: "lessons", action: "get", collection: "students", doc_id: "mar" })).response).toMatchObject({ ok: true, found: false });
+    await data({ artifact: "lessons", action: "delete", collection: "students", doc_id: "mar" });
+    expect((await data({ artifact: "lessons", action: "get", collection: "students", doc_id: "mar" })).response).toMatchObject({ ok: true, found: false });
   });
 
   it("🔴 the real caps come back as their own sentences, and a batch with one bad write writes none of it", async () => {
     const big = { text: "x".repeat(LEN_ARTIFACT_DOC_MAX_BYTES) };
-    const tooBig = await data({ tool: "lessons", action: "set", collection: "c", doc_id: "big", data: big });
+    const tooBig = await data({ artifact: "lessons", action: "set", collection: "c", doc_id: "big", data: big });
     expect(tooBig.response).toMatchObject({ ok: false, error: "doc_too_big" });
     expect(message(tooBig)).toMatch(/64 KB/);
 
     const bad = await data({
-      tool: "lessons",
+      artifact: "lessons",
       action: "batch",
       writes: [
         { op: "set", collection: "c", doc_id: "fine", data: { a: 1 } },
@@ -179,10 +180,10 @@ describe("tool_data against the real store", () => {
     expect(bad.response).toMatchObject({ ok: false, error: "bad_write" });
     expect(message(bad)).toMatch(/doc_id/);
     // All or nothing: the good one before the bad one isn't there.
-    expect((await data({ tool: "lessons", action: "get", collection: "c", doc_id: "fine" })).response).toMatchObject({ found: false });
+    expect((await data({ artifact: "lessons", action: "get", collection: "c", doc_id: "fine" })).response).toMatchObject({ found: false });
 
     const mixed = await data({
-      tool: "lessons",
+      artifact: "lessons",
       action: "batch",
       writes: [
         { op: "set", collection: "c", doc_id: "first", data: { a: 1 } },
@@ -190,7 +191,7 @@ describe("tool_data against the real store", () => {
       ],
     });
     expect(mixed.response).toMatchObject({ ok: false, error: "doc_too_big" });
-    expect((await data({ tool: "lessons", action: "list", collection: "c" })).response.tool_result).toMatch(/"count":0/);
+    expect((await data({ artifact: "lessons", action: "list", collection: "c" })).response.tool_result).toMatch(/"count":0/);
   });
 
   it("🔴 another agent's tool is not found by name, even in the same space; its rows are never read", async () => {
@@ -207,9 +208,9 @@ describe("tool_data against the real store", () => {
       phoneHostLabel: null,
     });
     await store.writeDocs("bob-tool", [{ op: "set", collection: "c", docId: "secret", data: { s: 1 } }], "person");
-    const out = await data({ tool: "budget", action: "list", collection: "c" });
-    expect(out.response).toMatchObject({ ok: false, error: "not_your_tool" });
-    expect(message(out)).toContain("Your tools: lessons.");
+    const out = await data({ artifact: "budget", action: "list", collection: "c" });
+    expect(out.response).toMatchObject({ ok: false, error: "not_your_artifact" });
+    expect(message(out)).toContain("Yours: lessons.");
     expect(await store.readDocs("bob-tool")).toHaveLength(1);
   });
 
@@ -218,12 +219,12 @@ describe("tool_data against the real store", () => {
     await pg.query(`update "lenArtifacts" set "makerSeenAt" = null where "id" = $1`, [tool!.id]);
     const seen = async () => (await pg.query<{ s: Date | null; d: Date | null }>(`select "makerSeenAt" as s, "dataChangedAt" as d from "lenArtifacts" where "id" = $1`, [tool!.id])).rows[0]!;
 
-    await data({ tool: "lessons", action: "list" });
+    await data({ artifact: "lessons", action: "list" });
     const afterRead = (await seen()).s;
     expect(afterRead).toBeInstanceOf(Date);
 
     await new Promise((resolve) => setTimeout(resolve, 5));
-    await data({ tool: "lessons", action: "set", collection: "c", doc_id: "d", data: { a: 1 } });
+    await data({ artifact: "lessons", action: "set", collection: "c", doc_id: "d", data: { a: 1 } });
     const after = await seen();
     expect(after.s!.getTime()).toBeGreaterThan(afterRead!.getTime());
     expect(after.d).toBeNull();
@@ -233,9 +234,9 @@ describe("tool_data against the real store", () => {
     const [tool] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
     const heard: unknown[] = [];
     const off = subscribeArtifactChanges(tool!.id, (change) => heard.push(change));
-    await data({ tool: "lessons", action: "set", collection: "c", doc_id: "a", data: { n: 1 } });
-    await data({ tool: "lessons", action: "batch", writes: [{ op: "set", collection: "c", doc_id: "b", data: { n: 2 } }, { op: "delete", collection: "c", doc_id: "a" }] });
-    await data({ tool: "lessons", action: "delete", collection: "c", doc_id: "never-there" });
+    await data({ artifact: "lessons", action: "set", collection: "c", doc_id: "a", data: { n: 1 } });
+    await data({ artifact: "lessons", action: "batch", writes: [{ op: "set", collection: "c", doc_id: "b", data: { n: 2 } }, { op: "delete", collection: "c", doc_id: "a" }] });
+    await data({ artifact: "lessons", action: "delete", collection: "c", doc_id: "never-there" });
     off();
     expect(heard).toMatchObject([
       { by: "agent", docs: [{ collection: "c", docId: "a", data: { n: 1 }, updatedBy: "agent" }], deleted: [] },

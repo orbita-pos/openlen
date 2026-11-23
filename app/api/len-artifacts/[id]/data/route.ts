@@ -4,7 +4,7 @@
 // screen that frames the tool — the workspace with the person's session, the phone app with its key. The frame holds neither.
 //
 // Body { op: "get"|"list"|"query"|"set"|"update"|"delete", collection, docId?, data?, query? } — the same checks and
-// sentences as the agent's `tool_data` (`lib/len-artifacts/validate.ts`); no `batch`, that is the agent's.
+// sentences as the agent's `artifact_data` (`lib/len-artifacts/validate.ts`); no `batch`, that is the agent's.
 // → 200 reads { doc } | { docs } · writes { ok: true, doc } (doc is null for a delete) · 400 `bad_request` with its sentence,
 //   or the store's code (`doc_too_big`, `too_many_docs`, `tool_too_big`, `bad_write`) · 404 `not_found` · 413
 //   `payload_too_large` for a body past 256 KB (read no further than that).

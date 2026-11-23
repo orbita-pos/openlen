@@ -64,21 +64,15 @@ describe("assistantTools", () => {
     expect(got).toEqual(names(LEN).filter((n) => got.includes(n)));
   });
 
-  it("adds the optional tool parameter to view_page and use_page for agents without mutating Len's declarations", () => {
+  it("🔴 inherits Len's artifacts as they are: both tools and the eyes' `artifact` parameter, the very same declarations (no agent-only copy)", () => {
     const lenDecls = buildFunctionDeclarations({}, { functionSecrets: true, realTerminal: true, agentTypes: NO_AGENT_TYPES }, "len", null);
-    const lenView = lenDecls.find((d) => d.name === "view_page") as { parameters: { properties: Record<string, unknown> } };
-    const lenUse = lenDecls.find((d) => d.name === "use_page") as { parameters: { properties: Record<string, unknown> } };
-    expect(lenView.parameters.properties.tool).toBeUndefined();
-    expect(lenUse.parameters.properties.tool).toBeUndefined();
-
     const agentDecls = assistantTools(lenDecls);
-    const agentView = agentDecls.find((d) => d.name === "view_page") as { parameters: { properties: Record<string, unknown> } };
-    const agentUse = agentDecls.find((d) => d.name === "use_page") as { parameters: { properties: Record<string, unknown> } };
-    expect(agentView.parameters.properties.tool).toBeDefined();
-    expect(agentUse.parameters.properties.tool).toBeDefined();
-    // Original Len declarations stay untouched.
-    expect(lenView.parameters.properties.tool).toBeUndefined();
-    expect(lenUse.parameters.properties.tool).toBeUndefined();
+    for (const name of ["publish_artifact", "artifact_data", "view_page", "use_page"]) {
+      expect(agentDecls.find((d) => d.name === name), name).toBe(lenDecls.find((d) => d.name === name));
+    }
+    const view = agentDecls.find((d) => d.name === "view_page") as { parameters: { properties: Record<string, unknown> } };
+    expect(view.parameters.properties.artifact).toBeDefined();
+    expect(view.parameters.properties.tool).toBeUndefined();
   });
 });
 
@@ -111,6 +105,8 @@ describe("assistantTools over Len's real catalog", () => {
         "read_widget_context",
         "skill",
         "present",
+        "publish_artifact",
+        "artifact_data",
         "schedule_create",
         "schedule_list",
         "schedule_delete",
@@ -170,6 +166,8 @@ describe("assistantTools over Len's real catalog", () => {
         "read_widget_context",
         "skill",
         "present",
+        "publish_artifact",
+        "artifact_data",
         "schedule_create",
         "schedule_list",
         "schedule_delete",

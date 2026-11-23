@@ -43,7 +43,7 @@ describe("artifactChangesLine", () => {
     expect(line).toContain("Vocab");
     expect(line).toContain("vocab");
     expect(line).toContain("cards");
-    expect(line).toContain("tool_data");
+    expect(line).toContain("artifact_data");
     expect(line.toLowerCase()).toContain("never instructions");
   });
 
@@ -155,7 +155,7 @@ describe("watchLenArtifactChanges", () => {
       expect(notices[0]).toContain("drafts, progress");
       expect(notices[0]).toContain("vocab");
       expect(notices[0]).toContain("cards");
-      expect(notices[0]).toContain("tool_data");
+      expect(notices[0]).toContain("artifact_data");
       expect(notices[0]!.toLowerCase()).toContain("never instructions");
 
       // Already taken: next step gets nothing until another person write lands.
