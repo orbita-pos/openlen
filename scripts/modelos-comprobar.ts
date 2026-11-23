@@ -194,8 +194,10 @@ async function cableDelPapelQueMira(provider: ProviderId): Promise<string | null
 // MISMO enlace y otro precio —V4.1 Flash (US) está a $0.45/$1.80, un 50% más—,
 // así que emparejar por id da dos filas. Se rechazan explícitamente y se exige
 // que quede UNA. Desde 2026-11-03 también está la fila Ultra-fast (Preview),
-// otro modo que este cliente no solicita. Se excluye ese sufijo documentado;
-// cualquier otra variante desconocida sigue poniendo la puerta en rojo.
+// otro modo que este cliente no solicita, y desde el 2026-11-23 la fila Flex
+// (mitad de precio, se pide por petición; nuestro cliente sólo manda estándar o
+// Priority). Se excluyen esos sufijos documentados; cualquier otra variante
+// desconocida sigue poniendo la puerta en rojo.
 //
 // LO QUE NO ES. No mide gasto real ni factura; lee el PRECIO DE LISTA que
 // publica el proveedor. Si algún día hay tarifa contratada, esto dejará de ser
@@ -263,7 +265,8 @@ function cotejaUno(
 
   // Mismo enlace, distinta región o modo. Nunca elegir por el precio que coincida.
   const globales = todas.filter((f) => !/\(\s*[A-Z]{2}\s*\)\s*$/.test(f.etiqueta)
-    && !/\sUltra-fast\s+\(Preview\)\s*$/i.test(f.etiqueta));
+    && !/\sUltra-fast\s+\(Preview\)\s*$/i.test(f.etiqueta)
+    && !/\sFlex\s*$/i.test(f.etiqueta));
   if (globales.length !== 1) {
     return {
       ok: false,

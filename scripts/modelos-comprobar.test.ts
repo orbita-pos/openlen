@@ -115,6 +115,21 @@ describe("modelos:comprobar published price selection", () => {
     expect(r.status, r.stdout + r.stderr).toBe(0);
     expect(r.stdout).toContain("cuestan lo que decimos");
   });
+  // 23/11: Fireworks added a Flex row for the same id (half price, selected per request); our client never asks
+  // for Flex (it sends standard, or Priority when asked), so the page as it was that day must pass.
+  it("checks the standard row when the same id also has a Flex row (the page of 23/11)", () => {
+    const r = check([
+      row(label),
+      row(label + " Flex", "$0.15 / $0.003 / $0.60"),
+      row(label + " Ultra-fast (Preview)", "$1.20 / $0.024 / $4.80"),
+      row(label + " (US)", "$0.45 / $0.009 / $1.80"),
+    ]);
+    expect(r.status, r.stdout + r.stderr).toBe(0);
+    expect(r.stdout).toContain("cuestan lo que decimos");
+  });
+  it("never treats a Flex-only row as standard even when its numbers match", () => {
+    expect(check([row(label + " Flex")]).status).toBe(1);
+  });
   it("never treats an Ultra-fast-only row as standard even when its numbers match", () => {
     expect(check([row(label + " Ultra-fast (Preview)")]).status).toBe(1);
   });
