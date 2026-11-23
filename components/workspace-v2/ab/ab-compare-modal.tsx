@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { FlaskConical, Rocket, Trash2, X } from "lucide-react";
 
 import type { AbExperimentView } from "@/lib/ab/types";
+import { postAbLaunchAfterSecurity } from "@/lib/workspace-v2/ab-launch-request";
 
 export function AbCompareModal({
   experiment,
@@ -18,36 +19,33 @@ export function AbCompareModal({
 }) {
   const t = useTranslations("panelsChat");
   const locale = useLocale();
-  const [busy, setBusy] = useState<"launch" | "cancel" | null>(null);
+  const [busy, setBusy] = useState<"launch" | "reviewing" | "cancel" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const previewA = `/api/projects/${encodeURIComponent(experiment.projectId)}/ab/${encodeURIComponent(experiment.id)}/preview?variant=a`;
   const previewB = `/api/projects/${encodeURIComponent(experiment.projectId)}/ab/${encodeURIComponent(experiment.id)}/preview?variant=b`;
 
+  // Variant B's security review may still be running: it is waited for (the button says so) and the launch is sent
+  // again by itself, as Publish does. What it can't do is said in the person's language, never the server's sentence.
   const launch = async () => {
     setBusy("launch");
     setError(null);
     try {
-      const res = await fetch(
-        `/api/projects/${encodeURIComponent(experiment.projectId)}/ab/${encodeURIComponent(experiment.id)}/launch`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ locale }),
-        },
-      );
-      const body = (await res.json().catch(() => null)) as {
-        experiment?: AbExperimentView;
-        message?: string;
-      } | null;
-      if (!res.ok || !body?.experiment) {
-        setError(body?.message || t("ownAssistant.ab.failed"));
+      const outcome = await postAbLaunchAfterSecurity(experiment.projectId, experiment.id, { locale }, {
+        onWaiting: () => setBusy("reviewing"),
+      });
+      if (outcome.kind === "launched") {
+        onUpdated(outcome.experiment);
+        onClose();
         return;
       }
-      onUpdated(body.experiment);
-      onClose();
-    } catch {
-      setError(t("ownAssistant.ab.failed"));
+      setError(
+        outcome.kind === "security_review_pending"
+          ? t("ownAssistant.ab.securityPending")
+          : outcome.kind === "security_findings"
+            ? t("ownAssistant.ab.securityFindings")
+            : t("ownAssistant.ab.failed"),
+      );
     } finally {
       setBusy(null);
     }
@@ -121,7 +119,11 @@ export function AbCompareModal({
                 >
                   <Rocket size={13} />
                   <span>
-                    {busy === "launch" ? t("ownAssistant.ab.applying") : t("ownAssistant.ab.launch5050")}
+                    {busy === "reviewing"
+                      ? t("ownAssistant.ab.reviewing")
+                      : busy === "launch"
+                        ? t("ownAssistant.ab.applying")
+                        : t("ownAssistant.ab.launch5050")}
                   </span>
                 </button>
               </>
