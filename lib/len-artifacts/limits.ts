@@ -26,3 +26,15 @@ export const LEN_ARTIFACT_BATCH_MAX = 100;
 /** The most one `artifact_data` answer carries of rows (their JSON): 100 documents of 64 KB would be 6 MB of context kept in the
  *  conversation for good. A document is never cut: the answer holds the first ones that fit, and says so. */
 export const LEN_ARTIFACT_ANSWER_MAX_BYTES = 100 * 1024;
+
+// The two screens' routes (app/api/len-artifacts/[id]/data and /follow) read these from here: a route file may export only
+// its handlers and Next's settings, or `next build` fails (lib/route-exports.test.ts).
+
+/** The most a call's body may weigh: one document is at most 64 KB, so four times that leaves room for its JSON's escapes
+ *  and a query — and a page can't make the server parse megabytes before the store's own check refuses them. */
+export const DATA_BODY_MAX_BYTES = 256 * 1024;
+
+/** The most a screen may leave unread before its stream is closed: more than two whole baselines of a full tool (5 MB of
+ *  data each). A screen that stopped reading would otherwise keep every change in this process's memory; closed, it
+ *  reconnects when it can and gets one fresh baseline — a slow follower is dropped, never waited for (DeepSeek's follow). */
+export const FOLLOW_UNREAD_MAX_BYTES = 16 * 1024 * 1024;

@@ -27,6 +27,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { subscribeArtifactChanges, type LenArtifactChange } from "@/lib/len-artifacts/bus";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
+import { FOLLOW_UNREAD_MAX_BYTES } from "@/lib/len-artifacts/limits";
 import { lenArtifactById, readDocs, readDocsByKeys } from "@/lib/len-artifacts/store";
 import type { DataChangedParams } from "@/lib/tools/bridge/protocol";
 import { toBridgeDoc } from "@/lib/len-artifacts/wire";
@@ -38,10 +39,6 @@ export const dynamic = "force-dynamic";
 
 const ENCODER = new TextEncoder();
 const KEEPALIVE_MS = 25_000;
-/** The most a screen may leave unread before its stream is closed: more than two whole baselines of a full tool (5 MB of
- *  data each). A screen that stopped reading would otherwise keep every change in this process's memory; closed, it
- *  reconnects when it can and gets one fresh baseline — a slow follower is dropped, never waited for (DeepSeek's follow). */
-export const FOLLOW_UNREAD_MAX_BYTES = 16 * 1024 * 1024;
 
 const notFound = () =>
   new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { "content-type": "application/json", "cache-control": "no-store" } });

@@ -50,6 +50,7 @@ const { changeOfWrites, toBridgeDoc } = await import("@/lib/len-artifacts/wire")
 const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
 const store = await import("@/lib/len-artifacts/store");
 const route = await import("./route");
+const { FOLLOW_UNREAD_MAX_BYTES } = await import("@/lib/len-artifacts/limits");
 
 let pg: PGlite;
 
@@ -503,7 +504,7 @@ describe("closing", () => {
     // ~60 KB a change, one document rewritten (the tool's own 5 MB cap is never near), never read by the screen
     const big = { t: "x".repeat(60 * 1024) };
     let writes = 0;
-    while (busTrack.live > 0 && writes < Math.ceil(route.FOLLOW_UNREAD_MAX_BYTES / (60 * 1024)) + 40) {
+    while (busTrack.live > 0 && writes < Math.ceil(FOLLOW_UNREAD_MAX_BYTES / (60 * 1024)) + 40) {
       await write([set("c", "a", { ...big, n: ++writes })]);
       await new Promise((r) => setTimeout(r, 0));
     }

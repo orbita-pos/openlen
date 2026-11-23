@@ -18,6 +18,7 @@
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { publishArtifactChange } from "@/lib/len-artifacts/bus";
 import { runQuery } from "@/lib/len-artifacts/query";
+import { DATA_BODY_MAX_BYTES } from "@/lib/len-artifacts/limits";
 import { lenArtifactById, readDoc, readDocs, writeDocs } from "@/lib/len-artifacts/store";
 import { isRecord, parseRead, parseWrite, READ_ACTIONS, WRITE_ACTIONS, type ReadAction, type WriteAction } from "@/lib/len-artifacts/validate";
 import { changeOfWrites, toBridgeDoc } from "@/lib/len-artifacts/wire";
@@ -36,9 +37,6 @@ const badRequest = (message: string) => json({ error: "bad_request", message }, 
 const READ_OPS: readonly ReadAction[] = READ_ACTIONS;
 const WRITE_OPS: readonly WriteAction[] = WRITE_ACTIONS;
 
-/** The most a call's body may weigh: one document is at most 64 KB, so four times that leaves room for its JSON's escapes
- *  and a query — and a page can't make the server parse megabytes before the store's own check refuses them. */
-export const DATA_BODY_MAX_BYTES = 256 * 1024;
 const tooLarge = () => json({ error: "payload_too_large" }, 413);
 
 /** The body as text, or null once it is past `max` bytes — whatever its `content-length` says, read no further than that. */
