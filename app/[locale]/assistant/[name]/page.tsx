@@ -37,7 +37,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function AssistantPage({ params }: { params: Promise<{ locale: string; name: string }> }) {
   if (!assistantsEnabled()) notFound();
   const { locale, name } = await params;
-  const personId = (await auth())?.user?.id;
+  const session = await auth();
+  const personId = session?.user?.id;
   if (!personId) return redirect({ href: "/login", locale });
   const slug = slugFromParam(name);
   const assistant = await assistantBySlug(personId, slug);
@@ -73,6 +74,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
       startsWith={startsWith}
       inSpace={isSpaceData(project.data)}
       agents={agentsEnabled()}
+      personName={session?.user?.name ?? ""}
     />
   );
 }

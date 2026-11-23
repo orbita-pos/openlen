@@ -38,6 +38,10 @@ export const dynamic = "force-dynamic";
 
 const ENCODER = new TextEncoder();
 const KEEPALIVE_MS = 25_000;
+/** The most a screen may leave unread before its stream is closed: more than two whole baselines of a full tool (5 MB of
+ *  data each). A screen that stopped reading would otherwise keep every change in this process's memory; closed, it
+ *  reconnects when it can and gets one fresh baseline — a slow follower is dropped, never waited for (DeepSeek's follow). */
+export const FOLLOW_UNREAD_MAX_BYTES = 16 * 1024 * 1024;
 
 const notFound = () =>
   new Response(JSON.stringify({ error: "not_found" }), { status: 404, headers: { "content-type": "application/json", "cache-control": "no-store" } });
@@ -71,7 +75,11 @@ function follow(toolId: string, controller: ReadableStreamDefaultController<Uint
       controller.enqueue(ENCODER.encode(chunk));
     } catch {
       stop();
+      return;
     }
+    // The queue counts bytes (see the stream's strategy): past the cap the screen isn't reading, so it is let go.
+    const unread = controller.desiredSize === null ? 0 : -controller.desiredSize;
+    if (unread > FOLLOW_UNREAD_MAX_BYTES) stop();
   };
   const event = (name: string, data: unknown) => send(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
 
@@ -136,14 +144,18 @@ export const GET = paraLaApp(async (req: Request, { params }: { params: Promise<
   if (!tool || tool.personId !== userId) return notFound();
 
   let stop: (() => void) | undefined;
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      stop = follow(tool.id, controller, req.signal);
+  const stream = new ReadableStream<Uint8Array>(
+    {
+      start(controller) {
+        stop = follow(tool.id, controller, req.signal);
+      },
+      cancel() {
+        stop?.();
+      },
     },
-    cancel() {
-      stop?.();
-    },
-  });
+    // Bytes, not chunks: `desiredSize` is then minus what the screen hasn't read yet.
+    { highWaterMark: 0, size: (chunk) => chunk.byteLength },
+  );
 
   return new Response(stream, {
     status: 200,

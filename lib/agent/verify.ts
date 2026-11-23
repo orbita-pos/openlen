@@ -1540,6 +1540,8 @@ export interface MiradaParams {
   readonly toolBridge?: import("@/lib/tools/bridge/eyes").EyesCaller;
   /** An agent tool's published sibling files (`/app.js` → content), served in memory alongside its `/index.html`. */
   readonly releaseFiles?: Readonly<Record<string, string>>;
+  /** Its binary files as bytes (images, fonts, sounds), answered beside the text ones. */
+  readonly releaseBinaries?: Readonly<Record<string, Uint8Array>>;
 }
 
 /** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
@@ -1630,7 +1632,7 @@ export async function observarPagina(
   const agentTool = bridge?.mode === "agentTool";
   const medible = agentTool ? params.html : documentoMedible(params.html, params.vista ?? null);
   // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-  const suCarpeta = agentTool ? { files: params.releaseFiles ?? {}, pagina: null } : await carpetaDeLaVista(params.vista);
+  const suCarpeta = agentTool ? { files: params.releaseFiles ?? {}, binaryFiles: params.releaseBinaries ?? {}, pagina: null } : await carpetaDeLaVista(params.vista);
   const doc = bridge ? injectToolBridge(medible) : medible;
   const carpeta = bridge
     ? {

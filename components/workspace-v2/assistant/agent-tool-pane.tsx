@@ -21,6 +21,8 @@ export interface AgentToolListItem {
   readonly slug: string;
   readonly title: string;
   readonly frameUrl: string;
+  /** The published version the tab shows (its context's `tool.version`). */
+  readonly releaseSha?: string;
   readonly frameOrigin: string;
 }
 
@@ -44,9 +46,12 @@ export function AgentToolPane({
   locale,
   onPrompt,
   onRemoved,
+  personName = "",
 }: {
   tool: AgentToolListItem;
   locale: string;
+  /** The signed-in person's name, for the tool's context (as an installed tool gets it). */
+  personName?: string;
   onPrompt: (text: string) => void;
   onRemoved: (toolId: string) => void;
 }) {
@@ -60,8 +65,8 @@ export function AgentToolPane({
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  const latest = useRef({ tool, locale, onPrompt, onRemoved });
-  latest.current = { tool, locale, onPrompt, onRemoved };
+  const latest = useRef({ tool, locale, onPrompt, onRemoved, personName });
+  latest.current = { tool, locale, onPrompt, onRemoved, personName };
 
   // Follow stream lifecycle — kept in refs so `onDataSubscribe` stays strictly synchronous (Ruling T5 / M5-1).
   const followRef = useRef<{
@@ -167,9 +172,10 @@ export function AgentToolPane({
         caller: { agentToolId: tool.id },
         methods: AGENT_TOOL_BRIDGE_METHODS,
         context: () => ({
-          person: { name: "", locale: latest.current.locale },
+          person: { name: latest.current.personName, locale: latest.current.locale },
           project: null,
-          tool: { id: latest.current.tool.id, version: latest.current.tool.frameUrl },
+          // The published version it shows (an older list without it: the version the frame's URL carries).
+          tool: { id: latest.current.tool.id, version: latest.current.tool.releaseSha ?? new URL(latest.current.tool.frameUrl).searchParams.get("v") ?? "" },
           environment: "installed",
         }),
         theme: readToolTheme,

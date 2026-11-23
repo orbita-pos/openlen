@@ -39,7 +39,7 @@ import type { Browser, CDPSession, ElementHandle, KeyInput, Page } from "puppete
 
 import { TEXTO_DE_LA_PAGINA_ES_DATO } from "@/lib/agent/aviso-medido";
 import type { InlineImage } from "@/lib/ai-gateway";
-import { esperarALaRed, origenDeMedida, type DocumentoServido } from "@/lib/ai/origen-de-medida";
+import { esperarALaRed, origenDeMedida, type DocumentoServido, type OpcionesDelDocumento } from "@/lib/ai/origen-de-medida";
 import { textoDelError, traductorDeMapas, type Traductor } from "@/lib/ai/sitio-del-error";
 import { lanzarChromium, VISUAL_QUALITY_MOBILE_VIEWPORT } from "@/lib/ai/visual-quality-renderer";
 import { carpetaDeLaVista, documentoMedible, type ContextoDeVista } from "@/lib/lienzo/documento";
@@ -868,6 +868,8 @@ export interface VisitaParams {
   readonly toolBridge?: EyesCaller;
   /** An agent tool's published sibling files (`/app.js` → content), served in memory alongside its `/index.html`. */
   readonly releaseFiles?: Readonly<Record<string, string>>;
+  /** Its binary files as bytes (images, fonts, sounds), answered beside the text ones. */
+  readonly releaseBinaries?: Readonly<Record<string, Uint8Array>>;
   /** The installed tool's private host, opened top-level instead of the draft (`installed: true`). */
   readonly installedUrl?: string;
 }
@@ -1184,7 +1186,8 @@ interface OpenTab {
   readonly cambiantes: Set<string>;
   traducir: Traductor | undefined;
   doc: DocumentoServido | null;
-  opciones: Awaited<ReturnType<typeof carpetaDeLaVista>>;
+  // The view's folder, or an agent tool's release (its text files and its binaries).
+  opciones: (OpcionesDelDocumento & { readonly pagina: string | null }) | null | undefined;
   /** La versión que enseña: el documento y sus ficheros, sin la pantalla. */
   version: string;
   /** Lo que se abrió (el documento y la pantalla de una app). */
@@ -1620,7 +1623,9 @@ async function visitTab(
   const html = p.toolBridge ? injectToolBridge(medible) : medible;
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
-  const carpeta = agentTool ? { files: p.releaseFiles ?? {}, pagina: null } : await carpetaDeLaVista(p.vista);
+  const carpeta: (OpcionesDelDocumento & { pagina: string | null }) | null | undefined = agentTool
+    ? { files: p.releaseFiles ?? {}, binaryFiles: p.releaseBinaries ?? {}, pagina: null }
+    : await carpetaDeLaVista(p.vista);
   const opciones = p.toolBridge
     ? {
         ...(carpeta ?? { files: {}, pagina: null }),

@@ -1504,10 +1504,12 @@ async function correrTurno(
   // person typed at a screen — never a server-started turn (scheduled, Len-woken, thread, email, round) —, one
   // `<system-reminder>` inside `textoEnviado` after `visualStatesReminder`, so the row keeps it as `sentText` and the
   // history replays it byte for byte. Fail-soft: a store error leaves the turn running without the line.
-  const herramientasDelAgente: AgentToolRow[] =
-    asistente !== null && espacioDelTurno && agentToolsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno
-      ? await agentToolsOf(asistente.id).catch(() => [])
-      : [];
+  // `/compact` is no message of the person's: it carries no line and follows nothing.
+  const vigilaHerramientas =
+    asistente !== null && espacioDelTurno && agentToolsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno && !parseCompactCommand(prompt);
+  const herramientasDelAgente: AgentToolRow[] = vigilaHerramientas ? await agentToolsOf(asistente!.id).catch(() => []) : [];
+  // When the line below was read: the turn's watcher looks in the store for what landed after it, before it subscribed.
+  const cambiosLeidosEn = new Date();
   const cambiosDeHerramientas =
     asistente !== null && herramientasDelAgente.length > 0
       ? await changedSince(asistente.id, { toolsOf: async () => herramientasDelAgente }).catch(() => [])
@@ -2641,8 +2643,13 @@ async function correrTurno(
             return null;
           });
         }
-        if (herramientasDelAgente.length > 0 && !compactCommand) {
-          toolWatch = watchAgentToolChanges(herramientasDelAgente);
+        // Even with no tool yet: one the agent publishes in this turn is followed from then on (`agentToolWatch.add`).
+        if (vigilaHerramientas && !compactCommand) {
+          toolWatch = watchAgentToolChanges(herramientasDelAgente, undefined, {
+            since: cambiosLeidosEn,
+            personChangedCollections: async (toolId, since) => (await import("@/lib/agent-tools/store")).personChangedCollections(toolId, since),
+          });
+          agentSession.agentToolWatch = toolWatch;
         }
         // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him that is still unread
         // (held, pending or delivering) rides with the next turn a PERSON starts here — not one the server started (an

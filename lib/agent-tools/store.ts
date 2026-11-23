@@ -45,9 +45,30 @@ export type AgentToolInput = Pick<AgentToolRow, "id" | "assistantId" | "personId
   phoneHostLabel?: string | null;
 };
 
-export async function upsertAgentTool(input: AgentToolInput): Promise<AgentToolRow> {
+/** Thrown by `upsertAgentTool` when a NEW tool would pass `maxPerAgent`: the cap held under a race. */
+export class AgentToolCapError extends Error {
+  constructor(readonly max: number) {
+    super(`agentTools: an agent has at most ${max} tools`);
+    this.name = "AgentToolCapError";
+  }
+}
+
+/** Keeps the tool. With `maxPerAgent`, a tool the agent doesn't have yet is refused (`AgentToolCapError`) once it has that
+ *  many: the agent's row is locked first, so two publishes at once are counted one after the other. */
+export async function upsertAgentTool(input: AgentToolInput, opts: { readonly maxPerAgent?: number } = {}): Promise<AgentToolRow> {
+  const max = opts.maxPerAgent;
+  if (max === undefined) return upsertRow(db, input);
+  return db.transaction(async (tx) => {
+    await tx.select({ id: schema.assistants.id }).from(schema.assistants).where(eq(schema.assistants.id, input.assistantId)).for("update");
+    const mine = await tx.select({ slug: tools.slug }).from(tools).where(eq(tools.assistantId, input.assistantId));
+    if (!mine.some((t) => t.slug === input.slug) && mine.length >= max) throw new AgentToolCapError(max);
+    return upsertRow(tx, input);
+  });
+}
+
+async function upsertRow(q: Pick<typeof db, "insert">, input: AgentToolInput): Promise<AgentToolRow> {
   const now = new Date();
-  const [row] = await db
+  const [row] = await q
     .insert(tools)
     .values({ ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: now, updatedAt: now })
     .onConflictDoUpdate({

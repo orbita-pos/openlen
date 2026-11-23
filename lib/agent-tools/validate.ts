@@ -65,8 +65,11 @@ export function parseQuery(raw: unknown): { query: AgentToolQuery } | { problem:
   return { query };
 }
 
-export type ReadAction = "get" | "list" | "query";
-export type WriteAction = "set" | "update" | "delete";
+/** The reads and the writes of a tool's data, named once: the agent's `tool_data` (which adds `batch`) and the page's route. */
+export const READ_ACTIONS = ["get", "list", "query"] as const;
+export const WRITE_ACTIONS = ["set", "update", "delete"] as const;
+export type ReadAction = (typeof READ_ACTIONS)[number];
+export type WriteAction = (typeof WRITE_ACTIONS)[number];
 
 /** What a caller names in one call: whatever it sent, not yet trusted. */
 export interface DataInput {

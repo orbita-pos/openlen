@@ -58,8 +58,12 @@ describe("loadTestInstalled", () => {
   });
 
   it("a measure that couldn't run is not a failure (it couldn't check, it didn't see an error)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const d = deps(null);
     expect(await loadTestInstalled(installation, caller, d.deps)).toEqual({ ok: true });
+    // said, not printed: a measure that couldn't run is noted for whoever reads the logs
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("couldn't run"));
+    warn.mockRestore();
   });
 
   it("a release that is gone fails", async () => {

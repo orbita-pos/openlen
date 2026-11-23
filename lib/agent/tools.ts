@@ -520,6 +520,8 @@ export interface AgentDeps {
     toolBridge?: import("@/lib/tools/bridge/eyes").EyesCaller;
     /** An agent tool's published sibling files (`/app.js` → content). */
     releaseFiles?: Readonly<Record<string, string>>;
+    /** Its binary files (images, fonts, sounds) as bytes. */
+    releaseBinaries?: Readonly<Record<string, Uint8Array>>;
   }): Promise<{ respuesta: string } | null>;
   /** USAR LA PÁGINA — `use_page` (H9). Una visita en Chromium con los pasos
    *  que da Len; devuelve HECHOS de cada paso, no un veredicto. Opcional por lo
@@ -540,6 +542,8 @@ export interface AgentDeps {
     toolBridge?: import("@/lib/tools/bridge/eyes").EyesCaller;
     /** An agent tool's published sibling files (`/app.js` → content). */
     releaseFiles?: Readonly<Record<string, string>>;
+    /** Its binary files (images, fonts, sounds) as bytes. */
+    releaseBinaries?: Readonly<Record<string, Uint8Array>>;
     /** `installed: true`: the installed tool's private host. */
     installedUrl?: string;
   }): Promise<{ informe: string; images?: readonly InlineImage[]; noChange?: boolean }>;
@@ -549,6 +553,7 @@ export interface AgentDeps {
     tool: { id: string; slug: string; title: string; releaseSha: string };
     html: string;
     files: Record<string, string>;
+    binaries?: Record<string, Uint8Array>;
     docs: import("@/lib/agent-tools/store").AgentToolDoc[];
   } | null>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
@@ -1430,6 +1435,9 @@ export interface AgentSession {
   /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2) or the person's own assistant: Write, Edit
    *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
+  /** An agent's turn follows what its person changes in its tools (lib/agent-tools/changes.ts): a tool it publishes in
+   *  the turn is added here, so it is followed from then on. Absent when nothing is followed (Len, a server turn). */
+  agentToolWatch?: { add(tool: { readonly id: string; readonly slug: string; readonly title: string }): void };
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): this turn runs as it. Absent for Len. */
   assistant?: {
     readonly id: string;
@@ -2163,6 +2171,7 @@ async function toolMirarPagina(
           ...(enTelefono ? { viewport: "mobile" as const } : {}),
           toolBridge: agentTool.toolBridge,
           releaseFiles: agentTool.releaseFiles,
+        releaseBinaries: agentTool.releaseBinaries,
         }),
       ).catch(() => null);
       if (!visto) {
@@ -2188,6 +2197,7 @@ async function toolMirarPagina(
         vista: null,
         toolBridge: agentTool.toolBridge,
         releaseFiles: agentTool.releaseFiles,
+        releaseBinaries: agentTool.releaseBinaries,
       })
       .catch(() => null);
     if (!visto) {
@@ -2414,6 +2424,7 @@ async function toolUsarPagina(
         ...(newVisit ? { newVisit } : {}),
         toolBridge: agentTool.toolBridge,
         releaseFiles: agentTool.releaseFiles,
+        releaseBinaries: agentTool.releaseBinaries,
       }),
     ).catch(() => null);
     if (!visto) {
@@ -2801,12 +2812,14 @@ async function defaultLoadAgentToolForEyes(assistantId: string, slug: string): P
   tool: { id: string; slug: string; title: string; releaseSha: string };
   html: string;
   files: Record<string, string>;
+  binaries?: Record<string, Uint8Array>;
   docs: import("@/lib/agent-tools/store").AgentToolDoc[];
 } | null> {
-  const [{ agentToolsOf, readDocs }, { readRelease }, { isBlobPointer }] = await Promise.all([
+  const [{ agentToolsOf, readDocs }, { readRelease }, { isBlobPointer }, { getBlob }] = await Promise.all([
     import("@/lib/agent-tools/store"),
     import("@/lib/tools/store"),
     import("@/lib/files/blob-pointer"),
+    import("@/lib/files/blob"),
   ]);
   const row = (await agentToolsOf(assistantId)).find((r) => r.slug === slug);
   if (!row) return null;
@@ -2814,11 +2827,15 @@ async function defaultLoadAgentToolForEyes(assistantId: string, slug: string): P
   const indexFile = release && Object.prototype.hasOwnProperty.call(release, "/index.html") ? release["/index.html"] : undefined;
   if (!release || !indexFile) return null;
   const files: Record<string, string> = {};
+  // Its images, fonts and sounds too, as bytes: without them the agent would look at broken images and "fix" them.
+  const binaries: Record<string, Uint8Array> = {};
   for (const [k, f] of Object.entries(release)) {
-    if (k !== "/index.html" && !isBlobPointer(f.content)) files[k] = f.content;
+    if (k === "/index.html") continue;
+    if (isBlobPointer(f.content)) binaries[k] = await getBlob(f.content);
+    else files[k] = f.content;
   }
   const docs = await readDocs(row.id);
-  return { tool: { id: row.id, slug: row.slug, title: row.title, releaseSha: row.releaseSha }, html: indexFile.content, files, docs };
+  return { tool: { id: row.id, slug: row.slug, title: row.title, releaseSha: row.releaseSha }, html: indexFile.content, files, binaries, docs };
 }
 
 /** Synchronous access and input guard for `view_page` / `use_page` with `tool`, checked before consuming look budget. */
@@ -2842,6 +2859,7 @@ async function resolveAgentToolEyes(
   | {
       html: string;
       releaseFiles: Record<string, string>;
+      releaseBinaries: Record<string, Uint8Array>;
       ruta: string;
       toolBridge: import("@/lib/tools/bridge/eyes").AgentToolEyesCaller;
     }
@@ -2861,6 +2879,7 @@ async function resolveAgentToolEyes(
   return {
     html: loaded.html,
     releaseFiles: loaded.files,
+    releaseBinaries: loaded.binaries ?? {},
     ruta: `/tools/${assistant.slug ?? assistant.id}/${loaded.tool.slug}/index.html`,
     toolBridge: {
       mode: "agentTool",

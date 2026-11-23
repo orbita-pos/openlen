@@ -107,9 +107,15 @@ class InMemoryAgentToolCopy {
 
   constructor(initial: readonly AgentToolDoc[]) {
     for (const d of initial) {
+      // What the store gives is one row per key with JSON data; a copy that is handed something else still holds together:
+      // a document without data is no document, and a key given twice keeps its last one (its bytes counted once).
+      if (d.data === undefined || d.data === null) continue;
       const cloned = JSON.parse(JSON.stringify(d.data)) as unknown;
       const bytes = sizeOf(cloned);
-      this.docs.set(keyOf(d.collection, d.docId), {
+      const key = keyOf(d.collection, d.docId);
+      const before = this.docs.get(key);
+      if (before) this.totalBytes -= before.bytes;
+      this.docs.set(key, {
         doc: { collection: d.collection, docId: d.docId, data: cloned, updatedAt: new Date(d.updatedAt.getTime()), updatedBy: d.updatedBy },
         bytes,
       });

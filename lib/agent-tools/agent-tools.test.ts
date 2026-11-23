@@ -447,6 +447,40 @@ describe("publish_tool: what it refuses", () => {
     expect(w.releases).toHaveLength(releasesBefore);
   });
 
+  it("a tool published in the turn is handed to the turn's watcher, so its person's changes are heard from then on", async () => {
+    const w = world();
+    const added: { id: string; slug: string; title: string }[] = [];
+    const out = await runPublishTool({ ...session(), agentToolWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/tools/ana/recorrido", title: "Recorrido" }, w.deps);
+    expect(response(out).ok).toBe(true);
+    expect(added).toEqual([{ id: w.tools[0]!.id, slug: "recorrido", title: "Recorrido" }]);
+    // a refused publish hands nothing
+    const refused = await runPublishTool({ ...session(), agentToolWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/tools/bob/x", title: "X" }, w.deps);
+    expect(response(refused).ok).toBe(false);
+    expect(added).toHaveLength(1);
+  });
+
+  it("a sixth that another publish beat to the last place (the store's locked check refuses it) is too_many_tools, not a crash", async () => {
+    const w = world();
+    const capped: AgentToolsDeps = {
+      ...w.deps,
+      upsert: async () => {
+        const err = new Error("agentTools: an agent has at most 5 tools");
+        err.name = "AgentToolCapError";
+        throw err;
+      },
+    };
+    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, capped);
+    expect(response(out)).toMatchObject({ ok: false, error: "too_many_tools" });
+    expect(sentence(out)).toContain(String(AGENT_TOOLS_PER_AGENT));
+    expect(w.seen).toEqual([]);
+  });
+
+  it("any other failure of the write is not dressed up as the cap", async () => {
+    const w = world();
+    const broken: AgentToolsDeps = { ...w.deps, upsert: async () => Promise.reject(new Error("database is down")) };
+    await expect(runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, broken)).rejects.toThrow("database is down");
+  });
+
   it("republishing one of the five is not a sixth", async () => {
     const w = world();
     for (let i = 1; i <= AGENT_TOOLS_PER_AGENT - 1; i++) addTool(w, { slug: `t${i}` });

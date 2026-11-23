@@ -6261,7 +6261,10 @@ describe("POST /api/agent — the person's own assistant", () => {
     beforeEach(() => {
       mocks.loadProject.mockResolvedValue(spaceProject);
       agentToolStore.agentToolsOf.mockResolvedValue([toolRow()]);
-      agentToolStore.personChangedCollections.mockResolvedValue(["progress"]);
+      // As the store answers: the person's collections written AFTER `since` (the tool's write is at 12:00).
+      agentToolStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
+        since === null || since.getTime() < new Date("2026-11-22T12:00:00Z").getTime() ? ["progress"] : [],
+      );
     });
     afterEach(() => {
       agentToolStore.agentToolsOf.mockResolvedValue([]);
@@ -6340,6 +6343,59 @@ describe("POST /api/agent — the person's own assistant", () => {
         deleted: [],
       });
       expect(capturedTake?.()).toEqual([]);
+    });
+
+    it("🔴 a person's write that lands after the line was read but before the turn subscribed reaches the next step", async () => {
+      // the store has a write newer than the turn's read: the watcher's catch-up finds it
+      agentToolStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
+        since === null || since.getTime() < new Date("2026-11-22T12:00:00Z").getTime() ? ["progress"] : ["late"],
+      );
+      let first: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await new Promise((r) => setTimeout(r, 0));
+        first = args.takeAgentNotices!();
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", prompt: "hola" }));
+      expect(first).toHaveLength(1);
+      expect(first[0]).toContain("late");
+      const sinceAsked = agentToolStore.personChangedCollections.mock.calls.map((c) => c[1] as Date | null);
+      // once for the line (from agentSeenAt), once for the catch-up (from when the line was read)
+      expect(sinceAsked[0]!.toISOString()).toBe("2026-11-22T11:00:00.000Z");
+      expect(sinceAsked.at(-1)!.getTime()).toBeGreaterThan(new Date("2026-11-22T12:00:00Z").getTime());
+    });
+
+    it("a tool the agent publishes in the turn is followed from then on, even when it had none", async () => {
+      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      agentToolStore.agentToolsOf.mockResolvedValue([]);
+      let notices: readonly string[] = [];
+      // publish_tool, as the tools see their session: it hands the new tool to the turn's watcher after saving its row
+      mocks.runAgentTool.mockImplementationOnce(async (session: { agentToolWatch?: { add(t: object): void } }) => {
+        session.agentToolWatch!.add({ id: "tool-new", slug: "nuevo", title: "Nuevo" });
+        return { response: { ok: true } };
+      });
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        await args.runTool("publish_tool", { path: "/tools/lucia/nuevo", title: "Nuevo" });
+        publishToolChange("tool-new", {
+          by: "person",
+          docs: [{ collection: "answers", docId: "1", data: { a: 1 }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        notices = args.takeAgentNotices!();
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", prompt: "hazme un recorrido" }));
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toContain("nuevo");
+      expect(notices[0]).toContain("answers");
+    });
+
+    it("/compact reads no line", async () => {
+      agentToolStore.agentToolsOf.mockClear();
+      agentToolStore.personChangedCollections.mockClear();
+      await readEvents(await pedir({ assistantId: "a1", prompt: "/compact" }));
+      expect(agentToolStore.agentToolsOf).not.toHaveBeenCalled();
+      expect(agentToolStore.personChangedCollections).not.toHaveBeenCalled();
     });
 
     it("never adds the line or mid-turn notices on server-started turns (scheduled or woken by Len)", async () => {

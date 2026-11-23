@@ -185,4 +185,106 @@ describe("watchAgentToolChanges", () => {
     });
     expect(watch2.take()).toEqual([]);
   });
+
+  const personWrite = (toolId: string, collection: string) =>
+    publishToolChange(toolId, {
+      by: "person",
+      docs: [{ collection, docId: "1", data: { a: 1 }, updatedAt: new Date(), updatedBy: "person" }],
+      deleted: [],
+    });
+
+  it("names the tools in the order they were made, not in the order the person wrote to them", () => {
+    const watch = watchAgentToolChanges([
+      { id: "wo-1", slug: "first", title: "First" },
+      { id: "wo-2", slug: "second", title: "Second" },
+    ]);
+    try {
+      personWrite("wo-2", "b");
+      personWrite("wo-1", "a");
+      const notice = watch.take()[0]!;
+      expect(notice.indexOf("first")).toBeLessThan(notice.indexOf("second"));
+    } finally {
+      watch.stop();
+    }
+  });
+
+  it("follows a tool published during the turn from then on, and a tool once however often it is added", () => {
+    const watch = watchAgentToolChanges([]);
+    try {
+      personWrite("wn-1", "before");
+      expect(watch.take()).toEqual([]);
+      watch.add({ id: "wn-1", slug: "nuevo", title: "Nuevo" });
+      watch.add({ id: "wn-1", slug: "nuevo", title: "Nuevo" });
+      personWrite("wn-1", "progress");
+      const notices = watch.take();
+      expect(notices).toHaveLength(1);
+      expect(notices[0]).toContain("nuevo");
+      expect(notices[0]).toContain("progress");
+      expect(notices[0]).not.toContain("before");
+    } finally {
+      watch.stop();
+    }
+    // after stop, adding follows nothing
+    watch.add({ id: "wn-2", slug: "late", title: "Late" });
+    personWrite("wn-2", "x");
+    expect(watch.take()).toEqual([]);
+  });
+
+  it("🔴 a person's write that landed between the turn's read and the subscription is caught from the store", async () => {
+    const since = new Date("2026-11-22T12:00:00Z");
+    const asked: [string, Date][] = [];
+    const watch = watchAgentToolChanges([{ id: "wc-1", slug: "recorrido", title: "Recorrido" }], undefined, {
+      since,
+      personChangedCollections: async (toolId, s) => {
+        asked.push([toolId, s]);
+        return ["progress"];
+      },
+    });
+    try {
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(asked).toEqual([["wc-1", since]]);
+      const notice = watch.take()[0]!;
+      expect(notice).toContain("recorrido");
+      expect(notice).toContain("progress");
+    } finally {
+      watch.stop();
+    }
+  });
+
+  it("a catch-up that fails or finds nothing adds nothing", async () => {
+    const watch = watchAgentToolChanges([{ id: "wc-2", slug: "a", title: "A" }, { id: "wc-3", slug: "b", title: "B" }], undefined, {
+      since: new Date(),
+      personChangedCollections: async (toolId) => (toolId === "wc-2" ? Promise.reject(new Error("database is down")) : []),
+    });
+    try {
+      await new Promise((r) => setTimeout(r, 0));
+      expect(watch.take()).toEqual([]);
+    } finally {
+      watch.stop();
+    }
+  });
+});
+
+describe("the names a notice repeats", () => {
+  it("a collection name that is only spaces is left out, and a lone surrogate becomes the replacement character", () => {
+    const line = toolChangesLine([{ title: "R", slug: "r", collections: ["   ", "notes", "bad\ud800"] }]);
+    expect(line).toContain("collections notes, bad�");
+    expect(line).not.toMatch(/collections\s*,/);
+    expect(line).not.toMatch(/[\ud800-\udfff]/);
+    expect(toolChangesLine([{ title: "R", slug: "r", collections: ["  "] }])).toContain("R (r): some collections");
+  });
+
+  it("an override given as undefined never hides the live member", async () => {
+    const out = await changedSince("a1", {
+      enabled: () => true,
+      toolsOf: async () => [row({ dataChangedAt: new Date("2026-11-22T13:00:00Z") })],
+      personChangedCollections: async () => ["progress"],
+      ...({ personChangedCollectionsTypo: undefined } as object),
+    });
+    expect(out).toEqual([{ title: "Recorrido", slug: "recorrido", collections: ["progress"] }]);
+    // and an explicit undefined member falls back to the live one rather than being called
+    const live = await changedSince("a1", { enabled: () => false, toolsOf: undefined });
+    expect(live).toEqual([]);
+  });
 });

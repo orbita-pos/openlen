@@ -62,6 +62,7 @@ export function AssistantHome({
   startsWith = null,
   inSpace = false,
   agents = false,
+  personName = "",
 }: {
   assistant: AssistantView;
   projectHtml: string;
@@ -83,6 +84,8 @@ export function AssistantHome({
   inSpace?: boolean;
   /** Agents are on (`agentsEnabled()`): the person's space, where an agent is changed, answers. */
   agents?: boolean;
+  /** The signed-in person's name: what the agent's tools are told in their context. */
+  personName?: string;
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("panelsChat");
@@ -101,6 +104,8 @@ export function AssistantHome({
   const [agentTools, setAgentTools] = useState<AgentToolListItem[]>([]);
   const toolsReqRef = useRef(0);
   const loadAgentTools = useCallback(async () => {
+    // Only an agent of the person's space has tools: any other assistant never asks.
+    if (!inSpace) return;
     const reqId = ++toolsReqRef.current;
     try {
       const res = await fetch(`/api/agent-tools?assistantId=${encodeURIComponent(assistant.id)}`, { cache: "no-store" });
@@ -123,7 +128,7 @@ export function AssistantHome({
     } catch {
       // fail-soft: the chat stays usable without the tabs
     }
-  }, [assistant.id]);
+  }, [assistant.id, inSpace]);
   useEffect(() => {
     void loadAgentTools();
   }, [loadAgentTools]);
@@ -391,6 +396,7 @@ export function AssistantHome({
                   <AgentToolPane
                     tool={tool}
                     locale={locale}
+                    personName={personName}
                     onPrompt={(text) => handleToolPrompt(tool.id, text)}
                     onRemoved={handleToolRemoved}
                   />

@@ -163,7 +163,3 @@ export function isBridgeResponse(v: unknown): v is BridgeResponse {
 export function isBridgeNotification(v: unknown): v is BridgeNotification | DataChangedNotification {
   return onChannel(v) && !("id" in v) && (v.method === "context" || v.method === "data.changed");
 }
-
-export function isDataChangedNotification(v: unknown): v is DataChangedNotification {
-  return isBridgeNotification(v) && v.method === "data.changed";
-}

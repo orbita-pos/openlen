@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 describe("the list of an agent's tools", () => {
-  it("is the id, the folder name, the title and where to frame it, for each tool, oldest first so the tabs stay put", async () => {
+  it("is the id, the folder name, the title, the version and where to frame it, for each tool, oldest first so the tabs stay put", async () => {
     // Made in the order b, a, c — the ids and names are not in that order.
     await store.upsertAgentTool(toolInput({ id: "tool-b", slug: "budget", title: "Budget" }));
     await store.upsertAgentTool(toolInput({ id: "tool-a", slug: "lessons", title: "Lessons", releaseSha: "sha-9" }));
@@ -90,9 +90,9 @@ describe("the list of an agent's tools", () => {
     const r = await call();
     expect(r.status).toBe(200);
     expect(r.body).toEqual([
-      { id: "tool-b", slug: "budget", title: "Budget", frameUrl: "http://lienzo-host-tool-b.localhost/?v=sha-1", frameOrigin: "http://lienzo-host-tool-b.localhost" },
-      { id: "tool-a", slug: "lessons", title: "Lessons", frameUrl: "http://lienzo-host-tool-a.localhost/?v=sha-9", frameOrigin: "http://lienzo-host-tool-a.localhost" },
-      { id: "tool-c", slug: "plan", title: "Plan", frameUrl: "http://lienzo-host-tool-c.localhost/?v=sha-1", frameOrigin: "http://lienzo-host-tool-c.localhost" },
+      { id: "tool-b", slug: "budget", title: "Budget", releaseSha: "sha-1", frameUrl: "http://lienzo-host-tool-b.localhost/?v=sha-1", frameOrigin: "http://lienzo-host-tool-b.localhost" },
+      { id: "tool-a", slug: "lessons", title: "Lessons", releaseSha: "sha-9", frameUrl: "http://lienzo-host-tool-a.localhost/?v=sha-9", frameOrigin: "http://lienzo-host-tool-a.localhost" },
+      { id: "tool-c", slug: "plan", title: "Plan", releaseSha: "sha-1", frameUrl: "http://lienzo-host-tool-c.localhost/?v=sha-1", frameOrigin: "http://lienzo-host-tool-c.localhost" },
     ]);
   });
 

@@ -97,6 +97,14 @@ const AGENT_DATA_BRANCH = ` else if (m.method === "data.changed") {
 // An agent tool's database, from the tool's side. The parent holds the stream: on `data.subscribe` it tells a baseline (the
 // whole set, again on every reconnect) and then each change. This keeps the documents it is told, and after EACH
 // notification gives every subscriber the whole set (its own array) with the change that caused it (null for a baseline).
+// Where an agent's tool posts its requests, which carry the person's data (data.set…): to the one parent it may have
+// when there is only one, and once a parent has answered from one of its origins, to that origin — "*" only before then,
+// and only where frame-ancestors already lets nothing else frame it. The installed tools' script stays as it was.
+const AGENT_CONSTANTS = `  var target = PARENTS.length === 1 ? PARENTS[0] : "*";
+`;
+const AGENT_LEARNS_THE_PARENT = `
+      target = e.origin;`;
+
 const AGENT_TAIL = `  var docs = new Map();
   var subscribers = [];
   var streaming = false;
@@ -104,8 +112,9 @@ const AGENT_TAIL = `  var docs = new Map();
 
   function docKey(d) { return JSON.stringify([d.collection, d.docId]); }
   function isDoc(d) { return !!d && typeof d.collection === "string" && typeof d.docId === "string"; }
-  // Documents are JSON: a deep copy kept here and another handed to each subscriber, so what one subscriber changes in its
-  // copy never reaches the set kept here or another subscriber's.
+  // Documents are JSON: a deep copy kept here, and each subscriber keeps its OWN copies, so what one subscriber changes in
+  // its copies never reaches the set kept here or another subscriber's. A change copies only the documents it names: the
+  // others are the subscriber's copies from before (the same objects, so a screen can tell what didn't change).
   function copy(v) { return JSON.parse(JSON.stringify(v)); }
 
   // A document with null data is a removal, as the ones the parent names as deleted.
@@ -114,15 +123,29 @@ const AGENT_TAIL = `  var docs = new Map();
     if (d.data === null) docs.delete(docKey(d)); else docs.set(docKey(d), copy(d));
   }
 
-  function current() {
-    var all = [];
-    docs.forEach(function (d) { all.push(copy(d)); });
-    return all;
+  // All of a subscriber's copies, made anew from the set kept here: its first snapshot, and every baseline.
+  function copyAll(s) {
+    s.copies = new Map();
+    docs.forEach(function (d, key) { s.copies.set(key, copy(d)); });
   }
 
-  function tell(change) {
+  // Only the documents a change names, for one subscriber: copied again if they are still here, forgotten if not.
+  function copyChanged(s, keys) {
+    keys.forEach(function (key) {
+      if (docs.has(key)) s.copies.set(key, copy(docs.get(key))); else s.copies["delete"](key);
+    });
+  }
+
+  function snapshotOf(s, change) {
+    var all = [];
+    s.copies.forEach(function (d) { all.push(d); });
+    return { docs: all, change: change === null ? null : copy(change) };
+  }
+
+  function tell(change, keys) {
     subscribers.slice().forEach(function (s) {
-      try { s.cb({ docs: current(), change: change === null ? null : copy(change) }); } catch (_) {}
+      if (keys === null || !s.copies) copyAll(s); else copyChanged(s, keys);
+      try { s.cb(snapshotOf(s, change)); } catch (_) {}
     });
   }
 
@@ -132,11 +155,12 @@ const AGENT_TAIL = `  var docs = new Map();
       docs = new Map();
       p.docs.forEach(function (d) { put(d); });
       baselineSeen = true;
-      tell(null);
+      tell(null, null);
     } else if (p.kind === "change") {
-      (Array.isArray(p.docs) ? p.docs : []).forEach(function (d) { put(d); });
-      (Array.isArray(p.deleted) ? p.deleted : []).forEach(function (d) { if (isDoc(d)) docs.delete(docKey(d)); });
-      tell(p);
+      var keys = [];
+      (Array.isArray(p.docs) ? p.docs : []).forEach(function (d) { if (isDoc(d)) { put(d); keys.push(docKey(d)); } });
+      (Array.isArray(p.deleted) ? p.deleted : []).forEach(function (d) { if (isDoc(d)) { docs["delete"](docKey(d)); keys.push(docKey(d)); } });
+      tell(p, keys);
     }
   }
 
@@ -156,8 +180,10 @@ const AGENT_TAIL = `  var docs = new Map();
     }
     if (baselineSeen) {
       Promise.resolve().then(function () {
-        if (subscribers.indexOf(s) < 0) return;
-        try { cb({ docs: current(), change: null }); } catch (_) {}
+        // unsubscribed meanwhile, or already told by a notification that came first
+        if (subscribers.indexOf(s) < 0 || s.copies) return;
+        copyAll(s);
+        try { cb(snapshotOf(s, null)); } catch (_) {}
       });
     }
     return function () {
@@ -195,7 +221,7 @@ export function toolBridgeClientSource(parentOrigins: readonly string[], options
   var TIMEOUT = ${BRIDGE_TIMEOUT_MS};
   var PERSON_TIMEOUT = ${BRIDGE_PERSON_TIMEOUT_MS};
   var WAITS = ${JSON.stringify(agentTool ? [] : WAITS_ON_THE_PERSON)};
-${agentTool ? "" : INSTALLED_CONSTANTS}  var framed = window.parent && window.parent !== window;
+${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent && window.parent !== window;
   var next = 1;
   var pending = new Map();
   var listeners = new Set();
@@ -210,7 +236,7 @@ ${agentTool ? "" : INSTALLED_CONSTANTS}  var framed = window.parent && window.pa
     window.addEventListener("message", function (e) {
       if (e.source !== window.parent || PARENTS.indexOf(e.origin) < 0) return;
       var m = e.data;
-      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;
+      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;${agentTool ? AGENT_LEARNS_THE_PARENT : ""}
       if (typeof m.id === "number") {
         var p = pending.get(m.id);
         if (!p) return;
@@ -231,7 +257,7 @@ ${agentTool ? "" : INSTALLED_CONSTANTS}  var framed = window.parent && window.pa
       if (framed) {
         var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, WAITS.indexOf(method) >= 0 ? PERSON_TIMEOUT : TIMEOUT);
         pending.set(id, { resolve: resolve, reject: reject, timer: timer });
-        window.parent.postMessage(req, "*");
+        window.parent.postMessage(req, ${agentTool ? "target" : '"*"'});
       } else if (typeof window.__openlenBridge === "function") {
         Promise.resolve(window.__openlenBridge(JSON.stringify(req))).then(function (raw) {
           var m = JSON.parse(raw);

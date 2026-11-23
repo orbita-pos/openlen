@@ -151,6 +151,65 @@ describe("mobile agent tools", () => {
     expect(lenClient.pedir.mock.calls.some(([r]) => String(r).includes("/api/agent-tools"))).toBe(false);
   });
 
+  it("a DELETE answered 401 (the key is gone; the app signs out) closes the screen and shows no failure", async () => {
+    const cliente = {
+      pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
+        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") return Response.json({ url: `${PHONE_ORIGIN}/?v=1`, origin: PHONE_ORIGIN });
+        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") return new Response("{}", { status: 401 });
+        return Response.json({});
+      }),
+      avisarAlCerrar: vi.fn(),
+    };
+    const onCerrar = vi.fn();
+    const onRemoved = vi.fn();
+    mount(
+      <PantallaHerramientaDeAgente cliente={cliente} tool={{ id: "t1", slug: "recorrido", title: "Recorrido" }} idioma="es" onCerrar={onCerrar} onPrompt={vi.fn()} onRemoved={onRemoved} />,
+    );
+    await act(flush);
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>("[data-agent-tool-remove]")!.click();
+      await flush();
+    });
+    await act(async () => {
+      document.querySelector<HTMLButtonElement>("[data-agent-tool-confirm-remove]")!.click();
+      await flush();
+    });
+    expect(onCerrar).toHaveBeenCalled();
+    expect(onRemoved).not.toHaveBeenCalled();
+    expect(document.querySelector("[data-agent-tool-confirm-sheet]")?.textContent ?? "").not.toContain("quitarFallo");
+  });
+
+  it("the tool's context names the signed-in person and the version its phone address shows", async () => {
+    const cliente = {
+      pedir: vi.fn(async (ruta: string, init?: RequestInit) =>
+        ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST" ? Response.json({ url: `${PHONE_ORIGIN}/?v=sha-real`, origin: PHONE_ORIGIN }) : Response.json({}),
+      ),
+      avisarAlCerrar: vi.fn(),
+    };
+    mount(
+      <PantallaHerramientaDeAgente
+        cliente={cliente}
+        tool={{ id: "t1", slug: "recorrido", title: "Recorrido" }}
+        idioma="es"
+        persona={{ name: "Ana P" }}
+        onCerrar={vi.fn()}
+        onPrompt={vi.fn()}
+        onRemoved={vi.fn()}
+      />,
+    );
+    await act(flush);
+    const iframe = document.querySelector<HTMLIFrameElement>('iframe[data-agent-tool-frame="t1"]')!;
+    const posted: unknown[] = [];
+    vi.spyOn(iframe.contentWindow!, "postMessage").mockImplementation((msg) => posted.push(msg));
+    await act(async () => {
+      window.dispatchEvent(new MessageEvent("message", { origin: PHONE_ORIGIN, source: iframe.contentWindow, data: rpc(1, "context") }));
+      await flush();
+    });
+    const answer = posted.map((m) => m as { id?: number; result?: { person: { name: string }; tool: { version: string } } }).find((m) => m.id === 1);
+    expect(answer?.result?.person.name).toBe("Ana P");
+    expect(answer?.result?.tool.version).toBe("sha-real");
+  });
+
   it("opens on the phone URL from POST /api/movil/agent-tools/[id]/open, restricts methods, streams changes, reconnects on drop, and stops on gone", async () => {
     vi.useFakeTimers();
     const s1 = sseStream();

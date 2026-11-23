@@ -66,6 +66,8 @@ interface Props {
   /** Talking with the person's own assistant, not Len (phase 5): her name and colour in the header, and none of Len's
    *  own (the call, Equipo, his event and tool cards). `id` lets her chat list and open her own tools. */
   asistente?: { readonly id?: string; readonly name: string; readonly color: string; readonly look?: unknown };
+  /** The signed-in person (her chat): what her tools are told in their context. */
+  persona?: { readonly name: string };
   /** Her chat on the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.5): the project on the screen, whose event
    *  and tool cards show here, as in Len's chat. Her own `projectId` is her home. */
   cardsProjectId?: string | null;
@@ -83,7 +85,7 @@ interface Props {
   };
 }
 
-export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente, cardsProjectId, lenCards }: Props) {
+export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip, onCerrar, onLlamar, onVerPagina, onEquipo, enfocar, onEnfocado, resaltarAviso, borrador, onAbrirHerramienta, onAbrirProyecto, onHerramientasCambiaron, asistente, persona, cardsProjectId, lenCards }: Props) {
   // Whose cards: Len's chat, its project's; her chat, the project on the phone's screen (none: no cards).
   const proyectoDeLasTarjetas = asistente ? cardsProjectId ?? null : projectId;
   const t = useTranslations("movil.chat");
@@ -314,6 +316,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
             cliente={cliente}
             tools={visibleAgentTools}
             idioma={idioma}
+            persona={persona}
             onPrompt={(text) => {
               setTexto(text);
               campo.current?.focus({ preventScroll: true });

@@ -21,6 +21,8 @@ vi.mock("@/lib/db", async () => {
   };
 });
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => base.person) }));
+// The real key path (one test below) loads `quien` for real: no web session there, only the phone's key.
+vi.mock("@/auth", () => ({ auth: vi.fn(async () => null) }));
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { AGENT_TOOL_DOC_MAX_BYTES, AGENT_TOOL_DOCS_MAX } = await import("@/lib/agent-tools/limits");
@@ -337,6 +339,33 @@ describe("🔴 who may", () => {
 });
 
 describe("for the phone's app", () => {
+  it("🔴 the phone's real key opens its owner's tool, and no other: the same door the app uses, end to end", async () => {
+    const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
+    const actual = await vi.importActual<typeof import("@/lib/movil/quien")>("@/lib/movil/quien");
+    vi.mocked(usuarioDeLaPeticion).mockImplementation((req: Request) => actual.usuarioDeLaPeticion(req));
+    try {
+      await pg.query(
+        `create table if not exists "movilLlaves" ("huella" text primary key, "userId" text not null references "users"("id") on delete cascade, "nombre" text, "creadoEn" timestamp not null default now(), "ultimoUso" timestamp)`,
+      );
+      const { huella, secretoNuevo } = await import("@/lib/movil/secreto");
+      const mine = secretoNuevo();
+      const theirs = secretoNuevo();
+      await pg.query(`insert into "movilLlaves" ("huella", "userId") values ($1, 'u1'), ($2, 'u2')`, [huella(mine), huella(theirs)]);
+
+      const asMine = await post({ op: "set", collection: "c", docId: "d", data: { from: "phone" } }, "tool-1", { authorization: `Bearer ${mine}` });
+      expect(asMine.status).toBe(200);
+      expect((await store.readDoc("tool-1", "c", "d"))!.data).toEqual({ from: "phone" });
+      // another person's key, a key that isn't one, and a malformed header: the one 404 for everything
+      for (const authorization of [`Bearer ${theirs}`, `Bearer ${secretoNuevo()}`, "Basic x"]) {
+        const res = await post({ op: "get", collection: "c", docId: "d" }, "tool-1", { authorization });
+        expect(res.status, authorization).toBe(404);
+        expect(await res.json()).toEqual({ error: "not_found" });
+      }
+    } finally {
+      vi.mocked(usuarioDeLaPeticion).mockImplementation(async () => base.person);
+    }
+  });
+
   it("answers the app's origin with CORS, and the preflight too", async () => {
     const res = await post({ op: "get", collection: "c", docId: "d" }, "tool-1", { origin: "https://localhost" });
     expect(res.status).toBe(200);

@@ -34,7 +34,7 @@ import {
 import { matchQuery, queryLimit } from "./query";
 import { buildAgentToolRelease, type AgentToolReleaseError } from "./release";
 import type { AgentToolDoc, AgentToolInput, AgentToolRow, DataWrite, WriteError } from "./store";
-import { isRecord, nonBlank, parseRead, parseWrite, QUERY_OPS } from "./validate";
+import { isRecord, nonBlank, parseRead, parseWrite, QUERY_OPS, READ_ACTIONS, WRITE_ACTIONS } from "./validate";
 import { changeOfWrites } from "./wire";
 
 export const PUBLISH_TOOL = "publish_tool";
@@ -45,9 +45,9 @@ const TOOL_NAME = /^[a-z0-9][a-z0-9-]{0,47}$/;
 /** The title on its tab. */
 const TITLE_MAX = 80;
 
-const TOOL_DATA_ACTIONS = ["get", "list", "query", "set", "update", "delete", "batch"] as const;
+const TOOL_DATA_ACTIONS = [...READ_ACTIONS, ...WRITE_ACTIONS, "batch"] as const;
 type ToolDataAction = (typeof TOOL_DATA_ACTIONS)[number];
-const WRITE_OPS = ["set", "update", "delete"] as const;
+const WRITE_OPS = WRITE_ACTIONS;
 
 const kb = (bytes: number) => `${bytes / 1024} KB`;
 const mb = (bytes: number) => `${bytes / 1024 / 1024} MB`;
@@ -172,7 +172,8 @@ const liveDeps: AgentToolsDeps = {
   listFiles: async (projectId, prefix) => (await import("@/lib/backend/files")).listProjectFiles(projectId, prefix),
   saveRelease: async (sha, projectId, files) => (await import("@/lib/tools/store")).saveRelease(sha, projectId, files),
   toolsOf: async (assistantId) => (await import("./store")).agentToolsOf(assistantId),
-  upsert: async (input) => (await import("./store")).upsertAgentTool(input),
+  // The cap is checked again where the row is written, under a lock: the count above is what the agent is told first.
+  upsert: async (input) => (await import("./store")).upsertAgentTool(input, { maxPerAgent: AGENT_TOOLS_PER_AGENT }),
   readDocs: async (toolId, collection) => (await import("./store")).readDocs(toolId, collection),
   readDoc: async (toolId, collection, docId) => (await import("./store")).readDoc(toolId, collection, docId),
   writeDocs: async (toolId, writes, by) => (await import("./store")).writeDocs(toolId, writes, by),
@@ -240,6 +241,12 @@ const CONTROL_CHARACTER = /[\u0000-\u001f\u007f]/;
 const SHOWN_MAX = 200;
 const shown = (text: string): string => (text.length > SHOWN_MAX ? `${text.slice(0, SHOWN_MAX)}…` : text);
 
+const tooManyTools = (have: number): ToolOutcome =>
+  refuse(
+    "too_many_tools",
+    `You already have ${have} tools, and ${AGENT_TOOLS_PER_AGENT} is the most an agent can have. Make one of them better by publishing it again, or ask your person to remove one from its tab.`,
+  );
+
 export async function runPublishTool(session: AgentSession, args: Record<string, unknown>, deps?: Partial<AgentToolsDeps>): Promise<ToolOutcome> {
   const d = depsOf(deps);
   const allowed = gate(session, d);
@@ -265,12 +272,7 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
   // A republish is not a new tool: only a name you don't have yet counts toward the cap.
   const mine = await d.toolsOf(agent.id);
   const existing = mine.find((tool) => tool.slug === name);
-  if (!existing && mine.length >= AGENT_TOOLS_PER_AGENT) {
-    return refuse(
-      "too_many_tools",
-      `You already have ${mine.length} tools, and ${AGENT_TOOLS_PER_AGENT} is the most an agent can have. Make one of them better by publishing it again, or ask your person to remove one from its tab.`,
-    );
-  }
+  if (!existing && mine.length >= AGENT_TOOLS_PER_AGENT) return tooManyTools(mine.length);
 
   const built = buildAgentToolRelease({ spaceProjectId: session.projectId, folder, files: await d.listFiles(session.projectId, `${folder}/`) });
   if (!built.ok) return releaseProblem(built.error, folder);
@@ -290,19 +292,28 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
   // The version is saved before the row that points at it: a tab never opens on a version that isn't there.
   const at = d.now();
   await d.saveRelease(built.sha, session.projectId, built.files);
-  const row = await d.upsert({
-    id: id!,
-    assistantId: agent.id,
-    personId: personOf(session),
-    spaceProjectId: session.projectId,
-    slug: name,
-    title,
-    folder,
-    releaseSha: built.sha,
-    hostLabel: hostLabel!,
-    phoneHostLabel,
-  });
+  let row: AgentToolRow;
+  try {
+    row = await d.upsert({
+      id: id!,
+      assistantId: agent.id,
+      personId: personOf(session),
+      spaceProjectId: session.projectId,
+      slug: name,
+      title,
+      folder,
+      releaseSha: built.sha,
+      hostLabel: hostLabel!,
+      phoneHostLabel,
+    });
+  } catch (err) {
+    // Another publish of a new tool got the last place between the count above and this write.
+    if (err instanceof Error && err.name === "AgentToolCapError") return tooManyTools(AGENT_TOOLS_PER_AGENT);
+    throw err;
+  }
   await markSeen(d, row.id, at);
+  // From now on this turn hears what the person changes in it, as it does for the tools it had when it began.
+  session.agentToolWatch?.add({ id: row.id, slug: row.slug, title: row.title });
 
   const count = Object.keys(built.files).length;
   const verb = existing ? "Republished" : "Published";

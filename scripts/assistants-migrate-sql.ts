@@ -174,6 +174,7 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_hostLabel_idx" ON "agentTools" ("hostLabel");`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_phoneHostLabel_idx" ON "agentTools" ("phoneHostLabel");`,
   `CREATE INDEX IF NOT EXISTS "agentTools_personId_idx" ON "agentTools" ("personId");`,
+  `CREATE INDEX IF NOT EXISTS "agentTools_spaceProjectId_idx" ON "agentTools" ("spaceProjectId");`,
   `CREATE TABLE IF NOT EXISTS "agentToolDocs" (
     "toolId" text NOT NULL REFERENCES "agentTools"("id") ON DELETE CASCADE,
     "collection" text NOT NULL,

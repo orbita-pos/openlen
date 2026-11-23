@@ -1711,6 +1711,8 @@ export const agentTools = pgTable(
     uniqueIndex("agentTools_hostLabel_idx").on(t.hostLabel),
     uniqueIndex("agentTools_phoneHostLabel_idx").on(t.phoneHostLabel),
     index("agentTools_personId_idx").on(t.personId),
+    // Deleting a space project cascades here: the index keeps that delete from reading the whole table.
+    index("agentTools_spaceProjectId_idx").on(t.spaceProjectId),
   ],
 );
 

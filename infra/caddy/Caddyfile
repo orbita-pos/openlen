@@ -169,6 +169,15 @@ openlen.com, www.openlen.com {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "SAMEORIGIN"
+	}
+	# Las de la PÁGINA, nunca en un host lienzo-*: allí Next pone las suyas (el
+	# lienzo, la de la página; la herramienta de un agente, cámara, micrófono,
+	# ubicación y pagos apagados, y no-referrer), y `header` + `reverse_proxy`
+	# mandaría las dos copias, contradiciéndose.
+	@paginaPublicada {
+		not header_regexp Host ^lienzo-
+	}
+	header @paginaPublicada {
 		Referrer-Policy "strict-origin-when-cross-origin"
 		# La página puede pedir cámara, micrófono y ubicación; el navegador le
 		# pregunta al visitante. La misma cadena que lib/publish/permissions-policy.ts.

@@ -42,10 +42,13 @@ export async function openAgentTool(c: ClienteDeOpenLen, id: string): Promise<{ 
   return { error: typeof body?.error === "string" ? body.error : String(res.status) };
 }
 
-export async function deleteAgentTool(c: ClienteDeOpenLen, id: string): Promise<boolean> {
+/** Removes the tool. `unauthorized`: the key is no longer good — the client is already signing the person out
+ *  (`alNoAutorizado`), so it is no failure to show, as `followAgentTool` says it too. A 404 is a tool already gone. */
+export async function deleteAgentTool(c: ClienteDeOpenLen, id: string): Promise<"removed" | "failed" | "unauthorized"> {
   const res = await c.pedir(`/api/agent-tools/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
-  if (!res) return false;
-  return res.ok || res.status === 404;
+  if (!res) return "failed";
+  if (res.status === 401) return "unauthorized";
+  return res.ok || res.status === 404 ? "removed" : "failed";
 }
 
 function isDataChanged(raw: unknown): raw is DataChangedParams {

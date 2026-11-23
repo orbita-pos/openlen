@@ -19,7 +19,7 @@ import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
 import { publishToolChange } from "@/lib/agent-tools/bus";
 import { runQuery } from "@/lib/agent-tools/query";
 import { agentToolById, readDoc, readDocs, writeDocs } from "@/lib/agent-tools/store";
-import { isRecord, parseRead, parseWrite, type ReadAction, type WriteAction } from "@/lib/agent-tools/validate";
+import { isRecord, parseRead, parseWrite, READ_ACTIONS, WRITE_ACTIONS, type ReadAction, type WriteAction } from "@/lib/agent-tools/validate";
 import { changeOfWrites, toBridgeDoc } from "@/lib/agent-tools/wire";
 import { paraLaApp, respuestaPrevia } from "@/lib/movil/cors";
 import { usuarioDeLaPeticion } from "@/lib/movil/quien";
@@ -33,8 +33,8 @@ const json = (body: unknown, status = 200) =>
 const notFound = () => json({ error: "not_found" }, 404);
 const badRequest = (message: string) => json({ error: "bad_request", message }, 400);
 
-const READ_OPS: readonly ReadAction[] = ["get", "list", "query"];
-const WRITE_OPS: readonly WriteAction[] = ["set", "update", "delete"];
+const READ_OPS: readonly ReadAction[] = READ_ACTIONS;
+const WRITE_OPS: readonly WriteAction[] = WRITE_ACTIONS;
 
 /** The most a call's body may weigh: one document is at most 64 KB, so four times that leaves room for its JSON's escapes
  *  and a query — and a page can't make the server parse megabytes before the store's own check refuses them. */

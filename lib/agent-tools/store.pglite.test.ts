@@ -123,6 +123,33 @@ describe("the tool rows", () => {
     expect(await store.agentToolByLabel("lienzo-host-tool-9")).toMatchObject({ id: "tool-9", servedTo: "workspace" });
   });
 
+  it("two tools without a phone label can both be kept (a missing label is no address to share)", async () => {
+    await store.upsertAgentTool(toolInput({ id: "tool-a", slug: "a", phoneHostLabel: null }));
+    await store.upsertAgentTool(toolInput({ id: "tool-b", slug: "b", phoneHostLabel: null }));
+    expect((await store.agentToolsOf("teacher")).filter((t) => t.phoneHostLabel === null).map((t) => t.id)).toEqual(["tool-a", "tool-b"]);
+  });
+
+  it("🔴 with maxPerAgent, a new tool past the cap is refused and nothing is written; republishing one at the cap is fine", async () => {
+    for (const i of [2, 3, 4, 5]) await store.upsertAgentTool(toolInput({ id: `tool-${i}`, slug: `s${i}` }), { maxPerAgent: 5 });
+    expect(await store.agentToolsOf("teacher")).toHaveLength(5);
+    await expect(store.upsertAgentTool(toolInput({ id: "tool-6", slug: "s6" }), { maxPerAgent: 5 })).rejects.toBeInstanceOf(store.AgentToolCapError);
+    expect(await store.agentToolsOf("teacher")).toHaveLength(5);
+    expect(await store.upsertAgentTool(toolInput({ id: "ignored", slug: "s3", title: "Again" }), { maxPerAgent: 5 })).toMatchObject({ id: "tool-3", title: "Again" });
+    // another agent's count is its own
+    expect(await store.upsertAgentTool(toolInput({ id: "tool-f", assistantId: "finance", slug: "s6" }), { maxPerAgent: 5 })).toMatchObject({ id: "tool-f" });
+  });
+
+  it("🔴 two first publishes at once at four tools: one gets the fifth place, the other is refused", async () => {
+    for (const i of [2, 3, 4]) await store.upsertAgentTool(toolInput({ id: `tool-${i}`, slug: `s${i}` }));
+    const results = await Promise.allSettled([
+      store.upsertAgentTool(toolInput({ id: "tool-x", slug: "x" }), { maxPerAgent: 5 }),
+      store.upsertAgentTool(toolInput({ id: "tool-y", slug: "y" }), { maxPerAgent: 5 }),
+    ]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((r) => r.status === "rejected").map((r) => (r as PromiseRejectedResult).reason)).toEqual([expect.any(store.AgentToolCapError)]);
+    expect(await store.agentToolsOf("teacher")).toHaveLength(5);
+  });
+
   it("two tools cannot share an address", async () => {
     await expect(store.upsertAgentTool(toolInput({ id: "tool-8", slug: "eight", hostLabel: "lienzo-host-tool-1" }))).rejects.toThrow();
   });
@@ -181,6 +208,15 @@ describe("writing documents", () => {
     // one change per document the batch left different from how it found it: `b` was made and unmade, so it is not one.
     expect(r.changes.map((c) => [c.docId, c.data])).toEqual([["a", { x: 1, y: 2 }], ["t", { x: 2 }]]);
     expect((await store.readDocs("tool-1", "c")).map((d) => d.docId)).toEqual(["a", "t"]);
+  });
+
+  it("an update after a delete of the same document in one batch makes it anew from the update's fields alone", async () => {
+    await store.writeDocs("tool-1", [set("c", "a", { old: true, keep: 1 })], "agent");
+    const r = await store.writeDocs("tool-1", [del("c", "a"), update("c", "a", { fresh: 1 })], "agent");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.changes.map((c) => [c.docId, c.data])).toEqual([["a", { fresh: 1 }]]);
+    expect((await store.readDoc("tool-1", "c", "a"))!.data).toEqual({ fresh: 1 });
   });
 
   it("documents of two tools do not meet, even with the same collection and id", async () => {

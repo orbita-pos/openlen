@@ -27,6 +27,23 @@ describe("los ficheros de la carpeta en el origen de medida", () => {
     }
   });
 
+  it("an agent tool's binary files are answered as bytes, with their type, under the same filter", async () => {
+    const o = await origenDeMedida();
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const doc = o.publicar("<h1>x</h1>", { files: { "/app.js": "1" }, binaryFiles: { "/assets/cat.png": png, "/openlen/x.png": png }, rawFiles: true });
+    try {
+      const base = `http://${o.origin}`;
+      const answer = localResponseFor(`${base}/assets/cat.png`, doc.url);
+      expect(answer?.contentType).toBe("image/png");
+      expect(answer?.body).toBeInstanceOf(Uint8Array);
+      expect([...(answer!.body as Uint8Array)]).toEqual([...png]);
+      // the platform's own path stays the platform's, whatever a release holds
+      expect(localResponseFor(`${base}/openlen/x.png`, doc.url)).toBeNull();
+    } finally {
+      doc.soltar();
+    }
+  });
+
   it("lo que no existe, lo que no se publica, otro origen o el propio documento: no contesta (sigue a la red)", async () => {
     const o = await origenDeMedida();
     const doc = o.publicar("<h1>x</h1>", { files: { "/js/app.js": "1", "/tests/a.spec.ts": "t" } });

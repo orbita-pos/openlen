@@ -39,6 +39,7 @@ import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { boxMarker } from "@/lib/agent/sandbox/box-marker";
 import { agentToolByLabel } from "@/lib/agent-tools/store";
 import { agentToolContentPolicy } from "@/lib/agent-tools/serve";
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 
 const SECRETO = "s3cr3t";
 const P1 = "4f9c10cb-8781-48f1-b291-c5d146579f09";
@@ -367,7 +368,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
   const WORKSPACE = "lienzo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const PHONE = "lienzo-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
   const INSTALLED = "lienzo-00112233445566778899aabbccddeeff";
-  const PHONE_ORIGINS = "http://localhost:5173 https://localhost capacitor://localhost";
+  const PHONE_ORIGINS = ORIGENES_DE_LA_APP.join(" ");
   const agentRow = (servedTo: "workspace" | "phone", over: Record<string, unknown> = {}) => ({
     id: "t1",
     assistantId: "a1",
@@ -410,6 +411,16 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     const res = await pide(`${PHONE}.openlen.app`, "/");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-security-policy")).toBe(agentToolContentPolicy(PHONE_ORIGINS));
+  });
+
+  it("🔴 a path the tool doesn't have answers the very 404 of a label that is nothing: nobody can tell a tool is there", async () => {
+    const nothing = await pide("lienzo-cccccccccccccccccccccccccccccccc.openlen.app", "/x.js");
+    for (const label of [WORKSPACE, PHONE]) {
+      const missing = await pide(`${label}.openlen.app`, "/x.js");
+      expect(missing.status).toBe(404);
+      expect(await missing.text()).toBe(await nothing.clone().text());
+      expect(Object.fromEntries(missing.headers)).toEqual(Object.fromEntries(nothing.headers));
+    }
   });
 
   it("serves the agent tool's bridge script, with data and without the installed tools' methods", async () => {

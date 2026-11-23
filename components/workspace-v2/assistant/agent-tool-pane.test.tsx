@@ -172,6 +172,42 @@ function sendFromFrame(win: Window, origin: string, id: number, method: string, 
   );
 }
 
+describe("what the tool is told, and who asks for tools", () => {
+  it("the tool's context names the signed-in person and the published version it shows", async () => {
+    const host = mount(<AgentToolPane tool={{ ...TOOL_1, releaseSha: "sha-real" }} locale="es" personName="Jesús" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
+    const { win, posted } = stubIframeWindow(iframe);
+    sendFromFrame(win, TOOL_1.frameOrigin, 1, "context");
+    await flush();
+    const answer = posted.map((p) => p.message as { id?: number; result?: { person: { name: string; locale: string }; tool: { version: string } } }).find((m) => m.id === 1);
+    expect(answer?.result?.person).toEqual({ name: "Jesús", locale: "es" });
+    expect(answer?.result?.tool.version).toBe("sha-real");
+  });
+
+  it("a list without the version still names it, from the frame's address", async () => {
+    const host = mount(<AgentToolPane tool={TOOL_1} locale="es" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const { win, posted } = stubIframeWindow(host.querySelector<HTMLIFrameElement>("iframe")!);
+    sendFromFrame(win, TOOL_1.frameOrigin, 2, "context");
+    await flush();
+    const answer = posted.map((p) => p.message as { id?: number; result?: { tool: { version: string } } }).find((m) => m.id === 2);
+    expect(answer?.result?.tool.version).toBe("sha1");
+  });
+
+  it("an assistant outside the person's space never asks for tools", async () => {
+    const fetched: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        fetched.push(String(url));
+        return new Response("[]", { status: 200 });
+      }),
+    );
+    mount(<AssistantHome assistant={ANA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
+    await flush();
+    expect(fetched.filter((u) => u.startsWith("/api/agent-tools"))).toEqual([]);
+  });
+});
+
 describe("AssistantHome + AgentToolPane", () => {
   it("lists one tool tab per returned tool in the rail, and shows none when the list is empty (tools off)", async () => {
     vi.stubGlobal(

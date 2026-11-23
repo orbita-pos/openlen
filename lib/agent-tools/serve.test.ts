@@ -4,6 +4,7 @@
 // version, the bridge first in <head>, and a tight content policy on every answer.
 import { describe, expect, it, vi } from "vitest";
 
+import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 import { VISUALS_CDN_ORIGINS } from "@/lib/visuals/frame-document";
 
 import { agentToolContentPolicy, serveAgentTool, type AgentServeDeps } from "./serve";
@@ -48,7 +49,8 @@ const serve = (path: string, d = deps(), row = ROW, env: Record<string, string |
   serveAgentTool(row, path, { requestHost: "openlen.com", env }, d);
 const onPhone = (path: string, d = deps()) => serve(path, d, { ...ROW, servedTo: "phone" });
 
-const PHONE_ORIGINS = "http://localhost:5173 https://localhost capacitor://localhost";
+// The phone app's origins as the app declares them: a change there is a change here.
+const PHONE_ORIGINS = ORIGENES_DE_LA_APP.join(" ");
 
 /** `{ "script-src": ["'self'", ...] }` — each directive's sources, to assert on one at a time. */
 function directives(csp: string): Record<string, string[]> {

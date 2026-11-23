@@ -110,6 +110,17 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     }
   });
 
+  it("🔴 the page's Referrer-Policy and Permissions-Policy are never stamped on a lienzo host (Next sends its own there)", () => {
+    expect(matcher("paginaPublicada")).toMatch(/\n\s*not header_regexp Host \^lienzo-\n/);
+    const paginas = bloque(PAGINAS, "header @paginaPublicada {");
+    expect(paginas).toContain('Referrer-Policy "strict-origin-when-cross-origin"');
+    expect(paginas).toContain('Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"');
+    // and the block every host gets carries neither
+    const todos = bloque(PAGINAS, "header {");
+    expect(todos).not.toContain("Referrer-Policy");
+    expect(todos).not.toContain("Permissions-Policy");
+  });
+
   it("🔴 nota 1: lo inmutable es lo que lleva hash en el nombre o es binario; nunca un .js/.css/.svg de nombre fijo", () => {
     const a = matcher("assets");
     const rutas = rutasDe(a, "path ");

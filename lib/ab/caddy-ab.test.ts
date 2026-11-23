@@ -110,7 +110,9 @@ describe("Caddy: A/B testing", () => {
   });
 
   it("the failover sends the same security headers as the site", () => {
-    const site = /header \{([\s\S]*?)\n\t\}/.exec(block)![1]!;
+    // What a published page gets: the block every host gets, and the page's own (never on a lienzo host). The failover only
+    // ever serves a published page, so it sends both.
+    const site = [/header \{([\s\S]*?)\n\t\}/.exec(block)![1]!, /header @paginaPublicada \{([\s\S]*?)\n\t\}/.exec(block)![1]!].join("\n");
     const errors = body(block, block.indexOf("\thandle_errors {"));
     const failover = /header \{([\s\S]*?)\n\t\t\t\}/.exec(errors)![1]!;
     const lines = (s: string) => s.split("\n").map((l) => l.trim()).filter(Boolean).sort();

@@ -65,7 +65,19 @@ export function agentToolContentPolicy(ancestors: string): string {
   ].join("; ");
 }
 
-const notFound = () => new Response("Not found", { status: 404, headers: { "cache-control": "no-store", "x-content-type-options": "nosniff" } });
+/** The canvas route's own 404, byte for byte (its `noEncontrado`): a label that is a tool with nothing at that path must
+ *  not be told apart from a label that is nothing at all. */
+const notFound = (env: Env = process.env) =>
+  new Response("not found", {
+    status: 404,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "content-security-policy": `frame-ancestors ${frameAncestors(env)}`,
+      "referrer-policy": "no-referrer",
+      "x-content-type-options": "nosniff",
+    },
+  });
 
 export async function serveAgentTool(
   row: AgentToolRow & { readonly servedTo: "workspace" | "phone" },
@@ -74,7 +86,7 @@ export async function serveAgentTool(
   deps?: AgentServeDeps,
 ): Promise<Response> {
   const env = o.env ?? process.env;
-  if (!agentToolsEnabled(env)) return notFound();
+  if (!agentToolsEnabled(env)) return notFound(env);
   const phone = row.servedTo === "phone";
   const headers = {
     "content-security-policy": agentToolContentPolicy(phone ? ORIGENES_DE_LA_APP.join(" ") : frameAncestors(env)),
@@ -95,11 +107,11 @@ export async function serveAgentTool(
 
   const d = deps ?? (await realServeDeps());
   const release = await d.readRelease(row.releaseSha);
-  if (!release) return notFound();
+  if (!release) return notFound(env);
   const key = path === "/" ? "/index.html" : path;
   // a path is a key of the version's files and nothing else (`/__proto__`, `/constructor`… are not files)
   const file = Object.prototype.hasOwnProperty.call(release, key) ? release[key] : undefined;
-  if (!file) return notFound();
+  if (!file) return notFound(env);
   if (key === "/index.html") {
     return new Response(injectToolBridge(file.content), { status: 200, headers: { ...headers, "content-type": "text/html; charset=utf-8" } });
   }

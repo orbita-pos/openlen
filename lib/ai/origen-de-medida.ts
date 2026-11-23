@@ -79,6 +79,9 @@ export interface OpcionesDelDocumento {
   /** An agent tool's published release: already re-rooted and validated at publish time, so website reserved roots like
    *  `/assets/` are valid sibling files (only `/openlen/` stays reserved for `platformFiles`). */
   readonly rawFiles?: boolean;
+  /** The binary files beside `files` (an agent tool's images, fonts, sounds), as bytes: answered like the others, under the
+   *  same filter. Text files stay in `files`. */
+  readonly binaryFiles?: Readonly<Record<string, Uint8Array>>;
 }
 
 /** Cuánto sin peticiones abiertas es «la red se calmó», y el tope de la
@@ -111,7 +114,7 @@ export interface OrigenDeMedida {
 /** Los documentos vivos ahora mismo, por identificador de ruta. */
 const documentos = new Map<string, string>();
 /** Los ficheros de la carpeta de cada documento vivo. */
-const ficherosPorDocumento = new Map<string, ReadonlyMap<string, string>>();
+const ficherosPorDocumento = new Map<string, ReadonlyMap<string, string | Uint8Array>>();
 /** El `host:puerto` del servidor, una vez arrancado. */
 let origenVivo: string | null = null;
 
@@ -129,7 +132,7 @@ let origenVivo: string | null = null;
 export function localResponseFor(
   requestUrl: string,
   documentUrl: string | null,
-): { status: 200; contentType: string; body: string } | null {
+): { status: 200; contentType: string; body: string | Uint8Array } | null {
   if (!origenVivo || !documentUrl) return null;
   let pedida: URL;
   let doc: URL;
@@ -208,12 +211,13 @@ function crear(): Promise<OrigenDeMedida> {
         publicar(html: string, opciones: OpcionesDelDocumento = {}): DocumentoServido {
           const id = randomUUID();
           documentos.set(id, html);
-          if (opciones.files || opciones.platformFiles) {
+          if (opciones.files || opciones.platformFiles || opciones.binaryFiles) {
             const allowFile = (ruta: string) => (opciones.rawFiles ? ruta.startsWith("/") && !ruta.startsWith("/openlen/") : isPublishableFolderPath(ruta));
             ficherosPorDocumento.set(
               id,
-              new Map([
+              new Map<string, string | Uint8Array>([
                 ...Object.entries(opciones.files ?? {}).filter(([ruta]) => allowFile(ruta)),
+                ...Object.entries(opciones.binaryFiles ?? {}).filter(([ruta]) => allowFile(ruta)),
                 ...Object.entries(opciones.platformFiles ?? {}).filter(([ruta]) => ruta.startsWith("/openlen/")),
               ]),
             );

@@ -3,7 +3,7 @@
 // «CREAR» STARTS THE CREATOR AND INSTALLS WHAT IT HANDS BACK (spec local 2026-11-04-herramientas-hechas-por-len, §4.10):
 // the person's tool project is born, a host turn launches the `creator` child, and its result — not Len — decides the
 // card: ready → install through the gates and load-test it; not ready, stopped or failed → the card says so.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ToolCardRow } from "./store";
 
@@ -185,8 +185,15 @@ describe("onCreatorSettled", () => {
 });
 
 describe("🔴 I4: what throws during the settlement or the install lands on «fallida»", () => {
+  // What throws here on purpose is said with a warning: caught and checked, not printed.
+  let warn: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     card = { ...card, toolProjectId: "tool-1" };
+    warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[tools] card"), expect.any(Error));
+    warn.mockRestore();
   });
 
   it("installTool throws: failed install_failed", async () => {

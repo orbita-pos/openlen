@@ -10,11 +10,15 @@ import { newBrowserTabHolder } from "@/lib/agent/pasos-de-uso";
 import { closeBrowserTab, usarPagina } from "@/lib/agent/usar-pagina";
 import type { AgentToolDoc } from "./store";
 
+// A real 1×1 PNG: an agent tool's image is a binary file of its version (a blob in the store), answered as bytes.
+const DOT_PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64");
+
 const TOOL_HTML = `<!doctype html>
 <html>
 <head><meta charset="utf-8"><title>Recorrido</title><script src="/assets/helper.js"></script></head>
 <body>
   <p id="helper-flag">no</p>
+  <img id="pic" src="/assets/dot.png" alt="">
   <p id="status">loading</p>
   <p id="sub-count">0</p>
   <button id="done-btn">Finish Lesson 3</button>
@@ -56,9 +60,11 @@ describe("agent tool eyes in Chromium", () => {
         vista: null,
         tab,
         releaseFiles: { "/assets/helper.js": 'window.HELPER_OK = "yes";' },
+        releaseBinaries: { "/assets/dot.png": new Uint8Array(DOT_PNG) },
         toolBridge: { mode: "agentTool", toolId: "tool-1", releaseSha: "sha-1", locale: "es", theme: "light", docs: realDocs },
         pasos: [
           { wait: 0.3 },
+          { eval: "var p = document.getElementById('pic'); return 'pic:' + [p.complete, p.naturalWidth].join('/')" },
           { read: "seed:Hola" },
           { eval: "return [document.getElementById('helper-flag').textContent, typeof window.openlen.backend, typeof window.openlen.data.set]" },
           { click: "Finish Lesson 3" },
@@ -68,6 +74,8 @@ describe("agent tool eyes in Chromium", () => {
         ],
       });
       expect(first.informe).toContain("seed:Hola");
+      // the image loaded: its bytes reached the page
+      expect(first.informe).toContain("pic:true/1");
       expect(first.informe).toContain('["yes","undefined","function"]');
       expect(first.informe).toContain("lesson3-done");
       expect(first.informe).toContain('"done":true');

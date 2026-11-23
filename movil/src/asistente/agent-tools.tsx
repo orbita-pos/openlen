@@ -30,6 +30,15 @@ function temaDeLaHerramienta(): ToolContext["theme"] {
   return { mode, tokens: { ...WORKSPACE_TOOL_THEME[mode], ...(font ? { "--font-sans": font } : {}) } };
 }
 
+/** The version an open address names (`?v=<sha>`); the address itself when it names none. */
+function versionOf(url: string): string {
+  try {
+    return new URL(url).searchParams.get("v") ?? url;
+  } catch {
+    return url;
+  }
+}
+
 export function PantallaHerramientaDeAgente({
   cliente,
   tool,
@@ -37,10 +46,13 @@ export function PantallaHerramientaDeAgente({
   onCerrar,
   onPrompt,
   onRemoved,
+  persona,
 }: {
   cliente: ClienteDeOpenLen;
   tool: AgentToolItem;
   idioma: string;
+  /** The signed-in person, for the tool's context (as an installed tool gets it). */
+  persona?: { readonly name: string };
   onCerrar: () => void;
   onPrompt: (text: string) => void;
   onRemoved: (toolId: string) => void;
@@ -55,8 +67,8 @@ export function PantallaHerramientaDeAgente({
   const backBtn = useRef<HTMLButtonElement>(null);
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  const latest = useRef({ tool, idioma, onCerrar, onPrompt, onRemoved, marco, confirmOpen, removing });
-  latest.current = { tool, idioma, onCerrar, onPrompt, onRemoved, marco, confirmOpen, removing };
+  const latest = useRef({ tool, idioma, onCerrar, onPrompt, onRemoved, marco, confirmOpen, removing, persona });
+  latest.current = { tool, idioma, onCerrar, onPrompt, onRemoved, marco, confirmOpen, removing, persona };
 
   const closeScreen = useCallback(() => {
     const m = latest.current.marco;
@@ -206,9 +218,10 @@ export function PantallaHerramientaDeAgente({
       caller: { agentToolId: tool.id },
       methods: AGENT_TOOL_BRIDGE_METHODS,
       context: () => ({
-        person: { name: "", locale: latest.current.idioma },
+        person: { name: latest.current.persona?.name ?? "", locale: latest.current.idioma },
         project: null,
-        tool: { id: latest.current.tool.id, version: url },
+        // The published version the phone's address names (`?v=`), as the web's context names it.
+        tool: { id: latest.current.tool.id, version: versionOf(url) },
         environment: "installed",
       }),
       theme: temaDeLaHerramienta,
@@ -248,8 +261,15 @@ export function PantallaHerramientaDeAgente({
     setRemoving(true);
     setRemoveError(false);
     try {
-      const ok = await deleteAgentTool(cliente, tool.id);
-      if (!ok) {
+      const outcome = await deleteAgentTool(cliente, tool.id);
+      if (outcome === "unauthorized") {
+        // signed out under it: nothing failed here, the app is leaving
+        stopFollow(true, false);
+        setConfirmOpen(false);
+        latest.current.onCerrar();
+        return;
+      }
+      if (outcome === "failed") {
         setRemoveError(true);
         return;
       }
@@ -366,11 +386,13 @@ export function BotonHerramientasDeAgente({
   idioma,
   onPrompt,
   onRemoved,
+  persona,
 }: {
   abierto?: boolean;
   cliente: ClienteDeOpenLen;
   tools: readonly AgentToolItem[];
   idioma: string;
+  persona?: { readonly name: string };
   onPrompt: (text: string) => void;
   onRemoved: (toolId: string) => void;
 }) {
@@ -481,6 +503,7 @@ export function BotonHerramientasDeAgente({
           cliente={cliente}
           tool={active}
           idioma={idioma}
+          persona={persona}
           onCerrar={() => setActive(null)}
           onPrompt={onPrompt}
           onRemoved={(id) => {

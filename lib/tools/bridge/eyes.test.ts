@@ -199,4 +199,16 @@ describe("installEyesBridge — agentTool mode", () => {
     const huge = { x: "a".repeat(70 * 1024) };
     expect((await call("data.set", { collection: "c", docId: "big", data: huge })).error).toMatchObject({ code: 400, message: "doc_too_big" });
   });
+
+  it("a copy handed a key twice keeps the last, and a document without data is no document", async () => {
+    const at = new Date("2026-11-22T10:00:00Z");
+    const docs = [
+      { collection: "c", docId: "a", data: { v: 1 }, updatedAt: at, updatedBy: "agent" as const },
+      { collection: "c", docId: "a", data: { v: 2 }, updatedAt: at, updatedBy: "agent" as const },
+      { collection: "c", docId: "gone", data: undefined, updatedAt: at, updatedBy: "agent" as const },
+    ] as unknown as ReturnType<typeof initialDocs>;
+    const { call } = await exposedAgentTool(docs);
+    const listed = (await call("data.list", { collection: "c" })).result as { docs: { docId: string; data: unknown }[] };
+    expect(listed.docs).toEqual([expect.objectContaining({ docId: "a", data: { v: 2 } })]);
+  });
 });

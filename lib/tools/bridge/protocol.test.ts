@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { BRIDGE_METHODS, isBridgeNotification, isBridgeRequest, isBridgeResponse, isDataChangedNotification, TOOL_THEME_TOKENS } from "./protocol";
+import { BRIDGE_METHODS, isBridgeNotification, isBridgeRequest, isBridgeResponse, TOOL_THEME_TOKENS } from "./protocol";
 
 const req = { jsonrpc: "2.0", id: 1, method: "projects", channel: "openlen-tool" };
 
@@ -38,11 +38,8 @@ describe("bridge messages", () => {
     const change = { jsonrpc: "2.0", method: "data.changed", params: { kind: "change", by: "agent", docs: [], deleted: [] }, channel: "openlen-tool" };
     for (const n of [baseline, change]) {
       expect(isBridgeNotification(n)).toBe(true);
-      expect(isDataChangedNotification(n)).toBe(true);
       expect(isBridgeNotification({ ...n, id: 3 })).toBe(false);
     }
-    // the context notification is not a data one
-    expect(isDataChangedNotification({ jsonrpc: "2.0", method: "context", params: {}, channel: "openlen-tool" })).toBe(false);
     expect(isBridgeNotification({ ...baseline, method: "data.other" })).toBe(false);
     expect(isBridgeNotification({ ...baseline, channel: "other" })).toBe(false);
   });

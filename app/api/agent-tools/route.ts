@@ -2,7 +2,7 @@
 // GET /api/agent-tools?assistantId= — the tools an agent has made for its person (spec local
 // 2026-11-22-herramienta-dentro-del-agente, §2): the tabs beside its chat on the web, the buttons of its chat on the phone.
 //
-// → 200 [{ id, slug, title, frameUrl, frameOrigin }], oldest first so the tabs stay where they were · 400 `bad_request` (no
+// → 200 [{ id, slug, title, releaseSha, frameUrl, frameOrigin }], oldest first so the tabs stay where they were · 400 `bad_request` (no
 //   `assistantId`) · 404 `not_found`.
 //
 // `frameUrl` is where the WORKSPACE frames the tool (its private host with the published version in the query) and `frameOrigin`
@@ -45,7 +45,7 @@ export const GET = paraLaApp(async (req: Request): Promise<Response> => {
     if (tool.personId !== userId) continue;
     const frameUrl = agentToolFrameUrl({ hostLabel: tool.hostLabel, releaseSha: tool.releaseSha, requestHost });
     if (!frameUrl) continue;
-    tools.push({ id: tool.id, slug: tool.slug, title: tool.title, frameUrl, frameOrigin: new URL(frameUrl).origin });
+    tools.push({ id: tool.id, slug: tool.slug, title: tool.title, releaseSha: tool.releaseSha, frameUrl, frameOrigin: new URL(frameUrl).origin });
   }
   return json(tools);
 });

@@ -3,7 +3,7 @@
 // ACTING ON A «CREAR» CARD (spec local 2026-11-04-herramientas-hechas-por-len, §4.10): DeepSeek's action-cards — the
 // card is the person's, it is reconciled with what really exists before every action, concurrent presses coalesce,
 // and a decided card only settles.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ToolCardRow } from "./store";
 
@@ -277,6 +277,16 @@ describe("🔴 C1: reconciled when read, not only when pressed (a restart in the
 });
 
 describe("🔴 I4: a creation that throws doesn't leave the card «creando»", () => {
+  // What throws here on purpose is said with a warning: caught and checked, not printed.
+  let warn: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[tools] card"), expect.any(Error));
+    warn.mockRestore();
+  });
+
   it("startCreation throws: failed", async () => {
     const d = deps();
     d.startCreation.mockRejectedValueOnce(new Error("db down"));

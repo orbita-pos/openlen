@@ -496,6 +496,24 @@ describe("closing", () => {
     expect(f.raw).toBe("");
   });
 
+  it("🔴 a screen that stops reading is let go once it leaves more than the cap unread: nothing piles up in memory", async () => {
+    const { res, controller } = await follow();
+    expect(busTrack.live).toBe(1);
+    // ~60 KB a change, one document rewritten (the tool's own 5 MB cap is never near), never read by the screen
+    const big = { t: "x".repeat(60 * 1024) };
+    let writes = 0;
+    while (busTrack.live > 0 && writes < Math.ceil(route.FOLLOW_UNREAD_MAX_BYTES / (60 * 1024)) + 40) {
+      await write([set("c", "a", { ...big, n: ++writes })]);
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    expect(busTrack.live).toBe(0);
+    // what it had already been sent can still be read, and then the stream ends: it reconnects for a fresh baseline
+    const reader = res.body!.getReader();
+    let done = false;
+    while (!done) done = (await reader.read()).done;
+    controller.abort();
+  }, 60_000);
+
   it("🔴 every way a stream ends takes it off the bus: the screen leaving, the reader cancelled, a failed read, gone", async () => {
     spyOn(console, "warn").mockImplementation(() => undefined);
     expect(busTrack.live).toBe(0);

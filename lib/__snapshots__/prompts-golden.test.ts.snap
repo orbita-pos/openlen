@@ -5603,6 +5603,8 @@ Every file of a published tool runs under a strict Content Security Policy:
 - **Workers**: \`worker-src blob:\` only.
 - **Images & media**: own files (\`'self'\`), \`data:\` and \`blob:\` only — never hotlink remote image URLs.
 - **Network (\`connect-src 'self'\`)**: \`fetch\` and \`XHR\` can ONLY load your own tool's files (e.g. \`./lessons.json\`), never external origins or APIs. No \`<form>\` posts (\`form-action 'none'\`), no \`<base>\`, no nested \`<iframe>\` (\`frame-src 'none'\`).
+- **No new windows**: the frame can't open popups, so \`target="_blank"\` links and \`window.open\` do nothing. Keep everything inside the page (show details in place, or in a dialog you draw), and don't link out.
+- **No camera, microphone, location or payments**: the tool's frame doesn't allow them.
 
 ## 4. Shared live database (\`window.openlen.data\` & \`tool_data\`)
 
@@ -5686,6 +5688,8 @@ Every file of a published tool runs under a strict Content Security Policy:
 - **Workers**: \`worker-src blob:\` only.
 - **Images & media**: own files (\`'self'\`), \`data:\` and \`blob:\` only — never hotlink remote image URLs.
 - **Network (\`connect-src 'self'\`)**: \`fetch\` and \`XHR\` can ONLY load your own tool's files (e.g. \`./lessons.json\`), never external origins or APIs. No \`<form>\` posts (\`form-action 'none'\`), no \`<base>\`, no nested \`<iframe>\` (\`frame-src 'none'\`).
+- **No new windows**: the frame can't open popups, so \`target="_blank"\` links and \`window.open\` do nothing. Keep everything inside the page (show details in place, or in a dialog you draw), and don't link out.
+- **No camera, microphone, location or payments**: the tool's frame doesn't allow them.
 
 ## 4. Shared live database (\`window.openlen.data\` & \`tool_data\`)
 

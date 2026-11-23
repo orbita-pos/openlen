@@ -10,20 +10,24 @@ import { esPeticionLocal, esProduccion, lienzoApagado, lienzoBaseHost, LIENZO_PR
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-export function toolHostLabel(installationId: string, env: Env = process.env): string | null {
+/** A private host label: `lienzo-` + 32 hex of an HMAC with Auth.js's secret over `domain` + the id (lowercase). One
+ *  domain per kind of host — an installed tool's, its phone's, an agent's tool's, its phone's — so two kinds never meet.
+ *  Null when the server has no secret. */
+export function hmacHostLabel(domain: string, id: string, env: Env = process.env): string | null {
   const secret = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim();
   if (!secret) return null;
-  const mark = createHmac("sha256", secret).update(`openlen-tool:${installationId.toLowerCase()}`).digest("hex");
+  const mark = createHmac("sha256", secret).update(`${domain}${id.toLowerCase()}`).digest("hex");
   return LIENZO_PREFIJO + mark.slice(0, 32);
+}
+
+export function toolHostLabel(installationId: string, env: Env = process.env): string | null {
+  return hmacHostLabel("openlen-tool:", installationId, env);
 }
 
 /** THE PHONE'S OWN LABEL for the same installation (phase 5, §4.14): framed only by the phone app's origins, so the
  *  workspace's label stays framed only by openlen.com — what `/api/movil/canvas` does with `framedBy` on its document. */
 export function toolPhoneHostLabel(installationId: string, env: Env = process.env): string | null {
-  const secret = env.AUTH_SECRET?.trim() || env.NEXTAUTH_SECRET?.trim();
-  if (!secret) return null;
-  const mark = createHmac("sha256", secret).update(`openlen-tool-phone:${installationId.toLowerCase()}`).digest("hex");
-  return LIENZO_PREFIJO + mark.slice(0, 32);
+  return hmacHostLabel("openlen-tool-phone:", installationId, env);
 }
 
 /** Where the workspace frames the tool: its private host, with the release in the query so a reinstall

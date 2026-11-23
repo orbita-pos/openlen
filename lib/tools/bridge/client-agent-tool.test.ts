@@ -4,6 +4,8 @@
 // script with `{ agentTool: true }`, but the object it exposes has only `context`, `onContext`, `sendPrompt` and `data`.
 // Run against a fake window, like the installed tool's (client.test.ts).
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,14 +56,21 @@ afterEach(() => vi.useRealTimers());
 
 describe("the agent tool's script: the same default, byte for byte, when no variant is asked", () => {
   // The installed tools' script is pinned: asking for no variant must give exactly what it gave before this variant existed.
-  // Change it on purpose and this hash with it.
+  // The script is kept as text beside this test, so a difference shows as a diff; its hash pins the text itself. Change
+  // the script on purpose and both with it (the fixture, then this hash).
   const INSTALLED_SHA256 = "cc4d9300a2190e615571efc1941c570fbc6193b5735f86acf213ffab2dfb2f13";
   const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+  // Line endings as git may have checked them out on Windows: the script itself only has \n.
+  const INSTALLED = readFileSync(join(__dirname, "__fixtures__", "installed-bridge-client.js.txt"), "utf8").replace(/\r\n/g, "\n");
+
+  it("the kept text is the script as it was", () => {
+    expect(sha(INSTALLED)).toBe(INSTALLED_SHA256);
+  });
 
   it("without options, or with the variant off, it is the installed tool's script as it was", () => {
-    expect(sha(toolBridgeClientSource([APP]))).toBe(INSTALLED_SHA256);
-    expect(sha(toolBridgeClientSource([APP], {}))).toBe(INSTALLED_SHA256);
-    expect(sha(toolBridgeClientSource([APP], { agentTool: false }))).toBe(INSTALLED_SHA256);
+    expect(toolBridgeClientSource([APP])).toBe(INSTALLED);
+    expect(toolBridgeClientSource([APP], {})).toBe(INSTALLED);
+    expect(toolBridgeClientSource([APP], { agentTool: false })).toBe(INSTALLED);
   });
 
   it("the variant is another script, for the parents it is given", () => {
@@ -98,7 +107,8 @@ describe("window.openlen of an agent's tool", () => {
     const ctx = (f.win.openlen!.context as Fn)() as Promise<unknown>;
     const r = f.lastRequest();
     expect(r).toEqual({ jsonrpc: "2.0", id: r.id, method: "context", channel: "openlen-tool" });
-    expect(f.parent.postMessage).toHaveBeenCalledWith(r, "*");
+    // one parent: posted to it, not to any (the installed tools' script still posts to "*")
+    expect(f.parent.postMessage).toHaveBeenCalledWith(r, APP);
     f.deliver({ jsonrpc: "2.0", id: r.id, result: { environment: "installed" }, channel: "openlen-tool" });
     await expect(ctx).resolves.toEqual({ environment: "installed" });
 
@@ -147,9 +157,30 @@ describe("window.openlen.data: the requests", () => {
     expect(f.lastRequest()).toMatchObject({ method: "data.delete", params: { collection: "tareas", docId: "t1" } });
     void f.data.list!("tareas");
     expect(f.lastRequest()).toMatchObject({ method: "data.list", params: { collection: "tareas" } });
-    const q = { where: [["hecho", "==", false]], orderBy: [["titulo", "asc"]], limit: 10 };
+    // the query's own shape, as the route checks it (lib/agent-tools/validate.ts)
+    const q = { where: [{ field: "hecho", op: "==", value: false }], orderBy: { field: "titulo", direction: "asc" }, limit: 10 };
     void f.data.query!("tareas", q);
     expect(f.lastRequest()).toMatchObject({ method: "data.query", params: { collection: "tareas", query: q } });
+  });
+
+  it("with one parent, a request carrying the person's data is posted to that origin, never to any", () => {
+    const f = framed([APP]);
+    void f.data.set!("tareas", "t1", { titulo: "Pagar" });
+    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe(APP);
+  });
+
+  it("with several parents, a request goes to any only until a parent answers; then to the origin that answered", () => {
+    const parents = ["https://localhost", "capacitor://localhost"];
+    const f = framed(parents);
+    void f.data.list!("tareas");
+    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("*");
+    f.deliver({ jsonrpc: "2.0", id: f.lastRequest().id, result: [], channel: "openlen-tool" }, { origin: "capacitor://localhost" });
+    void f.data.set!("tareas", "t1", { titulo: "Pagar" });
+    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("capacitor://localhost");
+    // a message from an origin that isn't a parent teaches it nothing
+    f.deliver({ jsonrpc: "2.0", method: "context", params: {}, channel: "openlen-tool" }, { origin: "https://evil.example" });
+    void f.data.get!("tareas", "t1");
+    expect(f.parent.postMessage.mock.calls.at(-1)![1]).toBe("capacitor://localhost");
   });
 
   it("each resolves with the parent's answer, or rejects with its error", async () => {
@@ -368,6 +399,35 @@ describe("window.openlen.data.subscribe", () => {
     late.off();
     await Promise.resolve();
     expect(late.seen).toEqual([]);
+  });
+
+  it("a change copies only the documents it names: the others are the subscriber's same objects as before", () => {
+    const f = framed();
+    const a = snapshots(f);
+    const b = snapshots(f);
+    f.notify({ kind: "baseline", docs: [doc("t", "1", { n: 1 }), doc("t", "2", { n: 2 })] });
+    f.notify({ kind: "change", by: "person", docs: [doc("t", "2", { n: 20 })], deleted: [] });
+    const [before, after] = [a.seen[0]!.docs, a.seen[1]!.docs];
+    expect(after.find((d) => d.docId === "1")).toBe(before.find((d) => d.docId === "1"));
+    expect(after.find((d) => d.docId === "2")).not.toBe(before.find((d) => d.docId === "2"));
+    expect(after.map((d) => d.data)).toEqual([{ n: 1 }, { n: 20 }]);
+    // but never another subscriber's objects
+    expect(b.seen[1]!.docs.find((d) => d.docId === "1")).not.toBe(after.find((d) => d.docId === "1"));
+    // a baseline makes every copy anew
+    f.notify({ kind: "baseline", docs: [doc("t", "1", { n: 1 })] });
+    expect(a.seen[2]!.docs[0]).not.toBe(after.find((d) => d.docId === "1"));
+    expect(a.seen[2]!.docs.map((d) => d.docId)).toEqual(["1"]);
+  });
+
+  it("a late subscriber told by a change that came before its microtask is told once, with everything", async () => {
+    const f = framed();
+    snapshots(f);
+    f.notify({ kind: "baseline", docs: [doc("t", "1", { n: 1 })] });
+    const late = snapshots(f);
+    f.notify({ kind: "change", by: "agent", docs: [doc("t", "2", { n: 2 })], deleted: [] });
+    await Promise.resolve();
+    expect(late.seen).toHaveLength(1);
+    expect(late.seen[0]!.docs.map((d) => d.docId)).toEqual(["1", "2"]);
   });
 
   it("a malformed notification is ignored", () => {
