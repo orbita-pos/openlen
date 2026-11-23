@@ -211,7 +211,7 @@ it("mientras espera a que termines de iniciar sesión, lo dice", async () => {
 
 it("🔴 una tarjeta que pide aprobación (un servidor que escribió Len) no tiene botón en el teléfono: se aprueba en la web", async () => {
   iniciar();
-  const pedir = vi.fn(async () => servidores({ name: "cal", status: "pending" }));
+  const pedir = vi.fn(async (_ruta: string, _init?: RequestInit) => servidores({ name: "cal", status: "pending" }));
   await conectar({ ...OAUTH_CARD, version: 7, credentials: [{ name: "KEY", set: false, destinationHosts: ["calendarmcp.googleapis.com"], otherHosts: [], firstTime: false }] }, pedir);
   expect(host.querySelector("button")).toBeNull();
   expect(host.textContent).toContain("aprobarEnLaWeb");
