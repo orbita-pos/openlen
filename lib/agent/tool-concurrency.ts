@@ -39,9 +39,9 @@ const visitWithoutClicks: Classifier = (args) => {
  *  búsquedas vacías seguidas depende del orden. */
 const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   Read: always,
-  list_artifacts: always,
-  list_artifact_audio: always,
-  inspect_artifact: always,
+  list_deliverables: always,
+  list_deliverable_audio: always,
+  inspect_deliverable: always,
   Grep: always,
   Glob: always,
   web_search: always,

@@ -2470,7 +2470,7 @@ async function correrTurno(
         // A `bash` command running inside its own timeout (up to 10 min) is work: it keeps the silence watchdog
         // armed instead of tripping it (Len 3.0 trial F, 21/10: `sleep 180` waiting for a render cut the turn).
         const stillWorking = reloj.vivo;
-        // A tool that waits (inspect_artifact's wait_ms) stops waiting when the turn is stopped.
+        // A tool that waits (inspect_deliverable's wait_ms) stops waiting when the turn is stopped.
         const turnSignal = upstreamAbort.signal;
         // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas): the project's, paid by its owner; with event
         // tasks on (spec local 2026-11-03-len-que-avisa), the same four tools reach them too.

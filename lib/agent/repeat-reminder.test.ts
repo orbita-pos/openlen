@@ -24,17 +24,17 @@ describe("createRepeatReminder (DeepSeek's repeat-tool-reminder + the alternatin
 
   it("an alternating pair fires once per cycle count (3, then 5), whichever call closes the cycle", () => {
     const r = createRepeatReminder();
-    const A = call("render_artifact", { revision: 10 });
-    const B = call("inspect_artifact", { artifact_id: "v" });
+    const A = call("render_deliverable", { revision: 10 });
+    const B = call("inspect_deliverable", { deliverable_id: "v" });
     const got = [A, B, A, B, A, B, A, B, A, B].map((c) => r.observe([c]));
     expect(got.map((x) => x.length)).toEqual([0, 0, 0, 0, 0, 1, 0, 0, 0, 1]);
     expect(got[5]![0]).toMatch(/^You are alternating the same two tool calls/);
-    expect(got[9]![0]).toContain("- tools: render_artifact, then inspect_artifact\n- consecutive_cycles: 5");
+    expect(got[9]![0]).toContain("- tools: render_deliverable, then inspect_deliverable\n- consecutive_cycles: 5");
   });
 
   it("a pending answer is transparent and reset() starts over", () => {
     const r = createRepeatReminder();
-    const polling = { name: "inspect_artifact", args: { id: "v" }, response: { ok: true, pending: true } };
+    const polling = { name: "inspect_deliverable", args: { id: "v" }, response: { ok: true, pending: true } };
     expect(r.observe([call("Read"), polling, call("Read"), polling])).toEqual([]);
     expect(r.observe([call("Read")])).toHaveLength(1);
     r.reset();
@@ -93,7 +93,7 @@ describe("createRepeatReminder · what counts as a change, and who it speaks to"
   const noChange = (click: string) => ({ name: "use_page", args: { steps: [{ click }] }, response: { ok: true, no_change: true } });
 
   // Every one of them can change what Read would now answer, whatever its own arguments say.
-  const ALSO_MUTATING = ["undo_last_change", "create_artifact", "render_artifact", "cancel_artifact_job", "subagent", "subagent_fork"];
+  const ALSO_MUTATING = ["undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "subagent", "subagent_fork"];
 
   it("🔴 the tools that change the project without naming a file break the circling streaks and forget what was read", () => {
     for (const tool of ALSO_MUTATING) {
@@ -113,7 +113,7 @@ describe("createRepeatReminder · what counts as a change, and who it speaks to"
   it("a failed one changed nothing, so it breaks nothing", () => {
     const r = createRepeatReminder();
     circling(r);
-    r.observe([{ name: "render_artifact", args: { revision: 1 }, response: { ok: false, error: "boom" } }]);
+    r.observe([{ name: "render_deliverable", args: { revision: 1 }, response: { ok: false, error: "boom" } }]);
     expect(rereads(r)).toHaveLength(1);
   });
 

@@ -5,7 +5,7 @@ A deck is files in /.len/artifacts/<id>/: an index and one file per slide. It ex
 ## The files
 deck.json is the index: {"version":3,"title":"Turnia","order":["cover","problem","plan"],"sections":{"s1":{"description":"Why and how much","start":"cover"}}}. order lists slide ids in deck order (letters, digits, - and _). sections is optional: your outline, each a one-line description and the id of the slide it starts at. A slide file the order leaves out shows last.
 slides/<id>.html is exactly one <section id="<id>" style="…"> and nothing around it: no <html>, <head>, <body>, <style>, <link> or <script>. The section's id is the file's name. Speaker notes are plain text in one <aside>, the section's last child, 4000 characters at most; write them only when the user asks for notes or a script.
-The canvas is 1920×1080 px. When the user says a size in points, a point is two pixels (36pt = 72px). Saving a slide answers at once with what is outside the format, anchored to its line, in <new-diagnostics>; fix those before render_artifact.
+The canvas is 1920×1080 px. When the user says a size in points, a point is two pixels (36pt = 72px). Saving a slide answers at once with what is outside the format, anchored to its line, in <new-diagnostics>; fix those before render_deliverable.
 
 ## The format
 Every style is inline in style="". There is no stylesheet, so class does nothing and is refused; values you repeat can be CSS variables declared on the <section> (--accent:#f59e0b; then color:var(--accent)).
@@ -18,7 +18,7 @@ What becomes a PowerPoint object is a closed list:
 - Painted boxes: any <div> (or text block) with background (a color, one linear-gradient() or one radial-gradient()), border, border-radius, box-shadow, opacity, transform: translate()/rotate().
 - Borders: one style and one color per element; the sides may have different widths (border-bottom alone is a rule). For an accent bar or a side of another color, place a painted 4px <div>.
 - Corners: one border-radius for every corner; 50% on a square is a circle, a large radius is a pill.
-- Pictures: <img src="asset:<artifactId>@<revision>/<output>" alt="…" style="width;height;object-fit:cover|contain"> from a saved output (inspect_artifact gives the exact assetId; naming it is the dependency, also in a correction). object-position, border-radius, border and box-shadow carry over. No URLs, no data:.
+- Pictures: <img src="asset:<artifactId>@<revision>/<output>" alt="…" style="width;height;object-fit:cover|contain"> from a saved output (inspect_deliverable gives the exact assetId; naming it is the dependency, also in a correction). object-position, border-radius, border and box-shadow carry over. No URLs, no data:.
 - Drawings: an inline <svg aria-label="what it shows"> (52 KB at most, no <script>, on*=, <foreignObject> or URLs) becomes one picture. Keep its words outside it, as <p> text over or beside it: fonts do not load inside an svg.
 - Transitions: data-transition="fade" or "push" on the <section>.
 Not available, and what to do instead: filter, backdrop-filter, mix-blend-mode → opacity or a painted overlay <div>; clip-path, mask → border-radius or an <svg>; background-image: url() → a pinned <img> listed first; background-clip: text → a solid color; scale/skew → set the size; overflow:hidden that cuts a child → keep the child inside, or give an <img> its own border-radius; <button> → a <p> pill; <canvas> → <svg>. Usual HTML names are read as their equivalent and noted (<strong> as <b>, <em> as <i>, <header>/<footer>/<figure> as <div>, <h4>–<h6> as <h3>).

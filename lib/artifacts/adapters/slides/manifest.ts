@@ -29,9 +29,9 @@ export function parseSlideDeck(input: SealedArtifactInput): SlideDeck {
   let deck: SlideDeck;
   const raw = manifestJson(input.revision.files, "deck.json", "invalid_slide_deck");
   // A retired format says what to write instead, as a deprecated option does.
-  if ((raw as { version?: unknown })?.version === 2) throw new ArtifactError("invalid_slide_deck", 'deck.json version 2 (a full HTML document per slide) is retired; write version 3: deck.json {"version":3,"title":"…","order":["cover",…]} and slides/<id>.html, one <section> each (/.openlen/docs/artifacts/slides.md)');
+  if ((raw as { version?: unknown })?.version === 2) throw new ArtifactError("invalid_slide_deck", 'deck.json version 2 (a full HTML document per slide) is retired; write version 3: deck.json {"version":3,"title":"…","order":["cover",…]} and slides/<id>.html, one <section> each (/.openlen/docs/deliverables/slides.md)');
   const parsed = schema.safeParse(raw);
-  if (!parsed.success) { const issue = parsed.error.issues[0]!; throw new ArtifactError("invalid_slide_deck", `deck.json ${issue.path.join(".") || "(root)"}: ${issue.message}; new decks are version 3 (/.openlen/docs/artifacts/slides.md)`); }
+  if (!parsed.success) { const issue = parsed.error.issues[0]!; throw new ArtifactError("invalid_slide_deck", `deck.json ${issue.path.join(".") || "(root)"}: ${issue.message}; new decks are version 3 (/.openlen/docs/deliverables/slides.md)`); }
   deck = parsed.data;
   const slides = new Set<string>();
   for (const slide of deck.slides) {

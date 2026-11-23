@@ -17,7 +17,7 @@ test("native agent dispatch lists project audio without changing app files",asyn
     const artifactAgent=createArtifactAgent({database:f.database,store:f.store,jobs:createArtifactJobs(f.database,f.store),data:createArtifactData(f.database,f.store,async()=>null),captureContext:async()=>{throw Error("not requested");},audioUploads:{listAudio:async id=>{assert.equal(id,"project");return [{filename,contentType:"audio/mpeg",size:100,url:"not exposed",uploadedAt:0}];},get:async()=>{throw Error("listing must not read bytes");}}},f.owner,()=>"audio-message",["audio"]);
     const deps={artifactAgent,loadProject:async()=>({data:{html:"original"},userBrief:null}),projectFiles:async()=>({}),saveProjectData:async()=>{throw Error("must not change app");}} as unknown as AgentDeps;
     const session={projectId:"project",userId:"owner",page:null,ownerEmail:null,imageEditsThisTurn:0,photoSearchesThisTurn:0,busquedasVaciasSeguidas:0} as AgentSession;
-    const result=await runAgentTool(session,deps,"list_artifact_audio",{projectId:"other"});
+    const result=await runAgentTool(session,deps,"list_deliverable_audio",{projectId:"other"});
     assert.equal(result.response.ok,true,JSON.stringify(result.response));assert.deepEqual(result.response.assets,[{id:`upload:${filename}`,filename,mime:"audio/mpeg",bytes:100}]);assert.equal(result.mutoDurable,undefined);
   }finally{await f.pg.close();}
 });
@@ -76,10 +76,10 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     const artifactAgent = createArtifactAgent({ database: f.database, store: f.store, jobs: createArtifactJobs(f.database, f.store), data: createArtifactData(f.database, f.store, async () => null), captureContext: async () => { throw new Error("not requested"); } }, f.owner, () => "message", ["slides"]);
     const deps = { artifacts: artifactAgent.workspace, artifactAgent, loadProject: async () => ({ data: { html: "original" }, userBrief: null }), projectFiles: async () => ({}), saveProjectData: async () => { throw new Error("must not change the app"); } } as unknown as AgentDeps;
     const session = { projectId: "project", userId: "owner", page: null, ownerEmail: null, imageEditsThisTurn: 0, photoSearchesThisTurn: 0, busquedasVaciasSeguidas: 0 } as AgentSession;
-    const result = await runAgentTool(session, deps, "create_artifact", { kind: "slides", item_key: "deck", title: "Deck", brief: "App" });
+    const result = await runAgentTool(session, deps, "create_deliverable", { kind: "slides", item_key: "deck", title: "Deck", brief: "App" });
     assert.equal(result.response.ok, true);
     const id = result.response.artifactId;
-    // Each save says the revision it made: render_artifact seals one by its number (the 23/10 trial guessed).
+    // Each save says the revision it made: render_deliverable seals one by its number (the 23/10 trial guessed).
     const index = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/deck.json`, content: JSON.stringify({ version: 3, title: "Deck", order: ["cover"] }) });
     assert.match(String(index.response.tool_result), /no need to Read it again\) The piece is now at revision 1\.$/);
     const cover = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' });
@@ -88,7 +88,7 @@ test("agent dispatch creates and queues sources without saving or compiling the 
     const same = await runAgentTool(session, deps, "Write", { file_path: `/.len/artifacts/${id}/slides/cover.html`, content: '<section id="cover" style="background:#fff"><h1>App</h1></section>' });
     assert.equal(same.response.ok, true);
     assert.doesNotMatch(String(same.response.tool_result), /revision/);
-    const queued = await runAgentTool(session, deps, "render_artifact", { artifact_id: id, revision: 2, formats: ["pdf"] });
+    const queued = await runAgentTool(session, deps, "render_deliverable", { deliverable_id: id, revision: 2, formats: ["pdf"] });
     assert.equal(queued.response.status, "queued");
     assert.equal(queued.updatedHtml, undefined);
     assert.equal(queued.appCambiada, undefined);

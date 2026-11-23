@@ -78,7 +78,7 @@ export function createArtifactStore(database: ArtifactDatabase) {
       try { privateDependency = await validateDependencies(tx, ctx, id, dependencies); }
       catch (error) {
         const named = dependencies.filter((d) => !before.dependencies.some((b) => b.artifactId === d.artifactId)).map((d) => `${d.artifactId}@${d.revision}`);
-        if (isArtifactError(error) && named.length && error.message === error.code) throw new ArtifactError(error.code, `the sources name ${named.join(", ")}; check those ids with list_artifacts/inspect_artifact`);
+        if (isArtifactError(error) && named.length && error.message === error.code) throw new ArtifactError(error.code, `the sources name ${named.join(", ")}; check those ids with list_deliverables/inspect_deliverable`);
         throw error;
       }
       const [row] = await tx.query(`update "artifactRevisions" set "sealedAt"=now(),"dependencies"=$3::jsonb where "artifactId"=$1 and "revision"=$2 returning *`, [id, expectedRevision, JSON.stringify(dependencies)]);

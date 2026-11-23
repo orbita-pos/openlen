@@ -6,7 +6,7 @@ import { NONE } from "./adapters/dashboard/manifest";
 /**
  * A piece's manifest checked when it is saved, as a compiler answers a save: broken JSON at its line and column,
  * a wrong field by name, a retired format with what to write instead. What depends on the other files (the
- * entry, the slides, the datasets) is checked again on render_artifact, before anything is queued.
+ * entry, the slides, the datasets) is checked again on render_deliverable, before anything is queued.
  */
 export interface ManifestFinding { readonly line: number; readonly column: number; readonly message: string }
 

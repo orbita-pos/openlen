@@ -515,7 +515,7 @@ describe("bundled skills", () => {
     });
 
     // The switch alone never advertises a renderer this server can't run (lib/artifacts/capabilities.ts):
-    // a skill for a kind create_artifact doesn't offer would invite Len to promise it.
+    // a skill for a kind create_deliverable doesn't offer would invite Len to promise it.
     it("an artifact skill is offered only for a renderer this server has", () => {
       const artifacts = (env: Record<string, string>) => names({ app: null, env }).filter((n) => n.startsWith("artifact-"));
       expect(artifacts({ OPENLEN_ARTIFACTS: "1" })).toEqual([]);
@@ -524,7 +524,7 @@ describe("bundled skills", () => {
 
     it("a generated skill's SKILL.md is today's manual, with its frontmatter", () => {
       const text = bundledSkillFiles(PAGE_ARTIFACTS)[`${BUNDLED_SKILLS_DIR}/artifact-slides/SKILL.md`]!;
-      expect(text).toContain(artifactManuals["/.openlen/docs/artifacts/slides.md"]!.slice(0, 200));
+      expect(text).toContain(artifactManuals["/.openlen/docs/deliverables/slides.md"]!.slice(0, 200));
       expect(parseSkillFile(text, "artifact-slides").ok).toBe(true);
     });
 

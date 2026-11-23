@@ -19,7 +19,7 @@ export function centerContent(p: { readonly hasPage: boolean | null; readonly is
 }
 
 const ARTIFACT_ID = /"artifactId":"([0-9a-f-]{36})"/i;
-const TOOLS_THAT_NAME_A_PIECE = new Set(["create_artifact", "render_artifact"]);
+const TOOLS_THAT_NAME_A_PIECE = new Set(["create_deliverable", "render_deliverable", "create_artifact", "render_artifact"]);
 
 /** The pieces a turn created or queued, once each and in the order Len touched them. The client keeps an
  *  action's `valores` cut at 200 characters, so the id is read from the text, not by parsing it. */

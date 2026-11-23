@@ -18,7 +18,7 @@ export async function preflightArtifact(ctx: ArtifactContext, store: ArtifactSto
   for (const dependency of dependencies) {
     let pinned: ArtifactRevision;
     try { pinned = await store.getRevision(ctx, dependency.artifactId, dependency.revision); }
-    catch { throw new ArtifactError("invalid_dependency", `the sources name ${dependency.artifactId}@${dependency.revision}, which is not a saved piece here; check the id with list_artifacts`); }
+    catch { throw new ArtifactError("invalid_dependency", `the sources name ${dependency.artifactId}@${dependency.revision}, which is not a saved piece here; check the id with list_deliverables`); }
     pinned.outputs.forEach((output, index) => assets.push({ id: `${pinned.artifactId}@${pinned.revision}/${index}`, mime: output.mime, bytes: new Uint8Array([0]) }));
   }
   const input = { artifact, revision: { ...revision, dependencies }, assets, datasets: datasetsFromRevision(revision) } as SealedArtifactInput;

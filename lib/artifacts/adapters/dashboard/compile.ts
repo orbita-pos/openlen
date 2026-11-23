@@ -100,7 +100,7 @@ export async function compileArtifactHtml(input: SealedArtifactInput, entryHtml:
     const src = element.getAttribute("src")!;
     if (/^data:image\/(png|jpeg|webp|gif|svg\+xml|avif);/i.test(src) && element.tagName === "IMG") continue;
     const asset = src.startsWith("asset:") ? input.assets.find((a) => a.id === src.slice(6)) : undefined;
-    if (!asset || !/^image\/(png|jpeg|webp|gif|svg\+xml|avif)$/.test(asset.mime) || element.tagName !== "IMG") throw new ArtifactError("artifact_resource_missing", `<${element.tagName.toLowerCase()} src="${src.slice(0, 200)}">: ${src.startsWith("asset:") ? "not a ready saved image of this revision; check the id with inspect_artifact" : "only <img src=\"asset:<artifactId>@<revision>/<output>\"> or a data: image; there is no network"}`);
+    if (!asset || !/^image\/(png|jpeg|webp|gif|svg\+xml|avif)$/.test(asset.mime) || element.tagName !== "IMG") throw new ArtifactError("artifact_resource_missing", `<${element.tagName.toLowerCase()} src="${src.slice(0, 200)}">: ${src.startsWith("asset:") ? "not a ready saved image of this revision; check the id with inspect_deliverable" : "only <img src=\"asset:<artifactId>@<revision>/<output>\"> or a data: image; there is no network"}`);
     element.setAttribute("src", `data:${asset.mime};base64,${Buffer.from(asset.bytes).toString("base64")}`);
   }
   head.insertAdjacentHTML("afterbegin", `<meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}">${globals ? `<script>${scriptText(globals)}</script>` : ""}<script>window.lenData=Object.freeze(${safeJson({ datasets:datasets.map(artifactDatasetForDisplay) })});${scriptText(trustedRuntime)}</script>`);

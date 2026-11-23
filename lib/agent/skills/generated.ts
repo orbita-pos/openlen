@@ -54,13 +54,13 @@ const ARTIFACT_KINDS: Readonly<Record<ArtifactKind, string>> = {
   audio: "an audio or narration deliverable (its voice, takes and reuse)",
 };
 
-// Only for a kind this server can render, like create_artifact's kinds: the switch alone never
+// Only for a kind this server can render, like create_deliverable's kinds: the switch alone never
 // advertises a renderer the deployment can't run (lib/artifacts/capabilities.ts).
 const artifactSkills: GeneratedSkill[] = (Object.entries(ARTIFACT_KINDS) as [ArtifactKind, string][]).map(([kind, what]) => ({
   name: `artifact-${kind}`,
-  description: `How to author ${what} with create_artifact. Load it before writing a ${kind} deliverable.`,
+  description: `How to author ${what} with create_deliverable. Load it before writing a ${kind} deliverable.`,
   when: (ctx) => availableArtifactKinds(ctx.env).includes(kind),
-  files: () => ({ "SKILL.md": artifactManuals[`/.openlen/docs/artifacts/${kind}.md`]! }),
+  files: () => ({ "SKILL.md": artifactManuals[`/.openlen/docs/deliverables/${kind}.md`]! }),
 }));
 
 const LIBRARIES_POINTER =

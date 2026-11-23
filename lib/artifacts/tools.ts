@@ -12,23 +12,23 @@ import type {ArtifactAudioUploads} from "./assets";
 import {AUDIO_MIMES} from "./audio-protocol";
 import { whatToDoAfter } from "./render-failures";
 
-export const ARTIFACT_TOOLS = ["create_artifact", "list_artifacts", "inspect_artifact", "render_artifact", "cancel_artifact_job", "query_artifact_data","list_artifact_audio"] as const;
-const idParameter = { type: "STRING", description: "Exact artifact id returned by create_artifact or list_artifacts." };
+export const ARTIFACT_TOOLS = ["create_deliverable", "list_deliverables", "inspect_deliverable", "render_deliverable", "cancel_deliverable_job", "query_deliverable_data", "list_deliverable_audio"] as const;
+const idParameter = { type: "STRING", description: "Exact deliverable id returned by create_deliverable or list_deliverables." };
 export function artifactToolDeclarations(kinds: readonly ArtifactKind[]): Record<string, unknown>[] {
   if (!kinds.length) return [];
   return [
-    ...kinds.some(k=>k==="audio"||k==="motion")?[{name:"list_artifact_audio",description:"List this project's uploaded music/effects/audio. Returns immutable upload IDs for audio.json or motion.json tracks. Use returned IDs, never external URLs. This does not generate music or effects.",parameters:{type:"OBJECT",properties:{}}}]:[],
-    {name:"create_artifact",description:"Create a persistent project deliverable when the user asks for it in normal conversation. One identity per piece, including each promotional image. Read /.openlen/docs/artifacts/<kind>.md before authoring; edit its private source files with your file tools. This does not change the original app. Reuse a stable item_key for retries of the same piece in this request.",parameters:{type:"OBJECT",properties:{
+    ...kinds.some(k=>k==="audio"||k==="motion")?[{name:"list_deliverable_audio",description:"List this project's uploaded music/effects/audio. Returns immutable upload IDs for audio.json or motion.json tracks. Use returned IDs, never external URLs. This does not generate music or effects.",parameters:{type:"OBJECT",properties:{}}}]:[],
+    {name:"create_deliverable",description:"Create a persistent project deliverable when the user asks for it in normal conversation. One identity per piece, including each promotional image. Read /.openlen/docs/deliverables/<kind>.md before authoring; edit its private source files with your file tools. This does not change the original app. Reuse a stable item_key for retries of the same piece in this request.",parameters:{type:"OBJECT",properties:{
       kind:{type:"STRING",enum:[...kinds]},item_key:{type:"STRING",description:"Stable request-local name, e.g. promo_image_2; letters, digits, - and _."},title:{type:"STRING"},brief:{type:"STRING"},
       source_paths:{type:"ARRAY",items:{type:"STRING"}},
       freeze_source:{type:"BOOLEAN",description:"For motion only: freeze selected public source_paths into project-source/ for hash-verified offline screenshots. Include its HTML entry and every local module/style it imports. No customer session, env or network is captured; missing/remote resources fail explicitly."},
       dependencies:{type:"ARRAY",description:"Optional. Saved outputs that the sources name (asset:<artifactId>@<revision>/<output>) are dependencies already.",items:{type:"OBJECT",properties:{artifactId:{type:"STRING"},revision:{type:"NUMBER"}},required:["artifactId","revision"]}},
     },required:["kind","item_key","title","brief"]}},
-    { name: "list_artifacts", description: "List the project's saved deliverables and their actual revisions/status. Use after compaction or when returning to existing work; conversation text is not completion evidence.", parameters: { type: "OBJECT", properties: {} } },
-    { name: "inspect_artifact", description: "Read a deliverable's saved status, source paths, dependencies, verified exports and jobs. Read source files separately. Queued/running is not completed.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, wait_ms: { type: "NUMBER", description: "Optional. Wait up to this many milliseconds (max 600000) for this piece's export jobs to end, checked every 2 s, and answer as soon as they do. Use it after render_artifact instead of sleep." } }, required: ["artifact_id"] } },
-    { name: "render_artifact", description: "Seal an exact source revision and queue an export. Returns a durable job id and queued status; wait for the result with inspect_artifact with wait_ms. Export failures preserve editable sources and earlier ready versions. A render that failed for a reason outside its sources (a timeout, the renderer) can be asked for again on the same revision; a paid image or voice is not repeated on its own.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, revision: { type: "NUMBER" }, formats: { type: "ARRAY", items: { type: "STRING" } },refresh_source_paths:{type:"ARRAY",items:{type:"STRING"},description:"Optional motion-only deliberate source refresh: freeze these current public project files into one NEW revision of the same deliverable before export. Pass its current revision. Omit on normal retries; inspect after any conflict/lost response."} }, required: ["artifact_id", "revision", "formats"] } },
-    { name: "cancel_artifact_job", description: "Cancel one export job without cancelling other pieces of the request.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, job_id: { type: "STRING" } }, required: ["artifact_id", "job_id"] } },
-    { name: "query_artifact_data", description: "Save a labeled dataset to a deliverable. scenario uses explicitly hypothetical rows; backend/visits/forms read only owner-authorized project data and make the deliverable private. Real data source unavailable is an error, never permission to invent metrics. A refresh saves a new dataset/revision.", parameters: { type: "OBJECT", properties: { artifact_id: idParameter, source: { type: "STRING", enum: ["scenario", "backend", "visits", "forms"] }, mode: { type: "STRING", enum: ["snapshot", "live"] }, environment: { type: "STRING", enum: ["draft", "live"] }, query: { type: "STRING", description: "Backend SQL, SELECT-only even in draft." }, zone: { type: "STRING" }, from: { type: "STRING" }, to: { type: "STRING" }, columns: { type: "ARRAY", items: { type: "STRING" } }, rows_json: { type: "STRING", description: "For scenario only: a JSON array of row objects ([{\"month\":\"Mes 1\",\"clients\":40}]) or of arrays in columns order; columns may be left out with row objects. Hypothetical values requested by the user, not claimed real data." } }, required: ["artifact_id", "source"] } },
+    { name: "list_deliverables", description: "List the project's saved deliverables and their actual revisions/status. Use after compaction or when returning to existing work; conversation text is not completion evidence.", parameters: { type: "OBJECT", properties: {} } },
+    { name: "inspect_deliverable", description: "Read a deliverable's saved status, source paths, dependencies, verified exports and jobs. Read source files separately. Queued/running is not completed.", parameters: { type: "OBJECT", properties: { deliverable_id: idParameter, wait_ms: { type: "NUMBER", description: "Optional. Wait up to this many milliseconds (max 600000) for this piece's export jobs to end, checked every 2 s, and answer as soon as they do. Use it after render_deliverable instead of sleep." } }, required: ["deliverable_id"] } },
+    { name: "render_deliverable", description: "Seal an exact source revision and queue an export. Returns a durable job id and queued status; wait for the result with inspect_deliverable with wait_ms. Export failures preserve editable sources and earlier ready versions. A render that failed for a reason outside its sources (a timeout, the renderer) can be asked for again on the same revision; a paid image or voice is not repeated on its own.", parameters: { type: "OBJECT", properties: { deliverable_id: idParameter, revision: { type: "NUMBER" }, formats: { type: "ARRAY", items: { type: "STRING" } },refresh_source_paths:{type:"ARRAY",items:{type:"STRING"},description:"Optional motion-only deliberate source refresh: freeze these current public project files into one NEW revision of the same deliverable before export. Pass its current revision. Omit on normal retries; inspect after any conflict/lost response."} }, required: ["deliverable_id", "revision", "formats"] } },
+    { name: "cancel_deliverable_job", description: "Cancel one export job without cancelling other pieces of the request.", parameters: { type: "OBJECT", properties: { deliverable_id: idParameter, job_id: { type: "STRING" } }, required: ["deliverable_id", "job_id"] } },
+    { name: "query_deliverable_data", description: "Save a labeled dataset to a deliverable. scenario uses explicitly hypothetical rows; backend/visits/forms read only owner-authorized project data and make the deliverable private. Real data source unavailable is an error, never permission to invent metrics. A refresh saves a new dataset/revision.", parameters: { type: "OBJECT", properties: { deliverable_id: idParameter, source: { type: "STRING", enum: ["scenario", "backend", "visits", "forms"] }, mode: { type: "STRING", enum: ["snapshot", "live"] }, environment: { type: "STRING", enum: ["draft", "live"] }, query: { type: "STRING", description: "Backend SQL, SELECT-only even in draft." }, zone: { type: "STRING" }, from: { type: "STRING" }, to: { type: "STRING" }, columns: { type: "ARRAY", items: { type: "STRING" } }, rows_json: { type: "STRING", description: "For scenario only: a JSON array of row objects ([{\"month\":\"Mes 1\",\"clients\":40}]) or of arrays in columns order; columns may be left out with row objects. Hypothetical values requested by the user, not claimed real data." } }, required: ["deliverable_id", "source"] } },
   ];
 }
 
@@ -88,14 +88,14 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
     let mutated = false;
     try {
       let response: Record<string, unknown>;
-      if (name === "list_artifacts") return { response: { ok: true, artifacts: await list() } };
-      if(name==="list_artifact_audio"){
+      if (name === "list_deliverables") return { response: { ok: true, artifacts: await list() } };
+      if(name==="list_deliverable_audio"){
         if(!services.audioUploads||!kinds.some(k=>k==="audio"||k==="motion"))throw new ArtifactError("audio_uploads_unavailable");
         await requireProjectAccess(database,ctx);
         const assets=(await services.audioUploads.listAudio(ctx.projectId)).filter(a=>/^[a-f0-9]{64}\.(mp3|m4a|ogg|wav)$/.test(a.filename)&&AUDIO_MIMES.includes(a.contentType as typeof AUDIO_MIMES[number])&&a.size>0&&a.size<=20*1024*1024).slice(0,200).map(a=>({id:`upload:${a.filename}`,filename:a.filename,mime:a.contentType,bytes:a.size}));
         return {response:{ok:true,assets}};
       }
-      if (name === "create_artifact") {
+      if (name === "create_deliverable") {
         const kind = text(args, "kind") as ArtifactKind;
         if (!kinds.includes(kind)) throw new ArtifactError("format_unavailable");
         const request = await store.ensureArtifactRequest(ctx, messageId());
@@ -111,11 +111,11 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
         mutated = true;
         if (artifact.currentRevision === 0 && (sourceRef || dependencies?.length)) await store.writeArtifactFiles(context, artifact.id, 0, frozen?.files??{}, { sourceRef, dependencies });
         const current = await store.getArtifact(context, artifact.id);
-        response = { ok: true, artifactId: artifact.id, requestId: request.id, revision: current.currentRevision, status: current.status, sourcePath: `/.len/artifacts/${artifact.id}/`, manual: `/.openlen/docs/artifacts/${kind}.md` }; mutated = true;
+        response = { ok: true, artifactId: artifact.id, requestId: request.id, revision: current.currentRevision, status: current.status, sourcePath: `/.len/artifacts/${artifact.id}/`, manual: `/.openlen/docs/deliverables/${kind}.md` }; mutated = true;
       } else {
-        const id = text(args, "artifact_id");
+        const id = text(args, "deliverable_id");
         let artifact = await requireArtifactAccess(database, ctx, id, "read");
-        if (name === "inspect_artifact") {
+        if (name === "inspect_deliverable") {
           let pending: string | null = null;
           const waitMs = args.wait_ms === undefined ? 0 : Number(args.wait_ms);
           if (!Number.isFinite(waitMs) || waitMs < 0) throw new ArtifactError("invalid_artifact_arguments", "wait_ms is how many milliseconds to wait for this piece's export jobs to end, 0 to 600000");
@@ -132,7 +132,7 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
           if (Object.keys(revision.files)[0]) await workspace.read(`/.len/artifacts/${id}/${Object.keys(revision.files)[0]}`);
           return { response: { ok: true, artifactId: id, status: artifact.status, revision: artifact.currentRevision, lastReadyRevision: artifact.lastReadyRevision, paths: Object.keys(revision.files).map((p) => `/.len/artifacts/${id}/${p}`), dependencies: revision.dependencies, evidence:revision.evidence, outputs: revision.outputs.map((o, index) => ({ index, assetId: `${id}@${revision.revision}/${index}`, format: o.format, bytes: o.bytes, mime: o.mime })), jobs: jobsForLen, ...(pending ? { pending: true, note: `the export is still ${pending} after ${seconds(Math.min(waitMs, MAX_WAIT_MS))}; wait again with wait_ms, or tell the user it is still rendering` } : {}) } };
         }
-        if (name === "render_artifact") {
+        if (name === "render_deliverable") {
           // validateInput, as Claude Code does: a refusal says which value was wrong and what it must be.
           const allowed = ARTIFACT_FORMATS[artifact.kind];
           if (!kinds.includes(artifact.kind)) throw new ArtifactError("format_unavailable", `this server does not export ${artifact.kind}`);
@@ -156,12 +156,12 @@ export function createArtifactAgent(services: ArtifactAgentServices, ctx: Artifa
           await preflightArtifact(ctx, store, artifact, await store.getRevision(ctx, id, revision));
           const job = await jobs.enqueueArtifactJob(ctx, id, revision, "export", { formats: [...new Set(args.formats as string[])].sort() });
           response = { ok: true, artifactId: id, revision: job.revision, jobId: job.id, status: job.status }; mutated = true;
-        } else if (name === "cancel_artifact_job") {
+        } else if (name === "cancel_deliverable_job") {
           const jobId = text(args, "job_id");
           if ((await jobs.getJob(ctx, jobId)).artifactId !== id) throw new ArtifactError("job_not_found");
           await jobs.cancelArtifactJob(ctx, jobId);
           response = { ok: true, artifactId: id, jobId, status: (await jobs.getJob(ctx, jobId)).status }; mutated = true;
-        } else if (name === "query_artifact_data") {
+        } else if (name === "query_deliverable_data") {
           let rows: unknown;
           if (args.source === "scenario") { try { rows = JSON.parse(text(args, "rows_json")); } catch { throw new ArtifactError("invalid_dataset"); } }
           const dataset = await services.data.queryArtifactData(ctx, id, { ...args, ...(rows !== undefined ? { rows } : {}) } as unknown as ArtifactDataRequest);

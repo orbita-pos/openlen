@@ -98,7 +98,7 @@ const MUTATING_TOOLS = new Set([
   "Edit", "MultiEdit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app",
   // They change the project without saying which file, or through a child that may write: nothing read before them
   // is known to still be what Read would answer.
-  "undo_last_change", "create_artifact", "render_artifact", "cancel_artifact_job", "subagent", "subagent_fork",
+  "undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "subagent", "subagent_fork",
 ]);
 /** Of those, the ones whose arguments name the one file they changed; the rest (`edit_image` rewrites every file that
  *  holds the picture) may have changed any. */

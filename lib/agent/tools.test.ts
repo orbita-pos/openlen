@@ -2939,9 +2939,11 @@ describe("moved manuals and reserved generated names", () => {
     Object.assign(process.env, set);
     try {
       const { deps } = makeDeps();
-      const out = await runAgentTool(makeSession(), deps, "Read", { file_path: "/.openlen/docs/artifacts/slides.md" });
-      assert.equal(out.response.ok, false);
-      assert.match(String(out.response.error), /moved to the skill "artifact-slides"/);
+      for (const p of ["/.openlen/docs/deliverables/slides.md", "/.openlen/docs/artifacts/slides.md"]) {
+        const out = await runAgentTool(makeSession(), deps, "Read", { file_path: p });
+        assert.equal(out.response.ok, false);
+        assert.match(String(out.response.error), /moved to the skill "artifact-slides"/);
+      }
     } finally {
       for (const [k, v] of Object.entries(before)) if (v === undefined) delete process.env[k]; else process.env[k] = v;
     }

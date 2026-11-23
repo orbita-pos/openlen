@@ -103,9 +103,12 @@ describe("fetchedCaseFrom", () => {
   });
 
   it("a project where Len made an ARTIFACT (a dashboard, a deck) is another flow, not a page: left out", () => {
-    const artefacto = { role: "assistant", content: "", functionCalls: [{ name: "create_artifact", args: {} }] };
-    const c = fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, transcript: { mensajes: [artefacto] } }] }), "t");
-    expect(c).toEqual({ left: "Len hizo un artefacto (create_artifact), no la página: es otro flujo" });
+    const legacy = { role: "assistant", content: "", functionCalls: [{ name: "create_artifact", args: {} }] };
+    const c = fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, transcript: { mensajes: [legacy] } }] }), "t");
+    expect(c).toEqual({ left: "Len hizo un entregable (create_deliverable), no la página: es otro flujo" });
+    const current = { role: "assistant", content: "", functionCalls: [{ name: "create_deliverable", args: {} }] };
+    const c2 = fetchedCaseFrom(raw({ rows: [{ ...raw().rows[0]!, transcript: { mensajes: [current] } }] }), "t");
+    expect(c2).toEqual({ left: "Len hizo un entregable (create_deliverable), no la página: es otro flujo" });
   });
 
   it("a project with no owner message is not a case", () => {

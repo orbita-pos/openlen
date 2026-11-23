@@ -90,8 +90,8 @@ const OUT_FOR_EVERY_CHILD: ReadonlySet<string> = new Set([
   READ_WIDGET_CONTEXT,
 ]);
 
-/** The artifact tools that only read. */
-const ARTIFACT_READS: ReadonlySet<string> = new Set(["list_artifacts", "inspect_artifact", "list_artifact_audio"]);
+/** The deliverable tools that only read. */
+const ARTIFACT_READS: ReadonlySet<string> = new Set(["list_deliverables", "inspect_deliverable", "list_deliverable_audio"]);
 
 /** Out as well for a read-only child: everything that writes. What `bash` changes is refused apart (§4.2). */
 /** What a read-only session can't run; the person's own assistant drops these too (lib/assistants/agent.ts). */

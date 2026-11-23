@@ -26,7 +26,7 @@ const WHAT: Readonly<Record<string, string>> = {
   motion_nondeterministic:
     "the video did not look the same when it seeked back to the same instant (the beginning, middle and end are compared byte for byte). Something moves on its own: a CSS animation or transition, a timer or requestAnimationFrame loop, Date.now or Math.random, a <video> or GIF, or an image or font that finishes loading late. Drive everything from the one paused GSAP timeline in lenMotion.seek(), then render the new revision",
   motion_contract_missing:
-    "the entry did not define window.lenMotion with ready(), seek() and durationSeconds equal to motion.json's (see /.openlen/docs/artifacts/motion.md); fix it, then render the new revision",
+    "the entry did not define window.lenMotion with ready(), seek() and durationSeconds equal to motion.json's (see /.openlen/docs/deliverables/motion.md); fix it, then render the new revision",
   slide_count_mismatch: "the deck has a different number of slides than it declares; make them match, then render the new revision",
   slide_text_overflow: "text goes outside its box; the diagnostics name the slide: shorten the text or give it room, then render the new revision",
   slide_element_outside_canvas: "an element sits outside the 1920×1080 canvas; the diagnostics name it: move it inside, then render the new revision",
@@ -35,7 +35,7 @@ const WHAT: Readonly<Record<string, string>> = {
   audio_narration_overflow: "a narration track runs past durationSeconds: start it earlier, shorten it or lengthen the audio, then render the new revision",
   audio_track_timing_invalid: "a track's fades are longer than the time it plays, or it plays for no time; adjust its timing, then render the new revision",
   dataset_provenance_missing: "a dataset has no provenance: say where its numbers come from, then render the new revision",
-  artifact_resource_missing: "a file or asset the piece references is missing: check its asset: references against inspect_artifact's assetIds, then render the new revision",
+  artifact_resource_missing: "a file or asset the piece references is missing: check its asset: references against inspect_deliverable's assetIds, then render the new revision",
 };
 
 const OTHER =

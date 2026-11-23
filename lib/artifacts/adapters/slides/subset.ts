@@ -202,7 +202,7 @@ export function checkSlideSource(id: string, source: string): SlideCheck {
     if (tag === "a") { const href = el.getAttribute("href") ?? ""; if (!/^(https:\/\/|mailto:)/i.test(href)) fail(el.range[0], `<a>: href: ${href}`, "links are https:// or mailto:"); }
     if (tag === "img") {
       const src = el.getAttribute("src") ?? "", m = OUTPUT_SRC.exec(src);
-      if (m) assets.push(m[1]!); else fail(el.range[0], `<img>: src: ${src.slice(0, 80) || "(none)"}`, "images come from saved outputs: asset:<artifactId>@<revision>/<output> from inspect_artifact");
+      if (m) assets.push(m[1]!); else fail(el.range[0], `<img>: src: ${src.slice(0, 80) || "(none)"}`, "images come from saved outputs: asset:<artifactId>@<revision>/<output> from inspect_deliverable");
       if (el.getAttribute("alt") === undefined) note(el.range[0], "<img>: no alt; say what it shows (alt=\"\" if decorative)");
       return;
     }

@@ -3,7 +3,7 @@
  * command OPENS with `sleep N` and N is 25 s or more, nothing runs and the answer says how to wait instead — for
  * a condition, not for a time. Claude Code only does this when it has something better to offer; here a sleep can
  * never be the better thing, because nothing runs in the background of this terminal: the only work that goes on
- * while Len waits is an export job, and `inspect_artifact` waits for that one (`wait_ms`).
+ * while Len waits is an export job, and `inspect_deliverable` waits for that one (`wait_ms`).
  *
  * Only the first part of the line counts, as there: `echo x; sleep 60` runs. Pure; the splitting is the exit-code
  * rule's (`trozos`), which keeps quotes, `$(…)` and comments whole.
@@ -29,7 +29,7 @@ export function longSleepRefusal(what: string, rendersAvailable: boolean): strin
     `Not run: ${what}.`,
     "Nothing runs in the background of this terminal, so sleeping here only spends the turn.",
     rendersAvailable
-      ? "To wait for an export you queued with render_artifact, call inspect_artifact with wait_ms: it checks every 2 s and answers as soon as the job ends."
+      ? "To wait for an export you queued with render_deliverable, call inspect_deliverable with wait_ms: it checks every 2 s and answers as soon as the job ends."
       : "",
     "Do not split the wait into shorter sleeps to get past this.",
   ].filter(Boolean).join(" ");

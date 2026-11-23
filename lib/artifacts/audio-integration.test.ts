@@ -31,9 +31,9 @@ it("lists only project-authorized upload identities and checks their hash before
   const uploads={listAudio:async(projectId:string)=>{calls.push(projectId);return [{filename,contentType:"audio/wav",size:wav.length,url:"private URL is not returned",uploadedAt:0}];},get:async(projectId:string,name:string,maxBytes?:number)=>{expect(projectId).toBe("project");expect(name).toBe(filename);expect(maxBytes).toBe(20*1024*1024);return {contents:Buffer.from(wav),contentType:"audio/wav"};}};
   const services={database:f.database,store:f.store,jobs:createArtifactJobs(f.database,f.store),data:createArtifactData(f.database,f.store,async()=>null),captureContext:async()=>{throw Error("not requested");},audioUploads:uploads};
   const agent=createArtifactAgent(services,f.owner,()=>"audio-list",["audio"]);
-  expect(artifactToolDeclarations(["audio"]).some(t=>t.name==="list_artifact_audio")).toBe(true);
-  expect((await agent.execute("list_artifact_audio",{projectId:"other"})).response).toMatchObject({ok:true,assets:[{id:`upload:${filename}`,bytes:wav.length}]});expect(calls).toEqual(["project"]);
-  expect((await createArtifactAgent(services,{...f.owner,actorId:"stranger",role:"lector"},()=>"bad",["audio"]).execute("list_artifact_audio",{})).response.ok).toBe(false);expect(calls).toHaveLength(1);
+  expect(artifactToolDeclarations(["audio"]).some(t=>t.name==="list_deliverable_audio")).toBe(true);
+  expect((await agent.execute("list_deliverable_audio",{projectId:"other"})).response).toMatchObject({ok:true,assets:[{id:`upload:${filename}`,bytes:wav.length}]});expect(calls).toEqual(["project"]);
+  expect((await createArtifactAgent(services,{...f.owner,actorId:"stranger",role:"lector"},()=>"bad",["audio"]).execute("list_deliverable_audio",{})).response.ok).toBe(false);expect(calls).toHaveLength(1);
   const revision={dependencies:[],files:{"audio.json":JSON.stringify({version:1,durationSeconds:1,tracks:[{asset:`upload:${filename}`} ]})}};
   expect(await resolveArtifactAssets(f.owner,revision,f.store,{} as never,uploads,f.database)).toEqual([{id:`upload:${filename}`,mime:"audio/wav",bytes:new Uint8Array(wav)}]);
   await expect(resolveArtifactAssets(f.owner,revision,f.store,{} as never,{...uploads,get:async()=>({contents:Buffer.from("corrupt"),contentType:"audio/wav"})},f.database)).rejects.toMatchObject({code:"asset_corrupt"});
@@ -53,7 +53,7 @@ it("saves real mixed outputs, settles once, and reuses exact narration in a vide
     expect(await runArtifactJob(claim,{database:f.database,store:f.store,jobs,storage,billing,adapters:{audio}},new AbortController().signal)).toMatchObject({status:"completed"});
     const saved=await f.store.getRevision(ctx,artifact.id,1);expect(saved.outputs.map(x=>x.format)).toEqual(["mp3","wav","wav","json"]);
     const agent=createArtifactAgent({database:f.database,store:f.store,jobs,data:createArtifactData(f.database,f.store,async()=>null),captureContext:async()=>{throw Error("not requested");}},ctx,()=>"inspect-audio",["audio"]);
-    expect((await agent.execute("inspect_artifact",{artifact_id:artifact.id})).response).toMatchObject({ok:true,evidence:{checks:expect.arrayContaining(["audio:durationSeconds:1","voice:ai-generated"])}});
+    expect((await agent.execute("inspect_deliverable",{deliverable_id:artifact.id})).response).toMatchObject({ok:true,evidence:{checks:expect.arrayContaining(["audio:durationSeconds:1","voice:ai-generated"])}});
     expect((await f.database.query(`select "surface","centicredits","costMicroUsd" from "creditLedger" where "refId"=$1`,[claim.job.id]))[0]).toMatchObject({surface:"artifact_audio",centicredits:25,costMicroUsd:null});
     const wavExport=await jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["wav"]});expect(wavExport.id).toBe(claim.job.id);expect(await jobs.claimArtifactJob("again")).toBeNull();
     await expect(jobs.enqueueArtifactJob(ctx,artifact.id,1,"export",{formats:["mp3"],nonce:"bypass"})).rejects.toMatchObject({code:"invalid_job_options"});

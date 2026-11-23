@@ -5,7 +5,7 @@ import {CATALOGO_ACTUAL,catalogo} from "../../../apps/dependencias";
 import { DATASET_FILE, fileDataset } from "./file-datasets";
 import { manifestJson } from "../../manifest-json";
 export interface DashboardManifest { readonly entry: string; readonly datasetIds: readonly string[]; readonly width: number; readonly height: number; readonly probes: readonly RenderProbe[]; readonly catalogo?:string; readonly datasets?: Readonly<Record<string, { title?: string; description?: string }>> }
-export const NONE = 'dashboard.json datasetIds needs at least one dataset: an id that query_artifact_data returned, or a CSV, TSV or JSON file of this dashboard (rows you write are a hypothetical scenario; say what they are in "datasets": {"<file>": {"title", "description"}})';
+export const NONE = 'dashboard.json datasetIds needs at least one dataset: an id that query_deliverable_data returned, or a CSV, TSV or JSON file of this dashboard (rows you write are a hypothetical scenario; say what they are in "datasets": {"<file>": {"title", "description"}})';
 export function dashboardManifest(input: SealedArtifactInput): DashboardManifest & { readonly resolved: readonly ArtifactDataset[] } {
   const m = manifestJson(input.revision.files, "dashboard.json", "invalid_dashboard_manifest") as DashboardManifest;
   if (!m || typeof m.entry !== "string" || !safeArtifactPath(m.entry) || !m.entry.endsWith(".html") || !Object.hasOwn(input.revision.files, m.entry)) throw new ArtifactError("invalid_dashboard_manifest", 'dashboard.json "entry" names this dashboard\'s .html file');
@@ -16,7 +16,7 @@ export function dashboardManifest(input: SealedArtifactInput): DashboardManifest
     const saved = input.datasets.find((d) => d.id === id);
     if (saved) return saved;
     if (DATASET_FILE.test(id) && safeArtifactPath(id) && Object.hasOwn(input.revision.files, id)) return fileDataset(id, input.revision.files[id]!, m.datasets?.[id], capturedAt);
-    throw new ArtifactError("dashboard_dataset_missing", `"${id}" is neither a dataset query_artifact_data saved here nor a CSV, TSV or JSON file of this dashboard`);
+    throw new ArtifactError("dashboard_dataset_missing", `"${id}" is neither a dataset query_deliverable_data saved here nor a CSV, TSV or JSON file of this dashboard`);
   });
   // The packet check names the field ("height" is 1200…); here it is a field of dashboard.json, as in the errors above.
   try { validateRenderPacket({ version: 1, kind: "dashboard", html: "", width: m.width, height: m.height, probes: m.probes ?? [] }); }

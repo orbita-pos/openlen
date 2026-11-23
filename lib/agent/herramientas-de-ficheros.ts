@@ -716,10 +716,10 @@ async function loadArtifactSource(deps: AgentDeps, raw: unknown): Promise<ToolOu
   if (!path.startsWith(ARTIFACT_WORKSPACE)) return null;
   try {
     if (raw.startsWith(ARTIFACT_WORKSPACE)) parseArtifactPath(raw);
-    if (!deps.artifacts) return { response: respuesta(fallo("Artifact sources are unavailable in this session.")) };
+    if (!deps.artifacts) return { response: respuesta(fallo("Deliverable sources are unavailable in this session.")) };
     await deps.artifacts.read(path);
     return null;
-  } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact access failed")) }; }
+  } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "deliverable access failed")) }; }
 }
 
 async function aplicarPlan(
@@ -739,11 +739,11 @@ async function aplicarPlan(
 ): Promise<ToolOutcome> {
   if (!plan.ok) return { response: respuesta(plan.resultado) };
   if (plan.ruta.startsWith(ARTIFACT_WORKSPACE)) {
-    if (!deps.artifacts) return { response: respuesta(fallo("Artifact sources are unavailable in this session.")) };
+    if (!deps.artifacts) return { response: respuesta(fallo("Deliverable sources are unavailable in this session.")) };
     const before = v.artifacts.get(plan.ruta) ?? null;
     try {
       const changed = before !== plan.contenido;
-      // Each save of a piece's file is a new revision, and render_artifact seals one by its number: the save says
+      // Each save of a piece's file is a new revision, and render_deliverable seals one by its number: the save says
       // which (the 23/10 trial guessed 1 and 0 for a piece at 6).
       const saved = changed ? await deps.artifacts.write(plan.ruta, plan.contenido, before) : null;
       leidosDe(session).set(plan.ruta, { instantanea: plan.contenido, offset: undefined, limit: undefined });
@@ -753,7 +753,7 @@ async function aplicarPlan(
         // And a piece's manifest (deck.json, dashboard.json, motion.json, audio.json), the same way.
         : changed ? checkManifestSource(plan.ruta, plan.contenido).map((d) => ({ ruta: plan.ruta, linea: d.line, columna: d.column, gravedad: "Error" as const, mensaje: d.message, fuente: "artifacts" })) : [];
       return { response: { ok: true, cambio: changed ? "cambio" : "sin_cambio", tool_result: plan.respuesta({ guardadoIgual: true }) + (saved ? ` The piece is now at revision ${saved.revision}.` : "") }, action: { tool: herramienta, ok: true, summary: detalle }, ...(changed ? { mutoDurable: true } : {}), ...conDiagnosticos(diagnosticos) };
-    } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "artifact save failed")) }; }
+    } catch (error) { return { response: respuesta(fallo(error instanceof Error ? error.message : "deliverable save failed")) }; }
   }
   if (isLegacyMemoryPath(plan.ruta)) return { response: respuesta(fallo(MEMORIA_MUDADA)) };
   if (isUnderSkillsDir(plan.ruta)) return await guardarSkill(session, deps, v.skills, plan, herramienta, detalle);
@@ -1283,14 +1283,14 @@ export async function guardarLoDeLaTerminal(
     !mayWritePersonalSkills(session) && cambios.some((c) => c.tipo !== "borrado" && skillPathOf(c.ruta)?.scope === "personal");
   for (const c of cambios) {
     if (c.ruta.startsWith(ARTIFACT_WORKSPACE)) {
-      if (!deps.artifacts) { deshacer(c.ruta, "Artifact sources are unavailable in this session."); continue; }
+      if (!deps.artifacts) { deshacer(c.ruta, "Deliverable sources are unavailable in this session."); continue; }
       try {
         if (c.tipo === "borrado") await deps.artifacts.remove(c.ruta, antes[c.ruta] ?? null);
         else await deps.artifacts.write(c.ruta, c.contenido, antes[c.ruta] ?? null);
         enLaTerminal[c.ruta] = c.tipo === "borrado" ? null : c.contenido;
         escrituras.push({ response: { ok: true, cambio: "cambio" }, action: { tool: "bash", ok: true, summary: rutaRelativa(c.ruta), cambio: "cambio" }, mutoDurable: true });
         notas.push(`${rutaRelativa(c.ruta)}: ${c.tipo === "borrado" ? "removed" : "saved"}.`);
-      } catch (error) { deshacer(c.ruta, error instanceof Error ? error.message : "artifact save failed"); }
+      } catch (error) { deshacer(c.ruta, error instanceof Error ? error.message : "deliverable save failed"); }
       continue;
     }
     if (c.tipo === "borrado") {

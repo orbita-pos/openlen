@@ -4282,8 +4282,8 @@ describe("the repeated-call reminder", () => {
   });
 
   it("three render → inspect cycles with identical arguments get the pair reminder", async () => {
-    const R = call("render_artifact", { artifact_id: "v", revision: 10, formats: ["mp4"] });
-    const I = call("inspect_artifact", { artifact_id: "v", wait_ms: 480000 });
+    const R = call("render_deliverable", { deliverable_id: "v", revision: 10, formats: ["mp4"] });
+    const I = call("inspect_deliverable", { deliverable_id: "v", wait_ms: 480000 });
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
       openStream: scripted(R, I, R, I, R, I, [{ type: "text_delta", text: "ok" }, done]),
@@ -4299,7 +4299,7 @@ describe("the repeated-call reminder", () => {
     let n = 0;
     const r = await runAgentLoop({
       messages: [{ role: "user", content: "x" }], tools: [],
-      openStream: scripted(...Array.from({ length: 4 }, () => call("inspect_artifact", { artifact_id: "v", wait_ms: 1000 })), [{ type: "text_delta", text: "ok" }, done]),
+      openStream: scripted(...Array.from({ length: 4 }, () => call("inspect_deliverable", { deliverable_id: "v", wait_ms: 1000 })), [{ type: "text_delta", text: "ok" }, done]),
       runTool: async () => ({ response: n++ < 3 ? { ok: true, pending: true } : { ok: true } }),
       emit: () => {},
     });

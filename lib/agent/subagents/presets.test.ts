@@ -14,7 +14,7 @@ import {
 const all = [
   "Read", "Edit", "MultiEdit", "Write", "Grep", "Glob", "bash", "view_page", "use_page", "skill", "web_search", "publish", "ask_user_question",
   "request_secrets", "present", "show_widget", "undo_last_change", "subagent", "schedule_create", "enter_plan_mode", "create_goal",
-  "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact", "list_artifacts",
+  "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_deliverable", "list_deliverables",
   "send_message", "subagent_fork", "interrupt_agent", "list_agents", "propose_action", "mcp__empleados__add_employee",
   "suggest_connectors", "mcp__cal__authenticate", "mcp__cal__list_events", "propose_skills", "message_agent", "read_widget_context",
 ].map((name) => ({ name }));
@@ -89,8 +89,8 @@ describe("the three subagent types (Claude Code's) and what each child gets", ()
 
   it("Explore and Plan read, use the terminal and load skills, but write nothing", () => {
     for (const p of ["Explore", "Plan"] as const) {
-      for (const w of ["Edit", "MultiEdit", "Write", "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_artifact"]) expect(names(p)).not.toContain(w);
-      expect(names(p)).toEqual(expect.arrayContaining(["Read", "Grep", "bash", "skill", "view_page", "list_artifacts"]));
+      for (const w of ["Edit", "MultiEdit", "Write", "edit_image", "toggle_module", "convert_to_app", "draft_reply", "create_deliverable"]) expect(names(p)).not.toContain(w);
+      expect(names(p)).toEqual(expect.arrayContaining(["Read", "Grep", "bash", "skill", "view_page", "list_deliverables"]));
     }
   });
 
@@ -168,7 +168,7 @@ describe("custom child types", () => {
 // every tool that writes, and its session is read-only, so Write, Edit, git/gh/supabase/stripe writes and what a
 // command changes are refused (lib/agent/terminal/read-only-commands.ts).
 describe("a bundled read-only type (len-review)", () => {
-  const everything = [...OUT_FOR_READ_ONLY, "Read", "Grep", "Glob", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"].map((name) => ({ name }));
+  const everything = [...OUT_FOR_READ_ONLY, "Read", "Grep", "Glob", "bash", "skill", "send_message", "list_deliverables", "inspect_deliverable"].map((name) => ({ name }));
 
   it("🔴 is read-only without plan mode, and general-purpose types around it are not", async () => {
     const p = await import("./presets");
@@ -178,12 +178,12 @@ describe("a bundled read-only type (len-review)", () => {
     expect(p.isReadOnlyFor(p.childTypeOf("len-office", NO_AGENT_TYPES)!, false)).toBe(false);
   });
 
-  it("🔴 is not offered any tool that writes (the artifact writes included), exactly like Explore", async () => {
+  it("🔴 is not offered any tool that writes (the deliverable writes included), exactly like Explore", async () => {
     const p = await import("./presets");
     const { NO_AGENT_TYPES } = await import("./agent-registry");
     const given = p.childToolsFor(everything, p.childTypeOf("len-review", NO_AGENT_TYPES)!, false).map((d) => d.name);
     for (const out of OUT_FOR_READ_ONLY) expect(given, String(out)).not.toContain(out);
-    expect(given).toEqual(expect.arrayContaining(["Read", "Grep", "Glob", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"]));
+    expect(given).toEqual(expect.arrayContaining(["Read", "Grep", "Glob", "bash", "skill", "send_message", "list_deliverables", "inspect_deliverable"]));
   });
 
   it("a custom type is read-only only when its own file says so", async () => {
@@ -197,8 +197,8 @@ describe("a bundled read-only type (len-review)", () => {
       personal: [],
     });
     expect(p.isReadOnlyFor(p.childTypeOf("auditor", types)!, false)).toBe(true);
-    expect(p.childToolsFor(everything, p.childTypeOf("auditor", types)!, false).map((d) => d.name)).not.toContain("create_artifact");
+    expect(p.childToolsFor(everything, p.childTypeOf("auditor", types)!, false).map((d) => d.name)).not.toContain("create_deliverable");
     expect(p.isReadOnlyFor(p.childTypeOf("builder", types)!, false)).toBe(false);
-    expect(p.childToolsFor(everything, p.childTypeOf("builder", types)!, false).map((d) => d.name)).toContain("create_artifact");
+    expect(p.childToolsFor(everything, p.childTypeOf("builder", types)!, false).map((d) => d.name)).toContain("create_deliverable");
   });
 });

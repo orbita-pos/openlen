@@ -1069,19 +1069,19 @@ describe("launching custom types", () => {
   });
   // 🔴 len-review says «strictly read-only» in its prompt; the server makes it so: a read-only session, and no tool that writes.
   it("🔴 the bundled len-review child has a read-only session and none of the tools that write, with no plan mode", async () => {
-    const s = setup({ scripts: [llama("bash", { command: "sed -i s/a/b/ /index.html" }), dice("ok")], declarations: ["Read", "Edit", "Write", "bash", "skill", "send_message", "create_artifact", "render_artifact", "cancel_artifact_job", "list_artifacts", "inspect_artifact", "undo_last_change"] });
+    const s = setup({ scripts: [llama("bash", { command: "sed -i s/a/b/ /index.html" }), dice("ok")], declarations: ["Read", "Edit", "Write", "bash", "skill", "send_message", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "list_deliverables", "inspect_deliverable", "undo_last_change"] });
     expect(await s.launcher.launch({ description: "Review", prompt: "Review the change.", preset: "len-review" as never })).toMatchObject({ ok: true });
     await s.settled("r1");
     expect(s.sessions[0].readOnly).toBe(true);
     // What OpenLen answers in the terminal reads the session's flag: a git commit from this child is refused.
     const git = guardReadOnly(s.sessions[0].readOnly === true, "git", async (_args: readonly string[]) => ({ stdout: "committed", stderr: "", exitCode: 0 }));
     expect(await git(["commit", "-am", "x"])).toEqual({ stdout: "", stderr: `${READ_ONLY_REFUSAL}\n`, exitCode: 1 });
-    expect(s.brainTools[0].map((d) => d.name)).toEqual(["Read", "bash", "skill", "send_message", "list_artifacts", "inspect_artifact"]);
+    expect(s.brainTools[0].map((d) => d.name)).toEqual(["Read", "bash", "skill", "send_message", "list_deliverables", "inspect_deliverable"]);
     // The run keeps its type's scope when it is woken: the session stays read-only with Len out of plan mode.
     await s.launcher.send({ id: "r1", message: "Look again." });
     await s.settled("r1");
     expect(s.sessions.at(-1)!.readOnly).toBe(true);
-    expect(s.brainTools.at(-1)!.map((d) => d.name)).not.toContain("create_artifact");
+    expect(s.brainTools.at(-1)!.map((d) => d.name)).not.toContain("create_deliverable");
   });
   // «Move on to editing» means nothing to a child that cannot edit (Explore, Plan, len-review, plan mode).
   it("🔴 a read-only child is never told to stop re-reading and edit; a child that can write is", async () => {

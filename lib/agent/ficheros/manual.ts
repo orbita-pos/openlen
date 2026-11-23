@@ -68,7 +68,10 @@ export const RUTAS_MUDADAS: Readonly<Record<string, string>> = {
   [RUTA_LIBRERIAS]: "frontend-design",
   [RUTA_APPS]: "convert-to-app",
   ...Object.fromEntries(
-    ["dashboard", "slides", "image", "motion", "audio"].map((kind) => [`${CARPETA_DOCS}/artifacts/${kind}.md`, `artifact-${kind}`]),
+    ["dashboard", "slides", "image", "motion", "audio"].flatMap((kind) => [
+      [`${CARPETA_DOCS}/deliverables/${kind}.md`, `artifact-${kind}`],
+      [`${CARPETA_DOCS}/artifacts/${kind}.md`, `artifact-${kind}`],
+    ]),
   ),
 };
 

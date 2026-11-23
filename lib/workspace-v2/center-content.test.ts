@@ -42,3 +42,16 @@ it("names the pieces a turn created or rendered, once each and in order", () => 
   expect(artifactIdsOfTurn([{ tool: "render_artifact", status: "done", summary: "queued", valores: `{"artifactId":"${a}","revision":2,"jobId":"3333` }])).toEqual([a]);
   expect(artifactIdsOfTurn(undefined)).toEqual([]);
 });
+
+it("🔴 names pieces created or rendered by the new deliverable tool names as well as legacy stored calls", () => {
+  const a = "11111111-1111-4111-8111-111111111111", b = "22222222-2222-4222-8222-222222222222";
+  expect(artifactIdsOfTurn([
+    { tool: "create_deliverable", status: "done", summary: "draft", valores: JSON.stringify({ artifactId: a, revision: 0 }) },
+    { tool: "render_deliverable", status: "done", summary: "queued", valores: JSON.stringify({ artifactId: b, revision: 2, jobId: "j" }) },
+  ])).toEqual([a, b]);
+  // Stored turns from before the rename still resolve alongside new turns (Review Focus 3).
+  expect(artifactIdsOfTurn([
+    { tool: "create_artifact", status: "done", summary: "draft", valores: JSON.stringify({ artifactId: a, revision: 0 }) },
+    { tool: "render_deliverable", status: "done", summary: "queued", valores: JSON.stringify({ artifactId: b, revision: 2, jobId: "j" }) },
+  ])).toEqual([a, b]);
+});

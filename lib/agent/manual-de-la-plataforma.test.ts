@@ -470,11 +470,13 @@ describe("the deliverables manuals as skills", () => {
   it("the deliverables index points to the skills", () => {
     const manual = buildManualDeLaPlataforma(ON);
     expect(manual).toContain("Load the `artifact-<kind>` skill");
+    expect(manual).not.toContain("/.openlen/docs/deliverables");
     expect(manual).not.toContain("/.openlen/docs/artifacts");
   });
 
   it("the old deliverables paths are not served as docs; the skills' files are", () => {
     const docs = documentosDeLaPlataforma(null, ON);
+    expect(docs).not.toHaveProperty("/.openlen/docs/deliverables/slides.md");
     expect(docs).not.toHaveProperty("/.openlen/docs/artifacts/slides.md");
     expect(docs).toHaveProperty("/.openlen/skills/artifact-slides/SKILL.md");
   });
@@ -482,8 +484,8 @@ describe("the deliverables manuals as skills", () => {
   // 🔴 The switch must not leave Len without its manuals.
   it("with OPENLEN_SKILLS=0 the deliverables manuals stay where they were", () => {
     const docs = documentosDeLaPlataforma(null, OFF);
-    expect(docs["/.openlen/docs/artifacts/slides.md"]).toBe(artifactManuals["/.openlen/docs/artifacts/slides.md"]);
-    expect(buildManualDeLaPlataforma(OFF)).toContain("Read /.openlen/docs/artifacts/<kind>.md before authoring that kind");
+    expect(docs["/.openlen/docs/deliverables/slides.md"]).toBe(artifactManuals["/.openlen/docs/deliverables/slides.md"]);
+    expect(buildManualDeLaPlataforma(OFF)).toContain("Read /.openlen/docs/deliverables/<kind>.md before authoring that kind");
   });
 });
 

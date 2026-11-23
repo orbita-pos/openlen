@@ -89,7 +89,7 @@ export function compileSlideDeck(deck: SlideDeckV3, input: SealedArtifactInput):
       if (tag === "img") {
         const ref = (el.getAttribute("src") ?? "").replace(/^asset:/, "");
         const asset = input.assets.find((a) => a.id === ref);
-        if (!asset || !["image/png", "image/jpeg", "image/webp"].includes(asset.mime) || !asset.bytes.length) throw new ArtifactError("slide_image_missing", `${where(el.range[0])}: asset:${ref} is not a ready saved image; check the id with inspect_artifact`);
+        if (!asset || !["image/png", "image/jpeg", "image/webp"].includes(asset.mime) || !asset.bytes.length) throw new ArtifactError("slide_image_missing", `${where(el.range[0])}: asset:${ref} is not a ready saved image; check the id with inspect_deliverable`);
         el.setAttribute("src", `data:${asset.mime};base64,${Buffer.from(asset.bytes).toString("base64")}`);
         el.setAttribute("data-len-asset", ref);
       }

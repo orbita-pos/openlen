@@ -56,7 +56,7 @@ it("takes JSON rows as objects too, and says what a dataset can be when none is 
   expect(result.html).toContain('"columns":["zona","ventas"]');
   expect(result.html).toContain('["Norte",120],["Sur",80]');
   await expect(buildDashboard({ ...input, revision: { ...input.revision, files: scenarioFiles({ datasetIds: [] }) }, datasets: [] } as unknown as SealedArtifactInput))
-    .rejects.toMatchObject({ code: "dashboard_dataset_missing", message: expect.stringMatching(/query_artifact_data.*CSV, TSV or JSON file/) });
+    .rejects.toMatchObject({ code: "dashboard_dataset_missing", message: expect.stringMatching(/query_deliverable_data.*CSV, TSV or JSON file/) });
   await expect(buildDashboard({ ...input, revision: { ...input.revision, files: scenarioFiles({ datasetIds: ["nada.csv"] }) }, datasets: [] } as unknown as SealedArtifactInput))
     .rejects.toMatchObject({ code: "dashboard_dataset_missing", message: expect.stringContaining('"nada.csv"') });
 });

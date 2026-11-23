@@ -16,10 +16,10 @@ it("lets short sleeps, sleeps inside other commands and the word in quotes throu
   expect(longSleep("sleep 1m")).toBeNull();
 });
 
-it("says what to do instead: a render is waited for with inspect_artifact, not with time", () => {
+it("says what to do instead: a render is waited for with inspect_deliverable, not with time", () => {
   const withRenders = longSleepRefusal("sleep 180 followed by: echo listo", true);
   expect(withRenders).toMatch(/^Not run: sleep 180 followed by: echo listo\./);
-  expect(withRenders).toMatch(/inspect_artifact.*wait_ms/);
+  expect(withRenders).toMatch(/inspect_deliverable.*wait_ms/);
   expect(withRenders).toMatch(/shorter sleeps/);
-  expect(longSleepRefusal("standalone sleep 60", false)).not.toMatch(/inspect_artifact/);
+  expect(longSleepRefusal("standalone sleep 60", false)).not.toMatch(/inspect_deliverable/);
 });
