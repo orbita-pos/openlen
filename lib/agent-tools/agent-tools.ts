@@ -58,7 +58,7 @@ export const PUBLISH_TOOL_DECLARATION = {
     "Gives your person a tool of your own: a small page you wrote (an index.html, with the CSS, JS and images beside it) that opens as a tab of yours, next to your chat, on the web and on the phone. " +
     "First write its files with Write and Edit in /tools/<your slug>/<tool name>/ of your space, with an index.html there; then pass that folder as path. " +
     "Publishing saves a VERSION: the tab shows the copy you published, not the folder as you keep editing it, so after a change publish it again with the same path for the tab to change. " +
-    "The page runs apart from OpenLen: its scripts and styles load only from the allowed CDNs and it can't make network requests; what it keeps, it keeps with window.openlen.data, the small database it shares with you, which you read and write with tool_data. " +
+    "The page runs apart from OpenLen: its scripts and styles load only from the allowed CDNs and its own files, and fetch/XHR can reach only its own files (connect-src 'self', no external network requests); what it keeps, it keeps with window.openlen.data, the small database it shares with you, which you read and write with tool_data. " +
     `At most ${AGENT_TOOLS_PER_AGENT} tools, up to ${mb(AGENT_TOOL_VERSION_MAX_BYTES)} each. Only your person removes a tool, from its tab.`,
   parameters: {
     type: "OBJECT",

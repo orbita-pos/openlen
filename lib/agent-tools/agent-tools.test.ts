@@ -196,6 +196,11 @@ describe("the declarations", () => {
     expect(TOOL_DATA_DECLARATION.description).toContain(String(AGENT_TOOL_DOCS_MAX));
     expect(TOOL_DATA_DECLARATION.description).toContain(String(AGENT_TOOL_BATCH_MAX));
   });
+
+  it("publish_tool describes the real network policy (connect-src 'self': own files only, no external requests)", () => {
+    expect(PUBLISH_TOOL_DECLARATION.description).toContain("connect-src 'self'");
+    expect(PUBLISH_TOOL_DECLARATION.description).not.toContain("can't make network requests");
+  });
 });
 
 describe("publish_tool: what it publishes", () => {

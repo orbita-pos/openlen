@@ -124,6 +124,7 @@
     "noSkills": "Keine Skill passt",
     "skillDescriptions": {
       "agent-creation": "Einen deiner eigenen Agenten erstellen oder ändern",
+      "agent-tools": "Ein eigenes Werkzeug in diesem Agenten erstellen oder aktualisieren",
       "artifact-audio": "Ein Audio oder eine Sprachaufnahme erstellen",
       "artifact-dashboard": "Ein Daten-Dashboard erstellen",
       "artifact-image": "Ein Werbebild erstellen",

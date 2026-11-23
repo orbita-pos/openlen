@@ -11,6 +11,7 @@ import path from "node:path";
 
 import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
+import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { GENERATED_SKILLS, type BundledContext } from "./generated";
 import { parseSkillFile, type SkillDefinition } from "./skill-file";
@@ -78,9 +79,12 @@ function generated(ctx: BundledContext): { skills: BundledSkill[]; files: Record
 
 const DEFAULT_CONTEXT = (): BundledContext => ({ app: null, env: process.env });
 
-/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off (OPENLEN_SCHEDULE=0). */
+/** Skills on disk this server leaves out: `/schedule` with scheduled tasks off, `agent-tools` with agent tools off. */
 function offHere(ctx: BundledContext): ReadonlySet<string> {
-  return new Set(scheduleEnabled(ctx.env) ? [] : ["schedule"]);
+  return new Set([
+    ...(scheduleEnabled(ctx.env) ? [] : ["schedule"]),
+    ...(agentToolsEnabled(ctx.env) ? [] : ["agent-tools"]),
+  ]);
 }
 
 /** And the ones it doesn't OFFER here: `tool-development` outside a tool project, `tool-suggestions` unless the

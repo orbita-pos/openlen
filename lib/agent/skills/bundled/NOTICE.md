@@ -151,3 +151,8 @@ basics of the U.S. Department of Agriculture's Food Safety and Inspection Servic
 (Regulation (EU) No 1169/2011, Annex II); and the 9 major food allergens of the U.S. Food and Drug Administration
 (FALCPA and the FASTER Act). The method — allergies before anything, a week planned from what is at home, one shopping
 list — is ours. Added on 2026-11-20.
+
+`agent-tools` is ours (spec local 2026-11-22-herramienta-dentro-del-agente, §6), built on the design of Claude Code's
+Artifacts (`db` + `ArtifactData`) and DeepSeek's live state-follow streams, written entirely in our own words for an
+agent's own tools in `/tools/<slug>/<tool>/` with `publish_tool`, `tool_data`, `window.openlen.data`, and throwaway-copy
+verification via `view_page`/`use_page`. Added on 2026-11-22.

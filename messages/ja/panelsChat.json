@@ -124,6 +124,7 @@
     "noSkills": "一致するスキルはありません",
     "skillDescriptions": {
       "agent-creation": "自分のエージェントを作成・変更",
+      "agent-tools": "このエージェント専用のツールを作成または更新する",
       "artifact-audio": "音声やナレーションを作る",
       "artifact-dashboard": "データダッシュボードを作る",
       "artifact-image": "宣伝用の画像を作る",

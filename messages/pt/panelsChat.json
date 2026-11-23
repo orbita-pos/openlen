@@ -124,6 +124,7 @@
     "noSkills": "Nenhuma skill corresponde",
     "skillDescriptions": {
       "agent-creation": "Criar ou mudar um dos seus agentes",
+      "agent-tools": "Criar ou atualizar uma ferramenta própria dentro deste agente",
       "artifact-audio": "Fazer um áudio ou uma narração",
       "artifact-dashboard": "Fazer um painel de dados",
       "artifact-image": "Fazer uma imagem promocional",

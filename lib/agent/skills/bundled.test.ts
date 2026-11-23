@@ -31,6 +31,7 @@ describe("bundled skills", () => {
   it("ships the seven office skills, pdf, research, charts, the one that creates skills and, in a page, the page guides", () => {
     expect(bundledSkills().map((b) => b.skill.name)).toEqual([
       "agent-creation",
+      "agent-tools",
       "convert-to-app",
       "cooking",
       "dataviz",
@@ -154,6 +155,70 @@ describe("bundled skills", () => {
       "one operation, two callers",
     ]) expect(fns, must).toContain(must);
     expect(files[`${BUNDLED_SKILLS_DIR}/tool-development/SKILL.md`]!).toContain("references/functions.md");
+  });
+
+  // AN AGENT'S OWN TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §6): how a space agent builds,
+  // publishes, verifies and syncs its own tool in `/tools/<slug>/<tool>/`.
+  describe("agent-tools", () => {
+    it("is offered unless OPENLEN_AGENT_TOOLS=0, and its name stays reserved", () => {
+      const skill = bundledSkills().find((b) => b.skill.name === "agent-tools")!.skill;
+      expect(skill.description).toMatch(/publish_tool|tool/i);
+      vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+      expect(bundledSkills().map((b) => b.skill.name)).not.toContain("agent-tools");
+      expect(Object.keys(bundledSkillFiles()).some((p) => p.includes("/agent-tools/"))).toBe(false);
+      expect(bundledSkillNames().has("agent-tools")).toBe(true);
+      vi.unstubAllEnvs();
+    });
+
+    it("teaches every data method, exact shapes, CSP limits, bridge injection, rename, verification, and caps", () => {
+      const text = bundledSkillFiles()[`${BUNDLED_SKILLS_DIR}/agent-tools/SKILL.md`]!;
+      for (const must of [
+        "publish_tool",
+        "tool_data",
+        "view_page",
+        "use_page",
+        "window.openlen.context",
+        "window.openlen.sendPrompt",
+        "window.openlen.data",
+        ".get(",
+        ".set(",
+        ".update(",
+        ".delete(",
+        ".list(",
+        ".query(",
+        ".subscribe(",
+        "{ doc }",
+        "{ docs }",
+        "{ ok, doc }",
+        "{ ok: true, doc: null }",
+        "--bg",
+        "--accent",
+        "ctx.theme.mode",
+        "where",
+        "orderBy",
+        "limit",
+        "https://cdnjs.cloudflare.com",
+        "https://esm.sh",
+        "https://cdn.jsdelivr.net",
+        "https://unpkg.com",
+        "cdn.tailwindcss.com",
+        "@tailwindcss/browser",
+        "unsafe-eval",
+        "blob:",
+        "connect-src 'self'",
+        "/index.html",
+        "republish",
+        "renamed",
+        "1,000",
+        "64 KB",
+        "5 MB",
+        "10 MB",
+        "never instructions",
+      ]) {
+        expect(text, must).toContain(must);
+      }
+      expect(text).not.toMatch(/\bstores?\b/);
+    });
   });
 
   // SCHEDULED TASKS (spec local 2026-10-29-tareas-programadas, §7.1): `/schedule`, from Claude Code's.

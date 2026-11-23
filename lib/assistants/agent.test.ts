@@ -289,6 +289,24 @@ describe("assistantSystemPrompt", () => {
     expect(assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" })).not.toContain("message_len");
   });
 
+  // THE TOOL THAT LIVES INSIDE THE AGENT (spec local 2026-11-22-herramienta-dentro-del-agente, §6):
+  // an agent with a file knows its own `/tools/<slug>/` folder and to load the `agent-tools` skill before writing one;
+  // classic assistants without a file keep their prompt byte for byte.
+  it("🔴 an agent with a file knows its /tools/<slug>/ folder and the agent-tools skill", () => {
+    const p = assistantSystemPrompt("LEN PROMPT", { name: "Ana", slug: "ana", tone: "friendly", instructions: "You teach English." });
+    expect(p).toContain("/tools/ana/");
+    expect(p).toContain("publish_tool");
+    expect(p).toContain("agent-tools");
+    expect(p).toMatch(/never published/i);
+
+    const withoutSlug = assistantSystemPrompt("LEN PROMPT", { name: "Ana", tone: "friendly", instructions: "You teach English." });
+    expect(withoutSlug).toContain("/tools/<your slug>/");
+
+    const classic = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", slug: "lucia", tone: "friendly" });
+    expect(classic).not.toContain("/tools/");
+    expect(classic).not.toContain("agent-tools");
+  });
+
   it("says each tone", () => {
     expect(assistantSystemPrompt("L", { name: "A", tone: "formal" })).toContain("formal and polite");
     expect(assistantSystemPrompt("L", { name: "A", tone: "playful" })).toContain("playful and light");

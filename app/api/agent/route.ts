@@ -1663,7 +1663,7 @@ async function correrTurno(
   const messages = built.messages;
   // The person's own assistant: Len's system prompt byte for byte, then its section and who it is.
   if (asistente && messages[0]?.role === "system") {
-    messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, { name: asistente.name, tone: asistente.tone, instructions: agenteDelAsistente?.body ?? null }) };
+    messages[0] = { ...messages[0], content: assistantSystemPrompt(built.systemPrompt, { name: asistente.name, slug: asistente.slug, tone: asistente.tone, instructions: agenteDelAsistente?.body ?? null }) };
     // A prompt the plan mode left in the history gets its text from message 0 as it is NOW sent.
     messages.splice(0, messages.length, ...materializeSystemUpdates(messages));
   }
