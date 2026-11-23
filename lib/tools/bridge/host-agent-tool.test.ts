@@ -149,15 +149,20 @@ describe("an agent's tool: what it can't ask", () => {
 });
 
 describe("an agent's tool: following its data", () => {
-  it("data.subscribe is answered at once, every time, and tells the pane to open the stream only the first", async () => {
+  // The client asks once per document and retries only after a reject or a timeout, and the host answers at once: a repeat is a
+  // NEW document (a reload, or a move to another of the tool's own pages), which needs its own baseline — so the parent is told
+  // every time and restarts its stream.
+  it("data.subscribe is answered at once, every time, and tells the pane every time so it restarts its stream", async () => {
     const onDataSubscribe = vi.fn();
     const fetchImpl = vi.fn();
     const s = setup(fetchImpl, { onDataSubscribe });
     await s.send(rpc(1, "data.subscribe"));
+    expect(onDataSubscribe).toHaveBeenCalledTimes(1);
     await s.send(rpc(2, "data.subscribe"));
+    expect(onDataSubscribe).toHaveBeenCalledTimes(2);
     await s.send(rpc(3, "data.subscribe"));
     expect(s.answered().map((m) => [m.id, m.result])).toEqual([[1, { ok: true }], [2, { ok: true }], [3, { ok: true }]]);
-    expect(onDataSubscribe).toHaveBeenCalledTimes(1);
+    expect(onDataSubscribe).toHaveBeenCalledTimes(3);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -167,7 +172,7 @@ describe("an agent's tool: following its data", () => {
     expect(s.answered()[0]).toMatchObject({ result: { ok: true } });
   });
 
-  it("if opening the stream fails, the tool is told and its retry opens it again", async () => {
+  it("if opening the stream fails, the tool is told, and the next subscribe asks the pane again", async () => {
     const onDataSubscribe = vi.fn().mockImplementationOnce(() => {
       throw new Error("no stream");
     });

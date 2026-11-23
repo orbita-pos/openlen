@@ -69,9 +69,12 @@ export interface BridgeHostOptions {
   /** The methods the frame may ask. A request outside it is answered `METHOD_NOT_FOUND` and nothing else happens. Absent, an
    *  installed tool or a draft has its whole bridge; an agent's tool has `AGENT_TOOL_BRIDGE_METHODS`. */
   methods?: readonly BridgeMethod[];
-  /** An agent's tool asked to follow its data (`data.subscribe`): called the FIRST time only, per host. The pane (or the phone
-   *  app) opens the stream then and forwards what it brings with `notifyData` — so the baseline can't reach a frame that hasn't
-   *  installed its listener yet. If it throws, the frame is told and its retry calls it again. */
+  /** An agent's tool asked to follow its data (`data.subscribe`): called on EVERY such request, each of which is still answered
+   *  at once. The pane (or the phone app) RESTARTS its follow stream each time — closes the old one, opens a new one — and
+   *  forwards what it brings with `notifyData`, so a fresh baseline arrives after the frame has installed its listener. A repeat
+   *  means a new document in the frame (a reload, or a move to another of the tool's own pages): the client asks once per
+   *  document and retries only after a reject or a timeout. If it throws, the frame is told (`bridge_failed`) and its next
+   *  subscribe calls it again. */
   onDataSubscribe?(): void;
   /** The origin a link the frame gets must name — where the person's session or key opens it. The workspace's own by
    *  default; the phone app gives openlen.com's (phase 5, §4.14). */
@@ -97,7 +100,6 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
   const titles = new Map<string, string>();
   // What the frame may ask: the list it was given, or, for an agent's tool, the agent's — never the whole bridge by default.
   const allowed: readonly BridgeMethod[] | null = o.methods ?? ("agentToolId" in o.caller ? AGENT_TOOL_BRIDGE_METHODS : null);
-  let dataSubscribed = false;
   const doFetch = o.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const post = (message: unknown) => {
     const frame = o.frame();
@@ -236,15 +238,13 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
     // An agent's tool's own database. For any other tool `data.*` fall through to the bridge's server, which refuses them.
     if ("agentToolId" in o.caller) {
       if (req.method === "data.subscribe") {
-        // Answered at once, every time: the frame retries after a failure or a timeout, and a repeat is the same wish. The pane
-        // is told once, so there is one stream per host.
-        if (!dataSubscribed) {
-          try {
-            o.onDataSubscribe?.();
-            dataSubscribed = true;
-          } catch {
-            return { error: { code: INTERNAL_ERROR, message: "bridge_failed" } };
-          }
+        // Answered at once, and the pane is told EVERY time. The frame's client asks once per document and retries only after a
+        // reject or a timeout; this answers at once, so a repeat is a new document (a reload, or a move to another of the
+        // tool's own pages), which needs its own baseline: the parent restarts its stream on each call.
+        try {
+          o.onDataSubscribe?.();
+        } catch {
+          return { error: { code: INTERNAL_ERROR, message: "bridge_failed" } };
         }
         return { result: { ok: true } };
       }
