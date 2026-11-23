@@ -1029,6 +1029,16 @@
       "discardBring": "변형 B의 변경 버리기",
       "pushClosedBySystem": "A/B 테스트 “{name}”이(가) 게시된 사이트에서 더 이상 실행되지 않아 종료했어요. 게시된 페이지는 바뀌지 않았어요.",
       "pushPromotedBySystem": "“{name}”의 B안이 승자로 게시되었어요. 다시 게시하기 전에 A/B 테스트 카드에서 초안으로 가져오세요."
+    },
+    "tools": {
+      "menu": "도구 옵션",
+      "remove": "제거",
+      "removeTitle": "{title}을(를) 제거할까요?",
+      "removeBody": "{title}을(를) 제거하고 저장된 모든 데이터를 영구적으로 삭제합니다. 공간 폴더의 파일은 그대로 남습니다.",
+      "removeConfirm": "제거",
+      "removeCancel": "취소",
+      "removeFailed": "제거하지 못했습니다. 다시 시도하세요.",
+      "empty": "아직 도구가 없습니다."
     }
   },
   "skillProposal": {

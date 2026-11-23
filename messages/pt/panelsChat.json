@@ -1029,6 +1029,16 @@
       "discardBring": "Descartar as mudanças da variante B",
       "pushClosedBySystem": "O teste A/B “{name}” já não estava em andamento no seu site publicado, então foi encerrado. Sua página publicada não mudou.",
       "pushPromotedBySystem": "A variante B de “{name}” foi ao ar como vencedora. Traga-a para o seu rascunho pelo cartão do teste A/B antes de publicar de novo."
+    },
+    "tools": {
+      "menu": "Opções da ferramenta",
+      "remove": "Remover",
+      "removeTitle": "Remover {title}?",
+      "removeBody": "Isso remove {title} e apaga para sempre todos os dados salvos dela. Os arquivos na sua pasta continuam lá.",
+      "removeConfirm": "Remover",
+      "removeCancel": "Cancelar",
+      "removeFailed": "Não foi possível remover. Tente novamente.",
+      "empty": "Nenhuma ferramenta ainda."
     }
   },
   "skillProposal": {

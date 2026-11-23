@@ -1029,6 +1029,16 @@
       "discardBring": "Änderungen von Variante B verwerfen",
       "pushClosedBySystem": "Der A/B-Test „{name}“ lief auf deiner veröffentlichten Seite nicht mehr und wurde deshalb beendet. Deine veröffentlichte Seite wurde nicht verändert.",
       "pushPromotedBySystem": "Variante B von „{name}“ ist als Gewinnerin live gegangen. Übernimm sie über die Karte des A/B-Tests in deinen Entwurf, bevor du wieder veröffentlichst."
+    },
+    "tools": {
+      "menu": "Tool-Optionen",
+      "remove": "Entfernen",
+      "removeTitle": "{title} entfernen?",
+      "removeBody": "Dadurch wird {title} entfernt und alle gespeicherten Daten werden dauerhaft gelöscht. Die Dateien in deinem Ordner bleiben erhalten.",
+      "removeConfirm": "Entfernen",
+      "removeCancel": "Abbrechen",
+      "removeFailed": "Konnte nicht entfernt werden. Versuche es erneut.",
+      "empty": "Noch keine Tools."
     }
   },
   "skillProposal": {

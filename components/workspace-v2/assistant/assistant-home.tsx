@@ -10,9 +10,9 @@
 // Its frame (11/11, Jesús, on the reference he sent: «la tabla de arriba no me gusta»): no bar across the top. The
 // three views are icons in a slim rail at the left, and what is set about her (name, figure, morning summary, her
 // pages) waits in a menu behind one button, so her place is her and the conversation.
-import { Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, Wand2, type LucideIcon } from "lucide-react";
+import { AppWindow, Inbox, MessageCircle, MoreHorizontal, PanelRight, Users, Wand2, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps, type CSSProperties } from "react";
 
 import { useRouter } from "@/i18n/navigation";
 import type { AssistantView } from "@/lib/assistants/view";
@@ -21,6 +21,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
+import { AgentToolPane, type AgentToolListItem } from "./agent-tool-pane";
 import { ChangeFigure } from "./change-figure";
 import { HerPage } from "./her-page";
 import { HerProjects } from "./her-projects";
@@ -31,18 +32,22 @@ import { tintStyle } from "@/lib/figure/tint";
 import { VisitorConversations } from "./visitor-conversations";
 import { VisitorRequests } from "./visitor-requests";
 
+type LatestTurn = NonNullable<Parameters<NonNullable<ComponentProps<typeof NewChatPanel>["onLatestTurnChange"]>>[0]>;
+
 const noCanvas = () => {};
 /** What travels with her file's first message: only that it is her opening (claimed once by the server). */
 const OPENING = { images: [], opening: true } as const;
 
-type Tab = "talk" | "conversations" | "requests";
+type CoreTab = "talk" | "conversations" | "requests";
+type ToolTab = `tool:${string}`;
+type Tab = CoreTab | ToolTab;
 
-const TAB_LABEL: Record<Tab, string> = {
+const TAB_LABEL: Record<CoreTab, string> = {
   talk: "ownAssistant.place.talk",
   conversations: "ownAssistant.place.conversations",
   requests: "ownAssistant.requests.tab",
 };
-const TAB_ICON: Record<Tab, LucideIcon> = { talk: MessageCircle, conversations: Users, requests: Inbox };
+const TAB_ICON: Record<CoreTab, LucideIcon> = { talk: MessageCircle, conversations: Users, requests: Inbox };
 const PAGE_PANE = "openlen:her-page-pane";
 
 export function AssistantHome({
@@ -86,8 +91,60 @@ export function AssistantHome({
   // from another tab, a turn picked up and finished), the page is read again and the chat merges what it brings.
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("talk");
+  const activeTabRef = useRef<Tab>(tab);
+  activeTabRef.current = tab;
   // Its first message goes out once: the panel hands it back when it is sent, and it is not given again.
   const [opening, setOpening] = useState<string | null>(startsWith);
+  // Text handed by one of the agent's tools (`sendPrompt`): fills the composer and never auto-sends.
+  const [toolDraft, setToolDraft] = useState<string | null>(null);
+  // The tools this agent published for its person (spec local 2026-11-22-herramienta-dentro-del-agente, §2).
+  const [agentTools, setAgentTools] = useState<AgentToolListItem[]>([]);
+  const toolsReqRef = useRef(0);
+  const loadAgentTools = useCallback(async () => {
+    const reqId = ++toolsReqRef.current;
+    try {
+      const res = await fetch(`/api/agent-tools?assistantId=${encodeURIComponent(assistant.id)}`, { cache: "no-store" });
+      if (!res.ok || reqId !== toolsReqRef.current) return;
+      const data: unknown = await res.json();
+      if (!Array.isArray(data) || reqId !== toolsReqRef.current) return;
+      const list = data as AgentToolListItem[];
+      setAgentTools(list);
+      const validIds = new Set(list.map((item) => `tool:${item.id}`));
+      setSeen((prev) => {
+        let changed = false;
+        const next = new Set<Tab>();
+        for (const k of prev) {
+          if (k.startsWith("tool:") && !validIds.has(k)) changed = true;
+          else next.add(k);
+        }
+        return changed ? next : prev;
+      });
+      setTab((cur) => (cur.startsWith("tool:") && !validIds.has(cur) ? "talk" : cur));
+    } catch {
+      // fail-soft: the chat stays usable without the tabs
+    }
+  }, [assistant.id]);
+  useEffect(() => {
+    void loadAgentTools();
+  }, [loadAgentTools]);
+  const prevTurnRef = useRef<{ id: string; status: string; published: number } | null>(null);
+  const handleLatestTurnChange = useCallback(
+    (turn: LatestTurn | null) => {
+      if (!turn) {
+        prevTurnRef.current = null;
+        return;
+      }
+      const published = turn.actions.filter((a) => a.tool === "publish_tool" && a.status === "done").length;
+      const prev = prevTurnRef.current;
+      prevTurnRef.current = { id: turn.id, status: turn.status, published };
+      if (!prev) return;
+      const sameTurn = prev.id === turn.id;
+      const justPublished = sameTurn && published > prev.published;
+      const justSettled = sameTurn && prev.status === "streaming" && turn.status !== "streaming";
+      if (justPublished || justSettled) void loadAgentTools();
+    },
+    [loadAgentTools],
+  );
   // Her figure can be changed here (phase 6): her place wears the new one at once.
   const [look, setLook] = useState(assistant.look);
   const [creatorOpen, setCreatorOpen] = useState(false);
@@ -106,7 +163,25 @@ export function AssistantHome({
       // ignore
     }
   }, []);
-  const tabs: readonly Tab[] = ["talk", "conversations", "requests"];
+  const tabs: readonly CoreTab[] = ["talk", "conversations", "requests"];
+  const handleToolPrompt = useCallback((toolId: string, text: string) => {
+    if (activeTabRef.current !== `tool:${toolId}`) return;
+    setOpening(null);
+    setToolDraft(text);
+    setTab("talk");
+  }, []);
+  const handleToolRemoved = useCallback((toolId: string) => {
+    toolsReqRef.current += 1;
+    const key: ToolTab = `tool:${toolId}`;
+    setAgentTools((prev) => prev.filter((item) => item.id !== toolId));
+    setSeen((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setTab((cur) => (cur === key ? "talk" : cur));
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   // Her page beside her chat. Put away, it stays away on this device until it is asked for again. Not known until the
   // device's choice is read (`null`): a page put away must not open, load and close again on every visit.
@@ -243,6 +318,26 @@ export function AssistantHome({
                 </button>
               );
             })}
+            {agentTools.length > 0 && <div className="my-1 h-px w-6 bg-[var(--border)]" />}
+            {agentTools.map((tool) => {
+              const k: ToolTab = `tool:${tool.id}`;
+              return (
+                <button
+                  key={tool.id}
+                  type="button"
+                  role="tab"
+                  data-agent-tool-tab={tool.id}
+                  data-agent-tool-slug={tool.slug}
+                  aria-selected={tab === k}
+                  title={tool.title}
+                  onClick={() => (setTab(k), setMenuOpen(false), setSeen((s) => (s.has(k) ? s : new Set(s).add(k))))}
+                  className={`her-ring flex h-9 w-9 items-center justify-center rounded-[10px] transition-colors ${tab === k ? "her-wash fg" : "fg-faint hover:bg-hover hover:fg"}`}
+                >
+                  <AppWindow size={18} strokeWidth={tab === k ? 2 : 1.7} aria-hidden="true" />
+                  <span className="sr-only">{tool.title}</span>
+                </button>
+              );
+            })}
           </div>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* The conversation stays mounted while she reads the visitors': a turn in flight isn't lost. */}
@@ -253,15 +348,22 @@ export function AssistantHome({
                   flatProjectHtml={projectHtml}
                   onFlatHtmlUpdate={noCanvas}
                   flatProjectChat={initialChat}
-                  onChatChange={() => router.refresh()}
+                  onChatChange={() => {
+                    router.refresh();
+                    void loadAgentTools();
+                  }}
+                  onLatestTurnChange={handleLatestTurnChange}
                   assistant={her}
                   figurePaused={creatorOpen || tab !== "talk"}
                   centered
-                  pendingDraft={opening}
+                  pendingDraft={opening ?? toolDraft}
                   pendingDraftAutoSend={opening !== null}
                   // Marked as her opening: the server lets it go once, if the phone or another tab opened her too.
                   pendingAttachments={opening !== null ? OPENING : null}
-                  onPendingDraftConsumed={() => setOpening(null)}
+                  onPendingDraftConsumed={() => {
+                    if (opening !== null) setOpening(null);
+                    else setToolDraft(null);
+                  }}
                 />
               </div>
               {/* Windows of 860 px or more, and only beside her chat: elsewhere it is not loaded. */}
@@ -281,6 +383,20 @@ export function AssistantHome({
                 <VisitorRequests assistantId={assistant.id} name={assistant.name} />
               </div>
             )}
+            {agentTools.map((tool) => {
+              const k: ToolTab = `tool:${tool.id}`;
+              if (!seen.has(k)) return null;
+              return (
+                <div key={tool.id} className={tab === k ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+                  <AgentToolPane
+                    tool={tool}
+                    locale={locale}
+                    onPrompt={(text) => handleToolPrompt(tool.id, text)}
+                    onRemoved={handleToolRemoved}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

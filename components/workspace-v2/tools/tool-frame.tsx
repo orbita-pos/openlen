@@ -65,7 +65,7 @@ export function ToolFrame({
   const nameOf = (change: ToolDataChange) => change.projectTitle ?? projectTitle?.(change.projectId) ?? change.projectId;
   return (
     <div className="relative h-full w-full">
-      <iframe ref={iframe} src={src} title={title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} className="h-full w-full border-0 bg-[var(--bg)]" data-tool-frame={caller && "installationId" in caller ? caller.installationId : "draft"} />
+      <iframe ref={iframe} src={src} title={title} sandbox={SANDBOX_REMOTO} allow={ALLOW_REMOTO} className="h-full w-full border-0 bg-[var(--bg)]" data-tool-frame={caller && "installationId" in caller ? caller.installationId : caller && "agentToolId" in caller ? caller.agentToolId : "draft"} />
       {asking ? (
         <DataChangeDialog
           open

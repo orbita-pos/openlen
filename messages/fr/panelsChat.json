@@ -1029,6 +1029,16 @@
       "discardBring": "Abandonner les changements de la variante B",
       "pushClosedBySystem": "Le test A/B « {name} » ne tournait plus sur votre site publié, il a donc été clôturé. Votre page publiée n’a pas changé.",
       "pushPromotedBySystem": "La variante B de « {name} » est en ligne comme gagnante. Intégrez-la à votre brouillon depuis la carte du test A/B avant de publier à nouveau."
+    },
+    "tools": {
+      "menu": "Options de l'outil",
+      "remove": "Retirer",
+      "removeTitle": "Retirer {title} ?",
+      "removeBody": "Cela retire {title} et supprime définitivement toutes ses données enregistrées. Les fichiers dans votre dossier restent.",
+      "removeConfirm": "Retirer",
+      "removeCancel": "Annuler",
+      "removeFailed": "Impossible de le retirer. Réessayez.",
+      "empty": "Aucun outil pour le moment."
     }
   },
   "skillProposal": {

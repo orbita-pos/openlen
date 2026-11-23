@@ -1029,6 +1029,16 @@
       "discardBring": "Discard Variant B's changes",
       "pushClosedBySystem": "The A/B test “{name}” had stopped running on your live site, so it was closed. Your live page was not changed.",
       "pushPromotedBySystem": "Variant B of “{name}” went live as the winner. Bring it into your draft from the A/B card before you publish again."
+    },
+    "tools": {
+      "menu": "Tool options",
+      "remove": "Remove",
+      "removeTitle": "Remove {title}?",
+      "removeBody": "This removes {title} and deletes all of its saved data for good. The files in your space folder stay.",
+      "removeConfirm": "Remove",
+      "removeCancel": "Cancel",
+      "removeFailed": "Couldn't remove it. Try again.",
+      "empty": "No tools yet."
     }
   },
   "skillProposal": {
