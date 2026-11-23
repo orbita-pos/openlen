@@ -209,8 +209,9 @@ describe("🔴 who may", () => {
 
   it("🔴 the agent has no way to delete a tool: nothing the agent runs reaches `deleteAgentTool`", () => {
     const callers: string[] = [];
-    // Code only: a comment that names the function (this sentence, or a note in another file) is not a caller.
-    const withoutComments = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/[^\n]*/g, "$1");
+    // Code only: a comment that names the function (this sentence, or a note in another file) is not a caller. Only comments
+    // that open a line are dropped — a "/*" or "//" inside a string (a route like "/api/*", a URL) must never hide code.
+    const withoutComments = (src: string) => src.replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^[ \t]*\/\/[^\n]*/gm, "");
     const walk = (dir: string) => {
       for (const e of fs.readdirSync(path.join(process.cwd(), dir), { withFileTypes: true })) {
         const rel = `${dir}/${e.name}`;

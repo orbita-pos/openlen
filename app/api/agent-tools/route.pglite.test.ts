@@ -152,6 +152,13 @@ describe("🔴 who may", () => {
     expect(((await call("assistantId=stranger")).body as { id: string }[]).map((t) => t.id)).toEqual(["tool-x"]);
   });
 
+  it("a tool on the person's own agent whose row names another person is not listed (its follow, open and delete would 404)", async () => {
+    await store.upsertAgentTool(toolInput({ id: "tool-odd", personId: "u2", slug: "odd" }));
+    const ids = ((await call()).body as { id: string }[]).map((t) => t.id);
+    expect(ids).toContain("tool-a");
+    expect(ids).not.toContain("tool-odd");
+  });
+
   it("nobody signed in, no key: the same 404", async () => {
     base.person = null;
     expect(await call()).toEqual({ status: 404, body: { error: "not_found" } });

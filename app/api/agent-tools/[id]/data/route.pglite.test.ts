@@ -252,9 +252,13 @@ describe("a call that is wrong", () => {
 
   it("a body past 256 KB is a 413 and nothing is written, whether its content-length says so or not", async () => {
     const big = JSON.stringify({ op: "set", collection: "c", docId: "d", data: { t: "x".repeat(256 * 1024) } });
-    const declared = await post(big);
+    // A content-length past the cap is refused before a byte is read (here the body itself is small).
+    const declared = await post({ op: "set", collection: "c", docId: "d", data: { t: "x" } }, "tool-1", { "content-length": String(300 * 1024) });
     expect(declared.status).toBe(413);
     expect(await declared.json()).toEqual({ error: "payload_too_large" });
+    // A big body (Node's Request sends no content-length for it) is read no further than the cap.
+    const undeclared = await post(big);
+    expect(undeclared.status).toBe(413);
     // A stream with no content-length is read no further than the cap.
     const chunk = new TextEncoder().encode(big);
     const stream = new ReadableStream<Uint8Array>({
