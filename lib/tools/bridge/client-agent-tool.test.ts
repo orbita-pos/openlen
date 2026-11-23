@@ -16,6 +16,7 @@ interface FakeWindow {
   parent: unknown;
   openlen?: Record<string, unknown>;
   __openlenBridge?: (json: string) => Promise<string>;
+  __openlenBridgeNotify?: (params: unknown) => void;
   addEventListener: (type: string, fn: (e: unknown) => void) => void;
 }
 interface Doc {
@@ -168,6 +169,58 @@ describe("window.openlen.data: the requests", () => {
     new Function("window", toolBridgeClientSource([APP], { agentTool: true }))(win);
     await expect((win.openlen!.data as Record<string, Fn>).get!("tareas", "t1")).resolves.toBeNull();
     expect(JSON.parse((win.__openlenBridge as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string)).toMatchObject({ method: "data.get", params: { collection: "tareas", docId: "t1" } });
+  });
+});
+
+// Len's eyes run the tool top-level: there is no parent to send `data.changed` messages, so the baseline comes back as the
+// RESULT of `data.subscribe`, and what the eyes change afterwards is pushed through `window.__openlenBridgeNotify`.
+describe("window.openlen.data.subscribe without a parent (Len's eyes)", () => {
+  const unframed = (result: unknown) => {
+    const win: FakeWindow = { parent: null, addEventListener: () => {} };
+    win.parent = win;
+    win.__openlenBridge = vi.fn(async (json: string) => JSON.stringify({ jsonrpc: "2.0", id: JSON.parse(json).id, result, channel: "openlen-tool" }));
+    new Function("window", toolBridgeClientSource([APP], { agentTool: true }))(win);
+    const seen: Array<{ docs: Doc[]; change: unknown }> = [];
+    const off = (win.openlen!.data as Record<string, Fn>).subscribe!((s: unknown) => seen.push(s as { docs: Doc[]; change: unknown })) as () => void;
+    return { win, seen, off };
+  };
+
+  it("a baseline-shaped answer to data.subscribe is applied and told to the subscribers", async () => {
+    const { win, seen } = unframed({ kind: "baseline", docs: [doc("tareas", "t1", { n: 1 })] });
+    expect(JSON.parse((win.__openlenBridge as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string)).toMatchObject({ method: "data.subscribe" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toEqual([{ docs: [doc("tareas", "t1", { n: 1 })], change: null }]);
+  });
+
+  it("an answer that isn't a baseline (an acknowledgement) tells nobody", async () => {
+    const { seen } = unframed({ ok: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toEqual([]);
+  });
+
+  it("window.__openlenBridgeNotify takes a data.changed's params, as the parent sends them in a frame", async () => {
+    const { win, seen } = unframed({ ok: true });
+    await vi.advanceTimersByTimeAsync(0);
+    win.__openlenBridgeNotify!({ kind: "baseline", docs: [doc("tareas", "t1", { n: 1 }), doc("tareas", "t2", { n: 2 })] });
+    const change = { kind: "change", by: "person", docs: [doc("tareas", "t1", { n: 10 }, "person")], deleted: [{ collection: "tareas", docId: "t2" }] };
+    win.__openlenBridgeNotify!(change);
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toEqual({ docs: [doc("tareas", "t1", { n: 1 }), doc("tareas", "t2", { n: 2 })], change: null });
+    expect(seen[1]).toEqual({ docs: [doc("tareas", "t1", { n: 10 }, "person")], change });
+  });
+
+  it("in a frame there is no such entry point: the parent's messages are the only way in", () => {
+    const f = framed();
+    expect(f.win.__openlenBridgeNotify).toBeUndefined();
+  });
+
+  it("in a frame the answer to data.subscribe tells nobody: only the parent's notifications do", async () => {
+    const f = framed();
+    const seen: unknown[] = [];
+    f.data.subscribe!((s: unknown) => seen.push(s));
+    f.deliver({ jsonrpc: "2.0", id: f.lastRequest().id, result: { kind: "baseline", docs: [doc("a", "1", {})] }, channel: "openlen-tool" });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(seen).toEqual([]);
   });
 });
 

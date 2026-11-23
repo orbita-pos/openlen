@@ -144,7 +144,10 @@ const AGENT_TAIL = `  var docs = new Map();
     subscribers.push(s);
     if (!streaming) {
       streaming = true;
-      call("data.subscribe").then(undefined, function () { streaming = false; });
+      // In a frame the baseline arrives as a notification; with no parent (Len's eyes) it is the answer itself.
+      call("data.subscribe").then(function (r) {
+        if (!framed && r && r.kind === "baseline") onDataChanged(r);
+      }, function () { streaming = false; });
     }
     if (baselineSeen) { try { cb({ docs: current(), change: null }); } catch (_) {} }
     return function () {
@@ -162,6 +165,9 @@ const AGENT_TAIL = `  var docs = new Map();
     query: function (collection, q) { return call("data.query", { collection: collection, query: q }); },
     subscribe: subscribe
   });
+
+  // Task 8's Puppeteer calls this from Len's eyes (no parent to send messages) with a data.changed's params.
+  if (!framed) window.__openlenBridgeNotify = onDataChanged;
 
   window.openlen = Object.freeze({
     context: function () { return call("context"); },
