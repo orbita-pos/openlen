@@ -18,6 +18,9 @@ import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/re
 import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
 import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/agent-tools/agent-tools";
+import { changedSince, toolChangesLine, watchAgentToolChanges } from "@/lib/agent-tools/changes";
+import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
+import { agentToolsOf, type AgentToolRow } from "@/lib/agent-tools/store";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -1497,10 +1500,22 @@ async function correrTurno(
     estadosPedidos.length > 0
       ? heldVisualStates(estadosPedidos, await widgetsOfConversation(projectId, enLaCharla[0] ?? null).catch(() => new Map<string, string | null>()))
       : [];
+  // WHAT CHANGED IN THE AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4): only on a turn its
+  // person typed at a screen — never a server-started turn (scheduled, Len-woken, thread, email, round) —, one
+  // `<system-reminder>` inside `textoEnviado` after `visualStatesReminder`, so the row keeps it as `sentText` and the
+  // history replays it byte for byte. Fail-soft: a store error leaves the turn running without the line.
+  const herramientasDelAgente: AgentToolRow[] =
+    asistente !== null && espacioDelTurno && agentToolsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno
+      ? await agentToolsOf(asistente.id).catch(() => [])
+      : [];
+  const cambiosDeHerramientas =
+    asistente !== null && herramientasDelAgente.length > 0
+      ? await changedSince(asistente.id, { toolsOf: async () => herramientasDelAgente }).catch(() => [])
+      : [];
   const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
-      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}${visualStatesReminder(estadosVisuales)}`,
+      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}${visualStatesReminder(estadosVisuales)}${toolChangesLine(cambiosDeHerramientas)}`,
     skillsInvocadas,
   );
   // WHAT THE PERSON TYPED, for a subagent's <original_task> (lib/agent/subagents/run.ts): their own words, never
@@ -1979,6 +1994,8 @@ async function correrTurno(
        *  it. What it never got, or what a turn that left no row claimed, goes back to waiting (`closeRowOnce`). */
       let rideAlong: HeldMessages | null = null;
       let rideAlongHanded = false;
+      /** Mid-turn person writes on the agent's tools bus (spec local 2026-11-22-herramienta-dentro-del-agente, §4). */
+      let toolWatch: ReturnType<typeof watchAgentToolChanges> | null = null;
       /** The turn's row was written at its close (`closeRowOnce`). */
       let rowWritten = false;
       /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
@@ -2624,6 +2641,9 @@ async function correrTurno(
             return null;
           });
         }
+        if (herramientasDelAgente.length > 0 && !compactCommand) {
+          toolWatch = watchAgentToolChanges(herramientasDelAgente);
+        }
         // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him that is still unread
         // (held, pending or delivering) rides with the next turn a PERSON starts here — not one the server started (an
         // agent's request or message claimed its own when it started, lib/assistants/messages/wake.ts; a scheduled task,
@@ -2673,7 +2693,8 @@ async function correrTurno(
                   // And what waited from Len (claimed above), once: its own user message, framed per project.
                   const fromLen = rideAlong && !rideAlongHanded ? [rideAlong.framing] : [];
                   if (fromLen.length > 0) rideAlongHanded = true;
-                  return [...handed.map(noticeText), ...fromLen];
+                  const fromTools = toolWatch?.take() ?? [];
+                  return [...handed.map(noticeText), ...fromLen, ...fromTools];
                 },
               }
             : {}),
@@ -3304,6 +3325,7 @@ async function correrTurno(
         close();
       } finally {
         reloj.parar();
+        toolWatch?.stop();
         stepRecorder?.finish({ endReason: finDelTurno ?? "upstream" });
         // La terminal del turno (F1, plans/len-agente-2026), si se usó: su hilo
         // muere con el turno. Nunca tumba el cierre, y no se ESPERA: con el

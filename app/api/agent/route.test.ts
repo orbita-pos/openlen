@@ -341,6 +341,12 @@ vi.mock("@/lib/assistants/messages/note", () => agentNote);
 // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant's agent file, none unless a test gives one.
 const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: string, _agentType: string): Promise<Record<string, unknown> | null> => null) }));
 vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
+// The tool that lives inside the agent (spec local 2026-11-22-herramienta-dentro-del-agente): none unless a test sets tools.
+const agentToolStore = vi.hoisted(() => ({
+  agentToolsOf: vi.fn(async (_assistantId: string): Promise<Record<string, unknown>[]> => []),
+  personChangedCollections: vi.fn(async (_toolId: string, _since: Date | null): Promise<string[]> => []),
+}));
+vi.mock("@/lib/agent-tools/store", () => agentToolStore);
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   widgetsOfConversation: mocks.widgetsOfConversation,
@@ -6227,6 +6233,173 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
     expect(JSON.stringify(declared())).toBe(outsideTheSpace);
     expect(declared()).toHaveLength(2);
+  });
+
+  // Task 7: the agent hears what the person changed in its tools (turn-start line inside textoEnviado + mid-turn bus notice).
+  describe("agent tool changes", () => {
+    const spaceProject = { title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } };
+    const toolRow = (over: Record<string, unknown> = {}) => ({
+      id: "tool-1",
+      assistantId: "a1",
+      personId: "u1",
+      spaceProjectId: "p1",
+      slug: "recorrido",
+      title: "Recorrido",
+      folder: "/tools/lucia/recorrido",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-1",
+      phoneHostLabel: "lienzo-2",
+      createdAt: new Date("2026-11-22T10:00:00Z"),
+      updatedAt: new Date("2026-11-22T10:00:00Z"),
+      dataChangedAt: new Date("2026-11-22T12:00:00Z"),
+      agentSeenAt: new Date("2026-11-22T11:00:00Z"),
+      ...over,
+    });
+    const promptSent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
+    const savedRow = () => (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1];
+
+    beforeEach(() => {
+      mocks.loadProject.mockResolvedValue(spaceProject);
+      agentToolStore.agentToolsOf.mockResolvedValue([toolRow()]);
+      agentToolStore.personChangedCollections.mockResolvedValue(["progress"]);
+    });
+    afterEach(() => {
+      agentToolStore.agentToolsOf.mockResolvedValue([]);
+      agentToolStore.personChangedCollections.mockResolvedValue([]);
+    });
+
+    it("appends the tool changes <system-reminder> after visualStatesReminder inside textoEnviado and saves it as sentText", async () => {
+      mocks.widgetsOfConversation.mockResolvedValueOnce(new Map([["widget_aaaa1111", "Quiz"]]));
+      mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), mutoDurable: true }));
+      await readEvents(await pedir({ assistantId: "a1", prompt: "ya", visualStates: [{ widgetId: "widget_aaaa1111", state: "3 of 5" }] }));
+
+      const sent = promptSent();
+      const visIdx = sent.indexOf("widget_aaaa1111");
+      const toolIdx = sent.indexOf("recorrido");
+      expect(visIdx).toBeGreaterThan(-1);
+      expect(toolIdx).toBeGreaterThan(visIdx);
+      expect(sent).toContain("Recorrido");
+      expect(sent).toContain("progress");
+      expect(sent).toContain("tool_data");
+      expect(savedRow().transcript?.sentText).toContain("recorrido");
+      expect(savedRow().transcript?.sentText).toContain("progress");
+    });
+
+    it("omits the line once agentSeenAt has caught up with dataChangedAt", async () => {
+      agentToolStore.agentToolsOf.mockResolvedValue([
+        toolRow({ dataChangedAt: new Date("2026-11-22T11:00:00Z"), agentSeenAt: new Date("2026-11-22T12:00:00Z") }),
+      ]);
+      await readEvents(await pedir({ assistantId: "a1", prompt: "ya" }));
+      expect(promptSent()).toBe("ya");
+    });
+
+    it("delivers ONE per-step notice via takeAgentNotices when the person writes mid-turn, ignores agent writes, and stops after the turn", async () => {
+      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      let step1: readonly string[] = [];
+      let step2: readonly string[] = [];
+      let step3: readonly string[] = [];
+      let capturedTake: (() => readonly string[]) | undefined;
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        capturedTake = args.takeAgentNotices;
+        step1 = args.takeAgentNotices!();
+        // Agent's own write: ignored.
+        publishToolChange("tool-1", {
+          by: "agent",
+          docs: [{ collection: "lessons", docId: "3", data: { unlocked: true }, updatedAt: new Date(), updatedBy: "agent" }],
+          deleted: [],
+        });
+        // Two person writes: coalesced into ONE notice.
+        publishToolChange("tool-1", {
+          by: "person",
+          docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        publishToolChange("tool-1", {
+          by: "person",
+          docs: [{ collection: "notes", docId: "1", data: { text: "done" }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        step2 = args.takeAgentNotices!();
+        step3 = args.takeAgentNotices!();
+        return cierre();
+      });
+
+      await readEvents(await pedir({ assistantId: "a1", prompt: "hola" }));
+      expect(step1).toEqual([]);
+      expect(step2).toHaveLength(1);
+      expect(step2[0]).toContain("<system-reminder>");
+      expect(step2[0]).toContain("recorrido");
+      expect(step2[0]).toContain("notes, progress");
+      expect(step2[0]).not.toContain("lessons");
+      expect(step3).toEqual([]);
+
+      // After the turn ends, the bus subscription is torn down.
+      publishToolChange("tool-1", {
+        by: "person",
+        docs: [{ collection: "after", docId: "1", data: { x: 1 }, updatedAt: new Date(), updatedBy: "person" }],
+        deleted: [],
+      });
+      expect(capturedTake?.()).toEqual([]);
+    });
+
+    it("never adds the line or mid-turn notices on server-started turns (scheduled or woken by Len)", async () => {
+      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      const runner = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+      const where = { url: "http://x/api/agent", signal: new AbortController().signal };
+
+      let duringScheduled: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        publishToolChange("tool-1", {
+          by: "person",
+          docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        duringScheduled = args.takeAgentNotices!();
+        return cierre();
+      });
+
+      await readEvents(
+        await runner("u1", { projectId: "p1", prompt: "Mándame 5 palabras", turnId: "77777777-7777-4777-8777-7777777777b1", assistantId: "a1" }, where, {
+          scheduled: {
+            framing: "[SCHEDULE REMINDER]\nMándame 5 palabras",
+            origin: { kind: "scheduled" as const, taskId: "t1", title: "Palabras", occurrenceAt: "2026-11-22T15:00:00.000Z" },
+            onReply: vi.fn(async () => {}),
+          },
+        }),
+      );
+      expect(promptSent()).not.toContain("recorrido");
+      expect(duringScheduled).toEqual([]);
+
+      await readEvents(
+        await runner("u1", { projectId: "p1", prompt: "¿Cuál es el tope?", turnId: "77777777-7777-4777-8777-7777777777b2", assistantId: "a1" }, where, {
+          scheduled: {
+            framing: "Len sent you a message.",
+            origin: { kind: "len-message" as const, projectId: "p9", projectTitle: "Presupuesto" },
+            onReply: vi.fn(async () => {}),
+          },
+        }),
+      );
+      expect(promptSent()).not.toContain("recorrido");
+      expect(duringScheduled).toEqual([]);
+    });
+
+    it("adds nothing when OPENLEN_AGENT_TOOLS=0", async () => {
+      vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      let notices: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        publishToolChange("tool-1", {
+          by: "person",
+          docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        notices = args.takeAgentNotices!();
+        return cierre();
+      });
+      await readEvents(await pedir({ assistantId: "a1", prompt: "ya" }));
+      expect(promptSent()).toBe("ya");
+      expect(notices).toEqual([]);
+    });
   });
 
   it("its session is read-only, and in phase 1 it launches no subagents (their notices would wake Len)", async () => {

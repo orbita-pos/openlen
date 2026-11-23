@@ -7,7 +7,7 @@
 // live elsewhere. What is in `agentToolDocs` is DATA — never instructions — for the agent and for the page.
 import "server-only";
 
-import { and, asc, eq, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, or, sql, type SQL } from "drizzle-orm";
 
 import { db, schema } from "@/lib/db";
 
@@ -115,6 +115,20 @@ export async function readDocs(toolId: string, collection?: string): Promise<Age
 export async function readDocsByKeys(toolId: string, keys: readonly { collection: string; docId: string }[]): Promise<AgentToolDoc[]> {
   if (keys.length === 0) return [];
   return asDocs(await db.select().from(docs).where(and(eq(docs.toolId, toolId), inKeys(keys))));
+}
+
+/** Distinct collections of a tool that the person wrote after `since` (or all the person's collections when `since` is
+ *  null), in code-unit order. Reads only collection names so turn start never loads document bodies. */
+export async function personChangedCollections(toolId: string, since: Date | null): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ collection: docs.collection })
+    .from(docs)
+    .where(
+      since === null
+        ? and(eq(docs.toolId, toolId), eq(docs.updatedBy, "person"))
+        : and(eq(docs.toolId, toolId), eq(docs.updatedBy, "person"), gt(docs.updatedAt, since)),
+    );
+  return rows.map((r) => r.collection).sort(byCodeUnit);
 }
 
 // ---- writing ---------------------------------------------------------------------------------------------------------
