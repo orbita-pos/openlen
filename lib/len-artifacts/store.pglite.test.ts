@@ -38,6 +38,7 @@ function toolInput(
     assistantId?: string | null;
     slug?: string;
     title?: string;
+    folder?: string;
     releaseSha?: string;
     hostLabel?: string;
     phoneHostLabel?: string | null;
@@ -53,7 +54,7 @@ function toolInput(
     assistantId,
     slug,
     title: o.title ?? "Lessons",
-    folder: assistantId === null ? `/.artifacts/${slug}` : `/.artifacts/${assistantId}/${slug}`,
+    folder: o.folder ?? (assistantId === null ? `/.artifacts/${slug}` : `/.artifacts/${assistantId}/${slug}`),
     releaseSha: o.releaseSha ?? "sha-1",
     hostLabel: o.hostLabel ?? `lienzo-host-${id}`,
     ...(o.phoneHostLabel === undefined ? { phoneHostLabel: `lienzo-phone-${id}` } : { phoneHostLabel: o.phoneHostLabel }),
@@ -221,6 +222,30 @@ describe("the artifact rows", () => {
 
   it("two artifacts cannot share an address", async () => {
     await expect(store.upsertLenArtifact(toolInput({ id: "tool-8", slug: "eight", hostLabel: "lienzo-host-tool-1" }))).rejects.toThrow();
+  });
+
+  it("🔴 renaming an assistant updates its artifact in place on (projectId, assistantId, slug), preserving id, labels, docs, and the 5-artifact cap", async () => {
+    // Fill teacher to the cap (5 artifacts in space).
+    for (const i of [2, 3, 4, 5]) {
+      await store.upsertLenArtifact(toolInput({ id: `tool-${i}`, slug: `s${i}`, folder: `/.artifacts/ana/s${i}` }), { maxPerMaker: 5 });
+    }
+    await store.writeDocs("tool-1", [set("progress", "1", { score: 9 })], "person");
+    // Agent ana is renamed to elena and republishes the same artifact from /.artifacts/elena/lessons.
+    const moved = await store.upsertLenArtifact(
+      toolInput({ id: "should-not-insert", slug: "lessons", folder: "/.artifacts/elena/lessons", title: "Lessons v2", releaseSha: "sha-2", hostLabel: "lienzo-unused" }),
+      { maxPerMaker: 5 },
+    );
+    expect(moved).toMatchObject({
+      id: "tool-1",
+      slug: "lessons",
+      folder: "/.artifacts/elena/lessons",
+      title: "Lessons v2",
+      releaseSha: "sha-2",
+      hostLabel: "lienzo-host-tool-1",
+      phoneHostLabel: "lienzo-phone-tool-1",
+    });
+    expect(await store.lenArtifactsOf({ projectId: "space", maker: teacher })).toHaveLength(5);
+    expect(await store.readDocs("tool-1")).toMatchObject([{ collection: "progress", docId: "1", data: { score: 9 } }]);
   });
 
   it("marks when its maker last looked at its data", async () => {

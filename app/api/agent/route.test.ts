@@ -5021,6 +5021,18 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(base().wokenByAgent).toBeUndefined();
   });
 
+  it("🔴 a child launched from Len's turn in the person's space carries sessionBase.space = true; in a normal project, none", async () => {
+    const base = () => (launcherArgs()[0] as unknown as { sessionBase: { space?: true } }).sessionBase;
+    await pedir();
+    expect(base().space).toBeUndefined();
+    mocks.loadProject.mockResolvedValue({
+      title: "Mi espacio", subdomain: null, publishedAt: null, userBrief: "", brief: null,
+      data: { html: "", space: { bornAt: "2026-11-19T00:00:00Z" } },
+    });
+    await pedir();
+    expect(base().space).toBe(true);
+  });
+
   it("in a game project, a child's session knows it is one and is offered game-development (spec local 2026-11-05-modo-juego-design, §8.4)", async () => {
     mocks.loadProject.mockResolvedValue({
       title: "Naves", subdomain: null, publishedAt: null, userBrief: "", brief: null,

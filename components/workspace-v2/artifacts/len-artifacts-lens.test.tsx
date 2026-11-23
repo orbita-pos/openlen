@@ -237,6 +237,85 @@ describe("useLenArtifacts + useArtifactTurnSync", () => {
     expect(itemsNow[1]?.title).toBe("Pendientes (hoy)");
     expect(opened).toEqual(["artifact:art-2"]);
   });
+
+  it("🔴 exposes loaded = false while initial fetch is in flight and true once settled (or on projectId: null)", async () => {
+    let resolveFetch!: (r: Response) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>((resolve) => { resolveFetch = resolve; })),
+    );
+    let snapshot = { loaded: true, count: 0 };
+    function Probe({ projectId }: { projectId: string | null }) {
+      const a = useLenArtifacts(projectId);
+      snapshot = { loaded: a.loaded, count: a.items.length };
+      return null;
+    }
+    mount(<Probe projectId="p1" />);
+    expect(snapshot.loaded).toBe(false);
+    await act(async () => {
+      resolveFetch(new Response(JSON.stringify([ART_1]), { status: 200 }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(snapshot).toEqual({ loaded: true, count: 1 });
+
+    mount(<Probe projectId={null} />);
+    expect(snapshot.loaded).toBe(true);
+  });
+
+  it("🔴 a failed reload after publish_artifact does not leave pending open armed to steal focus on a later unrelated turn", async () => {
+    let failFetch = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        if (failFetch) throw new Error("network down");
+        return new Response(JSON.stringify([ART_1]), { status: 200 });
+      }),
+    );
+    const opened: string[] = [];
+    let pushTurn!: (t: ArtifactTurnLike | null) => void;
+    function Harness() {
+      const [turn, setTurn] = useState<ArtifactTurnLike | null>({ id: "t0", status: "applied", actions: [] });
+      pushTurn = setTurn;
+      const artifacts = useLenArtifacts("p1");
+      useArtifactTurnSync({ projectId: "p1", latestTurn: turn, artifacts, onOpenArtifact: (l) => opened.push(l) });
+      return null;
+    }
+    mount(<Harness />);
+    await flush();
+    // publish_artifact finishes done, but its reload fails transiently.
+    failFetch = true;
+    act(() => pushTurn({ id: "t1", status: "streaming", actions: [{ tool: "publish_artifact", status: "running" }] }));
+    act(() => pushTurn({ id: "t1", status: "streaming", actions: [{ tool: "publish_artifact", status: "done" }] }));
+    await flush();
+    expect(opened).toEqual([]);
+    // Later an unrelated turn settles and fetch succeeds -> must NOT steal focus!
+    failFetch = false;
+    act(() => pushTurn({ id: "t2", status: "streaming", actions: [] }));
+    act(() => pushTurn({ id: "t2", status: "applied", actions: [] }));
+    await flush();
+    expect(opened).toEqual([]);
+  });
+
+  it("🔴 catches a first turn whose very first streaming snapshot already has publish_artifact done", async () => {
+    let serverList: LenArtifactListItem[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(serverList), { status: 200 })));
+    const opened: string[] = [];
+    let pushTurn!: (t: ArtifactTurnLike | null) => void;
+    function Harness() {
+      const [turn, setTurn] = useState<ArtifactTurnLike | null>(null);
+      pushTurn = setTurn;
+      const artifacts = useLenArtifacts("p1");
+      useArtifactTurnSync({ projectId: "p1", latestTurn: turn, artifacts, onOpenArtifact: (l) => opened.push(l) });
+      return null;
+    }
+    mount(<Harness />);
+    await flush();
+    serverList = [ART_1];
+    act(() => pushTurn({ id: "t-first", status: "streaming", actions: [{ tool: "publish_artifact", status: "done" }] }));
+    await flush();
+    expect(opened).toEqual(["artifact:art-1"]);
+  });
 });
 
 describe("PreviewArea with Len's artifacts", () => {
@@ -372,5 +451,29 @@ describe("PreviewArea with Len's artifacts", () => {
     setArtifacts([ART_1]);
     await flush();
     expect(getLens()).toBe("pagina");
+  });
+
+  it("🔴 keeps the artifact lenses reachable when a no-page project renders a deliverableStage on the pagina lens", () => {
+    function DeliverableWrapper() {
+      const [lente, setLente] = useState<Lente>("pagina");
+      return (
+        <PreviewArea
+          doc=""
+          projectId="p1"
+          lente={lente}
+          onLente={setLente}
+          toolPerson={{ name: "Jesús", locale: "es" }}
+          lenArtifacts={[ART_1]}
+          deliverableStage={<div data-deliverable-stage="">Mi presentación</div>}
+        />
+      );
+    }
+    const host = mount(<DeliverableWrapper />);
+    expect(host.querySelector("[data-deliverable-stage]")?.textContent).toBe("Mi presentación");
+    const budgetBtn = [...host.querySelectorAll("button")].find((b) => b.getAttribute("aria-label") === "Presupuesto")!;
+    expect(budgetBtn).toBeDefined();
+    act(() => budgetBtn.click());
+    expect(host.querySelector('[data-artifact-lens="art-1"] iframe')).not.toBeNull();
+    expect(host.querySelector("[data-deliverable-stage]")).toBeNull();
   });
 });

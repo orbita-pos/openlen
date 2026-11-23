@@ -1712,6 +1712,11 @@ export const lenArtifacts = pgTable(
   (t) => [
     // Its folder in its project is its identity across republishes (the unique index also serves the project's lookups).
     uniqueIndex("lenArtifacts_project_folder_idx").on(t.projectId, t.folder),
+    // Per-maker slug uniqueness within a project: renaming an assistant moves its folder while preserving its row & data.
+    uniqueIndex("lenArtifacts_project_len_slug_idx").on(t.projectId, t.slug).where(sqlOp`${t.assistantId} is null`),
+    uniqueIndex("lenArtifacts_project_assistant_slug_idx")
+      .on(t.projectId, t.assistantId, t.slug)
+      .where(sqlOp`${t.assistantId} is not null`),
     uniqueIndex("lenArtifacts_hostLabel_idx").on(t.hostLabel),
     uniqueIndex("lenArtifacts_phoneHostLabel_idx").on(t.phoneHostLabel),
     index("lenArtifacts_personId_idx").on(t.personId),

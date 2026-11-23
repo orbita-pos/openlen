@@ -327,8 +327,9 @@ export async function runPublishArtifact(session: AgentSession, args: Record<str
   const { folder, name } = named;
 
   // A republish is not a new artifact: only a name you don't have yet counts toward the cap.
+  // Match by folder OR slug so an agent renamed to a new slug updates its existing artifact row in place.
   const mine = await d.toolsOf(scopeOf(session, maker));
-  const existing = mine.find((row) => row.folder === folder);
+  const existing = mine.find((row) => row.folder === folder || row.slug === name);
   if (!existing && mine.length >= LEN_ARTIFACTS_PER_MAKER) return tooManyArtifacts(mine.length);
 
   const built = buildLenArtifactRelease({ projectId: session.projectId, folder, files: await d.listFiles(session.projectId, `${folder}/`) });

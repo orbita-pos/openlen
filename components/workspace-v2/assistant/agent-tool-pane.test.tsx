@@ -448,4 +448,27 @@ describe("AssistantHome + LenArtifactPane", () => {
     expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(0);
     expect(host.querySelector('[data-chat]')?.closest(".hidden")).toBeNull();
   });
+
+  it("🔴 refreshes when the first streaming snapshot of a new turn already has publish_artifact done", async () => {
+    let serverTools: LenArtifactListItem[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) =>
+        String(url) === "/api/len-artifacts?assistantId=a1"
+          ? new Response(JSON.stringify(serverTools), { status: 200 })
+          : new Response("{}", { status: 200 }),
+      ),
+    );
+    const host = mount(
+      <AssistantHome assistant={ANA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} inSpace />,
+    );
+    await flush();
+    act(() => panel.latestTurnChange?.(null));
+    serverTools = [TOOL_1];
+    act(() => {
+      panel.latestTurnChange?.({ id: "turn-1", status: "streaming", cut: false, isFirst: true, actions: [{ tool: "publish_artifact", status: "done" }] });
+    });
+    await flush();
+    expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(1);
+  });
 });

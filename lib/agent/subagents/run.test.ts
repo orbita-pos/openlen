@@ -1394,4 +1394,20 @@ describe("an isolated child (phase 4)", () => {
     await until(() => s.changes.length > 0);
     expect(s.changes).toEqual([["p", "row-1", changes.before, changes.after]]);
   });
+
+  it("🔴 a child launched from Len's turn in the person's space inherits session.space so publish_artifact still refuses in_space", async () => {
+    const { runPublishArtifact } = await import("@/lib/len-artifacts/tools");
+    const s = setup({ scripts: [dice("Done")] });
+    const spaceCtx = { ...s.ctx, sessionBase: { ...s.ctx.sessionBase, space: true as const } };
+    const launcher = createSubagentLauncher(spaceCtx, s.io);
+    await launcher.launch({ description: "Check space", prompt: "Look around.", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(s.sessions[0]!.space).toBe(true);
+    const out = await runPublishArtifact(s.sessions[0]!, { path: "/.artifacts/budget/", title: "Budget" });
+    expect(out.response).toEqual({
+      ok: false,
+      error: "in_space",
+      message: "Artifacts live in your projects; in the person's space, their agents make their own.",
+    });
+  });
 });

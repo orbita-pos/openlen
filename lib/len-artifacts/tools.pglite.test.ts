@@ -243,4 +243,29 @@ describe("artifact_data against the real store", () => {
       { by: "agent", docs: [{ collection: "c", docId: "b", data: { n: 2 } }], deleted: [{ collection: "c", docId: "a" }] },
     ]);
   });
+
+  it("🔴 after an agent is renamed, publishing from /.artifacts/<new slug>/<name>/ updates in place, keeps data, and drops the old release", async () => {
+    const [before] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
+    await data({ artifact: "lessons", action: "set", collection: "notes", doc_id: "n1", data: { text: "keep me" } });
+
+    const dropped: string[] = [];
+    files["/.artifacts/elena/lessons/index.html"] = "<h1>updated after rename</h1>";
+    const renamedSession = (): AgentSession =>
+      ({ projectId: "space", userId: "u1", assistant: { id: "teacher", name: "Elena", slug: "elena", inSpace: true } }) as unknown as AgentSession;
+    const renamedDeps = { ...deps(), dropRelease: async (sha: string) => void dropped.push(sha) };
+
+    const out = await runPublishArtifact(renamedSession(), { path: "/.artifacts/elena/lessons/", title: "Lessons" }, renamedDeps);
+    expect(out.response.ok).toBe(true);
+    expect(message(out)).toMatch(/^Republished/);
+
+    const all = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
+    expect(all).toHaveLength(1);
+    expect(all[0]).toMatchObject({ id: before!.id, hostLabel: before!.hostLabel, folder: "/.artifacts/elena/lessons" });
+    expect(all[0]!.releaseSha).not.toBe(before!.releaseSha);
+    expect(dropped).toEqual([before!.releaseSha]);
+
+    const got = await runArtifactData(renamedSession(), { artifact: "lessons", action: "get", collection: "notes", doc_id: "n1" }, renamedDeps);
+    expect(got.response.ok).toBe(true);
+    expect(rows(got).document.data).toEqual({ text: "keep me" });
+  });
 });

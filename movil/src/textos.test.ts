@@ -77,3 +77,14 @@ for (const [nombre, mapa] of Object.entries({ entrega: textosEntrega, gestion: t
     validar(mapa[idioma]);
   });
 }
+
+it("🔴 mobile artifact strings say Artifacts / artifact (never Tools / Herramientas) across all 10 locales", () => {
+  for (const idioma of IDIOMAS) {
+    expect(textosLenArtifacts[idioma].boton, `${idioma}.boton`).toBe("Artifacts");
+    expect(textosLenArtifacts[idioma].elegirTitulo, `${idioma}.elegirTitulo`).toBe("Artifacts");
+    expect(textosLenArtifacts[idioma].noAbre, `${idioma}.noAbre`).toMatch(/artifact/i);
+    expect(textosLenArtifacts[idioma].yaNoEsta, `${idioma}.yaNoEsta`).toMatch(/artifact/i);
+  }
+  expect(JSON.stringify(textosLenArtifacts.en)).not.toMatch(/\btools?\b/i);
+  expect(JSON.stringify(textosLenArtifacts.es)).not.toMatch(/\bherramientas?\b/i);
+});

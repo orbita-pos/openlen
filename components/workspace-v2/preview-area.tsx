@@ -88,6 +88,9 @@ interface PreviewAreaProps {
   onArtifactPrompt?: (text: string) => void;
   /** Called when an artifact is removed (by «Quitar» or `event: gone`) so the parent drops it from its list. */
   onArtifactRemoved?: (artifactId: string) => void;
+  /** Deliverable stage shown on the `pagina` lens when a no-page project has both deliverables and Len artifacts,
+   *  so the lens bar stays visible and Len artifacts remain reachable. */
+  deliverableStage?: React.ReactNode;
   /** The project is a TOOL being built (`data.tool`): its canvas calls `window.openlen`, answered here as the draft. */
   isTool?: boolean;
   /** When set, the iframe loads this URL directly (a curated template from
@@ -294,6 +297,7 @@ export function PreviewArea({
   onToolPrompt,
   onArtifactPrompt,
   onArtifactRemoved,
+  deliverableStage = null,
   isTool = false,
   doc,
   previewUrl,
@@ -1390,6 +1394,11 @@ export function PreviewArea({
             labels={codeViewLabels}
           />
         )}
+        {lente === "pagina" && deliverableStage && (
+          <div className="absolute inset-0 z-10 flex flex-col bg-app">
+            {deliverableStage}
+          </div>
+        )}
         {/* EL LIENZO SE OCULTA, NUNCA SE DESMONTA. Es la garantía que ya tenía
             el visor de código cuando se superponía: volver a la página la
             devuelve tal cual estaba — su scroll, y lo que el JavaScript del
@@ -1397,7 +1406,7 @@ export function PreviewArea({
             iframe se remontaría y las dos cosas se perderían en cada ida y
             vuelta. */}
         <div
-          className={`mx-auto relative${lente === "pagina" ? "" : " hidden"}`}
+          className={`mx-auto relative${lente === "pagina" && !deliverableStage ? "" : " hidden"}`}
           style={{ width: deviceWidth * scale }}
         >
           <div

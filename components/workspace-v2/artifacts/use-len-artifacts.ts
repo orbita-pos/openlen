@@ -55,43 +55,56 @@ export function newestArtifactId(
 
 export interface LenArtifactsState {
   readonly items: LenArtifactListItem[];
-  readonly reload: () => Promise<void>;
+  readonly loaded: boolean;
+  readonly reload: () => Promise<LenArtifactListItem[] | null>;
   readonly remove: (id: string) => void;
   readonly version: number;
 }
 
 export function useLenArtifacts(projectId: string | null): LenArtifactsState {
   const [items, setItems] = useState<LenArtifactListItem[]>([]);
+  const [loaded, setLoaded] = useState<boolean>(projectId === null);
   const [version, setVersion] = useState(0);
   const reqRef = useRef(0);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (): Promise<LenArtifactListItem[] | null> => {
     if (!projectId) {
       reqRef.current += 1;
       setItems([]);
-      return;
+      setLoaded(true);
+      return [];
     }
     const reqId = ++reqRef.current;
     try {
       const res = await fetch(`/api/len-artifacts?projectId=${encodeURIComponent(projectId)}`, { cache: "no-store" });
-      if (reqId !== reqRef.current) return;
+      if (reqId !== reqRef.current) return null;
       if (!res.ok) {
         setItems([]);
+        setLoaded(true);
         setVersion((v) => v + 1);
-        return;
+        return [];
       }
       const data: unknown = await res.json();
-      if (reqId !== reqRef.current) return;
-      setItems(Array.isArray(data) ? (data as LenArtifactListItem[]) : []);
+      if (reqId !== reqRef.current) return null;
+      const list = Array.isArray(data) ? (data as LenArtifactListItem[]) : [];
+      setItems(list);
+      setLoaded(true);
       setVersion((v) => v + 1);
+      return list;
     } catch {
       // fail-soft: the workspace stays usable without the artifact lenses
+      if (reqId === reqRef.current) setLoaded(true);
+      return null;
     }
   }, [projectId]);
 
   useEffect(() => {
     setItems([]);
-    if (!projectId) return;
+    if (!projectId) {
+      setLoaded(true);
+      return;
+    }
+    setLoaded(false);
     void reload();
   }, [projectId, reload]);
 
@@ -100,7 +113,7 @@ export function useLenArtifacts(projectId: string | null): LenArtifactsState {
     setItems((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
-  return { items, reload, remove, version };
+  return { items, loaded, reload, remove, version };
 }
 
 export interface ArtifactTurnLike {
@@ -110,7 +123,8 @@ export interface ArtifactTurnLike {
 }
 
 /** Watches the workspace's `latestTurn`: reloads the project's artifacts when `publish_artifact` finishes `done` (and
- *  opens the newest artifact's lens) or when a streaming turn settles. Never steals focus on initial mount. */
+ *  opens the newest artifact's lens) or when a streaming turn settles. Never steals focus on initial mount or after a
+ *  failed reload. */
 export function useArtifactTurnSync({
   projectId,
   latestTurn,
@@ -122,47 +136,53 @@ export function useArtifactTurnSync({
   artifacts: LenArtifactsState;
   onOpenArtifact: (lens: ArtifactLens) => void;
 }): void {
+  const mountedProjectRef = useRef<string | null>(null);
   const prevTurnRef = useRef<{ id: string; status: string; published: number } | null>(null);
-  const pendingOpenRef = useRef<{ prev: readonly LenArtifactListItem[]; afterVersion: number } | null>(null);
+  const openGenRef = useRef(0);
   const itemsRef = useRef(artifacts.items);
   itemsRef.current = artifacts.items;
-  const versionRef = useRef(artifacts.version);
-  versionRef.current = artifacts.version;
   const onOpenRef = useRef(onOpenArtifact);
   onOpenRef.current = onOpenArtifact;
 
   useEffect(() => {
+    mountedProjectRef.current = null;
     prevTurnRef.current = null;
-    pendingOpenRef.current = null;
+    openGenRef.current += 1;
   }, [projectId]);
 
   useEffect(() => {
-    if (!projectId || !latestTurn) {
+    if (!projectId) {
+      mountedProjectRef.current = null;
       prevTurnRef.current = null;
       return;
     }
-    const published = latestTurn.actions.filter((a) => a.tool === "publish_artifact" && a.status === "done").length;
+    const published = latestTurn ? latestTurn.actions.filter((a) => a.tool === "publish_artifact" && a.status === "done").length : 0;
+    // First observation for this project: record baseline (null or historical turn) so reload never steals focus.
+    if (mountedProjectRef.current !== projectId) {
+      mountedProjectRef.current = projectId;
+      prevTurnRef.current = latestTurn ? { id: latestTurn.id, status: latestTurn.status, published } : null;
+      return;
+    }
+    if (!latestTurn) {
+      prevTurnRef.current = null;
+      return;
+    }
     const prev = prevTurnRef.current;
     prevTurnRef.current = { id: latestTurn.id, status: latestTurn.status, published };
-    // First snapshot on mount / project switch: record baseline so an already-finished historical turn never steals focus.
-    if (!prev) return;
-    const sameTurn = prev.id === latestTurn.id;
+    const sameTurn = prev !== null && prev.id === latestTurn.id;
     const justPublished =
       (sameTurn && published > prev.published) || (!sameTurn && latestTurn.status === "streaming" && published > 0);
     const justSettled = sameTurn && prev.status === "streaming" && latestTurn.status !== "streaming";
     if (justPublished) {
-      pendingOpenRef.current = { prev: itemsRef.current, afterVersion: versionRef.current };
-      void artifacts.reload();
+      const prevItems = itemsRef.current;
+      const gen = ++openGenRef.current;
+      void artifacts.reload().then((next) => {
+        if (!next || openGenRef.current !== gen) return;
+        const newest = newestArtifactId(next, prevItems);
+        if (newest) onOpenRef.current(artifactLens(newest));
+      });
     } else if (justSettled) {
       void artifacts.reload();
     }
   }, [projectId, latestTurn, artifacts.reload]);
-
-  useEffect(() => {
-    const pending = pendingOpenRef.current;
-    if (!pending || artifacts.version <= pending.afterVersion) return;
-    pendingOpenRef.current = null;
-    const newest = newestArtifactId(artifacts.items, pending.prev);
-    if (newest) onOpenRef.current(artifactLens(newest));
-  }, [artifacts.version, artifacts.items]);
 }

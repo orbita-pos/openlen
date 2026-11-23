@@ -57,7 +57,7 @@ import { projectToolItems, railToolItems, toolPromptDraft } from "@/components/w
 import { ToolView } from "@/components/workspace-v2/tools/tool-view";
 import { ToolsView } from "@/components/workspace-v2/tools/tools-view";
 import { useInstalledTools } from "@/components/workspace-v2/tools/use-installed-tools";
-import { artifactIdOfLens, useArtifactTurnSync, useLenArtifacts } from "@/components/workspace-v2/artifacts/use-len-artifacts";
+import { artifactLens, newestArtifactId, useArtifactTurnSync, useLenArtifacts } from "@/components/workspace-v2/artifacts/use-len-artifacts";
 import { useGamesAvailable } from "@/components/workspace-v2/use-games-available";
 import { ResultadosView } from "@/components/workspace-v2/resultados-view";
 import {
@@ -568,6 +568,10 @@ function NewV2Inner() {
   // Len mira el estado, y una base sin crear todavía no guarda nada.
   const [hasDatabase, setHasDatabase] = useState(false);
   const loadedProjectId = loadedProject?.id ?? null;
+  // Reset canvas lens on project switch so an artifact/tool/code lens from Project A never leaks into Project B.
+  useEffect(() => {
+    setLente("pagina");
+  }, [loadedProjectId]);
   useEffect(() => {
     setHasDatabase(false);
     if (!loadedProjectId) return;
@@ -3614,10 +3618,31 @@ function NewV2Inner() {
     !pantallaDeInicio &&
     !proyectoEnBlanco &&
     !projectUnavailable &&
-    centro === "pending" &&
+    (centro === "pending" || (centro === "conversation" && !lenArtifacts.loaded)) &&
     normalizedCenterView === "page" &&
     mode === "chat" &&
     !previewingTemplate;
+  // On reload of a no-page project that has only Len artifacts (no HTML, no deliverables), land directly on the newest
+  // artifact lens once per project instead of an empty page iframe.
+  const autoOpenedArtifactProjectRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!loadedProjectId) {
+      autoOpenedArtifactProjectRef.current = null;
+      return;
+    }
+    if (
+      !activeDoc &&
+      centro === "conversation" &&
+      lenArtifacts.loaded &&
+      lenArtifacts.items.length > 0 &&
+      lente === "pagina" &&
+      autoOpenedArtifactProjectRef.current !== loadedProjectId
+    ) {
+      autoOpenedArtifactProjectRef.current = loadedProjectId;
+      const newest = newestArtifactId(lenArtifacts.items);
+      if (newest) setLente(artifactLens(newest));
+    }
+  }, [loadedProjectId, activeDoc, centro, lenArtifacts.loaded, lenArtifacts.items, lente]);
   return (
     <WorkspaceArtifactsContext.Provider value={workspaceArtifacts}>
     <div className="workspace-v2 h-full flex flex-col">
@@ -3994,7 +4019,7 @@ function NewV2Inner() {
           // Con el primer mensaje mandado, el lienzo aparece VACÍO y se va
           // llenando con la página a medias que Len escribe (`page_preview`).
           (loadedProject && !centroPorSaber && (activeDoc || heroSent || loadedProject.chatHistory.length > 0) ? (
-            centro === "deliverable" && workspaceArtifacts && !artifactIdOfLens(lente) ? (
+            centro === "deliverable" && workspaceArtifacts && lenArtifacts.items.length === 0 ? (
               <ArtifactStage
                 projectId={loadedProject.id}
                 items={workspaceArtifacts.items}
@@ -4011,6 +4036,17 @@ function NewV2Inner() {
                 onLente={setLente}
                 projectTools={installedTools.available ? projectToolItems(installedTools.tools) : undefined}
                 lenArtifacts={lenArtifacts.items}
+                deliverableStage={
+                  centro === "deliverable" && workspaceArtifacts ? (
+                    <ArtifactStage
+                      projectId={loadedProject.id}
+                      items={workspaceArtifacts.items}
+                      selectedId={centerArtifactId}
+                      onSelect={setCenterArtifactId}
+                      onAccessLost={() => void artifacts.refresh()}
+                    />
+                  ) : null
+                }
                 toolPerson={{ name: installedTools.person.name, locale }}
                 toolProjectTitle={loadedProject?.title ?? ""}
                 isTool={loadedProject?.tool === true}

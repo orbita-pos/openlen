@@ -77,42 +77,47 @@ export class LenArtifactMakerError extends Error {
 
 /** Keeps the artifact. With `maxPerMaker`, one its maker doesn't have yet in that project is refused
  *  (`LenArtifactCapError`) once it has that many: the project's row is locked first, so two publishes at once are counted
- *  one after the other. Another maker's artifact in that folder is never written over (`LenArtifactMakerError`). */
+ *  one after the other. Another maker's artifact in that folder is never written over (`LenArtifactMakerError`).
+ *  When a maker already has an artifact with the same `(projectId, maker, slug)` — e.g. after an assistant is renamed and
+ *  publishes from `/.artifacts/<new slug>/<slug>/` — the row updates in place, preserving its id, labels and documents. */
 export async function upsertLenArtifact(input: LenArtifactInput, opts: { readonly maxPerMaker?: number } = {}): Promise<LenArtifactRow> {
   const max = opts.maxPerMaker;
-  if (max === undefined) return upsertRow(db, input);
   return db.transaction(async (tx) => {
     await tx.select({ id: schema.projects.id }).from(schema.projects).where(eq(schema.projects.id, input.projectId)).for("update");
-    const [there] = await tx
-      .select({ assistantId: tools.assistantId })
+    const [atFolder] = await tx
+      .select({ id: tools.id, assistantId: tools.assistantId })
       .from(tools)
       .where(and(eq(tools.projectId, input.projectId), eq(tools.folder, input.folder)));
-    if (there && there.assistantId !== input.assistantId) throw new LenArtifactMakerError();
-    if (!there) {
+    if (atFolder && atFolder.assistantId !== input.assistantId) throw new LenArtifactMakerError();
+    const [sameMaker] = atFolder
+      ? [atFolder]
+      : await tx
+          .select({ id: tools.id, assistantId: tools.assistantId })
+          .from(tools)
+          .where(and(eq(tools.projectId, input.projectId), madeBy(input.assistantId), eq(tools.slug, input.slug)))
+          .limit(1);
+    const now = new Date();
+    if (sameMaker) {
+      const [updated] = await tx
+        .update(tools)
+        .set({ folder: input.folder, title: input.title, slug: input.slug, releaseSha: input.releaseSha, updatedAt: now })
+        .where(eq(tools.id, sameMaker.id))
+        .returning();
+      return updated!;
+    }
+    if (max !== undefined) {
       const [mine] = await tx
         .select({ n: sql<number>`count(*)::int` })
         .from(tools)
         .where(and(eq(tools.projectId, input.projectId), madeBy(input.assistantId)));
       if (Number(mine?.n ?? 0) >= max) throw new LenArtifactCapError(max);
     }
-    return upsertRow(tx, input);
+    const [inserted] = await tx
+      .insert(tools)
+      .values({ ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: now, updatedAt: now })
+      .returning();
+    return inserted!;
   });
-}
-
-async function upsertRow(q: Pick<typeof db, "insert">, input: LenArtifactInput): Promise<LenArtifactRow> {
-  const now = new Date();
-  const [row] = await q
-    .insert(tools)
-    .values({ ...input, phoneHostLabel: input.phoneHostLabel ?? null, createdAt: now, updatedAt: now })
-    .onConflictDoUpdate({
-      target: [tools.projectId, tools.folder],
-      set: { title: input.title, slug: input.slug, releaseSha: input.releaseSha, updatedAt: now },
-      // Only its maker writes over it: with another maker nothing is written and no row comes back.
-      setWhere: sql`${tools.assistantId} is not distinct from ${input.assistantId}`,
-    })
-    .returning();
-  if (!row) throw new LenArtifactMakerError();
-  return row;
 }
 
 /** The artifacts in `scope`, in the order they were made. */

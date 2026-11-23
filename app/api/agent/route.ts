@@ -2585,6 +2585,8 @@ async function correrTurno(
                   // A child of Len's turn an agent's message woke, with none of the owner's words, has no owner in it
                   // either: it keeps the connectors' resource tools, and they are refused for it (final review I2, 2b).
                   ...(agentSession.wokenByAgent ? { wokenByAgent: true as const } : {}),
+                  // A child of Len's turn in the person's space stays bound by the space rule (no Len artifacts there).
+                  ...(agentSession.space ? { space: true as const } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.

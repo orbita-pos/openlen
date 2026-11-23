@@ -171,6 +171,8 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "makerSeenAt" timestamp with time zone
   );`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_project_folder_idx" ON "lenArtifacts" ("projectId", "folder");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_project_len_slug_idx" ON "lenArtifacts" ("projectId", "slug") WHERE "assistantId" IS NULL;`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_project_assistant_slug_idx" ON "lenArtifacts" ("projectId", "assistantId", "slug") WHERE "assistantId" IS NOT NULL;`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_hostLabel_idx" ON "lenArtifacts" ("hostLabel");`,
   `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_phoneHostLabel_idx" ON "lenArtifacts" ("phoneHostLabel");`,
   `CREATE INDEX IF NOT EXISTS "lenArtifacts_personId_idx" ON "lenArtifacts" ("personId");`,
