@@ -25,6 +25,8 @@ import { DeliveredCards } from "./delivered-cards";
 import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
 import { LenRequestCard } from "../asistente/len-request-card";
+import { BotonHerramientasDeAgente } from "../asistente/agent-tools";
+import { listAgentTools, type AgentToolItem } from "../api/agent-tools";
 import "../asistente/her-chat.css";
 import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
@@ -62,8 +64,8 @@ interface Props {
   onAbrirProyecto?: (projectId: string) => void;
   onHerramientasCambiaron?: () => void;
   /** Talking with the person's own assistant, not Len (phase 5): her name and colour in the header, and none of Len's
-   *  own (the call, Equipo, his event and tool cards). */
-  asistente?: { readonly name: string; readonly color: string; readonly look?: unknown };
+   *  own (the call, Equipo, his event and tool cards). `id` lets her chat list and open her own tools. */
+  asistente?: { readonly id?: string; readonly name: string; readonly color: string; readonly look?: unknown };
   /** Her chat on the phone (spec local 2026-11-16-movil-es-tu-asistente, §5.5): the project on the screen, whose event
    *  and tool cards show here, as in Len's chat. Her own `projectId` is her home. */
   cardsProjectId?: string | null;
@@ -103,6 +105,38 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const volver = useRef<HTMLButtonElement>(null);
   const [archivos,setArchivos] = useState<File[]>([]);
   const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
+  const [agentTools, setAgentTools] = useState<{ id: string; items: AgentToolItem[] } | null>(null);
+  const agentToolsSeq = useRef(0);
+  const wasWorking = useRef(chat.trabajando);
+  const asistenteId = asistente?.id ?? null;
+  const visibleAgentTools = asistenteId && agentTools?.id === asistenteId ? agentTools.items : [];
+  useEffect(() => {
+    const seq = ++agentToolsSeq.current;
+    if (!abierto || !asistenteId) {
+      if (!asistenteId) setAgentTools(null);
+      return;
+    }
+    const ctrl = new AbortController();
+    void listAgentTools(cliente, asistenteId, ctrl.signal).then((items) => {
+      if (!ctrl.signal.aborted && agentToolsSeq.current === seq && items !== null) {
+        setAgentTools({ id: asistenteId, items });
+      }
+    });
+    return () => ctrl.abort();
+  }, [abierto, asistenteId, cliente]);
+  useEffect(() => {
+    const prev = wasWorking.current;
+    wasWorking.current = chat.trabajando;
+    if (!prev || chat.trabajando || !abierto || !asistenteId) return;
+    const seq = ++agentToolsSeq.current;
+    const ctrl = new AbortController();
+    void listAgentTools(cliente, asistenteId, ctrl.signal).then((items) => {
+      if (!ctrl.signal.aborted && agentToolsSeq.current === seq && items !== null) {
+        setAgentTools({ id: asistenteId, items });
+      }
+    });
+    return () => ctrl.abort();
+  }, [chat.trabajando, abierto, asistenteId, cliente]);
   useEffect(()=>{setArchivos([]);setAdjunta(null);setTexto("");setErrorAdjunto(null)},[projectId]);
   const borradorN = borrador?.n;
   useEffect(() => {
@@ -273,6 +307,22 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
           </button>
         )}
         {onEquipo && !asistente && <button type="button" className="ch-equipo" onClick={onEquipo}>@ {tq("titulo")}</button>}
+        {asistenteId && (
+          <BotonHerramientasDeAgente
+            key={asistenteId}
+            abierto={abierto}
+            cliente={cliente}
+            tools={visibleAgentTools}
+            idioma={idioma}
+            onPrompt={(text) => {
+              setTexto(text);
+              campo.current?.focus({ preventScroll: true });
+            }}
+            onRemoved={(toolId) =>
+              setAgentTools((cur) => (cur && cur.id === asistenteId ? { ...cur, items: cur.items.filter((x) => x.id !== toolId) } : cur))
+            }
+          />
+        )}
       </header>
 
       <div className="ch-historial">

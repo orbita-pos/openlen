@@ -16,6 +16,7 @@ import { deliveredTexts } from "./delivered-texts";
 import { overviewTexts } from "./overview-texts";
 import { textosHerramientas } from "./textos-herramientas";
 import { textosAsistente } from "./textos-asistente";
+import { textosAgentTools } from "./textos-agent-tools";
 
 // The tools (spec local 2026-11-04-herramientas-hechas-por-len, §4.14) read the web's own texts for what the web
 // already says — OpenLen's confirmations and the «Instalar» and «Crear» cards —, so both say the same thing.
@@ -43,7 +44,7 @@ async function mensajesDe(idioma: Idioma): Promise<Record<string, unknown>> {
     visualLinkOpen: panelsChat.default.visualLinkOpen,
     visualLinkCancel: panelsChat.default.visualLinkCancel,
   };
-  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion, avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente, visual }, llamada: llamada.default };
+  return { movil: { ...movil.default, interfaz: textosInterfaz[idioma], chat: { ...(movil.default.chat as Record<string, unknown>), irAlUltimo: textosInterfaz[idioma].irAlUltimo }, gestion, avisos: textosAvisos[idioma], personalizacion: textosPersonalizacion[idioma], entrega: textosEntrega[idioma], equipo: textosEquipo[idioma], adjuntos: textosAdjuntos[idioma], lenWatch: textosLenWatch[idioma], entregado: deliveredTexts[idioma], resumen: overviewTexts[idioma], herramientas, asistente, agentTools: textosAgentTools[idioma], visual }, llamada: llamada.default };
 }
 
 export function Textos({ idioma, children }: { idioma: Idioma; children: ReactNode }) {

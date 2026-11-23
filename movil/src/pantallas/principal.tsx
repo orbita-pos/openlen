@@ -697,7 +697,7 @@ export function PantallaPrincipal({ cliente, idioma, onSalir }: { cliente: Clien
         chat={ella ? chatDeElla : chat}
         cliente={cliente}
         projectId={ella ? ella.projectId : (id ?? "")}
-        {...(ella ? { cardsProjectId: id, asistente: { name: ella.name, color: ella.color, look: ella.look }, lenCards: {
+        {...(ella ? { cardsProjectId: id, asistente: { id: ella.id, name: ella.name, color: ella.color, look: ella.look }, lenCards: {
           byFila: pedidosALen.byFila,
           onStop: (turno: string) => void pedidosALen.stop(turno),
           projectTitle: (pid: string) => lista?.find((x) => x.id === pid)?.title ?? "",
