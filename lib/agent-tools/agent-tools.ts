@@ -90,7 +90,7 @@ export const TOOL_DATA_DECLARATION = {
       action: { type: "STRING", enum: [...TOOL_DATA_ACTIONS], description: "What to do." },
       collection: { type: "STRING", description: "A collection of the tool's database, a short name such as \"students\". For get, query, set, update and delete; list takes it too." },
       doc_id: { type: "STRING", description: "A document's id inside its collection. For get, set, update and delete." },
-      data: { type: "OBJECT", properties: {}, description: "The document for set and update: a JSON object." },
+      data: { type: "OBJECT", additionalProperties: true, description: "The document for set and update: a JSON object with any fields, such as {\"title\": \"Pay rent\", \"done\": false}." },
       query: {
         type: "OBJECT",
         description: "For query. Every condition in where must hold.",
@@ -103,7 +103,10 @@ export const TOOL_DATA_DECLARATION = {
               properties: {
                 field: { type: "STRING", description: "The field's path." },
                 op: { type: "STRING", enum: [...QUERY_OPS], description: "== and != compare any JSON values; < <= > >= compare two numbers, two texts or two booleans." },
-                value: { description: "What to compare with: a number, text, true or false, null, a list or an object." },
+                value: {
+                  anyOf: [{ type: "STRING" }, { type: "NUMBER" }, { type: "BOOLEAN" }, { type: "NULL" }, { type: "ARRAY", items: {} }, { type: "OBJECT", additionalProperties: true }],
+                  description: "What to compare with, as its JSON value: a number, text, true or false, null, a list or an object — false, not \"false\"; 3, not \"3\".",
+                },
               },
               required: ["field", "op", "value"],
             },
@@ -129,7 +132,7 @@ export const TOOL_DATA_DECLARATION = {
             op: { type: "STRING", enum: [...WRITE_OPS] },
             collection: { type: "STRING" },
             doc_id: { type: "STRING" },
-            data: { type: "OBJECT", properties: {}, description: "For set and update: a JSON object." },
+            data: { type: "OBJECT", additionalProperties: true, description: "For set and update: a JSON object with any fields." },
           },
           required: ["op", "collection", "doc_id"],
         },

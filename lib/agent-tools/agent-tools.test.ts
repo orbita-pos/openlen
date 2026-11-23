@@ -204,6 +204,20 @@ describe("the declarations", () => {
     expect(PUBLISH_TOOL_DECLARATION.description).not.toContain("no external network requests");
   });
 
+  it("🔴 data is an object open to any field, and value names every JSON type (measured on both providers: scripts/measure/tool-schema-probe.ts)", () => {
+    type Node = { type?: string; properties?: Record<string, Node>; additionalProperties?: unknown; anyOf?: Node[]; items?: Node };
+    const props = TOOL_DATA_DECLARATION.parameters.properties as unknown as Record<string, Node>;
+    // An object with `properties: {}` is decoded as "only {}" by a provider that follows the schema: the data was lost.
+    for (const data of [props.data!, props.writes!.items!.properties!.data!]) {
+      expect(data.type).toBe("OBJECT");
+      expect(data.additionalProperties).toBe(true);
+      expect(data.properties).toBeUndefined();
+    }
+    // A value with no type came back as the text "false": the types are named.
+    const value = props.query!.properties!.where!.items!.properties!.value!;
+    expect(value.anyOf!.map((n) => n.type)).toEqual(["STRING", "NUMBER", "BOOLEAN", "NULL", "ARRAY", "OBJECT"]);
+  });
+
   it("query.limit is declared a whole number, as it is checked", () => {
     const query = (TOOL_DATA_DECLARATION.parameters.properties as Record<string, { properties?: Record<string, { type: string }> }>).query!;
     expect(query.properties!.limit!.type).toBe("INTEGER");
