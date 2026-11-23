@@ -66,19 +66,19 @@ const FOR_HER_MEMORY: ReadonlySet<string> = new Set(["Write", "Edit"]);
 
 /** An agent opens its own published tool with view_page / use_page (spec local 2026-11-22-herramienta-dentro-del-agente,
  *  §5): declared only on an agent's turn, so Len's declarations stay byte for byte identical. */
-const AGENT_TOOL_EYES_PARAM = {
+const LEN_ARTIFACT_EYES_PARAM = {
   type: "STRING",
   description:
     "Optional: the slug of one of your published tools (/tools/<your slug>/<tool name>/). Opens its published version with window.openlen.data running on a throwaway copy of its real data — writes while testing never touch your person's data.",
 };
 
-function withAgentToolEyes(d: Record<string, unknown>): Record<string, unknown> {
+function withLenArtifactEyes(d: Record<string, unknown>): Record<string, unknown> {
   const parameters = (d.parameters ?? { type: "OBJECT", properties: {} }) as {
     type: string;
     properties?: Record<string, unknown>;
     required?: string[];
   };
-  return { ...d, parameters: { ...parameters, properties: { ...(parameters.properties ?? {}), tool: AGENT_TOOL_EYES_PARAM } } };
+  return { ...d, parameters: { ...parameters, properties: { ...(parameters.properties ?? {}), tool: LEN_ARTIFACT_EYES_PARAM } } };
 }
 
 export function assistantTools(declarations: readonly Record<string, unknown>[]): Record<string, unknown>[] {
@@ -88,7 +88,7 @@ export function assistantTools(declarations: readonly Record<string, unknown>[])
       const name = String(d.name);
       return (FOR_HER_MEMORY.has(name) || !OUT_FOR_READ_ONLY.has(name)) && !BUILDS.has(name) && !SUBAGENTS_NOT_YET.has(name) && !disallowed.has(name);
     })
-    .map((d) => (d.name === "view_page" || d.name === "use_page" ? withAgentToolEyes(d) : d));
+    .map((d) => (d.name === "view_page" || d.name === "use_page" ? withLenArtifactEyes(d) : d));
 }
 
 export const TONES: Readonly<Record<AssistantTone, string>> = {

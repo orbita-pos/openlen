@@ -156,8 +156,8 @@ import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/agent-tools/agent-tools";
-import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
+import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/len-artifacts/agent-tools";
+import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { lenNeedsOwnersWords, lenWokenRefusal, needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
@@ -549,12 +549,12 @@ export interface AgentDeps {
   }): Promise<{ informe: string; images?: readonly InlineImage[]; noChange?: boolean }>;
   /** Loads one of the agent's own published tools for `view_page` / `use_page` with `tool` (spec local
    *  2026-11-22-herramienta-dentro-del-agente, §5). Absent → loads from Postgres + toolReleases. */
-  loadAgentToolForEyes?(assistantId: string, slug: string): Promise<{
+  loadLenArtifactForEyes?(assistantId: string, slug: string): Promise<{
     tool: { id: string; slug: string; title: string; releaseSha: string };
     html: string;
     files: Record<string, string>;
     binaries?: Record<string, Uint8Array>;
-    docs: import("@/lib/agent-tools/store").AgentToolDoc[];
+    docs: import("@/lib/len-artifacts/store").LenArtifactDoc[];
   } | null>;
   /** `use_page` con `sign_in_as`: abre una sesión de verdad del backend de
    *  la página como uno de sus usuarios (lib/backend/auth/visit-session.ts), y
@@ -1435,9 +1435,9 @@ export interface AgentSession {
   /** A read-only subagent (spec local 2026-11-01-subagentes-de-len, §4.2) or the person's own assistant: Write, Edit
    *  and what a command changes in the project are refused (`READ_ONLY_REFUSAL`). Absent for Len. */
   readOnly?: true;
-  /** An agent's turn follows what its person changes in its tools (lib/agent-tools/changes.ts): a tool it publishes in
+  /** An agent's turn follows what its person changes in its tools (lib/len-artifacts/changes.ts): a tool it publishes in
    *  the turn is added here, so it is followed from then on. Absent when nothing is followed (Len, a server turn). */
-  agentToolWatch?: { add(tool: { readonly id: string; readonly slug: string; readonly title: string }): void };
+  artifactWatch?: { add(tool: { readonly id: string; readonly slug: string; readonly title: string }): void };
   /** THE PERSON'S OWN ASSISTANT (spec local 2026-11-06-asistente-propio): this turn runs as it. Absent for Len. */
   assistant?: {
     readonly id: string;
@@ -2133,7 +2133,7 @@ async function toolMirarPagina(
   // running on a throwaway copy of its stored data; never requires the space project to have a `data.html`.
   if (args.tool !== undefined) {
     if (args.url !== undefined) return { response: { ok: false, error: '"tool" and "url" can\'t be used together.' } };
-    const gate = checkAgentToolEyesGate(session, args);
+    const gate = checkLenArtifactEyesGate(session, args);
     if ("error" in gate) return { response: { ok: false, error: gate.error } };
     if (tipo === "medir" ? !deps.observarPagina : !deps.usarPagina) {
       return { response: { ok: false, error: "view_page isn't available in this environment. Go on with what the user asked you." } };
@@ -2151,11 +2151,11 @@ async function toolMirarPagina(
     // Increment synchronously before awaiting I/O so concurrent `view_page` calls cannot bypass the per-turn cap.
     if (tipo === "captura") session.screenshotsThisTurn = usadas + 1;
     else session.miradasMedirEsteTurno = usadas + 1;
-    const agentTool = await resolveAgentToolEyes(session, deps, gate.slug, args);
-    if ("error" in agentTool) {
+    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate.slug, args);
+    if ("error" in lenArtifact) {
       if (tipo === "captura") session.screenshotsThisTurn = Math.max(0, (session.screenshotsThisTurn ?? 1) - 1);
       else session.miradasMedirEsteTurno = Math.max(0, (session.miradasMedirEsteTurno ?? 1) - 1);
-      return { response: { ok: false, error: agentTool.error } };
+      return { response: { ok: false, error: lenArtifact.error } };
     }
 
     if (tipo === "captura") {
@@ -2163,15 +2163,15 @@ async function toolMirarPagina(
       const tab = (session.browserTab ??= newBrowserTabHolder());
       const visto = await visitar(() =>
         deps.usarPagina!({
-          html: agentTool.html,
+          html: lenArtifact.html,
           pasos: [{ screenshot: zona ?? "screen" }],
-          ruta: agentTool.ruta,
+          ruta: lenArtifact.ruta,
           vista: null,
           tab,
           ...(enTelefono ? { viewport: "mobile" as const } : {}),
-          toolBridge: agentTool.toolBridge,
-          releaseFiles: agentTool.releaseFiles,
-        releaseBinaries: agentTool.releaseBinaries,
+          toolBridge: lenArtifact.toolBridge,
+          releaseFiles: lenArtifact.releaseFiles,
+        releaseBinaries: lenArtifact.releaseBinaries,
         }),
       ).catch(() => null);
       if (!visto) {
@@ -2190,14 +2190,14 @@ async function toolMirarPagina(
 
     const visto = await deps
       .observarPagina!({
-        html: agentTool.html,
+        html: lenArtifact.html,
         tipo,
         pregunta,
         ...(zona ? { zona } : {}),
         vista: null,
-        toolBridge: agentTool.toolBridge,
-        releaseFiles: agentTool.releaseFiles,
-        releaseBinaries: agentTool.releaseBinaries,
+        toolBridge: lenArtifact.toolBridge,
+        releaseFiles: lenArtifact.releaseFiles,
+        releaseBinaries: lenArtifact.releaseBinaries,
       })
       .catch(() => null);
     if (!visto) {
@@ -2397,7 +2397,7 @@ async function toolUsarPagina(
     if (args.sign_in_as !== undefined) {
       return { response: { ok: false, error: '"sign_in_as" is for pages with a Supabase backend, not an agent tool.' } };
     }
-    const gate = checkAgentToolEyesGate(session, args);
+    const gate = checkLenArtifactEyesGate(session, args);
     if ("error" in gate) return { response: { ok: false, error: gate.error } };
     if (!deps.usarPagina) {
       return {
@@ -2407,24 +2407,24 @@ async function toolUsarPagina(
         },
       };
     }
-    const agentTool = await resolveAgentToolEyes(session, deps, gate.slug, args);
-    if ("error" in agentTool) return { response: { ok: false, error: agentTool.error } };
+    const lenArtifact = await resolveLenArtifactEyes(session, deps, gate.slug, args);
+    if ("error" in lenArtifact) return { response: { ok: false, error: lenArtifact.error } };
     const visitar = (session.visitLimit ??= createConcurrencyLimit(MAX_CONCURRENT_VISITS));
     const tab = (session.browserTab ??= newBrowserTabHolder());
     const newVisit = args.new_visit === true;
     const usarPagina = deps.usarPagina;
     const visto = await visitar(() =>
       usarPagina({
-        html: agentTool.html,
+        html: lenArtifact.html,
         pasos: v.pasos,
-        ruta: agentTool.ruta,
+        ruta: lenArtifact.ruta,
         vista: null,
         signedInAs: null,
         tab,
         ...(newVisit ? { newVisit } : {}),
-        toolBridge: agentTool.toolBridge,
-        releaseFiles: agentTool.releaseFiles,
-        releaseBinaries: agentTool.releaseBinaries,
+        toolBridge: lenArtifact.toolBridge,
+        releaseFiles: lenArtifact.releaseFiles,
+        releaseBinaries: lenArtifact.releaseBinaries,
       }),
     ).catch(() => null);
     if (!visto) {
@@ -2808,20 +2808,20 @@ async function toolEyesOf(
 }
 
 /** Loads an agent's own published tool from Postgres + toolReleases for `view_page` / `use_page` with `tool`. */
-async function defaultLoadAgentToolForEyes(assistantId: string, slug: string): Promise<{
+async function defaultLoadLenArtifactForEyes(assistantId: string, slug: string): Promise<{
   tool: { id: string; slug: string; title: string; releaseSha: string };
   html: string;
   files: Record<string, string>;
   binaries?: Record<string, Uint8Array>;
-  docs: import("@/lib/agent-tools/store").AgentToolDoc[];
+  docs: import("@/lib/len-artifacts/store").LenArtifactDoc[];
 } | null> {
-  const [{ agentToolsOf, readDocs }, { readRelease }, { isBlobPointer }, { getBlob }] = await Promise.all([
-    import("@/lib/agent-tools/store"),
+  const [{ lenArtifactsOf, readDocs }, { readRelease }, { isBlobPointer }, { getBlob }] = await Promise.all([
+    import("@/lib/len-artifacts/store"),
     import("@/lib/tools/store"),
     import("@/lib/files/blob-pointer"),
     import("@/lib/files/blob"),
   ]);
-  const row = (await agentToolsOf(assistantId)).find((r) => r.slug === slug);
+  const row = (await lenArtifactsOf(assistantId)).find((r) => r.slug === slug);
   if (!row) return null;
   const release = await readRelease(row.releaseSha);
   const indexFile = release && Object.prototype.hasOwnProperty.call(release, "/index.html") ? release["/index.html"] : undefined;
@@ -2839,10 +2839,10 @@ async function defaultLoadAgentToolForEyes(assistantId: string, slug: string): P
 }
 
 /** Synchronous access and input guard for `view_page` / `use_page` with `tool`, checked before consuming look budget. */
-function checkAgentToolEyesGate(session: AgentSession, args: Record<string, unknown>): { slug: string } | { error: string } {
+function checkLenArtifactEyesGate(session: AgentSession, args: Record<string, unknown>): { slug: string } | { error: string } {
   if (!session.assistant) return { error: '"tool" is only for an agent looking at one of its own published tools.' };
   if (!session.assistant.inSpace) return { error: "Only an agent in the person's space has tools of its own." };
-  if (!agentToolsEnabled()) return { error: "Agent tools are turned off right now." };
+  if (!lenArtifactsEnabled()) return { error: "Agent tools are turned off right now." };
   const slug = typeof args.tool === "string" ? args.tool.trim() : "";
   if (!slug) return { error: '"tool" must be the slug of one of your published tools.' };
   return { slug };
@@ -2850,7 +2850,7 @@ function checkAgentToolEyesGate(session: AgentSession, args: Record<string, unkn
 
 /** AN AGENT'S OWN TOOL IN THE EYES (spec local 2026-11-22-herramienta-dentro-del-agente, §5): only the agent itself, in
  *  the person's space, on its own published tool — never another agent's, never Len, and always on a copy of its data. */
-async function resolveAgentToolEyes(
+async function resolveLenArtifactEyes(
   session: AgentSession,
   deps: AgentDeps,
   slug: string,
@@ -2861,12 +2861,12 @@ async function resolveAgentToolEyes(
       releaseFiles: Record<string, string>;
       releaseBinaries: Record<string, Uint8Array>;
       ruta: string;
-      toolBridge: import("@/lib/tools/bridge/eyes").AgentToolEyesCaller;
+      toolBridge: import("@/lib/tools/bridge/eyes").LenArtifactEyesCaller;
     }
   | { error: string }
 > {
   const assistant = session.assistant!;
-  const loader = deps.loadAgentToolForEyes ?? defaultLoadAgentToolForEyes;
+  const loader = deps.loadLenArtifactForEyes ?? defaultLoadLenArtifactForEyes;
   // A tool that isn't there and a tool that couldn't be loaded are two answers: the second is no reason to publish again.
   let loaded: Awaited<ReturnType<typeof loader>>;
   try {
@@ -2882,7 +2882,7 @@ async function resolveAgentToolEyes(
     releaseBinaries: loaded.binaries ?? {},
     ruta: `/tools/${assistant.slug ?? assistant.id}/${loaded.tool.slug}/index.html`,
     toolBridge: {
-      mode: "agentTool",
+      mode: "lenArtifact",
       toolId: loaded.tool.id,
       releaseSha: loaded.tool.releaseSha,
       locale: session.uiLocale ?? "en",
@@ -3568,7 +3568,7 @@ async function ejecutarHerramienta(
       case MESSAGE_LEN:
       case MESSAGE_AGENT:
         return await runSendMessage(session, args);
-      // The agent's own tools (lib/agent-tools/agent-tools.ts): it publishes a folder of its space as a tab, and reads and
+      // The agent's own tools (lib/len-artifacts/agent-tools.ts): it publishes a folder of its space as a tab, and reads and
       // writes the small database that tool shares with it. Refused when they run, whoever calls them without being one.
       case PUBLISH_TOOL:
         return await runPublishTool(session, args);

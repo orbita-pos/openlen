@@ -136,11 +136,11 @@ describe("las rutas de la app", () => {
   // stream is read by the phone with a fetch reader, so it takes the key from the header: it needs the app's CORS like the rest.
   it("🔴 an agent's tool routes are on the list, with the methods the phone calls", () => {
     const listed = new Map(RUTAS_DE_LA_APP.map((r) => [r.fichero, r.metodos]));
-    expect(listed.get("app/api/agent-tools/route.ts")).toEqual(["GET"]);
-    expect(listed.get("app/api/agent-tools/[id]/route.ts")).toEqual(["DELETE"]);
-    expect(listed.get("app/api/agent-tools/[id]/data/route.ts")).toEqual(["POST"]);
-    expect(listed.get("app/api/agent-tools/[id]/follow/route.ts")).toEqual(["GET"]);
-    expect(listed.get("app/api/movil/agent-tools/[id]/open/route.ts")).toEqual(["POST"]);
+    expect(listed.get("app/api/len-artifacts/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/len-artifacts/[id]/route.ts")).toEqual(["DELETE"]);
+    expect(listed.get("app/api/len-artifacts/[id]/data/route.ts")).toEqual(["POST"]);
+    expect(listed.get("app/api/len-artifacts/[id]/follow/route.ts")).toEqual(["GET"]);
+    expect(listed.get("app/api/movil/len-artifacts/[id]/open/route.ts")).toEqual(["POST"]);
   });
 
   it("una ruta de fuera de la lista sigue sólo con la sesión", () => {

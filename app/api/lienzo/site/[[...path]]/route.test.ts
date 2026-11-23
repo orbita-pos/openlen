@@ -14,7 +14,7 @@ vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
 // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its label lives in toolInstallations.
 const tools = vi.hoisted(() => ({
   byLabel: {} as Record<string, unknown>,
-  /** An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente): its label lives in agentTools. */
+  /** An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente): its label lives in lenArtifacts. */
   agentByLabel: {} as Record<string, unknown>,
   releases: {} as Record<string, Record<string, { content: string; contentType: string }>>,
 }));
@@ -22,8 +22,8 @@ vi.mock("@/lib/tools/store", () => ({
   installationByLabel: vi.fn(async (label: string) => tools.byLabel[label] ?? null),
   readRelease: vi.fn(async (sha: string) => tools.releases[sha] ?? { "/index.html": { content: "<html><head></head><body>tool</body></html>", contentType: "text/html; charset=utf-8" } }),
 }));
-vi.mock("@/lib/agent-tools/store", () => ({
-  agentToolByLabel: vi.fn(async (label: string) => tools.agentByLabel[label] ?? null),
+vi.mock("@/lib/len-artifacts/store", () => ({
+  lenArtifactByLabel: vi.fn(async (label: string) => tools.agentByLabel[label] ?? null),
 }));
 vi.mock("@/lib/limits", () => ({ getUserPlan: vi.fn(async () => "pro") }));
 vi.mock("@/lib/backend/files", () => ({
@@ -37,8 +37,8 @@ import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { boxMarker } from "@/lib/agent/sandbox/box-marker";
-import { agentToolByLabel } from "@/lib/agent-tools/store";
-import { agentToolContentPolicy } from "@/lib/agent-tools/serve";
+import { lenArtifactByLabel } from "@/lib/len-artifacts/store";
+import { lenArtifactContentPolicy } from "@/lib/len-artifacts/serve";
 import { ORIGENES_DE_LA_APP } from "@/lib/movil/cors";
 
 const SECRETO = "s3cr3t";
@@ -362,7 +362,7 @@ describe("GET /api/lienzo/site — tools made by Len", () => {
   });
 });
 
-// AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its label lives in agentTools, and is looked up
+// AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its label lives in lenArtifacts, and is looked up
 // only when no canvas owns the label and no installed tool took it — canvas first, installed tool second, agent tool third.
 describe("GET /api/lienzo/site — an agent's tool", () => {
   const WORKSPACE = "lienzo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
@@ -390,7 +390,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
   const installedRow = { id: "i1", personId: "u1", projectId: P2, releaseSha: "sha1", placement: "rail", titles: {}, descriptions: {}, iconPath: "/icon.svg", hostLabel: INSTALLED, enabled: true, installedAt: new Date(), updatedAt: new Date(), removedAt: null };
 
   beforeEach(() => {
-    vi.mocked(agentToolByLabel).mockClear();
+    vi.mocked(lenArtifactByLabel).mockClear();
     tools.byLabel = {};
     tools.agentByLabel = { [WORKSPACE]: agentRow("workspace"), [PHONE]: agentRow("phone") };
     tools.releases = { "agent-sha": { "/index.html": { content: "<html><head></head><body>agent tool</body></html>", contentType: "text/html; charset=utf-8" } } };
@@ -402,7 +402,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     const html = await res.text();
     expect(html).toContain("agent tool");
     expect(html).toContain('<script src="/openlen/tool-bridge.js"></script>');
-    expect(res.headers.get("content-security-policy")).toBe(agentToolContentPolicy("https://openlen.com"));
+    expect(res.headers.get("content-security-policy")).toBe(lenArtifactContentPolicy("https://openlen.com"));
     expect(res.headers.get("content-security-policy")).toContain("connect-src 'self'");
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
@@ -410,7 +410,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
   it("its phone label is framed only by the phone app", async () => {
     const res = await pide(`${PHONE}.openlen.app`, "/");
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-security-policy")).toBe(agentToolContentPolicy(PHONE_ORIGINS));
+    expect(res.headers.get("content-security-policy")).toBe(lenArtifactContentPolicy(PHONE_ORIGINS));
   });
 
   it("🔴 a path the tool doesn't have answers the very 404 of a label that is nothing: nobody can tell a tool is there", async () => {
@@ -442,7 +442,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     const doc = guardarDocumento({ html: "<!doctype html><p>home</p>", projectId: P1, userId: "u1", pagina: null });
     const res = await pide(`${label}.openlen.app`, `/?__lienzo=${doc}`);
     expect(await res.text()).toContain("<p>home</p>");
-    expect(agentToolByLabel).not.toHaveBeenCalled();
+    expect(lenArtifactByLabel).not.toHaveBeenCalled();
   });
 
   it("🔴 an installed tool takes the label before an agent's", async () => {
@@ -453,18 +453,18 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     expect(await res.text()).not.toContain("agent tool");
     // the installed tool's own frame header, not the agent tool's content policy
     expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
-    expect(agentToolByLabel).not.toHaveBeenCalled();
+    expect(lenArtifactByLabel).not.toHaveBeenCalled();
   });
 
   it("with no canvas and no installed tool it asks for the label, and a label nobody owns is a 404", async () => {
     expect((await pide("lienzo-cccccccccccccccccccccccccccccccc.openlen.app", "/")).status).toBe(404);
-    expect(agentToolByLabel).toHaveBeenCalledWith("lienzo-cccccccccccccccccccccccccccccccc");
+    expect(lenArtifactByLabel).toHaveBeenCalledWith("lienzo-cccccccccccccccccccccccccccccccc");
   });
 
-  it("with OPENLEN_AGENT_TOOLS=0 it is not served, and not even looked up", async () => {
-    vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+  it("with OPENLEN_LEN_ARTIFACTS=0 it is not served, and not even looked up", async () => {
+    vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
     expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(404);
-    expect(agentToolByLabel).not.toHaveBeenCalled();
+    expect(lenArtifactByLabel).not.toHaveBeenCalled();
   });
 
   it("with OPENLEN_TOOLS=0 (the installed tools off) an agent's tool is still served: they are two switches", async () => {
@@ -473,7 +473,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
   });
 
   it("when the lookup fails the label is a 404, not a 500", async () => {
-    vi.mocked(agentToolByLabel).mockRejectedValueOnce(new Error("db down"));
+    vi.mocked(lenArtifactByLabel).mockRejectedValueOnce(new Error("db down"));
     expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(404);
   });
 });

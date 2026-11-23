@@ -160,10 +160,10 @@ describe("bundled skills", () => {
   // AN AGENT'S OWN TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §6): how a space agent builds,
   // publishes, verifies and syncs its own tool in `/tools/<slug>/<tool>/`.
   describe("agent-tools", () => {
-    it("is offered unless OPENLEN_AGENT_TOOLS=0, and its name stays reserved", () => {
+    it("is offered unless OPENLEN_LEN_ARTIFACTS=0, and its name stays reserved", () => {
       const skill = bundledSkills().find((b) => b.skill.name === "agent-tools")!.skill;
       expect(skill.description).toMatch(/publish_tool|tool/i);
-      vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+      vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
       expect(bundledSkills().map((b) => b.skill.name)).not.toContain("agent-tools");
       expect(Object.keys(bundledSkillFiles()).some((p) => p.includes("/agent-tools/"))).toBe(false);
       expect(bundledSkillNames().has("agent-tools")).toBe(true);

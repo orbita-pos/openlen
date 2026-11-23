@@ -21,7 +21,7 @@ export const VISUALS_CDN_ORIGINS = [
  *  Checked 2026-10-16: the CSS exists on jsdelivr and its classes are `.icon-<name>`. */
 export const LUCIDE_FONT_VERSION = "1.16.0";
 
-/** Also what an agent's tool loads its fonts from (`lib/agent-tools/serve.ts`): one list for both. */
+/** Also what an agent's tool loads its fonts from (`lib/len-artifacts/serve.ts`): one list for both. */
 export const GOOGLE_FONT_STYLES = "https://fonts.googleapis.com";
 export const GOOGLE_FONT_FILES = "https://fonts.gstatic.com";
 

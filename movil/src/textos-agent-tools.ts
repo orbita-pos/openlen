@@ -1,5 +1,5 @@
 // Phone texts for an agent's own tools (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4), in all 10
-// languages (namespace `movil.agentTools`). Registered in `movil/src/textos.test.ts`.
+// languages (namespace `movil.lenArtifacts`). Registered in `movil/src/textos.test.ts`.
 import type { Idioma } from "./config";
 
 const es = {
@@ -20,7 +20,7 @@ const es = {
 };
 type Texts = Record<keyof typeof es, string>;
 
-export const textosAgentTools: Record<Idioma, Texts> = {
+export const textosLenArtifacts: Record<Idioma, Texts> = {
   es,
   en: {
     boton: "Tools",

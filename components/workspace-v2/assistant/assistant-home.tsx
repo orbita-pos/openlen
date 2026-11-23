@@ -21,7 +21,7 @@ import type { StoredChatTurn } from "@/lib/projects/types";
 
 import { NewChatPanel } from "../chat/new-chat-panel";
 import { ToastProvider } from "../toast";
-import { AgentToolPane, type AgentToolListItem } from "./agent-tool-pane";
+import { LenArtifactPane, type LenArtifactListItem } from "./agent-tool-pane";
 import { ChangeFigure } from "./change-figure";
 import { HerPage } from "./her-page";
 import { HerProjects } from "./her-projects";
@@ -101,19 +101,19 @@ export function AssistantHome({
   // Text handed by one of the agent's tools (`sendPrompt`): fills the composer and never auto-sends.
   const [toolDraft, setToolDraft] = useState<string | null>(null);
   // The tools this agent published for its person (spec local 2026-11-22-herramienta-dentro-del-agente, §2).
-  const [agentTools, setAgentTools] = useState<AgentToolListItem[]>([]);
+  const [lenArtifacts, setLenArtifacts] = useState<LenArtifactListItem[]>([]);
   const toolsReqRef = useRef(0);
-  const loadAgentTools = useCallback(async () => {
+  const loadLenArtifacts = useCallback(async () => {
     // Only an agent of the person's space has tools: any other assistant never asks.
     if (!inSpace) return;
     const reqId = ++toolsReqRef.current;
     try {
-      const res = await fetch(`/api/agent-tools?assistantId=${encodeURIComponent(assistant.id)}`, { cache: "no-store" });
+      const res = await fetch(`/api/len-artifacts?assistantId=${encodeURIComponent(assistant.id)}`, { cache: "no-store" });
       if (!res.ok || reqId !== toolsReqRef.current) return;
       const data: unknown = await res.json();
       if (!Array.isArray(data) || reqId !== toolsReqRef.current) return;
-      const list = data as AgentToolListItem[];
-      setAgentTools(list);
+      const list = data as LenArtifactListItem[];
+      setLenArtifacts(list);
       const validIds = new Set(list.map((item) => `tool:${item.id}`));
       setSeen((prev) => {
         let changed = false;
@@ -130,8 +130,8 @@ export function AssistantHome({
     }
   }, [assistant.id, inSpace]);
   useEffect(() => {
-    void loadAgentTools();
-  }, [loadAgentTools]);
+    void loadLenArtifacts();
+  }, [loadLenArtifacts]);
   const prevTurnRef = useRef<{ id: string; status: string; published: number } | null>(null);
   const handleLatestTurnChange = useCallback(
     (turn: LatestTurn | null) => {
@@ -146,9 +146,9 @@ export function AssistantHome({
       const sameTurn = prev.id === turn.id;
       const justPublished = sameTurn && published > prev.published;
       const justSettled = sameTurn && prev.status === "streaming" && turn.status !== "streaming";
-      if (justPublished || justSettled) void loadAgentTools();
+      if (justPublished || justSettled) void loadLenArtifacts();
     },
-    [loadAgentTools],
+    [loadLenArtifacts],
   );
   // Her figure can be changed here (phase 6): her place wears the new one at once.
   const [look, setLook] = useState(assistant.look);
@@ -178,7 +178,7 @@ export function AssistantHome({
   const handleToolRemoved = useCallback((toolId: string) => {
     toolsReqRef.current += 1;
     const key: ToolTab = `tool:${toolId}`;
-    setAgentTools((prev) => prev.filter((item) => item.id !== toolId));
+    setLenArtifacts((prev) => prev.filter((item) => item.id !== toolId));
     setSeen((prev) => {
       if (!prev.has(key)) return prev;
       const next = new Set(prev);
@@ -323,8 +323,8 @@ export function AssistantHome({
                 </button>
               );
             })}
-            {agentTools.length > 0 && <div className="my-1 h-px w-6 bg-[var(--border)]" />}
-            {agentTools.map((tool) => {
+            {lenArtifacts.length > 0 && <div className="my-1 h-px w-6 bg-[var(--border)]" />}
+            {lenArtifacts.map((tool) => {
               const k: ToolTab = `tool:${tool.id}`;
               return (
                 <button
@@ -355,7 +355,7 @@ export function AssistantHome({
                   flatProjectChat={initialChat}
                   onChatChange={() => {
                     router.refresh();
-                    void loadAgentTools();
+                    void loadLenArtifacts();
                   }}
                   onLatestTurnChange={handleLatestTurnChange}
                   assistant={her}
@@ -388,12 +388,12 @@ export function AssistantHome({
                 <VisitorRequests assistantId={assistant.id} name={assistant.name} />
               </div>
             )}
-            {agentTools.map((tool) => {
+            {lenArtifacts.map((tool) => {
               const k: ToolTab = `tool:${tool.id}`;
               if (!seen.has(k)) return null;
               return (
                 <div key={tool.id} className={tab === k ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-                  <AgentToolPane
+                  <LenArtifactPane
                     tool={tool}
                     locale={locale}
                     personName={personName}

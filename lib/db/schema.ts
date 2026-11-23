@@ -1683,8 +1683,8 @@ export const agentLenMessages = pgTable(
  *  row by convention — no foreign key: that table belongs to `tools:migrate`) and served on its own private labels, one
  *  for the web and one for the phone. Deleting the agent, the person or the space deletes its tools and their data.
  *  Created by `npm run assistants:migrate`. */
-export const agentTools = pgTable(
-  "agentTools",
+export const lenArtifacts = pgTable(
+  "lenArtifacts",
   {
     id: text("id").primaryKey(),
     assistantId: text("assistantId").notNull().references(() => assistants.id, { onDelete: "cascade" }),
@@ -1707,21 +1707,21 @@ export const agentTools = pgTable(
     agentSeenAt: timestamp("agentSeenAt", { mode: "date", withTimezone: true }),
   },
   (t) => [
-    uniqueIndex("agentTools_assistant_slug_idx").on(t.assistantId, t.slug),
-    uniqueIndex("agentTools_hostLabel_idx").on(t.hostLabel),
-    uniqueIndex("agentTools_phoneHostLabel_idx").on(t.phoneHostLabel),
-    index("agentTools_personId_idx").on(t.personId),
+    uniqueIndex("lenArtifacts_assistant_slug_idx").on(t.assistantId, t.slug),
+    uniqueIndex("lenArtifacts_hostLabel_idx").on(t.hostLabel),
+    uniqueIndex("lenArtifacts_phoneHostLabel_idx").on(t.phoneHostLabel),
+    index("lenArtifacts_personId_idx").on(t.personId),
     // Deleting a space project cascades here: the index keeps that delete from reading the whole table.
-    index("agentTools_spaceProjectId_idx").on(t.spaceProjectId),
+    index("lenArtifacts_spaceProjectId_idx").on(t.spaceProjectId),
   ],
 );
 
 /** The small database a tool shares with its agent: JSON documents in collections (`collection/docId`), per tool.
  *  `bytes` is the UTF-8 length of the document's JSON, kept so the caps are checked without reading the documents. */
-export const agentToolDocs = pgTable(
-  "agentToolDocs",
+export const lenArtifactDocs = pgTable(
+  "lenArtifactDocs",
   {
-    toolId: text("toolId").notNull().references(() => agentTools.id, { onDelete: "cascade" }),
+    toolId: text("toolId").notNull().references(() => lenArtifacts.id, { onDelete: "cascade" }),
     collection: text("collection").notNull(),
     docId: text("docId").notNull(),
     data: jsonb("data").$type<unknown>().notNull(),

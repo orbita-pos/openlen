@@ -3419,7 +3419,7 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
         publishedAt: null,
         data: { html: "", space: { bornAt: "2026-11-19T00:00:00Z" } },
       }),
-      loadAgentToolForEyes: async (assistantId: string, slug: string) => {
+      loadLenArtifactForEyes: async (assistantId: string, slug: string) => {
         loadedArgs.push([assistantId, slug]);
         return loaded && loaded.tool.slug === slug ? loaded : null;
       },
@@ -3442,7 +3442,7 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     docs: [{ collection: "lessons", docId: "1", data: { unlocked: true }, updatedAt: new Date("2026-11-22T10:00:00Z"), updatedBy: "agent" as const }],
   };
 
-  it("view_page screenshot and measure open the published tool with agentTool bridge and release files", async () => {
+  it("view_page screenshot and measure open the published tool with lenArtifact bridge and release files", async () => {
     const { eyesDeps, seenUsar, seenObservar, loadedArgs } = makeToolDeps(SAMPLE);
     const shot = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
     assert.equal(shot.response.ok, true);
@@ -3452,7 +3452,7 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     assert.equal(seenUsar[0]!.html, SAMPLE.html);
     assert.deepEqual(seenUsar[0]!.releaseFiles, SAMPLE.files);
     assert.deepEqual(seenUsar[0]!.toolBridge, {
-      mode: "agentTool",
+      mode: "lenArtifact",
       toolId: "t1",
       releaseSha: "sha-abc",
       locale: "es",
@@ -3465,10 +3465,10 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     assert.equal(seenObservar.length, 1);
     assert.equal(seenObservar[0]!.html, SAMPLE.html);
     assert.deepEqual(seenObservar[0]!.releaseFiles, SAMPLE.files);
-    assert.equal((seenObservar[0]!.toolBridge as { mode: string }).mode, "agentTool");
+    assert.equal((seenObservar[0]!.toolBridge as { mode: string }).mode, "lenArtifact");
   });
 
-  it("use_page with tool runs steps on the published tool and passes agentTool bridge", async () => {
+  it("use_page with tool runs steps on the published tool and passes lenArtifact bridge", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
     const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "Recorrido" }] });
     assert.equal(out.response.ok, true);
@@ -3487,7 +3487,7 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
 
   it("a tool that couldn't be loaded (the database or its version didn't answer) is not called missing", async () => {
     const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
-    (eyesDeps as unknown as { loadAgentToolForEyes: () => Promise<never> }).loadAgentToolForEyes = async () => {
+    (eyesDeps as unknown as { loadLenArtifactForEyes: () => Promise<never> }).loadLenArtifactForEyes = async () => {
       throw new Error("database is down");
     };
     const warned: unknown[][] = [];
@@ -3521,9 +3521,9 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
     assert.equal(seenUsar.length, 0);
   });
 
-  it("refuses when OPENLEN_AGENT_TOOLS=0", async () => {
-    const prev = process.env.OPENLEN_AGENT_TOOLS;
-    process.env.OPENLEN_AGENT_TOOLS = "0";
+  it("refuses when OPENLEN_LEN_ARTIFACTS=0", async () => {
+    const prev = process.env.OPENLEN_LEN_ARTIFACTS;
+    process.env.OPENLEN_LEN_ARTIFACTS = "0";
     try {
       const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
       const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "x" }] });
@@ -3531,8 +3531,8 @@ describe("agent tool eyes: view_page and use_page with tool", () => {
       assert.match(String(out.response.error), /turned off/i);
       assert.equal(seenUsar.length, 0);
     } finally {
-      if (prev === undefined) delete process.env.OPENLEN_AGENT_TOOLS;
-      else process.env.OPENLEN_AGENT_TOOLS = prev;
+      if (prev === undefined) delete process.env.OPENLEN_LEN_ARTIFACTS;
+      else process.env.OPENLEN_LEN_ARTIFACTS = prev;
     }
   });
 });

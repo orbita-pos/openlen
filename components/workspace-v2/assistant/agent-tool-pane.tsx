@@ -1,7 +1,7 @@
 "use client";
 
 // AN AGENT'S TOOL IN ITS PLACE ON THE WEB (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): frames the
-// tool's published version (`frameUrl`), answers its restricted bridge (`AGENT_TOOL_BRIDGE_METHODS`), opens one SSE
+// tool's published version (`frameUrl`), answers its restricted bridge (`LEN_ARTIFACT_BRIDGE_METHODS`), opens one SSE
 // follow stream on `data.subscribe` (restarting on every `data.subscribe` and reconnecting with backoff if the stream
 // drops so a fresh baseline always arrives; stopping and removing the tab only on `event: gone`), fills the agent's
 // composer without sending on `sendPrompt`, and offers the person-only «Quitar» menu with confirmation.
@@ -9,14 +9,14 @@ import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { AGENT_TOOL_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
+import { LEN_ARTIFACT_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
 import type { DataChangedParams } from "@/lib/tools/bridge/protocol";
 
 import { ALLOW_HERRAMIENTA_AGENTE, SANDBOX_HERRAMIENTA_AGENTE } from "../sandbox-del-lienzo";
 import { readToolTheme } from "../tools/use-tool-bridge-host";
 import { HER_QUIET, HER_ROW, HerSheet } from "./her-sheet";
 
-export interface AgentToolListItem {
+export interface LenArtifactListItem {
   readonly id: string;
   readonly slug: string;
   readonly title: string;
@@ -41,14 +41,14 @@ function parseDataChanged(raw: string): DataChangedParams | null {
   return null;
 }
 
-export function AgentToolPane({
+export function LenArtifactPane({
   tool,
   locale,
   onPrompt,
   onRemoved,
   personName = "",
 }: {
-  tool: AgentToolListItem;
+  tool: LenArtifactListItem;
   locale: string;
   /** The signed-in person's name, for the tool's context (as an installed tool gets it). */
   personName?: string;
@@ -119,7 +119,7 @@ export function AgentToolPane({
 
     let es: EventSource;
     try {
-      es = new EventSource(`/api/agent-tools/${encodeURIComponent(toolId)}/follow`);
+      es = new EventSource(`/api/len-artifacts/${encodeURIComponent(toolId)}/follow`);
     } catch {
       scheduleReconnect();
       return;
@@ -169,8 +169,8 @@ export function AgentToolPane({
       createToolBridgeHost({
         frame: () => iframe.current?.contentWindow ?? null,
         frameOrigin: tool.frameOrigin,
-        caller: { agentToolId: tool.id },
-        methods: AGENT_TOOL_BRIDGE_METHODS,
+        caller: { lenArtifactId: tool.id },
+        methods: LEN_ARTIFACT_BRIDGE_METHODS,
         context: () => ({
           person: { name: latest.current.personName, locale: latest.current.locale },
           project: null,
@@ -224,7 +224,7 @@ export function AgentToolPane({
     setRemoving(true);
     setRemoveError(false);
     try {
-      const res = await fetch(`/api/agent-tools/${encodeURIComponent(tool.id)}`, { method: "DELETE" });
+      const res = await fetch(`/api/len-artifacts/${encodeURIComponent(tool.id)}`, { method: "DELETE" });
       if (!res.ok && res.status !== 404) {
         setRemoveError(true);
         return;

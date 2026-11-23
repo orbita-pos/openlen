@@ -79,15 +79,15 @@ export async function GET(
       }
     }
     // AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): third and last — no canvas and no installed
-    // tool owns the label. Its published version, with the bridge, on its own switch (OPENLEN_AGENT_TOOLS), whether or not
+    // tool owns the label. Its published version, with the bridge, on its own switch (OPENLEN_LEN_ARTIFACTS), whether or not
     // the installed tools (OPENLEN_TOOLS) are on.
-    const { agentToolsEnabled } = await import("@/lib/agent-tools/enabled");
-    if (agentToolsEnabled()) {
-      const { agentToolByLabel } = await import("@/lib/agent-tools/store");
-      const agentTool = await agentToolByLabel(etiqueta).catch(() => null);
-      if (agentTool) {
-        const { serveAgentTool } = await import("@/lib/agent-tools/serve");
-        return serveAgentTool(agentTool, ruta, { requestHost: req.headers.get("host") });
+    const { lenArtifactsEnabled } = await import("@/lib/len-artifacts/enabled");
+    if (lenArtifactsEnabled()) {
+      const { lenArtifactByLabel } = await import("@/lib/len-artifacts/store");
+      const lenArtifact = await lenArtifactByLabel(etiqueta).catch(() => null);
+      if (lenArtifact) {
+        const { serveLenArtifact } = await import("@/lib/len-artifacts/serve");
+        return serveLenArtifact(lenArtifact, ruta, { requestHost: req.headers.get("host") });
       }
     }
   }

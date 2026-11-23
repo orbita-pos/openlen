@@ -26,7 +26,7 @@ import { useSubagentes } from "./use-subagentes";
 import { SubagentesLineas } from "./subagentes-lineas";
 import { LenRequestCard } from "../asistente/len-request-card";
 import { BotonHerramientasDeAgente } from "../asistente/agent-tools";
-import { listAgentTools, type AgentToolItem } from "../api/agent-tools";
+import { listLenArtifacts, type LenArtifactItem } from "../api/len-artifacts";
 import "../asistente/her-chat.css";
 import type { LenRequestRef } from "@/lib/assistants/len-request-ref";
 import type { LenRequestView } from "@/lib/assistants/len-requests";
@@ -107,21 +107,21 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
   const volver = useRef<HTMLButtonElement>(null);
   const [archivos,setArchivos] = useState<File[]>([]);
   const [errorAdjunto,setErrorAdjunto] = useState<string|null>(null);
-  const [agentTools, setAgentTools] = useState<{ id: string; items: AgentToolItem[] } | null>(null);
-  const agentToolsSeq = useRef(0);
+  const [lenArtifacts, setLenArtifacts] = useState<{ id: string; items: LenArtifactItem[] } | null>(null);
+  const lenArtifactsSeq = useRef(0);
   const wasWorking = useRef(chat.trabajando);
   const asistenteId = asistente?.id ?? null;
-  const visibleAgentTools = asistenteId && agentTools?.id === asistenteId ? agentTools.items : [];
+  const visibleLenArtifacts = asistenteId && lenArtifacts?.id === asistenteId ? lenArtifacts.items : [];
   useEffect(() => {
-    const seq = ++agentToolsSeq.current;
+    const seq = ++lenArtifactsSeq.current;
     if (!abierto || !asistenteId) {
-      if (!asistenteId) setAgentTools(null);
+      if (!asistenteId) setLenArtifacts(null);
       return;
     }
     const ctrl = new AbortController();
-    void listAgentTools(cliente, asistenteId, ctrl.signal).then((items) => {
-      if (!ctrl.signal.aborted && agentToolsSeq.current === seq && items !== null) {
-        setAgentTools({ id: asistenteId, items });
+    void listLenArtifacts(cliente, asistenteId, ctrl.signal).then((items) => {
+      if (!ctrl.signal.aborted && lenArtifactsSeq.current === seq && items !== null) {
+        setLenArtifacts({ id: asistenteId, items });
       }
     });
     return () => ctrl.abort();
@@ -130,11 +130,11 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
     const prev = wasWorking.current;
     wasWorking.current = chat.trabajando;
     if (!prev || chat.trabajando || !abierto || !asistenteId) return;
-    const seq = ++agentToolsSeq.current;
+    const seq = ++lenArtifactsSeq.current;
     const ctrl = new AbortController();
-    void listAgentTools(cliente, asistenteId, ctrl.signal).then((items) => {
-      if (!ctrl.signal.aborted && agentToolsSeq.current === seq && items !== null) {
-        setAgentTools({ id: asistenteId, items });
+    void listLenArtifacts(cliente, asistenteId, ctrl.signal).then((items) => {
+      if (!ctrl.signal.aborted && lenArtifactsSeq.current === seq && items !== null) {
+        setLenArtifacts({ id: asistenteId, items });
       }
     });
     return () => ctrl.abort();
@@ -314,7 +314,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
             key={asistenteId}
             abierto={abierto}
             cliente={cliente}
-            tools={visibleAgentTools}
+            tools={visibleLenArtifacts}
             idioma={idioma}
             persona={persona}
             onPrompt={(text) => {
@@ -322,7 +322,7 @@ export function PantallaChat({ abierto, chat, cliente, projectId, idioma, conPip
               campo.current?.focus({ preventScroll: true });
             }}
             onRemoved={(toolId) =>
-              setAgentTools((cur) => (cur && cur.id === asistenteId ? { ...cur, items: cur.items.filter((x) => x.id !== toolId) } : cur))
+              setLenArtifacts((cur) => (cur && cur.id === asistenteId ? { ...cur, items: cur.items.filter((x) => x.id !== toolId) } : cur))
             }
           />
         )}

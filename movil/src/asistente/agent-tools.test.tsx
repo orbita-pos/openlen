@@ -1,5 +1,5 @@
 // AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): header button only when
-// the agent has tools, opens full screen on the phone's own label (`POST /api/movil/agent-tools/[id]/open`, never the
+// the agent has tools, opens full screen on the phone's own label (`POST /api/movil/len-artifacts/[id]/open`, never the
 // list's workspace frameUrl), streams live changes with fetch reader + crearLectorSse (reconnecting for a fresh
 // baseline on drop; stopping and removing only on `gone`), restricted bridge, `sendPrompt` fills composer without
 // sending, and remove asks confirmation then calls DELETE.
@@ -95,7 +95,7 @@ describe("mobile agent tools", () => {
   it("shows the header button in the agent's chat ONLY when the agent has tools", async () => {
     const withTools = {
       pedir: vi.fn(async (ruta: string) =>
-        ruta === "/api/agent-tools?assistantId=a1"
+        ruta === "/api/len-artifacts?assistantId=a1"
           ? Response.json([{ id: "t1", slug: "recorrido", title: "Recorrido", frameUrl: `${WORKSPACE_ORIGIN}/?v=1`, frameOrigin: WORKSPACE_ORIGIN }])
           : Response.json({}),
       ),
@@ -148,14 +148,14 @@ describe("mobile agent tools", () => {
     );
     await act(flush);
     expect(host3.querySelector("[data-agent-tools-btn]")).toBeNull();
-    expect(lenClient.pedir.mock.calls.some(([r]) => String(r).includes("/api/agent-tools"))).toBe(false);
+    expect(lenClient.pedir.mock.calls.some(([r]) => String(r).includes("/api/len-artifacts"))).toBe(false);
   });
 
   it("a DELETE answered 401 (the key is gone; the app signs out) closes the screen and shows no failure", async () => {
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
-        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") return Response.json({ url: `${PHONE_ORIGIN}/?v=1`, origin: PHONE_ORIGIN });
-        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") return new Response("{}", { status: 401 });
+        if (ruta === "/api/movil/len-artifacts/t1/open" && init?.method === "POST") return Response.json({ url: `${PHONE_ORIGIN}/?v=1`, origin: PHONE_ORIGIN });
+        if (ruta === "/api/len-artifacts/t1" && init?.method === "DELETE") return new Response("{}", { status: 401 });
         return Response.json({});
       }),
       avisarAlCerrar: vi.fn(),
@@ -182,7 +182,7 @@ describe("mobile agent tools", () => {
   it("the tool's context names the signed-in person and the version its phone address shows", async () => {
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) =>
-        ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST" ? Response.json({ url: `${PHONE_ORIGIN}/?v=sha-real`, origin: PHONE_ORIGIN }) : Response.json({}),
+        ruta === "/api/movil/len-artifacts/t1/open" && init?.method === "POST" ? Response.json({ url: `${PHONE_ORIGIN}/?v=sha-real`, origin: PHONE_ORIGIN }) : Response.json({}),
       ),
       avisarAlCerrar: vi.fn(),
     };
@@ -210,7 +210,7 @@ describe("mobile agent tools", () => {
     expect(answer?.result?.tool.version).toBe("sha-real");
   });
 
-  it("opens on the phone URL from POST /api/movil/agent-tools/[id]/open, restricts methods, streams changes, reconnects on drop, and stops on gone", async () => {
+  it("opens on the phone URL from POST /api/movil/len-artifacts/[id]/open, restricts methods, streams changes, reconnects on drop, and stops on gone", async () => {
     vi.useFakeTimers();
     const s1 = sseStream();
     const s2 = sseStream();
@@ -221,10 +221,10 @@ describe("mobile agent tools", () => {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
         const key = `${init?.method ?? "GET"} ${ruta}`;
         calls.push(key);
-        if (key === "POST /api/movil/agent-tools/t1/open") {
+        if (key === "POST /api/movil/len-artifacts/t1/open") {
           return Response.json({ url: `${PHONE_ORIGIN}/?v=sha1`, origin: PHONE_ORIGIN });
         }
-        if (key === "GET /api/agent-tools/t1/follow") {
+        if (key === "GET /api/len-artifacts/t1/follow") {
           followCount += 1;
           return followCount === 1 ? s1.response : s2.response;
         }
@@ -248,7 +248,7 @@ describe("mobile agent tools", () => {
     );
     await act(flush);
 
-    expect(calls[0]).toBe("POST /api/movil/agent-tools/t1/open");
+    expect(calls[0]).toBe("POST /api/movil/len-artifacts/t1/open");
     const iframe = document.querySelector<HTMLIFrameElement>('iframe[data-agent-tool-frame="t1"]')!;
     expect(iframe).not.toBeNull();
     expect(iframe.getAttribute("src")).toBe(`${PHONE_ORIGIN}/?v=sha1`);
@@ -259,7 +259,7 @@ describe("mobile agent tools", () => {
     const posted: unknown[] = [];
     vi.spyOn(iframe.contentWindow!, "postMessage").mockImplementation((msg) => posted.push(msg));
 
-    // Method outside AGENT_TOOL_BRIDGE_METHODS is refused.
+    // Method outside LEN_ARTIFACT_BRIDGE_METHODS is refused.
     await act(async () => {
       window.dispatchEvent(new MessageEvent("message", { origin: PHONE_ORIGIN, source: iframe.contentWindow, data: rpc(1, "projects") }));
       await flush();
@@ -326,13 +326,13 @@ describe("mobile agent tools", () => {
     const chat = makeChat();
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
-        if (ruta === "/api/agent-tools?assistantId=a1") {
+        if (ruta === "/api/len-artifacts?assistantId=a1") {
           return Response.json([{ id: "t1", slug: "recorrido", title: "Recorrido", frameUrl: `${WORKSPACE_ORIGIN}/?v=1`, frameOrigin: WORKSPACE_ORIGIN }]);
         }
-        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") {
+        if (ruta === "/api/movil/len-artifacts/t1/open" && init?.method === "POST") {
           return Response.json({ url: `${PHONE_ORIGIN}/?v=sha1`, origin: PHONE_ORIGIN });
         }
-        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") {
+        if (ruta === "/api/len-artifacts/t1" && init?.method === "DELETE") {
           deletes.push(ruta);
           return Response.json({ ok: true });
         }
@@ -391,7 +391,7 @@ describe("mobile agent tools", () => {
       document.querySelector<HTMLButtonElement>("[data-agent-tool-confirm-remove]")!.click();
       await flush();
     });
-    expect(deletes).toEqual(["/api/agent-tools/t1"]);
+    expect(deletes).toEqual(["/api/len-artifacts/t1"]);
     expect(document.querySelector('iframe[data-agent-tool-frame="t1"]')).toBeNull();
     // Tool removed -> header button is gone!
     expect(host.querySelector("[data-agent-tools-btn]")).toBeNull();
@@ -401,13 +401,13 @@ describe("mobile agent tools", () => {
     let finishDelete!: (r: Response) => void;
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
-        if (ruta === "/api/agent-tools?assistantId=a1") {
+        if (ruta === "/api/len-artifacts?assistantId=a1") {
           return Response.json([{ id: "t1", slug: "recorrido", title: "Recorrido", frameUrl: `${WORKSPACE_ORIGIN}/?v=1`, frameOrigin: WORKSPACE_ORIGIN }]);
         }
-        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") {
+        if (ruta === "/api/movil/len-artifacts/t1/open" && init?.method === "POST") {
           return Response.json({ url: `${PHONE_ORIGIN}/?v=sha1`, origin: PHONE_ORIGIN });
         }
-        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") {
+        if (ruta === "/api/len-artifacts/t1" && init?.method === "DELETE") {
           return await new Promise<Response>((r) => {
             finishDelete = r;
           });
@@ -467,11 +467,11 @@ describe("mobile agent tools", () => {
     const dataCalls: Array<{ ruta: string; body: unknown }> = [];
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
-        if (ruta === "/api/agent-tools?assistantId=a1") return Response.json(toolsList);
-        if (ruta === "/api/movil/agent-tools/t2/open" && init?.method === "POST") {
+        if (ruta === "/api/len-artifacts?assistantId=a1") return Response.json(toolsList);
+        if (ruta === "/api/movil/len-artifacts/t2/open" && init?.method === "POST") {
           return Response.json({ url: `${PHONE_ORIGIN}/?v=sha2`, origin: PHONE_ORIGIN });
         }
-        if (ruta === "/api/agent-tools/t2/data" && init?.method === "POST") {
+        if (ruta === "/api/len-artifacts/t2/data" && init?.method === "POST") {
           dataCalls.push({ ruta, body: JSON.parse(String(init.body ?? "{}")) });
           return Response.json({ ok: true, doc: { collection: "notes", docId: "1", data: { text: "hola" }, updatedAt: "2026-11-22T12:00:00Z", updatedBy: "person" } });
         }
@@ -543,7 +543,7 @@ describe("mobile agent tools", () => {
       );
       await flush();
     });
-    expect(dataCalls).toEqual([{ ruta: "/api/agent-tools/t2/data", body: { op: "set", collection: "notes", docId: "1", data: { text: "hola" } } }]);
+    expect(dataCalls).toEqual([{ ruta: "/api/len-artifacts/t2/data", body: { op: "set", collection: "notes", docId: "1", data: { text: "hola" } } }]);
     expect(posted.at(-1)).toMatchObject({ id: 9, result: { ok: true } });
   });
 
@@ -554,25 +554,25 @@ describe("mobile agent tools", () => {
     let resolveAgentB!: (r: Response) => void;
     const cliente = {
       pedir: vi.fn(async (ruta: string, init?: RequestInit) => {
-        if (ruta === "/api/agent-tools?assistantId=a1") {
+        if (ruta === "/api/len-artifacts?assistantId=a1") {
           return Response.json([
             { id: "t1", slug: "recorrido", title: "Recorrido", frameUrl: `${WORKSPACE_ORIGIN}/?v=1`, frameOrigin: WORKSPACE_ORIGIN },
             { id: "t2", slug: "notas", title: "Notas", frameUrl: `${WORKSPACE_ORIGIN}/?v=2`, frameOrigin: WORKSPACE_ORIGIN },
           ]);
         }
-        if (ruta === "/api/agent-tools?assistantId=a2") {
+        if (ruta === "/api/len-artifacts?assistantId=a2") {
           return await new Promise<Response>((r) => {
             resolveAgentB = r;
           });
         }
-        if (ruta === "/api/movil/agent-tools/t1/open" && init?.method === "POST") {
+        if (ruta === "/api/movil/len-artifacts/t1/open" && init?.method === "POST") {
           return Response.json({ url: `${PHONE_ORIGIN}/?v=sha1`, origin: PHONE_ORIGIN });
         }
-        if (ruta === "/api/agent-tools/t1/follow") {
+        if (ruta === "/api/len-artifacts/t1/follow") {
           if (init?.signal) signals.push(init.signal);
           return sseStream().response;
         }
-        if (ruta === "/api/agent-tools/t1" && init?.method === "DELETE") {
+        if (ruta === "/api/len-artifacts/t1" && init?.method === "DELETE") {
           return new Response(JSON.stringify({ error: "boom" }), { status: deleteStatus });
         }
         return Response.json({});

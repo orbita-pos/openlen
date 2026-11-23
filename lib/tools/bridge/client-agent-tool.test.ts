@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
 // window.openlen as an AGENT'S tool gets it (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): the same
-// script with `{ agentTool: true }`, but the object it exposes has only `context`, `onContext`, `sendPrompt` and `data`.
+// script with `{ lenArtifact: true }`, but the object it exposes has only `context`, `onContext`, `sendPrompt` and `data`.
 // Run against a fake window, like the installed tool's (client.test.ts).
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -41,7 +41,7 @@ function framed(parents: readonly string[] = [APP]) {
   const handlers: Array<(e: unknown) => void> = [];
   const parent = { postMessage: vi.fn() };
   const win: FakeWindow = { parent, addEventListener: (_t, fn) => handlers.push(fn) };
-  new Function("window", toolBridgeClientSource(parents, { agentTool: true }))(win);
+  new Function("window", toolBridgeClientSource(parents, { lenArtifact: true }))(win);
   const deliver = (data: unknown, o: { source?: unknown; origin?: string } = {}) =>
     handlers.forEach((h) => h({ source: o.source ?? parent, origin: o.origin ?? APP, data }));
   const lastRequest = () => parent.postMessage.mock.calls.at(-1)?.[0] as { id: number; method: string; params?: unknown };
@@ -70,11 +70,11 @@ describe("the agent tool's script: the same default, byte for byte, when no vari
   it("without options, or with the variant off, it is the installed tool's script as it was", () => {
     expect(toolBridgeClientSource([APP])).toBe(INSTALLED);
     expect(toolBridgeClientSource([APP], {})).toBe(INSTALLED);
-    expect(toolBridgeClientSource([APP], { agentTool: false })).toBe(INSTALLED);
+    expect(toolBridgeClientSource([APP], { lenArtifact: false })).toBe(INSTALLED);
   });
 
   it("the variant is another script, for the parents it is given", () => {
-    const agent = toolBridgeClientSource(["https://localhost", "capacitor://localhost"], { agentTool: true });
+    const agent = toolBridgeClientSource(["https://localhost", "capacitor://localhost"], { lenArtifact: true });
     expect(sha(agent)).not.toBe(INSTALLED_SHA256);
     expect(agent).toContain(`"https://localhost"`);
     expect(agent).toContain(`"capacitor://localhost"`);
@@ -92,13 +92,13 @@ describe("window.openlen of an agent's tool", () => {
   });
 
   it("the script carries no trace of what it doesn't offer", () => {
-    const js = toolBridgeClientSource([APP], { agentTool: true });
+    const js = toolBridgeClientSource([APP], { lenArtifact: true });
     for (const gone of ["jobs.", "files.", '"backend"', '"projects"', '"forms"', '"visits"', '"query"', '"update"']) expect(js).not.toContain(gone);
     expect(js).toContain("window.openlen");
   });
 
   it("is plain ES5: it parses without arrow functions, let/const or template strings", () => {
-    const js = toolBridgeClientSource([APP], { agentTool: true });
+    const js = toolBridgeClientSource([APP], { lenArtifact: true });
     expect(js).not.toMatch(/=>|\blet\b|\bconst\b|`/);
   });
 
@@ -157,7 +157,7 @@ describe("window.openlen.data: the requests", () => {
     expect(f.lastRequest()).toMatchObject({ method: "data.delete", params: { collection: "tareas", docId: "t1" } });
     void f.data.list!("tareas");
     expect(f.lastRequest()).toMatchObject({ method: "data.list", params: { collection: "tareas" } });
-    // the query's own shape, as the route checks it (lib/agent-tools/validate.ts)
+    // the query's own shape, as the route checks it (lib/len-artifacts/validate.ts)
     const q = { where: [{ field: "hecho", op: "==", value: false }], orderBy: { field: "titulo", direction: "asc" }, limit: 10 };
     void f.data.query!("tareas", q);
     expect(f.lastRequest()).toMatchObject({ method: "data.query", params: { collection: "tareas", query: q } });
@@ -197,7 +197,7 @@ describe("window.openlen.data: the requests", () => {
     const win: FakeWindow = { parent: null, addEventListener: () => {} };
     win.parent = win;
     win.__openlenBridge = vi.fn(async (json: string) => JSON.stringify({ jsonrpc: "2.0", id: JSON.parse(json).id, result: null, channel: "openlen-tool" }));
-    new Function("window", toolBridgeClientSource([APP], { agentTool: true }))(win);
+    new Function("window", toolBridgeClientSource([APP], { lenArtifact: true }))(win);
     await expect((win.openlen!.data as Record<string, Fn>).get!("tareas", "t1")).resolves.toBeNull();
     expect(JSON.parse((win.__openlenBridge as ReturnType<typeof vi.fn>).mock.calls[0]![0] as string)).toMatchObject({ method: "data.get", params: { collection: "tareas", docId: "t1" } });
   });
@@ -210,7 +210,7 @@ describe("window.openlen.data.subscribe without a parent (Len's eyes)", () => {
     const win: FakeWindow = { parent: null, addEventListener: () => {} };
     win.parent = win;
     win.__openlenBridge = vi.fn(async (json: string) => JSON.stringify({ jsonrpc: "2.0", id: JSON.parse(json).id, result, channel: "openlen-tool" }));
-    new Function("window", toolBridgeClientSource([APP], { agentTool: true }))(win);
+    new Function("window", toolBridgeClientSource([APP], { lenArtifact: true }))(win);
     const seen: Array<{ docs: Doc[]; change: unknown }> = [];
     const off = (win.openlen!.data as Record<string, Fn>).subscribe!((s: unknown) => seen.push(s as { docs: Doc[]; change: unknown })) as () => void;
     return { win, seen, off };

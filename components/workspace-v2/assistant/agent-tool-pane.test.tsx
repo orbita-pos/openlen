@@ -1,6 +1,6 @@
 // AN AGENT'S TOOLS ON THE WEB (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): tabs in the agent's rail,
 // live-synced with SSE follow (`baseline`, `change`, reconnect on drop, stop + remove on `gone`), restricted bridge
-// (`AGENT_TOOL_BRIDGE_METHODS`), `sendPrompt` filling the composer without sending, and person-only delete with confirmation.
+// (`LEN_ARTIFACT_BRIDGE_METHODS`), `sendPrompt` filling the composer without sending, and person-only delete with confirmation.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -39,7 +39,7 @@ vi.mock("../chat/new-chat-panel", () => ({
 }));
 
 import { AssistantHome } from "./assistant-home";
-import { AgentToolPane, type AgentToolListItem } from "./agent-tool-pane";
+import { LenArtifactPane, type LenArtifactListItem } from "./agent-tool-pane";
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -54,14 +54,14 @@ const ANA = {
   projectId: "space-1",
   agentType: "language-teacher",
 };
-const TOOL_1: AgentToolListItem = {
+const TOOL_1: LenArtifactListItem = {
   id: "tool-1",
   slug: "recorrido",
   title: "Recorrido",
   frameUrl: "https://lienzo-aaa.openlen.app/?v=sha1",
   frameOrigin: "https://lienzo-aaa.openlen.app",
 };
-const TOOL_2: AgentToolListItem = {
+const TOOL_2: LenArtifactListItem = {
   id: "tool-2",
   slug: "vocab",
   title: "Vocabulario",
@@ -174,7 +174,7 @@ function sendFromFrame(win: Window, origin: string, id: number, method: string, 
 
 describe("what the tool is told, and who asks for tools", () => {
   it("the tool's context names the signed-in person and the published version it shows", async () => {
-    const host = mount(<AgentToolPane tool={{ ...TOOL_1, releaseSha: "sha-real" }} locale="es" personName="Jesús" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const host = mount(<LenArtifactPane tool={{ ...TOOL_1, releaseSha: "sha-real" }} locale="es" personName="Jesús" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
     const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
     const { win, posted } = stubIframeWindow(iframe);
     sendFromFrame(win, TOOL_1.frameOrigin, 1, "context");
@@ -185,7 +185,7 @@ describe("what the tool is told, and who asks for tools", () => {
   });
 
   it("a list without the version still names it, from the frame's address", async () => {
-    const host = mount(<AgentToolPane tool={TOOL_1} locale="es" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
+    const host = mount(<LenArtifactPane tool={TOOL_1} locale="es" onPrompt={vi.fn()} onRemoved={vi.fn()} />);
     const { win, posted } = stubIframeWindow(host.querySelector<HTMLIFrameElement>("iframe")!);
     sendFromFrame(win, TOOL_1.frameOrigin, 2, "context");
     await flush();
@@ -204,16 +204,16 @@ describe("what the tool is told, and who asks for tools", () => {
     );
     mount(<AssistantHome assistant={ANA} projectHtml="" initialChat={[]} onPage={false} needsPublish={false} nothingToKnow={false} />);
     await flush();
-    expect(fetched.filter((u) => u.startsWith("/api/agent-tools"))).toEqual([]);
+    expect(fetched.filter((u) => u.startsWith("/api/len-artifacts"))).toEqual([]);
   });
 });
 
-describe("AssistantHome + AgentToolPane", () => {
+describe("AssistantHome + LenArtifactPane", () => {
   it("lists one tool tab per returned tool in the rail, and shows none when the list is empty (tools off)", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) =>
-        String(url) === "/api/agent-tools?assistantId=a1"
+        String(url) === "/api/len-artifacts?assistantId=a1"
           ? new Response(JSON.stringify([TOOL_1, TOOL_2]), { status: 200 })
           : new Response("{}", { status: 200 }),
       ),
@@ -243,7 +243,7 @@ describe("AssistantHome + AgentToolPane", () => {
   it("mounts the iframe with frameUrl, restricts bridge methods, streams baseline/change, reconnects on drop, and restarts on repeat subscribe", async () => {
     vi.useFakeTimers();
     const fetchMock = vi.fn(async (url: string) => {
-      if (String(url) === "/api/agent-tools/tool-1/data") {
+      if (String(url) === "/api/len-artifacts/tool-1/data") {
         return new Response(JSON.stringify({ doc: { collection: "lessons", docId: "1", data: { ok: true }, updatedAt: "2026-11-22T00:00:00Z", updatedBy: "agent" } }), { status: 200 });
       }
       return new Response("{}", { status: 200 });
@@ -252,7 +252,7 @@ describe("AssistantHome + AgentToolPane", () => {
 
     const onPrompt = vi.fn();
     const onRemoved = vi.fn();
-    const host = mount(<AgentToolPane tool={TOOL_1} locale="es" onPrompt={onPrompt} onRemoved={onRemoved} />);
+    const host = mount(<LenArtifactPane tool={TOOL_1} locale="es" onPrompt={onPrompt} onRemoved={onRemoved} />);
 
     const iframe = host.querySelector<HTMLIFrameElement>("iframe")!;
     expect(iframe).not.toBeNull();
@@ -265,20 +265,20 @@ describe("AssistantHome + AgentToolPane", () => {
 
     const { win, posted } = stubIframeWindow(iframe);
 
-    // Installed-tool method outside AGENT_TOOL_BRIDGE_METHODS is refused with METHOD_NOT_FOUND.
+    // Installed-tool method outside LEN_ARTIFACT_BRIDGE_METHODS is refused with METHOD_NOT_FOUND.
     await act(async () => {
       sendFromFrame(win, TOOL_1.frameOrigin, 1, "projects");
       await Promise.resolve();
     });
     expect(posted.at(-1)?.message).toMatchObject({ id: 1, error: { code: METHOD_NOT_FOUND } });
 
-    // data.get relays to /api/agent-tools/tool-1/data.
+    // data.get relays to /api/len-artifacts/tool-1/data.
     await act(async () => {
       sendFromFrame(win, TOOL_1.frameOrigin, 2, "data.get", { collection: "lessons", docId: "1" });
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(fetchMock).toHaveBeenCalledWith("/api/agent-tools/tool-1/data", expect.objectContaining({ method: "POST" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/len-artifacts/tool-1/data", expect.objectContaining({ method: "POST" }));
     expect(posted.at(-1)?.message).toMatchObject({ id: 2, result: { doc: { collection: "lessons", docId: "1" } } });
 
     // data.subscribe opens the SSE follow stream and answers { ok: true } immediately.
@@ -289,7 +289,7 @@ describe("AssistantHome + AgentToolPane", () => {
     expect(posted.at(-1)?.message).toMatchObject({ id: 3, result: { ok: true } });
     expect(FakeEventSource.instances).toHaveLength(1);
     const es1 = FakeEventSource.instances[0]!;
-    expect(es1.url).toBe("/api/agent-tools/tool-1/follow");
+    expect(es1.url).toBe("/api/len-artifacts/tool-1/follow");
 
     // baseline & change events are forwarded untouched as data.changed notifications.
     const baseline = { kind: "baseline", docs: [] };
@@ -343,7 +343,7 @@ describe("AssistantHome + AgentToolPane", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) =>
-        String(url) === "/api/agent-tools?assistantId=a1"
+        String(url) === "/api/len-artifacts?assistantId=a1"
           ? new Response(JSON.stringify([TOOL_1]), { status: 200 })
           : new Response("{}", { status: 200 }),
       ),
@@ -376,8 +376,8 @@ describe("AssistantHome + AgentToolPane", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string, init?: RequestInit) => {
-        if (String(url) === "/api/agent-tools?assistantId=a1") return new Response(JSON.stringify([TOOL_1]), { status: 200 });
-        if (String(url) === "/api/agent-tools/tool-1" && init?.method === "DELETE") {
+        if (String(url) === "/api/len-artifacts?assistantId=a1") return new Response(JSON.stringify([TOOL_1]), { status: 200 });
+        if (String(url) === "/api/len-artifacts/tool-1" && init?.method === "DELETE") {
           deletes.push(String(url));
           return new Response(JSON.stringify({ ok: true }), { status: 200 });
         }
@@ -408,17 +408,17 @@ describe("AssistantHome + AgentToolPane", () => {
       await Promise.resolve();
     });
 
-    expect(deletes).toEqual(["/api/agent-tools/tool-1"]);
+    expect(deletes).toEqual(["/api/len-artifacts/tool-1"]);
     expect(host.querySelectorAll("[data-agent-tool-tab]")).toHaveLength(0);
     expect(document.body.querySelector('[role="dialog"]')).toBeNull();
   });
 
   it("refreshes the tool list when publish_tool finishes in a live turn and falls back to Talk if the active tool disappears", async () => {
-    let serverTools: AgentToolListItem[] = [];
+    let serverTools: LenArtifactListItem[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) =>
-        String(url) === "/api/agent-tools?assistantId=a1"
+        String(url) === "/api/len-artifacts?assistantId=a1"
           ? new Response(JSON.stringify(serverTools), { status: 200 })
           : new Response("{}", { status: 200 }),
       ),

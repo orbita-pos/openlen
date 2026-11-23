@@ -17,10 +17,10 @@ import { relatedAgentsLine } from "@/lib/assistants/messages/policy";
 import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/related";
 import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/agent-tools/agent-tools";
-import { changedSince, toolChangesLine, watchAgentToolChanges } from "@/lib/agent-tools/changes";
-import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
-import { agentToolsOf, type AgentToolRow } from "@/lib/agent-tools/store";
+import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/agent-tools";
+import { changedSince, artifactChangesLine, watchLenArtifactChanges } from "@/lib/len-artifacts/changes";
+import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
+import { lenArtifactsOf, type LenArtifactRow } from "@/lib/len-artifacts/store";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -1506,8 +1506,8 @@ async function correrTurno(
   // history replays it byte for byte. Fail-soft: a store error leaves the turn running without the line.
   // `/compact` is no message of the person's: it carries no line and follows nothing.
   const vigilaHerramientas =
-    asistente !== null && espacioDelTurno && agentToolsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno && !parseCompactCommand(prompt);
-  const herramientasDelAgente: AgentToolRow[] = vigilaHerramientas ? await agentToolsOf(asistente!.id).catch(() => []) : [];
+    asistente !== null && espacioDelTurno && lenArtifactsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno && !parseCompactCommand(prompt);
+  const herramientasDelAgente: LenArtifactRow[] = vigilaHerramientas ? await lenArtifactsOf(asistente!.id).catch(() => []) : [];
   // When the line below was read: the turn's watcher looks in the store for what landed after it, before it subscribed.
   const cambiosLeidosEn = new Date();
   const cambiosDeHerramientas =
@@ -1517,7 +1517,7 @@ async function correrTurno(
   const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
       ? programadaDelTurno.framing
-      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}${visualStatesReminder(estadosVisuales)}${toolChangesLine(cambiosDeHerramientas)}`,
+      : `${hiloDelTurno ? `${hiloDelTurno.contexto}\n\n` : ""}${correoDelTurno ? `${correoDelTurno.context}\n\n` : ""}${compartido ? neutralizarMarcas(prompt) : prompt}${visualStatesReminder(estadosVisuales)}${artifactChangesLine(cambiosDeHerramientas)}`,
     skillsInvocadas,
   );
   // WHAT THE PERSON TYPED, for a subagent's <original_task> (lib/agent/subagents/run.ts): their own words, never
@@ -1997,7 +1997,7 @@ async function correrTurno(
       let rideAlong: HeldMessages | null = null;
       let rideAlongHanded = false;
       /** Mid-turn person writes on the agent's tools bus (spec local 2026-11-22-herramienta-dentro-del-agente, §4). */
-      let toolWatch: ReturnType<typeof watchAgentToolChanges> | null = null;
+      let toolWatch: ReturnType<typeof watchLenArtifactChanges> | null = null;
       /** The turn's row was written at its close (`closeRowOnce`). */
       let rowWritten = false;
       /** H4 · lo que vio el modelo, como lo guarda la fila; de aquí sale el
@@ -2643,13 +2643,13 @@ async function correrTurno(
             return null;
           });
         }
-        // Even with no tool yet: one the agent publishes in this turn is followed from then on (`agentToolWatch.add`).
+        // Even with no tool yet: one the agent publishes in this turn is followed from then on (`artifactWatch.add`).
         if (vigilaHerramientas && !compactCommand) {
-          toolWatch = watchAgentToolChanges(herramientasDelAgente, undefined, {
+          toolWatch = watchLenArtifactChanges(herramientasDelAgente, undefined, {
             since: cambiosLeidosEn,
-            personChangedCollections: async (toolId, since) => (await import("@/lib/agent-tools/store")).personChangedCollections(toolId, since),
+            personChangedCollections: async (toolId, since) => (await import("@/lib/len-artifacts/store")).personChangedCollections(toolId, since),
           });
-          agentSession.agentToolWatch = toolWatch;
+          agentSession.artifactWatch = toolWatch;
         }
         // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him that is still unread
         // (held, pending or delivering) rides with the next turn a PERSON starts here — not one the server started (an

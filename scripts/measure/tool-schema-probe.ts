@@ -8,7 +8,7 @@
  *   · query — a `where` whose value is the boolean false;
  *   · set   — a `data` object with text, a boolean and a list.
  * Each is judged three ways: the provider answered (no refusal of the schema), the model called `tool_data` with those
- * values, and `parseRead` / `parseWrite` (lib/agent-tools/validate.ts, what `tool_data` runs) take its arguments.
+ * values, and `parseRead` / `parseWrite` (lib/len-artifacts/validate.ts, what `tool_data` runs) take its arguments.
  *
  * ⚠️ It spends real money on the accounts production uses. Without `--yes` it prints the plan and its worst case:
  *
@@ -23,8 +23,8 @@ import type { Message } from "@/lib/ai-gateway";
 import { messagesForFireworks, toolsForFireworks } from "@/lib/agent/fireworks-bridge";
 import { createFireworksStreamClient } from "@/lib/ai/fireworks-stream-client";
 import { resolveAgentProviders } from "@/lib/ai/providers";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/agent-tools/agent-tools";
-import { parseRead, parseWrite } from "@/lib/agent-tools/validate";
+import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/agent-tools";
+import { parseRead, parseWrite } from "@/lib/len-artifacts/validate";
 import { WIRE_PROBE_PRICES, wireProbeCostUsd, type WireProvider } from "@/lib/measure/wire-probe";
 
 const DIR = path.join("plans", "agent-tools", "tool-schema-probe");

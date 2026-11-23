@@ -8,7 +8,7 @@ import { buildManualDeLaPlataforma, documentosDeLaPlataforma } from "./manual-de
 import { TOOL_RENAMES } from "./tool-renames";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/agent-tools/agent-tools";
+import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/agent-tools";
 
 // Lo que se retiró: nombres de herramienta, claves y valores en español.
 const VIEJOS_NOMBRES = Object.keys(TOOL_RENAMES);

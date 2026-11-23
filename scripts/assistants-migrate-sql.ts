@@ -154,7 +154,7 @@ export const CREATE_ASSISTANTS: readonly string[] = [
   // The tool that lives inside an agent (spec local 2026-11-22-herramienta-dentro-del-agente, §1–§3): its tools, and the
   // small database each one shares with the agent. "releaseSha" names a "toolReleases" row by convention only — that table
   // belongs to tools:migrate, which may run after this one. Gone with the agent, the person or the space.
-  `CREATE TABLE IF NOT EXISTS "agentTools" (
+  `CREATE TABLE IF NOT EXISTS "lenArtifacts" (
     "id" text PRIMARY KEY,
     "assistantId" text NOT NULL REFERENCES "assistants"("id") ON DELETE CASCADE,
     "personId" text NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
@@ -170,13 +170,13 @@ export const CREATE_ASSISTANTS: readonly string[] = [
     "dataChangedAt" timestamp with time zone,
     "agentSeenAt" timestamp with time zone
   );`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_assistant_slug_idx" ON "agentTools" ("assistantId", "slug");`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_hostLabel_idx" ON "agentTools" ("hostLabel");`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS "agentTools_phoneHostLabel_idx" ON "agentTools" ("phoneHostLabel");`,
-  `CREATE INDEX IF NOT EXISTS "agentTools_personId_idx" ON "agentTools" ("personId");`,
-  `CREATE INDEX IF NOT EXISTS "agentTools_spaceProjectId_idx" ON "agentTools" ("spaceProjectId");`,
-  `CREATE TABLE IF NOT EXISTS "agentToolDocs" (
-    "toolId" text NOT NULL REFERENCES "agentTools"("id") ON DELETE CASCADE,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_assistant_slug_idx" ON "lenArtifacts" ("assistantId", "slug");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_hostLabel_idx" ON "lenArtifacts" ("hostLabel");`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS "lenArtifacts_phoneHostLabel_idx" ON "lenArtifacts" ("phoneHostLabel");`,
+  `CREATE INDEX IF NOT EXISTS "lenArtifacts_personId_idx" ON "lenArtifacts" ("personId");`,
+  `CREATE INDEX IF NOT EXISTS "lenArtifacts_spaceProjectId_idx" ON "lenArtifacts" ("spaceProjectId");`,
+  `CREATE TABLE IF NOT EXISTS "lenArtifactDocs" (
+    "toolId" text NOT NULL REFERENCES "lenArtifacts"("id") ON DELETE CASCADE,
     "collection" text NOT NULL,
     "docId" text NOT NULL,
     "data" jsonb NOT NULL,

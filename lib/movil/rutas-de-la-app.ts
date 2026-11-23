@@ -82,9 +82,9 @@ export const RUTAS_DE_LA_APP: readonly { fichero: string; metodos: readonly stri
   // An agent's tool on the phone (spec local 2026-11-22-herramienta-dentro-del-agente, §2–§4): the list of an agent's tools, its
   // page's data.* reaching the person's database through the app's bridge, the stream every open screen follows it with (the
   // phone reads it with a fetch reader and the key in a header), opening one on the phone's own label, and the person deleting it.
-  { fichero: "app/api/agent-tools/route.ts", metodos: ["GET"] },
-  { fichero: "app/api/agent-tools/[id]/route.ts", metodos: ["DELETE"] },
-  { fichero: "app/api/agent-tools/[id]/data/route.ts", metodos: ["POST"] },
-  { fichero: "app/api/agent-tools/[id]/follow/route.ts", metodos: ["GET"] },
-  { fichero: "app/api/movil/agent-tools/[id]/open/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/len-artifacts/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/len-artifacts/[id]/route.ts", metodos: ["DELETE"] },
+  { fichero: "app/api/len-artifacts/[id]/data/route.ts", metodos: ["POST"] },
+  { fichero: "app/api/len-artifacts/[id]/follow/route.ts", metodos: ["GET"] },
+  { fichero: "app/api/movil/len-artifacts/[id]/open/route.ts", metodos: ["POST"] },
 ];

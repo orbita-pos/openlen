@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { CARPETA_SKILLS } from "@/lib/agent/ficheros/manual";
 
-import { agentToolsEnabled } from "@/lib/agent-tools/enabled";
+import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { scheduleEnabled } from "@/lib/scheduled-tasks/enabled";
 import { GENERATED_SKILLS, type BundledContext } from "./generated";
 import { parseSkillFile, type SkillDefinition } from "./skill-file";
@@ -83,7 +83,7 @@ const DEFAULT_CONTEXT = (): BundledContext => ({ app: null, env: process.env });
 function offHere(ctx: BundledContext): ReadonlySet<string> {
   return new Set([
     ...(scheduleEnabled(ctx.env) ? [] : ["schedule"]),
-    ...(agentToolsEnabled(ctx.env) ? [] : ["agent-tools"]),
+    ...(lenArtifactsEnabled(ctx.env) ? [] : ["agent-tools"]),
   ]);
 }
 

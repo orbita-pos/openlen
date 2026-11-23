@@ -8,16 +8,16 @@
 //   the theme is light unless the eyes ask for dark. A job never runs from the eyes (it costs the person, and only their
 //   press in OpenLen's confirmation starts one), nor does a file get picked, delivered or a job stopped there; the
 //   person's jobs of the tool can still be read (§4.6).
-// - For an AGENT's tool (`mode: "agentTool"`): answers ONLY `context`, `sendPrompt` (`unavailable`), and `data.*` on an
+// - For an AGENT's tool (`mode: "lenArtifact"`): answers ONLY `context`, `sendPrompt` (`unavailable`), and `data.*` on an
 //   isolated in-memory COPY of its real documents — writes go to the copy, push live updates to the page through
 //   `window.__openlenBridgeNotify`, and are thrown away when the visit ends. Real tables are never written.
 import "server-only";
 
-import { AGENT_TOOL_DATA_MAX_BYTES, AGENT_TOOL_DOC_MAX_BYTES, AGENT_TOOL_DOCS_MAX } from "@/lib/agent-tools/limits";
-import { runQuery } from "@/lib/agent-tools/query";
-import type { AgentToolDoc } from "@/lib/agent-tools/store";
-import { isRecord, parseRead, parseWrite, type ReadAction, type WriteAction } from "@/lib/agent-tools/validate";
-import { toBridgeDoc } from "@/lib/agent-tools/wire";
+import { LEN_ARTIFACT_DATA_MAX_BYTES, LEN_ARTIFACT_DOC_MAX_BYTES, LEN_ARTIFACT_DOCS_MAX } from "@/lib/len-artifacts/limits";
+import { runQuery } from "@/lib/len-artifacts/query";
+import type { LenArtifactDoc } from "@/lib/len-artifacts/store";
+import { isRecord, parseRead, parseWrite, type ReadAction, type WriteAction } from "@/lib/len-artifacts/validate";
+import { toBridgeDoc } from "@/lib/len-artifacts/wire";
 
 import {
   BRIDGE_CHANNEL,
@@ -34,16 +34,16 @@ import { WORKSPACE_TOOL_THEME } from "./workspace-theme";
 export const EYES_BRIDGE_FUNCTION = "__openlenBridge";
 
 /** An agent's own published tool running in the eyes on an isolated copy of its real documents. */
-export interface AgentToolEyesCaller {
-  readonly mode: "agentTool";
+export interface LenArtifactEyesCaller {
+  readonly mode: "lenArtifact";
   readonly toolId: string;
   readonly releaseSha?: string;
   readonly locale?: string;
   readonly theme?: "light" | "dark";
-  readonly docs: readonly AgentToolDoc[];
+  readonly docs: readonly LenArtifactDoc[];
 }
 
-export type EyesCaller = BridgeCaller | AgentToolEyesCaller;
+export type EyesCaller = BridgeCaller | LenArtifactEyesCaller;
 
 /** The workspace's colours, light and dark, as the phone gives them (`WORKSPACE_TOOL_THEME`, copied from
  *  app/[locale]/new/tokens.css and pinned by its test): what a tool sees in the eyes, the same tokens as on the web and
@@ -78,7 +78,7 @@ function contextOf(caller: BridgeCaller): ToolContext {
   };
 }
 
-// ---- agent-tool in-memory copy (same caps & validation rules as lib/agent-tools/store.ts) ---------------------------
+// ---- agent-tool in-memory copy (same caps & validation rules as lib/len-artifacts/store.ts) ---------------------------
 
 const NAME_MAX = 200;
 const NOT_A_NAME = /[\u0000-\u001f\u007f/]|[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/;
@@ -101,11 +101,11 @@ function plainObject(value: unknown): Record<string, unknown> | null {
   return isRecord(parsed) ? parsed : null;
 }
 
-class InMemoryAgentToolCopy {
-  private readonly docs = new Map<string, { doc: AgentToolDoc; bytes: number }>();
+class InMemoryLenArtifactCopy {
+  private readonly docs = new Map<string, { doc: LenArtifactDoc; bytes: number }>();
   private totalBytes = 0;
 
-  constructor(initial: readonly AgentToolDoc[]) {
+  constructor(initial: readonly LenArtifactDoc[]) {
     for (const d of initial) {
       // What the store gives is one row per key with JSON data; a copy that is handed something else still holds together:
       // a document without data is no document, and a key given twice keeps its last one (its bytes counted once).
@@ -123,8 +123,8 @@ class InMemoryAgentToolCopy {
     }
   }
 
-  all(collection?: string): AgentToolDoc[] {
-    const out: AgentToolDoc[] = [];
+  all(collection?: string): LenArtifactDoc[] {
+    const out: LenArtifactDoc[] = [];
     for (const { doc } of this.docs.values()) {
       if (collection === undefined || doc.collection === collection) {
         out.push({ ...doc, data: JSON.parse(JSON.stringify(doc.data)) as unknown });
@@ -138,7 +138,7 @@ class InMemoryAgentToolCopy {
     collection: string,
     docId: string,
     rawData?: Record<string, unknown>,
-  ): { ok: true; changed: boolean; doc: AgentToolDoc | null } | { ok: false; error: "too_many_docs" | "doc_too_big" | "tool_too_big" | "bad_write" } {
+  ): { ok: true; changed: boolean; doc: LenArtifactDoc | null } | { ok: false; error: "too_many_docs" | "doc_too_big" | "tool_too_big" | "bad_write" } {
     if (!isName(collection) || !isName(docId)) return { ok: false, error: "bad_write" };
     const key = keyOf(collection, docId);
     const prev = this.docs.get(key);
@@ -152,13 +152,13 @@ class InMemoryAgentToolCopy {
     if (!clean) return { ok: false, error: "bad_write" };
     const merged = op === "update" && prev && isRecord(prev.doc.data) ? { ...prev.doc.data, ...clean } : clean;
     const bytes = sizeOf(merged);
-    if (bytes > AGENT_TOOL_DOC_MAX_BYTES) return { ok: false, error: "doc_too_big" };
+    if (bytes > LEN_ARTIFACT_DOC_MAX_BYTES) return { ok: false, error: "doc_too_big" };
     const nextCount = this.docs.size + (prev ? 0 : 1);
     const nextBytes = this.totalBytes + bytes - (prev?.bytes ?? 0);
-    if (nextCount > AGENT_TOOL_DOCS_MAX) return { ok: false, error: "too_many_docs" };
-    if (nextBytes > AGENT_TOOL_DATA_MAX_BYTES) return { ok: false, error: "tool_too_big" };
+    if (nextCount > LEN_ARTIFACT_DOCS_MAX) return { ok: false, error: "too_many_docs" };
+    if (nextBytes > LEN_ARTIFACT_DATA_MAX_BYTES) return { ok: false, error: "tool_too_big" };
 
-    const doc: AgentToolDoc = { collection, docId, data: merged, updatedAt: new Date(), updatedBy: "person" };
+    const doc: LenArtifactDoc = { collection, docId, data: merged, updatedAt: new Date(), updatedBy: "person" };
     this.docs.set(key, { doc, bytes });
     this.totalBytes = nextBytes;
     return { ok: true, changed: true, doc: { ...doc, data: JSON.parse(JSON.stringify(doc.data)) as unknown } };
@@ -176,7 +176,7 @@ const DATA_WRITE_METHODS: Readonly<Record<string, WriteAction>> = {
   "data.delete": "delete",
 };
 
-function agentToolContextOf(caller: AgentToolEyesCaller): ToolContext {
+function lenArtifactContextOf(caller: LenArtifactEyesCaller): ToolContext {
   return {
     person: { name: "", locale: caller.locale ?? "en" },
     theme: caller.theme === "dark" ? { mode: "dark", tokens: DARK_TOKENS } : { mode: "light", tokens: LIGHT_TOKENS },
@@ -186,13 +186,13 @@ function agentToolContextOf(caller: AgentToolEyesCaller): ToolContext {
   };
 }
 
-async function answerAgentTool(
-  caller: AgentToolEyesCaller,
+async function answerLenArtifact(
+  caller: LenArtifactEyesCaller,
   req: BridgeRequest,
-  copy: InMemoryAgentToolCopy,
+  copy: InMemoryLenArtifactCopy,
   notify: (payload: DataChangedParams) => Promise<void>,
 ): Promise<{ result: unknown } | { error: BridgeError }> {
-  if (req.method === "context") return { result: agentToolContextOf(caller) };
+  if (req.method === "context") return { result: lenArtifactContextOf(caller) };
   if (req.method === "sendPrompt") return { result: { status: "unavailable" } };
   if (req.method === "data.subscribe") {
     return { result: { kind: "baseline", docs: copy.all().map(toBridgeDoc) } };
@@ -270,9 +270,9 @@ export async function installEyesBridge(
   callerOf: EyesCaller | (() => EyesCaller | undefined),
   deps: EyesDeps = realEyesDeps,
 ): Promise<void> {
-  // Each AgentToolEyesCaller identity owns its own isolated in-memory copy; when a new visit passes a fresh caller, the
+  // Each LenArtifactEyesCaller identity owns its own isolated in-memory copy; when a new visit passes a fresh caller, the
   // old copy is discarded and GC'd.
-  const copies = new WeakMap<AgentToolEyesCaller, InMemoryAgentToolCopy>();
+  const copies = new WeakMap<LenArtifactEyesCaller, InMemoryLenArtifactCopy>();
   const notify = async (payload: DataChangedParams): Promise<void> => {
     if (typeof page.evaluate !== "function") return;
     const serialized = JSON.stringify(payload).replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
@@ -294,13 +294,13 @@ export async function installEyesBridge(
     let r: { result: unknown } | { error: BridgeError };
     if (!known || !caller) {
       r = { error: { code: METHOD_NOT_FOUND, message: "method_not_found" } };
-    } else if (caller.mode === "agentTool") {
+    } else if (caller.mode === "lenArtifact") {
       let copy = copies.get(caller);
       if (!copy) {
-        copy = new InMemoryAgentToolCopy(caller.docs);
+        copy = new InMemoryLenArtifactCopy(caller.docs);
         copies.set(caller, copy);
       }
-      r = await answerAgentTool(caller, req as BridgeRequest, copy, notify);
+      r = await answerLenArtifact(caller, req as BridgeRequest, copy, notify);
     } else {
       r = await answer(caller, req as BridgeRequest, deps);
     }

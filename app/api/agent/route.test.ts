@@ -342,11 +342,11 @@ vi.mock("@/lib/assistants/messages/note", () => agentNote);
 const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: string, _agentType: string): Promise<Record<string, unknown> | null> => null) }));
 vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
 // The tool that lives inside the agent (spec local 2026-11-22-herramienta-dentro-del-agente): none unless a test sets tools.
-const agentToolStore = vi.hoisted(() => ({
-  agentToolsOf: vi.fn(async (_assistantId: string): Promise<Record<string, unknown>[]> => []),
+const lenArtifactStore = vi.hoisted(() => ({
+  lenArtifactsOf: vi.fn(async (_assistantId: string): Promise<Record<string, unknown>[]> => []),
   personChangedCollections: vi.fn(async (_toolId: string, _since: Date | null): Promise<string[]> => []),
 }));
-vi.mock("@/lib/agent-tools/store", () => agentToolStore);
+vi.mock("@/lib/len-artifacts/store", () => lenArtifactStore);
 vi.mock("@/lib/projects/chat", () => ({
   turnosParaElHistorial: mocks.turnosParaElHistorial,
   widgetsOfConversation: mocks.widgetsOfConversation,
@@ -6228,7 +6228,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
     expect(JSON.stringify(declared())).toBe(outsideTheSpace);
 
-    vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+    vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
     await readEvents(await pedir({ assistantId: "a1" }));
     expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
     expect(JSON.stringify(declared())).toBe(outsideTheSpace);
@@ -6260,15 +6260,15 @@ describe("POST /api/agent — the person's own assistant", () => {
 
     beforeEach(() => {
       mocks.loadProject.mockResolvedValue(spaceProject);
-      agentToolStore.agentToolsOf.mockResolvedValue([toolRow()]);
+      lenArtifactStore.lenArtifactsOf.mockResolvedValue([toolRow()]);
       // As the store answers: the person's collections written AFTER `since` (the tool's write is at 12:00).
-      agentToolStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
+      lenArtifactStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
         since === null || since.getTime() < new Date("2026-11-22T12:00:00Z").getTime() ? ["progress"] : [],
       );
     });
     afterEach(() => {
-      agentToolStore.agentToolsOf.mockResolvedValue([]);
-      agentToolStore.personChangedCollections.mockResolvedValue([]);
+      lenArtifactStore.lenArtifactsOf.mockResolvedValue([]);
+      lenArtifactStore.personChangedCollections.mockResolvedValue([]);
     });
 
     it("appends the tool changes <system-reminder> after visualStatesReminder inside textoEnviado and saves it as sentText", async () => {
@@ -6289,7 +6289,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     });
 
     it("omits the line once agentSeenAt has caught up with dataChangedAt", async () => {
-      agentToolStore.agentToolsOf.mockResolvedValue([
+      lenArtifactStore.lenArtifactsOf.mockResolvedValue([
         toolRow({ dataChangedAt: new Date("2026-11-22T11:00:00Z"), agentSeenAt: new Date("2026-11-22T12:00:00Z") }),
       ]);
       await readEvents(await pedir({ assistantId: "a1", prompt: "ya" }));
@@ -6297,7 +6297,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     });
 
     it("delivers ONE per-step notice via takeAgentNotices when the person writes mid-turn, ignores agent writes, and stops after the turn", async () => {
-      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
       let step1: readonly string[] = [];
       let step2: readonly string[] = [];
       let step3: readonly string[] = [];
@@ -6306,18 +6306,18 @@ describe("POST /api/agent — the person's own assistant", () => {
         capturedTake = args.takeAgentNotices;
         step1 = args.takeAgentNotices!();
         // Agent's own write: ignored.
-        publishToolChange("tool-1", {
+        publishArtifactChange("tool-1", {
           by: "agent",
           docs: [{ collection: "lessons", docId: "3", data: { unlocked: true }, updatedAt: new Date(), updatedBy: "agent" }],
           deleted: [],
         });
         // Two person writes: coalesced into ONE notice.
-        publishToolChange("tool-1", {
+        publishArtifactChange("tool-1", {
           by: "person",
           docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
           deleted: [],
         });
-        publishToolChange("tool-1", {
+        publishArtifactChange("tool-1", {
           by: "person",
           docs: [{ collection: "notes", docId: "1", data: { text: "done" }, updatedAt: new Date(), updatedBy: "person" }],
           deleted: [],
@@ -6337,7 +6337,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(step3).toEqual([]);
 
       // After the turn ends, the bus subscription is torn down.
-      publishToolChange("tool-1", {
+      publishArtifactChange("tool-1", {
         by: "person",
         docs: [{ collection: "after", docId: "1", data: { x: 1 }, updatedAt: new Date(), updatedBy: "person" }],
         deleted: [],
@@ -6347,7 +6347,7 @@ describe("POST /api/agent — the person's own assistant", () => {
 
     it("🔴 a person's write that lands after the line was read but before the turn subscribed reaches the next step", async () => {
       // the store has a write newer than the turn's read: the watcher's catch-up finds it
-      agentToolStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
+      lenArtifactStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
         since === null || since.getTime() < new Date("2026-11-22T12:00:00Z").getTime() ? ["progress"] : ["late"],
       );
       let first: readonly string[] = [];
@@ -6359,24 +6359,24 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await pedir({ assistantId: "a1", prompt: "hola" }));
       expect(first).toHaveLength(1);
       expect(first[0]).toContain("late");
-      const sinceAsked = agentToolStore.personChangedCollections.mock.calls.map((c) => c[1] as Date | null);
+      const sinceAsked = lenArtifactStore.personChangedCollections.mock.calls.map((c) => c[1] as Date | null);
       // once for the line (from agentSeenAt), once for the catch-up (from when the line was read)
       expect(sinceAsked[0]!.toISOString()).toBe("2026-11-22T11:00:00.000Z");
       expect(sinceAsked.at(-1)!.getTime()).toBeGreaterThan(new Date("2026-11-22T12:00:00Z").getTime());
     });
 
     it("a tool the agent publishes in the turn is followed from then on, even when it had none", async () => {
-      const { publishToolChange } = await import("@/lib/agent-tools/bus");
-      agentToolStore.agentToolsOf.mockResolvedValue([]);
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
+      lenArtifactStore.lenArtifactsOf.mockResolvedValue([]);
       let notices: readonly string[] = [];
       // publish_tool, as the tools see their session: it hands the new tool to the turn's watcher after saving its row
-      mocks.runAgentTool.mockImplementationOnce(async (session: { agentToolWatch?: { add(t: object): void } }) => {
-        session.agentToolWatch!.add({ id: "tool-new", slug: "nuevo", title: "Nuevo" });
+      mocks.runAgentTool.mockImplementationOnce(async (session: { artifactWatch?: { add(t: object): void } }) => {
+        session.artifactWatch!.add({ id: "tool-new", slug: "nuevo", title: "Nuevo" });
         return { response: { ok: true } };
       });
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
         await args.runTool("publish_tool", { path: "/tools/lucia/nuevo", title: "Nuevo" });
-        publishToolChange("tool-new", {
+        publishArtifactChange("tool-new", {
           by: "person",
           docs: [{ collection: "answers", docId: "1", data: { a: 1 }, updatedAt: new Date(), updatedBy: "person" }],
           deleted: [],
@@ -6391,21 +6391,21 @@ describe("POST /api/agent — the person's own assistant", () => {
     });
 
     it("/compact reads no line", async () => {
-      agentToolStore.agentToolsOf.mockClear();
-      agentToolStore.personChangedCollections.mockClear();
+      lenArtifactStore.lenArtifactsOf.mockClear();
+      lenArtifactStore.personChangedCollections.mockClear();
       await readEvents(await pedir({ assistantId: "a1", prompt: "/compact" }));
-      expect(agentToolStore.agentToolsOf).not.toHaveBeenCalled();
-      expect(agentToolStore.personChangedCollections).not.toHaveBeenCalled();
+      expect(lenArtifactStore.lenArtifactsOf).not.toHaveBeenCalled();
+      expect(lenArtifactStore.personChangedCollections).not.toHaveBeenCalled();
     });
 
     it("never adds the line or mid-turn notices on server-started turns (scheduled or woken by Len)", async () => {
-      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
       const runner = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
       const where = { url: "http://x/api/agent", signal: new AbortController().signal };
 
       let duringScheduled: readonly string[] = [];
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-        publishToolChange("tool-1", {
+        publishArtifactChange("tool-1", {
           by: "person",
           docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
           deleted: [],
@@ -6439,12 +6439,12 @@ describe("POST /api/agent — the person's own assistant", () => {
       expect(duringScheduled).toEqual([]);
     });
 
-    it("adds nothing when OPENLEN_AGENT_TOOLS=0", async () => {
-      vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
-      const { publishToolChange } = await import("@/lib/agent-tools/bus");
+    it("adds nothing when OPENLEN_LEN_ARTIFACTS=0", async () => {
+      vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
       let notices: readonly string[] = [];
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-        publishToolChange("tool-1", {
+        publishArtifactChange("tool-1", {
           by: "person",
           docs: [{ collection: "progress", docId: "3", data: { ok: true }, updatedAt: new Date(), updatedBy: "person" }],
           deleted: [],

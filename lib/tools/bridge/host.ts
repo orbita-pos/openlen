@@ -22,12 +22,12 @@ import { JOB_REFUSALS, UPLOADS_PER_PICK, type ToolJobView } from "../jobs/types"
 
 /** Who the tool is: an installed tool, a tool project's draft, or (spec local 2026-11-22-herramienta-dentro-del-agente) a tool
  *  an AGENT made, which talks only to its own data. */
-export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string } | { readonly agentToolId: string };
+export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string } | { readonly lenArtifactId: string };
 
 /** What an agent's tool may ask its parent (spec §3): its context, the agent's prompt box and its own database. Nothing of the
  *  person's projects, forms, visits, backend, jobs or files. The tool's code can `postMessage` any method, so this list —
  *  enforced by the host itself — is the boundary, not what the tool's own client offers. */
-export const AGENT_TOOL_BRIDGE_METHODS: readonly BridgeMethod[] = [
+export const LEN_ARTIFACT_BRIDGE_METHODS: readonly BridgeMethod[] = [
   "context",
   "sendPrompt",
   "data.get",
@@ -67,7 +67,7 @@ export interface BridgeHostOptions {
   onDelivered?(file: { name: string; url: string; size: number }): void;
   fetchImpl?: typeof fetch;
   /** The methods the frame may ask. A request outside it is answered `METHOD_NOT_FOUND` and nothing else happens. Absent, an
-   *  installed tool or a draft has its whole bridge; an agent's tool has `AGENT_TOOL_BRIDGE_METHODS`. */
+   *  installed tool or a draft has its whole bridge; an agent's tool has `LEN_ARTIFACT_BRIDGE_METHODS`. */
   methods?: readonly BridgeMethod[];
   /** An agent's tool asked to follow its data (`data.subscribe`): called on EVERY such request, each of which is still answered
    *  at once. The pane (or the phone app) RESTARTS its follow stream each time — closes the old one, opens a new one — and
@@ -99,7 +99,7 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
   // Titles of the projects the tool has seen (its `projects()`), so the dialog names a project, not an id.
   const titles = new Map<string, string>();
   // What the frame may ask: the list it was given, or, for an agent's tool, the agent's — never the whole bridge by default.
-  const allowed: readonly BridgeMethod[] | null = o.methods ?? ("agentToolId" in o.caller ? AGENT_TOOL_BRIDGE_METHODS : null);
+  const allowed: readonly BridgeMethod[] | null = o.methods ?? ("lenArtifactId" in o.caller ? LEN_ARTIFACT_BRIDGE_METHODS : null);
   const doFetch = o.fetchImpl ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   const post = (message: unknown) => {
     const frame = o.frame();
@@ -127,7 +127,7 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
   // a bad request travels as its data so the tool's author can read what was wrong.
   const relayData = async (toolId: string, op: DataOp, p: Record<string, unknown>): Promise<{ result: unknown } | { error: BridgeError }> => {
     try {
-      const res = await doFetch(`/api/agent-tools/${encodeURIComponent(toolId)}/data`, {
+      const res = await doFetch(`/api/len-artifacts/${encodeURIComponent(toolId)}/data`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ op, collection: p.collection, docId: p.docId, data: p.data, query: p.query }),
@@ -236,7 +236,7 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
     // confirmed or opened.
     if (allowed && !allowed.includes(req.method)) return { error: { code: METHOD_NOT_FOUND, message: "method_not_found" } };
     // An agent's tool's own database. For any other tool `data.*` fall through to the bridge's server, which refuses them.
-    if ("agentToolId" in o.caller) {
+    if ("lenArtifactId" in o.caller) {
       if (req.method === "data.subscribe") {
         // Answered at once, and the pane is told EVERY time. The frame's client asks once per document and retries only after a
         // reject or a timeout; this answers at once, so a repeat is a new document (a reload, or a move to another of the
@@ -249,7 +249,7 @@ export function createToolBridgeHost(o: BridgeHostOptions): {
         return { result: { ok: true } };
       }
       const op = dataOpOf(req.method);
-      if (op) return relayData(o.caller.agentToolId, op, p);
+      if (op) return relayData(o.caller.lenArtifactId, op, p);
     }
     switch (req.method) {
       case "context":

@@ -5,7 +5,7 @@
 // allow-list is the boundary. Needs no React and no DOM: this file runs in Node, like the parent's other tests.
 import { describe, expect, it, vi } from "vitest";
 
-import { AGENT_TOOL_BRIDGE_METHODS, createToolBridgeHost, type BridgeHostOptions } from "./host";
+import { LEN_ARTIFACT_BRIDGE_METHODS, createToolBridgeHost, type BridgeHostOptions } from "./host";
 import { METHOD_NOT_FOUND } from "./protocol";
 
 const ORIGIN = "https://lienzo-0123456789abcdef0123456789abcdef.openlen.app";
@@ -20,13 +20,13 @@ function setup(fetchImpl: ReturnType<typeof vi.fn>, over: Partial<BridgeHostOpti
   const host = createToolBridgeHost({
     frame: () => frame as unknown as Window,
     frameOrigin: ORIGIN,
-    caller: { agentToolId: "tool-1" },
+    caller: { lenArtifactId: "tool-1" },
     context: () => ({ person: { name: "Ana", locale: "es" }, project: null, tool: { id: "tool-1", version: "sha1" }, environment: "installed" }),
     theme: () => ({ mode: "dark", tokens: {} }),
     onPrompt: vi.fn(),
     ...handlers,
     fetchImpl: fetchImpl as unknown as typeof fetch,
-    methods: AGENT_TOOL_BRIDGE_METHODS,
+    methods: LEN_ARTIFACT_BRIDGE_METHODS,
     timeZone: "Europe/Madrid",
     locale: "es",
     ...over,
@@ -43,17 +43,17 @@ describe("an agent's tool: its data", () => {
     );
     const s = setup(fetchImpl);
     await s.send(rpc(1, "data.set", { collection: "lessons", docId: "l1", data: { done: true } }));
-    expect(sentOf(fetchImpl)).toEqual([{ url: "/api/agent-tools/tool-1/data", method: "POST", body: { op: "set", collection: "lessons", docId: "l1", data: { done: true } } }]);
+    expect(sentOf(fetchImpl)).toEqual([{ url: "/api/len-artifacts/tool-1/data", method: "POST", body: { op: "set", collection: "lessons", docId: "l1", data: { done: true } } }]);
     expect(s.answered()[0]).toMatchObject({ jsonrpc: "2.0", id: 1, channel: "openlen-tool", result: { ok: true, doc: { docId: "l1", updatedBy: "person" } } });
   });
 
   it("every data method is its op, and the tool's id is encoded in the address", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ docs: [] }));
-    const s = setup(fetchImpl, { caller: { agentToolId: "a b/c" } });
+    const s = setup(fetchImpl, { caller: { lenArtifactId: "a b/c" } });
     const params = { collection: "c", docId: "d", data: { a: 1 }, query: { limit: 1 } };
     for (const [i, op] of ["get", "set", "update", "delete", "list", "query"].entries()) await s.send(rpc(i + 1, `data.${op}`, params));
     const sent = sentOf(fetchImpl);
-    expect(sent.map((c) => c.url)).toEqual(Array(6).fill("/api/agent-tools/a%20b%2Fc/data"));
+    expect(sent.map((c) => c.url)).toEqual(Array(6).fill("/api/len-artifacts/a%20b%2Fc/data"));
     expect(sent.map((c) => c.body.op)).toEqual(["get", "set", "update", "delete", "list", "query"]);
     expect(sent[5]!.body).toEqual({ op: "query", collection: "c", docId: "d", data: { a: 1 }, query: { limit: 1 } });
   });
@@ -61,7 +61,7 @@ describe("an agent's tool: its data", () => {
   it("a request from the page can't add fields to the relay", async () => {
     const fetchImpl = vi.fn(async () => Response.json({ doc: null }));
     const s = setup(fetchImpl);
-    await s.send(rpc(1, "data.get", { collection: "c", docId: "d", op: "delete", agentToolId: "other", personId: "u2" }));
+    await s.send(rpc(1, "data.get", { collection: "c", docId: "d", op: "delete", lenArtifactId: "other", personId: "u2" }));
     expect(sentOf(fetchImpl)[0]!.body).toEqual({ op: "get", collection: "c", docId: "d" });
   });
 
@@ -118,7 +118,7 @@ describe("an agent's tool: what it can't ask", () => {
   });
 
   it("the list is the three things an agent's tool has: context, the prompt box and its data", () => {
-    expect([...AGENT_TOOL_BRIDGE_METHODS].sort()).toEqual(["context", "data.delete", "data.get", "data.list", "data.query", "data.set", "data.subscribe", "data.update", "sendPrompt"]);
+    expect([...LEN_ARTIFACT_BRIDGE_METHODS].sort()).toEqual(["context", "data.delete", "data.get", "data.list", "data.query", "data.set", "data.subscribe", "data.update", "sendPrompt"]);
   });
 
   it("what is on the list still works: context and sendPrompt", async () => {

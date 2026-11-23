@@ -1220,14 +1220,14 @@ export function tabVersionOf(
   return extraKey ? `${withTheme}:${extraKey}` : withTheme;
 }
 
-function agentToolVersionKey(caller: Extract<EyesCaller, { mode: "agentTool" }>): string {
+function lenArtifactVersionKey(caller: Extract<EyesCaller, { mode: "lenArtifact" }>): string {
   const h = createHash("sha256");
   h.update(caller.toolId);
   h.update(`\0${caller.releaseSha ?? ""}`);
   for (const d of caller.docs) {
     h.update(`\0${d.collection}\0${d.docId}\0${JSON.stringify(d.data)}\0${d.updatedAt.getTime()}\0${d.updatedBy}`);
   }
-  return `agentTool:${h.digest("hex")}`;
+  return `lenArtifact:${h.digest("hex")}`;
 }
 
 function versionOf(html: string, opciones: OpenTab["opciones"]): string {
@@ -1618,29 +1618,29 @@ async function visitTab(
 ): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean; noChange?: boolean }> {
   // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4; or an agent's tool, §5): `window.openlen` first in
   // its <head>, served by the platform under /openlen/, and answered in Node — never writing real data.
-  const agentTool = p.toolBridge?.mode === "agentTool";
-  const medible = agentTool ? p.html : documentoMedible(p.html, p.vista ?? null);
+  const lenArtifact = p.toolBridge?.mode === "lenArtifact";
+  const medible = lenArtifact ? p.html : documentoMedible(p.html, p.vista ?? null);
   const html = p.toolBridge ? injectToolBridge(medible) : medible;
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
-  const carpeta: (OpcionesDelDocumento & { pagina: string | null }) | null | undefined = agentTool
+  const carpeta: (OpcionesDelDocumento & { pagina: string | null }) | null | undefined = lenArtifact
     ? { files: p.releaseFiles ?? {}, binaryFiles: p.releaseBinaries ?? {}, pagina: null }
     : await carpetaDeLaVista(p.vista);
   const opciones = p.toolBridge
     ? {
         ...(carpeta ?? { files: {}, pagina: null }),
-        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], agentTool ? { agentTool: true } : undefined) },
-        ...(agentTool ? { rawFiles: true } : {}),
+        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], lenArtifact ? { lenArtifact: true } : undefined) },
+        ...(lenArtifact ? { rawFiles: true } : {}),
       }
     : carpeta;
-  const extraKey = p.toolBridge?.mode === "agentTool" ? agentToolVersionKey(p.toolBridge) : undefined;
+  const extraKey = p.toolBridge?.mode === "lenArtifact" ? lenArtifactVersionKey(p.toolBridge) : undefined;
   const version = tabVersionOf(html, opciones, p.toolBridge ? (p.toolBridge.theme ?? "light") : undefined, extraKey);
   if (p.toolBridge) {
     // Exposed once per tab; the caller is this visit's (light/dark, or an agent tool's in-memory copy). When an agent
     // tool's persistent tab carries on without reloading (`willReuse`), keep its existing caller so in-memory writes
     // survive sequential `use_page` steps; any reload, `newVisit`, or DB change installs the fresh snapshot.
     const page = tab.page as object;
-    const willReuse = agentTool && tab.doc !== null && tab.version === version && !p.newVisit;
+    const willReuse = lenArtifact && tab.doc !== null && tab.version === version && !p.newVisit;
     if (!willReuse || !bridgeCallers.has(page)) bridgeCallers.set(page, p.toolBridge);
     if (!exposedBridge.has(page)) {
       exposedBridge.add(page);

@@ -1629,16 +1629,16 @@ export async function observarPagina(
   // binding nativo no carga se mide crudo, que ya es útil.
   const medir = internals.medir ?? renderVisualQualityViewports;
   const bridge = params.toolBridge;
-  const agentTool = bridge?.mode === "agentTool";
-  const medible = agentTool ? params.html : documentoMedible(params.html, params.vista ?? null);
+  const lenArtifact = bridge?.mode === "lenArtifact";
+  const medible = lenArtifact ? params.html : documentoMedible(params.html, params.vista ?? null);
   // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-  const suCarpeta = agentTool ? { files: params.releaseFiles ?? {}, binaryFiles: params.releaseBinaries ?? {}, pagina: null } : await carpetaDeLaVista(params.vista);
+  const suCarpeta = lenArtifact ? { files: params.releaseFiles ?? {}, binaryFiles: params.releaseBinaries ?? {}, pagina: null } : await carpetaDeLaVista(params.vista);
   const doc = bridge ? injectToolBridge(medible) : medible;
   const carpeta = bridge
     ? {
         ...(suCarpeta ?? { files: {}, pagina: null }),
-        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], agentTool ? { agentTool: true } : undefined) },
-        ...(agentTool ? { rawFiles: true } : {}),
+        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], lenArtifact ? { lenArtifact: true } : undefined) },
+        ...(lenArtifact ? { rawFiles: true } : {}),
       }
     : suCarpeta;
   const preparePage = bridge

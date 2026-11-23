@@ -5,7 +5,7 @@
 // tool top-level), it calls `window.__openlenBridge`, which Puppeteer exposes. Plain ES5 on purpose: it runs
 // before the tool's bundle, in any browser. Keep the methods in step with `OPENLEN_TYPES` (lib/tools/skeleton.ts).
 //
-// Two variants of ONE script: an installed tool's (everything), and an AGENT's tool's (`{ agentTool: true }`, spec local
+// Two variants of ONE script: an installed tool's (everything), and an AGENT's tool's (`{ lenArtifact: true }`, spec local
 // 2026-11-22-herramienta-dentro-del-agente, §3–§4), which exposes only `context`, `onContext`, `sendPrompt` and `data`.
 // They share the channel, the origin checks, the timeouts and `call`; asking for no variant gives the installed tool's
 // script exactly as it was (a test pins it).
@@ -20,7 +20,7 @@ export const JOB_FOLLOW_EVERY_MS = 2_000;
 
 export interface ToolBridgeClientOptions {
   /** The script of an agent's tool: `context`, `onContext`, `sendPrompt` and `data`, and nothing of an installed tool's. */
-  readonly agentTool?: boolean;
+  readonly lenArtifact?: boolean;
 }
 
 // What only an installed tool's script has (jobs): the two constants, and — below — the helpers and the object.
@@ -213,15 +213,15 @@ const AGENT_TAIL = `  var docs = new Map();
   });`;
 
 export function toolBridgeClientSource(parentOrigins: readonly string[], options: ToolBridgeClientOptions = {}): string {
-  const agentTool = options.agentTool === true;
+  const lenArtifact = options.lenArtifact === true;
   return `(function () {
   "use strict";
   var PARENTS = ${JSON.stringify(parentOrigins)};
   var CHANNEL = ${JSON.stringify(BRIDGE_CHANNEL)};
   var TIMEOUT = ${BRIDGE_TIMEOUT_MS};
   var PERSON_TIMEOUT = ${BRIDGE_PERSON_TIMEOUT_MS};
-  var WAITS = ${JSON.stringify(agentTool ? [] : WAITS_ON_THE_PERSON)};
-${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent && window.parent !== window;
+  var WAITS = ${JSON.stringify(lenArtifact ? [] : WAITS_ON_THE_PERSON)};
+${lenArtifact ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent && window.parent !== window;
   var next = 1;
   var pending = new Map();
   var listeners = new Set();
@@ -236,7 +236,7 @@ ${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent
     window.addEventListener("message", function (e) {
       if (e.source !== window.parent || PARENTS.indexOf(e.origin) < 0) return;
       var m = e.data;
-      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;${agentTool ? AGENT_LEARNS_THE_PARENT : ""}
+      if (!m || m.jsonrpc !== "2.0" || m.channel !== CHANNEL) return;${lenArtifact ? AGENT_LEARNS_THE_PARENT : ""}
       if (typeof m.id === "number") {
         var p = pending.get(m.id);
         if (!p) return;
@@ -245,7 +245,7 @@ ${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent
         if (m.error) p.reject(fail(m.error)); else p.resolve(m.result);
       } else if (m.method === "context") {
         listeners.forEach(function (cb) { try { cb(m.params); } catch (_) {} });
-      }${agentTool ? AGENT_DATA_BRANCH : ""}
+      }${lenArtifact ? AGENT_DATA_BRANCH : ""}
     });
   }
 
@@ -257,7 +257,7 @@ ${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent
       if (framed) {
         var timer = setTimeout(function () { pending.delete(id); reject(new Error("bridge_timeout")); }, WAITS.indexOf(method) >= 0 ? PERSON_TIMEOUT : TIMEOUT);
         pending.set(id, { resolve: resolve, reject: reject, timer: timer });
-        window.parent.postMessage(req, ${agentTool ? "target" : '"*"'});
+        window.parent.postMessage(req, ${lenArtifact ? "target" : '"*"'});
       } else if (typeof window.__openlenBridge === "function") {
         Promise.resolve(window.__openlenBridge(JSON.stringify(req))).then(function (raw) {
           var m = JSON.parse(raw);
@@ -269,7 +269,7 @@ ${agentTool ? AGENT_CONSTANTS : INSTALLED_CONSTANTS}  var framed = window.parent
     });
   }
 
-${agentTool ? AGENT_TAIL : INSTALLED_TAIL}
+${lenArtifact ? AGENT_TAIL : INSTALLED_TAIL}
 })();
 `;
 }

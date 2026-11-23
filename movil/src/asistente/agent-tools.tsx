@@ -1,6 +1,6 @@
 // AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4):
 // header button in the agent's chat (only when it has tools), full-screen frame on the phone's own private label
-// (`POST /api/movil/agent-tools/[id]/open`), restricted bridge (`AGENT_TOOL_BRIDGE_METHODS`), live SSE follow stream
+// (`POST /api/movil/len-artifacts/[id]/open`), restricted bridge (`LEN_ARTIFACT_BRIDGE_METHODS`), live SSE follow stream
 // read via `cliente.pedir` + `crearLectorSse` (reconnecting for a fresh baseline on drop; stopping and removing only on
 // `gone`), `sendPrompt` filling the chat composer without sending, and person-only remove with confirmation.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,11 +9,11 @@ import { useTranslations } from "use-intl";
 
 import type { ClienteDeOpenLen } from "@/components/llamada/cliente";
 import { ALLOW_HERRAMIENTA_AGENTE, SANDBOX_HERRAMIENTA_AGENTE } from "@/components/workspace-v2/sandbox-del-lienzo";
-import { AGENT_TOOL_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
+import { LEN_ARTIFACT_BRIDGE_METHODS, createToolBridgeHost } from "@/lib/tools/bridge/host";
 import type { ToolContext } from "@/lib/tools/bridge/protocol";
 import { WORKSPACE_TOOL_THEME } from "@/lib/tools/bridge/workspace-theme";
 
-import { deleteAgentTool, followAgentTool, openAgentTool, type AgentToolItem } from "../api/agent-tools";
+import { deleteLenArtifact, followLenArtifact, openLenArtifact, type LenArtifactItem } from "../api/len-artifacts";
 import { useAtras } from "../atras";
 import { BASE } from "../config";
 import { devolverFoco } from "../foco";
@@ -49,7 +49,7 @@ export function PantallaHerramientaDeAgente({
   persona,
 }: {
   cliente: ClienteDeOpenLen;
-  tool: AgentToolItem;
+  tool: LenArtifactItem;
   idioma: string;
   /** The signed-in person, for the tool's context (as an installed tool gets it). */
   persona?: { readonly name: string };
@@ -57,7 +57,7 @@ export function PantallaHerramientaDeAgente({
   onPrompt: (text: string) => void;
   onRemoved: (toolId: string) => void;
 }) {
-  const t = useTranslations("movil.agentTools");
+  const t = useTranslations("movil.lenArtifacts");
   const [marco, setMarco] = useState<{ url: string; origin: string } | { error: string } | null>(null);
   const [intento, setIntento] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -106,7 +106,7 @@ export function PantallaHerramientaDeAgente({
   useEffect(() => {
     let alive = true;
     setMarco(null);
-    void openAgentTool(cliente, tool.id).then((m) => {
+    void openLenArtifact(cliente, tool.id).then((m) => {
       if (!alive) return;
       if ("error" in m && m.error === "unauthorized") latest.current.onCerrar();
       else setMarco(m);
@@ -159,7 +159,7 @@ export function PantallaHerramientaDeAgente({
     f.ctrl = ctrl;
     const toolId = latest.current.tool.id;
 
-    void followAgentTool(cliente, toolId, {
+    void followLenArtifact(cliente, toolId, {
       signal: ctrl.signal,
       onData: (params) => {
         if (f.gen !== gen || f.stopped) return;
@@ -215,8 +215,8 @@ export function PantallaHerramientaDeAgente({
     return createToolBridgeHost({
       frame: () => iframe.current?.contentWindow ?? null,
       frameOrigin: origin,
-      caller: { agentToolId: tool.id },
-      methods: AGENT_TOOL_BRIDGE_METHODS,
+      caller: { lenArtifactId: tool.id },
+      methods: LEN_ARTIFACT_BRIDGE_METHODS,
       context: () => ({
         person: { name: latest.current.persona?.name ?? "", locale: latest.current.idioma },
         project: null,
@@ -261,7 +261,7 @@ export function PantallaHerramientaDeAgente({
     setRemoving(true);
     setRemoveError(false);
     try {
-      const outcome = await deleteAgentTool(cliente, tool.id);
+      const outcome = await deleteLenArtifact(cliente, tool.id);
       if (outcome === "unauthorized") {
         // signed out under it: nothing failed here, the app is leaving
         stopFollow(true, false);
@@ -390,15 +390,15 @@ export function BotonHerramientasDeAgente({
 }: {
   abierto?: boolean;
   cliente: ClienteDeOpenLen;
-  tools: readonly AgentToolItem[];
+  tools: readonly LenArtifactItem[];
   idioma: string;
   persona?: { readonly name: string };
   onPrompt: (text: string) => void;
   onRemoved: (toolId: string) => void;
 }) {
-  const t = useTranslations("movil.agentTools");
+  const t = useTranslations("movil.lenArtifacts");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [active, setActive] = useState<AgentToolItem | null>(null);
+  const [active, setActive] = useState<LenArtifactItem | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useAtras(pickerOpen, () => setPickerOpen(false));

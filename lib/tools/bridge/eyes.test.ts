@@ -97,7 +97,7 @@ describe("installEyesBridge", () => {
   });
 });
 
-describe("installEyesBridge — agentTool mode", () => {
+describe("installEyesBridge — lenArtifact mode", () => {
   const initialDocs = () => [
     {
       collection: "lessons",
@@ -115,10 +115,10 @@ describe("installEyesBridge — agentTool mode", () => {
     },
   ];
 
-  async function exposedAgentTool(docs = initialDocs(), extra: { theme?: "light" | "dark"; locale?: string; releaseSha?: string } = {}) {
+  async function exposedLenArtifact(docs = initialDocs(), extra: { theme?: "light" | "dark"; locale?: string; releaseSha?: string } = {}) {
     let fn: ((json: string) => Promise<string>) | null = null;
     const evals: string[] = [];
-    const caller = { mode: "agentTool" as const, toolId: "tool-1", docs, ...extra };
+    const caller = { mode: "lenArtifact" as const, toolId: "tool-1", docs, ...extra };
     await installEyesBridge(
       {
         exposeFunction: async (_name, f) => void (fn = f),
@@ -135,7 +135,7 @@ describe("installEyesBridge — agentTool mode", () => {
 
   it("reads initial docs, applies set/update/delete on an isolated copy, pushes __openlenBridgeNotify, and never mutates the caller's docs", async () => {
     const seed = initialDocs();
-    const { call, evals } = await exposedAgentTool(seed, { locale: "es", releaseSha: "sha-9" });
+    const { call, evals } = await exposedLenArtifact(seed, { locale: "es", releaseSha: "sha-9" });
 
     expect((await call("context")).result).toMatchObject({
       person: { locale: "es" },
@@ -187,14 +187,14 @@ describe("installEyesBridge — agentTool mode", () => {
   });
 
   it("refuses installed-tool methods (backend, projects, update, jobs.*, files.*) with METHOD_NOT_FOUND", async () => {
-    const { call } = await exposedAgentTool();
+    const { call } = await exposedLenArtifact();
     for (const m of ["backend", "projects", "forms", "visits", "query", "update", "jobs.run", "jobs.list", "files.pick", "files.deliver"]) {
       expect((await call(m, {})).error).toMatchObject({ code: -32601 });
     }
   });
 
   it("enforces validation and the 64 KB doc cap on the in-memory copy", async () => {
-    const { call } = await exposedAgentTool();
+    const { call } = await exposedLenArtifact();
     expect((await call("data.list", {})).error).toMatchObject({ code: 400, message: "bad_request" });
     const huge = { x: "a".repeat(70 * 1024) };
     expect((await call("data.set", { collection: "c", docId: "big", data: huge })).error).toMatchObject({ code: 400, message: "doc_too_big" });
@@ -207,7 +207,7 @@ describe("installEyesBridge — agentTool mode", () => {
       { collection: "c", docId: "a", data: { v: 2 }, updatedAt: at, updatedBy: "agent" as const },
       { collection: "c", docId: "gone", data: undefined, updatedAt: at, updatedBy: "agent" as const },
     ] as unknown as ReturnType<typeof initialDocs>;
-    const { call } = await exposedAgentTool(docs);
+    const { call } = await exposedLenArtifact(docs);
     const listed = (await call("data.list", { collection: "c" })).result as { docs: { docId: string; data: unknown }[] };
     expect(listed.docs).toEqual([expect.objectContaining({ docId: "a", data: { v: 2 } })]);
   });
