@@ -17,6 +17,7 @@ import { relatedAgentsLine } from "@/lib/assistants/messages/policy";
 import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/related";
 import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
+import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/agent-tools/agent-tools";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -941,8 +942,12 @@ async function correrTurno(
     // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
     // what builds it passes to Len. Then `message_len` (spec local 2026-11-21-len-y-el-agente-conversan): every agent
     // turn may write to Len — the same list whether a person or Len's message started it, so the cached prefix holds;
-    // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts).
-    if (asistente) return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }];
+    // what a woken turn may not do is refused when it runs (lib/assistants/messages/woken.ts). Then its own tools
+    // (spec local 2026-11-22-herramienta-dentro-del-agente): `publish_tool` and `tool_data`, in every agent turn — in its
+    // space or not, with the tools on or off — and never Len's: what isn't allowed is refused when they run.
+    if (asistente) {
+      return [...assistantTools(todas), { ...ASK_LEN_DECLARATION }, { ...MESSAGE_LEN_DECLARATION }, { ...PUBLISH_TOOL_DECLARATION }, { ...TOOL_DATA_DECLARATION }];
+    }
     // And Len's `message_agent`, LAST — after the operations and the connectors — and only in a project with agents
     // related to it (never in a member's turn: none are read for one): in one with none, his declarations are byte for
     // byte as before.
@@ -1775,6 +1780,8 @@ async function correrTurno(
           assistant: {
             id: asistente.id,
             name: asistente.name,
+            // Its folder of tools is /tools/<slug>/: the guard of Write and `publish_tool` read it here.
+            slug: asistente.slug,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             started: (proyectosEmpezados ?? []).map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             ...(proyectoEnElTelefono ? { viewing: proyectoEnElTelefono } : {}),

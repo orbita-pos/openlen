@@ -72,6 +72,8 @@
       "ask_len": "Len に引き継ぎ",
       "message_len": "Len にメッセージ",
       "message_agent": "エージェントにメッセージ",
+      "publish_tool": "ツールを公開",
+      "tool_data": "ツールのデータを操作",
       "schedule_create": "予定タスクを作成",
       "schedule_list": "予定タスクを確認",
       "schedule_delete": "予定タスクを削除",

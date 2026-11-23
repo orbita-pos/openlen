@@ -72,6 +72,8 @@
       "ask_len": "Passando para o Len",
       "message_len": "Escrevendo para o Len",
       "message_agent": "Escrevendo para um agente",
+      "publish_tool": "Publicando uma ferramenta",
+      "tool_data": "Trabalhando com os dados de uma ferramenta",
       "schedule_create": "Agendando uma tarefa",
       "schedule_list": "Vendo as tarefas agendadas",
       "schedule_delete": "Apagando uma tarefa agendada",

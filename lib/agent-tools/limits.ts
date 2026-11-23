@@ -19,3 +19,10 @@ export const AGENT_TOOL_DATA_MAX_BYTES = 5 * 1024 * 1024;
 
 /** The most documents one `query` returns — also what no `limit` means, so no answer is ever a whole collection. */
 export const AGENT_TOOL_QUERY_LIMIT_MAX = 100;
+
+/** The most writes in one `tool_data` batch: a batch is one transaction, and past this a model is seeding, not editing. */
+export const AGENT_TOOL_BATCH_MAX = 100;
+
+/** The most one `tool_data` answer carries of rows (their JSON): 100 documents of 64 KB would be 6 MB of context kept in the
+ *  conversation for good. A document is never cut: the answer holds the first ones that fit, and says so. */
+export const AGENT_TOOL_ANSWER_MAX_BYTES = 100 * 1024;

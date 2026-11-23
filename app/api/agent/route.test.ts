@@ -5638,7 +5638,7 @@ describe("POST /api/agent — the person's own assistant", () => {
         expect(session().readOnly).toBe(true);
         expect(session().assistant).toMatchObject({ id: "a1", name: "Lucía", woken: true });
         // Its tools are every agent turn's: the refusals are at execution, so its cached prefix stays the same.
-        expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
+        expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len", "publish_tool", "tool_data"]);
         // What Len sent it, it claimed when it started (its own `resolveAtStart`): nothing is claimed here again.
         expect(agentMessages.claimForAgent).not.toHaveBeenCalled();
       });
@@ -6203,7 +6203,30 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(system).toContain("Your name is Lucía");
     // Write and Edit stay for her memory (10/11, spec §8; her read-only session refuses every other file).
     // And `message_len` after it (spec local 2026-11-21-len-y-el-agente-conversan): every agent turn may write to Len.
-    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len"]);
+    expect(toolNames()).toEqual(["Read", "Glob", "bash", "Write", "Edit", "show_widget", "schedule_create", "ask_len", "message_len", "publish_tool", "tool_data"]);
+  });
+
+  // THE TOOL THAT LIVES INSIDE THE AGENT (spec local 2026-11-22-herramienta-dentro-del-agente): `publish_tool` and `tool_data`
+  // are declared in EVERY agent turn, right after `message_len` — in its space or not, with the tools on or off — so the cached
+  // prefix is the same in all of them; what isn't allowed is refused when they run. Never in Len's.
+  it("🔴 declares publish_tool and tool_data right after message_len in every agent turn, byte for byte the same whatever the turn", async () => {
+    const declared = () => loopArgs().tools.filter((d) => d.name === "publish_tool" || d.name === "tool_data");
+    const spaceProject = { title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } };
+
+    await readEvents(await pedir({ assistantId: "a1" }));
+    const outsideTheSpace = JSON.stringify(declared());
+    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
+
+    mocks.loadProject.mockResolvedValue(spaceProject);
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
+    expect(JSON.stringify(declared())).toBe(outsideTheSpace);
+
+    vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+    await readEvents(await pedir({ assistantId: "a1" }));
+    expect(toolNames().slice(-3)).toEqual(["message_len", "publish_tool", "tool_data"]);
+    expect(JSON.stringify(declared())).toBe(outsideTheSpace);
+    expect(declared()).toHaveLength(2);
   });
 
   it("its session is read-only, and in phase 1 it launches no subagents (their notices would wake Len)", async () => {
@@ -6214,7 +6237,7 @@ describe("POST /api/agent — the person's own assistant", () => {
     await readEvents(await pedir({ assistantId: "a1" }));
     const [session] = mocks.runAgentTool.mock.calls.at(-1) as unknown as [{ readOnly?: true; assistant?: { id: string; name: string } }];
     expect(session.readOnly).toBe(true);
-    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", projects: [], started: [], inSpace: false });
+    expect(session.assistant).toEqual({ id: "a1", name: "Lucía", slug: "lucia", projects: [], started: [], inSpace: false });
     expect(mocks.createSubagentLauncher).not.toHaveBeenCalled();
   });
 
@@ -6518,6 +6541,9 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(toolNames()).toContain("Write");
     expect(toolNames()).not.toContain("ask_len");
     expect(toolNames()).not.toContain("message_len");
+    // And none of the agent's own tools: Len's declarations don't change.
+    expect(toolNames()).not.toContain("publish_tool");
+    expect(toolNames()).not.toContain("tool_data");
     expect((mocks.createSubagentLauncher.mock.calls.at(-1)![0] as { readOnly?: true }).readOnly).toBeUndefined();
   });
 });

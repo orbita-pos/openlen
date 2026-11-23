@@ -156,6 +156,7 @@ import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
+import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/agent-tools/agent-tools";
 import { lenNeedsOwnersWords, lenWokenRefusal, needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
 import { CREATE_AB_VARIANT, runCreateAbVariant } from "@/lib/agent/tools-ab";
@@ -1420,6 +1421,9 @@ export interface AgentSession {
   assistant?: {
     readonly id: string;
     readonly name: string;
+    /** Its address name, the one in /<locale>/assistant/<slug>: also the folder of its tools, /tools/<slug>/ (spec local
+     *  2026-11-22-herramienta-dentro-del-agente). Absent when a turn doesn't say. */
+    readonly slug?: string;
     /** The projects she serves, her home first (phase 4): `ask_len` passes a request to one of them. */
     readonly projects?: readonly { readonly id: string; readonly title: string }[];
     /** The projects it STARTED with `ask_len`'s `new_project` (spec local 2026-11-21-agente-sigue-su-proyecto), oldest
@@ -3323,6 +3327,12 @@ async function ejecutarHerramienta(
       case MESSAGE_LEN:
       case MESSAGE_AGENT:
         return await runSendMessage(session, args);
+      // The agent's own tools (lib/agent-tools/agent-tools.ts): it publishes a folder of its space as a tab, and reads and
+      // writes the small database that tool shares with it. Refused when they run, whoever calls them without being one.
+      case PUBLISH_TOOL:
+        return await runPublishTool(session, args);
+      case TOOL_DATA:
+        return await runToolData(session, args);
       // Len's card to create the person's own assistant (lib/assistants/create-tool.ts).
       case CREATE_ASSISTANT:
         return await runCreateAssistant(session, args);

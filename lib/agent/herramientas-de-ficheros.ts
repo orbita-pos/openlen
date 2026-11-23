@@ -630,14 +630,23 @@ import { AVISO_VISITANTES } from "./visitor-data";
 /** What a read-only session may write, only in the person's own assistant's session: its memory and what its
  *  customers may be told; and, when it lives in the person's space (spec local 2026-11-19-agentes-para-todos, §6.4), the
  *  space's own files — never the person's home (`~/.len/`: Len's configuration for every project), the project's Len
- *  configuration (`/.len/`, `/LEN.md`) or the platform's files (`/.openlen/`, where visitors' data is). */
+ *  configuration (`/.len/`, `/LEN.md`) or the platform's files (`/.openlen/`, where visitors' data is). Under `/tools/`
+ *  (spec local 2026-11-22-herramienta-dentro-del-agente, §1) only its own folder, `/tools/<its slug>/`: the space is one
+ *  for all of the person's agents, and one never writes another's tool. */
 export function assistantMayWrite(session: AgentSession, filePath: string): boolean {
   if (session.assistant === undefined) return false;
   const path = resolverRuta(filePath);
   if (path === ASSISTANT_MEMORY) return true;
   if (path === ASSISTANT_CUSTOMERS) return session.assistant.withAgentFile === true;
   if (!session.assistant.inSpace) return false;
+  if (path === "/tools" || path.startsWith("/tools/")) return startsInOwnToolsFolder(path, session.assistant.slug);
   return !path.startsWith(`${HOME_DIR}/`) && !path.startsWith("/.len/") && path !== PROJECT_LEN_MD && !path.startsWith("/.openlen/");
+}
+
+/** Whether `path` (already resolved) is a file below `/tools/<slug>/`. A turn that doesn't say its slug has no folder. */
+function startsInOwnToolsFolder(path: string, slug: string | undefined): boolean {
+  if (!slug || slug === "." || slug === ".." || /[\\/]/.test(slug)) return false;
+  return path.startsWith(`/tools/${slug}/`);
 }
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {

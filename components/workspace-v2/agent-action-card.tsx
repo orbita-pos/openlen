@@ -264,6 +264,10 @@ export const KNOWN_TOOLS = new Set([
   // Len and the agent talk (spec local 2026-11-21-len-y-el-agente-conversan): the agent's message to Len, and Len's to it.
   "message_len",
   "message_agent",
+  // The agent's own tools (spec local 2026-11-22-herramienta-dentro-del-agente): publishes a folder of its space as a tab, and
+  // reads and writes the small database that tool shares with it.
+  "publish_tool",
+  "tool_data",
   // The review card of the person's own skills (spec local 2026-11-19-agentes-para-todos, §6.6).
   "propose_skills",
 ]);

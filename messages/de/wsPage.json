@@ -72,6 +72,8 @@
       "ask_len": "An Len weitergeben",
       "message_len": "An Len schreiben",
       "message_agent": "An einen Agenten schreiben",
+      "publish_tool": "Tool veröffentlichen",
+      "tool_data": "Mit den Daten eines Tools arbeiten",
       "schedule_create": "Aufgabe planen",
       "schedule_list": "Geplante Aufgaben ansehen",
       "schedule_delete": "Geplante Aufgabe löschen",

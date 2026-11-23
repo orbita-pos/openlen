@@ -72,6 +72,8 @@
       "ask_len": "转交给 Len",
       "message_len": "给 Len 发消息",
       "message_agent": "给代理发消息",
+      "publish_tool": "发布工具",
+      "tool_data": "处理工具的数据",
       "schedule_create": "创建定时任务",
       "schedule_list": "查看定时任务",
       "schedule_delete": "删除定时任务",

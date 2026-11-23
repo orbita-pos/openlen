@@ -72,6 +72,8 @@
       "ask_len": "Doorgeven aan Len",
       "message_len": "Len een bericht sturen",
       "message_agent": "Een agent een bericht sturen",
+      "publish_tool": "Een tool publiceren",
+      "tool_data": "Met de gegevens van een tool werken",
       "schedule_create": "Taak plannen",
       "schedule_list": "Geplande taken bekijken",
       "schedule_delete": "Geplande taak verwijderen",
