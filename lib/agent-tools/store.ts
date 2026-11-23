@@ -92,16 +92,29 @@ export async function markAgentSeen(toolId: string, at: Date): Promise<void> {
 
 const byCodeUnit = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-/** A tool's documents, one collection or all, by collection and then by id (code-unit order, so it doesn't depend on the
- *  database's collation). */
-export async function readDocs(toolId: string, collection?: string): Promise<AgentToolDoc[]> {
-  const rows = await db
-    .select()
-    .from(docs)
-    .where(collection === undefined ? eq(docs.toolId, toolId) : and(eq(docs.toolId, toolId), eq(docs.collection, collection)));
+/** Rows as documents, by collection and then by id (code-unit order, so it doesn't depend on the database's collation). */
+function asDocs(rows: (typeof docs.$inferSelect)[]): AgentToolDoc[] {
   return rows
     .map((r) => ({ collection: r.collection, docId: r.docId, data: r.data, updatedAt: r.updatedAt, updatedBy: r.updatedBy }))
     .sort((a, b) => byCodeUnit(a.collection, b.collection) || byCodeUnit(a.docId, b.docId));
+}
+
+/** A tool's documents, one collection or all, in order. */
+export async function readDocs(toolId: string, collection?: string): Promise<AgentToolDoc[]> {
+  return asDocs(
+    await db
+      .select()
+      .from(docs)
+      .where(collection === undefined ? eq(docs.toolId, toolId) : and(eq(docs.toolId, toolId), eq(docs.collection, collection))),
+  );
+}
+
+/** The documents of a tool at these keys, as they are stored NOW, in the order of `readDocs`; a key with no document is
+ *  left out. What a stream re-reads after a change: it tells the screens what is stored, not what a writer meant to
+ *  store (two writers to one document can publish out of the order they committed in). */
+export async function readDocsByKeys(toolId: string, keys: readonly { collection: string; docId: string }[]): Promise<AgentToolDoc[]> {
+  if (keys.length === 0) return [];
+  return asDocs(await db.select().from(docs).where(and(eq(docs.toolId, toolId), inKeys(keys))));
 }
 
 // ---- writing ---------------------------------------------------------------------------------------------------------

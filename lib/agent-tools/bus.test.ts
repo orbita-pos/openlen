@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
 
-import { publishToolChange, subscribeToolChanges, type AgentToolChange } from "./bus";
+import { publishToolChange, publishToolGone, subscribeToolChanges, type AgentToolChange } from "./bus";
 
 // The change bus of an agent's tools (spec local 2026-11-22-herramienta-dentro-del-agente, §4): OpenLen runs as one
 // process, so what the agent or a screen writes reaches every open stream of that tool in memory.
@@ -76,6 +76,48 @@ describe("the agent tools' change bus", () => {
     publishToolChange("tool-e", change());
     expect(seen).toEqual(["first", "second", "second"]);
     offSecond();
+  });
+
+  it("tells every follower of a tool that it is gone, and no other tool's; after that nothing more reaches them", () => {
+    const aChange = vi.fn();
+    const aGone = vi.fn();
+    const a2Gone = vi.fn();
+    const otherChange = vi.fn();
+    const otherGone = vi.fn();
+    subscribeToolChanges("tool-g", aChange, aGone);
+    subscribeToolChanges("tool-g", vi.fn(), a2Gone);
+    subscribeToolChanges("tool-h", otherChange, otherGone);
+    publishToolGone("tool-g");
+    expect(aGone).toHaveBeenCalledTimes(1);
+    expect(a2Gone).toHaveBeenCalledTimes(1);
+    expect(otherGone).not.toHaveBeenCalled();
+    publishToolChange("tool-g", change());
+    publishToolGone("tool-g");
+    expect(aChange).not.toHaveBeenCalled();
+    expect(aGone).toHaveBeenCalledTimes(1);
+    publishToolChange("tool-h", change());
+    expect(otherChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("a follower that only listens for changes is simply dropped when its tool is gone; one whose gone-handler throws breaks no one", () => {
+    const plain = vi.fn();
+    const after = vi.fn();
+    subscribeToolChanges("tool-i", plain);
+    subscribeToolChanges("tool-i", vi.fn(), () => {
+      throw new Error("socket closed");
+    });
+    subscribeToolChanges("tool-i", vi.fn(), after);
+    expect(() => publishToolGone("tool-i")).not.toThrow();
+    expect(after).toHaveBeenCalledTimes(1);
+    publishToolChange("tool-i", change());
+    expect(plain).not.toHaveBeenCalled();
+  });
+
+  it("unsubscribing after the tool is gone is harmless, and a tool nobody follows being gone is a no-op", () => {
+    const off = subscribeToolChanges("tool-j", vi.fn(), vi.fn());
+    publishToolGone("tool-j");
+    expect(() => off()).not.toThrow();
+    expect(() => publishToolGone("nobody-follows")).not.toThrow();
   });
 
   it("is one bus per process, on globalThis under a registered symbol: a second evaluation of the module reaches the first one's subscribers", async () => {

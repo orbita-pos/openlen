@@ -204,6 +204,39 @@ describe("writing documents", () => {
   });
 });
 
+describe("reading documents by their keys", () => {
+  beforeEach(async () => {
+    await store.upsertAgentTool(toolInput({ id: "tool-2", slug: "plan" }));
+    await store.writeDocs("tool-1", [set("b", "2", { n: 1 }), set("a", "9", { n: 2 }), set("b", "1", { n: 3 }), set("a", "10", { n: 4 })], "agent");
+    await store.writeDocs("tool-2", [set("a", "9", { from: "another tool" })], "agent");
+  });
+
+  it("gives the documents at those keys as they are stored now, in the order of `readDocs`, whatever the order asked", async () => {
+    const docs = await store.readDocsByKeys("tool-1", [{ collection: "b", docId: "2" }, { collection: "a", docId: "9" }, { collection: "a", docId: "10" }]);
+    expect(docs.map((d) => `${d.collection}/${d.docId}`)).toEqual(["a/10", "a/9", "b/2"]);
+    expect(docs.find((d) => d.docId === "9")).toEqual({ collection: "a", docId: "9", data: { n: 2 }, updatedAt: expect.any(Date), updatedBy: "agent" });
+    const all = await store.readDocs("tool-1");
+    expect(docs).toEqual(all.filter((d) => ["a/10", "a/9", "b/2"].includes(`${d.collection}/${d.docId}`)));
+  });
+
+  it("leaves out a key that has no document, and answers nothing for no keys", async () => {
+    expect((await store.readDocsByKeys("tool-1", [{ collection: "a", docId: "9" }, { collection: "a", docId: "ghost" }, { collection: "nope", docId: "9" }])).map((d) => d.docId)).toEqual(["9"]);
+    expect(await store.readDocsByKeys("tool-1", [])).toEqual([]);
+  });
+
+  it("only this tool's documents, and a key means the collection AND the id together", async () => {
+    const docs = await store.readDocsByKeys("tool-1", [{ collection: "a", docId: "9" }, { collection: "b", docId: "9" }, { collection: "a", docId: "1" }]);
+    expect(docs.map((d) => [d.collection, d.docId, d.data])).toEqual([["a", "9", { n: 2 }]]);
+    expect((await store.readDocsByKeys("tool-2", [{ collection: "a", docId: "9" }]))[0]!.data).toEqual({ from: "another tool" });
+  });
+
+  it("a key asked twice answers one document; text that looks like SQL is only text", async () => {
+    expect(await store.readDocsByKeys("tool-1", [{ collection: "a", docId: "9" }, { collection: "a", docId: "9" }])).toHaveLength(1);
+    expect(await store.readDocsByKeys("tool-1", [{ collection: "a'); drop table \"agentToolDocs\"; --", docId: "9" }])).toEqual([]);
+    expect(await countDocs()).toBe(4);
+  });
+});
+
 describe("the caps", () => {
   it("are the ones of the spec", () => {
     expect(AGENT_TOOL_DOCS_MAX).toBe(1000);
