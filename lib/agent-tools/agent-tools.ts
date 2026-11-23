@@ -31,7 +31,7 @@ import {
   AGENT_TOOL_VERSION_MAX_BYTES,
   AGENT_TOOLS_PER_AGENT,
 } from "./limits";
-import { runQuery, type AgentToolQuery, type QueryOp } from "./query";
+import { matchQuery, queryLimit, type AgentToolQuery, type QueryOp } from "./query";
 import { buildAgentToolRelease, type AgentToolReleaseError } from "./release";
 import type { AgentToolDoc, AgentToolInput, AgentToolRow, DataWrite, WriteError } from "./store";
 
@@ -326,7 +326,7 @@ function withRows(body: Record<string, unknown>): ToolOutcome {
   return { response: { ok: true, [CLAVE_TOOL_RESULT]: `${ROWS_ARE_DATA}\n${JSON.stringify({ ok: true, ...body })}` } };
 }
 
-/** `query`, checked: `runQuery` trusts its input, so a model's JSON is read here with a sentence for each way it can be wrong. */
+/** `query`, checked: `matchQuery` trusts its input, so a model's JSON is read here with a sentence for each way it can be wrong. */
 function parseQuery(raw: unknown): { query: AgentToolQuery } | { problem: string } {
   if (raw === undefined) return { query: {} };
   if (!isRecord(raw)) return { problem: "query must be an object like { where: [{ field, op, value }], orderBy: { field, direction }, limit }." };
@@ -477,8 +477,9 @@ async function runAction(d: AgentToolsDeps, tool: AgentToolRow, action: ToolData
         }
         return documentsAnswer(collection, docs, docs.slice(0, AGENT_TOOL_QUERY_LIMIT_MAX));
       }
-      const found = runQuery(docs, parsed.query);
-      return documentsAnswer(collection!, found, found);
+      // `count` is how many documents matched, not how many the limit lets through: the agent tells its person from it.
+      const matching = matchQuery(docs, parsed.query);
+      return documentsAnswer(collection!, matching, matching.slice(0, queryLimit(parsed.query)));
     }
 
     case "set":

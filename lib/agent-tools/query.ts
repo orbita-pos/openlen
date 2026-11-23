@@ -10,7 +10,8 @@
 //   - the conditions are all required (AND);
 //   - `orderBy` keeps the documents without the field AFTER the rest, either way: nothing disappears from the list;
 //   - equal values stay in the order the documents came in;
-//   - `limit` is at most 100, and 100 is also what no limit means.
+//   - `limit` is at most 100, and 100 is also what no limit means (`runQuery` is `matchQuery`, which keeps every match, cut
+//     to `queryLimit`).
 import { AGENT_TOOL_QUERY_LIMIT_MAX } from "./limits";
 import type { AgentToolDoc } from "./store";
 
@@ -81,12 +82,16 @@ function rank(value: unknown): number {
   return 4;
 }
 
-function limitOf(asked: number | undefined): number {
+/** How many documents a query returns: the limit asked, at most 100, and 100 when it asks for none. */
+export function queryLimit(q: AgentToolQuery): number {
+  const asked = q.limit;
   if (typeof asked !== "number" || Number.isNaN(asked)) return AGENT_TOOL_QUERY_LIMIT_MAX;
   return Math.min(Math.max(Math.floor(asked), 0), AGENT_TOOL_QUERY_LIMIT_MAX);
 }
 
-export function runQuery(docs: readonly AgentToolDoc[], q: AgentToolQuery): AgentToolDoc[] {
+/** Every document that matches `where`, in `orderBy` order, with NO limit: what a caller needs to say how many matched (the
+ *  `count` of `tool_data query`) before `queryLimit` cuts what it returns. */
+export function matchQuery(docs: readonly AgentToolDoc[], q: AgentToolQuery): AgentToolDoc[] {
   const conditions = q.where ?? [];
   let found = docs.filter((doc) => conditions.every((c) => matches(valueAt(doc.data, c.field), c.op, c.value)));
   if (q.orderBy) {
@@ -101,5 +106,9 @@ export function runQuery(docs: readonly AgentToolDoc[], q: AgentToolQuery): Agen
       })
       .map((entry) => entry.doc);
   }
-  return found.slice(0, limitOf(q.limit));
+  return found;
+}
+
+export function runQuery(docs: readonly AgentToolDoc[], q: AgentToolQuery): AgentToolDoc[] {
+  return matchQuery(docs, q).slice(0, queryLimit(q));
 }

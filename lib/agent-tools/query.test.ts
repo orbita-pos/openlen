@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 
 import { AGENT_TOOL_QUERY_LIMIT_MAX } from "./limits";
-import { runQuery } from "./query";
+import { matchQuery, queryLimit, runQuery } from "./query";
 import type { AgentToolDoc } from "./store";
 
 const AT = new Date("2026-11-22T10:00:00Z");
@@ -128,5 +128,34 @@ describe("limit", () => {
     expect(runQuery(MANY, { limit: 0 })).toEqual([]);
     expect(runQuery(MANY, { limit: -3 })).toEqual([]);
     expect(runQuery(MANY, { limit: 2.9 })).toHaveLength(2);
+  });
+});
+
+// The step before the cut (what `tool_data query` needs to say how many documents matched, not how many it returned):
+// `runQuery` is exactly this step and then the limit.
+describe("matchQuery and queryLimit", () => {
+  const MANY = Array.from({ length: 150 }, (_, i) => doc(`d${String(i).padStart(3, "0")}`, { n: i, even: i % 2 === 0 }));
+
+  it("matchQuery keeps every match, sorted, whatever the limit", () => {
+    expect(matchQuery(MANY, {})).toHaveLength(150);
+    expect(matchQuery(MANY, { limit: 5 })).toHaveLength(150);
+    expect(matchQuery(MANY, { where: [{ field: "even", op: "==", value: true }] })).toHaveLength(75);
+    expect(ids(matchQuery(MANY, { orderBy: { field: "n", direction: "desc" } })).slice(0, 2)).toEqual(["d149", "d148"]);
+  });
+
+  it("queryLimit is what runQuery cuts to: the limit asked, at most 100, and 100 when none", () => {
+    expect(queryLimit({})).toBe(100);
+    expect(queryLimit({ limit: 5 })).toBe(5);
+    expect(queryLimit({ limit: 500 })).toBe(100);
+    expect(queryLimit({ limit: Number.NaN })).toBe(100);
+    expect(queryLimit({ limit: 0 })).toBe(0);
+    expect(queryLimit({ limit: -3 })).toBe(0);
+    expect(queryLimit({ limit: 2.9 })).toBe(2);
+  });
+
+  it("runQuery is matchQuery cut to queryLimit", () => {
+    for (const q of [{}, { limit: 7 }, { limit: 1000 }, { where: [{ field: "even", op: "==" as const, value: true }], orderBy: { field: "n", direction: "desc" as const }, limit: 3 }]) {
+      expect(runQuery(MANY, q)).toEqual(matchQuery(MANY, q).slice(0, queryLimit(q)));
+    }
   });
 });

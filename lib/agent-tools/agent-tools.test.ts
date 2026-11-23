@@ -821,7 +821,39 @@ describe("tool_data: reading", () => {
     );
     const body = rowsOf(out);
     expect(body.documents.map((d: { doc_id: string }) => d.doc_id)).toEqual(["ana"]);
-    expect(body.count).toBe(1);
+    // Two documents match (ana and luis): the answer says so, and that the limit left one out.
+    expect(body).toMatchObject({ count: 2, returned: 1, truncated: true });
+    expect(body.note).toMatch(/Only the first 1 of 2/);
+  });
+
+  it("🔴 query says how many documents matched, not how many it returned: past 100 matches with no limit it says so", async () => {
+    const w = world();
+    addTool(w);
+    const total = AGENT_TOOL_QUERY_LIMIT_MAX + 50;
+    for (let i = 0; i < total; i++) {
+      w.docs.set(keyOf("tool-x-recorrido", "students", `s${String(i).padStart(3, "0")}`), { collection: "students", docId: `s${String(i).padStart(3, "0")}`, data: { active: true, n: i }, updatedAt: NOW, updatedBy: "person" });
+    }
+    w.docs.set(keyOf("tool-x-recorrido", "students", "zz-inactive"), { collection: "students", docId: "zz-inactive", data: { active: false, n: -1 }, updatedAt: NOW, updatedBy: "person" });
+
+    const where = [{ field: "active", op: "==", value: true }];
+    const noLimit = rowsOf(await runToolData(session(), { tool: "recorrido", action: "query", collection: "students", query: { where, orderBy: { field: "n" } } }, w.deps));
+    expect(noLimit).toMatchObject({ count: total, returned: AGENT_TOOL_QUERY_LIMIT_MAX, truncated: true });
+    expect(noLimit.documents).toHaveLength(AGENT_TOOL_QUERY_LIMIT_MAX);
+    expect(noLimit.documents[0].doc_id).toBe("s000");
+    expect(noLimit.note).toContain(`Only the first ${AGENT_TOOL_QUERY_LIMIT_MAX} of ${total}`);
+
+    // With a limit below the matches: the matches are still all counted.
+    const limited = rowsOf(await runToolData(session(), { tool: "recorrido", action: "query", collection: "students", query: { where, limit: 5 } }, w.deps));
+    expect(limited).toMatchObject({ count: total, returned: 5, truncated: true });
+
+    // And a query whose matches all fit says nothing was left out.
+    const fits = rowsOf(await runToolData(session(), { tool: "recorrido", action: "query", collection: "students", query: { where: [{ field: "active", op: "==", value: false }] } }, w.deps));
+    expect(fits).toMatchObject({ count: 1, returned: 1, truncated: false });
+    expect(fits.note).toBeUndefined();
+
+    // list on the same collection tells the same story.
+    const listed = rowsOf(await runToolData(session(), { tool: "recorrido", action: "list", collection: "students" }, w.deps));
+    expect(listed).toMatchObject({ count: total + 1, returned: AGENT_TOOL_QUERY_LIMIT_MAX, truncated: true });
   });
 
   it("query with no query is the collection's first documents; it never reaches into another collection", async () => {
