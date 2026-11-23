@@ -1410,4 +1410,16 @@ describe("an isolated child (phase 4)", () => {
       message: "Artifacts live in your projects; in the person's space, their agents make their own.",
     });
   });
+
+  it("🔴 a non-worktree child inherits session.artifactWatch so a mid-turn publish registers on the parent watcher", async () => {
+    const watched: { id: string; slug: string; title: string }[] = [];
+    const s = setup({ scripts: [dice("Done")] });
+    const watchCtx = { ...s.ctx, sessionBase: { ...s.ctx.sessionBase, artifactWatch: { add: (t: { id: string; slug: string; title: string }) => void watched.push(t) } } };
+    const launcher = createSubagentLauncher(watchCtx, s.io);
+    await launcher.launch({ description: "Make artifact", prompt: "Publish budget.", preset: "general-purpose" });
+    await s.settled("r1");
+    expect(s.sessions[0]!.artifactWatch).toBeDefined();
+    s.sessions[0]!.artifactWatch!.add({ id: "a1", slug: "budget", title: "Budget" });
+    expect(watched).toEqual([{ id: "a1", slug: "budget", title: "Budget" }]);
+  });
 });

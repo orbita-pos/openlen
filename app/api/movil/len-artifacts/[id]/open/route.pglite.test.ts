@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// POST /api/movil/len-artifacts/[id]/open (spec local 2026-11-22-herramienta-dentro-del-agente, §2–§3): the phone app opens one of its
+// POST /api/movil/len-artifacts/[id]/open (spec local 2026-11-22-artifacts-de-len, §2–§3): the phone app opens one of its
 // person's agent tools full screen — its frame URL on the phone's OWN private label, which only the phone app may frame, stored
 // with the tool when it was published (it is never set here). Against the real store (PGlite) with the tables as `npm run
 // assistants:migrate` creates them.
@@ -148,6 +148,9 @@ describe("🔴 who may", () => {
     base.person = "u3";
     const missing = await call("no-such-tool");
     expect(missing).toEqual({ status: 404, body: { error: "not_found" } });
+    expect(await call("len-1")).toEqual(missing);
+    // Even for the owner, Len's project artifacts do not open on the phone in this round (spec §4 / "Lo que no").
+    base.person = "u1";
     expect(await call("len-1")).toEqual(missing);
   });
 

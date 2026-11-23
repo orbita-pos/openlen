@@ -98,8 +98,15 @@ const MUTATING_TOOLS = new Set([
   "Edit", "MultiEdit", "Write", "bash", "edit_image", "toggle_module", "convert_to_app",
   // They change the project without saying which file, or through a child that may write: nothing read before them
   // is known to still be what Read would answer.
-  "undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "subagent", "subagent_fork",
+  "undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "publish_artifact", "subagent", "subagent_fork",
 ]);
+/** `artifact_data` write actions: reads (`get`, `list`, `query`) do not break circling streaks. */
+const ARTIFACT_DATA_WRITES = new Set(["set", "update", "delete", "batch"]);
+
+function isMutatingCall(name: string, args: Record<string, unknown> | undefined): boolean {
+  if (MUTATING_TOOLS.has(name)) return true;
+  return name === "artifact_data" && typeof args?.action === "string" && ARTIFACT_DATA_WRITES.has(args.action);
+}
 /** Of those, the ones whose arguments name the one file they changed; the rest (`edit_image` rewrites every file that
  *  holds the picture) may have changed any. */
 const NAMES_ITS_FILE = new Set(["Edit", "MultiEdit", "Write"]);
@@ -139,7 +146,7 @@ export function createRepeatReminder(thresholds: readonly number[] = REPEAT_THRE
 
         // Track mutations: an edit/write/bash breaks both circling streaks and clears cached read scopes.
         const ok = response.ok !== false && response.isError !== true;
-        if (MUTATING_TOOLS.has(name) && ok) {
+        if (isMutatingCall(name, args) && ok) {
           usePageNoChangeStreak = 0;
           rereadStreak = 0;
           if (!NAMES_ITS_FILE.has(name)) {

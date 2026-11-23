@@ -1,4 +1,4 @@
-/* An agent's own tools on the phone (spec local 2026-11-22-herramienta-dentro-del-agente, §2):
+/* An agent's own tools on the phone (spec local 2026-11-22-artifacts-de-len, §2):
    reuses `.herr-pantalla` / `.herr-barra` / `.herr-velo` / `.herr-hoja` from `herramientas.css` and adds
    the header remove button, danger confirm button, and multi-tool picker list. */
 .herr-barra b { flex: 1; min-width: 0; }

@@ -21,7 +21,7 @@ export const BRIDGE_METHODS = [
   "jobs.list",
   "files.pick",
   "files.deliver",
-  // An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): the small database it shares with its
+  // An AGENT's tool (spec local 2026-11-22-artifacts-de-len, §3–§4): the small database it shares with its
   // agent, answered by the screen with the person's session. Only the agent-tool variant of the client offers them.
   "data.get",
   "data.set",

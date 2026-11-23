@@ -1030,16 +1030,6 @@
       "discardBring": "バリアントBの変更を破棄",
       "pushClosedBySystem": "A/Bテスト「{name}」は公開中のサイトで実行されなくなっていたため、終了しました。公開中のページは変更されていません。",
       "pushPromotedBySystem": "「{name}」のバリアントBが勝者として公開されました。もう一度公開する前に、A/Bテストのカードから下書きに取り込んでください。"
-    },
-    "tools": {
-      "menu": "ツールのオプション",
-      "remove": "削除",
-      "removeTitle": "{title} を削除しますか？",
-      "removeBody": "{title} を削除し、保存されたデータをすべて完全に消去します。スペースフォルダ内のファイルは残ります。",
-      "removeConfirm": "削除",
-      "removeCancel": "キャンセル",
-      "removeFailed": "削除できませんでした。もう一度お試しください。",
-      "empty": "ツールはまだありません。"
     }
   },
   "skillProposal": {

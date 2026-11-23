@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// POST /api/len-artifacts/[id]/data (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): where the bridge's `data.*`
+// POST /api/len-artifacts/[id]/data (spec local 2026-11-22-artifacts-de-len, §3–§4): where the bridge's `data.*`
 // land — a tool's page reading and writing the small database it shares with its agent, with the PERSON's session (or the
 // phone's key). Against the real store (PGlite) with the tables as `npm run assistants:migrate` creates them, so what a
 // write does to `dataChangedAt` and to the rows is what production does.

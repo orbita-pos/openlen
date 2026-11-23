@@ -33,7 +33,7 @@ export const SANDBOX_REMOTO =
  *  propio origen. */
 export const ALLOW_REMOTO = "clipboard-write; fullscreen; camera; microphone; geolocation";
 
-/** THE FRAME OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2), on the web and the phone. Its
+/** THE FRAME OF AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2), on the web and the phone. Its
  *  code is written by an agent that sometimes reads other people's text, and what it stores must not leave it: the
  *  canvas's flags without popups (a popup escaping the sandbox is a window the tool's policy no longer governs), and no
  *  camera, microphone or location — its host answers `permissions-policy` with all three off anyway. */

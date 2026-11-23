@@ -101,7 +101,7 @@ export interface LaunchContext {
   readonly declarations: readonly Record<string, unknown>[];
   /** Len's deps, without what only the turn has (questions, plan mode, goal, scheduled tasks). */
   readonly deps: AgentDeps;
-  readonly sessionBase: Pick<AgentSession, "skills" | "attachments" | "uiLocale" | "zonaHoraria" | "ownerEmail" | "tool" | "game" | "ownerPaid" | "wokenByAgent" | "space">;
+  readonly sessionBase: Pick<AgentSession, "skills" | "attachments" | "uiLocale" | "zonaHoraria" | "ownerEmail" | "tool" | "game" | "ownerPaid" | "wokenByAgent" | "space" | "artifactWatch">;
   readonly spend: TurnSpend;
   /** While the launching turn's stream is open. */
   readonly emit?: (ev: SubagentEvent) => void;
@@ -366,7 +366,7 @@ export function createSubagentLauncher(ctx: LaunchContext, io: RunnerIO): Subage
       ...ctx.sessionBase,
       // An isolated child works in its copy; its LEN.md, memory, skills and agents stay its parent's (phase 4).
       projectId: spec.worktree ? spec.worktree.copyId : ctx.projectId,
-      ...(spec.worktree ? { parentProjectId: ctx.projectId } : {}),
+      ...(spec.worktree ? { parentProjectId: ctx.projectId, artifactWatch: undefined } : {}),
       userId: ctx.userId,
       ...(ctx.personId !== ctx.userId ? { personId: ctx.personId } : {}),
       turnId: ctx.turnId,

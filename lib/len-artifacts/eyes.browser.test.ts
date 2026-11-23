@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// THE AGENT'S EYES ON ITS PUBLISHED TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §5): in real Chromium,
+// THE AGENT'S EYES ON ITS PUBLISHED TOOL (spec local 2026-11-22-artifacts-de-len, §5): in real Chromium,
 // `usarPagina` opens the published page with the agent-tool bridge (`window.openlen.data`) running on an in-memory copy
 // of its real documents. A `data.set` updates what `subscribe` receives (via `window.__openlenBridgeNotify`) and what a
 // later `data.get` in the same visit returns, while never touching the real docs array; a fresh visit starts clean.

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// DELETE /api/len-artifacts/[id] (spec local 2026-11-22-herramienta-dentro-del-agente, §1): taking a tool away is the PERSON's —
+// DELETE /api/len-artifacts/[id] (spec local 2026-11-22-artifacts-de-len, §1): taking a tool away is the PERSON's —
 // from the menu of its tab on the web, or from the phone — and it deletes the tool and its data for good; every screen following
 // it is told `gone`. The agent has no way to do it. Against the real store (PGlite) with the tables as `npm run
 // assistants:migrate` creates them.

@@ -60,7 +60,7 @@ import type { LedgerEntry, LedgerOutcome } from "@/lib/credit-ledger";
 import { stripOpIds } from "@/lib/html-ops";
 import { seleccionDelLienzo } from "@/lib/agent/seleccion-del-lienzo";
 import { parseMentions, resolveMentions } from "@/lib/mentions/resolve";
-import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { buildFunctionDeclarations, stripArtifactEyes } from "@/lib/agent/catalog";
 import { resolveAgentTypes } from "@/lib/agent/subagents/agent-registry";
 import { functionsEnabled } from "@/lib/functions/engines";
 import { scriptDelDocumento } from "@/lib/page-engine/conservar-scripts";
@@ -943,9 +943,9 @@ async function correrTurno(
     const mcp = mergeMcpDeclarations(operaciones?.declarations ?? [], conectores?.declarations ?? []);
     const conMcp = mcp.length > 0 ? [...conLaTarjeta, ...mcp] : conLaTarjeta;
     // Only the owner creates the project's assistant (POST /api/assistants, 403 solo_dueno) and only the owner has artifacts
-    // (spec local 2026-11-22-artifacts-de-len, §1: «Sólo el dueño»): a member's turn isn't offered those tools at all, as
-    // Claude Code leaves a denied tool out of the list.
-    const todas = miembro ? conMcp.filter((d) => !ONLY_THE_OWNERS.has(String(d.name))) : conMcp;
+    // (spec local 2026-11-22-artifacts-de-len, §1: «Sólo el dueño»): a member's turn isn't offered those tools or the
+    // optional `artifact` parameter on view_page/use_page at all, as Claude Code leaves a denied tool out of the list.
+    const todas = miembro ? stripArtifactEyes(conMcp.filter((d) => !ONLY_THE_OWNERS.has(String(d.name)))) : conMcp;
     // The person's own assistant inherits them all, minus what builds (lib/assistants/agent.ts), plus `ask_len` LAST:
     // what builds it passes to Len. Then `message_len` (spec local 2026-11-21-len-y-el-agente-conversan): every agent
     // turn may write to Len — the same list whether a person or Len's message started it, so the cached prefix holds;
@@ -2017,7 +2017,7 @@ async function correrTurno(
        *  it. What it never got, or what a turn that left no row claimed, goes back to waiting (`closeRowOnce`). */
       let rideAlong: HeldMessages | null = null;
       let rideAlongHanded = false;
-      /** Mid-turn person writes on the agent's tools bus (spec local 2026-11-22-herramienta-dentro-del-agente, §4). */
+      /** Mid-turn person writes on the agent's tools bus (spec local 2026-11-22-artifacts-de-len, §4). */
       let toolWatch: ReturnType<typeof watchLenArtifactChanges> | null = null;
       /** The turn's row was written at its close (`closeRowOnce`). */
       let rowWritten = false;
@@ -2543,6 +2543,14 @@ async function correrTurno(
           newId: randomUUID,
           log: console.warn,
         };
+        // Even with no artifact yet: one Len, an agent, or a non-worktree subagent publishes in this turn is followed from then on (`artifactWatch.add`).
+        if (vigilaHerramientas && !compactCommand) {
+          toolWatch = watchLenArtifactChanges(herramientasDelAgente, undefined, {
+            since: cambiosLeidosEn,
+            personChangedCollections: async (toolId, since) => (await import("@/lib/len-artifacts/store")).personChangedCollections(toolId, since),
+          });
+          agentSession.artifactWatch = toolWatch;
+        }
         const subagents = subagentsOn
           ? createSubagentLauncher(
               {
@@ -2587,6 +2595,8 @@ async function correrTurno(
                   ...(agentSession.wokenByAgent ? { wokenByAgent: true as const } : {}),
                   // A child of Len's turn in the person's space stays bound by the space rule (no Len artifacts there).
                   ...(agentSession.space ? { space: true as const } : {}),
+                  // A non-worktree child publishing a new artifact mid-turn registers it on the parent turn's watcher.
+                  ...(agentSession.artifactWatch ? { artifactWatch: agentSession.artifactWatch } : {}),
                 },
                 spend,
                 // Straight to the channel: a child's step is not this turn's sign of life.
@@ -2665,14 +2675,6 @@ async function correrTurno(
             console.warn("[agent-messages] what waited from Len couldn't be claimed", err);
             return null;
           });
-        }
-        // Even with no tool yet: one the agent publishes in this turn is followed from then on (`artifactWatch.add`).
-        if (vigilaHerramientas && !compactCommand) {
-          toolWatch = watchLenArtifactChanges(herramientasDelAgente, undefined, {
-            since: cambiosLeidosEn,
-            personChangedCollections: async (toolId, since) => (await import("@/lib/len-artifacts/store")).personChangedCollections(toolId, since),
-          });
-          agentSession.artifactWatch = toolWatch;
         }
         // And WHAT WAITED FOR LEN in this project (same decision): what the agents wrote to him that is still unread
         // (held, pending or delivering) rides with the next turn a PERSON starts here — not one the server started (an

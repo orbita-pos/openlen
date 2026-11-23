@@ -1,4 +1,4 @@
-// SERVING AN AGENT'S TOOL ON ITS OWN PRIVATE HOST (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its PUBLISHED
+// SERVING AN AGENT'S TOOL ON ITS OWN PRIVATE HOST (spec local 2026-11-22-artifacts-de-len, §2): its PUBLISHED
 // version — never the folder mid-edit — with `window.openlen` first in the shell's <head>, and the bridge script for the
 // screen that frames it. The same shape as an installed tool's host (`lib/tools/serve.ts`), with three differences:
 // there is no plan check at all (it is for every plan: what a tool costs is the turn of the agent that writes it), the

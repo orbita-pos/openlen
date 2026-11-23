@@ -1030,16 +1030,6 @@
       "discardBring": "Wijzigingen van variant B weggooien",
       "pushClosedBySystem": "De A/B-test “{name}” draaide niet meer op je gepubliceerde site en is daarom gesloten. Je gepubliceerde pagina is niet veranderd.",
       "pushPromotedBySystem": "Variant B van “{name}” is als winnaar live gegaan. Haal hem vanaf de kaart van de A/B-test in je concept voordat je opnieuw publiceert."
-    },
-    "tools": {
-      "menu": "Toolopties",
-      "remove": "Verwijderen",
-      "removeTitle": "{title} verwijderen?",
-      "removeBody": "Hiermee verwijder je {title} en worden alle opgeslagen gegevens definitief gewist. De bestanden in je map blijven staan.",
-      "removeConfirm": "Verwijderen",
-      "removeCancel": "Annuleren",
-      "removeFailed": "Kon niet worden verwijderd. Probeer het opnieuw.",
-      "empty": "Nog geen tools."
     }
   },
   "skillProposal": {

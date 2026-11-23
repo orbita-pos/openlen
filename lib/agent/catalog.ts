@@ -263,7 +263,7 @@ function declaracionesDelModo(
     : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env));
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): with games off, convert_to_app offers no `game`.
   const conJuegos = gamesEnabled(_env) ? declaraciones : declaraciones.map((d) => (d.name === CONVERTIR_EN_APP ? declaracionConvertirEnApp(false) : d));
-  const conOjos = artifactsOn ? conJuegos : conJuegos.map((d) => (EYES.has(String(d.name)) ? withoutArtifactEyes(d) : d));
+  const conOjos = artifactsOn ? conJuegos : stripArtifactEyes(conJuegos);
   return fuera.size === 0 ? conOjos : conOjos.filter((d) => !fuera.has(String(d.name)));
 }
 
@@ -285,11 +285,17 @@ const ARTIFACT_EYES_PARAM = {
 };
 const EYES = new Set(["view_page", "use_page"]);
 
-/** view_page or use_page without the `artifact` parameter: what the eyes are with the artifacts off on this server. */
+/** view_page or use_page without the `artifact` parameter. */
 function withoutArtifactEyes(d: Record<string, unknown>): Record<string, unknown> {
-  const parameters = d.parameters as { properties: Record<string, unknown> };
+  const parameters = d.parameters as { properties?: Record<string, unknown> } | undefined;
+  if (!parameters?.properties || !("artifact" in parameters.properties)) return d;
   const { artifact: _gone, ...properties } = parameters.properties;
   return { ...d, parameters: { ...parameters, properties } };
+}
+
+/** Strips the optional `artifact` parameter from view_page and use_page (artifacts off on this server, or a member's turn). */
+export function stripArtifactEyes(declarations: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  return declarations.map((d) => (EYES.has(String(d.name)) ? withoutArtifactEyes(d) : d));
 }
 
 // ⚰️ LAS DIFERIDAS Y `ToolSearch` (H2, 2026-09-25 → Len 2.1, 2026-09-30). El

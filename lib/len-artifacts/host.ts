@@ -1,4 +1,4 @@
-// THE PRIVATE HOST OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): the same shape as the
+// THE PRIVATE HOST OF AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): the same shape as the
 // canvas label (`lienzo-` + 32 hex), so Caddy's `lienzo-*` handle and the canvas rewrites already reach Next with no
 // infra change — but keyed by the tool's row and looked up in `lenArtifacts`, never recomputed from a live document. An HMAC
 // with Auth.js's secret: it can't be guessed. Each label has a domain of its own, apart from the installed tool's

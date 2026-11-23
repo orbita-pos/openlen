@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// window.openlen as an AGENT'S tool gets it (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): the same
+// window.openlen as an AGENT'S tool gets it (spec local 2026-11-22-artifacts-de-len, §3–§4): the same
 // script with `{ lenArtifact: true }`, but the object it exposes has only `context`, `onContext`, `sendPrompt` and `data`.
 // Run against a fake window, like the installed tool's (client.test.ts).
 import { createHash } from "node:crypto";

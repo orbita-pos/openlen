@@ -1,5 +1,5 @@
 // LEN'S EYES RUN A TOOL WITH ITS BRIDGE (spec local 2026-11-04-herramientas-hechas-por-len, §4.4, §4.8; and an agent's
-// tool, spec local 2026-11-22-herramienta-dentro-del-agente, §5). The eyes open the tool top-level in Chromium, with no
+// tool, spec local 2026-11-22-artifacts-de-len, §5). The eyes open the tool top-level in Chromium, with no
 // workspace around it, so `window.openlen` calls `__openlenBridge`, which Puppeteer exposes and this answers in Node:
 // - For a Len-built tool (`draft` / `installed`): reads through the same handlers as the bridge's server; `update` (a
 //   production row of another project, which needs the person's press) never — `draft_no_production` in the draft,

@@ -1,4 +1,4 @@
-// AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4):
+// AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-artifacts-de-len, §2, §4):
 // header button in the agent's chat (only when it has tools), full-screen frame on the phone's own private label
 // (`POST /api/movil/len-artifacts/[id]/open`), restricted bridge (`LEN_ARTIFACT_BRIDGE_METHODS`), live SSE follow stream
 // read via `cliente.pedir` + `crearLectorSse` (reconnecting for a fresh baseline on drop; stopping and removing only on

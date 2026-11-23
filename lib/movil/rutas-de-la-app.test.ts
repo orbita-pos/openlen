@@ -131,7 +131,7 @@ describe("las rutas de la app", () => {
     expect(listed.get("app/api/visual-frame-url/route.ts")).toEqual(["GET"]);
   });
 
-  // An agent's tool on the phone (spec local 2026-11-22-herramienta-dentro-del-agente, §2–§4): the list of its tools, opening one
+  // An agent's tool on the phone (spec local 2026-11-22-artifacts-de-len, §2–§4): the list of its tools, opening one
   // on the phone's own label, its page's data, the stream every open screen follows it with, and the person deleting it. The
   // stream is read by the phone with a fetch reader, so it takes the key from the header: it needs the app's CORS like the rest.
   it("🔴 an agent's tool routes are on the list, with the methods the phone calls", () => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// GET /api/len-artifacts/[id]/follow (spec local 2026-11-22-herramienta-dentro-del-agente, §4): every open screen follows a
+// GET /api/len-artifacts/[id]/follow (spec local 2026-11-22-artifacts-de-len, §4): every open screen follows a
 // tool's data — a complete baseline on opening, then each change as it happens, the baseline again on reconnect. Against
 // the real store (PGlite) with the tables as `npm run assistants:migrate` creates them, reading the stream the way a screen
 // does (a fetch reader, the phone's way, as well as a cookie's).
@@ -486,7 +486,7 @@ describe("closing", () => {
     await f.closed();
     expect(f.raw).not.toContain("event: change");
     // and it is said, with the tool, so an outage shows as more than a silent reconnect
-    expect(warn).toHaveBeenCalledWith("[agent-tools] follow closed", "tool-1", expect.any(Error));
+    expect(warn).toHaveBeenCalledWith("[len-artifacts] follow closed", "tool-1", expect.any(Error));
   });
 
   it("a baseline that can't be read closes the stream too", async () => {

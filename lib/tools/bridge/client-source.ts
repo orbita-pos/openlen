@@ -6,7 +6,7 @@
 // before the tool's bundle, in any browser. Keep the methods in step with `OPENLEN_TYPES` (lib/tools/skeleton.ts).
 //
 // Two variants of ONE script: an installed tool's (everything), and an AGENT's tool's (`{ lenArtifact: true }`, spec local
-// 2026-11-22-herramienta-dentro-del-agente, §3–§4), which exposes only `context`, `onContext`, `sendPrompt` and `data`.
+// 2026-11-22-artifacts-de-len, §3–§4), which exposes only `context`, `onContext`, `sendPrompt` and `data`.
 // They share the channel, the origin checks, the timeouts and `call`; asking for no variant gives the installed tool's
 // script exactly as it was (a test pins it).
 import { BRIDGE_CHANNEL } from "./protocol";

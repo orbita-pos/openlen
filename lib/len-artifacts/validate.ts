@@ -1,4 +1,4 @@
-// THE CHECKS OF A CALL ON AN AGENT TOOL'S DATA (spec local 2026-11-22-herramienta-dentro-del-agente, §3): the agent's
+// THE CHECKS OF A CALL ON AN AGENT TOOL'S DATA (spec local 2026-11-22-artifacts-de-len, §3): the agent's
 // `artifact_data` and the tool's own page (`window.openlen.data`, through the bridge's route) reach the same database, so they
 // are checked by the same rules and with the same sentences — one copy. `matchQuery` and the store trust their input; what a
 // model or a page sends is read here, with a sentence for each way it can be wrong.

@@ -1,4 +1,4 @@
-// THE CHANGE BUS OF AN AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4): what the agent writes with
+// THE CHANGE BUS OF AN AGENT'S TOOLS (spec local 2026-11-22-artifacts-de-len, §4): what the agent writes with
 // `artifact_data`, or the person from any screen, is handed in memory to every open stream of that tool, so a change shows on the
 // web and the phone at once. OpenLen runs as ONE process on Hetzner (as the chat's hub, lib/chat/hub.ts), so no queue sits
 // between a write and the screens that follow it.

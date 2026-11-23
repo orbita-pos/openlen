@@ -93,7 +93,7 @@ describe("createRepeatReminder · what counts as a change, and who it speaks to"
   const noChange = (click: string) => ({ name: "use_page", args: { steps: [{ click }] }, response: { ok: true, no_change: true } });
 
   // Every one of them can change what Read would now answer, whatever its own arguments say.
-  const ALSO_MUTATING = ["undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "subagent", "subagent_fork"];
+  const ALSO_MUTATING = ["undo_last_change", "create_deliverable", "render_deliverable", "cancel_deliverable_job", "publish_artifact", "subagent", "subagent_fork"];
 
   it("🔴 the tools that change the project without naming a file break the circling streaks and forget what was read", () => {
     for (const tool of ALSO_MUTATING) {
@@ -119,13 +119,39 @@ describe("createRepeatReminder · what counts as a change, and who it speaks to"
 
   it("🔴 those names are real tools of Len's", async () => {
     const { ARTIFACT_TOOLS } = await import("@/lib/artifacts/tools");
+    const { PUBLISH_ARTIFACT } = await import("@/lib/len-artifacts/tools");
     const { SUBAGENT_TOOL, SUBAGENT_FORK_TOOL } = await import("./subagents/enabled");
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const real = new Set<string>([...ARTIFACT_TOOLS, SUBAGENT_TOOL, SUBAGENT_FORK_TOOL]);
+    const real = new Set<string>([...ARTIFACT_TOOLS, PUBLISH_ARTIFACT, SUBAGENT_TOOL, SUBAGENT_FORK_TOOL]);
     const catalog = readFileSync(join(__dirname, "catalog.ts"), "utf8");
     expect(catalog).toContain('name: "undo_last_change"');
     for (const tool of ALSO_MUTATING.filter((t) => t !== "undo_last_change")) expect(real.has(tool), tool).toBe(true);
+  });
+
+  it("🔴 artifact_data writes (set/update/delete/batch) break circling and use_page streaks; reads (get/list/query) do not", () => {
+    for (const action of ["set", "update", "delete", "batch"]) {
+      const r = createRepeatReminder();
+      circling(r);
+      expect(r.observe([call("artifact_data", { artifact: "budget", action })]), action).toEqual([]);
+      expect(rereads(r), action).toEqual([]);
+
+      const p = createRepeatReminder();
+      p.observe([noChange("A"), noChange("B")]);
+      p.observe([call("artifact_data", { artifact: "budget", action })]);
+      expect(p.observe([noChange("C")]), action).toEqual([]);
+    }
+    for (const action of ["get", "list", "query"]) {
+      const r = createRepeatReminder();
+      circling(r);
+      expect(r.observe([call("artifact_data", { artifact: "budget", action })]), action).toEqual([]);
+      expect(rereads(r), action).toHaveLength(1);
+
+      const p = createRepeatReminder();
+      p.observe([noChange("A"), noChange("B")]);
+      p.observe([call("artifact_data", { artifact: "budget", action })]);
+      expect(p.observe([noChange("C")]), action).toHaveLength(1);
+    }
   });
 
   it("🔴 a reader that cannot edit is never told to move on to editing; the other reminders still reach it", () => {

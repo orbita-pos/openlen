@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// SERVING AN AGENT'S TOOL on its own private label (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its published
+// SERVING AN AGENT'S TOOL on its own private label (spec local 2026-11-22-artifacts-de-len, §2): its published
 // version, the bridge first in <head>, and a tight content policy on every answer.
 import { describe, expect, it, vi } from "vitest";
 

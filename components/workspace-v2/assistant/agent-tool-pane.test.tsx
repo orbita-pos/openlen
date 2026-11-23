@@ -1,4 +1,4 @@
-// AN AGENT'S TOOLS ON THE WEB (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): tabs in the agent's rail,
+// AN AGENT'S TOOLS ON THE WEB (spec local 2026-11-22-artifacts-de-len, §2, §4): tabs in the agent's rail,
 // live-synced with SSE follow (`baseline`, `change`, reconnect on drop, stop + remove on `gone`), restricted bridge
 // (`LEN_ARTIFACT_BRIDGE_METHODS`), `sendPrompt` filling the composer without sending, and person-only delete with confirmation.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

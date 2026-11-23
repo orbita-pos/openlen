@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// THE BRIDGE'S PARENT FOR AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): the parent answers
+// THE BRIDGE'S PARENT FOR AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §3–§4): the parent answers
 // `context`, `sendPrompt` and the tool's own database, and nothing else. The tool's code can `postMessage` any method, so the
 // allow-list is the boundary. Needs no React and no DOM: this file runs in Node, like the parent's other tests.
 import { describe, expect, it, vi } from "vitest";

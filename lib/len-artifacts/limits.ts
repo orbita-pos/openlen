@@ -1,4 +1,4 @@
-// THE CAPS OF AN AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3). For every plan: what a
+// THE CAPS OF AN AGENT'S TOOLS (spec local 2026-11-22-artifacts-de-len, §1 and §3). For every plan: what a
 // tool costs is the agent's turn that writes it, in credits — these only keep one agent's tools, and the small database
 // they share with it, from growing without end.
 

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { publishArtifactChange, publishArtifactGone, subscribeArtifactChanges, type LenArtifactChange } from "./bus";
 
-// The change bus of an agent's tools (spec local 2026-11-22-herramienta-dentro-del-agente, §4): OpenLen runs as one
+// The change bus of an agent's tools (spec local 2026-11-22-artifacts-de-len, §4): OpenLen runs as one
 // process, so what the agent or a screen writes reaches every open stream of that tool in memory.
 
 const doc = (collection: string, docId: string, data: unknown = { n: 1 }) => ({

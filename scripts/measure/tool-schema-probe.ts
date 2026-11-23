@@ -1,7 +1,7 @@
 /**
- * THE TOOL-SCHEMA PROBE (M3-1 of the agent's own tool, spec local 2026-11-22-herramienta-dentro-del-agente; the tools are Len's
- * artifacts' since spec local 2026-11-22-artifacts-de-len): does each of Len's providers take `artifact_data`'s declaration — whose `query.where[].value` and `data` carry no JSON type, because they
- * are any JSON value and any object — and does the model fill them so that `artifact_data` itself accepts the call?
+ * THE TOOL-SCHEMA PROBE (spec local 2026-11-22-artifacts-de-len): does each of Len's providers take `artifact_data`'s
+ * declaration — whose `query.where[].value` and `data` carry no JSON type, because they are any JSON value and any
+ * object — and does the model fill them so that `artifact_data` itself accepts the call?
  *
  * Per provider, two calls through the real client and the real bridge (`toolsForFireworks`, as a turn sends them), with
  * the two declarations (`publish_artifact`, `artifact_data`) and the agent role's model:
@@ -15,7 +15,7 @@
  *   npx tsx --tsconfig tsconfig.eval.json --env-file=.env.local --require ./scripts/test-node-server-only-shim.cjs \
  *     scripts/measure/tool-schema-probe.ts -- --yes --budget-usd=0.10
  *
- * Nothing it sends is anyone's data: the prompts are written here. The report goes to plans/agent-tools/ (local).
+ * Nothing it sends is anyone's data: the prompts are written here. The report goes to plans/len-artifacts/ (local).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -27,7 +27,7 @@ import { ARTIFACT_DATA, ARTIFACT_DATA_DECLARATION, PUBLISH_ARTIFACT_DECLARATION 
 import { parseRead, parseWrite } from "@/lib/len-artifacts/validate";
 import { WIRE_PROBE_PRICES, wireProbeCostUsd, type WireProvider } from "@/lib/measure/wire-probe";
 
-const DIR = path.join("plans", "agent-tools", "tool-schema-probe");
+const DIR = path.join("plans", "len-artifacts", "tool-schema-probe");
 const PROVIDERS: readonly WireProvider[] = ["deepinfra", "fireworks"];
 const MAX_OUTPUT_TOKENS = 400;
 const CALL_TIMEOUT_MS = 120_000;

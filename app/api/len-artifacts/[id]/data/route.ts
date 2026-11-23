@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/len-artifacts/[id]/data — where an agent's tool's page reaches its own database (spec local
-// 2026-11-22-herramienta-dentro-del-agente, §3–§4): the bridge's `data.get|set|update|delete|list|query`, relayed by the
+// 2026-11-22-artifacts-de-len, §3–§4): the bridge's `data.get|set|update|delete|list|query`, relayed by the
 // screen that frames the tool — the workspace with the person's session, the phone app with its key. The frame holds neither.
 //
 // Body { op: "get"|"list"|"query"|"set"|"update"|"delete", collection, docId?, data?, query? } — the same checks and

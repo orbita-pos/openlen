@@ -20,7 +20,7 @@ import {
 } from "./protocol";
 import { JOB_REFUSALS, UPLOADS_PER_PICK, type ToolJobView } from "../jobs/types";
 
-/** Who the tool is: an installed tool, a tool project's draft, or (spec local 2026-11-22-herramienta-dentro-del-agente) a tool
+/** Who the tool is: an installed tool, a tool project's draft, or (spec local 2026-11-22-artifacts-de-len) a tool
  *  an AGENT made, which talks only to its own data. */
 export type BridgeHostCaller = { readonly installationId: string } | { readonly draftProjectId: string } | { readonly lenArtifactId: string };
 

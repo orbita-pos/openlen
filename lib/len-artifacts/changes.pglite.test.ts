@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// WHAT CHANGED IN AN AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4): against real Postgres
+// WHAT CHANGED IN AN AGENT'S TOOLS (spec local 2026-11-22-artifacts-de-len, §4): against real Postgres
 // (PGlite), a person's write shows up in `changedSince` until `markMakerSeen` moves past it; an agent's own write never
 // does; and a deletion-only change names the tool without collections.
 import { PGlite } from "@electric-sql/pglite";

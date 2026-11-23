@@ -1,4 +1,4 @@
-// AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4): header button only when
+// AN AGENT'S TOOLS ON THE PHONE (spec local 2026-11-22-artifacts-de-len, §2, §4): header button only when
 // the agent has tools, opens full screen on the phone's own label (`POST /api/movil/len-artifacts/[id]/open`, never the
 // list's workspace frameUrl), streams live changes with fetch reader + crearLectorSse (reconnecting for a fresh
 // baseline on drop; stopping and removing only on `gone`), restricted bridge, `sendPrompt` fills composer without

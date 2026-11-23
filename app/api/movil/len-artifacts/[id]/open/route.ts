@@ -1,11 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/movil/len-artifacts/[id]/open — the phone app opens one of its person's agent tools (spec local
-// 2026-11-22-herramienta-dentro-del-agente, §2–§3): its frame URL on the phone's OWN private label, which only the phone app may
+// POST /api/movil/len-artifacts/[id]/open — the phone app opens one of its person's assistant artifacts (spec local
+// 2026-11-22-artifacts-de-len, §4): its frame URL on the phone's OWN private label, which only the phone app may
 // frame and whose bridge answers only the app — the workspace's label stays framed only by openlen.com, as
-// `/api/movil/tools/[id]/open` does for an installed tool.
+// `/api/movil/tools/[id]/open` does for an installed tool. Len's project artifacts (`assistantId === null`) are not
+// opened from the phone in this round and answer 404.
 //
-// → 200 { url, origin } · 404 `not_found` (the tools are off, nobody is signed in, there is no such tool, it is another
-// person's) · 503 `no_frame_host` (the canvas origin is off, or the tool has no phone label).
+// → 200 { url, origin } · 404 `not_found` (artifacts are off, nobody is signed in, there is no such artifact, it is
+// another person's, or it is a Len project artifact) · 503 `no_frame_host` (the canvas origin is off, or the artifact
+// has no phone label).
 //
 // The phone label was stored once, WITH the tool, when it was published (it is an HMAC of the tool's id, so it never changes):
 // nothing here writes it. No plan check, no credits.
@@ -30,7 +32,7 @@ export const POST = paraLaApp(async (req: Request, { params }: { params: Promise
   if (!userId) return notFound();
   const { id } = await params;
   const tool = await lenArtifactById(id);
-  if (!tool || tool.personId !== userId) return notFound();
+  if (!tool || tool.personId !== userId || tool.assistantId === null) return notFound();
 
   const url = tool.phoneHostLabel ? lenArtifactFrameUrl({ hostLabel: tool.phoneHostLabel, releaseSha: tool.releaseSha, requestHost: req.headers.get("host") }) : null;
   if (!url) return json({ error: "no_frame_host" }, 503);

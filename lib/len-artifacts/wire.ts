@@ -1,4 +1,4 @@
-// A TOOL'S DOCUMENTS AS THEY TRAVEL (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): a document leaves the server
+// A TOOL'S DOCUMENTS AS THEY TRAVEL (spec local 2026-11-22-artifacts-de-len, §3–§4): a document leaves the server
 // as JSON — the date an ISO string — whether the tool's page asks for it (the bridge's route) or follows it (the stream), and
 // a write becomes the one change every screen following the tool is told. One place, so they never drift apart.
 import type { BridgeDataDoc } from "@/lib/tools/bridge/protocol";

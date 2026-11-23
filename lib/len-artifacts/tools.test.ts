@@ -29,7 +29,7 @@ describe("artifactFolderOf: the one place the folder's form is worked out (spec 
   });
 });
 
-// `publish_artifact` and `artifact_data` (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): the agent publishes a
+// `publish_artifact` and `artifact_data` (spec local 2026-11-22-artifacts-de-len, §1 and §3): the agent publishes a
 // folder of its space as a tool and reads and writes the small database it shares with it. Against in-memory fakes of the
 // store, the space's files and the version table: the tests never reach a database (the real store is
 // `agent-tools.pglite.test.ts`).
@@ -394,6 +394,19 @@ describe("publish_artifact: what it publishes", () => {
     await runPublishArtifact(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(await w.deps.toolsOf({ projectId: SPACE, maker: { assistantId: "a1" } })).toHaveLength(1);
     expect(await w.deps.toolsOf({ maker: { assistantId: "another-agent" } })).toHaveLength(0);
+  });
+
+  it("🔴 Len's project artifacts carry no phoneHostLabel (mobile is the assistant's); an assistant's still gets one", async () => {
+    const wLen = world({ files: { "/.artifacts/presupuesto/index.html": "<h1>P</h1>" } });
+    const lenOut = await runPublishArtifact(session(null), { path: "/.artifacts/presupuesto/", title: "Presupuesto" }, wLen.deps);
+    expect(response(lenOut).ok).toBe(true);
+    expect(wLen.tools[0]!.phoneHostLabel).toBeNull();
+    expect(wLen.tools[0]!.hostLabel).toBe("lienzo-web-tool-1");
+
+    const wAgent = world();
+    const agentOut = await runPublishArtifact(session(), { path: "/.artifacts/ana/recorrido/", title: "Recorrido" }, wAgent.deps);
+    expect(response(agentOut).ok).toBe(true);
+    expect(wAgent.tools[0]!.phoneHostLabel).toBe("lienzo-phone-tool-1");
   });
 
   it("publishing it again keeps the tool's id and addresses, takes the new title and version, and is not a new tool", async () => {

@@ -1,4 +1,4 @@
-// Phone API calls for an agent's own tools (spec local 2026-11-22-herramienta-dentro-del-agente, §2, §4):
+// Phone API calls for an agent's own tools (spec local 2026-11-22-artifacts-de-len, §2, §4):
 // list the agent's tools (`GET /api/len-artifacts?assistantId=`), open one on the phone's OWN private label
 // (`POST /api/movil/len-artifacts/[id]/open` — never the list's workspace `frameUrl`), stream live changes with a
 // fetch reader + `crearLectorSse` (`GET /api/len-artifacts/[id]/follow`), and delete (`DELETE /api/len-artifacts/[id]`).

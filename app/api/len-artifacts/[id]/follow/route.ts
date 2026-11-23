@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/len-artifacts/[id]/follow — every open screen follows one tool's data (spec local
-// 2026-11-22-herramienta-dentro-del-agente, §4), the way DeepSeek's screens follow a session: ONE connection per open tool; on
+// 2026-11-22-artifacts-de-len, §4), the way DeepSeek's screens follow a session: ONE connection per open tool; on
 // opening a complete baseline, then each change as it happens, and on reconnect the baseline again. What the agent writes
 // with `artifact_data` and what the person changes on another screen (the phone and the web at once) show up without reloading.
 //
@@ -90,7 +90,7 @@ function follow(toolId: string, controller: ReadableStreamDefaultController<Uint
       .then(() => (closed ? undefined : job()))
       .catch((err: unknown) => {
         // A read that fails ends the stream: the screen reconnects for a baseline. Said here, so an outage shows.
-        console.warn("[agent-tools] follow closed", toolId, err);
+        console.warn("[len-artifacts] follow closed", toolId, err);
         stop();
       });
   };

@@ -100,7 +100,7 @@ export function AssistantHome({
   const [opening, setOpening] = useState<string | null>(startsWith);
   // Text handed by one of the agent's tools (`sendPrompt`): fills the composer and never auto-sends.
   const [toolDraft, setToolDraft] = useState<string | null>(null);
-  // The tools this agent published for its person (spec local 2026-11-22-herramienta-dentro-del-agente, §2).
+  // The tools this agent published for its person (spec local 2026-11-22-artifacts-de-len, §2).
   const [lenArtifacts, setLenArtifacts] = useState<LenArtifactListItem[]>([]);
   const toolsReqRef = useRef(0);
   const loadLenArtifacts = useCallback(async () => {

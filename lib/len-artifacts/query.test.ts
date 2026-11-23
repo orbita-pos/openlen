@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// THE QUERY OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §3): `where` / `orderBy` / `limit`
+// THE QUERY OF AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §3): `where` / `orderBy` / `limit`
 // over the documents of one collection, as the `query` of Claude's artifact database. Pure: no database, no clock.
 import { describe, expect, it } from "vitest";
 

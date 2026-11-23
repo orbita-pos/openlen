@@ -17,7 +17,6 @@ import { randomUUID } from "node:crypto";
 
 import type { AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
-import { personOf } from "@/lib/agent/person";
 import { resolverRuta } from "@/lib/agent/ficheros/sitio";
 import type { ToolReleaseFile } from "@/lib/tools/types";
 
@@ -336,15 +335,16 @@ export async function runPublishArtifact(session: AgentSession, args: Record<str
   if (!built.ok) return releaseProblem(built.error, folder);
 
   // A new tool gets its private addresses once; a republish keeps the ones its tab already uses.
+  // Len's project artifacts stay on web in this round (spec §4 / "Lo que no"): only an assistant's get a phone label.
   let id = existing?.id;
   let hostLabel = existing?.hostLabel;
-  let phoneHostLabel = existing?.phoneHostLabel ?? null;
+  let phoneHostLabel = maker === "len" ? null : (existing?.phoneHostLabel ?? null);
   if (!existing) {
     id = d.newId();
     const labels = await d.labelsOf(id);
     if (labels.web === null) return refuse("no_host", "This server can't give artifacts their private address right now (it has no signing secret), so nothing was published.");
     hostLabel = labels.web;
-    phoneHostLabel = labels.phone;
+    phoneHostLabel = maker === "len" ? null : labels.phone;
   }
 
   // The version is saved before the row that points at it: a tab never opens on a version that isn't there.

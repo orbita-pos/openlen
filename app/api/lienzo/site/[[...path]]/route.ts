@@ -78,7 +78,7 @@ export async function GET(
         return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language"), servedTo: tool.servedTo });
       }
     }
-    // AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): third and last — no canvas and no installed
+    // AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): third and last — no canvas and no installed
     // tool owns the label. Its published version, with the bridge, on its own switch (OPENLEN_LEN_ARTIFACTS), whether or not
     // the installed tools (OPENLEN_TOOLS) are on.
     const { lenArtifactsEnabled } = await import("@/lib/len-artifacts/enabled");

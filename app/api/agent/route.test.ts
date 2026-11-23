@@ -231,9 +231,13 @@ vi.mock("@/lib/agent/fotos-de-la-conversacion", async (real) => ({
 vi.mock("@/lib/style-match/scrape/validate-url", () => ({
   validateUrl: vi.fn(),
 }));
-vi.mock("@/lib/agent/catalog", () => ({
-  buildFunctionDeclarations: mocks.buildFunctionDeclarations,
-}));
+vi.mock("@/lib/agent/catalog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/agent/catalog")>();
+  return {
+    ...actual,
+    buildFunctionDeclarations: mocks.buildFunctionDeclarations,
+  };
+});
 vi.mock("@/lib/agent/context", () => ({
   buildAgentMessages: mocks.buildAgentMessages,
   // What a photo weighs in the token estimate (compaction/estimate.ts): the route estimates a conversation's
@@ -341,7 +345,7 @@ vi.mock("@/lib/assistants/messages/note", () => agentNote);
 // Agents for everyone (spec local 2026-11-19-agentes-para-todos, §6.4): an assistant's agent file, none unless a test gives one.
 const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: string, _agentType: string): Promise<Record<string, unknown> | null> => null) }));
 vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
-// The tool that lives inside the agent (spec local 2026-11-22-herramienta-dentro-del-agente): none unless a test sets tools.
+// The tool that lives inside the agent (spec local 2026-11-22-artifacts-de-len): none unless a test sets tools.
 const lenArtifactStore = vi.hoisted(() => ({
   lenArtifactsOf: vi.fn(async (_scope: unknown): Promise<Record<string, unknown>[]> => []),
   personChangedCollections: vi.fn(async (_toolId: string, _since: Date | null): Promise<string[]> => []),
@@ -5033,6 +5037,12 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(base().space).toBe(true);
   });
 
+  it("🔴 a child launched from Len's owner turn in a project inherits sessionBase.artifactWatch so mid-turn publishes register on the parent watcher", async () => {
+    const base = () => (launcherArgs()[0] as unknown as { sessionBase: { artifactWatch?: { add: (t: unknown) => void } } }).sessionBase;
+    await pedir();
+    expect(typeof base().artifactWatch?.add).toBe("function");
+  });
+
   it("in a game project, a child's session knows it is one and is offered game-development (spec local 2026-11-05-modo-juego-design, §8.4)", async () => {
     mocks.loadProject.mockResolvedValue({
       title: "Naves", subdomain: null, publishedAt: null, userBrief: "", brief: null,
@@ -5500,17 +5510,24 @@ describe("POST /api/agent — the person's own assistant", () => {
     }
   });
 
-  it("🔴 a member's turn has neither publish_artifact nor artifact_data: only the owner has artifacts (spec local 2026-11-22-artifacts-de-len, §1)", async () => {
-    mocks.buildFunctionDeclarations.mockReturnValue(["Read", "publish_artifact", "artifact_data", "Edit"].map((name) => ({ name })));
+  it("🔴 a member's turn has neither publish_artifact nor artifact_data nor the artifact param on view_page/use_page: only the owner has artifacts (spec local 2026-11-22-artifacts-de-len, §1)", async () => {
+    const eye = (name: string) => ({ name, parameters: { type: "OBJECT", properties: { file_path: { type: "STRING" }, artifact: { type: "STRING" } } } });
+    mocks.buildFunctionDeclarations.mockReturnValue([{ name: "Read" }, { name: "publish_artifact" }, { name: "artifact_data" }, eye("view_page"), eye("use_page"), { name: "Edit" }]);
+    const eyeProps = (name: string) =>
+      ((mocks.runAgentLoop.mock.calls.at(-1)![0] as { tools: { name: string; parameters?: { properties: Record<string, unknown> } }[] }).tools.find((t) => t.name === name)?.parameters?.properties ?? {});
     await readEvents(await pedir({}));
-    expect(toolNames()).toEqual(["Read", "publish_artifact", "artifact_data", "Edit"]);
+    expect(toolNames()).toEqual(["Read", "publish_artifact", "artifact_data", "view_page", "use_page", "Edit"]);
+    expect(eyeProps("view_page")).toHaveProperty("artifact");
+    expect(eyeProps("use_page")).toHaveProperty("artifact");
     mocks.cabeEnElTope.mockResolvedValue(true);
     mocks.margenDeMiembros.mockResolvedValue(null);
     mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
     fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
     try {
       await readEvents(await pedir({}));
-      expect(toolNames()).toEqual(["Read", "Edit"]);
+      expect(toolNames()).toEqual(["Read", "view_page", "use_page", "Edit"]);
+      expect(eyeProps("view_page")).not.toHaveProperty("artifact");
+      expect(eyeProps("use_page")).not.toHaveProperty("artifact");
     } finally {
       fijarAccesoDePrueba(null);
     }

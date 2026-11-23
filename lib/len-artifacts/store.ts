@@ -1,4 +1,4 @@
-// WHERE AN AGENT'S TOOLS LIVE (spec local 2026-11-22-herramienta-dentro-del-agente, §1–§3): Postgres is the truth. A tool is
+// WHERE AN AGENT'S TOOLS LIVE (spec local 2026-11-22-artifacts-de-len, §1–§3): Postgres is the truth. A tool is
 // one row per agent and folder (`slug`), whose private labels are fixed for its life — so publishing it again keeps the
 // address the screens already framed — and the small database it shares with its agent is JSON documents in collections
 // (`collection/docId`), per tool, as the `db` of Claude's artifacts.

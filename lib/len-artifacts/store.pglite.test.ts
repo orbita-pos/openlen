@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// THE TOOLS OF AN AGENT AND THEIR DATA (spec local 2026-11-22-herramienta-dentro-del-agente, §3): the tool rows and the
+// THE TOOLS OF AN AGENT AND THEIR DATA (spec local 2026-11-22-artifacts-de-len, §3): the tool rows and the
 // small database they share with the agent, against real Postgres (PGlite) with the tables as `npm run
 // assistants:migrate` creates them over minimal users and projects.
 import { PGlite } from "@electric-sql/pglite";

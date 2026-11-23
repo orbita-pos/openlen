@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// `publish_artifact` AND `artifact_data` AGAINST THE REAL STORE (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): what
+// `publish_artifact` AND `artifact_data` AGAINST THE REAL STORE (spec local 2026-11-22-artifacts-de-len, §1 and §3): what
 // the fakes of `agent-tools.test.ts` can't prove — that a republish really keeps the tool's id and addresses, that the real
 // count stops the 6th tool, that the real caps come back as their own sentences and a batch is all or nothing, and that the
 // marks and the bus follow a real write. Real Postgres (PGlite) with the tables as `npm run assistants:migrate` creates

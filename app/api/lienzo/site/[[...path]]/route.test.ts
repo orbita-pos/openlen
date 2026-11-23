@@ -14,7 +14,7 @@ vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
 // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its label lives in toolInstallations.
 const tools = vi.hoisted(() => ({
   byLabel: {} as Record<string, unknown>,
-  /** An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente): its label lives in lenArtifacts. */
+  /** An AGENT's tool (spec local 2026-11-22-artifacts-de-len): its label lives in lenArtifacts. */
   agentByLabel: {} as Record<string, unknown>,
   releases: {} as Record<string, Record<string, { content: string; contentType: string }>>,
 }));
@@ -362,7 +362,7 @@ describe("GET /api/lienzo/site — tools made by Len", () => {
   });
 });
 
-// AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its label lives in lenArtifacts, and is looked up
+// AN AGENT'S TOOL (spec local 2026-11-22-artifacts-de-len, §2): its label lives in lenArtifacts, and is looked up
 // only when no canvas owns the label and no installed tool took it — canvas first, installed tool second, agent tool third.
 describe("GET /api/lienzo/site — an agent's tool", () => {
   const WORKSPACE = "lienzo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
