@@ -24,7 +24,7 @@ vi.mock("@/lib/db", async () => {
 });
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { runPublishTool, runToolData } = await import("./agent-tools");
+const { runPublishTool, runToolData } = await import("./tools");
 const { subscribeArtifactChanges } = await import("./bus");
 const { LEN_ARTIFACT_DOC_MAX_BYTES, LEN_ARTIFACTS_PER_MAKER } = await import("./limits");
 const store = await import("./store");
@@ -52,7 +52,7 @@ const rows = (out: { response: Record<string, unknown> }) => {
 
 beforeEach(async () => {
   vi.stubEnv("AUTH_SECRET", "s3cret-for-the-test");
-  files = { "/tools/ana/lessons/index.html": "<h1>hi</h1>" };
+  files = { "/.artifacts/ana/lessons/index.html": "<h1>hi</h1>" };
   releases.length = 0;
   pg = new PGlite();
   await pg.query(`create table "users" ("id" text primary key)`);
@@ -76,10 +76,10 @@ afterEach(async () => {
 
 describe("publish_tool against the real store", () => {
   it("🔴 publishes a tool with real private addresses, and publishing it again keeps its id, both addresses and its data", async () => {
-    const first = await publish("/tools/ana/lessons/", "Lessons");
+    const first = await publish("/.artifacts/ana/lessons/", "Lessons");
     expect(first.response.ok).toBe(true);
     const [row] = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
-    expect(row).toMatchObject({ slug: "lessons", title: "Lessons", folder: "/tools/ana/lessons", personId: "u1", projectId: "space" });
+    expect(row).toMatchObject({ slug: "lessons", title: "Lessons", folder: "/.artifacts/ana/lessons", personId: "u1", projectId: "space" });
     expect(row!.hostLabel).toMatch(/^lienzo-[0-9a-f]{32}$/);
     expect(row!.phoneHostLabel).toMatch(/^lienzo-[0-9a-f]{32}$/);
     expect(row!.phoneHostLabel).not.toBe(row!.hostLabel);
@@ -87,8 +87,8 @@ describe("publish_tool against the real store", () => {
     expect(row!.makerSeenAt).toBeInstanceOf(Date);
 
     await data({ tool: "lessons", action: "set", collection: "students", doc_id: "luis", data: { level: "B1" } });
-    files["/tools/ana/lessons/index.html"] = "<h1>changed</h1>";
-    const again = await publish("/tools/ana/lessons/index.html", "Lessons 2");
+    files["/.artifacts/ana/lessons/index.html"] = "<h1>changed</h1>";
+    const again = await publish("/.artifacts/ana/lessons/index.html", "Lessons 2");
     expect(again.response.ok).toBe(true);
 
     const tools = await store.lenArtifactsOf({ maker: { assistantId: "teacher" } });
@@ -102,29 +102,29 @@ describe("publish_tool against the real store", () => {
 
   it("🔴 the 6th tool is refused by the real count, and another agent of the same space has its own five", async () => {
     for (let i = 1; i <= LEN_ARTIFACTS_PER_MAKER; i++) {
-      files[`/tools/ana/t${i}/index.html`] = "x";
-      expect((await publish(`/tools/ana/t${i}`, `T${i}`)).response.ok, `t${i}`).toBe(true);
+      files[`/.artifacts/ana/t${i}/index.html`] = "x";
+      expect((await publish(`/.artifacts/ana/t${i}`, `T${i}`)).response.ok, `t${i}`).toBe(true);
     }
-    files["/tools/ana/t6/index.html"] = "x";
-    const sixth = await publish("/tools/ana/t6", "T6");
+    files["/.artifacts/ana/t6/index.html"] = "x";
+    const sixth = await publish("/.artifacts/ana/t6", "T6");
     expect(sixth.response).toMatchObject({ ok: false, error: "too_many_tools" });
     expect(await store.lenArtifactsOf({ maker: { assistantId: "teacher" } })).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
     // …but republishing one of them goes through.
-    expect((await publish("/tools/ana/t3", "T3 again")).response.ok).toBe(true);
+    expect((await publish("/.artifacts/ana/t3", "T3 again")).response.ok).toBe(true);
 
     // Bob's turn: the same space, his own folder and his own count.
-    files["/tools/bob/one/index.html"] = "x";
+    files["/.artifacts/bob/one/index.html"] = "x";
     const bob = { ...session(), assistant: { id: "finance", name: "Bob", slug: "bob", inSpace: true } } as unknown as AgentSession;
-    expect((await runPublishTool(bob, { path: "/tools/bob/one", title: "One" }, deps())).response.ok).toBe(true);
+    expect((await runPublishTool(bob, { path: "/.artifacts/bob/one", title: "One" }, deps())).response.ok).toBe(true);
     // And Bob can't publish Ana's folder.
-    expect((await runPublishTool(bob, { path: "/tools/ana/lessons", title: "Mine now" }, deps())).response).toMatchObject({ ok: false, error: "bad_path" });
+    expect((await runPublishTool(bob, { path: "/.artifacts/ana/lessons", title: "Mine now" }, deps())).response).toMatchObject({ ok: false, error: "bad_path" });
   });
 });
 
 describe("tool_data against the real store", () => {
   beforeEach(async () => {
-    await publish("/tools/ana/lessons");
-    await publish("/tools/ana/lessons"); // twice: still one tool
+    await publish("/.artifacts/ana/lessons");
+    await publish("/.artifacts/ana/lessons"); // twice: still one tool
   });
 
   it("writes, reads, lists and queries real documents, and says on every read that they are data", async () => {
@@ -201,7 +201,7 @@ describe("tool_data against the real store", () => {
       projectId: "space",
       slug: "budget",
       title: "Budget",
-      folder: "/tools/bob/budget",
+      folder: "/.artifacts/bob/budget",
       releaseSha: "sha",
       hostLabel: "lienzo-bob",
       phoneHostLabel: null,

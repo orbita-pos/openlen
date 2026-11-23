@@ -376,7 +376,7 @@ describe("GET /api/lienzo/site — an agent's tool", () => {
     projectId: P2,
     slug: "recorrido",
     title: "Recorrido",
-    folder: "/tools/ana/recorrido",
+    folder: "/.artifacts/ana/recorrido",
     releaseSha: "agent-sha",
     hostLabel: WORKSPACE,
     phoneHostLabel: PHONE,

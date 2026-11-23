@@ -104,6 +104,34 @@ describe("publicar la carpeta (pieza 9)", () => {
     assert.equal(existsSync(path.join(root, "fuera.js")), false);
   });
 
+  it("🔴 /.artifacts/ (Len's artifacts) never reaches the release: the site publishes without it", async () => {
+    await publishToDir({
+      subdomain: "con-artifact",
+      html: DOC("home"),
+      files: [
+        { path: "/js/app.js", content: "console.log(1)" },
+        { path: "/.artifacts/budget/index.html", content: "<h1>private</h1>" },
+        { path: "/.artifacts/budget/app.js", content: "private()" },
+        { path: "/.artifacts/lucia/plan/index.html", content: "<h1>private</h1>" },
+      ],
+    });
+    assert.equal(actual("con-artifact", "js/app.js"), "console.log(1)");
+    for (const rel of [".artifacts/budget/index.html", ".artifacts/budget/app.js", ".artifacts/lucia/plan/index.html", ".artifacts"]) {
+      assert.equal(enActual("con-artifact", rel), false, rel);
+    }
+  });
+
+  it("🔴 a site with its own /artifacts/ folder and an artifacts page keeps publishing both (only the dotted folder is private)", async () => {
+    await publishToDir({
+      subdomain: "su-carpeta",
+      html: DOC("home"),
+      pages: [{ slug: "artifacts", html: DOC("artifacts page") }],
+      files: [{ path: "/artifacts/app.js", content: "mine()" }],
+    });
+    assert.equal(actual("su-carpeta", "artifacts/app.js"), "mine()");
+    assert.match(actual("su-carpeta", "artifacts/index.html"), /<h1>artifacts page<\/h1>/);
+  });
+
   it("el robots.txt del dueño gana al generado", async () => {
     await publishToDir({ subdomain: "robots", html: DOC("home"), files: [{ path: "/robots.txt", content: "User-agent: *\nDisallow: /" }] });
     assert.equal(actual("robots", "robots.txt"), "User-agent: *\nDisallow: /");

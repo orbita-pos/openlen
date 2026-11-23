@@ -1,5 +1,5 @@
-// THE PUBLISHED VERSION OF AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §1): what the agent wrote in
-// `/tools/<agent slug>/<tool>/` is a folder of the space's project; publishing freezes it as a VERSION — the files
+// THE PUBLISHED VERSION OF AN ARTIFACT (spec local 2026-11-22-artifacts-de-len, §3, §6): what its maker wrote in
+// `/.artifacts/…/<name>/` is a folder of the project; publishing freezes it as a VERSION — the files
 // re-rooted at `/`, as the tool's own host serves them — and the tab shows that copy, never the folder mid-edit. This is the
 // pure half: the files come in, the version (or why not) goes out; nothing here reads the database or saves anything.
 import { createHash } from "node:crypto";
@@ -29,8 +29,8 @@ function shaOf(projectId: string, files: Readonly<Record<string, ToolReleaseFile
 }
 
 /**
- * `folder` is the tool's folder (`/tools/ana/recorrido`, with or without the trailing slash) and `files` the space's files
- * by absolute path. Only what is strictly under `folder + "/"` is the tool's: `/tools/ana/recorrido-2/…` is another folder.
+ * `folder` is the artifact's folder (`/.artifacts/ana/recorrido`, with or without the trailing slash) and `files` the space's files
+ * by absolute path. Only what is strictly under `folder + "/"` is the artifact's: `/.artifacts/ana/recorrido-2/…` is another folder.
  * A text file keeps its text and a binary its blob pointer (`lib/files/blob-pointer.ts`), like a published page's release.
  */
 export function buildLenArtifactRelease(p: {

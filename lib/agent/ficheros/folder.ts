@@ -16,6 +16,11 @@
  *                exportar, pero nunca se publica ni se sirve (como en Vite).
  *   · `manifest` /package.json: the app's packages (lib/apps/npm/); read by the
  *                compiler, never published.
+ *   · `artifact` /.artifacts/: Len's artifacts (spec local 2026-11-22-artifacts-de-len, §3) — private pages
+ *                the owner opens as a lens, each published as its own version. The project's files (the
+ *                Code lens, git, export, undo), never the site's: not published, not compiled or
+ *                checked as the app, not served by the canvas, not remixed. The dot keeps a live site's
+ *                own /artifacts/ folder or page publishing as before.
  *
  *   · `file`     todo lo demás (spec local 2026-10-28-ficheros-al-nivel-de-claude-code): imágenes,
  *                fuentes, PDF, vídeo, `.wasm`, un `.html` que no es una página… Se publica y se sirve
@@ -37,7 +42,10 @@ import { sizeOf } from "@/lib/files/blob-pointer";
 import { contentTypeOf } from "@/lib/files/content-types";
 import { MAX_FILE_BYTES, MAX_PATH_CHARS, MAX_PATH_DEPTH, MAX_PROJECT_BYTES, MAX_PROJECT_FILES } from "@/lib/files/limits";
 
-export type FolderFileKind = "web" | "tests" | "supabase" | "env" | "manifest" | "file";
+export type FolderFileKind = "web" | "tests" | "supabase" | "env" | "manifest" | "artifact" | "file";
+
+/** Len's artifacts' folder (spec local 2026-11-22-artifacts-de-len, §3). */
+export const ARTIFACTS_ROOT = ".artifacts";
 
 /** `.jsx`, `.tsx` y `.ts` son FUENTES (apps web, spec local 2026-10-07-apps):
  *  se guardan como se escriben y se sirven y publican COMPILADOS a JavaScript,
@@ -114,6 +122,8 @@ export function classifyFolderPath(path: string): FolderPathClass {
   if (HIDDEN_ROOTS.includes(segments[0]!)) {
     return { ok: false, reason: `${path}: /${segments[0]} is not part of the project's files (${segments[0] === ".git" ? "it is git's own folder" : "it is Len's"}).` };
   }
+  // Before the pages: /.artifacts/index.html is an artifact's file, never a page called ".artifacts".
+  if (segments[0] === ARTIFACTS_ROOT) return { ok: true, kind: "artifact" };
   if (PAGE_PATH.test(path)) {
     return { ok: false, reason: `${path} is a page: pages are /index.html and /<slug>/index.html.` };
   }

@@ -45,7 +45,7 @@ beforeEach(async () => {
     projectId: "space",
     slug: "recorrido",
     title: "Recorrido",
-    folder: "/tools/ana/recorrido",
+    folder: "/.artifacts/ana/recorrido",
     releaseSha: "sha-1",
     hostLabel: "lienzo-host-1",
     phoneHostLabel: "lienzo-phone-1",

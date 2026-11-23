@@ -42,7 +42,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
-    folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
+    folder: `/.artifacts/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
     releaseSha: "sha-1",
     hostLabel: `lienzo-host-${o.id}`,
     phoneHostLabel: `lienzo-phone-${o.id}`,

@@ -15,7 +15,8 @@ import type { ProjectData } from "@/lib/projects/types";
 
 describe("qué vuelve al deshacer un turno", () => {
   it("las páginas y la carpeta, sí; /supabase, /memoria y /ajustes, no", () => {
-    for (const r of ["/index.html", "/menu/index.html", "/src/App.jsx", "/js/app.js", "/tests/a.spec.ts", "/data/x.json", "/.env", "/package.json"]) {
+    // Len's artifacts (/.artifacts/, spec local 2026-11-22-artifacts-de-len, §3) are project files: they come back too.
+    for (const r of ["/index.html", "/menu/index.html", "/src/App.jsx", "/js/app.js", "/tests/a.spec.ts", "/data/x.json", "/.env", "/package.json", "/.artifacts/budget/index.html", "/.artifacts/lucia/plan/app.js"]) {
       expect(esDeshacible(r), r).toBe(true);
     }
     for (const r of ["/supabase/migrations/20261007000000_x.sql", "/LEN.md", "/home/user/.len/LEN.md", "/.len/memory/hero-oscuro.md", "/ajustes/proyecto.json"]) {

@@ -101,6 +101,7 @@ import {
 } from "@/lib/agent/herramientas-de-ficheros";
 import { ficherosDelSitio, leerFichero, rutaDePagina, rutaRelativa, sinOpIds } from "@/lib/agent/ficheros/sitio";
 import { isPublishableFolderPath } from "@/lib/agent/ficheros/folder";
+import { artifactFolderOf } from "@/lib/len-artifacts/folder";
 import { isLegacyMemoryPath, memoryLayerOf } from "@/lib/agent/ficheros/len-md";
 import { CLAVE_TOOL_RESULT } from "@/lib/agent/ficheros/resultado";
 import { NOMBRE_BASH } from "@/lib/agent/terminal/declaracion";
@@ -156,7 +157,7 @@ import { READ_WIDGET_CONTEXT, toolReadWidgetContext } from "@/lib/agent/visuals/
 import { ASK_LEN, runAskLen } from "@/lib/assistants/ask-len";
 import { CREATE_ASSISTANT, runCreateAssistant } from "@/lib/assistants/create-tool";
 import { MESSAGE_AGENT, MESSAGE_LEN, runSendMessage } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/len-artifacts/agent-tools";
+import { PUBLISH_TOOL, TOOL_DATA, runPublishTool, runToolData } from "@/lib/len-artifacts/tools";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { lenNeedsOwnersWords, lenWokenRefusal, needsOwnersWords, wokenRefusal } from "@/lib/assistants/messages/woken";
 import { PROPOSE_SKILLS, runProposeSkills } from "@/lib/agent/skills/propose-tool";
@@ -1442,8 +1443,8 @@ export interface AgentSession {
   assistant?: {
     readonly id: string;
     readonly name: string;
-    /** Its address name, the one in /<locale>/assistant/<slug>: also the folder of its tools, /tools/<slug>/ (spec local
-     *  2026-11-22-herramienta-dentro-del-agente). Absent when a turn doesn't say. */
+    /** Its address name, the one in /<locale>/assistant/<slug>: also the folder of its artifacts, /.artifacts/<slug>/ (spec
+     *  local 2026-11-22-artifacts-de-len, §3). Absent when a turn doesn't say. */
     readonly slug?: string;
     /** The projects she serves, her home first (phase 4): `ask_len` passes a request to one of them. */
     readonly projects?: readonly { readonly id: string; readonly title: string }[];
@@ -2880,7 +2881,7 @@ async function resolveLenArtifactEyes(
     html: loaded.html,
     releaseFiles: loaded.files,
     releaseBinaries: loaded.binaries ?? {},
-    ruta: `/tools/${assistant.slug ?? assistant.id}/${loaded.tool.slug}/index.html`,
+    ruta: `${artifactFolderOf(session) ?? "/.artifacts/"}${loaded.tool.slug}/index.html`,
     toolBridge: {
       mode: "lenArtifact",
       toolId: loaded.tool.id,
@@ -3568,7 +3569,7 @@ async function ejecutarHerramienta(
       case MESSAGE_LEN:
       case MESSAGE_AGENT:
         return await runSendMessage(session, args);
-      // The agent's own tools (lib/len-artifacts/agent-tools.ts): it publishes a folder of its space as a tab, and reads and
+      // The agent's own tools (lib/len-artifacts/tools.ts): it publishes a folder of its space as a tab, and reads and
       // writes the small database that tool shares with it. Refused when they run, whoever calls them without being one.
       case PUBLISH_TOOL:
         return await runPublishTool(session, args);

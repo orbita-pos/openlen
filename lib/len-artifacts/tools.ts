@@ -1,5 +1,5 @@
 // THE TWO TOOLS OF AN AGENT THAT MAKES TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): `publish_tool`
-// gives the person a tool the agent wrote — a folder of the space, `/tools/<its slug>/<tool>/`, published as a saved VERSION
+// gives the person a tool the agent wrote — a folder of the space, `/.artifacts/<its slug>/<tool>/`, published as a saved VERSION
 // that shows as a tab of the agent — and `tool_data` reads and writes the small database that tool shares with it (the
 // `ArtifactData` of Claude's artifacts: get, list, query, set, update, delete, batch). Declared in every agent turn after
 // `message_len`, in a space or not, with the tools on or off: the declarations never change, so the cached prefix holds, and
@@ -32,10 +32,13 @@ import {
   LEN_ARTIFACTS_PER_MAKER,
 } from "./limits";
 import { matchQuery, queryLimit } from "./query";
+import { artifactFolderOf } from "./folder";
 import { buildLenArtifactRelease, type LenArtifactReleaseError } from "./release";
 import type { LenArtifactDoc, LenArtifactInput, LenArtifactRow, LenArtifactScope, DataWrite, WriteError } from "./store";
 import { isRecord, nonBlank, parseRead, parseWrite, QUERY_OPS, READ_ACTIONS, WRITE_ACTIONS } from "./validate";
 import { changeOfWrites } from "./wire";
+
+export { artifactFolderOf } from "./folder";
 
 export const PUBLISH_TOOL = "publish_tool";
 export const TOOL_DATA = "tool_data";
@@ -56,7 +59,7 @@ export const PUBLISH_TOOL_DECLARATION = {
   name: PUBLISH_TOOL,
   description:
     "Gives your person a tool of your own: a small page you wrote (an index.html, with the CSS, JS and images beside it) that opens as a tab of yours, next to your chat, on the web and on the phone. " +
-    "First write its files with Write and Edit in /tools/<your slug>/<tool name>/ of your space, with an index.html there; then pass that folder as path. " +
+    "First write its files with Write and Edit in /.artifacts/<your slug>/<tool name>/ of your space, with an index.html there; then pass that folder as path. " +
     "Publishing saves a VERSION: the tab shows the copy you published, not the folder as you keep editing it, so after a change publish it again with the same path for the tab to change. " +
     "The page runs apart from OpenLen: its scripts and styles load only from the allowed CDNs and its own files, and fetch/XHR can reach only its own files (connect-src 'self', no external fetch/XHR or form requests); what it keeps, it keeps with window.openlen.data, the small database it shares with you, which you read and write with tool_data. " +
     `At most ${LEN_ARTIFACTS_PER_MAKER} tools, up to ${mb(LEN_ARTIFACT_VERSION_MAX_BYTES)} each. Only your person removes a tool, from its tab.`,
@@ -65,7 +68,7 @@ export const PUBLISH_TOOL_DECLARATION = {
     properties: {
       path: {
         type: "STRING",
-        description: "The tool's folder: /tools/<your slug>/<tool name>/. The tool name is lowercase letters, digits and hyphens, up to 48 characters; it is the name tool_data calls it by.",
+        description: "The tool's folder: /.artifacts/<your slug>/<tool name>/. The tool name is lowercase letters, digits and hyphens, up to 48 characters; it is the name tool_data calls it by.",
       },
       title: { type: "STRING", description: `The name your person reads on its tab, up to ${TITLE_MAX} characters.` },
     },
@@ -86,7 +89,7 @@ export const TOOL_DATA_DECLARATION = {
   parameters: {
     type: "OBJECT",
     properties: {
-      tool: { type: "STRING", description: "The tool's name: the folder name you published it under (/tools/<your slug>/<tool name>/)." },
+      tool: { type: "STRING", description: "The tool's name: the folder name you published it under (/.artifacts/<your slug>/<tool name>/)." },
       action: { type: "STRING", enum: [...TOOL_DATA_ACTIONS], description: "What to do." },
       collection: { type: "STRING", description: "A collection of the tool's database, a short name such as \"students\". For get, query, set, update and delete; list takes it too." },
       doc_id: { type: "STRING", description: "A document's id inside its collection. For get, set, update and delete." },
@@ -237,13 +240,15 @@ async function dropRelease(deps: LenArtifactsDeps, sha: string): Promise<void> {
 
 // ---- publish_tool ----------------------------------------------------------------------------------------------------
 
-/** The tool's folder (`/tools/<slug>/<tool>`) a `path` names, or null. Accepts the folder with a trailing slash, or its page
- *  (`…/index.html`), which is what a model often names. Exactly three parts: nothing else is a tool. */
-function folderOf(path: string, slug: string): { folder: string; name: string } | null {
+/** The tool's folder (`artifactFolderOf(session)` + `<tool>`) a `path` names, or null. Accepts the folder with a trailing slash, or its page
+ *  (`…/index.html`), which is what a model often names. Exactly that folder and one name: nothing else is a tool. */
+function folderOf(path: string, base: string): { folder: string; name: string } | null {
   let folder = resolverRuta(path.trim());
   if (folder.endsWith("/index.html")) folder = folder.slice(0, -"/index.html".length);
-  const [root, owner, name, ...rest] = folder.split("/").slice(1);
-  if (root !== "tools" || owner !== slug || name === undefined || rest.length > 0 || !TOOL_NAME.test(name)) return null;
+  if (!folder.startsWith(base)) return null;
+  const name = folder.slice(base.length);
+  // The name is one folder name: no slash, nothing below it, nothing that isn't a tool name.
+  if (!TOOL_NAME.test(name)) return null;
   return { folder, name };
 }
 
@@ -271,18 +276,19 @@ export async function runPublishTool(session: AgentSession, args: Record<string,
   if ("response" in allowed) return allowed;
   const { agent } = allowed;
 
-  if (!agent.slug) return refuse("no_folder", "Your tools' folder can't be worked out in this turn, so nothing was published.");
-  if (typeof args.path !== "string") return invalid("path is required: the tool's folder, /tools/<your slug>/<tool name>/.");
+  const base = artifactFolderOf(session);
+  if (!base) return refuse("no_folder", "Your tools' folder can't be worked out in this turn, so nothing was published.");
+  if (typeof args.path !== "string") return invalid("path is required: the tool's folder, /.artifacts/<your slug>/<tool name>/.");
   const title = typeof args.title === "string" ? args.title.trim() : "";
   if (title === "" || title.length > TITLE_MAX) return invalid(`title is required: the name your person reads on the tab, from 1 to ${TITLE_MAX} characters.`);
   // A tab's name is one line of text: a control character (a NUL would even fail the database) has no place in it.
   if (CONTROL_CHARACTER.test(title)) return invalid("title must be plain text on one line: no line breaks, tabs or other control characters.");
 
-  const named = folderOf(args.path, agent.slug);
+  const named = folderOf(args.path, base);
   if (!named) {
     return refuse(
       "bad_path",
-      `A tool lives in its own folder, /tools/${agent.slug}/<tool name>/ — the tool name in lowercase letters, digits and hyphens, up to 48 characters — and that folder is what you pass as path. "${shown(args.path)}" isn't one of yours.`,
+      `A tool lives in its own folder, ${base}<tool name>/ — the tool name in lowercase letters, digits and hyphens, up to 48 characters — and that folder is what you pass as path. "${shown(args.path)}" isn't one of yours.`,
     );
   }
   const { folder, name } = named;

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSession } from "@/lib/agent/tools";
 
-import { runPublishTool, runToolData, PUBLISH_TOOL, PUBLISH_TOOL_DECLARATION, TOOL_DATA, TOOL_DATA_DECLARATION, type LenArtifactsDeps } from "./agent-tools";
+import { artifactFolderOf, runPublishTool, runToolData, PUBLISH_TOOL, PUBLISH_TOOL_DECLARATION, TOOL_DATA, TOOL_DATA_DECLARATION, type LenArtifactsDeps } from "./tools";
 import type { LenArtifactChange } from "./bus";
 import {
   LEN_ARTIFACT_BATCH_MAX,
@@ -15,6 +15,19 @@ import {
   LEN_ARTIFACTS_PER_MAKER,
 } from "./limits";
 import type { LenArtifactDoc, LenArtifactInput, LenArtifactRow, DataWrite, WriteError } from "./store";
+
+describe("artifactFolderOf: the one place the folder's form is worked out (spec local 2026-11-22-artifacts-de-len, §3)", () => {
+  it("an agent's artifacts live in /.artifacts/<its slug>/; Len's in /.artifacts/", () => {
+    expect(artifactFolderOf(session())).toBe("/.artifacts/ana/");
+    expect(artifactFolderOf(session({ slug: "lucia" }))).toBe("/.artifacts/lucia/");
+    expect(artifactFolderOf(session(null))).toBe("/.artifacts/");
+  });
+
+  it("an agent whose turn doesn't say its slug, or whose slug is no folder name, has none", () => {
+    expect(artifactFolderOf(session({ slug: undefined }))).toBeNull();
+    for (const slug of ["", ".", "..", "a/b", "a\\b"]) expect(artifactFolderOf(session({ slug })), slug).toBeNull();
+  });
+});
 
 // `publish_tool` and `tool_data` (spec local 2026-11-22-herramienta-dentro-del-agente, §1 and §3): the agent publishes a
 // folder of its space as a tool and reads and writes the small database it shares with it. Against in-memory fakes of the
@@ -40,7 +53,7 @@ function session(over: Partial<Assistant> | null = {}): AgentSession {
   } as unknown as AgentSession;
 }
 
-const MINIMAL = { "/tools/ana/recorrido/index.html": "<h1>hola</h1>" };
+const MINIMAL = { "/.artifacts/ana/recorrido/index.html": "<h1>hola</h1>" };
 
 interface World {
   readonly deps: LenArtifactsDeps;
@@ -163,7 +176,7 @@ function addTool(w: World, over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     projectId: SPACE,
     slug,
     title: slug,
-    folder: `/tools/ana/${slug}`,
+    folder: `/.artifacts/ana/${slug}`,
     releaseSha: "sha-old",
     hostLabel: `lienzo-web-${slug}`,
     phoneHostLabel: `lienzo-phone-${slug}`,
@@ -238,7 +251,7 @@ describe("the declarations", () => {
 describe("publish_tool: what it publishes", () => {
   it("publishes the folder as a version and a tool, and says it shows as a tab and how to look at it", async () => {
     const w = world();
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido/", title: "  Recorrido de verbos  " }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido/", title: "  Recorrido de verbos  " }, w.deps);
 
     expect(response(out).ok).toBe(true);
     expect(w.tools).toHaveLength(1);
@@ -250,7 +263,7 @@ describe("publish_tool: what it publishes", () => {
       projectId: SPACE,
       slug: "recorrido",
       title: "Recorrido de verbos",
-      folder: "/tools/ana/recorrido",
+      folder: "/.artifacts/ana/recorrido",
       hostLabel: "lienzo-web-tool-1",
       phoneHostLabel: "lienzo-phone-tool-1",
     });
@@ -271,30 +284,30 @@ describe("publish_tool: what it publishes", () => {
   });
 
   it("reads only the tool's own folder (with its trailing slash), builds the version, THEN saves it, THEN the row", async () => {
-    const w = world({ files: { ...MINIMAL, "/tools/ana/recorrido-2/index.html": "other", "/notes.md": "x" } });
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const w = world({ files: { ...MINIMAL, "/.artifacts/ana/recorrido-2/index.html": "other", "/notes.md": "x" } });
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(w.order.filter((s) => s !== "markSeen")).toEqual(["listFiles", "saveRelease", "upsert"]);
     // Only the tool's own files are in the version, not `recorrido-2` nor the notes.
     expect(Object.keys(w.releases[0]!.files)).toEqual(["/index.html"]);
   });
 
   it("takes the tool's folder with a trailing slash, or the page's path (index.html) the model often names", async () => {
-    for (const path of ["/tools/ana/recorrido", "/tools/ana/recorrido/", "/tools/ana/recorrido/index.html", "tools/ana/recorrido", "/tools/ana/./recorrido/index.html"]) {
+    for (const path of ["/.artifacts/ana/recorrido", "/.artifacts/ana/recorrido/", "/.artifacts/ana/recorrido/index.html", ".artifacts/ana/recorrido", "/.artifacts/ana/./recorrido/index.html"]) {
       const w = world();
       const out = await runPublishTool(session(), { path, title: "R" }, w.deps);
       expect(response(out).ok, path).toBe(true);
-      expect(w.tools[0]!.folder, path).toBe("/tools/ana/recorrido");
+      expect(w.tools[0]!.folder, path).toBe("/.artifacts/ana/recorrido");
       expect(w.tools[0]!.slug, path).toBe("recorrido");
     }
   });
 
   it("marks the tool as seen by the agent after a successful publish, and not after a refusal", async () => {
     const w = world();
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(w.seen).toEqual([{ toolId: "tool-1", at: NOW }]);
 
     const refused = world();
-    await runPublishTool(session(), { path: "/tools/ana", title: "R" }, refused.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana", title: "R" }, refused.deps);
     expect(refused.seen).toEqual([]);
   });
 
@@ -302,24 +315,24 @@ describe("publish_tool: what it publishes", () => {
     const w = world();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const deps = { ...w.deps, markSeen: async () => Promise.reject(new Error("db down")) };
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, deps);
     expect(response(out).ok).toBe(true);
     expect(w.tools).toHaveLength(1);
   });
 
   it("lists as one tool of the agent (the next call counts it)", async () => {
     const w = world();
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(await w.deps.toolsOf({ projectId: SPACE, maker: { assistantId: "a1" } })).toHaveLength(1);
     expect(await w.deps.toolsOf({ maker: { assistantId: "another-agent" } })).toHaveLength(0);
   });
 
   it("publishing it again keeps the tool's id and addresses, takes the new title and version, and is not a new tool", async () => {
     const w = world();
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "First" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "First" }, w.deps);
     const first = { ...w.tools[0]! };
-    w.files["/tools/ana/recorrido/index.html"] = "<h1>changed</h1>";
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido/index.html", title: "Second" }, w.deps);
+    w.files["/.artifacts/ana/recorrido/index.html"] = "<h1>changed</h1>";
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido/index.html", title: "Second" }, w.deps);
 
     expect(response(out).ok).toBe(true);
     expect(w.tools).toHaveLength(1);
@@ -338,26 +351,26 @@ describe("publish_tool: what it publishes", () => {
 
   it("🔴 a republish keeps ONE version: the one it moved off is deleted after the row moved; the same version deletes nothing", async () => {
     const w = world();
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "First" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "First" }, w.deps);
     const first = w.tools[0]!.releaseSha;
     expect(w.dropped).toEqual([]);
     // Published again unchanged: the same version, nothing to delete.
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Same" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "Same" }, w.deps);
     expect(w.dropped).toEqual([]);
-    w.files["/tools/ana/recorrido/index.html"] = "<h1>changed</h1>";
+    w.files["/.artifacts/ana/recorrido/index.html"] = "<h1>changed</h1>";
     w.order.length = 0;
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Second" }, w.deps);
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "Second" }, w.deps);
     expect(w.dropped).toEqual([first]);
     expect(w.order.indexOf("dropRelease")).toBeGreaterThan(w.order.indexOf("upsert"));
   });
 
   it("a version that can't be deleted never fails the publish that moved off it", async () => {
     const w = world();
-    await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "First" }, w.deps);
-    w.files["/tools/ana/recorrido/index.html"] = "<h1>changed</h1>";
+    await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "First" }, w.deps);
+    w.files["/.artifacts/ana/recorrido/index.html"] = "<h1>changed</h1>";
     w.failDrop = true;
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Second" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "Second" }, w.deps);
     expect(response(out).ok).toBe(true);
     expect(w.tools[0]!.title).toBe("Second");
     expect(warn).toHaveBeenCalled();
@@ -370,7 +383,7 @@ describe("publish_tool: what it refuses", () => {
 
   it("a Len session (no agent): refused, nothing saved", async () => {
     const w = world();
-    const out = await runPublishTool(session(null), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
+    const out = await runPublishTool(session(null), { path: "/.artifacts/ana/recorrido", ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "not_an_agent" });
     expect(w.releases).toEqual([]);
     expect(w.tools).toEqual([]);
@@ -378,16 +391,16 @@ describe("publish_tool: what it refuses", () => {
 
   it("an agent that doesn't live in the person's space: refused", async () => {
     const w = world();
-    const out = await runPublishTool(session({ inSpace: false }), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
+    const out = await runPublishTool(session({ inSpace: false }), { path: "/.artifacts/ana/recorrido", ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "not_in_space" });
     expect(w.tools).toEqual([]);
-    const absent = await runPublishTool(session({ inSpace: undefined }), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
+    const absent = await runPublishTool(session({ inSpace: undefined }), { path: "/.artifacts/ana/recorrido", ...ASK }, w.deps);
     expect(response(absent)).toMatchObject({ ok: false, error: "not_in_space" });
   });
 
   it("with the tools off (OPENLEN_LEN_ARTIFACTS=0): refused, and nothing is read", async () => {
     const w = world({ enabled: false });
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "agent_tools_off" });
     expect(sentence(out)).toMatch(/off/);
     expect(w.order).toEqual([]);
@@ -395,41 +408,44 @@ describe("publish_tool: what it refuses", () => {
 
   it("with no deps it reads the environment's switch", async () => {
     vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", ...ASK });
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", ...ASK });
     expect(response(out)).toMatchObject({ ok: false, error: "agent_tools_off" });
   });
 
   it("an agent whose slug this turn doesn't know: refused (never a guess at the folder)", async () => {
     const w = world();
-    const out = await runPublishTool(session({ slug: undefined }), { path: "/tools/ana/recorrido", ...ASK }, w.deps);
+    const out = await runPublishTool(session({ slug: undefined }), { path: "/.artifacts/ana/recorrido", ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "no_folder" });
     expect(w.tools).toEqual([]);
   });
 
   it.each([
-    ["another agent's folder", "/tools/bob/recorrido"],
-    ["another agent's folder, folded with ..", "/tools/ana/../bob/recorrido"],
-    ["a path that isn't under /tools/", "/recorrido/index.html"],
+    ["another agent's folder", "/.artifacts/bob/recorrido"],
+    ["another agent's folder, folded with ..", "/.artifacts/ana/../bob/recorrido"],
+    ["a path that isn't under /.artifacts/", "/recorrido/index.html"],
+    ["the old /tools/ form", "/tools/ana/recorrido"],
+    ["an /artifacts/ folder without the dot (a site's own)", "/artifacts/ana/recorrido"],
     ["a page of the space", "/index.html"],
     ["the space's root", "/"],
-    ["/tools alone", "/tools"],
-    ["/tools/ with the agent's folder and no tool", "/tools/ana"],
-    ["the agent's folder (it would sweep every tool into one)", "/tools/ana/"],
-    ["a file inside the tool's folder that isn't its page", "/tools/ana/recorrido/main.js"],
-    ["a folder inside the tool's folder", "/tools/ana/recorrido/sub"],
-    ["a tool name with uppercase letters", "/tools/ana/Recorrido"],
-    ["a tool name with spaces", "/tools/ana/mi herramienta"],
-    ["a tool name with an underscore", "/tools/ana/mi_herramienta"],
-    ["a tool name that starts with a hyphen", "/tools/ana/-recorrido"],
-    ["a tool name of 49 characters", `/tools/ana/${"a".repeat(49)}`],
-    ["the person's home", "~/tools/ana/recorrido"],
+    ["/.artifacts alone", "/.artifacts"],
+    ["/.artifacts/ with the agent's folder and no tool", "/.artifacts/ana"],
+    ["a folder straight under /.artifacts/ (Len's form, not an agent's)", "/.artifacts/recorrido"],
+    ["the agent's folder (it would sweep every tool into one)", "/.artifacts/ana/"],
+    ["a file inside the tool's folder that isn't its page", "/.artifacts/ana/recorrido/main.js"],
+    ["a folder inside the tool's folder", "/.artifacts/ana/recorrido/sub"],
+    ["a tool name with uppercase letters", "/.artifacts/ana/Recorrido"],
+    ["a tool name with spaces", "/.artifacts/ana/mi herramienta"],
+    ["a tool name with an underscore", "/.artifacts/ana/mi_herramienta"],
+    ["a tool name that starts with a hyphen", "/.artifacts/ana/-recorrido"],
+    ["a tool name of 49 characters", `/.artifacts/ana/${"a".repeat(49)}`],
+    ["the person's home", "~/.artifacts/ana/recorrido"],
     ["an empty path", ""],
   ])("%s: refused with the expected form, nothing saved", async (_name, path) => {
-    const w = world({ files: { ...MINIMAL, "/tools/bob/recorrido/index.html": "x" } });
+    const w = world({ files: { ...MINIMAL, "/.artifacts/bob/recorrido/index.html": "x" } });
     const out = await runPublishTool(session(), { path, ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "bad_path" });
     // It names the form, with the agent's own slug.
-    expect(sentence(out)).toContain("/tools/ana/<tool name>/");
+    expect(sentence(out)).toContain("/.artifacts/ana/<tool name>/");
     expect(w.releases).toEqual([]);
     expect(w.tools).toEqual([]);
     expect(w.order).toEqual([]);
@@ -438,8 +454,8 @@ describe("publish_tool: what it refuses", () => {
   it("takes a tool name of 48 characters, with digits and hyphens", async () => {
     const name = `1${"a-".repeat(23)}z`;
     expect(name).toHaveLength(48);
-    const w = world({ files: { [`/tools/ana/${name}/index.html`]: "x" } });
-    const out = await runPublishTool(session(), { path: `/tools/ana/${name}`, title: "R" }, w.deps);
+    const w = world({ files: { [`/.artifacts/ana/${name}/index.html`]: "x" } });
+    const out = await runPublishTool(session(), { path: `/.artifacts/ana/${name}`, title: "R" }, w.deps);
     expect(response(out).ok).toBe(true);
     expect(w.tools[0]!.slug).toBe(name);
   });
@@ -456,7 +472,7 @@ describe("publish_tool: what it refuses", () => {
     ["with a DEL", "Recorrido\u007f"],
   ])("a title that is %s: refused", async (_name, title) => {
     const w = world();
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "invalid_arguments" });
     expect(sentence(out)).toMatch(/title/);
     expect(w.releases).toEqual([]);
@@ -464,13 +480,13 @@ describe("publish_tool: what it refuses", () => {
 
   it("takes a title of exactly 80 characters", async () => {
     const w = world();
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "x".repeat(80) }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "x".repeat(80) }, w.deps);
     expect(response(out).ok).toBe(true);
   });
 
   it("a very long path is repeated cut in the refusal, not whole", async () => {
     const w = world();
-    const path = `/tools/bob/${"x".repeat(5000)}`;
+    const path = `/.artifacts/bob/${"x".repeat(5000)}`;
     const out = await runPublishTool(session(), { path, ...ASK }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "bad_path" });
     expect(sentence(out)).toContain(`${path.slice(0, 200)}…`);
@@ -486,14 +502,14 @@ describe("publish_tool: what it refuses", () => {
   it("the 6th tool: refused as too_many_tools, nothing saved; the 5th is fine", async () => {
     const w = world();
     for (let i = 1; i <= LEN_ARTIFACTS_PER_MAKER - 1; i++) addTool(w, { slug: `t${i}` });
-    w.files["/tools/ana/last/index.html"] = "x";
-    const fifth = await runPublishTool(session(), { path: "/tools/ana/last", title: "Last" }, w.deps);
+    w.files["/.artifacts/ana/last/index.html"] = "x";
+    const fifth = await runPublishTool(session(), { path: "/.artifacts/ana/last", title: "Last" }, w.deps);
     expect(response(fifth).ok).toBe(true);
     expect(w.tools).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
 
-    w.files["/tools/ana/sixth/index.html"] = "x";
+    w.files["/.artifacts/ana/sixth/index.html"] = "x";
     const releasesBefore = w.releases.length;
-    const sixth = await runPublishTool(session(), { path: "/tools/ana/sixth", title: "Sixth" }, w.deps);
+    const sixth = await runPublishTool(session(), { path: "/.artifacts/ana/sixth", title: "Sixth" }, w.deps);
     expect(response(sixth)).toMatchObject({ ok: false, error: "too_many_tools" });
     expect(sentence(sixth)).toContain(String(LEN_ARTIFACTS_PER_MAKER));
     expect(w.tools).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
@@ -503,11 +519,11 @@ describe("publish_tool: what it refuses", () => {
   it("a tool published in the turn is handed to the turn's watcher, so its person's changes are heard from then on", async () => {
     const w = world();
     const added: { id: string; slug: string; title: string }[] = [];
-    const out = await runPublishTool({ ...session(), artifactWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/tools/ana/recorrido", title: "Recorrido" }, w.deps);
+    const out = await runPublishTool({ ...session(), artifactWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/.artifacts/ana/recorrido", title: "Recorrido" }, w.deps);
     expect(response(out).ok).toBe(true);
     expect(added).toEqual([{ id: w.tools[0]!.id, slug: "recorrido", title: "Recorrido" }]);
     // a refused publish hands nothing
-    const refused = await runPublishTool({ ...session(), artifactWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/tools/bob/x", title: "X" }, w.deps);
+    const refused = await runPublishTool({ ...session(), artifactWatch: { add: (t) => void added.push({ ...t }) } }, { path: "/.artifacts/bob/x", title: "X" }, w.deps);
     expect(response(refused).ok).toBe(false);
     expect(added).toHaveLength(1);
   });
@@ -522,7 +538,7 @@ describe("publish_tool: what it refuses", () => {
         throw err;
       },
     };
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, capped);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, capped);
     expect(response(out)).toMatchObject({ ok: false, error: "too_many_tools" });
     expect(sentence(out)).toContain(String(LEN_ARTIFACTS_PER_MAKER));
     expect(w.seen).toEqual([]);
@@ -531,7 +547,7 @@ describe("publish_tool: what it refuses", () => {
   it("any other failure of the write is not dressed up as the cap", async () => {
     const w = world();
     const broken: LenArtifactsDeps = { ...w.deps, upsert: async () => Promise.reject(new Error("database is down")) };
-    await expect(runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, broken)).rejects.toThrow("database is down");
+    await expect(runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, broken)).rejects.toThrow("database is down");
   });
 
   it("republishing one of the five is not a sixth", async () => {
@@ -539,7 +555,7 @@ describe("publish_tool: what it refuses", () => {
     for (let i = 1; i <= LEN_ARTIFACTS_PER_MAKER - 1; i++) addTool(w, { slug: `t${i}` });
     addTool(w, { slug: "recorrido" });
     expect(w.tools).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "Again" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "Again" }, w.deps);
     expect(response(out).ok).toBe(true);
     expect(w.tools).toHaveLength(LEN_ARTIFACTS_PER_MAKER);
     expect(w.tools.find((t) => t.slug === "recorrido")!.title).toBe("Again");
@@ -548,29 +564,29 @@ describe("publish_tool: what it refuses", () => {
   it("another agent's five tools don't count against this one", async () => {
     const w = world();
     for (let i = 1; i <= LEN_ARTIFACTS_PER_MAKER; i++) addTool(w, { slug: `t${i}`, assistantId: "a2" });
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out).ok).toBe(true);
   });
 
   it("an empty folder: refused, naming the folder", async () => {
     const w = world({ files: {} });
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "empty" });
-    expect(sentence(out)).toContain("/tools/ana/recorrido/");
+    expect(sentence(out)).toContain("/.artifacts/ana/recorrido/");
     expect(w.tools).toEqual([]);
   });
 
   it("a folder without index.html: refused, saying the tab opens it", async () => {
-    const w = world({ files: { "/tools/ana/recorrido/app.js": "x" } });
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const w = world({ files: { "/.artifacts/ana/recorrido/app.js": "x" } });
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "no_index" });
     expect(sentence(out)).toContain("index.html");
     expect(w.releases).toEqual([]);
   });
 
   it("a folder past 10 MB: refused as too_big, saying the cap", async () => {
-    const w = world({ files: { "/tools/ana/recorrido/index.html": "x".repeat(LEN_ARTIFACT_VERSION_MAX_BYTES + 1) } });
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const w = world({ files: { "/.artifacts/ana/recorrido/index.html": "x".repeat(LEN_ARTIFACT_VERSION_MAX_BYTES + 1) } });
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "too_big" });
     expect(sentence(out)).toMatch(/10 MB/);
     expect(w.releases).toEqual([]);
@@ -579,7 +595,7 @@ describe("publish_tool: what it refuses", () => {
   it("a server with no signing secret (no private addresses to give): refused, no row without a label", async () => {
     const w = world();
     w.labels = { web: null, phone: null };
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out)).toMatchObject({ ok: false, error: "no_host" });
     expect(w.tools).toEqual([]);
     expect(w.releases).toEqual([]);
@@ -589,7 +605,7 @@ describe("publish_tool: what it refuses", () => {
     const w = world();
     addTool(w, { slug: "recorrido" });
     w.labels = { web: null, phone: null };
-    const out = await runPublishTool(session(), { path: "/tools/ana/recorrido", title: "R" }, w.deps);
+    const out = await runPublishTool(session(), { path: "/.artifacts/ana/recorrido", title: "R" }, w.deps);
     expect(response(out).ok).toBe(true);
   });
 });

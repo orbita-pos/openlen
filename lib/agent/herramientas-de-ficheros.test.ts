@@ -878,8 +878,8 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     }
   });
 
-  // THE AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §1): its folder is /tools/<its slug>/, and it
-  // writes there and nowhere else under /tools/ — two agents of one space never overwrite each other's tool.
+  // AN AGENT'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §3): its folder is /.artifacts/<its slug>/, and it writes
+  // there and nowhere else under /.artifacts/ — two agents of one space never overwrite each other's artifact.
   const conSlug = (slug?: string) => ({ ...sesionDelAsistente(), assistant: { id: "a1", name: "Ana", inSpace: true, ...(slug ? { slug } : {}) } });
   function depsConArchivos() {
     const { deps } = depsConAsistente();
@@ -897,29 +897,37 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     return { deps: conFicheros, archivos };
   }
 
-  it("🔴 an agent writes below /tools/<its slug>/ and the rest of its space as before", async () => {
+  it("🔴 an agent writes below /.artifacts/<its slug>/ and the rest of its space as before", async () => {
     const { deps, archivos } = depsConArchivos();
-    for (const file_path of ["/tools/ana/recorrido/index.html", "/tools/ana/recorrido/js/app.js", "/tools/ana/x.html", "/notes.md", "/tools-notes.md", "/toolsbox/a.md"]) {
+    for (const file_path of [
+      "/.artifacts/ana/recorrido/index.html",
+      "/.artifacts/ana/recorrido/js/app.js",
+      "/.artifacts/ana/x.html",
+      "/notes.md",
+      "/artifacts/a.md",
+      "/.artifacts-notes.md",
+      "/tools/bob/x.html",
+    ]) {
       const out = await runAgentTool(conSlug("ana"), deps, "Write", { file_path, content: "x" });
       assert.equal(out.response.ok, true, `${file_path}: ${texto(out)}`);
       assert.equal(archivos[file_path], "x");
     }
   });
 
-  it("🔴 never another agent's folder, nor a file straight under /tools/, nor a name that merely starts like its own", async () => {
+  it("🔴 never another agent's folder, nor a file straight under /.artifacts/, nor a name that merely starts like its own", async () => {
     const { deps, archivos } = depsConArchivos();
     const s = conSlug("ana");
     for (const file_path of [
-      "/tools/bob/recorrido/index.html",
-      "/tools/x.html",
-      "/tools/ana",
-      "/tools",
-      "/tools/anabel/index.html",
-      "/tools/ana-2/index.html",
-      "/tools/ana/../bob/x.html",
-      "/tools/./bob/x.html",
-      "tools/bob/x.html",
-      "\\tools\\bob\\x.html",
+      "/.artifacts/bob/recorrido/index.html",
+      "/.artifacts/x.html",
+      "/.artifacts/ana",
+      "/.artifacts",
+      "/.artifacts/anabel/index.html",
+      "/.artifacts/ana-2/index.html",
+      "/.artifacts/ana/../bob/x.html",
+      "/.artifacts/./bob/x.html",
+      ".artifacts/bob/x.html",
+      "\\.artifacts\\bob\\x.html",
     ]) {
       negado(await runAgentTool(s, deps, "Write", { file_path, content: "x" }));
     }
@@ -929,20 +937,20 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
   it("🔴 Edit and MultiEdit keep the same guard", async () => {
     const { deps } = depsConArchivos();
     const s = conSlug("ana");
-    negado(await runAgentTool(s, deps, "Edit", { file_path: "/tools/bob/x.html", old_string: "a", new_string: "b" }));
-    negado(await runAgentTool(s, deps, "MultiEdit", { file_path: "/tools/bob/x.html", edits: [{ old_string: "a", new_string: "b" }] }));
+    negado(await runAgentTool(s, deps, "Edit", { file_path: "/.artifacts/bob/x.html", old_string: "a", new_string: "b" }));
+    negado(await runAgentTool(s, deps, "MultiEdit", { file_path: "/.artifacts/bob/x.html", edits: [{ old_string: "a", new_string: "b" }] }));
   });
 
-  it("🔴 an agent whose turn doesn't say its slug writes nothing under /tools/ at all", async () => {
+  it("🔴 an agent whose turn doesn't say its slug writes nothing under /.artifacts/ at all", async () => {
     const { deps, archivos } = depsConArchivos();
-    negado(await runAgentTool(conSlug(), deps, "Write", { file_path: "/tools/ana/recorrido/index.html", content: "x" }));
+    negado(await runAgentTool(conSlug(), deps, "Write", { file_path: "/.artifacts/ana/recorrido/index.html", content: "x" }));
     assert.deepEqual(archivos, {});
   });
 
   it("🔴 outside the person's space, even its own folder is closed", async () => {
     const { deps } = depsConArchivos();
     const sinEspacio = { ...sesionDelAsistente(), assistant: { id: "a1", name: "Ana", slug: "ana" } };
-    negado(await runAgentTool(sinEspacio, deps, "Write", { file_path: "/tools/ana/recorrido/index.html", content: "x" }));
+    negado(await runAgentTool(sinEspacio, deps, "Write", { file_path: "/.artifacts/ana/recorrido/index.html", content: "x" }));
   });
 
   // What an agent's customers may be told (spec local 2026-11-19-agentes-para-todos, §6.7): a file of its own.

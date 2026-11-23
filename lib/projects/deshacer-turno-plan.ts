@@ -111,7 +111,7 @@ export function esDeshacible(ruta: string): boolean {
   if (ruta === RUTA_FORMA) return true;
   if (paginaDeRuta(ruta)) return true;
   const c = classifyFolderPath(ruta);
-  return c.ok && (c.kind === "web" || c.kind === "tests" || c.kind === "env" || c.kind === "manifest");
+  return c.ok && (c.kind === "web" || c.kind === "tests" || c.kind === "env" || c.kind === "manifest" || c.kind === "artifact");
 }
 
 /** De las dos fotos del turno, lo que se guarda para poder deshacerlo. */

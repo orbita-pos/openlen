@@ -17,6 +17,11 @@ describe("diagnosticosDeLaApp", () => {
     expect(diagnosticosDeLaApp({ app: APP, ahora: BIEN, alEmpezar: BIEN, escritos: ["/src/App.jsx"], cascaron: CASCARON })).toEqual([]);
   });
 
+  it("🔴 /.artifacts/ (Len's artifacts) is not compiled as the app: one that doesn't compile breaks nothing", () => {
+    const conArtifact = { ...BIEN, "/.artifacts/x/app.jsx": "export default () => <div", "/.artifacts/x/util.js": "const = ;" };
+    expect(diagnosticosDeLaApp({ app: APP, ahora: conArtifact, alEmpezar: BIEN, escritos: ["/.artifacts/x/app.jsx", "/.artifacts/x/util.js"], cascaron: CASCARON })).toEqual([]);
+  });
+
   it("lo que rompe este turno, sí; lo que ya estaba roto en otro fichero, no", () => {
     const antes = { ...BIEN, "/src/Viejo.jsx": "export default () => <div" };
     const ahora = { ...antes, "/src/App.jsx": "export const App = 1;" };

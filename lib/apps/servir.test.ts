@@ -25,6 +25,11 @@ describe("una app: la entrada y lo que no es un fuente", () => {
     });
   });
 
+  it("🔴 /.artifacts/ (Len's artifacts) is never served with the app", () => {
+    const conArtifact = { ...CARPETA, "/.artifacts/x/index.html": "<h1>private</h1>", "/.artifacts/x/data.json": "{}", "/.artifacts/x/app.js": "p()" };
+    expect(ficherosDeLaApp(conArtifact, APP, "PAQUETE")).toEqual(ficherosDeLaApp(CARPETA, APP, "PAQUETE"));
+  });
+
   it("entradaServida: el paquete; si no compila, un módulo que lanza sus errores; si no contestó, el aviso", () => {
     expect(entradaServida("/src/main.jsx", { ok: true, js: "JS", map: null, bytes: 2, gzipBytes: 1, ms: 1 })).toBe("JS");
     const roto = entradaServida("/src/main.jsx", { ok: false, errores: [{ ruta: "/src/A.jsx", linea: 3, columna: 1, mensaje: "x" }] });

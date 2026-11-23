@@ -17,7 +17,7 @@ import { relatedAgentsLine } from "@/lib/assistants/messages/policy";
 import { relatedAgentsOf, type RelatedAgent } from "@/lib/assistants/messages/related";
 import { claimRideAlongForAgent, claimRideAlongForLen, giveBackRideAlong, type HeldMessages } from "@/lib/assistants/messages/ride-along";
 import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assistants/messages/tool";
-import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/agent-tools";
+import { PUBLISH_TOOL_DECLARATION, TOOL_DATA_DECLARATION } from "@/lib/len-artifacts/tools";
 import { changedSince, artifactChangesLine, watchLenArtifactChanges } from "@/lib/len-artifacts/changes";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { lenArtifactsOf, type LenArtifactRow } from "@/lib/len-artifacts/store";
@@ -1797,7 +1797,7 @@ async function correrTurno(
           assistant: {
             id: asistente.id,
             name: asistente.name,
-            // Its folder of tools is /tools/<slug>/: the guard of Write and `publish_tool` read it here.
+            // Its folder of artifacts is /.artifacts/<slug>/ (`artifactFolderOf`): the guard of Write and `publish_tool` read it here.
             slug: asistente.slug,
             projects: proyectosDelAsistente.map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),
             started: (proyectosEmpezados ?? []).map((p) => ({ id: p.projectId, title: p.title?.trim() || p.projectId })),

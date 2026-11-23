@@ -56,7 +56,7 @@ describe("agent tool eyes in Chromium", () => {
     try {
       const first = await usarPagina({
         html: TOOL_HTML,
-        ruta: "/tools/ana/recorrido/index.html",
+        ruta: "/.artifacts/ana/recorrido/index.html",
         vista: null,
         tab,
         releaseFiles: { "/assets/helper.js": 'window.HELPER_OK = "yes";' },
@@ -84,7 +84,7 @@ describe("agent tool eyes in Chromium", () => {
       // Sequential use_page on the same open tab (without newVisit) preserves the in-memory copy.
       const second = await usarPagina({
         html: TOOL_HTML,
-        ruta: "/tools/ana/recorrido/index.html",
+        ruta: "/.artifacts/ana/recorrido/index.html",
         vista: null,
         tab,
         releaseFiles: { "/assets/helper.js": 'window.HELPER_OK = "yes";' },
@@ -100,7 +100,7 @@ describe("agent tool eyes in Chromium", () => {
       // A fresh visit (`newVisit: true`) starts clean from `realDocs`: progress/3 is gone.
       const fresh = await usarPagina({
         html: TOOL_HTML,
-        ruta: "/tools/ana/recorrido/index.html",
+        ruta: "/.artifacts/ana/recorrido/index.html",
         vista: null,
         tab,
         newVisit: true,

@@ -7,6 +7,9 @@ describe("la huella de la carpeta publicable", () => {
   it("sin publicables no hay huella (un proyecto sin carpeta no tiene deriva nueva)", () => {
     expect(folderFingerprint({})).toBeNull();
     expect(folderFingerprint({ "/tests/a.spec.ts": "x", "/supabase/migrations/1_a.sql": "y" })).toBeNull();
+    // Len's artifacts are no one's visit: editing one is no «unpublished change» of the site.
+    expect(folderFingerprint({ "/.artifacts/budget/index.html": "x", "/.artifacts/budget/app.js": "y" })).toBeNull();
+    expect(folderFingerprint({ "/js/a.js": "1", "/.artifacts/budget/app.js": "y" })).toBe(folderFingerprint({ "/js/a.js": "1" }));
   });
 
   it("cambia con el contenido y con la ruta, no con el orden ni con lo que no se publica", () => {

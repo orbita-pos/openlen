@@ -20,7 +20,7 @@ const ROW: LenArtifactRow & { servedTo: "workspace" | "phone" } = {
   projectId: "p1",
   slug: "recorrido",
   title: "Recorrido",
-  folder: "/tools/ana/recorrido",
+  folder: "/.artifacts/ana/recorrido",
   releaseSha: "sha1",
   hostLabel: WORKSPACE_LABEL,
   phoneHostLabel: PHONE_LABEL,

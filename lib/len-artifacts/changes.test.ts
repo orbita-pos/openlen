@@ -13,7 +13,7 @@ function row(over: Partial<LenArtifactRow> = {}): LenArtifactRow {
     projectId: "space",
     slug: "recorrido",
     title: "Recorrido",
-    folder: "/tools/ana/recorrido",
+    folder: "/.artifacts/ana/recorrido",
     releaseSha: "sha1",
     hostLabel: "lienzo-1",
     phoneHostLabel: "lienzo-2",

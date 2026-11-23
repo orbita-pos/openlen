@@ -86,6 +86,24 @@ it("in an app, what the child imports is installed after the merge commits, neve
   expect(await saveWorktreeIntoDraft({ ...session(), app: APP }, deps, [importsTiny], draft)).toEqual({ rechazado: false });
   expect(seen).toEqual(["after the commit"]);
 });
+// Len's artifacts (/.artifacts/, spec local 2026-11-22-artifacts-de-len, §3) are project files: a child's edit comes back
+// like any other, and as they are no app code, nothing is installed for them.
+it("an edited and a new artifact file come back to the draft, and nothing is installed for them", async () => {
+  await pg.exec(`insert into "projectFiles" ("projectId",path,content) values ('p', '/.artifacts/budget/index.html', '<h1>old</h1>');`);
+  const seen = recordInstalls();
+  const withArtifact = { ...draft, "/.artifacts/budget/index.html": "<h1>old</h1>" };
+  const changes = [
+    { tipo: "escrito", ruta: "/.artifacts/budget/index.html", contenido: "<h1>child</h1>", crea: false } as const,
+    { tipo: "escrito", ruta: "/.artifacts/budget/app.js", contenido: 'import tiny from "tiny";', crea: true } as const,
+  ];
+  expect(await saveWorktreeIntoDraft({ ...session(), app: APP }, deps, changes, withArtifact)).toEqual({ rechazado: false });
+  const rows = (await pg.query<{ path: string; content: string }>(`select path, content from "projectFiles" where path like '/.artifacts/%' order by path`)).rows;
+  expect(rows).toEqual([
+    { path: "/.artifacts/budget/app.js", content: 'import tiny from "tiny";' },
+    { path: "/.artifacts/budget/index.html", content: "<h1>child</h1>" },
+  ]);
+  expect(seen).toEqual([]);
+});
 it("in an app, a refused merge installs nothing", async () => {
   const seen = recordInstalls();
   const r = await saveWorktreeIntoDraft({ ...session(), app: APP }, deps, [importsTiny, { tipo: "borrado", ruta: "/index.html" }], draft);

@@ -67,6 +67,7 @@ import { MCP_CONFIG_PATH } from "@/lib/mcp-connectors/len-file";
 import { AGENT_MEMORY_MAX } from "@/lib/agent/user-memory";
 import { USER_BRIEF_MAX } from "@/lib/projects";
 import { classifyFolderPath, folderSaveProblem, isCompileInputPath, isFolderPath } from "@/lib/agent/ficheros/folder";
+import { artifactFolderOf } from "@/lib/len-artifacts/folder";
 import { binaryReadError, encodingWriteError, readOfBytes } from "@/lib/agent/ficheros/binarios";
 import { parsePointer } from "@/lib/files/blob-pointer";
 import { esDeLaPlataforma, MANUAL_SOLO_LECTURA, RUTA_MANUAL, RUTAS_MUDADAS, mudanza } from "@/lib/agent/ficheros/manual";
@@ -630,23 +631,20 @@ import { AVISO_VISITANTES } from "./visitor-data";
 /** What a read-only session may write, only in the person's own assistant's session: its memory and what its
  *  customers may be told; and, when it lives in the person's space (spec local 2026-11-19-agentes-para-todos, §6.4), the
  *  space's own files — never the person's home (`~/.len/`: Len's configuration for every project), the project's Len
- *  configuration (`/.len/`, `/LEN.md`) or the platform's files (`/.openlen/`, where visitors' data is). Under `/tools/`
- *  (spec local 2026-11-22-herramienta-dentro-del-agente, §1) only its own folder, `/tools/<its slug>/`: the space is one
- *  for all of the person's agents, and one never writes another's tool. */
+ *  configuration (`/.len/`, `/LEN.md`) or the platform's files (`/.openlen/`, where visitors' data is). Under
+ *  `/.artifacts/` (spec local 2026-11-22-artifacts-de-len, §3) only its own folder, `artifactFolderOf` — the space is one
+ *  for all of the person's agents, and one never writes over another's artifact. */
 export function assistantMayWrite(session: AgentSession, filePath: string): boolean {
   if (session.assistant === undefined) return false;
   const path = resolverRuta(filePath);
   if (path === ASSISTANT_MEMORY) return true;
   if (path === ASSISTANT_CUSTOMERS) return session.assistant.withAgentFile === true;
   if (!session.assistant.inSpace) return false;
-  if (path === "/tools" || path.startsWith("/tools/")) return startsInOwnToolsFolder(path, session.assistant.slug);
+  if (path === "/.artifacts" || path.startsWith("/.artifacts/")) {
+    const own = artifactFolderOf(session);
+    return own !== null && path.startsWith(own);
+  }
   return !path.startsWith(`${HOME_DIR}/`) && !path.startsWith("/.len/") && path !== PROJECT_LEN_MD && !path.startsWith("/.openlen/");
-}
-
-/** Whether `path` (already resolved) is a file below `/tools/<slug>/`. A turn that doesn't say its slug has no folder. */
-function startsInOwnToolsFolder(path: string, slug: string | undefined): boolean {
-  if (!slug || slug === "." || slug === ".." || /[\\/]/.test(slug)) return false;
-  return path.startsWith(`/tools/${slug}/`);
 }
 
 export async function toolEdit(session: AgentSession, deps: AgentDeps, args: Record<string, unknown>): Promise<ToolOutcome> {

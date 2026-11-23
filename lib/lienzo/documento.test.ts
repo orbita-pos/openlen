@@ -324,4 +324,9 @@ describe("una app en la vista", () => {
     expect(await carpetaDeLaVista({ ...ctx(), files: { "/.env": "VITE_A=1" } })).toBeUndefined();
     expect(await carpetaDeLaVista({ ...ctx(), files: { "/.env": "VITE_A=1", "/js/a.js": "x" } })).toMatchObject({ files: { "/js/a.js": "x" } });
   });
+
+  it("🔴 /.artifacts/ (Len's artifacts) never reaches the canvas or the eyes: a page whose folder only has one is measured as without a folder", async () => {
+    expect((await carpetaServida({ "/js/a.js": "x", "/.artifacts/b/app.js": "y", "/.artifacts/b/index.html": "<h1>p</h1>" }, null)).files).toEqual({ "/js/a.js": "x" });
+    expect(await carpetaDeLaVista({ ...ctx(), files: { "/.artifacts/b/app.js": "y" } })).toBeUndefined();
+  });
 });

@@ -25,7 +25,7 @@ vi.mock("@/lib/db", async () => {
 vi.mock("@/lib/movil/quien", () => ({ usuarioDeLaPeticion: vi.fn(async () => state.person) }));
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
-const { runPublishTool, runToolData } = await import("./agent-tools");
+const { runPublishTool, runToolData } = await import("./tools");
 const { changedSince, artifactChangesLine, watchLenArtifactChanges } = await import("./changes");
 const store = await import("./store");
 const listRoute = await import("@/app/api/len-artifacts/route");
@@ -132,8 +132,8 @@ beforeEach(async () => {
   vi.stubEnv("OPENLEN_TOOLS", "0");
   state.person = "u1";
   files = {
-    "/tools/ana/recorrido/index.html": "<!doctype html><html><head><title>Recorrido</title></head><body><h1>Recorrido</h1></body></html>",
-    "/tools/ana/recorrido/style.css": "body { color: var(--fg); }",
+    "/.artifacts/ana/recorrido/index.html": "<!doctype html><html><head><title>Recorrido</title></head><body><h1>Recorrido</h1></body></html>",
+    "/.artifacts/ana/recorrido/style.css": "body { color: var(--fg); }",
   };
 
   pg = new PGlite();
@@ -159,8 +159,8 @@ afterEach(async () => {
 
 describe("a whole tool between an agent and its person", () => {
   it("🔴 publish → list & serve → follow baseline → agent write → person write & notice → agent read clears reminder → delete sends gone and 404s", async () => {
-    // 1. Agent writes `/tools/ana/recorrido/index.html` and publishes it.
-    const pub = await runPublishTool(agentSession(), { path: "/tools/ana/recorrido/", title: "Recorrido" }, { listFiles: listFilesDep });
+    // 1. Agent writes `/.artifacts/ana/recorrido/index.html` and publishes it.
+    const pub = await runPublishTool(agentSession(), { path: "/.artifacts/ana/recorrido/", title: "Recorrido" }, { listFiles: listFilesDep });
     expect(pub.response.ok).toBe(true);
 
     // 2. Web list route returns the tool with its workspace frameUrl; phone open returns its own distinct label.

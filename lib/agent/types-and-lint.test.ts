@@ -43,6 +43,21 @@ describe("tipos y lint como el LSP de Claude Code (plan 03)", () => {
     expect(takeTypesAndLint(session).map((d) => d.ruta)).toEqual(["/src/a.tsx"]);
   });
 
+  it("🔴 /.artifacts/ (Len's artifacts) is never the app's code: the checker never reads it, and writing there opens nothing", async () => {
+    const llamadas: Record<string, string>[] = [];
+    const session = { app: { catalogo: "2026-11", entrada: "/src/main.jsx" } } as never;
+    const deps = {
+      checkApp: (files: Record<string, string>) => {
+        llamadas.push(files);
+        return Promise.resolve({ typescript: [diag("/.artifacts/x/app.tsx", "TS2322")], eslint: [] });
+      },
+    } as never;
+    typesAndLintAfterWrite({ session, deps, now: { "/src/a.tsx": "a", "/.artifacts/x/app.tsx": "const n: number = 'a';" }, written: ["/.artifacts/x/app.tsx", "/src/a.tsx"], compileErrors: 0 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(Object.keys(llamadas[0]!)).toEqual(["/src/a.tsx"]);
+    expect(takeTypesAndLint(session)).toEqual([]);
+  });
+
   it("🔴 tras editar un fichero, lo ya entregado de ESE fichero se olvida: vuelve a salir si sigue", async () => {
     const { session, llamadas, escribir, tick } = montar();
     const r = { typescript: [diag("/src/a.tsx", "TS2322")], eslint: [] };

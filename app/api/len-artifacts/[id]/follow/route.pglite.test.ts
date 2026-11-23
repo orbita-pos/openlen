@@ -45,7 +45,7 @@ vi.mock("@/lib/len-artifacts/bus", async (importOriginal) => {
 
 const { CREATE_ASSISTANTS } = await import("@/scripts/assistants-migrate-sql");
 const { publishArtifactChange, publishArtifactGone } = await import("@/lib/len-artifacts/bus");
-const { runToolData } = await import("@/lib/len-artifacts/agent-tools");
+const { runToolData } = await import("@/lib/len-artifacts/tools");
 const { changeOfWrites, toBridgeDoc } = await import("@/lib/len-artifacts/wire");
 const { usuarioDeLaPeticion } = await import("@/lib/movil/quien");
 const store = await import("@/lib/len-artifacts/store");
@@ -69,7 +69,7 @@ function toolInput(o: { id: string; assistantId?: string; personId?: string; slu
     projectId: "space",
     slug: o.slug ?? "lessons",
     title: "Lessons",
-    folder: `/tools/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
+    folder: `/.artifacts/${o.assistantId ?? "teacher"}/${o.slug ?? "lessons"}`,
     releaseSha: "sha-1",
     hostLabel: `lienzo-host-${o.id}`,
     phoneHostLabel: `lienzo-phone-${o.id}`,

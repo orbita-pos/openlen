@@ -7,7 +7,7 @@ import { LEN_ARTIFACT_VERSION_MAX_BYTES } from "./limits";
 import { buildLenArtifactRelease } from "./release";
 
 const SPACE = "9d1f7c0e-aaaa-4bbb-8ccc-000000000001";
-const FOLDER = "/tools/ana/recorrido";
+const FOLDER = "/.artifacts/ana/recorrido";
 
 function build(files: Record<string, string>, over: { folder?: string; projectId?: string } = {}) {
   return buildLenArtifactRelease({ projectId: over.projectId ?? SPACE, folder: over.folder ?? FOLDER, files });
@@ -43,11 +43,11 @@ describe("buildLenArtifactRelease: what it takes", () => {
     const r = ok({
       ...MINIMAL,
       "/index.html": "<h1>the space's own page</h1>",
-      "/tools/ana/recorrido-2/index.html": "<h1>a neighbour</h1>",
-      "/tools/ana/recorrido-2/extra.js": "1",
-      "/tools/ana/otra/index.html": "<h1>another tool</h1>",
-      "/tools/bea/recorrido/index.html": "<h1>another agent's</h1>",
-      "/tools/ana/recorrido.html": "<h1>a file with the folder's name</h1>",
+      "/.artifacts/ana/recorrido-2/index.html": "<h1>a neighbour</h1>",
+      "/.artifacts/ana/recorrido-2/extra.js": "1",
+      "/.artifacts/ana/otra/index.html": "<h1>another tool</h1>",
+      "/.artifacts/bea/recorrido/index.html": "<h1>another agent's</h1>",
+      "/.artifacts/ana/recorrido.html": "<h1>a file with the folder's name</h1>",
     });
     expect(Object.keys(r.files)).toEqual(["/index.html"]);
     expect(r.files["/index.html"]!.content).toBe("<h1>hola</h1>");
@@ -63,7 +63,7 @@ describe("buildLenArtifactRelease: what it takes", () => {
 describe("buildLenArtifactRelease: what it refuses", () => {
   it("nothing under the folder is empty, not a missing index", () => {
     expect(build({})).toEqual({ ok: false, error: "empty" });
-    expect(build({ "/tools/ana/recorrido-2/index.html": "x", "/index.html": "y" })).toEqual({ ok: false, error: "empty" });
+    expect(build({ "/.artifacts/ana/recorrido-2/index.html": "x", "/index.html": "y" })).toEqual({ ok: false, error: "empty" });
   });
 
   it("a folder that is the root of the project is empty: a tool is never the whole space", () => {
@@ -103,7 +103,7 @@ describe("buildLenArtifactRelease: what it refuses", () => {
 
   it("files outside the folder do not count towards the size", () => {
     const huge = "x".repeat(LEN_ARTIFACT_VERSION_MAX_BYTES + 1);
-    expect(build({ ...MINIMAL, "/tools/ana/recorrido-2/big.bin": huge, "/big.txt": huge }).ok).toBe(true);
+    expect(build({ ...MINIMAL, "/.artifacts/ana/recorrido-2/big.bin": huge, "/big.txt": huge }).ok).toBe(true);
   });
 });
 
@@ -119,7 +119,7 @@ describe("buildLenArtifactRelease: the version's sha", () => {
   });
 
   it("does not change with files outside the folder", () => {
-    expect(ok({ ...MINIMAL, "/other.txt": "noise", "/tools/ana/recorrido-2/index.html": "noise" }).sha).toBe(ok(MINIMAL).sha);
+    expect(ok({ ...MINIMAL, "/other.txt": "noise", "/.artifacts/ana/recorrido-2/index.html": "noise" }).sha).toBe(ok(MINIMAL).sha);
   });
 
   it("changes with one byte of one file", () => {
@@ -136,8 +136,8 @@ describe("buildLenArtifactRelease: the version's sha", () => {
   });
 
   it("does not depend on where the folder is, only on what is in it", () => {
-    const here = ok({ "/tools/ana/recorrido/index.html": "<h1>x</h1>" });
-    const there = ok({ "/tools/ana/otra/index.html": "<h1>x</h1>" }, { folder: "/tools/ana/otra" });
+    const here = ok({ "/.artifacts/ana/recorrido/index.html": "<h1>x</h1>" });
+    const there = ok({ "/.artifacts/ana/otra/index.html": "<h1>x</h1>" }, { folder: "/.artifacts/ana/otra" });
     expect(there.sha).toBe(here.sha);
   });
 

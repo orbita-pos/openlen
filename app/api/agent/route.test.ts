@@ -6245,7 +6245,7 @@ describe("POST /api/agent — the person's own assistant", () => {
       projectId: "p1",
       slug: "recorrido",
       title: "Recorrido",
-      folder: "/tools/lucia/recorrido",
+      folder: "/.artifacts/lucia/recorrido",
       releaseSha: "sha-1",
       hostLabel: "lienzo-1",
       phoneHostLabel: "lienzo-2",
@@ -6375,7 +6375,7 @@ describe("POST /api/agent — the person's own assistant", () => {
         return { response: { ok: true } };
       });
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-        await args.runTool("publish_tool", { path: "/tools/lucia/nuevo", title: "Nuevo" });
+        await args.runTool("publish_tool", { path: "/.artifacts/lucia/nuevo", title: "Nuevo" });
         publishArtifactChange("tool-new", {
           by: "person",
           docs: [{ collection: "answers", docId: "1", data: { a: 1 }, updatedAt: new Date(), updatedBy: "person" }],

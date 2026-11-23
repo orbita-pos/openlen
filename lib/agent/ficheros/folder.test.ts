@@ -52,6 +52,28 @@ describe("qué rutas son de la carpeta", () => {
     expect(isPublishableFolderPath("/tests/carrito.spec.ts")).toBe(false);
   });
 
+  it("🔴 /.artifacts/ (Len's artifacts, spec local 2026-11-22-artifacts-de-len, §3) is the project's: kept, never published, built or remixed", () => {
+    for (const p of ["/.artifacts/budget/index.html", "/.artifacts/lucia/budget/app.js", "/.artifacts/budget/data/seed.json", "/.artifacts/index.html", "/.artifacts/budget/logo.png", "/.artifacts"]) {
+      expect(kind(p), p).toBe("artifact");
+      expect(isPublishableFolderPath(p), p).toBe(false);
+      expect(isCompileInputPath(p), p).toBe(false);
+      expect(isRemixedFolderPath(p), p).toBe(false);
+    }
+    // It is a project file (the Code lens, git, export), with a file's size cap.
+    expect(folderSaveProblem("/.artifacts/budget/index.html", "<h1>budget</h1>", new Map())).toBeNull();
+    expect(folderSaveProblem("/.artifacts/budget/big.bin", "x".repeat(MAX_FILE_BYTES + 1), new Map())).toMatch(/too large/i);
+    expect(classifyFolderPath("/.artifacts/../x.js").ok).toBe(false);
+  });
+
+  it("🔴 a live site's own /artifacts/ folder and artifacts page are untouched: only the dotted folder is private", () => {
+    expect(kind("/artifacts/app.js")).toBe("web");
+    expect(isPublishableFolderPath("/artifacts/app.js")).toBe(true);
+    expect(kind("/artifacts/logo.png")).toBe("file");
+    expect(isPublishableFolderPath("/artifacts/logo.png")).toBe(true);
+    // /artifacts/index.html is a page (the pages' engine), never a folder file.
+    expect(classifyFolderPath("/artifacts/index.html").ok).toBe(false);
+  });
+
   it("/supabase sigue con sus reglas y no se publica", () => {
     expect(kind("/supabase/migrations/20261004120000_init.sql")).toBe("supabase");
     expect(isPublishableFolderPath("/supabase/migrations/20261004120000_init.sql")).toBe(false);
