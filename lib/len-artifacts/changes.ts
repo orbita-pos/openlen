@@ -1,9 +1,9 @@
-// WHAT THE PERSON CHANGED IN AN AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4).
+// WHAT THE PERSON CHANGED IN ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §7).
 //
-// Two doors, never waking the agent:
-// 1. At turn start, `changedSince(assistantId)` finds every tool whose `dataChangedAt` moved past `makerSeenAt` (or has
-//    never been seen) and lists the distinct collections the person wrote since; `artifactChangesLine` formats one short
-//    `<system-reminder>` appended inside `textoEnviado` (so the chat row keeps it as `sentText` and history replay
+// Two doors, never waking the maker:
+// 1. At turn start, `changedSince(scope)` finds every artifact in `scope` whose `dataChangedAt` moved past `makerSeenAt`
+//    (or has never been seen) and lists the distinct collections the person wrote since; `artifactChangesLine` formats one
+//    short `<system-reminder>` appended inside `textoEnviado` (so the chat row keeps it as `sentText` and history replay
 //    rebuilds it byte for byte).
 // 2. While a person-started turn is running, `watchLenArtifactChanges` subscribes to the in-process change bus and
 //    coalesces any person writes into ONE `<system-reminder>` notice for the next step via `takeAgentNotices`.
@@ -72,11 +72,11 @@ async function liveDeps(): Promise<ChangedSinceDeps> {
   return { enabled: () => lenArtifactsEnabled(), toolsOf: lenArtifactsOf, personChangedCollections };
 }
 
-/** Tools of `assistantId` whose `dataChangedAt` moved past `makerSeenAt` (or `makerSeenAt` is null and `dataChangedAt` is
- *  non-null), each paired with the distinct collections the person wrote since. Tools whose `dataChangedAt` moved with
+/** Artifacts in `scope` whose `dataChangedAt` moved past `makerSeenAt` (or `makerSeenAt` is null and `dataChangedAt` is
+ *  non-null), each paired with the distinct collections the person wrote since. Artifacts whose `dataChangedAt` moved with
  *  only deletions carry an empty `collections` list. */
 export async function changedSince(
-  assistantId: string,
+  scope: LenArtifactScope,
   overrides?: Partial<ChangedSinceDeps>,
 ): Promise<ChangedLenArtifact[]> {
   const enabled = overrides?.enabled ?? (() => lenArtifactsEnabled());
@@ -87,7 +87,7 @@ export async function changedSince(
     given.toolsOf && given.personChangedCollections
       ? { enabled, toolsOf: given.toolsOf, personChangedCollections: given.personChangedCollections }
       : { ...(await liveDeps()), ...given };
-  const rows = await d.toolsOf({ maker: { assistantId } });
+  const rows = await d.toolsOf(scope);
   const changed = rows.filter(
     (t) => t.dataChangedAt !== null && (t.makerSeenAt === null || t.dataChangedAt.getTime() > t.makerSeenAt.getTime()),
   );

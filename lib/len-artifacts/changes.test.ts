@@ -77,7 +77,7 @@ describe("changedSince", () => {
 
   it("returns empty when tools are disabled without touching the store", async () => {
     const d = deps({ enabled: () => false });
-    expect(await changedSince("a1", d)).toEqual([]);
+    expect(await changedSince({ projectId: "space", maker: { assistantId: "a1" } }, d)).toEqual([]);
     expect(d.toolsOf).not.toHaveBeenCalled();
   });
 
@@ -91,7 +91,7 @@ describe("changedSince", () => {
         row({ id: "seen", dataChangedAt: t1, makerSeenAt: t2 }),
       ]),
     });
-    expect(await changedSince("a1", d)).toEqual([]);
+    expect(await changedSince({ projectId: "space", maker: { assistantId: "a1" } }, d)).toEqual([]);
     expect(d.personChangedCollections).not.toHaveBeenCalled();
   });
 
@@ -105,12 +105,28 @@ describe("changedSince", () => {
       ]),
       personChangedCollections: vi.fn(async (id: string) => (id === "t1" ? ["progress"] : [])),
     });
-    expect(await changedSince("a1", d)).toEqual([
+    const scope = { projectId: "space", maker: { assistantId: "a1" } } as const;
+    expect(await changedSince(scope, d)).toEqual([
       { title: "Recorrido", slug: "recorrido", collections: ["progress"] },
       { title: "Vocab", slug: "vocab", collections: [] },
     ]);
+    expect(d.toolsOf).toHaveBeenCalledWith(scope);
     expect(d.personChangedCollections).toHaveBeenCalledWith("t1", t1);
     expect(d.personChangedCollections).toHaveBeenCalledWith("t2", null);
+  });
+
+  it("passes Len's project scope straight to toolsOf", async () => {
+    const t1 = new Date("2026-11-22T12:00:00Z");
+    const t2 = new Date("2026-11-22T12:05:00Z");
+    const d = deps({
+      toolsOf: vi.fn(async () => [
+        row({ id: "len-1", assistantId: null, projectId: "p1", slug: "presupuesto", title: "Presupuesto", folder: "/.artifacts/presupuesto", dataChangedAt: t2, makerSeenAt: t1 }),
+      ]),
+      personChangedCollections: vi.fn(async () => ["items"]),
+    });
+    const scope = { projectId: "p1", maker: "len" } as const;
+    expect(await changedSince(scope, d)).toEqual([{ title: "Presupuesto", slug: "presupuesto", collections: ["items"] }]);
+    expect(d.toolsOf).toHaveBeenCalledWith(scope);
   });
 });
 
@@ -276,7 +292,7 @@ describe("the names a notice repeats", () => {
   });
 
   it("an override given as undefined never hides the live member", async () => {
-    const out = await changedSince("a1", {
+    const out = await changedSince({ projectId: "space", maker: { assistantId: "a1" } }, {
       enabled: () => true,
       toolsOf: async () => [row({ dataChangedAt: new Date("2026-11-22T13:00:00Z") })],
       personChangedCollections: async () => ["progress"],
@@ -284,7 +300,7 @@ describe("the names a notice repeats", () => {
     });
     expect(out).toEqual([{ title: "Recorrido", slug: "recorrido", collections: ["progress"] }]);
     // and an explicit undefined member falls back to the live one rather than being called
-    const live = await changedSince("a1", { enabled: () => false, toolsOf: undefined });
+    const live = await changedSince({ projectId: "space", maker: { assistantId: "a1" } }, { enabled: () => false, toolsOf: undefined });
     expect(live).toEqual([]);
   });
 });

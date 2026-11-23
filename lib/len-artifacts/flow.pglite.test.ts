@@ -264,7 +264,7 @@ describe("a whole tool between an agent and its person", () => {
       watcher.stop();
     }
 
-    const pending = await changedSince("teacher");
+    const pending = await changedSince({ projectId: "space", maker: { assistantId: "teacher" } });
     expect(pending).toEqual([{ title: "Recorrido", slug: "recorrido", collections: ["progress"] }]);
     const reminder = artifactChangesLine(pending);
     expect(reminder).toContain("Recorrido");
@@ -281,8 +281,8 @@ describe("a whole tool between an agent and its person", () => {
     });
     expect(agentGet.response.ok).toBe(true);
     expect(parseToolJson(agentGet).document.data).toEqual({ answers: ["am", "is", "are"] });
-    expect(await changedSince("teacher")).toEqual([]);
-    expect(artifactChangesLine(await changedSince("teacher"))).toBe("");
+    expect(await changedSince({ projectId: "space", maker: { assistantId: "teacher" } })).toEqual([]);
+    expect(artifactChangesLine(await changedSince({ projectId: "space", maker: { assistantId: "teacher" } }))).toBe("");
 
     // 8. Person deletes the tool -> follow receives `gone` & closes, both labels 404, docs are gone.
     const delRes = await deleteRoute.DELETE(

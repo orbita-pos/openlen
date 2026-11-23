@@ -20,7 +20,7 @@ import { MESSAGE_AGENT_DECLARATION, MESSAGE_LEN_DECLARATION } from "@/lib/assist
 import { ARTIFACT_DATA, PUBLISH_ARTIFACT } from "@/lib/len-artifacts/tools";
 import { changedSince, artifactChangesLine, watchLenArtifactChanges } from "@/lib/len-artifacts/changes";
 import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
-import { lenArtifactsOf, type LenArtifactRow } from "@/lib/len-artifacts/store";
+import { lenArtifactsOf, type LenArtifactRow, type LenArtifactScope } from "@/lib/len-artifacts/store";
 import { isSpaceData } from "@/lib/space/types";
 import { ASK_LEN_DECLARATION } from "@/lib/assistants/ask-len";
 import { assistantConversationKey } from "@/lib/assistants/conversation";
@@ -1503,19 +1503,34 @@ async function correrTurno(
     estadosPedidos.length > 0
       ? heldVisualStates(estadosPedidos, await widgetsOfConversation(projectId, enLaCharla[0] ?? null).catch(() => new Map<string, string | null>()))
       : [];
-  // WHAT CHANGED IN THE AGENT'S TOOLS (spec local 2026-11-22-herramienta-dentro-del-agente, §4): only on a turn its
-  // person typed at a screen — never a server-started turn (scheduled, Len-woken, thread, email, round) —, one
+  // WHAT CHANGED IN THE MAKER'S ARTIFACTS (spec local 2026-11-22-artifacts-de-len, §7): only on a turn the project's
+  // owner typed at a screen — never a member's turn, never a project copy, never Len in the person's space, never an
+  // agent outside its space, and never a server-started turn (scheduled, Len-woken, thread, email, round) —, one
   // `<system-reminder>` inside `textoEnviado` after `visualStatesReminder`, so the row keeps it as `sentText` and the
   // history replays it byte for byte. Fail-soft: a store error leaves the turn running without the line.
   // `/compact` is no message of the person's: it carries no line and follows nothing.
+  const alcanceDeArtifacts: LenArtifactScope | null = asistente
+    ? espacioDelTurno
+      ? { projectId, maker: { assistantId: asistente.id } }
+      : null
+    : !espacioDelTurno && !miembro && proyectoDelChat === projectId
+      ? { projectId, maker: "len" }
+      : null;
   const vigilaHerramientas =
-    asistente !== null && espacioDelTurno && lenArtifactsEnabled() && !opts.round && !opts.hilo && !opts.email && !programadaDelTurno && !parseCompactCommand(prompt);
-  const herramientasDelAgente: LenArtifactRow[] = vigilaHerramientas ? await lenArtifactsOf({ projectId, maker: { assistantId: asistente!.id } }).catch(() => []) : [];
+    alcanceDeArtifacts !== null &&
+    lenArtifactsEnabled() &&
+    !opts.round &&
+    !opts.hilo &&
+    !opts.email &&
+    !programadaDelTurno &&
+    !sinMensajeDelDueno &&
+    !parseCompactCommand(prompt);
+  const herramientasDelAgente: LenArtifactRow[] = vigilaHerramientas ? await lenArtifactsOf(alcanceDeArtifacts!).catch(() => []) : [];
   // When the line below was read: the turn's watcher looks in the store for what landed after it, before it subscribed.
   const cambiosLeidosEn = new Date();
   const cambiosDeHerramientas =
-    asistente !== null && herramientasDelAgente.length > 0
-      ? await changedSince(asistente.id, { toolsOf: async () => herramientasDelAgente }).catch(() => [])
+    alcanceDeArtifacts !== null && herramientasDelAgente.length > 0
+      ? await changedSince(alcanceDeArtifacts, { toolsOf: async () => herramientasDelAgente }).catch(() => [])
       : [];
   const textoEnviado = programadaDelTurno?.sentText ?? withInvokedSkills(
     programadaDelTurno
@@ -2711,12 +2726,13 @@ async function correrTurno(
                 },
               }
             : {}),
-          ...(subagentsOn || (!asistente && rideAlong)
+          ...(subagentsOn || (!asistente && (rideAlong || toolWatch))
             ? {
                 // LEN'S SUBAGENTS: their notices, before each call and before closing; a settlement is marked
                 // delivered once, a child's message never (a restart must still tell how its run ended).
                 // And what waited for Len from the project's agents (claimed above), once, after them: its own user
-                // message, each agent framed apart — so he still has it in the next turn. Without either, no hook.
+                // message, each agent framed apart — so he still has it in the next turn. Plus mid-turn person edits
+                // in Len's project artifacts. Without any of them, no hook.
                 takeAgentNotices: () => {
                   const fromChildren = subagentsOn
                     ? takeNotices(projectId).map((n) => {
@@ -2726,7 +2742,8 @@ async function correrTurno(
                     : [];
                   const fromAgents = rideAlong && !rideAlongHanded ? [rideAlong.framing] : [];
                   if (fromAgents.length > 0) rideAlongHanded = true;
-                  return [...fromChildren, ...fromAgents];
+                  const fromArtifacts = toolWatch?.take() ?? [];
+                  return [...fromChildren, ...fromAgents, ...fromArtifacts];
                 },
                 // A turn nobody watches waits for its children before closing (DeepSeek's headless hosts). Waiting
                 // is work: the silence watchdog is kept from firing meanwhile. Not the notices' own turn: it has

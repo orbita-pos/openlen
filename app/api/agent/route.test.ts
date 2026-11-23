@@ -343,7 +343,7 @@ const agentFile = vi.hoisted(() => ({ loadAgentOf: vi.fn(async (_personId: strin
 vi.mock("@/lib/assistants/agent-file", async (orig) => ({ ...(await orig<object>()), loadAgentOf: agentFile.loadAgentOf }));
 // The tool that lives inside the agent (spec local 2026-11-22-herramienta-dentro-del-agente): none unless a test sets tools.
 const lenArtifactStore = vi.hoisted(() => ({
-  lenArtifactsOf: vi.fn(async (_assistantId: string): Promise<Record<string, unknown>[]> => []),
+  lenArtifactsOf: vi.fn(async (_scope: unknown): Promise<Record<string, unknown>[]> => []),
   personChangedCollections: vi.fn(async (_toolId: string, _since: Date | null): Promise<string[]> => []),
 }));
 vi.mock("@/lib/len-artifacts/store", () => lenArtifactStore);
@@ -5159,6 +5159,7 @@ describe("POST /api/agent — Len's subagents", () => {
 
   it("with OPENLEN_SUBAGENTS=0 there is no launcher and the loop gets no notice hooks", async () => {
     vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+    vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
       await args.runTool("Read", { file_path: "/index.html" });
       return cierre();
@@ -6129,6 +6130,7 @@ describe("POST /api/agent — the person's own assistant", () => {
 
     it("🔴 with the subagents off, they still ride: the loop gets a notices hook only for them", async () => {
       vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+      vi.stubEnv("OPENLEN_LEN_ARTIFACTS", "0");
       agentMessages.claimForLen.mockResolvedValueOnce([forLen("m1", "¿Cuál es el tope?", 1)]);
       let first: readonly string[] = [];
       mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
@@ -6473,6 +6475,164 @@ describe("POST /api/agent — the person's own assistant", () => {
       await readEvents(await pedir({ assistantId: "a1", prompt: "ya" }));
       expect(promptSent()).toBe("ya");
       expect(notices).toEqual([]);
+    });
+  });
+
+  // Task 5: Len hears what the owner changed in his project artifacts (turn-start line + mid-turn notice).
+  describe("Len hears what the owner changed in his artifacts", () => {
+    const lenRow = (over: Record<string, unknown> = {}) => ({
+      id: "len-art-1",
+      assistantId: null,
+      personId: "u1",
+      projectId: "p1",
+      slug: "presupuesto",
+      title: "Presupuesto",
+      folder: "/.artifacts/presupuesto",
+      releaseSha: "sha-1",
+      hostLabel: "lienzo-len-1",
+      phoneHostLabel: null,
+      createdAt: new Date("2026-11-22T10:00:00Z"),
+      updatedAt: new Date("2026-11-22T10:00:00Z"),
+      dataChangedAt: new Date("2026-11-22T12:00:00Z"),
+      makerSeenAt: new Date("2026-11-22T11:00:00Z"),
+      ...over,
+    });
+    const promptSent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string }])[0].prompt;
+    const savedRow = () => (mocks.registrarTurnoDelServidor.mock.calls.at(-1) as unknown as [string, { transcript: { sentText?: string } | null }])[1];
+
+    beforeEach(() => {
+      lenArtifactStore.lenArtifactsOf.mockImplementation(async (scope: unknown) => {
+        const s = scope as { projectId?: string; maker?: unknown };
+        return s.projectId === "p1" && s.maker === "len" ? [lenRow()] : [];
+      });
+      lenArtifactStore.personChangedCollections.mockImplementation(async (_toolId: string, since: Date | null) =>
+        since === null || since.getTime() < new Date("2026-11-22T12:00:00Z").getTime() ? ["items"] : [],
+      );
+    });
+    afterEach(() => {
+      lenArtifactStore.lenArtifactsOf.mockResolvedValue([]);
+      lenArtifactStore.personChangedCollections.mockResolvedValue([]);
+    });
+
+    it("🔴 appends the artifact changes line to Len's next typed message in the project and saves it in sentText", async () => {
+      mocks.runAgentLoop.mockImplementation(async () => ({ ...cierre(), mutoDurable: true }));
+      await readEvents(await pedir({ prompt: "revisa mis gastos" }));
+      expect(lenArtifactStore.lenArtifactsOf).toHaveBeenCalledWith({ projectId: "p1", maker: "len" });
+      const sent = promptSent();
+      expect(sent).toContain("revisa mis gastos");
+      expect(sent).toContain("Presupuesto (presupuesto)");
+      expect(sent).toContain("items");
+      expect(sent).toContain("artifact_data");
+      expect(savedRow().transcript?.sentText).toContain("presupuesto");
+    });
+
+    it("🔴 delivers ONE mid-turn notice to Len via takeAgentNotices (even with subagents off) and follows newly published artifacts", async () => {
+      vi.stubEnv("OPENLEN_SUBAGENTS", "0");
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
+      let midTurn: readonly string[] = [];
+      let afterPublish: readonly string[] = [];
+      mocks.runAgentTool.mockImplementationOnce(async (session: { artifactWatch?: { add(t: object): void } }) => {
+        session.artifactWatch!.add({ id: "len-art-2", slug: "stock", title: "Stock" });
+        return { response: { ok: true } };
+      });
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        publishArtifactChange("len-art-1", {
+          by: "person",
+          docs: [{ collection: "items", docId: "1", data: { amount: 20 }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        publishArtifactChange("len-art-1", {
+          by: "person",
+          docs: [{ collection: "notes", docId: "1", data: { text: "ok" }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        midTurn = args.takeAgentNotices!();
+        await args.runTool("publish_artifact", { path: "/.artifacts/stock", title: "Stock" });
+        publishArtifactChange("len-art-2", {
+          by: "person",
+          docs: [{ collection: "skus", docId: "a", data: { qty: 3 }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        afterPublish = args.takeAgentNotices!();
+        return cierre();
+      });
+      await readEvents(await pedir({ prompt: "hola" }));
+      expect(midTurn).toHaveLength(1);
+      expect(midTurn[0]).toContain("presupuesto");
+      expect(midTurn[0]).toContain("items, notes");
+      expect(afterPublish).toHaveLength(1);
+      expect(afterPublish[0]).toContain("stock");
+      expect(afterPublish[0]).toContain("skus");
+    });
+
+    it("🔴 an assistant's artifacts never reach Len's line and Len's never reach the assistant's", async () => {
+      const spaceProject = { title: "Space", subdomain: null, publishedAt: null, userBrief: null, brief: null, data: { html: "", space: { bornAt: "2026-11-19T00:00:00.000Z" } } };
+      lenArtifactStore.lenArtifactsOf.mockImplementation(async (scope: unknown) => {
+        const s = scope as { projectId?: string; maker?: unknown };
+        if (s.maker === "len") return [lenRow()];
+        if (typeof s.maker === "object" && s.maker !== null && "assistantId" in s.maker) {
+          return [lenRow({ id: "ana-art", assistantId: "a1", slug: "recorrido", title: "Recorrido", folder: "/.artifacts/lucia/recorrido" })];
+        }
+        return [];
+      });
+      // Len's turn in p1 sees ONLY presupuesto, never recorrido.
+      await readEvents(await pedir({ prompt: "hola" }));
+      expect(promptSent()).toContain("presupuesto");
+      expect(promptSent()).not.toContain("recorrido");
+
+      // Assistant's turn in space sees ONLY recorrido, never presupuesto.
+      mocks.loadProject.mockResolvedValueOnce(spaceProject);
+      await readEvents(await pedir({ assistantId: "a1", prompt: "hola" }));
+      expect(promptSent()).toContain("recorrido");
+      expect(promptSent()).not.toContain("presupuesto");
+
+      // Len in the person's space reads no artifact line at all.
+      mocks.loadProject.mockResolvedValueOnce(spaceProject);
+      await readEvents(await pedir({ prompt: "hola espacio" }));
+      expect(promptSent()).toBe("hola espacio");
+    });
+
+    it("🔴 never gives Len's artifact changes to a member or to server-started turns", async () => {
+      // Member turn: owner's artifacts stay private.
+      mocks.cabeEnElTope.mockResolvedValue(true);
+      mocks.margenDeMiembros.mockResolvedValue(null);
+      mocks.auth.mockResolvedValue({ user: { id: "miembro-1", email: "m@example.com" } });
+      fijarAccesoDePrueba((_p, u) => (u === "miembro-1" ? { rol: "editor", duenoId: "u1" } : null));
+      lenArtifactStore.lenArtifactsOf.mockClear();
+      try {
+        await readEvents(await pedir({ prompt: "cambia el titulo" }));
+      } finally {
+        fijarAccesoDePrueba(null);
+        mocks.auth.mockResolvedValue({ user: { id: "u1", email: "owner@example.com" } });
+      }
+      expect(lenArtifactStore.lenArtifactsOf).not.toHaveBeenCalled();
+      expect(promptSent()).not.toContain("presupuesto");
+
+      // Server-started scheduled turn for Len: carries no artifact change line or mid-turn notice.
+      const { publishArtifactChange } = await import("@/lib/len-artifacts/bus");
+      const runner = mocks.corredor as unknown as (u: string, b: Record<string, unknown>, r: { url: string; signal: AbortSignal }, o: Record<string, unknown>) => Promise<Response>;
+      const where = { url: "http://x/api/agent", signal: new AbortController().signal };
+      let duringScheduled: readonly string[] = [];
+      mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
+        publishArtifactChange("len-art-1", {
+          by: "person",
+          docs: [{ collection: "items", docId: "1", data: { amount: 99 }, updatedAt: new Date(), updatedBy: "person" }],
+          deleted: [],
+        });
+        duringScheduled = args.takeAgentNotices?.() ?? [];
+        return cierre();
+      });
+      await readEvents(
+        await runner("u1", { projectId: "p1", prompt: "Resumen semanal", turnId: "77777777-7777-4777-8777-7777777777c1" }, where, {
+          scheduled: {
+            framing: "[SCHEDULE REMINDER]\nResumen semanal",
+            origin: { kind: "scheduled" as const, taskId: "t1", title: "Resumen", occurrenceAt: "2026-11-22T15:00:00.000Z" },
+            onReply: vi.fn(async () => {}),
+          },
+        }),
+      );
+      expect(promptSent()).not.toContain("presupuesto");
+      expect(duringScheduled).toEqual([]);
     });
   });
 
