@@ -21,6 +21,15 @@ export const BRIDGE_METHODS = [
   "jobs.list",
   "files.pick",
   "files.deliver",
+  // An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente, §3–§4): the small database it shares with its
+  // agent, answered by the screen with the person's session. Only the agent-tool variant of the client offers them.
+  "data.get",
+  "data.set",
+  "data.update",
+  "data.delete",
+  "data.list",
+  "data.query",
+  "data.subscribe",
 ] as const;
 export type BridgeMethod = (typeof BRIDGE_METHODS)[number];
 
@@ -58,6 +67,34 @@ export interface BridgeNotification {
   readonly jsonrpc: "2.0";
   readonly method: "context";
   readonly params: ToolContext;
+  readonly channel: typeof BRIDGE_CHANNEL;
+}
+
+/** One document of an agent tool's database, as it travels to the frame (JSON: the date is an ISO string). */
+export interface BridgeDataDoc {
+  readonly collection: string;
+  readonly docId: string;
+  readonly data: unknown;
+  readonly updatedAt: string;
+  readonly updatedBy: "agent" | "person";
+}
+
+/** What `data.changed` carries: the whole set (on opening, and again on every reconnect) or one change. A document sent
+ *  with `data: null` is a removal, like the ones named in `deleted`. */
+export type DataChangedParams =
+  | { readonly kind: "baseline"; readonly docs: readonly BridgeDataDoc[] }
+  | {
+      readonly kind: "change";
+      readonly by: "agent" | "person";
+      readonly docs: readonly BridgeDataDoc[];
+      readonly deleted: ReadonlyArray<{ readonly collection: string; readonly docId: string }>;
+    };
+
+/** The parent's tell, to a frame that called `data.subscribe`: the stream of its tool's documents. */
+export interface DataChangedNotification {
+  readonly jsonrpc: "2.0";
+  readonly method: "data.changed";
+  readonly params: DataChangedParams;
   readonly channel: typeof BRIDGE_CHANNEL;
 }
 
@@ -122,6 +159,11 @@ export function isBridgeResponse(v: unknown): v is BridgeResponse {
   return onChannel(v) && Number.isSafeInteger(v.id) && ("result" in v || (!!v.error && typeof v.error === "object"));
 }
 
-export function isBridgeNotification(v: unknown): v is BridgeNotification {
-  return onChannel(v) && !("id" in v) && v.method === "context";
+/** A notification the parent sends a frame: the context, or (an agent's tool) a change of its data. */
+export function isBridgeNotification(v: unknown): v is BridgeNotification | DataChangedNotification {
+  return onChannel(v) && !("id" in v) && (v.method === "context" || v.method === "data.changed");
+}
+
+export function isDataChangedNotification(v: unknown): v is DataChangedNotification {
+  return isBridgeNotification(v) && v.method === "data.changed";
 }

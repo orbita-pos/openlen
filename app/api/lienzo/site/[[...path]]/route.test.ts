@@ -12,10 +12,18 @@ vi.mock("@/lib/lienzo/proyecto-guardado", () => ({
   loadSavedProject: vi.fn(async (projectId: string) => mocks.proyectos[projectId] ?? null),
 }));
 // AN INSTALLED TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its label lives in toolInstallations.
-const tools = vi.hoisted(() => ({ byLabel: {} as Record<string, unknown> }));
+const tools = vi.hoisted(() => ({
+  byLabel: {} as Record<string, unknown>,
+  /** An AGENT's tool (spec local 2026-11-22-herramienta-dentro-del-agente): its label lives in agentTools. */
+  agentByLabel: {} as Record<string, unknown>,
+  releases: {} as Record<string, Record<string, { content: string; contentType: string }>>,
+}));
 vi.mock("@/lib/tools/store", () => ({
   installationByLabel: vi.fn(async (label: string) => tools.byLabel[label] ?? null),
-  readRelease: vi.fn(async () => ({ "/index.html": { content: "<html><head></head><body>tool</body></html>", contentType: "text/html; charset=utf-8" } })),
+  readRelease: vi.fn(async (sha: string) => tools.releases[sha] ?? { "/index.html": { content: "<html><head></head><body>tool</body></html>", contentType: "text/html; charset=utf-8" } }),
+}));
+vi.mock("@/lib/agent-tools/store", () => ({
+  agentToolByLabel: vi.fn(async (label: string) => tools.agentByLabel[label] ?? null),
 }));
 vi.mock("@/lib/limits", () => ({ getUserPlan: vi.fn(async () => "pro") }));
 vi.mock("@/lib/backend/files", () => ({
@@ -29,6 +37,8 @@ import { guardarDocumento, vaciarAlmacenParaPruebas } from "@/lib/lienzo/almacen
 import { etiquetaDeLienzo } from "@/lib/lienzo/host";
 import { PAGE_PERMISSIONS_POLICY } from "@/lib/publish/permissions-policy";
 import { boxMarker } from "@/lib/agent/sandbox/box-marker";
+import { agentToolByLabel } from "@/lib/agent-tools/store";
+import { agentToolContentPolicy } from "@/lib/agent-tools/serve";
 
 const SECRETO = "s3cr3t";
 const P1 = "4f9c10cb-8781-48f1-b291-c5d146579f09";
@@ -348,5 +358,111 @@ describe("GET /api/lienzo/site — tools made by Len", () => {
     vaciarAlmacenParaPruebas();
     guardarDocumento({ html: "<p>p</p>", projectId: P1, userId: "u1", pagina: null });
     expect((await pide(host(P1), "/openlen/tool-bridge.js")).status).toBe(404);
+  });
+});
+
+// AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): its label lives in agentTools, and is looked up
+// only when no canvas owns the label and no installed tool took it — canvas first, installed tool second, agent tool third.
+describe("GET /api/lienzo/site — an agent's tool", () => {
+  const WORKSPACE = "lienzo-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const PHONE = "lienzo-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const INSTALLED = "lienzo-00112233445566778899aabbccddeeff";
+  const PHONE_ORIGINS = "http://localhost:5173 https://localhost capacitor://localhost";
+  const agentRow = (servedTo: "workspace" | "phone", over: Record<string, unknown> = {}) => ({
+    id: "t1",
+    assistantId: "a1",
+    personId: "u1",
+    spaceProjectId: P2,
+    slug: "recorrido",
+    title: "Recorrido",
+    folder: "/tools/ana/recorrido",
+    releaseSha: "agent-sha",
+    hostLabel: WORKSPACE,
+    phoneHostLabel: PHONE,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    dataChangedAt: null,
+    agentSeenAt: null,
+    servedTo,
+    ...over,
+  });
+  const installedRow = { id: "i1", personId: "u1", projectId: P2, releaseSha: "sha1", placement: "rail", titles: {}, descriptions: {}, iconPath: "/icon.svg", hostLabel: INSTALLED, enabled: true, installedAt: new Date(), updatedAt: new Date(), removedAt: null };
+
+  beforeEach(() => {
+    vi.mocked(agentToolByLabel).mockClear();
+    tools.byLabel = {};
+    tools.agentByLabel = { [WORKSPACE]: agentRow("workspace"), [PHONE]: agentRow("phone") };
+    tools.releases = { "agent-sha": { "/index.html": { content: "<html><head></head><body>agent tool</body></html>", contentType: "text/html; charset=utf-8" } } };
+  });
+
+  it("its label serves the published version with the bridge and the tool's content policy", async () => {
+    const res = await pide(`${WORKSPACE}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).toContain("agent tool");
+    expect(html).toContain('<script src="/openlen/tool-bridge.js"></script>');
+    expect(res.headers.get("content-security-policy")).toBe(agentToolContentPolicy("https://openlen.com"));
+    expect(res.headers.get("content-security-policy")).toContain("connect-src 'self'");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("its phone label is framed only by the phone app", async () => {
+    const res = await pide(`${PHONE}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-security-policy")).toBe(agentToolContentPolicy(PHONE_ORIGINS));
+  });
+
+  it("serves the agent tool's bridge script, with data and without the installed tools' methods", async () => {
+    const res = await pide(`${WORKSPACE}.openlen.app`, "/openlen/tool-bridge.js");
+    expect(res.status).toBe(200);
+    const js = await res.text();
+    expect(js).toContain("data.subscribe");
+    expect(js).not.toContain("jobs.");
+    expect(js).not.toContain('"backend"');
+  });
+
+  it("a path its version doesn't have is a 404", async () => {
+    expect((await pide(`${WORKSPACE}.openlen.app`, "/nope.js")).status).toBe(404);
+  });
+
+  it("🔴 a label with a canvas is the canvas, and never reaches the table of agent tools", async () => {
+    const label = etiquetaDeLienzo(P1, { AUTH_SECRET: SECRETO })!;
+    tools.agentByLabel[label] = agentRow("workspace", { hostLabel: label });
+    const doc = guardarDocumento({ html: "<!doctype html><p>home</p>", projectId: P1, userId: "u1", pagina: null });
+    const res = await pide(`${label}.openlen.app`, `/?__lienzo=${doc}`);
+    expect(await res.text()).toContain("<p>home</p>");
+    expect(agentToolByLabel).not.toHaveBeenCalled();
+  });
+
+  it("🔴 an installed tool takes the label before an agent's", async () => {
+    tools.byLabel = { [INSTALLED]: installedRow };
+    tools.agentByLabel[INSTALLED] = agentRow("workspace", { hostLabel: INSTALLED });
+    const res = await pide(`${INSTALLED}.openlen.app`, "/");
+    expect(res.status).toBe(200);
+    expect(await res.text()).not.toContain("agent tool");
+    // the installed tool's own frame header, not the agent tool's content policy
+    expect(res.headers.get("content-security-policy")).toBe("frame-ancestors https://openlen.com");
+    expect(agentToolByLabel).not.toHaveBeenCalled();
+  });
+
+  it("with no canvas and no installed tool it asks for the label, and a label nobody owns is a 404", async () => {
+    expect((await pide("lienzo-cccccccccccccccccccccccccccccccc.openlen.app", "/")).status).toBe(404);
+    expect(agentToolByLabel).toHaveBeenCalledWith("lienzo-cccccccccccccccccccccccccccccccc");
+  });
+
+  it("with OPENLEN_AGENT_TOOLS=0 it is not served, and not even looked up", async () => {
+    vi.stubEnv("OPENLEN_AGENT_TOOLS", "0");
+    expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(404);
+    expect(agentToolByLabel).not.toHaveBeenCalled();
+  });
+
+  it("with OPENLEN_TOOLS=0 (the installed tools off) an agent's tool is still served: they are two switches", async () => {
+    vi.stubEnv("OPENLEN_TOOLS", "0");
+    expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(200);
+  });
+
+  it("when the lookup fails the label is a 404, not a 500", async () => {
+    vi.mocked(agentToolByLabel).mockRejectedValueOnce(new Error("db down"));
+    expect((await pide(`${WORKSPACE}.openlen.app`, "/")).status).toBe(404);
   });
 });

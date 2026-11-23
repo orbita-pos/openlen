@@ -21,8 +21,9 @@ export const VISUALS_CDN_ORIGINS = [
  *  Checked 2026-10-16: the CSS exists on jsdelivr and its classes are `.icon-<name>`. */
 export const LUCIDE_FONT_VERSION = "1.16.0";
 
-const GOOGLE_FONT_STYLES = "https://fonts.googleapis.com";
-const GOOGLE_FONT_FILES = "https://fonts.gstatic.com";
+/** Also what an agent's tool loads its fonts from (`lib/agent-tools/serve.ts`): one list for both. */
+export const GOOGLE_FONT_STYLES = "https://fonts.googleapis.com";
+export const GOOGLE_FONT_FILES = "https://fonts.gstatic.com";
 
 /** `closed`: the person's own assistant's visuals in a published page's bubble (phase 2B of the spec local
  *  2026-11-06-asistente-propio, §5): «sin poder mandar datos a ningún sitio» — no fetch at all, images only as data:.

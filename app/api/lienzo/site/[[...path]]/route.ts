@@ -78,6 +78,18 @@ export async function GET(
         return serveToolRelease(tool, ruta, { requestHost: req.headers.get("host"), acceptLanguage: req.headers.get("accept-language"), servedTo: tool.servedTo });
       }
     }
+    // AN AGENT'S TOOL (spec local 2026-11-22-herramienta-dentro-del-agente, §2): third and last — no canvas and no installed
+    // tool owns the label. Its published version, with the bridge, on its own switch (OPENLEN_AGENT_TOOLS), whether or not
+    // the installed tools (OPENLEN_TOOLS) are on.
+    const { agentToolsEnabled } = await import("@/lib/agent-tools/enabled");
+    if (agentToolsEnabled()) {
+      const { agentToolByLabel } = await import("@/lib/agent-tools/store");
+      const agentTool = await agentToolByLabel(etiqueta).catch(() => null);
+      if (agentTool) {
+        const { serveAgentTool } = await import("@/lib/agent-tools/serve");
+        return serveAgentTool(agentTool, ruta, { requestHost: req.headers.get("host") });
+      }
+    }
   }
   // A TOOL PROJECT'S CANVAS gets `window.openlen` too, in draft mode: the workspace answers it.
   if (ruta === TOOL_BRIDGE_PATH) {

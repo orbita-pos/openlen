@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 
-import { BRIDGE_METHODS, isBridgeNotification, isBridgeRequest, isBridgeResponse, TOOL_THEME_TOKENS } from "./protocol";
+import { BRIDGE_METHODS, isBridgeNotification, isBridgeRequest, isBridgeResponse, isDataChangedNotification, TOOL_THEME_TOKENS } from "./protocol";
 
 const req = { jsonrpc: "2.0", id: 1, method: "projects", channel: "openlen-tool" };
 
@@ -27,6 +27,25 @@ describe("bridge messages", () => {
     expect(isBridgeNotification({ jsonrpc: "2.0", method: "context", params: {}, channel: "openlen-tool" })).toBe(true);
     expect(isBridgeNotification({ jsonrpc: "2.0", id: 2, method: "context", params: {}, channel: "openlen-tool" })).toBe(false);
   });
+  it("an agent tool's data requests are requests like any other", () => {
+    for (const method of ["data.get", "data.set", "data.update", "data.delete", "data.list", "data.query", "data.subscribe"]) {
+      expect(isBridgeRequest({ ...req, method, params: { collection: "tareas" } })).toBe(true);
+    }
+    expect(isBridgeRequest({ ...req, method: "data.drop" })).toBe(false);
+  });
+  it("data.changed is a notification too: a baseline or a change, never with an id", () => {
+    const baseline = { jsonrpc: "2.0", method: "data.changed", params: { kind: "baseline", docs: [] }, channel: "openlen-tool" };
+    const change = { jsonrpc: "2.0", method: "data.changed", params: { kind: "change", by: "agent", docs: [], deleted: [] }, channel: "openlen-tool" };
+    for (const n of [baseline, change]) {
+      expect(isBridgeNotification(n)).toBe(true);
+      expect(isDataChangedNotification(n)).toBe(true);
+      expect(isBridgeNotification({ ...n, id: 3 })).toBe(false);
+    }
+    // the context notification is not a data one
+    expect(isDataChangedNotification({ jsonrpc: "2.0", method: "context", params: {}, channel: "openlen-tool" })).toBe(false);
+    expect(isBridgeNotification({ ...baseline, method: "data.other" })).toBe(false);
+    expect(isBridgeNotification({ ...baseline, channel: "other" })).toBe(false);
+  });
   it("names the methods the client offers and the workspace tokens it passes", () => {
     expect([...BRIDGE_METHODS]).toEqual([
       "context",
@@ -43,6 +62,13 @@ describe("bridge messages", () => {
       "jobs.list",
       "files.pick",
       "files.deliver",
+      "data.get",
+      "data.set",
+      "data.update",
+      "data.delete",
+      "data.list",
+      "data.query",
+      "data.subscribe",
     ]);
     expect(TOOL_THEME_TOKENS).toContain("--accent");
     expect(TOOL_THEME_TOKENS).toContain("--bg");
