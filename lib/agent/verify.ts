@@ -1535,9 +1535,11 @@ export interface MiradaParams {
    * Ausente ⇒ se mide el documento tal cual, como antes de que esto existiera.
    */
   readonly vista?: ContextoDeVista | null;
-  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): measured with window.openlen in draft, as the
-   *  screenshot sees it — without it every tool «throws» reading the bridge. */
-  readonly toolBridge?: import("@/lib/tools/bridge/handlers").BridgeCaller;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4; or an agent's tool, §5): measured with
+   *  window.openlen, as the screenshot sees it — without it every tool «throws» reading the bridge. */
+  readonly toolBridge?: import("@/lib/tools/bridge/eyes").EyesCaller;
+  /** An agent tool's published sibling files (`/app.js` → content), served in memory alongside its `/index.html`. */
+  readonly releaseFiles?: Readonly<Record<string, string>>;
 }
 
 /** El proveedor de la rama `describir`: mismo papel con visión que los ojos,
@@ -1624,13 +1626,18 @@ export async function observarPagina(
   // el usuario miraban páginas distintas. Fallo blando, como allí: si el
   // binding nativo no carga se mide crudo, que ya es útil.
   const medir = internals.medir ?? renderVisualQualityViewports;
-  const medible = documentoMedible(params.html, params.vista ?? null);
-  // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
-  const suCarpeta = await carpetaDeLaVista(params.vista);
   const bridge = params.toolBridge;
+  const agentTool = bridge?.mode === "agentTool";
+  const medible = agentTool ? params.html : documentoMedible(params.html, params.vista ?? null);
+  // LA CARPETA (pieza 9 de Len 2.5): como en los ojos.
+  const suCarpeta = agentTool ? { files: params.releaseFiles ?? {}, pagina: null } : await carpetaDeLaVista(params.vista);
   const doc = bridge ? injectToolBridge(medible) : medible;
   const carpeta = bridge
-    ? { ...(suCarpeta ?? { files: {}, pagina: null }), platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([]) } }
+    ? {
+        ...(suCarpeta ?? { files: {}, pagina: null }),
+        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], agentTool ? { agentTool: true } : undefined) },
+        ...(agentTool ? { rawFiles: true } : {}),
+      }
     : suCarpeta;
   const preparePage = bridge
     ? async (page: unknown) => (await import("@/lib/tools/bridge/eyes")).installEyesBridge(page as never, bridge)

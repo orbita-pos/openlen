@@ -3390,3 +3390,129 @@ describe("read_widget_context reads what the turn holds", () => {
     ]);
   });
 });
+
+// TASK 8: view_page / use_page with `tool` opens the agent's own published tool on a copy of its data.
+describe("agent tool eyes: view_page and use_page with tool", () => {
+  const spaceAgentSession = (): AgentSession => ({
+    ...makeSession(),
+    readOnly: true,
+    uiLocale: "es",
+    assistant: { id: "a1", name: "Ana", slug: "ana", projects: [], inSpace: true },
+  });
+
+  function makeToolDeps(loaded: {
+    tool: { id: string; slug: string; title: string; releaseSha: string };
+    html: string;
+    files: Record<string, string>;
+    docs: { collection: string; docId: string; data: unknown; updatedAt: Date; updatedBy: "agent" | "person" }[];
+  } | null) {
+    const { deps } = makeDeps();
+    const seenUsar: Record<string, unknown>[] = [];
+    const seenObservar: Record<string, unknown>[] = [];
+    const loadedArgs: [string, string][] = [];
+    const eyesDeps = {
+      ...deps,
+      // Space project has empty data.html! Eyes for `tool` must still work using the tool's published release.
+      loadProject: async () => ({
+        title: "Space",
+        subdomain: null,
+        publishedAt: null,
+        data: { html: "", space: { bornAt: "2026-11-19T00:00:00Z" } },
+      }),
+      loadAgentToolForEyes: async (assistantId: string, slug: string) => {
+        loadedArgs.push([assistantId, slug]);
+        return loaded && loaded.tool.slug === slug ? loaded : null;
+      },
+      usarPagina: async (input: Record<string, unknown>) => {
+        seenUsar.push(input);
+        return { informe: "Visit ok", images: [{ mimeType: "image/jpeg", dataBase64: "JPG" }] };
+      },
+      observarPagina: async (input: Record<string, unknown>) => {
+        seenObservar.push(input);
+        return { respuesta: "Measured ok" };
+      },
+    } as unknown as AgentDeps;
+    return { eyesDeps, seenUsar, seenObservar, loadedArgs };
+  }
+
+  const SAMPLE = {
+    tool: { id: "t1", slug: "recorrido", title: "Recorrido", releaseSha: "sha-abc" },
+    html: "<!doctype html><html><body><h1>Recorrido</h1></body></html>",
+    files: { "/app.js": "window.ok = true;" },
+    docs: [{ collection: "lessons", docId: "1", data: { unlocked: true }, updatedAt: new Date("2026-11-22T10:00:00Z"), updatedBy: "agent" as const }],
+  };
+
+  it("view_page screenshot and measure open the published tool with agentTool bridge and release files", async () => {
+    const { eyesDeps, seenUsar, seenObservar, loadedArgs } = makeToolDeps(SAMPLE);
+    const shot = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+    assert.equal(shot.response.ok, true);
+    assert.equal(loadedArgs[0]?.[0], "a1");
+    assert.equal(loadedArgs[0]?.[1], "recorrido");
+    assert.equal(seenUsar.length, 1);
+    assert.equal(seenUsar[0]!.html, SAMPLE.html);
+    assert.deepEqual(seenUsar[0]!.releaseFiles, SAMPLE.files);
+    assert.deepEqual(seenUsar[0]!.toolBridge, {
+      mode: "agentTool",
+      toolId: "t1",
+      releaseSha: "sha-abc",
+      locale: "es",
+      theme: "light",
+      docs: SAMPLE.docs,
+    });
+
+    const meas = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "measure", tool: "recorrido" });
+    assert.equal(meas.response.ok, true);
+    assert.equal(seenObservar.length, 1);
+    assert.equal(seenObservar[0]!.html, SAMPLE.html);
+    assert.deepEqual(seenObservar[0]!.releaseFiles, SAMPLE.files);
+    assert.equal((seenObservar[0]!.toolBridge as { mode: string }).mode, "agentTool");
+  });
+
+  it("use_page with tool runs steps on the published tool and passes agentTool bridge", async () => {
+    const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
+    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "Recorrido" }] });
+    assert.equal(out.response.ok, true);
+    assert.equal(seenUsar.length, 1);
+    assert.equal(seenUsar[0]!.html, SAMPLE.html);
+    assert.equal((seenUsar[0]!.toolBridge as { toolId: string }).toolId, "t1");
+  });
+
+  it("refuses another agent's slug (not found for this assistantId)", async () => {
+    const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
+    const out = await runAgentTool(spaceAgentSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "someone-elses" });
+    assert.equal(out.response.ok, false);
+    assert.match(String(out.response.error), /no published tool/i);
+    assert.equal(seenUsar.length, 0);
+  });
+
+  it("refuses Len (no assistant) and non-space assistants passing tool", async () => {
+    const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
+    const lenView = await runAgentTool(makeSession(), eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+    assert.equal(lenView.response.ok, false);
+    assert.match(String(lenView.response.error), /only for an agent/i);
+    const lenUse = await runAgentTool(makeSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "x" }] });
+    assert.equal(lenUse.response.ok, false);
+    assert.match(String(lenUse.response.error), /only for an agent/i);
+
+    const notSpace: AgentSession = { ...spaceAgentSession(), assistant: { id: "a1", name: "Ana", slug: "ana", projects: [], inSpace: false } };
+    const nsOut = await runAgentTool(notSpace, eyesDeps, "view_page", { mode: "screenshot", tool: "recorrido" });
+    assert.equal(nsOut.response.ok, false);
+    assert.match(String(nsOut.response.error), /space/i);
+    assert.equal(seenUsar.length, 0);
+  });
+
+  it("refuses when OPENLEN_AGENT_TOOLS=0", async () => {
+    const prev = process.env.OPENLEN_AGENT_TOOLS;
+    process.env.OPENLEN_AGENT_TOOLS = "0";
+    try {
+      const { eyesDeps, seenUsar } = makeToolDeps(SAMPLE);
+      const out = await runAgentTool(spaceAgentSession(), eyesDeps, "use_page", { tool: "recorrido", steps: [{ read: "x" }] });
+      assert.equal(out.response.ok, false);
+      assert.match(String(out.response.error), /turned off/i);
+      assert.equal(seenUsar.length, 0);
+    } finally {
+      if (prev === undefined) delete process.env.OPENLEN_AGENT_TOOLS;
+      else process.env.OPENLEN_AGENT_TOOLS = prev;
+    }
+  });
+});

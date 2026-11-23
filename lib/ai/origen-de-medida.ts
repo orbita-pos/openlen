@@ -76,6 +76,9 @@ export interface OpcionesDelDocumento {
    *  empaquetadas de una app, plan 04): no son de la carpeta del proyecto, así
    *  que no pasan su filtro de lo publicable — se aceptan sólo bajo `/openlen/`. */
   readonly platformFiles?: Readonly<Record<string, string>>;
+  /** An agent tool's published release: already re-rooted and validated at publish time, so website reserved roots like
+   *  `/assets/` are valid sibling files (only `/openlen/` stays reserved for `platformFiles`). */
+  readonly rawFiles?: boolean;
 }
 
 /** Cuánto sin peticiones abiertas es «la red se calmó», y el tope de la
@@ -206,10 +209,11 @@ function crear(): Promise<OrigenDeMedida> {
           const id = randomUUID();
           documentos.set(id, html);
           if (opciones.files || opciones.platformFiles) {
+            const allowFile = (ruta: string) => (opciones.rawFiles ? ruta.startsWith("/") && !ruta.startsWith("/openlen/") : isPublishableFolderPath(ruta));
             ficherosPorDocumento.set(
               id,
               new Map([
-                ...Object.entries(opciones.files ?? {}).filter(([ruta]) => isPublishableFolderPath(ruta)),
+                ...Object.entries(opciones.files ?? {}).filter(([ruta]) => allowFile(ruta)),
                 ...Object.entries(opciones.platformFiles ?? {}).filter(([ruta]) => ruta.startsWith("/openlen/")),
               ]),
             );

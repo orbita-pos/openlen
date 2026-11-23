@@ -63,6 +63,23 @@ describe("assistantTools", () => {
     const got = names(assistantTools(LEN));
     expect(got).toEqual(names(LEN).filter((n) => got.includes(n)));
   });
+
+  it("adds the optional tool parameter to view_page and use_page for agents without mutating Len's declarations", () => {
+    const lenDecls = buildFunctionDeclarations({}, { functionSecrets: true, realTerminal: true, agentTypes: NO_AGENT_TYPES }, "len", null);
+    const lenView = lenDecls.find((d) => d.name === "view_page") as { parameters: { properties: Record<string, unknown> } };
+    const lenUse = lenDecls.find((d) => d.name === "use_page") as { parameters: { properties: Record<string, unknown> } };
+    expect(lenView.parameters.properties.tool).toBeUndefined();
+    expect(lenUse.parameters.properties.tool).toBeUndefined();
+
+    const agentDecls = assistantTools(lenDecls);
+    const agentView = agentDecls.find((d) => d.name === "view_page") as { parameters: { properties: Record<string, unknown> } };
+    const agentUse = agentDecls.find((d) => d.name === "use_page") as { parameters: { properties: Record<string, unknown> } };
+    expect(agentView.parameters.properties.tool).toBeDefined();
+    expect(agentUse.parameters.properties.tool).toBeDefined();
+    // Original Len declarations stay untouched.
+    expect(lenView.parameters.properties.tool).toBeUndefined();
+    expect(lenUse.parameters.properties.tool).toBeUndefined();
+  });
 });
 
 // 🔴 PINNED against Len's REAL catalog, a page and an app (the route passes the same builder's output through

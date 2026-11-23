@@ -31,8 +31,7 @@
 // dónde iba.
 
 import { toolBridgeClientSource } from "@/lib/tools/bridge/client-source";
-import { installEyesBridge } from "@/lib/tools/bridge/eyes";
-import type { BridgeCaller } from "@/lib/tools/bridge/handlers";
+import { installEyesBridge, type EyesCaller } from "@/lib/tools/bridge/eyes";
 import { injectToolBridge, TOOL_BRIDGE_PATH } from "@/lib/tools/bridge/inject";
 import { createHash } from "node:crypto";
 import { Script } from "node:vm";
@@ -865,8 +864,10 @@ export interface VisitaParams {
   /** El tamaño de la pestaña en esta visita: un teléfono (390×844, el mismo del
    *  pase de móvil de `measure`) o, si no se dice, escritorio. */
   readonly viewport?: "mobile" | "desktop";
-  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): its `window.openlen`, answered in Node. */
-  readonly toolBridge?: BridgeCaller;
+  /** A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4; or an agent's tool, §5): its `window.openlen`, answered in Node. */
+  readonly toolBridge?: EyesCaller;
+  /** An agent tool's published sibling files (`/app.js` → content), served in memory alongside its `/index.html`. */
+  readonly releaseFiles?: Readonly<Record<string, string>>;
   /** The installed tool's private host, opened top-level instead of the draft (`installed: true`). */
   readonly installedUrl?: string;
 }
@@ -1205,9 +1206,25 @@ const STOOD_STILL = "Between your calls it stood still (its scripts, timers and 
 
 /** A TOOL'S THEME is part of what the tab shows (spec local 2026-11-04-herramientas-hechas-por-len, §4.8): the tool reads
  *  its context when it boots, so light → dark loads it again. A page without a tool keeps its version. */
-export function tabVersionOf(html: string, opciones: OpenTab["opciones"], toolTheme: "light" | "dark" | undefined): string {
+export function tabVersionOf(
+  html: string,
+  opciones: OpenTab["opciones"],
+  toolTheme: "light" | "dark" | undefined,
+  extraKey?: string,
+): string {
   const version = versionOf(html, opciones);
-  return toolTheme ? `${version}:${toolTheme}` : version;
+  const withTheme = toolTheme ? `${version}:${toolTheme}` : version;
+  return extraKey ? `${withTheme}:${extraKey}` : withTheme;
+}
+
+function agentToolVersionKey(caller: Extract<EyesCaller, { mode: "agentTool" }>): string {
+  const h = createHash("sha256");
+  h.update(caller.toolId);
+  h.update(`\0${caller.releaseSha ?? ""}`);
+  for (const d of caller.docs) {
+    h.update(`\0${d.collection}\0${d.docId}\0${JSON.stringify(d.data)}\0${d.updatedAt.getTime()}\0${d.updatedBy}`);
+  }
+  return `agentTool:${h.digest("hex")}`;
 }
 
 function versionOf(html: string, opciones: OpenTab["opciones"]): string {
@@ -1587,7 +1604,8 @@ export async function closeBrowserTab(holder: BrowserTabHolder | undefined): Pro
 }
 
 /** The tabs whose page already exposes a tool's bridge (Puppeteer refuses to expose a name twice). */
-const bridgeCallers = new WeakMap<object, BridgeCaller>();
+const exposedBridge = new WeakSet<object>();
+const bridgeCallers = new WeakMap<object, EyesCaller>();
 
 async function visitTab(
   tab: OpenTab,
@@ -1595,29 +1613,40 @@ async function visitTab(
   internals: VisitaInternals,
   o: { readonly persistent: boolean; readonly recovered: boolean; readonly closedIdle?: boolean },
 ): Promise<{ informe: string; images?: InlineImage[]; stuck: boolean; noChange?: boolean }> {
-  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4): `window.openlen` first in its <head>, served by
-  // the platform under /openlen/, and answered in Node in draft mode — never writing production.
-  const medible = documentoMedible(p.html, p.vista ?? null);
+  // A TOOL (spec local 2026-11-04-herramientas-hechas-por-len, §4.4; or an agent's tool, §5): `window.openlen` first in
+  // its <head>, served by the platform under /openlen/, and answered in Node — never writing real data.
+  const agentTool = p.toolBridge?.mode === "agentTool";
+  const medible = agentTool ? p.html : documentoMedible(p.html, p.vista ?? null);
   const html = p.toolBridge ? injectToolBridge(medible) : medible;
   const plazoMs = internals.plazoMs ?? PLAZO_DE_LA_VISITA_MS;
   const plazo = Date.now() + plazoMs;
-  const carpeta = await carpetaDeLaVista(p.vista);
+  const carpeta = agentTool ? { files: p.releaseFiles ?? {}, pagina: null } : await carpetaDeLaVista(p.vista);
   const opciones = p.toolBridge
-    ? { ...(carpeta ?? { files: {}, pagina: null }), platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([]) } }
+    ? {
+        ...(carpeta ?? { files: {}, pagina: null }),
+        platformFiles: { [TOOL_BRIDGE_PATH]: toolBridgeClientSource([], agentTool ? { agentTool: true } : undefined) },
+        ...(agentTool ? { rawFiles: true } : {}),
+      }
     : carpeta;
+  const extraKey = p.toolBridge?.mode === "agentTool" ? agentToolVersionKey(p.toolBridge) : undefined;
+  const version = tabVersionOf(html, opciones, p.toolBridge ? (p.toolBridge.theme ?? "light") : undefined, extraKey);
   if (p.toolBridge) {
-    // Exposed once per tab; the caller is this visit's (light or dark), read on every call.
+    // Exposed once per tab; the caller is this visit's (light/dark, or an agent tool's in-memory copy). When an agent
+    // tool's persistent tab carries on without reloading (`willReuse`), keep its existing caller so in-memory writes
+    // survive sequential `use_page` steps; any reload, `newVisit`, or DB change installs the fresh snapshot.
     const page = tab.page as object;
-    const first = !bridgeCallers.has(page);
-    bridgeCallers.set(page, p.toolBridge);
-    if (first) {
-      await installEyesBridge(tab.page as never, () => bridgeCallers.get(page)!).catch((err: unknown) => {
-        bridgeCallers.delete(page);
+    const willReuse = agentTool && tab.doc !== null && tab.version === version && !p.newVisit;
+    if (!willReuse || !bridgeCallers.has(page)) bridgeCallers.set(page, p.toolBridge);
+    if (!exposedBridge.has(page)) {
+      exposedBridge.add(page);
+      await installEyesBridge(tab.page as never, () => bridgeCallers.get(page)).catch((err: unknown) => {
+        exposedBridge.delete(page);
         throw err;
       });
     }
+  } else {
+    bridgeCallers.delete(tab.page as object);
   }
-  const version = tabVersionOf(html, opciones, p.toolBridge ? (p.toolBridge.theme ?? "light") : undefined);
   const enUnaApp = Boolean(p.vista?.app);
   const inicio = (doc: DocumentoServido) => doc.url + (opciones?.hash ?? "");
 
