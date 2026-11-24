@@ -5,7 +5,16 @@ import { entryFingerprint, parseMcpConfig } from "./config";
 import { mountServer } from "./mount";
 import { NeedsSignIn } from "./oauth/provider";
 import type { ServerState } from "./store";
-import { connectorsForTurn, mergeMcpDeclarations, RESOURCE_TOOL_NAMES, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
+import {
+  connectorsForTurn,
+  mergeMcpDeclarations,
+  privateInSharedProject,
+  RESOURCE_TOOL_NAMES,
+  SHARED_PROJECT_NOTE,
+  TurnConnections,
+  type CallDeps,
+  type TurnDeps,
+} from "./turn";
 
 const NOW = new Date("2026-11-06T12:00:00Z");
 const obj = { type: "object", properties: {} };
@@ -721,5 +730,56 @@ describe("mcp__<server>__authenticate", () => {
     expect(memberTurn.declarations.map((x) => x.name)).toEqual(["mcp__cal__list_events"]);
     expect(ownerTurn.declarations).toEqual([]);
     expect(ownerTurn.contextText).toBe("");
+  });
+});
+
+// PRIVATE BY DEFAULT (spec local 2026-11-24-servidor-de-google-calendar, §5.6; Jesús, 24/11: «así como lo hace Claude
+// Code»): everyone in a shared project reads its chat, so the speaker's personal connectors are off there — the tools,
+// the resources, the sign-in and the «Conectar» cards — and the turn's context says why. The server names stay taken in
+// the namespace an installed tool's operations share, and what needs mounting is still mounted outside the turn.
+describe("privateInSharedProject", () => {
+  const GCAL_ENV = { OPENLEN_MCP_GOOGLE_CLIENT_ID: "gid" };
+
+  it("🔴 declares and routes nothing, keeps the names and what to mount, and says why in the context", async () => {
+    const { d } = setup({ notion: entry("https://n.example.com/mcp"), fresh: entry("https://f.example.com/mcp") }, ["notion", "fresh"], [
+      { serverName: "notion", tools: [tool("notion", "search")], hasResources: true },
+    ]);
+    const full = await connectorsForTurn("p1", { ...d, env: GCAL_ENV, personEmail: async () => "jesus@example.com" });
+    expect(full.declarations.map((x) => x.name)).toContain("mcp__notion__search");
+    expect(full.directory?.map((x) => x.id)).toEqual(["google-calendar"]);
+    const shared = privateInSharedProject(full);
+    expect(shared.declarations).toEqual([]);
+    expect(shared.routes.size).toBe(0);
+    expect(shared.active.size).toBe(0);
+    expect(shared.needsAuth?.size ?? 0).toBe(0);
+    expect(shared.directory ?? []).toEqual([]);
+    expect(shared.resourceServers).toEqual([]);
+    expect(shared.serverNames).toEqual(full.serverNames);
+    expect(shared.toMount).toEqual(full.toMount);
+    expect(shared.toMount).toContain("fresh");
+    expect(shared.contextText).toBe(SHARED_PROJECT_NOTE);
+  });
+
+  it("with nothing configured but a «Conectar» card it could offer: no suggest_connectors, and the note", async () => {
+    const { d } = setup({}, [], []);
+    const full = await connectorsForTurn("p1", { ...d, env: GCAL_ENV, personEmail: async () => "jesus@example.com" });
+    expect(full.declarations.map((x) => x.name)).toEqual(["suggest_connectors"]);
+    const shared = privateInSharedProject(full);
+    expect(shared.declarations).toEqual([]);
+    expect(shared.routes.size).toBe(0);
+    expect(shared.contextText).toBe(SHARED_PROJECT_NOTE);
+  });
+
+  it("with no server and nothing to offer: nothing, not even the note", async () => {
+    const { d } = setup({}, [], []);
+    const shared = privateInSharedProject(await connectorsForTurn("p1", d));
+    expect(shared.declarations).toEqual([]);
+    expect(shared.contextText).toBe("");
+  });
+
+  it("the note is the spec's, word for word", () => {
+    expect(SHARED_PROJECT_NOTE).toBe(
+      "This project is shared: everyone in it reads this chat, so your personal connectors are off here. If the person asks for something from one (their calendar, their email), tell them to ask in their own assistant or in a project only they use.",
+    );
   });
 });

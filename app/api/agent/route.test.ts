@@ -457,6 +457,7 @@ vi.mock("@/lib/projects/thumbnail-jobs", () => ({ scheduleDraftThumbnail: vi.fn(
 import { fijarAccesoDePrueba } from "@/lib/projects/acceso-de-prueba";
 import { PERSONAL_MEMORY_FOOT } from "@/lib/agent/memory/personal-context";
 import { PRIVATE_MEMORY_NOTE } from "@/lib/agent/memory/private-memory";
+import { RESOURCE_TOOL_NAMES, SHARED_PROJECT_NOTE } from "@/lib/mcp-connectors/turn";
 
 async function readEvents(res: Response): Promise<Array<{ event: string; data: Record<string, unknown> }>> {
   const text = await res.text();
@@ -7058,5 +7059,63 @@ describe("POST /api/agent — the person's own assistant", () => {
     expect(toolNames()).not.toContain("publish_tool");
     expect(toolNames()).not.toContain("tool_data");
     expect((mocks.createSubagentLauncher.mock.calls.at(-1)![0] as { readOnly?: true }).readOnly).toBeUndefined();
+  });
+
+  // PRIVATE BY DEFAULT (spec local 2026-11-24-servidor-de-google-calendar, §5.6; Jesús, 24/11: «así como lo hace Claude
+  // Code»): everyone in a project with members reads its chat, so nobody's personal connectors are declared there — the
+  // owner's or a member's —, and the turn's context says why. The owner's own assistant keeps them: only its owner sees
+  // its chat. Not knowing whether the project is shared counts as shared (RF 4).
+  describe("personal connectors in a shared project", () => {
+    const connectorsSent = () => (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ connectors?: string | null }])[0].connectors ?? null;
+    const connectorTools = () => toolNames().filter((n) => n.startsWith("mcp__") || n === "suggest_connectors" || (RESOURCE_TOOL_NAMES as readonly string[]).includes(n));
+    beforeEach(() => {
+      connectorDeps.readConfig.mockImplementation(async () => ({ text: JSON.stringify({ servers: { notion: connectorDeps.entry } }), approved: {}, version: 1 }));
+    });
+    afterEach(() => {
+      connectorDeps.readConfig.mockImplementation(async () => ({ text: connectorDeps.none, approved: {}, version: 0 }));
+      mocks.proyectoCompartido.mockImplementation(async () => false);
+      fijarAccesoDePrueba(null);
+    });
+
+    it("a project without members: the owner's turn declares them, as today", async () => {
+      await readEvents(await pedir({}));
+      expect(connectorTools()).toContain("mcp__notion__search");
+      expect(connectorsSent()).toContain('["notion"]');
+    });
+
+    it("🔴 a project with a member: the owner's turn declares none, and its context says why", async () => {
+      mocks.proyectoCompartido.mockImplementation(async () => true);
+      await readEvents(await pedir({}));
+      expect(connectorTools()).toEqual([]);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+    });
+
+    it("🔴 a project with a member: the member's turn declares none of theirs either", async () => {
+      mocks.proyectoCompartido.mockImplementation(async () => true);
+      mocks.cabeEnElTope.mockResolvedValue(true);
+      mocks.margenDeMiembros.mockResolvedValue(null);
+      mocks.auth.mockResolvedValue({ user: { id: "ana", email: "ana@example.com" } });
+      fijarAccesoDePrueba((_p, u) => (u === "ana" ? { rol: "editor", duenoId: "u1" } : null));
+      await readEvents(await pedir({}));
+      expect(connectorDeps.readConfig).toHaveBeenCalledWith("ana");
+      expect(connectorTools()).toEqual([]);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+    });
+
+    it("🔴 the owner's own assistant in that project keeps them: only its owner sees its chat", async () => {
+      mocks.proyectoCompartido.mockImplementation(async () => true);
+      await readEvents(await pedir({ assistantId: "a1" }));
+      expect(connectorTools()).toContain("mcp__notion__search");
+      expect(connectorsSent()).not.toBe(SHARED_PROJECT_NOTE);
+    });
+
+    it("🔴 RF 4: when asking whether the project is shared fails, no connectors", async () => {
+      mocks.proyectoCompartido.mockImplementation(async () => {
+        throw new Error("the database is down");
+      });
+      await readEvents(await pedir({}));
+      expect(connectorTools()).toEqual([]);
+      expect(connectorsSent()).toBe(SHARED_PROJECT_NOTE);
+    });
   });
 });

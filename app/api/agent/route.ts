@@ -898,11 +898,18 @@ async function correrTurno(
   // LEN'S MCP CONNECTORS (spec local 2026-11-06-conectores-mcp, §5.4–5.6): the SPEAKER's ~/.len/mcp.json servers, from
   // the lists their last mount stored — a turn never waits on a server. Their names are taken in the namespace the
   // operations share; servers whose list is missing, changed or old are mounted outside this turn.
+  // PRIVATE BY DEFAULT (spec local 2026-11-24-servidor-de-google-calendar, §5.6): in a project with members everyone reads
+  // its chat, so nobody's personal connectors are declared there — the owner's or a member's —; the owner's own assistant,
+  // whose chat only its owner sees, keeps them. Asked only when there is something to hide, and a failed question counts
+  // as shared: never the other way round.
   let conexionesDelTurno: import("@/lib/mcp-connectors/turn").TurnConnections | null = null;
   const conectores = connectorsEnabled()
     ? await (async () => {
-        const [{ connectorsForTurn }, { realTurnDeps }] = await Promise.all([import("@/lib/mcp-connectors/turn"), import("@/lib/mcp-connectors/real")]);
-        return connectorsForTurn(quien, realTurnDeps());
+        const [{ connectorsForTurn, privateInSharedProject }, { realTurnDeps }] = await Promise.all([import("@/lib/mcp-connectors/turn"), import("@/lib/mcp-connectors/real")]);
+        const deLaPersona = await connectorsForTurn(quien, realTurnDeps());
+        const algoQueOcultar = deLaPersona.serverNames.length > 0 || (deLaPersona.directory?.length ?? 0) > 0;
+        const compartidoParaConectores = !asistente && algoQueOcultar && (await proyectoCompartido(projectId).catch(() => true));
+        return compartidoParaConectores ? privateInSharedProject(deLaPersona) : deLaPersona;
       })().catch((err: unknown) => {
         console.warn("[mcp-connectors] the speaker's connectors couldn't be read:", err);
         return null;

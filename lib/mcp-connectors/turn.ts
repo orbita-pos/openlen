@@ -134,6 +134,30 @@ export interface TurnConnectors {
   readonly toMount: readonly string[];
 }
 
+/** What the turn's context says in a shared project (spec local 2026-11-24-servidor-de-google-calendar, §5.6). */
+export const SHARED_PROJECT_NOTE =
+  "This project is shared: everyone in it reads this chat, so your personal connectors are off here. If the person asks for something from one (their calendar, their email), tell them to ask in their own assistant or in a project only they use.";
+
+/**
+ * The speaker's connectors in a SHARED project (§5.6; Jesús, 24/11: «así como lo hace Claude Code» — what is a person's
+ * starts private, and in a space others see it isn't): nothing is declared or routed — no tools, no resources, no
+ * sign-in, no «Conectar» card. The server names stay taken in the namespace an installed tool's operations share, and
+ * what needs mounting is still mounted outside the turn, so nothing moves when the project stops being shared. The
+ * context carries the note only when the person has a server or a card they could have been offered.
+ */
+export function privateInSharedProject(c: TurnConnectors): TurnConnectors {
+  const hadSomething = c.serverNames.length > 0 || (c.directory?.length ?? 0) > 0;
+  return {
+    declarations: [],
+    routes: new Map(),
+    serverNames: c.serverNames,
+    active: new Map(),
+    resourceServers: [],
+    contextText: hadSomething ? SHARED_PROJECT_NOTE : "",
+    toMount: c.toMount,
+  };
+}
+
 /** A server's error as the model reads it: what the server said, on one short line — whatever an older build stored. */
 const errorOf = (state: ServerState): string => shortError(state.error ?? "unknown error");
 
