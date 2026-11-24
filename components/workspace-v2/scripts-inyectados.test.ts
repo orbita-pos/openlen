@@ -114,12 +114,14 @@ describe("los scripts que el taller inyecta en el lienzo", () => {
           `${nombre} llama a ${nombreFn} pero no lo declara — ReferenceError en cuanto el usuario toque algo`,
         ).toBe(true);
       }
-      // `isEditorNode` lee esta constante; sin ella es el mismo fallo un nivel
-      // más abajo, y más difícil de ver.
-      if (/\bisEditorNode\b/.test(cuerpo)) {
+      // Un cuerpo que nombra esta constante tiene que declararla; sin ella es el
+      // mismo fallo un nivel más abajo, y más difícil de ver. `isEditorNode` ya no
+      // la lee: lleva su lista dentro desde 4c875e93d (el minificador renombraba la
+      // referencia), así que viajar sola no le falta nada.
+      if (/\bEDITOR_NODE_ATTRS\b/.test(cuerpo)) {
         expect(
           /\bvar\s+EDITOR_NODE_ATTRS\b/.test(cuerpo),
-          `${nombre} serializó isEditorNode sin EDITOR_NODE_ATTRS`,
+          `${nombre} usa EDITOR_NODE_ATTRS sin declararla`,
         ).toBe(true);
       }
     }
