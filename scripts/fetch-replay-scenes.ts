@@ -11,6 +11,7 @@ import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { scenes, scenesDir, type SceneFile, type SceneRow, type SceneSpec } from "../lib/agent/replay-scenes/scene-files";
+import { carriesConnectorResults, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,6 +54,8 @@ function fetchScene(spec: SceneSpec): SceneFile {
     return row;
   });
   for (const id of spec.rowIds) if (!rows.some((r) => r.id === id)) throw new Error(`scene ${spec.name}: row ${id} not found in its conversation`);
+  // Spec local 2026-11-24-servidor-de-google-calendar, §5.8: what a person's connectors gave Len is never read by people.
+  if (carriesConnectorResults(rows)) throw new Error(`scene ${spec.name} ${LEFT_FOR_LIMITED_USE}`);
   return { name: spec.name, projectId: spec.projectId, fetchedAt: new Date().toISOString(), olderTurns: 0, rows };
 }
 

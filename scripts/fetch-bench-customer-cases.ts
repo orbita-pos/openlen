@@ -11,6 +11,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { casesDir, fetchedCaseFrom, writeFetchedCase, type RawCaseRows } from "../lib/len-bench/casos/clientes/fetched";
+import { carriesConnectorResults, LEFT_FOR_LIMITED_USE } from "../lib/len-bench/personal-data";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const CASES_FILE = "lib/len-bench/casos/clientes/cases.json";
@@ -61,6 +62,11 @@ function main(): void {
     const raw = fetchRaw(projectId);
     if (!raw) {
       left.push(`${short}: el proyecto ya no existe`);
+      continue;
+    }
+    // Spec local 2026-11-24-servidor-de-google-calendar, §5.8: what a person's connectors gave Len is never read by people.
+    if (carriesConnectorResults(raw.rows)) {
+      left.push(`${short}: ${LEFT_FOR_LIMITED_USE}`);
       continue;
     }
     const c = fetchedCaseFrom(raw, fetchedAt);
