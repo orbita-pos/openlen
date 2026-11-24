@@ -3,9 +3,11 @@
 // number; the 65 minutes after which a turn counted as cold (lib/agent/cold-return.ts) were Claude Code's, read
 // off ITS provider. This sends eight prefixes of about 30.000 tokens, each under its own cache key, and sends
 // each one again exactly once after 15, 30, 45, 60, 75, 90, 120 and 180 minutes: how much of the second call
-// came back cached says whether the entry was still there. A read may refresh an entry, which is why every
-// prefix is looked at only once. Whether it does is what the REFRESH PLAN asks (`PROBE_REFRESH_PLAN`,
-// `--plan=refresh`, 24/11/2026): it was assumed here and never measured.
+// came back cached says whether the entry was still there. Every prefix is looked at only once: a look that
+// finds nothing writes the entry again. Whether a look that DOES find it keeps it alive longer is what the
+// REFRESH PLAN asked (`PROBE_REFRESH_PLAN`, `--plan=refresh`). Measured on 24/11/2026 (run 20261124T0516,
+// $0.05): NO — read at 40 minutes (99 % cached) or not, the entry was gone at 80, and at 100. DeepInfra keeps an
+// entry from when it was written, not from when it was last read; a keep-alive call would not extend it.
 //
 // One addition to the spec's sixteen calls: a ninth prefix sent again after ONE minute. Without it, eight
 // misses could mean «it expires in under 15 minutes» or «nothing was cached at all» (a key that gave no
@@ -51,9 +53,9 @@ export interface ProbeEntry {
   readonly delayMin: number;
   first: ProbeCall | null;
   second: ProbeCall | null;
-  /** ISO: when the second call was about to be sent — written down BEFORE sending it. A read refreshes the
-   *  entry, so a second call that was cut (the runner was killed) is never sent again: its answer would say
-   *  «still cached» because of the first try. */
+  /** ISO: when the second call was about to be sent — written down BEFORE sending it. A call that found nothing
+   *  cached writes the entry again, so a second call that was cut (the runner was killed) is never sent again:
+   *  its answer would say «still cached» because of the first try. */
   secondAttemptedAt?: string;
   /** THE REFRESH PLAN: minutes after the first call when this prefix is read once in the middle, before its
    *  second call. Absent = never. */
