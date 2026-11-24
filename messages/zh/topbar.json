@@ -134,6 +134,7 @@
     "rolLector": "仅查看",
     "rolEditorAyuda": "可编辑代码和页面、与 Len 对话并发布。",
     "rolLectorAyuda": "可以查看项目，但不能修改。",
+    "avisoConectores": "此聊天包含 Len 从你的连接器（例如你的日历）读取的内容。你邀请的人也会看到。",
     "dueno": "所有者",
     "tu": "（你）",
     "pendiente": "已发送邀请",

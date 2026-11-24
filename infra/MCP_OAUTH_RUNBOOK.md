@@ -37,9 +37,12 @@ El cliente vive en su **propio proyecto de Google Cloud, «OpenLen Connectors» 
      - `https://www.googleapis.com/auth/calendar.events`
      - `https://www.googleapis.com/auth/calendar.events.freebusy`
    - Son los que pide la tarjeta (`GCAL_SCOPES`, `lib/google-calendar-mcp/config.ts`) y los que el servidor exige: un token sin alguno de ellos recibe un 403 `insufficient_scope` y el conector pide a la persona más permisos.
+   - ✅ Hecho el 24/11/2026. Google clasifica `calendarlist.readonly` y `events.freebusy` como **no sensibles**; sólo `calendar.events` es sensible, y es el único que la verificación tiene que justificar.
 
-4. **Audience: «In production» al desplegar**
-   - Pasar `openlen-connectors` a **In production** en el mismo despliegue, sin esperar la verificación: en modo de prueba Google caduca los tokens de refresco a los 7 días y habría que reconectar cada semana.
+4. **Audience: «In production»**
+   - Pasar `openlen-connectors` a **In production** sin esperar la verificación: en modo de prueba Google caduca los tokens de refresco a los 7 días y habría que reconectar cada semana.
+   - Para publicar, Google exige el Branding completo: App name `OpenLen`, inicio `https://openlen.com`, privacidad `https://openlen.com/en/privacy`, términos `https://openlen.com/en/terms`, dominio autorizado `openlen.com`, sin logo (un logo obliga a verificar), como el proyecto del login.
+   - ✅ Hecho el 24/11/2026 (antes del deploy: el servidor viejo de Google ya no funcionaba, no había nada que romper). Google avisa: «Your app requires verification».
    - Sin verificar, quien conecta ve el aviso de Google de «app no verificada», y Google limita la app a 100 cuentas. `OPENLEN_MCP_GOOGLE_TEST_USERS` (§3) sigue decidiendo a quién le ofrece OpenLen la tarjeta.
 
 5. **Después del despliegue**

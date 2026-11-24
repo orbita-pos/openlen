@@ -23,7 +23,7 @@ vi.mock("@/lib/db", async () => {
   };
 });
 
-const { goalOfProject, lastFinishedTurnOf, abrirFilaDelTurno, cutOffRowsOpenedBeforeBoot, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
+const { chatCarriesConnectorResults, goalOfProject, lastFinishedTurnOf, abrirFilaDelTurno, cutOffRowsOpenedBeforeBoot, guardarMarcaDelTurno, marcarCortadaSiSigueEnCurso, CHAT_RETENTION_DAYS, filasParaElHistorialConEquipo, getChatMessages, listArchivedConversations, pruneOldConversations, latestTodoListForChat, leerTurnoDelUsuario, quitarEncargo, registrarTurnoDelServidor, reopenConversation, turnosParaElHistorial } =
   await import("./chat");
 
 const ENCARGO: GoalSnapshot = {
@@ -487,5 +487,40 @@ describe("goalOfProject / lastFinishedTurnOf", () => {
   it("an archived conversation is not looked at", async () => {
     await filaConTarjetas({ id: "old", minuto: 1, actions: [], conversation: "c-archived" });
     expect(await lastFinishedTurnOf("p1", "u1", true)).toBeNull();
+  });
+});
+
+// Spec local 2026-11-24-servidor-de-google-calendar, §5.6: what Len read from the owner's connectors before the project
+// was shared stays in its chat, which every member reads. The invite dialog says so — as Claude Code says plainly when
+// something is «visible to everyone with access … not private» —, and this is how it knows.
+describe("chatCarriesConnectorResults", () => {
+  const conCalendario = [{ role: "assistant", content: "", functionCalls: [{ name: "mcp__google-calendar__list_events", args: {} }] }];
+
+  it("🔴 a turn of the project's chat that called a connector: yes", async () => {
+    await fila({ id: "t1", minuto: 1, transcript: conCalendario });
+    expect(await chatCarriesConnectorResults("p1")).toBe(true);
+    expect(await chatCarriesConnectorResults("p2")).toBe(false);
+  });
+
+  it("an archived conversation counts too: members can open it", async () => {
+    await pg.query(
+      `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "transcript", "conversation") values ('a1', 'p1', 'x', '', 'applied', $1::jsonb, 'c-archived')`,
+      [JSON.stringify(conCalendario)],
+    );
+    expect(await chatCarriesConnectorResults("p1")).toBe(true);
+  });
+
+  it("🔴 the owner's own assistant's conversation doesn't: members never see it", async () => {
+    await pg.query(
+      `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "transcript", "conversation") values ('s1', 'p1', 'x', '', 'applied', $1::jsonb, 'assistant:a1')`,
+      [JSON.stringify(conCalendario)],
+    );
+    expect(await chatCarriesConnectorResults("p1")).toBe(false);
+  });
+
+  it("«mcp__» said in a message, or Len's own tools: no", async () => {
+    await fila({ id: "t2", minuto: 2, transcript: [{ role: "user", content: "¿y mcp__google-calendar__list_events?" }] });
+    await fila({ id: "t3", minuto: 3, transcript: [{ role: "assistant", content: "", functionCalls: [{ name: "Read", args: {} }] }] });
+    expect(await chatCarriesConnectorResults("p1")).toBe(false);
   });
 });

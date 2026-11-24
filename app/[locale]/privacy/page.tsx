@@ -236,19 +236,21 @@ export default async function PrivacyPage({
             Google y le das a OpenLen permiso para ver la lista de tus
             calendarios, ver y editar tus eventos y consultar tu disponibilidad
             (libre u ocupado). Len o tu asistente leen o cambian tu calendario{" "}
-            <strong>sólo cuando tú se lo pides</strong>, y sólo lo que esa
-            petición necesita.
+            <strong>sólo cuando tú se lo pides</strong> (también en una tarea
+            que tú programaste), y sólo lo que esa petición necesita.
           </p>
           <ul>
             <li>
               El servidor de Calendar de OpenLen no guarda tus eventos: los pide a
-              Google en cada llamada y se los pasa a Len. Lo único que guardamos
-              es la conexión (los tokens de Google, cifrados), que puedes quitar
-              cuando quieras en Herramientas → Conectores.
+              Google en cada llamada y se los pasa a Len. La conexión (tus tokens
+              de Google) se guarda cifrada, y puedes quitarla cuando quieras en
+              Herramientas → Conectores.
             </li>
             <li>
-              Lo que Len leyó de tu calendario queda en esa conversación, como el
-              resto de lo que hablas con Len, hasta que borras el proyecto o pides
+              Lo que Len leyó de tu calendario se guarda con esa conversación,
+              como el resto de lo que hablas con Len. OpenLen borra una
+              conversación cuando lleva 30 días sin mensajes (lo hace la próxima
+              vez que se usa el proyecto), y todas al borrar el proyecto o
               suprimir tu cuenta. Como el resto de la conversación, se envía a
               nuestros proveedores de IA (ver «Generación con IA») sólo para que
               Len te conteste, también en los mensajes siguientes de esa
@@ -264,7 +266,8 @@ export default async function PrivacyPage({
               conectores: todos los miembros leen ese chat. Lo tuyo se pide en tu
               asistente o en un proyecto sólo tuyo. Si compartes un proyecto
               donde Len ya usó tus conectores, lo que leyó entonces sigue en esa
-              conversación y los miembros pueden verlo.
+              conversación y los miembros pueden verlo; OpenLen te lo recuerda al
+              invitar a alguien.
             </li>
           </ul>
           <p>
@@ -706,20 +709,22 @@ export default async function PrivacyPage({
             in to Google and give OpenLen permission to see the list of your
             calendars, see and edit your events, and check your availability
             (free or busy). Len or your assistant read or change your calendar{" "}
-            <strong>only when you ask them to</strong>, and only what that request
-            needs.
+            <strong>only when you ask them to</strong> (including in a task you
+            scheduled), and only what that request needs.
           </p>
           <ul>
             <li>
               OpenLen&apos;s Calendar server doesn&apos;t store your events: it
-              asks Google for them on each call and hands them to Len. All we
-              store is the connection (your Google tokens, encrypted), which you
-              can remove at any time in Tools → Connectors.
+              asks Google for them on each call and hands them to Len. The
+              connection (your Google tokens) is stored encrypted, and you can
+              remove it at any time in Tools → Connectors.
             </li>
             <li>
-              What Len read from your calendar stays in that conversation, like
-              everything else you discuss with Len, until you delete the project
-              or ask us to delete your account. Like the rest of the conversation,
+              What Len read from your calendar is kept with that conversation,
+              like everything else you discuss with Len. OpenLen deletes a
+              conversation once it has gone 30 days without messages (it does so
+              the next time the project is used), and all of them when you delete
+              the project or your account. Like the rest of the conversation,
               it is sent to our AI providers (see &ldquo;AI generation&rdquo;)
               only so Len can answer you, including in later messages of that
               conversation.
@@ -734,7 +739,8 @@ export default async function PrivacyPage({
               connectors: every member reads that chat. Ask for what&apos;s yours
               in your assistant or in a project only you use. If you share a
               project where Len already used your connectors, what it read then
-              stays in that conversation and members can see it.
+              stays in that conversation and members can see it; OpenLen reminds
+              you of this when you invite someone.
             </li>
           </ul>
           <p>

@@ -134,6 +134,7 @@
     "rolLector": "Somente leitura",
     "rolEditorAyuda": "Edita o código e as páginas, fala com o Len e publica.",
     "rolLectorAyuda": "Vê o projeto sem mudar nada.",
+    "avisoConectores": "Este chat inclui o que o Len leu dos seus conectores (por exemplo, a sua agenda). Quem você convidar vai ver isso.",
     "dueno": "Dono",
     "tu": "(você)",
     "pendiente": "Convite enviado",

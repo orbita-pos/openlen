@@ -23,6 +23,7 @@ import type { CompactionMark } from "@/lib/agent/compaction/mark";
 import type { PendingIdleSummary } from "@/lib/agent/idle-summary";
 import type { AgentErrorCode } from "@/lib/agent/loop";
 import { ASSISTANT_CONVERSATION_PREFIX, isAssistantConversation } from "@/lib/assistants/conversation";
+import { connectorCallsIn } from "@/lib/mcp-connectors/connector-results";
 import { SHOW_WIDGET } from "@/lib/agent/visuals/widget";
 import { widgetIdOf } from "@/lib/visuals/widget-id";
 
@@ -505,6 +506,19 @@ export async function transcripcionDeLaFila(projectId: string, id: string): Prom
 /** A row outside every assistant's conversation (`assistant:<id>`); Len's current and archived chats pass. */
 function noEsDelAsistente(conversation: typeof schema.projectChatMessages.conversation) {
   return sql`coalesce(${conversation}, '') NOT LIKE ${`${ASSISTANT_CONVERSATION_PREFIX}%`}`;
+}
+
+/**
+ * Whether the chats a project's members read (Len's current and archived ones, never an assistant's) carry a connector's
+ * results — what Len read from the owner's calendar or email before the project was shared (spec local
+ * 2026-11-24-servidor-de-google-calendar, §5.6). The invite dialog says so, as Claude Code says plainly when something is
+ * «visible to everyone with access … not private».
+ */
+export async function chatCarriesConnectorResults(projectId: string): Promise<boolean> {
+  const t = schema.projectChatMessages;
+  const carries = sql.raw(`(${connectorCallsIn(`"transcript"`)} or ${connectorCallsIn(`"actions"`)})`);
+  const rows = await db.select({ id: t.id }).from(t).where(and(eq(t.projectId, projectId), noEsDelAsistente(t.conversation), carries)).limit(1);
+  return rows.length > 0;
 }
 
 /** Las fotos de un turno del cliente, como se guardan (`photosForRow`). Con

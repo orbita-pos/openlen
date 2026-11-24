@@ -44,6 +44,9 @@ interface Estado {
   readonly gastoDelMes?: number;
   /** LEN POR CORREO (lib/len-email): la dirección del proyecto, a quien puede editar. */
   readonly lenEmail?: string | null;
+  /** Sólo al dueño: el chat del proyecto trae lo que Len leyó de sus conectores, y los miembros lo verán (spec local
+   *  2026-11-24-servidor-de-google-calendar, §5.6). */
+  readonly conectoresEnElChat?: boolean;
 }
 
 const MAX_MIEMBROS = 10;
@@ -225,6 +228,12 @@ export function MiembrosDialog({
                 </Button>
               </div>
               <p className="text-[11.5px] fg-faint">{rol === "editor" ? t("miembros.rolEditorAyuda") : t("miembros.rolLectorAyuda")}</p>
+              {/* Dicho con todas las letras, como Claude Code dice «visible to everyone … not private»: quien entre leerá el chat. */}
+              {estado.conectoresEnElChat && (
+                <p className="text-[11.5px] fg-muted" data-aviso-conectores>
+                  {t("miembros.avisoConectores")}
+                </p>
+              )}
             </form>
           )}
 

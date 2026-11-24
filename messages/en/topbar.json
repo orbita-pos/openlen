@@ -134,6 +134,7 @@
     "rolLector": "View only",
     "rolEditorAyuda": "Edits the code and pages, talks to Len and publishes.",
     "rolLectorAyuda": "Sees the project without changing anything.",
+    "avisoConectores": "This chat includes what Len read from your connectors (your calendar, for example). Anyone you invite will see it.",
     "dueno": "Owner",
     "tu": "(you)",
     "pendiente": "Invitation sent",

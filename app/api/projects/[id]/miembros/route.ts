@@ -25,6 +25,7 @@ import {
   topeDelProyecto,
 } from "@/lib/projects/miembros";
 import { sendProjectInviteEmail } from "@/lib/email";
+import { chatCarriesConnectorResults } from "@/lib/projects/chat";
 import { lenEmailAddress } from "@/lib/len-email/address";
 import { avatarOf } from "@/lib/profile/avatar";
 import { deleteTasksByCreator } from "@/lib/scheduled-tasks/store";
@@ -82,7 +83,15 @@ export async function GET(_req: Request, ctx: Ctx): Promise<Response> {
     // LEN POR CORREO: la dirección del proyecto, sólo a quien puede pedirle a Len.
     lenEmail: puede(q.acceso.rol, "editar") ? lenEmailAddress(q.id) : null,
     ...(esDueno
-      ? { invitaciones, tope: await topeDelProyecto(q.id), gastoDelMes: await gastoDeMiembrosDelMes(q.id) }
+      ? {
+          invitaciones,
+          tope: await topeDelProyecto(q.id),
+          gastoDelMes: await gastoDeMiembrosDelMes(q.id),
+          // Lo que Len leyó de los conectores del dueño antes de compartir sigue en el chat que leen los miembros (spec local
+          // 2026-11-24-servidor-de-google-calendar, §5.6): el formulario de invitar lo dice. Si no se puede saber, no se
+          // afirma nada.
+          conectoresEnElChat: await chatCarriesConnectorResults(q.id).catch(() => false),
+        }
       : {}),
   });
 }

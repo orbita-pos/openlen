@@ -134,6 +134,7 @@
     "rolLector": "보기 전용",
     "rolEditorAyuda": "코드와 페이지를 편집하고, Len과 대화하고, 게시합니다.",
     "rolLectorAyuda": "아무것도 바꾸지 않고 프로젝트를 봅니다.",
+    "avisoConectores": "이 채팅에는 Len이 커넥터(예: 캘린더)에서 읽은 내용이 들어 있습니다. 초대한 사람도 볼 수 있습니다.",
     "dueno": "소유자",
     "tu": "(나)",
     "pendiente": "초대 보냄",

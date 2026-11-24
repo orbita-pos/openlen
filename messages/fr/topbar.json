@@ -134,6 +134,7 @@
     "rolLector": "Lecture seule",
     "rolEditorAyuda": "Modifie le code et les pages, parle à Len et publie.",
     "rolLectorAyuda": "Voit le projet sans rien modifier.",
+    "avisoConectores": "Ce chat contient ce que Len a lu dans vos connecteurs (votre agenda, par exemple). Les personnes que vous invitez le verront.",
     "dueno": "Propriétaire",
     "tu": "(vous)",
     "pendiente": "Invitation envoyée",
