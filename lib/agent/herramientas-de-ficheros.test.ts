@@ -3905,4 +3905,36 @@ describe("her other projects' folders (phase 4B)", () => {
     assert.deepEqual(conflictingTopLevel(Object.keys(files)), []);
     assert.equal((await readOnlyForBox(hers(), deps))["/home/user/.assistant/MEMORY.md"], "Lo que Lucía sabe.");
   });
+
+  // Seen in production on 24/11 (`[sandbox] fallback … reason=conflict`, a language teacher's first turn on a paid plan):
+  // an agent's note for its customers, ~/.assistant/CUSTOMERS.md (agentes para todos, 19/11), is under /home like her
+  // memory, so every turn of an agent with that file fell back to the limited terminal. It goes up read-only too.
+  it("🔴 an agent's box gets its project files without its customers' note either; the note goes up read-only", async () => {
+    const { deps: base } = depsOfTwo();
+    const deps = {
+      ...base,
+      assistantCustomers: {
+        async read() {
+          return "Para los clientes: clases los martes.";
+        },
+        async save() {
+          return true;
+        },
+      },
+    } as unknown as AgentDeps;
+    const agent = (): AgentSession => {
+      const s = hers();
+      return { ...s, assistant: { ...s.assistant!, withAgentFile: true } } as AgentSession;
+    };
+    // Why: with the note among the project's files, the box refused them.
+    assert.deepEqual(conflictingTopLevel(Object.keys(await cargarFicherosDeLaTerminal(agent(), deps))).sort(), [
+      "/home/user/.assistant/CUSTOMERS.md",
+      "/home/user/.assistant/MEMORY.md",
+    ]);
+    const files = await boxProjectFiles(agent(), deps);
+    assert.deepEqual(conflictingTopLevel(Object.keys(files)), []);
+    const readOnly = await readOnlyForBox(agent(), deps);
+    assert.equal(readOnly["/home/user/.assistant/CUSTOMERS.md"], "Para los clientes: clases los martes.");
+    assert.equal(readOnly["/home/user/.assistant/MEMORY.md"], "Lo que Lucía sabe.");
+  });
 });
