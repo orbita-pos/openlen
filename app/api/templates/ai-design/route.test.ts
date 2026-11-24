@@ -30,9 +30,13 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-vi.mock("@/lib/db", () => ({
+// The real tables beside the fake `projects`: since 69e77cf27 the route's imports reach
+// lib/chat/store.ts (context → catalog → tools-ab → ab/lifecycle → … → agent/tools), which reads
+// `schema.chatUsers` when it loads. The tables are plain drizzle definitions; nothing connects.
+vi.mock("@/lib/db", async () => ({
   db: { select: mocks.select, update: mocks.update },
   schema: {
+    ...(await vi.importActual<typeof import("@/lib/db/schema")>("@/lib/db/schema")),
     projects: { id: "id", userId: "userId", data: "data", userBrief: "userBrief", updatedAt: "updatedAt" },
   },
 }));
