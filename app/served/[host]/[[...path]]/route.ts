@@ -320,10 +320,24 @@ async function serve(
 
   let body: ArrayBuffer | null = null;
   let size: number;
+  let validators: { readonly etag: string; readonly lastModified: string } | null = null;
   try {
     const s = await stat(absNorm);
     if (!s.isFile()) return notFound(includeBody);
     size = s.size;
+    // VALIDATORS, as Caddy's file_server gives them on *.openlen.app (the file's time and size): a custom
+    // domain has no Cloudflare in front, and a folder file revalidates on every visit — without them every
+    // visit downloaded the whole folder again. Never on a file an A/B decision serves: it is no-store and
+    // never revalidated (lib/ab/serve.ts).
+    if (!abDecision) {
+      validators = { etag: `W/"${Math.floor(s.mtimeMs).toString(36)}-${s.size.toString(36)}"`, lastModified: s.mtime.toUTCString() };
+      if (notModified(req, validators.etag, s.mtime)) {
+        return new Response(null, {
+          status: 304,
+          headers: { ETag: validators.etag, "Last-Modified": validators.lastModified, "Cache-Control": resolved.cacheControl, ...SECURITY_HEADERS },
+        });
+      }
+    }
     if (includeBody) {
       const buf = await readFile(absNorm);
       // Slice into a standalone ArrayBuffer — node's `Buffer` shares a pool
@@ -341,11 +355,26 @@ async function serve(
     "Content-Type": resolved.contentType,
     "Content-Length": String(size),
     "Cache-Control": resolved.cacheControl,
+    ...(validators ? { ETag: validators.etag, "Last-Modified": validators.lastModified } : {}),
     ...SECURITY_HEADERS,
     ...(abDecision ? abResponseHeaders(abDecision, size) : {}),
   };
 
   return new Response(includeBody ? body : null, { status: 200, headers });
+}
+
+/** RFC 9110 §13.1: `If-None-Match` decides when it comes (weak comparison, as a GET allows); otherwise
+ *  `If-Modified-Since`, to the second the `Last-Modified` header carries. */
+function notModified(req: Request, etag: string, mtime: Date): boolean {
+  const ifNoneMatch = req.headers.get("if-none-match");
+  if (ifNoneMatch !== null) {
+    const opaque = (tag: string) => tag.trim().replace(/^W\//, "");
+    return ifNoneMatch.split(",").some((tag) => tag.trim() === "*" || opaque(tag) === opaque(etag));
+  }
+  const ifModifiedSince = req.headers.get("if-modified-since");
+  if (ifModifiedSince === null) return false;
+  const since = Date.parse(ifModifiedSince);
+  return Number.isFinite(since) && Math.floor(mtime.getTime() / 1000) * 1000 <= since;
 }
 
 // The branded dead-link page (same HTML Caddy serves for dead *.openlen.com

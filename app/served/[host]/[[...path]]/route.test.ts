@@ -103,12 +103,53 @@ describe("/served/<host>/ — los ficheros de la carpeta", () => {
     }
   });
 
-  it("BRAZO DE CONTROL: lo de /assets/ (nombre con hash) y los binarios siguen inmutables", async () => {
+  // Since the folder took images (28/10, 42a2b060d) an image of the folder is named after its file, not its
+  // content: dropping a new logo.png on the Code lens, or Len resizing /img/hero.jpg in place, keeps the URL. It
+  // revalidates like a js — immutable, a visitor kept the old one for a month. What carries its content in its
+  // name (/assets/) stays immutable.
+  it("BRAZO DE CONTROL: lo de /assets/ (nombre con hash) sigue inmutable; una imagen de la carpeta se revalida", async () => {
     mkdirSync(path.join(raiz, "demo", "assets"), { recursive: true });
     writeFileSync(path.join(raiz, "demo", "assets", "abc123.js"), "x");
     fichero("/foto.png", "x");
     expect((await pideRuta("/assets/abc123.js")).headers.get("cache-control")).toBe("public, max-age=2592000, immutable");
-    expect((await pideRuta("/foto.png")).headers.get("cache-control")).toBe("public, max-age=2592000, immutable");
+    expect((await pideRuta("/foto.png")).headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+  });
+
+  // REVALIDATING COSTS AN EMPTY ANSWER, as Caddy's file_server gives on *.openlen.app: a custom domain has no
+  // Cloudflare in front, and without a validator every visit downloaded every file of the folder again.
+  const pideCon = (ruta: string, headers: Record<string, string>) =>
+    GET(new Request(`https://${DOMINIO}${ruta}`, { headers: { host: DOMINIO, ...headers } }), {
+      params: Promise.resolve({ host: DOMINIO, path: ruta.split("/").filter(Boolean) }),
+    });
+
+  it("🔴 a file carries its validators, and the same ETag gets a 304 with no body", async () => {
+    fichero("/img/logo.png", "logo-v1");
+    const first = await pideRuta("/img/logo.png");
+    const etag = first.headers.get("etag");
+    expect(etag).toMatch(/^W\/"[0-9a-z]+-[0-9a-z]+"$/);
+    expect(first.headers.get("last-modified")).toBeTruthy();
+    const again = await pideCon("/img/logo.png", { "if-none-match": etag! });
+    expect(again.status).toBe(304);
+    expect(await again.text()).toBe("");
+    expect(again.headers.get("etag")).toBe(etag);
+    expect(again.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate");
+  });
+
+  it("🔴 a file that changed under the same name is sent whole again", async () => {
+    fichero("/img/logo.png", "logo-v1");
+    const etag = (await pideRuta("/img/logo.png")).headers.get("etag")!;
+    fichero("/img/logo.png", "logo-version-2");
+    const again = await pideCon("/img/logo.png", { "if-none-match": etag });
+    expect(again.status).toBe(200);
+    expect(await again.text()).toBe("logo-version-2");
+  });
+
+  it("If-Modified-Since at the file's time is a 304 too; If-None-Match wins when both come", async () => {
+    fichero("/css/site.css", "body{}");
+    const first = await pideRuta("/css/site.css");
+    const lastModified = first.headers.get("last-modified")!;
+    expect((await pideCon("/css/site.css", { "if-modified-since": lastModified })).status).toBe(304);
+    expect((await pideCon("/css/site.css", { "if-modified-since": lastModified, "if-none-match": 'W/"other"' })).status).toBe(200);
   });
 });
 

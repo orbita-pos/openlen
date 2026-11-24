@@ -210,10 +210,13 @@ openlen.com, www.openlen.com {
 	# "not an asset and not a proxied path" so root + clean URLs are covered.
 	#
 	# LA CARPETA (pieza 9 de Len 2.5, carril B, con las notas de C). Lo
-	# inmutable es sólo lo que lleva el hash en el nombre —/assets/, que migra
-	# publishToDir, y /uploads/— y los binarios. Un .js/.css/.svg de nombre fijo
-	# (el `js/app.js` de la carpeta) ya NO: se quedaría un mes en el navegador
-	# y en el borde.
+	# inmutable es sólo lo que lleva su contenido en el nombre —/assets/, que
+	# migra publishToDir, y /uploads/—. Un fichero de la carpeta de nombre fijo
+	# (el `js/app.js`, y desde el 28/10 también una imagen, una fuente o el
+	# favicon: `img/logo.png` se llama como el fichero subido) ya NO: si se
+	# cambia con el mismo nombre se quedaría un mes en el navegador y en el
+	# borde. Hasta el 24/11 las imágenes, las fuentes y el .ico seguían aquí
+	# como «binarios», de cuando sólo vivían en /assets/ con su hash.
 	#
 	# 🔴 Ninguna de estas cabeceras se estampa en un host lienzo-*: allí
 	# responde Next con las suyas, y `header` + `reverse_proxy` las DUPLICA.
@@ -226,7 +229,7 @@ openlen.com, www.openlen.com {
 	# propio (lib/publish/assistant-widget.ts): lleva su contenido en el nombre, así
 	# que es inmutable como /assets/, y no uno de los .js de la carpeta.
 	@assets {
-		path *.jpg *.jpeg *.png *.gif *.webp *.ico *.woff *.woff2 *.avif /assets/* /uploads/* /openlen/figure-*
+		path /assets/* /uploads/* /openlen/figure-*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*
 	}
@@ -237,8 +240,9 @@ openlen.com, www.openlen.com {
 	# sirviendo la versión de antes.
 	# Y los de un juego (spec local 2026-11-05-modo-juego-design, §8.6): sus modelos y sonidos, que Len puede
 	# cambiar con el mismo nombre (/models/nave.glb).
+	# Y sus imágenes, fuentes y favicon (24/11): lo mismo que da a un dominio propio la ruta /served (FOLDER_CACHE).
 	@carpeta {
-		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav
+		path *.js *.mjs *.jsx *.tsx *.ts *.css *.json *.webmanifest *.txt *.svg *.md *.glb *.gltf *.bin *.hdr *.opus *.flac *.ogg *.mp3 *.wav *.jpg *.jpeg *.png *.gif *.webp *.ico *.avif *.woff *.woff2
 		not path /assets/* /uploads/* /openlen/figure-*
 		not header_regexp Host ^lienzo-
 		not path /storage/v1/*

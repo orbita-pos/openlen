@@ -125,13 +125,17 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     expect(todos).not.toContain("Permissions-Policy");
   });
 
-  it("🔴 nota 1: lo inmutable es lo que lleva hash en el nombre o es binario; nunca un .js/.css/.svg de nombre fijo", () => {
+  // 🔴 24/11/2026: an image, a font or a favicon of the FOLDER is named after its file, not its content (since
+  // 42a2b060d, 28/10): a new logo.png dropped on the Code lens, or one Len resizes in place, keeps its URL, and an
+  // immutable month left visitors with the old one. Immutable is only what carries its content in its name, as
+  // the custom domains' route already serves them (app/served, FOLDER_CACHE).
+  it("🔴 nota 1: lo inmutable es sólo lo que lleva su contenido en el nombre; nunca un fichero de la carpeta, binarios incluidos", () => {
     const a = matcher("assets");
-    const rutas = rutasDe(a, "path ");
-    for (const r of ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.ico", "*.woff", "*.woff2", "*.avif", "/assets/*", "/uploads/*"]) {
-      expect(rutas, r).toContain(r);
+    expect(rutasDe(a, "path ")).toEqual(["/assets/*", "/uploads/*", "/openlen/figure-*"]);
+    const carpeta = rutasDe(matcher("carpeta"), "path ");
+    for (const r of ["*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.ico", "*.avif", "*.woff", "*.woff2", "*.js", "*.css", "*.svg"]) {
+      expect(carpeta, r).toContain(r);
     }
-    for (const r of ["*.js", "*.css", "*.svg"]) expect(rutas, r).not.toContain(r);
     expect(PAGINAS).toContain('header @assets Cache-Control "public, immutable, max-age=2592000"');
   });
 
