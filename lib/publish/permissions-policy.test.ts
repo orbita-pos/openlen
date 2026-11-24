@@ -22,7 +22,7 @@ describe("the pages' Permissions-Policy", () => {
   it("🔴 Caddy sends the same one on *.openlen.app", () => {
     const caddy = read("infra", "caddy", "Caddyfile");
     const block = caddy.slice(caddy.indexOf("\n*.openlen.app {"));
-    // In the page's own headers, never on a lienzo-* host, where Next sends its own (3429b97ec).
+    // In the page's own headers, never on a lienzo-* host, where Next sends its own (d15a52df9).
     const headers = /header @paginaPublicada \{([\s\S]*?)\n\t\}/.exec(block)![1]!;
     expect(/Permissions-Policy "([^"]*)"/.exec(headers)?.[1]).toBe(PAGE_PERMISSIONS_POLICY);
     expect(/@paginaPublicada \{\s*not header_regexp Host \^lienzo-\s*\}/.test(block)).toBe(true);

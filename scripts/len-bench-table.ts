@@ -1,4 +1,4 @@
-// npm run bench:len:tabla -- --base=<carpeta> --candidato=<carpeta> [--juego=clientes] [--base-commit=2e05b6df1] [--candidato-commit=<sha>]
+// npm run bench:len:tabla -- --base=<carpeta> --candidato=<carpeta> [--juego=clientes] [--base-commit=92f4f7e21] [--candidato-commit=<sha>]
 //
 // THE LEN 3.1 TABLE (spec local 2026-11-12-len-3-1-ruta, §4) from two columns run with `npm run bench:len`:
 // $0 — it reads their `runs/` and prints markdown. If the two columns were graded by different evaluators
@@ -24,7 +24,7 @@ async function main(): Promise<number> {
   // Which cases the customer published: the F2 row is read only there.
   const publishingCases = new Set((await cargarEncargos(juego).catch(() => [])).filter((e) => e.publicaLen).map((e) => e.id));
   const rows = tableRows(columnOf(allRuns(baseDir)), columnOf(allRuns(candidateDir)), { publishingCases });
-  console.log(renderTable(rows, { base: arg("--base-commit") ?? "2e05b6df1", candidato: arg("--candidato-commit") ?? "candidato" }));
+  console.log(renderTable(rows, { base: arg("--base-commit") ?? "92f4f7e21", candidato: arg("--candidato-commit") ?? "candidato" }));
   return 0;
 }
 

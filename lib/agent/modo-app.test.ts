@@ -181,7 +181,7 @@ describe("el manual de una app (/AGENTS.md)", () => {
     // Con las skills encendidas, la guía de la app es la skill frontend-design (spec local
     // 2026-10-27-len-five-skills): /.openlen/docs no sirve nada.
     expect(textoDeLaPlataforma("/.openlen/skills/frontend-design/SKILL.md", "len", APP)).toContain(GUIA_DE_LA_APP);
-    // Ni los tipos de subagente de OpenLen (/.openlen/agents, faefa821f), que se sirven con las skills.
+    // Ni los tipos de subagente de OpenLen (/.openlen/agents, b120f64d4), que se sirven con las skills.
     expect(Object.keys(documentosDeLaPlataforma(APP)).filter((r) => !r.startsWith(`${CARPETA_SKILLS}/`) && !r.startsWith(`${CARPETA_AGENTES}/`))).toEqual([]);
     // Con ellas apagadas, como siempre.
     vi.stubEnv("OPENLEN_SKILLS", "0");
@@ -314,7 +314,7 @@ describe("los nombres que usa el modo app", () => {
     // `doc_id`: a parameter of `artifact_data` (spec local 2026-11-22-artifacts-de-len).
     const NO_SON_HERRAMIENTAS = new Set(["doc_id", "blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress", "store_domain", "storefront_api", "agent_preset", "after_seconds", "every_seconds", "widget_id", "widget_ids"]);
     // Tools that exist only once the person has a connected MCP server (lib/mcp-connectors/turn.ts): the
-    // manual names them for that case (229219d82), and a catalog built with no server doesn't declare them.
+    // manual names them for that case (3a69721b5), and a catalog built with no server doesn't declare them.
     // Taken from their source, so a rename there still shows up here.
     const CON_UN_SERVIDOR_MCP: ReadonlySet<string> = new Set(RESOURCE_TOOL_NAMES);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(

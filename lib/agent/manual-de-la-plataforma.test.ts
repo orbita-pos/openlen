@@ -86,7 +86,7 @@ describe("el manual de la plataforma", () => {
 
   it("F4 · la guía y las librerías viven en /.openlen/docs, cada una en su fichero", () => {
     // Las skills (/.openlen/skills) no van en el índice de /AGENTS.md: las anuncia su catálogo. Los tipos de
-    // subagente de OpenLen (/.openlen/agents, faefa821f) tampoco: los anuncia la herramienta `subagent`.
+    // subagente de OpenLen (/.openlen/agents, b120f64d4) tampoco: los anuncia la herramienta `subagent`.
     expect(Object.keys(docs).filter((r) => !r.startsWith(`${CARPETA_SKILLS}/`) && !r.startsWith(`${CARPETA_AGENTES}/`))).toEqual([...RUTAS_DE_DOCS]);
     const donde: [string, string][] = [
       ["DESIGN GUIDE (for the pages you create yourself", RUTA_GUIA],

@@ -1,6 +1,6 @@
 # Len Móvil: revisión completa de uso y diseño
 
-29 de octubre de 2026. Rama `feat/len-movil-2`, base `c60ce1763`.
+29 de octubre de 2026. Rama `feat/len-movil-2`, base `66c363552`.
 
 ## Entrega
 

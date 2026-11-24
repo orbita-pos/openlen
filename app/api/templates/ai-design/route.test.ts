@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/auth", () => ({ auth: mocks.auth }));
-// The real tables beside the fake `projects`: since 69e77cf27 the route's imports reach
+// The real tables beside the fake `projects`: since a3470b8f2 the route's imports reach
 // lib/chat/store.ts (context → catalog → tools-ab → ab/lifecycle → … → agent/tools), which reads
 // `schema.chatUsers` when it loads. The tables are plain drizzle definitions; nothing connects.
 vi.mock("@/lib/db", async () => ({

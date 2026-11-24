@@ -77,7 +77,7 @@ export default async function Portada({ params }: { params: Promise<{ lang: stri
         <section className="sec release-resources" aria-labelledby="release-resources-title">
           <h2 id="release-resources-title">{p.recursos.titulo}</h2>
           <div className="release-resource-list">{p.recursos.items.map(x=><div key={x.titulo}><h3>{x.titulo}</h3><p>{x.texto}</p></div>)}</div>
-          <Fuente commit="8a690189" />
+          <Fuente commit="a72ba3f9" />
         </section>
 
         <section className="sec" id="oficio">

@@ -2,7 +2,7 @@
 //
 // WHAT A RUN COST AND DID, FROM THE ROWS THE ROUTE RECORDED (spec local 2026-11-12-len-3-1-ruta, §5 piece 5):
 // one row per call to the provider in `agentRequestSteps`, wherever the server runs. The recordings folder
-// was the runner's own, and a server started from another worktree (the base column, 2e05b6df1) writes to
+// was the runner's own, and a server started from another worktree (the base column, 92f4f7e21) writes to
 // ITS folder: the cost would read $0 and the cap would never trip.
 import { PGlite } from "@electric-sql/pglite";
 import { beforeEach, describe, expect, it } from "vitest";

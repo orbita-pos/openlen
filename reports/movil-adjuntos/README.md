@@ -6,7 +6,7 @@ El botón + del chat abre Cámara, Fotos y Archivos. La foto se previsualiza y p
 
 ## Capacidades existentes reutilizadas
 
-La primera inspección se hizo sobre la base antigua de esta rama y llevó a una conclusión demasiado amplia sobre el servidor. Se revisó master e2a907f45 y se confirmó:
+La primera inspección se hizo sobre la base antigua de esta rama y llevó a una conclusión demasiado amplia sobre el servidor. Se revisó master 22450d232 y se confirmó:
 
 - lib/projects/chat-files.ts define AttachedFile, tipos y límites.
 - lib/workspace-v2/upload-attachment.ts sube el fichero completo a POST /api/upload, con generationId del proyecto.

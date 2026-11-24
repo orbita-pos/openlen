@@ -36,7 +36,7 @@ describe("la landing no nombra proveedores de modelo", () => {
   const PROVEEDORES = ["Gemini", "DeepSeek", "Fireworks", "Qwen", "GPT-", "Claude"];
 
   // UNA SECCIÓN QUEDA FUERA, y sólo una: la del MCP («Tu IA de siempre»,
-  // b0d615be, 12/10). Ahí Claude o ChatGPT no son el modelo que mueve a Len,
+  // bbd76e80, 12/10). Ahí Claude o ChatGPT no son el modelo que mueve a Len,
   // son los CLIENTES que el usuario ya paga y conecta a OpenLen: su nombre ES
   // la instrucción, como lo fue el de las claves del self-host («Bring your own
   // Fireworks and OpenAI keys») hasta el 04/10. Y no caduca con nuestras

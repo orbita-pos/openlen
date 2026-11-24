@@ -1,7 +1,7 @@
 // lib/backend/split-off-thread.ts — SPLITTING MIGRATION SQL OFF THE APP'S THREAD (14/10).
 //
 // On 14/10 `supabase db push` hung the whole server: a catastrophic regex in the
-// splitter kept the app's MAIN thread at 100% CPU forever (fixed in 2196943f).
+// splitter kept the app's MAIN thread at 100% CPU forever (fixed in 65cd0dbb).
 // Nothing answered, not even the terminal's command timeout, whose answer has
 // to be handled by that same blocked thread. In Claude Code a hanging command
 // is its own process: its timeout kills it and the host carries on. Here the

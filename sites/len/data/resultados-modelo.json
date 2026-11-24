@@ -4,7 +4,7 @@
   "previousModel": "DeepSeek-V4.1-Flash",
   "currentModel": "DeepSeek-V4.1-Flash-1017",
   "previousPolicyCommit": "5311bbe7",
-  "currentPolicyCommit": "8a690189",
+  "currentPolicyCommit": "a72ba3f9",
   "rows": [
     {
       "benchmark": "HLE",

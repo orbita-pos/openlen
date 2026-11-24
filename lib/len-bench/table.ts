@@ -1,7 +1,7 @@
 // lib/len-bench/table.ts — THE LEN 3.1 TABLE, from two columns of runs.
 //
 // Spec local 2026-11-12-len-3-1-ruta, §4: «una tabla del flujo que usan los clientes —crear una página, seguir
-// editándola y publicarla— medida con el mismo corredor y los mismos casos sobre 2e05b6df1 y sobre el candidato,
+// editándola y publicarla— medida con el mismo corredor y los mismos casos sobre 92f4f7e21 y sobre el candidato,
 // con el ± de cada fila escrito antes de correrla». No threshold: a row that does not leave the noise says so,
 // and it is still the table. Underneath, what the table does not cover, as Anthropic does.
 import fs from "node:fs";

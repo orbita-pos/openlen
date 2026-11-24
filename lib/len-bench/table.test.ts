@@ -2,7 +2,7 @@
 // @vitest-environment node
 //
 // THE LEN 3.1 TABLE (spec local 2026-11-12-len-3-1-ruta, §4; plan local 2026-11-15, task 11): one row per thing
-// measured, the base column (2e05b6df1) and the candidate side by side, with the noise of each row written next
+// measured, the base column (92f4f7e21) and the candidate side by side, with the noise of each row written next
 // to it. No threshold: a row that does not leave the noise says so.
 import fs from "node:fs";
 import os from "node:os";
@@ -97,8 +97,8 @@ describe("tableRows", () => {
   });
 
   it("renders as markdown with what the table does not cover underneath", () => {
-    const md = renderTable(rows, { base: "2e05b6df1", candidato: "acd36c682" });
-    expect(md).toMatch(/^\| Fila \| Base \(2e05b6df1\) \| Candidato \(acd36c682\) \| ± \|/m);
+    const md = renderTable(rows, { base: "92f4f7e21", candidato: "24b478a4c" });
+    expect(md).toMatch(/^\| Fila \| Base \(92f4f7e21\) \| Candidato \(24b478a4c\) \| ± \|/m);
     expect(md).toMatch(/Lo que esta tabla NO cubre/);
     expect(md).toMatch(/apps, juegos, subagentes/);
   });

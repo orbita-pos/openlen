@@ -11,7 +11,7 @@ export const meta = {
   cifra: {
     valor: "5",
     nota: "deliverable kinds",
-    commit: "8a690189"
+    commit: "a72ba3f9"
   },
   indice: [
     { id: "engine", texto: "A more capable engine" },
@@ -49,19 +49,19 @@ Len 3.0 brings an updated engine with improved published results in reasoning, c
 
 <ResultadosModelo lang="en" />
 
-This release’s configuration incorporates the evaluated update. <Fuente ruta="lib/generation/model-policy.ts" commit="8a690189" />
+This release’s configuration incorporates the evaluated update. <Fuente ruta="lib/generation/model-policy.ts" commit="a72ba3f9" />
 
 <h2 id="agent">Understand, plan and check</h2>
 
 Len's capabilities are also in **how it carries a task forward**. It can consult project files and conversations, clarify what is missing, organize a longer task and choose the tools it needs. Planning, context and checking come together with execution and the new deliverables in the same workspace.
 
-**Understand the goal.** When it needs your decision, it can ask with options. It clarifies the task with you rather than guessing that missing detail. <Fuente ruta="lib/agent/ask-user-question.ts" commit="8a690189" />
+**Understand the goal.** When it needs your decision, it can ask with options. It clarifies the task with you rather than guessing that missing detail. <Fuente ruta="lib/agent/ask-user-question.ts" commit="a72ba3f9" />
 
-**Stay on track.** It can show a list of steps, propose a plan before changing the project and continue a longer task across rounds. The goal and what remains are part of its work. <Fuente ruta="lib/agent/plan-mode.ts" commit="8a690189" /> <Fuente ruta="lib/agent/goal.ts" commit="8a690189" />
+**Stay on track.** It can show a list of steps, propose a plan before changing the project and continue a longer task across rounds. The goal and what remains are part of its work. <Fuente ruta="lib/agent/plan-mode.ts" commit="a72ba3f9" /> <Fuente ruta="lib/agent/goal.ts" commit="a72ba3f9" />
 
-**Retrieve context.** It can search earlier project conversations and return to decisions you have already made. Files and the project's state give it context to continue. <Fuente ruta="lib/agent/session-query.ts" commit="8a690189" />
+**Retrieve context.** It can search earlier project conversations and return to decisions you have already made. Files and the project's state give it context to continue. <Fuente ruta="lib/agent/session-query.ts" commit="a72ba3f9" />
 
-**Check and correct.** It has a terminal to run code and tests, and a real browser to inspect and use what it builds. Execution errors and observed results give it information to correct a delivery. <Fuente ruta="lib/agent/verify.ts" commit="8a690189" />
+**Check and correct.** It has a terminal to run code and tests, and a real browser to inspect and use what it builds. Execution errors and observed results give it information to correct a delivery. <Fuente ruta="lib/agent/verify.ts" commit="a72ba3f9" />
 
 Ask for a presentation about your project alongside a dashboard, for example: it can work on the pieces, inspect their results and keep them together for the next correction.
 
@@ -81,13 +81,13 @@ Each deliverable is saved separately, with its title, source files, versions and
 - **Videos:** animated compositions with a preview and an MP4 file.
 - **Voice:** text turned into downloadable audio. Videos and audio pieces can also include music and sound effects you upload yourself.
 
-The preview fits a dashboard to the available space and slides to the window width, preserving their proportions. <Fuente ruta="components/workspace-v2/artifacts/artifact-viewer.tsx" commit="8a690189" />
+The preview fits a dashboard to the available space and slides to the window width, preserving their proportions. <Fuente ruta="components/workspace-v2/artifacts/artifact-viewer.tsx" commit="a72ba3f9" />
 
 <h2 id="terminal">A real terminal</h2>
 
 In the previous release, Len's terminal interpreted commands within the project. Now it can **run programs, install packages and execute code in an isolated environment**. One account does not share its environment with another account's files.
 
-This gives it more ways to work and check results: process files, run a test or prepare a resource the project needs. Environment usage is measured and charged as part of the turn. <Fuente ruta="lib/agent/sandbox/choose.ts" commit="8a690189" />
+This gives it more ways to work and check results: process files, run a test or prepare a resource the project needs. Environment usage is measured and charged as part of the turn. <Fuente ruta="lib/agent/sandbox/choose.ts" commit="a72ba3f9" />
 
 <h2 id="connections">Your accounts and your project</h2>
 
@@ -99,7 +99,7 @@ Websites and apps retain their database, visitor accounts, files and real-time u
 
 <h2 id="checks">How a delivery is checked</h2>
 
-A queued job is not a finished delivery. Deliverables go through compilation and format-specific checks before becoming available. Dashboards bind their figures to the accompanying data; presentations and videos are rendered before the final export is offered. <Fuente ruta="lib/artifacts/jobs.ts" commit="8a690189" />
+A queued job is not a finished delivery. Deliverables go through compilation and format-specific checks before becoming available. Dashboards bind their figures to the accompanying data; presentations and videos are rendered before the final export is offered. <Fuente ruta="lib/artifacts/jobs.ts" commit="a72ba3f9" />
 
 You can open the preview, download the result and request a correction to the same piece. If something fails, the deliverable's status should say so. Generated images and voice cost credits; generating them again is not a free correction.
 

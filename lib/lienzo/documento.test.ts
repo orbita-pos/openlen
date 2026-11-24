@@ -230,7 +230,7 @@ describe("las superficies que miden hornean el documento de vista", () => {
 
   it("y la ruta del lienzo hornea con la función ESTRICTA, no con la blanda", () => {
     // Al servir la página el fallo blando sería servir un documento a medias.
-    // Desde 1c69050c4 la ruta lo abre con `openCanvasDocument`, el mismo que la
+    // Desde e911eafb9 la ruta lo abre con `openCanvasDocument`, el mismo que la
     // vista previa del teléfono: el horneado vive allí.
     const ruta = readFileSync(join(process.cwd(), "app/api/lienzo/route.ts"), "utf8");
     expect(ruta).toContain("openCanvasDocument(");

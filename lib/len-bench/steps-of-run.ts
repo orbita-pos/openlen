@@ -3,7 +3,7 @@
 // Spec local 2026-11-12-len-3-1-ruta, §5 piece 5: «las medidas laterales en absoluto, sacadas de
 // `agentRequestSteps` de la base del banco». One row per call to the provider (layer 0, step-recorder.ts),
 // written by whichever server ran the turn. The recordings the runner used to read lived in ITS OWN folder;
-// a server started from another worktree (the base column, 2e05b6df1) writes to its own, so the cost read
+// a server started from another worktree (the base column, 92f4f7e21) writes to its own, so the cost read
 // $0 and the cap never tripped. The table is shared: both servers write to the bench's database.
 import { LIST_PRICE, usdOf } from "./cold-return/cost";
 import { PILOT_ONLY_GAMES } from "./coste";

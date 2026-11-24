@@ -1,6 +1,6 @@
 -- Read-only measurement: what Len's turns are charged in production, before and
--- after the prompt-cache fix (a4814c5e), which went live on 2026-10-11 22:38 UTC
--- with the dfd26ed1 deploy. Also: how much of each plan the accounts actually use,
+-- after the prompt-cache fix (8051670c), which went live on 2026-10-11 22:38 UTC
+-- with the b326a0b3 deploy. Also: how much of each plan the accounts actually use,
 -- and how the turns fall on DeepSeek's peak / off-peak hours.
 --
 -- The prompt-cache hit rate itself is NOT in the database: it is only in the

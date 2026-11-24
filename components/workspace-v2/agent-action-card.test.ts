@@ -248,7 +248,7 @@ describe("la tarjeta dice qué cubrió la comprobación", () => {
 // ellos la frase sale sin los números y vuelve a ser una disculpa en vez de un
 // hecho que el usuario pueda usar.
 // ⚰️ «no me cabe la conversación entera» tenía texto en los diez (`agent.ventana`):
-// A11 (b665ccd6, 25/10) le da a Len la conversación entera desde el último
+// A11 (50bd6c5d, 25/10) le da a Len la conversación entera desde el último
 // resumen, así que no hay ventana que avisar y la clave se fue de los diez.
 
 // 🔴 N41 · CADA MOTIVO DEL DUEÑO TIENE SU FRASE EN LOS DIEZ, con sus datos

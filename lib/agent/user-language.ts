@@ -1,7 +1,7 @@
 // lib/agent/user-language.ts — EL IDIOMA EN QUE ESCRIBE EL USUARIO, para
 // nombrarlo en el contexto del turno (`buildAgentContext.writingLanguage`).
 //
-// El contexto nombraba el idioma de la INTERFAZ (4b376555, por un dueño con la
+// El contexto nombraba el idioma de la INTERFAZ (f9dce972, por un dueño con la
 // interfaz en español al que Len narraba en inglés). Con la interfaz en inglés y
 // escribiendo en español —Jesús, 10/10, la app Holi— Len contestó en inglés a
 // «puedes hacerme que el hero que se vea como el hero de airbnb». Lo que se

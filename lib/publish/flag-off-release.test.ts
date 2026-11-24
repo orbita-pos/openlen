@@ -1,13 +1,13 @@
 // THE FLAG-OFF RELEASE, BYTE FOR BYTE (G1+G3 review, item 23).
 //
 // Publishing with OPENLEN_AB_TESTING off and no experiment must produce the release master produced BEFORE the A/B work
-// (04b218999): not a similar one — the same one, every file. This publishes a fixture that touches everything A/B touched in
+// (24b7a1b50): not a similar one — the same one, every file. This publishes a fixture that touches everything A/B touched in
 // the document bake — a home and two pages, forms (wired to the project's config and with no config), the analytics
 // snippet, a stylesheet and a script, a locale, the robots and the sitemap — and compares the tree with the one that commit
 // writes.
 //
 // HOW THE PINNED VALUES WERE COMPUTED (do it again if the fixture changes on purpose; never to make a failure go away):
-//   git worktree add .claude/worktrees/_pin 04b218999            # the commit before the A/B work, a scratch worktree
+//   git worktree add .claude/worktrees/_pin 24b7a1b50            # the commit before the A/B work, a scratch worktree
 //   cp lib/publish/flag-off-release.test.ts .claude/worktrees/_pin/lib/publish/
 //   cd .claude/worktrees/_pin
 //   FLAG_OFF_PIN_PRINT=1 npx tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/publish/flag-off-release.test.ts
@@ -86,7 +86,7 @@ const treeSha = (t: Record<string, string>): string =>
     .update(Object.entries(t).map(([p, h]) => `${p}\t${h}`).join("\n"))
     .digest("hex");
 
-// ── pinned from 04b218999 (see the header) ───────────────────────────────────────────────────────────────────────────────
+// ── pinned from 24b7a1b50 (see the header) ───────────────────────────────────────────────────────────────────────────────
 const PINNED_FILES: Record<string, string> = {
   "contacto/index.html": "ab55ded2ca21096be83b92447c96542134c8381c93254a618f299cefdc23b71a",
   "css/site.css": "e4bc8d3b6884015b3ea4da4599661c2abdf07f6c5d94b09d395b7fe38cf91d0d",
@@ -102,7 +102,7 @@ const PINNED_FILES: Record<string, string> = {
 const PINNED_TREE_SHA = "33dc7320cfd3c42ac790011020caf7526cc02d92951627495cb927ad7e5b348e";
 
 describe("with the flag off and no experiment, the release is byte for byte the one of before the A/B work", () => {
-  it("🔴 every file of the release tree (and so the tree) is the one 04b218999 writes", async () => {
+  it("🔴 every file of the release tree (and so the tree) is the one 24b7a1b50 writes", async () => {
     await publish();
     const tree = releaseTree("luna");
     if (process.env.FLAG_OFF_PIN_PRINT === "1") {

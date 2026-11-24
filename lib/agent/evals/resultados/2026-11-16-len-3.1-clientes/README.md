@@ -1,12 +1,12 @@
 # Len 3.1 contra la producción del 12 de noviembre — 2026-11-16
 
-La tabla con la que se nombró Len 3.1 (etiqueta `len-3.1`, sobre `32acd3bd4`). Mide el flujo que usan los clientes
+La tabla con la que se nombró Len 3.1 (etiqueta `len-3.1`, sobre `ca7f92566`). Mide el flujo que usan los clientes
 —crear una página, seguir editándola y publicarla— con el mismo corredor y los mismos casos sobre lo que había en
 producción el 12 de noviembre y sobre 3.1.
 
 | | Base | Len 3.1 |
 |---|---|---|
-| código de Len | `2e05b6df1`, producción del 12/11 | `32acd3bd4` |
+| código de Len | `92f4f7e21`, producción del 12/11 | `ca7f92566` |
 | corridas | 24 casos × 3, del 15 al 16/11 | 24 casos × 3, el 16/11 |
 | modelo de Len | el mismo en las dos | |
 | vara | Len-Bench, juego `clientes` (`lib/len-bench/`) | la misma, con el mismo evaluador |
@@ -24,11 +24,11 @@ cada fila se escribió antes de correrla.
 Las dos columnas se califican con la misma regla:
 
 - «Nada inventado» acepta un dato que el dueño no dio cuando Len le dijo que era de ejemplo o supuesto, nombrando su
-  tipo (teléfono, correo, precio), aunque no repita la cifra (`d0ce52c86`).
+  tipo (teléfono, correo, precio), aunque no repita la cifra (`9db186f4e`).
 - Un turno que el reloj del banco cortó a los 20 minutos cuenta como NO terminado en las dos columnas, como se corrió
   la batería. En producción nada corta un turno que trabaja; esos cortes (4 en la base, corrida de noche, y 9 en 3.1,
   corrida de día con el proveedor más lento; todos en las tiendas más grandes) perjudican más a 3.1. Desde
-  `db7ea4aad` el banco los cuenta aparte y les da 60 minutos.
+  `31d59c81e` el banco los cuenta aparte y les da 60 minutos.
 
 ## Resultados
 
@@ -48,7 +48,7 @@ Las dos columnas se califican con la misma regla:
 **Cómo leerla.** Los encargos terminados no cambian fuera del ruido. Baja el coste por encargo (−18,7 % en la media;
 −22,4 % por encargo terminado) y bajan las llamadas al modelo. F2 deja de aparecer. Los minutos no bajan: los turnos
 largos de las tiendas tardaron más con el proveedor más lento. F3 sube: eran notas de memoria que Len escribió en un
-turno y que el siguiente daba por no leídas; está arreglado después de 3.1 (`ed076c3fa`), sin medir aquí.
+turno y que el siguiente daba por no leídas; está arreglado después de 3.1 (`6e77b19ac`), sin medir aquí.
 
 **Lo que esta tabla no cubre.** Apps, juegos, subagentes, herramientas, el asistente propio, los conectores y el
 teléfono; y con unos pocos turnos al día, producción no puede confirmar nada por sí sola.
@@ -58,6 +58,6 @@ teléfono; y con unos pocos turnos al día, producción no puede confirmar nada 
 ## Volver a una conversación
 
 La rebaja al volver a una conversación más tarde no sale de esta tabla: se midió aparte el 14/11, con 12
-conversaciones, tres brazos y tres corridas (`b604f0ef4`). Cuando la caché del proveedor ya caducó, retomar una
+conversaciones, tres brazos y tres corridas (`4dd211976`). Cuando la caché del proveedor ya caducó, retomar una
 conversación larga —40.000 tokens o más, donde Len deja un resumen mientras la conversación descansa— cuesta un
 48,7 % menos; en las más cortas la rebaja es menor. Las 324 respuestas salieron correctas en los tres brazos.

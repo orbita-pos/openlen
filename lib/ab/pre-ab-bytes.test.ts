@@ -1,5 +1,5 @@
 // @vitest-environment node
-// WITHOUT AN EXPERIMENT, A PAGE'S BYTES ARE THE ONES IT HAD BEFORE A/B TESTING (review item 2; master 04b218999).
+// WITHOUT AN EXPERIMENT, A PAGE'S BYTES ARE THE ONES IT HAD BEFORE A/B TESTING (review item 2; master 24b7a1b50).
 //
 // The analytics snippet and the form stamp are baked into EVERY published page, and a release is content-addressed:
 // one extra byte changes every site's sha and weighs on every page. The A/B reader (sessionStorage `ol_ab`, the CTA
@@ -16,7 +16,7 @@ import { cidExpr, sourceExpr } from "@/lib/analytics/cid";
 import { injectAnalyticsSnippet } from "@/lib/analytics/snippet";
 import { wirePublishedForms } from "@/lib/publish/forms";
 
-/** The snippet exactly as master 04b218999 emitted it (its template, copied). */
+/** The snippet exactly as master 24b7a1b50 emitted it (its template, copied). */
 const preAbSnippet = (projectId: string, page: string | null) => `<script>(function(){
 var P=${JSON.stringify(projectId)},G=${JSON.stringify(page)},E="/c/"+P;
 var CID=${cidExpr()},SRC=${sourceExpr()};
@@ -30,7 +30,7 @@ try{if(new URL(a.href).host===location.host)return;}catch(_){return;}
 s({t:"c",h:a.href,l:(a.textContent||"").trim().slice(0,80)});
 },true);})();</script>`;
 
-/** The form stamp exactly as master 04b218999 emitted it. */
+/** The form stamp exactly as master 24b7a1b50 emitted it. */
 const preAbFormStamp = `<script data-ol-cid-stamp>(function(){try{var c=${cidExpr()};if(!c)return;var fs=document.querySelectorAll('form[action*="/api/f/"]');for(var i=0;i<fs.length;i++){var f=fs[i];if(f.querySelector('input[name=_openlen_cid]'))continue;var h=document.createElement('input');h.type='hidden';h.name='_openlen_cid';h.value=c;f.appendChild(h)}}catch(e){}})();</script>`;
 
 const PAGE = "<html><body><h1>Hola</h1></body></html>";

@@ -6,7 +6,7 @@
 // se quedaban en el clúster con las cuentas de los visitantes dentro, y sin la
 // fila ya nadie sabía de quién eran.
 //
-// Desde los datos en borrador y producción (ec252b5f) hay UNA BASE POR ENTORNO
+// Desde los datos en borrador y producción (6ba94fd5) hay UNA BASE POR ENTORNO
 // (`ol_<ref>_d`, `ol_<ref>_l`) y un solo rol de desarrollador por proyecto:
 // se borran las bases de cada entorno, sus ficheros, y luego el rol. Un
 // proyecto con base de ANTES de los entornos no tiene filas de entorno: su base

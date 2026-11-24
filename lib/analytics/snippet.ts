@@ -26,7 +26,7 @@
 import { cidExpr, sourceExpr } from "@/lib/analytics/cid";
 import { parseAbTag } from "@/lib/analytics/ab-tag";
 
-// 🔴 WITHOUT AN EXPERIMENT THIS IS THE SNIPPET OF BEFORE A/B TESTING, BYTE FOR BYTE (review item 2, master 04b218999;
+// 🔴 WITHOUT AN EXPERIMENT THIS IS THE SNIPPET OF BEFORE A/B TESTING, BYTE FOR BYTE (review item 2, master 24b7a1b50;
 // pinned by lib/ab/pre-ab-bytes.test.ts). The snippet is baked into every published page and a release is
 // content-addressed: bytes added for a feature that is off would change every site's sha and weigh on every page.
 const SNIPPET_TEMPLATE = (projectId: string, page: string | null) => `<script>(function(){

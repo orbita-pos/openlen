@@ -56,7 +56,7 @@ describe("Caddy y el lienzo", () => {
       // llamadas de la página, no tiene nada que avisar.
       if (ruta === "/ai/v1/*") continue;
       // El correo de los proyectos (lib/project-email, spec local 2026-10-22,
-      // 773894c27): /email/v1 también lo llaman sólo las Edge Functions, con la
+      // ff606f2f0): /email/v1 también lo llaman sólo las Edge Functions, con la
       // misma llave secreta. Nada que avisar, como /ai/v1.
       if (ruta === "/email/v1/*") continue;
       expect(RUTAS_SOLO_PUBLICADA, `${ruta} pasa a Next y el aviso del lienzo no lo conoce`).toContain(ruta.replace(/\*$/, ""));
@@ -126,7 +126,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
   });
 
   // 🔴 24/11/2026: an image, a font or a favicon of the FOLDER is named after its file, not its content (since
-  // 42a2b060d, 28/10): a new logo.png dropped on the Code lens, or one Len resizes in place, keeps its URL, and an
+  // 386f31d27, 28/10): a new logo.png dropped on the Code lens, or one Len resizes in place, keeps its URL, and an
   // immutable month left visitors with the old one. Immutable is only what carries its content in its name, as
   // the custom domains' route already serves them (app/served, FOLDER_CACHE).
   it("🔴 nota 1: lo inmutable es sólo lo que lleva su contenido en el nombre; nunca un fichero de la carpeta, binarios incluidos", () => {
@@ -143,7 +143,7 @@ describe("Caddy, la carpeta y el host lienzo-*", () => {
     const c = matcher("carpeta");
     const rutas = rutasDe(c, "path ");
     // /storage/v1/* (carril D): Next pone la caché de cada objeto, los privados `private`.
-    // /openlen/figure-* (f1f935096): el motor de la figura lleva su contenido en el nombre, así que es de @assets.
+    // /openlen/figure-* (b912bd655): el motor de la figura lleva su contenido en el nombre, así que es de @assets.
     expect(rutasDe(c, "not path ")).toEqual(["/assets/*", "/uploads/*", "/openlen/figure-*", "/storage/v1/*"]);
     expect(PAGINAS).toContain('header @carpeta Cache-Control "public, max-age=0, must-revalidate"');
     const doc = matcher("doc");

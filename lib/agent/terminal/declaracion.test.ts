@@ -104,7 +104,7 @@ describe("Len Dynamis: sólo la terminal para los ficheros", () => {
 
   // «Read-only» no es la herramienta; «Read the current session goal» (la
   // descripción de `get_goal`, literal de DeepSeek, pieza 8) tampoco: es el verbo.
-  // Ni «Read what the visuals you drew…» (`read_widget_context`, 50e23fc53, el
+  // Ni «Read what the visuals you drew…» (`read_widget_context`, bfd4c9967, el
   // ReadWidgetContext de Claude Code): también el verbo.
   const NOMBRA_UNA_DE_FICHEROS = /\b(Read|Edit|Write|Grep|Glob)\b(?!-| the current session goal| what the visuals you drew)/;
 

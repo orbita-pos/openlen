@@ -1,6 +1,6 @@
 # Auditoría independiente: entrada, navegación y controles
 
-Fecha: 2026-10-29. Base inspeccionada: c60ce1763 (el coordinador puede aplicar cambios mientras esta auditoría corre). Sólo se añadieron scripts y evidencia en reports. No se modificó producción.
+Fecha: 2026-10-29. Base inspeccionada: 66c363552 (el coordinador puede aplicar cambios mientras esta auditoría corre). Sólo se añadieron scripts y evidencia en reports. No se modificó producción.
 
 ## Cobertura y aislamiento
 

@@ -103,7 +103,7 @@ describe("/served/<host>/ — los ficheros de la carpeta", () => {
     }
   });
 
-  // Since the folder took images (28/10, 42a2b060d) an image of the folder is named after its file, not its
+  // Since the folder took images (28/10, 386f31d27) an image of the folder is named after its file, not its
   // content: dropping a new logo.png on the Code lens, or Len resizing /img/hero.jpg in place, keeps the URL. It
   // revalidates like a js — immutable, a visitor kept the old one for a month. What carries its content in its
   // name (/assets/) stays immutable.

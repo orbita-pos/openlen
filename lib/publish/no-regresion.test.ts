@@ -1,7 +1,7 @@
 // NO-REGRESIÓN (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §10 y foco 1 del plan): un proyecto de los
 // de antes —una página con su carpeta web y una imagen ya subida, y una app que importa un .svg— publica EL MISMO
 // árbol de release (cada ruta y el sha256 de su contenido) que antes de que la carpeta admitiera binarios. Lo
-// esperado se grabó en la base del trabajo (master a93de0bc) con NOREG_WRITE=1; aquí sólo se compara.
+// esperado se grabó en la base del trabajo (master 2213d6ac) con NOREG_WRITE=1; aquí sólo se compara.
 // Run: npx tsx --require ./scripts/test-node-server-only-shim.cjs --test lib/publish/no-regresion.test.ts
 import { after, describe, it } from "node:test";
 import assert from "node:assert/strict";

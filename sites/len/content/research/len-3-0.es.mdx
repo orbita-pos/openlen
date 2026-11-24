@@ -11,7 +11,7 @@ export const meta = {
   cifra: {
     valor: "5",
     nota: "tipos de entregables",
-    commit: "8a690189"
+    commit: "a72ba3f9"
   },
   indice: [
     { id: "engine", texto: "Un motor más capaz" },
@@ -49,19 +49,19 @@ Len 3.0 incorpora un motor actualizado con mejores resultados publicados en razo
 
 <ResultadosModelo lang="es" />
 
-La configuración de este lanzamiento incorpora la actualización evaluada. <Fuente ruta="lib/generation/model-policy.ts" commit="8a690189" />
+La configuración de este lanzamiento incorpora la actualización evaluada. <Fuente ruta="lib/generation/model-policy.ts" commit="a72ba3f9" />
 
 <h2 id="agent">Entender, planear y comprobar</h2>
 
 La capacidad de Len también está en **cómo lleva un encargo adelante**. Puede consultar los archivos y las conversaciones del proyecto, aclarar lo que falta, organizar un trabajo largo y elegir las herramientas que necesita. La planificación, el contexto y la comprobación se reúnen con la ejecución y los nuevos entregables en el mismo espacio de trabajo.
 
-**Entender el objetivo.** Cuando necesita una decisión tuya, puede preguntarte con opciones. El encargo se concreta contigo en lugar de rellenar ese dato a ciegas. <Fuente ruta="lib/agent/ask-user-question.ts" commit="8a690189" />
+**Entender el objetivo.** Cuando necesita una decisión tuya, puede preguntarte con opciones. El encargo se concreta contigo en lugar de rellenar ese dato a ciegas. <Fuente ruta="lib/agent/ask-user-question.ts" commit="a72ba3f9" />
 
-**Mantener el rumbo.** Puede mostrar una lista de pasos, proponerte un plan antes de tocar el proyecto y continuar un encargo largo por rondas. El objetivo y lo que queda pendiente forman parte del trabajo. <Fuente ruta="lib/agent/plan-mode.ts" commit="8a690189" /> <Fuente ruta="lib/agent/goal.ts" commit="8a690189" />
+**Mantener el rumbo.** Puede mostrar una lista de pasos, proponerte un plan antes de tocar el proyecto y continuar un encargo largo por rondas. El objetivo y lo que queda pendiente forman parte del trabajo. <Fuente ruta="lib/agent/plan-mode.ts" commit="a72ba3f9" /> <Fuente ruta="lib/agent/goal.ts" commit="a72ba3f9" />
 
-**Recuperar contexto.** Puede buscar en las conversaciones anteriores del proyecto y volver a las decisiones que ya tomaron. Los archivos y el estado del proyecto le dan contexto para seguir. <Fuente ruta="lib/agent/session-query.ts" commit="8a690189" />
+**Recuperar contexto.** Puede buscar en las conversaciones anteriores del proyecto y volver a las decisiones que ya tomaron. Los archivos y el estado del proyecto le dan contexto para seguir. <Fuente ruta="lib/agent/session-query.ts" commit="a72ba3f9" />
 
-**Comprobar y corregir.** Tiene una terminal para ejecutar código y pruebas, y un navegador real para mirar y usar lo que construye. Los errores de ejecución y los resultados observados le dan información para corregir la entrega. <Fuente ruta="lib/agent/verify.ts" commit="8a690189" />
+**Comprobar y corregir.** Tiene una terminal para ejecutar código y pruebas, y un navegador real para mirar y usar lo que construye. Los errores de ejecución y los resultados observados le dan información para corregir la entrega. <Fuente ruta="lib/agent/verify.ts" commit="a72ba3f9" />
 
 Pídele, por ejemplo, una presentación de tu proyecto acompañada de un dashboard: puede trabajar las piezas, revisar sus resultados y conservarlas juntas para la siguiente corrección.
 
@@ -81,13 +81,13 @@ Cada entregable se guarda por separado, con su título, sus fuentes, sus version
 - **Videos:** composiciones animadas con vista previa y archivo MP4.
 - **Voz:** texto convertido en audio descargable. Los videos y las piezas de audio también pueden incorporar música y efectos que tú subas.
 
-La vista previa ajusta el dashboard al espacio disponible y las diapositivas al ancho de la ventana, conservando sus proporciones. <Fuente ruta="components/workspace-v2/artifacts/artifact-viewer.tsx" commit="8a690189" />
+La vista previa ajusta el dashboard al espacio disponible y las diapositivas al ancho de la ventana, conservando sus proporciones. <Fuente ruta="components/workspace-v2/artifacts/artifact-viewer.tsx" commit="a72ba3f9" />
 
 <h2 id="terminal">Una terminal real</h2>
 
 En el lanzamiento anterior, la terminal de Len interpretaba comandos dentro del proyecto. Ahora puede **ejecutar programas, instalar paquetes y correr código en un entorno aislado**. Una cuenta no comparte su entorno con los archivos de otra.
 
-Esto le da más recursos para trabajar y comprobar resultados: procesar archivos, ejecutar una prueba o preparar un recurso que necesita el proyecto. El uso del entorno se mide y se cobra dentro del turno. <Fuente ruta="lib/agent/sandbox/choose.ts" commit="8a690189" />
+Esto le da más recursos para trabajar y comprobar resultados: procesar archivos, ejecutar una prueba o preparar un recurso que necesita el proyecto. El uso del entorno se mide y se cobra dentro del turno. <Fuente ruta="lib/agent/sandbox/choose.ts" commit="a72ba3f9" />
 
 <h2 id="connections">Tus cuentas y tu proyecto</h2>
 
@@ -99,7 +99,7 @@ Las páginas y apps conservan su base de datos, cuentas de visitantes, archivos 
 
 <h2 id="checks">Cómo se comprueba una entrega</h2>
 
-Un trabajo en cola no es una entrega terminada. Los entregables pasan por su compilación y las comprobaciones de su formato antes de quedar disponibles. Los dashboards vinculan sus cifras a los datos que los acompañan; las presentaciones y los videos se renderizan antes de ofrecer el archivo final. <Fuente ruta="lib/artifacts/jobs.ts" commit="8a690189" />
+Un trabajo en cola no es una entrega terminada. Los entregables pasan por su compilación y las comprobaciones de su formato antes de quedar disponibles. Los dashboards vinculan sus cifras a los datos que los acompañan; las presentaciones y los videos se renderizan antes de ofrecer el archivo final. <Fuente ruta="lib/artifacts/jobs.ts" commit="a72ba3f9" />
 
 Puedes abrir la vista previa, descargar el resultado y pedir una corrección sobre la misma pieza. Si algo falla, el estado del entregable debe decirlo. Las imágenes y la voz generadas tienen coste en créditos; volver a generarlas no es una corrección gratuita.
 

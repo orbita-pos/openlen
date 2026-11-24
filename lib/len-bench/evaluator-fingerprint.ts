@@ -1,7 +1,7 @@
 // lib/len-bench/evaluator-fingerprint.ts — THE EVALUATOR'S FINGERPRINT.
 //
 // Spec local 2026-11-12-len-3-1-ruta, §5 piece 5: «la huella del evaluador, que no deja correr si cambió sin
-// aprobarlo». The 3.1 table compares two columns (2e05b6df1 and the candidate); they are comparable only if
+// aprobarlo». The 3.1 table compares two columns (92f4f7e21 and the candidate); they are comparable only if
 // the same evaluator graded both — the same cases, graders, weights, judge and code. Claude Code's harness
 // integrity gate only detects changes and is no security boundary, and an unattended run never passes its
 // approval (§3.1): so is this, and so is `--aprobar-evaluador`.

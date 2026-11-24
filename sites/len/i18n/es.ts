@@ -47,8 +47,8 @@ export const es = {
     // La evidencia de las cifras de arriba y de la imagen (la promesa del pie).
     fuentes: {
       texto: "Los números:",
-      tabla: { commit: "c947d87d4" },
-      conversaciones: { commit: "b604f0ef4" }
+      tabla: { commit: "cf20fad0b" },
+      conversaciones: { commit: "4dd211976" }
     },
     cielo: {
       titulo: "Len 3.0",
@@ -93,7 +93,7 @@ export const es = {
           k: "cobro",
           t: "El coste, a la vista",
           p: "El trabajo se mide en créditos. Las imágenes, la voz y el uso de la terminal pueden sumar coste al turno; puedes revisar el consumo del proyecto.",
-          commit: "8a690189"
+          commit: "a72ba3f9"
         }
       ]
     },

@@ -47,8 +47,8 @@ export const en = {
     // The evidence behind the numbers above and in the image (the footer’s promise).
     fuentes: {
       texto: "The numbers:",
-      tabla: { commit: "c947d87d4" },
-      conversaciones: { commit: "b604f0ef4" }
+      tabla: { commit: "cf20fad0b" },
+      conversaciones: { commit: "4dd211976" }
     },
     cielo: {
       titulo: "Len 3.0",
@@ -93,7 +93,7 @@ export const en = {
           k: "cobro",
           t: "See what the work costs",
           p: "Work is measured in credits. Images, voice and terminal usage can add to a turn’s cost; you can review the project’s usage.",
-          commit: "8a690189"
+          commit: "a72ba3f9"
         }
       ]
     },
