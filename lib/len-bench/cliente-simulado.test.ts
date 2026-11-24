@@ -76,6 +76,16 @@ describe("respuestaFija — lo que contesta el dueño cuando Len PREGUNTA", () =
   it("nunca se sale de la ficha (la corrida no puede salir `cliente_fuera_de_ficha`)", () => {
     expect(respetaLaFicha(respuestaFija(ficha), ficha).ok).toBe(true);
   });
+  // 🔴 24/11, diagnóstico de la batería 1 de Len 3.1: a «¿una tienda con catálogo o una página con un botón?» el
+  // dueño contestaba «No lo tengo: déjalo como está», que se lee como «no hagas nada», y Len no hizo nada (4 corridas
+  // con la página vacía). Lo que quería decir es que no invente los datos que faltan; lo demás lo decide Len.
+  it("🔴 dice que no invente lo que falta y que lo demás lo decida Len — nunca «déjalo como está»", () => {
+    for (const r of [respuestaFija(ficha), respuestaFija({ negocio: "x", datos: {} })]) {
+      expect(r).not.toMatch(/d[ée]jalo como est[áa]/i);
+      expect(r).toMatch(/no (?:lo|los) inventes/i);
+      expect(r).toMatch(/dec[ií]delo t[úu]/i);
+    }
+  });
 });
 
 describe("decidirComoCliente — el dueño FIJO, como los dobles `fixed` de Claude Code", () => {

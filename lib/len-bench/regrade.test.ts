@@ -61,6 +61,55 @@ describe("regradeToldPlaceholders", () => {
     expect(regradeToldPlaceholders(before)).toEqual(before);
   });
 
+  // 🔴 24/11, diagnosis of the 29 unfinished runs of battery 1: the 10 `nada-inventado` failures of the candidate were
+  // all runs where Len DID tell the owner, in the customer's language or naming the data by its value or its card.
+  // These are his sentences from those runs (568f6c28, 45eece39, 3e256422, 64f67030).
+  it("🔴 told in Portuguese: the country code Len added to the WhatsApp number, and why", () => {
+    const invented = "no están en la ficha ni en la partida: teléfono 5544991238455";
+    for (const len of [
+      "O link de WhatsApp leva o +55 (Brasil) porque o endereço é Maringá/PR e o domínio é .com.br. Se o número for de outro país, me diga que eu corijo.",
+      "**O que assumi:** o número ficou como brasileiro (+55 44 99123-8455) para o link do WhatsApp funcionar, já que o endereço é em Maringá.",
+      "Assumi o +55 no link do WhatsApp, porque o endereço é em Maringá/PR.",
+    ]) {
+      const r = regradeToldPlaceholders(run({ graders: [grader("nada-inventado", false, invented)], len }));
+      expect(r.graders[0].paso, len).toBe(true);
+    }
+  });
+
+  it("🔴 told in Italian: placeholders, by kind or by the values themselves", () => {
+    const invented = "no están en la ficha ni en la partida: teléfono 390000000000, correo info@esempio.it";
+    for (const len of [
+      "Due cose che ho deciso io: email, telefono e indirizzo sono segnaposto da sostituire con i tuoi.",
+      "Nome, `info@esempio.it`, `+39 000 000 0000`, i nomi dei progetti e i numeri sono segnaposto: dammi i dati veri e li sostituisco.",
+    ]) {
+      const r = regradeToldPlaceholders(run({ graders: [grader("nada-inventado", false, invented)], len }));
+      expect(r.graders[0].paso, len).toBe(true);
+    }
+  });
+
+  it("🔴 told in Spanish without the word «precios»: the example listings, or the mockup's figures quoted", () => {
+    const listings = "no están en la ficha ni en la partida: precio 3000000, precio 8000000";
+    const listingsTold = regradeToldPlaceholders(run({ graders: [grader("nada-inventado", false, listings)], len: "Las siete fichas son de ejemplo, como me dijiste: quedan así." }));
+    expect(listingsTold.graders[0].paso).toBe(true);
+    const mockup = "no están en la ficha ni en la partida: precio 95, precio 19120";
+    const mockupTold = regradeToldPlaceholders(
+      run({ graders: [grader("nada-inventado", false, mockup)], len: "Los números de las maquetas ($95 del cobro, $19,120 de la semana) son de ejemplo." }),
+    );
+    expect(mockupTold.graders[0].paso).toBe(true);
+  });
+
+  it("CONTROL: the same data said as fact in those languages, or «por exemplo / per esempio / for example», change nothing", () => {
+    for (const len of [
+      "Coloquei o WhatsApp (44) 99123-8455 no rodapé e o e-mail no contato.",
+      "Ho messo il telefono e l'email nel footer.",
+      "Done: the phone number and the email are in the footer.",
+      "Por exemplo, o telefone pode ir no topo. Per esempio, l'email nel footer. For example, the price in bold.",
+    ]) {
+      const before = run({ graders: [grader("nada-inventado", false, INVENTED)], len });
+      expect(regradeToldPlaceholders(before), len).toEqual(before);
+    }
+  });
+
   it("a run whose grader passed, or that never got graded, is left as it was", () => {
     const passed = run({ graders: [grader("nada-inventado", true, "todo dato de contacto y precio sale de la ficha o de la página de partida")] });
     expect(regradeToldPlaceholders(passed)).toEqual(passed);

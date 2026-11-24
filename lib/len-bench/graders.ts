@@ -124,8 +124,27 @@ export function datosDeLaFicha(campos: readonly string[], peso = 3): Grader {
  * otro país, dime». Estrecha a propósito: «dime si quieres cambiarlo» no dice
  * que nada sea supuesto, y «le puse $36 al guisado» tampoco.
  */
-const SUPUESTO_DICHO =
-  /\b(?:supuse|supongo|suponiendo|asum[ií]|di por hecho|lo di por|(?:le )?puse [^.;]{0,60}\bporque\b|de ejemplo|es un ejemplo|provisional(?:es)?|no me (?:lo |la |los |las )?(?:diste|dijiste|pasaste)|si (?:no )?es de otr[oa]|si (?:el|la|tu|su) [^.;]{0,40}\bes de otr[oa])/i;
+const SUPUESTO_DICHO = new RegExp(
+  [
+    // Español.
+    String.raw`supuse|supongo|suponiendo|asum[ií]|di por hecho|lo di por|(?:le )?puse [^.;]{0,60}\bporque\b|de ejemplo|es un ejemplo|provisional(?:es)?|no me (?:lo |la |los |las )?(?:diste|dijiste|pasaste)|si (?:no )?es de otr[oa]|si (?:el|la|tu|su) [^.;]{0,40}\bes de otr[oa]`,
+    // 24/11 (diagnóstico de la batería 1 de Len 3.1): Len le habla al dueño en SU idioma, y los casos de clientes
+    // vienen en portugués, italiano, inglés, alemán… Lo mismo, dicho en los idiomas latinos de OpenLen.
+    // Português: «Assumi o +55 …», «leva o +55 (Brasil) porque o endereço é Maringá».
+    String.raw`assumi|supus|supondo|presumi|(?:coloquei|pus|leva|usei|deixei) [^.;]{0,60}\bporque\b|n[ãa]o me (?:passou|passaste|deu|deste|disse)`,
+    // Italiano.
+    String.raw`ho (?:supposto|assunto|presunto|deciso io)|dato per scontato|(?:ho messo|ho usato|ho lasciato) [^.;]{0,60}\bperch[ée]\b|non mi hai (?:dato|detto|passato)`,
+    // English, français, Deutsch, Nederlands.
+    String.raw`assumed|assuming|i (?:put|used|added|left) [^.;]{0,60}\bbecause\b|you didn'?t (?:give|tell|send)`,
+    String.raw`suppos[ée]e?s?|j'ai (?:mis|utilis[ée]) [^.;]{0,60}\bparce que\b|tu ne m'as pas|vous ne m'avez pas`,
+    String.raw`angenommen|ich bin davon ausgegangen|aangenomen|ik ging ervan uit`,
+  ]
+    .map((s) => `(?:${s})`)
+    .join("|")
+    .replace(/^/, String.raw`\b(?:`)
+    .concat(")"),
+  "i",
+);
 
 /** Las frases de Len, una a una. */
 function frasesDeLen(conversacion: readonly Intercambio[]): string[] {
@@ -145,14 +164,30 @@ function supuestoDicho(conversacion: readonly Intercambio[]): string {
  * 3.1, 16/11: así avisó Len en más de la mitad de lo que este grader suspendía). Estrecha como `SUPUESTO_DICHO`:
  * «por ejemplo» no lo dice, ni «dime si quieres cambiar el precio».
  */
-const DE_EJEMPLO =
-  /(?<!\bpor )\b(?:de ejemplo|ejemplos?|de muestra|provisional(?:es)?|fictici[oa]s?|gen[eé]ric[oa]s?|placeholders?)\b|\b(?:reempl[aá]z|sustitu[iy]|c[aá]mbi)\w* (?:por|con) (?:el|la|los|las|tu|tus|su|sus) (?:real(?:es)?|verdader[oa]s?|tuy[oa]s?|correct[oa]s?)\b/i;
+const DE_EJEMPLO = new RegExp(
+  // «por ejemplo», «por exemplo», «per/ad esempio», «for example», «par exemple», «zum Beispiel» no lo dicen.
+  String.raw`(?<!\b(?:por|per|ad|for|par|zum) )\b(?:` +
+    [
+      String.raw`de ejemplo|ejemplos?|de muestra|provisional(?:es)?|fictici[oa]s?|gen[eé]ric[oa]s?|placeholders?`,
+      // 24/11: los mismos avisos en los otros idiomas latinos de OpenLen («sono segnaposto», «são de exemplo»).
+      String.raw`de exemplo|exemplos?|fict[ií]ci[oa]s?|provis[óo]ri[oa]s?|gen[ée]ric[oa]s?`,
+      String.raw`d'esempio|di esempio|esempi[oi]?|segnaposto|fittizi[oe]?|provvisori[oaie]?`,
+      String.raw`examples?|sample|dummy|fictional|made[- ]up`,
+      String.raw`d'exemple|exemples?|fictifs?|fictives?|provisoires?|factices?`,
+      String.raw`beispiel\w*|platzhalter|fiktiv\w*|vorl[äa]ufig\w*|voorbeeld\w*|tijdelijk\w*`,
+    ].join("|") +
+    String.raw`)\b|\b(?:reempl[aá]z|sustitu[iy]|c[aá]mbi)\w* (?:por|con) (?:el|la|los|las|tu|tus|su|sus) (?:real(?:es)?|verdader[oa]s?|tuy[oa]s?|correct[oa]s?)\b`,
+  "i",
+);
 
-/** Los tres tipos de dato que mira `nada-inventado`, como los nombra una frase. */
+/** Los tres tipos de dato que mira `nada-inventado`, como los nombra una frase (en los idiomas latinos de OpenLen). */
 const TIPO_DE_DATO = {
-  teléfono: /tel[eé]fonos?|whats ?app|celular(?:es)?|\bn[uú]meros? de (?:contacto|tel[eé]fono|whats ?app)/i,
-  correo: /correos?|e-?mails?/i,
-  precio: /precios?|tarifas?|costos?/i,
+  teléfono: /tel[eé]fon[oe]s?|telefon\w*|t[ée]l[ée]phones?|\bphones?\b|whats ?app|celular(?:es)?|cellulare|\bn[uú]meros? de (?:contacto|tel[eé]fono|whats ?app)/i,
+  correo: /correos?|e-?mails?|courriels?|posta elettronica/i,
+  // Lo que LLEVA el precio también lo nombra: «las siete fichas son de ejemplo» (una inmobiliaria) dice que sus
+  // precios lo son.
+  precio:
+    /precios?|tarifas?|costos?|pre[çc]os?|prezz[oi]|\bprices?\b|\bprix\b|preise?\b|prijz\w*|fichas?\b|propiedades|productos|art[ií]culos|inmuebles|im[óo]veis|produtos|prodotti|immobili|listings?|products|propert(?:y|ies)/i,
 } as const;
 export type TipoDeDato = keyof typeof TIPO_DE_DATO;
 
@@ -163,7 +198,16 @@ export type TipoDeDato = keyof typeof TIPO_DE_DATO;
  */
 export function tiposDichosComoSupuestos(conversacion: readonly Intercambio[]): Set<TipoDeDato> {
   const avisos = frasesDeLen(conversacion).filter((f) => SUPUESTO_DICHO.test(f) || DE_EJEMPLO.test(f));
-  return new Set((Object.keys(TIPO_DE_DATO) as TipoDeDato[]).filter((t) => avisos.some((f) => TIPO_DE_DATO[t].test(f))));
+  // 24/11: o los nombra por el VALOR, que se lee en cualquier idioma: «`info@esempio.it`, `+39 000 000 0000` … sono
+  // segnaposto», «los números de las maquetas ($95 del cobro) son de ejemplo».
+  const porValor: Record<TipoDeDato, (f: string) => boolean> = {
+    teléfono: (f) => telefonosDe(f).length > 0,
+    correo: (f) => correosDe(f).length > 0,
+    precio: (f) => preciosDe(f).length > 0,
+  };
+  return new Set(
+    (Object.keys(TIPO_DE_DATO) as TipoDeDato[]).filter((t) => avisos.some((f) => TIPO_DE_DATO[t].test(f) || porValor[t](f))),
+  );
 }
 
 /** Una opción de selector que es un RANGO («Desde 450.000 €», «450.000 € –

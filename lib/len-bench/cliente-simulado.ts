@@ -50,8 +50,12 @@ export type Decision = { accion: "responder"; mensaje: string } | { accion: "sig
 export function respuestaFija(ficha: Ficha): string {
   // Con su nombre: «2012» suelto no dice que es el año en que abrieron.
   const datos = Object.entries(ficha.datos).map(([k, v]) => `- ${k.replace(/_/g, " ")}: ${v}`);
-  const falta = "Lo que no esté aquí no lo tengo: déjalo como está.";
-  return datos.length > 0 ? `Esto es lo que tengo:\n${datos.join("\n")}\n${falta}` : `No lo tengo: déjalo como está.`;
+  // 24/11: «déjalo como está» se leía como «no hagas nada» ante una pregunta de opciones (4 páginas vacías en la
+  // batería 1 de Len 3.1). Quiere decir que no invente los datos que faltan; lo demás lo decide Len.
+  const resto = "No lo inventes; lo demás, decídelo tú.";
+  return datos.length > 0
+    ? `Esto es lo que tengo:\n${datos.join("\n")}\nLo que no esté aquí no lo tengo. ${resto}`
+    : `No lo tengo. ${resto}`;
 }
 
 /**
