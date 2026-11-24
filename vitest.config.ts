@@ -692,6 +692,9 @@ export default defineConfig({
       // Len's MCP connectors (spec local 2026-11-06-conectores-mcp). LISTA BLANCA.
       "lib/mcp-connectors/**/*.test.ts",
       "app/api/mcp-connectors/**/*.test.ts",
+      // OpenLen's own Google Calendar MCP server (spec local 2026-11-24-servidor-de-google-calendar). LISTA BLANCA;
+      // its route's tests are under app/api/mcp/**, already listed above.
+      "lib/google-calendar-mcp/**/*.test.ts",
       // OpenLen's Client ID Metadata Document (spec local 2026-11-17-oauth-de-conectores-mcp, §5.2). LISTA BLANCA.
       "app/oauth/**/*.test.ts",
       // The game mode (spec local 2026-11-05-modo-juego-design). LISTA BLANCA.
