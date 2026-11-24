@@ -47,7 +47,7 @@ export const es = {
     // La evidencia de las cifras de arriba y de la imagen (la promesa del pie).
     fuentes: {
       texto: "Los números:",
-      tabla: { commit: "cf20fad0b" },
+      tabla: { commit: "3d4853a56" },
       conversaciones: { commit: "4dd211976" }
     },
     cielo: {

@@ -47,7 +47,7 @@ export const en = {
     // The evidence behind the numbers above and in the image (the footer’s promise).
     fuentes: {
       texto: "The numbers:",
-      tabla: { commit: "cf20fad0b" },
+      tabla: { commit: "3d4853a56" },
       conversaciones: { commit: "4dd211976" }
     },
     cielo: {
