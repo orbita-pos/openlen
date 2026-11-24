@@ -107,6 +107,25 @@ describe("the home's box", () => {
     expect(takeFirstMessage(BRIEF)).toEqual({ brief: BRIEF, kind: "pagina" });
   });
 
+  // 24/11 (Jesús: «lo máx son 4000 caracteres y siento que es algo que enfada … claude code no tiene eso»).
+  it("🔴 a 20,000-character message is kept whole and sent through its ticket, not the URL", async () => {
+    const long = "Mi panadería: ".concat("pan de masa madre, ".repeat(1_100));
+    const el = mount();
+    const ta = el.querySelector<HTMLTextAreaElement>("#hero-prompt")!;
+    expect(ta.hasAttribute("maxlength")).toBe(false);
+    type(el, long);
+    expect(ta.value).toBe(long);
+    await press(sendButton(el));
+    const url = String(push.mock.calls[0]?.[0] ?? "");
+    expect(url).toMatch(/^\/new\?first=[0-9a-f]{16}$/);
+    expect(takeFirstMessage({ first: url.slice("/new?first=".length) })).toEqual({ brief: long.trim(), kind: "pagina" });
+  });
+
+  it("the box's scrollbar is the app's, not the browser's", () => {
+    const el = mount();
+    expect(el.querySelector("#hero-prompt")!.classList.contains("nice-scroll")).toBe(true);
+  });
+
   it("🔴 a send without photos clears the ones an earlier send left: they never reach this message", async () => {
     // An earlier send left a photo and the visitor never arrived (closed the sign-in dialog, went back).
     dejarReferenciasEnTransito([{ dataUrl: "data:image/png;base64,AAAA", nombre: "vieja.png" }]);

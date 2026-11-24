@@ -1,4 +1,8 @@
 export const GENERATION_BRIEF_MIN_LENGTH = 10;
+/** The cap of the retired /api/generate's brief, kept only by the unmounted brief panel's hook
+ *  (`components/generation-brief-limit.tsx`). What the home sends to Len has NO maximum (24/11, Jesús: «claude code no
+ *  tiene eso»): Claude Code 2.1.330 sends whatever is written — past 10,000 characters its box only SHOWS the middle as
+ *  «[...Truncated text #N +X lines...]». The model's context is the only limit, as for every message in Len's chat. */
 export const GENERATION_BRIEF_MAX_LENGTH = 4000;
 
 const GENERATION_BRIEF_COUNTER_THRESHOLD = GENERATION_BRIEF_MAX_LENGTH * 0.75;
@@ -24,12 +28,9 @@ export function trimGenerationBrief(value: string): string {
   return value.trim();
 }
 
+/** Long enough to send. No maximum: see `GENERATION_BRIEF_MAX_LENGTH`. */
 export function isGenerationBriefLengthValid(value: string): boolean {
-  const length = trimGenerationBrief(value).length;
-  return (
-    length >= GENERATION_BRIEF_MIN_LENGTH &&
-    length <= GENERATION_BRIEF_MAX_LENGTH
-  );
+  return trimGenerationBrief(value).length >= GENERATION_BRIEF_MIN_LENGTH;
 }
 
 export function shouldShowGenerationBriefCounter(length: number): boolean {
@@ -77,21 +78,16 @@ export interface PreparedGenerationBriefInput {
   autostartAllowed: boolean;
 }
 
-/** Normalizes untrusted prefill text. An oversized deep-link is visible in a
- *  bounded textarea, but never starts a billable generation automatically. */
+/** Normalizes untrusted prefill text (a link's `?brief=`): trimmed, never cut — a URL bounds its own length. It still
+ *  never sends by itself: only the home's own ticket does (`lib/marketing/first-message-in-transit.ts`). */
 export function prepareGenerationBriefInput(
   rawValue: string | null | undefined,
 ): PreparedGenerationBriefInput {
-  const trimmed = trimGenerationBrief(rawValue ?? "");
-  const truncated = trimmed.length > GENERATION_BRIEF_MAX_LENGTH;
-  const value = truncated
-    ? utf16SafePrefix(trimmed, GENERATION_BRIEF_MAX_LENGTH)
-    : trimmed;
-
+  const value = trimGenerationBrief(rawValue ?? "");
   return {
     value,
-    truncated,
-    autostartAllowed: !truncated && isGenerationBriefLengthValid(value),
+    truncated: false,
+    autostartAllowed: isGenerationBriefLengthValid(value),
   };
 }
 

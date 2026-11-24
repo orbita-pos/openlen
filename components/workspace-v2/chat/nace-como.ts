@@ -52,9 +52,20 @@ export function kindFromParam(v: string | null): StartKind {
 
 /** El enlace de la portada a /new: el brief escrito y, si no es una página, su `kind`. An agent goes to the person's
  *  space instead, which sends the home's ticket as /new does. */
-export function newProjectHref(brief: string, kind: StartKind): string {
-  if (kind === "agent") return spaceHref({ brief: brief.trim() });
-  const base = `/new?brief=${encodeURIComponent(brief.trim())}`;
+/** How much of a URL the brief may take, escaped. Cloudflare and Node refuse a request line past ~16 KB, and escaped
+ *  Spanish takes 3–6 bytes a letter; past this the message travels only in the home's ticket and the link carries the
+ *  ticket's id (`?first=`, lib/marketing/first-message-in-transit.ts). Since 24/11 the box has no cap, as Claude Code. */
+export const URL_BRIEF_MAX_BYTES = 6_000;
+
+export function newProjectHref(brief: string, kind: StartKind, ticket: string | null = null): string {
+  const trimmed = brief.trim();
+  if (ticket && encodeURIComponent(trimmed).length > URL_BRIEF_MAX_BYTES) {
+    if (kind === "agent") return spaceHref({ first: ticket });
+    const byId = `/new?first=${encodeURIComponent(ticket)}`;
+    return kind === "pagina" ? byId : `${byId}&${KIND_PARAM}=${kind}`;
+  }
+  if (kind === "agent") return spaceHref({ brief: trimmed });
+  const base = `/new?brief=${encodeURIComponent(trimmed)}`;
   return kind === "pagina" ? base : `${base}&${KIND_PARAM}=${kind}`;
 }
 

@@ -17,11 +17,14 @@ import { takeFirstMessage, type FirstMessage } from "@/lib/marketing/first-messa
  */
 export function useFirstMessageOnArrival({
   arrivalBrief,
+  arrivalFirst = null,
   ready,
   send,
   onNothing,
 }: {
   arrivalBrief: string | null;
+  /** The ticket's id in `?first=`, for a message too long for a URL. */
+  arrivalFirst?: string | null;
   ready: boolean;
   send: (message: FirstMessage) => void;
   onNothing: () => void;
@@ -34,8 +37,8 @@ export function useFirstMessageOnArrival({
   useEffect(() => {
     if (!ready || taken.current) return;
     taken.current = true;
-    const message = takeFirstMessage(arrivalBrief);
+    const message = takeFirstMessage({ brief: arrivalBrief, first: arrivalFirst });
     if (message) sendRef.current(message);
     else nothingRef.current();
-  }, [ready, arrivalBrief]);
+  }, [ready, arrivalBrief, arrivalFirst]);
 }

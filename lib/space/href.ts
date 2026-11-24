@@ -8,9 +8,11 @@ export function spaceRedirectOf(data: { space?: unknown } | null | undefined): s
   return isSpaceData(data) ? spaceHref() : null;
 }
 
-export function spaceHref(q: { readonly brief?: string; readonly draft?: string } = {}): string {
+export function spaceHref(q: { readonly brief?: string; readonly draft?: string; readonly first?: string } = {}): string {
   const params = new URLSearchParams();
-  if (q.brief) params.set("brief", q.brief);
+  // `first`: the home's ticket id, for a message too long for a URL (see newProjectHref).
+  if (q.first) params.set("first", q.first);
+  else if (q.brief) params.set("brief", q.brief);
   else if (q.draft) params.set("draft", q.draft);
   const query = params.toString();
   return query ? `/space?${query}` : "/space";

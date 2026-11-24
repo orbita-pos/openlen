@@ -36,12 +36,13 @@ export default async function SpacePage({
   const [{ locale }, query] = await Promise.all([params, searchParams]);
   const brief = one(query.brief);
   const draft = one(query.draft);
+  const first = one(query.first);
   const personId = (await auth())?.user?.id;
   if (!personId) {
-    const back = spaceHref({ ...(brief ? { brief } : {}), ...(draft ? { draft } : {}) });
+    const back = spaceHref({ ...(first ? { first } : {}), ...(brief ? { brief } : {}), ...(draft ? { draft } : {}) });
     return redirect({ href: `/login?next=${encodeURIComponent(back)}`, locale });
   }
   const spaceId = await ensureSpace(personId);
   const chat = await getChatMessages(spaceId);
-  return <SpaceHome projectId={spaceId} initialChat={chat} arrivalBrief={brief} draft={draft} />;
+  return <SpaceHome projectId={spaceId} initialChat={chat} arrivalBrief={brief} draft={draft} arrivalFirst={first} />;
 }

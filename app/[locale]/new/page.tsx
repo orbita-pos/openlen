@@ -921,6 +921,8 @@ function NewV2Inner() {
   // the home's box — the only one since 06/11 (Jesús: «¿para qué tener 2 inputs?») —, which only fills (`homeHref`).
   const briefParam = searchParams.get("brief");
   const arrivalBriefRef = useRef(briefParam);
+  // The home's ticket id, for a message too long for a URL (`?first=`, components/workspace-v2/chat/nace-como.ts).
+  const arrivalFirstRef = useRef(searchParams.get("first"));
   const arrivalKindRef = useRef(kindFromParam(searchParams.get(KIND_PARAM)));
   // Mobile, otra vez: el Chat tapa el lienzo, así que cuando pide abrir una
   // lente —una fila de la tarjeta de cambios, una ruta (la #9 de
@@ -992,7 +994,7 @@ function NewV2Inner() {
   useEffect(() => {
     if (!resolvingBlank) return;
     // Nothing the home sent: back to its box, with what the link carried, before any blank project opens.
-    if (!hasFirstMessage(arrivalBriefRef.current)) {
+    if (!hasFirstMessage({ brief: arrivalBriefRef.current, first: arrivalFirstRef.current })) {
       router.replace(homeHref(arrivalBriefRef.current, arrivalKindRef.current));
       return;
     }
@@ -1025,6 +1027,7 @@ function NewV2Inner() {
     if (!projectParam) return;
     if (
       briefParam === null &&
+      searchParams.get("first") === null &&
       modeParam === null &&
       searchParams.get("autostart") === null &&
       searchParams.get(KIND_PARAM) === null
@@ -1032,6 +1035,7 @@ function NewV2Inner() {
       return;
     const qs = new URLSearchParams(searchParams.toString());
     qs.delete("brief");
+    qs.delete("first");
     qs.delete("mode");
     qs.delete("autostart");
     qs.delete(KIND_PARAM);
@@ -1117,6 +1121,7 @@ function NewV2Inner() {
   // an old tab) has no box here any more: back to the home's (Jesús, 06/11: «¿para qué tener 2 inputs?»).
   useFirstMessageOnArrival({
     arrivalBrief: arrivalBriefRef.current,
+    arrivalFirst: arrivalFirstRef.current,
     ready: proyectoEnBlanco && !!loadedProjectId,
     send: (message) => void handleHeroSend(message),
     onNothing: () => router.replace(homeHref(arrivalBriefRef.current, arrivalKindRef.current)),

@@ -17,8 +17,20 @@ afterEach(() => {
 
 describe("the first message sent from the home", () => {
   it("comes back on arrival at /new with the same brief, with its kind", () => {
-    expect(leaveFirstMessage({ brief: BRIEF, kind: "app" }, T0)).toBe(true);
+    expect(leaveFirstMessage({ brief: BRIEF, kind: "app" }, T0)).toMatch(/^[0-9a-f]{16}$/);
     expect(takeFirstMessage(BRIEF, T0 + 5_000)).toEqual({ brief: BRIEF, kind: "app" });
+  });
+
+  // 24/11: no cap on what the home sends (Claude Code has none). A message too long for a URL travels only in the ticket, and
+  // /new arrives with the ticket's id (`?first=<id>`) instead of the brief; the id is what a link from elsewhere can't forge.
+  it("🔴 a long message comes back whole when /new arrives with the ticket's id, and never with another id", () => {
+    const long = "x".repeat(20_000);
+    const id = leaveFirstMessage({ brief: long, kind: "pagina" }, T0)!;
+    expect(takeFirstMessage({ first: "0123456789abcdef" }, T0 + 5_000)).toBeNull();
+    leaveFirstMessage({ brief: long, kind: "pagina" }, T0);
+    const again = leaveFirstMessage({ brief: long, kind: "pagina" }, T0)!;
+    expect(again).not.toBe(id);
+    expect(takeFirstMessage({ first: again }, T0 + 5_000)).toEqual({ brief: long, kind: "pagina" });
   });
 
   // AGENTS FOR EVERYONE (spec local 2026-11-19-agentes-para-todos, §6.3): the home's Agente sends to the space.
@@ -90,7 +102,7 @@ describe("the first message sent from the home", () => {
     vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
       throw new Error("SecurityError");
     });
-    expect(leaveFirstMessage({ brief: BRIEF, kind: "pagina" }, T0)).toBe(false);
+    expect(leaveFirstMessage({ brief: BRIEF, kind: "pagina" }, T0)).toBeNull();
     expect(takeFirstMessage(BRIEF, T0)).toBeNull();
     expect(() => dropFirstMessage()).not.toThrow();
   });

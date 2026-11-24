@@ -12,9 +12,10 @@
 // it was opened. `sessionStorage` is written only by OpenLen's own pages, in this tab: a link from elsewhere still
 // only FILLS the composer, as before.
 //
-// WHY IT MUST MATCH THE BRIEF THE TAB ARRIVED WITH: the ticket only rides with the home's own link to /new (the
-// brief also travels in `?brief=`, which is what fills the box if the storage is blocked). Opening /new any other way
-// — the menu, an old tab, a link with another brief — does not send it, and spends it.
+// WHY IT MUST MATCH WHAT THE TAB ARRIVED WITH: the ticket only rides with the home's own link to /new — the brief in
+// `?brief=`, or, for a message too long for a URL (24/11: the home has no 4,000 cap any more, as Claude Code has none),
+// the ticket's own random id in `?first=`. Opening /new any other way — the menu, an old tab, a link with another brief
+// or id — does not send it, and spends it. A link from elsewhere can't forge the id: it only exists in this tab.
 //
 // It survives the sign-in detour (same tab: /register or /login, an OAuth round trip, back to `next`), dies with the
 // tab, is dropped when the visitor closes the sign-in dialog (they cancelled), and goes stale after 30 minutes.
@@ -38,18 +39,30 @@ export interface FirstMessage {
   readonly kind: StartKind;
 }
 
-/** Leaves the ticket just before going to /new (or opening the sign-in dialog). `false` if the storage refused. */
-export function leaveFirstMessage(message: FirstMessage, now: number = Date.now()): boolean {
+/** What /new (or the space) arrived with: the `?brief=` of its link, or the ticket's id in `?first=`. A bare string is
+ *  the brief, as before. */
+export type FirstMessageArrival = string | null | { readonly brief?: string | null; readonly first?: string | null };
+
+/** A ticket's id: 16 hex characters, random — what `?first=` carries instead of a message too long for a URL. */
+function newTicketId(): string {
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Leaves the ticket just before going to /new (or opening the sign-in dialog). Its id, or null if the storage refused. */
+export function leaveFirstMessage(message: FirstMessage, now: number = Date.now()): string | null {
   try {
-    sessionStorage.setItem(KEY, JSON.stringify({ brief: trimGenerationBrief(message.brief), kind: message.kind, at: now }));
-    return true;
+    const id = newTicketId();
+    sessionStorage.setItem(KEY, JSON.stringify({ id, brief: trimGenerationBrief(message.brief), kind: message.kind, at: now }));
+    return id;
   } catch {
-    return false;
+    return null;
   }
 }
 
 /** Reads AND REMOVES the ticket. It comes back only if it is fresh, sendable and for the brief /new arrived with. */
-export function takeFirstMessage(arrivalBrief: string | null, now: number = Date.now()): FirstMessage | null {
+export function takeFirstMessage(arrival: FirstMessageArrival, now: number = Date.now()): FirstMessage | null {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(KEY);
@@ -57,25 +70,26 @@ export function takeFirstMessage(arrivalBrief: string | null, now: number = Date
   } catch {
     return null;
   }
-  return parseTicket(raw, arrivalBrief, now);
+  return parseTicket(raw, arrival, now);
 }
 
 /** Whether /new arrives with a ticket it will send — WITHOUT spending it. /new has no box of its own (Jesús, 06/11:
  *  «¿para qué tener 2 inputs?»): with a ticket it opens the blank project and sends; without one it goes back to the
  *  home's box before opening anything. */
-export function hasFirstMessage(arrivalBrief: string | null, now: number = Date.now()): boolean {
+export function hasFirstMessage(arrival: FirstMessageArrival, now: number = Date.now()): boolean {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(KEY);
   } catch {
     return false;
   }
-  return parseTicket(raw, arrivalBrief, now) !== null;
+  return parseTicket(raw, arrival, now) !== null;
 }
 
-function parseTicket(raw: string | null, arrivalBrief: string | null, now: number): FirstMessage | null {
+function parseTicket(raw: string | null, arrival: FirstMessageArrival, now: number): FirstMessage | null {
   if (!raw) return null;
-  let ticket: { brief?: unknown; kind?: unknown; at?: unknown };
+  const { brief: arrivalBrief = null, first = null } = typeof arrival === "string" || arrival === null ? { brief: arrival } : arrival;
+  let ticket: { id?: unknown; brief?: unknown; kind?: unknown; at?: unknown };
   try {
     ticket = JSON.parse(raw) as typeof ticket;
   } catch {
@@ -84,7 +98,9 @@ function parseTicket(raw: string | null, arrivalBrief: string | null, now: numbe
   if (typeof ticket?.brief !== "string" || typeof ticket.at !== "number") return null;
   if (now - ticket.at > FIRST_MESSAGE_TTL_MS) return null;
   const brief = trimGenerationBrief(ticket.brief);
-  if (arrivalBrief === null || brief !== trimGenerationBrief(arrivalBrief)) return null;
+  const byId = first !== null && typeof ticket.id === "string" && ticket.id === first;
+  const byBrief = arrivalBrief !== null && brief === trimGenerationBrief(arrivalBrief);
+  if (!byId && !byBrief) return null;
   if (!isGenerationBriefLengthValid(brief)) return null;
   return { brief, kind: kindFromParam(typeof ticket.kind === "string" ? ticket.kind : null) };
 }

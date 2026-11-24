@@ -120,6 +120,8 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
   // The brief WRITTEN in /new's URL too: it fills /new's box if the ticket can't be read there. With another kind, `kind=`.
   // An agent goes to the person's space (spec local 2026-11-19-agentes-para-todos, §6.3), which sends the same ticket.
   const target = newProjectHref(value, kind);
+  // The link this send left its ticket for: by the ticket's id when the message is too long for a URL.
+  const [sentTarget, setSentTarget] = useState<string | null>(null);
 
   const [leaving, setLeaving] = useState(false);
   const submit = async () => {
@@ -131,7 +133,9 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
     dejarReferenciasEnTransito(photos);
     // THIS IS THE SEND (Jesús, 06/11: «dos inputs así es duplicación»): /new sends it on arrival instead of showing
     // the same text in a second box. Left before the sign-in dialog too: the detour is the same tab.
-    leaveFirstMessage({ brief: value, kind });
+    const ticket = leaveFirstMessage({ brief: value, kind });
+    const to = newProjectHref(value, kind, ticket);
+    setSentTarget(to);
     // The files too, in IndexedDB — awaited, so they are there before /new looks. Without storage they stay behind and
     // the message still goes.
     setLeaving(true);
@@ -143,7 +147,7 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
     if (status === "authenticated") {
       registrarUso("crear_envio", { imagenes: photos.length });
       setSubmitting(true);
-      router.push(target);
+      router.push(to);
     } else {
       setLoginOpen(true);
     }
@@ -228,7 +232,7 @@ export function HeroPromptInput({ tools = false, agents = false }: { tools?: boo
       )}
       {loginOpen && (
         <SignInDialog
-          next={target}
+          next={sentTarget ?? target}
           onClose={() => {
             // Closed, not followed: what they wrote is not on its way to /new any more — nor its files.
             dropFirstMessage();

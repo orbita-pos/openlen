@@ -206,7 +206,8 @@ export default function middleware(req: NextRequest): ReturnType<typeof intlMidd
       return fixRedirectHost(NextResponse.redirect(new URL(home, req.nextUrl.origin)), req);
     }
     const params = new URLSearchParams(search);
-    if (params.has("brief") && !params.has("mode")) {
+    // `first`: the home's ticket id, for a message too long for a URL (components/workspace-v2/chat/nace-como.ts).
+    if ((params.has("brief") || params.has("first")) && !params.has("mode")) {
       params.set("mode", "ai");
       const url = new URL(pathname, req.nextUrl.origin);
       url.search = "?" + params.toString();

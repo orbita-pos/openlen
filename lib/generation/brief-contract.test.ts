@@ -34,7 +34,8 @@ describe("contrato compartido del brief de generación", () => {
     expect(isGenerationBriefLengthValid("x".repeat(10))).toBe(true);
     expect(isGenerationBriefLengthValid("x".repeat(3000))).toBe(true);
     expect(isGenerationBriefLengthValid("x".repeat(4000))).toBe(true);
-    expect(isGenerationBriefLengthValid("x".repeat(4001))).toBe(false);
+    // No maximum since 24/11 (as Claude Code): past the old 4,000 it is still sendable.
+    expect(isGenerationBriefLengthValid("x".repeat(4001))).toBe(true);
   });
 
   it("muestra el contador sólo al superar 75% del máximo", () => {
@@ -42,20 +43,22 @@ describe("contrato compartido del brief de generación", () => {
     expect(shouldShowGenerationBriefCounter(3001)).toBe(true);
   });
 
-  it("acota un deep-link externo, lo marca y no permite su autostart", () => {
-    const prepared = prepareGenerationBriefInput(`  ${"x".repeat(4001)}  `);
-
-    expect(prepared.value).toHaveLength(GENERATION_BRIEF_MAX_LENGTH);
-    expect(prepared.truncated).toBe(true);
-    expect(prepared.autostartAllowed).toBe(false);
+  // 24/11 (Jesús: «lo máx son 4000 caracteres … Claude Code no tiene eso»): Claude Code 2.1.330 sends whatever is written —
+  // past 10,000 characters its box only SHOWS the middle as «[...Truncated text #N +X lines...]» and still sends it whole. The
+  // 4,000 was the cap of the retired /api/generate (06/10); Len's own chat never had one.
+  it("🔴 un mensaje de 20.000 caracteres se puede mandar y nunca se corta", () => {
+    const long = "Mi negocio: ".concat("x".repeat(20_000));
+    expect(isGenerationBriefLengthValid(long)).toBe(true);
+    const prepared = prepareGenerationBriefInput(`  ${long}  `);
+    expect(prepared.value).toBe(long);
+    expect(prepared.truncated).toBe(false);
+    expect(prepared.autostartAllowed).toBe(true);
   });
 
-  it("no parte un emoji al acotar un deep-link", () => {
+  it("un emoji al final de un mensaje largo llega entero", () => {
     const prepared = prepareGenerationBriefInput(`${"x".repeat(3999)}😀`);
-
-    expect(prepared.value).toBe("x".repeat(3999));
-    expect(prepared.truncated).toBe(true);
-    expect(() => encodeURIComponent(prepared.value)).not.toThrow();
+    expect(prepared.value).toBe(`${"x".repeat(3999)}😀`);
+    expect(prepared.truncated).toBe(false);
   });
 
   it("no pega medio emoji cuando sólo queda una unidad UTF-16", () => {

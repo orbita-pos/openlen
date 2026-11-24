@@ -315,6 +315,17 @@
     background-clip: padding-box;
     border: 2px solid transparent;
   }
+  /* Firefox has no ::-webkit-scrollbar: the standard properties, only there — in Chromium they would override the
+     rules above. */
+  @supports not selector(::-webkit-scrollbar) {
+    .nice-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+    .dark .nice-scroll {
+      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    }
+  }
 
   .cb {
     appearance: none;

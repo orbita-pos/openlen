@@ -51,7 +51,12 @@ async function fromTheHome(projectId: string): Promise<{ attachments: PendingAtt
 }
 
 /** What the box starts with: the home's ticket for this brief (sent), else the brief or the draft (filled). */
-function startOf(arrivalBrief: string | null, draft: string | null): Start | null {
+function startOf(arrivalBrief: string | null, draft: string | null, arrivalFirst: string | null = null): Start | null {
+  // A message too long for a URL arrives as its ticket's id (`?first=`): sent if it is the home's, nothing otherwise.
+  if (arrivalFirst) {
+    const ticket = takeFirstMessage({ first: arrivalFirst });
+    return ticket?.kind === "agent" ? { text: ticket.brief, send: true } : null;
+  }
   if (arrivalBrief) {
     const ticket = takeFirstMessage(arrivalBrief);
     if (ticket?.kind === "agent") return { text: ticket.brief, send: true };
@@ -65,6 +70,8 @@ interface SpaceProps {
   initialChat: StoredChatTurn[];
   arrivalBrief: string | null;
   draft: string | null;
+  /** The home's ticket id (`?first=`), for a message too long for a URL. */
+  arrivalFirst?: string | null;
 }
 
 export function SpaceHome(props: SpaceProps) {
@@ -76,7 +83,7 @@ export function SpaceHome(props: SpaceProps) {
   );
 }
 
-function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) {
+function SpaceView({ projectId, initialChat, arrivalBrief, draft, arrivalFirst = null }: SpaceProps) {
   const t = useTranslations("wsChrome");
   const tp = useTranslations("wsPage");
   const toast = useToast();
@@ -101,10 +108,10 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
   useEffect(() => {
     if (read.current) return;
     read.current = true;
-    const first = startOf(arrivalBrief, draft);
+    const first = startOf(arrivalBrief, draft, arrivalFirst);
     // Through the router, not history.replaceState: the refresh after Len's turn put the old address back (walked with
     // a real turn, 20/11), and a reload then filled the box with the brief again.
-    if (arrivalBrief || draft) router.replace(spaceHref(), { scroll: false });
+    if (arrivalBrief || draft || arrivalFirst) router.replace(spaceHref(), { scroll: false });
     if (!first?.send) {
       setStart(first);
       return;
@@ -120,7 +127,7 @@ function SpaceView({ projectId, initialChat, arrivalBrief, draft }: SpaceProps) 
       // Reading what was left failed: the message still goes, alone, as on /new.
       .catch(() => setStart(first))
       .finally(() => setPreparing(false));
-  }, [arrivalBrief, draft, router, projectId, toast, tp]);
+  }, [arrivalBrief, arrivalFirst, draft, router, projectId, toast, tp]);
 
   return (
       <div className="workspace-v2 relative h-dvh" data-space="">

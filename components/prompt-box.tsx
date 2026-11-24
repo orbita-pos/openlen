@@ -34,7 +34,7 @@ import { useToast } from "@/components/workspace-v2/toast";
 import { useDictado } from "@/components/marketing/use-dictado";
 import { reducirImagen } from "@/components/marketing/reducir-imagen";
 import { HeroKindPicker } from "@/components/marketing/hero-kind-picker";
-import { GenerationBriefLimitFeedback, useGenerationBriefLimit } from "@/components/generation-brief-limit";
+import { isGenerationBriefLengthValid } from "@/lib/generation/brief-contract";
 import { MAX_REFERENCIAS } from "@/lib/ai/referencia-adjunta";
 import { MAX_FILES_PER_MESSAGE, videoKindFromMime, videoKindFromName } from "@/lib/projects/chat-files";
 import { ATTACHMENT_ACCEPT } from "@/lib/workspace-v2/upload-attachment";
@@ -137,7 +137,8 @@ const SKIN = {
   // transparent — `dark:text-zinc-100` on the textarea outranked `text-transparent` and covered the blue (06/11).
   ink: "text-zinc-900 dark:text-zinc-100",
   caret: "caret-zinc-900 dark:caret-zinc-100",
-  text: "outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
+  // `nice-scroll`: past its tallest the box scrolls with the app's own thin scrollbar (globals.css), not the browser's.
+  text: "nice-scroll outline-none placeholder:text-zinc-500 dark:placeholder:text-zinc-500",
   minHeight: 52,
   maxHeight: 240,
   ghost: "text-[15px] leading-normal text-zinc-500 dark:text-zinc-400",
@@ -234,19 +235,18 @@ export function PromptBox({
   // The `+` opens its menu, with the chat's hook: Esc, click outside and arrows.
   const [plusOpen, setPlusOpen] = useState(false);
   const plus = useMandoDesplegable({ abierto: plusOpen, cerrar: () => setPlusOpen(false) });
-  const briefLimit = useGenerationBriefLimit({
-    value,
-    onValueChange,
-  });
+  // NO CAP ON WHAT IS WRITTEN (24/11, Jesús: «lo máx son 4000 caracteres … claude code no tiene eso»): Claude Code sends
+  // whatever is written, and so does Len's chat. Long enough to send is the only rule.
+  const sendable = isGenerationBriefLengthValid(value);
   const fileList = files ?? [];
 
-  // DICTATION WRITES AS A PERSON DOES: through the brief's cap, a space after what was there, none at the start.
+  // DICTATION WRITES AS A PERSON DOES: a space after what was there, none at the start.
   const dictado = useDictado({
     idioma: locale,
     onTexto: (fragment) => {
       onTyped?.();
       const joined = value ? `${value.replace(/\s+$/, "")} ${fragment.trim()}` : fragment.trim();
-      onValueChange(joined.slice(0, briefLimit.maxLength));
+      onValueChange(joined);
     },
   });
 
@@ -262,7 +262,7 @@ export function PromptBox({
     el.style.height = `${Math.min(el.scrollHeight, s.maxHeight)}px`;
   }, [value, s.maxHeight]);
 
-  const canSend = briefLimit.isValid && !sending && !sendDisabled;
+  const canSend = sendable && !sending && !sendDisabled;
   const send = () => {
     if (!canSend) return;
     // Still listening at send time, the engine outlives the navigation and the browser's mic stays on.
@@ -377,7 +377,7 @@ export function PromptBox({
               ...(id ? { id } : {}),
               onChange: (e) => {
                 onTyped?.();
-                briefLimit.onChange(e);
+                onValueChange(e.currentTarget.value);
               },
               onPaste: (e) => {
                 if (onFilesChange) {
@@ -389,7 +389,6 @@ export function PromptBox({
                   }
                 }
                 onTyped?.();
-                briefLimit.onPaste(e);
               },
               onFocus: () => setFocused(true),
               onBlur: () => setFocused(false),
@@ -403,8 +402,6 @@ export function PromptBox({
               },
               rows: 1,
               placeholder: ghost ? "" : placeholder,
-              maxLength: briefLimit.maxLength,
-              ...(briefLimit.warningVisible ? { "aria-describedby": briefLimit.feedbackId } : {}),
               className: s.text,
               style: { minHeight: s.minHeight },
             }}
@@ -429,14 +426,6 @@ export function PromptBox({
             {tm("heroPrompt.micDenied")}
           </p>
         )}
-        <GenerationBriefLimitFeedback
-          valueLength={value.length}
-          state={briefLimit}
-          warningText={tp("aiBrief.trimmed", { max: briefLimit.maxLength })}
-          className="pb-1 text-[11px]"
-          warningClassName="text-amber-600 dark:text-amber-400"
-          counterClassName={s.counter}
-        />
 
         <div className={cn("mt-0.5 flex items-center gap-[3px]", s.row)}>
           {/* The real `<input>`s are hidden: their native look can't be styled. `accept` FILTERS, it doesn't
@@ -576,7 +565,7 @@ export function PromptBox({
             title={tm("heroPrompt.generate")}
             className={cn(
               "ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-white transition hover:-translate-y-px disabled:translate-y-0 disabled:cursor-default",
-              briefLimit.isValid || sending ? s.sendOn : s.sendOff,
+              sendable || sending ? s.sendOn : s.sendOff,
             )}
           >
             {sending ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={16} />}

@@ -19,6 +19,13 @@ describe("el enlace de la portada a /new", () => {
   it("🔴 una app lleva además `kind=app`", () => {
     expect(newProjectHref("un punto de venta", "app")).toBe("/new?brief=un%20punto%20de%20venta&kind=app");
   });
+  it("🔴 a message too long for a URL goes as its ticket's id; a short one as always, ticket or not", () => {
+    const long = "á".repeat(5_000);
+    expect(newProjectHref(long, "pagina", "0123456789abcdef")).toBe("/new?first=0123456789abcdef");
+    expect(newProjectHref(long, "app", "0123456789abcdef")).toBe("/new?first=0123456789abcdef&kind=app");
+    expect(newProjectHref(long, "agent", "0123456789abcdef")).toBe("/space?first=0123456789abcdef");
+    expect(newProjectHref("hola mundo", "pagina", "0123456789abcdef")).toBe("/new?brief=hola%20mundo");
+  });
   it("y el brief va recortado de espacios y escapado", () => {
     expect(newProjectHref("  a&b=c  ", "app")).toBe("/new?brief=a%26b%3Dc&kind=app");
   });
