@@ -1,5 +1,8 @@
 # Len 3.1 contra la producción del 12 de noviembre — 2026-11-16
 
+> **Corregida el 24/11.** La prueba «nada inventado» suspendía avisos que Len sí dio, en otro idioma o citando los
+> valores. Las mismas corridas, recalificadas: `../2026-11-24-len-3.1-clientes-recalificada/`.
+
 La tabla con la que se nombró Len 3.1 (etiqueta `len-3.1`, sobre `ca7f92566`). Mide el flujo que usan los clientes
 —crear una página, seguir editándola y publicarla— con el mismo corredor y los mismos casos sobre lo que había en
 producción el 12 de noviembre y sobre 3.1.
