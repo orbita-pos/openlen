@@ -250,3 +250,86 @@ describe("a second call that was cut", () => {
     expect(report.controlOk).toBe(false);
   });
 });
+
+// THE REFRESH PLAN (24/11/2026, from comparing Len with Hermes Agent, which keeps a chat's cache warm by sending
+// its request again before it expires): does a READ keep DeepInfra's entry alive? Len's own probe assumed so
+// without measuring it. Two prefixes are read at minute 40 and again at 80, one at 40 and again at 100, and two
+// are left untouched until 80 — the control of the expiry measured on 14/11 (cached at 45, gone at 60).
+describe("the refresh plan", () => {
+  /** A provider whose entry lives `ttlMin` minutes from its write — or, with `refreshes`, from its last read. */
+  function world(ttlMin: number, refreshes: boolean) {
+    let clock = T0;
+    const sent: string[] = [];
+    const last = new Map<string, number>();
+    const deps = {
+      now: () => clock,
+      sleep: async (ms: number) => {
+        clock += ms;
+      },
+      save: () => {},
+      log: () => {},
+      send: async (entry: { id: string; cacheKey: string }): Promise<ProbeCall> => {
+        sent.push(entry.id);
+        const at = clock;
+        clock += 4_000;
+        const before = last.get(entry.cacheKey);
+        const warm = before !== undefined && at - before <= ttlMin * 60_000;
+        if (before === undefined || (refreshes && warm)) last.set(entry.cacheKey, at);
+        return { at: new Date(at).toISOString(), inputTokens: 30_000, cachedTokens: warm ? 29_970 : 0, outputTokens: 2, ms: 4_000 };
+      },
+    };
+    return { deps, sent };
+  }
+
+  it("is the control, two prefixes read at 40 and again at 80, one at 40 and again at 100, two untouched until 80", () => {
+    const state = newProbeState("run-1", "some-model", "refresh");
+    expect(state.entries.map((e) => [e.delayMin, e.refreshMin ?? null])).toEqual([
+      [PROBE_CONTROL_MIN, null],
+      [80, 40],
+      [80, 40],
+      [100, 40],
+      [80, null],
+      [80, null],
+    ]);
+  });
+
+  it("its worst case counts the reads in the middle, fifteen calls, and fits under $0.15", () => {
+    const state = newProbeState("run-1", "some-model", "refresh");
+    const oneCall = callCostUsd({ inputTokens: Math.ceil(PROBE_PREFIX_WORDS * PROBE_TOKENS_PER_WORD_MAX), cachedTokens: 0, outputTokens: 64 });
+    expect(worstCaseRemainingUsd(state)).toBeCloseTo(15 * oneCall, 10);
+    expect(fits(state, 0.15)).toBe(true);
+  });
+
+  it("a prefix read in the middle is read at 40 before its last read, never the other way round", () => {
+    const state = newProbeState("run-1", "some-model", "refresh");
+    for (const entry of state.entries) entry.first = call(T0, 0);
+    state.entries[0]!.second = call(T0 + 60_000, 29_000);
+    const at40 = nextAction(state, T0 + 40 * 60_000);
+    expect(at40).toMatchObject({ kind: "refresh", entry: { id: "p1" } });
+    expect(nextAction(state, T0 + 30 * 60_000)).toEqual({ kind: "wait", untilMs: T0 + 40 * 60_000 });
+  });
+
+  it("🔴 a cache that a read keeps alive: the prefixes read at 40 are still cached at 80, the untouched ones are not", async () => {
+    const w = world(50, true);
+    const state = newProbeState("run-1", "some-model", "refresh");
+    expect(await runProbe(state, 0.15, w.deps)).toBe("done");
+    expect(w.sent).toHaveLength(15);
+    const report = probeReport(state);
+    expect(report.refresh).toBe("refreshes");
+    expect(report.lines.join("\n")).toMatch(/a read keeps the entry alive/);
+  });
+
+  it("🔴 a cache that lives from its write: the read at 40 doesn't keep it", async () => {
+    const w = world(50, false);
+    const state = newProbeState("run-1", "some-model", "refresh");
+    await runProbe(state, 0.15, w.deps);
+    expect(probeReport(state).refresh).toBe("does_not_refresh");
+  });
+
+  it("untouched prefixes still cached at 80: this run can't tell", async () => {
+    const w = world(120, false);
+    const state = newProbeState("run-1", "some-model", "refresh");
+    await runProbe(state, 0.15, w.deps);
+    expect(probeReport(state).refresh).toBe("cannot_tell");
+  });
+});

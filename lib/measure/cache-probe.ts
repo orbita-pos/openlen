@@ -3,8 +3,9 @@
 // number; the 65 minutes after which a turn counted as cold (lib/agent/cold-return.ts) were Claude Code's, read
 // off ITS provider. This sends eight prefixes of about 30.000 tokens, each under its own cache key, and sends
 // each one again exactly once after 15, 30, 45, 60, 75, 90, 120 and 180 minutes: how much of the second call
-// came back cached says whether the entry was still there. A read refreshes an entry, which is why every
-// prefix is looked at only once.
+// came back cached says whether the entry was still there. A read may refresh an entry, which is why every
+// prefix is looked at only once. Whether it does is what the REFRESH PLAN asks (`PROBE_REFRESH_PLAN`,
+// `--plan=refresh`, 24/11/2026): it was assumed here and never measured.
 //
 // One addition to the spec's sixteen calls: a ninth prefix sent again after ONE minute. Without it, eight
 // misses could mean «it expires in under 15 minutes» or «nothing was cached at all» (a key that gave no
@@ -54,6 +55,12 @@ export interface ProbeEntry {
    *  entry, so a second call that was cut (the runner was killed) is never sent again: its answer would say
    *  «still cached» because of the first try. */
   secondAttemptedAt?: string;
+  /** THE REFRESH PLAN: minutes after the first call when this prefix is read once in the middle, before its
+   *  second call. Absent = never. */
+  readonly refreshMin?: number;
+  /** That read in the middle, and when it was about to be sent (written down first, like the second call). */
+  refresh?: ProbeCall | null;
+  refreshAttemptedAt?: string;
 }
 
 /** What the runner saves after every call: a probe that is killed goes on from here. */
@@ -62,15 +69,40 @@ export interface ProbeState {
   readonly runId: string;
   readonly model: string;
   readonly entries: ProbeEntry[];
+  /** `refresh`: the refresh plan (`PROBE_REFRESH_PLAN`). Absent: how long the cache lives (the delays). */
+  readonly plan?: "refresh";
 }
 
-export function newProbeState(runId: string, model: string): ProbeState {
-  const delays = [PROBE_CONTROL_MIN, ...PROBE_DELAYS_MIN];
+/** THE REFRESH PLAN (24/11/2026): does a READ keep DeepInfra's entry alive? This probe's header assumed so and
+ *  never measured it; Hermes Agent keeps a chat's cache warm on that assumption. The control; two prefixes read at
+ *  40 and again at 80; one read at 40 and again at 100; and two left untouched until 80, the control of the expiry
+ *  measured on 14/11 (cached at 45, gone at 60). */
+export const PROBE_REFRESH_PLAN: readonly { readonly delayMin: number; readonly refreshMin?: number }[] = [
+  { delayMin: PROBE_CONTROL_MIN },
+  { delayMin: 80, refreshMin: 40 },
+  { delayMin: 80, refreshMin: 40 },
+  { delayMin: 100, refreshMin: 40 },
+  { delayMin: 80 },
+  { delayMin: 80 },
+];
+
+export function newProbeState(runId: string, model: string, plan?: "refresh"): ProbeState {
+  const shape: readonly { readonly delayMin: number; readonly refreshMin?: number }[] =
+    plan === "refresh" ? PROBE_REFRESH_PLAN : [PROBE_CONTROL_MIN, ...PROBE_DELAYS_MIN].map((delayMin) => ({ delayMin }));
   return {
     v: 1,
     runId,
     model,
-    entries: delays.map((delayMin, index) => ({ id: `p${index}`, cacheKey: `cache-probe-${runId}-${index}`, index, delayMin, first: null, second: null })),
+    ...(plan ? { plan } : {}),
+    entries: shape.map((s, index) => ({
+      id: `p${index}`,
+      cacheKey: `cache-probe-${runId}-${index}`,
+      index,
+      delayMin: s.delayMin,
+      first: null,
+      second: null,
+      ...(s.refreshMin !== undefined ? { refreshMin: s.refreshMin, refresh: null } : {}),
+    })),
   };
 }
 
@@ -111,22 +143,33 @@ export function probeText(runId: string, index: number): string {
 
 export type ProbeAction =
   | { readonly kind: "first"; readonly entry: ProbeEntry }
+  | { readonly kind: "refresh"; readonly entry: ProbeEntry }
   | { readonly kind: "second"; readonly entry: ProbeEntry }
   | { readonly kind: "wait"; readonly untilMs: number }
   | { readonly kind: "done" };
 
 const answeredFirst = (entry: ProbeEntry): boolean => entry.first !== null && !entry.first.error;
-const dueAt = (entry: ProbeEntry): number => Date.parse(entry.first!.at) + entry.delayMin * 60_000;
+const dueAt = (entry: ProbeEntry, minutes: number): number => Date.parse(entry.first!.at) + minutes * 60_000;
+/** Its read in the middle is still to be sent. */
+const refreshPending = (entry: ProbeEntry): boolean => entry.refreshMin !== undefined && !entry.refresh && !entry.refreshAttemptedAt;
 
-/** What the runner does now: every prefix once, then each again when its own delay has passed. A second call
- *  that is overdue (the runner was down) is sent at once and reported with the delay that really passed. */
+/** What the runner does now: every prefix once, then each again when its own delay has passed — after its read in
+ *  the middle, if it has one. A call that is overdue (the runner was down) is sent at once and reported with the
+ *  delay that really passed. */
 export function nextAction(state: ProbeState, nowMs: number): ProbeAction {
   const unsent = state.entries.find((entry) => entry.first === null);
   if (unsent) return { kind: "first", entry: unsent };
-  const pending = state.entries.filter((entry) => answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt).sort((a, b) => dueAt(a) - dueAt(b));
+  const pending = state.entries
+    .filter((entry) => answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt)
+    .map((entry) =>
+      refreshPending(entry)
+        ? { kind: "refresh" as const, entry, due: dueAt(entry, entry.refreshMin!) }
+        : { kind: "second" as const, entry, due: dueAt(entry, entry.delayMin) },
+    )
+    .sort((a, b) => a.due - b.due);
   const next = pending[0];
   if (!next) return { kind: "done" };
-  return dueAt(next) <= nowMs ? { kind: "second", entry: next } : { kind: "wait", untilMs: dueAt(next) };
+  return next.due <= nowMs ? { kind: next.kind, entry: next.entry } : { kind: "wait", untilMs: next.due };
 }
 
 const PER_TOKEN = 1e-6;
@@ -137,18 +180,25 @@ export function callCostUsd(call: Pick<ProbeCall, "inputTokens" | "cachedTokens"
 }
 
 export function spentUsd(state: ProbeState): number {
-  return state.entries.reduce((sum, entry) => sum + (entry.first ? callCostUsd(entry.first) : 0) + (entry.second ? callCostUsd(entry.second) : 0), 0);
+  return state.entries.reduce(
+    (sum, entry) => sum + (entry.first ? callCostUsd(entry.first) : 0) + (entry.refresh ? callCostUsd(entry.refresh) : 0) + (entry.second ? callCostUsd(entry.second) : 0),
+    0,
+  );
 }
 
 /** The size the budget counts for a prefix: the largest the provider has reported so far, or the ceiling. */
 function prefixTokens(state: ProbeState): number {
-  const reported = Math.max(0, ...state.entries.flatMap((entry) => [entry.first?.inputTokens ?? 0, entry.second?.inputTokens ?? 0]));
+  const reported = Math.max(0, ...state.entries.flatMap((entry) => [entry.first?.inputTokens ?? 0, entry.refresh?.inputTokens ?? 0, entry.second?.inputTokens ?? 0]));
   return reported > 0 ? reported : Math.ceil(PROBE_PREFIX_WORDS * PROBE_TOKENS_PER_WORD_MAX);
 }
 
 /** What the calls still to make would cost if NONE came back cached and each wrote all it is allowed to. */
 export function worstCaseRemainingUsd(state: ProbeState): number {
-  const left = state.entries.reduce((n, entry) => n + (entry.first === null ? 2 : answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt ? 1 : 0), 0);
+  const left = state.entries.reduce((n, entry) => {
+    const middle = refreshPending(entry) ? 1 : 0;
+    if (entry.first === null) return n + 2 + middle;
+    return n + (answeredFirst(entry) && entry.second === null && !entry.secondAttemptedAt ? 1 + middle : 0);
+  }, 0);
   return left * callCostUsd({ inputTokens: prefixTokens(state), cachedTokens: 0, outputTokens: PROBE_MAX_OUTPUT_TOKENS });
 }
 
@@ -187,6 +237,46 @@ export interface ProbeReport {
   readonly clean: boolean;
   readonly spentUsd: number;
   readonly lines: readonly string[];
+  /** THE REFRESH PLAN's answer: whether a read in the middle kept the entry alive past its expiry. */
+  readonly refresh?: RefreshVerdict;
+}
+
+/** `refreshes`: the prefixes read at 40 were cached at 80 and the untouched ones were not. `does_not_refresh`: read
+ *  or not, gone at 80. `cannot_tell`: an untouched one was still cached at 80. `mixed`: the arms disagree within
+ *  themselves. `no_reading`: the control failed, or a call is missing. */
+export type RefreshVerdict = "refreshes" | "does_not_refresh" | "cannot_tell" | "mixed" | "no_reading";
+
+const isWarm = (c: ProbeCall | null | undefined): boolean => !!c && !c.error && hitShare(c) >= PROBE_WARM_FROM;
+const isCold = (c: ProbeCall | null | undefined): boolean => !!c && !c.error && hitShare(c) < PROBE_COLD_UNDER;
+const shareText = (c: ProbeCall | null | undefined): string => (!c ? "—" : c.error ? "failed" : `${(hitShare(c) * 100).toFixed(0)}%`);
+
+function refreshReading(state: ProbeState, controlOk: boolean): { verdict: RefreshVerdict; lines: string[] } {
+  const read = state.entries.filter((e) => e.refreshMin !== undefined && e.delayMin === 80);
+  const untouched = state.entries.filter((e) => e.refreshMin === undefined && e.delayMin === 80);
+  const later = state.entries.filter((e) => e.refreshMin !== undefined && e.delayMin !== 80);
+  const lines = [
+    ...read.map((e) => `${e.id}  read at ${e.refreshMin}: ${shareText(e.refresh)} · at ${e.delayMin}: ${shareText(e.second)}`),
+    ...later.map((e) => `${e.id}  read at ${e.refreshMin}: ${shareText(e.refresh)} · at ${e.delayMin}: ${shareText(e.second)} (${e.delayMin - e.refreshMin!} minutes after the read)`),
+    ...untouched.map((e) => `${e.id}  untouched · at ${e.delayMin}: ${shareText(e.second)}`),
+  ];
+  const complete = [...read, ...untouched].every((e) => e.second && !e.second.error) && read.every((e) => e.refresh && !e.refresh.error);
+  let verdict: RefreshVerdict;
+  if (!controlOk || !complete) verdict = "no_reading";
+  else if (untouched.some((e) => isWarm(e.second))) verdict = "cannot_tell";
+  else if (!untouched.every((e) => isCold(e.second))) verdict = "mixed";
+  else if (read.every((e) => isWarm(e.refresh) && isWarm(e.second))) verdict = "refreshes";
+  else if (read.every((e) => isCold(e.second))) verdict = "does_not_refresh";
+  else verdict = "mixed";
+  lines.push(
+    {
+      refreshes: "Yes: a read keeps the entry alive — the prefixes read at minute 40 were still cached at 80, the untouched ones were gone.",
+      does_not_refresh: "No: a read does NOT keep the entry alive — read at 40 or not, it was gone at 80.",
+      cannot_tell: "The untouched prefixes were still cached at 80 minutes: the cache lived longer than on 14/11, and this run can't tell whether a read keeps it alive.",
+      mixed: "Mixed answers within an arm: with two prefixes per arm, a routing miss can't be told from an expiry. Run it again.",
+      no_reading: "No reading: the control was not cached, or a call is missing.",
+    }[verdict],
+  );
+  return { verdict, lines };
 }
 
 function rowOf(entry: ProbeEntry): ProbeRow {
@@ -232,7 +322,11 @@ export function probeReport(state: ProbeState): ProbeReport {
     lines.push(`Cached up to ${minutes(lastWarm)} minutes; not at ${minutes(firstCold)}.${clean ? "" : " Hits and misses are MIXED after that: one prefix per delay cannot tell a routing miss from an expiry."}`);
   }
   if (!complete) lines.push("Not every delay was sent again on time: read the «actual» column, not the plan.");
-  return { rows, controlOk, complete, lastWarmMin: minutes(lastWarm), firstColdMin: minutes(firstCold), clean, spentUsd: spentUsd(state), lines };
+  const base = { rows, controlOk, complete, lastWarmMin: minutes(lastWarm), firstColdMin: minutes(firstCold), clean, spentUsd: spentUsd(state) };
+  if (state.plan !== "refresh") return { ...base, lines };
+  // The refresh plan asks something else: its own lines replace the expiry's reading (the table stays).
+  const reading = refreshReading(state, controlOk);
+  return { ...base, lines: [...lines.slice(0, rows.length + 2), ...reading.lines], refresh: reading.verdict };
 }
 
 /** What the runner needs from the world: the call, the clock and where the state is kept. */
@@ -264,16 +358,22 @@ export async function runProbe(state: ProbeState, capUsd: number, deps: ProbeDep
       return "cap";
     }
     const { entry } = action;
+    // A read is written down BEFORE it is sent: one that was cut is never sent again (its answer would lie).
     if (action.kind === "second") {
       entry.secondAttemptedAt = new Date(deps.now()).toISOString();
+      deps.save(state);
+    } else if (action.kind === "refresh") {
+      entry.refreshAttemptedAt = new Date(deps.now()).toISOString();
       deps.save(state);
     }
     const result = await deps.send(entry, probeText(state.runId, entry.index));
     if (action.kind === "first") entry.first = result;
+    else if (action.kind === "refresh") entry.refresh = result;
     else entry.second = result;
     deps.save(state);
+    const at = action.kind === "refresh" ? `${entry.refreshMin} min` : `${entry.delayMin} min`;
     deps.log(
-      `${entry.id} ${action.kind} (${entry.delayMin} min)${result.error ? ` FAILED: ${result.error}` : ` · ${result.inputTokens} tokens, ${(hitShare(result) * 100).toFixed(0)}% cached, ${result.ms} ms`}`,
+      `${entry.id} ${action.kind} (${at})${result.error ? ` FAILED: ${result.error}` : ` · ${result.inputTokens} tokens, ${(hitShare(result) * 100).toFixed(0)}% cached, ${result.ms} ms`}`,
     );
   }
 }

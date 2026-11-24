@@ -11,6 +11,9 @@
  *   npm run measure:cache-probe -- --yes --budget-usd=0.15         → the probe
  *   npm run measure:cache-probe -- --yes --resume=<run id>         → goes on after a kill
  *   npm run measure:cache-probe -- --report=<run id>               → reads a finished one again, nothing sent
+ *   npm run measure:cache-probe -- --plan=refresh [--yes --budget-usd=0.15]
+ *                                                                  → does a READ keep the entry alive? (PROBE_REFRESH_PLAN:
+ *                                                                    fifteen calls over 100 minutes)
  *
  * The state and the report go to plans/conversar-todo-el-mes/cache-probe/ (local, never in the repo).
  */
@@ -72,14 +75,18 @@ async function main(): Promise<number> {
   if (!Number.isFinite(cap) || cap <= 0) throw new Error("--budget-usd must be a number above zero");
 
   const resume = arg("--resume");
-  const state = resume !== undefined ? load(resume) : newProbeState(new Date().toISOString().replace(/[-:]/g, "").slice(0, 13), deepinfra.modelId);
+  const plan = arg("--plan");
+  if (plan !== undefined && plan !== "refresh") throw new Error("--plan takes only «refresh»");
+  const state = resume !== undefined ? load(resume) : newProbeState(new Date().toISOString().replace(/[-:]/g, "").slice(0, 13), deepinfra.modelId, plan === "refresh" ? "refresh" : undefined);
   if (state.model !== deepinfra.modelId) throw new Error(`probe «${state.runId}» was started on ${state.model}; Len's model is now ${deepinfra.modelId}`);
 
-  const left = state.entries.reduce((n, e) => n + (e.first === null ? 2 : e.second === null && !e.first.error ? 1 : 0), 0);
+  const middle = (e: ProbeState["entries"][number]) => (e.refreshMin !== undefined && !e.refresh && !e.refreshAttemptedAt ? 1 : 0);
+  const left = state.entries.reduce((n, e) => n + (e.first === null ? 2 + middle(e) : e.second === null && !e.first.error ? 1 + middle(e) : 0), 0);
+  const hours = Math.max(...state.entries.map((e) => e.delayMin)) / 60;
   console.log(`provider  ${deepinfra.id} · ${deepinfra.dialect.endpoint}`);
   console.log(`model     ${deepinfra.modelId}`);
-  console.log(`probe     ${state.runId}${resume !== undefined ? " (resumed)" : ""} · ${state.entries.length} prefixes · ${left} calls left · about 3 hours`);
-  console.log(`delays    ${state.entries.map((e) => e.delayMin).join(", ")} minutes (the first is the control)`);
+  console.log(`probe     ${state.runId}${resume !== undefined ? " (resumed)" : ""} · ${state.entries.length} prefixes · ${left} calls left · about ${hours.toFixed(1)} hours${state.plan ? ` · plan ${state.plan}` : ""}`);
+  console.log(`delays    ${state.entries.map((e) => (e.refreshMin !== undefined ? `${e.refreshMin}→${e.delayMin}` : `${e.delayMin}`)).join(", ")} minutes (the first is the control; a→b = read at a, then at b)`);
   console.log(`spent     $${spentUsd(state).toFixed(4)} · worst case of what is left $${worstCaseRemainingUsd(state).toFixed(4)} · cap $${cap.toFixed(2)}`);
   if (spentUsd(state) + worstCaseRemainingUsd(state) > cap) throw new Error(`REFUSED: the worst case does not fit under --budget-usd=${cap.toFixed(2)}`);
   if (arg("--yes") === undefined) {
