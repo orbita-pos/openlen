@@ -55,6 +55,10 @@ describe("Caddy y el lienzo", () => {
       // puede estar en ella), así que el aviso del lienzo, que mira las
       // llamadas de la página, no tiene nada que avisar.
       if (ruta === "/ai/v1/*") continue;
+      // El correo de los proyectos (lib/project-email, spec local 2026-10-22,
+      // 773894c27): /email/v1 también lo llaman sólo las Edge Functions, con la
+      // misma llave secreta. Nada que avisar, como /ai/v1.
+      if (ruta === "/email/v1/*") continue;
       expect(RUTAS_SOLO_PUBLICADA, `${ruta} pasa a Next y el aviso del lienzo no lo conoce`).toContain(ruta.replace(/\*$/, ""));
     }
   });
