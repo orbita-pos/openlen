@@ -69,6 +69,10 @@ export interface Message {
    *  was, never its text — the text is rebuilt from the turn's own message 0 when the history is. Only on a
    *  `role: "system"` message that is not the first. */
   systemUpdate?: "plan" | "default";
+  /** A user message that announced custom agent types (lib/agent/subagents/agent-listing.ts, Claude Code's
+   *  `agent_listing_delta`): which ones it added and removed. Saved with the row and folded from the conversation,
+   *  never sent: the model reads `content`. */
+  agentListing?: { readonly added: readonly string[]; readonly removed: readonly string[] };
   /** Asistente: lo que el modelo PENSÓ en ese paso, entero y tal cual llegó.
    *  Vuelve al modelo en los pasos siguientes del turno (H15, como el arnés de
    *  DeepSeek); al dueño no se le enseña, y no se guarda en la base. */

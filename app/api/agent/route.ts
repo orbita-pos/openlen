@@ -34,7 +34,8 @@ import { assistantById, claimOpening, markAssistantNoticesHeard, releaseOpening,
 import { noticeText, type ReadyNotice } from "@/lib/assistants/notices";
 import { createStepRecorder } from "@/lib/agent/telemetry/step-recorder";
 import { flushOnExit } from "@/lib/agent/exit-flush";
-import { subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { SUBAGENT_TOOL, subagentsEnabled } from "@/lib/agent/subagents/enabled";
+import { agentListingMessage } from "@/lib/agent/subagents/agent-listing";
 import { createSubagentLauncher, type RunnerIO } from "@/lib/agent/subagents/run";
 import { createTurnSpend } from "@/lib/agent/subagents/spend";
 import { hasNotices, liveCount, noticeTurnPending, setNoticeTurnPending, takeNotices, waitForNoticeOrIdle } from "@/lib/agent/subagents/registry";
@@ -959,16 +960,18 @@ async function correrTurno(
     // byte as before.
     return relatedAgents.length > 0 ? [...todas, { ...MESSAGE_AGENT_DECLARATION }] : todas;
   };
-  const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno));
+  // The custom agent types are never in the declarations (Claude Code 2.1.330's `agent_listing_delta`): creating or
+  // deleting one mid-turn reaches Len as an appended message (`agentListing` of the loop), and the tools stay byte for
+  // byte — on 24/11 a `Write ~/.len/agents/language-teacher.md` rebuilt them here and the next call was a cache break.
+  const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote }, mode, appDelTurno));
+  /** Claude Code's gate on its delta: only where the tool that takes the types is offered. */
+  const listsAgentTypes = subagentsOn && tools.some((d) => d.name === SUBAGENT_TOOL);
   let typesRefresh = Promise.resolve();
   const refreshAgentTypes = (): Promise<void> => {
     if (!subagentsOn) return Promise.resolve();
     // Serialized reads cannot overwrite a newer definition with an older in-flight read.
     typesRefresh = typesRefresh.then(async () => {
-      const next = await loadAgentTypes();
-      const changed = JSON.stringify(next.custom) !== JSON.stringify(agentTypes.custom);
-      agentTypes = next;
-      if (changed) tools.splice(0, tools.length, ...conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote, agentTypes }, mode, appDelTurno)));
+      agentTypes = await loadAgentTypes();
     });
     return typesRefresh;
   };
@@ -2911,6 +2914,9 @@ async function correrTurno(
           // compose a closing summary when a step-budget cap is hit, so the turn
           // ends with "here's what I did / what's pending" instead of a red error.
           ...(planEnElHistorial ? { systemUpdate: (msgs: readonly Message[]) => systemUpdateFor(msgs, planActivo) } : {}),
+          // The custom agent types the conversation hasn't announced — at its first step, or after a step that wrote a
+          // type's file (`refreshAgentTypes`) —, folded from the conversation itself, so a rebuilt turn repeats none.
+          ...(listsAgentTypes ? { agentListing: (msgs: readonly Message[]) => agentListingMessage(agentTypes, msgs) } : {}),
           closeOut: (msgs) => {
             const conModo = planEnElHistorial ? msgs : withPlanSection(msgs, planActivo);
             const s = conSenales(streamWithRetry(() => brain.closeOut(conModo), { signal: upstreamAbort.signal }), reloj.vivo);

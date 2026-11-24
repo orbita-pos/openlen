@@ -84,7 +84,6 @@ import { lenArtifactsEnabled } from "@/lib/len-artifacts/enabled";
 import { ARTIFACT_DATA, ARTIFACT_DATA_DECLARATION, PUBLISH_ARTIFACT, PUBLISH_ARTIFACT_DECLARATION } from "@/lib/len-artifacts/tools";
 import { skillsEnabled } from "@/lib/agent/skills/enabled";
 import { PROPOSE_SKILLS, PROPOSE_SKILLS_DECLARATION } from "@/lib/agent/skills/propose-tool";
-import { NO_AGENT_TYPES, type AgentTypeSet } from "@/lib/agent/subagents/agent-registry";
 import { declaracionesDeLaApp, promptDeLaApp } from "@/lib/agent/modo-app";
 import { promptOfGame } from "./game-mode";
 import { promptOfTool } from "./tool-mode";
@@ -167,7 +166,6 @@ const MODULE_KNOWLEDGE: Record<AgentModule, string> = {
  *  defecto que apagara herramientas en el producto sería mucho peor que el que
  *  esto arregla. Quien NO puede, lo dice. */
 export interface CapacidadesDelEntorno {
-  readonly agentTypes?: AgentTypeSet;
   readonly artifactKinds?: readonly ArtifactKind[];
   /** `false` cuando el llamador no cablea `observarPagina`. */
   readonly mirarPagina?: boolean;
@@ -253,14 +251,14 @@ function declaracionesDelModo(
   if (terminalOnly(mode, _env)) for (const n of SUSTITUIDAS_EN_SOLO_TERMINAL) fuera.add(n);
   const declaraciones = conTerminal
     ? [
-        ...buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env)),
+        ...buildTodasLasDeclaraciones(gitEnabled(_env), eventTasksEnabled(_env)),
         // GIT (spec local 2026-10-15-git-for-len, §5): with git on, bash says so and carries the commit protocol.
         gitEnabled(_env) ? { ...DECLARACION_BASH, description: withGit(String(DECLARACION_BASH.description)) } : DECLARACION_BASH,
       ].map((d) =>
         // Lo que nombra las herramientas que salen se dice con la terminal.
         typeof d.description === "string" ? { ...d, description: segunLasPalancas(d.description, _env, mode) } : d,
       )
-    : buildTodasLasDeclaraciones(capacidades.agentTypes, gitEnabled(_env), eventTasksEnabled(_env));
+    : buildTodasLasDeclaraciones(gitEnabled(_env), eventTasksEnabled(_env));
   // THE GAME MODE (spec local 2026-11-05-modo-juego-design, §8.2): with games off, convert_to_app offers no `game`.
   const conJuegos = gamesEnabled(_env) ? declaraciones : declaraciones.map((d) => (d.name === CONVERTIR_EN_APP ? declaracionConvertirEnApp(false) : d));
   const conOjos = artifactsOn ? conJuegos : stripArtifactEyes(conJuegos);
@@ -308,7 +306,7 @@ export function stripArtifactEyes(declarations: readonly Record<string, unknown>
 // se fue con ellas, porque una herramienta que carga lo que no existe es una
 // palanca a ninguna parte. Todo va cargado.
 
-function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, isolation = false, events = false): Record<string, unknown>[] {
+function buildTodasLasDeclaraciones(isolation = false, events = false): Record<string, unknown>[] {
   return [
     // El sitio como ficheros: nombres y parámetros de Claude Code; las descripciones, nuestras.
     ...DECLARACIONES_DE_FICHEROS,
@@ -611,8 +609,9 @@ function buildTodasLasDeclaraciones(agentTypes: AgentTypeSet = NO_AGENT_TYPES, i
     ...scheduleDeclarations({ events }),
     // Len's subagents (spec local 2026-11-01-subagentes-de-len): DeepSeek's `subagent` and, phase 2 (§5),
     // its fork and its control tools, in DeepSeek's order.
-    // Phase 4: with git on, both take `isolation` (Claude Code's worktree).
-    subagentDeclaration(agentTypes, { isolation }),
+    // Phase 4: with git on, both take `isolation` (Claude Code's worktree). The custom types are never in it: they
+    // reach Len as an appended message (lib/agent/subagents/agent-listing.ts), so the tools don't move with them.
+    subagentDeclaration({ isolation }),
     subagentForkDeclaration({ isolation }),
     SEND_MESSAGE_DECLARATION,
     INTERRUPT_AGENT_DECLARATION,

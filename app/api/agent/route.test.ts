@@ -4439,14 +4439,19 @@ describe("POST /api/agent — un miembro del proyecto", () => {
   it("a member sees their own agent types, never the owner's", async () => {
     const type = (name: string) => ({ name, text: `---\nname: ${name}\ndescription: Reviews\n---\nReview.`, updatedAt: new Date(0) });
     agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" ? [type(owner === "ana" ? "ana-review" : "owner-review")] : []);
+    mocks.buildFunctionDeclarations.mockImplementation(() => [{ name: "subagent" }]);
     try {
       await readEvents(await pedir());
       expect(agentTypeStore.list).toHaveBeenCalledWith("personal", "ana");
       expect(agentTypeStore.list).not.toHaveBeenCalledWith("personal", "dueno-1");
-      const caps = (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as [unknown, { agentTypes: import("@/lib/agent/subagents/agent-registry").AgentTypeSet }])[1];
-      expect(caps.agentTypes.names()).toContain("ana-review");
-      expect(caps.agentTypes.names()).not.toContain("owner-review");
-    } finally { agentTypeStore.list.mockImplementation(async () => []); }
+      // What Len is told of them: the delta the loop appends (lib/agent/subagents/agent-listing.ts).
+      const listing = (mocks.runAgentLoop.mock.calls.at(-1) as unknown as [AgentLoopArgs])[0].agentListing?.([])?.content ?? "";
+      expect(listing).toContain("- ana-review: Reviews");
+      expect(listing).not.toContain("owner-review");
+    } finally {
+      agentTypeStore.list.mockImplementation(async () => []);
+      mocks.buildFunctionDeclarations.mockImplementation(() => []);
+    }
   });
 
   it("el techo del turno de un miembro es lo que le queda al proyecto, si es menos", async () => {
@@ -5102,29 +5107,45 @@ describe("POST /api/agent — Len's subagents", () => {
     expect(mocks.createAgentBrain).toHaveBeenLastCalledWith(expect.objectContaining({ esfuerzoDelTurno: "high" }));
   });
 
-  it("refreshes custom choices after creating and deleting a type in the same turn", async () => {
+  // 🔴 Seen in production on 24/11: Len wrote ~/.len/agents/language-teacher.md and the next call's toolsHash changed
+  // (`causes=tools_changed`), so the provider re-read the conversation. As Claude Code 2.1.330 (`agent_listing_delta`):
+  // the declarations stay byte for byte, and the new type reaches Len as a message appended to the conversation.
+  it("creating and deleting a type mid-turn keeps the tools byte for byte and tells Len with appended messages", async () => {
     const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
     let rows: typeof type[] = [];
     const observed: unknown[] = [];
-    agentTypeStore.list.mockImplementation(async (scope) => scope === "project" ? rows : []);
-    mocks.buildFunctionDeclarations.mockImplementation((_env, caps) => [{ name: "subagent", names: (caps as { agentTypes: Ctx["agentTypes"] }).agentTypes.names() }]);
+    const real = (await vi.importActual<typeof import("@/lib/agent/catalog")>("@/lib/agent/catalog")).buildFunctionDeclarations;
+    agentTypeStore.list.mockImplementation(async (scope) => scope === "personal" ? rows : []);
+    mocks.buildFunctionDeclarations.mockImplementation((env, caps, mode, app) => real(env as Parameters<typeof real>[0], caps as Parameters<typeof real>[1], mode as Parameters<typeof real>[2], app as Parameters<typeof real>[3]));
     mocks.runAgentTool.mockImplementation(async (_session, _deps, name) => {
       if (name === "Write") rows = [type];
       if (name === "bash") rows = [];
       return { response: { ok: true } };
     });
     mocks.runAgentLoop.mockImplementation(async (args: AgentLoopArgs) => {
-      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"));
-      await args.runTool("Write", { file_path: "/.len/agents/reviewer.md", content: type.text });
-      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), args.tools.find((d) => d.name === "subagent")!.names);
-      await args.runTool("bash", { command: "rm /.len/agents/reviewer.md" });
-      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), args.tools.find((d) => d.name === "subagent")!.names);
+      const conversation: Message[] = [...args.messages];
+      const before = JSON.stringify(args.tools);
+      expect(args.tools.some((d) => d.name === "subagent")).toBe(true);
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), args.agentListing?.(conversation) ?? null);
+      await args.runTool("Write", { file_path: "~/.len/agents/reviewer.md", content: type.text });
+      const added = args.agentListing?.(conversation) ?? null;
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), JSON.stringify(args.tools) === before, added?.content);
+      if (added) conversation.push(added);
+      // Announced once: the same conversation asks for nothing more.
+      observed.push(args.agentListing?.(conversation) ?? null);
+      await args.runTool("bash", { command: "rm ~/.len/agents/reviewer.md" });
+      const removed = args.agentListing?.(conversation) ?? null;
+      observed.push(launcherArgs()[0].agentTypes.names().includes("reviewer"), JSON.stringify(args.tools) === before, removed?.agentListing);
       return cierre();
     });
     try {
       await pedir();
-      // OpenLen's own types (len-design, len-office, len-review) come after the three presets, before the project's.
-      expect(observed).toEqual([false, true, ["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "reviewer"], false, ["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review"]]);
+      expect(observed).toEqual([
+        false, null,
+        true, true, "<system-reminder>\nNew agent types are now available for the subagent tool:\n- reviewer: Reviews (Tools: All tools)\n</system-reminder>",
+        null,
+        false, true, { added: [], removed: ["reviewer"] },
+      ]);
     }
     finally {
       agentTypeStore.list.mockImplementation(async () => []);
@@ -5158,14 +5179,19 @@ describe("POST /api/agent — Len's subagents", () => {
   it("loads the project's and the speaker's custom types into the catalog and launcher", async () => {
     const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
     agentTypeStore.list.mockImplementation(async (scope, owner) => scope === "personal" && owner === "u1" ? [type] : []);
+    mocks.buildFunctionDeclarations.mockImplementation(() => [{ name: "subagent" }]);
     try {
       await pedir();
       expect(agentTypeStore.list).toHaveBeenCalledWith("project", "p1");
       expect(agentTypeStore.list).toHaveBeenCalledWith("personal", "u1");
-      const capabilities = (mocks.buildFunctionDeclarations.mock.calls.at(-1) as unknown as [unknown, { agentTypes: Ctx["agentTypes"] }])[1];
-      expect(capabilities.agentTypes.names()).toContain("reviewer");
-      expect(launcherArgs()[0].agentTypes).toBe(capabilities.agentTypes);
-    } finally { agentTypeStore.list.mockImplementation(async () => []); }
+      expect(launcherArgs()[0].agentTypes.names()).toContain("reviewer");
+      // And the catalog never gets them: the declarations are the same with or without custom types.
+      expect(mocks.buildFunctionDeclarations.mock.calls.at(-1)![1]).not.toHaveProperty("agentTypes");
+      expect(loopArgs().agentListing?.([])?.content).toContain("- reviewer: Reviews (Tools: All tools)");
+    } finally {
+      agentTypeStore.list.mockImplementation(async () => []);
+      mocks.buildFunctionDeclarations.mockImplementation(() => []);
+    }
   });
 
   it("a failing or slow custom-type store leaves the built-ins", async () => {

@@ -1560,7 +1560,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Custom types are listed in <system-reminder> messages in the conversation. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -1574,14 +1574,6 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         },
         "agent_preset": {
           "type": "STRING",
-          "enum": [
-            "general-purpose",
-            "Explore",
-            "Plan",
-            "len-design",
-            "len-office",
-            "len-review"
-          ],
           "description": "The type of subagent; general-purpose when omitted."
         },
         "isolation": {
@@ -3440,7 +3432,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Custom types are listed in <system-reminder> messages in the conversation. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -3454,14 +3446,6 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         },
         "agent_preset": {
           "type": "STRING",
-          "enum": [
-            "general-purpose",
-            "Explore",
-            "Plan",
-            "len-design",
-            "len-office",
-            "len-review"
-          ],
           "description": "The type of subagent; general-purpose when omitted."
         },
         "isolation": {
@@ -5309,7 +5293,7 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
   },
   {
     "name": "subagent",
-    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
+    "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. This tool starts an independently managed subagent and immediately returns its id. The runtime notifies you when it finishes. The child reports results with \`send_message\`; use \`send_message\` to steer it while running or continue its conversation after it finishes. Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on. OpenLen's types: len-design: Designs or redesigns a page, a section or a screen of this project, following the business's brand when it has one, and looks at the result on desktop and mobile before answering with what it changed and where.; len-office: Makes or edits a Word, Excel, PowerPoint or PDF document, checks it, and answers with where it left the file (in /tmp/office) and what it contains; you deliver it. Never start it with isolation: its file would not come back.; len-review: Read-only code and integrity reviewer that checks changes beyond the diff — callers, sibling implementations, edge cases and tests — and reports only evidence-backed findings without modifying files. Custom types are listed in <system-reminder> messages in the conversation. Its final message is not shown to the user: tell them what matters. Never report or guess a subagent's result before its notice arrives.",
     "parameters": {
       "type": "OBJECT",
       "properties": {
@@ -5323,14 +5307,6 @@ exports[`golden de los prompts de producción > las declaraciones de herramienta
         },
         "agent_preset": {
           "type": "STRING",
-          "enum": [
-            "general-purpose",
-            "Explore",
-            "Plan",
-            "len-design",
-            "len-office",
-            "len-review"
-          ],
           "description": "The type of subagent; general-purpose when omitted."
         },
         "isolation": {

@@ -1076,9 +1076,10 @@ describe("el catálogo declara lo que de verdad puede correr", () => {
   });
 });
 
-it("puts this turn's custom types in the subagent declaration", async () => {
-  const { resolveAgentTypes } = await import("./subagents/agent-registry");
-  const agentTypes = resolveAgentTypes({ project: [{ name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) }], personal: [] });
-  const d = buildFunctionDeclarations({}, { agentTypes }).find((d) => d.name === "subagent")!;
-  expect((d.parameters as any).properties.agent_preset.enum).toContain("reviewer");
+// Claude Code 2.1.330's `agent_listing_delta`: custom types reach Len as an appended message
+// (lib/agent/subagents/agent-listing.ts), never in the declarations — the catalog doesn't even take them.
+it("the subagent declaration names no custom type, so the tools don't move with them", () => {
+  const d = buildFunctionDeclarations({}).find((d) => d.name === "subagent")!;
+  expect((d.parameters as any).properties.agent_preset.enum).toBeUndefined();
+  expect(String(d.description)).toContain("Custom types are listed in <system-reminder> messages in the conversation.");
 });

@@ -266,12 +266,11 @@ describe("the control tools (phase 2)", () => {
 describe("isolation (phase 4)", () => {
   it("isolation is offered only when asked", async () => {
     const { subagentDeclaration, subagentForkDeclaration } = await import("./tool");
-    const { NO_AGENT_TYPES } = await import("./agent-registry");
     const props = (d: Record<string, unknown>) => (d.parameters as { properties: Record<string, Record<string, unknown>> }).properties;
-    expect(props(subagentDeclaration(NO_AGENT_TYPES)).isolation).toBeUndefined();
+    expect(props(subagentDeclaration()).isolation).toBeUndefined();
     expect(props(subagentForkDeclaration()).isolation).toBeUndefined();
     expect(subagentForkDeclaration()).toEqual(SUBAGENT_FORK_DECLARATION);
-    for (const d of [subagentDeclaration(NO_AGENT_TYPES, { isolation: true }), subagentForkDeclaration({ isolation: true })]) {
+    for (const d of [subagentDeclaration({ isolation: true }), subagentForkDeclaration({ isolation: true })]) {
       const p = props(d).isolation!;
       expect(p).toMatchObject({ type: "STRING", enum: ["worktree"] });
       expect(String(p.description)).toContain("its own copy of the project, on its own git branch");
@@ -292,25 +291,16 @@ describe("isolation (phase 4)", () => {
   });
 });
 
-// A turn's custom types change the choice offered to the model, never the built-in-only declaration.
+// Claude Code 2.1.330: the declaration never names a custom type (they come in `agent_listing_delta` messages,
+// ./agent-listing.ts), so it is one declaration whatever types exist, and its `agent_preset` takes any name.
 describe("custom types in the subagent tool", () => {
-  it("without custom types the declaration is unchanged", async () => {
+  it("one declaration, with no enum to leave a custom type out of", async () => {
     const { subagentDeclaration } = await import("./tool");
-    const { NO_AGENT_TYPES } = await import("./agent-registry");
-    expect(subagentDeclaration(NO_AGENT_TYPES)).toEqual(SUBAGENT_DECLARATION);
+    expect(subagentDeclaration()).toEqual(SUBAGENT_DECLARATION);
+    expect((SUBAGENT_DECLARATION.parameters as any).properties.agent_preset).toEqual({ type: "STRING", description: "The type of subagent; general-purpose when omitted." });
+    expect(SUBAGENT_DECLARATION.description).toContain(" Custom types are listed in <system-reminder> messages in the conversation. Its final message is not shown");
   });
-  it("offers the custom types, caps their descriptions and names shadowing", async () => {
-    const { subagentDeclaration } = await import("./tool");
-    const { resolveAgentTypes } = await import("./agent-registry");
-    const a = { name: "reviewer", text: `---\nname: reviewer\ndescription: ${"d".repeat(600)}\n---\nReview.`, updatedAt: new Date(0) };
-    const d = subagentDeclaration(resolveAgentTypes({ project: [a], personal: [a] }));
-    expect((d.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review", "reviewer"]);
-    expect(d.description).toContain("reviewer (yours, over the project's reviewer)");
-    expect(d.description).toMatch(/ Custom types: reviewer/);
-    expect(d.description).not.toContain("d".repeat(501));
-  });
-  it("OpenLen's types are in the enum and the description", () => {
-    expect((SUBAGENT_DECLARATION.parameters as any).properties.agent_preset.enum).toEqual(["general-purpose", "Explore", "Plan", "len-design", "len-office", "len-review"]);
+  it("OpenLen's types are in the description", () => {
     expect(SUBAGENT_DECLARATION.description).toContain("OpenLen's types: len-design: Designs or redesigns");
     expect(SUBAGENT_DECLARATION.description).toContain("len-office: Makes or edits");
     expect(SUBAGENT_DECLARATION.description).toContain("len-review: Read-only code and integrity reviewer");

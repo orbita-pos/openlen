@@ -9,9 +9,9 @@
 // The tools only validate and hand over: the launcher (`deps.subagents`, lib/agent/subagents/run.ts)
 // builds, runs, wakes and stops the children, and their notices reach Len later.
 //
-// Cache effect: the declaration changes when the project's or speaker's custom types change; without
-// custom types it is byte for byte the fixed declaration, which lists Claude Code's three types and
-// OpenLen's two. Answers are appended.
+// Cache effect: one fixed declaration for every turn — it lists Claude Code's three types and OpenLen's own, and
+// the project's and the speaker's custom types reach Len as an appended message (./agent-listing.ts, Claude Code
+// 2.1.330's `agent_listing_delta`), so creating or deleting one never moves the tools. Answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { SubagentStopReason } from "./notice";
@@ -20,7 +20,6 @@ import { BUNDLED_AGENT_TYPES } from "./bundled-types";
 import { INTERRUPT_AGENT_TOOL, LIST_AGENTS_TOOL, SEND_MESSAGE_TOOL, SUBAGENT_FORK_TOOL, SUBAGENT_TOOL } from "./enabled";
 import { LEN_AGENT_ID, startedLine } from "./notice";
 import { SUBAGENT_PRESETS } from "./presets";
-import type { AgentTypeSet } from "./agent-registry";
 
 /** DeepSeek's `tool:subagent` system-prompt section, with `subagent` and `subagent_fork` visible. */
 export const SUBAGENT_GUIDANCE =
@@ -41,6 +40,8 @@ const DESCRIPTION = [
   "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
   // Ours: OpenLen's own types (bundled-types.ts), always offered.
   `OpenLen's types: ${BUNDLED_AGENT_TYPES.map((a) => `${a.name}: ${a.description}`).join("; ")}`,
+  // Claude Code's `Oes`, for the types its declaration doesn't list: ./agent-listing.ts.
+  "Custom types are listed in <system-reminder> messages in the conversation.",
   NOT_SHOWN,
 ].join(" ");
 
@@ -55,7 +56,8 @@ export const SUBAGENT_DECLARATION: Record<string, unknown> = {
         type: "STRING",
         description: "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs.",
       },
-      agent_preset: { type: "STRING", enum: [...SUBAGENT_PRESETS, ...BUNDLED_AGENT_TYPES.map((a) => a.name)], description: "The type of subagent; general-purpose when omitted." },
+      // No enum, as Claude Code's `subagent_type`: a custom type is a valid value the declaration never names.
+      agent_preset: { type: "STRING", description: "The type of subagent; general-purpose when omitted." },
     },
     required: ["description", "prompt"],
   },
@@ -77,14 +79,9 @@ const withIsolation = (d: Record<string, unknown>, isolation: boolean): Record<s
   return { ...d, parameters: { ...parameters, properties: { ...parameters.properties, isolation: ISOLATION_PARAMETER } } };
 };
 
-/** Ours: custom types extend DeepSeek's preset enum; keep the fixed declaration unchanged. */
-export function subagentDeclaration(types: AgentTypeSet, opts: { isolation: boolean } = { isolation: false }): Record<string, unknown> {
-  if (!types.custom.length) return withIsolation(SUBAGENT_DECLARATION, opts.isolation);
-  const parameters = (SUBAGENT_DECLARATION as Declaration).parameters;
-  const summaries = types.custom.map(({ agent, covers }) => `${agent.name}${covers ? ` (yours, over the project's ${agent.name})` : ""}: ${agent.description.slice(0, 500)}`);
-  return withIsolation({ ...SUBAGENT_DECLARATION, description: `${DESCRIPTION} Custom types: ${summaries.join("; ")}`, parameters: {
-    ...parameters, properties: { ...parameters.properties, agent_preset: { ...parameters.properties.agent_preset, enum: types.names() } },
-  } }, opts.isolation);
+/** `subagent`, with `isolation` when git is on (phase 4). The same whatever custom types exist. */
+export function subagentDeclaration(opts: { isolation: boolean } = { isolation: false }): Record<string, unknown> {
+  return withIsolation(SUBAGENT_DECLARATION, opts.isolation);
 }
 
 /** `subagent_fork`, with `isolation` when git is on (phase 4). */

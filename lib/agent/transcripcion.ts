@@ -328,6 +328,8 @@ function limpio<M extends Message | MensajeDelHistorial>(m: M, siguiente?: Messa
     // A step's screenshots: where they were stored, never their pixels; or how many there were, once dropped.
     ...(m.screenshots?.length && m.screenshotsDropped === undefined ? { screenshots: [...m.screenshots] } : {}),
     ...(m.screenshotsDropped !== undefined ? { screenshotsDropped: m.screenshotsDropped } : {}),
+    // What an agent listing announced: the next turn folds it from the history (lib/agent/subagents/agent-listing.ts).
+    ...(m.agentListing ? { agentListing: { added: [...m.agentListing.added], removed: [...m.agentListing.removed] } } : {}),
   } as M;
 }
 

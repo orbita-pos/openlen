@@ -7,8 +7,8 @@
  *
  * Here as strings, not files on disk: the registry and the `subagent` declaration stay pure and fixed.
  *
- * Cache effect: the fixed `subagent` declaration lists these two in `agent_preset` and in its description; they
- * change only when this file does.
+ * Cache effect: the fixed `subagent` declaration lists these in its description; they change only when this file
+ * does. (Custom types never enter it: ./agent-listing.ts.)
  */
 import { CARPETA_AGENTES } from "@/lib/agent/ficheros/manual";
 

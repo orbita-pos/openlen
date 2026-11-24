@@ -65,7 +65,7 @@ describe("assistantTools", () => {
   });
 
   it("🔴 inherits Len's artifacts as they are: both tools and the eyes' `artifact` parameter, the very same declarations (no agent-only copy)", () => {
-    const lenDecls = buildFunctionDeclarations({}, { functionSecrets: true, realTerminal: true, agentTypes: NO_AGENT_TYPES }, "len", null);
+    const lenDecls = buildFunctionDeclarations({}, { functionSecrets: true, realTerminal: true }, "len", null);
     const agentDecls = assistantTools(lenDecls);
     for (const name of ["publish_artifact", "artifact_data", "view_page", "use_page"]) {
       expect(agentDecls.find((d) => d.name === name), name).toBe(lenDecls.find((d) => d.name === name));
@@ -81,7 +81,7 @@ describe("assistantTools", () => {
 // assistant got or lost — and that what it never has stays out.
 describe("assistantTools over Len's real catalog", () => {
   const APP = { catalogo: "2026-11", entrada: "/src/main.tsx" } as const;
-  const CAPS = { functionSecrets: true, realTerminal: true, agentTypes: NO_AGENT_TYPES } as const;
+  const CAPS = { functionSecrets: true, realTerminal: true } as const;
   const lenOf = (app: typeof APP | null) => buildFunctionDeclarations({}, CAPS, "len", app);
   const keptOf = (app: typeof APP | null) => names(assistantTools(lenOf(app)));
   const leftOutOf = (app: typeof APP | null) => names(lenOf(app)).filter((n) => !keptOf(app).includes(n));

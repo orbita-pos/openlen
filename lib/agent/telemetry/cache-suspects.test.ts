@@ -20,7 +20,10 @@ import { PLAN_ON_NOTICE, PLAN_POLICY, systemUpdateFor, withPlanSection } from "@
 import { quienPide } from "@/lib/agent/equipo";
 import { plegarEquipo } from "@/lib/agent/plegar-equipo";
 import { _resetProviderHealth } from "@/lib/agent/provider-health";
-import { checkReplay } from "@/lib/agent/testing/replay-invariant";
+import { buildFunctionDeclarations } from "@/lib/agent/catalog";
+import { agentListingMessage } from "@/lib/agent/subagents/agent-listing";
+import { resolveAgentTypes } from "@/lib/agent/subagents/agent-registry";
+import { checkReplay, jsonbRoundTrip } from "@/lib/agent/testing/replay-invariant";
 import { startFaultServer, type FaultServer } from "@/lib/agent/testing/llm-fault-server";
 import * as await0 from "@/lib/agent/screenshots-in-context";
 import { historialDesdeLaBase, picturesOldestFirst, screenshotAddresses, transcripcionParaGuardar, type MensajeDelHistorial } from "@/lib/agent/transcripcion";
@@ -159,6 +162,60 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(JSON.stringify(saved)).not.toContain("PLAN MODE");
     // And the next turn rebuilds, byte for byte, what this one sent.
     expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toEqual({ ok: true });
+  });
+
+  // FIXED (24/11, Claude Code 2.1.330's `agent_listing_delta`, lib/agent/subagents/agent-listing.ts). Seen in
+  // production: Len wrote ~/.len/agents/language-teacher.md and the next call's `toolsHash` changed
+  // (`causes=tools_changed`, 32768 → 16000 cached), because the `subagent` declaration listed the custom types and
+  // the route rebuilt the tools. Now the declarations never name one; the new type is a user message appended
+  // behind the step that wrote it, saved with the turn, and the next turn folds it from its history.
+  it("🔴 a custom agent type created mid-turn: the tools never move, the delta rides behind its step, and the next turn repeats nothing", async () => {
+    server = await startFaultServer({
+      "/deepinfra": [
+        { kind: "ok", text: "", toolCalls: [{ name: "Write", arguments: '{"file_path":"~/.len/agents/teacher.md","content":"x"}' }] },
+        { kind: "ok", text: "Creado." },
+        { kind: "ok", text: "Sigo." },
+      ],
+    });
+    const calls: BrainCall[] = [];
+    const tools = buildFunctionDeclarations({});
+    expect(tools.some((d) => d.name === "subagent")).toBe(true);
+    const brain = brainOn(server, calls, { tools });
+    const teacher = { name: "teacher", text: "---\nname: teacher\ndescription: Teaches languages\n---\nTeach.", updatedAt: new Date(0) };
+    let types = resolveAgentTypes({ project: [], personal: [] });
+    const turn = (messages: Message[]) =>
+      runAgentLoop({
+        messages,
+        tools,
+        openStream: brain.openStream,
+        runTool: async (name) => {
+          if (name === "Write") types = resolveAgentTypes({ project: [], personal: [teacher] });
+          return { response: { ok: true } };
+        },
+        agentListing: (m) => agentListingMessage(types, m),
+        emit: () => {},
+      });
+    const initial: Message[] = [{ role: "system", content: "s" }, { role: "user", content: "crea un profesor de idiomas" }];
+    const first = await turn([...initial]);
+    expect(calls.map((c) => c.kind)).toEqual(["loop", "loop"]);
+    const [before, after] = calls.map((c) => c.wire!);
+    // The same tools, byte for byte, and the second request extends the first.
+    expect(JSON.stringify(after!.tools)).toBe(JSON.stringify(before!.tools));
+    expect(diffConsecutive(before!, after!)).toEqual({ match: true });
+    // The delta is the last thing it sent: behind the Write's result.
+    expect(after!.messages.at(-1)).toEqual({ role: "user", content: "<system-reminder>\nNew agent types are now available for the subagent tool:\n- teacher: Teaches languages (Tools: All tools)\n</system-reminder>" });
+    // The row keeps it, with what it announced, and the next turn rebuilds the same bytes.
+    const saved = transcripcionParaGuardar(first.transcripcion!, new Map());
+    expect(saved.mensajes.filter((m) => m.agentListing)).toEqual([expect.objectContaining({ agentListing: { added: ["teacher"], removed: [] } })]);
+    const row = { userText: "crea un profesor de idiomas", assistantReasoning: "", transcript: jsonbRoundTrip(saved) };
+    const history = historialDesdeLaBase([row]) as Message[];
+    expect(agentListingMessage(types, history)).toBeNull();
+    await turn([initial[0]!, ...history, { role: "user", content: "sigue" }]);
+    const next = calls[2]!.wire!;
+    expect(JSON.stringify(next.tools)).toBe(JSON.stringify(before!.tools));
+    expect(diffConsecutive(after!, next)).toEqual({ match: true });
+    // Announced once in the whole conversation.
+    expect(next.messages.filter((m) => String(m.content).includes("New agent types")).length).toBe(1);
   });
 
   // Review, finding 1: the prompt of the mode was asked for once, at the top of a step. A compaction right after
