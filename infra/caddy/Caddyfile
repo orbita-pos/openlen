@@ -60,6 +60,23 @@ openlen.com, www.openlen.com {
 	# certbot-managed cert; the deploy hook reloads Caddy on renewal.
 	tls /etc/letsencrypt/live/openlen.com/fullchain.pem /etc/letsencrypt/live/openlen.com/privkey.pem
 
+	# Visits to openlen.com (2026-11-23). Until this line nothing recorded them:
+	# Caddy only logged the proxy's errors and the site has no analytics. One JSON
+	# line per request in its OWN file (not journald, so a count never wades
+	# through the app's logs); the visitor's IP is the `Cf-Connecting-Ip` header
+	# (Cloudflare proxies the apex, `remote_ip` is Cloudflare's). Kept 90 days.
+	# Counted by `scripts/measure/apex-visits.py` (bots and assets left out).
+	# ⚠️ `caddy validate` run as root (deploy step 8) OPENS this file: if it is
+	# missing, it is born root-owned and the reload fails with «permission
+	# denied» (seen 2026-11-23). Fix: `chown caddy:caddy` it and reload.
+	log {
+		output file /var/log/caddy/openlen-apex.log {
+			roll_size 100MiB
+			roll_keep_for 2160h
+		}
+		format json
+	}
+
 	encode zstd gzip
 
 	header {
