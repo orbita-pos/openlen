@@ -25,7 +25,13 @@ async function user(o: { verified?: boolean; google?: boolean } = {}) {
   if (o.google) await db.insert(schema.accounts).values({ userId: id, type: "oidc", provider: "google", providerAccountId: `g-old-${id}` });
   return { id, email };
 }
-const row = async (id: string) => (await db.select().from(schema.users).where(eq(schema.users.id, id)))[0]!;
+const row = async (id: string) =>
+  (
+    await db
+      .select({ passwordHash: schema.users.passwordHash, emailVerified: schema.users.emailVerified, passwordChangedAt: schema.users.passwordChangedAt })
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+  )[0]!;
 
 describe.skipIf(!HAS_DB)("🔴 cederAGoogle", () => {
   afterAll(async () => {
