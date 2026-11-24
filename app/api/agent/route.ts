@@ -2201,7 +2201,7 @@ async function correrTurno(
           }
           // Pedido por correo: Len contesta POR CORREO con lo que dijo al cerrar.
           if (correoDelTurno) {
-            await correoDelTurno.onReply(registro.texto).catch((err: unknown) =>
+            await correoDelTurno.onReply(registro.texto, registro.tarjetas).catch((err: unknown) =>
               console.warn("[agent] no se pudo contestar por correo", err),
             );
           }

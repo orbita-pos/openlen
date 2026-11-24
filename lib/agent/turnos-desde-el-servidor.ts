@@ -52,8 +52,8 @@ export interface PedidoDelHilo extends OrigenDelHilo {
 export interface EmailRequest {
   /** Lo que lee el MODELO delante del pedido; la fila guarda sólo lo escrito. */
   readonly context: string;
-  /** Lo que Len dijo al cerrar el turno: se le manda a quien escribió. */
-  readonly onReply: (text: string) => Promise<void>;
+  /** Lo que Len dijo al cerrar el turno, y las tarjetas del turno (lo que presentó va adjunto): se le manda a quien escribió. */
+  readonly onReply: (text: string, cards: Tarjetas) => Promise<void>;
 }
 
 /** Where a framed server turn came from: every origin the server starts a turn for. */
@@ -236,7 +236,8 @@ export async function launchEmailTurn(p: {
   readonly texto: string;
   readonly context: string;
   readonly origen: string;
-  readonly reply: (text: string) => Promise<void>;
+  /** Lo que Len dijo, con las tarjetas del turno (lo que presentó va adjunto); sin ellas, la frase de fallo. */
+  readonly reply: (text: string, cards?: Tarjetas) => Promise<void>;
   readonly fraseDeFallo: (fallo: FalloDelTurno | null) => string;
   /** La fila del turno: el id del correo apuntado. */
   readonly filaId?: string;
@@ -254,9 +255,9 @@ export async function launchEmailTurn(p: {
       let replied = false;
       const email: EmailRequest = {
         context: p.context,
-        onReply: async (text) => {
+        onReply: async (text, cards) => {
           replied = true;
-          await p.reply(text);
+          await p.reply(text, cards);
         },
       };
       const errores = await runTurn(correr, { ...p, filaId }, { email });

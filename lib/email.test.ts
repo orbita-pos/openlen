@@ -192,3 +192,72 @@ describe("the agent's note email (sendAgentNoteEmail)", () => {
     warned.mockRestore();
   });
 });
+
+// THE EMAILS SOMEONE RETRIES (Len's reply by email, a scheduled task's result, the chat notification): a refusal
+// used to be logged and swallowed like any other, so `lib/len-email/run.ts` marked the email answered and the
+// scheduler set `emailedAt` for an email that never went out. These throw instead — after retrying, here, the
+// refusals that pass in seconds — and send an idempotency key, so the retry after a restart can't send it twice.
+describe("an email that someone retries throws when Resend refuses it", () => {
+  const REPLY = { to: "eli@example.com", replyTo: "p1@len.openlen.com", idioma: "es" as const, projectTitle: "Taller", asunto: "Hola", texto: "Hecho.", url: "https://openlen.com/x" };
+  const QUOTA = { data: null, error: { name: "daily_quota_exceeded", message: "Daily quota exceeded", statusCode: 429 } };
+  const BURST = { data: null, error: { name: "rate_limit_exceeded", message: "Too many requests", statusCode: 429 } };
+  beforeEach(() => {
+    send.mockReset();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("🔴 Len's reply: a spent quota throws at once, and the send carried its idempotency key", async () => {
+    send.mockResolvedValue(QUOTA);
+    const { sendLenReplyEmail, EmailRefusedError } = await cargar();
+    await expect(sendLenReplyEmail({ ...REPLY, idempotencyKey: "len-email:r1" })).rejects.toBeInstanceOf(EmailRefusedError);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send.mock.calls[0]![1]).toEqual({ idempotencyKey: expect.stringMatching(/^len-email:r1:[0-9a-f]{32}$/) });
+  });
+
+  it("🔴 the key follows the email: the same one gets the same key, a different one (the resend after a restart that lost the files) another", async () => {
+    send.mockResolvedValue({ data: { id: "e1" }, error: null });
+    const { sendLenReplyEmail } = await cargar();
+    await sendLenReplyEmail({ ...REPLY, idempotencyKey: "len-email:r1" });
+    await sendLenReplyEmail({ ...REPLY, idempotencyKey: "len-email:r1" });
+    await sendLenReplyEmail({ ...REPLY, texto: "Otra cosa.", idempotencyKey: "len-email:r1" });
+    const keys = send.mock.calls.map((c) => (c[1] as { idempotencyKey: string }).idempotencyKey);
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("🔴 a burst over the rate limit is retried with the same key, and then it goes out", async () => {
+    vi.useFakeTimers();
+    send.mockResolvedValueOnce(BURST).mockResolvedValueOnce({ data: { id: "e1" }, error: null });
+    const { sendLenReplyEmail } = await cargar();
+    const sent = sendLenReplyEmail({ ...REPLY, idempotencyKey: "len-email:r1" });
+    await vi.runAllTimersAsync();
+    await expect(sent).resolves.toBeUndefined();
+    const [first, second] = send.mock.calls.map((c) => (c[1] as { idempotencyKey: string }).idempotencyKey);
+    expect(first).toMatch(/^len-email:r1:/);
+    expect(second).toBe(first);
+  });
+
+  it("🔴 a scheduled task's result and the chat notification throw too", async () => {
+    send.mockResolvedValue(QUOTA);
+    const { sendScheduledTaskEmail, sendChatNotificationEmail, EmailRefusedError } = await cargar();
+    const task = { to: "ana@example.com", replyTo: null, idioma: "es" as const, attachments: [], projectTitle: "Space", title: "Palabras", occurrenceAt: "2026-11-02T15:03:00.000Z", timeZone: "UTC", texto: "Hoy.", waiting: [], canReply: false, chatUrl: "https://openlen.com/x", removeUrl: null };
+    await expect(sendScheduledTaskEmail({ ...task, idempotencyKey: "scheduled-task:run1:result" })).rejects.toBeInstanceOf(EmailRefusedError);
+    await expect(
+      sendChatNotificationEmail({ to: "d@example.com", ownerName: null, senderName: "Ana", messageBody: "hola", deskUrl: "https://openlen.com/inbox", projectTitle: "Taller" }),
+    ).rejects.toBeInstanceOf(EmailRefusedError);
+  });
+
+  it("the other emails still log a refusal and go on (the visitor's paths must not turn it into a 500)", async () => {
+    send.mockResolvedValue(QUOTA);
+    const { sendLeadNotificationEmail, sendScheduledTaskEmail } = await cargar();
+    await expect(sendLeadNotificationEmail(LEAD as never)).resolves.toBeUndefined();
+    // A scheduled task's email without a key is one nobody retries (an event task's «stopped» notice): as before.
+    const task = { to: "ana@example.com", replyTo: null, idioma: "es" as const, attachments: [], projectTitle: "Space", title: "Palabras", occurrenceAt: "2026-11-02T15:03:00.000Z", timeZone: "UTC", texto: "Hoy.", waiting: [], canReply: false, chatUrl: "https://openlen.com/x", removeUrl: null };
+    await expect(sendScheduledTaskEmail(task)).resolves.toBeUndefined();
+  });
+});

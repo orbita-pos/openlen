@@ -61,6 +61,15 @@ describe("deliverResult", () => {
     expect(deps.markRun).not.toHaveBeenCalledWith("run-1", expect.objectContaining({ emailedAt: expect.anything() }));
   });
 
+  it("🔴 the email goes with its run's idempotency key (the result's and the failure's apart), so the restart's resend is not sent twice", async () => {
+    const ok = fakeDeps();
+    await deliverResult(run, task, "Listo.", [], ok.deps);
+    expect(vi.mocked(ok.deps.send).mock.calls[0]![0].idempotencyKey).toBe("scheduled-task:run-1:result");
+    const failed = fakeDeps();
+    await deliverFailure(run, task, "cut", "Se cortó.", failed.deps);
+    expect(vi.mocked(failed.deps.send).mock.calls[0]![0].idempotencyKey).toBe("scheduled-task:run-1:failure");
+  });
+
   it("attaches what fits and links the rest", async () => {
     const { deps } = fakeDeps();
     const cards = [

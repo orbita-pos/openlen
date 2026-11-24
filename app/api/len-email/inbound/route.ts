@@ -45,6 +45,19 @@ const Inbound = z.object({
   autoSubmitted: z.string().max(200).nullish(),
   precedence: z.string().max(200).nullish(),
   listId: z.string().max(1000).nullish(),
+  /** What the email came with, described by the Worker (which already caps the list and the names): the bytes
+   *  never travel. Len is told they don't reach him (`contextForModel`). Absent = an older Worker: none. */
+  attachments: z
+    .array(
+      z.object({
+        filename: z.string().max(1000).nullish(),
+        mimeType: z.string().max(300).nullish(),
+        size: z.number().nonnegative().finite(),
+        inline: z.boolean().optional(),
+      }),
+    )
+    .max(100)
+    .default([]),
 });
 
 function json(body: unknown, status = 200): Response {
@@ -109,6 +122,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!request) return ignored("duplicado");
   // Lo que un reinicio dejó a medias, por si este proceso aún no lo retomó.
   void resumeEmailRequests();
-  await startEmailRequest(request);
+  // The attachments ride only this start: they are not stored, so a resume after a restart doesn't name them.
+  await startEmailRequest(request, { attachments: mail.attachments });
   return json({ ok: true, turnId: request.id }, 202);
 }

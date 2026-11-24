@@ -8,11 +8,13 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 
-import { launchEmailTurn } from "@/lib/agent/turnos-desde-el-servidor";
+import { deliveryStore } from "@/lib/agent/skills/deliveries";
+import { presentedAttachments } from "@/lib/agent/skills/present-attachments";
+import { launchEmailTurn, type Tarjetas } from "@/lib/agent/turnos-desde-el-servidor";
 import { db, schema } from "@/lib/db";
 import { sendLenReplyEmail } from "@/lib/email";
 import { lenEmailAddress, lenEmailDomain } from "@/lib/len-email/address";
-import { contextForModel } from "@/lib/len-email/inbound";
+import { contextForModel, type InboundAttachment } from "@/lib/len-email/inbound";
 import { markEmailReplied, saveEmailReply, unansweredEmailRequests, type EmailRequest } from "@/lib/len-email/requests";
 import { urlDelChat } from "@/lib/notifications/channels/webpush";
 import { fraseDeFalloPorCorreo, fraseDeInterrupcionPorCorreo, idiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
@@ -21,12 +23,16 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "https://openlen.com";
 }
 
-/** Guarda lo que Len dijo, lo manda a quien escribió y lo marca contestado. */
-async function deliver(req: EmailRequest, texto: string): Promise<void> {
+/** Guarda lo que Len dijo, lo manda a quien escribió —con lo que presentó en el
+ *  turno adjunto, como el correo de una tarea programada— y lo marca contestado.
+ *  Se guarda el texto sin los ficheros: tras un reinicio se reenvía sin ellos. */
+async function deliver(req: EmailRequest, texto: string, cards: Tarjetas = []): Promise<void> {
   await saveEmailReply(req.id, texto);
   const replyTo = lenEmailAddress(req.projectId);
   if (!replyTo) throw new Error("LEN_EMAIL_DOMAIN no está configurado: no hay a qué dirección contestar");
   const [project] = await db.select({ title: schema.projects.title }).from(schema.projects).where(eq(schema.projects.id, req.projectId)).limit(1);
+  const store = deliveryStore();
+  const { attachments, links } = await presentedAttachments(req.projectId, cards, async (key) => (await store?.get(key)) ?? null, siteUrl());
   await sendLenReplyEmail({
     to: req.sender,
     replyTo,
@@ -34,23 +40,28 @@ async function deliver(req: EmailRequest, texto: string): Promise<void> {
     inReplyTo: req.inReplyTo,
     projectTitle: project?.title ?? "",
     asunto: req.subject,
-    texto,
+    texto: links.length > 0 ? [texto.trim(), "", ...links].join("\n") : texto,
     url: siteUrl() + urlDelChat(req.projectId),
+    attachments,
+    // Un rechazo de Resend LANZA (no se marca: el reinicio lo reenvía), y con la
+    // misma clave el reenvío de lo que sí salió no llega dos veces.
+    idempotencyKey: `len-email:${req.id}`,
   });
   await markEmailReplied(req.id);
 }
 
-/** Lanza el turno del correo; vuelve en el acto. La fila del chat es el id del correo. */
-export async function startEmailRequest(req: EmailRequest): Promise<void> {
+/** Lanza el turno del correo; vuelve en el acto. La fila del chat es el id del correo.
+ *  `attachments`: lo que traía el correo, que Len no recibe (sólo al llegar: no se guarda). */
+export async function startEmailRequest(req: EmailRequest, extra: { readonly attachments?: readonly InboundAttachment[] } = {}): Promise<void> {
   const idioma = idiomaDelCorreo(req.idioma);
   await launchEmailTurn({
     userId: req.userId,
     projectId: req.projectId,
     texto: req.texto,
-    context: contextForModel(req.subject),
+    context: contextForModel(req.subject, extra.attachments),
     origen: `${siteUrl()}/api/agent`,
     filaId: req.id,
-    reply: (texto) => deliver(req, texto),
+    reply: (texto, cards) => deliver(req, texto, cards),
     fraseDeFallo: (fallo) => fraseDeFalloPorCorreo(idioma, fallo),
   });
 }

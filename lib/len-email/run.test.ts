@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   pending: [] as unknown[],
   launched: [] as Record<string, unknown>[],
   failSend: false,
+  keys: [] as (string | undefined)[],
+  attached: [] as string[][],
 }));
 
 vi.mock("server-only", () => ({}));
@@ -21,10 +23,16 @@ vi.mock("@/lib/len-email/requests", () => ({
   unansweredEmailRequests: async () => mocks.pending,
 }));
 vi.mock("@/lib/email", () => ({
-  sendLenReplyEmail: async (p: { to: string; texto: string; replyTo: string }) => {
+  sendLenReplyEmail: async (p: { to: string; texto: string; replyTo: string; idempotencyKey?: string; attachments?: { filename: string }[] }) => {
+    mocks.keys.push(p.idempotencyKey);
+    mocks.attached.push((p.attachments ?? []).map((a) => a.filename));
     if (mocks.failSend) throw new Error("resend caído");
     mocks.log.push(`send ${p.to}: ${p.texto}`);
   },
+}));
+// The files Len presented, as the route stores them (`present`): a small one fits, a big one is linked.
+vi.mock("@/lib/agent/skills/deliveries", () => ({
+  deliveryStore: () => ({ get: async (key: string) => new Uint8Array(key.includes("small") ? 10 : 1) }),
 }));
 vi.mock("@/lib/agent/turnos-desde-el-servidor", () => ({
   launchEmailTurn: async (p: Record<string, unknown>) => {
@@ -56,6 +64,8 @@ beforeEach(() => {
   mocks.pending = [];
   mocks.launched = [];
   mocks.failSend = false;
+  mocks.keys = [];
+  mocks.attached = [];
 });
 
 describe("correr un correo apuntado", () => {
@@ -73,6 +83,38 @@ describe("correr un correo apuntado", () => {
     mocks.failSend = true;
     await expect((mocks.launched[0]!.reply as (t: string) => Promise<void>)("Listo.")).rejects.toThrow();
     expect(mocks.log).toEqual(["save req-1: Listo."]);
+  });
+
+  it("🔴 the reply goes with the email's id as its idempotency key, the same one the restart's resend uses", async () => {
+    const { startEmailRequest } = await import("./run");
+    await startEmailRequest(req());
+    mocks.failSend = true;
+    await expect((mocks.launched[0]!.reply as (t: string) => Promise<void>)("Listo.")).rejects.toThrow();
+    mocks.failSend = false;
+    mocks.pending = [{ ...req({ respuesta: "Listo." }), started: true }];
+    const { resumeEmailRequests } = await import("./run");
+    await resumeEmailRequests();
+    expect(mocks.keys).toEqual(["len-email:req-1", "len-email:req-1"]);
+  });
+});
+
+describe("the files the email came with", () => {
+  it("🔴 Len is told what came attached (their bytes never reach him)", async () => {
+    const { startEmailRequest } = await import("./run");
+    await startEmailRequest(req(), { attachments: [{ filename: "logo.png", mimeType: "image/png", size: 120_000 }] });
+    expect(String(mocks.launched[0]!.context)).toContain("logo.png (image/png, 117 KB)");
+  });
+});
+
+describe("the files Len presented in an email turn", () => {
+  const delivered = (name: string, size: number) => ({ name, size, url: `/api/projects/${PROJECT}/deliveries/req-1/0123abcd-${encodeURIComponent(name)}` });
+  it("🔴 go attached to the reply; what doesn't fit, as a link in its text", async () => {
+    const { startEmailRequest } = await import("./run");
+    await startEmailRequest(req());
+    const cards = [{ tool: "present", status: "done", summary: "", delivered: [delivered("small.pdf", 1_000), delivered("big.mp4", 50 * 1024 * 1024)] }];
+    await (mocks.launched[0]!.reply as (t: string, c: unknown) => Promise<void>)("Aquí está.", cards);
+    expect(mocks.attached).toEqual([["small.pdf"]]);
+    expect(mocks.log.find((l) => l.startsWith("send"))).toContain("big.mp4: https://openlen.com/api/projects/");
   });
 });
 

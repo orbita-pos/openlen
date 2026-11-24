@@ -10,6 +10,18 @@ function first(headers, name) {
   return headers.find((h) => h.key === name)?.value ?? null;
 }
 
+/** What the email came with — name, type, size and whether it sits in the body —, never its bytes: Len is
+ *  told they don't reach him by email (`contextForModel`). Capped so a long list can't make OpenLen refuse
+ *  the whole email (its schema takes up to 100, names up to 1000). */
+function attachmentsOf(mail) {
+  return (mail.attachments ?? []).slice(0, 50).map((a) => ({
+    filename: typeof a.filename === "string" ? a.filename.slice(0, 300) : null,
+    mimeType: typeof a.mimeType === "string" ? a.mimeType.slice(0, 200) : null,
+    size: a.content?.byteLength ?? a.content?.length ?? 0,
+    inline: a.disposition === "inline",
+  }));
+}
+
 export default {
   async email(message, env) {
     const raw = await new Response(message.raw).arrayBuffer();
@@ -31,6 +43,7 @@ export default {
         autoSubmitted: first(mail.headers, "auto-submitted"),
         precedence: first(mail.headers, "precedence"),
         listId: first(mail.headers, "list-id"),
+        attachments: attachmentsOf(mail),
       }),
     });
     // Un fallo NUESTRO (5xx) se rechaza para que el remitente se entere; lo que

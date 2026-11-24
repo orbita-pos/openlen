@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Resend } from "resend";
 import {
   agentNoteEmail,
@@ -75,32 +76,80 @@ function liveClientOrWarn(context: string): Resend | null {
  * enumeración). Que el trabajo de notificaciones reintente también ante una
  * cuota agotada es una decisión aparte —y con su propio riesgo: reintentar
  * contra una cuota agotada es una tormenta—, no un efecto secundario de esto.
+ *
+ * 🔴 SALVO LOS QUE ALGUIEN REINTENTA (`retried`): la respuesta de Len por correo
+ * (lib/len-email/run.ts), el resultado de una tarea programada
+ * (lib/scheduled-tasks/deliver.ts) y el aviso del chat (lib/notifications, cuyo
+ * trabajo reintenta y acaba en dead-letter). Tragado, el rechazo los daba por
+ * enviados: el correo a Len quedaba «contestado» y la tarea con `emailedAt`. A
+ * éstos un rechazo les LANZA `EmailRefusedError`, después de reintentar aquí lo
+ * que pasa en segundos (`PASSING_REFUSALS`); con su clave de idempotencia, el
+ * reintento tras un reinicio no lo manda dos veces.
  */
 async function enviar(
   live: Resend,
   contexto: string,
   payload: Parameters<Resend["emails"]["send"]>[0],
+  retried?: { readonly idempotencyKey?: string },
 ): Promise<boolean> {
-  let r: Awaited<ReturnType<Resend["emails"]["send"]>>;
-  try {
-    r = await live.emails.send(payload);
-  } catch (err) {
-    // Se oye Y se re-lanza: el que reintenta necesita el fallo, el operador
-    // necesita el motivo.
-    // eslint-disable-next-line no-console
-    console.error(`[email] ${contexto} reventó al enviarse → ${String(payload.to)}`, err);
-    throw err;
-  }
-  if (r.error) {
+  const options = retried?.idempotencyKey ? { idempotencyKey: idempotencyKeyFor(retried.idempotencyKey, payload) } : undefined;
+  for (let attempt = 0; ; attempt++) {
+    let r: Awaited<ReturnType<Resend["emails"]["send"]>>;
+    try {
+      r = await (options ? live.emails.send(payload, options) : live.emails.send(payload));
+    } catch (err) {
+      // Se oye Y se re-lanza: el que reintenta necesita el fallo, el operador
+      // necesita el motivo.
+      // eslint-disable-next-line no-console
+      console.error(`[email] ${contexto} reventó al enviarse → ${String(payload.to)}`, err);
+      throw err;
+    }
+    if (!r.error) return true;
     // eslint-disable-next-line no-console
     console.error(
       `[email] RESEND RECHAZÓ ${contexto} → ${String(payload.to)}: ` +
         `${r.error.name ?? "error"} — ${r.error.message ?? "sin mensaje"}. ` +
         "El correo NO salió. Revisa cuota y dominio verificado en Resend.",
     );
-    return false;
+    if (!retried) return false;
+    if (attempt < RETRY_WAITS_MS.length && PASSING_REFUSALS.has(r.error.name)) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_WAITS_MS[attempt]));
+      continue;
+    }
+    throw new EmailRefusedError(contexto, r.error.name ?? "error", r.error.message ?? "");
   }
-  return true;
+}
+
+/** Resend refused an email that its caller retries: it did NOT go out. */
+export class EmailRefusedError extends Error {
+  constructor(
+    readonly context: string,
+    readonly code: string,
+    detail: string,
+  ) {
+    super(`Resend refused the ${context}: ${code}${detail ? ` — ${detail}` : ""}`);
+    this.name = "EmailRefusedError";
+  }
+}
+
+/** Refusals that pass in seconds: a burst over the rate limit, or Resend's own failure (the SDK reports the
+ *  network's the same way). The others — a spent quota, an address it won't take — would be refused again. */
+const PASSING_REFUSALS: ReadonlySet<string> = new Set(["rate_limit_exceeded", "application_error", "internal_server_error", "concurrent_idempotent_requests"]);
+/** How long to wait before each retry of a passing refusal. */
+const RETRY_WAITS_MS = [1_000, 5_000] as const;
+
+/** The caller's key plus a digest of the email itself. Resend refuses a key it saw with another email, and the
+ *  resend after a restart can differ from the first try (a scheduled task's comes without its files): the same
+ *  email gets the same key, so a retry after an answer that never arrived is not sent twice; a different one
+ *  gets its own and goes out. */
+function idempotencyKeyFor(base: string, payload: Parameters<Resend["emails"]["send"]>[0]): string {
+  const { attachments, ...rest } = payload as typeof payload & { attachments?: readonly { filename?: unknown; content?: unknown }[] };
+  const hash = createHash("sha256").update(JSON.stringify(rest));
+  for (const a of attachments ?? []) {
+    hash.update(String(a.filename ?? ""));
+    if (typeof a.content === "string" || Buffer.isBuffer(a.content)) hash.update(a.content);
+  }
+  return `${base}:${hash.digest("hex").slice(0, 32)}`;
 }
 
 export interface PasswordResetEmail {
@@ -672,7 +721,15 @@ export async function sendMentionEmail(input: DatosDeLaMencion & { to: string; i
  * la respuesta en el mismo hilo del cliente de correo.
  */
 export async function sendLenReplyEmail(
-  input: DatosDeLaRespuestaDeLen & { to: string; replyTo: string; idioma: IdiomaDelCorreo; inReplyTo?: string | null },
+  input: DatosDeLaRespuestaDeLen & {
+    to: string;
+    replyTo: string;
+    idioma: IdiomaDelCorreo;
+    inReplyTo?: string | null;
+    idempotencyKey?: string;
+    /** The files Len presented in the turn (lib/agent/skills/present-attachments.ts). */
+    attachments?: readonly { filename: string; content: Buffer }[];
+  },
 ): Promise<void> {
   const correo = correoDeLen(input, input.idioma);
   const live = liveClientOrWarn("Len reply email");
@@ -685,13 +742,21 @@ export async function sendLenReplyEmail(
   }
   const address = /<([^>]+)>/.exec(from)?.[1] ?? from;
   const inReplyTo = input.inReplyTo?.trim();
-  await enviar(live, "Len reply email", {
-    from: `Len <${address}>`,
-    to: input.to,
-    replyTo: input.replyTo,
-    ...correo,
-    ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
-  });
+  // With a key its caller retries (lib/len-email/run.ts marks the email answered only once this returns): a
+  // refusal throws (`retried`). Without one, a refusal is logged, as before.
+  await enviar(
+    live,
+    "Len reply email",
+    {
+      from: `Len <${address}>`,
+      to: input.to,
+      replyTo: input.replyTo,
+      ...correo,
+      ...(inReplyTo ? { headers: { "In-Reply-To": inReplyTo, References: inReplyTo } } : {}),
+      ...(input.attachments?.length ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
+    },
+    input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+  );
 }
 
 /**
@@ -705,6 +770,7 @@ export async function sendScheduledTaskEmail(
     replyTo: string | null;
     idioma: IdiomaDelCorreo;
     attachments: readonly { filename: string; content: Buffer }[];
+    idempotencyKey?: string;
   },
 ): Promise<void> {
   const correo = scheduledTaskEmail(input, input.idioma);
@@ -723,13 +789,20 @@ export async function sendScheduledTaskEmail(
     }
     return;
   }
-  await enviar(live, "scheduled task email", {
-    from: sender,
-    to: input.to,
-    ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-    ...correo,
-    ...(input.attachments.length > 0 ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
-  });
+  // With a key its caller retries (the scheduler sets `emailedAt` only once this returns, and resumes the run after a
+  // restart): a refusal throws (`retried`). Without one (an event task's «stopped» notice), it is logged, as before.
+  await enviar(
+    live,
+    "scheduled task email",
+    {
+      from: sender,
+      to: input.to,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      ...correo,
+      ...(input.attachments.length > 0 ? { attachments: input.attachments.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
+    },
+    input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined,
+  );
 }
 
 /** An email in the name of the person's agent: a person chose that name, so what could break the header goes, and it
@@ -791,13 +864,19 @@ export async function sendChatNotificationEmail(input: {
     `Reply in your inbox: ${input.deskUrl}`,
   ].join("\n");
 
-  await enviar(live, "chat notification email", {
-    from,
-    to: input.to,
-    subject: `New message on ${input.projectTitle}`,
-    text,
-    html: buildChatNotificationHtml({ ...input, preview }),
-  });
+  // Its notification job retries what throws (lib/notifications/dispatch.ts), so a refusal throws (`retried`).
+  await enviar(
+    live,
+    "chat notification email",
+    {
+      from,
+      to: input.to,
+      subject: `New message on ${input.projectTitle}`,
+      text,
+      html: buildChatNotificationHtml({ ...input, preview }),
+    },
+    {},
+  );
 }
 
 // ⚰️ Aquí vivía `sendLiveSheetBrokenEmail`, el correo de «tu Sheet dejó de

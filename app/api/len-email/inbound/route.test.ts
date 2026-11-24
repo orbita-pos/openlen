@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   user: { id: "u-ana" } as { id: string } | undefined,
   rol: "dueno" as "dueno" | "editor" | "lector" | null,
   launched: [] as Record<string, unknown>[],
+  extras: [] as unknown[],
   stored: new Map<string, Record<string, unknown>>(),
   recent: 0,
 }));
@@ -45,7 +46,10 @@ vi.mock("@/lib/len-email/requests", async () => {
   };
 });
 vi.mock("@/lib/len-email/run", () => ({
-  startEmailRequest: async (req: Record<string, unknown>) => void mocks.launched.push(req),
+  startEmailRequest: async (req: Record<string, unknown>, extra?: unknown) => {
+    mocks.launched.push(req);
+    mocks.extras.push(extra);
+  },
   resumeEmailRequests: async () => 0,
 }));
 
@@ -79,6 +83,7 @@ beforeEach(() => {
   mocks.user = { id: "u-ana" };
   mocks.rol = "dueno";
   mocks.launched = [];
+  mocks.extras = [];
   mocks.stored = new Map();
   mocks.recent = 0;
 });
@@ -100,6 +105,14 @@ describe("POST /api/len-email/inbound", () => {
       inReplyTo: "<abc@mail.gmail.com>",
       dedupeKey: "mid:<abc@mail.gmail.com>",
     });
+  });
+
+  it("🔴 the attachments' names, types and sizes reach the turn (their bytes never travel); none, an empty list", async () => {
+    const attachments = [{ filename: "logo.png", mimeType: "image/png", size: 120_000, inline: false }];
+    expect((await POST(correo({ attachments }))).status).toBe(202);
+    expect(mocks.extras[0]).toEqual({ attachments });
+    expect((await POST(correo({ messageId: "<otro@mail.gmail.com>" }))).status).toBe(202);
+    expect(mocks.extras[1]).toEqual({ attachments: [] });
   });
 
   it("🔴 el MISMO correo entregado dos veces no lanza dos turnos (ni cobra dos veces)", async () => {

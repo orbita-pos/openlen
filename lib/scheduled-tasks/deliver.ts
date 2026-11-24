@@ -8,21 +8,24 @@ import "server-only";
 
 import { avisoDelTurno } from "@/lib/agent/aviso-del-turno";
 import { waitingFrom } from "./waiting";
-import { deliveredFrom, type DeliveredFile } from "@/lib/agent/skills/present";
+import { MAX_ATTACHMENT_BYTES, presentedAttachments } from "@/lib/agent/skills/present-attachments";
 import type { Tarjetas } from "@/lib/agent/turnos-desde-el-servidor";
 import type { ScheduledRunOutcome } from "@/lib/db/schema";
 import type { LenTurnoEvent } from "@/lib/notifications/types";
 import { idiomaDelCorreo, type DatosDeLaTareaProgramada, type IdiomaDelCorreo } from "@/lib/projects/correos-del-proyecto";
 import type { markRun, RunRow, TaskRow } from "./store";
 
-/** What one email carries, like `present`'s cap on one file. */
-export const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
+/** What one email carries (lib/agent/skills/present-attachments.ts, shared with Len's reply by email). */
+export { MAX_ATTACHMENT_BYTES };
 
 export interface ScheduledEmail extends DatosDeLaTareaProgramada {
   readonly to: string;
   readonly replyTo: string | null;
   readonly idioma: IdiomaDelCorreo;
   readonly attachments: readonly { filename: string; content: Buffer }[];
+  /** Resend's idempotency key for this run's email: a refusal throws and the run is retried after a restart
+   *  (`resumeAfterRestart`), and an email that did go out is not sent twice (lib/email.ts adds its digest). */
+  readonly idempotencyKey?: string;
 }
 
 export interface DeliverDeps {
@@ -56,18 +59,11 @@ const known = (agent: Agent) => (agent === "unknown" ? null : agent);
 /** What waits for the person: one rule with the phone's «Tareas» (`./waiting.ts`). */
 export { waitingFrom };
 
-/** The private-store key behind a delivered file's URL (`deliverableLocation` in present.ts). */
-function deliveryKey(projectId: string, url: string): string | null {
-  const m = /^\/api\/projects\/([^/]+)\/deliveries\/([^/]+)\/([^/]+)$/.exec(url);
-  if (!m || decodeURIComponent(m[1]!) !== projectId) return null;
-  return `deliveries/${projectId}/${m[2]}/${decodeURIComponent(m[3]!)}`;
-}
-
 function zoneOf(task: TaskRow): string {
   return "timeZone" in task.record ? task.record.timeZone : task.timeZone;
 }
 
-async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: readonly string[], attachments: ScheduledEmail["attachments"], deps: DeliverDeps, lookup: Agent): Promise<ScheduledEmail | null> {
+async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: readonly string[], attachments: ScheduledEmail["attachments"], deps: DeliverDeps, lookup: Agent, kind: "result" | "failure"): Promise<ScheduledEmail | null> {
   const to = await deps.recipientEmail(task.createdBy);
   if (!to) return null;
   // An agent's email has no Reply-To: the space's Len address would start a Len turn, not the agent's. Nor has the email
@@ -92,28 +88,16 @@ async function emailOf(run: RunRow, task: TaskRow, texto: string, waiting: reado
     removeUrl: agentGone ? null : deps.removeUrl(task),
     ...(agent ? { agentName: agent.name } : {}),
     ...(agentGone ? { agentGone: true } : {}),
+    idempotencyKey: `scheduled-task:${run.id}:${kind}`,
   };
 }
 
 export async function deliverResult(run: RunRow, task: TaskRow, text: string, cards: Tarjetas, deps: DeliverDeps): Promise<void> {
   await deps.markRun(run.id, { reply: text });
-  const files: DeliveredFile[] = cards.filter((c) => c.tool === "present").flatMap((c) => deliveredFrom(c.delivered) ?? []);
-  const attachments: { filename: string; content: Buffer }[] = [];
-  const links: string[] = [];
-  let total = 0;
-  for (const file of files) {
-    const key = deliveryKey(task.projectId, file.url);
-    const bytes = key && total + file.size <= MAX_ATTACHMENT_BYTES ? await deps.readDelivery(key) : null;
-    if (bytes && total + bytes.byteLength <= MAX_ATTACHMENT_BYTES) {
-      attachments.push({ filename: file.name, content: Buffer.from(bytes) });
-      total += bytes.byteLength;
-    } else {
-      links.push(`${file.name}: ${deps.siteUrl}${file.url}`);
-    }
-  }
+  const { attachments, links } = await presentedAttachments(task.projectId, cards, deps.readDelivery, deps.siteUrl);
   const texto = [text.trim(), ...(links.length > 0 ? ["", ...links] : [])].join("\n");
   const agent = await agentOfTask(task, deps);
-  const email = await emailOf(run, task, texto, waitingFrom(cards), attachments, deps, agent);
+  const email = await emailOf(run, task, texto, waitingFrom(cards), attachments, deps, agent, "result");
   if (email) await deps.send(email);
   else console.warn(`[schedule] no email for ${task.createdBy}: the result stays in the chat`);
   await deps.markRun(run.id, { emailedAt: email ? new Date() : null, outcome: "done", finishedAt: new Date() });
@@ -124,7 +108,7 @@ export async function deliverResult(run: RunRow, task: TaskRow, text: string, ca
 
 export async function deliverFailure(run: RunRow, task: TaskRow, outcome: ScheduledRunOutcome, phrase: string, deps: DeliverDeps): Promise<void> {
   await deps.markRun(run.id, { outcome, reason: phrase });
-  const email = await emailOf(run, task, phrase, [], [], deps, await agentOfTask(task, deps));
+  const email = await emailOf(run, task, phrase, [], [], deps, await agentOfTask(task, deps), "failure");
   if (email) await deps.send(email);
   await deps.markRun(run.id, { emailedAt: email ? new Date() : null, finishedAt: new Date() });
 }

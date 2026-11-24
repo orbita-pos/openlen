@@ -162,7 +162,7 @@ describe("un pedido por correo (Len por correo)", () => {
   it("🔴 el turno lleva el contexto del correo, y lo que Len dijo al cerrar se manda por correo UNA vez", async () => {
     const enviados: string[] = [];
     const corredor = vi.fn(async (_u: string, _b: Record<string, unknown>, _r: unknown, opts: { email?: EmailRequest }) => {
-      await opts.email!.onReply("Listo: el precio ya dice $499.");
+      await opts.email!.onReply("Listo: el precio ya dice $499.", []);
       return sse([["done", {}]]);
     });
     registrarCorredorDeTurnos(corredor);
