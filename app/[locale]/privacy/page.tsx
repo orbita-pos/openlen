@@ -33,7 +33,7 @@ export default async function PrivacyPage({
   return (
     <LegalPage
       title={es ? "Aviso de privacidad" : "Privacy Policy"}
-      updated={es ? "Última actualización: 21 de octubre de 2026" : "Last updated: October 21, 2026"}
+      updated={es ? "Última actualización: 24 de noviembre de 2026" : "Last updated: November 24, 2026"}
     >
       {es ? (
         <>
@@ -227,6 +227,54 @@ export default async function PrivacyPage({
             se procesan con nuestro proveedor de IA (ver subencargados) sólo para
             esa respuesta, sin la IP ni el navegador del visitante, y quedan en la
             conversación de Len de tu proyecto.
+          </p>
+
+          <h2>Google Calendar y otros conectores</h2>
+          <p>
+            Puedes conectar a Len servicios tuyos de fuera de OpenLen, como tu{" "}
+            <strong>Google Calendar</strong>. Al conectarlo inicias sesión en
+            Google y le das a OpenLen permiso para ver la lista de tus
+            calendarios, ver y editar tus eventos y consultar tu disponibilidad
+            (libre u ocupado). Len o tu asistente leen o cambian tu calendario{" "}
+            <strong>sólo cuando tú se lo pides</strong>, y sólo lo que esa
+            petición necesita.
+          </p>
+          <ul>
+            <li>
+              El servidor de Calendar de OpenLen no guarda tus eventos: los pide a
+              Google en cada llamada y se los pasa a Len. Lo único que guardamos
+              es la conexión (los tokens de Google, cifrados), que puedes quitar
+              cuando quieras en Herramientas → Conectores.
+            </li>
+            <li>
+              Lo que Len leyó de tu calendario queda en esa conversación, como el
+              resto de lo que hablas con Len, hasta que borras el proyecto o pides
+              suprimir tu cuenta. Para contestarte se procesa con nuestros
+              proveedores de IA (ver «Generación con IA») sólo para esa respuesta.
+            </li>
+            <li>
+              Esos datos no los leen personas de OpenLen, salvo que tú nos lo
+              pidas para darte soporte, por seguridad o porque la ley lo exija. No
+              se usan para entrenar ni mejorar modelos de IA, ni para publicidad.
+            </li>
+            <li>
+              En un proyecto compartido con otras personas, Len no usa tus
+              conectores: todos los miembros leen ese chat. Lo tuyo se pide en tu
+              asistente o en un proyecto sólo tuyo.
+            </li>
+          </ul>
+          <p>
+            El uso que OpenLen hace de la información recibida de las API de
+            Google, y su transferencia a cualquier otra aplicación, se ajustará a
+            la{" "}
+            <a href="https://developers.google.com/terms/api-services-user-data-policy">
+              Política de Datos de Usuario de los Servicios de API de Google
+            </a>
+            , incluidos los requisitos de Uso Limitado. En el original:
+            &ldquo;OpenLen&apos;s use and transfer to any other app of
+            information received from Google APIs will adhere to the Google API
+            Services User Data Policy, including the Limited Use
+            requirements.&rdquo;
           </p>
 
           <h2>Analítica</h2>
@@ -645,6 +693,50 @@ export default async function PrivacyPage({
             provider (see subprocessors) only for that answer, without the
             visitor&apos;s IP or browser, and they stay in your project&apos;s Len
             conversation.
+          </p>
+
+          <h2>Google Calendar and other connectors</h2>
+          <p>
+            You can connect services of yours outside OpenLen to Len, such as
+            your <strong>Google Calendar</strong>. When you connect it, you sign
+            in to Google and give OpenLen permission to see the list of your
+            calendars, see and edit your events, and check your availability
+            (free or busy). Len or your assistant read or change your calendar{" "}
+            <strong>only when you ask them to</strong>, and only what that request
+            needs.
+          </p>
+          <ul>
+            <li>
+              OpenLen&apos;s Calendar server doesn&apos;t store your events: it
+              asks Google for them on each call and hands them to Len. All we
+              store is the connection (your Google tokens, encrypted), which you
+              can remove at any time in Tools → Connectors.
+            </li>
+            <li>
+              What Len read from your calendar stays in that conversation, like
+              everything else you discuss with Len, until you delete the project
+              or ask us to delete your account. To answer you, it is processed by
+              our AI providers (see &ldquo;AI generation&rdquo;) only for that
+              answer.
+            </li>
+            <li>
+              No one at OpenLen reads that data, unless you ask us to for support,
+              for security, or because the law requires it. It is not used to train
+              or improve AI models, nor for advertising.
+            </li>
+            <li>
+              In a project shared with other people, Len doesn&apos;t use your
+              connectors: every member reads that chat. Ask for what&apos;s yours
+              in your assistant or in a project only you use.
+            </li>
+          </ul>
+          <p>
+            OpenLen&apos;s use and transfer to any other app of information
+            received from Google APIs will adhere to the{" "}
+            <a href="https://developers.google.com/terms/api-services-user-data-policy">
+              Google API Services User Data Policy
+            </a>
+            , including the Limited Use requirements.
           </p>
 
           <h2>Analytics</h2>
