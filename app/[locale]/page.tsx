@@ -4,13 +4,11 @@ import { Hero } from "@/components/marketing/hero";
 import { HomeShell } from "@/components/marketing/home-shell";
 import { HomeHashRouter } from "@/components/marketing/home-hash-router";
 import { HeroLenProvider } from "@/components/marketing/hero-len";
-import { countTemplates } from "@/lib/templates/store";
 import { toolsEnabled } from "@/lib/tools/enabled";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://openlen.com";
 
-// Revalidate every 60s. The page reads the template count (metadata) and the
-// live-pages count (hero) from the DB — without ISR they wouldn't move until
+// Revalidate every 60s. The page reads the live-pages count (hero) from the DB — without ISR they wouldn't move until
 // the next full deploy. 60s gives sub-minute freshness without making every
 // visitor pay the SSR cost.
 export const revalidate = 60;
@@ -22,16 +20,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const es = locale === "es";
-  const count = await countTemplates().catch(() => 0);
   // Brand name leads the title — the strongest on-page signal for the
   // branded query "openlen" (the layout's title.template doesn't apply
   // to its own segment, so it must be inline here).
   const title = es
     ? "OpenLen — Len, tu propio desarrollador web. Código abierto."
     : "OpenLen — Len, your own web developer. Open source.";
+  // At most 160 characters: Bing Webmaster Tools flags a longer description
+  // ("Meta Description too long or too short", 25–160) and search engines cut it.
   const description = es
-    ? `Len es tu propio desarrollador web: le cuentas qué necesitas y construye tu página —textos, fotos y formularios— y la publica en tu dominio. ${count} diseños hechos a mano, analítica sin cookies y tu HTML — AGPLv3.`
-    : `Len is your own web developer: tell it what you need and it builds your page — copy, photos and forms — and publishes it on your domain. ${count} hand-made designs, cookieless analytics and your HTML — AGPLv3.`;
+    ? "Len es tu propio desarrollador web: le cuentas qué necesitas, construye tu página con textos, fotos y formularios y la publica en tu dominio. Código abierto."
+    : "Len is your own web developer: tell it what you need and it builds your page — copy, photos and forms — and publishes it on your domain. Open source.";
   return {
     title,
     description,
