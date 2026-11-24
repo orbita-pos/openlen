@@ -41,6 +41,7 @@ import { credentialRefsOf, makeRedactor, resolveEntry } from "../templates";
 import { callbackUrl, clientMetadata, clientMetadataUrl, isClientRefusal } from "./clients";
 import { discoverAuthServer, entryClient, shortError, storableClient, type OAuthDeps, type SignInReason } from "./provider";
 import { confirmHashOf } from "./confirm-hash";
+import { withGoogleOfflineAccess } from "./google";
 import type { OAuthConnection, StartedFrom } from "./store";
 
 export type StartDeps = OAuthDeps & { readConfig(personId: string): Promise<StoredConfig> };
@@ -202,6 +203,9 @@ export async function startSignIn(
         now: d.now(),
       });
       url.searchParams.set("state", state);
+      // Google: offline access on a consent screen, or the connection lapses in an hour (spec local
+      // 2026-11-24-servidor-de-google-calendar, §5.2).
+      withGoogleOfflineAccess(url, issuer);
       authorizationUrl = url;
     },
     invalidateCredentials() {},

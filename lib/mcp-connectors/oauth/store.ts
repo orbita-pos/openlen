@@ -20,6 +20,8 @@ import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { decryptToken, encryptToken } from "@/lib/integrations/crypto";
 
+import { withKeptRefreshToken } from "./google";
+
 const o = schema.personMcpOAuth;
 const f = schema.personMcpOAuthFlows;
 
@@ -118,10 +120,15 @@ export async function saveClientInfo(personId: string, serverName: string, serve
  *  person removed the server, or it moved or changed, while they were signing in): tokens are never saved against a
  *  different binding. */
 export async function saveTokens(personId: string, serverName: string, serverUrl: string, issuer: string, fingerprint: string, tokens: StoredOAuthTokens): Promise<void> {
+  // A token set without a refresh token keeps the one saved before (Google sends one only on a consent screen; spec local
+  // 2026-11-24-servidor-de-google-calendar, §5.2).
+  const binding = and(eq(o.personId, personId), eq(o.serverName, serverName), eq(o.serverUrl, serverUrl), eq(o.issuer, issuer), eq(o.fingerprint, fingerprint));
+  const [before] = await db.select({ tokens: o.tokens }).from(o).where(binding).limit(1);
+  const toSave = withKeptRefreshToken(openJson<StoredOAuthTokens>(before?.tokens ?? null), tokens);
   const updated = await db
     .update(o)
-    .set({ tokens: encryptToken(JSON.stringify(tokens)), updatedAt: new Date() })
-    .where(and(eq(o.personId, personId), eq(o.serverName, serverName), eq(o.serverUrl, serverUrl), eq(o.issuer, issuer), eq(o.fingerprint, fingerprint)))
+    .set({ tokens: encryptToken(JSON.stringify(toSave)), updatedAt: new Date() })
+    .where(binding)
     .returning({ serverName: o.serverName });
   if (updated.length === 0) throw new Error(`no OAuth connection for "${serverName}" at this URL, issuer and entry to save the tokens into`);
 }

@@ -138,6 +138,14 @@ describe("the connection", () => {
     expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toMatchObject({ access_token: "at_new" });
   });
 
+  // Spec local 2026-11-24-servidor-de-google-calendar, §5.2: Google sends a refresh token only on a consent screen.
+  it("saving tokens without a refresh token keeps the one already saved", async () => {
+    await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, { access_token: "at_1", refresh_token: "rt_1", token_type: "Bearer" });
+    await saveTokens("p1", "cal", URL_A, ISSUER, FP, { access_token: "at_2", token_type: "Bearer" });
+    expect((await loadConnection("p1", "cal", URL_A, ISSUER, FP))?.tokens).toEqual({ access_token: "at_2", refresh_token: "rt_1", token_type: "Bearer" });
+  });
+
   it("dropTokens keeps the client and removes only the tokens", async () => {
     await saveClientInfo("p1", "cal", URL_A, ISSUER, FP, CLIENT);
     await saveTokens("p1", "cal", URL_A, ISSUER, FP, TOKENS);
