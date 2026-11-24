@@ -68,7 +68,11 @@ function conDialogoPropio(): string[] {
       }
       if (!e.name.endsWith(".tsx")) continue;
       if (e.name === "modal-shell.tsx") continue;
-      if (readFileSync(p, "utf8").includes('role="dialog"')) {
+      // Una prueba no pinta diálogos: los busca.
+      if (e.name.endsWith(".test.tsx")) continue;
+      // El atributo, no el selector `[role="dialog"]` con el que un menú mira si
+      // el clic cayó dentro de un diálogo ajeno.
+      if (/(?<!\[)role="dialog"/.test(readFileSync(p, "utf8"))) {
         salida.push(path.relative(DIR, p).replace(/\\/g, "/"));
       }
     }
