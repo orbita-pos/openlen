@@ -99,7 +99,7 @@ export const es = {
     },
     tarjeta: {
       antetitulo: "Len 3.1 · noviembre 2026",
-      titulo: "51 herramientas, un solo agente",
+      titulo: "56 herramientas, un solo agente",
       texto: "Lee y cambia los archivos de tu proyecto, ejecuta código en una terminal real y prepara entregables con sus propias versiones. Te pregunta lo que falta y te muestra qué ha comprobado antes de dar el trabajo por terminado.",
       como: "Cómo trabaja →",
       grupos: {

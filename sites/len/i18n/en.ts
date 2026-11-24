@@ -99,7 +99,7 @@ export const en = {
     },
     tarjeta: {
       antetitulo: "Len 3.1 · November 2026",
-      titulo: "51 tools, one agent",
+      titulo: "56 tools, one agent",
       texto: "It reads and changes project files, runs code in a real terminal and prepares deliverables with their own versions. It asks for what is missing and shows what it checked before calling the work finished.",
       como: "How it works →",
       grupos: {

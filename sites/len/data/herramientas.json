@@ -21,6 +21,7 @@
     "id": "editar",
     "herramientas": [
       "Edit",
+      "MultiEdit",
       "Write",
       "undo_last_change",
       "convert_to_app"
@@ -56,7 +57,9 @@
       "ask_user_question",
       "publish",
       "show_widget",
-      "create_assistant"
+      "read_widget_context",
+      "create_assistant",
+      "propose_skills"
     ]
   },
   {
@@ -100,13 +103,15 @@
   {
     "id": "entregables",
     "herramientas": [
-      "list_artifact_audio",
-      "create_artifact",
-      "list_artifacts",
-      "inspect_artifact",
-      "render_artifact",
-      "cancel_artifact_job",
-      "query_artifact_data",
+      "list_deliverable_audio",
+      "create_deliverable",
+      "list_deliverables",
+      "inspect_deliverable",
+      "render_deliverable",
+      "cancel_deliverable_job",
+      "query_deliverable_data",
+      "publish_artifact",
+      "artifact_data",
       "present"
     ]
   }
