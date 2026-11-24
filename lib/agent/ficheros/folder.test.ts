@@ -115,7 +115,7 @@ describe("qué rutas son de la carpeta", () => {
       "/.git/config",
       "/.git",
       "/.len/memory/x.md",
-      "/js/a.js",
+      "/js/a\u0001.js",
       `/${"a/".repeat(32)}x.js`,
       `/${"x".repeat(1025)}.js`,
     ]) {
