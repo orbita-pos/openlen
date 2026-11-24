@@ -19,6 +19,9 @@ import { ventanaVisibleDe } from "./historial-saneado";
 import { visualStatesReminder } from "./visuals/model-context";
 import { CLAVE_TOOL_RESULT } from "./ficheros/resultado";
 import { CLAVE_CAMBIOS_DEL_COMANDO } from "./terminal/cambios-del-comando";
+import { buildAgentContext } from "./context";
+import { personalSkillsReminder } from "./skills/catalog-message";
+import type { ResolvedSkill } from "./skills/registry";
 
 // H4, parte 3 (plans/len-2/hipotesis/H4-alcance-prompt-e-historial.md): el
 // historial sale de la BASE, escrito por el servidor, con los argumentos de
@@ -717,5 +720,68 @@ describe("A11 · el historial desde la marca del resumen", () => {
     expect(limpia.messages[0]).toEqual({ role: "user", content: RESUMEN.content });
     expect(JSON.stringify(limpia.messages)).not.toMatch(/secreto|AAAA/);
     expect(limpia.trigger).toBe("pressure");
+  });
+});
+
+// A SHARED PROJECT (lib/projects/acceso.ts): each turn's context carries the private context of whoever asked
+// it — their ~/.len/LEN.md, their own skills, their MCP servers (`buildAgentContext`) —, and the row keeps it
+// as it was sent so the next turn of THAT person still matches the provider's cache. Another person's turn
+// must not get it back: Claude Code and DeepSeek give each person a session of their own; here the
+// conversation is the project's.
+describe("the private context of whoever asked a turn stays theirs", () => {
+  const eliSkill: ResolvedSkill = {
+    skill: { fork: null, name: "eli-voice", description: "How Eli writes.", modelInvocable: true, userInvocable: true, body: "Short." },
+    scope: "personal",
+    baseDir: "~/.len/skills/eli-voice",
+  };
+  const eliConnectors = "<system-reminder>\nThe person's MCP servers (their ~/.len/mcp.json):\nEli's calendar server says: book with care.\n</system-reminder>\n";
+  const eliContext = buildAgentContext({
+    equipo: true,
+    state: { pagina: "home" },
+    userMemory: "Call me Eli. I am vegan.",
+    personalSkills: personalSkillsReminder([eliSkill], 100_000),
+    connectors: eliConnectors,
+  });
+  const eliTurn = (extra: Partial<FilaDelHistorial> = {}): FilaDelHistorial => ({
+    userText: "Hola",
+    assistantReasoning: "",
+    authorId: "eli",
+    transcript: { mensajes: [{ role: "assistant", content: "¡Hola!" }], leidos: [], contexto: eliContext },
+    ...extra,
+  });
+  const contextOf = (h: readonly { content: string }[]) => h.find((m) => m.content.includes("PROJECT STATE"))!.content;
+  const PRIVATE = /vegan|eli-voice|book with care/;
+
+  it("🔴 another member's turn: its context comes back without their LEN.md, their skills or their MCP servers", () => {
+    expect(eliContext).toMatch(PRIVATE);
+    const h = historialDesdeLaBase([eliTurn()], undefined, undefined, null, { speakerId: "ana", ownerId: "owner" });
+    expect(JSON.stringify(h)).not.toMatch(PRIVATE);
+    // What is the project's stays: the state of that turn and the team's rule.
+    expect(contextOf(h)).toContain('"pagina": "home"');
+  });
+
+  it("the same person's turns come back byte for byte: the cached prefix holds", () => {
+    const h = historialDesdeLaBase([eliTurn()], undefined, undefined, null, { speakerId: "eli", ownerId: "owner" });
+    expect(contextOf(h)).toBe(eliContext);
+  });
+
+  it("a turn with no author is the owner's", () => {
+    const ownerTurn = eliTurn({ authorId: null });
+    expect(contextOf(historialDesdeLaBase([ownerTurn], undefined, undefined, null, { speakerId: "owner", ownerId: "owner" }))).toBe(eliContext);
+    expect(JSON.stringify(historialDesdeLaBase([ownerTurn], undefined, undefined, null, { speakerId: "ana", ownerId: "owner" }))).not.toMatch(PRIVATE);
+  });
+
+  it("🔴 the summary mark of another member's turn comes back without their private context", () => {
+    const summary: Message = { role: "user", content: "This session is being continued from a previous conversation." };
+    const marked = eliTurn({ compaction: { messages: [summary, { role: "user", content: eliContext }], fromTranscript: 1, trigger: "idle", preTokens: 900, postTokens: 100 } });
+    const h = historialDesdeLaBase([marked], undefined, undefined, null, { speakerId: "ana", ownerId: "owner" });
+    expect(h[0]).toEqual(summary);
+    expect(JSON.stringify(h)).not.toMatch(PRIVATE);
+    // Theirs, as it was sent.
+    expect(historialDesdeLaBase([marked], undefined, undefined, null, { speakerId: "eli", ownerId: "owner" })[1]!.content).toBe(eliContext);
+  });
+
+  it("a reader that is not the model (a judge, a scene) gets the rows as they are", () => {
+    expect(contextOf(historialDesdeLaBase([eliTurn()]))).toBe(eliContext);
   });
 });

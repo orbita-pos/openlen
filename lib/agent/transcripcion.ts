@@ -38,6 +38,7 @@ import { CUT_OFF_TURN_MARK, MARCA_DE_TURNO_DETENIDO } from "@/lib/agent/historia
 import type { GoalSnapshot } from "@/lib/agent/goal";
 import type { MemoryDigests } from "@/lib/agent/memory/memory-messages";
 import { touchesPersonalMemory, withoutPersonalMemory } from "@/lib/agent/memory/private-memory";
+import { withoutPersonalContext } from "@/lib/agent/memory/personal-context";
 import { photosOf, type ChatPhoto } from "@/lib/projects/chat-photos";
 import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-files";
 import { isCompactionMark, type CompactionMark } from "@/lib/agent/compaction/mark";
@@ -244,6 +245,16 @@ export interface FilaDelHistorial {
    *  de mitad de turno, o no tiene, el historial lo dice detrás
    *  (`CUT_OFF_TURN_MARK`). Ausente = la de siempre. */
   readonly cutOff?: boolean;
+  /** Who asked this turn, column `autorId`: a member of the project. `null` or absent = its owner. Its
+   *  context carried THAT person's private context (`withoutPersonalContext`). */
+  readonly authorId?: string | null;
+}
+
+/** Who the history is rebuilt for: the person asking the turn now, and the project's owner (whose turns
+ *  carry no author). Another person's rows come back without their private context. */
+export interface HistoryReader {
+  readonly speakerId: string;
+  readonly ownerId: string;
 }
 
 /**
@@ -523,7 +534,13 @@ export function historialDesdeLaBase(
    *  (`coldTrim`). The route then saves this same mark on the turn's row (`coldTrim` of its transcript).
    *  `WHOLE_HISTORY`: nothing is trimmed, saved marks included (a reader that is not the model). */
   cold: ColdTrimMark | typeof WHOLE_HISTORY | null = null,
+  /** A SHARED PROJECT: the person the history goes to. The rows another person asked come back without
+   *  that person's private context (`withoutPersonalContext`), in their context and in their summary mark.
+   *  Absent: every row as it was saved (a reader that is not the model: a judge, a scene). */
+  reader: HistoryReader | null = null,
 ): MensajeDelHistorial[] {
+  /** This row's private context is someone else's. */
+  const notTheirs = (f: FilaDelHistorial) => reader !== null && (f.authorId ?? reader.ownerId) !== reader.speakerId;
   let mensajes: MensajeDelHistorial[] = [];
   /** Where the last TURN added begins — the last row with messages of its own —: the one a cold trim
    *  leaves its reasoning to. The «published» note, or a turn that died with nothing saved, is a row but
@@ -539,8 +556,10 @@ export function historialDesdeLaBase(
       lastRowStart = mensajes.length;
       // Lo que vio el modelo tras resumir (ya trae, resumidos o tal cual, la
       // memoria, el contexto y el mensaje del dueño de ese turno) y, detrás, la
-      // cola de su transcripción.
-      const marca = enElHistorial(f.compaction.messages);
+      // cola de su transcripción. De otra persona, sin su contexto privado: la
+      // marca lleva el contexto de su turno tal cual se mandó.
+      const vista = enElHistorial(f.compaction.messages);
+      const marca = notTheirs(f) ? vista.map((m) => (m.role === "user" ? { ...m, content: withoutPersonalContext(m.content) } : m)) : vista;
       const cola = enElHistorial((f.transcript?.mensajes ?? []).slice(f.compaction.fromTranscript));
       mensajes.push(...marca, ...cola);
       if (f.transcript?.detenido) mensajes.push({ role: "user", content: MARCA_DE_TURNO_DETENIDO });
@@ -558,7 +577,8 @@ export function historialDesdeLaBase(
     // Y el catálogo de skills que llevó, detrás (spec local 2026-10-26-len-skills).
     if (f.transcript?.skills) mensajes.push({ role: "user", content: f.transcript.skills });
     // Y su contexto, en su sitio: lo de delante sigue en caché (ver `contexto`).
-    if (f.transcript?.contexto) mensajes.push({ role: "user", content: f.transcript.contexto });
+    // El de otra persona, sin lo privado de ella (su LEN.md, sus skills, sus MCP).
+    if (f.transcript?.contexto) mensajes.push({ role: "user", content: notTheirs(f) ? withoutPersonalContext(f.transcript.contexto) : f.transcript.contexto });
     // And the narration of the owner's switch of plan mode, where it went: right before the request.
     if (f.transcript?.planNotice) mensajes.push({ role: "user", content: f.transcript.planNotice === "on" ? PLAN_ON_NOTICE : PLAN_OFF_NOTICE });
     mensajes.push(mensajeDelDueno(f, fotos));

@@ -16,6 +16,7 @@
 
 // Cache effect: the catalog is saved in the transcript and replayed as sent; a change is a NEW message further down (by digest), never an edit of the one above, so the prefix before it stays cached. The personal reminder rides the turn's context, at the end.
 import { isIdleMark } from "@/lib/agent/compaction/mark";
+import { PERSONAL_SKILLS_HEAD } from "@/lib/agent/memory/personal-context";
 import { createHash } from "node:crypto";
 
 import type { ResolvedSkill } from "./registry";
@@ -109,9 +110,8 @@ export function skillCatalogMessage(skills: readonly ResolvedSkill[], known: str
 /** The speaker's own skills, for the turn's context. `""` if there are none. */
 export function personalSkillsReminder(skills: readonly ResolvedSkill[], budgetChars: number): string {
   if (skills.length === 0) return "";
-  return `${[
-    "<system-reminder>",
-    "The person you are talking to also has skills of their own, available through the `skill` tool in the same way:",
+  // Its opening words live in `personal-context.ts`: another person's turn looks for exactly those.
+  return `${PERSONAL_SKILLS_HEAD}${[
     "",
     "<available_skills>",
     ...entries(skills, budgetChars),

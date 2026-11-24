@@ -26,6 +26,7 @@ import { attachmentNote, filesOf, type AttachedFile } from "@/lib/projects/chat-
 import { PERSONAL_LEN_MD } from "@/lib/agent/ficheros/len-md";
 import { TOPE_DE_BYTES, TOPE_DE_TOKENS, cortarLinea, estimarTokens, formatoCatN, normalizarFinales } from "@/lib/agent/ficheros/read";
 import { REGLA_DEL_EQUIPO } from "./equipo";
+import { PERSONAL_MEMORY_FOOT, PERSONAL_MEMORY_HEAD } from "./memory/personal-context";
 
 /**
  * El bloque para el prompt, o `""` cuando no hay nada.
@@ -38,13 +39,11 @@ export function userMemoryBlock(memoria: string | null | undefined, ruta?: strin
   const v = memoria?.trim();
   if (!v) return "";
   // En inglés desde la traducción de lo que lee Len (2026-10-02), también para
-  // Crear y el Chat, que lo comparten: decisión de Jesús.
-  return `WHAT YOU KNOW ABOUT THIS PERSON ${ruta ? `— ${ruta} ` : ""}(their private instructions, on ANY of their pages — it isn't about this project, it's about them${ruta ? "; edit this file to change them" : ""}):
+  // Crear y el Chat, que lo comparten: decisión de Jesús. Sus palabras fijas viven
+  // en `personal-context.ts`: el turno de otra persona busca justo esas.
+  return `${PERSONAL_MEMORY_HEAD} ${ruta ? `— ${ruta} ` : ""}(their private instructions, on ANY of their pages — it isn't about this project, it's about them${ruta ? "; edit this file to change them" : ""}):
 ${v}
-Respect it without them having to repeat it. If something here clashes with what they ask TODAY, today wins and you don't argue: the memory is a starting point, not a rule over them.
-It belongs to the person speaking now: in a shared project each person has their own, so never quote it to anyone else on the project.
-
-`;
+${PERSONAL_MEMORY_FOOT}`;
 }
 
 /** Un cambio ya hecho, tal como lo cuenta el registro de versiones. */

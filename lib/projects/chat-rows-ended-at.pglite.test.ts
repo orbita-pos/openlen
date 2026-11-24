@@ -26,11 +26,11 @@ const T0 = Date.UTC(2026, 10, 13, 9, 0, 0);
 const TRANSCRIPT = { mensajes: [{ role: "assistant", content: "done" }], leidos: [] };
 let pg: PGlite;
 
-async function row(o: { id: string; minute: number; durationMs?: number | null; tipo?: string | null }) {
+async function row(o: { id: string; minute: number; durationMs?: number | null; tipo?: string | null; autorId?: string | null }) {
   await pg.query(
-    `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "transcript", "tipo", "durationMs")
-     values ($1, 'p1', 'x', 'ok', 'applied', $2, $3::jsonb, $4, $5)`,
-    [o.id, new Date(T0 + o.minute * 60_000), JSON.stringify(TRANSCRIPT), o.tipo ?? null, o.durationMs ?? null],
+    `insert into "projectChatMessages" ("id", "projectId", "userText", "assistantReasoning", "status", "createdAt", "transcript", "tipo", "durationMs", "autorId")
+     values ($1, 'p1', 'x', 'ok', 'applied', $2, $3::jsonb, $4, $5, $6)`,
+    [o.id, new Date(T0 + o.minute * 60_000), JSON.stringify(TRANSCRIPT), o.tipo ?? null, o.durationMs ?? null, o.autorId ?? null],
   );
 }
 
@@ -62,5 +62,20 @@ describe("the rows of the history say when their turn ended", () => {
     await row({ id: "ana", minute: 5, tipo: "persona" });
     const rows = await filasParaElHistorialConEquipo("p1");
     expect(rows.filter((r) => r.tipo === null).map((r) => r.fila.endedAt)).toEqual([T0 + 40_000, T0 + 10 * 60_000]);
+  });
+});
+
+// A SHARED PROJECT: each turn's context carried the private context of whoever asked it, so the history has
+// to know who that was (`withoutPersonalContext` in lib/agent/transcripcion.ts). `null` = the owner.
+describe("the rows of the history say who asked their turn", () => {
+  it("a member's turn carries its author; the owner's, none", async () => {
+    await row({ id: "t3", minute: 20, autorId: "eli" });
+    expect((await turnosParaElHistorial("p1")).map((f) => f.authorId)).toEqual([null, null, "eli"]);
+  });
+
+  it("the rows of a shared project carry it too", async () => {
+    await row({ id: "t3", minute: 20, autorId: "eli" });
+    const rows = await filasParaElHistorialConEquipo("p1");
+    expect(rows.filter((r) => r.tipo === null).map((r) => r.fila.authorId)).toEqual([null, null, "eli"]);
   });
 });

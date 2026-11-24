@@ -455,6 +455,8 @@ vi.mock("@/lib/agent/verify", () => ({
 import { POST } from "./route";
 vi.mock("@/lib/projects/thumbnail-jobs", () => ({ scheduleDraftThumbnail: vi.fn() }));
 import { fijarAccesoDePrueba } from "@/lib/projects/acceso-de-prueba";
+import { PERSONAL_MEMORY_FOOT } from "@/lib/agent/memory/personal-context";
+import { PRIVATE_MEMORY_NOTE } from "@/lib/agent/memory/private-memory";
 
 async function readEvents(res: Response): Promise<Array<{ event: string; data: Record<string, unknown> }>> {
   const text = await res.text();
@@ -4640,6 +4642,31 @@ describe("POST /api/agent — un miembro del proyecto", () => {
     const sinEquipo = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ prompt: string; equipo?: boolean }])[0];
     expect(sinEquipo.prompt).toBe("@Len pon el pie gris");
     expect(sinEquipo.equipo).toBe(false);
+  });
+
+  it("🔴 a member's turn gets the owner's earlier turns without the owner's ~/.len/LEN.md", async () => {
+    mocks.runAgentLoop.mockResolvedValue({
+      finalText: "Hecho.", turns: 1, toolCalls: 0,
+      usage: { inputTokens: 1, outputTokens: 1, cachedTokens: 0, thinkingTokens: 0 },
+      terminalError: false, topeAlcanzado: null, errorCode: null, mutoDurable: false,
+    });
+    mocks.proyectoCompartido.mockResolvedValueOnce(true);
+    mocks.personasDelProyecto.mockResolvedValueOnce([
+      { userId: "dueno-1", nombre: "Dana Dueña", email: "d@x", rol: "dueno" },
+      { userId: "ana", nombre: "Ana Editora", email: "a@x", rol: "editor" },
+    ]);
+    // The owner's turn, saved with the context it was sent with: her private memory inside it.
+    const contexto = `WHAT YOU KNOW ABOUT THIS PERSON (their private instructions):\nDana is vegan.\n${PERSONAL_MEMORY_FOOT}PROJECT STATE (real, read from the server just now):\n{}\n\n`;
+    mocks.filasParaElHistorialConEquipo.mockResolvedValueOnce([
+      {
+        tipo: null, autorId: null, menciones: null, createdAt: new Date(Date.UTC(2026, 9, 7, 18, 1)),
+        fila: { userText: "pon el botón", assistantReasoning: "", authorId: null, transcript: { mensajes: [{ role: "assistant", content: "Hecho." }], leidos: [], contexto } },
+      },
+    ]);
+    await readEvents(await pedir({ prompt: "@Len hola" }));
+    const { history } = (mocks.buildAgentMessages.mock.calls.at(-1) as unknown as [{ history: { content: string }[] }])[0];
+    expect(JSON.stringify(history)).not.toContain("vegan");
+    expect(history.some((m) => m.content.includes(PRIVATE_MEMORY_NOTE) && m.content.includes("PROJECT STATE"))).toBe(true);
   });
 
   it("🔴 sin miembros, el turno no pide las personas del proyecto (una consulta barata y ya)", async () => {

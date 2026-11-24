@@ -325,6 +325,8 @@ export async function turnosParaElHistorial(projectId: string, charla: string | 
       // Cuándo acabó el turno, para la vuelta en frío (`lastModelCallEndedAt`).
       createdAt: schema.projectChatMessages.createdAt,
       durationMs: schema.projectChatMessages.durationMs,
+      // Quién lo pidió: su contexto privado es suyo (`withoutPersonalContext`).
+      autorId: schema.projectChatMessages.autorId,
     })
     .from(schema.projectChatMessages)
     .where(and(turnoDeLaHistoria(projectId, charla), desde ? gte(schema.projectChatMessages.createdAt, desde) : undefined))
@@ -337,6 +339,7 @@ export async function turnosParaElHistorial(projectId: string, charla: string | 
     attachedImage: r.attachedImage ?? null,
     attachedFiles: r.attachedFiles ?? null,
     endedAt: endedAtOf(r),
+    authorId: r.autorId ?? null,
     ...cutOffOf(r.status),
   }));
 }
@@ -435,6 +438,7 @@ export async function filasParaElHistorialConEquipo(projectId: string, charla: s
         compaction: r.compaction ?? null,
         attachedImage: r.attachedImage ?? null,
         attachedFiles: r.attachedFiles ?? null,
+        authorId: r.autorId ?? null,
         ...cutOffOf(r.status),
       },
     }));

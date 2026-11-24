@@ -104,6 +104,7 @@ import {
   transcripcionParaGuardar,
   compactionMarkForStorage,
   type FilaDelHistorial,
+  type HistoryReader,
   type MensajeDelHistorial,
   type TranscripcionGuardada,
 } from "@/lib/agent/transcripcion";
@@ -1202,7 +1203,10 @@ async function correrTurno(
   // THE SCREENSHOTS LEN TOOK in earlier turns stay in the conversation (as in Claude Code and DeepSeek): the
   // ones the history still shows — after the cold trims and the budget, with nothing loaded yet — are loaded
   // with the photos, so the turn sends the same pictures the earlier ones sent.
-  const capturasDeLen = filasDelHistorial.some((f) => f.transcript) ? screenshotAddresses(historialDesdeLaBase(filasDelHistorial, undefined, new Map(), coldMark)) : [];
+  // A SHARED PROJECT: the history is rebuilt for whoever asks this turn. The turns another person asked come
+  // back without their ~/.len/LEN.md, their skills and their MCP servers (`withoutPersonalContext`).
+  const lectorDelHistorial: HistoryReader = { speakerId: quien, ownerId: userId };
+  const capturasDeLen = filasDelHistorial.some((f) => f.transcript) ? screenshotAddresses(historialDesdeLaBase(filasDelHistorial, undefined, new Map(), coldMark, lectorDelHistorial)) : [];
   // UN solo orden para todas, de la más nueva a la más vieja: las fotos de cada turno, las capturas del modo
   // Diseño (Len 3.1) y lo que Len vio en él, como cuentan sus imágenes Claude Code y DeepSeek.
   const masNuevaPrimero = [...attachedImages.map((f) => f.url), ...picturesOldestFirst(filasDelHistorial, new Set(capturasDeLen)).reverse()];
@@ -1254,7 +1258,7 @@ async function correrTurno(
     console.log(`[agent] fotos de la conversación — ${vistas} de ${fotos.size} a la vista${noCaben ? `, ${noCaben} sin píxeles por no caber` : ""}`);
   }
   const historialDeLaBase = filasDelHistorial.some((f) => f.transcript)
-    ? historialDesdeLaBase(filasDelHistorial, undefined, fotos, coldMark)
+    ? historialDesdeLaBase(filasDelHistorial, undefined, fotos, coldMark, lectorDelHistorial)
     : null;
   // Nothing from the rows went to the model: nothing was trimmed, so this turn leaves no mark.
   if (!historialDeLaBase) coldMark = null;

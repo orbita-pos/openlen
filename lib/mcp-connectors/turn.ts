@@ -6,6 +6,7 @@
 // isn't connected. With `OPENLEN_MCP_OAUTH=0` (spec local 2026-11-17-oauth-de-conectores-mcp, §8) a server a mount left in
 // `needs-auth` is read as the failed one it was before OAuth: declared, described and retried like any failure.
 import type { ToolOutcome } from "@/lib/agent/tools";
+import { PERSONAL_CONNECTORS_HEAD } from "@/lib/agent/memory/personal-context";
 
 import { hostOf, issuerHostOf, type McpApprovalCard } from "./approval";
 import type { McpConnection, openMcp } from "./client";
@@ -262,7 +263,8 @@ export async function connectorsForTurn(personId: string, d: TurnDeps): Promise<
     active: new Map([...ready, ...needsAuth].map((r) => [r.name, r.entry])),
     ...(needsAuth.length > 0 && { needsAuth: new Map(needsAuth.map((r) => [r.name, r.state])) }),
     ...(directory.length > 0 && { directory }),
-    contextText: text.length > 0 ? `<system-reminder>\nThe person's MCP servers (their ~/.len/mcp.json):\n${text.join("\n\n")}\n</system-reminder>\n` : "",
+    // Its opening words live in `personal-context.ts`: another person's turn cuts the history's copy from there.
+    contextText: text.length > 0 ? `${PERSONAL_CONNECTORS_HEAD}${text.join("\n\n")}\n</system-reminder>\n` : "",
     toMount: serversToMount(states, config, stored.approved, d.now(), oauthOn),
   };
 }
