@@ -236,8 +236,8 @@ describe("assistantSystemPrompt", () => {
   // Phase 4E (measured 10/11): «apúntate que los jueves hacemos pan de muerto» → she also copied the page's hours,
   // flavors and pickup rules into her memory. Claude Code's memory doesn't keep what the repo already records.
   // Measured again after a one-sentence rule: she copied the page under «no hace falta apuntarlo aquí». Claude Code's
-  // agent memory has its own section, «## What NOT to save in memory», ending «These exclusions apply even when the user
-  // explicitly asks you to save» (binary 2.1.321).
+  // agent memory has its own section, «## What NOT to save in memory», whose exclusions hold even when
+  // the user asks to save.
   it("🔴 her body has Claude Code's «What NOT to save in memory», with the pages first", () => {
     const p = assistantSystemPrompt("LEN PROMPT", { name: "Lucía", tone: "friendly" });
     expect(p).toContain("## What NOT to save in memory");

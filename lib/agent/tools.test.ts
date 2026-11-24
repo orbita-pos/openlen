@@ -948,8 +948,8 @@ describe("use_page", () => {
     assert.equal(sin.images, undefined);
   });
 
-  // LA PRUEBA TIENE QUE LLEGAR A QUIEN LEE (27/10), como el verify de Claude Code («a file path is only
-  // evidence if the person reading the report can open it»: manda las capturas) y el
+  // LA PRUEBA TIENE QUE LLEGAR A QUIEN LEE (27/10), como el verify de Claude Code (una ruta sólo
+  // sirve de prueba si quien lee el informe la puede abrir: manda las capturas) y el
   // browser_take_screenshot de Playwright MCP, que guarda la captura y dice dónde: cada captura queda
   // en el turno por una ruta, que present entrega.
   it("each screenshot is kept for the turn at a path, in order, across view_page and use_page", async () => {
@@ -3367,9 +3367,9 @@ describe("read_widget_context reads what the turn holds", () => {
     assert.match(String(out.response.tool_result), /No visual in this conversation shared a state/);
   });
 
-  // Claude Code 2.1.329: only user messages and queued corrections carry the visual-states reminder — never a tool
+  // As in Claude Code: only user messages and queued corrections carry the visual-states reminder — never a tool
   // result like ask_user_question (held states updated on the answer are still read when read_widget_context is called).
-  it("🔴 ask_user_question does not attach a visual-states reminder notice on answer (Claude Code 2.1.329)", async () => {
+  it("🔴 ask_user_question does not attach a visual-states reminder notice on answer (as in Claude Code)", async () => {
     const { deps } = makeDeps();
     let held: { widgetId: string; state: string; cut: boolean; title: string | null }[] = [];
     const session = { ...makeSession(), visualStates: () => held } as AgentSession;

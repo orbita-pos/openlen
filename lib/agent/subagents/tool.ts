@@ -10,8 +10,8 @@
 // builds, runs, wakes and stops the children, and their notices reach Len later.
 //
 // Cache effect: one fixed declaration for every turn — it lists Claude Code's three types and OpenLen's own, and
-// the project's and the speaker's custom types reach Len as an appended message (./agent-listing.ts, Claude Code
-// 2.1.330's `agent_listing_delta`), so creating or deleting one never moves the tools. Answers are appended.
+// the project's and the speaker's custom types reach Len as an appended message (./agent-listing.ts, Claude Code's
+// `agent_listing_delta`), so creating or deleting one never moves the tools. Answers are appended.
 
 import type { AgentDeps, AgentSession, ToolOutcome } from "@/lib/agent/tools";
 import type { SubagentStopReason } from "./notice";
@@ -40,7 +40,7 @@ const DESCRIPTION = [
   "Types (agent_preset): general-purpose (the default) works on the task with your tools and can change files; Explore is a fast, read-only search of the project that answers with paths and lines — say how far to look: quick, medium or very thorough; Plan is read-only and answers with a step-by-step plan and the files it depends on.",
   // Ours: OpenLen's own types (bundled-types.ts), always offered.
   `OpenLen's types: ${BUNDLED_AGENT_TYPES.map((a) => `${a.name}: ${a.description}`).join("; ")}`,
-  // Claude Code's `Oes`, for the types its declaration doesn't list: ./agent-listing.ts.
+  // Claude Code's line for the types its declaration doesn't list: ./agent-listing.ts.
   "Custom types are listed in <system-reminder> messages in the conversation.",
   NOT_SHOWN,
 ].join(" ");

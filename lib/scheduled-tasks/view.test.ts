@@ -1,5 +1,5 @@
-// What the model reads of a task: DeepSeek's view plus the next run in local time (spec §7.1, Claude
-// Code's "give that time, not the minute in the cron expression").
+// What the model reads of a task: DeepSeek's view plus the next run in local time (spec §7.1, as Claude
+// Code tells the user the local time, not the cron's minute).
 import { describe, expect, it } from "vitest";
 
 import {

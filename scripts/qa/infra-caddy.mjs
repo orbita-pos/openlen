@@ -20,8 +20,8 @@
 //   1  INVÁLIDO — no adapta. Esto no se despliega.
 //   2  NO COMPROBADO — no hay `caddy` aquí. No es un aprobado: es que no se
 //      miró, y decirlo es la mitad de la doctrina que este repo copió del
-//      informe de `preview` de Claude Code («the browser could not start, so
-//      nothing was rendered» — nunca contar «no pude medir» como «está bien»).
+//      informe de `preview` de Claude Code (si el navegador no arrancó, lo dice
+//      y no da nada por bueno — nunca contar «no pude medir» como «está bien»).
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";

@@ -40,7 +40,7 @@ export function cleanVisualContext(raw: unknown): string {
   return typeof raw === "string" ? toWellFormedText(utf16SafePrefix(raw.trim(), VISUAL_CONTEXT_MAX_CHARS)).trim() : "";
 }
 
-// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2), as Claude Code 2.1.329 holds an MCP App view's
+// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2), as Claude Code holds an MCP App view's
 // state: the screen sends the latest state of each visual of the conversation with every message, the server keeps only
 // the visuals that conversation drew, the model gets one line naming them, and reads them with `read_widget_context`
 // when the person's message refers to them. Each state is the same text `cleanVisualContext` cleans.
@@ -48,7 +48,7 @@ export function cleanVisualContext(raw: unknown): string {
 /** At most this many visuals per message, and this many bytes of their JSON (Claude Code: 256 states or 1 MiB). */
 export const VISUAL_STATES_MAX = 256;
 export const VISUAL_STATES_MAX_BYTES = 1_048_576;
-/** Maximum number of `widget_id`s named explicitly in one reminder line before summarizing the rest as «, and N more» (Claude Code 2.1.329: 64). */
+/** Maximum number of `widget_id`s named explicitly in one reminder line before summarizing the rest as «, and N more» (Claude Code: 64). */
 export const VISUAL_STATES_REMINDER_MAX_IDS = 64;
 
 /** One visual's state as a message brought it; `cut` when it was longer than `VISUAL_CONTEXT_MAX_CHARS`. */
@@ -109,7 +109,7 @@ export function visualStatesPayload(held: ReadonlyMap<string, string>): { readon
 
 /** The line beside the person's message naming the visuals that shared a state; nothing when none did. The states stay
  *  out of it: the model reads them with the tool only when the message is about them. Large lists name the first
- *  `VISUAL_STATES_REMINDER_MAX_IDS` visuals and summarize the rest as «, and N more» (Claude Code 2.1.329). */
+ *  `VISUAL_STATES_REMINDER_MAX_IDS` visuals and summarize the rest as «, and N more» (as Claude Code). */
 export function visualStatesReminder(states: readonly HeldVisualState[]): string {
   if (states.length === 0) return "";
   const shown = states.slice(0, VISUAL_STATES_REMINDER_MAX_IDS).map((s) => s.widgetId);

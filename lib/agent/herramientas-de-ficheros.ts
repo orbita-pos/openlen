@@ -1039,8 +1039,8 @@ async function guardarMemoria(
   session.escritos = [plan.ruta, ...(session.escritos ?? []).filter((x) => x !== plan.ruta)];
   const cambio = before !== null && normalizarFinales(before) === normalizarFinales(plan.contenido) ? "sin_cambio" : "cambio";
   return {
-    // «Exactly what was saved» only when it is: Claude Code leaves its «no need to Read it back» out when it
-    // stamped a memory file (`memdirStamped`, binary 2.1.325), and so does a page that saving changed (`aplicarPlan`).
+    // «Exactly what was saved» only when it is: Claude Code leaves out its note that the file needs no second read
+    // when it stamped a memory file (`memdirStamped`), and so does a page that saving changed (`aplicarPlan`).
     response: respuesta({ ok: true, texto: plan.respuesta({ guardadoIgual: saved === plan.contenido }) }, { cambio }),
     action: { tool: herramienta, ok: true, summary: detalle, cambio },
     ...(cambio === "cambio" ? { mutoDurable: true } : {}),
@@ -1085,7 +1085,7 @@ async function guardarSkill(
 ): Promise<ToolOutcome> {
   const at = skillPathOf(plan.ruta);
   if (!at) return { response: respuesta(fallo(ONLY_SKILL_MD)) };
-  // THE PERSON'S OWN SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329:
+  // THE PERSON'S OWN SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as in Claude Code:
   // its skill files on disk are a read-only cache and `propose_skills` is the way. Their own edit (the Code lens, their
   // terminal) still saves; removing one stays Len's (`rm`), as OpenLen has no list of skills for them to delete from yet.
   if (at.scope === "personal" && !mayWritePersonalSkills(session)) return { response: respuesta(fallo(personalSkillsRefusal(session))) };

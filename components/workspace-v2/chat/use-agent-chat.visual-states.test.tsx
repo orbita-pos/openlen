@@ -1,4 +1,4 @@
-// WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the chat keeps
+// WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code's held views): the chat keeps
 // the latest state of each visual of the open conversation and sends them with every message, correction and answer — in
 // their own field, never inside what the person wrote. Another conversation starts with none. Same harness as
 // use-agent-chat.mentions.test.tsx.

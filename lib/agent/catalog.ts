@@ -749,7 +749,7 @@ export const REGLA_DE_LOS_JUEGOS =
 
 /**
  * EMOJIS IN THE CHAT (spec local 2026-11-21-emojis-en-el-chat): Jesús wants them, for more life in the messages. Not
- * Claude Code's rule («Only use emojis if the user explicitly requests it»: a tool for programmers) and DeepSeek has
+ * Claude Code's rule (no emojis unless the user asks for them: a tool for programmers) and DeepSeek has
  * none. A line of TONE, so the person's agents inherit it with Len's prompt (their tone adjusts it,
  * lib/assistants/agent.ts); files keep their own rule in HOW TO WORK.
  */

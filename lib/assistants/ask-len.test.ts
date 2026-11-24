@@ -262,7 +262,7 @@ describe("ask_len", () => {
     });
 
     // As Claude Code's Write names the path it wrote and DeepSeek's team tools name a task's owner: she can say which
-    // reading she took («say in your final message which reading you took»), and the owner can correct her (task 8, t3).
+    // reading she took, as Claude Code does with an ambiguous request, and the owner can correct her (task 8, t3).
     it("🔴 serving two, the result and the request's note name the project it went to", async () => {
       const launch = vi.fn();
       const notes = { queued: vi.fn(async () => {}), settle: vi.fn(async () => {}) };

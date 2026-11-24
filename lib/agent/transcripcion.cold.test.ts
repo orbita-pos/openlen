@@ -246,7 +246,7 @@ describe("historialDesdeLaBase with a cold return", () => {
 });
 
 // Claude Code measures the idle time from the messages it already holds, up to its last reply from the API
-// (binary 2.1.321, the function that plans its clearing after an idle period). Here: the rows the turn already
+// (when it plans its clearing after an idle period). Here: the rows the turn already
 // loaded, up to the last one with messages of its own.
 describe("lastModelCallEndedAt", () => {
   const at = (minutes: number) => Date.UTC(2026, 10, 13, 9, minutes);

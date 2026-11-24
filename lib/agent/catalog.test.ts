@@ -1076,7 +1076,7 @@ describe("el catálogo declara lo que de verdad puede correr", () => {
   });
 });
 
-// Claude Code 2.1.330's `agent_listing_delta`: custom types reach Len as an appended message
+// Claude Code's `agent_listing_delta`: custom types reach Len as an appended message
 // (lib/agent/subagents/agent-listing.ts), never in the declarations — the catalog doesn't even take them.
 it("the subagent declaration names no custom type, so the tools don't move with them", () => {
   const d = buildFunctionDeclarations({}).find((d) => d.name === "subagent")!;

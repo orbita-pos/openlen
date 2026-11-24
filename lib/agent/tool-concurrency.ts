@@ -57,7 +57,7 @@ const CLASSIFIERS: Readonly<Record<string, Classifier>> = {
   session_event_read: always,
   // Scheduled tasks: listing only reads.
   schedule_list: always,
-  // Claude Code 2.1.329's ReadWidgetContext (`isConcurrencySafe: () => true`): only reads held visual states.
+  // Claude Code's ReadWidgetContext (`isConcurrencySafe: () => true`): only reads held visual states.
   read_widget_context: always,
   // DeepSeek's `subagent` (`isConcurrencySafe: () => true`): it only starts a child and returns its id.
   subagent: always,

@@ -1,10 +1,10 @@
 /**
- * THE CONTRACT OF `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6), copied from Claude Code 2.1.329's tool
+ * THE CONTRACT OF `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6), after Claude Code's tool
  * of the same name (its contract, not its words): Len never writes the person's own skills; he proposes up to three on a
  * review card and the person saves them. A new skill brings its whole SKILL.md; an improvement of one of the person's
  * skills brings `edits` (`old_string` → `new_string`, each found exactly once, applied in order) on the SKILL.md Len read,
  * or a whole new SKILL.md. The saved file takes its name and description from the fields; other frontmatter keys are not
- * kept. OpenLen's own skills are never the person's to change: a customized one is a new skill under a name of its own.
+ * kept. OpenLen's own skills are never the person's to change: a customized one is saved as a new skill with its own name.
  *
  * Pure: what the person has, OpenLen's names and what Len read come in `ctx`.
  */

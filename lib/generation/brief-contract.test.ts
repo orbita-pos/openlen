@@ -43,8 +43,8 @@ describe("contrato compartido del brief de generación", () => {
     expect(shouldShowGenerationBriefCounter(3001)).toBe(true);
   });
 
-  // 24/11 (Jesús: «lo máx son 4000 caracteres … Claude Code no tiene eso»): Claude Code 2.1.330 sends whatever is written —
-  // past 10,000 characters its box only SHOWS the middle as «[...Truncated text #N +X lines...]» and still sends it whole. The
+  // 24/11 (Jesús: «lo máx son 4000 caracteres … Claude Code no tiene eso»): Claude Code sends whatever is written —
+  // past 10,000 characters its box only SHOWS the middle collapsed, and still sends it whole. The
   // 4,000 was the cap of the retired /api/generate (06/10); Len's own chat never had one.
   it("🔴 un mensaje de 20.000 caracteres se puede mandar y nunca se corta", () => {
     const long = "Mi negocio: ".concat("x".repeat(20_000));

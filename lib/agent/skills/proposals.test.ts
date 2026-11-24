@@ -1,4 +1,4 @@
-// THE CONTRACT OF `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329's: up to three
+// THE CONTRACT OF `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code's: up to three
 // proposals, a new skill with its whole SKILL.md, an improvement of one of the person's own skills with edits on the
 // SKILL.md it read, name and description from the fields. Nothing here writes: the card does, when the person saves.
 import { describe, expect, it } from "vitest";

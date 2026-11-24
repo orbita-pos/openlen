@@ -1,5 +1,5 @@
 /**
- * `read_widget_context` (spec local 2026-11-22-visuales-de-verdad, §2): Claude Code 2.1.329's ReadWidgetContext — its
+ * `read_widget_context` (spec local 2026-11-22-visuales-de-verdad, §2): Claude Code's ReadWidgetContext — its
  * name, its one argument and the fields of its answer — in our words (the repo is public; no Anthropic prose is copied).
  *
  * The screen sends the latest state of each visual with every message the person sends; the route keeps those of

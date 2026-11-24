@@ -1,7 +1,7 @@
 // OPENLEN'S LIMITS ON A SCHEDULE (spec local 2026-10-29-tareas-programadas, §7.2). DeepSeek lets a
 // reminder fire every minute because there each person pays for their own model; here every run is a
 // Len turn billed to the project's owner, so the floor is Claude Code's for its cloud routines: one
-// hour ("Minimum interval is 1 hour. `*/30 * * * *` will be rejected"). The codes and the error class
+// hour (a cron every 30 minutes is rejected). The codes and the error class
 // are DeepSeek's, so the model reads them the way it reads theirs.
 import { ScheduleInputError } from "./deepseek/domain";
 import type { ScheduleRecord } from "./deepseek/types";

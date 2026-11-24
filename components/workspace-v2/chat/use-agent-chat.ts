@@ -377,7 +377,7 @@ export function useAgentChat({
   const [turns, setTurns] = useState<DesignTurn[]>(() =>
     (initialChat ?? []).map(restoreTurn),
   );
-  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the latest
+  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code's held views): the latest
   // state of each visual of THIS conversation, by its widget_id, sent with every message, correction and answer. A visual
   // that reports again moves to the end; past `VISUAL_STATES_MAX` the oldest goes, so the server's cap never drops them
   // all. Another conversation, project or agent starts with none.

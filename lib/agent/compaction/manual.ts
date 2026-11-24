@@ -1,6 +1,6 @@
-// A11 · `/compact`, el de Claude Code: «Free up context by summarizing the
-// conversation so far», con `argumentHint: "<optional custom summarization
-// instructions>"`. Es el primer comando con «/» del chat de Len. Puro.
+// A11 · `/compact`, el de Claude Code: libera contexto resumiendo la
+// conversación hasta ahora, con instrucciones opcionales de cómo resumir
+// (su `argumentHint`). Es el primer comando con «/» del chat de Len. Puro.
 
 /** «/compact» o «/compact <instrucciones>» → lo que pide; otro texto → `null`. */
 export function parseCompactCommand(text: string): { instructions: string | null } | null {

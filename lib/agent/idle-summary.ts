@@ -5,8 +5,8 @@
 // summary instead of paying the whole conversation again at the full input price; if they come back while
 // it is still warm, the summary is ignored and the conversation goes on whole.
 //
-// The trigger is Claude Code's idle compaction (binary 2.1.321: «a 200K+ token conversation left idle is
-// summarized, and the summary is used on your next message if the prompt cache has expired»; it fires at 90 %
+// The trigger is Claude Code's idle compaction (a long conversation left idle gets summarized, and the summary
+// is used on the next message once the prompt cache has expired; it fires at 90 %
 // of the cache's life, only while warm, never near the usage limit, and a newer request cancels it). Here the
 // cache's life is the one measured on Len's provider — alive after 45 minutes of silence, gone after 60 —, so
 // the summary is asked for at minute 40 (`IDLE_SUMMARY_AT`). The

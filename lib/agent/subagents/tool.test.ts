@@ -291,7 +291,7 @@ describe("isolation (phase 4)", () => {
   });
 });
 
-// Claude Code 2.1.330: the declaration never names a custom type (they come in `agent_listing_delta` messages,
+// As in Claude Code: the declaration never names a custom type (they come in `agent_listing_delta` messages,
 // ./agent-listing.ts), so it is one declaration whatever types exist, and its `agent_preset` takes any name.
 describe("custom types in the subagent tool", () => {
   it("one declaration, with no enum to leave a custom type out of", async () => {

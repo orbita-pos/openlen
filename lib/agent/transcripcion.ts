@@ -52,7 +52,7 @@ export const RESULTADO_VACIADO = "[Earlier tool result removed to save space]";
 
 /**
  * WHAT MAY BE EMPTIED, in the three places that empty a result (the history's jumps, a row's cap, the cold
- * return): only the results Len can ask for again. It is Claude Code's rule — its binary (2.1.321) clears
+ * return): only the results Len can ask for again. It is Claude Code's rule — it clears
  * the results of Read, Bash, Grep, Glob, WebSearch, WebFetch, Edit and Write and of nothing else. Every
  * other result neither is emptied nor counts toward a budget: what the owner answered to a question
  * (`ask_user_question` returns it as its result), a loaded skill (`skill` answers «already loaded above»

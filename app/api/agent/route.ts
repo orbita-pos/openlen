@@ -961,7 +961,7 @@ async function correrTurno(
     // byte as before.
     return relatedAgents.length > 0 ? [...todas, { ...MESSAGE_AGENT_DECLARATION }] : todas;
   };
-  // The custom agent types are never in the declarations (Claude Code 2.1.330's `agent_listing_delta`): creating or
+  // The custom agent types are never in the declarations (Claude Code's `agent_listing_delta`): creating or
   // deleting one mid-turn reaches Len as an appended message (`agentListing` of the loop), and the tools stay byte for
   // byte — on 24/11 a `Write ~/.len/agents/language-teacher.md` rebuilt them here and the next call was a cache break.
   const tools = conPostura(buildFunctionDeclarations(process.env, { functionSecrets: functionsEnabled(), artifactKinds, realTerminal, gitRemote }, mode, appDelTurno));
@@ -1501,7 +1501,7 @@ async function correrTurno(
   // prompt inside it; the row keeps the prompt (and `sentText`, this).
   // A tool's creation: no model reads this turn, and the history keeps a plain account, not the Creator's task.
   //
-  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the
+  // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code's held views): the
   // latest state of each visual of the conversation, from its own field of the body — never part of `prompt`, which is
   // what the `/name` scan above, the chat's row and the person's language read. Only the visuals this conversation drew
   // count; the model gets one line naming them after the person's message (it travels in `textoEnviado`, so the row
@@ -3469,8 +3469,8 @@ async function correrTurno(
     // Hasta aquí esto abortaba el modelo, así que cerrar la pestaña, perder la
     // red o que el móvil se durmiera mataba el turno a media faena
     // (diagnóstico de 2.1, §3.1). La vara es Claude Code: el trabajo pertenece a
-    // la sesión, no a la vista; al desconectarse, «if the session still exists
-    // it keeps running». El canal ya descarta en silencio lo que no puede
+    // la sesión, no a la vista; al desconectarse, si la sesión sigue viva, el
+    // trabajo sigue. El canal ya descarta en silencio lo que no puede
     // escribir (`lib/ai/sse.ts`), así que el bucle sigue y la fila se escribe
     // igual en el `finally`.
     //

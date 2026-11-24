@@ -73,7 +73,7 @@ describe("cleanVisualContext", () => {
   });
 });
 
-// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the screen
+// WHAT EACH VISUAL SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code's held views): the screen
 // sends the latest state of each visual with every message, and the model reads them only when it asks.
 describe("cleanVisualStates", () => {
   const ID = "widget_abcd1234";
@@ -137,8 +137,8 @@ describe("visualStatesReminder", () => {
     expect(out).not.toContain("a, b");
   });
 
-  // Claude Code 2.1.329: names up to 64 widget_ids (slice(0, 64)) and summarizes the rest as ", and N more".
-  it("🔴 caps long lists at 64 widget_ids with ', and N more' as in Claude Code 2.1.329", () => {
+  // As in Claude Code: names up to 64 widget_ids and summarizes the rest as ", and N more".
+  it("🔴 caps long lists at 64 widget_ids with ', and N more' as in Claude Code", () => {
     expect(VISUAL_STATES_REMINDER_MAX_IDS).toBe(64);
     const many = Array.from({ length: 67 }, (_, i) => ({
       widgetId: `widget_${String(i).padStart(8, "0")}`,

@@ -40,8 +40,8 @@ export function warnBrokenAgentFile(assistantId: string, agentType: string): voi
   console.warn(`[assistants] ${assistantId}'s agent file ${agentType} is missing or broken: it runs as the plain assistant`);
 }
 
-/** What its place sends as the person's first turn: the file's `initialPrompt` — Claude Code's «auto-submitted as the first
- *  user turn» — only while the conversation is empty and it hasn't been sent (`openedAt`, claimed once by the turn);
+/** What its place sends as the person's first turn: the file's `initialPrompt` — which Claude Code sends by itself as the
+ *  first user turn — only while the conversation is empty and it hasn't been sent (`openedAt`, claimed once by the turn);
  *  nothing for an assistant without a file, or with one that broke. */
 export async function firstMessageOf(personId: string, agentType: string | null, conversationTurns: number, openedAt: Date | null = null): Promise<string | null> {
   if (!agentType || conversationTurns > 0 || openedAt) return null;

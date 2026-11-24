@@ -41,7 +41,7 @@ export interface AgentDefinition {
   /** Read-only on the SERVER, like Explore and Plan: no tool that writes, and its session refuses what a command
    *  would change. It only limits, but a malformed value drops the type like any key that limits. */
   readonly readOnly: boolean;
-  /** Claude Code's `initialPrompt`: «Auto-submitted as the first user turn when this agent is the main thread agent».
+  /** Claude Code's `initialPrompt`: sent by itself as the first user turn when the agent runs as the main thread.
    *  Only an agent of the person's own (spec local 2026-11-19-agentes-para-todos, §6.4) uses it; a subagent ignores it. */
   readonly initialPrompt: string | null;
   /** The type's section. */

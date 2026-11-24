@@ -1,6 +1,6 @@
 /**
- * CREDENCIALES EN LA MEMORIA — el «memory content appears to contain a
- * credential or API key» de Claude Code. La memoria va en cada turno y la ven
+ * CREDENCIALES EN LA MEMORIA — como Claude Code, que se niega a guardar en
+ * la memoria algo que parece una credencial. La memoria va en cada turno y la ven
  * los miembros del proyecto: una clave ahí es una clave filtrada.
  *
  * Puro.

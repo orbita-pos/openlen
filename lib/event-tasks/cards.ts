@@ -16,7 +16,7 @@ import type { EventTaskCardRow, EventTaskRow } from "./store";
 import { cardEmail } from "./texts";
 
 const c = schema.eventTaskCards;
-/** Claude Code's PushNotification: under 200 characters, one line, no markdown. */
+/** As Claude Code's PushNotification: a single short line of plain text, at most 200 characters. */
 const PUSH_MAX = 200;
 
 export function pushText(title: string): string {

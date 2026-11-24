@@ -3,7 +3,7 @@
 // whole conversation is paid again at the full input price (production, 12/11: one message after a
 // day's pause re-sent 215.399 tokens). Such a turn sends the history TRIMMED, with no model call:
 // what was thought in older turns goes, and so do the tool results older than the most recent ones
-// (`coldTrim` in ./transcripcion.ts). What is kept and the floor are Claude Code's (binary 2.1.321, its
+// (`coldTrim` in ./transcripcion.ts). What is kept and the floor are Claude Code's (its
 // tool-result clearing after an idle period): `keepToolUses: 12`, `clearAtLeastTokens: 20000`. Its
 // `minIdleSeconds: 3900` is its own provider's cache — an hour — plus five minutes; ours is measured
 // (`COLD_AFTER_MIN_DEFAULT`).

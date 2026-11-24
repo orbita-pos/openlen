@@ -3,8 +3,8 @@
 //
 // THE EVALUATOR'S FINGERPRINT (spec local 2026-11-12-len-3-1-ruta, §5 piece 5): the two columns of the 3.1
 // table are only comparable if they were graded by the same evaluator. Claude Code's harness integrity gate
-// is «a change detector, not a security boundary», and «never pass --approve-harness from an unattended
-// round» (§3.1).
+// only detects changes and is no security boundary, and an unattended run never passes its approval
+// (§3.1).
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

@@ -1,6 +1,6 @@
 // WHAT THE MODEL READS OF A TASK: DeepSeek's view, plus the next run as a local time. Claude Code's
-// `CronCreate` tells the model "when you tell the user when a job will run, give that time, not the
-// minute in the cron expression"; converting UTC to a zone is exactly what a model gets wrong, so the
+// `CronCreate` asks the model to tell the user the local time a job will run, not the cron's
+// minute; converting UTC to a zone is exactly what a model gets wrong, so the
 // tool does it (spec local 2026-10-29-tareas-programadas, §7.1).
 import { Temporal } from "@js-temporal/polyfill";
 

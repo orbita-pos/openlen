@@ -3,7 +3,7 @@
  * (`packages/skill/tool-skill/src/index.ts`, MIT, LICENSES/deepseek-harness.MIT.txt): its name, its
  * description, its three errors and its `<skill_content>` answer (`renderSkillContent`, in
  * `packages/skill/skill/src/index.ts`). A skill already loaded in this conversation is compared by its
- * content, as Claude Code 2.1.330 does: the same text is not sent again (Claude Code's line says so);
+ * content, as Claude Code does: the same text is not sent again (Claude Code's line says so);
  * a changed one goes again, behind Claude Code's re-invocation line.
  *
  * Read-only: it counts against no write budget (`READ_ME`-like, `READ_ONLY_TOOLS` in loop.ts).
@@ -57,7 +57,7 @@ export function renderSkillContent(s: ResolvedSkill): string {
 
 /** Claude Code's answer when the skill is already in the conversation, byte for byte. */
 export const alreadyLoaded = (name: string) => `Skill /${name} is already loaded above; instructions unchanged.`;
-/** Claude Code's line in front of a skill loaded again whose content changed (2.1.330): the new text follows. */
+/** Claude Code's line in front of a skill loaded again whose content changed: the new text follows. */
 export const reinvocationLine = (name: string) =>
   `(Re-invocation of /${name} — the skill instructions were previously loaded; the arguments or dynamic output below are new.)`;
 
@@ -148,7 +148,7 @@ export async function toolSkill(session: AgentSession, args: Record<string, unkn
   const content = catalog ? `${renderSkillContent(found)}
 
 ${catalog}` : renderSkillContent(found);
-  // As Claude Code 2.1.330: a skill already loaded is compared by CONTENT. The same bytes, its line; different ones
+  // As in Claude Code: a skill already loaded is compared by CONTENT. The same bytes, its line; different ones
   // (the skill was improved, or its dynamic part changed), the new text behind its re-invocation line.
   const digest = skillDigest(content);
   const copies = (session.loadedSkillDigests ??= new Map());

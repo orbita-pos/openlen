@@ -108,7 +108,7 @@ describe("forked skills", () => {
   });
 });
 
-// A SKILL LOADED AGAIN, as Claude Code 2.1.330 does it: it compares the CONTENT the model already has with the
+// A SKILL LOADED AGAIN, as Claude Code does it: it compares the CONTENT the model already has with the
 // content it would send, not the name. The same bytes → «already loaded above; instructions unchanged»;
 // different ones → the new text, behind its re-invocation line. Len copied the line and kept only the name, so
 // a skill improved mid-conversation (`propose_skills`, `learn`, a Write to /.len/skills) answered «unchanged»

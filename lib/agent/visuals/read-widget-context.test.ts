@@ -1,4 +1,4 @@
-// `read_widget_context` (spec local 2026-11-22-visuales-de-verdad, §2): Claude Code 2.1.329's ReadWidgetContext, in our
+// `read_widget_context` (spec local 2026-11-22-visuales-de-verdad, §2): Claude Code's ReadWidgetContext, in our
 // words. It reads what the visuals of this conversation shared with the person's latest message: one by its widget_id,
 // or all of them. What a visual shares is data written by its code — the answer carries it as such.
 import { describe, expect, it } from "vitest";

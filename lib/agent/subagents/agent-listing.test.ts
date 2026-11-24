@@ -8,7 +8,7 @@ import { resolveAgentTypes } from "./agent-registry";
 const file = (name: string, extra = "") => ({ name, text: `---\nname: ${name}\ndescription: ${name} does it\n${extra}---\nWork.`, updatedAt: new Date(0) });
 const types = (project: string[], personal: string[] = []) => resolveAgentTypes({ project: project.map((n) => file(n)), personal: personal.map((n) => file(n)) });
 
-describe("agentListingMessage (Claude Code 2.1.330's agent_listing_delta)", () => {
+describe("agentListingMessage (Claude Code's agent_listing_delta)", () => {
   it("nothing to say without custom types: OpenLen's and Claude Code's are in the declaration", () => {
     expect(agentListingMessage(types([]), [])).toBeNull();
   });
@@ -61,7 +61,7 @@ describe("agentListingMessage (Claude Code 2.1.330's agent_listing_delta)", () =
     expect(text).not.toContain("d".repeat(501));
   });
 
-  it("folds from the conversation: added adds, removed takes away (Claude Code's WLi)", () => {
+  it("folds from the conversation: added adds, removed takes away (as Claude Code folds them)", () => {
     const m = (added: string[], removed: string[] = []) => ({ agentListing: { added, removed } });
     expect([...announcedAgentTypes([m(["a", "b"]), {}, m([], ["a"]), m(["c"])])].sort()).toEqual(["b", "c"]);
   });

@@ -1052,9 +1052,9 @@ describe("LEN.md y la memoria (plans/len-md): ficheros que Len lee, corrige y bo
     assert.equal(s.leidos?.get("/.len/memory/hero-oscuro.md")?.instantanea, serializeNote(NOTA));
   });
 
-  // Claude Code (binary 2.1.325) leaves out «(file state is current in your context — no need to Read it back)»
-  // when what it saved is not what the model sent — a memory file it stamped (`memdirStamped`), or one the user
-  // changed. Len's «exactly what was saved» is the same promise.
+  // Claude Code leaves out its note that the file needs no second read when what it saved is not what the model
+  // sent — a memory file it stamped (`memdirStamped`), or one the user changed. Len's «exactly what was saved» is the
+  // same promise.
   it("🔴 like Claude Code: a note saved in other whitespace does not say it was saved exactly as sent", async () => {
     const { deps } = depsConLenMd();
     const out = await runAgentTool(makeSession(), deps, "Write", { file_path: "/.len/memory/hero-oscuro.md", content: AS_LEN_WRITES_IT });
@@ -1247,7 +1247,7 @@ describe("skills as files (spec local 2026-10-26-len-skills, §4.2)", () => {
     assert.ok(!estado.listed.includes("personal:dueno"));
   });
 
-  // PERSONAL SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as Claude Code 2.1.329: its
+  // PERSONAL SKILLS ARE SAVED FROM A CARD (spec local 2026-11-19-agentes-para-todos, §6.6), as in Claude Code: its
   // skill files on disk are a read-only cache, and writing one doesn't change the user's skills — propose_skills does.
   it("🔴 Len's Write of ~/.len/skills/<name>/SKILL.md is refused, names propose_skills, and saves nothing", async () => {
     const { deps, estado } = depsConSkills();

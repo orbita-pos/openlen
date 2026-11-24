@@ -105,7 +105,7 @@ export function withGit(description: string): string {
 }
 
 // WITH A REMOTE (spec local 2026-10-28-ficheros-al-nivel-de-claude-code, §8): what COMMITTING_WITH_GIT left out
-// because there was nowhere to push comes back, word for word as Claude Code has it: the destructive
+// because there was nowhere to push comes back, as Claude Code has it: the destructive
 // commands that now exist (push --force, branch -D), never a force push to main/master, never push unless asked, and
 // the section on creating pull requests with gh (lib/gh/run.ts) in its default variant. Still left out what doesn't exist here:
 // hooks and --no-verify, gh api, the Task/TodoWrite tools. Only for a project with a remote, decided per turn: one

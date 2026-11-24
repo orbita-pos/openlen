@@ -46,7 +46,7 @@ describe("agentTypeProblem", () => {
   });
 });
 
-// Claude Code's `initialPrompt`: «auto-submitted as the first user turn» — only while its conversation is empty.
+// Claude Code's `initialPrompt`: sent by itself as the first user turn — only while its conversation is empty.
 describe("firstMessageOf", () => {
   it("🔴 is the file's initialPrompt on an empty conversation, and nothing once it has turns", async () => {
     expect(await firstMessageOf("u1", "mr-smith", 0)).toBe("Hola, empecemos con tu nivel");

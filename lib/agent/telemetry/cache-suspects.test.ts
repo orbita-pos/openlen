@@ -164,7 +164,7 @@ describe("cache suspects, pinned as they are today (A7: closeOut and screenshots
     expect(checkReplay({ initialMessages: initial, lastRequest: requests.at(-1)!, transcript: result.transcripcion!, leidos: new Map() })).toEqual({ ok: true });
   });
 
-  // FIXED (24/11, Claude Code 2.1.330's `agent_listing_delta`, lib/agent/subagents/agent-listing.ts). Seen in
+  // FIXED (24/11, Claude Code's `agent_listing_delta`, lib/agent/subagents/agent-listing.ts). Seen in
   // production: Len wrote ~/.len/agents/language-teacher.md and the next call's `toolsHash` changed
   // (`causes=tools_changed`, 32768 → 16000 cached), because the `subagent` declaration listed the custom types and
   // the route rebuilt the tools. Now the declarations never name one; the new type is a user message appended

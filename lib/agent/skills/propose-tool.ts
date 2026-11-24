@@ -1,4 +1,4 @@
-// LEN'S `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6): Claude Code 2.1.329's tool of the same name — its
+// LEN'S `propose_skills` (spec local 2026-11-19-agentes-para-todos, §6.6): Claude Code's tool of the same name — its
 // contract, our words. Render-only: it checks the proposals (`proposals.ts`) and draws the review card under Len's answer;
 // it writes nothing. The person saves from the card (`POST /api/me/skills`). The skills are the speaker's (`personOf`):
 // on a shared project a member's proposals are theirs, never the owner's.

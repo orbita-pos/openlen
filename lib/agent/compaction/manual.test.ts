@@ -1,5 +1,5 @@
-// A11 · C16: `/compact`, el de Claude Code («Free up context by summarizing the
-// conversation so far», con `<optional custom summarization instructions>`).
+// A11 · C16: `/compact`, el de Claude Code (resume la conversación para liberar
+// contexto, con instrucciones opcionales).
 import { describe, expect, it } from "vitest";
 
 import { parseCompactCommand } from "./manual";

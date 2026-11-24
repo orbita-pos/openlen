@@ -1,7 +1,7 @@
 "use client";
 
-// THE REVIEW CARD OF THE PERSON'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.6), Claude Code's «review card where
-// they can save it»: what Len's `propose_skills` left under his answer, on reload too. The turn's action carries only the
+// THE REVIEW CARD OF THE PERSON'S SKILLS (spec local 2026-11-19-agentes-para-todos, §6.6), as in Claude Code, where the
+// person saves them: what Len's `propose_skills` left under his answer, on reload too. The turn's action carries only the
 // proposals' ids; the card asks the server for them (`GET /api/me/skills/proposals`), which gives each person only their
 // own — on a shared project a member's proposal never shows to the owner, nor the owner's to a member (final review I1).
 // Each proposal shows its name, whether it is new or improves one of theirs, its description and the whole SKILL.md;

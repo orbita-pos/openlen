@@ -15,7 +15,7 @@ import type { PdfPages } from "./pdf-pages";
 
 export { ATTACHMENTS_DIR, type AttachedFile } from "@/lib/projects/chat-files";
 
-/** `pages` as Claude Code takes it: one page ("3") or one range ("1-5"), 1-based. */
+/** `pages` as Claude Code takes it: a single page ("3") or a range ("1-5"), 1-based. */
 export function parsePages(raw: unknown): { ok: true; range: { first: number; last: number } | null } | { ok: false; error: string } {
   if (raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")) return { ok: true, range: null };
   const text = String(raw).trim();

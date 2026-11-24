@@ -9,8 +9,8 @@
 //
 // Ahora el inspector mira cómo está cableada la página y escribe en la
 // variable que de verdad lee, como pide Claude Code en `artifact-design`
-// («respect what already exists») y `design-sync` («never import an idiom the
-// DS doesn't have»). Aquí se hace cada gesto de verdad, lo que sale por
+// (respetar lo que ya existe) y `design-sync` (no traer un estilo que el
+// sistema de diseño no tiene). Aquí se hace cada gesto de verdad, lo que sale por
 // `openlen:edit` se aplica con el motor como en el servidor, y se abre la
 // página guardada SIN editor para medirla: lienzo = guardada.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

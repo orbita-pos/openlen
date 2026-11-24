@@ -28,7 +28,7 @@ what breaks), without its text or its scripts (its license reserves all rights).
 real box by `npm run pdf-skill:box-check`.
 
 `schedule` is ours (spec local 2026-10-29-tareas-programadas), from the facts of Claude Code's
-`/schedule` skill (binary 2.1.304: the prompt must be self-contained, confirm the user's local time, a
+`/schedule` skill (the prompt must be self-contained, confirm the user's local time, a
 one-hour minimum), which has no open license, and DeepSeek Harness's schedule tools
 (`packages/schedule/tool-schedule`, MIT, read at `00d5414`). Added on 2026-10-29.
 
@@ -102,7 +102,7 @@ DSH pages, `create_tool` in place of `create_personalized_page`, and our own exa
   inside Markdown so the repo's type check doesn't read them as source.
 
 `agent-creation` is ours (spec local 2026-11-19-agentes-para-todos, §6.3), from the facts of Claude Code's agent files
-(binary 2.1.329: the `.claude/agents/<name>.md` format, `initialPrompt` sent as the first user turn of a main-thread
+(the `.claude/agents/<name>.md` format, `initialPrompt` sent as the first user turn of a main-thread
 agent, agents made by asking Claude instead of a wizard) and of its «Learning» output style (the person does the part
 they learn from), which have no open license. Added on 2026-11-20.
 

@@ -3,8 +3,8 @@
 // Spec local 2026-11-12-len-3-1-ruta, §5 piece 5: «la huella del evaluador, que no deja correr si cambió sin
 // aprobarlo». The 3.1 table compares two columns (2e05b6df1 and the candidate); they are comparable only if
 // the same evaluator graded both — the same cases, graders, weights, judge and code. Claude Code's harness
-// integrity gate is «a change detector, not a security boundary», and «never pass --approve-harness from an
-// unattended round» (§3.1): so is this, and so is `--aprobar-evaluador`.
+// integrity gate only detects changes and is no security boundary, and an unattended run never passes its
+// approval (§3.1): so is this, and so is `--aprobar-evaluador`.
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";

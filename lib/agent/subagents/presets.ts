@@ -1,11 +1,11 @@
 // THE THREE SUBAGENT TYPES (spec local 2026-11-01-subagentes-de-len, §4.2 and §4.3): Claude Code's
 // `general-purpose`, `Explore` and `Plan`. Their sections are ours, written from the facts of Claude
-// Code's definitions (2.1.309: `Explore` and `Plan` read only and go without CLAUDE.md; `Plan` returns a
+// Code's definitions (`Explore` and `Plan` read only and go without CLAUDE.md; `Plan` returns a
 // plan and its critical files; `general-purpose` does the work itself), never from Anthropic's text.
 // The scope statement is DeepSeek Harness's, word for word (`packages/subagent/subagent/README.md`,
 // «Child delegation-scope statement» @ ce7073d, MIT, LICENSES/deepseek-harness.MIT.txt).
 //
-// Which tools a child gets follows Claude Code's rule (2.1.309, the filter every subagent goes through):
+// Which tools a child gets follows Claude Code's rule (the filter every subagent goes through):
 // out go the ones that talk to the user or change the session. The child's only way to the user is Len.
 //
 // Cache effect: the child's system prompt is Len's (the same prefix up to the line taken out) plus its

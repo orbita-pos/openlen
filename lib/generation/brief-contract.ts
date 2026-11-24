@@ -1,8 +1,8 @@
 export const GENERATION_BRIEF_MIN_LENGTH = 10;
 /** The cap of the retired /api/generate's brief, kept only by the unmounted brief panel's hook
  *  (`components/generation-brief-limit.tsx`). What the home sends to Len has NO maximum (24/11, Jesús: «claude code no
- *  tiene eso»): Claude Code 2.1.330 sends whatever is written — past 10,000 characters its box only SHOWS the middle as
- *  «[...Truncated text #N +X lines...]». The model's context is the only limit, as for every message in Len's chat. */
+ *  tiene eso»): Claude Code sends whatever is written — past 10,000 characters its box only SHOWS the middle
+ *  collapsed. The model's context is the only limit, as for every message in Len's chat. */
 export const GENERATION_BRIEF_MAX_LENGTH = 4000;
 
 const GENERATION_BRIEF_COUNTER_THRESHOLD = GENERATION_BRIEF_MAX_LENGTH * 0.75;

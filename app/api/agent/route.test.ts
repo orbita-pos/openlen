@@ -3039,7 +3039,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(guardada.transcript?.skillsLoaded).toBeUndefined();
     });
 
-    // As Claude Code 2.1.330 compares a skill loaded again by its CONTENT: the row keeps the copy each turn gave, and
+    // As Claude Code compares a skill loaded again by its CONTENT: the row keeps the copy each turn gave, and
     // the next turn's `skill` knows it (lib/agent/skills/tool.ts, `foldSkillDigests`).
     it("🔴 /name: the row keeps the copy of the skill it gave, by name", async () => {
       turno();
@@ -3097,7 +3097,7 @@ describe("POST /api/agent — H4: el historial sale de la base, no del navegador
       expect(prompt).not.toMatch(/<skill_content/);
     });
 
-    // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code 2.1.329's held views): the screen
+    // WHAT THE VISUALS SHARED (spec local 2026-11-22-visuales-de-verdad, §2; Claude Code's held views): the screen
     // sends the latest state of each visual with the message; the turn keeps those of visuals this conversation drew, the
     // model gets one line naming them, and reads them with read_widget_context. Never part of what the person wrote.
     describe("🔴 what the visuals shared rides with the turn, as data", () => {
@@ -5159,7 +5159,7 @@ describe("POST /api/agent — Len's subagents", () => {
   });
 
   // 🔴 Seen in production on 24/11: Len wrote ~/.len/agents/language-teacher.md and the next call's toolsHash changed
-  // (`causes=tools_changed`), so the provider re-read the conversation. As Claude Code 2.1.330 (`agent_listing_delta`):
+  // (`causes=tools_changed`), so the provider re-read the conversation. As Claude Code (`agent_listing_delta`):
   // the declarations stay byte for byte, and the new type reaches Len as a message appended to the conversation.
   it("creating and deleting a type mid-turn keeps the tools byte for byte and tells Len with appended messages", async () => {
     const type = { name: "reviewer", text: "---\nname: reviewer\ndescription: Reviews\n---\nReview.", updatedAt: new Date(0) };
