@@ -39,7 +39,7 @@ LEN_EMAIL_INBOUND_TOKEN=<openssl rand -hex 32>
    así que perder el comodín en ese nombre (trampa 3) no tumba nada.
 2. **Desplegar el Worker** (desde esta carpeta):
    ```
-   npm install
+   npm ci                                            # las versiones de package-lock.json, las desplegadas
    npx wrangler secret put LEN_EMAIL_INBOUND_TOKEN   # el mismo valor que en el servidor
    npx wrangler deploy
    ```
