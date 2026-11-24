@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EMPTY_MCP_CONFIG, entryFingerprint, parseMcpConfig } from "./config";
 import { DIRECTORY, directoryFor, directoryForAnyone } from "./directory";
 import { connectorsForTurn, TurnConnections, type CallDeps, type TurnDeps } from "./turn";
+import { GCAL_SCOPES, gcalResourceUrl } from "@/lib/google-calendar-mcp/config";
 
 const NOW = new Date("2026-11-17T12:00:00Z");
 
@@ -38,11 +39,22 @@ describe("directoryFor", () => {
     const cfg = configWith({
       mycal: {
         transport: "streamable-http",
-        url: "https://calendarmcp.googleapis.com/mcp/v1",
-        oauth: { scope: "https://www.googleapis.com/auth/calendar" },
+        url: gcalResourceUrl(),
+        oauth: { scope: GCAL_SCOPES.join(" ") },
       },
     });
     expect(directoryFor("jesus@example.com", cfg, env)).toEqual([]);
+  });
+
+  // Spec local 2026-11-24-servidor-de-google-calendar, §5.5: the card offers OpenLen's own server, signed in at Google
+  // with the three scopes the server checks — never Google's preview server, which only its testers may use.
+  it("DIRECTORY's Google Calendar entry is OpenLen's own server, with the three scopes, signed in at Google", () => {
+    const gcal = DIRECTORY.find((d) => d.id === "google-calendar")!;
+    expect(gcal.entry.url).toBe(gcalResourceUrl());
+    expect(gcal.entry.url).toBe("https://mcp.openlen.com/google-calendar");
+    expect(gcal.entry.oauth.scope).toBe(GCAL_SCOPES.join(" "));
+    expect(gcal.entry.oauth.scope?.split(" ")).toHaveLength(3);
+    expect(gcal.issuer).toBe("https://accounts.google.com");
   });
 
   it("DIRECTORY's Google Calendar entry is valid in mcp.json", () => {
@@ -59,7 +71,7 @@ describe("directoryForAnyone", () => {
     expect(directoryForAnyone({ servers: {} }, {})).toEqual([]);
     expect(directoryForAnyone({ servers: {} }, { ...env, OPENLEN_MCP_OAUTH: "0" })).toEqual([]);
     expect(directoryForAnyone({ servers: {} }, { ...env, OPENLEN_MCP: "0" })).toEqual([]);
-    const configured = configWith({ mycal: { transport: "streamable-http", url: "https://calendarmcp.googleapis.com/mcp/v1" } });
+    const configured = configWith({ mycal: { transport: "streamable-http", url: gcalResourceUrl() } });
     expect(directoryForAnyone(configured, env)).toEqual([]);
   });
 });
@@ -170,7 +182,7 @@ describe("suggest_connectors in a turn", () => {
     expect(attended.mcpApproval?.suggest).toEqual({
       id: "google-calendar",
       name: "Google Calendar",
-      host: "calendarmcp.googleapis.com",
+      host: "mcp.openlen.com",
     });
 
     const unattended = await new TurnConnections("p1", t, cd, { attended: false }).call("suggest_connectors", { ids: ["google-calendar"] });

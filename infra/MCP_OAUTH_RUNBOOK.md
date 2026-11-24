@@ -15,33 +15,43 @@ La migración aditiva (`scripts/mcp-connectors-migrate-sql.ts`) crea `personMcpO
 
 ---
 
-## 2. Configuración en Google Cloud Console (Google Calendar MCP)
+## 2. Configuración en Google Cloud Console (Google Calendar)
 
-El servidor oficial de Google Calendar MCP (`https://calendarmcp.googleapis.com/mcp/v1`) exige un cliente OAuth de Google registrado con el indicador de agente de IA. Vive en su **propio proyecto de Google Cloud, «OpenLen Connectors» (`openlen-connectors`)**, NO en el del login con Google de `auth.ts` (`genai`): el permiso de calendario es sensible y pide la verificación de Google, y en un proyecto aparte el login (sólo correo y perfil, publicado sin verificación) nunca depende de ella. Hecho así el 24/11/2026:
+Desde el 24/11/2026 la tarjeta «Conectar» de Google Calendar conecta con **el servidor de Calendar de OpenLen**, `https://mcp.openlen.com/google-calendar` (`lib/google-calendar-mcp/`, spec local `docs/superpowers/specs/2026-11-24-servidor-de-google-calendar-design.md`), como Anthropic sirve `gcal.mcp.claude.com`: Google inicia la sesión de la persona con el cliente de OpenLen, el conector manda ese token a nuestro servidor, el servidor lo comprueba en `tokeninfo` y llama a la Google Calendar API v3. No guarda nada. ⚰️ El servidor de Google (`https://calendarmcp.googleapis.com/mcp/v1`) ya no se usa: es una *Developer Preview* que sólo atiende a quien Google admite como probador.
 
-1. **Habilitar la API de Calendar MCP**
-   - En *APIs & Services → Library*, buscar y habilitar **Google Calendar API** y el endpoint de **Calendar MCP** (`calendarmcp.googleapis.com`).
+El cliente vive en su **propio proyecto de Google Cloud, «OpenLen Connectors» (`openlen-connectors`)**, NO en el del login con Google de `auth.ts`: los permisos de calendario son sensibles y piden la verificación de Google, y en un proyecto aparte el login (sólo correo y perfil, publicado sin verificación) nunca depende de ella.
 
-2. **Crear el cliente OAuth 2.0**
-   - En *APIs & Services → Credentials → Create Credentials → OAuth client ID*:
-     - **Application type:** `Web application`
-     - **Name:** `OpenLen MCP Connectors`
-     - Activar la casilla **«Use this client for an AI-powered agent»** (requerida por los servidores MCP de Google Workspace).
-     - **Authorized redirect URIs** (exactamente estas dos, sin segmento de idioma):
-       - Producción: `https://openlen.com/api/mcp-connectors/oauth/callback`
-       - Local: `http://localhost:3000/api/mcp-connectors/oauth/callback`
-   - Copiar el **Client ID** y el **Client Secret**.
+1. **Habilitar la API**
+   - En *APIs & Services → Library*, **Google Calendar API**. La de Calendar MCP (`calendarmcp.googleapis.com`) ya no hace falta.
 
-3. **Pantalla de consentimiento OAuth (*OAuth consent screen*)**
-   - En *Data Access / Scopes*, añadir el permiso:
-     - `https://www.googleapis.com/auth/calendar`
-   - Mientras Google no verifique el permiso de Calendar:
-     - En *Audience → Test users*, añadir los correos de las personas autorizadas a probarlo (hasta 100 cuentas, empezando por la de Jesús).
-     - Esos mismos correos deben ponerse en `OPENLEN_MCP_GOOGLE_TEST_USERS` para que `suggest_connectors` solo ofrezca Google Calendar a quienes pueden terminar el flujo sin que Google los bloquee.
+2. **El cliente OAuth 2.0** (creado el 24/11/2026; no cambia)
+   - *APIs & Services → Credentials → OAuth client ID*, tipo `Web application`, nombre `OpenLen MCP Connectors`.
+   - **Authorized redirect URIs** (exactamente estas dos, sin segmento de idioma):
+     - Producción: `https://openlen.com/api/mcp-connectors/oauth/callback`
+     - Local: `http://localhost:3000/api/mcp-connectors/oauth/callback`
+   - Su **Client ID** y su **Client Secret** van en `OPENLEN_MCP_GOOGLE_CLIENT_ID` / `OPENLEN_MCP_GOOGLE_CLIENT_SECRET` (§3). El servidor de Calendar acepta sólo los tokens emitidos para ese Client ID.
 
-4. **Verificación de Google**
-   - En *Verification Center*, enviar la solicitud para el scope `https://www.googleapis.com/auth/calendar` (enlace a la política de privacidad de OpenLen y vídeo breve mostrando el botón «Conectar Google Calendar» en el chat, la pantalla de consentimiento de Google y la lectura/creación de un evento).
-   - Una vez aprobada la verificación, eliminar `OPENLEN_MCP_GOOGLE_TEST_USERS` del entorno de producción para que Google Calendar aparezca en el directorio para todos los usuarios.
+3. **Data Access: los tres permisos, y sólo ésos**
+   - Quitar `https://www.googleapis.com/auth/calendar` y añadir:
+     - `https://www.googleapis.com/auth/calendar.calendarlist.readonly`
+     - `https://www.googleapis.com/auth/calendar.events`
+     - `https://www.googleapis.com/auth/calendar.events.freebusy`
+   - Son los que pide la tarjeta (`GCAL_SCOPES`, `lib/google-calendar-mcp/config.ts`) y los que el servidor exige: un token sin alguno de ellos recibe un 403 `insufficient_scope` y el conector pide a la persona más permisos.
+
+4. **Audience: «In production» al desplegar**
+   - Pasar `openlen-connectors` a **In production** en el mismo despliegue, sin esperar la verificación: en modo de prueba Google caduca los tokens de refresco a los 7 días y habría que reconectar cada semana.
+   - Sin verificar, quien conecta ve el aviso de Google de «app no verificada», y Google limita la app a 100 cuentas. `OPENLEN_MCP_GOOGLE_TEST_USERS` (§3) sigue decidiendo a quién le ofrece OpenLen la tarjeta.
+
+5. **Después del despliegue**
+   - Jesús quita su conexión vieja de Google Calendar (se hizo contra `calendarmcp.googleapis.com`: su fila está atada a esa URL y a la huella de esa entrada, así que no se reutiliza) y conecta otra vez desde la tarjeta.
+   - Prueba: leer la agenda y crear un evento de prueba.
+
+6. **Verificación de Google** (en *Verification Center*)
+   - `openlen.com` verificado en Search Console por una cuenta que sea dueña del proyecto `openlen-connectors` (añadir la cuenta que falte en un lado o en el otro).
+   - La política de privacidad (`/[locale]/privacy`, apartado «Google Calendar y otros conectores») con la declaración de *Limited Use* de Google.
+   - Un vídeo oculto en YouTube: conectar desde la tarjeta, la pantalla de Google, leer la agenda y crear un evento.
+   - La justificación de cada uno de los tres permisos.
+   - Cuando Google apruebe, quitar `OPENLEN_MCP_GOOGLE_TEST_USERS` del entorno de producción para que la tarjeta aparezca a todos.
 
 ---
 
@@ -70,6 +80,10 @@ OPENLEN_MCP_GOOGLE_TEST_USERS=jesus@...
 # Palancas opcionales (encendido por defecto; solo el literal "0" apaga):
 # OPENLEN_MCP_OAUTH=0   # Apaga OAuth (un 401 vuelve a contarse como failed)
 # OPENLEN_MCP=0         # Apaga todos los conectores MCP
+# OPENLEN_GCAL_MCP=0    # Apaga el servidor de Calendar de OpenLen (contesta 503)
+
+# Sólo en local: la URL pública del servidor de Calendar (por defecto https://mcp.openlen.com/google-calendar).
+# GCAL_MCP_RESOURCE_URL=http://localhost:3000/api/mcp/google-calendar
 ```
 
 ---

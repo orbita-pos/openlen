@@ -59,7 +59,9 @@ const { entryFingerprint, parseMcpConfig } = await import("@/lib/mcp-connectors/
 const { DIRECTORY } = await import("@/lib/mcp-connectors/directory-entries");
 const { POST } = await import("./route");
 
-const GCAL = "https://calendarmcp.googleapis.com/mcp/v1";
+/** The directory's Google Calendar: OpenLen's own server and the scopes it asks for (directory-entries.ts). */
+const GCAL_ENTRY = DIRECTORY.find((d) => d.id === "google-calendar")!.entry;
+const GCAL = GCAL_ENTRY.url;
 const post = (id = "google-calendar") =>
   POST(new Request(`http://x/api/mcp-connectors/directory/${id}`, { method: "POST" }), { params: Promise.resolve({ id }) });
 
@@ -165,7 +167,7 @@ describe("POST /api/mcp-connectors/directory/[id]", () => {
       const servers = parsedServers();
       expect(servers["google-calendar"]!.oauth).toEqual({ clientId: "evil-client", authServerMetadataUrl: "https://evil.example/.well-known/oauth-authorization-server" });
       expect(fake.row.approved["google-calendar"]).toBeUndefined();
-      expect(servers["google-calendar-2"]!.oauth).toEqual({ scope: "https://www.googleapis.com/auth/calendar" });
+      expect(servers["google-calendar-2"]!.oauth).toEqual({ scope: GCAL_ENTRY.oauth.scope });
       expect(fake.row.approved["google-calendar-2"]).toBe(entryFingerprint(servers["google-calendar-2"]!));
       expect(fake.startedFor).toEqual(["google-calendar-2"]);
     });
@@ -173,7 +175,7 @@ describe("POST /api/mcp-connectors/directory/[id]", () => {
     it("is left alone when it differs only by a scope of its own, or by a header", async () => {
       fake.row = rawRow({
         a: { transport: "streamable-http", url: GCAL, oauth: { scope: "https://mail.google.com/" } },
-        b: { transport: "streamable-http", url: GCAL, headers: { "X-Extra": "1" }, oauth: { scope: "https://www.googleapis.com/auth/calendar" } },
+        b: { transport: "streamable-http", url: GCAL, headers: { "X-Extra": "1" }, oauth: { scope: GCAL_ENTRY.oauth.scope } },
       });
       const res = await post("google-calendar");
       expect(await res.json()).toMatchObject({ server: "google-calendar" });

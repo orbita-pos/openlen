@@ -4,6 +4,8 @@
 // if an entry here has that exact URL and that exact `issuer`. (The issuer is pinned here, in the data, and not as an
 // `oauth.authorizationServer` of the entry the person approves: config.ts, like Claude Code's, accepts that field only
 // together with a `clientId`, and a directory entry names none — OpenLen's client is chosen by this pair instead.)
+import { GCAL_SCOPES, gcalResourceUrl } from "../google-calendar-mcp/config";
+
 import type { McpOAuthConfig } from "./config";
 
 export interface DirectoryEntry {
@@ -29,10 +31,12 @@ export const DIRECTORY: readonly DirectoryEntry[] = [
     what: "Read and add events in the person's Google Calendar",
     server: "google-calendar",
     issuer: GOOGLE_ISSUER,
+    // OpenLen's own Calendar server (spec local 2026-11-24-servidor-de-google-calendar, §5.5), as Anthropic hosts
+    // gcal.mcp.claude.com: Google's calendarmcp.googleapis.com is a Developer Preview only its testers may call.
     entry: {
       transport: "streamable-http",
-      url: "https://calendarmcp.googleapis.com/mcp/v1",
-      oauth: { scope: "https://www.googleapis.com/auth/calendar" },
+      url: gcalResourceUrl(),
+      oauth: { scope: GCAL_SCOPES.join(" ") },
     },
   },
 ];
