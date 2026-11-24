@@ -90,7 +90,8 @@ describe("🔴 allow-same-origin: la frontera de verdad", () => {
 
   it("🔴 SANDBOX_REMOTO sólo va con el src remoto, y el remoto se apaga con srcdoc", () => {
     const src = fuente("components/workspace-v2/preview-area.tsx");
-    expect(src).toContain("const remotoActivo = !previewUrl && !untrustedDoc && !!projectId;");
+    // Con un artifact a la vista (`deliverableStage`, dfc13f260) el remoto también se apaga.
+    expect(src).toContain("const remotoActivo = !previewUrl && !untrustedDoc && !!projectId && !deliverableStage;");
     expect(src).toContain("const modoRemoto = remotoActivo && urlRemota !== null;");
     expect(src).toContain(
       'const iframeFuente = previewUrl ? { src: previewUrl } : modoRemoto ? { src: urlRemota! } : esperandoRemoto ? { src: "about:blank" } : { srcDoc: finalSrcDoc };',
