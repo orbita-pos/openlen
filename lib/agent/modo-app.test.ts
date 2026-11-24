@@ -8,6 +8,7 @@ import { GUIA_DE_LA_APP, HERRAMIENTAS_QUE_CAMBIAN_EN_UNA_APP, promptDeLaApp } fr
 import { CARPETA_AGENTES, CARPETA_SKILLS, RUTA_GUIA, RUTA_LIBRERIAS, RUTA_MANUAL } from "./ficheros/manual";
 import { summarizeProjectState } from "./tools";
 import { CATALOGO_ACTUAL, catalogo } from "@/lib/apps/dependencias";
+import { RESOURCE_TOOL_NAMES } from "@/lib/mcp-connectors/turn";
 
 const APP = { catalogo: CATALOGO_ACTUAL, entrada: "/src/main.jsx" };
 const ENV = { OPENLEN_TERMINAL: "0" };
@@ -312,8 +313,12 @@ describe("los nombres que usa el modo app", () => {
     // `after_seconds`, `every_seconds`: parameters of `schedule_create` (spec local 2026-10-29-tareas-programadas).
     // `doc_id`: a parameter of `artifact_data` (spec local 2026-11-22-artifacts-de-len).
     const NO_SON_HERRAMIENTAS = new Set(["doc_id", "blocked_reason", "sign_in_as", "postgres_changes", "supabase_realtime", "by_date", "output_mode", "env_vars", "in_progress", "store_domain", "storefront_api", "agent_preset", "after_seconds", "every_seconds", "widget_id", "widget_ids"]);
+    // Tools that exist only once the person has a connected MCP server (lib/mcp-connectors/turn.ts): the
+    // manual names them for that case (229219d82), and a catalog built with no server doesn't declare them.
+    // Taken from their source, so a rename there still shows up here.
+    const CON_UN_SERVIDOR_MCP: ReadonlySet<string> = new Set(RESOURCE_TOOL_NAMES);
     const sueltos = [...new Set([...texto.matchAll(/\b[a-z]+(?:_[a-z0-9]+)+\b/g)].map((m) => m[0]))].filter(
-      (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t),
+      (t) => !declaradas.has(t) && !NO_SON_HERRAMIENTAS.has(t) && !CON_UN_SERVIDOR_MCP.has(t),
     );
     expect(sueltos).toEqual([]);
   });
